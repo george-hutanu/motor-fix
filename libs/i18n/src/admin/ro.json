@@ -51,6 +51,7 @@
       "approve": "Aprobă și publică",
       "ask": "Cere completări",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
+      "rarRequired": "Verificarea RAR e obligatorie",
       "reason": "Motiv: {reason}",
       "reject": "Respinge"
     },
@@ -72,6 +73,7 @@
       "more_requested": "Completări cerute de {name}, {when}",
       "opened": "Deschis de {name}, {when}",
       "page": "{document}, pagina {n} deschisă de {name}, {when}",
+      "rarNumber": "Număr RAR: {old} → {new} — {name}, {when}",
       "rejected": "Respins de {name}, {when}",
       "reopened": "Redeschis de {name}, {when}",
       "reopenedWhy": "Redeschis de {name}, {when} ({reason})",
@@ -113,46 +115,79 @@
     },
     "recorded": "{name}, {when}",
     "register": {
-      "activities": "Activități autorizate",
+      "activities": "Activitățile autorizate acoperă lista de prețuri",
       "anaf": "ANAF",
       "caen": "Cod CAEN 4520",
       "change": "Modifică",
       "company": "Firmă activă la ANAF și ONRC",
       "copied": "CUI copiat",
+      "correct": "Corectează",
       "errors": {
         "cui": "CUI‑ul service‑ului nu e valid",
         "detail": "{field}: între 1 și 200 de caractere, fără rânduri noi",
         "missing": "Lipsește: {fields}",
-        "result": "Alege un rezultat"
+        "noNumber": "Lipsește numărul RAR: corectează‑l întâi",
+        "number": "Numărul RAR: între 3 și 40 de caractere, fără rânduri noi",
+        "oneActivity": "Bifează cel puțin o activitate",
+        "result": "Alege un rezultat",
+        "uncovered": "Nu sunt acoperite: {jobs}"
       },
       "form": {
+        "authorisation": "Autorizația RAR",
+        "cancel": "Renunță",
         "clear": "Resetează",
+        "covered": "acoperit",
         "detail": "Detaliu",
         "detailHint": "1–200 caractere. Ceilalți administratori îl văd.",
         "failed": "Problemă",
         "name": "Denumirea firmei",
+        "noDocument": "fără autorizație încărcată",
+        "noJobs": "Lista de prețuri nu are lucrări",
         "ok": "OK",
+        "priceList": "Lucrările din lista de prețuri",
         "result": "Rezultat",
         "save": "Salvează",
         "ticks": "Ce ai verificat",
+        "uncovered": "neacoperit",
         "warning": "Atenție"
       },
       "heading": "VERIFICĂRI ÎN REGISTRE",
+      "noNumber": "număr lipsă",
+      "number": "Număr RAR",
       "onrc": "ONRC",
       "open": "Înregistrează",
-      "rar": "Autorizație RAR",
+      "proposed": {
+        "rarNotFound": "numărul introdus nu există în registrul public RAR",
+        "uncovered": {
+          "few": "{jobs} nu apar în autorizație",
+          "one": "{jobs} nu apare în autorizație",
+          "other": "{jobs} nu apar în autorizație"
+        }
+      },
+      "rar": "Autorizație RAR găsită în registru",
+      "rarCopied": "Număr RAR copiat",
+      "rarFailed": "Autorizația RAR nu apare în registru",
+      "rarRegister": "Registrul RAR",
       "stored": {
         "address": "adresă",
         "certificate": "certificat",
+        "found": "găsită",
         "noCertificate": "fără certificat",
-        "onrc": "ONRC"
+        "onrc": "ONRC",
+        "sameAddress": "adresă",
+        "sameCompany": "firmă"
       },
       "ticks": {
         "certificate": "4520 pe certificat",
+        "found": "găsită",
         "onrc": "4520 în ONRC",
         "premises": "la punctul de lucru",
+        "sameAddress": "aceeași adresă",
+        "sameCompany": "aceeași firmă",
+        "sameSeat": "același sediu social",
         "seat": "la sediul social"
-      }
+      },
+      "uncoveredLine": "Neacoperite: {jobs}"
     },
     "rejectedBefore": "Respins anterior: {reason}, {when}",
     "reopenedReport": "Redeschis după un raport, {when}",
