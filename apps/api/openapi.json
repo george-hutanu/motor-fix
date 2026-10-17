@@ -12066,6 +12066,28 @@
           "fromTime"
         ]
       },
+      "RecordCheckEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The company name as the register shows it; company only",
+            "maxLength": 200
+          },
+          "certificate": {
+            "type": "boolean",
+            "description": "4520 on the ONRC certificate; caen only"
+          },
+          "onrc": {
+            "type": "boolean",
+            "description": "4520 in the ONRC record; caen only"
+          },
+          "address": {
+            "type": "boolean",
+            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          }
+        }
+      },
       "RecordVerificationCheckDto": {
         "type": "object",
         "properties": {
@@ -12089,13 +12111,70 @@
             "items": {
               "type": "string"
             }
+          },
+          "evidence": {
+            "description": "What the admin found; company and caen only, refused with not_run",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordCheckEvidenceDto"
+              }
+            ]
           }
         },
         "required": [
           "result"
         ]
       },
-      "VerificationCheckDto": {
+      "VerificationCheckEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The company name as the register shows it; company only",
+            "maxLength": 200
+          },
+          "certificate": {
+            "type": "boolean",
+            "description": "4520 on the ONRC certificate; caen only"
+          },
+          "onrc": {
+            "type": "boolean",
+            "description": "4520 in the ONRC record; caen only"
+          },
+          "address": {
+            "type": "boolean",
+            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          },
+          "certificateUploaded": {
+            "type": "boolean",
+            "description": "Whether the file held an ONRC certificate at the save; caen only"
+          },
+          "lookedUpOn": {
+            "type": "string",
+            "description": "The day of the look-up, in Bucharest",
+            "format": "date"
+          }
+        }
+      },
+      "VerificationActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Null for the system",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileCheckDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -12136,6 +12215,16 @@
             "type": "string",
             "nullable": true
           },
+          "evidence": {
+            "description": "What the admin found, for company and caen; null otherwise",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationCheckEvidenceDto"
+              }
+            ]
+          },
           "recordedBy": {
             "type": "string",
             "format": "uuid",
@@ -12145,6 +12234,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
           }
         },
         "required": [
@@ -12154,15 +12253,17 @@
           "automatic",
           "result",
           "detail",
+          "evidence",
           "recordedBy",
-          "recordedAt"
+          "recordedAt",
+          "recorder"
         ]
       },
       "VerificationCheckRecordedDto": {
         "type": "object",
         "properties": {
           "check": {
-            "$ref": "#/components/schemas/VerificationCheckDto"
+            "$ref": "#/components/schemas/VerificationFileCheckDto"
           },
           "summary": {
             "$ref": "#/components/schemas/CheckSummaryDto"
@@ -12179,24 +12280,6 @@
           "check",
           "summary",
           "rarActivities"
-        ]
-      },
-      "VerificationActorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Null for the system",
-            "format": "uuid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name"
         ]
       },
       "VerificationFileStateDto": {
@@ -12373,80 +12456,6 @@
           "phone",
           "brands",
           "photos"
-        ]
-      },
-      "VerificationFileCheckDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fileId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "company",
-              "caen",
-              "rar",
-              "activities",
-              "representative",
-              "address",
-              "photos",
-              "documents"
-            ]
-          },
-          "automatic": {
-            "type": "boolean",
-            "description": "False until automatic look-ups exist"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "not_run",
-              "ok",
-              "warning",
-              "failed"
-            ]
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "recordedBy": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "recordedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "recorder": {
-            "description": "Null while never recorded; MotorFix for an automatic record",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "fileId",
-          "kind",
-          "automatic",
-          "result",
-          "detail",
-          "recordedBy",
-          "recordedAt",
-          "recorder"
         ]
       },
       "VerificationFileActivityDto": {

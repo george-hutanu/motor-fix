@@ -10,26 +10,15 @@ import {
   DOCUMENT_KINDS,
   type DocumentKind,
 } from './legal-documents/legal-documents';
-import { VerificationCheckDto } from './verification-checks';
+import {
+  VerificationActorDto,
+  VerificationFileCheckDto,
+} from './verification-checks';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
-
-// Who acted on the file: the account's first name, "MotorFix" for the system.
-export class VerificationActorDto {
-  @ApiProperty({
-    description: 'Null for the system',
-    format: 'uuid',
-    nullable: true,
-    type: String,
-  })
-  id!: string | null;
-
-  @ApiProperty()
-  name!: string;
-}
 
 export class VerificationFileStateDto {
   @ApiProperty({ format: 'uuid' })
@@ -116,16 +105,6 @@ export class VerificationFileGarageDto {
 
   @ApiProperty({ type: [PublicGaragePhotoDto] })
   photos!: PublicGaragePhotoDto[];
-}
-
-// A check as the file shows it: who recorded it, by first name.
-export class VerificationFileCheckDto extends VerificationCheckDto {
-  @ApiProperty({
-    description: 'Null while never recorded; MotorFix for an automatic record',
-    nullable: true,
-    type: VerificationActorDto,
-  })
-  recorder!: VerificationActorDto | null;
 }
 
 export class VerificationFileActivityDto {

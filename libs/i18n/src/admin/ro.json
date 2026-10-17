@@ -114,10 +114,45 @@
     "recorded": "{name}, {when}",
     "register": {
       "activities": "Activități autorizate",
+      "anaf": "ANAF",
       "caen": "Cod CAEN 4520",
-      "company": "Firmă (ANAF, ONRC)",
+      "change": "Modifică",
+      "company": "Firmă activă la ANAF și ONRC",
+      "copied": "CUI copiat",
+      "errors": {
+        "cui": "CUI‑ul service‑ului nu e valid",
+        "detail": "{field}: între 1 și 200 de caractere, fără rânduri noi",
+        "missing": "Lipsește: {fields}",
+        "result": "Alege un rezultat"
+      },
+      "form": {
+        "clear": "Resetează",
+        "detail": "Detaliu",
+        "detailHint": "1–200 caractere. Ceilalți administratori îl văd.",
+        "failed": "Problemă",
+        "name": "Denumirea firmei",
+        "ok": "OK",
+        "result": "Rezultat",
+        "save": "Salvează",
+        "ticks": "Ce ai verificat",
+        "warning": "Atenție"
+      },
       "heading": "VERIFICĂRI ÎN REGISTRE",
-      "rar": "Autorizație RAR"
+      "onrc": "ONRC",
+      "open": "Înregistrează",
+      "rar": "Autorizație RAR",
+      "stored": {
+        "address": "adresă",
+        "certificate": "certificat",
+        "noCertificate": "fără certificat",
+        "onrc": "ONRC"
+      },
+      "ticks": {
+        "certificate": "4520 pe certificat",
+        "onrc": "4520 în ONRC",
+        "premises": "la punctul de lucru",
+        "seat": "la sediul social"
+      }
     },
     "rejectedBefore": "Respins anterior: {reason}, {when}",
     "reopenedReport": "Redeschis după un raport, {when}",

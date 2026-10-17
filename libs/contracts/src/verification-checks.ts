@@ -1,13 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
+  IsObject,
   IsString,
   Length,
   Matches,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 // Kept decorator-free for the web app; read here as everywhere else.
@@ -153,6 +156,56 @@ const trimmed = ({ value }: { value: unknown }) =>
 
 const given = (_: object, value: unknown) => value !== undefined;
 
+// What the admin found in the registers: the company's name for `company`,
+// the three ticks for `caen`. The server adds the rest.
+export class RecordCheckEvidenceDto {
+  @ApiPropertyOptional({
+    description: 'The company name as the register shows it; company only',
+    maxLength: CHECK_DETAIL_MAX,
+  })
+  @Transform(trimmed)
+  @ValidateIf(given)
+  @IsString()
+  @Length(1, CHECK_DETAIL_MAX)
+  @Matches(/^\P{Cc}*$/u, { message: 'name must not hold control characters' })
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: '4520 on the ONRC certificate; caen only',
+  })
+  @ValidateIf(given)
+  @IsBoolean()
+  certificate?: boolean;
+
+  @ApiPropertyOptional({ description: '4520 in the ONRC record; caen only' })
+  @ValidateIf(given)
+  @IsBoolean()
+  onrc?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'The workshop address, or the registered seat for a mobile mechanic, matches; caen only',
+  })
+  @ValidateIf(given)
+  @IsBoolean()
+  address?: boolean;
+}
+
+// The evidence as stored: the admin's fields plus what the server wrote.
+export class VerificationCheckEvidenceDto extends RecordCheckEvidenceDto {
+  @ApiPropertyOptional({
+    description:
+      'Whether the file held an ONRC certificate at the save; caen only',
+  })
+  certificateUploaded?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'The day of the look-up, in Bucharest',
+    format: 'date',
+  })
+  lookedUpOn?: string;
+}
+
 export class RecordVerificationCheckDto {
   @ApiProperty({ enum: RECORDED_RESULTS })
   @IsIn(RECORDED_RESULTS)
@@ -183,6 +236,17 @@ export class RecordVerificationCheckDto {
   @IsString({ each: true })
   @Length(1, 40, { each: true })
   activities?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'What the admin found; company and caen only, refused with not_run',
+    type: RecordCheckEvidenceDto,
+  })
+  @ValidateIf(given)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => RecordCheckEvidenceDto)
+  evidence?: RecordCheckEvidenceDto;
 }
 
 export class VerificationCheckDto {
@@ -204,11 +268,42 @@ export class VerificationCheckDto {
   @ApiProperty({ nullable: true, type: String })
   detail!: string | null;
 
+  @ApiProperty({
+    description: 'What the admin found, for company and caen; null otherwise',
+    nullable: true,
+    type: VerificationCheckEvidenceDto,
+  })
+  evidence!: VerificationCheckEvidenceDto | null;
+
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   recordedBy!: string | null;
 
   @ApiProperty({ format: 'date-time', nullable: true, type: String })
   recordedAt!: Date | null;
+}
+
+// Who acted on the file: the account's first name, "MotorFix" for the system.
+export class VerificationActorDto {
+  @ApiProperty({
+    description: 'Null for the system',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  id!: string | null;
+
+  @ApiProperty()
+  name!: string;
+}
+
+// A check as the file shows it: who recorded it, by first name.
+export class VerificationFileCheckDto extends VerificationCheckDto {
+  @ApiProperty({
+    description: 'Null while never recorded; MotorFix for an automatic record',
+    nullable: true,
+    type: VerificationActorDto,
+  })
+  recorder!: VerificationActorDto | null;
 }
 
 export class CheckSummaryDto {
@@ -220,8 +315,8 @@ export class CheckSummaryDto {
 }
 
 export class VerificationCheckRecordedDto {
-  @ApiProperty({ type: VerificationCheckDto })
-  check!: VerificationCheckDto;
+  @ApiProperty({ type: VerificationFileCheckDto })
+  check!: VerificationFileCheckDto;
 
   @ApiProperty({ type: CheckSummaryDto })
   summary!: CheckSummaryDto;

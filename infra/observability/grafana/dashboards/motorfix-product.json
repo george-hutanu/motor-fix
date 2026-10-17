@@ -2841,6 +2841,68 @@
       }
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 130
+      },
+      "id": 102,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, result) (increase(motorfix_verification_checks_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{kind}} {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Verification checks recorded per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 130
+      },
+      "id": 103,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, result) (increase(motorfix_verification_checks_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{kind}} {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Verification checks recorded, last 24 hours",
+      "type": "stat"
+    },
+    {
       "type": "row",
       "title": "Support",
       "collapsed": false,
@@ -2848,10 +2910,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 130
+        "y": 134
       },
       "panels": [],
-      "id": 102
+      "id": 104
     },
     {
       "type": "stat",
@@ -2864,7 +2926,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 131
+        "y": 135
       },
       "targets": [
         {
@@ -2883,7 +2945,7 @@
         },
         "overrides": []
       },
-      "id": 103
+      "id": 105
     },
     {
       "type": "stat",
@@ -2896,7 +2958,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 131
+        "y": 135
       },
       "targets": [
         {
@@ -2915,7 +2977,7 @@
         },
         "overrides": []
       },
-      "id": 104
+      "id": 106
     },
     {
       "type": "timeseries",
@@ -2928,7 +2990,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 131
+        "y": 135
       },
       "targets": [
         {
@@ -2945,7 +3007,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 105
+      "id": 107
     },
     {
       "type": "stat",
@@ -2958,7 +3020,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 135
+        "y": 139
       },
       "targets": [
         {
@@ -2977,7 +3039,7 @@
         },
         "overrides": []
       },
-      "id": 106
+      "id": 108
     },
     {
       "type": "stat",
@@ -2990,7 +3052,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 135
+        "y": 139
       },
       "targets": [
         {
@@ -3009,7 +3071,7 @@
         },
         "overrides": []
       },
-      "id": 107
+      "id": 109
     },
     {
       "type": "timeseries",
@@ -3022,7 +3084,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 135
+        "y": 139
       },
       "targets": [
         {
@@ -3039,7 +3101,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 108
+      "id": 110
     },
     {
       "type": "timeseries",
@@ -3052,7 +3114,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 139
+        "y": 143
       },
       "targets": [
         {
@@ -3069,7 +3131,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 109
+      "id": 111
     }
   ]
 }

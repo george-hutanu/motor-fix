@@ -2,6 +2,8 @@ import {
   CONSENT_DECISIONS,
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
+  VERIFICATION_CHECK_KINDS,
+  VERIFICATION_CHECK_RESULTS,
 } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
@@ -43,6 +45,10 @@ async function series() {
     );
 }
 
+// Every series the API starts: its own 67 and one per check kind and result.
+const API_SERIES =
+  67 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
 
@@ -52,7 +58,7 @@ describe("the API's product counters at start", () => {
     initProductCounters('api');
 
     const all = await series();
-    expect(all).toHaveLength(67);
+    expect(all).toHaveLength(API_SERIES);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
     expect(all.filter((one) => WORKER_ONLY.includes(one.name))).toEqual([]);
     expect(
@@ -63,6 +69,9 @@ describe("the API's product counters at start", () => {
     );
     expect(named(all, 'motorfix_consent_records_total')).toHaveLength(
       CONSENT_DECISIONS.length,
+    );
+    expect(named(all, 'motorfix_verification_checks_total')).toHaveLength(
+      VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length,
     );
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
@@ -91,6 +100,6 @@ describe("the API's product counters at start", () => {
         method: 'google',
       }),
     ).toBe(1);
-    expect(await series()).toHaveLength(67);
+    expect(await series()).toHaveLength(API_SERIES);
   });
 });

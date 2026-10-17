@@ -81,8 +81,44 @@
             @if (row.activities) {
               <span class="detail">{{ row.activities }}</span>
             }
+            @if (row.ticks) {
+              <span class="detail" data-part="ticks">{{ row.ticks }}</span>
+            }
             @if (row.recorded) {
               <span class="by">{{ row.recorded }}</span>
+            }
+            @if (row.links.length || row.form) {
+              <span class="register-actions">
+                @for (link of row.links; track link.text) {
+                  <a class="lookup" href="{{ link.url }}" target="_blank" rel="noopener noreferrer" (click)="copyCui()">{{ link.text }}</a>
+                }
+                @if (row.form) {
+                  <button
+                    type="button"
+                    class="action"
+                    [attr.data-toggle]="row.form"
+                    [attr.aria-expanded]="row.open"
+                    [attr.aria-controls]="'mf-register-form-' + row.form"
+                    (click)="toggleForm(row.form)"
+                  >
+                    {{ row.toggle }}
+                  </button>
+                }
+              </span>
+            }
+            @if (row.open && row.form) {
+              <div class="register-form" [id]="'mf-register-form-' + row.form">
+                <mf-verification-register-form
+                  [fileId]="fileId"
+                  [kind]="row.form"
+                  [result]="row.result"
+                  [certificate]="formFacts().certificate"
+                  [mobile]="formFacts().mobile"
+                  [address]="formFacts().address"
+                  (recorded)="formRecorded(row.form, $event)"
+                  (decided)="formDecided()"
+                />
+              </div>
             }
           </li>
         }

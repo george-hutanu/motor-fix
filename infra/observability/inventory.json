@@ -438,6 +438,26 @@
       "story": "ST-111"
     },
     {
+      "kind": "outside-service",
+      "name": "onrc-portal",
+      "host": "portal.onrc.ro",
+      "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "a link the admin opens in a new tab to look a company up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
+      "story": "ST-203"
+    },
+    {
+      "kind": "outside-service",
+      "name": "anaf-company-lookup",
+      "host": "mfinante.gov.ro",
+      "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "a link the admin opens in a new tab to look a CUI up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
+      "story": "ST-203"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_maintenance_refusals_total",
       "source": "libs/domain/src/auth/maintenance.ts",
@@ -962,6 +982,28 @@
       ],
       "reason": "the first opening logs one line (file, admin) and emits verification.opened; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-302"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-check-record",
+      "source": "libs/domain/src/garages/verification/verification-checks/verification-checks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/checks/:kind",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each save logs one VerificationChecks line (file, kind, result, admin; never the detail or the company name), writes an audit entry and emits verification.check_recorded, and is counted by motorfix_verification_checks_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-203"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_checks_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each check an admin records on a garage's file by kind and result; a refused save is not counted; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-203"
     },
     {
       "kind": "product-counter",
