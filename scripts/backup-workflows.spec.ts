@@ -9,6 +9,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { script } from './workflow-text.ts';
+
 // Read as text, like reset-staging.spec.ts: the workflows only run on GitHub.
 const root = join(__dirname, '..');
 const read = (...path: string[]) => readFileSync(join(root, ...path), 'utf8');
@@ -38,10 +40,49 @@ describe('the nightly backup workflow', () => {
     expect(backup).toMatch(/^ {2}workflow_dispatch:/m);
   });
 
-  it('backs up staging and production on their own, one failing never stopping the other', () => {
-    expect(backup).toMatch(/environment: \[staging, production\]/);
+  // @traces 1348-FR-003
+  it('backs up staging, and production only while it is on, one failing never stopping the other', () => {
+    const matrix = backup.match(/^ {8}environment: (.+)$/m)?.[1] ?? '';
+    const [on, off] = [...matrix.matchAll(/'(\[[^']*\])'/g)].map(([, list]) =>
+      JSON.parse(list ?? ''),
+    );
+
+    expect(matrix).toMatch(/^\$\{\{ fromJSON\(.+\) \}\}$/);
+    expect(matrix).toContain("vars.PRODUCTION_ENABLED == 'true' &&");
+    expect(on).toEqual(['staging', 'production']);
+    expect(off).toEqual(['staging']);
     expect(setting(backup, 'fail-fast')).toBe('false');
     expect(setting(backup, 'environment')).toBe(gh('matrix.environment'));
+    expect(setting(backup, 'group')).toBe(`backup-${gh('matrix.environment')}`);
+  });
+
+  // @traces 1348-FR-003
+  it('notes on the staging leg that production is off, before the settings check', () => {
+    const at = backup.indexOf('- name: Note that production is off');
+    const note = backup.slice(at, backup.indexOf('- name:', at + 1));
+
+    expect(at).toBeGreaterThan(backup.indexOf('uses: actions/setup-node'));
+    expect(at).toBeLessThan(backup.indexOf('node scripts/backup.ts settings'));
+    expect(setting(note, 'if')).toBe(
+      "matrix.environment == 'staging' && vars.PRODUCTION_ENABLED != 'true'",
+    );
+
+    const dir = mkdtempSync(join(tmpdir(), 'backup-note-'));
+    try {
+      const summary = join(dir, 'summary.md');
+      const run = spawnSync('bash', ['-e', '-c', script(note)], {
+        encoding: 'utf8',
+        env: { GITHUB_STEP_SUMMARY: summary, PATH: process.env['PATH'] },
+      });
+
+      expect(run.status).toBe(0);
+      expect(run.stdout).toMatch(/^::notice[^\n]*PRODUCTION_ENABLED/m);
+      const lines = readFileSync(summary, 'utf8').trim().split('\n');
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain('PRODUCTION_ENABLED');
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
   });
 
   it('checks its settings first and skips every later step when the environment has none', () => {
