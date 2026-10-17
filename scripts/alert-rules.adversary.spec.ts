@@ -231,6 +231,7 @@ describe('Grafana alerts workflow under hostile input', () => {
         // Like curl, a read with -o writes its answer to that file.
         'out=""; prev=""; for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done',
         'case "$*" in *"?name=motorfix-outage"*) list="$OUTAGE_LIST_BODY";; *) list="$LIST_BODY";; esac',
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a shell parameter expansion, not a JS template.
         '[ -n "$out" ] && printf "%s" "${list:-[]}" > "$out"',
         // A write that asks for its status with -w is accepted with 200.
         'case " $* " in *" -w "*) printf 200;; esac',
