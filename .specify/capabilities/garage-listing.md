@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -26,6 +26,7 @@ features:
   - 226-best-rated-brand-dial
   - 115-listing-checklist
   - 1204-hours-row-live-regions
+  - 049-garage-suspension
 ---
 
 # Capability: Garage listing
@@ -895,6 +896,14 @@ _From 1204-hours-row-live-regions._
 ### 1204-FR-008 — The colocated component tests MUST cover, before the change is made, each of the four region kinds (weekdays, Saturday, a day row, closed day): present and empty before an error, holding the text during one, empty after it; and the tests that count or list the step's status regions MUST keep passing with their meaning intact: the helper that lists the regions' texts leaves the empty ones out, so its existing assertions stay unchanged.
 
 _From 1204-hours-row-live-regions._
+
+### 049-FR-012 — The garage dashboard MUST show every staff member (owner, receptionist, mechanic), when the signed-in garage's status is `suspended`, a red banner above the overview reading "Profil suspendat · {reason}. Profilul nu apare pe hartă până se rezolvă." / "Profile suspended · {reason}. The profile is off the map until this is fixed." followed by the next step for the cause (FR-011's three), as a `role="alert"` region, in the signed-in language, with no horizontal scroll at 320 px; the garage's session data MUST carry the open suspension's cause and reason for it. No banner for an `approved` or `draft` garage. On `garage.suspended` arriving on the staff stream, the dashboard MUST re-read the session's garage and show the banner without a reload.
+
+_From 049-garage-suspension._
+
+### 049-FR-013 — A suspended garage's owner, receptionists and mechanics MUST still sign in and reach the dashboard's views: the cars in the workshop, the documents, the history, the requests list (where the closed-for-suspension reason already shows). The suspension MUST delete or detach nothing: the account, the members, the reviews, the rating and the history stay, so #106 can show them again.
+
+_From 049-garage-suspension._
 
 ## Retired
 
