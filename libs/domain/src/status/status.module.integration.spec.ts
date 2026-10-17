@@ -527,6 +527,20 @@ describe('the system log entries of a run', () => {
     });
   });
 
+  it('does not write the same backup again when the log cannot be read', async () => {
+    const at = hours(3);
+    const backup = async () => at;
+    tick();
+    await run({ backup });
+    const read = jest
+      .spyOn(prisma.systemLogEntry, 'findFirst')
+      .mockRejectedValueOnce(new Error('log down'));
+    tick();
+    await run({ backup });
+    read.mockRestore();
+    expect(await entries('backup_completed')).toHaveLength(1);
+  });
+
   it('does not write the same backup again after a failed check in between', async () => {
     const at = hours(3);
     let reachable = true;

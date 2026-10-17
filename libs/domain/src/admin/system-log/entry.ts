@@ -110,7 +110,7 @@ type Derive<K extends Kind> = (
 ) => Entry;
 
 // The one place an entry's severity, grouping key and English message come
-// from (data-model.md, entry derivation).
+// from.
 const DERIVE: { [K in Kind]: Derive<K> } = {
   backup_completed: (c) => ({
     fingerprint: c.backup_at,

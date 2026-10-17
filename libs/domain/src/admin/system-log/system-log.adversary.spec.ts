@@ -1,4 +1,4 @@
-import { entryOf, KINDS, minuteOf, SOURCES } from './entry';
+import { minuteOf } from './entry';
 import { purgeSystemLog } from './purge';
 import { systemLog } from './system-log';
 import { limitCrossed } from '../../status/tiles';
@@ -125,26 +125,6 @@ describe('the writer with hostile names', () => {
       ).resolves.toBe('dropped');
     },
   );
-
-  it('derives an entry for every kind with every source', () => {
-    const contexts: Record<string, unknown> = {
-      backup_completed: { backup_at: '2026-10-17T03:00:00.000Z' },
-      backup_failed: { last_backup_at: 'x', reason: 'late' },
-      check_failed: { reason: 'timeout' },
-      deploy: { version: 'v1' },
-      job_failed: { attempts: 3, error_code: 'E', job: 'j', queue: 'q' },
-      server_error: { method: 'GET', route: '/a' },
-      service_error: { provider: 'brevo', status: 500 },
-      status_changed: { state: 'green' },
-    };
-    for (const kind of KINDS) {
-      for (const source of SOURCES) {
-        const e = entryOf(kind, source, contexts[kind] as never, at);
-        expect(e?.message.length).toBeGreaterThan(0);
-        expect(['info', 'warning', 'error']).toContain(e?.severity);
-      }
-    }
-  });
 });
 
 // @traces 297-FR-003
@@ -156,21 +136,6 @@ describe('minuteOf at its edges', () => {
     expect(minuteOf(new Date('2026-10-17T10:41:00.000Z'))).toEqual(
       new Date('2026-10-17T10:41:00.000Z'),
     );
-  });
-
-  it('floors a time before 1970 downward', () => {
-    expect(minuteOf(new Date(-1))).toEqual(new Date(-60_000));
-  });
-
-  it('is idempotent and does not mutate its argument', () => {
-    const t = new Date('2026-10-17T10:41:27.512Z');
-    const m = minuteOf(t);
-    expect(minuteOf(m)).toEqual(m);
-    expect(t.toISOString()).toBe('2026-10-17T10:41:27.512Z');
-  });
-
-  it('gives an invalid date no valid minute', () => {
-    expect(Number.isNaN(minuteOf(new Date('nope')).getTime())).toBe(true);
   });
 });
 

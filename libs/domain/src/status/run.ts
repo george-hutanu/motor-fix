@@ -135,11 +135,15 @@ interface Judgement {
   outcome: Outcome;
 }
 
-// The newest backup the log already holds as completed, if any.
-async function lastCompleted(prisma: PrismaClient): Promise<number | null> {
+// The newest backup the log already holds as completed: null when none,
+// undefined when the log cannot be read, so nothing is written twice.
+async function lastCompleted(
+  prisma: PrismaClient,
+): Promise<number | null | undefined> {
   const entry = await prisma.systemLogEntry
     .findFirst({ orderBy: { at: 'desc' }, where: { kind: 'backup_completed' } })
-    .catch(() => null);
+    .catch(() => undefined);
+  if (entry === undefined) return undefined;
   const at = (entry?.context as { backup_at?: string } | null)?.backup_at;
   return at ? Date.parse(at) : null;
 }
@@ -152,6 +156,7 @@ async function writeBackup(
   const last = row.detail['last_backup_at'];
   if (typeof last !== 'string') return;
   const logged = await lastCompleted(deps.prisma);
+  if (logged === undefined) return;
   if (logged === null || Date.parse(last) > logged) {
     await systemLog.write(
       'backup_completed',

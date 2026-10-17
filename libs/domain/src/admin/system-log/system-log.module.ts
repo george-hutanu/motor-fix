@@ -106,15 +106,25 @@ class SystemLogJobs implements OnApplicationBootstrap, OnApplicationShutdown {
   }
 
   // Once per release: a restart or a second instance of the same version
-  // finds it already the newest deploy entry; a rollback is a new one.
+  // finds it already the newest deploy entry; a rollback is a new one. The
+  // lock holds a second instance booting at the same time until the first
+  // has written, whichever minute each lands in.
   private async deployed() {
     const { version } = this.options;
     if (!version || version === 'dev') return;
-    const newest = await this.writer.prisma.systemLogEntry
-      .findFirst({ orderBy: { at: 'desc' }, where: { kind: 'deploy' } })
-      .catch(() => null);
-    if (newest?.fingerprint === version) return;
-    await systemLog.write('deploy', 'worker', { version });
+    await this.writer.prisma
+      .$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('system_log_deploy'))`;
+        const newest = await tx.systemLogEntry.findFirst({
+          orderBy: { at: 'desc' },
+          where: { kind: 'deploy' },
+        });
+        if (newest?.fingerprint === version) return;
+        await systemLog.write('deploy', 'worker', { version });
+      })
+      .catch(() =>
+        this.logger.warn(`Deploy of ${version} not checked against the log`),
+      );
   }
 
   async onApplicationShutdown() {

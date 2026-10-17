@@ -77,6 +77,22 @@ describe('the deploy entry', () => {
     expect(rows[0]?.count).toBe(1);
   });
 
+  it('is written once by two instances of a new release booting either side of a minute', async () => {
+    const write = systemLog.write.bind(systemLog);
+    let minutes = 0;
+    const spy = jest
+      .spyOn(systemLog, 'write')
+      .mockImplementation(async (kind, source, context) => {
+        const at = new Date(Date.now() + minutes++ * 60_000);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        return write(kind, source, context, at);
+      });
+    const apps = await Promise.all([boot('a1b2c3d'), boot('a1b2c3d')]);
+    spy.mockRestore();
+    await Promise.all(apps.map((app) => app.close()));
+    expect(await deploys()).toHaveLength(1);
+  });
+
   it('is written for a new release, and again for a rollback to an older one', async () => {
     await bootOnce('a1b2c3d');
     await bootOnce('e4f5a6b');
