@@ -111,6 +111,8 @@ export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueu
 export { adminOverviewControllerQueue as adminOverviewControllerQueue } from './fn/admin/admin-overview-controller-queue';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';
+export { suspensionControllerSuspend as suspensionControllerSuspend } from './fn/admin/suspension-controller-suspend';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';

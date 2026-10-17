@@ -222,10 +222,30 @@ describe('pr view', () => {
       'GET commits/head1/status': { statuses: [{ context: 'agent-review', state: 'success' }] },
     });
     assert.deepEqual(JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup, [
-      { __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' },
-      { __typename: 'CheckRun', name: 'Unit tests', status: 'IN_PROGRESS', conclusion: '' },
+      { __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS', workflowName: '' },
+      { __typename: 'CheckRun', name: 'Unit tests', status: 'IN_PROGRESS', conclusion: '', workflowName: '' },
       { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' },
     ]);
+  });
+
+  // @traces 1344-FR-010
+  it("gives each CheckRun its workflow's name, empty when the runs cannot be read", () => {
+    const checks = { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success', check_suite: { id: 4 } }, { name: 'scripts', status: 'queued', conclusion: null, check_suite: { id: 9 } }] };
+    const f = fake({
+      'GET pulls/160': pull(),
+      'GET commits/head1/check-runs?per_page=100': checks,
+      'GET commits/head1/status': { statuses: [] },
+      'GET actions/runs?head_sha=head1&per_page=100': { workflow_runs: [{ check_suite_id: 4, name: 'CI' }, { check_suite_id: 9, name: 'Mutation' }] },
+    });
+    assert.deepEqual(
+      JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup.map((c) => c.workflowName),
+      ['CI', 'Mutation'],
+    );
+    const down = fake({ 'GET pulls/160': pull(), 'GET commits/head1/check-runs?per_page=100': checks, 'GET commits/head1/status': { statuses: [] } });
+    assert.deepEqual(
+      JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], down).stdout).statusCheckRollup.map((c) => c.workflowName),
+      ['', ''],
+    );
   });
 
   it('answers a branch with no PR the way gh does', () => {
@@ -369,15 +389,35 @@ describe('pr checks', () => {
     assert.equal(r.code, 1);
   });
 
-  it('keeps every run when the workflows cannot be read, and reads them only for a repeated name', () => {
+  it('keeps every run when the workflows cannot be read', () => {
     const at = (c, suite, started_at) => ({ ...c, check_suite: { id: suite }, started_at });
     const f = fake(routes([at(run('body', 'completed', 'success'), 2, '2026-10-06T17:54:52Z'), at(run('body', 'completed', 'cancelled'), 1, '2026-10-06T17:54:47Z')]));
     const r = gh(['pr', 'checks', '160', '--json', 'name,bucket'], f);
     assert.deepEqual(JSON.parse(r.stdout).map((c) => c.bucket), ['pass', 'cancel']);
     assert.equal(r.code, 1);
-    const once = fake(routes([run('Biome', 'completed', 'success')]));
-    gh(['pr', 'checks', '160'], once);
-    assert.equal(once.api().filter((c) => c.includes('actions/runs')).length, 0);
+  });
+
+  // @traces 1344-FR-010
+  it("names each check's workflow under --json from the suite map, even when no name repeats", () => {
+    const at = (c, suite) => ({ ...c, check_suite: { id: suite } });
+    const f = fake({
+      ...routes([at(run('Biome', 'completed', 'success'), 4), at(run('scripts', 'in_progress'), 9), at(run('lone', 'completed', 'success'), 7)], [{ context: 'agent-review', state: 'success' }]),
+      'GET actions/runs?head_sha=head1&per_page=100': { workflow_runs: [{ check_suite_id: 4, name: 'CI' }, { check_suite_id: 9, name: 'Mutation' }] },
+    });
+    const r = gh(['pr', 'checks', '160', '--json', 'name,workflow'], f);
+    assert.deepEqual(JSON.parse(r.stdout), [
+      { name: 'Biome', workflow: 'CI' },
+      { name: 'scripts', workflow: 'Mutation' },
+      { name: 'lone', workflow: '' },
+      { name: 'agent-review', workflow: '' },
+    ]);
+  });
+
+  // @traces 1344-FR-010
+  it('names no workflow when the runs cannot be read, keeping every check (fail open)', () => {
+    const f = fake({ ...routes([run('Biome', 'completed', 'success')]), 'GET actions/runs?head_sha=head1&per_page=100': { code: 1, stderr: 'gh: HTTP 502' } });
+    const r = gh(['pr', 'checks', '160', '--json', 'name,workflow'], f);
+    assert.deepEqual(JSON.parse(r.stdout), [{ name: 'Biome', workflow: '' }]);
   });
 
   // @traces 1230-FR-010

@@ -20,29 +20,31 @@ const numbers = (text: string) =>
   (text.match(/\d+/g) ?? []).filter((n) => n !== '1').sort();
 
 describe('legal texts, structure and hygiene', () => {
-  // @traces 243-FR-012 1203-FR-005
-  it.each(kinds)(
+  // @traces 243-FR-012 1203-FR-005 366-FR-003
+  it.each([
+    ['terms', TERMS_VERSION, '2026-10-12'],
+    ['privacy', PRIVACY_VERSION, '2026-10-17'],
+  ] as const)(
     'the %s of both languages carries the shared version',
-    (kind) => {
-      const expected = kind === 'terms' ? TERMS_VERSION : PRIVACY_VERSION;
-
+    (kind, expected, date) => {
       expect(LEGAL_TEXTS.ro[kind].version).toBe(expected);
       expect(LEGAL_TEXTS.en[kind].version).toBe(expected);
-      expect(expected).toBe('2026-10-12');
+      expect(expected).toBe(date);
     },
   );
 
-  // @traces 243-FR-012 1203-FR-005
+  // @traces 243-FR-012 1203-FR-005 366-FR-003
   it.each(languages)(
     'no %s text still names a replaced version date',
     (language) => {
       for (const kind of kinds)
         for (const replaced of ['2026-10-05', '2026-10-11'])
           expect(whole(language, kind)).not.toContain(replaced);
+      expect(whole(language, 'privacy')).not.toContain('2026-10-12');
     },
   );
 
-  // @traces 243-FR-001 1203-FR-009
+  // @traces 243-FR-001 1203-FR-009 366-FR-006
   it.each(kinds)(
     'the %s has the same sections and paragraph counts in both languages',
     (kind) => {

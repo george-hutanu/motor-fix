@@ -21,6 +21,7 @@ const mini: CarDto = {
   id: 'car-mini',
   itpUntil: null,
   model: 'Cooper S',
+  nextServiceKm: null,
   odometerKm: 61000,
   plate: null,
   rcaUntil: null,

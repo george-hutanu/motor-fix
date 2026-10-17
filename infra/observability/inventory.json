@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 118,
+    "count": 119,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -208,6 +208,18 @@
       ],
       "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told, and one for a sending (ST-301) with the number of admins told (the counter counts decisions only); the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
       "story": "ST-209"
+    },
+    {
+      "kind": "queue",
+      "name": "garage-suspended",
+      "source": "libs/domain/src/notifications/garage-suspended/garage-suspended.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
+      "story": "ST-49"
     },
     {
       "kind": "queue",
@@ -504,12 +516,43 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_garage_suspended_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each suspension told to its garage's owners by outcome (built, skipped: no owner or no open suspension), with the fan-out's log line naming the garage id; a count has no failure to alert on, the garage-suspended queue entry owns the failed-job alert",
+      "story": "ST-49"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_garage_suspensions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each garage suspension by cause (recheck_failed, documents_overdue, admin, report_confirmed); the audit holds who and why; a count has no failure to alert on, the admin-garage-suspension endpoint entry owns the error and latency alerts",
+      "story": "ST-49"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_quote_received_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
       "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-344"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garage-suspension",
+      "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/suspend",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each suspension and each refused one is audited with the admin, the cause and the reason; the count by cause is the motorfix_garage_suspensions_total entry",
+      "story": "ST-49"
     },
     {
       "kind": "endpoint",

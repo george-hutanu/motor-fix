@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -408,4 +408,11 @@ describe('the sweep measures the layout', async () => {
     const findings = await sweep('/owner-pass.html');
     assert.deepEqual(findings.filter((f) => f.kind === 'layout').map((f) => f.title), []);
   }, 60000);
+});
+
+describe('the sweep\'s screenshots', () => {
+  // A dial's needle caught mid-transition shows as changed pixels on a page the PR never touched.
+  it('finish every transition and animation before the shot, of the whole page', () => {
+    assert.deepEqual(SHOT_OPTIONS, { animations: 'disabled', fullPage: true });
+  });
 });

@@ -209,5 +209,6 @@ export const CANNOT_RECEIVE_REASONS = [
   'fuel',
   'jobs',
   'not_taking_requests',
+  'garage_suspended',
 ] as const;
 export type CannotReceiveReason = (typeof CANNOT_RECEIVE_REASONS)[number];

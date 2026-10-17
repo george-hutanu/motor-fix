@@ -30,6 +30,9 @@ export const VIEWPORTS = {
   // The narrowest phone the specs promise no horizontal scrolling at.
   "small-phone": { width: 320, height: 568, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
+// Every shot is of the whole page, its transitions and animations run to their end first: a dial's
+// needle caught halfway is a pixel change the PR never made.
+export const SHOT_OPTIONS = { animations: "disabled", fullPage: true };
 const LOCALES = { ro: "ro-RO", en: "en-GB" };
 // Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
 const LANG_KEY = "mf.lang";
@@ -248,7 +251,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
         // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
-        await page.screenshot({ path: screenshot, fullPage: true });
+        await page.screenshot({ ...SHOT_OPTIONS, path: screenshot });
         screenshots.push(screenshot);
         if (!problem) {
           const layout = await page.evaluate(measureLayout, { phone: vp.isMobile, tapTargets: vp.hasTouch, focus: run.viewport === "desktop" });

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 253-live-connection
   - 254-live-audience
@@ -16,6 +16,7 @@ features:
   - 260-rule-off-confirm
   - 267-brand-results
   - 1175-valkey
+  - 049-garage-suspension
 ---
 
 # Capability: Live updates
@@ -367,6 +368,10 @@ _From 267-brand-results._
 ### 1175-FR-009 — The clients MUST run on ioredis's default protocol (RESP3, `replyMapping: "legacy"`): no client pins `protocol`, except the live subscriber, which MUST be pinned to `protocol: 2` if and only if a live-update test (publisher, subscriber and relay specs in Jest; the web-e2e live scenarios) fails twice under RESP3 against Valkey 9 and passes under `protocol: 2` on the same head; the pin, when made, carries a comment naming the failing case and the plan records it.
 
 _From 1175-valkey._
+
+### 049-FR-007 — The `garage.suspended` event MUST reach, through the existing audience resolver (419-FR-006): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, the all-brands results channel `public:search` (which every open results page and brand page joins beside its brand's channel, 419-FR-003) and `admin`; and the relay MUST drop the garage's cached public answers (its profile entries, the search and brand-page entries) as it does for every public garage change (267-FR-010, 1182-FR-007). An open results page re-reads and drops the card without a reload; an open profile re-reads, gets 410 and switches to the "no longer available" view (307-FR-018). Both behaviours exist; this story proves them end to end for a suspension.
+
+_From 049-garage-suspension._
 
 ## Retired
 

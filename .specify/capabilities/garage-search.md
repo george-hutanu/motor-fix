@@ -12,6 +12,7 @@ features:
   - 1182-cache-service
   - 1169-prefetch-intent
   - 269-map-price-pins
+  - 049-garage-suspension
 ---
 
 # Capability: Garage search
@@ -251,6 +252,9 @@ _From 269-map-price-pins._
 ### 269-FR-021 — Jest on real PostgreSQL and Redis MUST cover: the pins for the 25 km circle and for a box; the 500 cap with the nearest kept and `total` exact; a mobile mechanic only when the place is inside its area, in both modes, and never by the box alone; draft, suspended and never-approved garages excluded; `bbox` validation (wider than 100 km, outside Romania, inverted corners); the list route in visible-area mode (groups, order, counts, distances from the place, no SEARCH_LOG row with `log=1`); the cache key with the box and the drop on a public garage event; the public routes list. Web unit tests MUST cover the pin label and colour for each stance and a null rate, the circle for a mobile mechanic, the legend texts in both languages, the 400 ms stillness and the 100 km guard, the "Înapoi la 25 km" return, the loading, tiles-failed and pins-failed states, and the live re-read. Playwright, with the tile service stubbed: open Results and check the number of pins equals the total of fixed garages found; drag the map and see the list and the total change; tap "Înapoi la 25 km".
 
 _From 269-map-price-pins._
+### 049-FR-006 — Every public read MUST keep going through the one public scope (`status = approved`), so a suspended garage is in neither group and neither count of the brand search (043-FR-002), absent from the brand pages' counts and dials, answers 410 `gone` on its profile (307-FR-001) and is never a recipient of request routing (221-FR-007). This story adds no new read and MUST prove the rule with tests on a garage suspended through the use case.
+
+_From 049-garage-suspension._
 
 ## Retired
 

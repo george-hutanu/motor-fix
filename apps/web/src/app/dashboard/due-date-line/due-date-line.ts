@@ -7,19 +7,14 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
-  daysUntil,
   formatDay,
   formatMonthYear,
   I18n,
   TranslatePipe,
 } from '@motor-fix/i18n';
-import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
+import { Lamp } from '@motor-fix/ui-cockpit';
 
-interface DueDateStatus {
-  state: LampState;
-  days: number | null;
-  passed: boolean;
-}
+import { type DueDateStatus, dueDateStatus } from '../car-lines/car-lines';
 
 interface DueDateLink {
   label: string;
@@ -29,15 +24,6 @@ interface DueDateLink {
   params?: Record<string, string>;
   path: string[];
   query: Record<string, string>;
-}
-
-function dueDateStatus(expiry: string | null, now: Date): DueDateStatus {
-  const days = daysUntil(expiry, now);
-  if (days === null) return { days, passed: false, state: 'grey' };
-  if (days < 0) return { days, passed: true, state: 'red' };
-  if (days <= 7) return { days, passed: false, state: 'red' };
-  if (days <= 60) return { days, passed: false, state: 'amber' };
-  return { days, passed: false, state: 'green' };
 }
 
 // A lamp and a sentence for a date that runs out, such as the ITP. It reads
