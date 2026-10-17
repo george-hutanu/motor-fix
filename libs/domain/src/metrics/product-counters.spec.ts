@@ -1,4 +1,8 @@
-import { CONSENT_DECISIONS, DOCUMENT_KINDS } from '@motor-fix/contracts';
+import {
+  CONSENT_DECISIONS,
+  DOCUMENT_KINDS,
+  SYSTEM_LOG_KINDS,
+} from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
@@ -22,7 +26,6 @@ import {
   countSystemLogEntry,
   countVerificationResult,
 } from './product-counters';
-import { KINDS } from '../admin/system-log/entry';
 import { TEMPLATES } from '../notifications/templates/registry';
 
 const STEP_ACTIONS = [
@@ -100,7 +103,7 @@ function countEverySeries() {
   (['built', 'skipped'] as const).forEach((outcome) => {
     countVerificationResult(outcome);
   });
-  for (const kind of KINDS) {
+  for (const kind of SYSTEM_LOG_KINDS) {
     for (const outcome of ['written', 'grouped', 'dropped'] as const)
       countSystemLogEntry(kind, outcome);
   }

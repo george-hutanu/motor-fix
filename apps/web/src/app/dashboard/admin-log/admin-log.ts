@@ -74,7 +74,7 @@ export class AdminLog {
             }
           : undefined,
       id: entry.id,
-      lamp: LAMPS[entry.severity] ?? 'grey',
+      lamp: LAMPS[entry.severity],
       text: lineOf(entry, this.i18n),
       word: this.i18n.t(`admin.log.severity.${entry.severity}`),
     })),

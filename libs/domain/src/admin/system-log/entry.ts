@@ -1,18 +1,6 @@
-import {
-  SYSTEM_LOG_KINDS,
-  SYSTEM_LOG_SOURCES,
-  type SystemLogKind,
-  type SystemLogSource,
-} from '@motor-fix/contracts';
+import type { SystemLogKind, SystemLogSource } from '@motor-fix/contracts';
 
 import type { Figures, TileKey, TileState } from '../../status/tiles';
-
-// The lists are the contract's, so the read and the writer cannot drift.
-export const KINDS = SYSTEM_LOG_KINDS;
-export type Kind = SystemLogKind;
-
-export const SOURCES = SYSTEM_LOG_SOURCES;
-export type Source = SystemLogSource;
 
 type Severity = 'info' | 'warning' | 'error';
 
@@ -72,12 +60,16 @@ const LIMIT_UNITS: Record<keyof Figures, (value: number) => string> = {
   oldest_waiting_s: (s) => (s >= 60 ? `${trim(s / 60)} min` : `${trim(s)} s`),
 };
 
-const tileName = (source: Source) => TILE_NAMES[source as TileKey] ?? source;
+const tileName = (source: SystemLogSource) =>
+  TILE_NAMES[source as TileKey] ?? source;
 
 const capitalised = (name: string) =>
   name.charAt(0).toUpperCase() + name.slice(1);
 
-function tileChange(source: Source, c: Contexts['status_changed']): string {
+function tileChange(
+  source: SystemLogSource,
+  c: Contexts['status_changed'],
+): string {
   const tile = tileName(source);
   if (c.state === 'green') return `${tile}: back to normal.`;
   if (c.figure && c.limit !== undefined) {
@@ -91,15 +83,15 @@ function tileChange(source: Source, c: Contexts['status_changed']): string {
 const answer = (c: Contexts['service_error']) =>
   'status' in c ? String(c.status) : c.reason;
 
-type Derive<K extends Kind> = (
+type Derive<K extends SystemLogKind> = (
   c: Contexts[K],
-  source: Source,
+  source: SystemLogSource,
   at: Date,
 ) => Entry;
 
 // The one place an entry's severity, grouping key and English message come
 // from.
-const DERIVE: { [K in Kind]: Derive<K> } = {
+const DERIVE: { [K in SystemLogKind]: Derive<K> } = {
   backup_completed: (c) => ({
     fingerprint: c.backup_at,
     message: `Backup completed at ${c.backup_at}.`,
@@ -143,9 +135,9 @@ const DERIVE: { [K in Kind]: Derive<K> } = {
 };
 
 // The kind and source are checked against the lists by the writer, once.
-export function entryOf<K extends Kind>(
+export function entryOf<K extends SystemLogKind>(
   kind: K,
-  source: Source,
+  source: SystemLogSource,
   context: Contexts[K],
   at: Date,
 ): Entry {
