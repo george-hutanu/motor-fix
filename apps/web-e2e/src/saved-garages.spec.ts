@@ -87,9 +87,10 @@ test.describe('the saved garages list @seeded', () => {
     await clear();
     for (const [i, brand] of brands.entries()) {
       await db.query(
-        `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km, idempotency_key)
-         VALUES (gen_random_uuid(), $1, $2, 'E2E', 2018, $3::fuel, 100000, $4)`,
-        [driverId, brandIds[i], brand.fuel, `e2e-salvat-${stamp}-${i}`],
+        // The first brand's car is the newest, so the line names it first.
+        `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km, idempotency_key, created_at)
+         VALUES (gen_random_uuid(), $1, $2, 'E2E', 2018, $3::fuel, 100000, $4, now() - $5 * interval '1 minute')`,
+        [driverId, brandIds[i], brand.fuel, `e2e-salvat-${stamp}-${i}`, i],
       );
     }
     // Saved earlier than the one the test saves, so it lists second.
@@ -111,11 +112,20 @@ test.describe('the saved garages list @seeded', () => {
     page,
   }) => {
     await ready(page, `/ro/garages/${slug}`);
+    // The button turns to Salvat before the server has the save: wait for it,
+    // or leaving the page cancels it.
+    const stored = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/api/v1/me/saved-garages/') &&
+        res.ok(),
+    );
     await page.getByRole('button', { exact: true, name: 'Salvează' }).click();
     await signIn(page, ACCOUNTS.driver);
     await expect(
       page.getByRole('button', { exact: true, name: 'Salvat' }),
     ).toBeVisible();
+    await stored;
 
     // The list keeps the live stream open, so networkidle never comes: wait
     // for the list itself.
