@@ -15,10 +15,14 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import type { GarageSearchCache } from '../../search/garage-search/garage-search.cache';
+import { GarageSearchService } from '../../search/garage-search/garage-search.service';
 import { HomeService } from '../../search/home/home.service';
+import { SearchLogService } from '../../search/search-log/search-log.service';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
+import { SuspensionService } from '../verification/suspension/suspension.service';
 import { VerificationService } from '../verification/verification.service';
 
 // @traces 207-FR-005 207-FR-011 040-FR-012
@@ -1260,5 +1264,72 @@ describe('the response rate a profile carries', () => {
     expect((await read(approved.slug)).body.responseRate).toEqual({
       state: 'none',
     });
+  });
+});
+
+// @traces 049-FR-006 049-FR-007
+describe('a garage suspended through the use case', () => {
+  const uncached = {
+    entry: (_key, read) => read(),
+  } satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
+  const search = () =>
+    new GarageSearchService(prisma, uncached, new SearchLogService(prisma));
+
+  async function listed() {
+    const approved = await garage('approved');
+    const brand = await catalogueBrand('Bmw');
+    await prisma.garageBrand.create({
+      data: { brandId: brand.id, garageId: approved.id, stance: 'works_on' },
+    });
+    return { approved, brand };
+  }
+
+  // The relay purges the event's audience before it publishes it.
+  async function suspend(garageId: string) {
+    await app
+      .get(SuspensionService)
+      .suspend(
+        { accountId: null, role: 'system' },
+        garageId,
+        'recheck_failed',
+        'Autorizație RAR expirată',
+      );
+    const event = await prisma.outboxEvent.findFirstOrThrow({
+      where: { kind: 'garage.suspended', subjectId: garageId },
+    });
+    await purgeAudience(app.get(AUTH_REDIS), event.audience);
+  }
+
+  it('leaves both groups and both counts of the brand search', async () => {
+    const { approved, brand } = await listed();
+    expect((await search().forBrand(brand.id)).total).toBe(1);
+
+    await suspend(approved.id);
+
+    const page = await search().forBrand(brand.id);
+    expect(page.total).toBe(0);
+    expect(page.counts).toEqual({ doesNotTake: 0, worksOn: 0 });
+    expect(page.items).toEqual([]);
+  });
+
+  it('leaves the brand page counts and its best garage', async () => {
+    const { approved, brand } = await listed();
+    expect((await new HomeService(prisma).forBrand(brand.slug)).takers).toBe(1);
+
+    await suspend(approved.id);
+
+    const shown = await new HomeService(prisma).forBrand(brand.slug);
+    expect(shown).toMatchObject({ best: null, takers: 0, total: 0 });
+    expect(shown.preview).toEqual([]);
+  });
+
+  it('answers 410 gone on a profile that was cached before the suspension', async () => {
+    const { approved } = await listed();
+    expect((await read(approved.slug)).status).toBe(200);
+
+    await suspend(approved.id);
+
+    const res = await read(approved.slug);
+    expect([res.status, res.body.code]).toEqual([410, 'gone']);
   });
 });

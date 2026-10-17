@@ -26,6 +26,7 @@ const dashboardsDir = join(
   'grafana',
   'dashboards',
 );
+const alertingDir = join(root, 'infra', 'observability', 'grafana', 'alerting');
 
 type Query = {
   refId: string;
@@ -77,6 +78,38 @@ const SERVICES = {
 } as const;
 type Service = keyof typeof SERVICES;
 const OWN = Object.keys(SERVICES).map((s) => `${s}.json`);
+
+// The process's resident memory over its container's limit, per environment.
+const memory = (service: string) =>
+  `max by (deployment_environment) (process_memory_usage_bytes{service_name="${service}"} / on (deployment_environment, instance) motorfix_process_memory_limit_bytes{service_name="${service}"})`;
+const MEMORY = (service: string) => ({
+  expr: [memory(service)],
+  for: '10m',
+  from: 300,
+  type: 'gt' as const,
+  value: 0.85,
+});
+
+// The only rules that fire with no wait: each query's own window already
+// holds it (an absence over 5 minutes, a rate or an increase over its window),
+// or a single event is the alert.
+const ZERO_WAIT = new Set([
+  'api-down',
+  'web-down',
+  'worker-down',
+  'mcp-down',
+  'api-error-rate',
+  'web-error-rate',
+  'mcp-tool-errors',
+  'worker-jobs-failed',
+  'verification-result-failed',
+  'profile-views-job-failed',
+  'profile-views-lost',
+  'mcp-auth-failures',
+  'mcp-key-fetch-failures',
+  'decline-window-sweep-late',
+  'outage',
+]);
 
 // What each rule watches: its threshold, how long it pends, the window its
 // query reads, and the fragments of PromQL that make it that signal.
@@ -133,6 +166,7 @@ const EXPECTED: Record<
     type: 'gt',
     value: 1.5,
   },
+  'api-memory': MEMORY('api'),
   'api-prefetch-hit-rate': {
     expr: [
       'motorfix_cache_total{service_name="api", kind=~"driver-home|garage-home", outcome="hit"}[1h]',
@@ -155,6 +189,15 @@ const EXPECTED: Record<
     type: 'gt',
     value: 0.05,
   },
+  'api-search-latency': {
+    expr: [
+      'histogram_quantile(0.95, sum by (deployment_environment, le) (rate(http_server_request_duration_seconds_bucket{service_name="api", http_route="/api/v1/search/garages"}[5m])))',
+    ],
+    for: '10m',
+    from: 300,
+    type: 'gt',
+    value: 0.3,
+  },
   'api-search-log-failure-rate': {
     expr: [
       'motorfix_search_log_total{service_name="api", outcome="failed"}[10m]',
@@ -175,6 +218,15 @@ const EXPECTED: Record<
     from: 300,
     type: 'gt',
     value: 0.8,
+  },
+  'postgres-outbox-stuck': {
+    expr: [
+      'max by (deployment_environment) (motorfix_outbox_oldest_pending_seconds)',
+    ],
+    for: '5m',
+    from: 300,
+    type: 'gt',
+    value: 60,
   },
   'postgres-size': {
     expr: ['motorfix_pg_database_size_bytes'],
@@ -246,6 +298,17 @@ const EXPECTED: Record<
     type: 'gt',
     value: 3,
   },
+  'web-memory': MEMORY('web'),
+  'worker-cdn-purge-failed': {
+    expr: [
+      'by (deployment_environment)',
+      'increase(motorfix_cdn_purges_total{outcome="failed"}[5m])',
+    ],
+    for: '15m',
+    from: 300,
+    type: 'gt',
+    value: 0,
+  },
   'worker-down': {
     expr: [
       'target_info{service_name="worker"}[24h]',
@@ -267,6 +330,7 @@ const EXPECTED: Record<
     type: 'gt',
     value: 0,
   },
+  'worker-memory': MEMORY('worker'),
   'worker-queue-backlog': {
     expr: [
       'by (deployment_environment, queue)',
@@ -277,6 +341,15 @@ const EXPECTED: Record<
     type: 'gt',
     value: 600,
   },
+  'worker-queue-growing': {
+    expr: [
+      'max by (deployment_environment, queue) (delta(motorfix_queue_waiting[5m]))',
+    ],
+    for: '15m',
+    from: 300,
+    type: 'gt',
+    value: 0,
+  },
   'worker-saturation': {
     expr: ['nodejs_eventloop_delay_p99_seconds{service_name="worker"}'],
     for: '5m',
@@ -285,7 +358,11 @@ const EXPECTED: Record<
     value: 0.5,
   },
 };
-const QUEUE_RULES = ['worker-queue-backlog', 'worker-jobs-failed'];
+const QUEUE_RULES = [
+  'worker-queue-backlog',
+  'worker-jobs-failed',
+  'worker-queue-growing',
+];
 
 const PROMQL_WORDS = new Set([
   'and',
@@ -367,10 +444,23 @@ function problems(files: Files, known = dashboardMetrics()): string[] {
     const other = seen.get(rule.uid);
     if (other) found.push(`${at}: uid also in ${other}`);
     seen.set(rule.uid, name);
+    found.push(...waitProblems(at, rule));
     if (OWN.includes(name))
       found.push(...ruleProblems(at, group.name as Service, rule, known));
   }
   if (all.length > 50) found.push(`${all.length} rules in all; at most 50`);
+  return found;
+}
+
+/** A rule in any file without a runbook, or without a wait of its own. */
+function waitProblems(at: string, rule: Rule): string[] {
+  const found: string[] = [];
+  if (!(rule.annotations?.['runbook'] ?? '').trim())
+    found.push(`${at}: no runbook`);
+  if (typeof rule.for !== 'string' || !/^\d+[smh]$/.test(rule.for))
+    found.push(`${at}: no explicit for`);
+  else if (/^0[smh]$/.test(rule.for) && !ZERO_WAIT.has(rule.uid))
+    found.push(`${at}: waits 0s outside the table`);
   return found;
 }
 
@@ -414,8 +504,8 @@ const RULE_CHECKS: [
     (r, s) => r.annotations?.['dashboard_uid'] === SERVICES[s].dashboard,
   ],
   [
-    'receiver must be MotorFix owner',
-    (r) => r.notification_settings?.receiver === 'MotorFix owner',
+    'names a receiver; the policy routes it',
+    (r) => r.notification_settings === undefined,
   ],
   [
     'query A must read grafanacloud-prom',
@@ -455,6 +545,24 @@ function ruleProblems(
   ];
 }
 
+function expectRule(rule: Rule, want: (typeof EXPECTED)[string] | undefined) {
+  expect([rule.uid, threshold(rule)]).toEqual([
+    rule.uid,
+    { params: [want?.value], type: want?.type },
+  ]);
+  expect([rule.uid, rule.for, query(rule)?.relativeTimeRange.from]).toEqual([
+    rule.uid,
+    want?.for,
+    want?.from,
+  ]);
+  for (const fragment of want?.expr ?? []) {
+    expect([rule.uid, query(rule)?.model.expr]).toEqual([
+      rule.uid,
+      expect.stringContaining(fragment),
+    ]);
+  }
+}
+
 // @traces 267-FR-023
 describe('alert rules', () => {
   const files = alertFiles();
@@ -471,6 +579,10 @@ describe('alert rules', () => {
 
   // @traces 1024-FR-001
   // @traces 1024-FR-010
+  // @traces 880-FR-001
+  // @traces 880-FR-002
+  // @traces 880-FR-013
+  // @traces 880-FR-017
   it('every file breaks none of the rules', () => {
     expect(problems(files)).toEqual([]);
   });
@@ -484,30 +596,77 @@ describe('alert rules', () => {
   // @traces 267-FR-023
   // @traces 1182-FR-014
   // @traces 1169-FR-012
-  it('holds exactly the twenty rules, each with its threshold, window and wait', () => {
+  // @traces 880-FR-003
+  // @traces 880-FR-004
+  // @traces 880-FR-005
+  // @traces 880-FR-007
+  // @traces 880-FR-009
+  it('holds exactly the twenty-seven rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
     expect(rules.map((r) => r.uid).sort()).toEqual(
       Object.keys(EXPECTED).sort(),
     );
+    for (const rule of rules) expectRule(rule, EXPECTED[rule.uid]);
+  });
 
-    for (const rule of rules) {
-      const want = EXPECTED[rule.uid];
-      expect([rule.uid, threshold(rule)]).toEqual([
-        rule.uid,
-        { params: [want?.value], type: want?.type },
+  // @traces 880-FR-007
+  it('the MCP server has its own memory rule on its dashboard', () => {
+    const rule = rulesOf(files['mcp.json'] as AlertFile).find(
+      (r) => r.uid === 'mcp-memory',
+    );
+    expect(rule).toBeDefined();
+    expectRule(rule as Rule, MEMORY('mcp'));
+    expect(rule?.annotations['dashboard_uid']).toBe('motorfix-mcp');
+    expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
+  });
+
+  // @traces 880-FR-002
+  it('fires with no wait only the rules whose query already holds one', () => {
+    const zero = rows(files)
+      .map(([, , , r]) => r)
+      .filter((r) => /^0[smh]$/.test(r.for))
+      .map((r) => r.uid);
+    expect(zero.sort()).toEqual([...ZERO_WAIT].sort());
+  });
+
+  // @traces 880-FR-001
+  it('every rule says what to check first', () => {
+    for (const [, at, , rule] of rows(files))
+      expect([at, (rule.annotations['runbook'] ?? '').length > 20]).toEqual([
+        at,
+        true,
       ]);
-      expect([rule.uid, rule.for, query(rule)?.relativeTimeRange.from]).toEqual(
-        [rule.uid, want?.for, want?.from],
-      );
-      for (const fragment of want?.expr ?? []) {
-        expect([rule.uid, query(rule)?.model.expr]).toEqual([
-          rule.uid,
-          expect.stringContaining(fragment),
-        ]);
-      }
-    }
+  });
+
+  // @traces 880-FR-008
+  it.each([
+    ['api', 'API'],
+    ['web', 'Web'],
+    ['worker', 'Worker'],
+    ['mcp', 'MCP'],
+  ])('tells the owner when %s stops reporting, naming it', (s, title) => {
+    const rule = rows(files)
+      .map(([, , , r]) => r)
+      .find((r) => r.uid === `${s}-down`);
+    expect(rule?.title).toContain(title);
+    expect(rule?.annotations['summary']).toMatch(new RegExp(`\\b${s}\\b`, 'i'));
+    expect(rule?.noDataState).toBe('OK');
+  });
+
+  // @traces 880-FR-010
+  it('tells the owner a job failed for good, naming the queue', () => {
+    const rule = rulesOf(own('worker') as AlertFile).find(
+      (r) => r.uid === 'worker-jobs-failed',
+    );
+    expect(query(rule as Rule)?.model.expr).toContain('outcome="failed"');
+    expect(rule?.annotations['summary']).toContain('{{ $labels.queue }}');
+  });
+
+  // @traces 880-FR-017
+  it('holds thirty-eight rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(38);
   });
 
   // @traces 1345-FR-004
@@ -531,6 +690,7 @@ describe('alert rules', () => {
   });
 
   // @traces 1024-FR-005
+  // @traces 880-FR-009
   it('names the queue in the summary of the per-queue rules', () => {
     for (const uid of QUEUE_RULES) {
       const rule = rulesOf(own('worker') as AlertFile).find(
@@ -541,6 +701,7 @@ describe('alert rules', () => {
   });
 
   // @traces 1024-FR-010
+  // @traces 880-FR-016
   describe('refuses a file that breaks a rule', () => {
     const base = () => clone(files);
     const first = (f: Files) =>
@@ -572,11 +733,36 @@ describe('alert rules', () => {
         /api\.json api-\S+: motorfix_made_up_total is on no dashboard/,
       ],
       [
-        'no receiver',
+        'a receiver on an owner rule',
         (f) => {
-          delete first(f).notification_settings;
+          first(f).notification_settings = { receiver: 'MotorFix owner' };
         },
-        /api\.json api-\S+: receiver must be MotorFix owner/,
+        /api\.json api-\S+: names a receiver; the policy routes it/,
+      ],
+      [
+        'no runbook',
+        (f) => {
+          const rule = (f['mcp.json'] as AlertFile).groups[0]?.rules[0] as Rule;
+          delete rule.annotations['runbook'];
+        },
+        /mcp\.json mcp-\S+: no runbook/,
+      ],
+      [
+        'no wait',
+        (f) => {
+          (first(f) as Partial<Rule>).for = undefined;
+        },
+        /api\.json api-\S+: no explicit for/,
+      ],
+      [
+        'no wait on a rule outside the table',
+        (f) => {
+          const rule = rulesOf(f['postgres.json'] as AlertFile).find(
+            (r) => r.uid === 'postgres-outbox-stuck',
+          ) as Rule;
+          rule.for = '0s';
+        },
+        /postgres\.json postgres-outbox-stuck: waits 0s outside the table/,
       ],
       [
         'an environment named in the query',
@@ -693,19 +879,159 @@ describe('the inventory lists the rules', () => {
     }
   });
 
+  // @traces 880-FR-015
+  it('lists the search, MCP memory and queue growth rules where they watch', () => {
+    expect(entry('endpoint', 'search-garages')?.alerts).toContain(
+      'api-search-latency',
+    );
+    expect(entry('app', 'mcp')?.alerts).toContain('mcp-memory');
+    expect(entry('railway-service', 'mcp')?.alerts).toContain('mcp-memory');
+    expect(entry('outside-service', 'postgresql')?.alerts).toContain(
+      'postgres-outbox-stuck',
+    );
+    for (const q of inventory.entries.filter(
+      (e) =>
+        Array.isArray(e.alerts) && e.alerts.includes('worker-queue-backlog'),
+    ))
+      expect([q.name, q.alerts]).toEqual([
+        q.name,
+        expect.arrayContaining(['worker-queue-growing']),
+      ]);
+  });
+
   // @traces 1024-FR-008
+  // @traces 880-FR-015
   it('every rule of the five files is listed, and no reason still waits for a later story', () => {
     const listed = new Set(
       inventory.entries.flatMap((e) =>
         Array.isArray(e.alerts) ? e.alerts : [],
       ),
     );
-    for (const uid of Object.keys(EXPECTED))
+    for (const uid of [...Object.keys(EXPECTED), 'mcp-memory'])
       expect([uid, listed.has(uid)]).toEqual([uid, true]);
     const waiting = inventory.entries.filter((e) =>
       /ST-\d+ adds the (?:queue )?alert/.test(e.reason ?? ''),
     );
     expect(waiting.map((e) => `${e.kind} ${e.name}`)).toEqual([]);
+  });
+});
+
+type ContactPoint = {
+  uid: string;
+  name: string;
+  type: string;
+  settings: Record<string, unknown>;
+  disableResolveMessage?: boolean;
+};
+type Route = {
+  receiver?: string;
+  group_by?: string[];
+  group_wait?: string;
+  group_interval?: string;
+  repeat_interval?: string;
+  object_matchers?: string[][];
+  mute_time_intervals?: string[];
+  active_time_intervals?: string[];
+  routes?: Route[];
+};
+const alerting = <T>(name: string): T =>
+  JSON.parse(readFileSync(join(alertingDir, name), 'utf8'));
+
+/** Every way a policy tree breaks what this repository holds it to. */
+function routeProblems(policy: Route, points: ContactPoint[]): string[] {
+  const names = new Set(points.map((p) => p.name));
+  const found: string[] = policy.receiver ? [] : ['root: no receiver'];
+  const walk = (route: Route, at: string) => {
+    for (const key of ['mute_time_intervals', 'active_time_intervals'])
+      if (key in route) found.push(`${at}: holds ${key}`);
+    if (route.receiver !== undefined && !names.has(route.receiver))
+      found.push(`${at}: receiver ${route.receiver} is no contact point`);
+    route.routes?.forEach((child, i) => {
+      walk(child, `${at}.routes[${i}]`);
+    });
+  };
+  walk(policy, 'root');
+  return found;
+}
+
+describe('the contact point and the notification policy', () => {
+  const points = () => alerting<ContactPoint[]>('contact-points.json');
+  const policy = () => alerting<Route>('policies.json');
+  const intervals = (wait: string, group: string, repeat: string) => ({
+    group_interval: group,
+    group_wait: wait,
+    repeat_interval: repeat,
+  });
+
+  // @traces 880-FR-011
+  it("e-mails the owner's address only, under the name the rules know", () => {
+    expect(points()).toEqual([
+      {
+        name: 'MotorFix owner',
+        settings: { addresses: 'hutanugeorge40@gmail.com' },
+        type: 'email',
+        uid: 'motorfix-owner',
+      },
+    ]);
+  });
+
+  // @traces 880-FR-012
+  it('routes production at once and staging more quietly, both to the owner', () => {
+    expect(policy()).toEqual({
+      group_by: ['alertname', 'deployment_environment'],
+      receiver: 'MotorFix owner',
+      ...intervals('30s', '5m', '4h'),
+      routes: [
+        {
+          object_matchers: [['deployment_environment', '=', 'production']],
+          receiver: 'MotorFix owner',
+          ...intervals('30s', '5m', '4h'),
+        },
+        {
+          object_matchers: [['deployment_environment', '=', 'staging']],
+          receiver: 'MotorFix owner',
+          ...intervals('5m', '30m', '24h'),
+        },
+      ],
+    });
+    expect(routeProblems(policy(), points())).toEqual([]);
+  });
+
+  // @traces 880-FR-012
+  // @traces 880-FR-016
+  it.each<[string, (p: Route) => void, RegExp]>([
+    [
+      'a mute on a route',
+      (p) => {
+        (p.routes?.[1] as Route).mute_time_intervals = ['working-hours'];
+      },
+      /root\.routes\[1\]: holds mute_time_intervals/,
+    ],
+    [
+      'an empty mute list on the root',
+      (p) => {
+        p.mute_time_intervals = [];
+      },
+      /root: holds mute_time_intervals/,
+    ],
+    [
+      'an active interval',
+      (p) => {
+        (p.routes?.[0] as Route).active_time_intervals = ['nights'];
+      },
+      /root\.routes\[0\]: holds active_time_intervals/,
+    ],
+    [
+      'a receiver no contact point declares',
+      (p) => {
+        (p.routes?.[0] as Route).receiver = 'Slack';
+      },
+      /root\.routes\[0\]: receiver Slack is no contact point/,
+    ],
+  ])('refuses %s', (_, breakIt, message) => {
+    const broken = clone(policy());
+    breakIt(broken);
+    expect(routeProblems(broken, points()).join('\n')).toMatch(message);
   });
 });
 
@@ -724,11 +1050,13 @@ describe('Grafana alerts workflow', () => {
   };
 
   // @traces 1024-FR-009
+  // @traces 880-FR-014
   it('runs on a push to main that changes the alerts or itself, and by hand', () => {
     expect(text()).toMatch(/^name: Grafana alerts$/m);
     const on = block(text(), 'on', 0);
     expect(on).toMatch(/branches: \[main\]/);
     expect(on).toContain("'infra/observability/alerts/**'");
+    expect(on).toContain("'infra/observability/grafana/alerting/**'");
     expect(on).toContain("'.github/workflows/grafana-alerts.yml'");
     expect(on).toMatch(/^ {2}workflow_dispatch:/m);
     expect(text()).toMatch(/permissions:\n\s+contents: read/);
@@ -777,8 +1105,17 @@ describe('Grafana alerts workflow', () => {
           join(dir, 'infra', 'observability', 'alerts', f),
         );
       }
+      cpSync(
+        alertingDir,
+        join(dir, 'infra', 'observability', 'grafana', 'alerting'),
+        { recursive: true },
+      );
       // Logs each call's arguments and request body; refuses a group named in
-      // FAIL_GROUP and answers 404 for the folder unless FOLDER_EXISTS is set.
+      // FAIL_GROUP and answers 404 for the folder unless FOLDER_EXISTS is
+      // set. The contact point answers an HTTP status through -w: the one in
+      // FAIL_CONTACT for its PUT and POST, the one in CONTACT_PUT for its PUT,
+      // 404 for its PUT when CONTACT_MISSING is set, else 200. A list of
+      // contact points answers CONTACTS into the file -o names.
       const curl = join(dir, 'bin', 'curl');
       writeFileSync(
         curl,
@@ -790,7 +1127,13 @@ describe('Grafana alerts workflow', () => {
           'case "$*" in',
           '  *"rule-groups/$FAIL_GROUP"*) [ -n "$FAIL_GROUP" ] && { echo "{\\"message\\":\\"refused\\"}"; exit 22; };;',
           'esac',
+          'out=""; prev=""; w=""; fail=""',
+          'for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; case "$a" in -w) w=1;; --fail|-f) fail=1;; esac; prev="$a"; done',
+          'answer() { [ -n "$w" ] && printf "%s" "$1"; case "$1" in 2??) exit 0;; esac; [ -n "$fail" ] && exit 22; exit 0; }',
           'case "$*" in',
+          '  *"contact-points?name="*) [ -n "$out" ] && printf "%s" "$CONTACTS" > "$out"; exit 0;;',
+          '  *"-X DELETE"*) exit 0;;',
+          '  *"/contact-points"*) [ -n "$FAIL_CONTACT" ] && answer "$FAIL_CONTACT"; case "$*" in *"-X PUT"*) [ -n "$CONTACT_PUT" ] && answer "$CONTACT_PUT"; [ -n "$CONTACT_MISSING" ] && answer 404;; esac; answer 200;;',
           '  *"-X POST"*) exit 0;;',
           '  *"/api/folders/motorfix"*) [ -n "$FOLDER_EXISTS" ] && exit 0; exit 22;;',
           'esac',
@@ -818,6 +1161,13 @@ describe('Grafana alerts workflow', () => {
           encoding: 'utf8',
           env: {
             CALLS: join(dir, 'calls'),
+            CONTACT_MISSING: '',
+            CONTACT_PUT: '',
+            CONTACTS: JSON.stringify([
+              { name: 'MotorFix owner', uid: 'motorfix-owner' },
+              { name: 'MotorFix owner', uid: 'hand-made' },
+            ]),
+            FAIL_CONTACT: '',
             FAIL_GROUP: '',
             FOLDER_EXISTS: '',
             GRAFANA_SA_TOKEN: token,
@@ -891,7 +1241,9 @@ describe('Grafana alerts workflow', () => {
           });
         }
       }
-      expect(out.match(/applied/g)).toHaveLength(3);
+      expect(out.match(/applied infra\/observability\/alerts/g)).toHaveLength(
+        3,
+      );
       expect(out).not.toContain(token);
       expect(out).not.toContain(url);
     });
@@ -904,6 +1256,127 @@ describe('Grafana alerts workflow', () => {
       expect(puts(calls)).toHaveLength(3);
     });
 
+    const index = (
+      calls: ReturnType<typeof apply>['calls'],
+      test: (args: string) => boolean,
+    ) => calls.findIndex((c) => test(c.args));
+
+    // @traces 880-FR-014
+    it('applies the contact point, then the policy, then the rules, then drops the hand-made one', () => {
+      const { code, out, calls } = apply({ FOLDER_EXISTS: '1' });
+      expect(code).toBe(0);
+      const contact = index(
+        calls,
+        (a) => a.includes('PUT') && a.includes('contact-points/motorfix-owner'),
+      );
+      const policy = index(calls, (a) =>
+        a.includes(`${url}/api/v1/provisioning/policies`),
+      );
+      const rules = index(calls, (a) => a.includes('rule-groups/'));
+      const list = index(calls, (a) => a.includes('contact-points?name='));
+      const removed = calls.filter((c) => c.args.includes('DELETE'));
+      expect(contact).toBeGreaterThanOrEqual(0);
+      expect([contact < policy, policy < rules, rules < list]).toEqual([
+        true,
+        true,
+        true,
+      ]);
+      expect(calls[contact]?.body).toEqual(
+        alerting<ContactPoint[]>('contact-points.json')[0],
+      );
+      expect(calls[policy]?.body).toEqual(alerting<Route>('policies.json'));
+      for (const c of [calls[contact], calls[policy]])
+        expect(c?.args).toContain('X-Disable-Provenance: true');
+      expect(removed.map((c) => c.args)).toEqual([
+        expect.stringContaining(
+          `${url}/api/v1/provisioning/contact-points/hand-made`,
+        ),
+      ]);
+      expect(out).toContain(
+        'applied infra/observability/grafana/alerting/contact-points.json',
+      );
+      expect(out).toContain(
+        'applied infra/observability/grafana/alerting/policies.json',
+      );
+      expect(out).not.toContain(token);
+    });
+
+    // @traces 880-FR-014
+    it('creates the contact point when Grafana has none with its uid', () => {
+      const { code, calls } = apply({
+        CONTACT_MISSING: '1',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).toBe(0);
+      const created = calls.find(
+        (c) =>
+          c.args.includes('POST') &&
+          c.args.includes(`${url}/api/v1/provisioning/contact-points\n`),
+      );
+      expect(created?.body).toEqual(
+        alerting<ContactPoint[]>('contact-points.json')[0],
+      );
+    });
+
+    // @traces 880-FR-014
+    it('posts the contact point only after a PUT that answered 404, and before the policy', () => {
+      const { code, calls } = apply({
+        CONTACT_MISSING: '1',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).toBe(0);
+      const put = index(
+        calls,
+        (a) => a.includes('PUT') && a.includes('contact-points/motorfix-owner'),
+      );
+      const post = index(
+        calls,
+        (a) =>
+          a.includes('POST') &&
+          a.includes(`${url}/api/v1/provisioning/contact-points\n`),
+      );
+      const policy = index(calls, (a) =>
+        a.includes(`${url}/api/v1/provisioning/policies`),
+      );
+      expect([put >= 0, put < post, post < policy]).toEqual([true, true, true]);
+    });
+
+    // @traces 880-FR-014
+    it('sends no POST when the PUT is refused with anything but 404, names the code and fails', () => {
+      const { code, out, calls } = apply({
+        CONTACT_PUT: '500',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).not.toBe(0);
+      expect(
+        calls.some(
+          (c) =>
+            c.args.includes('POST') &&
+            c.args.includes(`${url}/api/v1/provisioning/contact-points\n`),
+        ),
+      ).toBe(false);
+      expect(out).toMatch(
+        /::error::.*contact-points\.json.*motorfix-owner.*HTTP 500/,
+      );
+      expect(calls.some((c) => c.args.includes('DELETE'))).toBe(false);
+      expect(out).not.toContain(token);
+    });
+
+    // @traces 880-FR-014
+    it('keeps the hand-made contact point when its own is refused, and fails at the end', () => {
+      const { code, out, calls } = apply({
+        FAIL_CONTACT: '500',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).not.toBe(0);
+      expect(out).toMatch(/::error::.*contact-points\.json/);
+      expect(calls.some((c) => c.args.includes('DELETE'))).toBe(false);
+      expect(puts(calls)).toHaveLength(3);
+      expect(out).toContain(
+        'applied infra/observability/grafana/alerting/policies.json',
+      );
+    });
+
     // @traces 1024-FR-009
     it('goes on past a refused group, names its file and fails at the end', () => {
       const { code, out, calls } = apply({
@@ -913,15 +1386,21 @@ describe('Grafana alerts workflow', () => {
       expect(code).not.toBe(0);
       expect(puts(calls)).toHaveLength(3);
       expect(out).toMatch(/::error::.*api\.json/);
-      expect(out.match(/applied/g)).toHaveLength(2);
+      expect(out.match(/applied infra\/observability\/alerts/g)).toHaveLength(
+        2,
+      );
       expect(out).not.toContain(token);
     });
   });
 
   // @traces 1024-FR-012
+  // @traces 880-FR-014
   it('the new files hold no address or token, only the names', () => {
     for (const body of [
       ...OWN.map((f) => readFileSync(join(alertsDir, f), 'utf8')),
+      ...['contact-points.json', 'policies.json'].map((f) =>
+        readFileSync(join(alertingDir, f), 'utf8'),
+      ),
       text(),
     ]) {
       expect(body).not.toMatch(/https?:\/\/(?!github\.com)|glsa_|glc_/);
@@ -936,6 +1415,7 @@ describe('the observability README', () => {
   );
 
   // @traces 1024-FR-011
+  // @traces 880-FR-015
   it('says where the rules live, whom they notify and how they reach Grafana', () => {
     const section = readme.slice(
       readme.indexOf('## Alert rules'),
@@ -951,6 +1431,16 @@ describe('the observability README', () => {
       'GRAFANA_SA_TOKEN',
       'GRAFANA_URL',
       'overwritten by the next run',
+      'infra/observability/grafana/alerting/',
+      'contact-points.json',
+      'policies.json',
+      '`runbook`',
+      'postgres-outbox-stuck',
+      'api-search-latency',
+      'worker-queue-growing',
+      'mcp-memory',
+      'staging',
+      'mute',
     ]) {
       expect([fact, section.includes(fact)]).toEqual([fact, true]);
     }

@@ -19,10 +19,8 @@
           },
           "annotations": {
             "summary": "Redis has not answered the worker for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-redis"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-redis",
+            "runbook": "Open the Redis service in Railway: check that it is running and its logs; caches fall back to PostgreSQL and queues stop meanwhile."
           },
           "data": [
             {
@@ -77,10 +75,8 @@
           },
           "annotations": {
             "summary": "Redis has used more than 70% of its maximum memory (or more than 224 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-redis"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-redis",
+            "runbook": "Open the Redis dashboard: find the keys that grew, check the cache sizes and the queue backlogs, and raise the limit only if the load justifies it."
           },
           "data": [
             {
@@ -135,10 +131,8 @@
           },
           "annotations": {
             "summary": "More than 100 clients have been connected to Redis for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-redis"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-redis",
+            "runbook": "Open the Redis dashboard: find which service opens the connections and restart it if they leak."
           },
           "data": [
             {

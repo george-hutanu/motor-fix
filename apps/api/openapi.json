@@ -1956,6 +1956,156 @@
         ]
       }
     },
+    "/api/v1/me/saved-garages/{garageId}": {
+      "put": {
+        "operationId": "SavedGaragesController_save",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved already; nothing changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Saved now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id or body"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          },
+          "404": {
+            "description": "not_found: no approved garage with that id"
+          },
+          "422": {
+            "description": "saved_at_in_future: savedAt is later than now"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save an approved garage on the caller's account",
+        "tags": [
+          "saved-garages"
+        ]
+      },
+      "delete": {
+        "operationId": "SavedGaragesController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed; savedAt is what an undo sends back",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Was not saved; nothing changed"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a garage from the caller's saved ones, whatever its status",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
+    "/api/v1/me/saved-garages/ids": {
+      "get": {
+        "operationId": "SavedGaragesController_ids",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageIdsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The ids of the caller's saved garages, whatever their status",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -2135,6 +2285,16 @@
             }
           },
           {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          },
+          {
             "name": "ids",
             "required": false,
             "in": "query",
@@ -2179,7 +2339,90 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box"
+          },
+          "404": {
+            "description": "not_found: no brand with that slug or id"
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/garages/pins": {
+      "get": {
+        "operationId": "GarageSearchController_pins",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; exactly one of brand and brandId",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue id; exactly one of brand and brandId",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "description": "Km around near that a fixed garage may be; a mobile mechanic counts by its own area. Ignored without near",
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "enum": [
+                25,
+                50
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePinsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -2567,6 +2810,9 @@
           },
           "404": {
             "description": "not_found: not a driver, or not the driver’s car"
+          },
+          "409": {
+            "description": "garage_cannot_receive with reason garage_suspended: a garage of the request is suspended"
           },
           "429": {
             "description": "too_many_requests: 20 sent today already"
@@ -3281,6 +3527,35 @@
         },
         "tags": [
           "garages"
+        ]
+      }
+    },
+    "/api/v1/admin/demand": {
+      "get": {
+        "operationId": "DemandController_demand",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDemandDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -4217,6 +4492,64 @@
         },
         "tags": [
           "garages"
+        ]
+      }
+    },
+    "/api/v1/admin/garages/{id}/suspend": {
+      "post": {
+        "operationId": "SuspensionController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageSuspensionCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a cause outside the four, or a reason that is not 1 to 200 characters"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no garage"
+          },
+          "409": {
+            "description": "garage_already_suspended, or garage_not_approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take an approved garage off the map",
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -5482,6 +5815,27 @@
           "canRecordFinalPrice"
         ]
       },
+      "GarageSuspensionDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cause",
+          "reason"
+        ]
+      },
       "GarageAccessDto": {
         "type": "object",
         "properties": {
@@ -5518,6 +5872,16 @@
               "type": "boolean"
             },
             "description": "The garage’s feature switches by key; a missing key is on"
+          },
+          "suspension": {
+            "description": "The open suspension; null unless the garage is suspended",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageSuspensionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -5526,7 +5890,8 @@
           "status",
           "role",
           "permissions",
-          "features"
+          "features",
+          "suspension"
         ]
       },
       "MeDto": {
@@ -7217,6 +7582,50 @@
           "version"
         ]
       },
+      "SaveGarageDto": {
+        "type": "object",
+        "properties": {
+          "savedAt": {
+            "type": "string",
+            "description": "An undo: the time the garage was first saved, never in the future",
+            "format": "date-time"
+          }
+        }
+      },
+      "SavedGarageDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "savedAt": {
+            "type": "string",
+            "description": "UTC",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "garageId",
+          "savedAt"
+        ]
+      },
+      "SavedGarageIdsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "In no promised order",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
       "BrandDto": {
         "type": "object",
         "properties": {
@@ -7520,6 +7929,68 @@
           "nextCursor",
           "total",
           "counts"
+        ]
+      },
+      "GaragePinDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Where the pin stands; a mobile mechanic's area centre, two decimals",
+            "example": 44.437
+          },
+          "lng": {
+            "type": "number",
+            "example": 26.117
+          },
+          "rateLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "rateLei",
+          "stance"
+        ]
+      },
+      "GaragePinsDto": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "description": "Every garage the search finds with a position, nearest first; 500 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePinDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every approved garage the search finds, as the list's total"
+          }
+        },
+        "required": [
+          "pins",
+          "total"
         ]
       },
       "HomeGarageDto": {
@@ -9534,6 +10005,100 @@
           }
         }
       },
+      "AdminDemandBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The brand as stored in the request's car snapshot, not normalised; may be empty",
+            "example": "Dacia"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests for the brand in the window",
+            "example": 412,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "name",
+          "requests"
+        ]
+      },
+      "AdminDemandJobDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The job type's key",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Brakes"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests that asked for the job in the window",
+            "example": 288,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "nameRo",
+          "nameEn",
+          "requests"
+        ]
+      },
+      "AdminDemandDto": {
+        "type": "object",
+        "properties": {
+          "firstDay": {
+            "type": "string",
+            "description": "The window's first Europe/Bucharest day",
+            "example": "2026-09-18",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The window's last day: today in Europe/Bucharest",
+            "example": "2026-10-17",
+            "format": "date"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests created in the window",
+            "example": 1240,
+            "minimum": 0
+          },
+          "brands": {
+            "description": "Every brand with a request in the window, most first, then by name in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandBrandDto"
+            }
+          },
+          "jobs": {
+            "description": "Every job type asked for in the window, most first, then by key in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandJobDto"
+            }
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay",
+          "requests",
+          "brands",
+          "jobs"
+        ]
+      },
       "AdminCityDto": {
         "type": "object",
         "properties": {
@@ -10844,6 +11409,66 @@
           "jobTypes",
           "prices",
           "photos"
+        ]
+      },
+      "SuspendGarageDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Trimmed; shown to the garage as written",
+            "maxLength": 200,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "cause",
+          "reason"
+        ]
+      },
+      "GarageSuspensionCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "garageId",
+          "cause",
+          "reason",
+          "fromTime"
         ]
       },
       "RecordVerificationCheckDto": {

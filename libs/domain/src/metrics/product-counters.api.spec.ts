@@ -26,6 +26,7 @@ const WORKER_ONLY = [
   'motorfix_verification_result_total',
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
+  'motorfix_garage_suspended_notices_total',
 ];
 
 async function series() {
@@ -51,7 +52,7 @@ describe("the API's product counters at start", () => {
     initProductCounters('api');
 
     const all = await series();
-    expect(all).toHaveLength(63);
+    expect(all).toHaveLength(67);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
     expect(all.filter((one) => WORKER_ONLY.includes(one.name))).toEqual([]);
     expect(
@@ -90,6 +91,6 @@ describe("the API's product counters at start", () => {
         method: 'google',
       }),
     ).toBe(1);
-    expect(await series()).toHaveLength(63);
+    expect(await series()).toHaveLength(67);
   });
 });

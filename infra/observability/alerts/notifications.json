@@ -19,7 +19,8 @@
           },
           "annotations": {
             "summary": "A verification result job failed its last attempt in the last 15 minutes: a garage owner was not told how their verification was decided ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-queues"
+            "dashboard_uid": "motorfix-queues",
+            "runbook": "Read the worker logs for the failed verification result job, fix the cause and send the result to the garage owner again."
           },
           "data": [
             {

@@ -8,6 +8,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import { HlmToaster } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
 import { ConsentBar } from '../../consent/consent-bar/consent-bar';
@@ -23,6 +24,7 @@ import { PublicTabBar } from '../tab-bar/tab-bar';
   host: { '[class.no-tab-bar]': '!tabBar' },
   imports: [
     ConsentBar,
+    HlmToaster,
     LanguageSwitch,
     PublicFooter,
     RouterLink,

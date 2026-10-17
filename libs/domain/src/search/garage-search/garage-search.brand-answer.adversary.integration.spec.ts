@@ -16,8 +16,8 @@ const { prisma } = fixtures();
 // PostgreSQL's answer every time: the cases change rows between reads, and
 // garage-search.cache.integration.spec.ts covers the cache.
 const uncached = {
-  page: (_key, read) => read(),
-} satisfies Pick<GarageSearchCache, 'page'> as unknown as GarageSearchCache;
+  entry: (_key, read) => read(),
+} satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
 const search = new GarageSearchService(
   prisma,
   uncached,

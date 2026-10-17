@@ -11,12 +11,14 @@ import type { Redis } from 'ioredis';
 
 import { type EventConsumer, OutboxRelay } from './outbox-relay';
 import { createPrisma } from '../../auth/prisma';
+import { CdnPurgeSender, cdnPurgeHook } from '../../cache/cdn-purge/cdn-purge';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { borrowStore, returnStore } from '../../store/store';
 
 const RELAY_PRISMA = Symbol('RELAY_PRISMA');
 const RELAY_REDIS = Symbol('RELAY_REDIS');
 const RELAY_QUEUES = Symbol('RELAY_QUEUES');
+const RELAY_CDN = Symbol('RELAY_CDN');
 
 type Consumers = (Omit<EventConsumer, 'queue'> & { queue: Queue })[];
 
@@ -30,6 +32,8 @@ interface RelayOptions {
   databaseUrl: string;
   redisUrl: string;
   consumers?: readonly RelayConsumer[];
+  // The CDN's API key and pull zone: set, each purged page tag reaches it.
+  cdn?: { apiKey: string; pullZoneId: string };
 }
 
 // The worker's outbox-relay. A Redis that is down fails each publish fast, so
@@ -41,6 +45,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
     @Inject(RELAY_PRISMA) private readonly prisma: PrismaClient,
     @Inject(RELAY_REDIS) private readonly redis: Redis,
     @Inject(RELAY_QUEUES) private readonly queues: Consumers,
+    @Inject(RELAY_CDN) private readonly cdn: CdnPurgeSender | undefined,
   ) {}
 
   static register(options: RelayOptions): DynamicModule {
@@ -81,10 +86,21 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
             ),
         },
         {
+          inject: [RELAY_REDIS],
+          provide: RELAY_CDN,
+          useFactory: (redis: Redis) =>
+            options.cdn ? new CdnPurgeSender(redis, options.cdn) : undefined,
+        },
+        {
           inject: [RELAY_PRISMA, RELAY_REDIS, RELAY_QUEUES],
           provide: OutboxRelay,
           useFactory: (prisma: PrismaClient, redis: Redis, queues: Consumers) =>
-            new OutboxRelay(prisma, redis, queues),
+            new OutboxRelay(
+              prisma,
+              redis,
+              queues,
+              options.cdn ? cdnPurgeHook(redis) : undefined,
+            ),
         },
       ],
     };
@@ -92,10 +108,12 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
 
   onModuleInit() {
     this.relay.start();
+    this.cdn?.start();
   }
 
   async onApplicationShutdown() {
     await this.relay.stop();
+    await this.cdn?.stop();
     for (const { queue } of this.queues) await queue.close();
     await returnStore(this.redis);
     await this.prisma.$disconnect();

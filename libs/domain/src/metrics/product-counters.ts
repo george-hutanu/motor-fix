@@ -4,6 +4,8 @@ import {
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
   type DocumentKind,
+  SUSPENSION_CAUSES,
+  type SuspensionCause,
 } from '@motor-fix/contracts';
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
@@ -52,6 +54,7 @@ export type GarageReportOutcome = (typeof GARAGE_REPORT_OUTCOMES)[number];
 const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 const REQUEST_RECEIVED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
 const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
+const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const QUOTE_RECEIVED_OUTCOMES = ['built', 'muted'] as const;
 
 // Looked up on every count, never cached: a counter kept from before the
@@ -70,6 +73,11 @@ const approvals = () =>
   counter(
     'motorfix_garage_approvals_total',
     'Garage verification decisions, by outcome',
+  );
+const suspensions = () =>
+  counter(
+    'motorfix_garage_suspensions_total',
+    'Garages taken off the map, by cause',
   );
 const quotes = () => counter('motorfix_quotes_total', 'Quotes sent to drivers');
 const emails = () =>
@@ -90,6 +98,11 @@ const verificationResults = () =>
   counter(
     'motorfix_verification_result_total',
     'Verification decisions told to garage owners, by outcome',
+  );
+const suspendedNotices = () =>
+  counter(
+    'motorfix_garage_suspended_notices_total',
+    'Garage suspensions told to garage owners, by outcome',
   );
 const documentsUploaded = () =>
   counter(
@@ -140,6 +153,10 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
   approvals().add(1, { outcome });
 }
 
+export function countGarageSuspension(cause: SuspensionCause) {
+  suspensions().add(1, { cause });
+}
+
 export function countQuote() {
   quotes().add(1);
 }
@@ -169,6 +186,14 @@ export function countVerificationResult(
   outcome: (typeof VERIFICATION_RESULT_OUTCOMES)[number],
 ) {
   verificationResults().add(1, { outcome });
+}
+
+// A suspension told to the garage's owners, or one with nobody or nothing
+// to tell.
+export function countGarageSuspendedNotice(
+  outcome: (typeof SUSPENDED_NOTICE_OUTCOMES)[number],
+) {
+  suspendedNotices().add(1, { outcome });
 }
 
 export function countDocumentUploaded(kind: DocumentKind) {
@@ -222,6 +247,7 @@ const STARTS: Record<
     [signIns, each('method', SIGN_IN_METHODS)],
     [garageSignUps, [{}]],
     [approvals, each('outcome', APPROVAL_OUTCOMES)],
+    [suspensions, each('cause', SUSPENSION_CAUSES)],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
     [documentsUploaded, each('kind', DOCUMENT_KINDS)],
@@ -254,6 +280,7 @@ const STARTS: Record<
     [quotes, [{}]],
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
+    [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
     [quotesReceived, each('outcome', QUOTE_RECEIVED_OUTCOMES)],
     [
       declineWindows,

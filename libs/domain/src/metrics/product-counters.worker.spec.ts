@@ -40,7 +40,7 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    expect(all).toHaveLength(emails.length + 20);
+    expect(all).toHaveLength(emails.length + 22);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
   });

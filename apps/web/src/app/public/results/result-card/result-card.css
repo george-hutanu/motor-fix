@@ -14,6 +14,12 @@
   padding: var(--mf-space-4);
 }
 
+.bookmark {
+  align-self: flex-start;
+  flex: none;
+  margin: calc(-1 * var(--mf-space-2)) calc(-1 * var(--mf-space-2)) 0 0;
+}
+
 .initials {
   align-items: center;
   background: var(--mf-panel-raised);

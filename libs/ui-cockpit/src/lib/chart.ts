@@ -8,7 +8,7 @@ import {
   computed,
   DestroyRef,
   Directive,
-  type ElementRef,
+  ElementRef,
   inject,
   input,
   output,
@@ -40,17 +40,29 @@ abstract class CockpitChart {
   readonly unit = input.required<ChartUnit>();
   readonly loading = input(false, { transform: booleanAttribute });
   readonly error = input(false, { transform: booleanAttribute });
+  // Bars across, one row per point, the plot as tall as its rows.
+  readonly horizontal = input(false, { transform: booleanAttribute });
+  // The host's own words for no data; the shared text otherwise.
+  readonly empty = input<string>();
+  // The host's word for the table's name column; "period" otherwise.
+  readonly labelHeading = input<string>();
   readonly retry = output<void>();
 
   private readonly i18n = inject(I18n);
   private readonly document = inject(DOCUMENT);
   private readonly reduced = inject(REDUCED_MOTION);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly scheme = signal(0);
   private chart?: Chart<ChartType, number[], string>;
 
   protected readonly tableId = inject(_IdGenerator).getId('mf-chart-table-');
   protected readonly tableShown = signal(false);
+
+  // 28 px a row keeps every 12 px name on its own line; the axis takes 24.
+  protected readonly plotHeight = computed(() =>
+    this.horizontal() ? Math.max(200, this.points().length * 28 + 24) : null,
+  );
 
   protected readonly rows = computed(() =>
     this.points().map((p) => ({
@@ -94,6 +106,7 @@ abstract class CockpitChart {
         this.i18n.language(),
         readTheme(canvas),
         reduced,
+        this.horizontal(),
       );
       if (!this.chart) {
         this.chart = new Chart(canvas, config);
@@ -129,6 +142,16 @@ abstract class CockpitChart {
     });
   }
 
+  // The pressed button goes with the error; focus stays in the panel.
+  protected retryPressed() {
+    const heading = this.host.nativeElement.querySelector('h2');
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+    this.retry.emit();
+  }
+
   private destroyChart() {
     this.chart?.destroy();
     this.chart = undefined;
@@ -142,14 +165,14 @@ const template = `
         <div class="mf-chart-skeleton" aria-hidden="true"></div>
       } @else if (error()) {
         <div class="mf-chart-message">
-          <button hlmBtn variant="secondary" (click)="retry.emit()">
+          <button hlmBtn variant="secondary" (click)="retryPressed()">
             {{ 'shell.chart.retry' | t }}
           </button>
         </div>
       } @else if (points().length === 0) {
-        <p class="mf-chart-message">{{ 'shell.chart.empty' | t }}</p>
+        <p class="mf-chart-message">{{ empty() ?? ('shell.chart.empty' | t) }}</p>
       } @else {
-        <div class="mf-chart-plot">
+        <div class="mf-chart-plot" [style.height.px]="plotHeight()">
           <canvas #canvas role="img" [attr.aria-label]="summary()"></canvas>
         </div>
         <button
@@ -165,7 +188,7 @@ const template = `
           <table hlmTable [id]="tableId">
             <thead hlmTHead>
               <tr hlmTr>
-                <th hlmTh scope="col">{{ 'shell.chart.label' | t }}</th>
+                <th hlmTh scope="col">{{ labelHeading() ?? ('shell.chart.label' | t) }}</th>
                 <th hlmTh scope="col">{{ 'shell.chart.value' | t }}</th>
               </tr>
             </thead>
@@ -179,6 +202,7 @@ const template = `
             </tbody>
           </table>
         }
+        <ng-content />
       }
     </div>
   </mf-panel>

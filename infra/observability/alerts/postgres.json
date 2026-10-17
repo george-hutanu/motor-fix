@@ -19,10 +19,8 @@
           },
           "annotations": {
             "summary": "PostgreSQL has not answered the worker for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-postgres"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-postgres",
+            "runbook": "Open the PostgreSQL service in Railway: check that it is running, its disk and its logs; the api and worker cannot work without it."
           },
           "data": [
             {
@@ -77,10 +75,8 @@
           },
           "annotations": {
             "summary": "PostgreSQL has used more than 80% of its connections for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-postgres"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-postgres",
+            "runbook": "Open the PostgreSQL dashboard: find which service holds the connections, look for leaked or long-running ones, and restart that service if needed."
           },
           "data": [
             {
@@ -135,10 +131,8 @@
           },
           "annotations": {
             "summary": "The PostgreSQL database has been larger than 4 GiB for 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-postgres"
-          },
-          "notification_settings": {
-            "receiver": "MotorFix owner"
+            "dashboard_uid": "motorfix-postgres",
+            "runbook": "Open the PostgreSQL dashboard: find the tables that grew, clean up what should not be kept, or raise the plan before the volume fills."
           },
           "data": [
             {
@@ -173,6 +167,62 @@
                       "type": "gt",
                       "params": [
                         4294967296
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "postgres-outbox-stuck",
+          "title": "PostgreSQL outbox stuck",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "postgres"
+          },
+          "annotations": {
+            "summary": "The oldest outbox event has waited more than 60 s to be sent, for 5 minutes: events are not leaving PostgreSQL ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-postgres",
+            "runbook": "Events are not leaving the outbox: check that the worker is up and its outbox relay logs, then the Redis and queue dashboards."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_outbox_oldest_pending_seconds)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        60
                       ]
                     }
                   }

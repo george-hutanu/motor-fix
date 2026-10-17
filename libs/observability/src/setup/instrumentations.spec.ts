@@ -197,6 +197,15 @@ describe('the HTTP instrumentation', () => {
       cpu?.dataPoints.map((point) => point.attributes['cpu.mode']).sort(),
     ).toEqual(['system', 'user']);
   });
+
+  // @traces 880-FR-006
+  it('reports the resident memory of every service that starts telemetry', async () => {
+    const { resourceMetrics } = await memory.metricReader.collect();
+    const names = resourceMetrics.scopeMetrics.flatMap((scope) =>
+      scope.metrics.map((metric) => metric.descriptor.name),
+    );
+    expect(names).toContain('process.memory.usage');
+  });
 });
 
 // @traces 1345-FR-001

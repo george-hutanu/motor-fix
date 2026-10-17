@@ -9,6 +9,7 @@ export { ConsentsService } from './services/consents.service';
 export { NotificationsService } from './services/notifications.service';
 export { AdminService } from './services/admin.service';
 export { CarsService } from './services/cars.service';
+export { SavedGaragesService } from './services/saved-garages.service';
 export { BrandsService } from './services/brands.service';
 export { CatalogueService } from './services/catalogue.service';
 export { PublicHolidaysService } from './services/public-holidays.service';

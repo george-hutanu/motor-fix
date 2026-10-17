@@ -1,6 +1,7 @@
 import { LANGUAGES } from '@motor-fix/i18n';
 import type { Express, Request } from 'express';
 
+import { PAGE_CACHE_CONTROL } from './page-cache/page-cache';
 import { alternates, PUBLIC_PATHS } from '../app/addresses';
 
 const ENTITIES = {
@@ -20,7 +21,11 @@ export function mountSearch(app: Express, publicOrigin: string | undefined) {
     publicOrigin ?? `${req.protocol}://${req.get('host')}`;
 
   app.get('/sitemap.xml', (req, res) => {
-    res.type('application/xml').send(sitemap(origin(req)));
+    res
+      .set('Cache-Control', PAGE_CACHE_CONTROL)
+      .set('CDN-Tag', 'search')
+      .type('application/xml')
+      .send(sitemap(origin(req)));
   });
 
   app.get('/robots.txt', (req, res) => {

@@ -811,7 +811,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 18,
+        "w": 12,
         "x": 6,
         "y": 41
       },
@@ -824,6 +824,38 @@
           },
           "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"web\", deployment_environment=\"$env\", http_route=\"/health/ready\"}[5m]))",
           "legendFormat": "{{http_response_status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Origin refusals",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(rate(motorfix_origin_refused_total{service_name=\"web\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "refused"
         }
       ],
       "fieldConfig": {

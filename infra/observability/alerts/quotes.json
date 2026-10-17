@@ -19,7 +19,8 @@
           },
           "annotations": {
             "summary": "The sweep, not their own timers, closed more than 10 decline windows in an hour: timers on the quote-timers queue are being lost ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-queues"
+            "dashboard_uid": "motorfix-queues",
+            "runbook": "Quote timers are being lost: check the quote-timers queue on the queues dashboard, Redis memory and eviction, and the worker logs."
           },
           "data": [
             {

@@ -17,6 +17,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
   ApiNotFoundResponse,
@@ -54,6 +55,10 @@ export class QuoteRequestsController {
   @ApiBadRequestResponse({
     description:
       'validation_failed: a bad field, too_many garages, length_mismatch, a missing description or key; garage_cannot_receive: garageId, garageName and reason',
+  })
+  @ApiConflictResponse({
+    description:
+      'garage_cannot_receive with reason garage_suspended: a garage of the request is suspended',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({

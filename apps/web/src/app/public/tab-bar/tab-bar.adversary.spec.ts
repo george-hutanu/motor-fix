@@ -62,6 +62,7 @@ function setUp(...replies: Array<MeDto | null>) {
           current,
           ended: new Subject<void>(),
           load,
+          roleHint: signal(null),
           shown: current,
           token: () => 'access',
         },

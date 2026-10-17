@@ -16,7 +16,10 @@ export class MaintenancePage {
     const response = inject(RESPONSE_INIT, { optional: true });
     if (response) {
       response.status = 503;
-      response.headers = { 'Retry-After': '300' };
+      // Added to the render's own headers, which carry its content type.
+      const headers = new Headers(response.headers);
+      headers.set('Retry-After', '300');
+      response.headers = headers;
     }
   }
 }

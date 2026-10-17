@@ -43,6 +43,7 @@ model Garage {
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
   reports                    GarageReport[]
+  savedBy                    SavedGarage[]
   members                    GarageMember[]
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]
@@ -102,6 +103,7 @@ model Garage {
   jobs                       Job[]
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]
+  suspensions                GarageSuspension[]
 
   @@index([cityKey])
   @@map("garage")
@@ -389,6 +391,33 @@ model GarageReport {
   @@index([verificationFileId])
   @@index([reporterId, createdAt])
   @@map("garage_report")
+}
+
+enum GarageSuspensionCause {
+  recheck_failed
+  documents_overdue
+  admin
+  report_confirmed
+
+  @@map("garage_suspension_cause")
+}
+
+// A garage taken off the map. Open while untilTime is empty; the migration
+// holds the reason's 1-200 characters and one open suspension per garage.
+model GarageSuspension {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId    String                @map("garage_id") @db.Uuid
+  cause       GarageSuspensionCause
+  reason      String
+  fromTime    DateTime              @map("from_time") @db.Timestamptz(3)
+  untilTime   DateTime?             @map("until_time") @db.Timestamptz(3)
+  // The admin's account; empty when MotorFix itself suspended.
+  suspendedBy String?               @map("suspended_by") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage      Garage                @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@index([garageId, fromTime])
+  @@map("garage_suspension")
 }
 
 // A legal document sent with a listing: its pages are storage keys in page

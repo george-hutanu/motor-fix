@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-16
+updated: 2026-10-17
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -11,6 +11,7 @@ features:
   - 1182-cache-service
   - 1169-prefetch-intent
   - 1235-unknown-brand-cache
+  - 290-save-garage
 ---
 
 # Capability: Garage profile
@@ -254,6 +255,30 @@ _From 1235-unknown-brand-cache._
 ### 1235-FR-003 — The brand a profile read names MUST be looked up through the cache service (kind `brands`, one entry per slug: a held brand kept 10 minutes, a slug no brand holds remembered 60 seconds as none), so a repeat read with the same brand, held or not, costs no PostgreSQL read, and a made-up brand adds no profile entry.
 
 _From 1235-unknown-brand-cache._
+
+### 290-FR-009 — The garage profile header (Mechanic / MGarage boards, 307-FR-010) MUST show, for a signed-in driver or a visitor, a save button next to the share button's place: an outline bookmark icon with "Salvează" / "Save" when not saved, a filled bookmark with "Salvat" / "Saved" when saved (`aria-pressed` reflecting it). In the garage, receptionist, mechanic or admin role in use the button MUST be absent.
+
+_From 290-save-garage._
+
+### 290-FR-011 — For a signed-in driver the web app MUST read the saved ids (FR-005) once per activation of a profile or results route, into one store shared by every control on the page that saves and removals update in place, and show the saved state on every profile button and card from that answer; until the answer arrives the controls read "Salvează" and are usable. For a visitor no read is made.
+
+_From 290-save-garage._
+
+### 290-FR-012 — Tapping save MUST be optimistic: the control shows the saved state at once and the save is sent; on 201 or 200 a toast "Salvat în Service-uri salvate" / "Saved to Saved garages" shows. A tap on a control whose save or removal for that garage is still in flight does nothing (the control keeps its look). On an error the control goes back and a toast explains why in the person's language: 404 replaces the control with the text "Indisponibil" / "Unavailable" and shows no toast; a failed connection shows "Fără conexiune" / "No connection"; any other error the shared error text.
+
+_From 290-save-garage._
+
+### 290-FR-013 — Tapping a saved control MUST remove the garage at once (optimistic) and show an undo bar "Scos din salvate · Anulează" / "Removed from saved · Undo" for 8 seconds; "Anulează" sends the save again with the removed row's `savedAt` (FR-002, from the 200 of FR-004) and the control shows the saved state; a 422 or any other error goes back to "Salvează" with the error toast. A new removal replaces an undo bar still showing. A removal that fails puts the control back to "Salvat", dismisses the bar and shows the error toast; "Anulează" tapped before the removal answered waits for it, then sends the save (with no body when the removal answered 204). The undo bar is announced to assistive technology and its "Anulează" is reachable and operable by keyboard.
+
+_From 290-save-garage._
+
+### 290-FR-014 — For a visitor, tapping either control MUST open the sign-in dialog over the page, sending nothing before. When the dialog resolves "signed in" (080-FR-013) for an account with the `driver` role, the page stays where it is and the tapped garage is saved as FR-012; when the sign-in goes through an outside provider, which leaves the page and returns to it (083-FR-009), the tapped garage is kept for this browser tab and saved once the returned page shows its control to a driver; for an account without that role, nothing is sent and the controls are hidden. A dialog closed without signing in saves nothing.
+
+_From 290-save-garage._
+
+### 290-FR-015 — The texts MUST live in the public texts for both languages and the screens MUST render well at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll (307-FR-016, 267-FR-016).
+
+_From 290-save-garage._
 
 ## Retired
 

@@ -53,6 +53,7 @@ function setUp(platform = 'browser') {
           ended: new Subject<void>(),
           keepReturnTo: jest.fn(),
           load,
+          roleHint: signal(null),
           shown: current,
           takeReturnTo: jest.fn((): string | null => null),
           token: () => 'access',

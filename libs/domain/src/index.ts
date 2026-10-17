@@ -41,6 +41,7 @@ export {
   RemindersModule,
 } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
+export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { BrandLoader } from './catalogue/brand-loader';
 export { BRANDS } from './catalogue/brands';
 export { CatalogueModule } from './catalogue/catalogue.module';
@@ -71,6 +72,7 @@ export {
 } from './garages/verification/verification.service';
 export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
+export { DemandModule } from './insights/demand/demand.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
@@ -78,6 +80,7 @@ export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
 export { emailConfig } from './notifications/email-config';
+export { GARAGE_SUSPENDED_CONSUMER } from './notifications/garage-suspended/garage-suspended.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
