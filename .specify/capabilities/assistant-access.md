@@ -1,10 +1,11 @@
 ---
 capability: assistant-access
-updated: 2026-10-09
+updated: 2026-10-17
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
   - 1016-mcp-staging
+  - 1019-staging-mcp-connect
 ---
 
 # Capability: Assistant access
@@ -132,5 +133,33 @@ _From 374-assistant-requests._
 ### 000-FR-005 — The MCP server MUST keep answering `GET /health/live` as today (421-FR-012) and MUST NOT gain a `/health/ready`.
 
 _From 1016-mcp-staging._
+
+### 1019-FR-001 — The check MUST take the MCP address as its one argument and send an unsigned MCP request to it; it passes only when the answer is 401 with a `Bearer` challenge that names an absolute `resource_metadata` address.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-002 — The check MUST read the protected-resource metadata at that address; it passes only when its `resource` equals the MCP address given (one trailing slash ignored on each side; a mismatch prints both) and it names exactly one authorization server.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-003 — The check MUST read that authorization server's metadata; it passes only when its `issuer` equals the server named in FR-002, it names an authorization, a token and a registration endpoint, and `S256` is among its PKCE methods.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-004 — The check MUST register one public client for each of Claude and ChatGPT at the registration endpoint, without credentials, each with that assistant's own callback address, as two independent steps (the second runs when the first fails), each passing only when its answer carries a client id.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-005 — The check MUST delete every client it registered, with the registration's own access token, whatever any other step's outcome, and fail when a delete is refused.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-006 — The check MUST print one line per step (pass, fail with the reason, or not run because an earlier step failed), end with status 1 when any step failed and 2 on a usage error, and never print a token, a registration access token or a client secret. Each request has a 10 s limit.
+
+_From 1019-staging-mcp-connect._
+
+### 1019-FR-008 — The owner instructions MUST say how to add the staging MCP address as a custom connector in Claude and in ChatGPT, how to run the check first, which tool to call (`get_my_account`) and what a passing answer is, how to record each result (date, client, tool called, pass or fail, error text) on #1106 and #869, and that the address changes if #1307 moves /mcp into the api; the setup steps MUST name the `MCP_URL` variable on the GitHub staging environment.
+
+_From 1019-staging-mcp-connect._
 
 ## Retired
