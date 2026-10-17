@@ -2568,6 +2568,9 @@
           "404": {
             "description": "not_found: not a driver, or not the driver’s car"
           },
+          "409": {
+            "description": "garage_cannot_receive with reason garage_suspended: a garage of the request is suspended"
+          },
           "429": {
             "description": "too_many_requests: 20 sent today already"
           }
@@ -4164,6 +4167,64 @@
         ]
       }
     },
+    "/api/v1/admin/garages/{id}/suspend": {
+      "post": {
+        "operationId": "SuspensionController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageSuspensionCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a cause outside the four, or a reason that is not 1 to 200 characters"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no garage"
+          },
+          "409": {
+            "description": "garage_already_suspended, or garage_not_approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take an approved garage off the map",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/checks/{kind}": {
       "put": {
         "operationId": "VerificationChecksController_record",
@@ -5426,6 +5487,27 @@
           "canRecordFinalPrice"
         ]
       },
+      "GarageSuspensionDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cause",
+          "reason"
+        ]
+      },
       "GarageAccessDto": {
         "type": "object",
         "properties": {
@@ -5462,6 +5544,16 @@
               "type": "boolean"
             },
             "description": "The garage’s feature switches by key; a missing key is on"
+          },
+          "suspension": {
+            "description": "The open suspension; null unless the garage is suspended",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageSuspensionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -5470,7 +5562,8 @@
           "status",
           "role",
           "permissions",
-          "features"
+          "features",
+          "suspension"
         ]
       },
       "MeDto": {
@@ -10642,6 +10735,66 @@
           "jobTypes",
           "prices",
           "photos"
+        ]
+      },
+      "SuspendGarageDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Trimmed; shown to the garage as written",
+            "maxLength": 200,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "cause",
+          "reason"
+        ]
+      },
+      "GarageSuspensionCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "garageId",
+          "cause",
+          "reason",
+          "fromTime"
         ]
       },
       "RecordVerificationCheckDto": {

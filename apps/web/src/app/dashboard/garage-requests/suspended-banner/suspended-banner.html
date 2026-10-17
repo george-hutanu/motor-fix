@@ -1,0 +1,6 @@
+@if (suspension(); as suspension) {
+  <div role="alert">
+    <p>{{ 'garage.suspended.text' | t: { reason: suspension.reason } }}</p>
+    <p>{{ next() | t }}</p>
+  </div>
+}
