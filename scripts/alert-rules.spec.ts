@@ -653,8 +653,8 @@ describe('alert rules', () => {
   });
 
   // @traces 880-FR-017
-  it('holds thirty-eight rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(38);
+  it('holds thirty-nine rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(39);
   });
 
   // @traces 1175-FR-006

@@ -92,7 +92,7 @@ Grafana UI is overwritten by the next release: edit the JSON instead.
 `infra/observability/alerts/` holds one JSON file per rule group, in Grafana's
 provisioning format (`apiVersion: 1`, folder `MotorFix`, every minute):
 `api.json`, `web.json`, `worker.json`, `postgres.json` and `redis.json` for
-the services, `mcp.json`, `notifications.json` and `quotes.json` for the
+the services, `mcp.json`, `notifications.json`, `quotes.json` and `support.json` for the
 narrower signals. Each rule groups by `deployment_environment`, so an
 environment that never reported raises nothing, and carries its `service`
 label, a summary naming the environment, its dashboard's uid and a
