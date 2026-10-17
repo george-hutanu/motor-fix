@@ -317,7 +317,9 @@ describe('the backup probe', () => {
       BACKUP_S3_REGION: 'auto',
       BACKUP_S3_SECRET_ACCESS_KEY: 'secret',
     };
-    expect(backupLister('production', full)).toBeInstanceOf(Function);
+    const lister = backupLister('production', full);
+    expect(lister?.list).toBeInstanceOf(Function);
+    lister?.destroy();
     for (const name of Object.keys(full)) {
       expect(
         backupLister('production', { ...full, [name]: '' }),

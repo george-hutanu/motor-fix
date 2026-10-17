@@ -313,6 +313,33 @@ describe('the probes', () => {
     ).toEqual(['notifications']);
   });
 
+  it('judge on the current sample and write every tile when the sample store refuses', async () => {
+    readyStatus = 200;
+    const probes = liveProbes(options(), prisma, notifications);
+    tick();
+    await runChecks({
+      events: outbox,
+      prisma,
+      probes: { ...probes, now: () => new Date(clock) },
+      samples: {
+        expire: store.expire.bind(store),
+        zadd: async () => {
+          throw new Error('store down');
+        },
+        zrangebyscore: store.zrangebyscore.bind(store),
+        zremrangebyscore: store.zremrangebyscore.bind(store),
+      } as unknown as Redis,
+      thresholds: parseThresholds(raw),
+    });
+    const rows = await tiles();
+    expect(rows).toHaveLength(6);
+    expect(rows.every((row) => row.state === 'green')).toBe(true);
+    const api = await prisma.statusTile.findUniqueOrThrow({
+      where: { key: 'api' },
+    });
+    expect(api.detail).toMatchObject({ latency_ms: expect.any(Number) });
+  });
+
   it('count the failed e-mails of the last 15 minutes from the notification table', async () => {
     const id = await account('driver');
     const row = (status: 'sent' | 'failed', minutesAgo: number) => ({
@@ -358,6 +385,8 @@ describe('the worker job', () => {
       imports: [
         StatusModule.registerWorker({
           ...options(),
+          appEnv: 'test',
+          backupEnv: {},
           databaseUrl,
           redisUrl,
           thresholds,
