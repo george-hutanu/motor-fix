@@ -43,6 +43,7 @@ model Garage {
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
   reports                    GarageReport[]
+  savedBy                    SavedGarage[]
   members                    GarageMember[]
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]

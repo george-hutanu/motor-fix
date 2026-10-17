@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 117,
+    "count": 120,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -715,6 +715,19 @@
       ],
       "reason": "refusals show on the request-duration metric by route and status code",
       "story": "ST-312"
+    },
+    {
+      "kind": "endpoint",
+      "name": "saved-garages",
+      "source": "libs/domain/src/cars/saved-garages/saved-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "PUT, DELETE and GET ids show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, so no product counter is added",
+      "story": "ST-290"
     },
     {
       "kind": "product-counter",

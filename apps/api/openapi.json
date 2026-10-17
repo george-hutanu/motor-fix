@@ -1956,6 +1956,156 @@
         ]
       }
     },
+    "/api/v1/me/saved-garages/{garageId}": {
+      "put": {
+        "operationId": "SavedGaragesController_save",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved already; nothing changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Saved now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id or body"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          },
+          "404": {
+            "description": "not_found: no approved garage with that id"
+          },
+          "422": {
+            "description": "saved_at_in_future: savedAt is later than now"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save an approved garage on the caller's account",
+        "tags": [
+          "saved-garages"
+        ]
+      },
+      "delete": {
+        "operationId": "SavedGaragesController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed; savedAt is what an undo sends back",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageDto"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Was not saved; nothing changed"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a garage from the caller's saved ones, whatever its status",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
+    "/api/v1/me/saved-garages/ids": {
+      "get": {
+        "operationId": "SavedGaragesController_ids",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGarageIdsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The ids of the caller's saved garages, whatever their status",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -7209,6 +7359,50 @@
         },
         "required": [
           "version"
+        ]
+      },
+      "SaveGarageDto": {
+        "type": "object",
+        "properties": {
+          "savedAt": {
+            "type": "string",
+            "description": "An undo: the time the garage was first saved, never in the future",
+            "format": "date-time"
+          }
+        }
+      },
+      "SavedGarageDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "savedAt": {
+            "type": "string",
+            "description": "UTC",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "garageId",
+          "savedAt"
+        ]
+      },
+      "SavedGarageIdsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "In no promised order",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
         ]
       },
       "BrandDto": {
