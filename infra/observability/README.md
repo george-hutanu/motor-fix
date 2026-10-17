@@ -192,8 +192,8 @@ same alert sent again sends nothing more.
 
 The contact point `motorfix-outage` and the rule `alerts/outage.json` are
 applied by the Grafana alerts workflow (`grafana-alerts.yml`) from the
-repository, never by hand; the checks are the one part set up by hand. Once
-per stack:
+repository, never by hand. What the owner does once per stack, and the
+file edits that keep the contact point current:
 
 1. Synthetic Monitoring › Checks: create the two checks from
    `uptime/checks.json`, `{PUBLIC_WEB_URL}` replaced by the environment's
@@ -207,8 +207,10 @@ per stack:
    the GitHub secret `OUTAGE_WEBHOOK_TOKEN` and the GitHub variable
    `STAGING_WEB_URL` (the staging web address), both set by the owner;
    without either the run skips it with a notice and still applies the
-   e-mail. It posts to the staging API only, as the checks watch staging:
-   production has no webhook.
+   e-mail. Such a run still removes any `motorfix-outage` integration made
+   by hand, a webhook included, so set both before the first run. It posts
+   to the staging API only, as the checks watch staging: production has no
+   webhook.
 3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token as the
    GitHub secret. Unset, the webhook refuses every call.
 4. A changed secret or variable takes effect at the next run of the
