@@ -69,6 +69,33 @@ describe('GET /admin/garages/summary', () => {
     expect(res.body.waiting).toBe(overview.body.garagesWaiting);
   });
 
+  it('counts a submitted and an in-review file as waiting, an approved, sent-back or rejected one nowhere', async () => {
+    const before = (await get('garages/summary', admin)).body;
+    for (const status of [
+      'submitted',
+      'in_review',
+      'approved',
+      'more_requested',
+      'rejected',
+    ]) {
+      const garage = randomUUID();
+      await db.query(
+        "INSERT INTO garage (id, name, slug) VALUES ($1, 'Auto Nord', $2)",
+        [garage, `g-${garage}`],
+      );
+      await db.query(
+        'INSERT INTO verification_file (id, garage_id, status) VALUES ($1, $2, $3::verification_file_status)',
+        [randomUUID(), garage, status],
+      );
+    }
+
+    const after = (await get('garages/summary', admin)).body;
+    const overview = (await get('overview', admin)).body;
+
+    expect(after.waiting).toBe(before.waiting + 2);
+    expect(after.waiting).toBe(overview.garagesWaiting);
+  });
+
   it('counts a garage the moment it is suspended', async () => {
     const before = (await get('garages/summary', admin)).body;
     const garage = randomUUID();
