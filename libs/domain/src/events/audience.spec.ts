@@ -142,6 +142,7 @@ describe('audienceOf', () => {
     ]);
   });
 
+  // @traces 049-FR-007
   it("adds the garage's public page and the results channel when an approval publishes it", () => {
     expect(
       audienceOf({ garageId: garage, published: true, type: 'verification' }),

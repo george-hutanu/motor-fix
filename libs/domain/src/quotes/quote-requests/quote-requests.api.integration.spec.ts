@@ -6,7 +6,9 @@ import { MeterProvider } from '@opentelemetry/sdk-metrics';
 
 import { AuditService } from '../../audit/audit.service';
 import { atLocal, localDay } from '../../bucharest';
+import { outbox } from '../../events/event.port';
 import { outboxMark } from '../../events/outbox.testing';
+import { SuspensionService } from '../../garages/verification/suspension/suspension.service';
 import { quotesApp } from '../quotes-api.testing';
 
 const { metricReader } = inMemory();
@@ -636,24 +638,53 @@ describe('routing', () => {
     ).toBe(201);
   });
 
-  it('refuses a suspended garage and a draft one as not taking requests', async () => {
+  it('refuses a draft garage as not taking requests', async () => {
     const { auth, body, car, oil } = await scene();
-    for (const status of ['suspended', 'draft'] as const) {
-      const garage = await taker(`Închis ${status}`, car.brandId, [oil.id]);
-      await prisma.garage.update({
-        data: { status },
-        where: { id: garage.id },
-      });
+    const garage = await taker('Închis draft', car.brandId, [oil.id]);
+    await prisma.garage.update({
+      data: { status: 'draft' },
+      where: { id: garage.id },
+    });
 
-      await refusedFor(
-        garage,
-        'not_taking_requests',
-        await send(
-          { ...body, garageIds: [garage.id], jobTypeIds: [oil.id] },
-          auth,
-        ),
-      );
-    }
+    await refusedFor(
+      garage,
+      'not_taking_requests',
+      await send(
+        { ...body, garageIds: [garage.id], jobTypeIds: [oil.id] },
+        auth,
+      ),
+    );
+  });
+
+  // @traces 049-FR-008
+  it('answers 409 garage_suspended for a suspended garage and writes nothing', async () => {
+    const { auth, body, car, garage: open, oil } = await scene();
+    const garage = await taker('Atelier Dinamo', car.brandId, [oil.id]);
+    await new SuspensionService(prisma, new AuditService(), outbox).suspend(
+      { accountId: null, role: 'system' },
+      garage.id,
+      'recheck_failed',
+      'Autorizație RAR expirată',
+    );
+
+    const res = await send(
+      {
+        ...body,
+        garageIds: [open.id, garage.id],
+        jobTypeIds: [oil.id],
+        sources: ['profile_direct', 'search'],
+      },
+      auth,
+    );
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'garage_cannot_receive',
+      garageId: garage.id,
+      garageName: 'Atelier Dinamo',
+      reason: 'garage_suspended',
+    });
+    expect(await rows()).toEqual(none);
   });
 
   it('names an id no garage holds as not taking requests', async () => {

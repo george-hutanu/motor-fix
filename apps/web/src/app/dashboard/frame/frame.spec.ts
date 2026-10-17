@@ -680,6 +680,19 @@ describe('Frame', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 049-FR-007 049-FR-012
+  it('reads the account again when its garage is suspended, so the banner shows at once', async () => {
+    await render('garage', '/app/garage', []);
+
+    live.events.next({
+      at: '2026-10-17T09:00:00.000Z',
+      id: 'garage-1',
+      kind: 'garage.suspended',
+    });
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it('asks an account with an unconfirmed e-mail to confirm it, on every dashboard', async () => {
     for (const [role, landing] of [
       ['driver', '/app/driver'],

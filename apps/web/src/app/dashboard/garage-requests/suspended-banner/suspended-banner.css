@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+[role="alert"] {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0 0 var(--mf-space-3);
+  padding: var(--mf-space-3) var(--mf-space-4);
+  border: 1px solid var(--mf-red-ink);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-red-ink);
+}
+p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

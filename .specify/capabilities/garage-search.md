@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -11,6 +11,7 @@ features:
   - 267-brand-results
   - 1182-cache-service
   - 1169-prefetch-intent
+  - 049-garage-suspension
 ---
 
 # Capability: Garage search
@@ -178,6 +179,10 @@ _From 1182-cache-service._
 ### 1169-FR-007 — The results page's card MUST pre-fetch the public profile of its garage, with the brand in context, on the first of: the pointer resting on the card for 100 ms, a touch starting on it, or the card scrolling into view after the visitor's first scroll (cards visible at first paint are not pre-fetched on visibility alone: first paint is not intent). At most 3 pre-fetches are in flight at once (later signals wait for a slot); a card already stored or in flight starts no second fetch; the pointer leaving a card before its answer cancels the fetch and stores nothing. On the same signal the profile route's lazy code is requested once per page life.
 
 _From 1169-prefetch-intent._
+
+### 049-FR-006 — Every public read MUST keep going through the one public scope (`status = approved`), so a suspended garage is in neither group and neither count of the brand search (043-FR-002), absent from the brand pages' counts and dials, answers 410 `gone` on its profile (307-FR-001) and is never a recipient of request routing (221-FR-007). This story adds no new read and MUST prove the rule with tests on a garage suspended through the use case.
+
+_From 049-garage-suspension._
 
 ## Retired
 

@@ -142,7 +142,7 @@
         </p>
         @if (unreceivable(); as refused) {
           <p class="error" role="alert">{{ refusedLine() }}</p>
-          @if (refused.reason === 'not_taking_requests') {
+          @if (refused.reason === 'not_taking_requests' || refused.reason === 'garage_suspended') {
             <a class="back" [href]="backToSearch()" (click)="leave($event, backToSearch())">{{ 'public.requestQuote.backToSearch' | t }}</a>
           }
         }

@@ -115,6 +115,7 @@ describe('who am I, at the garages I work at', () => {
         permissions: ALL,
         role: 'owner',
         status: 'draft',
+        suspension: null,
       },
     ]);
   });
@@ -179,6 +180,7 @@ describe('who am I, at the garages I work at', () => {
         },
         role: 'mechanic',
         status: 'draft',
+        suspension: null,
       },
     ]);
   });
@@ -226,6 +228,89 @@ describe('who am I, at the garages I work at', () => {
     expect(
       res.body.garageAccess.map((g: { garageId: string }) => g.garageId),
     ).not.toContain(other.id);
+  });
+});
+
+// @traces 049-FR-012 049-FR-013
+describe('who am I, at a suspended garage', () => {
+  const REASON = 'Autorizație RAR expirată';
+
+  const suspended = async () => {
+    const staff = await garage();
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: staff.atelier.id },
+    });
+    await prisma.garageSuspension.create({
+      data: {
+        cause: 'recheck_failed',
+        fromTime: new Date(),
+        garageId: staff.atelier.id,
+        reason: REASON,
+      },
+    });
+    return staff;
+  };
+
+  it.each([
+    ['the owner', 'owner', 'garage'],
+    ['a receptionist', 'receptionist', 'receptionist'],
+    ['a mechanic', 'mechanic', 'mechanic'],
+  ] as const)(
+    'gives %s the open suspension’s cause and reason',
+    async (_, who, role) => {
+      const staff = await suspended();
+
+      const res = await me(staff[who], role);
+
+      expect(res.status).toBe(200);
+      expect(res.body.garageAccess).toEqual([
+        expect.objectContaining({
+          garageId: staff.atelier.id,
+          status: 'suspended',
+          suspension: { cause: 'recheck_failed', reason: REASON },
+        }),
+      ]);
+    },
+  );
+
+  it('ignores a suspension that has ended', async () => {
+    const { atelier, owner } = await garage();
+    await prisma.garage.update({
+      data: { status: 'approved' },
+      where: { id: atelier.id },
+    });
+    await prisma.garageSuspension.create({
+      data: {
+        cause: 'admin',
+        fromTime: new Date(Date.now() - 86_400_000),
+        garageId: atelier.id,
+        reason: REASON,
+        untilTime: new Date(),
+      },
+    });
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageAccess[0]).toMatchObject({
+      status: 'approved',
+      suspension: null,
+    });
+  });
+
+  it('keeps the members and the mechanic card of a suspended garage', async () => {
+    const { atelier, owner } = await suspended();
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageId).toBe(atelier.id);
+    expect(res.body.capabilities).toContain('garage.requests');
+    expect(
+      await prisma.garageMember.count({ where: { garageId: atelier.id } }),
+    ).toBe(2);
+    expect(
+      await prisma.mechanic.count({ where: { garageId: atelier.id } }),
+    ).toBe(1);
   });
 });
 

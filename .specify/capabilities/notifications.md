@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 194-email-sending
   - 195-message-templates
@@ -32,6 +32,7 @@ features:
   - 251-monitoring-backups
   - 032-notifications-bell
   - 222-booking-from-quote
+  - 049-garage-suspension
 ---
 
 # Capability: Notifications
@@ -691,6 +692,14 @@ _From 032-notifications-bell._
 ### 222-FR-010 — `quote.accepted` MUST have one registered consumer in the notifications worker which, per event, builds one QUOTE_ACCEPTED through the existing notification service for each owner and receptionist of the quote's garage (the catalogue's staff list), never a mechanic, with params `{ driverShortName, car, slot }` (the slot written in Romania's time zone, as the platform writes its other times), skips when the booking is no longer `awaiting_confirmation` by the time it runs, and builds none twice for the same booking and recipient when the event is delivered again; the templates (bell, push, e-mail) MUST exist in Romanian and English: bell "Andrei M. a acceptat oferta ta · <car> · <slot>" / "Andrei M. accepted your quote · <car> · <slot>", push title "Ofertă acceptată" / "Quote accepted" with the same body, e-mail subject "Ofertă acceptată: <car>" / "Quote accepted: <car>" with the body naming the driver, the car, the slot and that the booking waits for the garage's confirmation; opening the notification lands on Oferte trimise.
 
 _From 222-booking-from-quote._
+
+### 049-FR-010 — The notifications worker MUST consume `garage.suspended` and build one GARAGE_SUSPENDED per garage owner through the notifications service, keyed by the outbox event id so a retry or a second relay never doubles it; the open suspension's cause and reason are read from the database, never from the event alone. The catalogue entry already exists (event; e-mail, push, WhatsApp; always sent); the e-mail and the bell entry go whatever the owner muted (194-FR-004), push and WhatsApp follow the existing routing, and the notification settings show the type locked on (198-FR-006).
+
+_From 049-garage-suspension._
+
+### 049-FR-011 — The system MUST carry a Romanian and an English GARAGE_SUSPENDED template for the e-mail, the push, the WhatsApp and the bell, saying that the profile is off the map until the problem is fixed, giving the reason as escaped plain text, naming the next step by cause (`recheck_failed`: upload the renewed RAR authorisation; `documents_overdue`: upload the yearly documents; `admin` and `report_confirmed`: answer MotorFix), with a link to the garage dashboard, holding no other personal data and passing the existing template checks; the bell entry opens the garage dashboard (`/app/garage`), through a garage-side rule added to the bell's link rules.
+
+_From 049-garage-suspension._
 
 ## Retired
 
