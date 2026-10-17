@@ -12,6 +12,22 @@ import { accessToken } from './platform-rules.js';
 // line and the panel move without a reload. A deployed address, whose run has
 // no DATABASE_URL, skips the file.
 // @traces 066-FR-006 066-FR-007 066-FR-008 066-FR-011
+// How far a line's text starts from the view title's text, in px: the counts
+// line under the title starts where the title and the cards' text start.
+const offTitle = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const textLeft = (el: Element | null) => {
+      if (!el) return Number.NaN;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return range.getClientRects()[0]?.left ?? Number.NaN;
+    };
+    return Math.abs(
+      textLeft(document.querySelector(sel)) -
+        textLeft(document.querySelector('header h1')),
+    );
+  }, selector);
+
 test.describe('the suspended garages @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],
@@ -88,6 +104,9 @@ test.describe('the suspended garages @seeded', () => {
         /^Service‑uri suspendate · \d+/,
       );
       expect(await sideways(page)).toBeLessThanOrEqual(0);
+      expect(
+        await offTitle(page, 'mf-admin-garages .counts'),
+      ).toBeLessThanOrEqual(1);
       const before = await suspended(page);
       let navigations = 0;
       page.on('framenavigated', (frame) => {
