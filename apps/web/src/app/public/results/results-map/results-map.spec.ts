@@ -3,7 +3,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import type { MapMove } from './pins-map';
+import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 
 const PINS: GaragePinsDto = {
@@ -18,10 +18,14 @@ let view: jest.Mocked<ResultsMapView>;
 let opened: (value: ResultsMapView) => void;
 let failed: (error: unknown) => void;
 let moved: (move: MapMove) => void;
+let tapped: (id: string | undefined) => void;
+let shifted: () => void;
 const open = jest.fn(
-  (_host: HTMLElement, onMove: (move: MapMove) => void) =>
+  (_host: HTMLElement, on: MapEvents) =>
     new Promise<ResultsMapView>((resolve, reject) => {
-      moved = onMove;
+      moved = on.moved;
+      tapped = on.picked;
+      shifted = on.shifted;
       opened = resolve;
       failed = reject;
     }),
@@ -66,7 +70,13 @@ const legend = () =>
 
 beforeEach(() => {
   open.mockClear();
-  view = { destroy: jest.fn(), fit: jest.fn(), show: jest.fn() };
+  view = {
+    destroy: jest.fn(),
+    fit: jest.fn(),
+    light: jest.fn(),
+    show: jest.fn(),
+    spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 40 })),
+  };
 });
 
 // @traces 269-FR-016
@@ -93,7 +103,11 @@ describe('ResultsMap, the map region', () => {
 
     expect(host?.hasAttribute('inert')).toBe(false);
     expect(host?.getAttribute('aria-hidden')).toBe('true');
-    expect(open).toHaveBeenCalledWith(host, expect.any(Function));
+    expect(open).toHaveBeenCalledWith(host, {
+      moved: expect.any(Function),
+      picked: expect.any(Function),
+      shifted: expect.any(Function),
+    });
   });
 });
 
@@ -379,5 +393,113 @@ describe('ResultsMap, a move of the map', () => {
     fixture.detectChanges();
 
     expect(said(hint())).toBe('Zoom in');
+  });
+});
+
+const BRAND = { id: 'b-1', name: 'BMW', slug: 'bmw' };
+const PIN = PINS.pins[0];
+
+// @traces 270-card-pin-link-FR-008
+describe('ResultsMap, the lit garage', () => {
+  it('lights the garage it is given once the map has opened, and each one after', async () => {
+    await render();
+    fixture.componentRef.setInput('lit', 'g-1');
+    fixture.detectChanges();
+    await ready();
+
+    expect(view.light).toHaveBeenLastCalledWith('g-1');
+
+    fixture.componentRef.setInput('lit', undefined);
+    fixture.detectChanges();
+
+    expect(view.light).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('keeps the garage lit when the pins are read again', async () => {
+    await render();
+    await ready();
+    fixture.componentRef.setInput('lit', 'g-1');
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    view.light.mockClear();
+    view.show.mockClear();
+
+    fixture.componentRef.setInput('pins', { ...PINS });
+    fixture.detectChanges();
+
+    expect(view.show).toHaveBeenCalledTimes(1);
+    expect(view.light).not.toHaveBeenCalledWith(undefined);
+  });
+});
+
+// @traces 270-card-pin-link-FR-004
+// @traces 270-card-pin-link-FR-010
+// @traces 270-card-pin-link-FR-011
+describe('ResultsMap, a tapped pin and its small card', () => {
+  const card = () => element().querySelector<HTMLElement>('mf-map-card');
+
+  async function withCard() {
+    await render();
+    await ready();
+    fixture.componentRef.setInput('cardBrand', BRAND);
+    fixture.componentRef.setInput('card', { pin: PIN });
+    fixture.detectChanges();
+  }
+
+  it('gives the garage of the tapped pin, and none for a tap away', async () => {
+    await render();
+    await ready();
+    const got: (string | undefined)[] = [];
+    fixture.componentInstance.picked.subscribe((id) => got.push(id));
+
+    tapped('g-1');
+    tapped(undefined);
+
+    expect(got).toEqual(['g-1', undefined]);
+  });
+
+  it('opens the small card at the pin, outside the hidden canvas', async () => {
+    await withCard();
+
+    expect(view.spot).toHaveBeenCalledWith({ lat: PIN.lat, lng: PIN.lng });
+    expect(card()).not.toBeNull();
+    expect(card()?.closest('[aria-hidden="true"]')).toBeNull();
+    expect(card()?.style.getPropertyValue('--x')).toBe('120px');
+    expect(card()?.style.getPropertyValue('--y')).toBe('40px');
+  });
+
+  it('follows the pin when the map moves', async () => {
+    await withCard();
+    view.spot.mockReturnValue({ x: 60, y: 90 });
+
+    shifted();
+    fixture.detectChanges();
+
+    expect(card()?.style.getPropertyValue('--x')).toBe('60px');
+    expect(card()?.style.getPropertyValue('--y')).toBe('90px');
+  });
+
+  it('closes the small card when the page clears it', async () => {
+    await withCard();
+
+    fixture.componentRef.setInput('card', undefined);
+    fixture.detectChanges();
+
+    expect(card()).toBeNull();
+  });
+
+  it('opens no small card before the map has opened, nor once it has failed', async () => {
+    await render();
+    fixture.componentRef.setInput('cardBrand', BRAND);
+    fixture.componentRef.setInput('card', { pin: PIN });
+    fixture.detectChanges();
+
+    expect(card()).toBeNull();
+
+    failed(new Error('style'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(card()).toBeNull();
   });
 });

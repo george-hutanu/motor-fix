@@ -118,3 +118,19 @@
   opacity: 0.15;
   width: 5em;
 }
+
+/* The small card of a tapped pin the list does not show: above its pin, or
+   below it in the map's top half, kept inside the map at any width. */
+mf-map-card {
+  --w: min(240px, calc(100% - 16px));
+  left: clamp(8px, calc(var(--x) - var(--w) / 2), calc(100% - var(--w) - 8px));
+  position: absolute;
+  top: var(--y);
+  transform: translateY(calc(-100% - 14px));
+  width: var(--w);
+  z-index: 1;
+}
+
+mf-map-card.below {
+  transform: translateY(14px);
+}

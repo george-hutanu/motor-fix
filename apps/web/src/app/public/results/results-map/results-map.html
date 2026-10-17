@@ -3,6 +3,16 @@
   @if (!view() || loading()) {
     <div class="placeholder" aria-hidden="true"></div>
   }
+  @if (cardAt(); as at) {
+    <mf-map-card
+      [class.below]="at.below"
+      [style.--x]="at.x"
+      [style.--y]="at.y"
+      [pin]="card()!.pin"
+      [brand]="cardBrand()!"
+      [garage]="card()!.garage"
+    />
+  }
   <p class="hint" role="status">@if (failed()) {{{ 'public.results.map.unavailable' | t }}}@else if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>
   <ul class="legend">
     <li><span class="dot takes" aria-hidden="true"></span>@if (brand()) {{{ 'public.results.map.takes' | t: { brand: brand() } }}}@else {<span class="skeleton" aria-hidden="true"></span>}</li>

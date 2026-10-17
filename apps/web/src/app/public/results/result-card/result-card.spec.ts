@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
@@ -373,5 +373,136 @@ describe('the bookmark on a card', () => {
     const article = card.querySelector('article.card');
     expect(article?.lastElementChild?.tagName).toBe('MF-SAVE-GARAGE-BUTTON');
     expect(card.querySelector('.score mf-save-garage-button')).toBeNull();
+  });
+});
+
+// @traces 270-card-pin-link-FR-002
+// @traces 270-card-pin-link-FR-003
+// @traces 270-card-pin-link-FR-004
+// @traces 270-card-pin-link-FR-007
+// @traces 270-card-pin-link-FR-011
+describe('a result card linked with its pin', () => {
+  const pointer = (type: string, pointerType = 'mouse') => {
+    const event = new Event(type);
+    Object.defineProperty(event, 'pointerType', { value: pointerType });
+    return event;
+  };
+  let points: boolean[];
+  let picks: number;
+
+  async function linked(selected = false) {
+    const card = await render(garageOf());
+    fixture.componentRef.setInput('selected', selected);
+    fixture.detectChanges();
+    points = [];
+    picks = 0;
+    fixture.componentInstance.point.subscribe((on) => points.push(on));
+    fixture.componentInstance.pick.subscribe(() => picks++);
+    return card;
+  }
+
+  it('says it is pointed at while a mouse or pen rests on it, and no longer once it leaves', async () => {
+    const card = await linked();
+
+    card.dispatchEvent(pointer('pointerenter'));
+    card.dispatchEvent(pointer('pointerleave'));
+    card.dispatchEvent(pointer('pointerenter', 'pen'));
+
+    expect(points).toEqual([true, false, true]);
+  });
+
+  it('is never pointed at by a touch', async () => {
+    const card = await linked();
+
+    card.dispatchEvent(pointer('pointerenter', 'touch'));
+    card.dispatchEvent(pointer('pointerleave', 'touch'));
+
+    expect(points).toEqual([]);
+  });
+
+  it('is pointed at while its link or button holds the focus, and no longer once the focus leaves the card', async () => {
+    const card = await linked();
+    const link = card.querySelector<HTMLAnchorElement>('a.view');
+    const button = card.querySelector<HTMLButtonElement>('.bookmark button');
+
+    link?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    link?.dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: button }),
+    );
+    button?.dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+    );
+
+    expect(points).toEqual([true, false]);
+  });
+
+  it('is picked by a tap anywhere on it but its link and its bookmark', async () => {
+    const card = await linked();
+    // The link still navigates; here to nowhere, so the router is stubbed.
+    jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    card
+      .querySelector('h2')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    card
+      .querySelector('a.view')
+      ?.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true }),
+      );
+    card
+      .querySelector('.bookmark button')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(picks).toBe(1);
+  });
+
+  it('shows the selected state, an amber border on the amber tint and an amber name, only when selected', async () => {
+    const card = await linked();
+
+    expect(card.querySelector('article.card.selected')).toBeNull();
+
+    fixture.componentRef.setInput('selected', true);
+    fixture.detectChanges();
+
+    expect(card.querySelector('article.card.selected')).not.toBeNull();
+    const css = readFileSync(join(__dirname, 'result-card.css'), 'utf8');
+    const rule = css.match(/\.card\.selected\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toMatch(/border-color:\s*var\(--mf-amber-ink\)/);
+    expect(rule).toMatch(/background:\s*var\(--mf-amber-tint\)/);
+    expect(css).toMatch(
+      /\.card\.selected h2\s*\{[^}]*color:\s*var\(--mf-amber-ink\)/,
+    );
+  });
+
+  it('changes nothing on itself while only pointed at', async () => {
+    const card = await linked();
+
+    card.dispatchEvent(pointer('pointerenter'));
+    fixture.detectChanges();
+
+    expect(card.querySelector('article.card.selected')).toBeNull();
+  });
+
+  it('scrolls itself into view at the nearest edge, smoothly or at once, without taking the focus', async () => {
+    const card = await linked();
+    const scroll = jest.fn();
+    card.scrollIntoView = scroll;
+    const focused = document.activeElement;
+
+    fixture.componentInstance.reveal(true);
+    fixture.componentInstance.reveal(false);
+
+    expect(scroll.mock.calls).toEqual([
+      [{ behavior: 'smooth', block: 'nearest' }],
+      [{ behavior: 'auto', block: 'nearest' }],
+    ]);
+    expect(document.activeElement).toBe(focused);
+  });
+
+  it('adds nothing to the tab order', async () => {
+    const card = await linked();
+
+    expect(card.getAttribute('tabindex')).toBeNull();
+    expect(card.querySelector('article')?.getAttribute('tabindex')).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import {
   resource,
   untracked,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -33,7 +34,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ResultCard } from './result-card/result-card';
-import { ResultsMap } from './results-map/results-map';
+import { type PinCard, ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
@@ -208,6 +209,27 @@ export class Results {
     computation: () => false,
     source: this.searched,
   });
+  // The selected garage (the amber card) and the pointed one (a pointer or
+  // the focus on its card), in the page only; the lit pin is the pointed
+  // garage's, else the selected one's. A fresh list selects its first card.
+  protected readonly selected = linkedSignal<
+    Page | undefined,
+    string | undefined
+  >({
+    computation: (page) => page?.items[0]?.id,
+    source: this.searched,
+  });
+  protected readonly pointed = linkedSignal<unknown, string | undefined>({
+    computation: () => undefined,
+    source: this.searched,
+  });
+  protected readonly lit = computed(() => this.pointed() ?? this.selected());
+  // The small card of a tapped pin whose garage the list does not show.
+  protected readonly card = linkedSignal<unknown, PinCard | undefined>({
+    computation: () => undefined,
+    source: this.searched,
+  });
+  private readonly cards = viewChildren(ResultCard);
   private readonly loaded = computed(
     () => this.answer()?.items.map((garage) => garage.id) ?? [],
     { equal: sameIds },
@@ -356,6 +378,60 @@ export class Results {
     void this.write({ radius: String(radius) });
   }
 
+  protected select(id: string) {
+    this.selected.set(id);
+    this.card.set(undefined);
+  }
+
+  protected point(id: string, on: boolean) {
+    if (on) this.pointed.set(id);
+    else if (untracked(this.pointed) === id) this.pointed.set(undefined);
+  }
+
+  // A tapped pin selects its garage and brings its card into view; one the
+  // list does not show opens the small card, filled by one ids= read. A tap
+  // away from every pin closes the small card and selects nothing.
+  protected async picked(id: string | undefined) {
+    if (id === undefined) return this.card.set(undefined);
+    this.selected.set(id);
+    const listed = untracked(this.cards).find((c) => c.garage().id === id);
+    const pin = untracked(this.pinned)?.pins.find((p) => p.id === id);
+    if (listed || !pin) {
+      this.card.set(undefined);
+      listed?.reveal(!untracked(this.reduced));
+      return;
+    }
+    const card: PinCard = { pin };
+    this.card.set(card);
+    const query = untracked(this.query);
+    if (!query) return;
+    let page: Page | undefined;
+    try {
+      page = await this.search.garageSearchControllerForBrand({
+        ...query,
+        ids: id,
+      });
+    } catch {
+      page = undefined;
+    }
+    // Another tap, another search or the page gone since: the answer is late.
+    if (
+      this.destroyRef.destroyed ||
+      untracked(this.query) !== query ||
+      untracked(this.card) !== card
+    )
+      return;
+    const garage = page?.items.find((g) => g.id === id);
+    this.card.set(garage ? { garage, pin } : undefined);
+  }
+
+  // A list replaced in place, as "Reîncarcă" does, selects its first card.
+  private first() {
+    this.selected.set(untracked(this.answer)?.items[0]?.id);
+    this.pointed.set(undefined);
+    this.card.set(undefined);
+  }
+
   // "Reîncarcă": the first page again, in place of the list shown.
   protected reload() {
     this.newer.set(false);
@@ -403,7 +479,8 @@ export class Results {
       this.pageWanted = false;
       this.wanted.clear();
       this.countsWanted = false;
-      await this.read(undefined, (page, now) => reuse(now, page));
+      if (await this.read(undefined, (page, now) => reuse(now, page)))
+        this.first();
     } else if (this.wanted.size > 0) {
       const ids = [...this.wanted].join(',');
       this.wanted.clear();
@@ -418,13 +495,13 @@ export class Results {
   }
 
   // A read that fails keeps the page as it is; one answered after the search
-  // changed is dropped.
+  // changed is dropped. True once its answer is shown.
   private async read(
     ids: string | undefined,
     apply: (page: Page, now: Page) => Page,
-  ) {
+  ): Promise<boolean> {
     const query = untracked(this.query);
-    if (!query) return;
+    if (!query) return false;
     let page: Page;
     try {
       page = await this.search.garageSearchControllerForBrand({
@@ -432,12 +509,13 @@ export class Results {
         ...(ids ? { ids } : {}),
       });
     } catch {
-      return;
+      return false;
     }
     const now = untracked(this.answer);
     if (this.destroyRef.destroyed || !now || untracked(this.query) !== query)
-      return;
+      return false;
     this.answer.set(apply(page, now));
+    return true;
   }
 
   // Like a card's read: a failure keeps the pins shown, a late answer is dropped.
@@ -499,7 +577,12 @@ export class Results {
     const now = untracked(this.answer);
     const garage = now?.items.find((g) => g.id === id);
     if (!now || !garage) return;
-    this.answer.set({ ...now, items: now.items.filter((g) => g.id !== id) });
+    const items = now.items.filter((g) => g.id !== id);
+    this.answer.set({ ...now, items });
+    // The selection passes to the first card left; a pointed card gone is
+    // pointed no more.
+    if (untracked(this.selected) === id) this.selected.set(items[0]?.id);
+    if (untracked(this.pointed) === id) this.pointed.set(undefined);
   }
 
   private write(queryParams: Record<string, string | null>) {
