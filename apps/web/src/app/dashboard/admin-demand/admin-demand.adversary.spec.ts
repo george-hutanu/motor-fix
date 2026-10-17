@@ -314,6 +314,18 @@ describe('AdminDemand under hostile answers', () => {
   });
 
   // @traces 103-FR-013
+  it('hides the full list by one switch: the closed list already holds its rows', async () => {
+    const el = await open();
+    const button = buttonsNamed(charts(el)[0], 'Vezi toate mărcile')[0];
+    const list = el.querySelector(
+      `[id="${button.getAttribute('aria-controls')}"]`,
+    ) as HTMLElement;
+
+    expect(list.hidden).toBe(true);
+    expect(list.querySelectorAll('li').length).toBeGreaterThan(0);
+  });
+
+  // @traces 103-FR-013
   it('keeps the full-list button after its chart in tab order and each chart text alternative', async () => {
     const el = await open();
     const chart = charts(el)[0];

@@ -153,9 +153,9 @@ export async function writeDemandDaily(
 ): Promise<{ days: string[]; written: number }> {
   const closed = closedDays(now);
   const written = await writtenDays(db, closed);
-  const days = closed.filter((day) => !written.has(day));
+  const days: string[] = [];
   let rows = 0;
-  for (const day of days) {
+  for (const day of closed.filter((d) => !written.has(d))) {
     const counts = await countDays(db, [day]);
     const date = new Date(day);
     const data = [
@@ -171,12 +171,17 @@ export async function writeDemandDaily(
       })),
       { dimension: 'total', key: 'all', requests: counts.requests },
     ].map((row) => ({ ...row, day: date, writtenAt: now }));
-    await db.$transaction(async (tx) => {
-      // Two runs at once write one after the other.
+    // Two runs at once write one after the other, and the second finds the
+    // day written under the lock and leaves it as it is.
+    const wrote = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('demand_daily'), hashtext(${day}))`;
+      if ((await writtenDays(tx, [day])).has(day)) return false;
       await tx.demandDaily.deleteMany({ where: { day: date } });
       await tx.demandDaily.createMany({ data });
+      return true;
     });
+    if (!wrote) continue;
+    days.push(day);
     rows += data.length;
   }
   return { days, written: rows };

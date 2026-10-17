@@ -26,10 +26,8 @@
           {{ expanded().has(report.kind) ? ('admin.demand.fewer' | t) : report.more }}
         </button>
         <ol class="all" [id]="report.listId" [hidden]="!expanded().has(report.kind)">
-          @if (expanded().has(report.kind)) {
-            @for (row of report.all; track $index) {
-              <li><span class="name">{{ row.label }}</span><span class="count">{{ row.count }}</span></li>
-            }
+          @for (row of report.all; track $index) {
+            <li><span class="name">{{ row.label }}</span><span class="count">{{ row.count }}</span></li>
           }
         </ol>
       }

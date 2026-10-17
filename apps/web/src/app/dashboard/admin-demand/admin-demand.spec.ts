@@ -115,8 +115,9 @@ const tableOf = async (chart: HTMLElement) => {
     [...row.querySelectorAll('td')].map((td) => td.textContent?.trim()),
   );
 };
+// The rows a reader sees: a hidden list shows none.
 const listOf = (chart: HTMLElement) =>
-  [...chart.querySelectorAll('li')].map((li) =>
+  [...chart.querySelectorAll('ol:not([hidden]) li')].map((li) =>
     [...li.querySelectorAll('span')].map((s) => s.textContent?.trim()),
   );
 

@@ -235,6 +235,33 @@ describe('the nightly demand rows', () => {
     expect(await rowsOf(yesterday)).toEqual(first);
   });
 
+  it('writes each day once when two runs overlap, and the second changes nothing', async () => {
+    const brakes = await job('brakes');
+    await asked('Dacia', [brakes], atLocal(yesterday, 9));
+    const LATER = atLocal(TODAY, 12);
+
+    const [one, two] = await Promise.all([
+      writeDemandDaily(prisma, NOW),
+      writeDemandDaily(prisma, LATER),
+    ]);
+
+    const rows = await prisma.demandDaily.findMany({
+      select: { day: true, writtenAt: true },
+    });
+    expect(one.written + two.written).toBe(rows.length);
+    expect([...one.days, ...two.days].sort()).toHaveLength(29);
+    expect(new Set([...one.days, ...two.days]).size).toBe(29);
+    const stamps = new Map<string, Set<number>>();
+    for (const row of rows) {
+      const key = row.day.toISOString();
+      stamps.set(
+        key,
+        (stamps.get(key) ?? new Set()).add(row.writtenAt.getTime()),
+      );
+    }
+    for (const set of stamps.values()) expect(set.size).toBe(1);
+  });
+
   it('writes every closed day of the window that has no rows, an empty one as a total of 0', async () => {
     const brakes = await job('brakes');
     await asked('Dacia', [brakes], atLocal(addDays(TODAY, -5), 9));
