@@ -186,7 +186,7 @@ describe('ResultCard', () => {
   });
 
   // @traces 267-FR-014
-  it('links to the garage with the brand, and carries no save button', async () => {
+  it('links to the garage with the brand', async () => {
     const card = await render(garageOf());
 
     const link = card.querySelector<HTMLAnchorElement>('a.view');
@@ -194,8 +194,6 @@ describe('ResultCard', () => {
     expect(link?.getAttribute('href')).toBe(
       '/ro/garages/service-auto-militari?brand=bmw',
     );
-    expect(card.querySelector('button')).toBeNull();
-    expect(card.textContent).not.toMatch(/Salvează|Save/);
   });
 
   // @traces 267-FR-014
@@ -355,5 +353,17 @@ describe('a result card about to be opened', () => {
     fixture.destroy();
 
     expect(observers[0]?.disconnected).toBe(true);
+  });
+});
+
+// @traces 290-FR-010
+describe('the bookmark on a card', () => {
+  it('is the icon-only save button for the garage, outside the profile link', async () => {
+    const card = await render(garageOf());
+
+    const save = card.querySelector('mf-save-garage-button button');
+    expect(save?.getAttribute('aria-label')).toBe('Salvează');
+    expect(save?.closest('a')).toBeNull();
+    expect(save?.textContent?.trim()).toBe('');
   });
 });

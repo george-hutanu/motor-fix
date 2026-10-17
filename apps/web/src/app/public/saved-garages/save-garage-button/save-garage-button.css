@@ -1,0 +1,39 @@
+:host {
+  display: inline-flex;
+}
+.save {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+}
+.save[aria-pressed="true"] {
+  color: var(--mf-amber-ink);
+}
+.save:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+.icon {
+  border-color: transparent;
+  justify-content: center;
+  min-width: var(--mf-tap);
+  padding: 0;
+}
+svg {
+  flex: none;
+}
+.unavailable {
+  align-items: center;
+  color: var(--mf-text-secondary);
+  display: inline-flex;
+  font-size: var(--mf-size-small);
+  min-height: var(--mf-tap);
+}

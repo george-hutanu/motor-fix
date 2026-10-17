@@ -619,6 +619,16 @@
     "title": "Garages for {brand}",
     "widen": "Search within {km} km"
   },
+  "saveGarage": {
+    "failed": "That did not work. Try again.",
+    "noConnection": "No connection",
+    "removed": "Removed from saved",
+    "save": "Save",
+    "saved": "Saved",
+    "savedToast": "Saved to Saved garages",
+    "unavailable": "Unavailable",
+    "undo": "Undo"
+  },
   "signIn": {
     "brand": "MotorFix",
     "code": {
