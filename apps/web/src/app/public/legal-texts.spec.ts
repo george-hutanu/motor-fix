@@ -9,8 +9,8 @@ const whole = (language: 'ro' | 'en', kind: LegalText) =>
 
 const CONTACT = { en: /from your account/, ro: /din contul tău/ } as const;
 const WRITE_FROM_ACCOUNT = {
-  en: /writ\w+ to us (at the address above )?(or )?from your account/,
-  ro: /(ne scrii|scriindu‑ne) (la adresa de mai sus )?(sau )?din contul tău/,
+  en: /writ\w+ to us (at the e-mail address above )?(or )?from your account/,
+  ro: /(ne scrii|scriindu‑ne) (la adresa de e‑mail de mai sus )?(sau )?din contul tău/,
 } as const;
 
 describe('the final legal texts', () => {
@@ -174,10 +174,10 @@ describe('the operator and how to reach it', () => {
 
   // @traces 005-FR-014
   it.each([
-    ['en', /the address above/],
-    ['ro', /adresa de mai sus/],
+    ['en', /the e-mail address above/],
+    ['ro', /adresa de e‑mail de mai sus/],
   ] as const)(
-    'every %s paragraph after the first section that sends a right to the account also points to the address above',
+    'every %s paragraph after the first section that sends a right to the account also points to the e-mail address above',
     (language, above) => {
       const later = LEGAL_TEXTS[language].privacy.sections
         .slice(1)
