@@ -468,6 +468,14 @@ function waitProblems(at: string, rule: Rule): string[] {
 const TOKEN = '$' + '{GRAFANA_SA_TOKEN}';
 const ENVIRONMENT = '{{ $labels.deployment_environment }}';
 
+// The rules whose signal disappears when what they watch is down: a store
+// that answers nothing, or a worker that stopped reporting its queues.
+const ALERTS_ON_NO_DATA = [
+  'postgres-unreachable',
+  'redis-unreachable',
+  'worker-queue-backlog',
+];
+
 /** Each check a rule of the five files must pass, and what failing it means. */
 const RULE_CHECKS: [
   string,
@@ -479,7 +487,11 @@ const RULE_CHECKS: [
     (r, s) => r.title.startsWith(SERVICES[s].title),
   ],
   ['condition must be B', (r) => r.condition === 'B'],
-  ['noDataState must be OK', (r) => r.noDataState === 'OK'],
+  [
+    'noDataState must be Alerting for an absence rule, OK for any other',
+    (r) =>
+      r.noDataState === (ALERTS_ON_NO_DATA.includes(r.uid) ? 'Alerting' : 'OK'),
+  ],
   ['execErrState must be Error', (r) => r.execErrState === 'Error'],
   ['label service must be its service', (r, s) => r.labels?.['service'] === s],
   ['carries the outage label', (r) => !('outage' in (r.labels ?? {}))],
@@ -655,6 +667,17 @@ describe('alert rules', () => {
   // @traces 880-FR-017
   it('holds thirty-eight rules in all, under the free tier cap', () => {
     expect(rows(files)).toHaveLength(38);
+  });
+
+  // @traces 1345-FR-004
+  it('alerts on missing data for the absence rules only', () => {
+    const all = Object.values(files).flatMap(rulesOf);
+    const alerting = all
+      .filter((r) => r.noDataState === 'Alerting')
+      .map((r) => r.uid)
+      .sort();
+
+    expect(alerting).toEqual([...ALERTS_ON_NO_DATA].sort());
   });
 
   // @traces 1175-FR-006

@@ -117,6 +117,7 @@ async function render(
           reload,
           shown,
           signOut,
+          token: () => 'access',
         },
       },
       { provide: Live, useValue: live },
@@ -1156,6 +1157,35 @@ describe('Frame consent bar', () => {
     expect(css).toMatch(
       /@media \(max-width: 767\.98px\)\s*\{\s*:host\s*\{\s*--tab-bar:/,
     );
+  });
+});
+
+describe('Frame side links', () => {
+  const sheet = () =>
+    readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(/\s+/g, ' ');
+
+  it('paint the wordmark in the theme, not the browser link colours', () => {
+    const rule = /\.logo \{([^}]*)\}/.exec(sheet())?.[1] ?? '';
+    expect(rule).toContain('color: var(--mf-text)');
+    expect(rule).toContain('text-decoration: none');
+    expect(rule).toContain('font-family: var(--mf-font-label)');
+    expect(rule).toContain('min-height: var(--mf-tap)');
+  });
+
+  it('paint the menu links in the theme, with the current one in amber ink', () => {
+    const css = sheet();
+    const rule = /aside nav a \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule).toContain('color: var(--mf-text-secondary)');
+    expect(rule).toContain('text-decoration: none');
+    expect(rule).toContain('min-height: var(--mf-tap)');
+    expect(css).toMatch(
+      /aside nav a\[aria-current="page"\] \{[^}]*color: var\(--mf-amber-ink\)/,
+    );
+  });
+
+  it('marks the wordmark link with the logo class', () => {
+    const html = readFileSync(join(__dirname, 'frame.html'), 'utf8');
+    expect(html).toMatch(/<a class="logo" routerLink="\/"/);
   });
 });
 
