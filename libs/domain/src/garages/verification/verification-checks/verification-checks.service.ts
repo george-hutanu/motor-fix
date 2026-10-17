@@ -29,7 +29,7 @@ import {
   type VerificationCheck,
   type VerificationFileStatus,
 } from '../../../generated/prisma/client';
-import { pricedJobs } from '../verification-file/verification-file.service';
+import { pricedJobs } from '../priced-jobs';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
