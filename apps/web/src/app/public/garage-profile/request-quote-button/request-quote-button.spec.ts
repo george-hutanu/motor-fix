@@ -60,6 +60,8 @@ async function render(
     hint?: 'driver' | 'garage' | 'mechanic' | null;
     // The session the hint was written for has since ended.
     expired?: boolean;
+    jobs?: string[];
+    label?: string;
   } = {},
 ) {
   open = jest.fn(
@@ -104,6 +106,8 @@ async function render(
   await TestBed.inject(I18n).enter('public');
   const fixture = TestBed.createComponent(RequestQuoteButton);
   fixture.componentRef.setInput('garage', options.garage ?? GARAGE);
+  if (options.jobs) fixture.componentRef.setInput('jobs', options.jobs);
+  if (options.label) fixture.componentRef.setInput('textKey', options.label);
   fixture.detectChanges();
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
@@ -296,6 +300,43 @@ describe('the quote request started event', () => {
 
     await press(host);
 
+    expect(track).toHaveBeenCalledWith('quote_request_started', {
+      source: 'profile',
+    });
+  });
+});
+
+// @traces 356-live-estimate-FR-011
+describe('RequestQuoteButton with jobs handed over', () => {
+  it('passes no jobs from the header', async () => {
+    const host = await render();
+    await press(host);
+
+    expect('jobTypeIds' in open.mock.calls[0][1].data).toBe(false);
+  });
+
+  it('passes the jobs given, an empty list included', async () => {
+    let host = await render({ jobs: ['j-diag', 'j-brakes'] });
+    await press(host);
+    expect(open.mock.calls[0][1].data.jobTypeIds).toEqual([
+      'j-diag',
+      'j-brakes',
+    ]);
+
+    TestBed.resetTestingModule();
+    host = await render({ jobs: [] });
+    await press(host);
+    expect(open.mock.calls[0][1].data.jobTypeIds).toEqual([]);
+  });
+
+  it('takes the text it is given, keeping the header’s rules and event', async () => {
+    const host = await render({
+      jobs: [],
+      label: 'public.garageProfile.estimate.request',
+    });
+
+    expect(button(host)?.textContent?.trim()).toBe('CERE OFERTĂ');
+    await press(host);
     expect(track).toHaveBeenCalledWith('quote_request_started', {
       source: 'profile',
     });

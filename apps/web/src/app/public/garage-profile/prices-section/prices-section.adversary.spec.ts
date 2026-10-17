@@ -1,9 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { PricesSection } from './prices-section';
+import { PriceSelection } from '../price-selection/price-selection';
 
 const row = (
   jobTypeId: string,
@@ -44,8 +45,10 @@ const GARAGE: PublicGarageDto = {
   worksOn: [],
 };
 
+// The page binds the shared selection to every answer it reads.
 @Component({
   imports: [PricesSection],
+  providers: [PriceSelection],
   template: `<section
     data-slot="prices"
     mf-prices-section
@@ -54,11 +57,17 @@ const GARAGE: PublicGarageDto = {
 })
 class Host {
   readonly garage = signal(GARAGE);
+  readonly selection = inject(PriceSelection);
+
+  constructor() {
+    effect(() => this.selection.sync(this.garage()));
+  }
 }
 
 let fixture: ComponentFixture<Host>;
 
 beforeEach(async () => {
+  sessionStorage.clear();
   TestBed.configureTestingModule({});
   await TestBed.inject(I18n).enter('public');
   await TestBed.inject(I18n).use('ro');

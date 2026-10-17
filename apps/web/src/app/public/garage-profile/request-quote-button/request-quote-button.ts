@@ -20,9 +20,12 @@ import type {
 } from '../request-quote/request-quote';
 import { sentLine } from '../request-quote/sent-line';
 
+let instances = 0;
+
 // The profile's "Cere ofertă": opens the request dialog for the garage and,
 // once a request went, says where. A visitor or a driver sees it; a garage-side
-// role does not.
+// role does not. The estimate box hands it the jobs switched on and its own
+// text; the header hands it none, and the dialog starts empty.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, RouterLink, TranslatePipe],
@@ -32,6 +35,9 @@ import { sentLine } from '../request-quote/sent-line';
 })
 export class RequestQuoteButton {
   readonly garage = input.required<PublicGarageDto>();
+  readonly jobs = input<readonly string[]>();
+  readonly textKey = input('public.requestQuote.button');
+  protected readonly noteId = `mf-quote-refused-${++instances}`;
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
   private readonly route = inject(ActivatedRoute);
@@ -62,6 +68,7 @@ export class RequestQuoteButton {
   }
 
   protected async open() {
+    const jobs = this.jobs();
     this.consent.track('quote_request_started', { source: 'profile' });
     const source =
       this.route.snapshot.queryParamMap.get('src') === 'share'
@@ -75,6 +82,7 @@ export class RequestQuoteButton {
     >(RequestQuote, {
       data: {
         garage: this.garage(),
+        ...(jobs === undefined ? {} : { jobTypeIds: [...jobs] }),
         sent: (request) => this.sent.set(request),
         source,
       },

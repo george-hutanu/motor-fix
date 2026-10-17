@@ -149,6 +149,7 @@ async function open(
     token?: string | null;
     hint?: 'driver' | null;
     signsIn?: boolean;
+    jobTypeIds?: string[];
   } = {},
 ) {
   list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
@@ -192,6 +193,7 @@ async function open(
       garage: options.garage ?? GARAGE,
       sent: onSent,
       source: options.source ?? 'profile_direct',
+      ...(options.jobTypeIds && { jobTypeIds: options.jobTypeIds }),
     },
     shape: 'dialog',
     title: 'public.requestQuote.title',
@@ -967,5 +969,40 @@ describe('the quote request sent event', () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(told()).toHaveLength(1);
+  });
+});
+
+// @traces 356-live-estimate-FR-011
+describe('the dialog opened from the estimate box', () => {
+  it('starts with the jobs handed over switched on, the rest off, and sends them', async () => {
+    await open({ jobTypeIds: [PADS.id] });
+
+    expect(jobSwitch('Plăcuțe frână').getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(jobSwitch('Schimb ulei').getAttribute('aria-checked')).toBe('false');
+    await press();
+
+    expect(send.mock.calls[0][0].body.jobTypeIds).toEqual([PADS.id]);
+  });
+
+  it('leaves out a job handed over that the garage does not list', async () => {
+    await open({ jobTypeIds: ['job-gone', OIL.id] });
+    await press();
+
+    expect(send.mock.calls[0][0].body.jobTypeIds).toEqual([OIL.id]);
+  });
+
+  it('readies the description with no job handed over', async () => {
+    await open({ jobTypeIds: [] });
+
+    expect(textarea().hasAttribute('autofocus')).toBe(true);
+    expect(jobSwitch('Schimb ulei').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('marks nothing to focus when opened from the header', async () => {
+    await open();
+
+    expect(textarea().hasAttribute('autofocus')).toBe(false);
   });
 });

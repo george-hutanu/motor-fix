@@ -463,6 +463,106 @@ describe('the price list on the profile', () => {
   });
 });
 
+// @traces 356-live-estimate-FR-001 356-live-estimate-FR-009 356-live-estimate-FR-010
+describe('the estimate box on the profile', () => {
+  const DIAGNOSIS = {
+    durationMinutes: 30,
+    fromBani: 15_000,
+    jobTypeId: 'j-diag',
+    nameEn: 'Diagnosis and fault-code read',
+    nameRo: 'Diagnoză și citire coduri de eroare',
+    toBani: 22_000,
+  };
+  const BRAKES = {
+    durationMinutes: 120,
+    fromBani: 89_000,
+    jobTypeId: 'j-brakes',
+    nameEn: 'Front brake pads and discs',
+    nameRo: 'Plăcuțe și discuri de frână față',
+    toBani: 140_000,
+  };
+  const estimate = () =>
+    page().querySelector<HTMLElement>('section[mf-estimate-section]');
+  const switchOf = (name: string) =>
+    [
+      ...page().querySelectorAll<HTMLElement>(
+        'section[data-slot="prices"] label.row',
+      ),
+    ]
+      .find((row) => row.querySelector('.name')?.textContent?.trim() === name)
+      ?.querySelector<HTMLElement>('[role="switch"]');
+
+  beforeEach(() => sessionStorage.clear());
+
+  it('comes right after the price list', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    const slots = [...page().querySelectorAll('.sections > section')];
+    const at = slots.findIndex((s) => s.matches('[data-slot="prices"]'));
+    expect(slots[at + 1]).toBe(estimate());
+    expect(estimate()?.getAttribute('aria-label')).toBe('Estimarea ta');
+  });
+
+  it('is not shown for an empty price list, nor while the first read is open', async () => {
+    await open('/ro/garages/service-auto-militari');
+    expect(estimate()).toBeNull();
+
+    await reads[0]?.answer({ ...FIXED, prices: [] });
+    expect(estimate()).toBeNull();
+  });
+
+  it('adds up a switch turned on in the list', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [DIAGNOSIS, BRAKES] });
+
+    switchOf('Plăcuțe și discuri de frână față')?.click();
+    await settle();
+
+    expect(
+      estimate()?.querySelector('.totals')?.getAttribute('aria-label'),
+    ).toBe('Estimare de la 890 la 1.400 lei');
+  });
+
+  it('restores the jobs kept for this garage in the session', async () => {
+    sessionStorage.setItem(
+      `mf.estimate.${FIXED.id}`,
+      JSON.stringify(['j-diag']),
+    );
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [DIAGNOSIS, BRAKES] });
+    await settle();
+
+    expect(
+      switchOf('Diagnoză și citire coduri de eroare')?.getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('true');
+    expect(
+      estimate()?.querySelector('.totals')?.getAttribute('aria-label'),
+    ).toBe('Estimare de la 150 la 220 lei');
+  });
+
+  it('switches off a job the next read no longer lists, and says so', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [DIAGNOSIS, BRAKES] });
+    switchOf('Plăcuțe și discuri de frână față')?.click();
+    await settle();
+
+    resync.next();
+    await settle();
+    await reads[1]?.answer({ ...FIXED, prices: [DIAGNOSIS] });
+    await settle();
+
+    expect(
+      estimate()?.querySelector('.totals')?.getAttribute('aria-label'),
+    ).toBe('Estimare de la 0 la 0 lei');
+    expect(estimate()?.textContent).toContain(
+      'O lucrare pornită nu mai este oferită de service.',
+    );
+  });
+});
+
 // The server render's answer reaches the browser through the transfer cache,
 // which serves it at once: hydration finds the same section it rendered.
 // @traces 355-price-list-ranges-FR-011

@@ -1,0 +1,31 @@
+<h2>{{ 'public.garageProfile.estimate.title' | t }}</h2>
+@if (rows().length === 0) {
+  <p class="empty">{{ 'public.garageProfile.estimate.empty' | t }}</p>
+} @else {
+  <ul class="rows">
+    @for (row of rows(); track row.id) {
+      <li class="row">
+        <span class="name">{{ row.name }}</span>
+        <span class="range">{{ row.range }}</span>
+      </li>
+    }
+  </ul>
+}
+<p class="mechanic">{{ 'public.garageProfile.estimate.mechanic' | t }}: <span class="any">{{ 'public.garageProfile.estimate.anyMechanic' | t }}</span></p>
+<div class="totals" role="img" [attr.aria-label]="spoken()">
+  <div class="total" aria-hidden="true">
+    <span class="label">{{ 'public.garageProfile.estimate.from' | t }}</span>
+    <mf-odometer [from]="from() * 100" [cells]="5" />
+  </div>
+  <div class="total" aria-hidden="true">
+    <span class="label">{{ 'public.garageProfile.estimate.to' | t }}</span>
+    <mf-odometer [from]="to() * 100" [cells]="5" />
+  </div>
+  <span class="unit" aria-hidden="true">{{ 'public.garageProfile.estimate.lei' | t }}</span>
+</div>
+@if (selection.dropped()) {
+  <p class="dropped">{{ 'public.garageProfile.estimate.dropped' | t }}</p>
+}
+<mf-request-quote-button class="request wide" [garage]="garage()" [jobs]="jobs()" textKey="public.garageProfile.estimate.request" />
+<p class="note">{{ 'public.garageProfile.estimate.note' | t }}</p>
+<p class="spoken" aria-live="polite" aria-atomic="true">{{ said() }}</p>

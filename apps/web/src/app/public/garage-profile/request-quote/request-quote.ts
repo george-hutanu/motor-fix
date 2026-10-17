@@ -61,6 +61,9 @@ export interface RequestQuoteData {
   // Told the request as soon as it is sent, whether or not the dialog is
   // then closed by its X.
   sent?: (request: RequestDto) => void;
+  // The jobs switched on in the estimate box, ticked on opening; an empty
+  // list puts the cursor in the description. Left out from the header.
+  jobTypeIds?: readonly string[];
 }
 
 // What the dialog closes with: the request it sent, nothing, or where one of
@@ -136,6 +139,11 @@ export class RequestQuote {
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
   protected readonly garage = this.task.data.garage;
+  // A job the garage no longer offers is left out of the ticks.
+  private readonly prefill = (this.task.data.jobTypeIds ?? []).filter((id) =>
+    this.garage.jobTypes.some((job) => job.id === id),
+  );
+  protected readonly describeFirst = this.task.data.jobTypeIds?.length === 0;
 
   protected readonly max = REQUEST_DESCRIPTION_MAX;
   protected readonly online = signal(globalThis.navigator?.onLine !== false);
@@ -167,7 +175,7 @@ export class RequestQuote {
       validators: [Validators.maxLength(REQUEST_DESCRIPTION_MAX), this.enough],
     }),
     garageIds: new FormControl<string[]>([], { nonNullable: true }),
-    jobTypeIds: new FormControl<string[]>([], { nonNullable: true }),
+    jobTypeIds: new FormControl<string[]>(this.prefill, { nonNullable: true }),
   });
 
   protected readonly save = taskSave({
@@ -193,7 +201,7 @@ export class RequestQuote {
     initialValue: '',
   });
   private readonly jobs = toSignal(this.form.controls.jobTypeIds.valueChanges, {
-    initialValue: [] as string[],
+    initialValue: this.prefill,
   });
   private readonly ticked = toSignal(
     this.form.controls.garageIds.valueChanges,
