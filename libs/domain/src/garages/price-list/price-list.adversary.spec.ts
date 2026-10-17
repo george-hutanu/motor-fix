@@ -21,6 +21,7 @@ const row = (
   jobType: PriceRow['jobType'],
   extra: Partial<Omit<PriceRow, 'jobType'>> = {},
 ): PriceRow => ({
+  brand: null,
   brandId: null,
   durationMinutes: null,
   fromBani: 1000,
@@ -112,7 +113,7 @@ describe('priceListJobs brand rows', () => {
     expect(items[0].public).toBe(true);
   });
 
-  it('never returns a brand range on the item', () => {
+  it("never takes the item's own range from a brand row", () => {
     const j = job();
     const [item] = priceListJobs(
       [
@@ -122,6 +123,7 @@ describe('priceListJobs brand rows', () => {
       [],
     );
     expect(item).toEqual({
+      brandRanges: [],
       durationMinutes: 30,
       fromBani: 100,
       jobTypeId: j.id,
@@ -132,14 +134,21 @@ describe('priceListJobs brand rows', () => {
     });
   });
 
-  it('returns no range keys at all for a job with only brand rows', () => {
+  it('returns no default range keys for a job with only brand rows', () => {
     const j = job();
     const [item] = priceListJobs(
       [row(j, { brandId: 'b1', durationMinutes: 5, fromBani: 7, toBani: 8 })],
       [],
     );
     expect(Object.keys(item).sort()).toEqual(
-      ['jobTypeId', 'nameEn', 'nameRo', 'public', 'reason'].sort(),
+      [
+        'brandRanges',
+        'jobTypeId',
+        'nameEn',
+        'nameRo',
+        'public',
+        'reason',
+      ].sort(),
     );
   });
 });

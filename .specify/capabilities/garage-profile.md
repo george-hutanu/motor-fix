@@ -12,6 +12,7 @@ features:
   - 1169-prefetch-intent
   - 1235-unknown-brand-cache
   - 290-save-garage
+  - 386-brand-price-range
 ---
 
 # Capability: Garage profile
@@ -180,9 +181,9 @@ _From 143-profile-views._
 
 _From 355-price-list-ranges._
 
-### 355-FR-002 — The range a row carries MUST be the job's price row for the brand in context when the profile is read with a catalogue brand and such a row exists with both ends set; otherwise the job's default row (no brand). A brand row with one end missing, a brand row for another brand, a brand the garage marked `does_not_take` (its brand rows are kept and never used; its ticks still apply) or a read without a brand never changes the default range. A brand row's own `visible` flag is ignored: visibility is the default row's (357-FR-001).
+### 386-FR-002 — The public read (`GET /api/v1/garages/{slug}?brand=`) MUST give a job the brand's range when the profile is read for a catalogue brand the garage **takes** (`works_on`) and a complete row for that brand exists; in every other case (no brand, another brand, an incomplete brand row, the brand refused or unstated) the default range. This narrows 355-FR-002: a brand row of a brand without a `works_on` row is kept and never used, and applies again when the brand is taken again. Visibility, duration and order stay the default row's, and the ticked-jobs rule of 355-FR-002 is unchanged: once the garage ticked any job for the brand, only the ticked jobs are listed for it.
 
-_From 355-price-list-ranges._
+_From 386-brand-price-range._
 
 ### 355-FR-003 — When the profile is read with a catalogue brand for which the garage recorded at least one job tick (a `GarageBrandJob` row for that garage and brand, the tick of specs issue #207), the rows of jobs not ticked for that brand MUST be left out; when the garage recorded no tick for that brand, or the read has no catalogue brand, every public job is listed. A tick never lists a job the ST-357 rule hides.
 
@@ -280,6 +281,14 @@ _From 290-save-garage._
 
 _From 290-save-garage._
 
+### 386-FR-002 — The public read (`GET /api/v1/garages/{slug}?brand=`) MUST give a job the brand's range when the profile is read for a catalogue brand the garage **takes** (`works_on`) and a complete row for that brand exists; in every other case (no brand, another brand, an incomplete brand row, the brand refused or unstated) the default range. This narrows 355-FR-002: a brand row of a brand without a `works_on` row is kept and never used, and applies again when the brand is taken again. Visibility, duration and order stay the default row's, and the ticked-jobs rule of 355-FR-002 is unchanged: once the garage ticked any job for the brand, only the ticked jobs are listed for it.
+
+_From 386-brand-price-range._
+
+### 386-FR-003 — Story #75's estimate MUST get the chosen range from the same public rows (FR-002); this story adds no second choice and no estimate of its own.
+
+_From 386-brand-price-range._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -288,3 +297,5 @@ _From 290-save-garage._
 
 - `307-FR-007` — removed by 1182-cache-service (2026-10-15)
 - `307-FR-006` — superseded by `1182-FR-007` (2026-10-15)
+
+- `355-FR-002` — superseded by `386-FR-002` (2026-10-17)

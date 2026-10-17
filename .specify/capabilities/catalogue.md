@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-10
+updated: 2026-10-17
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -8,6 +8,7 @@ features:
   - 109-garage-details-prices
   - 230-brand-search
   - 357-public-price-jobs
+  - 386-brand-price-range
 ---
 
 # Capability: Catalogue
@@ -104,9 +105,9 @@ _From 357-public-price-jobs._
 
 _From 357-public-price-jobs._
 
-### 357-FR-007 — The owner MUST be able to read every job of their garage's price list with its state through `GET /api/v1/garages/{garageId}/prices`, answering `{ items: [...] }`, one item per job in the price list's order (as FR-006), each with the job's id, its Romanian and English names, `public` (boolean), `reason` (one of the five codes, present only when not public), `durationMinutes` when set, `fromBani` and `toBani` when set, from the default range; an empty price list answers `items: []`; the answer carries no brand range, no labour range and nothing about other garages.
+### 386-FR-011 — The owner's read (`GET /api/v1/garages/{garageId}/prices`, 357-FR-007) MUST carry on each item `brandRanges`, the job's brand rows in catalogue order (popularity rank, then name), each `{ brandId, name, fromBani, toBani }` — the brand's id and catalogue name and both ends in bani (a row with no top is listed with `toBani` absent); `[]` when the job has none. Nothing else in the item changes.
 
-_From 357-public-price-jobs._
+_From 386-brand-price-range._
 
 ### 357-FR-008 — A garage with no recorded RAR activities (approved before the by-hand RAR check recorded any) MUST count every job as covered by its authorisation, until an admin records its activities; once any are recorded, a job is covered only when its RAR activity is empty or among them.
 
@@ -128,6 +129,12 @@ _From 357-public-price-jobs._
 
 _From 357-public-price-jobs._
 
+### 386-FR-011 — The owner's read (`GET /api/v1/garages/{garageId}/prices`, 357-FR-007) MUST carry on each item `brandRanges`, the job's brand rows in catalogue order (popularity rank, then name), each `{ brandId, name, fromBani, toBani }` — the brand's id and catalogue name and both ends in bani (a row with no top is listed with `toBani` absent); `[]` when the job has none. Nothing else in the item changes.
+
+_From 386-brand-price-range._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
+
+- `357-FR-007` — superseded by `386-FR-011` (2026-10-17)
