@@ -1,4 +1,4 @@
--- ST-280: the messages sent through the contact form, and the yearly counter
+-- The messages sent through the contact form, and the yearly counter
 -- behind their references.
 
 -- CreateEnum

@@ -4,36 +4,39 @@ import { supportConfig } from './support-config';
 
 // @traces 280-FR-011 280-FR-016 280-FR-017 280-FR-018
 describe('the support settings', () => {
-  let error: jest.SpyInstance;
+  let warn: jest.SpyInstance;
   beforeEach(() => {
-    error = jest
-      .spyOn(Logger.prototype, 'error')
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
   });
   afterEach(() => jest.restoreAllMocks());
 
+  const NOW = new Date('2026-10-17T09:00:00Z');
+
   it('reads the address and the away date, trimmed', () => {
     expect(
-      supportConfig({
-        SUPPORT_AWAY_UNTIL: ' 2026-11-03 ',
-        SUPPORT_EMAIL: ' help@example.test ',
-      }),
+      supportConfig(
+        {
+          SUPPORT_AWAY_UNTIL: ' 2026-11-03 ',
+          SUPPORT_EMAIL: ' help@example.test ',
+        },
+        NOW,
+      ),
     ).toEqual({ awayUntil: '2026-11-03', email: 'help@example.test' });
-    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it('leaves both unset when absent, naming SUPPORT_EMAIL in an error', () => {
+  it('leaves both unset when absent, naming SUPPORT_EMAIL in a warning', () => {
     expect(supportConfig({})).toEqual({});
-    expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('SUPPORT_EMAIL'),
-    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('SUPPORT_EMAIL'));
   });
 
   it.each(['', '   ', 'help', 'help@', 'a b@example.test'])(
     'reads SUPPORT_EMAIL=%p as unset',
     (value) => {
       expect(supportConfig({ SUPPORT_EMAIL: value }).email).toBeUndefined();
-      expect(error).toHaveBeenCalledWith(
+      expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('SUPPORT_EMAIL'),
       );
     },
@@ -48,8 +51,21 @@ describe('the support settings', () => {
           SUPPORT_EMAIL: 'help@example.test',
         }),
       ).toEqual({ awayUnreadable: true, email: 'help@example.test' });
-      expect(error).toHaveBeenCalledWith(
+      expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('SUPPORT_AWAY_UNTIL'),
+      );
+    },
+  );
+
+  it.each(['2026-10-17', '2026-01-01'])(
+    'logs an away date of %p, not after today, at start',
+    (value) => {
+      supportConfig(
+        { SUPPORT_AWAY_UNTIL: value, SUPPORT_EMAIL: 'help@example.test' },
+        NOW,
+      );
+      expect(warn).toHaveBeenCalledWith(
+        `SUPPORT_AWAY_UNTIL ${value} is not after today: read as unset`,
       );
     },
   );

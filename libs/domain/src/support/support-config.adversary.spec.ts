@@ -4,10 +4,10 @@ import { supportConfig } from './support-config';
 
 // @traces 280-FR-011 280-FR-016 280-FR-017 280-FR-018
 describe('the support settings under hostile input', () => {
-  let error: jest.SpyInstance;
+  let warn: jest.SpyInstance;
   beforeEach(() => {
-    error = jest
-      .spyOn(Logger.prototype, 'error')
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
   });
   afterEach(() => jest.restoreAllMocks());
@@ -24,9 +24,7 @@ describe('the support settings under hostile input', () => {
     'help@example.test\nBcc: x@y.test',
   ])('leaves the address unset for %j and names SUPPORT_EMAIL', (value) => {
     expect(supportConfig({ SUPPORT_EMAIL: value })).toEqual({});
-    expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('SUPPORT_EMAIL'),
-    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('SUPPORT_EMAIL'));
   });
 
   it('does not read the address from an unrelated key', () => {
@@ -49,7 +47,7 @@ describe('the support settings under hostile input', () => {
       awayUnreadable: true,
       email: 'help@example.test',
     });
-    expect(error).toHaveBeenCalledWith(
+    expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('SUPPORT_AWAY_UNTIL'),
     );
   });
@@ -65,7 +63,7 @@ describe('the support settings under hostile input', () => {
       ).toEqual({
         email: 'help@example.test',
       });
-      expect(error).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
     },
   );
 
