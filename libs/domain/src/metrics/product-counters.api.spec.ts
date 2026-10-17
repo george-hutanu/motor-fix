@@ -46,9 +46,9 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 71 and one per check kind and result.
+// Every series the API starts: its own 76 and one per check kind and result.
 const API_SERIES =
-  71 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+  76 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
 
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);

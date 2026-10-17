@@ -217,7 +217,7 @@ test.describe('the sign-up form', () => {
     await page.setViewportSize({ height: 844, width: 390 });
     await ready(page, '/ro/garages');
 
-    await page.getByRole('link', { name: 'Cont' }).click();
+    await page.getByRole('link', { exact: true, name: 'Cont' }).click();
     await dialog(page, 'Autentificare')
       .getByRole('button', { name: 'Creează un cont' })
       .click();
@@ -285,7 +285,10 @@ async function openAt(page: Page, width: number, language: 'ro' | 'en') {
   const titles = TITLE[language];
   if (width < 768) {
     await page
-      .getByRole('link', { name: language === 'ro' ? 'Cont' : 'Account' })
+      .getByRole('link', {
+        exact: true,
+        name: language === 'ro' ? 'Cont' : 'Account',
+      })
       .click();
   } else {
     await page

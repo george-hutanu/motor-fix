@@ -245,11 +245,7 @@ describe('the observability README after the staging review', () => {
     const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
       .entries as { kind: string; name: string; reason: string }[];
 
-    for (const name of [
-      'motorfix_garage_approvals_total',
-      'motorfix_verification_result_total',
-      'motorfix_documents_opened_total',
-    ]) {
+    for (const name of ['motorfix_documents_opened_total']) {
       expect(
         entries.find(
           (entry) => entry.kind === 'product-counter' && entry.name === name,

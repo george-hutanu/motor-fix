@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 135,
+    "count": 137,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -613,7 +613,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "it cannot fire on staging while no admin decision endpoint exists: only the automatic approval reaches it, and that holds only under APP_ENV=test; counts each verification decision told to its garage's owners by outcome (built, skipped: no owner or no decision to tell), with the fan-out's log line naming the file id; also on motorfix-product; a count has no failure to alert on, the verification-result queue entry owns the final-failure alert",
+      "reason": "an admin's decision through POST /api/v1/admin/verification-files/:id/decision reaches it, as does the automatic approval under APP_ENV=test; counts each verification decision told to its garage's owners by outcome (built, skipped: no owner or no decision to tell), with the fan-out's log line naming the file id; also on motorfix-product; a count has no failure to alert on, the verification-result queue entry owns the final-failure alert",
       "story": "ST-209"
     },
     {
@@ -771,8 +771,26 @@
       "source": "libs/domain/src/garages/verification/verification.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "it cannot fire on staging while no admin decision endpoint exists: only the automatic approval reaches it, and that holds only under APP_ENV=test; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "reason": "an admin's decision through POST /api/v1/admin/verification-files/:id/decision reaches it, as does the automatic approval under APP_ENV=test; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_decision_refusals_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
+      "story": "ST-306"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_reopenings_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each reopened verification file by who reopened it (admin, system); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-306"
     },
     {
       "kind": "product-counter",
@@ -1018,6 +1036,32 @@
       ],
       "reason": "each save logs one VerificationChecks line (file, kind, result, admin; never the detail or the company name), writes an audit entry and emits verification.check_recorded, and is counted by motorfix_verification_checks_total; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-203"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-decision",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each decision logs one Verification line (file, outcome, admin; never the note), writes its audit entry and the verification.decided outbox row, and is counted by motorfix_garage_approvals_total, a refusal by motorfix_verification_decision_refusals_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-306"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-reopen",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/reopen",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each reopening logs one Verification line (file, admin), writes its audit entry and the verification.reopened outbox row, and is counted by motorfix_verification_reopenings_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-306"
     },
     {
       "kind": "endpoint",

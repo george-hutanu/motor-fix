@@ -141,7 +141,7 @@ test.describe('suspending a garage @seeded', () => {
       if (width < 768) {
         await page
           .getByRole('navigation', { name: 'Navigare principală' })
-          .getByRole('link', { name: 'Cont' })
+          .getByRole('link', { exact: true, name: 'Cont' })
           .click();
       } else {
         await page

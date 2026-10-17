@@ -48,12 +48,16 @@
     },
     "failed": "Nu am putut deschide dosarul",
     "footer": {
+      "alreadyDecided": "Deja decis de {name} la {time}",
       "approve": "Aprobă și publică",
       "ask": "Cere completări",
+      "caenRequired": "Aprobarea cere verificarea CAEN",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
+      "rarCheckRequired": "Aprobarea cere verificarea RAR",
       "rarRequired": "Verificarea RAR e obligatorie",
       "reason": "Motiv: {reason}",
-      "reject": "Respinge"
+      "reject": "Respinge",
+      "saveFailed": "Nu am putut salva decizia"
     },
     "history": {
       "empty": "Nimic de arătat încă",
@@ -192,6 +196,14 @@
       "uncoveredLine": "Neacoperite: {jobs}"
     },
     "rejectedBefore": "Respins anterior: {reason}, {when}",
+    "reopen": {
+      "button": "Redeschide dosarul",
+      "cancel": "Renunță",
+      "confirm": "Redeschide",
+      "failed": "Nu am putut redeschide dosarul",
+      "question": "Redeschizi dosarul? Decizia rămâne până iei una nouă.",
+      "title": "Redeschide dosarul"
+    },
     "reopenedReport": "Redeschis după un raport, {when}",
     "report": "{text} · {when}",
     "reported": "Raportat",

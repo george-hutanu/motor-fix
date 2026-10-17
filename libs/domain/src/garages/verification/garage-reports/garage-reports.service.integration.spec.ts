@@ -215,7 +215,12 @@ describe('a driver reports an approved garage', () => {
       where: { kind: 'verification.reopened', subjectId: dinamo.file?.id },
     });
     expect(reopened.map((e) => e.payload)).toEqual([
-      { fileId: dinamo.file?.id, garageId: dinamo.id, reason: 'garage_report' },
+      {
+        adminId: null,
+        fileId: dinamo.file?.id,
+        garageId: dinamo.id,
+        reason: 'garage_report',
+      },
     ]);
     for (const event of [...reported, ...reopened]) {
       expect(JSON.stringify(event.payload)).not.toContain(ana.accountId);
