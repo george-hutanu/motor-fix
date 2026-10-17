@@ -1,4 +1,4 @@
-import { type Env, STORAGE_ENV } from '@motor-fix/contracts';
+import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   CAR_REMINDERS_CONSUMER,
   DataStoreMetricsModule,
@@ -63,6 +63,7 @@ export function workerModule(
       }),
       StorageModule.register(env),
       OutboxRelayModule.register({
+        cdn: bunnyConfig(process.env),
         consumers: [
           CAR_REMINDERS_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
