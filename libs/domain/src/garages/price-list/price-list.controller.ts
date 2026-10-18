@@ -1,7 +1,11 @@
 import {
   BrandRangeDto,
   BrandRangeSavedDto,
+  LabourRangeDto,
+  LabourRangeSavedDto,
   PriceListDto,
+  PriceRangeDto,
+  PriceRangeSavedDto,
 } from '@motor-fix/contracts';
 import {
   Body,
@@ -12,12 +16,14 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Put,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -57,6 +63,40 @@ export class PriceListController {
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
   ): Promise<PriceListDto> {
     return this.priceList.read(actor, garageId);
+  }
+
+  @Patch(':priceId')
+  @UseGuards(JsonOnly)
+  @ApiOperation({
+    summary:
+      "Changes a job's default range and duration in place, against the stamp it was read with",
+  })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiParam({ format: 'uuid', name: 'priceId', type: String })
+  @ApiOkResponse({ type: PriceRangeSavedDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: not a uuid, a missing or malformed stamp, or an unknown field',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({
+    description: "not_found: no such garage, or no such job's default row",
+  })
+  @ApiConflictResponse({
+    description: 'stale: the row changed since it was read',
+  })
+  @ApiUnsupportedMediaTypeResponse({ description: 'unsupported_media_type' })
+  @ApiUnprocessableEntityResponse({
+    description: 'validation_failed: the range or the duration',
+  })
+  setRange(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Param('priceId', new ParseUUIDPipe()) priceId: string,
+    @Body() body: PriceRangeDto,
+  ): Promise<PriceRangeSavedDto> {
+    return this.priceList.setRange(actor, { garageId, priceId }, body);
   }
 
   @Put(':jobTypeId/brands/:brandId')
@@ -118,5 +158,35 @@ export class PriceListController {
       garageId,
       jobTypeId,
     });
+  }
+}
+
+@ApiTags('garages')
+@ApiBearerAuth()
+@Controller('garages/:garageId/labour')
+export class GarageLabourController {
+  constructor(private readonly priceList: PriceListService) {}
+
+  @Patch()
+  @UseGuards(JsonOnly)
+  @ApiOperation({ summary: "Changes the garage's labour rate, both ends set" })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiOkResponse({ type: LabourRangeSavedDto })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: not a uuid, or an unknown field',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'unsupported_media_type' })
+  @ApiUnprocessableEntityResponse({
+    description: 'validation_failed: the range, a missing end included',
+  })
+  set(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Body() body: LabourRangeDto,
+  ): Promise<LabourRangeSavedDto> {
+    return this.priceList.setLabour(actor, garageId, body);
   }
 }
