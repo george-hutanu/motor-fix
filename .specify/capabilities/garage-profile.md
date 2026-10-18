@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -14,6 +14,7 @@ features:
   - 290-save-garage
   - 386-brand-price-range
   - 356-live-estimate
+  - 271-garage-distance
 ---
 
 # Capability: Garage profile
@@ -62,9 +63,9 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
-### 307-FR-013 — The place line MUST read "la {d} km" / "{d} km away" for a fixed garage when the visitor has a place (the one Home keeps in local storage, 229-FR-005, sent as `near` by the browser's re-read: the server renders without it), be left out for a fixed garage without one, and read "Mecanic mobil · zonă de {r} km" / "Mobile mechanic · {r} km area" for a mobile mechanic, whatever the place; the page MUST show no address and no seat.
+### 271-FR-015 — The profile's place line MUST read "la {d} km" / "{d} km away" for a fixed garage when the browser holds a kept place (the server renders without it; the browser re-reads once with `near` and shows the distance in place), be left out without a place, and keep the mobile mechanic's area line "Mecanic mobil · zonă de {r} km" with no distance and no address (307-FR-013 completed).
 
-_From 307-public-garage-profile._
+_From 271-garage-distance._
 
 ### 310-FR-004 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as thumbnails, in the list's order, the large cover tile showing the photo's display copy and every other tile its thumbnail copy, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall, as `design.md` fixes them). Photos below the fold MUST load lazily; the first photo MUST load eagerly.
 
@@ -346,6 +347,14 @@ _From 356-live-estimate._
 
 _From 356-live-estimate._
 
+### 271-FR-014 — The profile read `GET /api/v1/garages/{slug}` MUST accept the optional `near={lat},{lng}` with the search's validation (229-FR-009: 400 `validation_failed` when malformed or outside Romania) and, with it, carry `distanceKm` (one decimal, the shared rule of FR-010) for a fixed garage; a mobile mechanic and a read without `near` carry no `distanceKm`. The distance MUST be computed per request after the cached answer is read, so the shared profile cache key (307-FR-006) never holds a distance, and the place is never stored on the server. The key-set test of 307-FR-005 MUST cover the read with `near` for a fixed and a mobile garage.
+
+_From 271-garage-distance._
+
+### 271-FR-015 — The profile's place line MUST read "la {d} km" / "{d} km away" for a fixed garage when the browser holds a kept place (the server renders without it; the browser re-reads once with `near` and shows the distance in place), be left out without a place, and keep the mobile mechanic's area line "Mecanic mobil · zonă de {r} km" with no distance and no address (307-FR-013 completed).
+
+_From 271-garage-distance._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -358,3 +367,5 @@ _From 356-live-estimate._
 - `355-FR-002` — superseded by `386-FR-002` (2026-10-17)
 
 - `355-FR-011` — superseded by `356-FR-009` (2026-10-17)
+
+- `307-FR-013` — superseded by `271-FR-015` (2026-10-18)

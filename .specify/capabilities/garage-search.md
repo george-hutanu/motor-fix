@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -15,6 +15,7 @@ features:
   - 049-garage-suspension
   - 290-save-garage
   - 270-card-pin-link
+  - 271-garage-distance
 ---
 
 # Capability: Garage search
@@ -91,9 +92,9 @@ _From 229-location-or-address._
 
 _From 267-brand-results._
 
-### 229-FR-013 — The area query, the distance and the mobile-mechanic rule MUST live in one shared place in the `search` module that the Home read and the garage search both call (Constitution V); the distance MUST be the straight-line distance over the earth, in metres, computed in the database.
+### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
 
-_From 229-location-or-address._
+_From 271-garage-distance._
 
 ### 229-FR-015 — A distance MUST be shown in km with one decimal in the language's format (019-FR-004): "3,2 km" in Romanian, "3.2 km" in English; under 1 km as "0,8 km"; a mobile mechanic shows "Mecanic mobil · vine la tine" / "Mobile mechanic · comes to you" instead of a distance, and its registered address is never shown. (On Home this story shows no distances, which Home has no list for; the format and the texts are the shared ones Results uses.)
 
@@ -139,9 +140,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 267-FR-012 — The web app MUST serve Results at `/:lang/garages` in place of today's placeholder, open to anyone with no session, reading `brand` (the slug) from the address bar, the place from `near` in the bar or else from the browser's kept place (which is then written into the bar), and `radius=50` when widened; the bar is rewritten without a history entry, so a shared link opens the same search.
+### 271-FR-001 — Results opened in the browser with no `near` in the address bar and no kept place (a `bbox` alone is not a place) MUST ask the browser's location once on load (the existing 10 s timeout); while the request is open it MUST show its loading state and a polite status "Se caută locația…" / "Finding your location…" and run no search; a position inside Romania becomes the kept place (origin location, rounded as 229-FR-008), is written into the bar as `near` and starts one logged search. With `near` in the bar or a kept place it MUST search at once and ask nothing (267-FR-012 otherwise unchanged).
 
-_From 267-brand-results._
+_From 271-garage-distance._
 
 ### 267-FR-013 — The page MUST show the title naming the brand in the copy voice of MF-2 ("Service-uri pentru BMW" in the mock's voice), and under it the summary "{total} de service-uri găsite · {takers} lucrează pe {brand} · {others} nu o primesc" with the Romanian plural rules, the area ("în 25 km de {place}" / "în 50 km de {place}", or nothing without a place) and "Schimbă locul".
 
@@ -309,6 +310,58 @@ _From 270-card-pin-link._
 
 _From 270-card-pin-link._
 
+### 271-FR-001 — Results opened in the browser with no `near` in the address bar and no kept place (a `bbox` alone is not a place) MUST ask the browser's location once on load (the existing 10 s timeout); while the request is open it MUST show its loading state and a polite status "Se caută locația…" / "Finding your location…" and run no search; a position inside Romania becomes the kept place (origin location, rounded as 229-FR-008), is written into the bar as `near` and starts one logged search. With `near` in the bar or a kept place it MUST search at once and ask nothing (267-FR-012 otherwise unchanged).
+
+_From 271-garage-distance._
+
+### 271-FR-002 — On a refusal, a browser error, no geolocation in the browser, a point outside Romania, or no answer within 10 s, Results MUST show an address field labelled "Introdu o adresă" / "Enter an address" at the top of the page, above the map, with focus, and MUST assume no city and run no search; the map shows no pins and the list no cards until a place exists. Choosing a suggestion makes it the kept place (origin address), writes `near` into the bar and starts one logged search; the field then gives way to the summary line of 267-FR-013. An empty answer, a failed or rate-limited look-up and a text under three characters behave as 229-FR-004 ("Nu am găsit adresa", "Nu putem căuta adrese acum", nothing); a place from a link or from the browser keeps working while the geocoding service is down.
+
+_From 271-garage-distance._
+
+### 271-FR-003 — A location answer that arrives after the driver already chose a place another way MUST be dropped; a kept place set by this story on Results MUST be the same place Home reads (one storage, 229-FR-005).
+
+_From 271-garage-distance._
+
+### 271-FR-004 — The map MUST show one marker at the place, for the browser's location and a typed address alike, visually distinct from the price pins and the mobile areas, that pulses unless the device asks for reduced motion (`prefers-reduced-motion: reduce`); it moves when the place changes, is included in the map's fit to its contents (the Results map's `fit`) and is hidden from assistive technology (the summary line names the place). Its colour is the theme's accent, distinct from the pins in both themes and readable against the map (the sweep checks it). In visible-area mode it stays where the place is.
+
+_From 271-garage-distance._
+
+### 271-FR-006 — Distances and the mobile line on the cards stay as built (229-FR-015, 267-FR-014: "3,2 km" / "3.2 km", under 1 km "0,8 km", "Mecanic mobil · vine la tine · rază {n} km", never an address), and this story MUST prove them end to end from a real place: the seeded Service Mărăști reads "1,0 km" from the Cluj test point.
+
+_From 271-garage-distance._
+
+### 271-FR-007 — Changing the place from the summary line MUST keep running one new, logged search from the new place (267-FR-013, 267-FR-017, 267-FR-007: unchanged, proven here).
+
+_From 271-garage-distance._
+
+### 271-FR-008 — Every new text MUST live in the shared i18n files in Romanian and English; the page with the status line, the address field and the marker MUST hold at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll.
+
+_From 271-garage-distance._
+
+### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
+
+_From 271-garage-distance._
+
+### 271-FR-011 — The garage search (both groups, both counts, the order and the paging of 267-FR-001/002), the Home read's counts and preview (229-FR-009, 227) the pins (269-FR-001), the cars list's distances (291-FR-004) and the quote request's candidate garages (`candidates()`, today `garagesInArea`) MUST select the garages inside the area and read their distance in the same query, with no `id IN` list built from the area in the application; each read is one raw SQL statement over the area and the public scope, and cards are hydrated by the ids of the one page it answers, never of the whole area; their answers for the seeded fixture are identical before and after, which the existing integration suites prove unchanged.
+
+_From 271-garage-distance._
+
+### 271-FR-012 — Every read this story touches MUST keep applying the one public scope (approved garages only, 043-FR-002, 049-FR-006), and the scope guard test MUST cover the new reads so a raw query that forgets the scope fails it.
+
+_From 271-garage-distance._
+
+### 271-FR-013 — Before the PR is ready, the spatial extension MUST be verified available on the staging and production databases (the extension's availability read on each; the migration's `CREATE EXTENSION IF NOT EXISTS` is what enables it), and the PR MUST say so; an environment that cannot offer it makes the task Blocked with a needs-confirmation question on the story's issue, never a silent change of database image.
+
+_From 271-garage-distance._
+
+### 271-FR-017 — This story writes nothing new on the server: no audit entry, no event, no live update, no account field; the search log keeps logging one row per new search (267-FR-007/269-FR-006, unchanged). Observability: no new service, endpoint, queue or outside call; the profile read with `near` is the same endpoint; the PR's Observability section says so.
+
+_From 271-garage-distance._
+
+### 271-FR-018 — Tests: unit (Jest) for the Results location flow with a fake geolocation (allowed, refused, 10 s timeout, late answer dropped), the marker's reduced-motion rule, the shared address field, and the profile's distance line; integration for the migration (every position kept, the derived point equals the pair), the area query (identical answers, the index in the plan), the profile `near` read and its cache; end to end (Playwright): Results with geolocation granted at the Cluj test point shows the marker and "1,0 km" on Service Mărăști; with geolocation denied, the field shows, "Cluj" is typed (fake provider), the suggestion picked and the results appear.
+
+_From 271-garage-distance._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -327,3 +380,6 @@ _From 270-card-pin-link._
 - `229-FR-019` — superseded by `269-FR-001` (2026-10-17)
 - `267-FR-009` — superseded by `269-FR-019` (2026-10-17)
 - `267-FR-007` — superseded by `269-FR-006` (2026-10-17)
+
+- `267-FR-012` — superseded by `271-FR-001` (2026-10-18)
+- `229-FR-013` — superseded by `271-FR-010` (2026-10-18)

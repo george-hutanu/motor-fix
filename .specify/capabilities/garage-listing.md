@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -28,6 +28,7 @@ features:
   - 1204-hours-row-live-regions
   - 049-garage-suspension
   - 386-brand-price-range
+  - 271-garage-distance
 ---
 
 # Capability: Garage listing
@@ -949,6 +950,14 @@ _From 386-brand-price-range._
 ### 386-FR-014 — Tests MUST cover, in Jest: the choice rule (brand range over the default for a taken brand, the default for another brand, no brand, a refused brand, an unstated brand, an incomplete brand row; a job hidden by its default stays hidden for every brand); on real PostgreSQL and Redis: the write (create, change in place, no second row, a change of nothing, the `wide_range` warning), its refusals (each code of FR-006, two refusals at once answered together, a non-uuid), the removal and its 404, the access rule (owner 200, receptionist and mechanic 403, another garage's owner and an admin 404, no session 401), the audit entries with old and new values and the `price_list.updated` event with its payload in the same transaction (none when nothing changed), the owner's read with `brandRanges`, and the profile cache answering the new range for the written brand; in Playwright: the owner sets a BMW range on the seeded garage's front brakes over the API, a profile already open for BMW re-reads and shows it, the profile for Audi shows the default, and removing it brings the default back; the form's brand row in step 3 stays walked by `details-prices-mechanics.spec.ts` (research R6: no production path yet turns a sent listing into price rows, so the brief's send-and-approve walk has nothing to walk). The estimate's end-to-end check belongs to #75.
 
 _From 386-brand-price-range._
+
+### 271-FR-009 — The garage MUST hold its position as a spatial point column (`geography(Point, 4326)`) with a GiST index, derived by the database from latitude and longitude so the two can never disagree and nothing writes it; one migration enables the spatial extension and fills it for every garage with a position, losing none; the migration is additive (a new column and index; no existing column changes), so undoing it is dropping them and the previous release keeps working against it; latitude and longitude stay the fields the API, the listing and the seed write and read.
+
+_From 271-garage-distance._
+
+### 271-FR-016 — The ST-111 documents in the specs repo (`specs/111-garage-address-map/tasks.md` T021, `plan.md`, `research.md`, `quickstart.md`, `deferred.md`) MUST name the metrics as built, `motorfix_places_lookups_total{provider,outcome}` and `motorfix_places_provider_duration_seconds{provider}`, and no client span, which was never built (#654); nothing in the code changes for it.
+
+_From 271-garage-distance._
 
 ## Retired
 
