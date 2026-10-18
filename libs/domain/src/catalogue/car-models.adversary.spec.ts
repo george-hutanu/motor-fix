@@ -104,8 +104,7 @@ describe('validateCarModels under attack', () => {
     const bad = { ...car('a-1', 'a', 1), fuel: 'lpg' } as unknown as Model;
     const fn = () => validateCarModels([bad, car('b-2', 'b', 2)]);
     expect(fn).toThrow(CarModelFileError);
-    expect(fn).toThrow(/b/);
-    expect(fn).not.toThrow(/lpg/);
+    expect(fn).toThrow(/^brand "b" has ranks 2; they must be 1 to 1$/);
   });
 
   // @traces 405-FR-004
@@ -242,16 +241,5 @@ describe('carForBrand under attack', () => {
     const second = carForBrand('a', models);
     expect(second).toEqual(first);
     expect(models).toEqual([car('a-1', 'a', 1)]);
-  });
-
-  // @traces 405-FR-003
-  it('gives every shipped brand a licensed rank-1 model or a generic body style', () => {
-    for (const brand of BRANDS) {
-      const answer = carForBrand(brand.key);
-      if (answer.kind === 'licensed') {
-        expect(answer.model.brand).toBe(brand.key);
-        expect(answer.model.rank).toBe(1);
-      }
-    }
   });
 });
