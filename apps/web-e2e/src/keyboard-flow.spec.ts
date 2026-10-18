@@ -82,6 +82,8 @@ async function tabTo(
   limit = 60,
 ) {
   let wrapped = false;
+  // The stops so far, named when the focus falls to the page a second time.
+  const trail: string[] = [];
   for (let presses = 0; presses < limit; presses++) {
     await page.keyboard.press('Tab');
     const left = await page.evaluate(
@@ -91,6 +93,10 @@ async function tabTo(
       wrapped = true;
       continue;
     }
+    expect(left, `the focus left the page after ${trail.join(' | ')}`).toBe(
+      false,
+    );
+    trail.push((await page.evaluate(focusFacts))?.focused ?? '');
     await focusShows(page);
     if (
       await target
@@ -165,7 +171,10 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await expect(page).toHaveURL(/\/ro\/garages\/service-auto-militari/);
     await hydrated(page);
 
-    await tabTo(page, page.getByRole('button', { name: 'Cere ofertă' }));
+    await tabTo(
+      page,
+      page.getByRole('button', { exact: true, name: 'Cere ofertă' }),
+    );
     await page.keyboard.press('Enter');
     const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
     await expect(quote.locator('mf-overlay-panel')).toBeVisible();
