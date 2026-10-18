@@ -780,7 +780,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, note_required, reason_required, note_too_short, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
+      "reason": "counts each admin decision or request for more refused by reason (rar_check_required, caen_check_required, note_required, reason_required, note_too_short, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
     },
     {
@@ -802,6 +802,26 @@
       "alerts": "none",
       "reason": "counts each reopened verification file by who reopened it (admin, system); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_more_requests_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "verification-more-request-burst"
+      ],
+      "reason": "counts each garage verification file sent back for more details, with the Verification log line naming the file, the admin and the items asked for (never the message) and the items on the request span; more than 5 in an hour fires the burst alert",
+      "story": "ST-304"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_resubmissions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each file a garage sends again after a request for more, with one Verification log line naming the file; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-304"
     },
     {
       "kind": "product-counter",
