@@ -87,6 +87,14 @@ export const newestFirst = [
 const refused = (detail: string) =>
   refusal(HttpStatus.CONFLICT, 'verification_transition_refused', detail);
 
+// An admin's approval refused by the approval rules; each refused attempt is
+// written to the history by the endpoint, after the refusal rolled back.
+export const REFUSAL_CODES: ReadonlySet<string> = new Set([
+  'rar_check_required',
+  'caen_check_required',
+  'note_required',
+]);
+
 // The checks an admin's approval waits for, in the order they are asked.
 const GATES = [
   ['rar', 'rar_check_required', 'the rar check is not ok'],
@@ -199,8 +207,71 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    if (!this.config.skipManualApproval) return file;
+    return this.autoApprove(tx, file);
+  }
+
+  // Outside production, with manual approval switched off, a sending is
+  // approved at once as the system when the RAR rule is met: its rar check
+  // ok, or the RAR check switched off. Otherwise it waits for an admin; the
+  // sending itself is never refused for it.
+  private async autoApprove(
+    tx: Prisma.TransactionClient,
+    file: VerificationFile,
+  ): Promise<VerificationFile> {
+    if (!(await this.autoApprovalOn(tx))) return file;
+    const garage = await tx.garage.findUniqueOrThrow({
+      select: { status: true },
+      where: { id: file.garageId },
+    });
+    const cause =
+      garage.status === 'suspended'
+        ? 'garage_suspended'
+        : (await this.rarRuleMet(tx, file.id))
+          ? null
+          : 'rar_check_required';
+    if (cause) {
+      this.logger.log(`file ${file.id} automatic approval waited: ${cause}`);
+      return file;
+    }
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
+  }
+
+  // The variable (APP_ENV=test only) or the stored switch, never read in
+  // production.
+  private async autoApprovalOn(tx: Prisma.TransactionClient) {
+    return (
+      this.config.skipManualApproval ||
+      this.testRule(tx, 'skip_manual_approval')
+    );
+  }
+
+  private async rarRuleMet(tx: Prisma.TransactionClient, fileId: string) {
+    const ok = await tx.verificationCheck.findFirst({
+      select: { id: true },
+      where: { fileId, kind: 'rar', result: 'ok' },
+    });
+    return ok !== null || this.skipRar(tx);
+  }
+
+  // A refused approval as one history entry, in the transaction it is given.
+  async recordRefusal(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    fileId: string,
+    code: string,
+  ): Promise<void> {
+    const file = await this.file(tx, fileId);
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'decision',
+      garageId: file.garageId,
+      kind: 'verification_approval_refused',
+      newValue: code,
+      subjectId: fileId,
+      subjectType: 'verification_file',
+    });
   }
 
   // An admin sets or corrects the file's RAR number while it is undecided:
@@ -377,10 +448,11 @@ export class VerificationService {
     if (actor.role === 'system' || !row || !FROM.decide.includes(row.status)) {
       return missing;
     }
-    const skipRar = await this.skipRar(tx);
+    // The RAR switch lifts both register gates, never the note rule.
+    const skipRegisters = await this.skipRar(tx);
     for (const [kind, code, detail] of GATES) {
       if (
-        (kind === 'rar' && skipRar) ||
+        skipRegisters ||
         checks.some((check) => check.kind === kind && check.result === 'ok')
       ) {
         continue;
@@ -403,12 +475,20 @@ export class VerificationService {
     return missing;
   }
 
-  // The test-only switch, read per decision and never in production.
-  private async skipRar(tx: Prisma.TransactionClient) {
+  // The RAR test switch, read per decision and never in production.
+  private skipRar(tx: Prisma.TransactionClient) {
+    return this.testRule(tx, 'skip_rar_check');
+  }
+
+  // A test-only platform rule; production never reads one.
+  private async testRule(
+    tx: Prisma.TransactionClient,
+    key: 'skip_manual_approval' | 'skip_rar_check',
+  ) {
     if (!this.config.testRules) return false;
     const rule = await tx.platformRule.findUnique({
       select: { value: true },
-      where: { key: 'skip_rar_check' },
+      where: { key },
     });
     return rule?.value === true;
   }
@@ -482,7 +562,7 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    return file;
+    return this.autoApprove(tx, file);
   }
 
   // Only the garage's newest file, and only while no other file is live.

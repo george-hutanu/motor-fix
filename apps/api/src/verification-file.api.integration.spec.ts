@@ -5,8 +5,9 @@ import {
   AccountsService,
   StorageService,
   signAccessToken,
+  VerificationService,
 } from '@motor-fix/domain';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
@@ -58,6 +59,14 @@ const entries = async (subjectId: string) =>
   (
     await db.query(
       'SELECT action, field, new_value FROM activity_log WHERE subject_id = $1 ORDER BY at',
+      [subjectId],
+    )
+  ).rows;
+
+const refusedEntries = async (subjectId: string) =>
+  (
+    await db.query(
+      "SELECT actor_id, actor_role, new_value FROM activity_log WHERE subject_id = $1 AND kind = 'verification_approval_refused' ORDER BY at",
       [subjectId],
     )
   ).rows;
@@ -388,20 +397,117 @@ describe('POST /admin/verification-files/:id/decision', () => {
     expect(res.body.file.requestedItems).toEqual([]);
   });
 
+  // @traces 259-FR-005
   it.each([
     ['rar_check_required', 'warning', 'ok'],
     ['caen_check_required', 'ok', 'not_run'],
-  ])('answers 409 %s and writes nothing', async (code, rar, caen) => {
+  ])(
+    'answers 409 %s and writes only the refused attempt',
+    async (code, rar, caen) => {
+      const { id } = await file('in_review');
+      await checked(id, 'rar', rar);
+      await checked(id, 'caen', caen);
+
+      const res = await post(id, 'decision', admin, { decision: 'approved' });
+
+      expect([res.status, res.body.code]).toEqual([409, code]);
+      expect((await fileRow(id)).status).toBe('in_review');
+      expect(await entries(id)).toEqual([
+        { action: 'update', field: 'decision', new_value: code },
+      ]);
+      expect(await refusedEntries(id)).toEqual([
+        expect.objectContaining({ actor_id: adminId, actor_role: 'admin' }),
+      ]);
+      expect(await decided(id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 259-FR-005
+  it('writes an approval refused for its missing note, and a second attempt again', async () => {
     const { id } = await file('in_review');
-    await checked(id, 'rar', rar);
-    await checked(id, 'caen', caen);
+    await allOk(id);
+    await db.query(
+      "UPDATE verification_check SET result = 'failed' WHERE file_id = $1 AND kind = 'photos'",
+      [id],
+    );
+
+    const first = await post(id, 'decision', admin, { decision: 'approved' });
+    const second = await post(id, 'decision', admin, { decision: 'approved' });
+
+    expect([first.status, first.body.code]).toEqual([422, 'note_required']);
+    expect(second.status).toBe(422);
+    expect((await refusedEntries(id)).map((e) => e.new_value)).toEqual([
+      'note_required',
+      'note_required',
+    ]);
+  });
+
+  // @traces 259-FR-005
+  it('writes no refused attempt for a file decided already, a suspended garage, a rejection without a note or a bad body', async () => {
+    const decidedFile = await file('approved');
+    const suspended = await file('in_review');
+    await allOk(suspended.id);
+    await db.query("UPDATE garage SET status = 'suspended' WHERE id = $1", [
+      suspended.garage,
+    ]);
+    const plain = await file('in_review');
+
+    const answers = [
+      await post(decidedFile.id, 'decision', admin, { decision: 'approved' }),
+      await post(suspended.id, 'decision', admin, { decision: 'approved' }),
+      await post(plain.id, 'decision', admin, {
+        decision: 'rejected',
+        note: '   ',
+        reason: 'documents',
+      }),
+      await post(plain.id, 'decision', admin, {
+        decision: 'approved',
+        urgent: true,
+      }),
+    ];
+
+    expect(answers.map((res) => res.status)).toEqual([409, 409, 422, 400]);
+    for (const id of [decidedFile.id, suspended.id, plain.id]) {
+      expect(await refusedEntries(id)).toHaveLength(0);
+    }
+  });
+
+  // @traces 259-FR-005
+  it('still answers the refusal when its entry cannot be written, and logs why', async () => {
+    const { id } = await file('in_review');
+    const record = jest
+      .spyOn(app.get(VerificationService), 'recordRefusal')
+      .mockRejectedValueOnce(new Error('store down'));
+    const warn = jest.spyOn(Logger.prototype, 'warn');
 
     const res = await post(id, 'decision', admin, { decision: 'approved' });
 
-    expect([res.status, res.body.code]).toEqual([409, code]);
-    expect((await fileRow(id)).status).toBe('in_review');
-    expect(await entries(id)).toHaveLength(0);
-    expect(await decided(id)).toHaveLength(0);
+    expect([res.status, res.body.code]).toEqual([409, 'rar_check_required']);
+    expect(await refusedEntries(id)).toHaveLength(0);
+    expect(
+      warn.mock.calls.filter(
+        ([line]) =>
+          String(line) ===
+          `file ${id} refusal entry not written: Error: store down`,
+      ),
+    ).toHaveLength(1);
+    record.mockRestore();
+    warn.mockRestore();
+  });
+
+  // @traces 259-FR-006
+  it('shows the refused attempt first in the file read', async () => {
+    const { id } = await file('in_review');
+    await post(id, 'decision', admin, { decision: 'approved' });
+
+    const res = await read(id, admin);
+
+    expect(res.body.timeline.entries[0]).toMatchObject({
+      actor: { id: adminId, name: 'Ioana', role: 'admin' },
+      field: 'decision',
+      kind: 'verification_approval_refused',
+      newValue: 'rar_check_required',
+    });
   });
 
   it('answers 409 naming who decided first, and when', async () => {
