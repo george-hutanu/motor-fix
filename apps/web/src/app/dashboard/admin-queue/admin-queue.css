@@ -134,3 +134,26 @@ mf-lamp {
   gap: var(--mf-space-3);
   padding-top: var(--mf-space-3);
 }
+.approved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  font-weight: 600;
+  color: var(--mf-green-ink);
+  overflow-wrap: anywhere;
+}
+/* The mock's leading success dot; the text says it as well. */
+.approved::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+/* A decided row has no date: its state takes the date's column too. */
+@media (min-width: 900px) {
+  .row.decided .state {
+    grid-column: 2 / 4;
+  }
+}
