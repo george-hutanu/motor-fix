@@ -58,6 +58,40 @@ Keycloak refuses ChatGPT's client document: ChatGPT publishes
 client registration, which the realm allows for its hosts. Claude Code and
 Claude Desktop use their client documents.
 
+## The image and its memory
+
+The `Dockerfile` builds in two stages, as Keycloak's container guide does.
+The builder sets the build options (`KC_DB=postgres`, the `cimd` and
+`resource-indicators` features, health and metrics) and runs `kc.sh build`;
+the runtime copies the built server and the realm and runs
+`start --optimized`, so Keycloak does not rebuild itself on every start.
+Persistent user sessions stay on, as Keycloak 26 ships them. A build option
+cannot be changed by a Railway variable any more: change the `Dockerfile`.
+
+Health (`/health/ready`) and metrics (`/metrics`) are served on the
+management port 9000, which has no public domain: only services on Railway's
+private network reach it. The public domain stays on port 8080.
+
+The heap follows the container's memory limit (`JAVA_OPTS_KC_HEAP`): at most
+70% of it, starting at 50%, and no size in bytes. The limit itself is the
+Railway service's, set by the owner, and must be raised before a release
+deploys this image:
+
+| Figure | Memory |
+| --- | --- |
+| Keycloak's guide, request | 1250 MB |
+| Keycloak's guide, limit | 1360 MB |
+| The staging service's limit to set | 1.36–1.5 GB (a heap of about 950 MB–1 GB) |
+| A limit Keycloak refuses to start under, in the guide | 768 MiB |
+| A 512 MB limit | a heap of about 358 MB, which may not start at all |
+
+The worker reads Keycloak's heap from `/metrics` once a minute when
+`KEYCLOAK_METRICS_URL` is set on it (staging only:
+`http://keycloak.railway.internal:9000/metrics`; unset, there is no reading).
+The overview dashboard's keycloak row shows it, and `keycloak-memory` fires
+when the heap stays above 90% of its maximum for 10 minutes
+(`infra/observability/alerts/keycloak.json`).
+
 ## Railway: staging only
 
 Staging only: production runs neither the identity server nor the MCP server.
@@ -103,7 +137,7 @@ else; *address* is a public or internal address; *name* is a plain value.
 
    | Variable | Kind | What it is |
    | --- | --- | --- |
-   | `KC_DB` | name | `postgres` |
+   | `KC_DB` | name | Not set: the image is built with `postgres` |
    | `KC_DB_URL` | address | The Keycloak database from step 2, as a JDBC address |
    | `KC_DB_USERNAME`, `KC_DB_PASSWORD` | name, secret | The role from step 2 |
    | `KC_HOSTNAME` | address | Keycloak's public address |
@@ -115,6 +149,15 @@ else; *address* is a public or internal address; *name* is a plain value.
    | `ASSISTANT_TRUSTED_DOMAINS` | name | Left unset unless a further host is trusted |
 
    `ASSISTANT_ALLOW_HTTP` is not set on staging: it is for development and CI only.
+
+   On the worker:
+
+   | Variable | Kind | What it is |
+   | --- | --- | --- |
+   | `KEYCLOAK_METRICS_URL` | address | Keycloak's management metrics on the private network, `http://keycloak.railway.internal:9000/metrics` |
+
+   And on the keycloak service's settings, its memory limit: 1.36–1.5 GB
+   (see "The image and its memory"), before the release deploys the image.
 4. On the GitHub `staging` environment, set the variables
    `RAILWAY_SERVICE_MCP` and `RAILWAY_SERVICE_KEYCLOAK` to the two services'
    ids, and `MCP_URL` to the MCP server's public address (the same value as
@@ -123,8 +166,10 @@ else; *address* is a public or internal address; *name* is a plain value.
    and `MCP_URL` are set, it skips the check with a notice.
 5. Sign in to Keycloak's admin console once with the bootstrap admin, create a
    permanent admin, then remove the bootstrap one.
-6. Import `infra/observability/alerts/mcp.json` into Grafana Cloud: it carries
-   `mcp-down` and `mcp-issuer-unreachable` for these two services.
+6. Import `infra/observability/alerts/mcp.json` and
+   `infra/observability/alerts/keycloak.json` into Grafana Cloud: they carry
+   `mcp-down` and `mcp-issuer-unreachable` for these two services, and
+   `keycloak-memory` for Keycloak's heap.
 7. Connect Claude and ChatGPT to the staging MCP server and record the
    result: see "Connecting Claude and ChatGPT" below.
 
