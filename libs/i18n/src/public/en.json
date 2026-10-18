@@ -115,6 +115,10 @@
       "change": "Change",
       "choose": "Choose a place",
       "field": "Address",
+      "found": {
+        "one": "One address found",
+        "other": "{count} addresses found"
+      },
       "locating": "Finding your location…",
       "locationFailed": "We could not get your location; type an address",
       "near": "Near {label}",
@@ -418,9 +422,8 @@
       "placeholder": "Street and number, sector, town",
       "radius": "Area you work in",
       "radiusHint": "Between 1 and 100 km",
-      "searchDown": "Address search is not working right now. You can place the pin on the map.",
-      "seat": "Registered seat",
-      "suggestions": "Addresses found"
+      "searchUnavailable": "Address search is not working right now. You can place the pin on the map.",
+      "seat": "Registered seat"
     },
     "preview": {
       "draft": "Draft · published after verification",

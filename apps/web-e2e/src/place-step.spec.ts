@@ -10,7 +10,8 @@ const STEFAN = {
 };
 
 const step = (page: Page) => page.locator('mf-place-step');
-const address = (page: Page) => step(page).locator('input[name="address"]');
+const address = (page: Page) =>
+  step(page).locator('mf-address-field input[role="combobox"]');
 const radius = (page: Page) => step(page).locator('input[name="radiusKm"]');
 const pin = (page: Page) => step(page).locator('.maplibregl-marker');
 

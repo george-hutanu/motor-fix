@@ -110,7 +110,7 @@ const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const address = (step: HTMLElement) =>
   step.querySelector<HTMLInputElement>(
-    'input[name="address"]',
+    'mf-address-field input[role="combobox"]',
   ) as HTMLInputElement;
 const radius = (step: HTMLElement) =>
   step.querySelector<HTMLInputElement>('input[name="radiusKm"]');
@@ -165,6 +165,17 @@ beforeEach(() => {
 });
 
 describe('step 5, the place', () => {
+  // @traces 271-garage-distance-FR-005
+  it('is the shared address field, wired by the ids of the step', async () => {
+    const { step } = await open();
+
+    const field = address(step);
+    expect(field.id).toBe('place-address');
+    expect(field.getAttribute('aria-controls')).toBe('place-options');
+    expect(field.getAttribute('aria-describedby')).toBe('place-message');
+    expect(step.querySelectorAll('input[role="combobox"]')).toHaveLength(1);
+  });
+
   it('asks for the address with its placeholder, a map and the manual pin', async () => {
     const { step } = await open();
 
@@ -223,9 +234,9 @@ describe('step 5, the place', () => {
     await type(opened, 'Strada Exemplu');
 
     expect(options(opened.step)).toHaveLength(5);
-    expect(
-      text(opened.step.querySelector('.hint[aria-live="polite"]')),
-    ).toContain('5');
+    const found = opened.step.querySelector('#place-found');
+    expect(found?.getAttribute('aria-live')).toBe('polite');
+    expect(text(found)).toBe('5 adrese găsite');
   });
 
   it('drops a late answer to an older text', async () => {
@@ -295,6 +306,9 @@ describe('step 5, the place', () => {
     await type(opened, 'Bulevardul Nicăieri 7');
 
     expect(options(opened.step)).toEqual([]);
+    expect(text(opened.step.querySelector('#place-message'))).toBe(
+      'Nu am găsit adresa. Poți pune pinul pe hartă.',
+    );
     expect(text(opened.step)).toContain('Pune pinul pe hartă');
   });
 

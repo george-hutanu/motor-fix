@@ -25,17 +25,6 @@ input {
   min-height: var(--mf-tap);
   box-sizing: border-box;
 }
-.suggestions {
-  display: grid;
-}
-.suggestions:empty {
-  display: none;
-}
-.suggestions,
-.map-area {
-  min-width: 0;
-}
-.suggestions button,
 .manual {
   min-height: var(--mf-tap);
   max-width: 100%;
@@ -47,14 +36,6 @@ input {
   text-align: start;
   overflow-wrap: anywhere;
   cursor: pointer;
-}
-.suggestions button + button {
-  border-top: 0;
-}
-.suggestions button[aria-selected="true"] {
-  font-weight: 600;
-}
-.manual {
   border-radius: var(--mf-radius-control);
   justify-self: start;
 }
@@ -63,6 +44,7 @@ input {
   font-weight: 600;
 }
 .map-area {
+  min-width: 0;
   display: grid;
   gap: var(--mf-space-2);
   margin-top: var(--mf-space-2);

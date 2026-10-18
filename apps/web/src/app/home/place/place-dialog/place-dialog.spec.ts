@@ -146,6 +146,18 @@ afterEach(() => {
 });
 
 describe('the place dialog, by location', () => {
+  // @traces 271-garage-distance-FR-005
+  it('is the shared address field, wired by the ids of the dialog', async () => {
+    await open();
+
+    const embedded = panel().querySelector('mf-address-field');
+    expect(embedded?.contains(field())).toBe(true);
+    expect(embedded?.contains(locate() ?? null)).toBe(true);
+    expect(field().id).toBe('home-place-address');
+    expect(field().getAttribute('aria-controls')).toBe('home-place-options');
+    expect(field().getAttribute('aria-describedby')).toBe('home-place-message');
+  });
+
   it('offers the location and an address field, and asks nothing on opening', async () => {
     await open();
 
@@ -329,6 +341,21 @@ describe('the place dialog, by address', () => {
     },
   );
 
+  // @traces 271-garage-distance-FR-005
+  it('closes an open list with Escape and stays open, then closes on the next', async () => {
+    await open();
+    await type('Cluj');
+    expect(options()).toHaveLength(1);
+
+    await key('Escape');
+    expect(options()).toHaveLength(0);
+    expect(closed).toBeUndefined();
+
+    await key('Escape');
+    await result;
+    expect(closed).toBeDefined();
+  });
+
   it('shows only the answer to the latest text', async () => {
     let first: (value: unknown) => void = () => undefined;
     search.mockImplementationOnce(
@@ -345,10 +372,14 @@ describe('the place dialog, by address', () => {
   });
 });
 
+// The dialog's field is the shared one, so its sizes are the field's.
 describe('type scale', () => {
   // @traces 975-type-scale-FR-002
   // @traces 975-type-scale-FR-008
-  const stylesheet = readFileSync(join(__dirname, 'place-dialog.css'), 'utf8');
+  const stylesheet = readFileSync(
+    join(__dirname, '../../../public/address-field/address-field.css'),
+    'utf8',
+  );
 
   it('takes every text size from a Cockpit size token', () => {
     const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];

@@ -1704,8 +1704,9 @@ describe('the details, prices and mechanics in the draft', () => {
 
     expect(ticked(page)).toEqual([4, 5]);
     expect(
-      page.querySelector<HTMLInputElement>('mf-place-step [name="address"]')
-        ?.value,
+      page.querySelector<HTMLInputElement>(
+        'mf-place-step mf-address-field input',
+      )?.value,
     ).toBe(STEFAN.address);
   });
 
@@ -1802,8 +1803,9 @@ describe('the details, prices and mechanics in the draft', () => {
       ?.querySelector<HTMLInputElement>('input[type="radio"]');
     expect(free?.checked).toBe(true);
     expect(
-      page.querySelector<HTMLInputElement>('mf-place-step [name="address"]')
-        ?.value,
+      page.querySelector<HTMLInputElement>(
+        'mf-place-step mf-address-field input',
+      )?.value,
     ).toBe(STEFAN.address);
   });
 

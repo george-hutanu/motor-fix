@@ -117,6 +117,11 @@
       "change": "Schimbă",
       "choose": "Alege locul",
       "field": "Adresă",
+      "found": {
+        "few": "{count} adrese găsite",
+        "one": "O adresă găsită",
+        "other": "{count} de adrese găsite"
+      },
       "locating": "Se caută locația…",
       "locationFailed": "Nu am putut afla locația; scrie o adresă",
       "near": "Lângă {label}",
@@ -427,9 +432,8 @@
       "placeholder": "Stradă și număr, sector, oraș",
       "radius": "Zona în care lucrezi",
       "radiusHint": "Între 1 și 100 km",
-      "searchDown": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
-      "seat": "Sediul înregistrat",
-      "suggestions": "Adrese găsite"
+      "searchUnavailable": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
+      "seat": "Sediul înregistrat"
     },
     "preview": {
       "draft": "Ciornă · se publică după verificare",

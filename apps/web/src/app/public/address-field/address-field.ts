@@ -2,10 +2,12 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   type ElementRef,
   inject,
   input,
+  model,
   output,
   signal,
   viewChild,
@@ -36,6 +38,10 @@ export interface AddressChoice {
   locality?: string;
 }
 
+// Where a field's placeholder, its messages and its count are read from:
+// Home's place texts, or the listing's, which point to the map.
+export type AddressTexts = 'public.home.place' | 'public.listing.place';
+
 // The address look-up: a combobox that asks from the third character, a
 // pause after the last key, in the page's language, and shows only the
 // answer to the latest text; the arrows and Enter walk and take a
@@ -55,7 +61,18 @@ export class AddressField {
   readonly label = input<string>();
   readonly locate = input(false);
   readonly autofocus = input(false);
+  readonly texts = input<AddressTexts>('public.home.place');
+  // What the field holds: it follows each key, and a page that keeps the
+  // address sets it.
+  readonly text = model('');
+  // A page's own notes on the field, read after its message, and whether
+  // one of them is an error.
+  readonly describedBy = input('');
+  readonly invalid = input(false);
+  // The path a page's summary finds the field by.
+  readonly path = input<string>();
   readonly chosen = output<AddressChoice>();
+  readonly left = output<void>();
 
   private readonly places = inject(PlacesService);
   private readonly i18n = inject(I18n);
@@ -65,6 +82,7 @@ export class AddressField {
   // Each look-up and each key counts, so only the answer to the latest text
   // is shown.
   private asked = 0;
+  private lastAsked = '';
 
   protected readonly addressMax = ADDRESS_MAX;
   protected readonly geolocation =
@@ -73,6 +91,15 @@ export class AddressField {
   protected readonly suggestions = signal<PlaceSuggestionDto[]>([]);
   protected readonly active = signal(-1);
   protected readonly message = signal<Message | null>(null);
+  protected readonly words = computed(() => {
+    const texts = this.texts();
+    return {
+      found: `${texts}.found`,
+      nothingFound: `${texts}.nothingFound`,
+      placeholder: `${texts}.placeholder`,
+      searchUnavailable: `${texts}.searchUnavailable`,
+    };
+  });
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -110,7 +137,11 @@ export class AddressField {
   }
 
   protected type(event: Event) {
-    const q = (event.target as HTMLInputElement).value.trim();
+    const typed = (event.target as HTMLInputElement).value;
+    this.text.set(typed);
+    const q = typed.trim();
+    // Spaces around the text asked last change nothing to ask.
+    if (q && q === this.lastAsked) return;
     this.close();
     this.message.set(null);
     if (q.length < PLACE_SEARCH_MIN) return;
@@ -119,6 +150,7 @@ export class AddressField {
 
   private async search(q: string) {
     const asked = ++this.asked;
+    this.lastAsked = q;
     try {
       const { items } = await this.places.placesControllerSearch({
         lang: this.i18n.language(),
@@ -128,7 +160,9 @@ export class AddressField {
       this.suggestions.set(items.slice(0, PLACE_SUGGESTIONS_MAX));
       if (items.length === 0) this.message.set('nothingFound');
     } catch {
-      if (asked === this.asked) this.message.set('searchUnavailable');
+      if (asked !== this.asked) return;
+      this.lastAsked = '';
+      this.message.set('searchUnavailable');
     }
   }
 
@@ -168,6 +202,7 @@ export class AddressField {
   private close() {
     clearTimeout(this.timer);
     this.asked++;
+    this.lastAsked = '';
     this.suggestions.set([]);
     this.active.set(-1);
   }

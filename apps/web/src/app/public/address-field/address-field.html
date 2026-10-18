@@ -22,13 +22,17 @@
   aria-autocomplete="list"
   aria-expanded="false"
   [attr.aria-controls]="ids() + '-options'"
-  [aria-describedby]="ids() + '-message'"
+  [aria-describedby]="describedBy() ? ids() + '-message ' + describedBy() : ids() + '-message'"
+  [attr.aria-invalid]="invalid() || null"
+  [attr.data-field]="path() ?? null"
   [attr.aria-expanded]="suggestions().length > 0"
   [attr.aria-activedescendant]="active() >= 0 ? ids() + '-option-' + active() : null"
   [attr.maxlength]="addressMax"
-  [placeholder]="'public.home.place.placeholder' | t"
+  [placeholder]="words().placeholder | t"
+  [value]="text()"
   (input)="type($event)"
   (keydown)="keys($event)"
+  (blur)="left.emit()"
 />
 <p class="message" [id]="ids() + '-message'" aria-live="polite">
   @switch (message()) {
@@ -36,13 +40,14 @@
       {{ 'public.home.place.locationFailed' | t }}
     }
     @case ('nothingFound') {
-      {{ 'public.home.place.nothingFound' | t }}
+      {{ words().nothingFound | t }}
     }
     @case ('searchUnavailable') {
-      {{ 'public.home.place.searchUnavailable' | t }}
+      {{ words().searchUnavailable | t }}
     }
   }
 </p>
+<p class="message" [id]="ids() + '-found'" aria-live="polite">{{ suggestions().length > 0 ? (words().found | t: { count: suggestions().length }) : '' }}</p>
 <div class="suggestions" [id]="ids() + '-options'" role="listbox" [attr.aria-label]="label() ?? ('public.home.place.field' | t)">
   @for (suggestion of suggestions(); track $index) {
     <button
