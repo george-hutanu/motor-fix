@@ -184,6 +184,25 @@ describe('the browser queue of photos waiting to reach the draft', () => {
   });
 
   // @traces 1191-FR-001
+  it('keeps a change in memory when the store aborts it after the write seemed to succeed', async () => {
+    const queue = reopen();
+    const [first] = await queue.add(DRAFT, [photo('unu.jpg')]);
+    const put = IDBObjectStore.prototype.put;
+    jest
+      .spyOn(IDBObjectStore.prototype, 'put')
+      .mockImplementationOnce(function (this: IDBObjectStore, ...args) {
+        const request = put.apply(this, args);
+        // A quota failure surfaces at commit, after the request's success.
+        request.addEventListener('success', () => this.transaction.abort());
+        return request;
+      });
+
+    await queue.update(first!.id, { key: 'incoming/k' });
+
+    expect((await queue.forDraft(DRAFT))[0]?.key).toBe('incoming/k');
+  });
+
+  // @traces 1191-FR-001
   it('keeps the photos in memory for the page when IndexedDB is missing, without throwing', async () => {
     const saved = globalThis.indexedDB;
     Reflect.deleteProperty(globalThis, 'indexedDB');

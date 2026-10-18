@@ -1,5 +1,6 @@
 // Each app compiles this file through its imports, not the lib's include.
 /// <reference path="./heic/heic.d.ts" />
+// sharp's prebuilt libvips has no HEVC decoder, so it cannot read a HEIC.
 import decode from 'heic-decode';
 import sharp from 'sharp';
 

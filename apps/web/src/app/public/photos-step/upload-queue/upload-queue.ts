@@ -51,6 +51,15 @@ const answer = <T>(request: IDBRequest<T>) =>
     request.onerror = () => reject(request.error);
   });
 
+// Settles once the transaction commits: a quota failure aborts it at commit,
+// after its requests already succeeded.
+const committed = (tx: IDBTransaction) =>
+  new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onabort = () =>
+      reject(tx.error ?? new DOMException('aborted', 'AbortError'));
+  });
+
 const at = (draftId: string, file: File, position: number): QueuedPhoto => ({
   draftId,
   file,
@@ -150,7 +159,6 @@ export class UploadQueue {
     id: string,
     db: IDBDatabase | null,
   ): Promise<QueuedPhoto | undefined> {
-    // A change the store refused lives in memory, over its stale row.
     const held = this.memory.get(id);
     if (held) return held;
     try {
@@ -183,8 +191,12 @@ export class UploadQueue {
           name: file.name,
           type: file.type,
         };
-        const store = this.store(db, 'readwrite');
-        await answer(fresh ? store.add(value) : store.put(value));
+        const tx = db.transaction(STORE, 'readwrite');
+        const done = committed(tx);
+        const store = tx.objectStore(STORE);
+        const request = fresh ? store.add(value) : store.put(value);
+        // A refused request aborts the transaction too: report its error.
+        await Promise.all([answer(request), done]);
         this.memory.delete(entry.id);
         return true;
       }
