@@ -1,4 +1,5 @@
 import type { AdminDemandDto } from '@motor-fix/contracts';
+import { byCodePoint, orderBrands } from '@motor-fix/contracts/demand-order';
 
 import { addDays, atLocal, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -8,28 +9,46 @@ const WINDOW_DAYS = 30;
 
 type Db = Pick<
   PrismaClient,
-  'demandDaily' | 'jobType' | 'quoteRequest' | 'requestJob'
+  | 'brand'
+  | 'demandDaily'
+  | 'jobType'
+  | 'quoteRequest'
+  | 'requestJob'
+  | 'searchLog'
 >;
 
 interface Counts {
+  // Requests by brand name.
   brands: Map<string, number>;
   // By job type key.
   jobs: Map<string, number>;
   requests: number;
+  // Logged searches by the brand's current name.
+  searches: Map<string, number>;
+  searchCount: number;
 }
 
 const add = (into: Map<string, number>, key: string, n: number) =>
   into.set(key, (into.get(key) ?? 0) + n);
 
 // The requests created on `days`, whatever their status: once per brand as
-// stored in the car snapshot, once per job asked for.
+// stored in the car snapshot, once per job asked for; and the searches logged
+// on them, once per brand under its name today.
 async function countDays(db: Db, days: readonly string[]): Promise<Counts> {
-  const counts: Counts = { brands: new Map(), jobs: new Map(), requests: 0 };
+  const counts: Counts = {
+    brands: new Map(),
+    jobs: new Map(),
+    requests: 0,
+    searchCount: 0,
+    searches: new Map(),
+  };
   if (days.length === 0) return counts;
-  const createdAt = days.map((day) => ({
-    createdAt: { gte: atLocal(day, 0), lt: atLocal(addDays(day, 1), 0) },
+  const ranges = days.map((day) => ({
+    gte: atLocal(day, 0),
+    lt: atLocal(addDays(day, 1), 0),
   }));
-  const [brands, jobs] = await Promise.all([
+  const createdAt = ranges.map((range) => ({ createdAt: range }));
+  const [brands, jobs, searches] = await Promise.all([
     db.quoteRequest.groupBy({
       _count: { _all: true },
       by: ['carBrand'],
@@ -40,15 +59,33 @@ async function countDays(db: Db, days: readonly string[]): Promise<Counts> {
       by: ['jobTypeId'],
       where: { request: { OR: createdAt } },
     }),
+    db.searchLog.groupBy({
+      _count: { _all: true },
+      by: ['brandId'],
+      where: { OR: ranges.map((at) => ({ at })) },
+    }),
   ]);
   for (const row of brands) {
     add(counts.brands, row.carBrand, row._count._all);
     counts.requests += row._count._all;
   }
-  const types = await db.jobType.findMany({
-    select: { id: true, key: true },
-    where: { id: { in: jobs.map((row) => row.jobTypeId) } },
-  });
+  const [types, searched] = await Promise.all([
+    db.jobType.findMany({
+      select: { id: true, key: true },
+      where: { id: { in: jobs.map((row) => row.jobTypeId) } },
+    }),
+    db.brand.findMany({
+      select: { id: true, name: true },
+      where: { id: { in: searches.map((row) => row.brandId) } },
+    }),
+  ]);
+  const nameOf = new Map(searched.map((b) => [b.id, b.name]));
+  for (const row of searches) {
+    const name = nameOf.get(row.brandId);
+    if (name === undefined) continue;
+    add(counts.searches, name, row._count._all);
+    counts.searchCount += row._count._all;
+  }
   const keyOf = new Map(types.map((t) => [t.id, t.key]));
   for (const row of jobs) {
     const key = keyOf.get(row.jobTypeId);
@@ -56,6 +93,14 @@ async function countDays(db: Db, days: readonly string[]): Promise<Counts> {
   }
   return counts;
 }
+
+// One row per brand searched or requested, matched on the exact name.
+const brandRows = ({ brands, searches }: Counts) =>
+  [...new Set([...brands.keys(), ...searches.keys()])].map((name) => ({
+    name,
+    requests: brands.get(name) ?? 0,
+    searches: searches.get(name) ?? 0,
+  }));
 
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -68,28 +113,31 @@ function closedDays(now: Date) {
 }
 
 // The closed days that already have their total row.
-async function writtenDays(db: Db, days: readonly string[]) {
+async function writtenDays(
+  db: Pick<PrismaClient, 'demandDaily'>,
+  days: readonly string[],
+) {
   const totals = await db.demandDaily.findMany({
-    select: { day: true, requests: true },
+    select: { day: true, requests: true, searches: true },
     where: {
       day: { in: days.map((day) => new Date(day)) },
       dimension: 'total',
       key: 'all',
     },
   });
-  return new Map(totals.map((row) => [dayOf(row.day), row.requests]));
+  return new Map(totals.map((row) => [dayOf(row.day), row]));
 }
 
-// Plain code-point order; `<` would compare UTF-16 units and put an astral
-// character before U+E000..U+FFFF.
-function byCodePoint(a: string, b: string) {
-  const x = [...a];
-  const y = [...b];
-  for (let i = 0; i < Math.min(x.length, y.length); i++) {
-    const d = (x[i].codePointAt(0) ?? 0) - (y[i].codePointAt(0) ?? 0);
-    if (d !== 0) return d;
-  }
-  return x.length - y.length;
+// The day searches are counted from, when it falls after the window's first
+// day: the earliest search's, or today when none was ever logged.
+async function searchesFrom(db: Db, firstDay: string, today: string) {
+  const earliest = await db.searchLog.findFirst({
+    orderBy: { at: 'asc' },
+    select: { at: true },
+  });
+  if (!earliest) return today;
+  const day = localDay(earliest.at);
+  return day > firstDay && day <= today ? day : undefined;
 }
 
 // Most first, then by name (key) in plain code-point order.
@@ -103,23 +151,31 @@ export async function readDemand(db: Db, now: Date): Promise<AdminDemandDto> {
   const today = localDay(now);
   const written = await writtenDays(db, closed);
   const live = [...closed.filter((day) => !written.has(day)), today];
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, from] = await Promise.all([
     db.demandDaily.findMany({
-      select: { dimension: true, key: true, requests: true },
+      select: { dimension: true, key: true, requests: true, searches: true },
       where: {
         day: { in: [...written.keys()].map((day) => new Date(day)) },
         dimension: { in: ['brand', 'job'] },
       },
     }),
     countDays(db, live),
+    searchesFrom(db, closed[0], today),
   ]);
-  for (const row of rows)
-    add(
-      row.dimension === 'brand' ? counts.brands : counts.jobs,
-      row.key,
-      row.requests,
-    );
-  for (const n of written.values()) counts.requests += n;
+  for (const row of rows) {
+    if (row.dimension === 'job') {
+      add(counts.jobs, row.key, row.requests);
+      continue;
+    }
+    // A searched-only brand's row holds no request, a requested-only one no
+    // search; neither is counted as a 0 of the other.
+    if (row.requests > 0) add(counts.brands, row.key, row.requests);
+    if (row.searches > 0) add(counts.searches, row.key, row.searches);
+  }
+  for (const total of written.values()) {
+    counts.requests += total.requests;
+    counts.searchCount += total.searches;
+  }
 
   const jobs = ranked(counts.jobs);
   const names = await db.jobType.findMany({
@@ -128,10 +184,7 @@ export async function readDemand(db: Db, now: Date): Promise<AdminDemandDto> {
   });
   const nameOf = new Map(names.map((n) => [n.key, n]));
   return {
-    brands: ranked(counts.brands).map(([name, requests]) => ({
-      name,
-      requests,
-    })),
+    brands: orderBrands(brandRows(counts), 'searches'),
     firstDay: closed[0],
     jobs: jobs.map(([key, requests]) => ({
       key,
@@ -142,6 +195,8 @@ export async function readDemand(db: Db, now: Date): Promise<AdminDemandDto> {
     })),
     lastDay: today,
     requests: counts.requests,
+    searches: counts.searchCount,
+    ...(from !== undefined && { searchesFrom: from }),
   };
 }
 
@@ -159,17 +214,23 @@ export async function writeDemandDaily(
     const counts = await countDays(db, [day]);
     const date = new Date(day);
     const data = [
-      ...[...counts.brands].map(([key, requests]) => ({
+      ...brandRows(counts).map(({ name, ...figures }) => ({
         dimension: 'brand',
-        key,
-        requests,
+        key: name,
+        ...figures,
       })),
       ...[...counts.jobs].map(([key, requests]) => ({
         dimension: 'job',
         key,
         requests,
+        searches: 0,
       })),
-      { dimension: 'total', key: 'all', requests: counts.requests },
+      {
+        dimension: 'total',
+        key: 'all',
+        requests: counts.requests,
+        searches: counts.searchCount,
+      },
     ].map((row) => ({ ...row, day: date, writtenAt: now }));
     // Two runs at once write one after the other, and the second finds the
     // day written under the lock and leaves it as it is.

@@ -9,7 +9,12 @@ export interface AdminDemandBrandDto {
   name: string;
 
   /**
-   * Requests for the brand in the window
+   * Requests for the brand in the window; 0 for a brand only searched
    */
   requests: number;
+
+  /**
+   * Logged searches for the brand in the window; 0 for a brand only requested
+   */
+  searches: number;
 }
