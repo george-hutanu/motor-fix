@@ -41,8 +41,10 @@ import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
-import { ReportConfirmed } from '../report-confirmed/report-confirmed';
-import { ReportUnfounded } from '../report-unfounded/report-unfounded';
+import {
+  ReportDecision,
+  type ReportDecisionData,
+} from '../report-decision/report-decision';
 import {
   VerificationApprove,
   type VerificationApproveData,
@@ -444,7 +446,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusApprove();
+      this.focusPart('approve');
       return;
     }
     const again = await this.sendApproval(answer);
@@ -518,18 +520,18 @@ export class VerificationFile {
   async decideReports(decision: 'unfounded' | 'confirmed') {
     if (this.asking || this.busy() || !this.reportOpen()) return;
     this.asking = true;
-    const answer = await (decision === 'unfounded'
-      ? this.overlays.open<{ note?: string }>(ReportUnfounded, {
+    const answer = await this.overlays
+      .open<{ note?: string } | { reason: string }, ReportDecisionData>(
+        ReportDecision,
+        {
+          data: { decision },
           shape: 'dialog',
-          title: 'admin.file.reportDecision.unfounded',
-        })
-      : this.overlays.open<{ reason: string }>(ReportConfirmed, {
-          shape: 'dialog',
-          title: 'admin.file.reportDecision.confirmed',
-        })
-    ).finally(() => {
-      this.asking = false;
-    });
+          title: `admin.file.reportDecision.${decision}`,
+        },
+      )
+      .finally(() => {
+        this.asking = false;
+      });
     if (answer === 'cancelled') {
       this.focusPart(`report-${decision}`);
       return;
@@ -564,7 +566,7 @@ export class VerificationFile {
       title: 'admin.file.reopen.title',
     });
     if (answer !== true) {
-      this.focusReopen();
+      this.focusPart('reopen');
       return;
     }
     if (this.busy()) return;
@@ -603,14 +605,6 @@ export class VerificationFile {
     setTimeout(() =>
       this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
     );
-  }
-
-  private focusApprove() {
-    this.focusPart('approve');
-  }
-
-  private focusReopen() {
-    this.focusPart('reopen');
   }
 
   private focusPart(part: string) {

@@ -62,9 +62,9 @@ const note = ({ value }: { value: unknown }) => {
 const given = (_: object, value: unknown) => value !== undefined;
 
 export const REPORT_DECISIONS = ['unfounded', 'confirmed'] as const;
-export type ReportDecision = (typeof REPORT_DECISIONS)[number];
-export const REPORT_STATUSES = ['open', ...REPORT_DECISIONS] as const;
-export type ReportStatus = (typeof REPORT_STATUSES)[number];
+type ReportDecision = (typeof REPORT_DECISIONS)[number];
+const REPORT_STATUSES = ['open', ...REPORT_DECISIONS] as const;
+type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 // Each field is read with its own decision only; the other is ignored.
 const readWith =

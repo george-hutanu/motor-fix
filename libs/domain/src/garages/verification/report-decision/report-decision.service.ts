@@ -48,7 +48,8 @@ export class ReportDecisionService {
   ): Promise<void> {
     requireCapability(actor, 'admin.garages');
     if (!isUUID(fileId)) throw notFound();
-    const reason = body.decision === 'confirmed' ? body.reason?.trim() : '';
+    const reason =
+      body.decision === 'confirmed' ? (body.reason?.trim() ?? '') : '';
     if (body.decision === 'confirmed' && !reason) {
       countDecisionRefusal('reason_required');
       this.logger.log(`file ${fileId} refused: reason_required`);
@@ -76,7 +77,7 @@ export class ReportDecisionService {
     actor: Actor,
     fileId: string,
     decision: ReportDecisionDto['decision'],
-    { note, reason }: { note: string | null; reason?: string },
+    { note, reason }: { note: string | null; reason: string },
   ): Promise<Decided> {
     // The file's move is the lock: a second decision waits here and is refused.
     const file = await this.verification.approveAfterReports(tx, actor, fileId);
@@ -86,7 +87,7 @@ export class ReportDecisionService {
     });
     const already =
       decision === 'confirmed'
-        ? await this.suspend(tx, actor, file.garageId, reason ?? '')
+        ? await this.suspend(tx, actor, file.garageId, reason)
         : null;
     const reportIds = reports.map((r) => r.id);
     const reporterIds = [...new Set(reports.map((r) => r.reporterId))];

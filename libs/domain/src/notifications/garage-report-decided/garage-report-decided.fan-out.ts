@@ -60,6 +60,7 @@ export class GarageReportDecidedFanOut {
     const { decision, garageId, reporterIds } = payload;
     if (
       typeof garageId !== 'string' ||
+      !isUUID(garageId) ||
       !REPORT_DECISIONS.has(decision) ||
       !Array.isArray(reporterIds)
     ) {

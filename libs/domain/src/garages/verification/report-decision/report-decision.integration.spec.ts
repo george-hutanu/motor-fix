@@ -377,6 +377,29 @@ describe('confirming the reports', () => {
     );
     expect(await suspensions()).toBe(before.suspended);
   });
+
+  it('closes the reports of a garage suspended with no suspension on record, writing none', async () => {
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: garageId },
+    });
+    const before = await decisions('confirmed_already_suspended');
+
+    await service().decide(ioana, fileId, confirmed);
+
+    expect((await reportsOf()).every((r) => r.status === 'confirmed')).toBe(
+      true,
+    );
+    expect(await suspensionsOf()).toEqual([]);
+    expect(await garageStatus()).toBe('suspended');
+    const [entry] = await decidedEntries();
+    expect(entry?.newValue).toMatchObject({
+      alreadySuspended: true,
+      cause: null,
+      decision: 'confirmed',
+    });
+    expect(await decisions('confirmed_already_suspended')).toBe(before + 1);
+  });
 });
 
 describe('refusing a decision', () => {

@@ -17,8 +17,7 @@ import { filter, Subject } from 'rxjs';
 
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
-import { ReportConfirmed } from '../report-confirmed/report-confirmed';
-import { ReportUnfounded } from '../report-unfounded/report-unfounded';
+import { ReportDecision } from '../report-decision/report-decision';
 
 // @traces 203-FR-006 203-FR-008
 // @traces 204-FR-007 204-FR-009
@@ -2977,8 +2976,9 @@ describe('deciding the reports', () => {
     await settle();
 
     expect(overlays.open).toHaveBeenCalledWith(
-      ReportUnfounded,
+      ReportDecision,
       expect.objectContaining({
+        data: { decision: 'unfounded' },
         shape: 'dialog',
         title: 'admin.file.reportDecision.unfounded',
       }),
@@ -3022,8 +3022,9 @@ describe('deciding the reports', () => {
     await settle();
 
     expect(overlays.open).toHaveBeenCalledWith(
-      ReportConfirmed,
+      ReportDecision,
       expect.objectContaining({
+        data: { decision: 'confirmed' },
         shape: 'dialog',
         title: 'admin.file.reportDecision.confirmed',
       }),

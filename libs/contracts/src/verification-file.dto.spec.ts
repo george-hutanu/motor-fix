@@ -2,11 +2,7 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
-import {
-  REPORT_DECISIONS,
-  REPORT_STATUSES,
-  ReportDecisionDto,
-} from './verification-file.dto';
+import { ReportDecisionDto } from './verification-file.dto';
 
 // @traces 069-FR-001 069-FR-008
 
@@ -15,14 +11,6 @@ const errorsFor = async (plain: unknown) =>
   (await validate(read(plain))).map((error) => error.property);
 
 describe('ReportDecisionDto', () => {
-  it('takes the two decisions and no other', () => {
-    expect([...REPORT_DECISIONS]).toEqual(['unfounded', 'confirmed']);
-  });
-
-  it('names the three states a report can be in', () => {
-    expect([...REPORT_STATUSES]).toEqual(['open', 'unfounded', 'confirmed']);
-  });
-
   it.each([
     ['an unfounded decision with no note', { decision: 'unfounded' }],
     [

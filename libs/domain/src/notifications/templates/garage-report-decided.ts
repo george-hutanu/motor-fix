@@ -1,3 +1,5 @@
+import { REPORT_DECISIONS as DECISIONS } from '@motor-fix/contracts';
+
 import type { Template } from '../templates';
 
 // To each driver who reported a garage, once an admin decides the reports:
@@ -6,10 +8,7 @@ import type { Template } from '../templates';
 
 // The decisions a reporter is told about, each with its own template. Typed
 // unknown so .has() takes a raw payload value before anything narrows it.
-export const REPORT_DECISIONS: ReadonlySet<unknown> = new Set([
-  'unfounded',
-  'confirmed',
-]);
+export const REPORT_DECISIONS: ReadonlySet<unknown> = new Set(DECISIONS);
 
 const REASON = {
   en: 'You get this e-mail because you reported a garage on MotorFix.',
