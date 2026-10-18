@@ -397,7 +397,8 @@ describe('POST /admin/verification-files/:id/decision', () => {
     expect(res.body.file.requestedItems).toEqual([]);
   });
 
-  // @traces 259-FR-005
+  // The answer an admin gets is the one the contract already names (FR-007).
+  // @traces 259-FR-005 259-FR-007
   it.each([
     ['rar_check_required', 'warning', 'ok'],
     ['caen_check_required', 'ok', 'not_run'],
@@ -472,7 +473,7 @@ describe('POST /admin/verification-files/:id/decision', () => {
     }
   });
 
-  // @traces 259-FR-005
+  // @traces 259-FR-005 259-FR-007
   it('still answers the refusal when its entry cannot be written, and logs why', async () => {
     const { id } = await file('in_review');
     const record = jest
