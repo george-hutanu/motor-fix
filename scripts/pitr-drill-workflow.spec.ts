@@ -53,6 +53,17 @@ describe('the point-in-time drill workflow', () => {
     expect(job('self-contained')).not.toMatch(/^ {4}if:/m);
   });
 
+  it('drills the image a pull request builds, and the published one otherwise', () => {
+    const block = job('self-contained');
+
+    expect(block).toMatch(
+      /if: github\.event_name == 'pull_request'\n\s+run: docker build --pull -t ghcr\.io\/george-hutanu\/motor-fix-postgres:18 infra\/postgres/,
+    );
+    expect(block).toMatch(
+      /if: github\.event_name != 'pull_request'\n\s+run: docker pull ghcr\.io\/george-hutanu\/motor-fix-postgres:18/,
+    );
+  });
+
   it('reads the repository and nothing more', () => {
     expect(workflow).toMatch(/^permissions:\n {2}contents: read\n\n/m);
     expect(workflow).not.toContain('packages: write');
@@ -160,6 +171,23 @@ describe('the point-in-time drill script', () => {
   it('fails past 15 minutes of archive lag and 10 of restore', () => {
     expect(script).toMatch(/^MAX_LAG_SECONDS=900$/m);
     expect(script).toMatch(/^READY_SECONDS=600$/m);
+    expect(script).toMatch(/until_within "\$MAX_LAG_SECONDS" \d+ /);
+    expect(script.match(/until_within "\$READY_SECONDS" \d+ /g)).toHaveLength(
+      2,
+    );
+  });
+
+  // A wait that counts laps of a slow command runs far past its seconds.
+  it('bounds every wait by the clock, not by a count of laps', () => {
+    expect(script).not.toMatch(/\$\(seq /);
+    expect(script).toMatch(
+      /^until_within\(\) \{[^}]*deadline=\$\(\(SECONDS \+ /m,
+    );
+  });
+
+  it('keeps the throwaway keys readable by their owner only', () => {
+    expect(script).toMatch(/chmod 600 "\$work"\/\*\.key/);
+    expect(script).not.toMatch(/chmod 644 [^\n]*\.key/);
   });
 
   it('removes everything it started however it ends', () => {

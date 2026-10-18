@@ -36,7 +36,6 @@ mode=staging
 [ "${1:-}" = --self-contained ] && mode=self-contained
 
 work=$(mktemp -d)
-chmod 700 "$work"
 teardown() {
   docker rm -f -v "$SIBLING" "$SOURCE" "$STORE" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
@@ -56,6 +55,17 @@ step() {
 fail() {
   echo "drill failed: $*" >&2
   exit 1
+}
+# Runs the command every `pause` seconds until it succeeds, for at most
+# `limit` seconds by the clock however long each try takes.
+until_within() {
+  local limit=$1 pause=$2 deadline
+  shift 2
+  deadline=$((SECONDS + limit))
+  until "$@"; do
+    [ "$SECONDS" -lt "$deadline" ] || return 1
+    sleep "$pause"
+  done
 }
 
 # One SQL statement on the source, its single value printed.
@@ -82,7 +92,10 @@ if [ "$mode" = self-contained ]; then
   printf 'subjectAltName=DNS:%s\n' "$STORE" >"$work/san"
   openssl x509 -req -in "$work/store.csr" -CA "$work/ca.crt" -CAkey "$work/ca.key" -CAcreateserial \
     -days 1 -extfile "$work/san" -out "$work/store.crt" 2>/dev/null
-  chmod 644 "$work"/*.crt "$work"/*.key
+  # The store runs as root and reads its key as such; the source and the
+  # sibling read only the authority's certificate.
+  chmod 644 "$work"/*.crt
+  chmod 600 "$work"/*.key
   chmod 755 "$work"
 
   docker run -d --name "$STORE" --network "$NET" -v "$work:/certs:ro" \
@@ -90,8 +103,8 @@ if [ "$mode" = self-contained ]; then
     chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d \
     mini -dir=/data -bucket=pitr -admin.ui=false -webdav=false -master.telemetry=false \
     -s3.port.https=8443 -s3.cert.file=/certs/store.crt -s3.key.file=/certs/store.key >/dev/null
-  for _ in $(seq 60); do docker exec "$STORE" wget -q -O /dev/null http://127.0.0.1:8888/buckets/pitr/ 2>/dev/null && break; sleep 1; done
-  docker exec "$STORE" wget -q -O /dev/null http://127.0.0.1:8888/buckets/pitr/ || fail "the object store had no bucket within 60 s"
+  store_ready() { docker exec "$STORE" wget -q -O /dev/null http://127.0.0.1:8888/buckets/pitr/ 2>/dev/null; }
+  until_within 60 1 store_ready || fail "the object store had no bucket within 60 s"
 
   export WAL_ARCHIVE_BUCKET=pitr WAL_ARCHIVE_ENDPOINT=$STORE WAL_ARCHIVE_REGION=us-east-1
   export WAL_ARCHIVE_KEY=drill WAL_ARCHIVE_SECRET=drill-secret
@@ -100,8 +113,8 @@ if [ "$mode" = self-contained ]; then
 
   docker run -d --name "$SOURCE" --network "$NET" -e POSTGRES_PASSWORD=drill \
     "${archive_env[@]}" "${tls_env[@]}" "$IMAGE" >/dev/null
-  for _ in $(seq 120); do source_sql 'SELECT 1' >/dev/null 2>&1 && break; sleep 1; done
-  source_sql 'SELECT 1' >/dev/null || fail "the source database did not start within 120 s"
+  source_up() { source_sql 'SELECT 1' >/dev/null 2>&1; }
+  until_within 120 1 source_up || fail "the source database did not start within 120 s"
   repo_path=$(docker exec "$SOURCE" sh -c 'cat "$PGDATA/.pgbackrest_repo_path"')
 else
   for name in WAL_ARCHIVE_BUCKET WAL_ARCHIVE_ENDPOINT WAL_ARCHIVE_REGION WAL_ARCHIVE_KEY WAL_ARCHIVE_SECRET \
@@ -133,11 +146,8 @@ archive_info() {
 
 # A restore needs a base backup older than the target: the image takes the
 # first one once archiving works.
-for _ in $(seq "$READY_SECONDS"); do
-  [ "$(archive_info | jq '[.[0].backup[]?] | length' 2>/dev/null || echo 0)" -gt 0 ] && break
-  sleep 1
-done
-[ "$(archive_info | jq '[.[0].backup[]?] | length')" -gt 0 ] || fail "the archive holds no base backup"
+has_backup() { [ "$(archive_info | jq '[.[0].backup[]?] | length' 2>/dev/null || echo 0)" -gt 0 ]; }
+until_within "$READY_SECONDS" 1 has_backup || fail "the archive holds no base backup after $READY_SECONDS s"
 step backup
 
 # Two empty transactions: committing pg_current_xact_id() gives each its own
@@ -152,16 +162,13 @@ segment=$(source_sql 'SELECT pg_walfile_name(pg_current_wal_insert_lsn())')
 echo "drill: target $target, after transaction $before; $after committed in $segment"
 
 # Archive segment names sort in log order on one timeline.
-lag=
-for _ in $(seq "$MAX_LAG_SECONDS"); do
+archive_holds() {
+  local newest
   newest=$(archive_info | jq -r '.[0].archive[0].max // empty' 2>/dev/null || true)
-  if [ -n "$newest" ] && [[ ! "$newest" < "$segment" ]]; then
-    lag=$((SECONDS - committed_at))
-    break
-  fi
-  sleep 5
-done
-[ -n "$lag" ] || fail "the archive did not reach $segment within $MAX_LAG_SECONDS s"
+  [ -n "$newest" ] && [[ ! "$newest" < "$segment" ]]
+}
+until_within "$MAX_LAG_SECONDS" 5 archive_holds || fail "the archive did not reach $segment within $MAX_LAG_SECONDS s"
+lag=$((SECONDS - committed_at))
 echo "drill: the archive held the commit after $lag s (at most $MAX_LAG_SECONDS s)"
 step archive
 
@@ -173,19 +180,17 @@ docker run -d --name "$SIBLING" --network "$NET" "${tls_env[@]}" \
 sibling_sql() {
   docker exec "$SIBLING" psql -X -q -A -t -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -c "$1"
 }
-promoted=
-for _ in $(seq "$READY_SECONDS"); do
-  if [ "$(sibling_sql 'SELECT pg_is_in_recovery()' 2>/dev/null)" = f ]; then
-    promoted=yes
-    break
-  fi
-  docker inspect -f '{{.State.Running}}' "$SIBLING" 2>/dev/null | grep -qx true || break
-  sleep 1
-done
-if [ -z "$promoted" ]; then
+sibling_failed() {
   docker logs --tail 40 "$SIBLING" >&2 || true
-  fail "the sibling did not reach $target and promote within $READY_SECONDS s"
-fi
+  fail "the sibling $1"
+}
+sibling_promoted() {
+  [ "$(sibling_sql 'SELECT pg_is_in_recovery()' 2>/dev/null)" = f ] && return 0
+  docker inspect -f '{{.State.Running}}' "$SIBLING" 2>/dev/null | grep -qx true && return 1
+  sibling_failed "stopped before it promoted"
+}
+until_within "$READY_SECONDS" 1 sibling_promoted ||
+  sibling_failed "did not reach $target and promote within $READY_SECONDS s"
 step restore
 
 # The target transaction is there; the next one is not, so its id is still
