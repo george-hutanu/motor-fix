@@ -318,26 +318,23 @@ describe('ci workflow', () => {
   it('migrates the database before the integration tests', () => {
     const block = job('integration');
 
-    expect(block).toContain('postgis/postgis:17-3.5');
+    expect(block).toContain('ghcr.io/george-hutanu/motor-fix-postgres:18');
     expect(block.indexOf('prisma migrate deploy')).toBeGreaterThan(0);
     expect(block.indexOf('prisma migrate deploy')).toBeLessThan(
       block.indexOf('- name: Integration tests'),
     );
   });
 
-  // @traces 878-FR-013
-  it('preloads pg_stat_statements and restarts PostgreSQL before migrating', () => {
+  // The image preloads pg_stat_statements itself: no step restarts the
+  // service container before the data-store specs read the view.
+  // @traces 878-FR-013 1174-FR-003
+  it('migrates straight after the object store, with no preload step', () => {
     const block = job('integration');
-    const preload = step(block, 'Preload pg_stat_statements');
 
-    expect(preload).toContain(gh('job.services.postgres.id'));
-    expect(preload).toContain(
-      "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'",
-    );
-    expect(preload).toContain('docker restart');
-    expect(preload).toContain('pg_isready');
-    expect(block.indexOf('- name: Preload pg_stat_statements')).toBeLessThan(
-      block.indexOf('prisma migrate deploy'),
+    expect(block).not.toContain('Preload pg_stat_statements');
+    expect(block).not.toContain('docker restart');
+    expect(block.indexOf('- name: Object storage')).toBeLessThan(
+      block.indexOf('- name: Migrate the test database'),
     );
   });
 

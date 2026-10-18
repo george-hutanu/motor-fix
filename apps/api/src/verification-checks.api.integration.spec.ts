@@ -36,7 +36,7 @@ const file = async (status = 'submitted') => {
     `g-${garage}`,
   ]);
   await db.query(
-    'INSERT INTO verification_file (id, garage_id, status) VALUES ($1, $2, $3::verification_file_status)',
+    "INSERT INTO verification_file (id, garage_id, status, rar_number) VALUES ($1, $2, $3::verification_file_status, 'RAR-1234')",
     [id, garage, status],
   );
   await db.query(
@@ -75,11 +75,18 @@ afterAll(async () => {
 describe('PUT /admin/verification-files/:id/checks/:kind', () => {
   it('records the check and answers with it, the summary and the activities', async () => {
     const id = await file();
+    await db.query(
+      "INSERT INTO legal_document (id, verification_file_id, kind, pages) VALUES (gen_random_uuid(), $1, 'rar_authorisation', ARRAY['rar_authorisation/1.pdf'])",
+      [id],
+    );
 
     const res = await put(
       id,
       'rar',
-      { detail: 'Autorizație găsită în registru', result: 'ok' },
+      {
+        evidence: { found: true, sameAddress: true, sameCompany: true },
+        result: 'ok',
+      },
       admin,
     );
 
@@ -87,7 +94,7 @@ describe('PUT /admin/verification-files/:id/checks/:kind', () => {
     expect(res.body).toMatchObject({
       check: {
         automatic: false,
-        detail: 'Autorizație găsită în registru',
+        detail: 'aceeași firmă și adresă',
         kind: 'rar',
         result: 'ok',
       },

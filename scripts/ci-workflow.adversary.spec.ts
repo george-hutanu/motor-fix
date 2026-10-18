@@ -157,7 +157,9 @@ describe('CI workflow still performs every check', () => {
       tests.indexOf('services:'),
       tests.indexOf('\n    env:'),
     );
-    expect(services).toMatch(/image: postgis\/postgis:17-3\.5/);
+    expect(services).toMatch(
+      /image: ghcr\.io\/george-hutanu\/motor-fix-postgres:18\n/,
+    );
     expect(services).toMatch(/image: valkey\/valkey:9\n/);
     expect(services).toContain('--health-cmd "valkey-cli ping"');
     expect(services).not.toMatch(/image: redis|redis-cli/);
