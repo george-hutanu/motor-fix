@@ -38,7 +38,7 @@
   display: grid;
   flex: 1 1 120px;
   justify-items: start;
-  gap: 2px;
+  gap: var(--mf-space-1);
   min-width: 0;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-2);
