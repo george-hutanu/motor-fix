@@ -394,9 +394,9 @@ describe('RequestQuoteButton inside the estimate box', () => {
   });
 
   // "REQUEST A QUOTE" measures 248 px at its tracking: with the arrow it
-  // needs about 312 px, more than the box gives below 420 px, and on a 320 px
-  // phone only 246 px are left, so there the tracking and padding narrow too.
-  it('keeps the label on one line on a phone: no arrow below 420 px, tighter below 360 px', () => {
+  // needs about 312 px, more than the box gives below 420 px, and below 375 px
+  // 246 to 286 px are left, so there the tracking and padding narrow too.
+  it('keeps the label on one line on a phone: no arrow below 420 px, tighter below 375 px', () => {
     const css = readFileSync(
       join(__dirname, 'request-quote-button.css'),
       'utf8',
@@ -406,7 +406,7 @@ describe('RequestQuoteButton inside the estimate box', () => {
       /@media \(max-width: 419\.98px\) \{\s*:host\(\.wide\) button::after \{\s*content: none;/,
     );
     expect(css).toMatch(
-      /@media \(max-width: 359\.98px\) \{\s*:host\(\.wide\) button \{\s*padding-inline: var\(--mf-space-3\);\s*letter-spacing: normal;/,
+      /@media \(max-width: 374\.98px\) \{\s*:host\(\.wide\) button \{\s*padding-inline: var\(--mf-space-3\);\s*letter-spacing: normal;/,
     );
   });
 });

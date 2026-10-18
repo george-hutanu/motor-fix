@@ -52,13 +52,13 @@ p {
   margin-left: var(--mf-space-2);
 }
 /* Below 420 px the arrow would push the label onto a second line; below
-   360 px the label also needs a narrower tracking and padding to fit. */
+   375 px the label also needs a narrower tracking and padding to fit. */
 @media (max-width: 419.98px) {
   :host(.wide) button::after {
     content: none;
   }
 }
-@media (max-width: 359.98px) {
+@media (max-width: 374.98px) {
   :host(.wide) button {
     padding-inline: var(--mf-space-3);
     letter-spacing: normal;
