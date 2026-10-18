@@ -135,7 +135,7 @@ test.describe('rejecting a garage with a reason @seeded @database', () => {
       }>(
         `SELECT f.status::text AS file, g.status::text AS garage, e.payload
          FROM verification_file f JOIN garage g ON g.id = f.garage_id
-         JOIN outbox_event e ON e.subject_id = f.id AND e.kind = 'verification.decided'
+         JOIN outbox_event e ON e.subject_id = f.id::text AND e.kind = 'verification.decided'
          WHERE f.id = $1`,
         [fileId],
       );
