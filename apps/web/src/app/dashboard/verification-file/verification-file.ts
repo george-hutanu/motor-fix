@@ -913,19 +913,11 @@ export class VerificationFile {
     return this.statusLine(entry, name, when);
   }
 
-  // A change to the file: its RAR number corrected, or its status opened,
-  // decided, reopened (with its reason) or resent.
+  // A change to the file: an approval refused, its RAR number corrected, or
+  // its status opened, decided, reopened (with its reason) or resent.
   private statusLine(entry: AuditEntryDto, name: string, when: string) {
-    if (
-      entry.subjectType === 'verification_file' &&
-      entry.field === 'rar_number'
-    )
-      return this.t('lines.rarNumber', {
-        name,
-        new: String(entry.newValue ?? '—'),
-        old: String(entry.oldValue ?? '—'),
-        when,
-      });
+    const own = this.fileLine(entry, name, when);
+    if (own) return own;
     if (entry.kind === 'verification_reopened')
       return entry.text
         ? this.t('lines.reopenedWhy', { name, reason: entry.text, when })
@@ -948,6 +940,35 @@ export class VerificationFile {
       note,
     ].filter(Boolean);
     return parts.length ? parts.join(' — ') : this.t('noReason');
+  }
+
+  // The file's lines that are not a status: a refused approval and a RAR
+  // number correction.
+  private fileLine(entry: AuditEntryDto, name: string, when: string) {
+    if (entry.kind === 'verification_approval_refused')
+      return this.t('lines.approvalRefused', {
+        name,
+        reason: this.refusalReason(String(entry.newValue ?? '')),
+        when,
+      });
+    if (
+      entry.subjectType === 'verification_file' &&
+      entry.field === 'rar_number'
+    )
+      return this.t('lines.rarNumber', {
+        name,
+        new: String(entry.newValue ?? '—'),
+        old: String(entry.oldValue ?? '—'),
+        when,
+      });
+    return null;
+  }
+
+  // A refusal code this drawer has no words for reads as the code itself.
+  private refusalReason(code: string) {
+    const key = `admin.file.refusalReasons.${code}`;
+    const label = this.i18n.t(key);
+    return label === key ? code : label;
   }
 
   private documentName(kind: string) {
