@@ -745,30 +745,8 @@ describe('a staging release whose identity server fails its health check', () =>
 const keycloak = (file: string) =>
   readFileSync(join(__dirname, '..', 'infra', 'keycloak', file), 'utf8');
 
+// Its Dockerfile's shape is pinned in keycloak-image.spec.ts.
 describe('the keycloak image', () => {
-  const dockerfile = keycloak('Dockerfile');
-
-  it('is Keycloak 26.8 with the realm in its import folder and a small heap', () => {
-    expect(dockerfile).toMatch(/^FROM quay\.io\/keycloak\/keycloak:26\.8$/m);
-    expect(dockerfile).toMatch(
-      /^COPY realm-motorfix-assistants\.json \/opt\/keycloak\/data\/import\/$/m,
-    );
-    expect(dockerfile).toMatch(/^ENV JAVA_OPTS_KC_HEAP="-Xms128m -Xmx512m"$/m);
-  });
-
-  it('starts behind the proxy, imports the realm and takes its address from the environment', () => {
-    const cmd = dockerfile.match(/^CMD (\[.*\])$/m)?.[1];
-
-    expect(cmd && JSON.parse(cmd)).toEqual([
-      'start',
-      '--import-realm',
-      '--features=cimd,resource-indicators',
-      '--proxy-headers=xforwarded',
-      '--http-enabled=true',
-    ]);
-    expect(dockerfile).not.toContain('--hostname');
-  });
-
   // The master realm's endpoint: Keycloak opens its port only once the
   // import has finished, and a failed import stops the server. Railway
   // refuses the imported realm's own path, whose name has a hyphen.
