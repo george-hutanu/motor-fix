@@ -194,6 +194,21 @@ test.describe('the estimate within reach @seeded', () => {
       'Unde ajungi în interval depinde de mașină.',
     );
 
+    // The sheet's own request opens on top of it, with both jobs on.
+    await sheet
+      .getByRole('button', { exact: true, name: 'CERE OFERTĂ' })
+      .click();
+    await signIn(page, 'cerere@example.test');
+    const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
+    for (const name of [DIAGNOSIS, BRAKES])
+      await expect(quote.getByRole('switch', { name })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+    await page.keyboard.press('Escape');
+    await expect(quote).toBeHidden();
+    await expect(sheet).toBeVisible();
+
     await sheet
       .getByRole('button', { name: /închide/i })
       .first()
