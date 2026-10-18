@@ -530,6 +530,17 @@ describe('AdminDemand, read on a phone', () => {
     );
   });
 
+  it('keeps the two order buttons together as one control, the label free to wrap above it', async () => {
+    const el = await open();
+    const options = el.querySelector('[role="group"] .order-options');
+
+    expect(options?.querySelectorAll('button')).toHaveLength(2);
+    expect(stylesheet).toMatch(/\.order\s*\{[^}]*flex-wrap:\s*wrap;/);
+    expect(stylesheet).toMatch(
+      /\.order-options\s*\{[^}]*display:\s*inline-flex;[^}]*flex-wrap:\s*nowrap;/,
+    );
+  });
+
   it('keeps the subtitle, the counted-from line and the toggle off the screen edge', () => {
     expect(stylesheet).toMatch(
       /\.subtitle,\s*\.from,\s*\.order\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,

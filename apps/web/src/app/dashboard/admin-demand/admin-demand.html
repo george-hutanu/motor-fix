@@ -5,17 +5,19 @@
   }
   <div class="order" role="group" [attr.aria-labelledby]="orderLabelId">
     <span class="order-label" [id]="orderLabelId">{{ 'admin.demand.orderBy' | t }}</span>
-    @for (choice of orders; track choice.by) {
-      <button
-        hlmBtn
-        type="button"
-        [variant]="order() === choice.by ? 'secondary' : 'ghost'"
-        [attr.aria-pressed]="order() === choice.by"
-        (click)="order.set(choice.by)"
-      >
-        {{ choice.key | t }}
-      </button>
-    }
+    <span class="order-options">
+      @for (choice of orders; track choice.by) {
+        <button
+          hlmBtn
+          type="button"
+          [variant]="order() === choice.by ? 'secondary' : 'ghost'"
+          [attr.aria-pressed]="order() === choice.by"
+          (click)="order.set(choice.by)"
+        >
+          {{ choice.key | t }}
+        </button>
+      }
+    </span>
   </div>
 }
 <div class="reports">
