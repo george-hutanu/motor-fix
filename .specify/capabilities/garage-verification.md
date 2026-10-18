@@ -15,6 +15,7 @@ features:
   - 306-decision-record
   - 204-rar-activities-check
   - 303-approve-publish-garage
+  - 259-approval-rules
 ---
 
 # Capability: Garage verification
@@ -55,9 +56,9 @@ _From 207-garage-approval-flow._
 
 _From 303-approve-publish-garage._
 
-### 207-FR-009 — When `skip_manual_approval` is on (`SKIP_MANUAL_APPROVAL` read as `1` or `true`) and `APP_ENV` is `test`, submitting MUST approve the new file at once in the same transaction with actor `system` ("MotorFix"), writing the audit entries and outbox rows of both transitions; under any other `APP_ENV` (`development`, `staging`, `production`) the switch MUST be ignored and it MUST NOT be a required variable (A33).
+### 259-FR-002 — When the API does not run as production and automatic approval is on (the stored rule `skip_manual_approval` reads `true`, or, under `APP_ENV=test`, `SKIP_MANUAL_APPROVAL` reads `1` or `true`), a garage's sending of its listing (the submission, and the resend after more was requested) MUST approve the file at once as the `system` actor (`decided_by` null, shown as "MotorFix"), in the same transaction as the sending, when the RAR rule is met: the file's `rar` check is `ok`, or `skip_rar_check` reads `true` (FR-004's switch). The approval is the existing decision use case's: the audit entries and outbox rows of both transitions (`verification.submitted`, `verification.decided`), the garage published with `approved_at` and `last_checked_on`, the owner's VERIFICATION_RESULT from the fan-out (207-FR-009, 306-FR-004, 303-FR-005, unchanged). Modifies 207-FR-009: the stored rule turns the switch on as the variable does, the resend is covered, and the approval is conditional on the RAR rule.
 
-_From 207-garage-approval-flow._
+_From 259-approval-rules._
 
 ### 207-FR-010 — Nobody acts on the state machine directly: this story ships no endpoint beyond FR-005's public read. Each transition is a domain use case that takes the actor (id, role, first name) from server code, for the submitting (ST-116) and re-sending (ST-208), deciding (ST-302 to ST-305) and suspending (MF-59) stories to call; the opening, deciding and reopening use cases MUST refuse an actor whose role is not `admin` or `system` with 404, as the capabilities policy does.
 
@@ -312,7 +313,7 @@ _From 302-garage-verification-file._
 
 _From 306-decision-record._
 
-### 302-FR-010 — The read of FR-001 MUST include the file's timeline: the audit entries whose subject is the file, one of its checks or one of its documents and whose action is one of the file's sending, opening, decision, reopening or resending, a check record, or a document `open` (a document upload and the declaration write are left out, on the server), newest first, at most 50 of those with their total, each with action, field, old and new values, actor's first name ("MotorFix" for `system`), reason text and time; the drawer MUST render each as one line in the admin's language and Europe/Bucharest as US4 scenario 1 lists, and "și încă <n>" / "and <n> more" past 50.
+### 302-FR-010 — The read of FR-001 MUST include the file's timeline: the audit entries whose subject is the file, one of its checks or one of its documents and whose action is one of the file's sending, opening, decision, reopening or resending, a check record, or a document `open` (a document upload and the declaration write are left out, on the server), newest first, at most 50 of those with their total, each with action, field, old and new values, actor's first name ("MotorFix" for `system`), reason text and time; the drawer MUST render each as one line in the admin's language and Europe/Bucharest as US4 scenario 1 lists, and "și încă <n>" / "and <n> more" past 50. The refused approvals of 259-FR-005 are among its entries (259-FR-006).
 
 _From 302-garage-verification-file._
 
@@ -364,7 +365,7 @@ _From 203-company-caen-check._
 
 _From 203-company-caen-check._
 
-### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no audit entry and no event and is counted and logged as the other refusals are (FR-010). Modifies 306-FR-001, which left this rule to #58.
+### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no event and is counted and logged as the other refusals are (FR-010); an admin's refusal leaves its one audit entry, written after the rollback (259-FR-005). Modifies 306-FR-001, which left this rule to #58.
 
 _From 303-approve-publish-garage._
 
@@ -372,9 +373,9 @@ _From 303-approve-publish-garage._
 
 _From 306-decision-record._
 
-### 303-FR-004 — When the API does not run as production and the platform rule `skip_rar_check` reads `true`, the RAR gate of 306-FR-003 MUST be skipped for an admin's approval (the CAEN gate stays); in production the rule MUST never be read (the verification config's `testRules`, false when `APP_ENV` is `production`, the same test as the platform rules' `production` option), so the gate stands whatever a copied database holds. Modifies 306-FR-003.
+### 259-FR-004 — When the API does not run as production and the platform rule `skip_rar_check` reads `true`, an admin's approval MUST skip both the RAR gate and the CAEN gate of 306-FR-003 (today the RAR gate only); the note rule of 303-FR-003 stays as it is: it covers the guide checks and the documents, never `rar` and `caen`, so a lifted gate owes no note. The rule is read per decision inside the decision's transaction, never in production (FR-001). Modifies 303-FR-004.
 
-_From 303-approve-publish-garage._
+_From 259-approval-rules._
 
 ### 306-FR-005 — Reopening MUST be allowed from `approved`, `rejected` and `more_requested` and refused from `submitted` and `in_review` with 409 `verification_transition_refused` (unchanged); an admin's reopening MUST set `reopened_by` to the admin, `reopened_at`, reset `submitted_at`, keep the earlier decision's columns, write its audit entry and one `verification.reopened` row whose payload gains `adminId` (the account id, null for `system`) beside `fileId`, `garageId` and, when set, `reason` (modifies 207-FR-008); the garage's status and `approved_at` MUST NOT change (207-FR-003, unchanged), and no notification is built for the garage.
 
@@ -463,7 +464,7 @@ _From 303-approve-publish-garage._
 
 _From 303-approve-publish-garage._
 
-### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no audit entry and no event and is counted and logged as the other refusals are (FR-010). Modifies 306-FR-001, which left this rule to #58.
+### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no event and is counted and logged as the other refusals are (FR-010); an admin's refusal leaves its one audit entry, written after the rollback (259-FR-005). Modifies 306-FR-001, which left this rule to #58.
 
 _From 303-approve-publish-garage._
 
@@ -499,6 +500,30 @@ _From 303-approve-publish-garage._
 
 _From 303-approve-publish-garage._
 
+### 259-FR-001 — Neither test-only switch MUST have any effect when the API runs as production: the stored rules `skip_manual_approval` and `skip_rar_check` MUST never be read there (the verification configuration's `testRules`, false when `APP_ENV` is `production`, the one guard of 303-FR-004, now covering both keys), `SKIP_MANUAL_APPROVAL` MUST keep counting only under `APP_ENV=test` (207-FR-009), and the rules API MUST keep answering 404 for both keys and listing neither (258-FR-003, 258-FR-004, unchanged). A stored `true` for either key in production MUST change nothing: no automatic approval, both gates standing.
+
+_From 259-approval-rules._
+
+### 259-FR-003 — When automatic approval is on and the RAR rule is not met, or the garage is `suspended`, the sending MUST commit as it does today, the file staying `submitted` (its sending's audit entry and outbox row written, no decision), and an admin approves it by hand later; one log line MUST say the automatic approval waited, with the file id and the cause (`rar_check_required`, or `garage_suspended` for a suspended garage); nothing is counted as a refusal and no audit entry is written for it. The sending MUST never be refused because of the automatic approval.
+
+_From 259-approval-rules._
+
+### 259-FR-005 — Every admin's approval that the policy refuses, 409 `rar_check_required`, 409 `caen_check_required` or 422 `note_required`, MUST leave one audit entry: subject the verification file, actor the admin (id, role, first name), action `update` with kind `verification_approval_refused` (the audit's free `kind` column, no schema change), the refusal's code as its new value, the garage's id, written by the decision use case's owner of the transaction (the endpoint's wrapper hands the refusal to the verification service, which writes the entry in a fresh transaction) after the decision's transaction rolled back, so the file, its decision columns and the garage are unchanged while the attempt is kept; the refusal's answer, counter and log line are unchanged (306-FR-011). No event and no notification follow, and the garage's reads are unchanged. A failed write of the entry is logged and does not change the answer. The `system` actor, a decision already taken (`verification_transition_refused`), the suspended garage's refusal and the edge's validation errors write none. Modifies 303-FR-003 (its "the refusal writes no audit entry" is replaced for an admin's refusal) and 390-FR-001 is untouched: the entry is a change of its own, committed in its own transaction.
+
+_From 259-approval-rules._
+
+### 259-FR-006 — The file's timeline (302-FR-010) MUST include the refusal entries of FR-005 among the file's entries, newest first and within the 50 and the total, each read with its kind, value, actor's first name and time; the drawer MUST render each as one line "Aprobare refuzată: {motiv} — {name}, {when}" / "Approval refused: {reason} — {name}, {when}", the reason being "verificarea RAR nu e în regulă" / "the RAR check is not ok" for `rar_check_required`, "verificarea CAEN 4520 nu e în regulă" / "the CAEN 4520 check is not ok" for `caen_check_required`, "lipsește nota" / "the note is missing" for `note_required`, and the code itself for one the drawer has no words for; the texts live in the shared admin i18n files in Romanian and English, and the line wraps and reads at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, inside the drawer. Modifies 302-FR-010 (one more kind of entry in the timeline).
+
+_From 259-approval-rules._
+
+### 259-FR-007 — This story adds no endpoint, service, queue, outside call, counter or inventory entry: the automatic approval rides the existing decision counter and log line (`by system`), the refusals keep their counter and log lines (306-FR-011), FR-003 adds one log line, and FR-005's entry is one more row of the audit history, which has its own capability. The DTO of the file read is unchanged (the timeline's entry shape already carries kind and values), so no contract or generated client changes.
+
+_From 259-approval-rules._
+
+### 259-FR-008 — Tests MUST exist before the code (Principle II). Jest on real PostgreSQL and Redis: production (`testRules` false) with both rules stored `true` and `SKIP_MANUAL_APPROVAL=true`: a submission waits and the two gates refuse; the rules API in production lists neither key and answers 404 for both (existing tests kept); outside production, each switch alone and together, for a submission and for a resend: `skip_manual_approval` on with `skip_rar_check` on approves at once as `system` (both audit entries, both outbox rows, the garage published), with `skip_rar_check` off waits (the file `submitted`, no refusal counted, the log line), a resend with `rar` recorded `ok` approves, a suspended garage's resend waits; the variable under `APP_ENV=test` with the stored rule `false` approves under the same condition, and under `development` is ignored; `skip_rar_check` on lets an admin approve with `rar` and `caen` not `ok` and no note when the guide checks and documents are in order, still refuses 422 `note_required` for a guide check not `ok` without a note, and off holds both gates (the existing "still holds the approval on the caen check" test inverted); each of the three refusals writes exactly one `verification_approval_refused` entry with the admin's id, role and name and the code, the file and garage rows unchanged, a second attempt a second entry; the `system` approval and the already-decided refusal write none; the timeline read returns the entry newest first and within the 50. Web unit tests: the history line for each of the three codes and for an unknown code, in both languages. Playwright, in the end-to-end stack (`APP_ENV=test`), on a file seeded waiting with no check recorded (nothing in the stack sends a listing yet: no endpoint calls the sending use case, plan research R5, so the automatic approval at sending is proven by the Jest cases above): as the admin read both rules `false` through the rules API; approve the file through the API without the RAR check and see 409 and, in the drawer, the refusal line first in the history and the approve button disabled with the RAR hint (303-FR-001), at desktop and 320 px. The RAR switch is not turned on there: it is one platform-wide value and the suite's other workers approve files under the gate it would lift, so its effect on an admin's approval is proven by the Jest cases above. The four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 259-approval-rules._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -529,3 +554,6 @@ _From 303-approve-publish-garage._
 - `204-FR-009` — superseded by `303-FR-007` (2026-10-18)
 - `207-FR-001` — superseded by `303-FR-005` (2026-10-18)
 - `207-FR-003` — superseded by `303-FR-005` (2026-10-18)
+
+- `207-FR-009` — superseded by `259-FR-002` (2026-10-18)
+- `303-FR-004` — superseded by `259-FR-004` (2026-10-18)
