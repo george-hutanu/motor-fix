@@ -140,7 +140,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Download every job's report
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: mutation-*
           path: reports/mutation-all
