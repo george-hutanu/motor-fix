@@ -7,7 +7,9 @@ const TABLE = Uint32Array.from({ length: 256 }, (_, n) => {
 
 export function crc32(bytes: Uint8Array): number {
   let c = 0xffffffff;
-  for (const byte of bytes) c = TABLE[(c ^ byte) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < bytes.length; i++) {
+    c = TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  }
   return (c ^ 0xffffffff) >>> 0;
 }
 
