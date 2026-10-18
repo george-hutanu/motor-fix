@@ -69,10 +69,7 @@ export class SuspensionService {
       const suspension = await this.prisma.$transaction((tx) =>
         this.suspendIn(tx, actor, garageId, cause, reason),
       );
-      countGarageSuspension(cause);
-      this.logger.log(
-        `suspended garage=${garageId} cause=${cause} actor=${actor.role}`,
-      );
+      this.committed(garageId, cause, actor.role);
       return suspension;
     } catch (error) {
       if (!(error instanceof Refused)) throw error;
@@ -90,6 +87,19 @@ export class SuspensionService {
       );
       throw error.refusal;
     }
+  }
+
+  // A suspension that committed, counted and logged once: suspend()'s own,
+  // or one a caller made with suspendIn() in its transaction.
+  committed(
+    garageId: string,
+    cause: SuspensionCause,
+    role: VerificationActor['role'],
+  ) {
+    countGarageSuspension(cause);
+    this.logger.log(
+      `suspended garage=${garageId} cause=${cause} actor=${role}`,
+    );
   }
 
   // The garage's open suspension, if any: one with no end.

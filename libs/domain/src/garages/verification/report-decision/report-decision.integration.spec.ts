@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { ReportDecisionDto } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { ReportDecisionService } from './report-decision.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -302,8 +302,15 @@ describe('confirming the reports', () => {
       decided: await decisions('confirmed'),
       suspended: await suspensions(),
     };
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
 
     await service().decide(ioana, fileId, confirmed);
+
+    // @traces 069-FR-004
+    expect(log).toHaveBeenCalledWith(
+      `suspended garage=${garageId} cause=report_confirmed actor=admin`,
+    );
+    log.mockRestore();
 
     // @traces 069-FR-003
     for (const report of await reportsOf()) {
@@ -463,6 +470,43 @@ describe('refusing a decision', () => {
     });
     expect((await fileOf()).status).toBe('in_review');
     expect(await refusals('no_open_report')).toBe(before + 1);
+  });
+
+  // @traces 069-FR-003
+  it('closes a report sent while the decision is on its way, leaving none open on the approved file', async () => {
+    const maria = await account('Maria Stan', ['driver']);
+    let release: () => void = () => undefined;
+    let locked: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    // A report's own order: the garage's row lock, then its row on the file.
+    const reporting = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+      await tx.garageReport.create({
+        data: {
+          garageId,
+          reporterId: maria,
+          text: 'Programare anulată fără anunț.',
+          verificationFileId: fileId,
+        },
+      });
+      locked();
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    });
+    await held;
+
+    const deciding = service().decide(ioana, fileId, unfounded);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    release();
+    await Promise.all([reporting, deciding]);
+
+    const reports = await reportsOf();
+    expect(reports).toHaveLength(3);
+    expect(reports.every((r) => r.status === 'unfounded')).toBe(true);
+    expect((await fileOf()).status).toBe('approved');
   });
 
   it('lets exactly one of two decisions sent together through', async () => {

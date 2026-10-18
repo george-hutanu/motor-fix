@@ -10,7 +10,6 @@ import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import {
   countDecisionRefusal,
-  countGarageSuspension,
   countReportDecision,
   type ReportDecisionOutcome,
 } from '../../../metrics/product-counters';
@@ -21,6 +20,7 @@ const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such verification file');
 
 interface Decided {
+  garageId: string;
   outcome: ReportDecisionOutcome;
   reports: number;
 }
@@ -66,7 +66,8 @@ export class ReportDecisionService {
       this.store(tx, actor, fileId, body.decision, { note, reason }),
     );
     countReportDecision(done.outcome);
-    if (done.outcome === 'confirmed') countGarageSuspension('report_confirmed');
+    if (done.outcome === 'confirmed')
+      this.suspension.committed(done.garageId, 'report_confirmed', actor.role);
     this.logger.log(
       `decided file=${fileId} decision=${body.decision} reports=${done.reports} actor=${actor.role}`,
     );
@@ -81,13 +82,19 @@ export class ReportDecisionService {
   ): Promise<Decided> {
     // The file's move is the lock: a second decision waits here and is refused.
     const file = await this.verification.approveAfterReports(tx, actor, fileId);
+    // Then the garage's row lock, which a new report takes before it joins
+    // the file: one sent meanwhile is committed, and listed, before this read.
+    const [garage] = await tx.$queryRaw<{ status: string }[]>`
+      SELECT status::text AS status FROM garage
+      WHERE id = ${file.garageId}::uuid
+      FOR UPDATE`;
     const reports = await tx.garageReport.findMany({
       select: { id: true, reporterId: true },
       where: { status: 'open', verificationFileId: fileId },
     });
     const already =
       decision === 'confirmed'
-        ? await this.suspend(tx, actor, file.garageId, reason)
+        ? await this.suspend(tx, actor, file.garageId, garage?.status, reason)
         : null;
     const reportIds = reports.map((r) => r.id);
     const reporterIds = [...new Set(reports.map((r) => r.reporterId))];
@@ -133,6 +140,7 @@ export class ReportDecisionService {
       subjectId: fileId,
     });
     return {
+      garageId: file.garageId,
       outcome: already ? 'confirmed_already_suspended' : decision,
       reports: reportIds.length,
     };
@@ -140,20 +148,17 @@ export class ReportDecisionService {
 
   // The garage's suspension for the confirmed reports, unless one already
   // stands: then its cause, and nothing of the suspension is written again.
-  // The garage's row lock first, so a suspension racing this one is seen.
+  // The garage's row is already locked, so a suspension racing this one is seen.
   private async suspend(
     tx: Prisma.TransactionClient,
     actor: Actor,
     garageId: string,
+    status: string | undefined,
     reason: string,
   ): Promise<{ cause: SuspensionCause | null } | null> {
-    const [garage] = await tx.$queryRaw<{ status: string }[]>`
-      SELECT status::text AS status FROM garage
-      WHERE id = ${garageId}::uuid
-      FOR UPDATE`;
     const open = await this.suspension.openSuspension(tx, garageId);
     if (open) return open;
-    if (garage?.status === 'suspended') return { cause: null };
+    if (status === 'suspended') return { cause: null };
     await this.suspension.suspendIn(
       tx,
       actor,
