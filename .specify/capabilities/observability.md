@@ -34,6 +34,7 @@ features:
   - 299-system-log-search
   - 173-price-range-in-place
   - 1174-postgres-18-pitr
+  - 1183-garage-profile-page
 ---
 
 # Capability: Observability
@@ -791,6 +792,10 @@ _From 1345-staging-observability._
 ### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
 
 _From 173-price-range-in-place._
+
+### 1183-FR-006 — The `motorfix-api` dashboard MUST gain a "Profile p95 (alert above 300 ms)" panel, and the API alerts file an `api-profile-latency` rule that fires when the profile route's p95 request duration stays above 300 ms for 10 minutes, both shaped like the search ones; the route label MUST be the one the API actually emits for `GET /api/v1/garages/:slug` (checked against `apps/api/src/telemetry.ts` and the existing search panel's `http_route` value). The alert MUST be listed in `infra/observability/inventory.json` under the `api` app so `scripts/observability-inventory.ts` passes.
+
+_From 1183-garage-profile-page._
 
 ## Retired
 
