@@ -94,8 +94,10 @@ describe('a bar chart with a lead figure', () => {
     const six = [...PAIRS, ...PAIRS].map((p, i) => ({ ...p, label: `${i}` }));
     const [, el] = await render((h) => h.points.set(six));
 
+    // Three 12 px lines at Chart.js's 1.2 line height take 43.2 px; a 60 px
+    // row leaves a clear gap before the next name.
     expect(el.querySelector<HTMLElement>('.mf-chart-plot')?.style.height).toBe(
-      `${6 * 44 + 24}px`,
+      `${6 * 60 + 24}px`,
     );
   });
 

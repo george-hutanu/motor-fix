@@ -74,11 +74,12 @@ abstract class CockpitChart {
       : undefined;
   });
 
-  // 28 px a row keeps every 12 px name on its own line, 44 its name over both
-  // figures; the axis takes 24.
+  // 28 px a row keeps every 12 px name on its own line; 60 holds its name over
+  // both figures (three lines, 43.2 px) with a gap before the next name; the
+  // axis takes 24.
   protected readonly plotHeight = computed(() =>
     this.horizontal()
-      ? Math.max(200, this.points().length * (this.headings() ? 44 : 28) + 24)
+      ? Math.max(200, this.points().length * (this.headings() ? 60 : 28) + 24)
       : null,
   );
 
