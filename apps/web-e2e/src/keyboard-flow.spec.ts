@@ -221,6 +221,16 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await expect.poll(inSheet).toBe(true);
     await page.keyboard.press('Tab');
     await expect.poll(inSheet).toBe(true);
+    // The sheet may still be sliding in: wait for the focused control to
+    // have its box before judging how the focus shows.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const box = document.activeElement?.getBoundingClientRect();
+          return box ? box.width * box.height : 0;
+        }),
+      )
+      .toBeGreaterThan(0);
     await focusShows(page);
 
     await page.keyboard.press('Escape');

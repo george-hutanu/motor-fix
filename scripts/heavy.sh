@@ -45,9 +45,15 @@ rm -f "$got"
 # A signal stops whatever this script started — the slot holder and the
 # command under it — then exits; it never falls back into the slot loop.
 child=""
+# The whole tree is listed first, then stopped parent first: a shell whose
+# child died before it would run its next step.
+tree() {
+  echo "$1"
+  for c in $(pgrep -P "$1" 2>/dev/null); do tree "$c"; done
+}
 killtree() {
-  for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done
-  kill -TERM "$1" 2>/dev/null
+  # shellcheck disable=SC2046
+  kill -TERM $(tree "$1") 2>/dev/null
 }
 stop() {
   [ -n "$child" ] && { killtree "$child"; wait "$child" 2>/dev/null; }

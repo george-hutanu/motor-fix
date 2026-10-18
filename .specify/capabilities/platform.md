@@ -88,9 +88,10 @@ features:
   - 1344-no-mutation-wait
   - 430-cdn-waf
   - 1019-staging-mcp-connect
-  - 1348-release-green
-  - 1174-postgres-18-pitr
   - 173-price-range-in-place
+  - 1174-postgres-18-pitr
+  - 1178-keycloak-sizing
+  - 1348-release-green
 ---
 
 # Capability: Platform
@@ -223,7 +224,7 @@ _From 516-production-release-queue._
 
 _From 421-monorepo-platform._
 
-### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command `start --import-realm --features=cimd,resource-indicators --proxy-headers=xforwarded --http-enabled=true` and the JVM heap cap (FR-006); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
+### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command and heap sizing of 1178-FR-001 and 1178-FR-002 (a `kc.sh build` stage, then `start --optimized`; amended by ST-1178); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
 
 _From 1016-mcp-staging._
 
@@ -1467,15 +1468,15 @@ _From 1016-mcp-staging._
 
 _From 1016-mcp-staging; path modified by 1021-keycloak-health-path and 1022-keycloak-health-hyphen._
 
-### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
+### 1178-FR-001 — The Keycloak image MUST NOT set a fixed maximum or initial heap in bytes. Its heap MUST be a percentage of the container's memory limit: the maximum at 70% and the initial heap at a percentage too, so a change to the limit on Railway changes the heap with no change to the image.
 
-_From 1016-mcp-staging._
+_From 1178-keycloak-sizing._
 
 ### 000-FR-007 — When `RAILWAY_SERVICE_MCP` or `RAILWAY_SERVICE_KEYCLOAK` is empty on staging, the deploy script MUST skip that service alone, print one GitHub workflow notice naming the variable and that the service was not deployed, deploy every other service and exit 0. A set id with a missing `IMAGE_<NAME>` MUST fail naming the variable, as for every service today.
 
 _From 1016-mcp-staging._
 
-### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB=postgres`, `KC_DB_URL`, `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365.
+### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB_URL` (`KC_DB` is baked into the image, 1178-FR-002), `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365; and, per 1178-FR-011, the service's memory limit, `KEYCLOAK_METRICS_URL` on the worker, the management port 9000 and the `keycloak.json` alert import (amended by ST-1178).
 
 _From 1016-mcp-staging._
 
@@ -2297,6 +2298,22 @@ _From 1174-postgres-18-pitr._
 
 _From 1174-postgres-18-pitr._
 
+### 1178-FR-002 — The Keycloak image MUST be built in two stages: a build stage that runs Keycloak's build with the build-time options (database `postgres`, features `cimd` and `resource-indicators`, health enabled, metrics enabled), and a runtime stage that copies the built server and starts it with `--optimized`, `--import-realm`, `--proxy-headers=xforwarded` and `--http-enabled=true`.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-003 — Persistent user sessions MUST stay on (Keycloak 26's default): no build or runtime option disables the feature.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-004 — The runtime image MUST keep the realm file at `/opt/keycloak/data/import/`, expose 8080, and answer the Railway health check `/realms/master` on 8080 once the realm import has finished, as today; the deploy script and the health-check path are unchanged.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-011 — `infra/keycloak/README.md` MUST document the heap rule and the memory limit the owner sets on Railway (1.36–1.5 GB, with the guide's figures and the 768 MiB failure as the reason), the new `KEYCLOAK_METRICS_URL` variable on the worker (kind, value shape, that unset means no reading), the management port's role and the new alert in its import step; `infra/observability/README.md` MUST say how Keycloak's memory reaches Grafana. The PR's Notes MUST list the owner-only steps: the Railway memory limit, the variable and the alert import. The agent never sets a Railway variable or setting.
+
+_From 1178-keycloak-sizing._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2387,6 +2404,7 @@ _From 1174-postgres-18-pitr._
 
 - `431-FR-011` — superseded by `1344-FR-004` (2026-10-17)
 
+- `000-FR-006` — superseded by `1178-FR-001` (2026-10-18)
 - `000-FR-001` — superseded by `1348-FR-001` (2026-10-17)
 - `000-FR-014` — superseded by `1348-FR-002` (2026-10-17)
 - `251-FR-012` — superseded by `1348-FR-003` (2026-10-17)

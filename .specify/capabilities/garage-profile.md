@@ -15,6 +15,7 @@ features:
   - 386-brand-price-range
   - 356-live-estimate
   - 311-estimate-within-reach
+  - 1183-garage-profile-page
 ---
 
 # Capability: Garage profile
@@ -398,6 +399,38 @@ _From 311-estimate-within-reach._
 ### 311-FR-013 — Tests: component tests cover the bar shown on a phone only, hidden while a text field has focus, the empty text with nothing on, the placeholder before the selection is applied, the button alone with no public job, no bar for a garage-side role and the sheet opening on the total; the end-to-end walk, at 375 × 812 on the seeded garage, switches two jobs on, scrolls to the end, checks the button is inside the viewport and opens the request, then taps the total and sees the sheet (brief Tests).
 
 _From 311-estimate-within-reach._
+
+### 1183-FR-001 — On a cache miss, the public profile read MUST obtain everything the answer needs in exactly one PostgreSQL statement: the garage row with the brands it works on (each with its fuels and job ticks), its photos in position order, its price rows with their job types, the courtesy-car facility, its response stats and the decision time of its latest approved verification file, each aggregate with an explicit `ORDER BY` that reproduces today's order (deep equality, not byte-level). The brand-in-context lookup stays its own cached read (1235-FR-003) and does not count. An integration test MUST count every query event the read issues on a miss after the brand lookup, unfiltered, and assert one; the read runs outside `$transaction`.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-002 — The same statement MUST also return the status of a garage that is not publicly listed, so that the 404 `not_found` / 410 `gone` verdict of 307-FR-001 needs no second statement; the verdict rules themselves do not change.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-003 — The answer MUST be the same `PublicGarageDto` as today, field for field and value for value, for every existing case: every public-garages integration spec, the key allow-list and forbidden-list test (307-FR-005), the brand variants (307-FR-003), the photo, price, response-rate and verification cases MUST pass unchanged. The contract in `libs/contracts`, `apps/api/openapi.json` and the generated client do not change.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-004 — The statement's garage filter MUST come from one shared public scope exported beside the existing `publicGarages()` scope, in its SQL form, and that export MUST be the only way a raw SQL read scopes a visitor's or driver's garage read: every reachable raw read that filters on status inline today switches to it. The two forms (query-builder and SQL) MUST express the same condition, and a test MUST prove they agree on the same fixture of garages across every status.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-005 — After `garage.updated`, `price_list.updated`, or a published `verification.decided` for a garage, the next profile read MUST show the change within 5 s, through the existing purge by audience (1182-FR-007). One integration test per emitting event kind MUST make the write through the emitting service, drive the relay once in-process (as 1182's purge tests do) and read the changed value at once; the 5 s bound is the relay's, cited from 1182. `facility.*` is covered by the same audience rule once an emitter exists; none does today (Assumptions).
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-007 — The public-scope spec MUST check every read of the garage table reachable by a non-staff actor. Entry points are: every controller handler in `apps/` and `libs/` that a visitor or driver can reach (marked `@Public()`, carrying no `@Requires`, or `@Requires('driver.*')`; only an effective staff capability, `@Requires('garage.*')` / `@Requires('admin.*')` resolved per handler with the method over the class, excludes it; the app-wide `ActorGuard` is no class-level guard) and every assistant tool in `libs/mcp-tools` whose `capability` is absent or `driver.*`. From each it MUST follow `this.x()` and `this.field.x()` calls and calls to plain functions in the same module, and it MUST see raw SQL reads of the garage table (`$queryRaw` and `Prisma.sql` templates) as well as Prisma `garage.find*`/`count` calls. Each legitimate exception (a read that deliberately returns unlisted garages, such as saved garages' `available` flag) MUST be listed in the spec with its reason.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-008 — The scope spec MUST fail on a deliberately unscoped garage read placed in a non-controller service and reached from such an entry point, and on an unscoped raw SQL garage read, each proven by a fixture test that names the offending file and line; the spec run on the real tree MUST pass.
+
+_From 1183-garage-profile-page._
+
+### 1183-FR-009 — The page MUST keep making one unauthenticated profile call and none in the browser after hydration: the existing `apps/web-e2e/src/transfer-cache.spec.ts` stays the proof and MUST pass unchanged; PR QA's network log of the profile route is the second proof. No new route, path or `lang` parameter is added (Assumptions).
+
+_From 1183-garage-profile-page._
 
 ## Retired
 

@@ -72,7 +72,7 @@ the release goes on.
 
 | uid | Shows |
 |---|---|
-| `motorfix-overview` | a row per service (api, worker, web, mcp, postgres, redis): up, rate, error %, p95, CPU, heap, release; Grafana Cloud usage beside the free-tier limits |
+| `motorfix-overview` | a row per service (api, worker, web, mcp, postgres, redis, keycloak): up, rate, error %, p95, CPU, heap, release; Grafana Cloud usage beside the free-tier limits |
 | `motorfix-api`, `motorfix-worker`, `motorfix-web`, `motorfix-mcp` | requests by route template, outside calls by host, the Node runtime, error logs and slow traces; the worker's jobs and outbox age |
 | `motorfix-postgres`, `motorfix-redis` | the data-store readings (`motorfix_pg_*`, `motorfix_redis_*`) |
 | `motorfix-queues` | every queue's waiting count, oldest waiting age, failures and job outcomes |
@@ -95,12 +95,19 @@ reads to link the admin panel to the overview). Without either, both are
 skipped with a notice and the release goes on. A change made only in the
 Grafana UI is overwritten by the next release: edit the JSON instead.
 
+Keycloak sends no telemetry of its own. When `KEYCLOAK_METRICS_URL` is set
+on the worker (staging only), the worker's data-store readings fetch
+Keycloak's management `/metrics` (port 9000, private network) once a minute
+and republish two gauges, `motorfix_keycloak_heap_used_bytes` and
+`motorfix_keycloak_heap_max_bytes`, with `motorfix_datastore_up{store="keycloak"}`;
+nothing new runs on Railway. The overview dashboard's keycloak row shows them.
+
 ## Alert rules
 
 `infra/observability/alerts/` holds one JSON file per rule group, in Grafana's
 provisioning format (`apiVersion: 1`, folder `MotorFix`, every minute):
 `api.json`, `web.json`, `worker.json`, `postgres.json` and `redis.json` for
-the services, `mcp.json`, `notifications.json`, `quotes.json` and `support.json` for the
+the services, `mcp.json`, `keycloak.json`, `notifications.json`, `quotes.json` and `support.json` for the
 narrower signals. Each rule groups by `deployment_environment`, so an
 environment that never reported raises nothing, and carries its `service`
 label, a summary naming the environment, its dashboard's uid and a
@@ -124,9 +131,10 @@ hour, and the spec fails on one.
 
 | Service | Signals (the file holds each threshold) | No data |
 |---|---|---|
-| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 over 300 ms for 10 minutes (`api-search-latency`) | OK |
+| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 and the garage profile p95 over 300 ms for 10 minutes (`api-search-latency`, `api-profile-latency`) | OK |
 | worker | down, event-loop delay, oldest waiting job per queue, waiting jobs growing for 15 minutes per queue (`worker-queue-growing`), a job's final failure per queue (`verification-result` keeps its own rule), memory (`worker-memory`) | `worker-queue-backlog` alerts |
 | mcp | memory (`mcp-memory`, in `mcp.json`) beside its own signals | OK |
+| Keycloak | heap over 90% of its maximum for 10 minutes (`keycloak-memory`, in `keycloak.json`), fed by the worker's reading of `KEYCLOAK_METRICS_URL` | OK |
 | PostgreSQL | unreachable, connections used, database size, the oldest outbox event waiting more than 60 s for 5 minutes (`postgres-outbox-stuck`) | `postgres-unreachable` alerts |
 | Redis | unreachable, memory used, connected clients | `redis-unreachable` alerts |
 
