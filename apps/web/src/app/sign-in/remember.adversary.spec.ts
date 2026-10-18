@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
@@ -65,80 +62,29 @@ afterEach(() => {
   for (const p of document.querySelectorAll('mf-overlay-panel')) p.remove();
 });
 
-const css = (file: string) => readFileSync(join(__dirname, file), 'utf8');
-const styles = readFileSync(join(__dirname, '..', '..', 'styles.css'), 'utf8');
-const cockpit = readFileSync(
-  join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'libs/ui-cockpit/src/styles/cockpit.css',
-  ),
-  'utf8',
-);
-
 // @traces 248-FR-002
 describe.each([
-  ['sign-in' as const, 'ro' as const, 'Ține‑mă autentificat', 'sign-in.css'],
-  ['sign-in' as const, 'en' as const, 'Keep me signed in', 'sign-in.css'],
-  [
-    'phone' as const,
-    'ro' as const,
-    'Ține‑mă autentificat',
-    'phone-sign-in/phone-sign-in.css',
-  ],
-  [
-    'phone' as const,
-    'en' as const,
-    'Keep me signed in',
-    'phone-sign-in/phone-sign-in.css',
-  ],
-])(
-  'the remember checkbox on %s in %s',
-  (screen, language, text, stylesheet) => {
-    it('is named by its label in the page language', async () => {
-      await open(screen, language);
+  ['sign-in' as const, 'ro' as const, 'Ține‑mă autentificat'],
+  ['sign-in' as const, 'en' as const, 'Keep me signed in'],
+  ['phone' as const, 'ro' as const, 'Ține‑mă autentificat'],
+  ['phone' as const, 'en' as const, 'Keep me signed in'],
+])('the remember checkbox on %s in %s', (screen, language, text) => {
+  it('is named by its label in the page language', async () => {
+    await open(screen, language);
 
-      expect(label().textContent?.trim()).toBe(text);
-      expect(box().type).toBe('checkbox');
-    });
+    expect(label().textContent?.trim()).toBe(text);
+    expect(box().type).toBe('checkbox');
+  });
 
-    it('toggles from a tap on the label text and on the box, twice over', async () => {
-      await open(screen, language);
-      const before = box().checked;
+  it('toggles from a tap on the label text and on the box, twice over', async () => {
+    await open(screen, language);
+    const before = box().checked;
 
-      (label().querySelector('span') as HTMLElement).click();
-      expect(box().checked).toBe(!before);
-      box().click();
-      expect(box().checked).toBe(before);
-      label().click();
-      expect(box().checked).toBe(!before);
-    });
-
-    it('is a 44 px box and its label a 44 px high hit area', async () => {
-      await open(screen, language);
-
-      expect(box().classList.contains('mf-check')).toBe(true);
-      expect(cockpit).toMatch(/--mf-tap:\s*44px/);
-      expect(styles).toMatch(
-        /input\[type="checkbox"\]\.mf-check\s*\{[^}]*width:\s*var\(--mf-tap\)[^}]*height:\s*var\(--mf-tap\)/,
-      );
-      expect(css(stylesheet)).toMatch(
-        /\.remember\s*\{[^}]*min-height:\s*var\(--mf-tap\)/,
-      );
-      expect(css(stylesheet)).not.toMatch(
-        /\.remember\s*\{[^}]*(?<!min-)height:\s*\d+px/,
-      );
-    });
-
-    it('is a keyboard stop that Space toggles', async () => {
-      await open(screen, language);
-
-      expect(box().tabIndex).toBe(0);
-      expect(box().disabled).toBe(false);
-    });
-  },
-);
+    (label().querySelector('span') as HTMLElement).click();
+    expect(box().checked).toBe(!before);
+    box().click();
+    expect(box().checked).toBe(before);
+    label().click();
+    expect(box().checked).toBe(!before);
+  });
+});

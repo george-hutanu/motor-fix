@@ -468,7 +468,7 @@ test.describe('the platform figures', () => {
     await page.goto('/app/admin');
     await expect(tiles(page)).toHaveCount(6);
 
-    // The Jurnal panel's own link to the whole log (298, 299-FR-006) stays.
+    // The Jurnal panel's own link to the whole log stays.
     await expect(
       panel(page).getByRole('link', { name: /^Observabilitate/ }),
     ).toHaveCount(0);

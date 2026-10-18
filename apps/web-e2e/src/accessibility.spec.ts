@@ -158,7 +158,7 @@ async function tabsUnderBar(page: Page) {
 }
 
 // The bar's and the tab bar's controls smaller than 44 x 44 px; the
-// privacy link inside the bar's sentence is running text (FR-001).
+// privacy link inside the bar's sentence is running text, which the tap-size rule exempts.
 const smallControls = (page: Page) =>
   page.evaluate(() =>
     [
@@ -291,7 +291,7 @@ async function walk(page: Page, screens: readonly Screen[]) {
 // @traces 248-FR-007
 // @traces 248-FR-008
 // Each finding is named with its screen, language, scheme and rule; the
-// screen-reader run is FR-014's manual part.
+// screen-reader run is the manual part of that record.
 // @traces 248-FR-014
 test.describe('axe on the core screens @seeded', () => {
   // One test per screen: both languages and schemes of four screens do not

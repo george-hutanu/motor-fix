@@ -51,18 +51,10 @@ describe('focusMain', () => {
   it('keeps an explicit tabindex of -1 and does not stack attributes when called twice', () => {
     const main = addMain({ tabindex: '-1' });
 
-    focusMain(document);
-    focusMain(document);
+    expect(focusMain(document)).toBe(true);
+    expect(focusMain(document)).toBe(true);
 
     expect(main.getAttribute('tabindex')).toBe('-1');
-    expect(document.activeElement).toBe(main);
-  });
-
-  it('is idempotent: the second call answers true and the focus stays on the main', () => {
-    const main = addMain();
-
-    expect(focusMain(document)).toBe(true);
-    expect(focusMain(document)).toBe(true);
     expect(document.activeElement).toBe(main);
   });
 

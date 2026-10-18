@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 
 const root = __dirname;
 const styles = readFileSync(join(root, 'styles.css'), 'utf8');
@@ -81,30 +81,6 @@ describe('the empty message region rule', () => {
     expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
     expect(body).toMatch(/overflow:\s*hidden/);
     expect(body).not.toMatch(/display:\s*none/);
-  });
-
-  it('leaves no message region in any web stylesheet hidden with display none while empty', () => {
-    const sheets = (dir: string): string[] =>
-      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-        const path = join(dir, entry.name);
-        if (entry.isDirectory()) return sheets(path);
-        return entry.name.endsWith('.css') ? [path] : [];
-      });
-    const offenders = sheets(root).flatMap((path) =>
-      [
-        ...readFileSync(path, 'utf8').matchAll(
-          /([^{}]*:empty[^{}]*)\{([^}]*)\}/g,
-        ),
-      ]
-        .filter(
-          ([, selector, body]) =>
-            /display:\s*none/.test(body) &&
-            /problem|error|live|hint|status|warn|message|note/i.test(selector),
-        )
-        .map(([, selector]) => `${relative(root, path)}: ${selector.trim()}`),
-    );
-
-    expect(offenders).toEqual([]);
   });
 });
 

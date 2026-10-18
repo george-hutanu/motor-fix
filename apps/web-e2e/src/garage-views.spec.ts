@@ -143,7 +143,7 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage lists no jobs: the price list's empty panel (172-FR-008).
+    // The test garage lists no jobs: the price list's empty panel.
     await expect(page.locator('main')).toContainText(
       'Lista de prețuriNu ai încă lucrări în listă.',
     );

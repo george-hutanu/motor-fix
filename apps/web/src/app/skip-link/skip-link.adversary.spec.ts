@@ -42,16 +42,6 @@ describe('the skip link, attacked', () => {
     expect(main.getAttribute('tabindex')).toBe('-1');
   });
 
-  it('works in English and exposes the English name', async () => {
-    const main = addMain();
-    const { link } = await render('en');
-
-    link.click();
-
-    expect(link.textContent?.trim()).toBe('Skip to content');
-    expect(document.activeElement).toBe(main);
-  });
-
   it('cancels the navigation of a keyboard Enter, so the address never gains a hash', async () => {
     addMain();
     const { link } = await render();

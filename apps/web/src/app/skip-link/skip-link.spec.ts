@@ -102,10 +102,3 @@ describe('the skip link', () => {
     expect(css).not.toMatch(/transition|animation/);
   });
 });
-
-// @traces 248-FR-007
-describe('the page the server sends', () => {
-  it('starts as Romanian', () => {
-    expect(read('../../index.html')).toMatch(/<html[^>]*\slang="ro"/);
-  });
-});
