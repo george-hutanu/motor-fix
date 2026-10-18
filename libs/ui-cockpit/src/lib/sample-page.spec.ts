@@ -23,6 +23,12 @@ const buttonNamed = (page: HTMLElement, name: string) =>
   );
 
 describe('CockpitSamplePage', () => {
+  it('holds its content in the #main the skip link points at', async () => {
+    const page = await render();
+
+    expect(page.querySelectorAll('main#main')).toHaveLength(1);
+  });
+
   it('shows exactly one main (amber) action next to a secondary one', async () => {
     const page = await render();
     const primary = [
