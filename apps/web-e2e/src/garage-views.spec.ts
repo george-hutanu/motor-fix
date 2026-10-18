@@ -141,10 +141,12 @@ test.describe('garage views @seeded', () => {
       expect(await marked(page)).toBe(1);
     }
 
-    await page.goto('/app/garage/prices');
-    await expect(title(page)).toHaveText('Prețuri');
+    // Prețuri has its own screen since ST-172; Recenzii still shows the
+    // line that says what the view will hold.
+    await page.goto('/app/garage/reviews');
+    await expect(title(page)).toHaveText('Recenzii');
     await expect(page.locator('main')).toContainText(
-      'Aici vei vedea intervalele de preț pe lucrări.',
+      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
     );
 
     await page.goto('/app/garage/assistant');
