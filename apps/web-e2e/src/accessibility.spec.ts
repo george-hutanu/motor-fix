@@ -69,7 +69,14 @@ async function scan(page: Page, where: string): Promise<string[]> {
   for (const scheme of SCHEMES) {
     await page.emulateMedia({ colorScheme: scheme });
     await settled(page);
-    const seen = await violations(page, { resultTypes: ['violations'] });
+    let seen = await violations(page, { resultTypes: ['violations'] });
+    // A shared account's screen can change under the scan (another file's
+    // quote adds a rising panel): a finding counts when a second, settled
+    // scan sees it too.
+    if (seen.length) {
+      await settled(page);
+      seen = await violations(page, { resultTypes: ['violations'] });
+    }
     for (const v of seen) {
       if (v.impact !== 'serious' && v.impact !== 'critical') continue;
       const targets = v.nodes.map((n) => JSON.stringify(n.target)).join(' ');
@@ -80,17 +87,39 @@ async function scan(page: Page, where: string): Promise<string[]> {
   return found;
 }
 
-// Axe reads colours as they are drawn: an overlay still fading in, or a
-// colour still easing to the new scheme, would read as low contrast.
+// Axe reads colours as they are drawn: an overlay still fading in, a panel
+// still rising once its data came, or a colour still easing to the new
+// scheme, would read as low contrast. The page is settled once no finite
+// animation has run and no element has been added for half a second.
 const settled = (page: Page) =>
-  page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .every(
-        (a) =>
-          a.playState !== 'running' ||
-          a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
-      ),
+  page.waitForFunction(
+    () => {
+      const w = window as typeof window & {
+        mfCalm?: { since: number; watch: MutationObserver };
+      };
+      const now = performance.now();
+      if (!w.mfCalm) {
+        const calm = {
+          since: now,
+          watch: new MutationObserver(() => {
+            calm.since = performance.now();
+          }),
+        };
+        calm.watch.observe(document.body, { childList: true, subtree: true });
+        w.mfCalm = calm;
+      }
+      const moving = document
+        .getAnimations()
+        .some(
+          (a) =>
+            a.playState === 'running' &&
+            a.effect?.getTiming().iterations !== Number.POSITIVE_INFINITY,
+        );
+      if (moving) w.mfCalm.since = now;
+      return now - w.mfCalm.since >= 500;
+    },
+    undefined,
+    { polling: 50 },
   );
 
 const noSidewaysScroll = (page: Page) =>

@@ -53,6 +53,9 @@ async function sendRequest(request: APIRequestContext) {
 }
 
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
+const DAY = 24 * 60 * 60 * 1000;
+const day = (at: Date) =>
+  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(at);
 const tomorrow = () =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
     new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -90,7 +93,15 @@ test.describe('reading a request @seeded', () => {
     await expect(drawer).toContainText(`Scârțâie la frânare ${tag}`);
     await expect(drawer).toContainText('Sunați după ora 18');
     await expect(drawer).toContainText('orice mecanic');
-    await expect(drawer).toContainText('expiră în 6 zile');
+    // Seven Bucharest days on, in whole days left: 6 most weeks, 7 when the
+    // clocks go back an hour before it expires.
+    const expires = drawer.locator('.times time').nth(1);
+    const until = new Date((await expires.getAttribute('datetime')) ?? '');
+    const sevenOn = new Date(`${day(new Date())}T12:00:00Z`);
+    sevenOn.setUTCDate(sevenOn.getUTCDate() + 7);
+    expect(day(until)).toBe(sevenOn.toISOString().slice(0, 10));
+    const left = Math.floor((until.getTime() - Date.now()) / DAY);
+    await expect(expires).toHaveText(`expiră în ${left} zile`);
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage');

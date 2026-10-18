@@ -81,6 +81,9 @@ async function tabTo(
   target: ReturnType<Page['locator']>,
   limit = 60,
 ) {
+  // A screen drawn from data shows a placeholder first: tabbing past it
+  // reaches the footer, which the list then pushes out of view.
+  await expect(target).toBeVisible();
   let wrapped = false;
   // The stops so far, named when the focus falls to the page a second time.
   const trail: string[] = [];
