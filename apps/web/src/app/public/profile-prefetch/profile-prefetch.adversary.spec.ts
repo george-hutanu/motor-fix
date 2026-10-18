@@ -99,7 +99,7 @@ afterEach(() => {
   sendMeasurementsTo(undefined);
 });
 
-// @traces 1169-prefetch-intent-FR-008
+// @traces 1169-FR-008
 describe('the age of a pre-fetched profile', () => {
   it('serves an entry 119.999 s old and drops one exactly 120 s old', () => {
     jest.useFakeTimers({ now: 1_000_000 });
@@ -128,7 +128,7 @@ describe('the age of a pre-fetched profile', () => {
   });
 });
 
-// @traces 1169-prefetch-intent-FR-008
+// @traces 1169-FR-008
 describe('a profile that is not found or gone', () => {
   it.each([404, 410])(
     'is not read again within 120 s after a %s and is read again after',
@@ -163,7 +163,7 @@ describe('a profile that is not found or gone', () => {
   );
 });
 
-// @traces 1169-prefetch-intent-FR-007
+// @traces 1169-FR-007
 describe('hostile slugs and brands', () => {
   it('keeps a slug holding a slash inside one path segment', () => {
     setUp();
@@ -202,7 +202,7 @@ describe('hostile slugs and brands', () => {
   });
 });
 
-// @traces 1169-prefetch-intent-FR-007
+// @traces 1169-FR-007
 describe('cancelling', () => {
   it('cancels nothing and reports nothing after the answer arrived', () => {
     setUp();
@@ -247,7 +247,7 @@ describe('cancelling', () => {
   });
 });
 
-// @traces 1169-prefetch-intent-FR-009
+// @traces 1169-FR-009
 describe('when pre-fetching must stay off', () => {
   it('requests no route code while Save-Data is on', () => {
     connection = { saveData: true };
@@ -315,7 +315,7 @@ describe('when pre-fetching must stay off', () => {
   });
 });
 
-// @traces 1169-prefetch-intent-FR-007
+// @traces 1169-FR-007
 describe('route code that fails to load', () => {
   it('still reads the profile when the chunk request is rejected', async () => {
     setUp();
@@ -328,7 +328,7 @@ describe('route code that fails to load', () => {
   });
 });
 
-// @traces 1169-prefetch-intent-FR-008
+// @traces 1169-FR-008
 describe('an answer without a garage', () => {
   it('is handed to the page as nothing, not as null', () => {
     setUp();

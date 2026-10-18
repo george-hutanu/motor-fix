@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   Component,
   computed,
   effect,
@@ -25,8 +26,10 @@ import {
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
+import { EstimateSection } from './estimate-section/estimate-section';
 import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
+import { PriceSelection } from './price-selection/price-selection';
 import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
@@ -62,6 +65,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
 @Component({
   imports: [
     DayPipe,
+    EstimateSection,
     Gone,
     KmPipe,
     Lamp,
@@ -75,6 +79,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     RouterLink,
     TranslatePipe,
   ],
+  providers: [PriceSelection],
   selector: 'mf-garage-profile',
   styleUrl: './garage-profile.css',
   templateUrl: './garage-profile.html',
@@ -89,6 +94,7 @@ export class GarageProfile {
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly prefetch = inject(ProfilePrefetch);
   private readonly saved = inject(SavedGarages);
+  private readonly selection = inject(PriceSelection);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -166,6 +172,21 @@ export class GarageProfile {
         void this.saved.load();
       });
     });
+    // The jobs switched on follow every answer read. In the browser the
+    // first answer waits for the first render, so the jobs kept for the
+    // session come back after hydration rather than into it.
+    let rendered = !this.browser;
+    effect(() => {
+      const garage = this.garage();
+      if (garage && rendered) untracked(() => this.selection.sync(garage));
+    });
+    if (this.browser) {
+      afterNextRender(() => {
+        rendered = true;
+        const garage = untracked(this.garage);
+        if (garage) this.selection.sync(garage);
+      });
+    }
     // The garage's own purge tag, so its edit clears this page at the edge.
     effect(() => {
       if (!this.response) return;

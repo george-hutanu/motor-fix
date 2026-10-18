@@ -108,7 +108,7 @@ async function toProfile(page: Page, near?: typeof MILITARI) {
 
 // The request for an oil change to this garage and the nearby ones ticked.
 async function sendRequest(page: Page, others: string[] = []) {
-  await page.getByRole('button', { name: 'Cere ofertă' }).click();
+  await page.getByRole('button', { exact: true, name: 'Cere ofertă' }).click();
   const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
   await expect(
     quote.getByRole('combobox', { exact: true, name: 'Mașina' }),
@@ -235,7 +235,9 @@ test.describe('the launch events @seeded', () => {
 
     await toProfile(page);
 
-    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await page
+      .getByRole('button', { exact: true, name: 'Cere ofertă' })
+      .click();
     // A visitor gets the request dialog, then the sign-in dialog over it once
     // the API answers 401; either may be open, so check the topmost.
     await expect(

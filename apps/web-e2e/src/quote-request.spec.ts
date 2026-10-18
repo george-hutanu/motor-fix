@@ -48,7 +48,9 @@ test.describe('a quote request from a garage profile @seeded', () => {
     await signedInDriver(page);
     // A click before hydration is lost: the button answers once Angular has it.
     await hydrated(page, PROFILE);
-    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await page
+      .getByRole('button', { exact: true, name: 'Cere ofertă' })
+      .click();
     const quote = dialog(page, 'Cere ofertă');
     await expect(car(quote)).toContainText('Dacia Logan');
     await quote.getByRole('switch', { name: OIL }).click();
@@ -88,7 +90,9 @@ test.describe('a quote request from a garage profile @seeded', () => {
   }) => {
     // The profile holds a live stream, so networkidle never comes.
     await hydrated(page, PROFILE);
-    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await page
+      .getByRole('button', { exact: true, name: 'Cere ofertă' })
+      .click();
 
     // A visitor holds no session, so the sign-in gate opens over the dialog
     // before the cars are read, and the read goes out once the driver is in.
@@ -120,7 +124,9 @@ test.describe('a quote request from a garage profile @seeded', () => {
     await hydrated(page, '/ro');
     await hydrated(page, '/ro/garages?brand=dacia');
     await hydrated(page, PROFILE);
-    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await page
+      .getByRole('button', { exact: true, name: 'Cere ofertă' })
+      .click();
     await expect(
       page
         .getByRole('dialog', { name: 'Autentificare' })
@@ -146,7 +152,7 @@ test.describe('a quote request from a garage profile @seeded', () => {
       await page.setViewportSize({ height: 800, width });
       await hydrated(page, PROFILE.replace('/ro/', `/${language}/`));
       const name = language === 'ro' ? 'Cere ofertă' : 'Request a quote';
-      await page.getByRole('button', { name }).click();
+      await page.getByRole('button', { exact: true, name }).click();
       const quote = dialog(page, name);
       await expect(
         quote.getByRole('button', {
@@ -179,7 +185,9 @@ test.describe('the confirmation for a garage that usually answers the same day @
       await route.fulfill({ json: body, response });
     });
     await hydrated(page, PROFILE);
-    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await page
+      .getByRole('button', { exact: true, name: 'Cere ofertă' })
+      .click();
     const quote = dialog(page, 'Cere ofertă');
     await expect(car(quote)).toContainText('Dacia Logan');
     await quote.getByRole('switch', { name: OIL }).click();

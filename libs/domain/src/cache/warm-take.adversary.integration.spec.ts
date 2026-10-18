@@ -72,7 +72,7 @@ const warmed = (
     }),
   );
 
-// @traces 1169-prefetch-intent-FR-001
+// @traces 1169-FR-001
 describe('taking a warm entry under pressure', () => {
   it('gives a hundred simultaneous takes exactly one answer', async () => {
     const caches = [0, 1, 2, 3].map(() => new CacheService(client()));

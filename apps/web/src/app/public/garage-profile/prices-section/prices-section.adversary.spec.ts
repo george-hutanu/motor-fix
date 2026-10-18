@@ -1,9 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { PricesSection } from './prices-section';
+import { PriceSelection } from '../price-selection/price-selection';
 
 const row = (
   jobTypeId: string,
@@ -44,8 +45,10 @@ const GARAGE: PublicGarageDto = {
   worksOn: [],
 };
 
+// The page binds the shared selection to every answer it reads.
 @Component({
   imports: [PricesSection],
+  providers: [PriceSelection],
   template: `<section
     data-slot="prices"
     mf-prices-section
@@ -54,11 +57,17 @@ const GARAGE: PublicGarageDto = {
 })
 class Host {
   readonly garage = signal(GARAGE);
+  readonly selection = inject(PriceSelection);
+
+  constructor() {
+    effect(() => this.selection.sync(this.garage()));
+  }
 }
 
 let fixture: ComponentFixture<Host>;
 
 beforeEach(async () => {
+  sessionStorage.clear();
   TestBed.configureTestingModule({});
   await TestBed.inject(I18n).enter('public');
   await TestBed.inject(I18n).use('ro');
@@ -102,7 +111,7 @@ async function turnOn(name: string) {
   await settle();
 }
 
-// @traces 355-price-list-ranges-FR-010
+// @traces 355-FR-010
 describe('the price list section when it has nothing to list', () => {
   it('shows only the heading and the empty line, even with a labour range', async () => {
     await show({ prices: [] });
@@ -134,8 +143,8 @@ describe('the price list section when it has nothing to list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-008
-// @traces 355-price-list-ranges-FR-009
+// @traces 355-FR-008
+// @traces 355-FR-009
 describe('the price list rows with hostile data', () => {
   it('rounds bani to the nearest leu, never truncating', async () => {
     await show({
@@ -225,7 +234,7 @@ describe('the price list rows with hostile data', () => {
   }, 30_000);
 });
 
-// @traces 355-price-list-ranges-FR-011
+// @traces 355-FR-011
 describe('the switches of the price list', () => {
   it('starts with every switch off', () => {
     expect(checkedNames()).toEqual([]);
@@ -314,7 +323,7 @@ describe('the switches of the price list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-016
 describe('the price list section for assistive technology', () => {
   it('names the region, holds one h2 and no live region', () => {
     expect(section().getAttribute('aria-label')).toBe('Lista de prețuri');

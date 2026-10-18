@@ -1,9 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { PricesSection } from './prices-section';
+import { PriceSelection } from '../price-selection/price-selection';
 
 const row = (
   jobTypeId: string,
@@ -65,8 +66,10 @@ const GARAGE: PublicGarageDto = {
   worksOn: [],
 };
 
+// The page binds the shared selection to every answer it reads.
 @Component({
   imports: [PricesSection],
+  providers: [PriceSelection],
   template: `<section
     data-slot="prices"
     mf-prices-section
@@ -75,11 +78,17 @@ const GARAGE: PublicGarageDto = {
 })
 class Host {
   readonly garage = signal(GARAGE);
+  readonly selection = inject(PriceSelection);
+
+  constructor() {
+    effect(() => this.selection.sync(this.garage()));
+  }
 }
 
 let fixture: ComponentFixture<Host>;
 
 beforeEach(async () => {
+  sessionStorage.clear();
   TestBed.configureTestingModule({});
   await TestBed.inject(I18n).enter('public');
   await TestBed.inject(I18n).use('ro');
@@ -134,8 +143,8 @@ const switchOf = (name: string) =>
 const rowOf = (name: string) =>
   rows().find((r) => text(r).includes(name)) as HTMLElement | undefined;
 
-// @traces 355-price-list-ranges-FR-006
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-006
+// @traces 355-FR-016
 describe('the price list section', () => {
   it('is a region named as the price list, holding its h2 heading', () => {
     expect(section().getAttribute('aria-label')).toBe('Lista de prețuri');
@@ -173,10 +182,10 @@ describe('the price list section', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-007
-// @traces 355-price-list-ranges-FR-008
-// @traces 355-price-list-ranges-FR-009
-// @traces 355-price-list-ranges-FR-014
+// @traces 355-FR-007
+// @traces 355-FR-008
+// @traces 355-FR-009
+// @traces 355-FR-014
 describe('the rows of the price list', () => {
   it('shows each job with its name, duration and range, in the order given', () => {
     expect(rows().map((r) => text(r.querySelector('.name')))).toEqual([
@@ -238,7 +247,7 @@ describe('the rows of the price list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-010
+// @traces 355-FR-010
 describe('a garage with no public price', () => {
   it('shows the heading and the empty text, and nothing else', async () => {
     await show({ prices: [] });
@@ -264,8 +273,8 @@ describe('a garage with no public price', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-011
+// @traces 355-FR-016
 describe('the switch on each row', () => {
   it('is off on load and named by its job', () => {
     expect(switches()).toHaveLength(3);
@@ -339,8 +348,8 @@ describe('the switch on each row', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-012
+// @traces 355-FR-011
+// @traces 355-FR-012
 describe('the price list read again', () => {
   it('keeps the switch of a job still listed and shows its new range', async () => {
     switchOf('Plăcuțe și discuri de frână față')?.click();
@@ -384,5 +393,26 @@ describe('the price list read again', () => {
       section().querySelector('[aria-live], [role="status"], [role="alert"]'),
     ).toBeNull();
     expect(section().hasAttribute('aria-live')).toBe(false);
+  });
+});
+
+// @traces 356-FR-002 356-FR-009
+describe('the switches and the shared selection', () => {
+  it('writes each switch into the page’s selection', async () => {
+    switchOf('Plăcuțe și discuri de frână față')?.click();
+    await settle();
+
+    expect([...fixture.componentInstance.selection.on()]).toEqual(['j-brakes']);
+  });
+
+  it('shows a job on that the selection holds, as restored for the session', async () => {
+    fixture.componentInstance.selection.toggle('j-diag', true);
+    await settle();
+
+    expect(
+      switchOf('Diagnoză și citire coduri de eroare')?.getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('true');
   });
 });

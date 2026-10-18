@@ -149,7 +149,7 @@ const tick = async (garageId: string, brandId: string, jobTypeId: string) => {
 const ids = (body: { prices: { jobTypeId: string }[] }) =>
   body.prices.map((p) => p.jobTypeId);
 
-// @traces 355-price-list-ranges-FR-001
+// @traces 355-FR-001
 describe('the price list on the wire', () => {
   it('carries only the contract fields of each row, never the stored price row', async () => {
     const { garage, price } = await setup({
@@ -214,7 +214,7 @@ describe('the price list on the wire', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-003
+// @traces 355-FR-003
 describe('the brand ticks on the price list', () => {
   it('lists the ticked jobs for a brand the garage does not take', async () => {
     const dacia = await brand('Dacia');
@@ -286,7 +286,7 @@ describe('the brand ticks on the price list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-005
+// @traces 355-FR-005
 describe('the price list through the profile cache', () => {
   it('serves each brand its own range from a warm cache, in any order', async () => {
     const bmw = await brand('BMW');

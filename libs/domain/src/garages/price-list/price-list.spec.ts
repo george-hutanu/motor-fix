@@ -49,10 +49,10 @@ const stateOf = (rows: PriceRow[], rarActivities: string[] = []) => {
   return item?.public ? 'public' : item?.reason;
 };
 
-// @traces 357-public-price-jobs-FR-001
-// @traces 357-public-price-jobs-FR-002
-// @traces 357-public-price-jobs-FR-003
-// @traces 357-public-price-jobs-FR-008
+// @traces 357-FR-001
+// @traces 357-FR-002
+// @traces 357-FR-003
+// @traces 357-FR-008
 describe('whether drivers see a job, and why not', () => {
   const hidden = { visible: false };
   const fromOnly = { toBani: null };
@@ -161,8 +161,8 @@ describe('whether drivers see a job, and why not', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-004
-// @traces 357-public-price-jobs-FR-007
+// @traces 357-FR-004
+// @traces 357-FR-007
 describe('the price list items', () => {
   it('is empty without a price row', () => {
     expect(priceListJobs([], [])).toEqual([]);
@@ -267,8 +267,8 @@ describe('the price list items', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-001
-// @traces 355-price-list-ranges-FR-004
+// @traces 355-FR-001
+// @traces 355-FR-004
 describe('the public price rows of a profile read without a brand', () => {
   it('is empty without a price row', () => {
     expect(publicRows([], [])).toEqual([]);
@@ -337,8 +337,8 @@ describe('the public price rows of a profile read without a brand', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-002
-// @traces 355-price-list-ranges-FR-003
+// @traces 355-FR-002
+// @traces 355-FR-003
 // @traces 386-FR-001
 // @traces 386-FR-002
 // @traces 386-FR-003
