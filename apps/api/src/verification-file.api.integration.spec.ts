@@ -680,3 +680,78 @@ describe('who may decide or reopen', () => {
     },
   );
 });
+
+describe('asking a garage for more over the API', () => {
+  const ASK = {
+    decision: 'more_requested',
+    note: 'Trimite pozele atelierului.',
+    requestedItems: ['photos'],
+  };
+
+  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  it.each([
+    ['note_required', { decision: 'more_requested', note: '   ' }],
+    ['note_too_short', { decision: 'more_requested', note: 'Abcdefghi' }],
+  ])('answers 422 %s on the note, nothing stored', async (code, body) => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, body);
+
+    expect([res.status, res.body.code]).toEqual([422, code]);
+    expect(res.body.errors).toEqual([
+      expect.objectContaining({ field: 'note' }),
+    ]);
+    expect((await fileRow(id)).status).toBe('in_review');
+    expect(await decided(id)).toHaveLength(0);
+  });
+
+  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  it('answers 400 validation_failed to a note of 1,001 code points', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, {
+      decision: 'more_requested',
+      note: 'a'.repeat(1001),
+    });
+
+    expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+
+  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s of the garage, with no garage data',
+    async (role) => {
+      const { garage, id } = await file('in_review');
+      const accountId = await account(role);
+      if (role === 'garage' || role === 'receptionist') {
+        await db.query(
+          'INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, $3::garage_member_role)',
+          [garage, accountId, role === 'garage' ? 'owner' : 'receptionist'],
+        );
+      }
+      if (role === 'mechanic') {
+        await db.query(
+          "INSERT INTO mechanic (id, garage_id, account_id, name) VALUES (gen_random_uuid(), $1, $2, 'Vlad')",
+          [garage, accountId],
+        );
+      }
+
+      const res = await post(id, 'decision', bearer(accountId, role), ASK);
+
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('Atelier Dinamo');
+      expect((await fileRow(id)).status).toBe('in_review');
+    },
+  );
+
+  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  it('answers 401 sign_in_required with no token', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', undefined, ASK);
+
+    expect([res.status, res.body.code]).toEqual([401, 'sign_in_required']);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+});

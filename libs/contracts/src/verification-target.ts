@@ -21,7 +21,8 @@ export const VERIFICATION_QUEUE_MAX = 200;
 // The most characters a decision's note holds, counted in code points.
 export const VERIFICATION_NOTE_MAX = 1000;
 
-// The fewest characters a rejection's note holds, counted in code points.
+// The fewest characters the note of a rejection or of a request for more
+// holds, counted in code points.
 export const REJECTION_NOTE_MIN = 10;
 
 // What a rejection names, and what a request for more may ask for.

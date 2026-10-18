@@ -44,8 +44,10 @@ import type {
 import {
   countApproval,
   countDecisionRefusal,
+  countMoreRequest,
   countRejection,
   countReopening,
+  countResubmission,
 } from '../../metrics/product-counters';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
@@ -411,28 +413,34 @@ export class VerificationService {
       note,
       reason,
     });
-    this.told(fileId, actor, decision.outcome, reason);
+    this.told(fileId, actor, decision.outcome, reason, requestedItems);
     return file;
   }
 
-  // A decision's count, span attributes and log line. The reason is one of
-  // five codes; the note is the admin's own words and stays out of both.
+  // A decision's count, span attributes and log line. The reason and the
+  // items are fixed codes; the note is the admin's own words and stays out.
   private told(
     fileId: string,
     actor: VerificationActor,
     outcome: Decision['outcome'],
     reason: string | null,
+    requestedItems: string[],
   ) {
-    // A request for more documents is not a verdict.
-    if (outcome !== 'more_requested') countApproval(outcome);
+    // A request for more is not a verdict.
+    if (outcome === 'more_requested') countMoreRequest();
+    else countApproval(outcome);
+    const asked =
+      outcome === 'more_requested' ? requestedItems.join(',') : null;
     const rejection = outcome === 'rejected' ? reasonCode(reason) : null;
     if (rejection) countRejection(rejection);
     trace.getActiveSpan()?.setAttributes({
       'verification.decision': outcome,
       ...(rejection && { 'verification.reason': rejection }),
+      ...(asked !== null && { 'verification.requested_items': asked }),
     });
+    const codes = rejection ?? asked;
     this.logger.log(
-      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${rejection ? ` (${rejection})` : ''}`,
+      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${codes === null ? '' : ` (${codes})`}`,
     );
   }
 
@@ -589,6 +597,8 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
+    countResubmission();
+    this.logger.log(`file ${fileId} resent`);
     return this.autoApprove(tx, file);
   }
 
@@ -845,8 +855,8 @@ async function name(tx: Prisma.TransactionClient, accountId: string | null) {
 }
 
 // The rules between the payload's values: a rejection names a reason, a
-// rejection and a request for more carry a note, an approval's blank note is
-// none. A reason or items where the decision has no use for them is a
+// rejection and a request for more carry a note of at least the floor, an
+// approval's blank note is none. A reason or items where the decision has no use for them is a
 // malformed body, as the edge would answer it.
 function payloadOf(decision: Decision) {
   wellFormed(decision);
@@ -858,7 +868,7 @@ function payloadOf(decision: Decision) {
   if (outcome !== 'approved' && !text) {
     throw required('note_required', 'This decision needs a note', 'note');
   }
-  if (outcome === 'rejected' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
+  if (outcome !== 'approved' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
     throw required(
       'note_too_short',
       `The message to the garage is at least ${REJECTION_NOTE_MIN} characters`,

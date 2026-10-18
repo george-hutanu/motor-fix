@@ -309,7 +309,7 @@ describe('the time of the latest sending', () => {
     await inTx((tx) => verification.open(tx, admin, file.id));
     await inTx((tx) =>
       verification.decide(tx, admin, file.id, {
-        note: 'Blurred',
+        note: 'The CUI is blurred',
         outcome: 'more_requested',
         reason: 'documents_unreadable',
       }),

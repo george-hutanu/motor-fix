@@ -299,7 +299,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: [
         'photos',
         'documents',
@@ -318,7 +318,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos', 'documents', 'rar', 'address', 'other'],
     });
 
@@ -337,7 +337,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: [],
     });
 
@@ -349,7 +349,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos', 'photos'],
     });
 
@@ -362,7 +362,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       reason: 'photos',
     });
 
@@ -555,7 +555,10 @@ describe('decisions racing and repeating', () => {
         note: 'Prima respingere.',
         reason: 'other',
       }),
-      post(id, 'decision', other, { decision: 'more_requested', note: 'b' }),
+      post(id, 'decision', other, {
+        decision: 'more_requested',
+        note: 'Trimite pozele atelierului.',
+      }),
     ]);
 
     expect([a.status, b.status].sort()).toEqual([200, 409]);
@@ -705,7 +708,7 @@ describe('decisions racing and repeating', () => {
     const { id } = await file();
     await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'n',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos'],
     });
     await post(id, 'reopen', admin);
@@ -850,7 +853,7 @@ describe('reopening', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'again',
+      note: 'Trimite pozele atelierului.',
     });
 
     expect([res.status, res.body.file.status]).toEqual([200, 'more_requested']);

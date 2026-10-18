@@ -83,7 +83,7 @@ export class VerificationFileController {
       'verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required',
   })
   @ApiUnprocessableEntityResponse({
-    description: 'reason_required, note_required',
+    description: 'reason_required, note_required, note_too_short',
   })
   async decision(
     @CurrentActor() actor: Actor,
