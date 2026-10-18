@@ -1,6 +1,6 @@
 import { formatDuration, formatLeiRange } from './index';
 
-// @traces 355-price-list-ranges-FR-009
+// @traces 355-FR-009
 describe('formatDuration at its boundaries', () => {
   it.each<[number, string, string]>([
     [1, '1 min', '1 min'],
@@ -55,7 +55,7 @@ describe('formatDuration at its boundaries', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-008
+// @traces 355-FR-008
 describe('formatLeiRange for the price list', () => {
   it('writes the same stored value with each language grouping', () => {
     expect(formatLeiRange(89_000, 140_000, 'ro')).toBe('890–1.400 lei');

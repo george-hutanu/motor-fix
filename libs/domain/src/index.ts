@@ -81,8 +81,18 @@ export { ProfileViewsModule } from './insights/profile-views/profile-views.modul
 export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
-export { emailConfig } from './notifications/email-config';
+export { Brevo } from './notifications/brevo/brevo';
+export { emailConfig, sendingDomain } from './notifications/email-config';
+export {
+  checkEmailDns,
+  type DnsResolver,
+  dnsReport,
+} from './notifications/email-dns/email-dns';
 export { GARAGE_SUSPENDED_CONSUMER } from './notifications/garage-suspended/garage-suspended.fan-out';
+export {
+  inboxMailboxes,
+  runInboxTest,
+} from './notifications/inbox-test/inbox-test';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';

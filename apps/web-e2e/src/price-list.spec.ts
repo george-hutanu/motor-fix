@@ -14,9 +14,9 @@ const sideways = (page: Page) =>
 // Militari's seeded price list: six jobs, the suspension check without a top
 // price; a BMW range for the front brakes and a BMW tick list without the
 // timing chain; the oil service alone ticked for Dacia.
-// @traces 355-price-list-ranges-FR-006 355-price-list-ranges-FR-007 355-price-list-ranges-FR-008 355-price-list-ranges-FR-009
-// @traces 355-price-list-ranges-FR-002 355-price-list-ranges-FR-003 355-price-list-ranges-FR-014 355-price-list-ranges-FR-015
-// @traces 355-price-list-ranges-FR-011 355-price-list-ranges-FR-012 355-price-list-ranges-FR-016
+// @traces 355-FR-006 355-FR-007 355-FR-008 355-FR-009
+// @traces 355-FR-002 355-FR-003 355-FR-014 355-FR-015
+// @traces 355-FR-011 355-FR-012 355-FR-016
 test.describe('the price list on a garage profile @seeded', () => {
   test.describe.configure({ mode: 'serial' });
 
