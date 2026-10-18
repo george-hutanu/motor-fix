@@ -553,3 +553,74 @@ describe('the Keycloak reading', () => {
     expect(store.metrics).toHaveBeenCalledTimes(1);
   });
 });
+
+// @traces 1178-FR-007
+describe('the Keycloak reading under hostile answers', () => {
+  const GOOD =
+    'jvm_memory_used_bytes{area="heap",id="a"} 5.0E7\njvm_memory_max_bytes{area="heap",id="a"} 1.0E9\n';
+  const watch = (keycloak: { metrics(): Promise<string> }) =>
+    observe({ keycloak, outbox: outbox(), redis: redis() });
+  const up = (store: string) => value('motorfix_datastore_up', { store });
+
+  it('publishes no heap sample, never zero, when a body has used but only -1 maxima', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({
+      metrics: async () =>
+        'jvm_memory_used_bytes{area="heap"} 5\njvm_memory_max_bytes{area="heap"} -1.0',
+    });
+    await tick(10);
+    expect(await up('keycloak')).toBe(0);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+    expect(await points('motorfix_keycloak_heap_max_bytes')).toEqual([]);
+    expect(await up('redis')).toBe(1);
+  });
+
+  it('keeps no stale heap figure when the next body is bad', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    let n = 0;
+    watch({ metrics: async () => (n++ === 0 ? GOOD : '<html></html>') });
+    await tick(5);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toHaveLength(1);
+    await tick(60);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+    expect(await up('keycloak')).toBe(0);
+  });
+
+  it('logs a bad body once per streak without the body', async () => {
+    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({ metrics: async () => 'SECRET-BODY-TEXT' });
+    await tick(100);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).not.toContain('SECRET-BODY-TEXT');
+  });
+
+  it('does not log the address when a reader fails with it in the message', async () => {
+    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({
+      metrics: async () => {
+        throw new Error(
+          'failed http://admin:hunter2@keycloak.internal:9000/metrics',
+        );
+      },
+    });
+    await tick(10);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).not.toContain('hunter2');
+  });
+
+  it('never has two Keycloak reads in flight at once', async () => {
+    let inflight = 0;
+    let peak = 0;
+    watch({
+      metrics: async () => {
+        inflight += 1;
+        peak = Math.max(peak, inflight);
+        await tick(50);
+        inflight -= 1;
+        return GOOD;
+      },
+    });
+    await tick(150);
+    expect(peak).toBe(1);
+  });
+});

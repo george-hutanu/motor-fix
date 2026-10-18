@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Read as text, like postgres-image.spec.ts: the image builds only on
-// Docker. The local run that proves the heap it gets is in quickstart.md.
+// Docker.
 const root = join(__dirname, '..');
 const read = (...path: string[]) => readFileSync(join(root, ...path), 'utf8');
 

@@ -16,8 +16,9 @@ FROM quay.io/keycloak/keycloak:26.8
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 COPY realm-motorfix-assistants.json /opt/keycloak/data/import/
 # The heap follows the container's memory limit, as the guide sizes it: at
-# most 70% of it, starting at 50%. The limit itself is the Railway service's
-# (1.36-1.5 GB, README.md); a byte cap here would ignore it.
+# most 70% of it, starting at 50%. These are kc.sh's own defaults, pinned so
+# a fixed byte cap like the old 512 MB cannot come back unseen. The limit itself
+# is the Railway service's (1.36-1.5 GB, README.md).
 ENV JAVA_OPTS_KC_HEAP="-XX:MaxRAMPercentage=70 -XX:MinRAMPercentage=70 -XX:InitialRAMPercentage=50"
 EXPOSE 8080
 CMD ["start", "--optimized", "--import-realm", "--proxy-headers=xforwarded", "--http-enabled=true"]
