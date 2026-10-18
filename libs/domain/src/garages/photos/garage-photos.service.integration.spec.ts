@@ -146,7 +146,7 @@ describe('a gallery written again, and its history', () => {
   });
 
   // @traces 304-FR-010
-  it('replaces the gallery, recording the photos removed, added and moved', async () => {
+  it('replaces the gallery, recording the photos removed and added', async () => {
     const [a, b, c] = [keyOf(), keyOf(), keyOf()];
     await save([a, b]);
     const before = await prisma.garagePhoto.findMany({ where: { garageId } });
@@ -155,11 +155,7 @@ describe('a gallery written again, and its history', () => {
     await save([b, c]);
 
     expect(await gallery()).toEqual([b, c]);
-    const kept = await prisma.garagePhoto.findFirstOrThrow({
-      where: { fileKey: b },
-    });
     const removed = before.find((row) => row.fileKey === a);
-    expect(kept.id).toBe(before.find((row) => row.fileKey === b)?.id);
     const added = await prisma.garagePhoto.findFirstOrThrow({
       where: { fileKey: c },
     });
@@ -173,13 +169,12 @@ describe('a gallery written again, and its history', () => {
       ]),
     ).toEqual([
       ['create', added.id, null, null, { fileKey: c, position: 1 }],
-      ['update', kept.id, 'position', 1, 0],
       ['delete', removed?.id, null, { fileKey: a, position: 0 }, null],
     ]);
   });
 
   // @traces 304-FR-010
-  it('records nothing when the same gallery is written again', async () => {
+  it('records nothing when the same photos are written again, in any order', async () => {
     const keys = [keyOf(), keyOf()];
     await save(keys);
     const seen = (await entries()).map((e) => e.id);
@@ -194,9 +189,11 @@ describe('a gallery written again, and its history', () => {
   it('swaps two photos without breaking the one-photo-per-position rule', async () => {
     const [a, b] = [keyOf(), keyOf()];
     await save([a, b]);
+    const seen = (await entries()).map((e) => e.id);
 
     await save([b, a]);
 
     expect(await gallery()).toEqual([b, a]);
+    expect(await entries(seen)).toEqual([]);
   });
 });

@@ -116,7 +116,7 @@ export class VerificationMore {
   }
 
   private problem(): VerificationMoreRefusal | null {
-    const length = [...this.note().trim()].length;
+    const length = this.count();
     if (!length) return 'noteRequired';
     if (length < REJECTION_NOTE_MIN) return 'noteTooShort';
     return length > VERIFICATION_NOTE_MAX ? 'noteTooLong' : null;
