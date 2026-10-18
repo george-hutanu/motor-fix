@@ -101,6 +101,23 @@ describe('a bar chart with a lead figure', () => {
     );
   });
 
+  it('keeps the three-column table inside its panel, scrolling within it rather than the page at 320 px', async () => {
+    const [fixture, el] = await render();
+    await showTable(fixture, el);
+    const table = el.querySelector('table');
+    const container = table?.parentElement;
+
+    expect(container?.getAttribute('data-slot')).toBe('table-container');
+    expect(container?.classList).toContain('spartan-table-container');
+    expect(container?.classList).toContain('mf-chart-table');
+    const styles = [...document.querySelectorAll('style')]
+      .map((s) => s.textContent)
+      .join('\n');
+    expect(styles).toMatch(
+      /\.mf-chart-table\[[^\]]*\]\s*\{[^}]*justify-self:\s*stretch;[^}]*min-width:\s*0;[^}]*overflow-x:\s*auto;/,
+    );
+  });
+
   it('grows every row by a 15 px line when a name wraps onto a second line', async () => {
     const [, el] = await render((h) =>
       h.points.set([

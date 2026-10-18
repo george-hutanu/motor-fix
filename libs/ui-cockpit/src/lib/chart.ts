@@ -223,6 +223,7 @@ const template = `
           {{ 'shell.chart.table' | t }}
         </button>
         @if (tableShown()) {
+          <div hlmTableContainer class="mf-chart-table">
           <table hlmTable [id]="tableId">
             <thead hlmTHead>
               <tr hlmTr>
@@ -245,6 +246,7 @@ const template = `
               }
             </tbody>
           </table>
+          </div>
         }
         <ng-content />
       }
@@ -266,6 +268,12 @@ const styles = `
     box-sizing: border-box;
     width: 100%;
     height: 200px;
+  }
+  /* A table wider than a phone's panel scrolls inside it, never the page. */
+  .mf-chart-table {
+    justify-self: stretch;
+    min-width: 0;
+    overflow-x: auto;
   }
   .mf-chart-skeleton {
     background: var(--mf-panel-raised);
