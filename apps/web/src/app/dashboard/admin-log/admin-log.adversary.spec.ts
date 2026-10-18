@@ -1,5 +1,6 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
@@ -47,6 +48,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   asked = [];
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: PLATFORM_ID, useValue: 'browser' },
       {
         provide: Live,
@@ -241,6 +243,7 @@ describe('lineOf with hostile context', () => {
           source: 'api',
         }),
       ],
+      nextCursor: null,
     });
     const { element } = await open();
 
@@ -252,7 +255,7 @@ describe('lineOf with hostile context', () => {
 describe('AdminLog under odd answers', () => {
   // @traces 298-FR-007
   it.each([0, -3])('shows no count mark for a count of %s', async (count) => {
-    answer = async () => ({ items: [entry(1, { count })] });
+    answer = async () => ({ items: [entry(1, { count })], nextCursor: null });
     const { element } = await open();
 
     expect(element.querySelector('.count')).toBeNull();
@@ -260,7 +263,10 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-007
   it('reads a count of 1000 as ×1000 and "de 1000 de ori"', async () => {
-    answer = async () => ({ items: [entry(1, { count: 1000 })] });
+    answer = async () => ({
+      items: [entry(1, { count: 1000 })],
+      nextCursor: null,
+    });
     const { element } = await open();
 
     expect(element.querySelector('.count [aria-hidden]')?.textContent).toBe(
@@ -273,7 +279,10 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-005 298-FR-006
   it('still shows the line, with a grey lamp, for a severity it does not know', async () => {
-    answer = async () => ({ items: [entry(1, { severity: 'fatal' })] });
+    answer = async () => ({
+      items: [entry(1, { severity: 'fatal' })],
+      nextCursor: null,
+    });
     const { element } = await open();
 
     const row = lines(element);
@@ -285,7 +294,10 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-004
   it('shows a time for an entry whose instant is unreadable without a broken clock', async () => {
-    answer = async () => ({ items: [entry(1, { at: 'not a date' })] });
+    answer = async () => ({
+      items: [entry(1, { at: 'not a date' })],
+      nextCursor: null,
+    });
     const { element } = await open();
 
     expect(lines(element)[0].querySelector('time')?.textContent).not.toMatch(
@@ -293,19 +305,21 @@ describe('AdminLog under odd answers', () => {
     );
   });
 
-  // @traces 298-FR-003
-  it('lists twenty-one answered entries without inventing a link', async () => {
+  // @traces 298-FR-003 299-FR-006
+  it('lists twenty-one answered entries with only the link to the whole log', async () => {
     answer = async () => ({
       items: Array.from({ length: 21 }, (_, i) => entry(i + 1)),
+      nextCursor: null,
     });
     const { element } = await open();
 
-    expect(element.querySelector('a, button')).toBeNull();
+    expect(element.querySelectorAll('a')).toHaveLength(1);
+    expect(element.querySelector('button')).toBeNull();
   });
 
   // @traces 298-FR-015
   it('keeps the previous lines when a re-read answers an empty log after a failure', async () => {
-    answer = async () => ({ items: [entry(1)] });
+    answer = async () => ({ items: [entry(1)], nextCursor: null });
     const { element } = await open();
     answer = () => Promise.reject(new Error('down'));
     resync.next();
@@ -334,7 +348,7 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-009
   it('reads nothing after the panel is destroyed, on an event, a resync or a poll', async () => {
-    answer = async () => ({ items: [entry(1)] });
+    answer = async () => ({ items: [entry(1)], nextCursor: null });
     const { fixture } = await open();
     fixture.destroy();
 
@@ -352,7 +366,7 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-009
   it('does not pile reads up when ten entries arrive in a burst', async () => {
-    answer = async () => ({ items: [entry(1)] });
+    answer = async () => ({ items: [entry(1)], nextCursor: null });
     await open();
 
     for (let i = 0; i < 10; i++) {
@@ -374,7 +388,7 @@ describe('AdminLog under odd answers', () => {
       doNotFake: ['setImmediate'],
       now: new Date('2026-10-17T20:59:00Z'),
     });
-    answer = async () => ({ items: [] });
+    answer = async () => ({ items: [], nextCursor: null });
     const opening = open();
     await jest.advanceTimersByTimeAsync(50);
     const { fixture } = await opening;
@@ -391,7 +405,7 @@ describe('AdminLog under odd answers', () => {
       doNotFake: ['setImmediate'],
       now: new Date('2026-10-24T20:59:00Z'),
     });
-    answer = async () => ({ items: [] });
+    answer = async () => ({ items: [], nextCursor: null });
     const opening = open();
     await jest.advanceTimersByTimeAsync(50);
     await opening;
@@ -412,7 +426,10 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-005
   it('names a grouped entry in English with the count in words', async () => {
-    answer = async () => ({ items: [entry(1, { count: 2 })] });
+    answer = async () => ({
+      items: [entry(1, { count: 2 })],
+      nextCursor: null,
+    });
     const { element } = await open('en');
 
     expect(element.querySelector('.count .sr-only')?.textContent?.trim()).toBe(

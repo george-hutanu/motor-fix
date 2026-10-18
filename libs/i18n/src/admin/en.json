@@ -252,6 +252,7 @@
     "title": "Growth, last 12 months"
   },
   "log": {
+    "all": "See the whole log",
     "empty": "Nothing to report today.",
     "failed": "Could not read the log.",
     "figure": {
@@ -302,7 +303,49 @@
       "one": "once",
       "other": "{n} times"
     },
-    "title": "System log"
+    "title": "System log",
+    "view": {
+      "clear": "Clear the filters",
+      "dates": {
+        "beforeFrom": "“To” cannot be before “From”.",
+        "future": "Pick a day up to today.",
+        "missing": "Pick a day.",
+        "tooOld": "The log keeps only the last 90 days."
+      },
+      "empty": "No entries for these filters.",
+      "filters": {
+        "allSeverities": "All severities",
+        "allSources": "All sources",
+        "allTypes": "All types",
+        "apply": "Apply",
+        "button": "Filters",
+        "buttonSet": {
+          "one": "Filters, 1 set",
+          "other": "Filters, {n} set"
+        },
+        "from": "From",
+        "severity": "Severity",
+        "source": "Source",
+        "title": "Filters",
+        "to": "To",
+        "type": "Type"
+      },
+      "fresh": {
+        "one": "1 new entry",
+        "other": "{n} new entries"
+      },
+      "search": "Search the log",
+      "title": "System log",
+      "types": {
+        "backup": "Backup",
+        "checks": "Checks",
+        "deploy": "Deploy",
+        "jobs": "Jobs",
+        "servers": "Server errors",
+        "services": "Outside services",
+        "status": "Status"
+      }
+    }
   },
   "panel": {
     "activeDrivers": "Active drivers",

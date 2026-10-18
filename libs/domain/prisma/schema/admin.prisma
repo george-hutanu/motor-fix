@@ -133,6 +133,7 @@ model SystemLogEntry {
   @@unique([kind, source, fingerprint, minute], map: "system_log_entry_group_key")
   @@index([at(sort: Desc)], map: "system_log_entry_at_idx")
   @@index([kind, at], map: "system_log_entry_kind_at_idx")
-  @@index([message(ops: raw("gin_trgm_ops"))], map: "system_log_entry_message_trgm_idx", type: Gin)
+  // The migration also holds a trigram index on account_fold(message), for
+  // the search, which Prisma cannot declare.
   @@map("system_log_entry")
 }
