@@ -1,7 +1,6 @@
 import { LegalCheckDto } from '@motor-fix/contracts';
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -29,15 +28,17 @@ export class LegalCheckController {
   })
   @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiOkResponse({ type: LegalCheckDto })
-  @ApiBadRequestResponse({ description: 'validation_failed: not a uuid' })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
   @ApiNotFoundResponse({
-    description: 'not_found: not this garage, not approved, or no file',
+    description:
+      'not_found: not this garage (a malformed id included), not approved, or no file',
   })
   read(
     @CurrentActor() actor: Actor,
-    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    // An id that is not the actor's own garage, a malformed one included,
+    // answers 404 before any read.
+    @Param('garageId') garageId: string,
   ): Promise<LegalCheckDto> {
     return this.legalCheck.read(actor, garageId);
   }

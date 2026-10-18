@@ -4402,9 +4402,6 @@
               }
             }
           },
-          "400": {
-            "description": "validation_failed: not a uuid"
-          },
           "401": {
             "description": "sign_in_required"
           },
@@ -4412,7 +4409,7 @@
             "description": "forbidden: staff of this garage"
           },
           "404": {
-            "description": "not_found: not this garage, not approved, or no file"
+            "description": "not_found: not this garage (a malformed id included), not approved, or no file"
           }
         },
         "security": [

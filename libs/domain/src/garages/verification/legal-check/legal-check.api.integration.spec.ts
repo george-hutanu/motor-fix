@@ -336,10 +336,11 @@ describe('who may read it', () => {
     expect((await read(w.dinamo.id)).status).toBe(401);
   });
 
-  it('refuses an id that is not a uuid', async () => {
+  // @traces 210-FR-001
+  it('tells the owner nothing of an id that is not a uuid', async () => {
     const w = await world();
 
-    expect((await read('dinamo', w.owner)).status).toBe(400);
+    expect((await read('dinamo', w.owner)).status).toBe(404);
   });
 
   it('tells the owner nothing of an unknown garage', async () => {
