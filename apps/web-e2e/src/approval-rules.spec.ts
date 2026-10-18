@@ -36,11 +36,12 @@ test.describe('a refused approval in the history @seeded', () => {
     );
     const { rows } = await db.query<{ id: string }>(
       `INSERT INTO verification_file (id, garage_id, status)
-       VALUES (gen_random_uuid(), $1, 'submitted') RETURNING id::text`,
+       VALUES (gen_random_uuid(), $1, 'in_review') RETURNING id::text`,
       [garageId],
     );
     fileId = rows[0]?.id ?? '';
-    // As a sending leaves it: every check present, none run.
+    // Already in review: opening a sent file writes its "Deschis de" line,
+    // which would then stand above the refusal. Every check present, none run.
     await db.query(
       `INSERT INTO verification_check (id, file_id, kind)
        SELECT gen_random_uuid(), $1, kind
