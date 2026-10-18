@@ -87,19 +87,18 @@ export const newestFirst = [
 const refused = (detail: string) =>
   refusal(HttpStatus.CONFLICT, 'verification_transition_refused', detail);
 
-// An admin's approval refused by the approval rules; each refused attempt is
-// written to the history by the endpoint, after the refusal rolled back.
-export const REFUSAL_CODES: ReadonlySet<string> = new Set([
-  'rar_check_required',
-  'caen_check_required',
-  'note_required',
-]);
-
 // The checks an admin's approval waits for, in the order they are asked.
 const GATES = [
   ['rar', 'rar_check_required', 'the rar check is not ok'],
   ['caen', 'caen_check_required', 'the caen check is not ok'],
 ] as const;
+
+// An admin's approval refused by the approval rules; each refused attempt is
+// written to the history by the endpoint, after the refusal rolled back.
+export const REFUSAL_CODES: ReadonlySet<string> = new Set([
+  ...GATES.map(([, code]) => code),
+  'note_required',
+]);
 
 // A garage's verification file and its moves. Each use case runs in the
 // caller's transaction, so a story that creates the garage can submit in the
