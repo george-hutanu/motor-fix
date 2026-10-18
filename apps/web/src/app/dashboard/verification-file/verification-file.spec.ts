@@ -565,7 +565,7 @@ describe('the sections', () => {
 
 describe('the footer', () => {
   it.each(['submitted', 'in_review'] as const)(
-    'shows the three decisions, only the rejection open while the checks wait, with the note, on a %s file',
+    'shows the three decisions, the request for more and the rejection open while the checks wait, with the note, on a %s file',
     async (status) => {
       const host = await open(fileOf({ file: { status } }));
       const footer = section(host, 'footer');
@@ -576,9 +576,10 @@ describe('the footer', () => {
         'Respinge',
       ]);
       // @traces 305-FR-001
+      // @traces 304-request-garage-details-FR-001
       expect(
         [...(footer?.querySelectorAll('button') ?? [])].map((b) => b.disabled),
-      ).toEqual([true, true, false]);
+      ).toEqual([true, false, false]);
       expect(text(footer)).toContain('Service‑ul primește decizia pe e‑mail.');
     },
   );
@@ -2411,7 +2412,7 @@ describe('the approve button', () => {
     expect(text(hint(host))).toBe('Verificarea RAR e obligatorie');
   });
 
-  it('is enabled with no hint when both are ok; the request for more stays disabled', async () => {
+  it('is enabled with no hint when both are ok, beside the request for more and the rejection', async () => {
     const host = await open(withChecks('ok', 'ok'));
 
     const button = approveButton(host);
@@ -2422,7 +2423,7 @@ describe('the approve button', () => {
       ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
     ].filter((b) => b !== button);
     expect(others.map((b) => [text(b), b.disabled])).toEqual([
-      ['Cere completări', true],
+      ['Cere completări', false],
       ['Respinge', false],
     ]);
   });

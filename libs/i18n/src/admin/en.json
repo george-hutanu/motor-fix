@@ -81,6 +81,7 @@
       "ask": "Ask for more",
       "caenHint": "The CAEN 4520 check is required",
       "caenRequired": "Approval needs the CAEN check",
+      "items": "It concerns: {items}",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
       "rarCheckRequired": "Approval needs the RAR check",
       "rarRequired": "The RAR check is required",
@@ -127,6 +128,25 @@
       "problemNamed": "Mark a problem: {check}",
       "representative": "Phone confirmed by call",
       "saveFailed": "Could not save the check"
+    },
+    "more": {
+      "cancel": "Cancel",
+      "confirm": "Send the request",
+      "count": "{n}/1000",
+      "items": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "itemsLegend": "It concerns",
+      "note": "What is missing?",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write what is missing.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "At least 10 characters.",
+      "title": "What is missing?"
     },
     "noReason": "no reason",
     "photo": "Photo {n}, opened full size",
@@ -467,11 +487,13 @@
     },
     "mobile": "Mobile mechanic · {km} km radius",
     "more": "More",
+    "more_requested": "More details requested",
     "open": "Open the file",
     "openNamed": "Open the file of {name}",
     "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
+    "updated": "Updated",
     "waiting": {
       "one": "waiting {n} working day",
       "other": "waiting {n} working days"

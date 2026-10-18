@@ -43,6 +43,12 @@ import {
   VerificationApprove,
   type VerificationApproveData,
 } from '../verification-approve/verification-approve';
+import {
+  VerificationMore,
+  type VerificationMoreData,
+  type VerificationMoreRefusal,
+  type VerificationMoreRequest,
+} from '../verification-more/verification-more';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
 import {
@@ -112,6 +118,11 @@ const REJECTION_REFUSALS: Record<
   note_too_short: 'noteTooShort',
   reason_required: 'reasonRequired',
 };
+// The 422s a request for more answers by asking again, the note marked.
+const MORE_REFUSALS: Record<string, VerificationMoreRefusal | undefined> = {
+  note_required: 'noteRequired',
+  note_too_short: 'noteTooShort',
+};
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
@@ -175,8 +186,11 @@ export class VerificationFile {
   protected readonly refused = signal<string | null>(null);
   // A decision or a reopening on its way: a second press waits for nothing.
   protected readonly busy = signal(false);
-  // The rejection is the call on its way, so its button carries the spinner.
-  protected readonly rejecting = signal(false);
+  // The rejection or the request for more on its way, so its own button
+  // carries the spinner; null while no such call is out.
+  protected readonly inflight = signal<'rejected' | 'more_requested' | null>(
+    null,
+  );
   // The RAR number's correction field: what is typed, and its refusal.
   protected readonly correcting = signal<string | null>(null);
   protected readonly correctError = signal<string | null>(null);
@@ -373,12 +387,26 @@ export class VerificationFile {
         name: file.decidedBy?.name || SYSTEM_NAME,
         when: this.when(file.decidedAt),
       }),
-      reason:
-        file.reasonCode || file.reasonNote
-          ? this.t('footer.reason', {
-              reason: this.reason(file.reasonCode, file.reasonNote),
-            })
-          : null,
+      ...(file.status === 'more_requested'
+        ? {
+            items: file.requestedItems?.length
+              ? this.t('footer.items', {
+                  items: file.requestedItems
+                    .map((code) => this.t(`more.items.${code}`))
+                    .join(', '),
+                })
+              : null,
+            reason: file.reasonNote,
+          }
+        : {
+            items: null,
+            reason:
+              file.reasonCode || file.reasonNote
+                ? this.t('footer.reason', {
+                    reason: this.reason(file.reasonCode, file.reasonNote),
+                  })
+                : null,
+          }),
     };
   });
 
@@ -490,37 +518,70 @@ export class VerificationFile {
       this.focus('[data-part="reject"]');
       return;
     }
-    const refused = await this.sendRejection(answer);
+    const refused = await this.send(
+      { decision: 'rejected', ...answer },
+      REJECTION_REFUSALS,
+    );
     if (refused) await this.reject({ ...answer, refused });
   }
 
-  // Sends the rejection; the field to mark when it must be asked again.
-  private async sendRejection(
-    answer: VerificationRejection,
-  ): Promise<VerificationRejectRefusal | null> {
+  // Asks what is missing, then sends the request for more; answered as a
+  // rejection is, the note the field a 422 marks.
+  async ask(values: VerificationMoreData = {}) {
+    if (this.asking || this.busy() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<VerificationMoreRequest, VerificationMoreData>(VerificationMore, {
+        data: values,
+        shape: 'dialog',
+        title: 'admin.file.more.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus('[data-part="ask"]');
+      return;
+    }
+    const refused = await this.send(
+      { decision: 'more_requested', ...answer },
+      MORE_REFUSALS,
+    );
+    if (refused) await this.ask({ ...answer, refused });
+  }
+
+  // Sends a rejection or a request for more; the field to mark when it must
+  // be asked again, by `refusals`.
+  private async send<R>(
+    body: VerificationDecisionDto & { decision: 'rejected' | 'more_requested' },
+    refusals: Record<string, R | undefined>,
+  ): Promise<R | null> {
     if (this.busy()) return null;
     this.busy.set(true);
-    this.rejecting.set(true);
+    this.inflight.set(body.decision);
     this.refused.set(null);
     try {
       await this.api.verificationFileControllerDecision({
-        body: { decision: 'rejected', ...answer },
+        body,
         id: this.fileId,
       });
       this.file.reload();
       this.focus('h3');
       return null;
     } catch (error) {
-      return await this.rejectionFailed(error);
+      return await this.sendFailed(error, refusals);
     } finally {
       this.busy.set(false);
-      this.rejecting.set(false);
+      this.inflight.set(null);
     }
   }
 
-  private async rejectionFailed(error: unknown) {
+  private async sendFailed<R>(
+    error: unknown,
+    refusals: Record<string, R | undefined>,
+  ) {
     const code = toProblem(error).code ?? '';
-    const refused = REJECTION_REFUSALS[code];
+    const refused = refusals[code];
     if (refused) return (await this.reread()) ? refused : null;
     this.refusal(error);
     if (code !== 'verification_transition_refused') this.file.reload();

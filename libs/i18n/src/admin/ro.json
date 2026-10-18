@@ -83,6 +83,7 @@
       "ask": "Cere completări",
       "caenHint": "Verificarea CAEN 4520 e obligatorie",
       "caenRequired": "Aprobarea cere verificarea CAEN",
+      "items": "Privește: {items}",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
       "rarCheckRequired": "Aprobarea cere verificarea RAR",
       "rarRequired": "Verificarea RAR e obligatorie",
@@ -129,6 +130,25 @@
       "problemNamed": "Marchează o problemă: {check}",
       "representative": "Telefon confirmat prin apel",
       "saveFailed": "Nu am putut salva verificarea"
+    },
+    "more": {
+      "cancel": "Renunță",
+      "confirm": "Trimite cererea",
+      "count": "{n}/1000",
+      "items": {
+        "address": "Adresa",
+        "documents": "Documente",
+        "other": "Altceva",
+        "photos": "Fotografiile",
+        "rar": "Autorizația RAR"
+      },
+      "itemsLegend": "Privește",
+      "note": "Ce lipsește?",
+      "noteHint": "Service‑ul primește mesajul cuvânt cu cuvânt.",
+      "noteRequired": "Scrie ce lipsește.",
+      "noteTooLong": "Mesajul are cel mult 1000 de caractere.",
+      "noteTooShort": "Cel puțin 10 caractere.",
+      "title": "Ce lipsește?"
     },
     "noReason": "fără motiv",
     "photo": "Fotografia {n}, deschisă în mărime mare",
@@ -478,11 +498,13 @@
     },
     "mobile": "Mecanic mobil · rază {km} km",
     "more": "Mai multe",
+    "more_requested": "Cerute completări",
     "open": "Deschide dosarul",
     "openNamed": "Deschide dosarul {name}",
     "rejected": "Respins",
     "retry": "Reîncearcă",
     "stale": "(neactualizat)",
+    "updated": "Actualizat",
     "waiting": {
       "few": "așteaptă de {n} zile lucrătoare",
       "one": "așteaptă de {n} zi lucrătoare",
