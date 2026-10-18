@@ -3,15 +3,13 @@ import { fold } from '@motor-fix/contracts';
 // The brand list MotorFix keeps. A brand is matched by its `key` across
 // loads, so a key never changes once shipped; renaming a brand changes only
 // its name. A brand removed from this list is retired, never deleted.
-const BODY_STYLES = [
-  'saloon',
-  'hatchback',
-  'suv',
-  'crossover',
-  'estate',
-  'fastback',
-] as const;
-export type BodyStyle = (typeof BODY_STYLES)[number];
+export type BodyStyle =
+  | 'saloon'
+  | 'hatchback'
+  | 'suv'
+  | 'crossover'
+  | 'estate'
+  | 'fastback';
 
 export interface BrandRecord {
   key: string;
