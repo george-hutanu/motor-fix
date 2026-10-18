@@ -82,8 +82,7 @@ describe('validateCarModels under attack', () => {
         car('a-1', 'c', 1),
       ]);
     expect(fn).toThrow(CarModelFileError);
-    expect(fn).toThrow(/key/i);
-    expect(fn).toThrow(/a-1/);
+    expect(fn).toThrow(/^duplicate key "a-1"$/);
   });
 
   // @traces 405-FR-004
