@@ -37,7 +37,7 @@
   </div>
   <div class="remember-row">
     <label class="remember">
-      <input type="checkbox" formControlName="remember" />
+      <input class="mf-check" type="checkbox" formControlName="remember" />
       <span>{{ 'public.signIn.remember' | t }}</span>
     </label>
     <button type="button" class="forgot" [disabled]="save.state() === 'sending'" (click)="switchTo('reset')">

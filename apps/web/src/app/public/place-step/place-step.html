@@ -40,8 +40,8 @@
     }
   </div>
 </div>
-<p [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
-<p class="hint" aria-live="polite">
+<p class="mf-message" [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
+<p class="hint mf-message" id="place-suggested" aria-live="polite">
   @if (suggestions().length > 0) {
     {{ 'public.listing.place.found' | t: { count: suggestions().length } }}
   } @else if (nothingFound()) {
@@ -49,7 +49,7 @@
   }
 </p>
 @if (searchDown()) {
-  <p class="error" id="place-search-down">{{ 'public.listing.place.searchDown' | t }}</p>
+  <p class="error mf-message" id="place-search-down">{{ 'public.listing.place.searchDown' | t }}</p>
 }
 
 <div class="map-area">
@@ -57,7 +57,7 @@
     {{ 'public.listing.place.manualPin' | t }}
   </button>
   @if (armed()) {
-    <p class="hint" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
+    <p class="hint" id="place-armed" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
   }
   <div
     #map
@@ -66,13 +66,13 @@
     [tabIndex]="0"
     role="application"
     [attr.aria-label]="'public.listing.place.map' | t"
-    [attr.aria-describedby]="messages().position ? 'place-outside' : 'place-map-hint'"
+    [attr.aria-describedby]="messages().position ? 'place-outside' : armed() ? 'place-armed' : 'place-map-hint'"
     (keydown)="nudge($event)"
   ></div>
   @if (mapDown()) {
-    <p class="error" role="alert">{{ 'public.listing.place.mapDown' | t }}</p>
+    <p class="error mf-message" role="alert">{{ 'public.listing.place.mapDown' | t }}</p>
   }
-  <p [class]="messages().position?.warning ? 'warning' : 'error'" id="place-outside" role="status" aria-live="polite">{{ messages().position ? (messages().position!.key | t) : '' }}</p>
+  <p class="mf-message" [class]="messages().position?.warning ? 'warning' : 'error'" id="place-outside" role="status" aria-live="polite">{{ messages().position ? (messages().position!.key | t) : '' }}</p>
   <p class="hint" id="place-map-hint">
     @if (hasPin()) {
       {{ 'public.listing.place.dragHint' | t }}
@@ -104,7 +104,7 @@
     <span aria-hidden="true">{{ 'public.listing.place.km' | t }}</span>
   </div>
   @let radius = messages().radius;
-  <p [class]="radius ? (radius.warning ? 'warning' : 'error') : 'hint'" id="place-radius-hint">
+  <p class="mf-message" [class]="radius ? (radius.warning ? 'warning' : 'error') : 'hint'" id="place-radius-hint">
     @if (radius) {
       {{ radius.key | t }}
     } @else {

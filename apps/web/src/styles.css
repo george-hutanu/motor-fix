@@ -66,3 +66,44 @@ input[type="checkbox"].mf-check:checked::after {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* An empty message region (an error, a warning, a status line) takes no room
+   and stays in the accessibility tree, so a screen reader hears what fills it
+   later; display: none would drop it. The shape of .sr-only, while empty. */
+.mf-message:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A control scrolled into view by the keyboard stops clear of the bars
+   around it: the public site bar above, the tab bar and the consent bar
+   below. The frames give their bars' heights on their hosts, the consent bar
+   on the root; the dashboard frame has no sticky bar at its top. */
+:where(a, button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin-top: calc(var(--public-site-bar, 0px) + var(--mf-space-2));
+  scroll-margin-bottom: calc(
+    var(--tab-bar, 0px) +
+    var(--consent-bar, 0px) +
+    var(--mf-space-2)
+  );
+}
+
+/* A control inside a bar, or inside a page's own sticky bar, is where the
+   bar is: it never scrolls under one, so it keeps no room, and focusing it
+   (the focus coming back to the button that opened a sheet or a list) never
+   scrolls the page. */
+:where(
+  mf-public-frame > .bar,
+  mf-public-tab-bar,
+  mf-dashboard-tab-bar,
+  mf-consent-bar,
+  mf-list-your-garage nav,
+  mf-list-your-garage .actions,
+  mf-request-drawer .actions
+) :where(a, button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin: 0;
+}

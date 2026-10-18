@@ -6,7 +6,7 @@ import { test } from './fixtures.js';
 const preview = (page: Page) => page.locator('mf-garage-preview');
 const details = (page: Page) => page.locator('mf-details-step');
 const chip = (page: Page, name: string) =>
-  page.locator('mf-brands-step .chips button', { hasText: name });
+  page.locator('mf-brands-step .chips > li > button', { hasText: name });
 const prices = (page: Page) => page.locator('mf-prices-step');
 const mechanics = (page: Page) => page.locator('mf-mechanics-step');
 

@@ -16,6 +16,10 @@
       "cancel": "Cancel",
       "confirm": "Approve and publish",
       "count": "{n}/1000",
+      "documents": {
+        "onrc_certificate": "ONRC company certificate",
+        "rar_authorisation": "RAR authorisation"
+      },
       "listed": "You approve past:",
       "missingCheck": "{label}: {result}",
       "missingDocument": "Missing: {document}",

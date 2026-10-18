@@ -145,7 +145,11 @@ export function keepOutOfTabOrder(host: HTMLElement) {
     for (const control of host.querySelectorAll<HTMLElement>(
       'a, button, canvas, summary, [tabindex]',
     )) {
-      if (control.tabIndex !== -1) control.tabIndex = -1;
+      // A canvas is not focusable without a tabindex, while -1 would still
+      // take the focus from a click on a pin.
+      if (control instanceof HTMLCanvasElement) {
+        control.removeAttribute('tabindex');
+      } else if (control.tabIndex !== -1) control.tabIndex = -1;
     }
   };
   hide();

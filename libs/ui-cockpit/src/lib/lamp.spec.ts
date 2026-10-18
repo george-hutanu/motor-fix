@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { Lamp } from './lamp';
 
@@ -142,4 +143,33 @@ describe('lamp colours', () => {
       }
     });
   }
+});
+
+@Component({
+  imports: [Lamp, TranslatePipe],
+  template: `<mf-lamp state="green" [label]="'cockpit.gauges.lampGreen' | t" />`,
+})
+class Translated {}
+
+// @traces 248-FR-007
+describe('a lamp named in both languages', () => {
+  it('carries its word in Romanian, then in English, beside the hidden dot', async () => {
+    const i18n = TestBed.inject(I18n);
+    await i18n.enter('cockpit');
+    const fixture = TestBed.createComponent(Translated);
+    fixture.detectChanges();
+    const lamp = (fixture.nativeElement as HTMLElement).querySelector(
+      'mf-lamp',
+    ) as HTMLElement;
+
+    expect(lamp.textContent?.trim()).toBe('Lucrează pe Dacia');
+
+    await i18n.use('en');
+    fixture.detectChanges();
+
+    expect(lamp.textContent?.trim()).toBe('Works on Dacia');
+    expect(
+      lamp.querySelector('.mf-lamp-dot')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
 });

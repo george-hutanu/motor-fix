@@ -39,8 +39,9 @@ export class AdminLogFilters implements OnDestroy {
   readonly filter = input.required<LogFilter>();
   // The settled search text, 300 ms after the last key.
   readonly search = output<string>();
-  // The whole filter, at each choice the pickers allow.
-  readonly change = output<LogFilter>();
+  // The whole filter, at each choice the pickers allow. Not named `change`:
+  // the pickers' native change event bubbles to this host as well.
+  readonly applied = output<LogFilter>();
 
   protected readonly max = SYSTEM_LOG_SEARCH_MAX;
   // What the box holds: the address's text until the admin types, and the
@@ -90,7 +91,7 @@ export class AdminLogFilters implements OnDestroy {
   }
 
   protected choose(choice: LogChoice) {
-    this.change.emit({ ...choice, q: this.filter().q });
+    this.applied.emit({ ...choice, q: this.filter().q });
   }
 
   protected async openSheet() {

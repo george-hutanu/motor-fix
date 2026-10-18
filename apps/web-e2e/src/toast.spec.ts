@@ -1,25 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-
 import { expect, type Page } from '@playwright/test';
 
 import { settled } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
-
-type Axe = {
-  run: (
-    context: unknown,
-    options?: unknown,
-  ) => Promise<{
-    violations: Array<{ id: string; impact: string; nodes: unknown[] }>;
-  }>;
-};
-
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 const TEXTS = {
   en: { cockpit: 'Show a notification', saved: 'Saved' },
@@ -27,15 +11,12 @@ const TEXTS = {
 };
 
 async function toasterViolations(page: Page) {
-  await page.evaluate(AXE);
-  return page.evaluate(async () => {
-    const axe = (globalThis as unknown as { axe: Axe }).axe;
-    const result = await axe.run(
-      { include: [['hlm-toaster']] },
-      { resultTypes: ['violations'] },
-    );
-    return result.violations.map((v) => `${v.id} (${v.impact})`);
-  });
+  const found = await violations(
+    page,
+    { resultTypes: ['violations'] },
+    { include: [['hlm-toaster']] },
+  );
+  return found.map((v) => `${v.id} (${v.impact})`);
 }
 
 test.describe('the toast on the kit page', () => {

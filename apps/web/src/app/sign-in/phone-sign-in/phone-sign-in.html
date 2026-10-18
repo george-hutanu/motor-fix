@@ -15,7 +15,7 @@
       <mf-field-error id="mf-phone-number-error" [save]="phoneSave" [control]="phoneForm.controls.phone" />
     </div>
     <label class="remember">
-      <input type="checkbox" formControlName="remember" />
+      <input class="mf-check" type="checkbox" formControlName="remember" />
       <span>{{ 'public.signIn.remember' | t }}</span>
     </label>
     <ng-container [ngTemplateOutlet]="sendProblem" />
