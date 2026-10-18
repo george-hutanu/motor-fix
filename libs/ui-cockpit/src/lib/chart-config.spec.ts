@@ -263,8 +263,8 @@ describe('readTheme', () => {
     el.remove();
   });
 
-  // @traces 975-type-scale-FR-005
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-005
+  // @traces 975-FR-008
   it('reads the label size from the label token, as a number of pixels', () => {
     const el = document.createElement('div');
     el.style.setProperty('--mf-size-label', '12px');

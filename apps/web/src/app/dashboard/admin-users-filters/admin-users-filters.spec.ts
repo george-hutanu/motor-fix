@@ -14,7 +14,7 @@ import type { UsersFilter } from '../admin-users-filters-sheet/admin-users-filte
 
 @Component({
   imports: [AdminUsersFilters],
-  template: `<mf-admin-users-filters [q]="q()" [roles]="roles()" [status]="status()" (search)="searched.push($event)" (filter)="filtered.push($event)" />`,
+  template: `<mf-admin-users-filters [q]="q()" [roles]="roles()" [status]="status()" (settled)="searched.push($event)" (filter)="filtered.push($event)" />`,
 })
 class Host {
   readonly q = signal('');
@@ -436,8 +436,8 @@ describe("the phone's filter button", () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-002
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-002
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'admin-users-filters.css'),
     'utf8',

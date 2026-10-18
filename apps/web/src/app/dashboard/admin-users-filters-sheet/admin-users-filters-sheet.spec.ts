@@ -195,9 +195,9 @@ describe("the accounts' filters sheet", () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-003
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-003
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'admin-users-filters-sheet.css'),
     'utf8',
@@ -216,7 +216,7 @@ describe('type scale', () => {
     );
   });
 
-  // @traces 975-type-scale-FR-003
+  // @traces 975-FR-003
   it('keeps the label-size eyebrows out of paragraphs', () => {
     const template = readFileSync(
       join(__dirname, 'admin-users-filters-sheet.html'),

@@ -124,10 +124,26 @@ export class AdminQueue {
     this.queue.reload();
   }
 
-  private read(wanted: number): Promise<VerificationQueueDto> {
-    return pagedRead(wanted, (page) =>
+  private async read(wanted: number): Promise<VerificationQueueDto> {
+    const next = await pagedRead(wanted, (page) =>
       this.api.adminOverviewControllerQueue(page),
     );
+    this.remember();
+    return next;
+  }
+
+  // Every row shown since the view opened, where it last stood: a re-read for
+  // another file's event can drop a row before its own decision arrives.
+  private readonly seen = new Map<
+    string,
+    { index: number; row: VerificationQueueRowDto }
+  >();
+  private remember() {
+    const shown = this.rows();
+    for (const row of this.queue.value()?.items ?? []) {
+      const index = shown.findIndex((item) => item.id === row.id);
+      this.seen.set(row.id, { index, row });
+    }
   }
 
   private t(key: string, params?: Record<string, string | number>) {
@@ -171,16 +187,17 @@ export class AdminQueue {
       .on(['verification.decided'])
       .pipe(takeUntilDestroyed())
       .subscribe(({ id }) => {
+        if (this.approved().has(id)) return;
         const row = this.queue.value()?.items.find((item) => item.id === id);
-        if (!row || this.approved().has(id)) return;
         // Where it stands on screen, rows kept earlier included.
-        const index = this.rows().findIndex((shown) => shown.id === id);
+        const place = row
+          ? { index: this.rows().findIndex((item) => item.id === id), row }
+          : this.seen.get(id);
+        if (!place) return;
         this.api.verificationFileControllerRead({ id }).then(
           ({ file }) => {
             if (file.status !== 'approved') return;
-            this.approved.update((kept) =>
-              new Map(kept).set(id, { index, row }),
-            );
+            this.approved.update((kept) => new Map(kept).set(id, place));
           },
           // A failed read leaves the row to drop, as before this story.
           () => undefined,
