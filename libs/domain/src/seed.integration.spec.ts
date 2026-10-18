@@ -897,6 +897,11 @@ describe('seed of the platform rules', () => {
   const testOnly = { key: { in: ['skip_manual_approval', 'skip_rar_check'] } };
 
   beforeEach(() => prisma.platformRule.deleteMany({ where: testOnly }));
+  // The last case leaves the RAR switch on; the suites sharing the database
+  // read both switches off.
+  afterAll(() =>
+    prisma.platformRule.updateMany({ data: { value: false }, where: testOnly }),
+  );
 
   it('adds the two test-only rules, checks required, beside the migrated ones', async () => {
     expect(seed('test').status).toBe(0);
