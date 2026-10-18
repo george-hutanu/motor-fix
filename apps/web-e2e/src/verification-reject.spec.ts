@@ -97,7 +97,9 @@ test.describe('rejecting a garage with a reason @seeded @database', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Mesaj pentru service' });
-      await expect(dialog).toBeVisible();
+      // The dialog's container has no box of its own on a phone, where the
+      // panel inside it is a fixed bottom sheet: the panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBe(0);
 
       const confirm = dialog.getByRole('button', { name: 'Respinge' });
@@ -135,7 +137,7 @@ test.describe('rejecting a garage with a reason @seeded @database', () => {
       }>(
         `SELECT f.status::text AS file, g.status::text AS garage, e.payload
          FROM verification_file f JOIN garage g ON g.id = f.garage_id
-         JOIN outbox_event e ON e.subject_id = f.id AND e.kind = 'verification.decided'
+         JOIN outbox_event e ON e.subject_id = f.id::text AND e.kind = 'verification.decided'
          WHERE f.id = $1`,
         [fileId],
       );

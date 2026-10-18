@@ -51,7 +51,7 @@ test.describe('the legal check panel @seeded', () => {
     );
     await db.query(
       `INSERT INTO legal_document (verification_file_id, kind, pages, status)
-       SELECT $1, k, ARRAY[]::text[], 'valid'
+       SELECT $1::uuid, k, ARRAY['legal_document/' || $1::text || '/e2e-' || k || '-1'], 'valid'
        FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']) AS k`,
       [fileId],
     );
