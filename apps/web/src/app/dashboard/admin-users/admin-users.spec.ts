@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -696,5 +699,19 @@ describe('the search on the address', () => {
 
     expect(url()).toBe(`${VIEW}?role=driver,mechanic`);
     expect(reads.at(-1)).toEqual({ role: ['driver', 'mechanic'] });
+  });
+});
+
+describe('the view on the page', () => {
+  const stylesheet = readFileSync(join(__dirname, 'admin-users.css'), 'utf8');
+
+  it("keeps the header's gutter at both sides, so the controls and cards start under the title and end under the bell", () => {
+    expect(stylesheet).toMatch(
+      /^:host \{[^}]*margin-inline: var\(--mf-space-4\);/m,
+    );
+  });
+
+  it('starts the totals line at the view edge, where the title starts', () => {
+    expect(stylesheet).not.toMatch(/\n\.totals \{[^}]*padding-inline/);
   });
 });

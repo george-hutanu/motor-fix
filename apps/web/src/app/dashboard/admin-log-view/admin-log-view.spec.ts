@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -611,5 +614,18 @@ describe('the new entries bar', () => {
     await open();
 
     expect(every).not.toHaveBeenCalled();
+  });
+});
+
+describe('the view on the page', () => {
+  const stylesheet = readFileSync(
+    join(__dirname, 'admin-log-view.css'),
+    'utf8',
+  );
+
+  it("keeps the header's gutter at both sides, so the search, the filters and the entries start under the title and end under the bell", () => {
+    expect(stylesheet).toMatch(
+      /^:host \{[^}]*margin-inline: var\(--mf-space-4\);/m,
+    );
   });
 });
