@@ -32,7 +32,7 @@
             (input)="type(i, 'name', $event)"
             (blur)="leave(i)"
           />
-          <p [class]="message?.warning ? 'warning' : 'error'" [id]="'listing-mechanic-error-' + i" role="status" aria-live="polite">{{ message ? (message.key | t) : '' }}</p>
+          <p class="mf-message" [class]="message?.warning ? 'warning' : 'error'" [id]="'listing-mechanic-error-' + i" role="status" aria-live="polite">{{ message ? (message.key | t) : '' }}</p>
           <input
             hlmInput
             name="speciality"

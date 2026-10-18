@@ -5,6 +5,11 @@ import { I18n } from '@motor-fix/i18n';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
+import type { MapFake } from '../../place-step/place-step.testing';
+
+jest.mock('maplibre-gl', () =>
+  jest.requireActual('../../place-step/place-step.testing'),
+);
 
 const PINS: GaragePinsDto = {
   pins: [
@@ -393,6 +398,37 @@ describe('ResultsMap, a move of the map', () => {
     fixture.detectChanges();
 
     expect(said(hint())).toBe('Zoom in');
+  });
+});
+
+// @traces 248-FR-004
+describe('RESULTS_MAP, the map while it loads', () => {
+  const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+
+  afterEach(() => {
+    fake.manualLoad = false;
+  });
+
+  it('keeps the canvas MapLibre adds out of the keyboard order before the map has loaded', async () => {
+    fake.manualLoad = true;
+    const host = document.createElement('div');
+    document.body.append(host);
+    void TestBed.inject(RESULTS_MAP)(host, {
+      moved: jest.fn(),
+      picked: jest.fn(),
+      shifted: jest.fn(),
+    });
+    // The opener awaits MapLibre's import before it builds the map.
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // MapLibre draws its canvas, focusable, long before the style loads.
+    const canvas = document.createElement('canvas');
+    canvas.tabIndex = 0;
+    host.append(canvas);
+    await Promise.resolve();
+
+    expect(canvas.hasAttribute('tabindex')).toBe(false);
+    host.remove();
   });
 });
 

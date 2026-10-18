@@ -462,9 +462,13 @@ const fuelRow = (step: HTMLElement, name: string) =>
 const fuels = (step: HTMLElement, name: string) => [
   ...(fuelRow(step, name)?.querySelectorAll<HTMLButtonElement>('button') ?? []),
 ];
+// A fuel's name is its own text: the brand read first, then the fuel and,
+// once ticked, the lamp's words, so what shows is all in it (WCAG 2.5.3).
+const fuelName = (f: HTMLElement) =>
+  (f.textContent ?? '').replace(/\s+/g, ' ').trim();
 const fuel = (step: HTMLElement, name: string, label: string) => {
-  const found = fuels(step, name).find(
-    (f) => f.getAttribute('aria-label') === `${name}, ${label}`,
+  const found = fuels(step, name).find((f) =>
+    new RegExp(`^${name}, ${label}( |$)`).test(fuelName(f)),
   );
   if (!found) throw new Error(`no fuel ${label} under ${name}`);
   return found;
@@ -483,7 +487,12 @@ describe('step 2, the fuels of a taken brand', () => {
 
     await tap(fixture, step, 'Dacia');
 
-    expect(fuels(step, 'Dacia').map((f) => text(f).split(' ')[0])).toEqual([
+    // What shows, after the brand only a screen reader reads.
+    const shown = (f: HTMLElement) =>
+      text(f)
+        .replace(/^Dacia, /, '')
+        .split(' ')[0];
+    expect(fuels(step, 'Dacia').map(shown)).toEqual([
       'Benzină',
       'Diesel',
       'Hibrid',
@@ -495,18 +504,18 @@ describe('step 2, the fuels of a taken brand', () => {
     }
   });
 
-  it('names each fuel with its brand', async () => {
+  it('names each fuel with its brand, holding all the text it shows', async () => {
     const { fixture, step } = await open();
     await tap(fixture, step, 'Dacia');
 
-    expect(
-      fuels(step, 'Dacia').map((f) => f.getAttribute('aria-label')),
-    ).toEqual([
-      'Dacia, Benzină',
-      'Dacia, Diesel',
-      'Dacia, Hibrid',
-      'Dacia, Electric',
+    expect(fuels(step, 'Dacia').map(fuelName)).toEqual([
+      'Dacia, Benzină o lucrezi',
+      'Dacia, Diesel o lucrezi',
+      'Dacia, Hibrid o lucrezi',
+      'Dacia, Electric o lucrezi',
     ]);
+    for (const f of fuels(step, 'Dacia'))
+      expect(f.hasAttribute('aria-label')).toBe(false);
   });
 
   it('shows no fuels under a refused or an unmarked brand', async () => {
@@ -580,9 +589,7 @@ describe('step 2, the fuels of a taken brand', () => {
     await i18n.use('en');
     await settle(fixture);
 
-    expect(
-      fuels(step, 'Dacia').map((f) => f.getAttribute('aria-label')),
-    ).toEqual([
+    expect(fuels(step, 'Dacia').map(fuelName)).toEqual([
       'Dacia, Petrol',
       'Dacia, Diesel',
       'Dacia, Hybrid',

@@ -12,7 +12,7 @@
   (input)="type('name', $event)"
   (blur)="leave('name')"
 />
-<p class="error" id="listing-name-error" role="status" aria-live="polite">{{ errors().name ? (errors().name! | t) : '' }}</p>
+<p class="error mf-message" id="listing-name-error" role="status" aria-live="polite">{{ errors().name ? (errors().name! | t) : '' }}</p>
 
 <label hlmLabel class="field" for="listing-phone">{{ 'public.listing.details.phone' | t }}</label>
 <input
@@ -30,7 +30,7 @@
   (blur)="leave('phone')"
 />
 <p class="hint" id="listing-phone-hint">{{ 'public.listing.details.phoneHint' | t }}</p>
-<p class="error" id="listing-phone-error" role="status" aria-live="polite">{{ errors().phone ? (errors().phone! | t) : '' }}</p>
+<p class="error mf-message" id="listing-phone-error" role="status" aria-live="polite">{{ errors().phone ? (errors().phone! | t) : '' }}</p>
 
 <label hlmLabel class="field" for="listing-known-for">{{ 'public.listing.details.knownFor' | t }}</label>
 <textarea
@@ -47,7 +47,7 @@
   (blur)="leave('knownFor')"
 ></textarea>
 <p class="hint" id="listing-known-for-hint">{{ 'public.listing.details.knownForHint' | t }}</p>
-<p class="error" id="listing-known-for-error" role="status" aria-live="polite">{{ errors().knownFor ? (errors().knownFor! | t) : '' }}</p>
+<p class="error mf-message" id="listing-known-for-error" role="status" aria-live="polite">{{ errors().knownFor ? (errors().knownFor! | t) : '' }}</p>
 
 <fieldset
   data-group="kind"
@@ -66,7 +66,7 @@
       {{ kind.label | t }}
     </button>
   }
-  <p class="error" id="listing-kind-error" role="status" aria-live="polite">{{ errors().businessKind ? (errors().businessKind! | t) : '' }}</p>
+  <p class="error mf-message" id="listing-kind-error" role="status" aria-live="polite">{{ errors().businessKind ? (errors().businessKind! | t) : '' }}</p>
 </fieldset>
 
 @if (value().businessKind === 'mobile') {
@@ -87,6 +87,6 @@
         {{ form.label | t }}
       </button>
     }
-    <p class="error" id="listing-legal-error" role="status" aria-live="polite">{{ errors().mobileLegalForm ? (errors().mobileLegalForm! | t) : '' }}</p>
+    <p class="error mf-message" id="listing-legal-error" role="status" aria-live="polite">{{ errors().mobileLegalForm ? (errors().mobileLegalForm! | t) : '' }}</p>
   </fieldset>
 }

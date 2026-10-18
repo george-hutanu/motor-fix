@@ -32,12 +32,12 @@
     />
     <span class="unit">{{ 'public.listing.prices.lei' | t }}</span>
   </div>
-  <p [id]="messageId" [class]="judged.shown?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ judged.shown ? (judged.shown.key | t) : '' }}</p>
+  <p class="mf-message" [id]="messageId" [class]="judged.shown?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ judged.shown ? (judged.shown.key | t) : '' }}</p>
 </ng-template>
 
 <ng-template #named let-path="path">
   @if (error(path + '.name'); as key) {
-    <p class="error" role="status">{{ key | t }}</p>
+    <p class="error mf-message" role="status">{{ key | t }}</p>
   }
 </ng-template>
 
@@ -128,7 +128,7 @@
     </li>
   }
 </ul>
-<p class="error" id="listing-jobs-error" role="status" aria-live="polite">{{ jobsError() ? (jobsError()! | t) : '' }}</p>
+<p class="error mf-message" id="listing-jobs-error" role="status" aria-live="polite">{{ jobsError() ? (jobsError()! | t) : '' }}</p>
 
 <button hlmBtn variant="secondary" type="button" [disabled]="full()" (click)="toSearch()">
   {{ 'public.listing.prices.addJob' | t }}

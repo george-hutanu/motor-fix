@@ -27,15 +27,15 @@
     {{ 'public.listing.photos.choose' | t }}
   </button>
 </div>
-<p id="photos-error" [class]="message()?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ message() ? (message()!.key | t) : '' }}</p>
+<p class="mf-message" id="photos-error" [class]="message()?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ message() ? (message()!.key | t) : '' }}</p>
 @if (refused()) {
-  <p class="error" role="status">{{ 'public.listing.photos.refused' | t }}</p>
+  <p class="error mf-message" role="status">{{ 'public.listing.photos.refused' | t }}</p>
 }
 @if (full()) {
-  <p class="error" role="status">{{ 'public.listing.photos.full' | t }}</p>
+  <p class="error mf-message" role="status">{{ 'public.listing.photos.full' | t }}</p>
 }
 @if (later()) {
-  <p class="error" role="status">{{ 'public.listing.photos.later' | t }}</p>
+  <p class="error mf-message" role="status">{{ 'public.listing.photos.later' | t }}</p>
 }
 @let count = tiles().length;
 <ul cdkDropList cdkDropListOrientation="mixed" [cdkDropListData]="tiles()" (cdkDropListDropped)="drop($event)">

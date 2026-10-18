@@ -25,6 +25,18 @@ import type {
 
 let titles = 0;
 
+// Moves the focus to the page's first <main>, making it focusable from
+// script (tabindex -1) when it is not already. The skip link uses it, and so
+// does a closing task whose opener has left the page. False when there is no
+// main to take it.
+export function focusMain(document: Document): boolean {
+  const main = document.querySelector('main');
+  if (!main) return false;
+  if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+  main.focus();
+  return true;
+}
+
 // Opens a task on top of the current screen. The address never changes; the
 // promise settles with the task's result, or "cancelled" when the person
 // closed it (X, Escape, outside, a drag down, or the browser's Back button).
@@ -47,7 +59,8 @@ export class Overlays {
   );
   private readonly dialogs = this.scope.get(BrnDialogService);
   private readonly positions = inject(OverlayPositionBuilder);
-  private readonly window = inject(DOCUMENT).defaultView;
+  private readonly document = inject(DOCUMENT);
+  private readonly window = this.document.defaultView;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.scope.destroy());
@@ -58,6 +71,7 @@ export class Overlays {
     options: OverlayOptions<D>,
   ): Promise<OverlayResult<R>> {
     if (options.signal?.aborted) return Promise.resolve('cancelled');
+    const opener = this.document.activeElement;
     const titleId = `mf-overlay-title-${++titles}`;
     const sheet = !this.window?.matchMedia?.(TABLET).matches;
     const context: PanelContext = { ...options, sheet, source, titleId };
@@ -89,11 +103,34 @@ export class Overlays {
     // step back over a task's entry a task after the popstate, and a
     // navigation the opener starts on the result (sign-in going to a landing)
     // must come after that replay, or the replay undoes it.
+    // The CDK gives the focus back to the opener only while the opener is
+    // still on the page; when it has gone (a re-rendered row, the sign-in
+    // sheet a 401 opened over nothing focused) the focus would fall to the
+    // body with the closed panel, so it goes to the main content instead.
+    // Focus the person already moved elsewhere stays where it is.
     return firstValueFrom(ref.closed$, { defaultValue: undefined }).then(
-      (result) =>
-        new Promise<OverlayResult<R>>((resolve) =>
+      (result) => {
+        if (!this.stays(opener) && this.lost()) focusMain(this.document);
+        return new Promise<OverlayResult<R>>((resolve) =>
           setTimeout(() => resolve(result ?? 'cancelled')),
-        ),
+        );
+      },
     );
+  }
+
+  // True when the focus is nowhere, or still inside a pane that closed
+  // (the kit marks it data-state="closed") and is leaving the page.
+  private lost(): boolean {
+    const active = this.document.activeElement;
+    return (
+      !active ||
+      active === this.document.body ||
+      !active.isConnected ||
+      !!active.closest('.cdk-overlay-pane[data-state="closed"]')
+    );
+  }
+
+  private stays(element: Element | null): boolean {
+    return !!element && element !== this.document.body && element.isConnected;
   }
 }

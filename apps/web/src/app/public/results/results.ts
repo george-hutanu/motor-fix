@@ -297,6 +297,8 @@ export class Results {
   // What the next read takes in: cards by id, the counts, the first page.
   private readonly wanted = new Set<string>();
   private countsWanted = false;
+  // A loaded card was suspended: its counts read shows even when the total rose.
+  private suspended = false;
   private pageWanted = false;
   private pinsWanted = false;
   private reading = false;
@@ -451,6 +453,7 @@ export class Results {
     if (kind === 'garage.suspended' && loaded) {
       this.leave(id);
       this.countsWanted = true;
+      this.suspended = true;
     } else if (CARD_KINDS.has(kind) && loaded) this.wanted.add(id);
     // A review names itself, not its garage; only loaded garages send them.
     else if (REVIEWS.has(kind))
@@ -481,6 +484,7 @@ export class Results {
       this.pageWanted = false;
       this.wanted.clear();
       this.countsWanted = false;
+      this.suspended = false;
       if (await this.read(undefined, (page, now) => reuse(now, page)))
         this.first();
     } else if (this.wanted.size > 0) {
@@ -491,7 +495,11 @@ export class Results {
       );
     } else if (this.countsWanted) {
       this.countsWanted = false;
-      await this.read(undefined, (page, now) => this.counted(page, now));
+      const suspended = this.suspended;
+      this.suspended = false;
+      await this.read(undefined, (page, now) =>
+        this.counted(page, now, suspended),
+      );
     } else return false;
     return true;
   }
@@ -545,13 +553,14 @@ export class Results {
       : { ...now, items };
   }
 
-  // More found waits behind "Reîncarcă"; fewer, or another split, shows.
-  private counted(page: Page, now: Page): Page {
-    if (page.total > now.total) {
-      this.newer.set(true);
-      return now;
-    }
-    this.newer.set(false);
+  // More found waits behind "Reîncarcă"; fewer, or another split, shows. A
+  // read after a loaded card's suspension shows its counts whatever the total
+  // did, so the card gone is counted out even when others were approved.
+  private counted(page: Page, now: Page, suspended = false): Page {
+    const rose = page.total > now.total;
+    if (rose) this.newer.set(true);
+    if (rose && !suspended) return now;
+    if (!rose) this.newer.set(false);
     const counts = reuse(now.counts, page.counts);
     return counts === now.counts && page.total === now.total
       ? now
