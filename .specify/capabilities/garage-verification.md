@@ -16,6 +16,7 @@ features:
   - 204-rar-activities-check
   - 303-approve-publish-garage
   - 259-approval-rules
+  - 210-legal-check-panel
 ---
 
 # Capability: Garage verification
@@ -92,9 +93,9 @@ _From 204-rar-activities-check._
 
 _From 204-rar-activities-check._
 
-### 300-FR-007 — Every record MUST emit `verification.check_recorded` with fileId, kind and result through the outbox, in the same transaction, to the admin channel.
+### 210-FR-011 — While the owner's dashboard is open, a `verification.decided`, `verification.check_recorded` or `verification.reopened` event on the garage's live channel `garage:{garageId}` MUST make the panel read again; every check record MUST therefore still emit `verification.check_recorded` with fileId and kind (no longer the result, which the garage's staff may not read) through the outbox in the same transaction (300-FR-007), now to the admins and `garage:{garageId}` only, no longer the public `system` channel.
 
-_From 300-verification-checks._
+_From 210-legal-check-panel._
 
 ### 300-FR-008 — The system MUST map a result to a lamp colour: `ok` green, `warning` amber, `failed` red, `not_run` grey.
 
@@ -524,6 +525,58 @@ _From 259-approval-rules._
 
 _From 259-approval-rules._
 
+### 210-FR-001 — The API MUST serve the garage's legal check panel to the garage's `owner` only, at a garage-scoped read: 403 to a `receptionist` or `mechanic` of that garage, 404 to anyone without a membership there (another garage's staff, a driver, an admin, an unknown or malformed garage id); every route needs a session (no `@Public()`).
+
+_From 210-legal-check-panel._
+
+### 210-FR-002 — The read MUST answer for a garage whose own status is `approved`, and 404 when the garage is `draft` or `suspended` or has no verification file; it reads the garage's newest verification file (by creation, whatever the file's status: an approved file reopened since is still that file), its `company`, `caen` and `rar` checks and its legal documents. Document files and their pages are never part of the answer, only each document kind and status; the admin's approval note, reason and reviewer are never part of it.
+
+_From 210-legal-check-panel._
+
+### 210-FR-003 — The answer MUST hold four rows in the order `company`, `caen`, `rar`, `documents`, each with a state (`ok`, `warning`, `failed`, `not_run`), the day it was checked (a calendar date or null) and, for the three checks, the check's recorded detail text when the result is not `ok`; plus the garage's company name, whether it is a mobile mechanic (business kind `mobile`), the activities its RAR authorisation covers (code and Romanian and English name, from `rar_activities`) and `last_checked_on`.
+
+_From 210-legal-check-panel._
+
+### 210-FR-004 — A check row's state MUST be its check's result; the documents row's state MUST be `ok` when both document kinds (ONRC company certificate, RAR authorisation) are present with status `valid`, and `warning` otherwise, the answer naming each kind that is missing or not valid; the `documents` verification check is not read.
+
+_From 210-legal-check-panel._
+
+### 210-FR-005 — The dashboard MUST show, for the owner and the receptionist of a garage whose status is `approved`, the "Profil verificat" / "Verified profile" block with the tag "Verificat" / "Verified"; a mechanic sees no block, and a garage in any other status shows none.
+
+_From 210-legal-check-panel._
+
+### 210-FR-006 — For the owner only, the dashboard MUST show under that block the "Verificare legală" / "Legal check" panel: the four rows of FR-003 in order with their label, detail line and checked line, each row's state shown by colour and by text (green `ok` "în regulă" / "in order", amber `warning` "atenție" / "attention", red `failed` "problemă" / "problem", grey `not_run` "neverificat" / "not checked"), so colour is never the only signal; a row that is not `ok` and whose check has a recorded detail shows that detail as its detail line. Detail and checked lines: company "<company name> · CUI verificat la ANAF și ONRC" / "<company name> · tax ID checked at ANAF and ONRC", "verificat la înscriere" / "checked at sign-up"; CAEN per FR-007, "din certificatul constatator" / "from the company certificate"; RAR the covered activities' names joined by ", " (else "în registrul RAR" / "in the RAR register"), "verificată pe <day>" / "checked on <day>"; documents "certificat constatator și autorizație RAR" / "company certificate and RAR authorisation" (or the missing kinds on `warning`), "verificate pe <last_checked_on>" / "checked on <last_checked_on>"; a `not_run` check's checked line is "neverificat" / "not checked".
+
+_From 210-legal-check-panel._
+
+### 210-FR-007 — The CAEN row's detail MUST read "…, la sediul social" / "…, at the registered seat" for a mobile mechanic and "…, la punctul de lucru" / "…, at the workshop address" otherwise.
+
+_From 210-legal-check-panel._
+
+### 210-FR-008 — Dates in the panel MUST be shown as "1 oct. 2026" in Romanian and "1 Oct 2026" in English, as the Europe/Bucharest calendar day.
+
+_From 210-legal-check-panel._
+
+### 210-FR-009 — The panel read MUST take `last_checked_on` as stored by the approval (303-FR-005) and MUST NOT write it; the RAR row's checked day is the `rar` check's recorded day in Europe/Bucharest, else `last_checked_on`.
+
+_From 210-legal-check-panel._
+
+### 210-FR-010 — While the panel read is in flight the panel MUST show a skeleton of four rows, busy to assistive technology; on a failure it MUST show "Nu am putut încărca verificarea" / "We could not load the check" and a "Încearcă din nou" / "Try again" button that sends the read again.
+
+_From 210-legal-check-panel._
+
+### 210-FR-012 — The panel MUST be one reusable component taking its data and states as inputs, so the profile view (#236) can place it without a second copy.
+
+_From 210-legal-check-panel._
+
+### 210-FR-013 — The panel read MUST ship with its observability: a request counter and latency by outcome, its log line on a refusal, the dashboard panel and alert or the reason for none, listed in `infra/observability/inventory.json`.
+
+_From 210-legal-check-panel._
+
+### 210-FR-014 — Tests MUST cover the row mapping for each result, the documents row, the mobile wording, the date formats, the owner/receptionist/mechanic/outsider answers, the `check_recorded` audience, and one end-to-end flow: approve a test garage, sign in as its owner, see the four green rows and the "Verificat" tag.
+
+_From 210-legal-check-panel._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -557,3 +610,5 @@ _From 259-approval-rules._
 
 - `207-FR-009` — superseded by `259-FR-002` (2026-10-18)
 - `303-FR-004` — superseded by `259-FR-004` (2026-10-18)
+
+- `300-FR-007` — superseded by `210-FR-011` (2026-10-18)
