@@ -92,13 +92,14 @@ if [ "$mode" = self-contained ]; then
   printf 'subjectAltName=DNS:%s\n' "$STORE" >"$work/san"
   openssl x509 -req -in "$work/store.csr" -CA "$work/ca.crt" -CAkey "$work/ca.key" -CAcreateserial \
     -days 1 -extfile "$work/san" -out "$work/store.crt" 2>/dev/null
-  # The store runs as root and reads its key as such; the source and the
-  # sibling read only the authority's certificate.
+  # The store runs as this user, so it reads a key no one else can (the
+  # image would otherwise drop from root to its own user, who could not); the
+  # source and the sibling read only the authority's certificate.
   chmod 644 "$work"/*.crt
   chmod 600 "$work"/*.key
   chmod 755 "$work"
 
-  docker run -d --name "$STORE" --network "$NET" -v "$work:/certs:ro" \
+  docker run -d --name "$STORE" --network "$NET" -v "$work:/certs:ro" --user "$(id -u):$(id -g)" --tmpfs /data:mode=1777 \
     -e AWS_ACCESS_KEY_ID=drill -e AWS_SECRET_ACCESS_KEY=drill-secret \
     chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d \
     mini -dir=/data -bucket=pitr -admin.ui=false -webdav=false -master.telemetry=false \

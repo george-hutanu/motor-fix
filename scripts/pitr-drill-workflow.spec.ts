@@ -200,6 +200,14 @@ describe('the point-in-time drill script', () => {
     expect(script).not.toMatch(/chmod 644 [^\n]*\.key/);
   });
 
+  it('runs the store as the user who owns that key, its data on a throwaway tmpfs', () => {
+    const store = script.slice(script.indexOf('docker run -d --name "$STORE"'));
+    const command = store.slice(0, store.indexOf('>/dev/null'));
+
+    expect(command).toContain('--user "$(id -u):$(id -g)"');
+    expect(command).toContain('--tmpfs /data:mode=1777');
+  });
+
   it('removes everything it started however it ends', () => {
     expect(script).toMatch(/^trap teardown EXIT$/m);
   });
