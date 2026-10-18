@@ -650,6 +650,7 @@
       "one": "{count} doesn't take it",
       "other": "{count} don't take it"
     },
+    "placeTitle": "Where should we look for a garage?",
     "reload": "Reload",
     "retry": "Try again",
     "takers": {

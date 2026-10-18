@@ -664,6 +664,7 @@
       "one": "{count} nu o primește",
       "other": "{count} nu o primesc"
     },
+    "placeTitle": "Unde cauți service?",
     "reload": "Reîncarcă",
     "retry": "Reîncearcă",
     "takers": {

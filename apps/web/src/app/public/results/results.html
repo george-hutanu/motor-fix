@@ -24,7 +24,8 @@
   }
   <p class="locating" role="status">@if (state() === 'locating') {{{ 'public.results.locating' | t }}}</p>
   @if (state() === 'placeless') {
-    <h1 class="placeless">{{ 'public.results.locationFailed' | t }}</h1>
+    <h1>{{ 'public.results.placeTitle' | t }}</h1>
+    <p class="placeless">{{ 'public.results.locationFailed' | t }}</p>
     <mf-address-field
       ids="results-place"
       [label]="'public.results.enterAddress' | t"
