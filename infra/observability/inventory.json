@@ -130,7 +130,7 @@
         "keycloak-memory"
       ],
       "reason": "staging only; health at /realms/master, answering once the realm is imported; Keycloak sends no telemetry itself: the worker reads its management /metrics (port 9000, private network) at KEYCLOAK_METRICS_URL once a minute into motorfix_keycloak_heap_used_bytes, motorfix_keycloak_heap_max_bytes and motorfix_datastore_up{store=\"keycloak\"} on the overview dashboard's keycloak row, which fire keycloak-memory; the MCP server's mcp_issuer_up probe still fires mcp-issuer-unreachable",
-      "story": "ST-1178"
+      "story": "ST-1016"
     },
     {
       "kind": "railway-service",

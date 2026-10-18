@@ -171,19 +171,43 @@ describe('parseKeycloakMetrics on hostile Prometheus text', () => {
 // @traces 1178-FR-007
 describe('parseKeycloakMetrics on bodies that are failed readings', () => {
   it.each([
-    ['empty', ''],
-    ['only whitespace', ' \r\n\t\n'],
-    ['an HTML error page', '<html><body>502 Bad Gateway</body></html>'],
-    ['only another family', 'jvm_threads_live_threads 42.0'],
-    ['only non-heap used', used('area="nonheap",id="Metaspace"', '5')],
-    ['used with no max', used(HEAP, '5')],
-    ['max with no used', max(HEAP, '5')],
-    ['only -1 maxima', [used(HEAP, '5'), max(HEAP, '-1.0')].join('\n')],
-    ['a zero maximum', [used(HEAP, '5'), max(HEAP, '0.0')].join('\n')],
-    ['a NaN maximum', [used(HEAP, '5'), max(HEAP, 'NaN')].join('\n')],
-    ['an infinite maximum', [used(HEAP, '5'), max(HEAP, '+Inf')].join('\n')],
-  ])('throws for %s', (_, body) => {
-    expect(() => parseKeycloakMetrics(body)).toThrow();
+    ['empty', '', 'no heap series'],
+    ['only whitespace', ' \r\n\t\n', 'no heap series'],
+    [
+      'an HTML error page',
+      '<html><body>502 Bad Gateway</body></html>',
+      'no heap series',
+    ],
+    ['only another family', 'jvm_threads_live_threads 42.0', 'no heap series'],
+    [
+      'only non-heap used',
+      used('area="nonheap",id="Metaspace"', '5'),
+      'no heap series',
+    ],
+    ['used with no max', used(HEAP, '5'), 'no positive heap maximum'],
+    ['max with no used', max(HEAP, '5'), 'no heap series'],
+    [
+      'only -1 maxima',
+      [used(HEAP, '5'), max(HEAP, '-1.0')].join('\n'),
+      'no positive heap maximum',
+    ],
+    [
+      'a zero maximum',
+      [used(HEAP, '5'), max(HEAP, '0.0')].join('\n'),
+      'no positive heap maximum',
+    ],
+    [
+      'a NaN maximum',
+      [used(HEAP, '5'), max(HEAP, 'NaN')].join('\n'),
+      'no positive heap maximum',
+    ],
+    [
+      'an infinite maximum',
+      [used(HEAP, '5'), max(HEAP, '+Inf')].join('\n'),
+      'no positive heap maximum',
+    ],
+  ])('throws for %s', (_, body, message) => {
+    expect(() => parseKeycloakMetrics(body)).toThrow(new Error(message));
   });
 
   it('names neither the body nor its values in the error', () => {
@@ -194,8 +218,7 @@ describe('parseKeycloakMetrics on bodies that are failed readings', () => {
     } catch (error) {
       message = (error as Error).message;
     }
-    expect(message).not.toMatch(/secret-token-123|G1 Old Gen/);
-    expect(message.length).toBeGreaterThan(0);
+    expect(message).toBe('no positive heap maximum');
   });
 
   it('throws rather than reporting an infinite maximum when sums overflow', () => {
@@ -204,7 +227,9 @@ describe('parseKeycloakMetrics on bodies that are failed readings', () => {
       max(HEAP, '1.7E308'),
       max('area="heap",id="b"', '1.7E308'),
     ].join('\n');
-    expect(() => parseKeycloakMetrics(body)).toThrow();
+    expect(() => parseKeycloakMetrics(body)).toThrow(
+      new Error('heap sum out of range'),
+    );
   });
 
   it('reads a ten-thousand-pool body in well under a second', () => {
@@ -228,7 +253,7 @@ describe('parseKeycloakMetrics on bodies that are failed readings', () => {
       parseKeycloakMetrics(
         `jvm_memory_used_bytes{area="heap"} ${' '.repeat(200_000)}x`,
       ),
-    ).toThrow();
+    ).toThrow(new Error('no heap series'));
     expect(Date.now() - started).toBeLessThan(1000);
   });
 });

@@ -83,7 +83,7 @@ deploys this image:
 | Keycloak's guide, request | 1250 MB |
 | Keycloak's guide, limit | 1360 MB |
 | The staging service's limit to set | 1.36–1.5 GB (a heap of about 950 MB–1 GB) |
-| A limit Keycloak refuses to start under, in the guide | 768 MiB |
+| A limit a 2026 test saw Keycloak refuse to start under | 768 MiB |
 | A 512 MB limit | a heap of about 358 MB, which may not start at all |
 
 The worker reads Keycloak's heap from `/metrics` once a minute when

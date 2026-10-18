@@ -67,7 +67,15 @@ describe('the Keycloak image', () => {
     expect(runtime).toContain(
       'COPY realm-motorfix-assistants.json /opt/keycloak/data/import/',
     );
-    expect(runtime).toContain('EXPOSE 8080');
+    expect(instructions.filter((line) => line.startsWith('EXPOSE'))).toEqual([
+      'EXPOSE 8080',
+    ]);
+  });
+
+  it('holds no secret value', () => {
+    expect(dockerfile).not.toMatch(
+      /KC_DB_PASSWORD=|KEYCLOAK_ADMIN_PASSWORD=|KC_BOOTSTRAP_ADMIN_PASSWORD=/,
+    );
   });
 
   it('sizes the heap from the container limit, never in bytes', () => {
@@ -75,7 +83,7 @@ describe('the Keycloak image', () => {
       JAVA_OPTS_KC_HEAP:
         '-XX:MaxRAMPercentage=70 -XX:MinRAMPercentage=70 -XX:InitialRAMPercentage=50',
     });
-    expect(dockerfile).not.toMatch(/-Xm[sx]/);
+    expect(dockerfile).not.toMatch(/-Xm[sx]|-XX:(Max|Initial)HeapSize/i);
   });
 
   it('starts the built server behind the proxy, importing the realm', () => {
@@ -94,7 +102,7 @@ describe('the Keycloak image', () => {
     expect(start).not.toMatch(/--features|--db|--health|--metrics/);
     expect(dockerfile).not.toContain('--hostname');
     expect(dockerfile).not.toMatch(
-      /persistent-user-sessions|features-disabled/i,
+      /persistent-user-sessions|PERSISTENT_USER_SESSIONS|features-disabled/i,
     );
   });
 });
