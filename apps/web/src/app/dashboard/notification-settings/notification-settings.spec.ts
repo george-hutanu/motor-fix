@@ -476,8 +476,8 @@ describe('NotificationSettings', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'notification-settings.css'),
     'utf8',
@@ -496,7 +496,7 @@ describe('type scale', () => {
     );
   });
 
-  // @traces 975-type-scale-FR-003
+  // @traces 975-FR-003
   const at = stylesheet.indexOf('@media (min-width: 768px)');
   const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
   const tablet = at < 0 ? '' : stylesheet.slice(at);

@@ -436,8 +436,8 @@ describe("the phone's filter button", () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-002
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-002
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'admin-users-filters.css'),
     'utf8',

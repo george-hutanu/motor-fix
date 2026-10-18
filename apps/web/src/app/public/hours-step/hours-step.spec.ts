@@ -391,8 +391,8 @@ describe('step 5, the opening hours', () => {
     );
   });
 
-  // @traces 1204-hours-row-live-regions-FR-001
-  // @traces 1204-hours-row-live-regions-FR-005
+  // @traces 1204-FR-001
+  // @traces 1204-FR-005
   it('says why the weekdays kept their hours in the region that was there before, and empties it when they hold', async () => {
     const { fixture, step } = await open();
     const region = quietRegion(step, 'hours-weekdays-error');
@@ -413,7 +413,7 @@ describe('step 5, the opening hours', () => {
     ).toBeNull();
   });
 
-  // @traces 1204-hours-row-live-regions-FR-002
+  // @traces 1204-FR-002
   it('says why Saturday kept its hours in the region that was there before, and empties it when they hold', async () => {
     const { fixture, step } = await open();
     await click(fixture, tick(step, 'sat-closed'));
@@ -432,7 +432,7 @@ describe('step 5, the opening hours', () => {
     expect(text(region)).toBe('');
   });
 
-  // @traces 1204-hours-row-live-regions-FR-003
+  // @traces 1204-FR-003
   it("says why a day refused its break in that day's own region, and empties it when the break fits", async () => {
     const { fixture, step } = await open();
     await openByDay(fixture, step);
@@ -508,7 +508,7 @@ describe('step 5, the closed days', () => {
     expect(closedDays(step)).toEqual([]);
   });
 
-  // @traces 1204-hours-row-live-regions-FR-004
+  // @traces 1204-FR-004
   it('says why a day was refused in the region that was there before, and empties it once a day is added', async () => {
     const { fixture, step } = await open();
     const region = quietRegion(step, 'hours-closed-error');
@@ -1262,8 +1262,8 @@ describe('step 5, the page judges the hours', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-002
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-002
+  // @traces 975-FR-008
   const stylesheet = readFileSync(join(__dirname, 'hours-step.css'), 'utf8');
 
   it('takes every text size from a Cockpit size token', () => {
@@ -1281,7 +1281,7 @@ describe('type scale', () => {
 });
 
 describe('empty messages', () => {
-  // @traces 1204-hours-row-live-regions-FR-006
+  // @traces 1204-FR-006
   it('take no space but stay known to a reader, never removed from it', () => {
     // The step's regions carry mf-message; the one global rule hides them
     // while empty without removing them from the accessibility tree.
