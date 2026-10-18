@@ -32,6 +32,7 @@ features:
   - 1348-release-green
   - 1347-outage-contact-point
   - 280-contact-motorfix
+  - 299-system-log-search
 ---
 
 # Capability: Observability
@@ -699,9 +700,9 @@ _From 297-system-status-log._
 
 _From 297-system-status-log._
 
-### 297-FR-005 — After a new row is inserted (not on an increment), the writer MUST publish `system_log.added` with `{ id, kind, at }` (the live contract's three fields: the hub forwards only those, and #55 reads the row by `id`) on the live channel for the `admin` audience only, straight to Redis with no outbox row; a failed publish MUST be logged and MUST NOT fail the write or the caller.
+### 299-FR-019 — After a new row is inserted (not on an increment), the System status log writer MUST publish `system_log.added` with `{ id, kind, at, entryKind, severity, source }` (the entry's kind, severity and source) on the live channel for the `admin` audience only, straight to Redis with no outbox row; a failed publish MUST be logged and MUST NOT fail the write or the caller. A Jest test reads the published message and its three new fields; Jurnal's re-read on the event is unchanged.
 
-_From 297-system-status-log._
+_From 299-system-log-search._
 
 ### 297-FR-006 — The status checks (ST-294) MUST write, on each confirmed tile state change, after the tiles' own transaction has committed (never inside it, FR-004), `status_changed` with source the tile key, severity `warning` for `amber` and `red` and `info` for `green`, fingerprint the new state, context `{ state, latency_ms | failed_share | oldest_waiting_s | last_backup_at | reason, as the tile's detail holds }`; and, on each failed check (a probe that throws or times out), `check_failed` with source the tile key, severity `warning`, fingerprint the reason, context `{ reason }`.
 
@@ -814,3 +815,5 @@ _From 1348-release-green._
 - `251-FR-004` — superseded by `1347-FR-004` (2026-10-17)
 
 - `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)
+
+- `297-FR-005` — superseded by `299-FR-019` (2026-10-17)

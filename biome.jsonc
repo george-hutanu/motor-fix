@@ -151,6 +151,7 @@
       "includes": [
         "apps/web/src/app/consent/consent-bar/consent-bar.html",
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
+        "apps/web/src/app/dashboard/admin-log/admin-log.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/admin-queue/admin-queue.html",
         "apps/web/src/app/dashboard/admin-suspended/admin-suspended.html",
@@ -207,8 +208,9 @@
       }
     },
     {
-      // A form with role="search" for the accounts' search landmark: Biome asks for the <search> element, which Angular's DOM schema does not know (NG0304).
+      // A form with role="search" for the accounts' and the log's search landmarks: Biome asks for the <search> element, which Angular's DOM schema does not know (NG0304).
       "includes": [
+        "apps/web/src/app/dashboard/admin-log-filters/admin-log-filters.html",
         "apps/web/src/app/dashboard/admin-users-filters/admin-users-filters.html"
       ],
       "linter": {
@@ -220,8 +222,9 @@
       }
     },
     {
-      // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
+      // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders, or a label's bound [for].
       "includes": [
+        "apps/web/src/app/dashboard/admin-log-filters/log-pickers/log-pickers.html",
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/notification-settings/notification-settings.html",
         "apps/web/src/app/public/garage-profile/prices-section/prices-section.html"

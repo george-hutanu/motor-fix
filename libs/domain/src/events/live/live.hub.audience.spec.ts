@@ -159,11 +159,13 @@ describe('who a live event reaches', () => {
   });
 
   // @traces 574-FR-002
+  // @traces 172-FR-007
   it('keeps prices, settings, feature switches, the team, reviews, the profile and invites from a receptionist, and gives the owner everything', async () => {
     const receptionist = staff('maria', 'receptionist');
     const owner = staff('ion', 'garage');
     const hidden = [
       'price_list.updated',
+      'catalogue_job.decided',
       'garage.settings_changed',
       'garage.features_changed',
       'member.joined',
@@ -343,6 +345,8 @@ describe('what each garage role hears through the garage channel', () => {
   // One kind per family of the capability table, and one no family claims.
   const FAMILIES = [
     ['price_list.updated', 'garage.prices'],
+    // @traces 172-FR-007
+    ['catalogue_job.decided', 'garage.prices'],
     ['member.removed', 'garage.team'],
     ['mechanic.added', 'garage.team'],
     ['invite.sent', 'garage.team'],

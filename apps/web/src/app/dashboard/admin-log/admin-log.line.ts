@@ -6,6 +6,7 @@ import {
   type I18n,
   type Language,
 } from '@motor-fix/i18n';
+import type { LampState } from '@motor-fix/ui-cockpit';
 
 type Context = Record<string, unknown>;
 
@@ -140,4 +141,42 @@ export function lineOf(entry: SystemLogEntryDto, i18n: I18n): string {
   if (!parts) return entry.message;
   const [key, params] = parts;
   return i18n.t(`admin.log.${key}`, localised(params, i18n, i18n.language()));
+}
+
+const LAMPS: Record<SystemLogEntryDto['severity'], LampState> = {
+  error: 'red',
+  info: 'grey',
+  warning: 'amber',
+};
+
+export interface LineView {
+  at: string;
+  clock: string;
+  count?: { mark: string; words: string };
+  id: string;
+  lamp: LampState;
+  text: string;
+  word: string;
+}
+
+// What one line of the log shows, in the admin's language.
+export function lineView(entry: SystemLogEntryDto, i18n: I18n): LineView {
+  return {
+    at: entry.at,
+    clock: formatClock(entry.at),
+    count:
+      entry.count > 1
+        ? {
+            mark: `×${entry.count}`,
+            words: i18n.t('admin.log.times', {
+              count: entry.count,
+              n: entry.count,
+            }),
+          }
+        : undefined,
+    id: entry.id,
+    lamp: LAMPS[entry.severity],
+    text: lineOf(entry, i18n),
+    word: i18n.t(`admin.log.severity.${entry.severity}`),
+  };
 }

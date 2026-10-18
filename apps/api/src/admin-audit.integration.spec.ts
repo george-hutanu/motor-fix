@@ -40,7 +40,8 @@ const FIXTURES: Record<
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
   },
   'GET /api/v1/admin/system-log': {
-    path: async () => '/api/v1/admin/system-log?from=2026-01-01T00:00:00Z',
+    path: async () =>
+      `/api/v1/admin/system-log?from=${new Date(Date.now() - 86_400_000).toISOString()}`,
   },
   'GET /api/v1/admin/verification-files/{id}': {
     path: async () => `/api/v1/admin/verification-files/${await submitted()}`,
@@ -149,7 +150,7 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted('rejected')}/reopen`,
   },
-  // An OK RAR check needs the file's RAR number and the three ticks.
+  // OK on the RAR check needs the file's number and every tick.
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
     body: () => ({
       evidence: { found: true, sameAddress: true, sameCompany: true },
@@ -162,7 +163,7 @@ const FIXTURES: Record<
           `WITH g AS (INSERT INTO garage (id, name, slug)
              VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
            INSERT INTO verification_file (id, garage_id, rar_number)
-           SELECT gen_random_uuid(), id, 'RAR-0412' FROM g RETURNING id`,
+           SELECT gen_random_uuid(), id, 'RAR-1234' FROM g RETURNING id`,
           [slug],
         )
       ).rows[0].id as string;
@@ -175,7 +176,7 @@ const FIXTURES: Record<
     },
   },
   'PUT /api/v1/admin/verification-files/{id}/rar-number': {
-    body: () => ({ rarNumber: 'RAR-0412' }),
+    body: () => ({ rarNumber: 'RAR-5678' }),
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
