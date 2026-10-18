@@ -251,8 +251,8 @@ describe('keepOutOfTabOrder', () => {
     for (const control of host.querySelectorAll('button, a, summary')) {
       expect(control.getAttribute('tabindex')).toBe('-1');
     }
-    // A canvas at tabindex -1 still takes the focus of a tap on a pin
-    // (270-FR-004); without one it cannot be focused at all.
+    // A canvas at tabindex -1 still takes the focus of a tap on a pin;
+    // without one it cannot be focused at all.
     expect(host.querySelector('canvas')?.hasAttribute('tabindex')).toBe(false);
 
     stop();

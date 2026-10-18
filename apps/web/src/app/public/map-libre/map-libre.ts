@@ -141,8 +141,8 @@ export function closeMapLibre(map: MapLibre) {
 // <details> whose <summary> takes focus), while the pointer can still move
 // the map; `inert` would stop both. An element focusable only through its
 // tabindex, MapLibre's canvas, loses it: at -1 a tap on a pin would still
-// move the focus to the hidden canvas (270-FR-004, 270-FR-011). Returns the
-// call that stops watching.
+// move the focus to the hidden canvas, where a tap must leave the focus as it
+// was. Returns the call that stops watching.
 export function keepOutOfTabOrder(host: HTMLElement) {
   const hide = () => {
     for (const control of host.querySelectorAll<HTMLElement>(
