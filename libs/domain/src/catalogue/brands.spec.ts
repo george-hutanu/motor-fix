@@ -1,6 +1,12 @@
 import { fold } from '@motor-fix/contracts';
 
-import { BRANDS, BrandFileError, slugOf, validateFile } from './brands';
+import {
+  BODY_STYLES,
+  BRANDS,
+  BrandFileError,
+  slugOf,
+  validateFile,
+} from './brands';
 
 describe('fold', () => {
   it.each([
@@ -68,7 +74,8 @@ describe('validateFile', () => {
 });
 
 describe('the shipped brand file', () => {
-  it('holds the twelve brands of the mock in the mock order, then two unranked ones', () => {
+  // @traces 405-FR-005
+  it('holds the twelve brands of the mock in the mock order, then three unranked ones', () => {
     expect(BRANDS.map((brand) => brand.name)).toEqual([
       'BMW',
       'Mini',
@@ -84,6 +91,7 @@ describe('the shipped brand file', () => {
       'Tesla',
       'Alfa Romeo',
       'Citroën',
+      'Opel',
     ]);
     expect(BRANDS.map((brand) => brand.popularity)).toEqual([
       1,
@@ -100,7 +108,34 @@ describe('the shipped brand file', () => {
       12,
       undefined,
       undefined,
+      undefined,
     ]);
+    expect(BRANDS.find((brand) => brand.key === 'opel')?.name).toBe('Opel');
     expect(() => validateFile(BRANDS)).not.toThrow();
+  });
+
+  // @traces 405-FR-003
+  it('gives five brands the body shape the mock draws for them and leaves the rest unset', () => {
+    expect(
+      Object.fromEntries(
+        BRANDS.filter((brand) => brand.bodyStyle !== undefined).map((brand) => [
+          brand.key,
+          brand.bodyStyle,
+        ]),
+      ),
+    ).toEqual({
+      dacia: 'suv',
+      ford: 'fastback',
+      skoda: 'estate',
+      toyota: 'crossover',
+      volkswagen: 'hatchback',
+    });
+    expect(
+      BRANDS.every(
+        (brand) =>
+          brand.bodyStyle === undefined ||
+          BODY_STYLES.includes(brand.bodyStyle),
+      ),
+    ).toBe(true);
   });
 });

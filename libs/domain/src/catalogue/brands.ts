@@ -3,11 +3,23 @@ import { fold } from '@motor-fix/contracts';
 // The brand list MotorFix keeps. A brand is matched by its `key` across
 // loads, so a key never changes once shipped; renaming a brand changes only
 // its name. A brand removed from this list is retired, never deleted.
+export const BODY_STYLES = [
+  'saloon',
+  'hatchback',
+  'suv',
+  'crossover',
+  'estate',
+  'fastback',
+] as const;
+export type BodyStyle = (typeof BODY_STYLES)[number];
+
 export interface BrandRecord {
   key: string;
   name: string;
   // 1 is the most popular; an unranked brand sorts after every ranked one.
   popularity?: number;
+  // The generic body drawn when the brand has no licensed car; absent is a saloon.
+  bodyStyle?: BodyStyle;
 }
 
 export const BRANDS: readonly BrandRecord[] = [
@@ -15,16 +27,22 @@ export const BRANDS: readonly BrandRecord[] = [
   { key: 'mini', name: 'Mini', popularity: 2 },
   { key: 'mercedes-benz', name: 'Mercedes-Benz', popularity: 3 },
   { key: 'audi', name: 'Audi', popularity: 4 },
-  { key: 'volkswagen', name: 'Volkswagen', popularity: 5 },
-  { key: 'skoda', name: 'Škoda', popularity: 6 },
-  { key: 'dacia', name: 'Dacia', popularity: 7 },
+  {
+    bodyStyle: 'hatchback',
+    key: 'volkswagen',
+    name: 'Volkswagen',
+    popularity: 5,
+  },
+  { bodyStyle: 'estate', key: 'skoda', name: 'Škoda', popularity: 6 },
+  { bodyStyle: 'suv', key: 'dacia', name: 'Dacia', popularity: 7 },
   { key: 'renault', name: 'Renault', popularity: 8 },
-  { key: 'ford', name: 'Ford', popularity: 9 },
-  { key: 'toyota', name: 'Toyota', popularity: 10 },
+  { bodyStyle: 'fastback', key: 'ford', name: 'Ford', popularity: 9 },
+  { bodyStyle: 'crossover', key: 'toyota', name: 'Toyota', popularity: 10 },
   { key: 'hyundai', name: 'Hyundai', popularity: 11 },
   { key: 'tesla', name: 'Tesla', popularity: 12 },
   { key: 'alfa-romeo', name: 'Alfa Romeo' },
   { key: 'citroen', name: 'Citroën' },
+  { key: 'opel', name: 'Opel' },
 ];
 
 export class BrandFileError extends Error {}
