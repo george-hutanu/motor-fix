@@ -21,7 +21,7 @@
               @if (duration(row); as time) {
                 <span class="muted" data-duration>{{ time }}</span>
               }
-              @if (editing() && owner()) {
+              @if (editing() && owner() && editable(row)) {
                 <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) }" (click)="editRow(row)">{{ 'garage.prices.edit' | t }}</button>
               }
             </span>

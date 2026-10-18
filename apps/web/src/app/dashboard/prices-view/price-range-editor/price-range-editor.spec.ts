@@ -1,15 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  GaragesService,
-  type PriceListDto,
-  type PriceListItemDto,
-} from '@motor-fix/data-access';
+import { GaragesService, type PriceListDto } from '@motor-fix/data-access';
 import { formatDuration, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import {
+  type EditableRow,
   PriceRangeEditor,
   type PriceRangeEditorData,
   type PriceRangeEditorResult,
@@ -24,7 +21,7 @@ const GARAGE = 'garage-1';
 const STAMP = '2026-10-18T08:00:00.000Z';
 const NEWER = '2026-10-18T08:05:00.000Z';
 
-const BRAKES: PriceListItemDto = {
+const BRAKES: EditableRow = {
   brandRanges: [
     { brandId: 'bmw', fromBani: 110_000, name: 'BMW', toBani: 170_000 },
   ],

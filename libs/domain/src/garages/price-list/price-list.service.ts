@@ -113,20 +113,6 @@ const pairChange = (pair: Pair) => ({
   jobTypeIds: [pair.jobTypeId],
 });
 
-// Present only when set, as the price list's own items are.
-const rangeFields = (
-  range: Pick<PriceRangeSavedDto, 'fromBani'> & {
-    toBani: number | null;
-    durationMinutes: number | null;
-  },
-) => ({
-  fromBani: range.fromBani,
-  ...(range.toBani !== null && { toBani: range.toBani }),
-  ...(range.durationMinutes !== null && {
-    durationMinutes: range.durationMinutes,
-  }),
-});
-
 @Injectable()
 export class PriceListService {
   constructor(
@@ -292,9 +278,11 @@ export class PriceListService {
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { jobTypeId } = row;
     const answer = (updatedAt: Date): PriceRangeSavedDto => ({
+      fromBani,
       jobTypeId,
       priceId,
-      ...rangeFields(range),
+      ...(toBani !== null && { toBani }),
+      ...(durationMinutes !== null && { durationMinutes }),
       updatedAt: updatedAt.toISOString(),
       warnings,
     });

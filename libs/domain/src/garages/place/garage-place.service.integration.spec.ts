@@ -235,8 +235,8 @@ describe('GaragePlaceService.write', () => {
     ).rejects.toThrow();
   });
 
-  // Romania's box lives only in the contracts library (FR-007): the
-  // database holds a position to the earth's ranges (FR-012), no tighter.
+  // Romania's box lives only in the contracts library: the
+  // database holds a position to the earth's ranges, no tighter.
   it('is held by the database to a position on the earth, not to Romania', async () => {
     await prisma.garage.update({
       data: { latitude: 52.52, longitude: 13.4 },

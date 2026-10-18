@@ -17,10 +17,8 @@ import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
 import { GaragePlaceService } from './place/garage-place.service';
-import {
-  GarageLabourController,
-  PriceListController,
-} from './price-list/price-list.controller';
+import { GarageLabourController } from './price-list/labour/labour.controller';
+import { PriceListController } from './price-list/price-list.controller';
 import { PriceListService } from './price-list/price-list.service';
 import { GaragePricesService } from './prices/garage-prices/garage-prices.service';
 import { PublicGaragesService } from './public-garages/public-garages';

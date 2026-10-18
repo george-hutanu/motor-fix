@@ -114,7 +114,7 @@ h2 {
 .row[data-public="false"] .state {
   color: var(--mf-amber-ink);
 }
-/* Stacked on a phone: the state, then the price under it (FR-010). */
+/* Stacked on a phone: the state, then the price under it. */
 .meta {
   flex-direction: column;
   align-items: flex-start;

@@ -27,8 +27,14 @@ import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { LeiInput } from '../../../public/lei-input';
 
+// A job's own row, as the read gives it once the garage has one.
+export type EditableRow = PriceListItemDto & {
+  priceId: string;
+  updatedAt: string;
+};
+
 export type PriceRangeEditorData =
-  | { kind: 'row'; garageId: string; item: PriceListItemDto }
+  | { kind: 'row'; garageId: string; item: EditableRow }
   | {
       kind: 'brand';
       garageId: string;
@@ -44,11 +50,12 @@ type Field = 'fromBani' | 'toBani' | 'durationMinutes';
 
 const MESSAGES = 'garage.prices.editor';
 const PRICE_TEXTS = 'public.listing.prices.errors';
-const RANGE_FIELD: Record<string, Field> = {
+// The range rule's field names, and the form's field each one checks.
+const RANGE_FIELD = {
   duration: 'durationMinutes',
   from: 'fromBani',
   to: 'toBani',
-};
+} as const;
 
 // One job's range (and duration), a brand's range or the labour rate, changed
 // in place: the same range rule the server runs, checked as it is typed.
@@ -76,14 +83,10 @@ export class PriceRangeEditor {
   >();
   protected readonly data = this.task.data;
   protected readonly timed = this.data.kind === 'row';
-  protected readonly f = {
-    duration: 'durationMinutes',
-    from: 'fromBani',
-    to: 'toBani',
-  } as const;
+  protected readonly f = RANGE_FIELD;
   // The stamp the row was read with; a 409 brings the newer one.
   private readonly stamp = signal(
-    this.data.kind === 'row' ? this.data.item.updatedAt : undefined,
+    this.data.kind === 'row' ? this.data.item.updatedAt : '',
   );
 
   protected readonly form = new FormGroup({
@@ -118,8 +121,8 @@ export class PriceRangeEditor {
       toBani,
     });
     for (const { code, field } of checked.errors) {
-      const at = RANGE_FIELD[field];
-      if (at === 'fromBani' && fromBani === null) continue;
+      const at = (RANGE_FIELD as Record<string, Field | undefined>)[field];
+      if (!at || (at === 'fromBani' && fromBani === null)) continue;
       found.set(at, code);
     }
     if (fromBani === null) found.set('fromBani', 'required');
@@ -235,12 +238,12 @@ export class PriceRangeEditor {
     return this.api.priceListControllerSetRange({
       body: {
         durationMinutes,
-        expectedUpdatedAt: this.stamp() ?? '',
+        expectedUpdatedAt: this.stamp(),
         fromBani: range.fromBani,
         toBani,
       },
       garageId: data.garageId,
-      priceId: data.item.priceId ?? '',
+      priceId: data.item.priceId,
     });
   }
 
@@ -249,13 +252,11 @@ export class PriceRangeEditor {
   private async reread() {
     const { data } = this;
     if (data.kind !== 'row') return;
-    const list = await this.api
-      .priceListControllerRead({ garageId: data.garageId })
-      .catch(() => null);
-    const row = list?.items.find(
-      (item) => item.priceId && item.priceId === data.item.priceId,
-    );
-    if (!row) return;
+    const list = await this.api.priceListControllerRead({
+      garageId: data.garageId,
+    });
+    const row = list.items.find((item) => item.priceId === data.item.priceId);
+    if (!row?.updatedAt) return;
     this.stamp.set(row.updatedAt);
     this.fill(row);
   }

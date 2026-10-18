@@ -26,8 +26,10 @@ const item = (over: Partial<PriceListItemDto> = {}): PriceListItemDto => ({
   jobTypeId: 'diagnosis',
   nameEn: 'Diagnosis and fault-code read',
   nameRo: 'Diagnoză și citire coduri de eroare',
+  priceId: `price-${over.jobTypeId ?? 'diagnosis'}`,
   public: true,
   toBani: 22_000,
+  updatedAt: '2026-10-18T09:00:00.000Z',
   ...over,
 });
 

@@ -22,6 +22,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { filter, merge } from 'rxjs';
 
 import {
+  type EditableRow,
   PriceRangeEditor,
   type PriceRangeEditorData,
   type PriceRangeEditorResult,
@@ -72,7 +73,7 @@ export class PricesView {
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
   // TODO: nothing emits catalogue_job.decided until the admin's catalogue
-  // decision story lands; the hub already routes it to the owner (FR-007).
+  // decision story lands; the hub already routes it to the owner.
   protected readonly view = liveView(
     () => this.api.priceListControllerRead({ garageId: this.garageId() }),
     {
@@ -120,7 +121,13 @@ export class PricesView {
     return formatWholeLeiRange(fromBani, toBani, language);
   }
 
-  protected editRow(row: PriceListItemDto) {
+  // Only a job with its own row has a range to change: one priced by brand
+  // alone comes without an id.
+  protected editable(row: PriceListItemDto): row is EditableRow {
+    return Boolean(row.priceId && row.updatedAt);
+  }
+
+  protected editRow(row: EditableRow) {
     void this.edit(
       { garageId: this.garageId(), item: row, kind: 'row' },
       this.name(row),
@@ -150,12 +157,21 @@ export class PricesView {
     );
   }
 
+  // One editor at a time: a second press while one opens is ignored.
+  private opened = false;
+
   private async edit(data: PriceRangeEditorData, title: string) {
-    const result = await this.overlays.open<
-      PriceRangeEditorResult,
-      PriceRangeEditorData
-    >(PriceRangeEditor, { data, shape: 'dialog', title });
-    if (result === 'saved') this.view.reload();
+    if (this.opened) return;
+    this.opened = true;
+    try {
+      const result = await this.overlays.open<
+        PriceRangeEditorResult,
+        PriceRangeEditorData
+      >(PriceRangeEditor, { data, shape: 'dialog', title });
+      if (result === 'saved') this.view.reload();
+    } finally {
+      this.opened = false;
+    }
   }
 
   protected labour({ fromBani, toBani }: PublicLabourDto) {
