@@ -1,5 +1,7 @@
 // @traces 1191-FR-003
 // @traces 1191-FR-006
+// @traces 1191-FR-005
+// @traces 1191-FR-007
 import { randomUUID } from 'node:crypto';
 import { crc32 } from 'node:zlib';
 
@@ -20,11 +22,14 @@ import {
 import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageService } from '../../../storage/storage.service';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
+import { HEIC_BASE64 } from '../heic/heic.fixture';
+import { processPhoto } from '../photo-processing';
 
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49]);
+const HEIC = Buffer.from(HEIC_BASE64, 'base64');
 const TEN_MB = 10 * 1024 * 1024;
 const checksumOf = (file: Buffer) => {
   const sum = Buffer.alloc(4);
@@ -100,10 +105,15 @@ const hold = (id: string, count: number) =>
     where: { id },
   });
 
-async function uploaded(id: string, token: string, file = JPEG) {
+async function uploaded(
+  id: string,
+  token: string,
+  file = JPEG,
+  contentType = 'image/jpeg',
+) {
   const address = await photos.uploadAddress(id, token, {
     checksum: checksumOf(file),
-    contentType: 'image/jpeg',
+    contentType,
     size: file.length,
   });
   const put = await fetch(address.url, {
@@ -259,6 +269,36 @@ describe('confirming a photo', () => {
   it('refuses bytes that are not a photo and stores nothing', async () => {
     const draft = await newDraft();
     const key = await uploaded(draft.id, draft.token, Buffer.from('%PDF-1.7'));
+
+    const refused = await refusalOf(photos.confirm(draft.id, draft.token, key));
+
+    expect(refused.status).toBe(422);
+    expect(refused.body).toMatchObject({ code: 'file_type_mismatch' });
+    expect(await filesOf(draft.id)).toEqual([]);
+    expect(store.objects.size).toBe(0);
+  });
+
+  it('takes a real HEIC photo and processes it into JPEG copies', async () => {
+    const draft = await newDraft();
+    const key = await uploaded(draft.id, draft.token, HEIC, 'image/heic');
+
+    const confirmed = await photos.confirm(draft.id, draft.token, key);
+    await processPhoto(storage, confirmed.key);
+
+    expect(await filesOf(draft.id)).toEqual([confirmed.key]);
+    expect([
+      await storage.contentTypeOf(`${confirmed.key}.display`),
+      await storage.contentTypeOf(`${confirmed.key}.thumb`),
+      await storage.metadataOf(`${confirmed.key}.thumb`),
+    ]).toEqual(['image/jpeg', 'image/jpeg', { height: '16', width: '16' }]);
+  });
+
+  it.each([
+    ['a HEIC declared as JPEG', HEIC, 'image/jpeg'],
+    ['a JPEG declared as HEIC', JPEG, 'image/heic'],
+  ])('refuses %s and deletes it', async (_, file, contentType) => {
+    const draft = await newDraft();
+    const key = await uploaded(draft.id, draft.token, file, contentType);
 
     const refused = await refusalOf(photos.confirm(draft.id, draft.token, key));
 
