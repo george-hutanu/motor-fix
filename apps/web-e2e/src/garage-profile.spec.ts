@@ -308,3 +308,49 @@ test.describe('a mobile mechanic, then suspended @seeded', () => {
     );
   });
 });
+
+// The place the browser keeps, set before any page reads it.
+const keepPlace = (page: Page, place: { lat: number; lng: number }) =>
+  page.addInitScript((kept) => {
+    localStorage.setItem(
+      'mf-place',
+      JSON.stringify({ ...kept, label: 'Aici', origin: 'address' }),
+    );
+  }, place);
+
+// Service Auto Militari sits at 44.435, 26.015; 0.022 degrees north of it
+// is 2.45 km away. The seeded mobile mechanic serves Cluj.
+// @traces 271-garage-distance-FR-014 271-garage-distance-FR-015
+test.describe('the profile read from a kept place @seeded', () => {
+  test('says how far a fixed garage is, in Romanian and in English', async ({
+    page,
+  }) => {
+    await keepPlace(page, { lat: 44.457, lng: 26.015 });
+
+    await page.goto('/ro/garages/service-auto-militari');
+    await expect(heading(page)).toHaveText(/Service Auto Militari/i);
+    await expect(page.getByText('la 2,4 km', { exact: true })).toBeVisible();
+
+    await page.goto('/en/garages/service-auto-militari');
+    await expect(page.getByText('2.4 km away', { exact: true })).toBeVisible();
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+
+  test('shows a mobile mechanic its area, never a distance', async ({
+    page,
+  }) => {
+    await keepPlace(page, { lat: 46.771, lng: 23.624 });
+
+    await page.goto('/ro/garages/mecanic-mobil-cluj');
+
+    await expect(page.getByText('Mecanic mobil · zonă de 20 km')).toBeVisible();
+    await expect(page.getByText(/^la \d/)).toHaveCount(0);
+  });
+
+  test('shows no distance without a place', async ({ page }) => {
+    await page.goto('/ro/garages/service-auto-militari');
+
+    await expect(heading(page)).toHaveText(/Service Auto Militari/i);
+    await expect(page.getByText(/^la \d/)).toHaveCount(0);
+  });
+});

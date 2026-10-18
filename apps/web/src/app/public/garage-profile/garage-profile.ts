@@ -36,6 +36,7 @@ import { RequestQuoteButton } from './request-quote-button/request-quote-button'
 import { sourceOf } from './view-source';
 import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
+import { PlaceStore } from '../../home/place/place-store';
 import type { LiveView } from '../../live/view';
 import { publicRead } from '../../public-read';
 import { publicLiveResource } from '../live';
@@ -95,6 +96,7 @@ export class GarageProfile {
   private readonly prefetch = inject(ProfilePrefetch);
   private readonly saved = inject(SavedGarages);
   private readonly selection = inject(PriceSelection);
+  private readonly places = inject(PlaceStore);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -143,6 +145,19 @@ export class GarageProfile {
       ? this.i18n.t('public.garageProfile.newGarage')
       : '';
   });
+  // How far the garage is from the place the browser keeps, measured once
+  // for the garage and place shown; none for a mobile mechanic.
+  private readonly measured = signal<
+    { id: string; near: string; km: number } | undefined
+  >(undefined);
+  protected readonly distanceKm = computed(() => {
+    const measured = this.measured();
+    return measured &&
+      measured.id === this.garage()?.id &&
+      measured.near === this.near()
+      ? measured.km
+      : undefined;
+  });
   protected readonly removed = computed(
     () => this.profile.gone() && this.status() === 410,
   );
@@ -187,6 +202,19 @@ export class GarageProfile {
         if (garage) this.selection.sync(garage);
       });
     }
+    // The server renders without the place, which only the browser keeps;
+    // the browser asks once more with it and shows the distance in place.
+    let asked: string | undefined;
+    effect(() => {
+      const garage = this.garage();
+      const near = this.near();
+      if (!this.browser || !garage || !near) return;
+      if (garage.businessKind === 'mobile') return;
+      const key = `${garage.id}@${near}`;
+      if (key === asked) return;
+      asked = key;
+      untracked(() => this.measure(garage.id, near));
+    });
     // The garage's own purge tag, so its edit clears this page at the edge.
     effect(() => {
       if (!this.response) return;
@@ -200,6 +228,31 @@ export class GarageProfile {
       if (this.removed()) this.response.status = 410;
       else if (this.unknown()) this.response.status = 404;
     });
+  }
+
+  // The kept place as the profile read takes it.
+  private near(): string | undefined {
+    const place = this.places.place();
+    return place ? `${place.lat},${place.lng}` : undefined;
+  }
+
+  // A failed read leaves the line out; the rest of the page stands.
+  private measure(id: string, near: string): void {
+    const slug = untracked(this.slug);
+    const brand = untracked(this.brand);
+    this.garages
+      .publicGaragesControllerBySlug(
+        { near, slug, ...(brand ? { brand } : {}) },
+        publicRead(),
+      )
+      .then(
+        ({ distanceKm }) => {
+          if (typeof distanceKm === 'number') {
+            this.measured.set({ id, km: distanceKm, near });
+          }
+        },
+        () => undefined,
+      );
   }
 
   // A profile pre-fetched from the results, shown at once; after a server

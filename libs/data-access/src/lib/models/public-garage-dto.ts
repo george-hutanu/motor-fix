@@ -34,6 +34,11 @@ export interface PublicGarageDto {
    * The line the garage wrote about itself, as written
    */
   description?: string;
+
+  /**
+   * Km from the place, one decimal. Only with near, and never for a mobile mechanic
+   */
+  distanceKm?: number;
   doesNotTake: Array<BrandRefDto>;
   id: string;
 

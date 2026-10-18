@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { inMemory } from '@motor-fix/observability/testing';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { metrics } from '@opentelemetry/api';
@@ -57,6 +57,14 @@ beforeAll(async () => {
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
+  // The API's own pipe options (apps/api bootstrap).
+  app.useGlobalPipes(
+    new ValidationPipe({
+      forbidNonWhitelisted: true,
+      transform: true,
+      whitelist: true,
+    }),
+  );
   await app.init();
   appRedis = app.get(AUTH_REDIS);
 });
@@ -302,4 +310,93 @@ describe('the profile through the cache service', () => {
     expect((await read(garage.slug)).status).toBe(200);
     expect(outageWarnings()).toBe(2);
   });
+});
+
+// A fixed garage in Cluj, and a place 0.022 degrees north of it: 2.45 km.
+const CLUJ = { latitude: 46.771, longitude: 23.624 };
+const NEAR = '46.793,23.624';
+
+const placed = (businessKind?: 'mobile') =>
+  prisma.garage.create({
+    data: {
+      ...CLUJ,
+      ...(businessKind && { businessKind, serviceRadiusKm: 20 }),
+      name: 'Service Mărăști',
+      slug: `p-${randomUUID()}`,
+      status: 'approved',
+    },
+  });
+
+// @traces 271-garage-distance-FR-014
+describe('the profile read from a place', () => {
+  it('adds the distance to a fixed garage, rounded to one decimal', async () => {
+    const garage = await placed();
+
+    const res = await read(garage.slug, { near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body.distanceKm).toBe(2.4);
+  });
+
+  it('keeps the distance and the place out of the cache, under the same key set', async () => {
+    const garage = await placed();
+
+    const first = await read(garage.slug, { near: NEAR });
+    const before = await counts();
+    const second = await read(garage.slug, { near: NEAR });
+    const plain = await read(garage.slug);
+
+    expect([first.body.distanceKm, second.body.distanceKm]).toEqual([2.4, 2.4]);
+    expect(plain.body.distanceKm).toBeUndefined();
+    expect((await counts()).hit - before.hit).toBe(2);
+    expect(await other.zrange(`v1:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+      [entry(garage.slug)],
+    );
+    const stored = await other.get(entry(garage.slug));
+    expect(JSON.parse(stored ?? 'null').v).not.toHaveProperty('distanceKm');
+    expect(stored).not.toContain('46.793');
+    expect(await other.keys(`*${NEAR}*`)).toEqual([]);
+  });
+
+  it('gives a mobile mechanic no distance, only its area, under the same key set', async () => {
+    const garage = await placed('mobile');
+
+    const res = await read(garage.slug, { near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('distanceKm');
+    expect(res.body).not.toHaveProperty('latitude');
+    expect(res.body.serviceRadiusKm).toBe(20);
+    expect(await other.zrange(`v1:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+      [entry(garage.slug)],
+    );
+  });
+
+  it('gives no distance without a place', async () => {
+    const garage = await placed();
+
+    const res = await read(garage.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('distanceKm');
+  });
+
+  it.each([
+    ['not a place', 'aproape'],
+    ['three numbers', '46.79,23.62,1'],
+    ['outside Romania', '48.857,2.352'],
+  ])(
+    'refuses a near that is %s, for a mobile mechanic too',
+    async (_, near) => {
+      const fixed = await placed();
+      const mobile = await placed('mobile');
+
+      const answers = await Promise.all(
+        [fixed, mobile].map((garage) => read(garage.slug, { near })),
+      );
+
+      expect(answers.map((res) => res.status)).toEqual([400, 400]);
+      expect(await other.exists(entry(fixed.slug), entry(mobile.slug))).toBe(0);
+    },
+  );
 });

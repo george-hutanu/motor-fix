@@ -48,6 +48,10 @@
               | t: { km: (garage.serviceRadiusKm | km) }
           }}
         </p>
+      } @else if (distanceKm() !== undefined) {
+        <p class="place">
+          {{ 'public.garageProfile.distance' | t: { km: (distanceKm() | km) } }}
+        </p>
       }
       @if (garage.description) {
         <p class="description">{{ garage.description }}</p>

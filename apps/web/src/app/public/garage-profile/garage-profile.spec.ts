@@ -14,6 +14,7 @@ import { filter, Subject } from 'rxjs';
 
 import { GarageProfile } from './garage-profile';
 import { Consent } from '../../consent/consent';
+import { PlaceStore } from '../../home/place/place-store';
 import { PUBLIC_READ } from '../../public-read';
 import { PublicLive } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
@@ -63,7 +64,7 @@ const FIXED: PublicGarageDto = {
 const DACIA = { id: 'b-1', name: 'Dacia', slug: 'dacia' };
 
 type Read = {
-  query: { slug: string; brand?: string };
+  query: { slug: string; brand?: string; near?: string };
   answer: (garage: PublicGarageDto) => Promise<void>;
   fail: (status: number) => Promise<void>;
 };
@@ -73,7 +74,10 @@ const api = {
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
   publicGaragesControllerBySlug: jest.fn(
-    (query: { slug: string; brand?: string }, _context?: HttpContext) =>
+    (
+      query: { slug: string; brand?: string; near?: string },
+      _context?: HttpContext,
+    ) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
         reads.push({
           answer: async (garage) => {
@@ -1303,5 +1307,103 @@ describe('the save button in the profile header', () => {
         request.compareDocumentPosition(save) &
           Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// @traces 271-garage-distance-FR-015
+describe('the distance line in the profile header', () => {
+  const PLACE = {
+    label: 'Militari',
+    lat: 44.457,
+    lng: 26.015,
+    origin: 'address' as const,
+  };
+  const keep = () => TestBed.inject(PlaceStore).use(PLACE);
+  const line = () =>
+    [...page().querySelectorAll<HTMLElement>('.head .place')].map((p) =>
+      p.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+
+  it('re-reads a fixed garage once from the kept place and reads "la 2,4 km"', async () => {
+    keep();
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[0]?.answer(FIXED);
+
+    expect(reads.map((r) => r.query)).toEqual([
+      { brand: 'dacia', slug: 'service-auto-militari' },
+      { brand: 'dacia', near: '44.457,26.015', slug: 'service-auto-militari' },
+    ]);
+    expect(
+      api.publicGaragesControllerBySlug.mock.calls[1]?.[1]?.get(PUBLIC_READ),
+    ).toBe(true);
+    expect(line()).toEqual([]);
+
+    await reads[1]?.answer({ ...FIXED, distanceKm: 2.4 });
+
+    expect(line()).toEqual(['la 2,4 km']);
+    expect(text().indexOf('la 2,4 km')).toBeGreaterThan(
+      text().indexOf('Service Auto Militari'),
+    );
+    expect(reads).toHaveLength(2);
+  });
+
+  it('reads "2.4 km away" in English', async () => {
+    await TestBed.inject(I18n).use('en');
+    keep();
+    await open('/en/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await reads[1]?.answer({ ...FIXED, distanceKm: 2.4 });
+
+    expect(line()).toEqual(['2.4 km away']);
+  });
+
+  it('keeps the distance through a live re-read without asking again', async () => {
+    jest.useFakeTimers();
+    keep();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await reads[1]?.answer({ ...FIXED, distanceKm: 2.4 });
+
+    messages.next({
+      at: '2026-10-18T10:00:00.000Z',
+      id: 'x',
+      kind: 'garage.updated',
+    });
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[2]?.answer({ ...FIXED, name: 'Service Militari' });
+
+    expect(reads.filter((r) => r.query.near)).toHaveLength(1);
+    expect(line()).toEqual(['la 2,4 km']);
+  });
+
+  it('shows a mobile mechanic its area line only, never asking with the place', async () => {
+    keep();
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer(MOBILE);
+
+    expect(reads).toHaveLength(1);
+    expect(line()).toEqual(['Mecanic mobil · zonă de 20 km']);
+    expect(text()).not.toMatch(/la \d/);
+  });
+
+  it('shows no distance and reads once without a place', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(reads).toHaveLength(1);
+    expect(line()).toEqual([]);
+  });
+
+  it('leaves the line out when the read from the place fails', async () => {
+    keep();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await reads[1]?.fail(503);
+
+    expect(line()).toEqual([]);
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
   });
 });

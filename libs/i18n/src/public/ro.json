@@ -32,6 +32,7 @@
     "backBrand": "Service‑uri pentru {brand}",
     "backHome": "Acasă",
     "badge": "Verificat · autorizație RAR",
+    "distance": "la {km}",
     "estimate": {
       "anyMechanic": "Orice mecanic",
       "dropped": "O lucrare pornită nu mai este oferită de service.",

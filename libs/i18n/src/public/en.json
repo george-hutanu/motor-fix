@@ -32,6 +32,7 @@
     "backBrand": "Garages for {brand}",
     "backHome": "Home",
     "badge": "Verified · RAR authorisation",
+    "distance": "{km} away",
     "estimate": {
       "anyMechanic": "Any mechanic",
       "dropped": "A job you switched on is no longer offered by the garage.",

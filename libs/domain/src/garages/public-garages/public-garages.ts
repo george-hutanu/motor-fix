@@ -5,6 +5,7 @@ import {
   type PublicGarageDto,
   type PublicGaragePhotoDto,
 } from '@motor-fix/contracts';
+import type { SearchPoint } from '@motor-fix/contracts/search-place';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
@@ -12,6 +13,7 @@ import { refusal } from '../../auth/sign-up.service';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
+import { areaSql, kmOf } from '../../search/area/area-sql';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
 import {
@@ -116,8 +118,14 @@ export class PublicGaragesService {
     private readonly storage: StorageService,
   ) {}
 
-  // A garage never approved answers exactly as a slug nobody holds.
-  async bySlug(slug: string, brand?: unknown): Promise<PublicGarageDto> {
+  // A garage never approved answers exactly as a slug nobody holds. The
+  // distance from a place is added to the cached answer per read, so the
+  // entry never holds a distance or the place it was measured from.
+  async bySlug(
+    slug: string,
+    brand?: unknown,
+    point?: SearchPoint,
+  ): Promise<PublicGarageDto> {
     // PostgreSQL refuses a NUL byte in text; no slug holds a control character.
     if (CONTROL.test(slug)) throw notFound();
     const wanted = brandSlug(brand);
@@ -128,7 +136,21 @@ export class PublicGaragesService {
       soft: PROFILE_SECONDS,
     });
     if (!answer) throw notFound();
-    return answer;
+    // A mobile mechanic is shown by its area, never by how far its seat is.
+    if (!point || answer.businessKind === 'mobile') return answer;
+    const distanceKm = await this.distanceKm(answer.id, point);
+    return distanceKm === undefined ? answer : { ...answer, distanceKm };
+  }
+
+  // Kilometres from the place to a listed garage, on the search's rule;
+  // none for a garage without a position.
+  private async distanceKm(id: string, point: SearchPoint) {
+    const area = areaSql({ point });
+    const [row] = await this.prisma.$queryRaw<{ metres: number | null }[]>`
+      SELECT ${area.distance} AS metres
+      FROM garage
+      WHERE garage.id = ${id}::uuid AND ${publicGaragesSql}`;
+    return typeof row?.metres === 'number' ? kmOf(row.metres) : undefined;
   }
 
   // The catalogue brand a slug names, retired ones too, read through the
