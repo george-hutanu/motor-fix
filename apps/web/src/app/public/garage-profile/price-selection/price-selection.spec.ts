@@ -194,3 +194,24 @@ describe('the list read again', () => {
     expect(on(s)).toEqual([]);
   });
 });
+
+// @traces 311-FR-003 311-FR-010
+describe('whether the kept jobs are applied', () => {
+  it('is false until the first read is synced in the browser', () => {
+    const s = selection();
+    expect(s.applied()).toBe(false);
+
+    s.sync(MILITARI);
+
+    expect(s.applied()).toBe(true);
+  });
+
+  it('never returns to false, another garage or a toggle included', () => {
+    const s = selection();
+    s.sync(MILITARI);
+    s.toggle('j-diag', true);
+    s.sync(DINAMO);
+
+    expect(s.applied()).toBe(true);
+  });
+});

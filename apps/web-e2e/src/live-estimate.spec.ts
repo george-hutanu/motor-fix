@@ -139,3 +139,109 @@ test.describe('the live estimate on a garage profile @seeded', () => {
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 });
+
+// The bar keeps the total and CERE OFERTĂ on a phone's screen; from 1024 px
+// the box itself stays in view beside the long sections.
+// @traces 311-FR-013
+test.describe('the estimate within reach @seeded', () => {
+  const bar = (page: Page) => page.locator('mf-estimate-bar');
+
+  test('keeps the total and CERE OFERTĂ on a phone, down to the request', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 812, width: 375 });
+    await hydrated(page, `/ro${MILITARI}?brand=bmw`);
+    await page.getByRole('switch', { name: DIAGNOSIS }).click();
+    await page.getByRole('switch', { name: BRAKES }).click();
+    await page.evaluate(() =>
+      window.scrollTo(0, document.documentElement.scrollHeight),
+    );
+
+    const request = bar(page).getByRole('button', {
+      exact: true,
+      name: 'CERE OFERTĂ',
+    });
+    await expect(request).toBeInViewport({ ratio: 1 });
+    const height = (await request.boundingBox())?.height ?? 0;
+    expect(height).toBeGreaterThanOrEqual(44);
+
+    await request.click();
+    await signIn(page, 'cerere@example.test');
+    const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
+    for (const name of [DIAGNOSIS, BRAKES])
+      await expect(quote.getByRole('switch', { name })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+  });
+
+  test('opens the whole estimate in a sheet from the total', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 812, width: 375 });
+    await hydrated(page, `/ro${MILITARI}?brand=bmw`);
+    await page.getByRole('switch', { name: DIAGNOSIS }).click();
+    await page.getByRole('switch', { name: BRAKES }).click();
+    const scrolled = await page.evaluate(() => window.scrollY);
+
+    await bar(page)
+      .getByRole('button', { name: 'Estimare de la 1.250 la 1.920 lei' })
+      .click();
+    const sheet = page.getByRole('dialog', { name: 'Estimarea ta' });
+    await expect(sheet).toContainText(DIAGNOSIS);
+    await expect(sheet).toContainText(BRAKES);
+    await expect(sheet).toContainText(
+      'Unde ajungi în interval depinde de mașină.',
+    );
+
+    // The sheet's own request opens on top of it, with both jobs on.
+    await sheet
+      .getByRole('button', { exact: true, name: 'CERE OFERTĂ' })
+      .click();
+    await signIn(page, 'cerere@example.test');
+    const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
+    for (const name of [DIAGNOSIS, BRAKES])
+      await expect(quote.getByRole('switch', { name })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+    await page.keyboard.press('Escape');
+    await expect(quote).toHaveCount(0);
+    // The overlay's container reads as hidden to Playwright: its content shows.
+    await expect(sheet.getByText(BRAKES).first()).toBeVisible();
+
+    await sheet
+      .getByRole('button', { name: /închide/i })
+      .first()
+      .click();
+    await expect(sheet).toHaveCount(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  });
+
+  test('holds the box in view on a desktop and shows no bar on a tablet', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
+    await hydrated(page, `/ro${MILITARI}?brand=bmw`);
+    await page.getByRole('switch', { name: DIAGNOSIS }).click();
+    await page.getByRole('switch', { name: BRAKES }).click();
+    await page.evaluate(() => window.scrollBy(0, 1500));
+    await expect(box(page)).toBeInViewport();
+    await expect(bar(page)).toBeHidden();
+
+    await page.setViewportSize({ height: 1194, width: 834 });
+    await expect(bar(page)).toBeHidden();
+  });
+
+  test('fits a 320 px phone with the bar', async ({ page }) => {
+    await page.setViewportSize({ height: 568, width: 320 });
+    await hydrated(page, `/ro${MILITARI}?brand=bmw`);
+    await page.getByRole('switch', { name: DIAGNOSIS }).click();
+    await page.getByRole('switch', { name: BRAKES }).click();
+
+    await expect(
+      bar(page).getByRole('button', { name: /Estimare/ }),
+    ).toBeVisible();
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+});

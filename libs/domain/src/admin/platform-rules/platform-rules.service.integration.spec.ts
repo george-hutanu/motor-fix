@@ -129,6 +129,7 @@ describe('listing the platform rules', () => {
     ]);
   });
 
+  // @traces 259-FR-001
   it('hides the test-only rules in production even when the table holds them', async () => {
     const list = await rules(true).list(ioana);
 
@@ -167,17 +168,18 @@ describe('changing a platform rule', () => {
     ).toEqual({ code: 'not_found', status: 404 });
   });
 
-  it('refuses a test-only key in production with 404 and leaves it as it was', async () => {
-    expect(
-      await refusal(
-        rules(true).change(ioana, 'skip_rar_check', {
-          seen: false,
-          value: true,
-        }),
-      ),
-    ).toEqual({ code: 'not_found', status: 404 });
-    expect((await rule('skip_rar_check')).value).toBe(false);
-  });
+  // @traces 259-FR-001
+  it.each(TEST_ONLY)(
+    'refuses the test-only key %s in production with 404 and leaves it as it was',
+    async (key) => {
+      expect(
+        await refusal(
+          rules(true).change(ioana, key, { seen: false, value: true }),
+        ),
+      ).toEqual({ code: 'not_found', status: 404 });
+      expect((await rule(key)).value).toBe(false);
+    },
+  );
 
   it('accepts a test-only key outside production', async () => {
     await rules(false).change(ioana, 'skip_rar_check', {

@@ -542,6 +542,32 @@ describe('a file approved while its row is shown', () => {
     },
   );
 
+  // @traces 303-FR-008
+  it('keeps its place when a re-read for another file dropped it before its own event came', async () => {
+    const el = await open();
+    fileRead.mockResolvedValue({ file: { id: 'file-2', status: 'approved' } });
+    // The approval is saved; another file's event re-reads the queue first.
+    answer = async () => without('file-2');
+    events.next(message('verification.check_recorded'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+    expect(rows(el)).toHaveLength(3);
+
+    events.next(decided('file-2'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(rows(el).map((r) => text(r.querySelector('.name')))).toEqual([
+      'Service 1',
+      'Service 2',
+      'Service 3',
+      'Service 4',
+    ]);
+    expect(text(rows(el)[1]?.querySelector('.state'))).toBe(
+      'Aprobat, e pe hartă',
+    );
+  });
+
   it('lets the count drop as the server counts', async () => {
     const el = await open();
 

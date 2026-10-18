@@ -17,6 +17,7 @@ const row = (extra: Partial<PriceRow> = {}): PriceRow => ({
   jobType: job,
   position: 0,
   toBani: 2000,
+  updatedAt: new Date(0),
   visible: true,
   ...extra,
 });

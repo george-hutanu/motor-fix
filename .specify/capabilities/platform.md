@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -88,6 +88,9 @@ features:
   - 1344-no-mutation-wait
   - 430-cdn-waf
   - 1019-staging-mcp-connect
+  - 1348-release-green
+  - 1174-postgres-18-pitr
+  - 173-price-range-in-place
 ---
 
 # Capability: Platform
@@ -204,13 +207,13 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 1348-FR-001 — (replaces 000-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (000-FR-004), a service whose Railway id is unset skipped with a notice (000-FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then, while production is on, promote to production with no approval step of its own (the `production` environment's protection rules are the owner's). Production is on only while the repository variable `PRODUCTION_ENABLED` is `true`, compared by GitHub's expression `==` (which ignores letter case); unset, empty or any other value is off. While it is off the production job MUST NOT start (it is skipped before it binds the `production` environment, so no run waits on that environment's reviewer or holds the `release-production` group), and the run MUST end green after staging with a notice and a step-summary line naming the variable. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
-_From 1016-mcp-staging._
+_From 1348-release-green._
 
-### 000-FR-014 — (replaces 516-FR-002) Once staging and its `@core` end-to-end flows pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
+### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
-_From 1016-mcp-staging._
+_From 1348-release-green._
 
 ### 516-FR-003 — Staging deploys and production deploys MUST each run one at a time, in commit order, and a deploy already running MUST NOT be cancelled by a newer commit: the newer one waits, and of several waiting only the latest proven commit runs next. There MUST be no path that deploys a branch or an unproven commit to production.
 
@@ -1656,9 +1659,9 @@ _From 1037-remove-notion._
 
 _From 1037-remove-notion._
 
-### 251-FR-012 — A scheduled workflow MUST run every day at 03:00 UTC and on `workflow_dispatch`, one job per environment (`staging`, `production`), each in its GitHub environment. An environment whose `RAILWAY_SERVICE_POSTGRES` variable is unset MUST be skipped with a notice and MUST NOT fail the run; one whose variable is set but whose backup settings (`BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_GPG_PASSPHRASE`) are incomplete MUST fail naming the missing setting. A failed run is the backup alert at launch.
+### 1348-FR-003 — (replaces 251-FR-012) A scheduled workflow MUST run every day at 03:00 UTC and on `workflow_dispatch`, one job per environment, each in its GitHub environment: `staging` always, `production` only while production is on (1348-FR-001). While production is off its leg MUST NOT be started at all (a job bound to the `production` environment waits for that environment's reviewer before its first step, so a leg that starts and skips its steps still waits: the leg is left out of the job's matrix), the run MUST stay green while the staging leg is (a failing staging leg still fails it), and the staging leg MUST note production's skip with a notice and a step-summary line naming the variable, whether or not staging's own `RAILWAY_SERVICE_POSTGRES` is set (the note is about production). An environment in the matrix whose `RAILWAY_SERVICE_POSTGRES` variable is unset MUST be skipped with a notice and MUST NOT fail the run; one whose variable is set but whose backup settings (`BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_GPG_PASSPHRASE`) are incomplete MUST fail naming the missing setting. A failed run is the backup alert at launch.
 
-_From 251-monitoring-backups._
+_From 1348-release-green._
 
 ### 251-FR-013 — The dump MUST run inside the environment's PostgreSQL service over `railway ssh` (the service's own tools, PostgreSQL 18): one transaction-consistent snapshot that produces the dump in PostgreSQL's custom format and a manifest (JSON: environment, UTC timestamp, database server version, the encrypted object's size (`dump_size_bytes`, which the drill checks before it downloads), and the row count of every table in `public` taken in the same snapshot). Both MUST be streamed back to the runner, the dump encrypted with symmetric AES-256 (`gpg`) under the passphrase secret before it touches the runner's disk, and uploaded to the S3-compatible bucket as `<environment>/<timestamp>.dump.gpg` and `<environment>/<timestamp>.manifest.json`. The run's log MUST never print the passphrase, the keys, the database URL or the dump.
 
@@ -1668,11 +1671,11 @@ _From 251-monitoring-backups._
 
 _From 251-monitoring-backups._
 
-### 251-FR-015 — A restore drill script MUST, given a backup key (default: the environment's newest), download and decrypt it, restore it into a fresh throwaway PostgreSQL of the manifest's major version (`postgres:18` for staging and production today; staging has no PostGIS, only `plpgsql` and `pg_stat_statements`) (removing a leftover one first), compare every table's row count with the manifest and fail on any difference naming the table, boot the API against it with the compose Redis and object storage and require `GET /health/ready` 200, print the duration of each step and the total, and tear the database down. A workflow MUST run it on `workflow_dispatch` and on the first day of every quarter on staging's newest backup; its failure is the alert.
+### 251-FR-015 — A restore drill script MUST, given a backup key (default: the environment's newest), download and decrypt it, restore it into a fresh throwaway PostgreSQL of the manifest's major version (`ghcr.io/george-hutanu/motor-fix-postgres:<major>`, PostGIS available; `DRILL_IMAGE` overrides) (removing a leftover one first), compare every table's row count with the manifest and fail on any difference naming the table, boot the API against it with the compose Redis and object storage and require `GET /health/ready` 200, print the duration of each step and the total, and tear the database down. A workflow MUST run it on `workflow_dispatch` and on the first day of every quarter on staging's newest backup; its failure is the alert.
 
 _From 251-monitoring-backups._
 
-### 251-FR-016 — The drill MUST time each step in the order download, decrypt, restore, compare, build, boot and print the total; it MUST be run once during this story on staging's backup, and the specs repo MUST gain a runbook (`docs/how-to/`) with the backup and restore steps, the secret and variable names, the measured time of each step, the recovery time and the data-loss window against the targets (back within 4 h; at most 15 min of data lost, which a daily dump does not meet: see Open questions), the on-call and admin-list steps and the source-map check of FR-010.
+### 251-FR-016 — The drill MUST time each step in the order download, decrypt, restore, compare, build, boot and print the total; it MUST be run once during this story on staging's backup, and the specs repo MUST gain a runbook (`docs/how-to/`) with the backup and restore steps, the secret and variable names, the measured time of each step, the recovery time and the data-loss window against the targets (back within 4 h; at most 15 min of data lost, met by point-in-time recovery, whose drill measures it), the on-call and admin-list steps and the source-map check of FR-010.
 
 _From 251-monitoring-backups._
 
@@ -1720,7 +1723,7 @@ _From 1159-mutation-shards._
 
 _From 1159-mutation-shards._
 
-### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
+### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL (the repository's image, `ghcr.io/george-hutanu/motor-fix-postgres:18`) and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
 
 _From 1159-mutation-shards._
 
@@ -1752,7 +1755,7 @@ _From 1159-mutation-shards._
 
 _From 1170-integration-on-demand._
 
-### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with PostgreSQL+PostGIS and Redis service containers, `pg_stat_statements` preloaded and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with the repository's own PostgreSQL 18 + PostGIS 3.6 image (`ghcr.io/george-hutanu/motor-fix-postgres:18`, `pg_stat_statements` preloaded by the image, no `ALTER SYSTEM` step) and Redis service containers and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
 
 _From 1170-integration-on-demand._
 
@@ -2255,6 +2258,45 @@ _From 430-cdn-waf._
 
 _From 1019-staging-mcp-connect._
 
+### 173-FR-013 — `libs/domain/src/garages/prices/garage-prices.service.ts` and `garage-prices.testing.ts`, with their colocated specs, MUST move to `libs/domain/src/garages/prices/garage-prices/` (files named after the subfolder), every import updated, their two entries removed from `scripts/structure-baseline.json`, and `node scripts/structure-check.ts` MUST pass (Constitution IV; folded-in #658).
+
+_From 173-price-range-in-place._
+### 1174-FR-001 — The repository MUST hold one database image definition (`infra/postgres/Dockerfile`), `FROM ghcr.io/railwayapp-templates/postgres-ssl:18` plus the distribution's `postgresql-18-postgis-3` package (PostGIS 3.6.x) from the base image's pgdg repository, nothing else added, with `PGDATA` set under `/var/lib/postgresql/data` so the base entrypoint starts; it MUST be published to `ghcr.io/george-hutanu/motor-fix-postgres` for amd64 and arm64, tagged with the commit sha on every publish and `18` from `main` (from another branch only when the dispatch sets its `move_18` input, so nothing moves the tag compose, CI and staging pull by accident), by a workflow (`postgres-image.yml`) that runs on `workflow_dispatch` from any branch and on a push to `main` that changes `infra/postgres/**` or the workflow itself, and builds both architectures without pushing on a pull request that changes them (the proof before merge, and what registers the workflow for a dispatch from a branch); the package is public, as the application images are, so compose, CI and Railway pull it with no login (making a new package public is an owner step if GitHub creates it private); a failed publish run is its alert.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-002 — `docker-compose.yml`, CI's Integration and E2E service containers (`ci.yml`), the mutation matrix jobs (`mutation.yml`) and the dump drill's throwaway MUST name that image's `18` tag, so the PR QA boot (the PR's own compose file) and `scripts/test-services.ts` use it with no change of their own; a unit spec MUST assert that these files name one and the same image, and that the image definition's base, package and `PGDATA` are as FR-001 says.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-003 — Because the image preloads `pg_stat_statements` on a fresh database, the compose service's `command` and CI's "Preload pg_stat_statements" step (the `ALTER SYSTEM` and restart) MUST be removed; the data-store metric specs that read the view MUST still pass.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-004 — An integration spec MUST assert the server is PostgreSQL 18 (`version()`) and that PostGIS 3.6 is available to install (`pg_available_extensions`), so the suite fails on any environment that boots another image.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-006 — Point-in-time recovery on Railway MUST be configured, not implemented: the image's own archiving and backups, turned on by `WAL_ARCHIVE_BUCKET`, `WAL_ARCHIVE_ENDPOINT`, `WAL_ARCHIVE_REGION`, `WAL_ARCHIVE_KEY` and `WAL_ARCHIVE_SECRET` with its defaults (archive at most 60 s behind, full backup every 168 h, differential every 24 h, four fulls and fourteen differentials kept). The PR's Notes and the how-to MUST list each owner step with the exact service, setting and value or secret name: switch the staging PostgreSQL service to the published image, create the archive bucket, set those five variables, and set the GitHub `staging` environment secrets of FR-008. The code MUST NOT wait on any of them. Rolling the service back is an owner step too, named in the Notes: set it to the previous image's sha tag; the archive variables stay set and harmless. The drill prints no archive key or secret: staging's reach the job only as GitHub secrets (masked in logs), the self-contained mode's are throwaway.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-007 — A point-in-time drill script (`scripts/backup/pitr-drill.sh`) MUST restore from a write-ahead-log archive into a throwaway sibling of the image on the machine it runs on, to a target moment, using the image's own restore variables (`WAL_RECOVER_FROM_*`, `POSTGRES_RECOVERY_TARGET_TIME`); check that a change committed before the target is present and the next one after it is absent; print the restore time (from the sibling's `docker run`, the image already pulled, until it has promoted, `pg_is_in_recovery()` false) and the archive lag (from the second marker's commit until the archive holds its log segment, per pgBackRest's `info`: the data at risk); fail naming the check when a marker check fails, the lag is over 15 min or the sibling has not promoted within 600 s (the script's `READY_SECONDS`; the lag wait is bounded at 900 s, the 15 min target); and remove everything it started however it ends.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-008 — The drill MUST run in two modes: self-contained (`--self-contained`: it starts a throwaway source database of the image archiving to an S3-compatible store it starts on the same machine, commits the two markers itself around the target, and so needs no secret) and staging (the archive's bucket, endpoint, region, key and secret from the GitHub `staging` environment, named `WAL_ARCHIVE_*` like Railway's; the two markers are empty transactions, `SELECT pg_current_xact_id()`, committed on staging over `railway ssh` as `backup.sh` reaches the service, with the same `RAILWAY_API_TOKEN` and service variables; they write no row). In both modes the target is the first marker's commit time (`pg_xact_commit_timestamp`), and the check is `pg_xact_status` on the sibling: the first `committed`, the second still in its future. A workflow (`pitr-drill.yml`) MUST run the self-contained mode on `workflow_dispatch`, on the first day of every quarter and on a pull request that changes `infra/postgres/**`, the drill script or the workflow (drilling the image that commit's Dockerfile builds), and the staging mode on the first two triggers only, its job bound to the `staging` environment and ending green with a notice, its drill steps skipped, while that environment holds no `WAL_ARCHIVE_BUCKET` (until the owner sets it); a failed run is the alert.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-010 — `scripts/backup/restore-drill.sh` MUST restore into `ghcr.io/george-hutanu/motor-fix-postgres:<the copy's major version>` by default (`DRILL_IMAGE` still overrides), so a dump that holds the PostGIS extension restores; its header and the how-to MUST say so. `scripts/backup/dump.sh` and `backup.yml` MUST stay as they are: the nightly encrypted off-platform copy.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-012 — The specs repo's `docs/how-to/back-up-and-restore-the-database.md` MUST describe point-in-time recovery (the variables, what the image does with them, the defaults, how to restore for real with Railway's point-in-time restore into a new service and when to use the dump instead), the point-in-time drill (both modes, how to run it, what it checks), the dump drill's new image, and MUST say under "Timings and targets" that the 15-minute data-loss target is met by the archive (at most 60 s plus the heartbeat behind, as the self-contained drill measured), never again "not met"; `docs/reference/stack.md` MUST record PostgreSQL 18 + PostGIS 3.6 on our image as decided (ST-1174), and `llms.txt`'s summary of the how-to MUST mention point-in-time recovery.
+
+_From 1174-postgres-18-pitr._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2344,3 +2386,7 @@ _From 1019-staging-mcp-connect._
 - `1324-FR-011` — removed by 1324-retire-debt-and-ready (2026-10-16): a process check, not a behaviour; SC-004's doctor run is the check
 
 - `431-FR-011` — superseded by `1344-FR-004` (2026-10-17)
+
+- `000-FR-001` — superseded by `1348-FR-001` (2026-10-17)
+- `000-FR-014` — superseded by `1348-FR-002` (2026-10-17)
+- `251-FR-012` — superseded by `1348-FR-003` (2026-10-17)

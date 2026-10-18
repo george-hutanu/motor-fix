@@ -4,14 +4,14 @@ import type { FieldProblem, StartingPricesInput } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 
 import { GaragePricesService } from './garage-prices.service';
-import { AuditService } from '../../audit/audit.service';
-import { serialDatabase } from '../../auth/serial-db.testing';
-import { outbox } from '../../events/event.port';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { AuditService } from '../../../audit/audit.service';
+import { serialDatabase } from '../../../auth/serial-db.testing';
+import { outbox } from '../../../events/event.port';
+import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
-} from '../../notifications/notifications.testing';
+} from '../../../notifications/notifications.testing';
 
 // The refusal's field errors, or a failure when the call did not refuse.
 export async function refused(run: Promise<unknown>) {

@@ -206,6 +206,49 @@ export async function openPage(page, url) {
   return res;
 }
 
+// A canvas chart (Chart.js) animates in script, which SHOT_OPTIONS' animations: "disabled" cannot stop:
+// wait, bounded, until no canvas changes across STABLE_FRAMES frames `interval` ms apart and none is
+// still blank (Chart.js draws its first frame only once the canvas is sized). Three frames, not two:
+// an easing tail can repeat one frame before the bars reach their height. A page with no canvas
+// returns at once; one that cannot be read, or never settles, is shot as it is (false).
+export const CANVAS_SETTLE_MS = 3000;
+const STABLE_FRAMES = 3;
+export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interval = 100 } = {}) {
+  const frame = () =>
+    page.evaluate(() => {
+      let blank = false;
+      const sig = [...document.querySelectorAll("canvas")]
+        .map((canvas) => {
+          try {
+            const url = canvas.toDataURL();
+            const empty = document.createElement("canvas");
+            empty.width = canvas.width;
+            empty.height = canvas.height;
+            if (url === empty.toDataURL()) blank = true;
+            return url;
+          } catch {
+            return "";
+          }
+        })
+        .join("|");
+      return { sig, blank };
+    });
+  try {
+    const deadline = Date.now() + timeout;
+    let last = await frame();
+    if (!last.sig) return true;
+    let same = 1;
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(interval);
+      const next = await frame();
+      same = next.sig === last.sig && !next.blank ? same + 1 : 1;
+      if (same >= STABLE_FRAMES) return true;
+      last = next;
+    }
+  } catch {}
+  return false;
+}
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -254,6 +297,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
         // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
+        await settleCanvases(page);
         await page.screenshot(shotOptions(page, screenshot));
         screenshots.push(screenshot);
         if (!problem) {

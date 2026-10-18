@@ -805,8 +805,25 @@ describe('a failed write', () => {
 });
 
 describe('the test switch', () => {
+  // @traces 259-FR-002
+  // The RAR rule of an automatic approval is met by the RAR test switch.
+  const rarSwitch = (value: boolean) =>
+    prisma.platformRule.upsert({
+      create: { defaultValue: false, key: 'skip_rar_check', value },
+      update: { value },
+      where: { key: 'skip_rar_check' },
+    });
+
+  afterEach(() => rarSwitch(false));
+
   it('approves a submission at once as MotorFix, with both transitions recorded', async () => {
-    const file = await inTx((tx) => service(true).submit(tx, mihai, garageId));
+    await rarSwitch(true);
+    const automatic = new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: true,
+      testRules: true,
+    });
+
+    const file = await inTx((tx) => automatic.submit(tx, mihai, garageId));
 
     expect(file).toMatchObject({ decidedBy: null, status: 'approved' });
     const garage = await prisma.garage.findUniqueOrThrow({
@@ -1288,21 +1305,15 @@ describe('a file already decided', () => {
   // @traces 306-FR-002 306-FR-012
   it('lets exactly one of two racing decisions commit, every time', async () => {
     for (let lap = 0; lap < 10; lap += 1) {
-      const file = await prisma.verificationFile.create({
-        data: {
-          checks: {
-            create: [
-              { kind: 'rar', result: 'ok' },
-              { kind: 'caen', result: 'ok' },
-            ],
-          },
-          garageId,
-          status: 'in_review',
-        },
-      });
+      const file = await fileIn('in_review');
 
       const results = await Promise.allSettled([
-        decideWith(ioana, file.id, { outcome: 'approved' }),
+        // The documents are missing, so the approval carries its note and
+        // loses only to the race.
+        decideWith(ioana, file.id, {
+          note: 'Acte văzute la sediu',
+          outcome: 'approved',
+        }),
         decideWith(dan, file.id, {
           note: 'Lipsește ONRC',
           outcome: 'rejected',
@@ -2034,19 +2045,18 @@ describe('the RAR test switch', () => {
     expect((await fileRow(file.id)).status).toBe('approved');
   });
 
-  it('still holds the approval on the caen check', async () => {
+  // @traces 259-FR-004
+  it('lifts the caen gate too', async () => {
     const file = await fileIn('in_review');
     await setCheck(file.id, 'rar', 'not_run');
     await setCheck(file.id, 'caen', 'not_run');
     await switchTo(true);
 
-    const refused = await refusal(
-      inTx((tx) =>
-        rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
-      ),
+    await inTx((tx) =>
+      rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
     );
 
-    expect(refused.body.code).toBe('caen_check_required');
+    expect((await fileRow(file.id)).status).toBe('approved');
   });
 
   it('holds the rar gate when the switch is off', async () => {

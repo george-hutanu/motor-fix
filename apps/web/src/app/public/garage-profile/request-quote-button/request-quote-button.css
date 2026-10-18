@@ -39,6 +39,10 @@ p {
     width: 100%;
   }
 }
+/* The phone bar's button keeps its label on one line. */
+:host(.one-line) button {
+  white-space: nowrap;
+}
 /* The estimate box's button: full width, with a trailing arrow nobody hears. */
 :host(.wide) .request {
   justify-items: stretch;
@@ -47,9 +51,16 @@ p {
   content: "→" / "";
   margin-left: var(--mf-space-2);
 }
-/* On a 320 px phone the arrow would push the label onto a second line. */
-@media (max-width: 359.98px) {
+/* Below 420 px the arrow would push the label onto a second line; below
+   375 px the label also needs a narrower tracking and padding to fit. */
+@media (max-width: 419.98px) {
   :host(.wide) button::after {
     content: none;
+  }
+}
+@media (max-width: 374.98px) {
+  :host(.wide) button {
+    padding-inline: var(--mf-space-3);
+    letter-spacing: normal;
   }
 }

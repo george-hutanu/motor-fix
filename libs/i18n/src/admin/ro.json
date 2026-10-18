@@ -102,6 +102,7 @@
       "pfa": "PFA"
     },
     "lines": {
+      "approvalRefused": "Aprobare refuzată: {reason} — {name}, {when}",
       "approved": "Aprobat de {name}, {when}",
       "changed": "Modificat de {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
@@ -149,6 +150,11 @@
       "rar": "Autorizație RAR"
     },
     "recorded": "{name}, {when}",
+    "refusalReasons": {
+      "caen_check_required": "verificarea CAEN 4520 nu e în regulă",
+      "note_required": "lipsește nota",
+      "rar_check_required": "verificarea RAR nu e în regulă"
+    },
     "register": {
       "activities": "Activitățile autorizate acoperă lista de prețuri",
       "anaf": "ANAF",

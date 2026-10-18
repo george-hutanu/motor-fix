@@ -100,6 +100,7 @@
       "pfa": "PFA"
     },
     "lines": {
+      "approvalRefused": "Approval refused: {reason} — {name}, {when}",
       "approved": "Approved by {name}, {when}",
       "changed": "Changed by {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
@@ -147,6 +148,11 @@
       "rar": "RAR authorisation"
     },
     "recorded": "{name}, {when}",
+    "refusalReasons": {
+      "caen_check_required": "the CAEN 4520 check is not ok",
+      "note_required": "the note is missing",
+      "rar_check_required": "the RAR check is not ok"
+    },
     "register": {
       "activities": "Authorised activities cover the price list",
       "anaf": "ANAF",

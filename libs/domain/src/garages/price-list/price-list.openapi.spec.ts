@@ -48,3 +48,47 @@ describe("the owner's price list read's labour range in the OpenAPI document", (
     expect(list.required ?? []).not.toContain('labour');
   });
 });
+
+// @traces 173-FR-004
+// @traces 173-FR-005
+// @traces 173-FR-007
+describe('the in-place range writes in the OpenAPI document', () => {
+  it("changes a default row's range with its body, its answer and its refusals", () => {
+    const patch =
+      doc.paths['/api/v1/garages/{garageId}/prices/{priceId}'].patch;
+
+    expect(patch.operationId).toBe('PriceListController_setRange');
+    expect(ref(patch.requestBody.content['application/json'].schema)).toBe(
+      'PriceRangeDto',
+    );
+    expect(ref(patch.responses['200'].content['application/json'].schema)).toBe(
+      'PriceRangeSavedDto',
+    );
+    expect(Object.keys(patch.responses).sort()).toEqual(
+      ['200', '400', '401', '403', '404', '409', '415', '422'].sort(),
+    );
+  });
+
+  it('changes the labour range with its body, its answer and its refusals', () => {
+    const patch = doc.paths['/api/v1/garages/{garageId}/labour'].patch;
+
+    expect(ref(patch.requestBody.content['application/json'].schema)).toBe(
+      'LabourRangeDto',
+    );
+    expect(ref(patch.responses['200'].content['application/json'].schema)).toBe(
+      'LabourRangeSavedDto',
+    );
+    expect(Object.keys(patch.responses).sort()).toEqual(
+      ['200', '400', '401', '403', '404', '415', '422'].sort(),
+    );
+  });
+
+  it("gives each owner's item the default row's id and stamp, when it has one", () => {
+    const item = doc.components.schemas.PriceListItemDto;
+
+    expect(item.properties.priceId).toMatchObject({ format: 'uuid' });
+    expect(item.properties.updatedAt).toMatchObject({ format: 'date-time' });
+    expect(item.required).not.toContain('priceId');
+    expect(item.required).not.toContain('updatedAt');
+  });
+});

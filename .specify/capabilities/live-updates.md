@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 253-live-connection
   - 254-live-audience
@@ -20,6 +20,7 @@ features:
   - 049-garage-suspension
   - 270-card-pin-link
   - 172-price-list-states
+  - 173-price-range-in-place
 ---
 
 # Capability: Live updates
@@ -386,6 +387,10 @@ _From 270-card-pin-link._
 ### 172-FR-007 — The view MUST be live as the dashboard's other views are: it re-reads on `price_list.updated` and `catalogue_job.decided` events of its garage and on every resync, with a 300 ms burst as one re-read; `price_list.updated` already reaches the owner's stream through the garage channel (386-FR-010, the hub's `garage.prices` family); `catalogue_job.decided`, once a story emits it, MUST reach the garage's stream for the owner through the same `garage.prices` family: this story adds `/^catalogue_job\./ → garage.prices` to the hub's family table (`KIND_CAPABILITY`), so a receptionist or mechanic does not hear it. A re-read that fails keeps the rows shown. A failed read is tried again by itself after 60 seconds (`liveView`'s `retryAfter`), as the dashboard's other live views do.
 
 _From 172-price-list-states._
+
+### 173-FR-009 — Each write that changed something MUST emit, in the same transaction through the outbox, one `price_list.updated` event with `garageId`, `jobTypeIds` (the job, or `[]` for labour) and `brandIds` (`[]` for a default row or labour), so the open profile (`public:garage:{garageId}`) and other open Prețuri views (`garage:{garageId}`, the `garage.prices` holders) re-read; the live hub's existing mapping carries it. It MUST drop the garage's brandless public profile cache key (the relay's purge covers the brand variants), so the next profile read answers the new range at once. It notifies nobody.
+
+_From 173-price-range-in-place._
 
 ## Retired
 

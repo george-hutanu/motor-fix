@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -29,9 +29,12 @@ features:
   - 880-grafana-alerts
   - 297-system-status-log
   - 1345-staging-observability
+  - 1348-release-green
   - 1347-outage-contact-point
   - 280-contact-motorfix
   - 299-system-log-search
+  - 1174-postgres-18-pitr
+  - 173-price-range-in-place
 ---
 
 # Capability: Observability
@@ -332,7 +335,7 @@ _From 878-data-store-metrics._
 
 _From 878-data-store-metrics._
 
-### 878-FR-013 — `.env.example` MUST name `MONITOR_DATABASE_URL` and `MONITOR_DATABASE_PASSWORD` with no value; the local compose PostgreSQL MUST preload `pg_stat_statements`, and CI's PostgreSQL MUST have it preloaded before the tests (`ALTER SYSTEM` and a restart), so the slow-statement reading is tested, never skipped.
+### 878-FR-013 — `.env.example` MUST name `MONITOR_DATABASE_URL` and `MONITOR_DATABASE_PASSWORD` with no value; the local compose PostgreSQL and CI's PostgreSQL MUST have `pg_stat_statements` preloaded, by the repository's database image itself (no `ALTER SYSTEM` or restart step), so the slow-statement reading is tested, never skipped.
 
 _From 878-data-store-metrics._
 
@@ -785,6 +788,13 @@ _From 1345-staging-observability._
 ### 1345-FR-018 — The admin accounts failure log MUST log a 401 at info, with the same route and status fields, and every other status of 400 or above at warn. A colocated test asserts the level per status.
 
 _From 1345-staging-observability._
+
+### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
+
+_From 1348-release-green._
+### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
+
+_From 173-price-range-in-place._
 
 ## Retired
 

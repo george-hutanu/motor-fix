@@ -745,6 +745,28 @@ describe('Overlays: a task still loading', () => {
     expect(body()?.querySelector('.mf-overlay-skeleton')).toBeNull();
     expect(document.activeElement?.id).toBe('name');
   });
+
+  it('leaves the focus on the X when the person tabbed there while it loaded, on a computer and on a phone', async () => {
+    for (const wide of [true, false]) {
+      computer = wide;
+      let arrive: (task: typeof FormTask) => void = () => {};
+      const loading = new Promise<typeof FormTask>((resolve) => {
+        arrive = resolve;
+      });
+      await openTask((host) => {
+        host.task = () => loading;
+      });
+      closeButton()?.focus();
+
+      arrive(FormTask);
+      await settle();
+
+      expect(top().querySelector('#name')).not.toBeNull();
+      expect(document.activeElement).toBe(closeButton());
+      closeButton()?.click();
+      await settle();
+    }
+  });
 });
 
 describe('Overlays: a task that fails to load', () => {

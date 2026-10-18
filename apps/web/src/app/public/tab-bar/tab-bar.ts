@@ -31,7 +31,7 @@ const UNTYPED = new Set([
 
 // Browsers do not report the on-screen keyboard; a focused text field is the
 // closest sign of it.
-const takesText = (target: EventTarget | null) =>
+export const takesText = (target: EventTarget | null) =>
   target instanceof HTMLTextAreaElement ||
   (target instanceof HTMLInputElement && !UNTYPED.has(target.type)) ||
   (target instanceof HTMLElement && target.isContentEditable);

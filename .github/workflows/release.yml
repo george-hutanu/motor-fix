@@ -296,14 +296,25 @@ jobs:
           # The seeded accounts' staging password; without it the flows that
           # sign in for real are skipped there.
           E2E_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+      # The release ends here while production is off; the step's implied
+      # success() keeps a red staging from printing it.
+      - name: Note that production is off
+        if: vars.PRODUCTION_ENABLED != 'true'
+        run: |
+          echo "::notice title=Production skipped::PRODUCTION_ENABLED is not true, so this release ended after staging. The owner sets the repository variable PRODUCTION_ENABLED to true to promote to production again."
+          echo "Production skipped: the repository variable PRODUCTION_ENABLED is not \`true\`, so this release ended after staging." >> "$GITHUB_STEP_SUMMARY"
 
   production:
     needs: [images, staging]
+    # Production runs only while the repository variable PRODUCTION_ENABLED
+    # is true (any letter case), which the owner sets. A job this skips binds
+    # no environment, so it waits on no reviewer and holds no release group;
+    # the production environment's protection rules are the owner's.
+    if: vars.PRODUCTION_ENABLED == 'true'
     runs-on: ubuntu-latest
-    # No approval: production follows a green staging run. Production
-    # releases run one at a time, in commit order, and a deploy already
-    # running is never cancelled: a newer commit that passes staging waits
-    # for it, and of several waiting only the latest runs next.
+    # Production releases run one at a time, in commit order, and a deploy
+    # already running is never cancelled: a newer commit that passes staging
+    # waits for it, and of several waiting only the latest runs next.
     environment: production
     concurrency:
       group: release-production
@@ -338,7 +349,7 @@ jobs:
           node scripts/cdn.ts purge --zone || echo "::warning::CDN purge failed"
       # Marks the deploy on every dashboard (tags deploy and env:production); a
       # release without the token skips it (the images job named what is
-      # missing), and a refused annotation only warns: the deploy has happened. A shell check, not an `if:`, so the job carries no condition.
+      # missing), and a refused annotation only warns: the deploy has happened.
       - name: Annotate the deploy
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}

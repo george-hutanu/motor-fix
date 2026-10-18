@@ -9,7 +9,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
-import { refused } from '../prices/garage-prices.testing';
+import { refused } from '../prices/garage-prices/garage-prices.testing';
 
 const { account, prisma } = fixtures();
 const mechanics = new GarageMechanicsService(new AuditService());

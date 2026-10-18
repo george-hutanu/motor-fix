@@ -19,6 +19,11 @@ export interface PriceListItemDto {
   nameRo: string;
 
   /**
+   * The default row's id, what a range change names; absent without one
+   */
+  priceId?: string;
+
+  /**
    * Drivers see the job on the garage profile
    */
   public: boolean;
@@ -32,4 +37,9 @@ export interface PriceListItemDto {
    * The default range's top price, when set
    */
   toBani?: number;
+
+  /**
+   * When the default row last changed, sent back with a range change
+   */
+  updatedAt?: string;
 }

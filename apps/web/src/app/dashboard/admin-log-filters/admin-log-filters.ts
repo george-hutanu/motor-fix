@@ -37,11 +37,12 @@ export class AdminLogFilters implements OnDestroy {
   private wait: ReturnType<typeof setTimeout> | undefined;
 
   readonly filter = input.required<LogFilter>();
-  // The settled search text, 300 ms after the last key.
-  readonly search = output<string>();
-  // The whole filter, at each choice the pickers allow. Not named `change`:
-  // the pickers' native change event bubbles to this host as well.
-  readonly applied = output<LogFilter>();
+  // The settled search text, 300 ms after the last key. Neither output
+  // shares a name with a DOM event: the box's search and the pickers' change
+  // events bubble to the host, where a binding would take them for these.
+  readonly settled = output<string>();
+  // The whole filter, at each choice the pickers allow.
+  readonly narrowed = output<LogFilter>();
 
   protected readonly max = SYSTEM_LOG_SEARCH_MAX;
   // What the box holds: the address's text until the admin types, and the
@@ -86,12 +87,12 @@ export class AdminLogFilters implements OnDestroy {
     clearTimeout(this.wait);
     this.wait = setTimeout(() => {
       this.wait = undefined;
-      this.search.emit(searchText(value));
+      this.settled.emit(searchText(value));
     }, SETTLE_MS);
   }
 
   protected choose(choice: LogChoice) {
-    this.applied.emit({ ...choice, q: this.filter().q });
+    this.narrowed.emit({ ...choice, q: this.filter().q });
   }
 
   protected async openSheet() {
