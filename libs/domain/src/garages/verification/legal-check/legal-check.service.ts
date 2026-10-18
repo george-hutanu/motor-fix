@@ -57,6 +57,7 @@ export class LegalCheckService {
     const file = garage?.verificationFiles[0];
     if (garage?.status !== 'approved' || !file) throw notFound();
     const activities = await this.prisma.rarActivity.findMany({
+      select: { code: true, nameEn: true, nameRo: true },
       where: { code: { in: garage.rarActivities } },
     });
     const lastCheckedOn = day(garage.lastCheckedOn);

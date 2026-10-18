@@ -389,11 +389,12 @@ export class VerificationChecksService {
       subjectId: check.id,
       subjectType: 'verification_check',
     });
-    // The admins and the garage's own staff: its owner's legal check reads again.
+    // The admins and the garage's own staff: its owner's legal check reads
+    // again. The result stays out, since the staff may not read the check.
     await this.events.record(tx, {
       audience: { garageId: file.garageId, type: 'verification' },
       kind: 'verification.check_recorded',
-      payload: { fileId, kind, result: check.result },
+      payload: { fileId, kind },
       subjectId: fileId,
     });
 

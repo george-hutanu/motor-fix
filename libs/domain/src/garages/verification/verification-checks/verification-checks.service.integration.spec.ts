@@ -209,9 +209,11 @@ describe('recording a check', () => {
     expect(others).toHaveLength(0);
     expect(event).toMatchObject({
       audience: ['admin', `garage:${garageId}`],
-      payload: { fileId, kind: 'rar', result: 'ok' },
+      payload: { fileId, kind: 'rar' },
       subjectId: fileId,
     });
+    // The garage's staff may not read the check, so its result stays out.
+    expect(event?.payload).toEqual({ fileId, kind: 'rar' });
   });
 
   it('answers with the file summary in both languages', async () => {

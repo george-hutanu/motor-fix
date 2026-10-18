@@ -81,9 +81,6 @@ h2 {
   text-align: right;
   white-space: nowrap;
 }
-[data-lamp="green"] .lamp {
-  background: var(--mf-green);
-}
 [data-lamp="green"] .state {
   color: var(--mf-green-ink);
 }

@@ -1,4 +1,6 @@
-import { type LegalCheckSource, legalCheckRows } from './legal-check.dto';
+import { legalCheckRows } from './legal-check.dto';
+
+type LegalCheckSource = Parameters<typeof legalCheckRows>[0];
 
 const check = (
   kind: 'company' | 'caen' | 'rar',

@@ -9,13 +9,8 @@ import {
   type VerificationCheckResult,
 } from './verification-checks';
 
-export const LEGAL_CHECK_ROWS = [
-  'company',
-  'caen',
-  'rar',
-  'documents',
-] as const;
-export type LegalCheckRowKind = (typeof LEGAL_CHECK_ROWS)[number];
+const LEGAL_CHECK_ROWS = ['company', 'caen', 'rar', 'documents'] as const;
+type LegalCheckRowKind = (typeof LEGAL_CHECK_ROWS)[number];
 
 export class LegalCheckRowDto {
   @ApiProperty({ enum: LEGAL_CHECK_ROWS })
@@ -85,7 +80,7 @@ export class LegalCheckDto {
   rows!: LegalCheckRowDto[];
 }
 
-export interface LegalCheckSource {
+interface LegalCheckSource {
   checks: readonly {
     kind: string;
     result: VerificationCheckResult;

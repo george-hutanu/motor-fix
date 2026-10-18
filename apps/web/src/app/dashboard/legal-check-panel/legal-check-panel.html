@@ -5,7 +5,12 @@
       <span class="tag" data-legal-tag><span class="dot" aria-hidden="true"></span>{{ 'garage.legal.tag' | t }}</span>
     }
   </header>
-  @if (data()) {
+  @if (failed()) {
+    <div class="error" role="alert">
+      <p>{{ 'garage.legal.error' | t }}</p>&ngsp;
+      <button hlmBtn variant="secondary" type="button" (click)="retry.emit()">{{ 'garage.legal.retry' | t }}</button>
+    </div>
+  } @else if (data()) {
     <ul class="rows">
       @for (row of rows(); track row.kind) {
         <li class="row" [attr.data-legal-row]="row.kind" [attr.data-lamp]="row.lamp">
@@ -17,11 +22,6 @@
         </li>
       }
     </ul>
-  } @else if (failed()) {
-    <div class="error" role="alert">
-      <p>{{ 'garage.legal.error' | t }}</p>&ngsp;
-      <button hlmBtn variant="secondary" type="button" (click)="retry.emit()">{{ 'garage.legal.retry' | t }}</button>
-    </div>
   } @else if (loading()) {
     <ul class="rows" aria-busy="true">
       @for (n of skeletons; track n) {
