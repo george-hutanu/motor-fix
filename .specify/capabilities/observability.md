@@ -34,6 +34,7 @@ features:
   - 299-system-log-search
   - 173-price-range-in-place
   - 1174-postgres-18-pitr
+  - 1183-garage-profile-page
   - 1178-keycloak-sizing
   - 1348-release-green
 ---
@@ -797,6 +798,9 @@ _From 1348-release-green._
 
 _From 173-price-range-in-place._
 
+### 1183-FR-006 — The `motorfix-api` dashboard MUST gain a "Profile p95 (alert above 300 ms)" panel, and the API alerts file an `api-profile-latency` rule that fires when the profile route's p95 request duration stays above 300 ms for 10 minutes, both shaped like the search ones; the route label MUST be the one the API actually emits for `GET /api/v1/garages/:slug` (checked against `apps/api/src/telemetry.ts` and the existing search panel's `http_route` value). The alert MUST be listed in `infra/observability/inventory.json` under the `api` app so `scripts/observability-inventory.ts` passes.
+
+_From 1183-garage-profile-page._
 ### 1178-FR-005 — The worker MUST accept one new optional setting naming Keycloak's metrics endpoint (`KEYCLOAK_METRICS_URL`, a full address to the management interface's `/metrics` on Railway's private network). When it is unset or empty, the worker MUST make no request to any metrics endpoint and publish no Keycloak sample; every other reading is unchanged.
 
 _From 1178-keycloak-sizing._

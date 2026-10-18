@@ -24,6 +24,7 @@ import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { addLocalDays, atLocal, localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import type {
   Car,
   Fuel,
@@ -115,7 +116,6 @@ const takes = (car: Pick<Car, 'brandId' | 'fuel'>, jobTypeIds: string[]) => ({
       }),
     },
   },
-  status: 'approved' as const,
 });
 
 // The first garage, in the order sent, that cannot take the request.
@@ -331,6 +331,7 @@ export class QuoteRequestsService {
       take: REQUEST_MAX_GARAGES,
       where: {
         id: { in: [...area.keys()] },
+        ...publicGarages(),
         ...takes(car, query.jobTypeIds ?? []),
       },
     });

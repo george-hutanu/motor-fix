@@ -3,7 +3,10 @@ import type { Redis } from 'ioredis';
 
 import { AUTH_REDIS } from '../../auth/attempts';
 import { PRISMA } from '../../auth/prisma';
-import { PublicGaragesService } from '../../garages/public-garages/public-garages';
+import {
+  PublicGaragesService,
+  publicGaragesSql,
+} from '../../garages/public-garages/public-garages';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { HomeService, homeRead } from '../../search/home/home.service';
 import {
@@ -39,7 +42,7 @@ export async function warmCache(app: INestApplicationContext, release: string) {
       SELECT g.slug FROM garage g
       LEFT JOIN garage_daily_figures f
         ON f.garage_id = g.id AND f.day >= current_date - 30
-      WHERE g.status = 'approved'
+      WHERE ${publicGaragesSql('g')}
       GROUP BY g.id
       ORDER BY COALESCE(SUM(f.profile_views), 0) DESC,
         g.approved_at DESC NULLS LAST, g.id

@@ -23,6 +23,7 @@ import {
   type GarageReportOutcome,
 } from '../../../metrics/product-counters';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { publicGaragesSql } from '../../public-garages/public-garages';
 import {
   newestFirst,
   SYSTEM,
@@ -127,7 +128,7 @@ export class GarageReportsService {
     await tx.$queryRaw`SELECT id FROM account WHERE id = ${reporterId}::uuid FOR UPDATE`;
     const [garage] = await tx.$queryRaw<{ name: string }[]>`
       SELECT name FROM garage
-      WHERE id = ${garageId}::uuid AND status = 'approved'
+      WHERE id = ${garageId}::uuid AND ${publicGaragesSql()}
       FOR UPDATE`;
     if (!garage) throw notFound();
     const [member, mechanic] = await Promise.all([
