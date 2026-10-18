@@ -151,7 +151,7 @@ describe('what the bar shows', () => {
 
     expect(total().tagName).not.toBe('BUTTON');
     expect(total().getAttribute('aria-hidden')).toBe('true');
-    expect(say(total())).not.toContain('Alege');
+    expect(total().textContent?.trim()).toBe('');
   });
 
   it('asks to pick the jobs with nothing on', async () => {
