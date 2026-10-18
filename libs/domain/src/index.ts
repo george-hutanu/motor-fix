@@ -43,16 +43,13 @@ export { reminderDayMs } from './cars/reminders/reminders-config';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { BrandLoader } from './catalogue/brand-loader';
 export {
-  BODY_STYLES,
   type BodyStyle,
   BRANDS,
 } from './catalogue/brands';
 export {
   CAR_MODELS,
   type CarForBrand,
-  CarModelFileError,
   carForBrand,
-  validateCarModels,
 } from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
