@@ -248,15 +248,12 @@ async function walk(page: Page, screens: readonly Screen[]) {
 // @traces 248-launch-screens-accessible-FR-007
 // @traces 248-launch-screens-accessible-FR-008
 test.describe('axe on the core screens @seeded', () => {
-  test('home and the overlays it opens', async ({ page }) => {
-    expect(await walk(page, PUBLIC.slice(0, 3))).toEqual([]);
-  });
-
-  test('the results, a garage profile, list your garage and contact', async ({
-    page,
-  }) => {
-    expect(await walk(page, PUBLIC.slice(3))).toEqual([]);
-  });
+  // One test per screen: both languages and schemes of four screens do not
+  // fit one test's 30 s on a CI runner, and apart they run in parallel.
+  for (const screen of PUBLIC)
+    test(screen.name, async ({ page }) => {
+      expect(await walk(page, [screen])).toEqual([]);
+    });
 
   test("the driver's quote request dialog and my requests", async ({
     page,
