@@ -61,6 +61,13 @@ const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 const REQUEST_RECEIVED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
 const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
 const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
+const REPORT_DECISION_OUTCOMES = [
+  'unfounded',
+  'confirmed',
+  'confirmed_already_suspended',
+] as const;
+export type ReportDecisionOutcome = (typeof REPORT_DECISION_OUTCOMES)[number];
+const REPORT_DECIDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const QUOTE_RECEIVED_OUTCOMES = ['built', 'muted'] as const;
 
 const SUPPORT_MESSAGE_OUTCOMES = [
@@ -111,6 +118,16 @@ const decisionRefusals = () =>
   counter(
     'motorfix_verification_decision_refusals_total',
     'Verification decisions refused, by reason',
+  );
+const reportDecisions = () =>
+  counter(
+    'motorfix_report_decisions_total',
+    "Admins' decisions on a garage's open reports, by outcome",
+  );
+const reportDecidedNotices = () =>
+  counter(
+    'motorfix_garage_report_decided_notices_total',
+    'Report decisions told to their reporters, by outcome',
   );
 const reopenings = () =>
   counter(
@@ -217,11 +234,24 @@ const DECISION_REFUSAL_REASONS = [
   'rar_check_required',
   'caen_check_required',
   'note_required',
+  'no_open_report',
+  'reason_required',
 ] as const;
 type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
 
 export function countDecisionRefusal(reason: DecisionRefusalReason) {
   decisionRefusals().add(1, { reason });
+}
+
+export function countReportDecision(outcome: ReportDecisionOutcome) {
+  reportDecisions().add(1, { outcome });
+}
+
+// A report decision told to its reporters, or one with nobody to tell.
+export function countReportDecidedNotice(
+  outcome: (typeof REPORT_DECIDED_NOTICE_OUTCOMES)[number],
+) {
+  reportDecidedNotices().add(1, { outcome });
 }
 
 const REOPENING_ROLES = ['admin', 'system'] as const;
@@ -330,6 +360,7 @@ const STARTS: Record<
     ],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
+    [reportDecisions, each('outcome', REPORT_DECISION_OUTCOMES)],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
     [documentsUploaded, each('kind', DOCUMENT_KINDS)],
@@ -364,6 +395,7 @@ const STARTS: Record<
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
     [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
+    [reportDecidedNotices, each('outcome', REPORT_DECIDED_NOTICE_OUTCOMES)],
     [quotesReceived, each('outcome', QUOTE_RECEIVED_OUTCOMES)],
     [
       declineWindows,

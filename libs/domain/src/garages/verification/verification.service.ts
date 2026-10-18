@@ -55,13 +55,15 @@ export type Decision = {
   requestedItems?: string[];
 };
 
-type Transition = 'open' | 'decide' | 'resend' | 'reopen';
+type Transition = 'open' | 'decide' | 'resend' | 'reopen' | 'reports';
 
 // The statuses each transition may start from; every other pair is refused.
 const FROM: Record<Transition, VerificationFileStatus[]> = {
   decide: ['submitted', 'in_review'],
   open: ['submitted'],
   reopen: ['approved', 'rejected', 'more_requested'],
+  // A file a report reopened goes back to approved with the reports' decision.
+  reports: ['in_review'],
   resend: ['more_requested'],
 };
 
@@ -69,6 +71,7 @@ const KIND: Record<Transition, string> = {
   decide: 'verification_decided',
   open: 'verification_opened',
   reopen: 'verification_reopened',
+  reports: 'verification_decided',
   resend: 'verification_resent',
 };
 
@@ -467,6 +470,22 @@ export class VerificationService {
         verificationMissing: missing,
       },
     );
+  }
+
+  // The file's move when its reports are decided: the garage stays as it is,
+  // so no gate and no publication; the reports' story announces it.
+  async approveAfterReports(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    fileId: string,
+  ): Promise<VerificationFile> {
+    trust(actor);
+    const before = await this.file(tx, fileId);
+    return this.move(tx, actor, before, 'reports', {
+      decidedAt: new Date(),
+      decidedBy: actor.accountId,
+      status: 'approved',
+    });
   }
 
   // Who may resend is the submitting story's rule; here only the file counts.

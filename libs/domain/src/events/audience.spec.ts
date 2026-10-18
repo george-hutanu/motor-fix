@@ -1,6 +1,7 @@
 import { audienceOf } from './audience';
 
 // @traces 207-FR-008
+// @traces 069-report-decision-FR-006
 
 const driver = 'd1';
 const garage = 'g1';
@@ -169,6 +170,15 @@ describe('audienceOf', () => {
     expect(audienceOf({ adminOnly: true, type: 'platform' })).toEqual([
       'admin',
     ]);
+  });
+
+  it('sends a report decision to the admins and each reporter once, never to the garage', () => {
+    const channels = audienceOf({
+      reporterIds: ['r1', 'r2', 'r1'],
+      type: 'garage_report',
+    });
+    expect(channels).toEqual(['admin', 'account:r1', 'account:r2']);
+    expect(channels.some((key) => key.includes('garage'))).toBe(false);
   });
 
   it('sends an account event to that account only', () => {

@@ -67,7 +67,7 @@ export class SuspensionService {
     if (!isUUID(garageId)) throw notFound();
     try {
       const suspension = await this.prisma.$transaction((tx) =>
-        this.store(tx, actor, garageId, cause, reason),
+        this.suspendIn(tx, actor, garageId, cause, reason),
       );
       countGarageSuspension(cause);
       this.logger.log(
@@ -92,7 +92,20 @@ export class SuspensionService {
     }
   }
 
-  private async store(
+  // The garage's open suspension, if any: one with no end.
+  async openSuspension(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+  ): Promise<{ cause: SuspensionCause } | null> {
+    return tx.garageSuspension.findFirst({
+      select: { cause: true },
+      where: { garageId, untilTime: null },
+    });
+  }
+
+  // The suspension inside the caller's transaction, which counts and logs
+  // it once that commits.
+  async suspendIn(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
     garageId: string,

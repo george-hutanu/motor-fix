@@ -2161,3 +2161,73 @@ describe('the last check date', () => {
     expect(await lastCheckedOn()).toBeNull();
   });
 });
+
+describe('approving a file after its reports are decided', () => {
+  // @traces 069-report-decision-FR-002 069-report-decision-FR-003
+  it('moves an in-review file to approved, stamped with the admin, and leaves its other columns', async () => {
+    const at = new Date('2026-10-10T08:00:00Z');
+    const file = await fileIn('rejected', at);
+    await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+
+    const moved = await inTx((tx) =>
+      service().approveAfterReports(tx, dan, file.id),
+    );
+
+    const after = await fileRow(file.id);
+    expect(moved.status).toBe('approved');
+    expect(after).toMatchObject({
+      decidedBy: dan.accountId,
+      reasonCode: REASON.code,
+      reasonNote: REASON.note,
+      reopenReason: 'garage_report',
+      requestedItems: file.requestedItems,
+      status: 'approved',
+    });
+    expect(after.decidedAt?.getTime()).toBeGreaterThan(at.getTime());
+    const entries = await history(file.id);
+    expect(entries.at(-1)).toMatchObject({
+      actorId: dan.accountId,
+      field: 'status',
+      newValue: 'approved',
+      oldValue: 'in_review',
+    });
+  });
+
+  // @traces 069-report-decision-FR-003
+  it.each([
+    'submitted',
+    'approved',
+    'rejected',
+    'more_requested',
+  ] as FileStatus[])(
+    'refuses a %s file with the 409 of a transition',
+    async (status) => {
+      const file = await fileIn(status, new Date('2026-10-17T09:14:00Z'));
+
+      const { body, status: code } = await refusal(
+        inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+      );
+
+      expect(code).toBe(409);
+      expect(body.code).toBe('verification_transition_refused');
+      if (status !== 'submitted') {
+        expect(body).toMatchObject({
+          currentStatus: status,
+          decidedAt: '2026-10-17T09:14:00.000Z',
+          decidedBy: 'Ioana',
+        });
+      }
+      expect((await fileRow(file.id)).status).toBe(status);
+    },
+  );
+
+  // @traces 069-report-decision-FR-003
+  it('refuses an actor without admin.garages', async () => {
+    const file = await fileIn('in_review');
+
+    await expect(
+      inTx((tx) => service().approveAfterReports(tx, mihai, file.id)),
+    ).rejects.toBeInstanceOf(HttpException);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+});

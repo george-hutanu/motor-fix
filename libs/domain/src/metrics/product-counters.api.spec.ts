@@ -29,6 +29,7 @@ const WORKER_ONLY = [
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
   'motorfix_garage_suspended_notices_total',
+  'motorfix_garage_report_decided_notices_total',
   'motorfix_support_emails_total',
 ];
 
@@ -46,9 +47,10 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 77 (the decision refusals include note_required) and one per check kind and result.
+// Every series the API starts: its own 82 (the decision refusals include
+// note_required and the report decision's two) and one per check kind and result.
 const API_SERIES =
-  77 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+  82 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
 
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
@@ -79,7 +81,19 @@ describe("the API's product counters at start", () => {
       named(all, 'motorfix_verification_decision_refusals_total').map(
         (one) => one.labels['reason'],
       ),
-    ).toContain('note_required');
+    ).toEqual(
+      expect.arrayContaining([
+        'note_required',
+        'no_open_report',
+        'reason_required',
+      ]),
+    );
+    // @traces 069-report-decision-FR-011
+    expect(
+      named(all, 'motorfix_report_decisions_total').map(
+        (one) => one.labels['outcome'],
+      ),
+    ).toEqual(['unfounded', 'confirmed', 'confirmed_already_suspended']);
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
