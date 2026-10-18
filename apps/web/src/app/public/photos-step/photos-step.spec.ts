@@ -95,7 +95,7 @@ const askedForAddress = (http: HttpTestingController) =>
 async function answerAddress(opened: Opened, req: TestRequest, n: number) {
   req.flush({
     expiresAt: new Date(Date.now() + 900_000).toISOString(),
-    fields: { key: `incoming/${keyOf(n)}` },
+    headers: { 'x-amz-checksum-crc32': 'AAAAAA==' },
     key: `incoming/${keyOf(n)}`,
     url: STORE,
   });
@@ -105,9 +105,7 @@ async function answerAddress(opened: Opened, req: TestRequest, n: number) {
 // Ask, send to the store and confirm, as the uploader does for one file.
 async function upload(opened: Opened, req: TestRequest, n: number) {
   await answerAddress(opened, req, n);
-  opened.http
-    .expectOne(STORE)
-    .flush(null, { status: 204, statusText: 'No Content' });
+  opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
   await opened.settle();
   opened.http
     .expectOne((r) => r.method === 'POST' && r.url === BASE)
@@ -151,7 +149,9 @@ describe('step 5, the photos', () => {
       'Trage aici fotografii cu atelierul, elevatoarele și echipa',
     );
     expect(text(step)).toContain('Alege fotografii');
-    expect(picker(step).accept).toBe('image/jpeg,image/png,image/webp');
+    expect(picker(step).accept).toBe(
+      'image/jpeg,image/png,image/webp,image/heic,image/heif',
+    );
     expect(picker(step).multiple).toBe(true);
     expect(tiles(step)).toEqual([]);
   });
@@ -216,7 +216,7 @@ describe('step 5, the photos', () => {
 
     await choose(opened, [
       photo('plan.pdf', 'application/pdf'),
-      photo('iarna.heic', 'image/heic'),
+      photo('iarna.gif', 'image/gif'),
       photo('mare.jpg', 'image/jpeg', 10 * 1024 * 1024 + 1),
       photo('atelier.jpg'),
     ]);
@@ -227,6 +227,7 @@ describe('step 5, the photos', () => {
     const asked = askedForAddress(opened.http);
     expect(asked).toHaveLength(1);
     expect(asked[0]?.request.body).toEqual({
+      checksum: expect.stringMatching(/^[A-Za-z0-9+/]{6}==$/),
       contentType: 'image/jpeg',
       size: 2048,
     });
@@ -286,9 +287,7 @@ describe('step 5, the photos', () => {
     await choose(opened, [photo('atelier.jpg')]);
     const [asked] = askedForAddress(opened.http);
     await answerAddress(opened, asked as TestRequest, 0);
-    opened.http
-      .expectOne(STORE)
-      .flush(null, { status: 204, statusText: 'No Content' });
+    opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
     await opened.settle();
     opened.http
       .expectOne((r) => r.method === 'POST' && r.url === BASE)

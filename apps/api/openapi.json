@@ -13936,11 +13936,17 @@
             "type": "number",
             "description": "Bytes",
             "minimum": 1
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Base64 of the CRC32 of the file, big-endian",
+            "example": "yPQ5Jg=="
           }
         },
         "required": [
           "contentType",
-          "size"
+          "size",
+          "checksum"
         ]
       },
       "PhotoUploadAddressDto": {
@@ -13948,14 +13954,14 @@
         "properties": {
           "url": {
             "type": "string",
-            "description": "Where the browser posts the form"
+            "description": "Where the browser PUTs the file"
           },
-          "fields": {
+          "headers": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Form fields to send before the file"
+            "description": "Headers to send with the PUT, exactly as given"
           },
           "key": {
             "type": "string",
@@ -13968,7 +13974,7 @@
         },
         "required": [
           "url",
-          "fields",
+          "headers",
           "key",
           "expiresAt"
         ]
@@ -14041,11 +14047,17 @@
             "type": "number",
             "description": "Bytes",
             "minimum": 1
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Base64 of the CRC32 of the file, big-endian",
+            "example": "yPQ5Jg=="
           }
         },
         "required": [
           "contentType",
-          "size"
+          "size",
+          "checksum"
         ]
       },
       "DocumentUploadAddressDto": {
@@ -14053,14 +14065,14 @@
         "properties": {
           "url": {
             "type": "string",
-            "description": "Where the browser posts the form"
+            "description": "Where the browser PUTs the file"
           },
-          "fields": {
+          "headers": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Form fields to send before the file"
+            "description": "Headers to send with the PUT, exactly as given"
           },
           "key": {
             "type": "string",
@@ -14073,7 +14085,7 @@
         },
         "required": [
           "url",
-          "fields",
+          "headers",
           "key",
           "expiresAt"
         ]

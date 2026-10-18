@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsString, Matches, MaxLength, Min } from 'class-validator';
 
 export class PhotoUploadRequestDto {
   @ApiProperty({ example: 'image/jpeg' })
@@ -11,18 +11,26 @@ export class PhotoUploadRequestDto {
   @IsInt()
   @Min(1)
   size!: number;
+
+  @ApiProperty({
+    description: 'Base64 of the CRC32 of the file, big-endian',
+    example: 'yPQ5Jg==',
+  })
+  @IsString()
+  @Matches(/^[A-Za-z0-9+/]{6}==$/)
+  checksum!: string;
 }
 
 export class PhotoUploadAddressDto {
-  @ApiProperty({ description: 'Where the browser posts the form' })
+  @ApiProperty({ description: 'Where the browser PUTs the file' })
   url!: string;
 
   @ApiProperty({
     additionalProperties: { type: 'string' },
-    description: 'Form fields to send before the file',
+    description: 'Headers to send with the PUT, exactly as given',
     type: 'object',
   })
-  fields!: Record<string, string>;
+  headers!: Record<string, string>;
 
   @ApiProperty({ description: 'The key to confirm once uploaded' })
   key!: string;

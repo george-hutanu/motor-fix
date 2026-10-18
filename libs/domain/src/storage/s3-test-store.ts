@@ -6,6 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { crc32 } from 'node:zlib';
 
 import type { StorageEnv } from '@motor-fix/contracts';
 
@@ -28,9 +29,6 @@ interface StoredObject {
   etag: string;
   metadata: Record<string, string>;
 }
-
-type Fields = Record<string, string>;
-type Condition = Record<string, string> | [string, string, unknown];
 
 class Refusal extends Error {
   constructor(
@@ -58,10 +56,11 @@ const amzTime = (stamp: string) =>
   );
 
 // An S3-protocol server for the specs: one bucket, in memory, path-style.
-// It checks what a real store checks for the addresses MotorFix signs — the
-// POST policy's signature, expiry and conditions, and a presigned GET's
-// signature and lifetime. Header-signed SDK calls are only checked for the
-// access key: their signing is the SDK's, and no MotorFix code shapes it.
+// It checks what a real store checks for the addresses MotorFix signs — a
+// presigned PUT's or GET's signature, signed headers and lifetime, and a
+// body against its declared CRC32. Header-signed SDK calls are only checked
+// for the access key: their signing is the SDK's, and no MotorFix code
+// shapes it.
 export class S3TestStore {
   readonly objects = new Map<string, StoredObject>();
   now = () => Date.now();
@@ -130,9 +129,9 @@ export class S3TestStore {
     const body = await read(req);
 
     if (url.searchParams.has('X-Amz-Signature')) this.checkPresigned(req, url);
-    else if (req.method !== 'POST') this.checkHeaderAuth(req);
+    else this.checkHeaderAuth(req);
 
-    if (!key) this.onBucket(req, body, res);
+    if (!key) this.onBucket(req, res);
     else if (req.method === 'PUT') this.putObject(req, key, body, res);
     else if (req.method === 'DELETE') {
       this.beforeDelete?.();
@@ -141,10 +140,9 @@ export class S3TestStore {
     } else this.getObject(req, url, key, res);
   }
 
-  private onBucket(req: IncomingMessage, body: Buffer, res: ServerResponse) {
-    if (req.method === 'POST') this.postForm(req, body);
-    else if (req.method !== 'HEAD') throw new Refusal(405, 'MethodNotAllowed');
-    res.writeHead(req.method === 'POST' ? 204 : 200).end();
+  private onBucket(req: IncomingMessage, res: ServerResponse) {
+    if (req.method !== 'HEAD') throw new Refusal(405, 'MethodNotAllowed');
+    res.writeHead(200).end();
   }
 
   private checkHeaderAuth(req: IncomingMessage) {
@@ -179,6 +177,15 @@ export class S3TestStore {
       .sort()
       .join('&');
     const signedHeaders = q.get('X-Amz-SignedHeaders') ?? '';
+    // S3 refuses an x-amz- header the signature does not cover.
+    const signed = new Set(signedHeaders.split(';'));
+    if (
+      Object.keys(req.headers).some(
+        (name) => name.startsWith('x-amz-') && !signed.has(name),
+      )
+    ) {
+      throw new Refusal(403, 'AccessDenied');
+    }
     const headers = signedHeaders
       .split(';')
       .map((name) => `${name}:${String(req.headers[name] ?? '').trim()}\n`)
@@ -200,48 +207,6 @@ export class S3TestStore {
     }
   }
 
-  private postForm(req: IncomingMessage, body: Buffer) {
-    const { fields, file } = parseMultipart(req, body);
-    const form: Fields = { bucket: this.bucket };
-    for (const [name, value] of Object.entries(fields)) {
-      form[name.toLowerCase()] = value;
-    }
-    // Every field the browser sends must be named by a condition.
-    const covered = new Set(['policy', 'x-amz-signature', 'file', 'bucket']);
-    for (const condition of this.policyConditions(form)) {
-      for (const field of checkCondition(condition, form, file)) {
-        covered.add(field);
-      }
-    }
-    if (
-      Object.keys(form).some(
-        (name) => !covered.has(name) && !name.startsWith('x-ignore-'),
-      )
-    ) {
-      throw new Refusal(403, 'AccessDenied');
-    }
-    this.put(form['key'], file, form['content-type'] ?? 'binary/octet-stream');
-  }
-
-  private policyConditions(form: Fields): Condition[] {
-    const scope = form['x-amz-credential']?.split('/').slice(1).join('/');
-    const policy = form['policy'] ?? '';
-    const signature = hmac(this.signingKey(scope ?? ''), policy).toString(
-      'hex',
-    );
-    if (!scope || signature !== form['x-amz-signature']) {
-      throw new Refusal(403, 'SignatureDoesNotMatch');
-    }
-    const document = JSON.parse(Buffer.from(policy, 'base64').toString()) as {
-      conditions: Condition[];
-      expiration: string;
-    };
-    if (this.now() > Date.parse(document.expiration)) {
-      throw new Refusal(403, 'AccessDenied');
-    }
-    return document.conditions;
-  }
-
   private putObject(
     req: IncomingMessage,
     key: string,
@@ -250,6 +215,10 @@ export class S3TestStore {
   ) {
     const copySource = req.headers['x-amz-copy-source'];
     if (typeof copySource !== 'string') {
+      const checksum = req.headers['x-amz-checksum-crc32'];
+      if (checksum !== undefined && checksum !== crc32Of(body)) {
+        throw new Refusal(400, 'BadDigest');
+      }
       this.put(
         key,
         body,
@@ -333,65 +302,8 @@ function read(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-// Returns the form fields the condition names.
-function checkCondition(
-  condition: Condition,
-  form: Fields,
-  file: Buffer,
-): string[] {
-  if (!Array.isArray(condition)) {
-    const names = Object.keys(condition).map((name) => name.toLowerCase());
-    if (Object.values(condition).some((value, i) => form[names[i]] !== value)) {
-      throw new Refusal(403, 'AccessDenied');
-    }
-    return names;
-  }
-  const [operator, name, value] = condition;
-  if (operator === 'content-length-range') {
-    checkLength(file, Number(name), Number(value));
-    return [];
-  }
-  const field = name.replace(/^\$/, '').toLowerCase();
-  const actual = form[field] ?? '';
-  const ok =
-    operator === 'eq'
-      ? actual === value
-      : operator === 'starts-with' && actual.startsWith(String(value));
-  if (!ok) throw new Refusal(403, 'AccessDenied');
-  return [field];
-}
-
-function checkLength(file: Buffer, min: number, max: number) {
-  if (file.length < min) throw new Refusal(400, 'EntityTooSmall');
-  if (file.length > max) throw new Refusal(400, 'EntityTooLarge');
-}
-
-function parseMultipart(req: IncomingMessage, body: Buffer) {
-  const boundary = /boundary=(?:"([^"]+)"|([^;]+))/.exec(
-    req.headers['content-type'] ?? '',
-  );
-  if (!boundary) throw new Refusal(400, 'MalformedPOSTRequest');
-  const delimiter = Buffer.from(`--${boundary[1] ?? boundary[2]}`);
-  const fields: Fields = {};
-  let file: Buffer | undefined;
-  let start = body.indexOf(delimiter) + delimiter.length;
-  let end = body.indexOf(delimiter, start);
-  while (start >= delimiter.length && end >= 0) {
-    const { content, name } = parsePart(body.subarray(start + 2, end - 2));
-    if (name === 'file') file = content;
-    else if (name) fields[name] = content.toString();
-    start = end + delimiter.length;
-    end = body.indexOf(delimiter, start);
-  }
-  if (!file) throw new Refusal(400, 'InvalidArgument');
-  return { fields, file };
-}
-
-function parsePart(part: Buffer) {
-  const split = part.indexOf('\r\n\r\n');
-  const head = part.subarray(0, split).toString();
-  return {
-    content: part.subarray(split + 4),
-    name: /name="([^"]*)"/.exec(head)?.[1],
-  };
-}
+const crc32Of = (body: Buffer) => {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(body));
+  return sum.toString('base64');
+};

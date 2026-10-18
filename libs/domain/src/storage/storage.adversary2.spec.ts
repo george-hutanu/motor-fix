@@ -1,3 +1,5 @@
+import { crc32 } from 'node:zlib';
+
 import { HttpException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
@@ -30,12 +32,19 @@ async function refusal(promise: Promise<unknown>) {
   return { code: body.code, status: http.getStatus() };
 }
 
+function checksumOf(file: Buffer) {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+}
+const ANY_SUM = checksumOf(JPEG);
+
 function send(upload: SignedUpload, file: Buffer) {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(upload.fields))
-    form.append(name, value);
-  form.append('file', new Blob([new Uint8Array(file)]));
-  return fetch(upload.url, { body: form, method: 'POST' });
+  return fetch(upload.url, {
+    body: new Uint8Array(file),
+    headers: upload.headers,
+    method: 'PUT',
+  });
 }
 
 describe('StorageService second round of hostile input', () => {
@@ -98,6 +107,7 @@ describe('StorageService second round of hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
       await send(upload, JPEG);
 
@@ -226,10 +236,11 @@ describe('StorageService second round of hostile input', () => {
             `acc_${i % 3}`,
             'image/jpeg',
             JPEG.length,
+            checksumOf(JPEG),
           ),
         ),
       );
-      for (const u of uploads) expect((await send(u, JPEG)).status).toBe(204);
+      for (const u of uploads) expect((await send(u, JPEG)).status).toBe(200);
 
       const finals = await Promise.all(
         uploads.map((u, i) =>
@@ -247,6 +258,7 @@ describe('StorageService second round of hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
       await send(upload, JPEG);
 
@@ -263,7 +275,7 @@ describe('StorageService second round of hostile input', () => {
     });
   });
 
-  describe('the upload form', () => {
+  describe('the upload address', () => {
     it('expires about 15 minutes after it was asked for', async () => {
       const before = Date.now();
       const upload = await storage.createUpload(
@@ -271,6 +283,7 @@ describe('StorageService second round of hostile input', () => {
         'acc_1',
         'image/jpeg',
         5,
+        ANY_SUM,
       );
 
       const lifetime = Date.parse(upload.expiresAt) - before;
@@ -289,7 +302,13 @@ describe('StorageService second round of hostile input', () => {
 
       const upload = await moduleRef
         .get(StorageService)
-        .createUpload('legal_document', 'acc_1', 'application/pdf', 100);
+        .createUpload(
+          'legal_document',
+          'acc_1',
+          'application/pdf',
+          100,
+          ANY_SUM,
+        );
 
       expect(upload.key).toMatch(
         /^incoming\/legal_document\/acc_1\/[0-9a-f-]{36}$/,
@@ -299,7 +318,13 @@ describe('StorageService second round of hostile input', () => {
 
     it('refuses a declared content type with a null byte as not allowed', async () => {
       const answer = await refusal(
-        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg\u0000', 10),
+        storage.createUpload(
+          'garage_photo',
+          'acc_1',
+          'image/jpeg\u0000',
+          10,
+          ANY_SUM,
+        ),
       );
 
       expect(answer.status).toBe(422);

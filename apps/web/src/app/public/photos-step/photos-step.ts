@@ -231,11 +231,11 @@ export class PhotosStep {
     const sub = this.uploader
       .upload(
         file,
-        () =>
+        (checksum) =>
           defer(() =>
             this.api.listingPhotosControllerUploadAddress({
               ...params,
-              body: { contentType: file.type, size: file.size },
+              body: { checksum, contentType: file.type, size: file.size },
             }),
           ),
         (key) =>
@@ -265,6 +265,7 @@ export class PhotosStep {
             this.patch(id, { progress: event.progress });
             return;
           }
+          if (!('done' in event)) return;
           this.sending.delete(id);
           this.patch(id, { key: event.done.key, status: 'ready' });
           this.setTiles(this.tiles());

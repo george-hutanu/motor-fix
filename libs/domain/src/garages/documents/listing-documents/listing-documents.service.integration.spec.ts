@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { crc32 } from 'node:zlib';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
@@ -27,6 +28,12 @@ const uploaded = (kind: string) =>
 const PDF = Buffer.from('%PDF-1.7\n%âãÏÓ\n');
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49]);
 const MB = 1024 * 1024;
+const checksumOf = (file: Buffer) => {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+};
+const ANY_SUM = checksumOf(PDF);
 const EMAIL = 'owner@example.test';
 
 const store = new S3TestStore();
@@ -118,16 +125,16 @@ async function upload(
   contentType = 'application/pdf',
 ) {
   const address = await documents.uploadAddress(id, kind, token, {
+    checksum: checksumOf(file),
     contentType,
     size: file.length,
   });
-  const form = new FormData();
-  for (const [name, value] of Object.entries(address.fields)) {
-    form.append(name, value);
-  }
-  form.append('file', new Blob([new Uint8Array(file)]));
-  const posted = await fetch(address.url, { body: form, method: 'POST' });
-  expect(posted.status).toBe(204);
+  const put = await fetch(address.url, {
+    body: new Uint8Array(file),
+    headers: address.headers,
+    method: 'PUT',
+  });
+  expect(put.status).toBe(200);
   return address.key;
 }
 
@@ -156,7 +163,7 @@ describe('the upload address', () => {
       draft.id,
       'rar_authorisation',
       draft.token,
-      { contentType: 'application/pdf', size: 3 * MB },
+      { checksum: ANY_SUM, contentType: 'application/pdf', size: 3 * MB },
     );
 
     expect(address.key).toMatch(
@@ -177,6 +184,7 @@ describe('the upload address', () => {
     for (const token of ['not-a-key', other.token, undefined]) {
       const refused = await refusalOf(
         documents.uploadAddress(draft.id, 'onrc_certificate', token, {
+          checksum: ANY_SUM,
           contentType: 'application/pdf',
           size: 100,
         }),
@@ -193,6 +201,7 @@ describe('the upload address', () => {
 
     const refused = await refusalOf(
       documents.uploadAddress(draft.id, 'onrc_certificate', draft.token, {
+        checksum: ANY_SUM,
         contentType: 'application/pdf',
         size: 100,
       }),
@@ -210,6 +219,7 @@ describe('the upload address', () => {
 
       const refused = await refusalOf(
         documents.uploadAddress(draft.id, kind, draft.token, {
+          checksum: ANY_SUM,
           contentType: 'application/pdf',
           size: 100,
         }),
@@ -235,6 +245,7 @@ describe('the upload address', () => {
 
     const refused = await refusalOf(
       documents.uploadAddress(draft.id, 'onrc_certificate', draft.token, {
+        checksum: ANY_SUM,
         contentType,
         size,
       }),
@@ -251,6 +262,7 @@ describe('the upload address', () => {
 
     const refused = await refusalOf(
       documents.uploadAddress(draft.id, 'onrc_certificate', draft.token, {
+        checksum: ANY_SUM,
         contentType: 'application/pdf',
         size: 100,
       }),
@@ -260,6 +272,7 @@ describe('the upload address', () => {
     expect(refused.body).toMatchObject({ code: 'document_full' });
     await expect(
       documents.uploadAddress(draft.id, 'rar_authorisation', draft.token, {
+        checksum: ANY_SUM,
         contentType: 'image/jpeg',
         size: 100,
       }),

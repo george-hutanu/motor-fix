@@ -74,12 +74,18 @@ export class ListingDocumentsService {
     id: string,
     kind: string,
     token: string | undefined,
-    file: { contentType: string; size: number },
+    file: { checksum: string; contentType: string; size: number },
   ): Promise<DocumentUploadAddressDto> {
     const draft = await this.drafts.open(id, token);
     if (pagesOf(draft.data, checkedKind(kind)).length >= DOCUMENT_PAGES_MAX)
       throw full();
-    return this.storage.createUpload(PURPOSE, id, file.contentType, file.size);
+    return this.storage.createUpload(
+      PURPOSE,
+      id,
+      file.contentType,
+      file.size,
+      file.checksum,
+    );
   }
 
   // The cap is checked again, binding, under the row lock: two confirms at

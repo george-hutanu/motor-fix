@@ -201,11 +201,11 @@ export class DocumentArea {
     const sub = this.uploader
       .upload(
         file,
-        () =>
+        (checksum) =>
           defer(() =>
             this.api.listingDocumentsControllerUploadAddress({
               ...params,
-              body: { contentType: file.type, size: file.size },
+              body: { checksum, contentType: file.type, size: file.size },
             }),
           ),
         (key) =>
@@ -235,6 +235,7 @@ export class DocumentArea {
             this.patch(id, { progress: event.progress });
             return;
           }
+          if (!('done' in event)) return;
           this.sending.delete(id);
           this.patch(id, { key: event.done, status: 'ready' });
           this.setShown(this.shown());

@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
+import { crc32 } from 'node:zlib';
 
 import { FILE_RULES } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
@@ -34,11 +35,20 @@ async function refusal(promise: Promise<unknown>) {
   return { code: body.code, status: http.getStatus() };
 }
 
-function send(upload: SignedUpload, file: Buffer, fields = upload.fields) {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  form.append('file', new Blob([new Uint8Array(file)]));
-  return fetch(upload.url, { body: form, method: 'POST' });
+function checksumOf(file: Buffer) {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+}
+const ANY_SUM = checksumOf(JPEG);
+
+function send(
+  upload: SignedUpload,
+  file: Buffer,
+  headers: Record<string, string> = upload.headers,
+  url = upload.url,
+) {
+  return fetch(url, { body: new Uint8Array(file), headers, method: 'PUT' });
 }
 
 describe('StorageService under hostile input', () => {
@@ -71,9 +81,10 @@ describe('StorageService under hostile input', () => {
       purpose,
       owner,
       contentType,
-      Math.max(file.length, 1),
+      file.length,
+      checksumOf(file),
     );
-    expect((await send(upload, file)).status).toBe(204);
+    expect((await send(upload, file)).status).toBe(200);
     return upload.key;
   }
 
@@ -92,11 +103,14 @@ describe('StorageService under hostile input', () => {
     });
 
     it('keeps PDF out of the photo purposes and in the document purposes', () => {
-      for (const purpose of [
-        'garage_photo',
-        'message_photo',
-        'mechanic_photo',
-      ] as const) {
+      expect([...FILE_RULES.garage_photo.types].sort()).toEqual([
+        'image/heic',
+        'image/heif',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      ]);
+      for (const purpose of ['message_photo', 'mechanic_photo'] as const) {
         expect([...FILE_RULES[purpose].types].sort()).toEqual([
           'image/jpeg',
           'image/png',
@@ -123,7 +137,13 @@ describe('StorageService under hostile input', () => {
       ['a purpose with a trailing space', 'garage_photo '],
     ])('refuses %s as a purpose with 400', async (_, purpose) => {
       const answer = await refusal(
-        storage.createUpload(purpose as Purpose, 'acc_1', 'image/jpeg', 10),
+        storage.createUpload(
+          purpose as Purpose,
+          'acc_1',
+          'image/jpeg',
+          10,
+          ANY_SUM,
+        ),
       );
 
       expect(answer.status).toBe(400);
@@ -147,7 +167,7 @@ describe('StorageService under hostile input', () => {
       ['a tab', 'acc\t1'],
     ])('refuses an owner id with %s', async (_, owner) => {
       const answer = await refusal(
-        storage.createUpload('garage_photo', owner, 'image/jpeg', 10),
+        storage.createUpload('garage_photo', owner, 'image/jpeg', 10, ANY_SUM),
       );
 
       expect(answer.status).toBe(400);
@@ -164,6 +184,7 @@ describe('StorageService under hostile input', () => {
         owner,
         'image/jpeg',
         10,
+        ANY_SUM,
       );
 
       expect(upload.key).toMatch(
@@ -188,6 +209,7 @@ describe('StorageService under hostile input', () => {
           'acc_1',
           'image/jpeg',
           size as number,
+          ANY_SUM,
         ),
       );
 
@@ -196,8 +218,8 @@ describe('StorageService under hostile input', () => {
 
     it('takes a size of one byte', async () => {
       await expect(
-        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', 1),
-      ).resolves.toMatchObject({ fields: { 'Content-Type': 'image/jpeg' } });
+        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', 1, ANY_SUM),
+      ).resolves.toMatchObject({ headers: { 'Content-Type': 'image/jpeg' } });
     });
 
     it('refuses the largest safe integer as too large, not as a bad request', async () => {
@@ -208,6 +230,7 @@ describe('StorageService under hostile input', () => {
             'acc_1',
             'image/jpeg',
             Number.MAX_SAFE_INTEGER,
+            ANY_SUM,
           ),
         ),
       ).toEqual({ code: 'file_too_large', status: 422 });
@@ -227,10 +250,10 @@ describe('StorageService under hostile input', () => {
       ['a subtype suffix', 'image/jpeg+xml'],
       ['a similar type', 'image/jpg'],
     ])(
-      'never signs a form for a type with %s unless the form pins the exact allowed type',
+      'never signs an address for a type with %s unless it pins the exact allowed type',
       async (_, type) => {
         const outcome = await storage
-          .createUpload('garage_photo', 'acc_1', type, 10)
+          .createUpload('garage_photo', 'acc_1', type, 10, ANY_SUM)
           .then(
             (upload) => ({ upload }),
             (error: unknown) => ({ error }),
@@ -241,7 +264,7 @@ describe('StorageService under hostile input', () => {
           expect((outcome.error as HttpException).getStatus()).toBe(422);
         } else {
           expect(FILE_RULES.garage_photo.types).toContain(
-            outcome.upload.fields['Content-Type'],
+            outcome.upload.headers['Content-Type'],
           );
         }
       },
@@ -254,7 +277,9 @@ describe('StorageService under hostile input', () => {
       ['a wildcard', 'image/*'],
     ])('refuses a type with %s with file_type_not_allowed', async (_, type) => {
       expect(
-        await refusal(storage.createUpload('garage_photo', 'acc_1', type, 10)),
+        await refusal(
+          storage.createUpload('garage_photo', 'acc_1', type, 10, ANY_SUM),
+        ),
       ).toEqual({ code: 'file_type_not_allowed', status: 422 });
     });
 
@@ -266,17 +291,19 @@ describe('StorageService under hostile input', () => {
             'acc_1',
             'application/zip',
             TEN_MB + 1,
+            ANY_SUM,
           ),
         ),
       ).toEqual({ code: 'file_type_not_allowed', status: 422 });
     });
 
-    it('issues no key and no form fields that carry the secret or a file name', async () => {
+    it('issues no key, address or headers that carry the secret or a file name', async () => {
       const upload = await storage.createUpload(
         'garage_photo',
         'acc_1',
         'image/jpeg',
         10,
+        ANY_SUM,
       );
 
       const text = JSON.stringify(upload);
@@ -290,7 +317,13 @@ describe('StorageService under hostile input', () => {
     it('issues unique keys across a thousand calls', async () => {
       const uploads = await Promise.all(
         Array.from({ length: 1000 }, () =>
-          storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', 10),
+          storage.createUpload(
+            'garage_photo',
+            'acc_1',
+            'image/jpeg',
+            10,
+            ANY_SUM,
+          ),
         ),
       );
 
@@ -298,17 +331,18 @@ describe('StorageService under hostile input', () => {
     });
   });
 
-  describe('the signed upload form', () => {
-    it('is refused by the store with an extra metadata field', async () => {
+  describe('the signed upload address', () => {
+    it('is refused by the store with an extra metadata header', async () => {
       const upload = await storage.createUpload(
         'garage_photo',
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
 
       const res = await send(upload, JPEG, {
-        ...upload.fields,
+        ...upload.headers,
         'x-amz-meta-owner': 'acc_2',
       });
 
@@ -330,12 +364,15 @@ describe('StorageService under hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
 
-      const res = await send(upload, JPEG, {
-        ...upload.fields,
-        key: change(upload.key),
-      });
+      const res = await send(
+        upload,
+        JPEG,
+        upload.headers,
+        upload.url.replace(upload.key, change(upload.key)),
+      );
 
       expect(res.status).toBe(403);
       expect(store.objects.size).toBe(0);
@@ -352,10 +389,11 @@ describe('StorageService under hostile input', () => {
           'acc_1',
           'image/jpeg',
           JPEG.length,
+          checksumOf(JPEG),
         );
 
         const res = await send(upload, JPEG, {
-          ...upload.fields,
+          ...upload.headers,
           'Content-Type': type,
         });
 
@@ -370,13 +408,14 @@ describe('StorageService under hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
 
       const over = await send(upload, Buffer.concat([JPEG, Buffer.from([0])]));
-      expect(over.status).toBe(400);
+      expect(over.status).toBe(403);
       expect(store.objects.size).toBe(0);
 
-      expect((await send(upload, JPEG)).status).toBe(204);
+      expect((await send(upload, JPEG)).status).toBe(200);
       expect(store.objects.size).toBe(1);
     });
 
@@ -386,10 +425,12 @@ describe('StorageService under hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
-      const { 'X-Amz-Signature': _signature, ...rest } = upload.fields;
+      const url = new URL(upload.url);
+      url.searchParams.delete('X-Amz-Signature');
 
-      const res = await send(upload, JPEG, rest);
+      const res = await send(upload, JPEG, upload.headers, url.toString());
 
       expect(res.status).toBe(403);
       expect(store.objects.size).toBe(0);
@@ -401,11 +442,12 @@ describe('StorageService under hostile input', () => {
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
       const issued = Date.now();
 
       store.now = () => issued + 14 * MINUTE;
-      expect((await send(upload, JPEG)).status).toBe(204);
+      expect((await send(upload, JPEG)).status).toBe(200);
 
       store.now = () => issued + 16 * MINUTE;
       expect((await send(upload, JPEG)).status).toBe(403);
@@ -457,14 +499,15 @@ describe('StorageService under hostile input', () => {
       expect([...store.objects.keys()]).toEqual([final]);
     });
 
-    it('does not let a replayed upload form overwrite an already confirmed file', async () => {
+    it('does not let a replayed upload address overwrite an already confirmed file', async () => {
       const upload = await storage.createUpload(
         'garage_photo',
         'acc_1',
         'image/jpeg',
         JPEG.length,
+        checksumOf(JPEG),
       );
-      expect((await send(upload, JPEG)).status).toBe(204);
+      expect((await send(upload, JPEG)).status).toBe(200);
       const final = await storage.confirmUpload(
         upload.key,
         'garage_photo',
