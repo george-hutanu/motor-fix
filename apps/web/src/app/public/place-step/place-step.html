@@ -57,7 +57,7 @@
     {{ 'public.listing.place.manualPin' | t }}
   </button>
   @if (armed()) {
-    <p class="hint" id="place-found" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
+    <p class="hint" id="place-armed" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
   }
   <div
     #map
@@ -66,7 +66,7 @@
     [tabIndex]="0"
     role="application"
     [attr.aria-label]="'public.listing.place.map' | t"
-    [attr.aria-describedby]="messages().position ? 'place-outside' : 'place-map-hint'"
+    [attr.aria-describedby]="messages().position ? 'place-outside' : armed() ? 'place-armed' : 'place-map-hint'"
     (keydown)="nudge($event)"
   ></div>
   @if (mapDown()) {
