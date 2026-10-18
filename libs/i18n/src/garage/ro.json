@@ -97,6 +97,7 @@
     "empty": "Nu ai încă lucrări în listă.",
     "from": "de la {amount}",
     "labour": "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă.",
+    "labourTitle": "Manoperă, pe oră",
     "labourUnset": "Manoperă: nesetată",
     "retry": "Încearcă din nou",
     "state": {

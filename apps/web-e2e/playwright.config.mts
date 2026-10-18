@@ -57,18 +57,26 @@ export default defineConfig({
       ? /@mailbox|@openid|@assistants|@reset/
       : /@seeded|@mailbox|@openid|@assistants|@reset/
     : undefined,
-  // The photo flows add an approved garage, which Home's counts would take
-  // in: they run after everything else. The platform rules and maintenance
-  // flows switch maintenance on, which refuses every non-admin call
-  // platform-wide: they run alone, one file after the other, last.
+  // The price edit flows change the seeded front brakes the other flows read:
+  // they run after them. The photo flows add an approved garage, which Home's
+  // counts would take in: they run after everything else. The platform rules
+  // and maintenance flows switch maintenance on, which refuses every non-admin
+  // call platform-wide: they run alone, one file after the other, last.
   projects: [
     {
       name: 'chromium',
-      testIgnore: /(platform-rules|garage-photos|maintenance)\.spec\.ts$/,
+      testIgnore:
+        /(platform-rules|garage-photos|garage-prices-edit|maintenance)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       dependencies: ['chromium'],
+      name: 'garage-prices-edit',
+      testMatch: /garage-prices-edit\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      dependencies: ['garage-prices-edit'],
       name: 'garage-photos',
       testMatch: /garage-photos\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },

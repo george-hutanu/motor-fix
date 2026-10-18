@@ -51,7 +51,7 @@
         <p class="muted labour" data-labour>
           {{ list.labour ? labour(list.labour) : ('garage.prices.labourUnset' | t) }}
           @if (editing() && owner()) {
-            <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: ('public.listing.prices.labour' | t) }" (click)="editLabour(list.labour)">{{ 'garage.prices.edit' | t }}</button>
+            <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: ('garage.prices.labourTitle' | t) }" (click)="editLabour(list.labour)">{{ 'garage.prices.edit' | t }}</button>
           }
         </p>
       }

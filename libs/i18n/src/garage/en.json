@@ -97,6 +97,7 @@
     "empty": "No jobs in your list yet.",
     "from": "from {amount}",
     "labour": "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.",
+    "labourTitle": "Labour, per hour",
     "labourUnset": "Labour: not set",
     "retry": "Try again",
     "state": {

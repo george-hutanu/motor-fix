@@ -146,7 +146,7 @@ export class PricesView {
         kind: 'labour',
         ...(labour && { labour }),
       },
-      'public.listing.prices.labour',
+      'garage.prices.labourTitle',
     );
   }
 

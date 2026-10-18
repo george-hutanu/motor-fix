@@ -639,16 +639,19 @@ describe('Prețuri: opening an editor', () => {
 
   it("opens the labour editor on the garage's labour range", async () => {
     const { element, settle } = await editing();
+    const action = element.querySelector(
+      '[data-labour] button',
+    ) as HTMLButtonElement;
 
-    (
-      element.querySelector('[data-labour] button') as HTMLButtonElement
-    ).click();
+    // Named from the garage texts the view loads, not the public listing's.
+    expect(action.getAttribute('aria-label')).toBe('Modifică Manoperă, pe oră');
+    action.click();
     await settle();
 
     expect(open).toHaveBeenCalledWith(PriceRangeEditor, {
       data: { garageId: GARAGE, kind: 'labour', labour: LABOUR },
       shape: 'dialog',
-      title: 'public.listing.prices.labour',
+      title: 'garage.prices.labourTitle',
     });
   });
 });
