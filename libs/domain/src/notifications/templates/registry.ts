@@ -12,6 +12,10 @@ import {
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import { ADMIN_VERIFICATION_QUEUED } from './admin-verification-queued';
 import { DUE_ITP } from './due-itp';
+import {
+  GARAGE_REPORT_CONFIRMED,
+  GARAGE_REPORT_UNFOUNDED,
+} from './garage-report-decided';
 import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
@@ -50,6 +54,8 @@ export const TEMPLATES: Registry = {
   ADMIN_RULE_APPROVAL_NEEDED,
   ADMIN_VERIFICATION_QUEUED,
   DUE_ITP,
+  'GARAGE_REPORT_DECIDED.confirmed': GARAGE_REPORT_CONFIRMED,
+  'GARAGE_REPORT_DECIDED.unfounded': GARAGE_REPORT_UNFOUNDED,
   GARAGE_SUSPENDED,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,

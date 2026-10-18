@@ -347,6 +347,7 @@
       "DOCUMENT_OVERDUE": "Document expired",
       "FACILITY_RE_ADD_DECIDED": "Decision on adding a facility back",
       "FACILITY_REMOVED": "Facility removed",
+      "GARAGE_REPORT_DECIDED": "What became of your report",
       "GARAGE_RESTORED": "Garage restored",
       "GARAGE_SUSPENDED": "Garage suspended",
       "MESSAGE_RECEIVED": "New message",

@@ -93,6 +93,7 @@ export {
   type DnsResolver,
   dnsReport,
 } from './notifications/email-dns/email-dns';
+export { GARAGE_REPORT_DECIDED_CONSUMER } from './notifications/garage-report-decided/garage-report-decided.fan-out';
 export { GARAGE_SUSPENDED_CONSUMER } from './notifications/garage-suspended/garage-suspended.fan-out';
 export {
   inboxMailboxes,

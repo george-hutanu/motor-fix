@@ -81,6 +81,7 @@ const ENTRIES: Record<string, Entry> = {
   FACILITY_RE_ADD_DECIDED: ['event', EPW, null],
   FACILITY_REMOVED: ['event', EPW, null, 'always'],
   FINAL_PRICE_CORRECTED: ['event', EPW, 'bookings'],
+  GARAGE_REPORT_DECIDED: ['event', ['email', 'push'], 'reviews_history'],
   GARAGE_RESTORED: ['event', EPW, null, 'always'],
   GARAGE_SUSPENDED: ['event', EPW, null, 'always'],
   GARAGE_SUSPENDED_NOTICE: ['event', EPW, 'bookings', 'always'],
