@@ -112,6 +112,7 @@ describe('GET /brands', () => {
     expect(res.body.total).toBe(15);
   });
 
+  // @traces 405-FR-005
   it('ships Alfa Romeo, Citroën and Opel unranked, after every ranked brand', async () => {
     await loader.load(BRANDS);
 

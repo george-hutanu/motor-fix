@@ -17,7 +17,7 @@ const car = (
 ): LicensedCarModel => ({ brand, fuel, key, model: key, rank });
 
 describe('the shipped car models', () => {
-  // @traces 405-FR-002
+  // @traces 405-FR-001 405-FR-002
   it('holds the twenty most registered model families, in register order', () => {
     expect(CAR_MODELS.map((m) => `${m.brand} ${m.model} ${m.rank}`)).toEqual([
       'dacia Logan 1',
@@ -83,6 +83,7 @@ describe('the shipped car models', () => {
     expect(named(BRANDS.filter((b) => b.key !== 'opel'))).toBe(false);
   });
 
+  // @traces 405-FR-007
   it('carries no licence, seller, cost or renewal', () => {
     for (const model of CAR_MODELS) {
       expect(Object.keys(model).sort()).toEqual([
