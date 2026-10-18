@@ -8,7 +8,8 @@ import { join, relative } from 'node:path';
 const read = (file: string) => readFileSync(join(__dirname, file), 'utf8');
 
 // Each template whose stylesheet hid its message regions when empty, with the
-// classes those rules named.
+// classes those rules named (`#id` names one region by its id, where the class
+// is shared with text that is never empty).
 const REGIONS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['dashboard/frame/frame.html', ['live-offline']],
   [
@@ -25,7 +26,10 @@ const REGIONS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['public/list-your-garage/list-your-garage.html', ['error', 'warning']],
   ['public/mechanics-step/mechanics-step.html', ['error']],
   ['public/photos-step/photos-step.html', ['error', 'warning']],
-  ['public/place-step/place-step.html', ['error', 'warning']],
+  [
+    'public/place-step/place-step.html',
+    ['error', 'warning', '#place-suggested'],
+  ],
   ['public/prices-step/prices-step.html', ['error']],
   ['sign-in/consent/consent.html', ['error']],
 ];
@@ -39,6 +43,7 @@ function tags(html: string) {
       classes: (attributes.match(/(?:^|\s)class="([^"]*)"/)?.[1] ?? '')
         .split(/\s+/)
         .filter(Boolean),
+      id: attributes.match(/(?:^|\s)id="([^"]*)"/)?.[1] ?? '',
       tag: tag.replace(/\s+/g, ' ').slice(0, 120),
     }),
   );
@@ -48,9 +53,11 @@ function tags(html: string) {
 // @traces 248-FR-008
 describe('message regions', () => {
   it.each(REGIONS)('%s marks every %p region mf-message', (template, names) => {
-    const regions = tags(read(template)).filter(({ bound, classes }) =>
-      names.some(
-        (name) => classes.includes(name) || bound.includes(`'${name}'`),
+    const regions = tags(read(template)).filter(({ bound, classes, id }) =>
+      names.some((name) =>
+        name.startsWith('#')
+          ? id === name.slice(1)
+          : classes.includes(name) || bound.includes(`'${name}'`),
       ),
     );
 

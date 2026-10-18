@@ -41,7 +41,7 @@
   </div>
 </div>
 <p class="mf-message" [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
-<p class="hint" aria-live="polite">
+<p class="hint mf-message" id="place-suggested" aria-live="polite">
   @if (suggestions().length > 0) {
     {{ 'public.listing.place.found' | t: { count: suggestions().length } }}
   } @else if (nothingFound()) {
@@ -57,7 +57,7 @@
     {{ 'public.listing.place.manualPin' | t }}
   </button>
   @if (armed()) {
-    <p class="hint" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
+    <p class="hint" id="place-found" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
   }
   <div
     #map
