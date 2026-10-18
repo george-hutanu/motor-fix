@@ -1142,6 +1142,39 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Rate-limit refusals by route",
+      "description": "Calls refused past a rate limit a minute, by method and route template. A surge is an attack or a limit set too tight (libs/domain/src/rate-limit/rate-limit.config.ts).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 76
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (route) (increase(motorfix_rate_limit_refusals_total{service_name=\"mcp\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }
