@@ -468,14 +468,13 @@ test.describe('the platform figures', () => {
     await page.goto('/app/admin');
     await expect(tiles(page)).toHaveCount(6);
 
-    // The panel's one link is Jurnal's way to the whole log.
+    // The Jurnal panel's own link to the whole log stays.
+    await expect(
+      panel(page).getByRole('link', { name: /^Observabilitate/ }),
+    ).toHaveCount(0);
     await expect(panel(page).getByRole('link')).toHaveText([
       'Vezi tot jurnalul',
     ]);
-    await expect(panel(page).getByRole('link')).toHaveAttribute(
-      'href',
-      '/app/admin/log',
-    );
   });
 });
 

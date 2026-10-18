@@ -141,14 +141,11 @@ test.describe('garage views @seeded', () => {
       expect(await marked(page)).toBe(1);
     }
 
-    // Atelier Test has no jobs on its list: the panel says so.
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    await expect(
-      page.locator('main').getByRole('heading', { level: 2 }),
-    ).toHaveText('Lista de prețuri');
+    // The test garage lists no jobs: the price list's empty panel.
     await expect(page.locator('main')).toContainText(
-      'Nu ai încă lucrări în listă.',
+      'Lista de prețuriNu ai încă lucrări în listă.',
     );
 
     await page.goto('/app/garage/assistant');

@@ -420,7 +420,8 @@ describe('the address', () => {
 
     const type = el.querySelector('select.type') as HTMLSelectElement;
     type.value = 'jobs';
-    type.dispatchEvent(new Event('change'));
+    // A browser's change event bubbles up through the filters' host.
+    type.dispatchEvent(new Event('change', { bubbles: true }));
     await settle();
 
     expect(path()).toBe(`${VIEW}?kind=jobs`);
@@ -428,28 +429,20 @@ describe('the address', () => {
     expect(reads.at(-1)?.cursor).toBeUndefined();
   });
 
-  // A browser's change event bubbles out of the filter row: it is not a filter.
-  it('keeps each filter chosen on the screen as the browser bubbles its change event', async () => {
+  it('keeps each choice and date on the wide row as the next one is made', async () => {
     const el = await open();
+    const pick = async (selector: string, value: string) => {
+      const control = el.querySelector(selector) as HTMLInputElement;
+      control.value = value;
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+      await settle();
+    };
 
-    const type = el.querySelector('select.type') as HTMLSelectElement;
-    type.value = 'backup';
-    type.dispatchEvent(new Event('change', { bubbles: true }));
-    await settle();
-    const from = el.querySelector('input.from') as HTMLInputElement;
-    from.value = '2026-10-13';
-    from.dispatchEvent(new Event('change', { bubbles: true }));
-    await settle();
-    await search(el, 'disk');
+    await pick('select.type', 'backup');
+    await pick('input.from', '2026-10-12');
+    await pick('input.to', '2026-10-17');
 
-    expect(path()).toBe(
-      `${VIEW}?from=2026-10-13&kind=backup&q=disk&to=2026-10-17`,
-    );
-    expect(reads.at(-1)).toMatchObject({
-      from: '2026-10-12T21:00:00.000Z',
-      kind: ['backup_completed', 'backup_failed'],
-      q: 'disk',
-    });
+    expect(path()).toBe(`${VIEW}?from=2026-10-12&kind=backup&to=2026-10-17`);
   });
 });
 

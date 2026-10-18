@@ -423,9 +423,18 @@ describe('reading a garage by its public slug', () => {
       ),
     );
     expect((await read(hidden.slug)).status).toBe(404);
+    // Every check ok and both legal documents held: no note is owed.
     await prisma.verificationCheck.updateMany({
       data: { result: 'ok' },
-      where: { fileId: file.id, kind: { in: ['rar', 'caen'] } },
+      where: { fileId: file.id },
+    });
+    await prisma.legalDocument.createMany({
+      data: ['onrc_certificate', 'rar_authorisation'].map((kind) => ({
+        kind,
+        pages: [`${kind}/1.pdf`],
+        verificationFileId: file.id,
+      })),
+      skipDuplicates: true,
     });
 
     await prisma.$transaction((tx) =>

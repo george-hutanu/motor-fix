@@ -19,6 +19,11 @@ export interface VerificationFileGarageDto {
    * Digits only
    */
   cui: string | null;
+
+  /**
+   * The names of the other garages holding the same CUI, sorted; empty when none or no CUI
+   */
+  cuiAlsoUsedBy: Array<string>;
   id: string;
   name: string;
   phone: string | null;

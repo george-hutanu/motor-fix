@@ -328,6 +328,18 @@ const post = (
   return authorization ? req.set('Authorization', authorization) : req;
 };
 
+// Every check ok and both legal documents held: an approval then owes no note.
+const allOk = async (id: string) => {
+  await db.query(
+    "UPDATE verification_check SET result = 'ok' WHERE file_id = $1",
+    [id],
+  );
+  await db.query(
+    "INSERT INTO legal_document (id, verification_file_id, kind, pages) SELECT gen_random_uuid(), $1::uuid, k, ARRAY[k || '/1.pdf'] FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']::text[]) AS k ON CONFLICT DO NOTHING",
+    [id],
+  );
+};
+
 const checked = (id: string, kind: 'rar' | 'caen', result: string) =>
   db.query(
     'UPDATE verification_check SET result = $3::verification_check_result WHERE file_id = $1 AND kind = $2::verification_check_kind',
@@ -368,8 +380,7 @@ describe('POST /admin/verification-files/:id/decision', () => {
 
   it('approves a file whose rar and caen checks are ok', async () => {
     const { id } = await file('in_review');
-    await checked(id, 'rar', 'ok');
-    await checked(id, 'caen', 'ok');
+    await allOk(id);
 
     const res = await post(id, 'decision', admin, { decision: 'approved' });
 

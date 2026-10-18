@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -14,6 +14,7 @@ features:
   - 203-company-caen-check
   - 306-decision-record
   - 204-rar-activities-check
+  - 303-approve-publish-garage
 ---
 
 # Capability: Garage verification
@@ -22,17 +23,17 @@ How MotorFix keeps a garage hidden from drivers until an admin approves it: the 
 
 ## Requirements
 
-### 207-FR-001 — The system MUST store a verification file per submission with garage, status (`submitted`, `in_review`, `approved`, `more_requested`, `rejected`), `opened_by`, `opened_at`, `decided_by`, `decided_at`, `reopened_by`, `reopened_at`, `previous_file_id` (the rejected file a re-submission follows), reason code and note of the last `more_requested` or `rejected` decision, and creation time; every timestamp is stored in UTC. A garage's status MUST be one of `draft`, `approved`, `suspended`, with `approved_at` set at each approval.
+### 303-FR-005 — The garage MUST carry `last_checked_on`, a nullable calendar date, set at every approval (an admin's and the system's, a reopened file's included) to the decision time's day in Europe/Bucharest, in the same update that sets `status` and `approved_at`, and included in the garage's audit entry of that approval; nothing else in this story writes it (#248 reads it; the monthly re-check of MF-59 may write it later). Modifies 207-FR-001 (one more column) and 207-FR-003 (the approval sets it beside `approved_at`).
 
-_From 207-garage-approval-flow._
+_From 303-approve-publish-garage._
 
 ### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
 
 _From 302-garage-verification-file._
 
-### 207-FR-003 — The garage's status MUST move `draft` → `approved` only through a file approval, in the same transaction; an approval of a reopened file keeps `approved` and resets `approved_at`; no other transition of this story changes the garage's status (`approved` ↔ `suspended` belongs to MF-59). A rejection, a "more requested" or a reopening of an approved garage's file MUST leave the garage `approved`.
+### 303-FR-005 — The garage MUST carry `last_checked_on`, a nullable calendar date, set at every approval (an admin's and the system's, a reopened file's included) to the decision time's day in Europe/Bucharest, in the same update that sets `status` and `approved_at`, and included in the garage's audit entry of that approval; nothing else in this story writes it (#248 reads it; the monthly re-check of MF-59 may write it later). Modifies 207-FR-001 (one more column) and 207-FR-003 (the approval sets it beside `approved_at`).
 
-_From 207-garage-approval-flow._
+_From 303-approve-publish-garage._
 
 ### 207-FR-004 — Submitting MUST create a file `submitted` for a garage that has no `submitted`, `in_review` or `approved` file; when the garage's newest file is `rejected`, the new file's `previous_file_id` MUST point to it; when it is `submitted`, `in_review`, `more_requested` (the garage re-sends that file instead) or `approved` (a change goes through the change-flow stories), submitting MUST be refused with 409. This story exposes the submit transition for the submission story to call; it ships no submit endpoint.
 
@@ -50,9 +51,9 @@ _From 207-garage-approval-flow._
 
 _From 207-garage-approval-flow._
 
-### 306-FR-004 — Every accepted decision MUST store, in the same transaction, the status, `decided_by`, `decided_at`, `reason_code` (null for `approved`), `reason_note` (the note, or null) and `requested_items` (the list for `more_requested`, empty otherwise, a new non-null list column defaulting to empty), write one audit entry on the file with the old and new status, the reason code and the note, and one `verification.decided` outbox row whose payload gains `reason` and `note` beside `fileId`, `garageId` and `decision` (modifies 207-FR-008); the file keeps only its latest decision in its columns. A failed audit or outbox write fails the decision. The approval's publishing of the garage, the audiences and the decisions counter stay as they are.
+### 303-FR-006 — The approval's audit record (306-FR-004: the file's status entry with the note, and the garage's entry of the same approval) MUST carry the list FR-003 judges, on the garage's entry as `verificationMissing`, computed for every approval (the `system` actor's included, which is exempt from the refusal, not from the record): the check kinds not `ok` with their results and the missing document kinds, empty when every check was ok; the timeline line of 302-FR-010 is unchanged. Modifies 306-FR-004.
 
-_From 306-decision-record._
+_From 303-approve-publish-garage._
 
 ### 207-FR-009 — When `skip_manual_approval` is on (`SKIP_MANUAL_APPROVAL` read as `1` or `true`) and `APP_ENV` is `test`, submitting MUST approve the new file at once in the same transaction with actor `system` ("MotorFix"), writing the audit entries and outbox rows of both transitions; under any other `APP_ENV` (`development`, `staging`, `production`) the switch MUST be ignored and it MUST NOT be a required variable (A33).
 
@@ -275,9 +276,9 @@ _From 066-suspended-garages._
 ### 306-FR-006 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/decision`, taking FR-001's payload through a DTO in the contracts library validated at the edge, and `POST /api/v1/admin/verification-files/{id}/reopen` with no body; both run the use case with the signed-in admin as actor (the `admin.garages` capability, as the open call) and answer 200 with the file read's body (302-FR-001), which now carries `requested_items`; anyone who is not a MotorFix admin MUST get 404 with no garage data, no token 401, an unknown id 404. The OpenAPI document and the generated client MUST be regenerated.
 
 _From 306-decision-record._
-### 204-FR-009 — The file read MUST give the form what it compares: the garage's price-list jobs (job type id, Romanian and English name, the RAR activity each maps to) and the whole RAR activity catalogue by code and name (modifies 302-FR-001; the garage's recorded activities it already returns). After a save, the row MUST show only the server's answer: the lamp, the detail, the ticks of a `rar` check as text ("găsită · firmă · adresă" or the English equivalents), the ticked activities of an `activities` check by name and its uncovered jobs by name, the recorder's name and the time; the queue line is updated from the answer's summary. On a failure the form keeps what was typed and ticked and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` the drawer re-reads the file and turns read-only (302-FR-007). Another admin's open drawer refreshes through the existing `verification-file:{fileId}` live update, with no new channel. While the file is undecided and `rar` is not `ok`, the footer MUST show "Verificarea RAR e obligatorie" / "The RAR check is required" beside the disabled "Aprobă și publică" (302-FR-009); the server's refusal and the button itself stay with #173 and #58.
+### 303-FR-007 — The file read MUST carry, on its garage part, `cuiAlsoUsedBy`: the names of the other garage rows holding the same stored CUI, whatever their status, sorted by name in Romanian collation then by id, empty when the CUI is null or held by no other garage; the drawer MUST show, in the header under the CUI, the line "CUI folosit și de alt service: {names}" / "CUI also used by another garage: {names}" in the warning colour and by text (an alert role is not used: it is a fact, not an event), and nothing of the button's state changes. Modifies the file read (204-FR-009, the latest form of 302-FR-001: one more field).
 
-_From 204-rar-activities-check._
+_From 303-approve-publish-garage._
 
 ### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
 
@@ -363,17 +364,17 @@ _From 203-company-caen-check._
 
 _From 203-company-caen-check._
 
-### 306-FR-001 — The decision payload MUST be `decision` ∈ `approved`, `more_requested`, `rejected`; `reason` ∈ `documents`, `rar`, `address`, `photos`, `other`, required for `rejected`, optional for `more_requested` and refused (400) with `approved`; `requested_items`, an optional list of the same codes, accepted only with `more_requested`; `note`, 1 to 1,000 characters after trimming, required for `rejected` and `more_requested` and optional for `approved`, where a note empty after trimming is stored as null (the conditional approval-note rule is #58's). The use case MUST answer 422 `reason_required` when a rejection lacks its reason and 422 `note_required` when a rejection or a request for more lacks its note; every other shape fault (an unknown value, a note too long, a reason or `requested_items` with the wrong decision, an unknown field) is the edge's 400 `validation_failed`. The existing 400 of the use case's reason check is replaced by these 422s (modifies the refusal of 207-FR-001's reason rule).
+### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no audit entry and no event and is counted and logged as the other refusals are (FR-010). Modifies 306-FR-001, which left this rule to #58.
 
-_From 306-decision-record._
+_From 303-approve-publish-garage._
 
 ### 306-FR-002 — A decision MUST be accepted only while the file is `submitted` or `in_review`, as one conditional update on the status (unchanged); the refusal of an already decided file MUST answer 409 `verification_transition_refused` with the details `decidedBy` (the deciding admin's first name, "MotorFix" for `system`), `decidedAt` (UTC) and `currentStatus`, and the text "already decided by <name> at <time>" (modifies the refusal text of the existing guard). Two concurrent decisions on one file MUST end with exactly one committed.
 
 _From 306-decision-record._
 
-### 306-FR-003 — Inside the decision's transaction, after the file is read for the conditional update, `approved` from any actor whose role is `admin` MUST be refused with 409 `rar_check_required` unless the file's `rar` check is `ok`, and with 409 `caen_check_required` unless its `caen` check is `ok` (RAR first); the refusal writes no audit entry and no event. The `system` actor (207-FR-009) is exempt. A `caen` recorded ok from the ONRC record alone (203-FR-003, OD-29) passes.
+### 303-FR-004 — When the API does not run as production and the platform rule `skip_rar_check` reads `true`, the RAR gate of 306-FR-003 MUST be skipped for an admin's approval (the CAEN gate stays); in production the rule MUST never be read (the verification config's `testRules`, false when `APP_ENV` is `production`, the same test as the platform rules' `production` option), so the gate stands whatever a copied database holds. Modifies 306-FR-003.
 
-_From 306-decision-record._
+_From 303-approve-publish-garage._
 
 ### 306-FR-005 — Reopening MUST be allowed from `approved`, `rejected` and `more_requested` and refused from `submitted` and `in_review` with 409 `verification_transition_refused` (unchanged); an admin's reopening MUST set `reopened_by` to the admin, `reopened_at`, reset `submitted_at`, keep the earlier decision's columns, write its audit entry and one `verification.reopened` row whose payload gains `adminId` (the account id, null for `system`) beside `fileId`, `garageId` and, when set, `reason` (modifies 207-FR-008); the garage's status and `approved_at` MUST NOT change (207-FR-003, unchanged), and no notification is built for the garage.
 
@@ -383,9 +384,9 @@ _From 306-decision-record._
 
 _From 306-decision-record._
 
-### 306-FR-008 — The drawer component MUST offer one `decide(decision)` method, calling the decision endpoint and showing the server's answer (the decided state) on success, for the button stories (#58, #59, #172) to call; on 409 `verification_transition_refused` it MUST show a red inline message above the buttons, "Deja decis de {name} la {time}" / "Already decided by {name} at {time}" (the time in Europe/Bucharest, the drawer's existing short format), conveyed by text and an alert role, and re-read the file; on 409 `rar_check_required` or `caen_check_required` the same slot reads "Aprobarea cere verificarea RAR" / "Approval needs the RAR check" or "… CAEN"; on any other failure a toast reads "Nu am putut salva decizia" / "Could not save the decision". The message stays over the re-read state until the admin's next decide or reopen call, or until the drawer closes; no re-read clears it. While a decide or reopen call is in flight, a further call from the same drawer is ignored and the controls are disabled, so one press sends one request.
+### 303-FR-009 — While the decision call is in flight the button MUST show a spinner (busy, named to assistive technology) and the drawer's controls stay disabled (306-FR-008); on any failure other than the two 409 kinds and 422 `note_required` the drawer MUST show the toast "Nu am putut salva decizia" and re-read the file before the controls return, so a decision that committed is shown and never sent twice; on 422 `note_required` it MUST re-read the file and open the dialog of FR-002 again with the server's `missing` list and the note required. The 409 messages of 306-FR-008 are unchanged. Modifies 306-FR-008 (the re-read on failure).
 
-_From 306-decision-record._
+_From 303-approve-publish-garage._
 
 ### 306-FR-009 — On an `approved`, `rejected` or `more_requested` file the drawer's header MUST hold a text button "Redeschide dosarul" / "Reopen the file", at least 44 px tall and reachable by keyboard, which opens a confirmation (the `dialog` shape the problem dialog uses) reading "Redeschizi dosarul? Decizia rămâne până iei una nouă." / "Reopen the file? The decision stands until you take a new one." with "Redeschide" / "Reopen" and "Renunță" / "Cancel"; confirming calls the reopen endpoint and the drawer shows the server's answer (`in_review`, the three buttons back, the reopen button gone); a failed call shows the toast "Nu am putut redeschide dosarul" / "Could not reopen the file" and changes nothing. The button is absent on a `submitted` or `in_review` file.
 
@@ -454,6 +455,50 @@ _From 204-rar-activities-check._
 
 _From 204-rar-activities-check._
 
+### 303-FR-001 — On an undecided file the drawer's "Aprobă și publică" / "Approve and publish" button MUST be enabled when the file's `rar` and `caen` checks are both `ok` and disabled otherwise, with one hint under the buttons: "Verificarea RAR e obligatorie" / "The RAR check is required" while `rar` is not `ok`, else "Verificarea CAEN 4520 e obligatorie" / "The CAEN 4520 check is required" while `caen` is not `ok`; the hint is text, named to assistive technology as the button's description, and absent when the button is enabled or the file is decided. The "Cere completări" and "Respinge" buttons stay disabled (#59 and the reject story wire them). The button follows the file read alone; a `skip_rar_check` test environment is served by the API (FR-004), not by the drawer.
+
+_From 303-approve-publish-garage._
+
+### 303-FR-002 — Pressing the enabled button MUST open an approval dialog (the `dialog` shape the problem dialog uses) titled "Aprobă și publică" / "Approve and publish" that lists, one line each, every check among `company`, `activities`, `representative`, `address`, `photos`, `documents` whose result is not `ok` (the row's label, as the drawer shows it, with the result: "neverificat" / "not checked", "atenție" / "warning", "problemă" / "failure") and every missing document kind ("Lipsește: Certificat constatator ONRC" / "Missing: ONRC company certificate", "Lipsește: Autorizația RAR" / "Missing: RAR authorisation"), or the line "Toate verificările sunt în regulă." / "Every check is ok." when the list is empty; a text area "Notă" / "Note" of at most 1,000 characters with a live count, required when the list is not empty ("Scrie de ce aprobi așa." / "Say why you approve as it is.") and optional otherwise; the buttons "Aprobă și publică" / "Approve and publish" and "Renunță" / "Cancel". Confirming with a required note empty after trimming MUST be refused in the dialog, the text area named at fault and the refusal announced. Confirming calls the existing `decide({ decision: 'approved', note })`, the note left out when empty; cancelling (the "Renunță" button or the Escape key) returns focus to the button; confirming closes the dialog at once and, while the decision call is in flight, the drawer's approve button is disabled and shows the spinner (FR-009), so one press sends one call. The dialog opens inside the drawer, which stays the one modal dialog (302-FR-011); the note is internal to MotorFix and is not sent to the garage.
+
+_From 303-approve-publish-garage._
+
+### 303-FR-003 — The decision use case MUST, for an `approved` decision from an actor whose role is `admin`, after the RAR and CAEN gates and inside the same transaction and row lock, read the file's six other checks and its two document kinds and refuse with 422 `note_required` (the existing shape, with a `missing` list naming each check kind not `ok` and each absent document kind, the checks in the drawer's row order, then the documents in the contracts list's order) when any of them is not `ok` or absent and the note is null after trimming; a note of 1 to 1,000 characters lets it through and is stored as the file's `reason_note` (306-FR-004's columns, unchanged). The `system` actor is exempt. `missing` is a list of `{ kind, result }` (a check not ok) and `{ document }` (an absent kind) objects, typed in the contracts library; a missing certificate yields both its document line and the `documents` check line when that check is not ok. The refusal writes no audit entry and no event and is counted and logged as the other refusals are (FR-010). Modifies 306-FR-001, which left this rule to #58.
+
+_From 303-approve-publish-garage._
+
+### 303-FR-004 — When the API does not run as production and the platform rule `skip_rar_check` reads `true`, the RAR gate of 306-FR-003 MUST be skipped for an admin's approval (the CAEN gate stays); in production the rule MUST never be read (the verification config's `testRules`, false when `APP_ENV` is `production`, the same test as the platform rules' `production` option), so the gate stands whatever a copied database holds. Modifies 306-FR-003.
+
+_From 303-approve-publish-garage._
+
+### 303-FR-005 — The garage MUST carry `last_checked_on`, a nullable calendar date, set at every approval (an admin's and the system's, a reopened file's included) to the decision time's day in Europe/Bucharest, in the same update that sets `status` and `approved_at`, and included in the garage's audit entry of that approval; nothing else in this story writes it (#248 reads it; the monthly re-check of MF-59 may write it later). Modifies 207-FR-001 (one more column) and 207-FR-003 (the approval sets it beside `approved_at`).
+
+_From 303-approve-publish-garage._
+
+### 303-FR-006 — The approval's audit record (306-FR-004: the file's status entry with the note, and the garage's entry of the same approval) MUST carry the list FR-003 judges, on the garage's entry as `verificationMissing`, computed for every approval (the `system` actor's included, which is exempt from the refusal, not from the record): the check kinds not `ok` with their results and the missing document kinds, empty when every check was ok; the timeline line of 302-FR-010 is unchanged. Modifies 306-FR-004.
+
+_From 303-approve-publish-garage._
+
+### 303-FR-007 — The file read MUST carry, on its garage part, `cuiAlsoUsedBy`: the names of the other garage rows holding the same stored CUI, whatever their status, sorted by name in Romanian collation then by id, empty when the CUI is null or held by no other garage; the drawer MUST show, in the header under the CUI, the line "CUI folosit și de alt service: {names}" / "CUI also used by another garage: {names}" in the warning colour and by text (an alert role is not used: it is a fact, not an event), and nothing of the button's state changes. Modifies the file read (204-FR-009, the latest form of 302-FR-001: one more field).
+
+_From 303-approve-publish-garage._
+
+### 303-FR-008 — A queue row (overview panel and "Service-uri" view) whose file is decided `approved` while the row is shown MUST keep its place for the rest of the visit with its lamp, summary and waiting line replaced by the text "Aprobat, e pe hartă" / "Approved, on the map" (the mock's wording; the garage's own status label "Aprobat, pe hartă" of 207-FR-006 is unchanged), its "Deschide dosarul" link kept, held in that queue component's own state (lost when the admin leaves the view) and outside the page size, the counts dropping as today; the queue learns it from the `verification.decided` event's `fileId` (the live message carries no outcome) by reading that file once and keeping the row when the file's status is `approved`, and its re-read (unchanged, waiting files only) leaves the decided row in place; a fresh visit lists waiting files only. A decision other than `approved` leaves the row as today (its stories own the text).
+
+_From 303-approve-publish-garage._
+
+### 303-FR-009 — While the decision call is in flight the button MUST show a spinner (busy, named to assistive technology) and the drawer's controls stay disabled (306-FR-008); on any failure other than the two 409 kinds and 422 `note_required` the drawer MUST show the toast "Nu am putut salva decizia" and re-read the file before the controls return, so a decision that committed is shown and never sent twice; on 422 `note_required` it MUST re-read the file and open the dialog of FR-002 again with the server's `missing` list and the note required. The 409 messages of 306-FR-008 are unchanged. Modifies 306-FR-008 (the re-read on failure).
+
+_From 303-approve-publish-garage._
+
+### 303-FR-010 — This story adds no endpoint, service, queue or outside call: the refusals counter of 306-FR-011 MUST gain the reason `note_required`, with one log line per refusal (file id, reason), and its inventory entry reworded to name it; `last_checked_on` and `cuiAlsoUsedBy` ride existing reads under the API's route metrics. The DTO change lives in the contracts library, the OpenAPI document and the generated client are regenerated (Principle V).
+
+_From 303-approve-publish-garage._
+
+### 303-FR-012 — Tests MUST exist before the code (Principle II). Jest on real PostgreSQL and Redis: 422 `note_required` for each of the six check kinds not `ok` (`not_run`, `warning`, `failed`) and for each missing document kind, with the `missing` list; the approval saved with a note in each case and without one when every check is ok and both documents present; the OD-29 case (no certificate, `caen` ok from the record) refused without a note and saved with one; the `system` actor exempt; `skip_rar_check` = true letting an approval without `rar` through outside production and ignored in production, the CAEN gate still refusing; `last_checked_on` set to the Bucharest day (a decision at 23:30 UTC on a summer day is the next day) and reset on a reopened file's second approval; the audit entry's list; `cuiAlsoUsedBy` with none, one and two other garages and with a null CUI; the public read showing the garage after approval and the `verification.decided` audiences holding `admin`, the garage, `public:garage:{id}` and `public:search`; VERIFICATION_RESULT queued once; the refusals counter's `note_required`; the existing 409 and 404 cases still passing (the existing approval tests gain a note where their checks are not ok). Web unit tests: the button enabled and disabled with each hint in both languages; the dialog's list for each non-ok check and missing document, the empty-list line, the required and optional note, the in-dialog refusal, the call with and without the note; the spinner; the re-read on a failure and on 422 with the dialog reopened; the CUI line present and absent; the queue row's state text after an approved event and its untouched row after another decision. Playwright, as the seeded admin: open Atelier Dinamo's file, record every check ok (both documents seeded), press "Aprobă și publică", confirm, see "Aprobat de …" in the footer and "Aprobat, e pe hartă" on the queue row without a reload; the garage's public read answers (404 before, 200 after) and its `last_checked_on` holds the day; at desktop and a 320 px phone (amended at implement, 2026-10-18, pending the owner's answer on #58: the driver's brand search and the owner's VERIFICATION_RESULT item are proven by the integration specs of the publish path and its audiences, not in the browser). The four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 303-approve-publish-garage._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -476,3 +521,11 @@ _From 204-rar-activities-check._
 - `203-FR-001` — superseded by `204-FR-002` (2026-10-17)
 - `203-FR-004` — superseded by `204-FR-005` (2026-10-17)
 - `300-FR-005` — superseded by `204-FR-013` (2026-10-17)
+
+- `306-FR-001` — superseded by `303-FR-003` (2026-10-18)
+- `306-FR-003` — superseded by `303-FR-004` (2026-10-18)
+- `306-FR-004` — superseded by `303-FR-006` (2026-10-18)
+- `306-FR-008` — superseded by `303-FR-009` (2026-10-18)
+- `204-FR-009` — superseded by `303-FR-007` (2026-10-18)
+- `207-FR-001` — superseded by `303-FR-005` (2026-10-18)
+- `207-FR-003` — superseded by `303-FR-005` (2026-10-18)

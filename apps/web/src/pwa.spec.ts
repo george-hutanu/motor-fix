@@ -120,3 +120,10 @@ describe('service worker', () => {
     expect(build.configurations.development.serviceWorker).toBeUndefined();
   });
 });
+
+// @traces 248-FR-007
+describe('the page the server sends', () => {
+  it('starts as Romanian', () => {
+    expect(index).toMatch(/<html[^>]*\slang="ro"/);
+  });
+});

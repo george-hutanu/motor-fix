@@ -13306,6 +13306,13 @@
             "description": "Digits only",
             "nullable": true
           },
+          "cuiAlsoUsedBy": {
+            "description": "The names of the other garages holding the same CUI, sorted; empty when none or no CUI",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "address": {
             "type": "string",
             "description": "The workshop; null for a mobile mechanic",
@@ -13343,6 +13350,7 @@
           "name",
           "businessKind",
           "cui",
+          "cuiAlsoUsedBy",
           "address",
           "seatAddress",
           "serviceRadiusKm",

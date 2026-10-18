@@ -11,6 +11,28 @@
     "subtitle": "What drivers asked for in the last 30 days"
   },
   "file": {
+    "approve": {
+      "allOk": "Every check is ok.",
+      "cancel": "Cancel",
+      "confirm": "Approve and publish",
+      "count": "{n}/1000",
+      "documents": {
+        "onrc_certificate": "ONRC company certificate",
+        "rar_authorisation": "RAR authorisation"
+      },
+      "listed": "You approve past:",
+      "missingCheck": "{label}: {result}",
+      "missingDocument": "Missing: {document}",
+      "note": "Note",
+      "noteRequired": "Say why you approve as it is.",
+      "noteTooLong": "The note can be at most 1000 characters.",
+      "results": {
+        "failed": "failure",
+        "not_run": "not checked",
+        "warning": "warning"
+      },
+      "title": "Approve and publish"
+    },
     "checks": {
       "activities": "Activities",
       "address": "Address",
@@ -22,6 +44,7 @@
       "representative": "Phone"
     },
     "cui": "CUI {cui}",
+    "cuiShared": "CUI also used by another garage: {names}",
     "documents": {
       "ago": {
         "one": "issued {n} day ago",
@@ -49,6 +72,7 @@
       "alreadyDecided": "Already decided by {name} at {time}",
       "approve": "Approve and publish",
       "ask": "Ask for more",
+      "caenHint": "The CAEN 4520 check is required",
       "caenRequired": "Approval needs the CAEN check",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
       "rarCheckRequired": "Approval needs the RAR check",
@@ -395,6 +419,7 @@
   },
   "queue": {
     "all": "See all",
+    "approved": "Approved, on the map",
     "brands": {
       "one": "{n} brand",
       "other": "{n} brands"

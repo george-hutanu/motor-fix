@@ -21,9 +21,6 @@ h3 {
   font-size: var(--mf-size-label);
   color: var(--mf-text-secondary);
 }
-.fresh:empty {
-  display: none;
-}
 .loading {
   display: grid;
   gap: var(--mf-space-3);

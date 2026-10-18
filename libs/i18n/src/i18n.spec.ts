@@ -223,3 +223,16 @@ describe('provideI18n', () => {
     expect(page.lang).toBe('ro');
   });
 });
+
+// @traces 248-FR-007
+describe('the page language', () => {
+  it('follows every switch, there and back', async () => {
+    const i18n = TestBed.inject(I18n);
+    const page = TestBed.inject(DOCUMENT).documentElement;
+
+    for (const language of ['en', 'ro', 'en', 'ro'] as const) {
+      await i18n.use(language);
+      expect(page.lang).toBe(language);
+    }
+  });
+});

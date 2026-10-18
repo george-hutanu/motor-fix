@@ -52,6 +52,7 @@ const queueOf = (count: number, total = count): VerificationQueueDto => ({
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let asked: { offset?: number; limit?: number }[];
+let fileRead: jest.Mock;
 let answer: (read: {
   offset?: number;
   limit?: number;
@@ -81,6 +82,7 @@ async function open(
   events = new Subject();
   resync = new Subject();
   asked = [];
+  fileRead = jest.fn(async () => ({ file: { status: 'in_review' } }));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -104,6 +106,8 @@ async function open(
             asked.push(read);
             return answer(read);
           },
+          verificationFileControllerRead: (read: { id: string }) =>
+            fileRead(read),
         },
       },
       ...(providers as never[]),
@@ -484,5 +488,130 @@ describe('the file named in the address', () => {
 
     await open({ overview: true, providers: providers('file-9') });
     expect(overlays.open).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 303-FR-008 303-FR-012
+describe('a file approved while its row is shown', () => {
+  const decided = (id: string): LiveMessage => ({
+    at: '2026-10-18T09:00:00.000Z',
+    id,
+    kind: 'verification.decided',
+  });
+  // The queue as the server answers once file-2 is decided: it waits no more.
+  const without = (id: string) => {
+    const items = queueOf(4).items.filter((r) => r.id !== id);
+    return { items, total: items.length };
+  };
+  async function decide(el: HTMLElement, id: string, status: string) {
+    fileRead.mockResolvedValue({ file: { id, status } });
+    answer = async () => without(id);
+    events.next(decided(id));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+    return el;
+  }
+
+  it.each([
+    ['ro', 'Aprobat, e pe hartă'],
+    ['en', 'Approved, on the map'],
+  ] as const)(
+    'keeps its place, reading "%s" in place of its lamp and waiting line',
+    async (language, line) => {
+      const el = await open({}, language);
+
+      await decide(el, 'file-2', 'approved');
+
+      expect(fileRead).toHaveBeenCalledWith({ id: 'file-2' });
+      expect(fileRead).toHaveBeenCalledTimes(1);
+      const names = rows(el).map((r) => text(r.querySelector('.name')));
+      expect(names).toEqual([
+        'Service 1',
+        'Service 2',
+        'Service 3',
+        'Service 4',
+      ]);
+      const kept = rows(el)[1] as HTMLElement;
+      expect(text(kept.querySelector('.state'))).toBe(line);
+      expect(kept.querySelector('mf-lamp')).toBeNull();
+      expect(kept.querySelector('.waiting')).toBeNull();
+      expect(kept.querySelector('.applied')).toBeNull();
+      expect(kept.querySelector('a.open')?.getAttribute('href')).toBe(
+        '/app/admin/garages/file-2',
+      );
+    },
+  );
+
+  it('lets the count drop as the server counts', async () => {
+    const el = await open();
+
+    await decide(el, 'file-2', 'approved');
+
+    expect(text(el.querySelector('h2'))).toBe('Service‑uri de verificat · 3');
+  });
+
+  it('stays outside the page size: the next page still reads 20 more', async () => {
+    answer = async ({ limit = 20, offset = 0 }) => ({
+      items: Array.from({ length: Math.min(limit, 45 - offset) }, (_, i) =>
+        row(offset + i + 1),
+      ),
+      total: 45,
+    });
+    const el = await open();
+    fileRead.mockResolvedValue({ file: { status: 'approved' } });
+    answer = async ({ limit = 20, offset = 0 }) => {
+      const left = Array.from({ length: 45 }, (_, i) => row(i + 1)).filter(
+        (r) => r.id !== 'file-3',
+      );
+      return { items: left.slice(offset, offset + limit), total: 44 };
+    };
+    events.next(decided('file-3'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(rows(el)).toHaveLength(21);
+    expect(text(rows(el)[2]?.querySelector('.name'))).toBe('Service 3');
+    button(el, 'Mai multe')?.click();
+    await settle();
+
+    expect(asked.at(-1)).toMatchObject({ limit: 40 });
+    expect(rows(el)).toHaveLength(41);
+  });
+
+  it.each(['rejected', 'more_requested'])(
+    'leaves the row to drop when the file was %s',
+    async (status) => {
+      const el = await open();
+
+      await decide(el, 'file-2', status);
+
+      expect(rows(el).map((r) => text(r.querySelector('.name')))).toEqual([
+        'Service 1',
+        'Service 3',
+        'Service 4',
+      ]);
+    },
+  );
+
+  it('reads nothing for a file it does not show', async () => {
+    await open();
+
+    events.next(decided('file-99'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(fileRead).not.toHaveBeenCalled();
+  });
+
+  it('forgets the row with the view: a fresh visit lists waiting files only', async () => {
+    const el = await open();
+    await decide(el, 'file-2', 'approved');
+    TestBed.resetTestingModule();
+    document.body.innerHTML = '';
+    answer = async () => without('file-2');
+
+    const again = await open();
+
+    expect(rows(again)).toHaveLength(3);
   });
 });

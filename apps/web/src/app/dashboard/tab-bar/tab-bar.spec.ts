@@ -52,6 +52,7 @@ const current = (element: HTMLElement) =>
     .filter((a) => a.getAttribute('aria-current') === 'page')
     .map((a) => a.textContent?.trim());
 
+// @traces 248-FR-007
 describe('DashboardTabBar', () => {
   it('shows one tab per view, in order, with its short label and its address', async () => {
     const { element } = await open('/app/garage');

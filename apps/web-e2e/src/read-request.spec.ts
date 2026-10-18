@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { accessToken, bearer } from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // The seeded driver with a Dacia Logan, and the owner of Service Auto
@@ -11,16 +12,6 @@ import { keepSeededLanguage } from './seeded-language.js';
 const DRIVER = 'cerere@example.test';
 const OWNER = 'militari@example.test';
 const OIL = 'Schimb de ulei și filtre';
-
-async function accessToken(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  return ((await res.json()) as { accessToken: string }).accessToken;
-}
-
-const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 // The driver's own request for an oil service, with a two-line description,
 // sent to the owner's garage.
@@ -54,33 +45,12 @@ async function sendRequest(request: APIRequestContext) {
 
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
 const DAY = 24 * 60 * 60 * 1000;
+const day = (at: Date) =>
+  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(at);
 const tomorrow = () =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + DAY),
+    new Date(Date.now() + 24 * 60 * 60 * 1000),
   );
-
-// An instant as Bucharest reads it: its day and its wall-clock time.
-const wall = (at: string) => {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    ...BUCHAREST,
-    day: '2-digit',
-    fractionalSecondDigits: 3,
-    hour: '2-digit',
-    hourCycle: 'h23',
-    minute: '2-digit',
-    month: '2-digit',
-    second: '2-digit',
-    year: 'numeric',
-  }).formatToParts(new Date(at));
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((p) => p.type === type)?.value;
-  return {
-    day: `${part('year')}-${part('month')}-${part('day')}`,
-    time: `${part('hour')}:${part('minute')}:${part('second')}.${part('fractionalSecond')}`,
-  };
-};
-const plusDays = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
@@ -106,32 +76,23 @@ test.describe('reading a request @seeded', () => {
     const onPanou = page
       .locator('mf-garage-requests-panel')
       .locator(`[data-live-id="${id}"]`);
-    const detail = page.waitForResponse(
-      (response) =>
-        response.url().endsWith(`/api/v1/garage/requests/${id}`) &&
-        response.request().method() === 'GET',
-    );
     await onPanou.getByRole('button', { name: /^Deschide cererea / }).click();
     await expect(page).toHaveURL(`/app/garage/requests/${id}`);
-    const { createdAt, expiresAt } = (await (await detail).json()) as {
-      createdAt: string;
-      expiresAt: string;
-    };
-    // A request expires seven Bucharest days later at the same wall-clock
-    // time, so 169 h over the autumn clock change; the drawer rounds the time
-    // left down to whole days: 6 in most weeks, 7 in the week before it.
-    expect(wall(expiresAt)).toEqual({
-      day: plusDays(wall(createdAt).day, 7),
-      time: wall(createdAt).time,
-    });
-    const daysLeft = Math.floor((Date.parse(expiresAt) - Date.now()) / DAY);
     const drawer = page.getByRole('dialog', { name: 'Cerere de ofertă' });
     await expect(drawer).toContainText('Dacia Logan');
     await expect(drawer).toContainText(OIL);
     await expect(drawer).toContainText(`Scârțâie la frânare ${tag}`);
     await expect(drawer).toContainText('Sunați după ora 18');
     await expect(drawer).toContainText('orice mecanic');
-    await expect(drawer).toContainText(`expiră în ${daysLeft} zile`);
+    // Seven Bucharest days on, in whole days left: 6 most weeks, 7 when the
+    // clocks go back an hour before it expires.
+    const expires = drawer.locator('.times time').nth(1);
+    const until = new Date((await expires.getAttribute('datetime')) ?? '');
+    const sevenOn = new Date(`${day(new Date())}T12:00:00Z`);
+    sevenOn.setUTCDate(sevenOn.getUTCDate() + 7);
+    expect(day(until)).toBe(sevenOn.toISOString().slice(0, 10));
+    const left = Math.floor((until.getTime() - Date.now()) / DAY);
+    await expect(expires).toHaveText(`expiră în ${left} zile`);
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage');

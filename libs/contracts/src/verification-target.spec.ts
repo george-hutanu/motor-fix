@@ -1,4 +1,6 @@
 import {
+  approvalGaps,
+  approvalGapsFrom,
   queueLamp,
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
@@ -40,5 +42,107 @@ describe('the queue constants', () => {
     expect(VERIFICATION_TARGET_WORKING_DAYS).toBe(2);
     expect(VERIFICATION_QUEUE_PAGE).toBe(20);
     expect(VERIFICATION_QUEUE_PANEL).toBe(5);
+  });
+});
+
+describe('what an approval passes over', () => {
+  // @traces 303-FR-003 303-FR-006
+  const allOk = [
+    'company',
+    'caen',
+    'rar',
+    'activities',
+    'representative',
+    'address',
+    'photos',
+    'documents',
+  ].map((kind) => ({ kind, result: 'ok' as const }));
+  const both = ['onrc_certificate', 'rar_authorisation'];
+
+  it('is nothing when every check is ok and both documents are there', () => {
+    expect(approvalGaps(allOk, both)).toEqual([]);
+  });
+
+  it.each([
+    'company',
+    'activities',
+    'representative',
+    'address',
+    'photos',
+    'documents',
+  ])('names the %s check for each result that is not ok', (kind) => {
+    for (const result of ['not_run', 'warning', 'failed'] as const) {
+      const checks = allOk.map((check) =>
+        check.kind === kind ? { kind, result } : check,
+      );
+      expect(approvalGaps(checks, both)).toEqual([{ kind, result }]);
+    }
+  });
+
+  it('leaves out the rar and caen checks, which the gates hold', () => {
+    const checks = allOk.map((check) =>
+      ['rar', 'caen'].includes(check.kind)
+        ? { kind: check.kind, result: 'failed' as const }
+        : check,
+    );
+    expect(approvalGaps(checks, both)).toEqual([]);
+  });
+
+  it('counts a check the file has no row for as not run', () => {
+    expect(approvalGaps([], both)).toEqual(
+      [
+        'company',
+        'activities',
+        'representative',
+        'address',
+        'photos',
+        'documents',
+      ].map((kind) => ({ kind, result: 'not_run' })),
+    );
+  });
+
+  it('names each missing document after the checks, in the kinds order', () => {
+    const checks = allOk.map((check) =>
+      check.kind === 'photos'
+        ? { kind: 'photos', result: 'warning' as const }
+        : check,
+    );
+    expect(approvalGaps(checks, [])).toEqual([
+      { kind: 'photos', result: 'warning' },
+      { document: 'onrc_certificate' },
+      { document: 'rar_authorisation' },
+    ]);
+    expect(approvalGaps(allOk, ['rar_authorisation'])).toEqual([
+      { document: 'onrc_certificate' },
+    ]);
+  });
+});
+
+// @traces 303-FR-009
+describe("the server's list of what an approval passes over", () => {
+  it('keeps every well-formed check and document line, in order', () => {
+    const missing = [
+      { kind: 'photos', result: 'warning' },
+      { kind: 'company', result: 'not_run' },
+      { document: 'onrc_certificate' },
+    ];
+    expect(approvalGapsFrom(missing)).toEqual(missing);
+  });
+
+  it('is an empty list when the server lists nothing', () => {
+    expect(approvalGapsFrom([])).toEqual([]);
+  });
+
+  it.each([
+    ['no list', undefined],
+    ['not a list', { kind: 'photos', result: 'failed' }],
+    ['a gate check', [{ kind: 'rar', result: 'failed' }]],
+    ['an ok check', [{ kind: 'photos', result: 'ok' }]],
+    ['an unknown result', [{ kind: 'photos', result: 'bad' }]],
+    ['an unknown document', [{ document: 'passport' }]],
+    ['a bare value', ['photos']],
+    ['a null line', [null]],
+  ])('is none for %s', (_, value) => {
+    expect(approvalGapsFrom(value)).toBeNull();
   });
 });

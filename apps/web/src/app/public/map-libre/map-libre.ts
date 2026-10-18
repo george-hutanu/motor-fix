@@ -139,16 +139,15 @@ export function closeMapLibre(map: MapLibre) {
 // Keeps the map's canvas, controls and attribution links out of the keyboard
 // order, those MapLibre adds later too (its compact attribution is a
 // <details> whose <summary> takes focus), while the pointer can still move
-// the map; `inert` would stop both. An element focusable only through its
-// tabindex, MapLibre's canvas, loses it: at -1 a tap on a pin would still
-// move the focus to the hidden canvas, where a tap must leave the focus as it
-// was. Returns the call that stops watching.
+// the map; `inert` would stop both. Returns the call that stops watching.
 export function keepOutOfTabOrder(host: HTMLElement) {
   const hide = () => {
     for (const control of host.querySelectorAll<HTMLElement>(
-      'a, button, summary, [tabindex]',
+      'a, button, canvas, summary, [tabindex]',
     )) {
-      if (!control.matches('a[href], button, summary')) {
+      // A canvas is not focusable without a tabindex, while -1 would still
+      // take the focus from a click on a pin.
+      if (control instanceof HTMLCanvasElement) {
         control.removeAttribute('tabindex');
       } else if (control.tabIndex !== -1) control.tabIndex = -1;
     }

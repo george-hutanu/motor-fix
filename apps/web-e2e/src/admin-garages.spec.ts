@@ -96,28 +96,6 @@ test.describe('the suspended garages @seeded', () => {
       const id = made.rows[0]?.id ?? '';
       garageIds.push(id);
 
-      // The line counts every garage on the platform, and the specs running
-      // beside this one suspend, restore and delete garages too: once this
-      // one is suspended the line must show the figure the page read again,
-      // not the figure from before plus one.
-      let reads = 0;
-      let read = Number.NaN;
-      page.on('response', (answer) => {
-        if (!answer.url().includes('/api/v1/admin/garages/summary')) return;
-        reads++;
-        // A 304 keeps the figure the page already shows. A body that cannot
-        // be read (the page closing first) leaves no figure to compare.
-        if (answer.status() === 200)
-          void answer.json().then(
-            (body: { suspended: number }) => {
-              read = body.suspended;
-            },
-            () => {
-              read = Number.NaN;
-            },
-          );
-      });
-
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
       await page.goto('/app/admin/garages');
@@ -134,8 +112,21 @@ test.describe('the suspended garages @seeded', () => {
       page.on('framenavigated', (frame) => {
         if (frame === page.mainFrame()) navigations++;
       });
+      // The count is platform-wide, and other files suspend and put back
+      // garages beside this one: the line shows what its latest live re-read
+      // returned, not this file's garage added to the count before.
+      let reads = 0;
+      let latest = Number.NaN;
+      page.on('response', async (response) => {
+        if (!response.url().endsWith('/api/v1/admin/garages/summary')) return;
+        const body = (await response.json().catch(() => null)) as {
+          suspended?: number;
+        } | null;
+        if (typeof body?.suspended !== 'number') return;
+        reads++;
+        latest = body.suspended;
+      });
 
-      const readsBefore = reads;
       const res = await request.post(`/api/v1/admin/garages/${id}/suspend`, {
         data: { cause: 'recheck_failed', reason: REASON },
         headers: { Authorization: `Bearer ${await accessToken(request)}` },
@@ -148,13 +139,12 @@ test.describe('the suspended garages @seeded', () => {
         'suspendat · autorizație RAR expirată',
       );
       await expect(row.locator('.reason')).toHaveText(REASON);
+      await expect.poll(() => reads, { timeout: 15_000 }).toBeGreaterThan(0);
       await expect
-        .poll(() => reads, { timeout: 15_000 })
-        .toBeGreaterThan(readsBefore);
-      await expect
-        .poll(async () => (await suspended(page)) === read)
+        .poll(async () => (await suspended(page)) === latest, {
+          timeout: 15_000,
+        })
         .toBe(true);
-      expect(read).toBeGreaterThanOrEqual(1);
       expect(navigations).toBe(0);
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });

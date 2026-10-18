@@ -1,0 +1,67 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gaps {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+ul {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding-inline-start: var(--mf-space-5);
+  color: var(--mf-amber-ink);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.field > label {
+  font-weight: 700;
+}
+textarea {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+  resize: vertical;
+}
+.count {
+  color: var(--mf-text-secondary);
+  text-align: end;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+/* On a phone the dialog is a bottom sheet (below the overlays' 768 px). The label face is wide: at the full size
+   "Approve and publish" needs a 405 px sheet. So the actions stack at the sheet's width, confirm nearest the thumb,
+   and only the confirm's label face takes the small size at half the label tracking, which keeps it on one line in a
+   320 px sheet. Cancel is set in the body face and keeps the body size, as every other sheet's buttons do. */
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .actions button {
+    padding-inline: var(--mf-space-3);
+  }
+  .actions button[type="submit"] {
+    font-size: var(--mf-size-small);
+    letter-spacing: calc(var(--mf-label-tracking) / 2);
+  }
+}
