@@ -72,8 +72,9 @@ Health (`/health/ready`) and metrics (`/metrics`) are served on the
 management port 9000, which has no public domain: only services on Railway's
 private network reach it. The public domain stays on port 8080.
 
-The heap follows the container's memory limit (`JAVA_OPTS_KC_HEAP`): at most
-70% of it, starting at 50%, and no size in bytes. The limit itself is the
+The heap follows the container's memory limit (`JAVA_OPTS_KC_HEAP`:
+`-XX:MaxRAMPercentage=70 -XX:MinRAMPercentage=70 -XX:InitialRAMPercentage=50`):
+at most 70% of it, starting at 50%, and no size in bytes. The limit itself is the
 Railway service's, set by the owner, and must be raised before a release
 deploys this image:
 

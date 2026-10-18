@@ -790,6 +790,28 @@ describe('the keycloak README', () => {
     expect(setup).toMatch(new RegExp(`\`${name}\``));
   });
 
+  // @traces 1178-FR-011
+  it('says how the heap is sized, which limit the owner sets and how its memory is watched', () => {
+    for (const fact of [
+      'MaxRAMPercentage',
+      '70%',
+      '1.36–1.5 GB',
+      '1360 MB',
+      '768 MiB',
+      '358 MB',
+      'before a release',
+      'start --optimized',
+      'kc.sh build',
+      'port 9000',
+      '`KEYCLOAK_METRICS_URL`',
+      'infra/observability/alerts/keycloak.json',
+      'keycloak-memory',
+    ]) {
+      expect([fact, readme.includes(fact)]).toEqual([fact, true]);
+    }
+    expect(readme).not.toMatch(/\| `KC_DB` \| name \| `postgres` \|/);
+  });
+
   it('leaves ASSISTANT_ALLOW_HTTP off staging', () => {
     const setup = readme.slice(readme.indexOf('## Railway'));
     const lines = setup
