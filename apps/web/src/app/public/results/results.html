@@ -89,6 +89,14 @@
         </div>
       </section>
     }
+    @case ('limited') {
+      <section class="state" role="alert">
+        <h1>{{ 'shell.form.problem.rate_limited' | t }}</h1>
+        <div class="actions">
+          <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
+        </div>
+      </section>
+    }
     @case ('missing') {
       <section class="state" role="alert">
         <h1>{{ 'public.results.failed' | t }}</h1>

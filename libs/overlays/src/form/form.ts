@@ -167,6 +167,10 @@ export function taskSave<F extends AbstractControl, R>(
         text([
           ...own('problem', failure.code),
           `shell.form.problem.${failure.code}`,
+          // Any limit, the ones a later change adds too.
+          ...(failure.status === 429
+            ? ['shell.form.problem.rate_limited']
+            : []),
           'shell.form.problem.error',
         ]),
         ...unknownFields.map(({ code }) => fieldText(code)),

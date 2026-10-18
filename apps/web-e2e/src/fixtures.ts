@@ -1,4 +1,11 @@
-import type { APIRequestContext, BrowserContext } from '@playwright/test';
+import type {
+  APIRequestContext,
+  BrowserContext,
+  PlaywrightTestArgs,
+  PlaywrightTestOptions,
+  PlaywrightWorkerArgs,
+  Route,
+} from '@playwright/test';
 import { test as base } from '@playwright/test';
 
 import { cacheAssets } from './asset-cache/asset-cache.js';
@@ -46,7 +53,11 @@ export async function needsAnalytics(
   base.skip(reason !== undefined, reason);
 }
 
-let draftAddresses = 0;
+let addresses = 0;
+const nextAddress = () => `192.0.2.${(Date.now() + ++addresses) % 250}`;
+
+// The garage search itself, not its pins.
+const SEARCH = /\/api\/v1\/search\/garages(\?|$)/;
 
 /** The `context` fixture: the routes every test shares, removed when it ends. */
 export async function routedContext(
@@ -60,24 +71,51 @@ export async function routedContext(
   await context.route('https://plausible.io/**', (route) =>
     route.fulfill({ status: 204 }),
   );
-  // Drafts created are limited per address per hour (rate-counts.ts), and
-  // every listing spec creates some from this one machine: each test creates
-  // them from an address of its own, on TEST-NET-1. A deployed target trusts
-  // no such header, so this only matters to a run that starts its servers.
-  const address = `192.0.2.${(Date.now() + ++draftAddresses) % 250}`;
+  // Drafts created, sign-ins and searches are limited per address
+  // (rate-counts.ts), and every spec makes them from this one machine: each
+  // test makes them from an address of its own, on TEST-NET-1. A deployed
+  // target trusts no such header, so this only matters to a run that starts
+  // its servers.
+  const address = nextAddress();
+  const addressed = (route: Route) =>
+    route.continue({
+      headers: { ...route.request().headers(), 'x-forwarded-for': address },
+    });
   await context.route('**/api/v1/listing-drafts', (route) =>
-    route.request().method() === 'POST'
-      ? route.continue({
-          headers: {
-            ...route.request().headers(),
-            'x-forwarded-for': address,
-          },
-        })
-      : route.fallback(),
+    route.request().method() === 'POST' ? addressed(route) : route.fallback(),
   );
+  await context.route('**/api/v1/auth/sign-in', (route) =>
+    route.request().method() === 'POST' ? addressed(route) : route.fallback(),
+  );
+  await context.route(SEARCH, addressed);
   await use(context);
   // Handlers still answering when the test ends must not outlive it.
   await context.unrouteAll({ behavior: 'ignoreErrors' });
 }
 
-export const test = base.extend({ context: routedContext });
+/**
+ * The `request` fixture: the API calls a flow sets up with, sign-ins among
+ * them, from an address of the test's own like its browser's.
+ */
+export async function addressedRequest(
+  {
+    baseURL,
+    playwright,
+  }: Pick<
+    PlaywrightTestArgs & PlaywrightWorkerArgs & PlaywrightTestOptions,
+    'baseURL' | 'playwright'
+  >,
+  use: (request: APIRequestContext) => Promise<void>,
+) {
+  const request = await playwright.request.newContext({
+    baseURL,
+    extraHTTPHeaders: { 'x-forwarded-for': nextAddress() },
+  });
+  await use(request);
+  await request.dispose();
+}
+
+export const test = base.extend({
+  context: routedContext,
+  request: addressedRequest,
+});

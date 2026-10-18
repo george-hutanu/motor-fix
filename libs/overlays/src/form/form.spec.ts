@@ -532,6 +532,37 @@ describe('failures', () => {
     expect(text('mf-task-error')).toBe('Ceva nu a mers. Încearcă din nou.');
   });
 
+  // @traces 1181-FR-006
+  // @traces 1181-FR-007
+  it.each(['rate_limited', 'too_many_requests', 'brand_new_limit'])(
+    'shows the calm message for a 429 with %s, keeps the text and sends nothing again',
+    async (code) => {
+      answer = () =>
+        Promise.reject(problem(429, { code, retryAfterSeconds: 60 }));
+      await openTask();
+      await type('name', 'Ana Pop');
+      await press();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await settle();
+
+      expect(text('mf-task-error')).toBe(
+        'Prea multe încercări. Încearcă din nou peste un minut.',
+      );
+      expect($<HTMLInputElement>('#name')?.value).toBe('Ana Pop');
+      expect(current.sent).toHaveLength(1);
+    },
+  );
+
+  // @traces 1181-FR-006
+  it('keeps a 429 code’s own message over the calm one', async () => {
+    answer = () => Promise.reject(problem(429, { code: 'maintenance' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+
+    expect(text('mf-task-error')).toBe(ro('shell.form.problem.maintenance'));
+  });
+
   it('shows the network message when nothing answers', async () => {
     answer = () => Promise.reject(problem(0, null));
     await openTask();

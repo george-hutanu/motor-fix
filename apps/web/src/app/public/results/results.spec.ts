@@ -443,6 +443,18 @@ describe('Results', () => {
       expect(state()).toBeNull();
     });
 
+    // @traces 1181-FR-006
+    it('says calmly to wait a minute when the searches from here are past their limit, keeping "Reîncearcă"', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail(429);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Prea multe încercări. Încearcă din nou peste un minut.',
+      );
+      expect(actions()).toEqual(['Reîncearcă']);
+      expect(headings()).toHaveLength(1);
+    });
+
     // @traces 267-FR-016
     it('offers "Căutare nouă" to Home instead of a retry when the brand is unknown', async () => {
       await open('/ro/garages?brand=nu-exista');

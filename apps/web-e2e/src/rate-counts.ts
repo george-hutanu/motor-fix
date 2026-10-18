@@ -10,6 +10,11 @@ export const DRAFT_KEYS = 'listing-drafts:create:*';
 // answers the consent bar stores one from the same address, so the suite
 // uses them up within a run, and the consent flows clear them per test.
 export const CONSENT_KEYS = 'consents:record:*';
+// The route limits (libs/domain/src/rate-limit/rate-limit.config.ts):
+// sign-ins and searches per address, quotes, upload addresses, test
+// notifications and assistant calls per account or draft. Each test speaks
+// from an address of its own (fixtures.ts), and a local run starts clear.
+export const LIMIT_KEYS = 'limit:*';
 // SCAN ends when its cursor comes back to 0; the cap ends it should a Redis
 // never answer so. 1000 pages of 100 is far beyond a local test database.
 const MAX_PAGES = 1000;

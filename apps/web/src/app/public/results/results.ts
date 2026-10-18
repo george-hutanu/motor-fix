@@ -242,7 +242,8 @@ export class Results {
     // No brand, or one the catalogue does not hold: a retry would not help.
     if (!this.query() || httpStatus(this.results.error()) === 404)
       return 'missing';
-    return 'failed';
+    // Past the searches' limit: the same retry, a calmer reason.
+    return httpStatus(this.results.error()) === 429 ? 'limited' : 'failed';
   });
 
   // The 50 km search is offered once, near a place, before it has run.
