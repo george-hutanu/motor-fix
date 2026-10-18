@@ -1,0 +1,87 @@
+name: Point-in-time drill
+
+# By hand, and on the first day of every quarter an hour after the dump drill:
+# restores a write-ahead-log archive into a throwaway PostgreSQL on this runner
+# to a chosen moment and proves it stopped there (scripts/backup/pitr-drill.sh).
+# The self-contained job archives a database of its own to a store of its own,
+# so it needs no setting; the staging job restores staging's archive and ends
+# green with a notice until the staging environment has WAL_ARCHIVE_BUCKET.
+# The log ends with each step's seconds and the archive lag, the data at risk.
+# A failed run is the alert: GitHub e-mails the owner.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 1 1,4,7,10 *'
+
+permissions:
+  contents: read
+
+jobs:
+  self-contained:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Pull the image
+        run: docker pull ghcr.io/george-hutanu/motor-fix-postgres:18
+      - name: Archive, restore and check
+        run: bash scripts/backup/pitr-drill.sh --self-contained
+
+  staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 90
+    concurrency:
+      group: pitr-drill-staging
+      cancel-in-progress: false
+    env:
+      WAL_ARCHIVE_BUCKET: ${{ vars.WAL_ARCHIVE_BUCKET }}
+      WAL_ARCHIVE_ENDPOINT: ${{ vars.WAL_ARCHIVE_ENDPOINT }}
+      WAL_ARCHIVE_REGION: ${{ vars.WAL_ARCHIVE_REGION }}
+      WAL_ARCHIVE_KEY: ${{ secrets.WAL_ARCHIVE_KEY }}
+      WAL_ARCHIVE_SECRET: ${{ secrets.WAL_ARCHIVE_SECRET }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
+      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+      RAILWAY_SERVICE_POSTGRES: ${{ vars.RAILWAY_SERVICE_POSTGRES }}
+      KEY_NAME: pitr-drill-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check the settings
+        id: settings
+        run: |
+          if [ -z "$WAL_ARCHIVE_BUCKET" ]; then echo skip=true; else echo skip=false; fi >> "$GITHUB_OUTPUT"
+      - name: Note the skip
+        if: steps.settings.outputs.skip == 'true'
+        run: echo "::notice title=Point-in-time drill skipped::staging has no WAL_ARCHIVE_BUCKET, so its archive is not on yet"
+      - uses: actions/checkout@v7
+        if: steps.settings.outputs.skip != 'true'
+      - uses: actions/setup-node@v7
+        if: steps.settings.outputs.skip != 'true'
+        with:
+          node-version-file: .nvmrc
+      - name: Install the Railway CLI
+        if: steps.settings.outputs.skip != 'true'
+        run: npm install --global @railway/cli@5.63.1
+      # `railway ssh` signs in with a key registered to the token's workspace.
+      - name: Register an SSH key for this run
+        if: steps.settings.outputs.skip != 'true'
+        run: |
+          mkdir -p -m 700 ~/.ssh
+          ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
+          railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
+          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+      - name: Pull the image
+        if: steps.settings.outputs.skip != 'true'
+        run: docker pull ghcr.io/george-hutanu/motor-fix-postgres:18
+      - name: Mark, restore and check
+        if: steps.settings.outputs.skip != 'true'
+        run: bash scripts/backup/pitr-drill.sh
+      - name: Remove the SSH key
+        if: always() && steps.settings.outputs.skip != 'true'
+        run: |
+          [ -f ~/.ssh/id_ed25519.pub ] || exit 0
+          railway ssh keys remove "$KEY_NAME"
