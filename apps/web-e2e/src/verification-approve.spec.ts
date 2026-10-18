@@ -114,7 +114,8 @@ test.describe('approving and publishing a garage @seeded', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Toate verificările sunt în regulă.' });
-      await expect(dialog).toBeVisible();
+      // On a phone the dialog's own box is empty; its panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBe(0);
       await dialog.getByRole('button', { name: 'Aprobă și publică' }).click();
 
@@ -168,7 +169,8 @@ test.describe('approving and publishing a garage @seeded', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Every check is ok.' });
-      await expect(dialog).toBeVisible();
+      // On a phone the dialog's own box is empty; its panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await confirmLines(page, dialog)).toBe(1);
       // On a phone the actions stack full width. Cancel keeps the body size,
       // as every other sheet's buttons do; only the wide label face of the
