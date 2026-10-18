@@ -33,14 +33,15 @@ import {
 } from '../request-quote-button/request-quote-button';
 
 // A phone's estimate and "Cere ofertă", pinned on the tab bar below 768 px:
-// the total opens the whole box in a sheet. It steps aside while the
-// keyboard is up and gives the page its height as --estimate-bar.
+// the total opens the whole box in a sheet. It is hidden while the keyboard
+// is up and for a garage-side role, and gives the page its height as
+// --estimate-bar, 0 while hidden.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:focusin)': 'typing.set(takesText($event.target))',
     '(document:focusout)': 'typing.set(false)',
-    '[hidden]': 'typing()',
+    '[hidden]': 'typing() || !shown()',
   },
   imports: [RequestQuoteButton, TranslatePipe],
   selector: 'mf-estimate-bar',
