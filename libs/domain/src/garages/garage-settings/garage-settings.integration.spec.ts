@@ -6,6 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { writeGaragePayments } from './write-garage-payments';
+import { AuditService } from '../../audit/audit.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
@@ -119,15 +120,20 @@ const refusalOf = async (promise: Promise<unknown>) => {
 
 describe("writing a garage's payment methods and courtesy car from step 5", () => {
   let garageId: string;
+  let actorId: string;
+  const audit = new AuditService();
 
   beforeEach(async () => {
     ({ id: garageId } = await prisma.garage.create({
       data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}` },
     }));
+    actorId = await account('Mihai Pop', ['garage']);
   });
 
   const write = (section: Record<string, unknown>) =>
-    prisma.$transaction((tx) => writeGaragePayments(tx, garageId, section));
+    prisma.$transaction((tx) =>
+      writeGaragePayments(tx, garageId, section, { actorId, audit }),
+    );
 
   it('starts a garage with no payment method and no courtesy car price', async () => {
     expect(await stored(garageId)).toEqual({
@@ -260,8 +266,7 @@ describe("writing a garage's payment methods and courtesy car from step 5", () =
     expect(await stored(garageId)).toEqual(before);
   });
 
-  it('writes nothing to the history or the outbox', async () => {
-    const entries = await prisma.activityLog.count();
+  it('writes nothing to the outbox', async () => {
     const saved = await prisma.outboxEvent.count();
 
     await write({
@@ -270,8 +275,84 @@ describe("writing a garage's payment methods and courtesy car from step 5", () =
       payments: ['cash'],
     });
 
-    expect(await prisma.activityLog.count()).toBe(entries);
     expect(await prisma.outboxEvent.count()).toBe(saved);
+  });
+
+  // @traces 304-request-garage-details-FR-010
+  it('records one history entry per changed field, by the garage, with old and new values', async () => {
+    await write({
+      courtesyCar: { paid: true, pricePerDayBani: 15000 },
+      facilities: ['courtesy_car'],
+      payments: ['cash'],
+    });
+    const first = await prisma.activityLog.findMany({
+      orderBy: { field: 'asc' },
+      where: { garageId },
+    });
+
+    await write({
+      courtesyCar: { paid: true, pricePerDayBani: 20000 },
+      facilities: ['courtesy_car'],
+      payments: ['cash', 'card'],
+    });
+
+    expect(
+      first.map((e) => [
+        e.subjectType,
+        e.subjectId,
+        e.field,
+        e.oldValue,
+        e.newValue,
+      ]),
+    ).toEqual([
+      ['garage', garageId, 'courtesy_car_paid', false, true],
+      ['garage', garageId, 'courtesy_car_price_per_day_bani', null, 15000],
+      ['garage', garageId, 'payment_cash', false, true],
+    ]);
+    const second = await prisma.activityLog.findMany({
+      orderBy: { field: 'asc' },
+      where: { garageId, id: { notIn: first.map((e) => e.id) } },
+    });
+    expect(
+      second.map((e) => [
+        e.field,
+        e.oldValue,
+        e.newValue,
+        e.actorId,
+        e.actorRole,
+        e.internal,
+      ]),
+    ).toEqual([
+      [
+        'courtesy_car_price_per_day_bani',
+        15000,
+        20000,
+        actorId,
+        'owner',
+        false,
+      ],
+      ['payment_card', false, true, actorId, 'owner', false],
+    ]);
+  });
+
+  // @traces 304-request-garage-details-FR-010
+  it('records nothing when the same section is written again, or refused', async () => {
+    const section = { facilities: [], payments: ['transfer'] };
+    await write(section);
+    const before = await prisma.activityLog.count({ where: { garageId } });
+
+    await write(section);
+    await refusalOf(
+      write({
+        courtesyCar: { paid: false, seats: 5 },
+        facilities: ['courtesy_car'],
+        payments: ['cash'],
+      }),
+    );
+
+    expect(await prisma.activityLog.count({ where: { garageId } })).toBe(
+      before,
+    );
   });
 });
 
