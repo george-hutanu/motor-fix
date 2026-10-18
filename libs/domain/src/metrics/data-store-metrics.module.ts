@@ -19,18 +19,24 @@ import { borrowStore, returnStore } from '../store/store';
 const DATA_STORE_CLIENTS = Symbol('DATA_STORE_CLIENTS');
 const DATA_STORE_INTERVAL = Symbol('DATA_STORE_INTERVAL');
 const STATEMENT_LIMIT_MS = 5_000;
+const KEYCLOAK_LIMIT_MS = 5_000;
 
 interface DataStoreOptions {
   // The application URL, for the outbox SELECT.
   databaseUrl: string;
   // How often the stores are read; 60 s when unset.
   intervalMs?: number;
+  // KEYCLOAK_METRICS_URL; unset or empty, the Keycloak reading is off.
+  keycloakMetricsUrl?: string;
   // MONITOR_DATABASE_URL; unset, the PostgreSQL readings are off.
   monitorUrl?: string;
   redisUrl: string;
 }
 
 interface Clients {
+  // Keycloak's management /metrics address; absent without
+  // KEYCLOAK_METRICS_URL.
+  keycloak?: string;
   // The application database, one connection, for the outbox SELECT.
   outbox: Pool;
   // The monitoring role's session; absent without MONITOR_DATABASE_URL.
@@ -56,6 +62,26 @@ function bounded(connectionString: string, extra: { options?: string } = {}) {
   return pool;
 }
 
+// One GET of Keycloak's metrics text within the reading's limit. A failure
+// names its status, code or kind only, never the address.
+async function readMetrics(url: string): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { accept: 'text/plain' },
+      signal: AbortSignal.timeout(KEYCLOAK_LIMIT_MS),
+    });
+  } catch (error) {
+    const { cause, name } = error as Error & { cause?: { code?: string } };
+    throw new Error(cause?.code ?? name);
+  }
+  if (!response.ok) {
+    await response.body?.cancel().catch(ignore);
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.text();
+}
+
 const session = (pool: Pool): MonitorSession => ({
   query: async <T>(text: string) => (await pool.query(text)).rows as T[],
 });
@@ -69,11 +95,12 @@ function connect(options: DataStoreOptions): Clients | undefined {
           options: '-c default_transaction_read_only=on',
         });
   const redis = borrowStore(options.redisUrl);
-  return { outbox: bounded(options.databaseUrl), pool, redis };
+  const keycloak = options.keycloakMetricsUrl || undefined;
+  return { keycloak, outbox: bounded(options.databaseUrl), pool, redis };
 }
 
-// The worker's readings of PostgreSQL (as the monitoring role), Redis and
-// the outbox for the data-store figures. Off, holding no client, while
+// The worker's readings of PostgreSQL (as the monitoring role), Redis, the
+// outbox and Keycloak's heap for the data-store figures. Off, holding no client, while
 // telemetry is off.
 @Module({})
 export class DataStoreMetricsModule
@@ -100,12 +127,13 @@ export class DataStoreMetricsModule
   onModuleInit() {
     const clients = this.clients;
     if (!clients) return;
-    const { outbox, pool, redis } = clients;
+    const { keycloak, outbox, pool, redis } = clients;
     this.stop = observeDataStores({
       ...(this.intervalMs && { intervalMs: this.intervalMs }),
       outbox: {
         oldestPendingSeconds: () => oldestPendingSeconds(session(outbox)),
       },
+      ...(keycloak && { keycloak: { metrics: () => readMetrics(keycloak) } }),
       ...(pool && { postgres: session(pool) }),
       redis: { info: () => redis.info() },
     });
