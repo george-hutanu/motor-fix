@@ -19,6 +19,9 @@ export class PriceSelection {
   readonly dropped = signal(false);
   // True once the visitor switches a job here, so a page load stays silent.
   readonly touched = signal(false);
+  // True once the browser has applied the jobs kept for the session, so the
+  // bar does not flash "nothing on" before them. The server never applies.
+  readonly applied = signal(false);
 
   sync(garage: PublicGarageDto) {
     const listed = new Set(garage.prices.map((price) => price.jobTypeId));
@@ -37,6 +40,7 @@ export class PriceSelection {
       this.on.set(new Set(kept));
       this.write();
     }
+    if (this.browser) this.applied.set(true);
   }
 
   toggle(id: string, checked: boolean) {

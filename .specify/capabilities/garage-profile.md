@@ -15,6 +15,7 @@ features:
   - 386-brand-price-range
   - 356-live-estimate
   - 271-garage-distance
+  - 311-estimate-within-reach
 ---
 
 # Capability: Garage profile
@@ -291,9 +292,9 @@ _From 386-brand-price-range._
 
 _From 386-brand-price-range._
 
-### 356-FR-001 — The profile page MUST show an "Estimarea ta" / "Your estimate" box whenever the price list has at least one row (355-FR-006), placed directly after the price list section in the sections stack at every width, and not shown when the list is empty (355-FR-010) or while the profile loads (the page's skeleton, 307-FR-015).
+### 311-FR-009 — From 1024 px, the profile's sections MUST lay out in two columns: a main column (photos, brands, mechanics, prices, reviews, in today's order) and a side column (the estimate box, then the `where` slot) that sticks under the site bar while the main column scrolls, and scrolls inside itself when taller than the window below the site bar; the side column exists only when the estimate box or the `where` slot has content, else the main column takes the full width; from 768 to 1023 px and below 768 px the page stays one column as today.
 
-_From 356-live-estimate._
+_From 311-estimate-within-reach._
 
 ### 356-FR-002 — The box MUST list every switched-on job (355-FR-011) in the list's order, each with its name in the page's language and the range the list shows for it (355-FR-002, 355-FR-008), and nothing else about jobs that are off.
 
@@ -354,6 +355,57 @@ _From 271-garage-distance._
 ### 271-FR-015 — The profile's place line MUST read "la {d} km" / "{d} km away" for a fixed garage when the browser holds a kept place (the server renders without it; the browser re-reads once with `near` and shows the distance in place), be left out without a place, and keep the mobile mechanic's area line "Mecanic mobil · zonă de {r} km" with no distance and no address (307-FR-013 completed).
 
 _From 271-garage-distance._
+### 311-FR-001 — Below 768 px, the profile page MUST show a bar fixed above the public tab bar (and above the consent bar while it is shown) on every profile that has a request button to show (a visitor or a driver, 356-FR-011); while the profile loads, is unknown or removed, and for a signed-in garage-side account, no bar is rendered; from 768 px the bar's markup stays (FR-010) but is not shown and not announced (`display: none`). Below 768 px it is shown wherever the page stands, the in-page box on screen or not.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-002 — The bar MUST hold, left, the running total as the estimate box's totals written through the shared whole-lei range format ("1.040–1.620 lei" / "1,040–1,620 lei") and, right, the estimate's "CERE OFERTĂ" / "REQUEST A QUOTE" button; the total reads the shared selection and the ranges the page holds, exactly as the box does (356-FR-003), and computes nothing of its own: the box and the bar call one shared pure totals function kept beside the shared selection.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-003 — With nothing switched on, the total's place MUST read "Alege lucrările" / "Pick the jobs"; when the garage lists no public job the bar MUST show only the button; until the stored selection is applied after hydration the total's place MUST hold a placeholder (no text, hidden from assistive technology).
+
+_From 311-estimate-within-reach._
+
+### 311-FR-004 — The bar's button MUST be the profile's request button with the estimate box's inputs and rules (356-FR-011): the switched-on jobs ticked, or none and the description focused; disabled and described by the refusal text when the page's brand is refused; the same analytics event with `source: profile`; its sent line stays in the bar's own status. After a send from the bar or the sheet, the sheet stays open, the selection is unchanged and only the button that sent speaks.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-005 — The total (or the empty text) MUST be a button, named "Estimare de la {from} la {to} lei" / "Estimate from {from} to {to} lei" (the box's sentence, 356-FR-005) or the empty text, that opens the estimate box as a bottom sheet through the overlay service with the title "Estimarea ta" / "Your estimate" (158-FR-001 to FR-009: grip, X, Escape, outside, scroll lock and position kept); the sheet holds the same box as the page (rows, mechanic line, totals, button, note) without a second heading; the sheet's button opens the request dialog on top (157-FR-011); when the garage lists no public job there is no total to tap and no sheet.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-006 — While a text field has focus (287-FR-009's definition) the bar MUST be hidden, not announced and not focusable, and show again when focus leaves.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-007 — The bar MUST publish its measured height as `--estimate-bar` on the document (as the consent bar publishes `--consent-bar`) and sit at `bottom: calc(var(--tab-bar) + var(--consent-bar, 0px))` above the page and below every overlay (the sheet, the request dialog and the sign-in dialog cover it); the page MUST get bottom padding equal to that height while the bar is shown, so the page's last content (the report link) is reachable above it; the bar MUST respect the bottom safe-area inset: it rests on the tab bar, which already holds the inset, and adds none of its own (every route that shows the bar has the tab bar; see Edge Cases).
+
+_From 311-estimate-within-reach._
+
+### 311-FR-008 — The bar's smallest text MUST be at least 12 px, its buttons at least 44 × 44 px, its total in tabular figures; it MUST fit 320 px without sideways scroll, with the button's label wrapping rather than cut (286-FR-002, FR-003, FR-004, FR-006); it MUST pass axe and 4.5:1 contrast in light and dark, Romanian and English; the total wraps onto a second line rather than being cut or shrunk below 12 px, and the bar stays readable at 200% text size without sideways scroll; both of its buttons show the kit's visible focus ring and are reached in reading order (total, then "CERE OFERTĂ"); the total's changes are not announced as a live region (the button's name carries the current sum, read when it is focused), only the request button's own sent status is.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-009 — From 1024 px, the profile's sections MUST lay out in two columns: a main column (photos, brands, mechanics, prices, reviews, in today's order) and a side column (the estimate box, then the `where` slot) that sticks under the site bar while the main column scrolls, and scrolls inside itself when taller than the window below the site bar; the side column exists only when the estimate box or the `where` slot has content, else the main column takes the full width; from 768 to 1023 px and below 768 px the page stays one column as today.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-010 — The server render and the first client render MUST agree with each other (no hydration mismatch): the bar's markup is rendered on the server and hidden by width, and the total's placeholder is what both show until the selection is applied.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-011 — Every new text (the empty text, the total button's name if it differs from the box's sentence, the sheet's title) MUST live in the public texts for both languages; the bar and the sheet reuse the estimate's existing keys wherever one exists.
+
+_From 311-estimate-within-reach._
+
+### 311-FR-012 — Nothing is written to the server and no event is emitted; the story adds no endpoint, metric, dashboard panel or alert (`infra/observability/inventory.json` unchanged).
+
+_From 311-estimate-within-reach._
+
+### 311-FR-013 — Tests: component tests cover the bar shown on a phone only, hidden while a text field has focus, the empty text with nothing on, the placeholder before the selection is applied, the button alone with no public job, no bar for a garage-side role and the sheet opening on the total; the end-to-end walk, at 375 × 812 on the seeded garage, switches two jobs on, scrolls to the end, checks the button is inside the viewport and opens the request, then taps the total and sees the sheet (brief Tests).
+
+_From 311-estimate-within-reach._
 
 ## Retired
 
@@ -369,3 +421,4 @@ _From 271-garage-distance._
 - `355-FR-011` — superseded by `356-FR-009` (2026-10-17)
 
 - `307-FR-013` — superseded by `271-FR-015` (2026-10-18)
+- `356-FR-001` — superseded by `311-FR-009` (2026-10-18)

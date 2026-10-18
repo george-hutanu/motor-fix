@@ -16,6 +16,7 @@ import { EstimateSection } from './estimate-section';
 import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import { PriceSelection } from '../price-selection/price-selection';
+import { estimateTotals } from '../price-selection/totals';
 
 const row = (
   jobTypeId: string,
@@ -420,5 +421,26 @@ describe('the box’s request button', () => {
       'j-diag',
     ]);
     expect(rows()).toHaveLength(2);
+  });
+});
+
+// @traces 311-FR-002 311-FR-005
+describe('the box in the estimate sheet', () => {
+  it('sums the same totals as estimateTotals', async () => {
+    await render();
+    toggle('j-diag');
+    toggle('j-brakes');
+
+    const sums = estimateTotals(GARAGE.prices, new Set(['j-diag', 'j-brakes']));
+    expect([sums.fromLei, sums.toLei]).toEqual([1040, 1620]);
+    expect(totals().getAttribute('aria-label')).toBe(
+      'Estimare de la 1.040 la 1.620 lei',
+    );
+  });
+
+  it('hides its own heading inside the sheet, whose title names it', () => {
+    const css = readFileSync(join(__dirname, 'estimate-section.css'), 'utf8');
+
+    expect(css).toMatch(/:host\(\.sheet\)\s+h2\s*\{\s*display:\s*none;?\s*\}/);
   });
 });

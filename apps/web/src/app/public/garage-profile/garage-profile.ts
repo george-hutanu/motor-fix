@@ -28,6 +28,7 @@ import {
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
+import { EstimateBar } from './estimate-bar/estimate-bar';
 import { EstimateSection } from './estimate-section/estimate-section';
 import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
@@ -68,6 +69,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
 @Component({
   imports: [
     DayPipe,
+    EstimateBar,
     EstimateSection,
     Gone,
     KmPipe,
