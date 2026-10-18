@@ -61,8 +61,9 @@ export class ReportDecision {
   protected readonly blank = computed(
     () => this.confirmed && !this.text().trim(),
   );
-  // Code points, as the server counts them, so an emoji is one.
-  protected readonly count = computed(() => [...this.text()].length);
+  // Code points after trimming, as the server counts them: an emoji is one,
+  // and the spaces at the ends the limit never reads are not counted.
+  protected readonly count = computed(() => [...this.text().trim()].length);
 
   protected input(event: Event) {
     this.text.set((event.target as HTMLTextAreaElement).value);
@@ -82,6 +83,6 @@ export class ReportDecision {
   }
 
   private over() {
-    return [...this.text().trim()].length > this.max;
+    return this.count() > this.max;
   }
 }

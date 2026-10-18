@@ -235,6 +235,16 @@ describe('confirming the reports', () => {
     expect(text()).toContain('6/200');
   });
 
+  it('counts the reason after trimming, as the limit reads it', async () => {
+    await open('confirmed');
+
+    type(`  ${'a'.repeat(200)}   `);
+    await settle();
+
+    expect(text()).toContain('200/200');
+    expect(text()).not.toContain('205/200');
+  });
+
   it('refuses a reason past 200 characters, names it, and stays open', async () => {
     await open('confirmed');
     let settled = false;
