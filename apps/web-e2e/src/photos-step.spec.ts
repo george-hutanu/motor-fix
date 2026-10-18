@@ -248,8 +248,15 @@ const queuedInBrowser = (page: Page) =>
     });
   });
 
-const confirmedKeys = (page: Page) =>
-  expect.poll(async () => (await keys(page)).every((key) => key !== null));
+// Every one of `count` tiles holds its confirmed key. An empty list does not
+// count: the tiles appear only once the picked files were read and shrunk.
+const confirmedKeys = (page: Page, count: number) =>
+  expect
+    .poll(async () => {
+      const held = await keys(page);
+      return held.length === count && held.every((key) => key !== null);
+    })
+    .toBe(true);
 
 const newEmail = (what: string) =>
   `${what}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
@@ -278,7 +285,7 @@ test.describe('step 5 of list your garage, photos on a bad connection @mailbox',
       .setInputFiles([jpeg('atelier.jpg')]);
 
     await expect(tiles(page)).toHaveCount(1);
-    await confirmedKeys(page).toBe(true);
+    await confirmedKeys(page, 1);
     expect(cut).toBe(true);
     await confirmedCount(page, 1);
   });
@@ -305,9 +312,9 @@ test.describe('step 5 of list your garage, photos on a bad connection @mailbox',
       .locator('input[type="file"]')
       .setInputFiles([jpeg('atelier.jpg')]);
 
-    await confirmedKeys(page).toBe(true);
-    expect(lost).toBe(true);
     await expect(tiles(page)).toHaveCount(1);
+    await expect.poll(() => lost).toBe(true);
+    await confirmedKeys(page, 1);
     await confirmedCount(page, 1);
   });
 
@@ -341,7 +348,7 @@ test.describe('step 5 of list your garage, photos on a bad connection @mailbox',
     await hydrated(page);
 
     await expect(tiles(page)).toHaveCount(2);
-    await confirmedKeys(page).toBe(true);
+    await confirmedKeys(page, 2);
     expect(await names(page)).toEqual(['unu.jpg', 'doi.jpg']);
     await expect(step(page).locator('.queued[role="status"]')).toHaveText('');
     await expect.poll(() => queuedInBrowser(page)).toBe(0);
