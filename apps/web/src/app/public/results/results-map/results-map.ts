@@ -41,7 +41,11 @@ const GAP = 14;
 
 export interface ResultsMapView {
   destroy(): void;
-  fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
+  fit(
+    place: LatLng | undefined,
+    answer: GaragePinsDto | undefined,
+    covered?: number,
+  ): void;
   show(answer: GaragePinsDto | undefined): void;
   light(id: string | undefined): void;
   spot(at: LatLng): { x: number; y: number };
@@ -196,6 +200,17 @@ export class ResultsMap {
     const view = untracked(this.view);
     this.fitWanted = !view;
     this.tooWide.set(false);
-    view?.fit(untracked(this.place), untracked(this.pins));
+    view?.fit(untracked(this.place), untracked(this.pins), this.covered());
+  }
+
+  // How far up the map's bottom edge the legend reaches, in pixels.
+  private covered() {
+    const map = this.host().nativeElement.parentElement;
+    const key = map?.querySelector('.legend');
+    if (!map || !key) return 0;
+    return Math.max(
+      0,
+      map.getBoundingClientRect().bottom - key.getBoundingClientRect().top,
+    );
   }
 }

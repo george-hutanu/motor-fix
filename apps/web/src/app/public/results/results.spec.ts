@@ -1194,6 +1194,7 @@ describe('Results', () => {
       expect(mapView.fit).toHaveBeenCalledWith(
         { lat: PLACE.lat, lng: PLACE.lng },
         pinsOf(48),
+        0,
       );
     });
 
@@ -1441,6 +1442,7 @@ describe('Results', () => {
       expect(mapView.fit).toHaveBeenCalledWith(
         { lat: PLACE.lat, lng: PLACE.lng },
         pinsOf(48),
+        0,
       );
       expect(back()).toBeNull();
       expect(said(page().querySelector('.summary .tally'))).toMatch(
@@ -2328,13 +2330,15 @@ describe('Results waiting for an address the driver types', () => {
     );
   });
 
-  it('heads the page with the line, and shows no legend for pins that are not there', async () => {
+  it('heads the page with where to look, the line under it, and shows no legend for pins that are not there', async () => {
     await open('/ro/garages?brand=bmw', { placed: false });
     await asks[0]?.refuse();
     await settle();
 
     expect(page().querySelectorAll('h1')).toHaveLength(1);
-    expect(said(page().querySelector('h1'))).toBe('Nu am putut afla locația.');
+    expect(said(page().querySelector('h1'))).toBe('Unde cauți service?');
+    expect(page().querySelector('h1.placeless')).toBeNull();
+    expect(page().querySelector('h1 + p.placeless')).not.toBeNull();
     expect(page().querySelector('mf-results-map section.map')).not.toBeNull();
     expect(page().querySelector('mf-results-map .legend')).toBeNull();
   });

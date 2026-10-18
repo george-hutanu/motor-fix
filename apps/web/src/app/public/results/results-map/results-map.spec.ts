@@ -329,7 +329,7 @@ describe('ResultsMap, the pins it is given', () => {
 
     fixture.componentInstance.fit();
 
-    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS);
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 0);
   });
 
   it('fits once the map has opened when asked before', async () => {
@@ -341,7 +341,25 @@ describe('ResultsMap, the pins it is given', () => {
     await ready();
 
     expect(view.fit).toHaveBeenCalledTimes(1);
-    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS);
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 0);
+  });
+
+  // @traces 271-FR-004
+  it("fits the place clear of the legend over the map's bottom edge", async () => {
+    await render();
+    await ready();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    const rect = (top: number, bottom: number) => ({ bottom, top }) as DOMRect;
+    const section = element().querySelector<HTMLElement>('section.map');
+    const key = element().querySelector<HTMLElement>('.legend');
+    if (!section || !key) throw new Error('no map or legend');
+    section.getBoundingClientRect = () => rect(100, 500);
+    key.getBoundingClientRect = () => rect(430, 488);
+
+    fixture.componentInstance.fit();
+
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 70);
   });
 
   it('closes the map with the page', async () => {

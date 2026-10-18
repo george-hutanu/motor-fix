@@ -23,7 +23,8 @@ import { type LatLng, ring, START } from '../../map-libre/map-libre';
 const CLUSTER_ABOVE = 50;
 const SOURCE = 'pins';
 const AREAS = 'areas';
-const FIT = { animate: false, maxZoom: 15, padding: 40 };
+const FIT = { animate: false, maxZoom: 15 };
+const PADDING = 40;
 const FONT = ['Noto Sans Bold'];
 // How long the map stays still after the driver's move before it counts.
 const SETTLE_MS = 400;
@@ -42,7 +43,13 @@ export interface MapEvents {
 
 interface PinsMap {
   show(answer: GaragePinsDto | undefined): void;
-  fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
+  // `covered` is how far up the map's bottom edge the legend lies, kept
+  // clear so no pin or "you are here" marker lands under it.
+  fit(
+    place: LatLng | undefined,
+    answer: GaragePinsDto | undefined,
+    covered?: number,
+  ): void;
   // Lights one garage's pin or circle amber, or none.
   light(id: string | undefined): void;
   // Where a place sits on the map, in pixels from its top left corner.
@@ -294,7 +301,7 @@ export function drawPins(
   let marked = false;
 
   return {
-    fit(place, answer) {
+    fit(place, answer, covered = 0) {
       const points = [
         ...(place ? [place] : []),
         ...fixedOf(answer).map(({ lat, lng }) => ({ lat, lng })),
@@ -310,7 +317,18 @@ export function drawPins(
           [Math.min(...lngs), Math.min(...lats)],
           [Math.max(...lngs), Math.max(...lats)],
         ],
-        FIT,
+        {
+          ...FIT,
+          padding:
+            covered > 0
+              ? {
+                  bottom: PADDING + covered,
+                  left: PADDING,
+                  right: PADDING,
+                  top: PADDING,
+                }
+              : PADDING,
+        },
       );
     },
     light(id) {

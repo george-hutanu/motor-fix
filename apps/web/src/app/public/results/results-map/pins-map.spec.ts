@@ -724,6 +724,17 @@ describe('the "you are here" marker on the results map', () => {
     expect(here.addTo).not.toHaveBeenCalled();
   });
 
+  // @traces 271-FR-004
+  it("keeps the place clear of what covers the map's bottom edge", () => {
+    draw().fit(PLACE, answer([pinOf(1, { lat: 44.5, lng: 26.0 })]), 70);
+
+    expect(map.fitBounds).toHaveBeenCalledWith(expect.any(Array), {
+      animate: false,
+      maxZoom: 15,
+      padding: { bottom: 110, left: 40, right: 40, top: 40 },
+    });
+  });
+
   it('keeps the place in the fit with no pin around it', () => {
     const view = draw();
     view.mark(PLACE);
