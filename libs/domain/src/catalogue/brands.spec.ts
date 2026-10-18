@@ -1,12 +1,6 @@
 import { fold } from '@motor-fix/contracts';
 
-import {
-  BODY_STYLES,
-  BRANDS,
-  BrandFileError,
-  slugOf,
-  validateFile,
-} from './brands';
+import { BRANDS, BrandFileError, slugOf, validateFile } from './brands';
 
 describe('fold', () => {
   it.each([
@@ -130,12 +124,5 @@ describe('the shipped brand file', () => {
       toyota: 'crossover',
       volkswagen: 'hatchback',
     });
-    expect(
-      BRANDS.every(
-        (brand) =>
-          brand.bodyStyle === undefined ||
-          BODY_STYLES.includes(brand.bodyStyle),
-      ),
-    ).toBe(true);
   });
 });

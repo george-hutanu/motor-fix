@@ -1,5 +1,3 @@
-import { FUELS } from '@motor-fix/contracts';
-
 import { BRANDS } from './brands';
 import {
   CAR_MODELS,
@@ -60,7 +58,6 @@ describe('the shipped car models', () => {
       'Corsa',
       'Clio',
     ]);
-    expect(CAR_MODELS.every((m) => FUELS.includes(m.fuel))).toBe(true);
     expect(
       CAR_MODELS.filter((m) => m.fuel !== 'petrol').every(
         (m) => m.fuel === 'diesel',

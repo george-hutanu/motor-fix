@@ -3,7 +3,7 @@ import { fold } from '@motor-fix/contracts';
 // The brand list MotorFix keeps. A brand is matched by its `key` across
 // loads, so a key never changes once shipped; renaming a brand changes only
 // its name. A brand removed from this list is retired, never deleted.
-export const BODY_STYLES = [
+const BODY_STYLES = [
   'saloon',
   'hatchback',
   'suv',

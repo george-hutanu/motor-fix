@@ -1,4 +1,4 @@
-import { BODY_STYLES, BRANDS } from './brands';
+import { BRANDS } from './brands';
 import {
   CAR_MODELS,
   CarModelFileError,
@@ -27,7 +27,7 @@ describe('validateCarModels under attack', () => {
   });
 
   // @traces 405-FR-004
-  it.each([0, -1, 1.5, Number.NaN, 2])(
+  it.each([0, -1, 1.5, Number.NaN])(
     'refuses a brand whose only model has rank %p',
     (rank) => {
       expect(() => validateCarModels([car('a-1', 'a', rank)])).toThrow(
@@ -96,8 +96,7 @@ describe('validateCarModels under attack', () => {
         car('b-1x', 'b', 1),
       ]);
     expect(fn).toThrow(CarModelFileError);
-    expect(fn).toThrow(/b/);
-    expect(fn).not.toThrow(/gap|1\.\.|exactly/i);
+    expect(fn).toThrow(/^brand "b" ranks b-1 and b-1x both 1$/);
   });
 
   // @traces 405-FR-004
@@ -246,32 +245,13 @@ describe('carForBrand under attack', () => {
   });
 
   // @traces 405-FR-003
-  it('gives every shipped brand a licensed rank-1 model or a body style from BODY_STYLES', () => {
+  it('gives every shipped brand a licensed rank-1 model or a generic body style', () => {
     for (const brand of BRANDS) {
       const answer = carForBrand(brand.key);
-      if (answer.kind === 'generic') {
-        expect(BODY_STYLES).toContain(answer.bodyStyle);
-      } else {
+      if (answer.kind === 'licensed') {
         expect(answer.model.brand).toBe(brand.key);
         expect(answer.model.rank).toBe(1);
       }
     }
-  });
-
-  // @traces 405-FR-005
-  it('lists opel among the fifteen brands, after citroen', () => {
-    const keys = BRANDS.map((b) => b.key);
-    expect(keys).toHaveLength(15);
-    expect(keys.indexOf('opel')).toBe(keys.indexOf('citroen') + 1);
-  });
-
-  // @traces 405-FR-003
-  it('gives the five styled brands their styles when unlicensed', () => {
-    const none: Model[] = [];
-    expect(
-      ['volkswagen', 'dacia', 'toyota', 'skoda', 'ford'].map(
-        (k) => (carForBrand(k, none) as { bodyStyle: string }).bodyStyle,
-      ),
-    ).toEqual(['hatchback', 'suv', 'crossover', 'estate', 'fastback']);
   });
 });

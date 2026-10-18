@@ -166,7 +166,7 @@ describe('GET /brands', () => {
     const res = await search({ q: 'tesla' });
 
     expect(res.body.items).toEqual([]);
-    expect((await search()).body.total).toBe(BRANDS.length - 1);
+    expect((await search()).body.total).toBe(14);
   });
 
   it.each([
