@@ -67,7 +67,7 @@ describe('the matrix job', () => {
     );
 
     expect(services).toMatch(
-      /postgres:\n(?: {8}.+\n)*? {8}image: postgis\/postgis/,
+      /postgres:\n(?: {8}.+\n)*? {8}image: ghcr\.io\/george-hutanu\/motor-fix-postgres:18\n/,
     );
     expect(services).toMatch(
       /redis:\n(?: {8}.+\n)*? {8}image: valkey\/valkey:9\n/,
