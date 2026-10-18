@@ -4,21 +4,24 @@ import { isIP } from 'node:net';
 import { Logger } from '@nestjs/common';
 import type { ChainableCommander, Redis } from 'ioredis';
 
+import { AUTH_LIMITS } from '../rate-limit/rate-limit.config';
+
 // The Redis of the attempt limits, which the e-mail confirmation's limit shares.
 export const AUTH_REDIS = Symbol('AUTH_REDIS');
 
-const WINDOW_SECONDS = 15 * 60;
-const LIMIT = { address: 20, email: 5 } as const;
-const SIGN_UP_WINDOW_SECONDS = 60 * 60;
-const SIGN_UP_LIMIT = 10;
-const RESET_WINDOW_SECONDS = 60 * 60;
-const RESET_LIMIT = { address: 10, email: 3 } as const;
-const HOUR_SECONDS = 60 * 60;
-const PHONE_CODE_LIMIT = { address: 20, hour: 5, minute: 1 } as const;
-const CONTACT_CHANGE_LIMIT = 5;
-const PASSWORD_LIMIT = 5;
+const WINDOW_SECONDS = AUTH_LIMITS.signInFailures.windowSeconds;
+const LIMIT = AUTH_LIMITS.signInFailures;
+const SIGN_UP_WINDOW_SECONDS = AUTH_LIMITS.signUp.windowSeconds;
+const SIGN_UP_LIMIT = AUTH_LIMITS.signUp.limit;
+const RESET_WINDOW_SECONDS = AUTH_LIMITS.reset.windowSeconds;
+const RESET_LIMIT = AUTH_LIMITS.reset;
+const HOUR_SECONDS = AUTH_LIMITS.phoneCode.windowSeconds;
+const PHONE_CODE_LIMIT = AUTH_LIMITS.phoneCode;
+const CONTACT_CHANGE_LIMIT = AUTH_LIMITS.contactChange.limit;
+const PASSWORD_LIMIT = AUTH_LIMITS.password.limit;
+const PASSWORD_WINDOW_SECONDS = AUTH_LIMITS.password.windowSeconds;
 
-type Kind = keyof typeof LIMIT;
+type Kind = 'address' | 'email';
 type Limited =
   | 'sign-in'
   | 'sign-up'
@@ -239,7 +242,9 @@ export class Attempts {
   async passwordFailed(accountId: string): Promise<void> {
     try {
       const key = passwordKey(accountId);
-      await counted(this.redis.multi().incr(key).expire(key, WINDOW_SECONDS));
+      await counted(
+        this.redis.multi().incr(key).expire(key, PASSWORD_WINDOW_SECONDS),
+      );
     } catch {
       this.unavailable('password');
     }

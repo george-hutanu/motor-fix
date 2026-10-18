@@ -1,7 +1,8 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
-import { NotificationsService } from '@motor-fix/domain';
+import { NotificationsService, ROUTE_LIMITS } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { apiBoot } from './api-boot.testing';
@@ -265,5 +266,73 @@ describe('the listing draft routes', () => {
       ]?.get;
 
     expect(op?.tags).toEqual(['verification-documents']);
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-004
+// @traces 1181-FR-011
+describe('the upload addresses of a draft past their limit', () => {
+  const store = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.uploadUrl;
+  const countOf = (draftId: string) =>
+    `${key}:${createHash('sha256').update(draftId).digest('hex')}`;
+  // Brings the draft to `calls` addresses in the window without asking them.
+  const used = (draftId: string, calls: number) =>
+    store.set(countOf(draftId), calls, 'EX', windowSeconds);
+  const photo = (draft: { id: string; token: string }, token = draft.token) =>
+    request(app.getHttpServer())
+      .post(`/api/v1/listing-drafts/${draft.id}/photos/upload-url`)
+      .set('X-Listing-Token', token)
+      .send({ checksum: 'yPQ5Jg==', contentType: 'image/jpeg', size: 1024 });
+  const page = (draft: { id: string; token: string }) =>
+    request(app.getHttpServer())
+      .post(
+        `/api/v1/listing-drafts/${draft.id}/documents/onrc_certificate/upload-url`,
+      )
+      .set('X-Listing-Token', draft.token)
+      .send({
+        checksum: 'yPQ5Jg==',
+        contentType: 'application/pdf',
+        size: 1024,
+      });
+
+  afterAll(() => store.quit());
+
+  it('counts photos and document pages as one, refuses the address past the limit with the wait, and issues it again once the window is over', async () => {
+    const { body: draft } = await create().expect(201);
+    await used(draft.id, limit - 1);
+
+    const last = await photo(draft).expect(201);
+    expect(last.body.url).toEqual(expect.any(String));
+    const refused = await page(draft).expect(429);
+
+    expect(refused.body).toMatchObject({ code: 'rate_limited', status: 429 });
+    expect(refused.body.url).toBeUndefined();
+    const wait = Number(refused.headers['retry-after']);
+    expect(wait).toBe(refused.body.retryAfterSeconds);
+    expect(wait).toBeGreaterThanOrEqual(1);
+    expect(wait).toBeLessThanOrEqual(windowSeconds);
+    await photo(draft).expect(429);
+
+    await store.del(countOf(draft.id));
+    await page(draft).expect(201);
+  });
+
+  it('never refuses a second draft for the first one’s count', async () => {
+    const { body: first } = await create().expect(201);
+    const { body: second } = await create().expect(201);
+    await used(first.id, limit);
+
+    await photo(second).expect(201);
+  });
+
+  it('spends no count on a call whose draft key is wrong', async () => {
+    const { body: draft } = await create().expect(201);
+
+    await photo(draft, 'not-the-key').expect(404);
+
+    expect(await store.get(countOf(draft.id))).toBeNull();
   });
 });

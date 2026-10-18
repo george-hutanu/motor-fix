@@ -19,6 +19,7 @@ import { PRISMA } from '../../../auth/prisma';
 import { refusal } from '../../../auth/sign-up.service';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { countDocumentUploaded } from '../../../metrics/product-counters';
+import { RateLimits } from '../../../rate-limit/rate-limit.service';
 import { StorageService } from '../../../storage/storage.service';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
 
@@ -68,6 +69,7 @@ export class ListingDocumentsService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly drafts: ListingDraftsService,
     private readonly storage: StorageService,
+    private readonly limits: RateLimits,
   ) {}
 
   async uploadAddress(
@@ -77,6 +79,7 @@ export class ListingDocumentsService {
     file: { checksum: string; contentType: string; size: number },
   ): Promise<DocumentUploadAddressDto> {
     const draft = await this.drafts.open(id, token);
+    await this.limits.take('uploadUrl', id);
     if (pagesOf(draft.data, checkedKind(kind)).length >= DOCUMENT_PAGES_MAX)
       throw full();
     return this.storage.createUpload(

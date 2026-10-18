@@ -15,9 +15,13 @@ import {
   fixtures,
   redisUrlFor,
 } from '../../../notifications/notifications.testing';
+import type { RateLimits } from '../../../rate-limit/rate-limit.service';
 import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageService } from '../../../storage/storage.service';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
+
+// The limits are proven at the route; here every call is admitted.
+const unlimited = { take: async () => undefined } as unknown as RateLimits;
 
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -45,7 +49,7 @@ let photos: ListingPhotosService;
 beforeAll(async () => {
   await store.start();
   storage = new StorageService(store.env());
-  photos = new ListingPhotosService(prisma, drafts, storage, queue);
+  photos = new ListingPhotosService(prisma, drafts, storage, queue, unlimited);
 });
 
 afterAll(async () => {

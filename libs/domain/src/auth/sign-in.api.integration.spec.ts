@@ -19,6 +19,7 @@ import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
+import { ROUTE_LIMITS } from '../rate-limit/rate-limit.config';
 import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
@@ -76,7 +77,10 @@ afterAll(async () => {
 beforeEach(async () => {
   maintenance = false;
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-  const keys = await redis.keys('auth:fail:*');
+  const keys = [
+    ...(await redis.keys('auth:fail:*')),
+    ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
+  ];
   if (keys.length) await redis.del(...keys);
   jest.restoreAllMocks();
 });
@@ -887,5 +891,84 @@ describe('signing out', () => {
   ])('answers 204 for %s, and twice in a row', async (_, cookie) => {
     expect((await signOut(cookie)).status).toBe(204);
     expect((await signOut(cookie)).status).toBe(204);
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-004
+// @traces 1181-FR-011
+describe('every sign-in attempt from one address, counted', () => {
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.signInAttempts;
+  const countOf = (from: string) =>
+    `${key}:${createHash('sha256').update(from).digest('hex')}`;
+
+  it('counts the right and the wrong password alike, refuses the attempt past the limit with rate_limited and the wait, and issues no session', async () => {
+    await person('andrei@example.test', ['driver']);
+    const from = '192.0.2.70';
+    await redis.set(countOf(from), limit - 2, 'EX', windowSeconds);
+
+    const right = await signIn(
+      { email: 'andrei@example.test', password: PASSWORD },
+      from,
+    );
+    const wrong = await signIn(
+      { email: 'andrei@example.test', password: 'x' },
+      from,
+    );
+    const refused = await signIn(
+      { email: 'andrei@example.test', password: PASSWORD },
+      from,
+    );
+
+    expect(right.status).toBe(200);
+    expect(wrong.status).toBe(401);
+    expect(refused.status).toBe(429);
+    expect(refused.body.code).toBe('rate_limited');
+    expect(refused.body.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    expect(refused.body.retryAfterSeconds).toBeLessThanOrEqual(windowSeconds);
+    expect(setCookie(refused)).toBeUndefined();
+  });
+
+  it('admits the address again once its window is over', async () => {
+    await person('andrei@example.test', ['driver']);
+    const from = '192.0.2.71';
+    await redis.set(countOf(from), limit, 'EX', windowSeconds);
+    const body = { email: 'andrei@example.test', password: PASSWORD };
+    expect((await signIn(body, from)).status).toBe(429);
+
+    await redis.del(countOf(from));
+
+    expect((await signIn(body, from)).status).toBe(200);
+  });
+
+  it('never refuses a second address for the first one’s count', async () => {
+    await person('andrei@example.test', ['driver']);
+    await redis.set(countOf('192.0.2.72'), limit, 'EX', windowSeconds);
+
+    const res = await signIn(
+      { email: 'andrei@example.test', password: PASSWORD },
+      '192.0.2.73',
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it('keeps the failure limits and their own code under the new count', async () => {
+    await person('andrei@example.test', ['driver']);
+    for (let i = 0; i < 5; i++) {
+      await signIn(
+        { email: 'andrei@example.test', password: 'x' },
+        '192.0.2.74',
+      );
+    }
+
+    const res = await signIn(
+      { email: 'andrei@example.test', password: PASSWORD },
+      '192.0.2.74',
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe('too_many_attempts');
   });
 });

@@ -1,14 +1,16 @@
 // @traces 196-FR-001 196-FR-002 196-FR-003 196-FR-014 196-FR-016 196-FR-018
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 import { generateVAPIDKeys } from 'web-push';
 
 import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import { serialDatabase } from '../../../auth/serial-db.testing';
+import { ROUTE_LIMITS } from '../../../rate-limit/rate-limit.config';
 import { NotificationsModule } from '../../notifications.module';
 import {
   databaseUrl,
@@ -248,6 +250,50 @@ describe('POST /push-subscriptions/test', () => {
       .set('Authorization', bearer(ana))
       .expect(202);
     expect(res.body).toEqual({ queued: 0 });
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-011
+describe('POST /push-subscriptions/test past its limit', () => {
+  const store = new Redis(redisUrl);
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.pushTest;
+  const countOf = (accountId: string) =>
+    `${key}:${createHash('sha256').update(accountId).digest('hex')}`;
+  const sendTest = (accountId: string) =>
+    request(app.getHttpServer())
+      .post('/push-subscriptions/test')
+      .set('Authorization', bearer(accountId));
+  const pushes = (accountId: string) =>
+    prisma.notification.count({ where: { accountId, channel: 'push' } });
+
+  afterAll(() => store.quit());
+
+  it('refuses the call past the limit with the wait, queues no push, and admits again once the window is over', async () => {
+    const ana = await account('ana');
+    await save(ana, body(1)).expect(200);
+    for (let i = 0; i < limit; i++) await sendTest(ana).expect(202);
+
+    const refused = await sendTest(ana).expect(429);
+
+    expect(refused.body.code).toBe('rate_limited');
+    const wait = refused.body.retryAfterSeconds;
+    expect(wait).toBeGreaterThanOrEqual(1);
+    expect(wait).toBeLessThanOrEqual(windowSeconds);
+    expect(await pushes(ana)).toBe(limit);
+
+    await store.del(countOf(ana));
+    await sendTest(ana).expect(202);
+    expect(await pushes(ana)).toBe(limit + 1);
+  });
+
+  it('never refuses a second account for the first one’s count', async () => {
+    const ana = await account('ana');
+    const bob = await account('bob');
+    for (let i = 0; i <= limit; i++) await sendTest(ana);
+
+    await sendTest(bob).expect(202);
   });
 });
 

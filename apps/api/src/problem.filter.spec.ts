@@ -1,4 +1,5 @@
 import { systemLog } from '@motor-fix/domain';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import {
   type ArgumentsHost,
   HttpException,
@@ -423,5 +424,70 @@ describe('an unexpected error in the system log', () => {
   ])('is not written for %s', (_, exception) => {
     sendFor(exception, { method: 'GET', route: { path: '/api/v1/x' } });
     expect(write).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1181-FR-008
+describe('a refusal past a limit in the metrics', () => {
+  const reader = countedMetrics();
+  const refusals = (route: string) =>
+    counterTotal(reader, 'motorfix_rate_limit_refusals_total', { route });
+
+  const refuse = (
+    code: string,
+    req: { method: string; baseUrl?: string; route?: { path?: string } },
+    status = 429,
+  ) => {
+    const res = {
+      json() {
+        return this;
+      },
+      set() {
+        return this;
+      },
+      status() {
+        return this;
+      },
+      type() {
+        return this;
+      },
+    };
+    const host = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+    } as unknown as ArgumentsHost;
+    new ProblemFilter().catch(
+      new HttpException({ code, retryAfterSeconds: 5 }, status),
+      host,
+    );
+  };
+
+  it('counts every 429 by its method and route template, new and existing limits alike', async () => {
+    // Other cases in this file refuse outside any route too.
+    const unmatched = await refusals('unknown');
+    refuse('rate_limited', {
+      baseUrl: '',
+      method: 'POST',
+      route: { path: '/api/v1/quotes' },
+    });
+    refuse('too_many_messages', {
+      baseUrl: '',
+      method: 'POST',
+      route: { path: '/api/v1/support/messages' },
+    });
+    refuse('rate_limited', {
+      baseUrl: '',
+      method: 'POST',
+      route: { path: '/api/v1/listing-drafts/:id/photos/upload-url' },
+    });
+    refuse('rate_limited', { method: 'GET' });
+    refuse('not_found', { method: 'GET', route: { path: '/x' } }, 404);
+
+    expect(await refusals('POST /api/v1/quotes')).toBe(1);
+    expect(await refusals('POST /api/v1/support/messages')).toBe(1);
+    expect(
+      await refusals('POST /api/v1/listing-drafts/:id/photos/upload-url'),
+    ).toBe(1);
+    expect(await refusals('unknown')).toBe(unmatched + 1);
+    expect(await refusals('GET /x')).toBe(0);
   });
 });

@@ -59,7 +59,10 @@ afterAll(async () => {
 beforeEach(async () => {
   maintenance = false;
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-  const keys = await redis.keys('auth:fail:*');
+  const keys = [
+    ...(await redis.keys('auth:fail:*')),
+    ...(await redis.keys('limit:*')),
+  ];
   if (keys.length) await redis.del(...keys);
   jest.restoreAllMocks();
 });
@@ -537,7 +540,7 @@ describe('attempt limits at their boundaries', () => {
     await person('elena@example.test');
     const attacker = '192.0.2.90';
     await wrongInOrder('andrei@example.test', attacker, 5);
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 24; i++) {
       await signIn({ email: 'andrei@example.test', password: 'x' }, attacker);
     }
 

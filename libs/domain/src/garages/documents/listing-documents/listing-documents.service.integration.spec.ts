@@ -13,10 +13,14 @@ import {
   databaseUrl,
   fixtures,
 } from '../../../notifications/notifications.testing';
+import type { RateLimits } from '../../../rate-limit/rate-limit.service';
 import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageService } from '../../../storage/storage.service';
 import { NoStore } from '../../listing-drafts/listing-drafts.controller';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
+
+// The limits are proven at the route; here every call is admitted.
+const unlimited = { take: async () => undefined } as unknown as RateLimits;
 
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -49,7 +53,7 @@ let documents: ListingDocumentsService;
 beforeAll(async () => {
   await store.start();
   storage = new StorageService(store.env());
-  documents = new ListingDocumentsService(prisma, drafts, storage);
+  documents = new ListingDocumentsService(prisma, drafts, storage, unlimited);
 });
 
 afterAll(async () => {

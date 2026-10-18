@@ -771,6 +771,7 @@ describe('the keycloak README', () => {
     'PUBLIC_WEB_URL',
     'API_INTERNAL_URL',
     'DATABASE_URL',
+    'REDIS_URL',
     'APP_ENV',
     'OTEL_EXPORTER_OTLP_ENDPOINT',
     'OTEL_EXPORTER_OTLP_HEADERS',

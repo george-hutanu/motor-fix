@@ -12,8 +12,7 @@ import type { Redis } from 'ioredis';
 import type { Actor } from '../../auth/policy';
 import { countSupportMessage } from '../../metrics/product-counters';
 import { AddressThrottle } from '../../rate-limit/address-throttle';
-
-const PER_HOUR = 5;
+import { THROTTLES } from '../../rate-limit/rate-limit.config';
 
 // Messages per client address and per signed-in account, in the hour that
 // began with the first.
@@ -22,17 +21,8 @@ export class SupportThrottle {
   readonly account: AddressThrottle;
 
   constructor(redis: Redis) {
-    const rule = { limit: PER_HOUR, windowSeconds: 60 * 60 };
-    this.address = new AddressThrottle(redis, {
-      ...rule,
-      key: 'support:address',
-      name: 'SupportThrottle',
-    });
-    this.account = new AddressThrottle(redis, {
-      ...rule,
-      key: 'support:account',
-      name: 'SupportThrottle',
-    });
+    this.address = new AddressThrottle(redis, THROTTLES.supportAddress);
+    this.account = new AddressThrottle(redis, THROTTLES.supportAccount);
   }
 }
 

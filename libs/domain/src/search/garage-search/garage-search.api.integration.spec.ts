@@ -1,7 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { AuthModule } from '../../auth/auth.module';
@@ -11,10 +12,12 @@ import {
   fixtures,
   redisUrlFor,
 } from '../../notifications/notifications.testing';
+import { ROUTE_LIMITS } from '../../rate-limit/rate-limit.config';
 import { SearchModule } from '../search.module';
 
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();
+const store = new Redis(redisUrl);
 serialDatabase(databaseUrl);
 
 let app: INestApplication;
@@ -28,6 +31,8 @@ beforeAll(async () => {
     ],
   }).compile();
   app = moduleRef.createNestApplication();
+  // The API trusts the edge's forwarded address (apps/api bootstrap).
+  app.getHttpAdapter().getInstance().set('trust proxy', 'loopback');
   // The API's own pipe options (apps/api bootstrap).
   app.useGlobalPipes(
     new ValidationPipe({
@@ -40,6 +45,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  // Every case searches from this one machine: no case spends another's count.
+  const counts = await store.keys(`${ROUTE_LIMITS.search.key}:*`);
+  if (counts.length) await store.del(...counts);
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
@@ -51,6 +59,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await app.close();
   await prisma.$disconnect();
+  await store.quit();
 });
 
 const search = (query: Record<string, string>) =>
@@ -463,5 +472,66 @@ describe('GET /search/garages with a box', () => {
     const res = await search({ bbox, brandId: dacia });
 
     expect(res.status).toBe(400);
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-004
+// @traces 1181-FR-011
+describe('GET /search/garages past its limit', () => {
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.search;
+  const ADDRESS = '198.51.100.23';
+  const countOf = (address: string) =>
+    `${key}:${createHash('sha256').update(address).digest('hex')}`;
+  const from = (address: string, query: Record<string, string>) =>
+    search(query).set('X-Forwarded-For', address);
+  // Brings the address to `used` calls in the window without making them.
+  const used = (address: string, calls: number) =>
+    store.set(countOf(address), calls, 'EX', windowSeconds);
+  const logged = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return prisma.searchLog.count();
+  };
+
+  beforeEach(() => prisma.$executeRawUnsafe('TRUNCATE search_log'));
+
+  it('counts a logged search like any other, then refuses the next with the wait and writes no log row', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await used(ADDRESS, limit - 1);
+
+    await from(ADDRESS, { brandId: dacia, log: '1', near: NEAR }).expect(200);
+    expect(await logged()).toBe(1);
+    const refused = await from(ADDRESS, {
+      brandId: dacia,
+      log: '1',
+      near: NEAR,
+    }).expect(429);
+
+    expect(refused.body.code).toBe('rate_limited');
+    expect(refused.body.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    expect(refused.body.retryAfterSeconds).toBeLessThanOrEqual(windowSeconds);
+    expect(await logged()).toBe(1);
+  });
+
+  it('admits the address again once its window is over', async () => {
+    await used(ADDRESS, limit);
+    await from(ADDRESS, { brandId: dacia }).expect(429);
+
+    await store.del(countOf(ADDRESS));
+
+    await from(ADDRESS, { brandId: dacia }).expect(200);
+  });
+
+  it('never refuses a second address for the first one’s count', async () => {
+    await used(ADDRESS, limit);
+
+    await from('198.51.100.24', { brandId: dacia }).expect(200);
+  });
+
+  it('spends no count on a search the validation refuses', async () => {
+    await from(ADDRESS, { brand: 'dacia', brandId: dacia }).expect(400);
+
+    expect(await store.get(countOf(ADDRESS))).toBeNull();
   });
 });

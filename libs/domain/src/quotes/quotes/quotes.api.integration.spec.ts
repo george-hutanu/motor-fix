@@ -1,12 +1,14 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import type { SendQuoteDto } from '@motor-fix/contracts';
+import { Redis } from 'ioredis';
 
 import { QuotesService } from './quotes.service';
 import type { AuditPort } from '../../audit/audit.port';
 import { AuditService } from '../../audit/audit.service';
 import { addLocalDays } from '../../bucharest';
 import { outbox } from '../../events/event.port';
+import { ROUTE_LIMITS } from '../../rate-limit/rate-limit.config';
 import { garageActor } from '../quotes.testing';
 import { quotesApp } from '../quotes-api.testing';
 
@@ -720,5 +722,88 @@ describe('POST /quotes who may send and what', () => {
       where: { subjectId: res.body.id, subjectType: 'quote' },
     });
     expect(entry.newValue).toMatchObject({ noteSet: false });
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-004
+// @traces 1181-FR-011
+describe('POST /quotes past its limit', () => {
+  const store = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.quoteSend;
+  const countOf = (accountId: string) =>
+    `${key}:${createHash('sha256').update(accountId).digest('hex')}`;
+  // Brings the account to `calls` sends in the window without making them.
+  const used = (accountId: string, calls: number) =>
+    store.set(countOf(accountId), calls, 'EX', windowSeconds);
+
+  afterAll(() => store.quit());
+
+  it('refuses the send past the limit with the wait and writes nothing, then admits it once the window is over', async () => {
+    const { dinamo, request } = await open();
+    await used(dinamo.owner, limit);
+    const body = sendBody(request.id);
+
+    const refused = await post('/quotes', body, asOwner(dinamo), randomUUID());
+
+    expect(refused.status).toBe(429);
+    expect(refused.body.code).toBe('rate_limited');
+    expect(refused.body.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    expect(refused.body.retryAfterSeconds).toBeLessThanOrEqual(windowSeconds);
+    await nothingWritten(request.id);
+
+    await store.del(countOf(dinamo.owner));
+    const sent = await post('/quotes', body, asOwner(dinamo), randomUUID());
+    expect(sent.status).toBe(201);
+  });
+
+  it('counts each send, so the one past the limit is refused', async () => {
+    const { dinamo, request } = await open();
+    await used(dinamo.owner, limit - 1);
+
+    const last = await post(
+      '/quotes',
+      sendBody(request.id),
+      asOwner(dinamo),
+      randomUUID(),
+    );
+    const past = await post(
+      '/quotes',
+      sendBody(request.id),
+      asOwner(dinamo),
+      randomUUID(),
+    );
+
+    expect(last.status).toBe(201);
+    expect(past.status).toBe(429);
+  });
+
+  it('never refuses a second garage account for the first one’s count', async () => {
+    const { dinamo, request } = await open();
+    await used(dinamo.receptionist, limit);
+
+    const res = await post(
+      '/quotes',
+      sendBody(request.id),
+      asOwner(dinamo),
+      randomUUID(),
+    );
+
+    expect(res.status).toBe(201);
+  });
+
+  it('spends no count on a send the validation refuses', async () => {
+    const { dinamo, request } = await open();
+
+    const res = await post(
+      '/quotes',
+      sendBody(request.id, { fromLei: -1 }),
+      asOwner(dinamo),
+      randomUUID(),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await store.get(countOf(dinamo.owner))).toBeNull();
   });
 });

@@ -22,6 +22,7 @@ import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
@@ -51,6 +52,9 @@ export class ListingDocumentsController {
   @ApiUnprocessableEntityResponse({
     description:
       'document_kind_unknown, document_full, file_type_not_allowed, file_too_large',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many upload addresses for this draft',
   })
   uploadAddress(
     @Param('id') id: string,
