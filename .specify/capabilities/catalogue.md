@@ -163,6 +163,7 @@ _From 173-price-range-in-place._
 ### 173-FR-012 — Brand lines MUST be edited through the existing brand range write (`PUT /api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}`, 386), with the same editor, errors and saving states; this story adds no brand route and no removal of a brand range from the view (ST-386's own screens own removal).
 
 _From 173-price-range-in-place._
+
 ### 405-FR-002 — The product MUST keep one catalogue of the licensed car models, in a data file beside the brand list (`libs/domain/src/catalogue/`), the file #1241 seeds `CAR_MODEL_3D` from as the brand loader seeds `BRAND` from `brands.ts`, holding exactly the 20 models of the list; each model MUST carry a stable key, its brand key (a key of MotorFix's brand list), its model name, its fuel (one of the four fuel values the cars contract already uses: `petrol`, `diesel`, `hybrid`, `electric`) and its rank within its brand.
 
 _From 405-car-model-licences._
