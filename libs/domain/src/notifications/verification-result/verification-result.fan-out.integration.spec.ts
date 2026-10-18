@@ -377,6 +377,35 @@ describe('the reason and the note', () => {
     });
   });
 
+  // @traces 305-FR-005 305-FR-011
+  it.each([
+    ['documents', 'Documente', 'Documents'],
+    ['rar', 'Autorizație RAR', 'RAR authorisation'],
+    ['address', 'Adresă', 'Address'],
+    ['photos', 'Fotografii', 'Photos'],
+    ['other', 'Alt motiv', 'Other reason'],
+  ])(
+    'tells each owner of a garage rejected for %s the reason in their language and the note word for word',
+    async (code, ro, en) => {
+      const { english, file, owner } = await staffedGarage(`rejected-${code}`);
+      const { job } = await decided(file.id, negative('rejected', code));
+      const { fanOut } = await start();
+
+      await fanOut.handle(job);
+
+      expect((await emailOf(owner))?.params).toMatchObject({
+        decision: 'rejected',
+        note: NOTE,
+        reason: ro,
+      });
+      expect((await emailOf(english))?.params).toMatchObject({
+        decision: 'rejected',
+        note: NOTE,
+        reason: en,
+      });
+    },
+  );
+
   it('gives a code it does not know the other label, the note intact', async () => {
     const { file, owner } = await staffedGarage();
     const { job } = await decided(file.id, negative('rejected', 'expired'));

@@ -2322,6 +2322,63 @@ describe('rejecting a garage', () => {
     expect(await fileRow(file.id)).toMatchObject({ reasonCode: 'documents' });
   });
 
+  // @traces 305-FR-004 305-FR-011
+  it('answers 409 to a rejection of an approved file, the approval kept', async () => {
+    const file = await fileIn('in_review');
+    await decideWith(ioana, file.id, { outcome: 'approved' });
+
+    const { body, status } = await refusal(
+      decideWith(dan, file.id, {
+        note: 'Adresa nu corespunde.',
+        outcome: 'rejected',
+        reason: 'address',
+      }),
+    );
+
+    expect(status).toBe(409);
+    expect(body).toMatchObject({
+      code: 'verification_transition_refused',
+      currentStatus: 'approved',
+      decidedBy: 'Ioana',
+    });
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonCode: null,
+      status: 'approved',
+    });
+  });
+
+  // @traces 305-FR-004 305-FR-011
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s rejecting, nothing stored',
+    async (role) => {
+      const outsider = person(
+        await account(`reject-${role}`, [role]),
+        role,
+        garageId,
+      );
+      const file = await fileIn('in_review');
+
+      const { status } = await refusal(
+        decideWith(outsider, file.id, {
+          note: 'Autorizația RAR a expirat.',
+          outcome: 'rejected',
+          reason: 'rar',
+        }),
+      );
+
+      expect(status).toBe(404);
+      expect(await fileRow(file.id)).toMatchObject({
+        reasonCode: null,
+        status: 'in_review',
+      });
+      expect(
+        await prisma.outboxEvent.count({
+          where: { kind: 'verification.decided', subjectId: file.id },
+        }),
+      ).toBe(0);
+    },
+  );
+
   // @traces 305-FR-008
   it('lets the garage send a new file linked to the rejection, keeping one garage', async () => {
     const file = await fileIn('in_review');

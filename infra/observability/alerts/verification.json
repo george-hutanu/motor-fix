@@ -9,7 +9,7 @@
       "rules": [
         {
           "uid": "verification-rejection-burst",
-          "title": "Garage rejection burst",
+          "title": "Rejection burst",
           "condition": "B",
           "for": "0s",
           "noDataState": "OK",
