@@ -78,6 +78,23 @@ describe('the MCP server and its identity server', () => {
   });
 });
 
+describe('the identity server itself', () => {
+  // @traces 1178-FR-010
+  it('lists its memory alert and the overview dashboard on its Railway service, and the worker reading', () => {
+    const service = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'railway-service' && e.name === 'keycloak',
+    );
+    expect(service).toMatchObject({
+      alerts: ['mcp-issuer-unreachable', 'keycloak-memory'],
+      dashboard: 'motorfix-overview',
+    });
+    expect(service.reason).toContain('KEYCLOAK_METRICS_URL');
+  });
+});
+
 describe('the verification result queue', () => {
   // @traces 209-FR-014
   it('alerts on its final job failures, shows its counter on the queues dashboard and lists both', () => {
@@ -115,6 +132,62 @@ describe('the verification result queue', () => {
     expect(queue).toMatchObject({
       alerts: [rule?.uid],
       dashboard: 'motorfix-queues',
+    });
+  });
+});
+
+// @traces 305-FR-009
+describe('the garage rejections', () => {
+  it('alert on a burst of more than five in an hour, show on the product dashboard and are listed', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'verification.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      for: string;
+      annotations: { dashboard_uid: string };
+      data: {
+        model: { expr?: string; conditions?: { evaluator: unknown }[] };
+      }[];
+    }[];
+    const rule = rules.find((r) => r.uid === 'verification-rejection-burst');
+    expect(rule?.annotations.dashboard_uid).toBe('motorfix-product');
+    expect(rule?.data[0]?.model.expr).toMatch(
+      /^sum by \(deployment_environment\) \(increase\(motorfix_verification_rejections_total\{[^}]*\}\[1h\]\)\)$/,
+    );
+    expect(rule?.data[1]?.model.conditions?.[0]?.evaluator).toEqual({
+      params: [5],
+      type: 'gt',
+    });
+
+    const dashboard = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-product.json',
+      ),
+    ) as { panels: { title?: string; targets?: { expr: string }[] }[] };
+    const titles = dashboard.panels.map((p) => p.title);
+    expect(titles).toContain('Garage rejections');
+    expect(
+      dashboard.panels.filter((p) =>
+        (p.targets ?? []).some((t) =>
+          t.expr.includes('motorfix_verification_rejections_total'),
+        ),
+      ).length,
+    ).toBeGreaterThanOrEqual(3);
+
+    const counter = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'product-counter' &&
+        e.name === 'motorfix_verification_rejections_total',
+    );
+    expect(counter).toMatchObject({
+      alerts: ['verification-rejection-burst'],
+      dashboard: 'motorfix-product',
     });
   });
 });

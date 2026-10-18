@@ -34,6 +34,8 @@ features:
   - 299-system-log-search
   - 173-price-range-in-place
   - 1174-postgres-18-pitr
+  - 1178-keycloak-sizing
+  - 1348-release-green
 ---
 
 # Capability: Observability
@@ -310,7 +312,7 @@ _From 878-data-store-metrics._
 
 _From 878-data-store-metrics._
 
-### 878-FR-007 — The worker MUST report `motorfix_datastore_up` by `store` (`postgres`, `redis`): 1 when the last reading of that store succeeded, 0 when it failed (a reading that has not answered within 5 s for PostgreSQL, 2 s for Redis counts as failed). A failed reading MUST report none of that store's other figures for that cycle, MUST log one error line per failure streak, and MUST NOT affect jobs, the relay or health checks.
+### 878-FR-007 — The worker MUST report `motorfix_datastore_up` by `store` (`postgres`, `redis`, and `keycloak` when its metrics address is set): 1 when the last reading of that store succeeded, 0 when it failed (a reading that has not answered within 5 s for PostgreSQL and Keycloak, 2 s for Redis counts as failed; `keycloak` amended by ST-1178). A failed reading MUST report none of that store's other figures for that cycle, MUST log one error line per failure streak, and MUST NOT affect jobs, the relay or health checks.
 
 _From 878-data-store-metrics._
 
@@ -470,7 +472,7 @@ _From 1016-mcp-staging._
 
 _From 1016-mcp-staging._
 
-### 000-FR-012 — `infra/observability/inventory.json` MUST list `mcp` and `keycloak` as `railway-service` entries (`source` `scripts/railway-deploy.ts`, `dashboard` `motorfix-mcp`, `alerts` the two new uids, `story` ST-1016), and `node scripts/observability-inventory.ts` MUST pass against the changed deploy script (its service discovery reads the union of every service list in the deploy script). The existing `outside-service` `keycloak` entry stays.
+### 000-FR-012 — `infra/observability/inventory.json` MUST list `mcp` and `keycloak` as `railway-service` entries (`source` `scripts/railway-deploy.ts`, `dashboard` `motorfix-mcp`, `alerts` the two new uids, `story` ST-1016; the `keycloak` entry's `dashboard` is `motorfix-overview` and its alerts add `keycloak-memory`, 1178-FR-010), and `node scripts/observability-inventory.ts` MUST pass against the changed deploy script (its service discovery reads the union of every service list in the deploy script). The existing `outside-service` `keycloak` entry stays.
 
 _From 1016-mcp-staging._
 
@@ -788,9 +790,40 @@ _From 1345-staging-observability._
 
 _From 1345-staging-observability._
 
+### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
+
+_From 1348-release-green._
 ### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
 
 _From 173-price-range-in-place._
+
+### 1178-FR-005 — The worker MUST accept one new optional setting naming Keycloak's metrics endpoint (`KEYCLOAK_METRICS_URL`, a full address to the management interface's `/metrics` on Railway's private network). When it is unset or empty, the worker MUST make no request to any metrics endpoint and publish no Keycloak sample; every other reading is unchanged.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-006 — When the setting is set, the worker's data-store readings MUST read the endpoint once a minute with the other stores (the first read at start, not awaited by the boot, each read given up after 5 s, never two at once) and publish two gauges, `motorfix_keycloak_heap_used_bytes` (the sum of `jvm_memory_used_bytes{area="heap"}` over its pools) and `motorfix_keycloak_heap_max_bytes` (the sum of the non-negative `jvm_memory_max_bytes{area="heap"}` values), plus `motorfix_datastore_up{store="keycloak"}`.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-007 — A read that fails (no answer within the limit, a non-2xx status, or a body without a heap-used series and a positive heap maximum) MUST publish no heap sample for that reading (never zero), MUST set `motorfix_datastore_up{store="keycloak"}` to 0, MUST NOT affect the PostgreSQL, Redis or outbox readings, and MUST be logged as one error line per failure streak naming the reason and never the address's credentials or the body.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-008 — The `motorfix-overview` dashboard MUST gain a `keycloak` row with one panel showing Keycloak heap used against heap maximum for the selected environment, following the rules `scripts/dashboard-check.ts` enforces (environment variable, data source through a variable).
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-009 — A new rule group `infra/observability/alerts/keycloak.json` MUST hold a rule with uid `keycloak-memory`, service label `keycloak`, grouped by `deployment_environment`, pending 10 minutes while heap used divided by heap maximum stays above 0.9, with a summary naming the environment, `dashboard_uid` `motorfix-overview` and a `runbook` annotation (raise the Railway limit; read Keycloak's logs; look for session or cache growth), raising nothing when no sample arrives. It MUST pass `scripts/alert-rules.spec.ts`.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-010 — `infra/observability/inventory.json`'s `keycloak` railway-service entry MUST list `keycloak-memory`, its dashboard MUST become `motorfix-overview` (where the heap panel is), and its reason MUST name the worker's reading as the memory signal; the outside-service `keycloak` entry is unchanged. `scripts/observability-inventory.ts` MUST pass.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-012 — The two gauges carry no label of their own; the environment and service come from the worker's OpenTelemetry resource attributes, as for every other data-store figure, so the existing environment filters select them.
+
+_From 1178-keycloak-sizing._
 
 ## Retired
 

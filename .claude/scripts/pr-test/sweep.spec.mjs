@@ -433,17 +433,41 @@ describe('settling canvas charts before the shot', () => {
     const waits = [];
     return {
       waits,
-      evaluate: async () => frames[Math.min(i++, frames.length - 1)],
+      // A frame is the canvases' joined pixels ('' with no canvas), or { sig, blank } for one not drawn yet.
+      evaluate: async () => {
+        const f = frames[Math.min(i++, frames.length - 1)];
+        return typeof f === 'string' ? { sig: f, blank: false } : f;
+      },
       waitForTimeout: async (ms) => {
         waits.push(ms);
       },
     };
   };
 
-  it('waits until no canvas changes between two frames', async () => {
-    const page = framesPage(['axes', 'bars-low', 'bars-full', 'bars-full']);
+  it('waits until no canvas changes across three frames in a row', async () => {
+    const page = framesPage(['axes', 'bars-low', 'bars-full', 'bars-full', 'bars-full']);
     assert.equal(await settleCanvases(page), true);
-    assert.equal(page.waits.length, 3);
+    assert.equal(page.waits.length, 4);
+  });
+
+  // An easing tail (easeOutQuart) can leave two frames 100 ms apart equal before the bars reach their height.
+  it('does not stop on one repeated frame in the middle of the animation', async () => {
+    const page = framesPage(['axes', 'bars-90', 'bars-90', 'bars-99', 'bars-full', 'bars-full', 'bars-full']);
+    assert.equal(await settleCanvases(page), true);
+    assert.equal(page.waits.length, 6);
+  });
+
+  // Chart.js draws its first frame only after the canvas is sized: a blank canvas that has not changed is not drawn yet.
+  it('does not take a canvas that is still blank as settled', async () => {
+    const blank = { sig: 'blank', blank: true };
+    const page = framesPage([blank, blank, blank, blank, 'bars-full', 'bars-full', 'bars-full']);
+    assert.equal(await settleCanvases(page), true);
+    assert.equal(page.waits.length, 6);
+  });
+
+  it('gives up, bounded, on a canvas that stays blank', async () => {
+    const page = { evaluate: async () => ({ sig: 'blank', blank: true }), waitForTimeout: async () => new Promise((r) => setTimeout(r, 5)) };
+    assert.equal(await settleCanvases(page, { timeout: 50, interval: 5 }), false);
   });
 
   it('returns at once on a page with no canvas', async () => {
@@ -454,7 +478,7 @@ describe('settling canvas charts before the shot', () => {
 
   it('gives up, bounded, on a canvas that never stops moving', async () => {
     let n = 0;
-    const page = { evaluate: async () => `frame-${n++}`, waitForTimeout: async () => new Promise((r) => setTimeout(r, 5)) };
+    const page = { evaluate: async () => ({ sig: `frame-${n++}`, blank: false }), waitForTimeout: async () => new Promise((r) => setTimeout(r, 5)) };
     assert.equal(await settleCanvases(page, { timeout: 50, interval: 5 }), false);
   });
 

@@ -23,6 +23,7 @@
     "label": "Period",
     "retry": "Retry",
     "summary": "{title}, {period}. Highest: {high}, {highLabel}. Lowest: {low}, {lowLabel}.",
+    "summaryTwo": "{title}, {period}. Highest: {highLabel}, {leadHeading} {highLead}, {valueHeading} {high}. Lowest: {lowLabel}, {leadHeading} {lowLead}, {valueHeading} {low}.",
     "table": "View as table",
     "value": "Value"
   },

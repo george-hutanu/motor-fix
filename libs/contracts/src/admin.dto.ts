@@ -188,12 +188,22 @@ export class AdminDemandBrandDto {
   name!: string;
 
   @ApiProperty({
-    description: 'Requests for the brand in the window',
+    description:
+      'Requests for the brand in the window; 0 for a brand only searched',
     example: 412,
-    minimum: 1,
+    minimum: 0,
     type: 'integer',
   })
   requests!: number;
+
+  @ApiProperty({
+    description:
+      'Logged searches for the brand in the window; 0 for a brand only requested',
+    example: 8900,
+    minimum: 0,
+    type: 'integer',
+  })
+  searches!: number;
 }
 
 export class AdminDemandJobDto {
@@ -242,7 +252,24 @@ export class AdminDemandDto {
 
   @ApiProperty({
     description:
-      'Every brand with a request in the window, most first, then by name in code-point order',
+      "Searches logged in the window; the sum of the brands' searches",
+    example: 12900,
+    minimum: 0,
+    type: 'integer',
+  })
+  searches!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'The Europe/Bucharest day searches are counted from, when it falls after firstDay: the day of the earliest logged search, or lastDay when none was ever logged',
+    example: '2026-10-11',
+    format: 'date',
+  })
+  searchesFrom?: string;
+
+  @ApiProperty({
+    description:
+      'Every brand searched or requested in the window, most searched first, then most requested, then by name in code-point order',
     type: [AdminDemandBrandDto],
   })
   brands!: AdminDemandBrandDto[];

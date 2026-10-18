@@ -229,8 +229,8 @@ describe('the admin filters', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-008
   const stylesheet = readFileSync(join(__dirname, 'admin-filters.css'), 'utf8');
 
   it('takes every text size from a Cockpit size token', () => {

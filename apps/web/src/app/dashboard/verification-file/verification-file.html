@@ -296,17 +296,29 @@
             class="action primary"
             data-part="approve"
             [disabled]="busy() || !!gateHint()"
-            [attr.aria-busy]="busy() ? 'true' : null"
+            [attr.aria-busy]="busy() && !rejecting() ? 'true' : null"
             [attr.aria-describedby]="gateHint() ? 'mf-file-gate-hint' : null"
             (click)="approve()"
           >
-            @if (busy()) {
+            @if (busy() && !rejecting()) {
               <span class="spinner" data-part="spinner" aria-hidden="true"></span>
             }
             {{ 'admin.file.footer.approve' | t }}
           </button>
           <button type="button" class="action" disabled>{{ 'admin.file.footer.ask' | t }}</button>
-          <button type="button" class="action danger" disabled>{{ 'admin.file.footer.reject' | t }}</button>
+          <button
+            type="button"
+            class="action danger"
+            data-part="reject"
+            [disabled]="busy()"
+            [attr.aria-busy]="rejecting() ? 'true' : null"
+            (click)="reject()"
+          >
+            @if (rejecting()) {
+              <span class="spinner" data-part="spinner" aria-hidden="true"></span>
+            }
+            {{ 'admin.file.footer.reject' | t }}
+          </button>
         </div>
         @if (gateHint(); as hint) {
           <p class="note" id="mf-file-gate-hint" data-part="gate-hint">{{ hint }}</p>

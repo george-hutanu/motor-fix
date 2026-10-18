@@ -367,7 +367,7 @@ describe('the approve button gate, attacked', () => {
   });
 
   // @traces 303-FR-001
-  it('names the hint to assistive technology and leaves the other two buttons disabled while held', async () => {
+  it('names the hint to assistive technology and holds no other decision with it', async () => {
     const host = await open(gated('not_run', 'not_run'), 'en');
 
     const button = approveButton(host);
@@ -376,7 +376,11 @@ describe('the approve button gate, attacked', () => {
     const others = [
       ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
     ].filter((b) => b !== button);
-    expect(others.every((b) => b.disabled)).toBe(true);
+    // A rejection needs no check: it stays offered while the approval waits.
+    expect(others.map((b) => [text(b), b.disabled])).toEqual([
+      ['Ask for more', true],
+      ['Reject', false],
+    ]);
   });
 
   // @traces 303-FR-001

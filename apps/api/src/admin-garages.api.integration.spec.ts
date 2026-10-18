@@ -119,6 +119,10 @@ describe('GET /admin/garages?status=suspended', () => {
   it('answers the suspended garages, the newest suspension first, with the total', async () => {
     const garage = randomUUID();
     const file = randomUUID();
+    // An earlier run on the same database left its garage on this start, which would tie.
+    await db.query(
+      "DELETE FROM garage WHERE id IN (SELECT garage_id FROM garage_suspension WHERE from_time = '2999-01-01T08:00:00Z')",
+    );
     await db.query(
       "INSERT INTO garage (id, name, slug, status, city_key, city_name) VALUES ($1, 'Auto Expres Pantelimon', $2, 'suspended', 'pantelimon', 'Pantelimon')",
       [garage, `g-${garage}`],

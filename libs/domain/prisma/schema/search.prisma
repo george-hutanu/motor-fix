@@ -11,5 +11,6 @@ model SearchLog {
   areaCell String?  @map("area_cell") @db.VarChar(5)
   at       DateTime @default(now()) @db.Timestamptz(3)
 
+  @@index([at])
   @@map("search_log")
 }

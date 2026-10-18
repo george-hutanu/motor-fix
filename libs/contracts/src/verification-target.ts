@@ -21,6 +21,19 @@ export const VERIFICATION_QUEUE_MAX = 200;
 // The most characters a decision's note holds, counted in code points.
 export const VERIFICATION_NOTE_MAX = 1000;
 
+// The fewest characters a rejection's note holds, counted in code points.
+export const REJECTION_NOTE_MIN = 10;
+
+// What a rejection names, and what a request for more may ask for.
+export const VERIFICATION_REASON_CODES = [
+  'documents',
+  'rar',
+  'address',
+  'photos',
+  'other',
+] as const;
+export type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
+
 // A report decision's reason the garage is given, and the admins' own note.
 export const REPORT_REASON_MAX = 200;
 export const REPORT_NOTE_MAX = 1000;

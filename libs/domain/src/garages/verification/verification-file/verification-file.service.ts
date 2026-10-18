@@ -31,8 +31,8 @@ export function certificateStale(issuedOn: Date | null, sentAt: Date) {
   return !issuedWithinWindow(calendarDay(issuedOn), localDay(sentAt));
 }
 
-// The file's own lines: its sending, status changes and RAR number
-// corrections, its checks' records
+// The file's own lines: its sending, status changes, RAR number corrections
+// and refused approvals, its checks' records
 // and its documents' openings. A document upload and the declaration stay out.
 // Every one of them carries the garage, so the (garageId, at) index reads it.
 export function timelineWhere(
@@ -49,6 +49,7 @@ export function timelineWhere(
           { action: 'create' },
           { action: 'update', field: 'status' },
           { action: 'update', field: 'rar_number' },
+          { action: 'update', kind: 'verification_approval_refused' },
         ],
         subjectId: fileId,
         subjectType: 'verification_file',

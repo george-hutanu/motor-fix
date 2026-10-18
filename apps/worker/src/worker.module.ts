@@ -133,6 +133,7 @@ export function workerModule(
       }),
       DataStoreMetricsModule.register({
         databaseUrl: env.DATABASE_URL,
+        keycloakMetricsUrl: process.env['KEYCLOAK_METRICS_URL'],
         monitorUrl: process.env['MONITOR_DATABASE_URL'],
         redisUrl: env.REDIS_URL,
       }),

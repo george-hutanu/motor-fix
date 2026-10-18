@@ -1,0 +1,236 @@
+import { observeDataStores } from '@motor-fix/observability';
+
+import { DataStoreMetricsModule } from './data-store-metrics.module';
+
+// A limit no other reading uses, so the test proves the module reads the
+// one the observability library defines rather than a copy of its own.
+jest.mock('@motor-fix/observability', () => ({
+  KEYCLOAK_LIMIT_MS: 4_321,
+  observeDataStores: jest.fn(() => () => undefined),
+  telemetryStarted: jest.fn(() => true),
+}));
+jest.mock('../store/store', () => ({
+  borrowStore: jest.fn(() => ({ info: jest.fn() })),
+  returnStore: jest.fn(async () => undefined),
+}));
+jest.mock('pg', () => ({
+  Pool: jest.fn().mockImplementation(() => ({
+    end: jest.fn(async () => undefined),
+    on: jest.fn(),
+    query: jest.fn(),
+  })),
+}));
+
+const observe = jest.mocked(observeDataStores);
+const URL = 'http://keycloak.railway.internal:9000/metrics';
+
+type Stores = Parameters<typeof observeDataStores>[0];
+
+// Builds the module as Nest would from register() and starts it, returning
+// the stores it handed to the readings.
+function started(keycloakMetricsUrl?: string): Stores {
+  const dynamic = DataStoreMetricsModule.register({
+    databaseUrl: 'postgres://app@db/motorfix',
+    redisUrl: 'redis://store:6379',
+    ...(keycloakMetricsUrl !== undefined && { keycloakMetricsUrl }),
+  });
+  const [clients, interval] = (dynamic.providers ?? []) as {
+    useFactory?: () => unknown;
+    useValue?: unknown;
+  }[];
+  const module = new DataStoreMetricsModule(
+    clients?.useFactory?.() as never,
+    interval?.useValue as never,
+  );
+  module.onModuleInit();
+  return observe.mock.calls.at(-1)?.[0] as Stores;
+}
+
+// An answer streaming the body; cancel watches the body being let go.
+const answer = (status: number, body = '') => {
+  const stream = new Blob([body]).stream();
+  const cancel = jest.spyOn(stream, 'cancel');
+  const response = {
+    body: stream,
+    headers: new Headers(),
+    ok: status >= 200 && status < 300,
+    status,
+  } as unknown as Response;
+  return { cancel, response };
+};
+
+let fetch: jest.SpyInstance;
+beforeEach(() => {
+  observe.mockClear();
+  fetch = jest.spyOn(globalThis, 'fetch');
+});
+afterEach(() => jest.restoreAllMocks());
+
+// @traces 1178-FR-005
+// @traces 1178-FR-007
+describe('the Keycloak reading in the data-store readings', () => {
+  it.each([
+    ['unset', undefined],
+    ['empty', ''],
+  ])(
+    'is off, and nothing is fetched, with KEYCLOAK_METRICS_URL %s',
+    (_, url) => {
+      const stores = started(url);
+
+      expect(stores).toBeDefined();
+      expect(stores.keycloak).toBeUndefined();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('fetches the address once a reading, asking for text within the shared Keycloak limit, and returns the body', async () => {
+    const timeout = jest.spyOn(AbortSignal, 'timeout');
+    fetch.mockResolvedValue(answer(200, 'jvm_memory_used_bytes 1').response);
+    const stores = started(URL);
+
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(stores.keycloak?.metrics()).resolves.toBe(
+      'jvm_memory_used_bytes 1',
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]?.[0]).toBe(URL);
+    expect(timeout).toHaveBeenCalledWith(4_321);
+    const init = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(init.signal).toBe(timeout.mock.results[0]?.value);
+    expect(new Headers(init.headers).get('accept')).toBe('text/plain');
+  });
+
+  it('fails an answer that is not 2xx with its status only, and lets its body go', async () => {
+    const { cancel, response } = answer(503, '<html>down</html>');
+    fetch.mockResolvedValue(response);
+    const stores = started(URL);
+
+    await expect(stores.keycloak?.metrics()).rejects.toThrow(
+      new Error('HTTP 503'),
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails an address that does not answer with the error code only, never the address', async () => {
+    fetch.mockRejectedValue(
+      Object.assign(new TypeError(`fetch failed for ${URL}`), {
+        cause: Object.assign(new Error(`connect ECONNREFUSED ${URL}`), {
+          code: 'ECONNREFUSED',
+        }),
+      }),
+    );
+    const stores = started(URL);
+
+    const error = await stores.keycloak?.metrics().catch((e: Error) => e);
+    expect(error).toEqual(new Error('ECONNREFUSED'));
+    expect((error as Error).message).not.toContain('railway');
+  });
+
+  it('fails a reading cut off by its limit with the error name only', async () => {
+    fetch.mockRejectedValue(
+      Object.assign(new Error(`aborted ${URL}`), { name: 'TimeoutError' }),
+    );
+    const stores = started(URL);
+
+    await expect(stores.keycloak?.metrics()).rejects.toThrow(
+      new Error('TimeoutError'),
+    );
+  });
+
+  it('cuts off a body past 8 MiB that declares no length', async () => {
+    const { response } = answer(200, 'x'.repeat(8 * 1024 * 1024 + 1));
+    fetch.mockResolvedValue(response);
+    const stores = started(URL);
+
+    await expect(stores.keycloak?.metrics()).rejects.toThrow(
+      new Error('metrics body too large'),
+    );
+  });
+
+  it('reads a body of exactly 8 MiB', async () => {
+    const body = 'x'.repeat(8 * 1024 * 1024);
+    fetch.mockResolvedValue(answer(200, body).response);
+
+    await expect(started(URL).keycloak?.metrics()).resolves.toBe(body);
+  });
+
+  it.each(['not a url', 'redis://keycloak:6379', 'ftp://keycloak/metrics'])(
+    'fails each reading of %s, fetching nothing, while the worker boots',
+    async (url) => {
+      const stores = started(url);
+
+      await expect(stores.keycloak?.metrics()).rejects.toThrow(
+        new Error('not an http(s) address'),
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+});
+
+// @traces 1178-FR-007
+describe('the Keycloak fetch under hostile answers', () => {
+  const CREDENTIALED =
+    'http://user:hunter2@keycloak.railway.internal:9000/metrics';
+  // An answer whose body streams the text, or fails midway with the error.
+  const streamed = (status: number, body: string | Error) =>
+    ({
+      body:
+        typeof body === 'string'
+          ? new Blob([body]).stream()
+          : new ReadableStream({ start: (stream) => stream.error(body) }),
+      headers: new Headers(),
+      ok: status >= 200 && status < 300,
+      status,
+    }) as unknown as Response;
+
+  it.each([199, 300, 301, 404, 500])(
+    'rejects HTTP %s with its status only',
+    async (status) => {
+      fetch.mockResolvedValue(streamed(status, 'body'));
+      await expect(started(CREDENTIALED).keycloak?.metrics()).rejects.toThrow(
+        new Error(`HTTP ${status}`),
+      );
+    },
+  );
+
+  it('accepts a 204 and hands the empty body on', async () => {
+    fetch.mockResolvedValue(streamed(204, ''));
+    await expect(started(CREDENTIALED).keycloak?.metrics()).resolves.toBe('');
+  });
+
+  it('does not carry the address when the body stream fails midway', async () => {
+    fetch.mockResolvedValue(
+      streamed(200, new Error(`terminated reading ${CREDENTIALED}`)),
+    );
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('Error'));
+  });
+
+  it('fails with a non-empty reason when fetch rejects with a non-Error', async () => {
+    fetch.mockRejectedValue('boom');
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('fetch failed'));
+  });
+
+  it('fails with a non-empty reason when fetch rejects with null', async () => {
+    fetch.mockRejectedValue(null);
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('fetch failed'));
+  });
+
+  it('sends no credentials header of its own', async () => {
+    fetch.mockResolvedValue(streamed(200, 'x'));
+    await started(CREDENTIALED).keycloak?.metrics();
+    const headers = new Headers(
+      (fetch.mock.calls[0]?.[1] as RequestInit | undefined)?.headers,
+    );
+    expect(headers.get('authorization')).toBeNull();
+    expect(headers.get('cookie')).toBeNull();
+  });
+});

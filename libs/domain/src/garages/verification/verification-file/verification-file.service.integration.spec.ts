@@ -446,6 +446,44 @@ describe('reading a file', () => {
     expect((await service().read(file.id)).previousRejection).toBeNull();
   });
 
+  // @traces 305-FR-008
+  it('carries the latest rejection of a garage rejected twice, leaving the earlier files as they were', async () => {
+    const first = await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-09-01T09:00:00Z'),
+        decidedBy: ioana,
+        garageId,
+        reasonCode: 'documents',
+        reasonNote: 'Certificatul ONRC lipsește.',
+        status: 'rejected',
+      },
+    });
+    const second = await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-10-02T15:30:00Z'),
+        decidedBy: ioana,
+        garageId,
+        previousFileId: first.id,
+        reasonCode: 'rar',
+        reasonNote: 'Autorizația RAR a expirat.',
+        status: 'rejected',
+      },
+    });
+    const file = await sent({ previousFileId: second.id });
+
+    expect((await service().read(file.id)).previousRejection).toEqual({
+      decidedAt: '2026-10-02T15:30:00.000Z',
+      reasonCode: 'rar',
+      reasonNote: 'Autorizația RAR a expirat.',
+    });
+    expect(
+      await prisma.verificationFile.findUniqueOrThrow({
+        where: { id: second.id },
+      }),
+    ).toMatchObject({ reasonCode: 'rar', status: 'rejected' });
+    expect(await prisma.garage.count({ where: { id: garageId } })).toBe(1);
+  });
+
   it("names each check's recorder, MotorFix for an automatic one and nobody for one never recorded", async () => {
     const file = await sent();
     const at = new Date();
@@ -686,6 +724,40 @@ describe('the timeline', () => {
 
     expect(timeline.total).toBe(1);
     expect(timeline.entries.map((e) => e.newValue)).toEqual(['in_review']);
+  });
+
+  // @traces 259-FR-006
+  it('carries a refused approval, newest first, and counts it', async () => {
+    const file = await sent();
+    await entry(
+      {
+        field: 'status',
+        newValue: 'in_review',
+        subjectId: file.id,
+        subjectType: 'verification_file',
+      },
+      1,
+    );
+    await entry(
+      {
+        field: 'decision',
+        kind: 'verification_approval_refused',
+        newValue: 'rar_check_required',
+        subjectId: file.id,
+        subjectType: 'verification_file',
+      },
+      2,
+    );
+
+    const { timeline } = await service().read(file.id);
+
+    expect(timeline.total).toBe(2);
+    expect(timeline.entries[0]).toMatchObject({
+      actor: { name: 'Ioana', role: 'admin' },
+      field: 'decision',
+      kind: 'verification_approval_refused',
+      newValue: 'rar_check_required',
+    });
   });
 
   it('keeps the newest 50 and counts them all', async () => {

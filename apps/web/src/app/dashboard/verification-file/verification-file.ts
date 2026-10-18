@@ -51,6 +51,12 @@ import {
 } from '../verification-approve/verification-approve';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
+import {
+  VerificationReject,
+  type VerificationRejectData,
+  type VerificationRejection,
+  type VerificationRejectRefusal,
+} from '../verification-reject/verification-reject';
 import { VerificationReopen } from '../verification-reopen/verification-reopen';
 
 type CheckKind = VerificationFileCheckDto['kind'];
@@ -102,6 +108,15 @@ const STATUS_LINES: Record<string, string | undefined> = {
 const REFUSALS: Record<string, string | undefined> = {
   caen_check_required: 'caenRequired',
   rar_check_required: 'rarCheckRequired',
+};
+// The 422s a rejection answers by asking again, each by the field it marks.
+const REJECTION_REFUSALS: Record<
+  string,
+  VerificationRejectRefusal | undefined
+> = {
+  note_required: 'noteRequired',
+  note_too_short: 'noteTooShort',
+  reason_required: 'reasonRequired',
 };
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into
@@ -173,6 +188,8 @@ export class VerificationFile {
   protected readonly refused = signal<string | null>(null);
   // A decision or a reopening on its way: a second press waits for nothing.
   protected readonly busy = signal(false);
+  // The rejection is the call on its way, so its button carries the spinner.
+  protected readonly rejecting = signal(false);
   // The RAR number's correction field: what is typed, and its refusal.
   protected readonly correcting = signal<string | null>(null);
   protected readonly correctError = signal<string | null>(null);
@@ -443,7 +460,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusPart('approve');
+      this.focus('[data-part="approve"]');
       return;
     }
     const again = await this.sendApproval(answer);
@@ -464,7 +481,7 @@ export class VerificationFile {
         id: this.fileId,
       });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
       return null;
     } catch (error) {
       return await this.approvalFailed(error);
@@ -483,6 +500,62 @@ export class VerificationFile {
     // A named refusal changes nothing; the transition refusal re-reads.
     const told = REFUSALS[code] || code === 'verification_transition_refused';
     if (!told) this.file.reload();
+    return null;
+  }
+
+  // Asks for a reason and a message, then sends them. A 422 on either field
+  // reads the file again and, while it still waits, asks again with what was
+  // written and the field marked; any other failure is told as an approval's.
+  async reject(values: VerificationRejectData = {}) {
+    if (this.asking || this.busy() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<VerificationRejection, VerificationRejectData>(VerificationReject, {
+        data: values,
+        shape: 'dialog',
+        title: 'admin.file.reject.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus('[data-part="reject"]');
+      return;
+    }
+    const refused = await this.sendRejection(answer);
+    if (refused) await this.reject({ ...answer, refused });
+  }
+
+  // Sends the rejection; the field to mark when it must be asked again.
+  private async sendRejection(
+    answer: VerificationRejection,
+  ): Promise<VerificationRejectRefusal | null> {
+    if (this.busy()) return null;
+    this.busy.set(true);
+    this.rejecting.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body: { decision: 'rejected', ...answer },
+        id: this.fileId,
+      });
+      this.file.reload();
+      this.focus('h3');
+      return null;
+    } catch (error) {
+      return await this.rejectionFailed(error);
+    } finally {
+      this.busy.set(false);
+      this.rejecting.set(false);
+    }
+  }
+
+  private async rejectionFailed(error: unknown) {
+    const code = toProblem(error).code ?? '';
+    const refused = REJECTION_REFUSALS[code];
+    if (refused) return (await this.reread()) ? refused : null;
+    this.refusal(error);
+    if (code !== 'verification_transition_refused') this.file.reload();
     return null;
   }
 
@@ -530,7 +603,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusPart(`report-${decision}`);
+      this.focus(`[data-part="report-${decision}"]`);
       return;
     }
     if (this.busy()) return;
@@ -543,7 +616,7 @@ export class VerificationFile {
           id: this.fileId,
         }),
       );
-      this.focusHeading();
+      this.focus('h3');
     } catch (error) {
       this.refusal(error);
       if (toProblem(error).code !== 'verification_transition_refused')
@@ -563,7 +636,7 @@ export class VerificationFile {
       title: 'admin.file.reopen.title',
     });
     if (answer !== true) {
-      this.focusPart('reopen');
+      this.focus('[data-part="reopen"]');
       return;
     }
     if (this.busy()) return;
@@ -572,7 +645,7 @@ export class VerificationFile {
     try {
       await this.api.verificationFileControllerReopen({ id: this.fileId });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
     } catch {
       toast(this.t('reopen.failed'));
     } finally {
@@ -598,17 +671,10 @@ export class VerificationFile {
     }
   }
 
-  private focusHeading() {
+  // Focus moves once the drawer has rendered what changed.
+  private focus(selector: string) {
     setTimeout(() =>
-      this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
-    );
-  }
-
-  private focusPart(part: string) {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>(`[data-part="${part}"]`)
-        ?.focus(),
+      this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
     );
   }
 
@@ -992,19 +1058,11 @@ export class VerificationFile {
     );
   }
 
-  // A change to the file: its RAR number corrected, or its status opened,
-  // decided, reopened (with its reason) or resent.
+  // A change to the file: an approval refused, its RAR number corrected, or
+  // its status opened, decided, reopened (with its reason) or resent.
   private statusLine(entry: AuditEntryDto, name: string, when: string) {
-    if (
-      entry.subjectType === 'verification_file' &&
-      entry.field === 'rar_number'
-    )
-      return this.t('lines.rarNumber', {
-        name,
-        new: String(entry.newValue ?? '—'),
-        old: String(entry.oldValue ?? '—'),
-        when,
-      });
+    const own = this.fileLine(entry, name, when);
+    if (own) return own;
     if (entry.kind === 'verification_reopened')
       return entry.text
         ? this.t('lines.reopenedWhy', { name, reason: entry.text, when })
@@ -1047,6 +1105,35 @@ export class VerificationFile {
       note,
     ].filter(Boolean);
     return parts.length ? parts.join(' — ') : this.t('noReason');
+  }
+
+  // The file's lines that are not a status: a refused approval and a RAR
+  // number correction.
+  private fileLine(entry: AuditEntryDto, name: string, when: string) {
+    if (entry.kind === 'verification_approval_refused')
+      return this.t('lines.approvalRefused', {
+        name,
+        reason: this.refusalReason(String(entry.newValue ?? '')),
+        when,
+      });
+    if (
+      entry.subjectType === 'verification_file' &&
+      entry.field === 'rar_number'
+    )
+      return this.t('lines.rarNumber', {
+        name,
+        new: String(entry.newValue ?? '—'),
+        old: String(entry.oldValue ?? '—'),
+        when,
+      });
+    return null;
+  }
+
+  // A refusal code this drawer has no words for reads as the code itself.
+  private refusalReason(code: string) {
+    const key = `admin.file.refusalReasons.${code}`;
+    const label = this.i18n.t(key);
+    return label === key ? code : label;
   }
 
   private documentName(kind: string) {

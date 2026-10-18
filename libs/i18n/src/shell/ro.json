@@ -24,6 +24,7 @@
     "label": "Perioadă",
     "retry": "Reîncearcă",
     "summary": "{title}, {period}. Cea mai mare valoare: {high}, {highLabel}. Cea mai mică: {low}, {lowLabel}.",
+    "summaryTwo": "{title}, {period}. Cea mai mare valoare: {highLabel}, {leadHeading} {highLead}, {valueHeading} {high}. Cea mai mică: {lowLabel}, {leadHeading} {lowLead}, {valueHeading} {low}.",
     "table": "Vezi ca tabel",
     "value": "Valoare"
   },

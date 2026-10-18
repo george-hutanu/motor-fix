@@ -207,30 +207,42 @@ export async function openPage(page, url) {
 }
 
 // A canvas chart (Chart.js) animates in script, which SHOT_OPTIONS' animations: "disabled" cannot stop:
-// wait, bounded, until no canvas changes between two frames `interval` ms apart. A page with no canvas
+// wait, bounded, until no canvas changes across STABLE_FRAMES frames `interval` ms apart and none is
+// still blank (Chart.js draws its first frame only once the canvas is sized). Three frames, not two:
+// an easing tail can repeat one frame before the bars reach their height. A page with no canvas
 // returns at once; one that cannot be read, or never settles, is shot as it is (false).
 export const CANVAS_SETTLE_MS = 3000;
+const STABLE_FRAMES = 3;
 export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interval = 100 } = {}) {
   const frame = () =>
-    page.evaluate(() =>
-      [...document.querySelectorAll("canvas")]
+    page.evaluate(() => {
+      let blank = false;
+      const sig = [...document.querySelectorAll("canvas")]
         .map((canvas) => {
           try {
-            return canvas.toDataURL();
+            const url = canvas.toDataURL();
+            const empty = document.createElement("canvas");
+            empty.width = canvas.width;
+            empty.height = canvas.height;
+            if (url === empty.toDataURL()) blank = true;
+            return url;
           } catch {
             return "";
           }
         })
-        .join("|"),
-    );
+        .join("|");
+      return { sig, blank };
+    });
   try {
     const deadline = Date.now() + timeout;
     let last = await frame();
-    if (!last) return true;
+    if (!last.sig) return true;
+    let same = 1;
     while (Date.now() < deadline) {
       await page.waitForTimeout(interval);
       const next = await frame();
-      if (next === last) return true;
+      same = next.sig === last.sig && !next.blank ? same + 1 : 1;
+      if (same >= STABLE_FRAMES) return true;
       last = next;
     }
   } catch {}

@@ -2,6 +2,7 @@
  * @jest-environment @stryker-mutator/jest-runner/jest-env/node
  */
 import {
+  Agent,
   createServer,
   get,
   type IncomingMessage,
@@ -193,6 +194,22 @@ describe('web edge', () => {
     expect(res.headers.getSetCookie()).toEqual([
       'mf_refresh=next; Path=/api/v1/auth; HttpOnly',
     ]);
+  });
+
+  it("tells the browser this server's own keep-alive on an API answer, not the API's", async () => {
+    // The API keeps Node's 5 s; this server keeps a time of its own.
+    web.keepAliveTimeout = 9_000;
+    const agent = new Agent({ keepAlive: true });
+
+    const res = await new Promise<IncomingMessage>((resolve) =>
+      get(`${base}/api/v1/me`, { agent }, resolve),
+    );
+    res.resume();
+    agent.destroy();
+
+    expect(res.statusCode).toBe(201);
+    expect(res.headers.connection).toBe('keep-alive');
+    expect(res.headers['keep-alive']).toBe('timeout=9');
   });
 
   it('answers 502 when the API cannot be reached', async () => {

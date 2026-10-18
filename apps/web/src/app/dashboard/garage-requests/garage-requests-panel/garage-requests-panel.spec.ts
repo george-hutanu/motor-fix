@@ -374,9 +374,9 @@ describe('the requests panel with a limit', () => {
 
 // The PR tester measured this panel off the 4 px grid and the type scale.
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-003
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-003
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'garage-requests-panel.css'),
     'utf8',

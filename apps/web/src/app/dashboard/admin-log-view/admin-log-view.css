@@ -1,6 +1,9 @@
+/* Inset as far as the header's gutter at both sides: the search, the filters
+   and the entries start under the title and end under the bell. */
 :host {
   display: block;
   grid-column: 1 / -1;
+  margin-inline: var(--mf-space-4);
   min-width: 0;
 }
 section {

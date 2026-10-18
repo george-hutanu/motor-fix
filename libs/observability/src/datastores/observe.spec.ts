@@ -397,3 +397,230 @@ describe('the PostgreSQL readings left off', () => {
     expect(await unset()).toEqual([]);
   });
 });
+
+const KEYCLOAK = [
+  'jvm_memory_used_bytes{area="heap",id="G1 Eden Space"} 2.0E7',
+  'jvm_memory_used_bytes{area="heap",id="G1 Old Gen"} 6.0E7',
+  'jvm_memory_max_bytes{area="heap",id="G1 Eden Space"} -1.0',
+  'jvm_memory_max_bytes{area="heap",id="G1 Old Gen"} 9.98244352E8',
+].join('\n');
+const KEYCLOAK_FIGURES = [
+  'motorfix_keycloak_heap_used_bytes',
+  'motorfix_keycloak_heap_max_bytes',
+];
+
+const keycloak = (metrics: () => Promise<string> = async () => KEYCLOAK) => ({
+  metrics: jest.fn(metrics),
+});
+
+// @traces 1178-FR-005
+// @traces 1178-FR-006
+// @traces 1178-FR-007
+// @traces 1178-FR-012
+describe('the Keycloak reading', () => {
+  it('reports the heap in use, its maximum and the store as up after a reading', async () => {
+    const store = keycloak();
+    observe({
+      keycloak: store,
+      outbox: outbox(),
+      postgres: postgres(),
+      redis: redis(),
+    });
+    await tick(5);
+
+    expect(store.metrics).toHaveBeenCalledTimes(1);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([
+      { attributes: {}, value: 80_000_000 },
+    ]);
+    expect(await points('motorfix_keycloak_heap_max_bytes')).toEqual([
+      { attributes: {}, value: 998_244_352 },
+    ]);
+    expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(1);
+  });
+
+  it('reads nothing and reports nothing for Keycloak without the store', async () => {
+    observe({ outbox: outbox(), postgres: postgres(), redis: redis() });
+    await tick(50);
+
+    for (const name of KEYCLOAK_FIGURES) {
+      expect(await points(name)).toEqual([]);
+    }
+    expect(
+      await value('motorfix_datastore_up', { store: 'keycloak' }),
+    ).toBeUndefined();
+  });
+
+  it('reports a failed reading as down with no heap figure, and the other stores as usual', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    observe({
+      keycloak: keycloak(async () => {
+        throw new Error('HTTP 503');
+      }),
+      outbox: outbox(),
+      postgres: postgres(),
+      redis: redis(),
+    });
+    await tick(5);
+
+    expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(0);
+    for (const name of KEYCLOAK_FIGURES) {
+      expect(await points(name)).toEqual([]);
+    }
+    expect(await value('motorfix_datastore_up', { store: 'postgres' })).toBe(1);
+    expect(await value('motorfix_datastore_up', { store: 'redis' })).toBe(1);
+    expect(await value('motorfix_redis_memory_used_bytes')).toBe(2048);
+  });
+
+  it('counts a body without the heap series as a failed reading', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    observe({
+      keycloak: keycloak(async () => 'jvm_threads_live_threads 42.0'),
+      outbox: outbox(),
+      redis: redis(),
+    });
+    await tick(5);
+
+    expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(0);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+  });
+
+  it('drops the heap figures read before Keycloak went down, and resumes after', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    let failing = false;
+    observe({
+      keycloak: keycloak(async () => {
+        if (failing) throw new Error('ECONNREFUSED');
+        return KEYCLOAK;
+      }),
+      outbox: outbox(),
+      redis: redis(),
+    });
+    await tick(5);
+    expect(await value('motorfix_keycloak_heap_used_bytes')).toBe(80_000_000);
+
+    failing = true;
+    await tick(40);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+
+    failing = false;
+    await tick(40);
+    expect(await value('motorfix_keycloak_heap_used_bytes')).toBe(80_000_000);
+    expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(1);
+  });
+
+  it('logs one error line per failure streak, naming the store and the reason only', async () => {
+    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    observe({
+      keycloak: keycloak(async () => {
+        throw new Error('HTTP 404');
+      }),
+      outbox: outbox(),
+      redis: redis(),
+    });
+    await tick(70);
+
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).toBe(
+      'datastore metrics: keycloak not read: HTTP 404',
+    );
+  });
+
+  it('counts a reading that has not answered within 5 s as failed', async () => {
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    });
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    observe({
+      intervalMs: 60_000,
+      keycloak: keycloak(() => new Promise(() => undefined)),
+      outbox: outbox(),
+      redis: redis(),
+    });
+
+    await jest.advanceTimersByTimeAsync(4_999);
+    expect(
+      await value('motorfix_datastore_up', { store: 'keycloak' }),
+    ).toBeUndefined();
+    await jest.advanceTimersByTimeAsync(2);
+    expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(0);
+  });
+
+  it('never starts a reading while the previous one is still running', async () => {
+    const store = keycloak(() => new Promise(() => undefined));
+    observe({ keycloak: store, outbox: outbox(), redis: redis() });
+    await tick(80);
+
+    expect(store.metrics).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 1178-FR-007
+describe('the Keycloak reading under hostile answers', () => {
+  const GOOD =
+    'jvm_memory_used_bytes{area="heap",id="a"} 5.0E7\njvm_memory_max_bytes{area="heap",id="a"} 1.0E9\n';
+  const watch = (keycloak: { metrics(): Promise<string> }) =>
+    observe({ keycloak, outbox: outbox(), redis: redis() });
+  const up = (store: string) => value('motorfix_datastore_up', { store });
+
+  it('publishes no heap sample, never zero, when a body has used but only -1 maxima', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({
+      metrics: async () =>
+        'jvm_memory_used_bytes{area="heap"} 5\njvm_memory_max_bytes{area="heap"} -1.0',
+    });
+    await tick(10);
+    expect(await up('keycloak')).toBe(0);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+    expect(await points('motorfix_keycloak_heap_max_bytes')).toEqual([]);
+    expect(await up('redis')).toBe(1);
+  });
+
+  it('keeps no stale heap figure when the next body is bad', async () => {
+    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    let n = 0;
+    watch({ metrics: async () => (n++ === 0 ? GOOD : '<html></html>') });
+    await tick(5);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toHaveLength(1);
+    await tick(60);
+    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+    expect(await up('keycloak')).toBe(0);
+  });
+
+  it('logs a bad body once per streak without the body', async () => {
+    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({ metrics: async () => 'SECRET-BODY-TEXT' });
+    await tick(100);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).not.toContain('SECRET-BODY-TEXT');
+  });
+
+  it('does not log the address when a reader fails with it in the message', async () => {
+    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    watch({
+      metrics: async () => {
+        throw new Error(
+          'failed http://admin:hunter2@keycloak.internal:9000/metrics',
+        );
+      },
+    });
+    await tick(10);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).not.toContain('hunter2');
+  });
+
+  it('never has two Keycloak reads in flight at once', async () => {
+    let inflight = 0;
+    let peak = 0;
+    watch({
+      metrics: async () => {
+        inflight += 1;
+        peak = Math.max(peak, inflight);
+        await tick(50);
+        inflight -= 1;
+        return GOOD;
+      },
+    });
+    await tick(150);
+    expect(peak).toBe(1);
+  });
+});

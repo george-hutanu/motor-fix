@@ -7,6 +7,11 @@ import {
 
 import { figure } from './figure';
 import {
+  KEYCLOAK_LIMIT_MS,
+  type KeycloakReading,
+  parseKeycloakMetrics,
+} from './keycloak';
+import {
   logSlowStatements,
   type MonitorSession,
   type PostgresReading,
@@ -22,12 +27,19 @@ interface DataStores {
   postgres?: MonitorSession;
   redis: { info(): Promise<string> };
   outbox: { oldestPendingSeconds(): Promise<number> };
+  // Keycloak's management /metrics text; absent, the Keycloak reading is off.
+  keycloak?: { metrics(): Promise<string> };
   intervalMs?: number;
 }
 
 const READ_INTERVAL_MS = 60_000;
 const POSTGRES_LIMIT_MS = 5_000;
 const REDIS_LIMIT_MS = 2_000;
+
+// An address in a failure's message may carry credentials; it is logged
+// as a placeholder.
+const redact = (message: string) =>
+  message.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<address>');
 
 const info = (message: string) =>
   console.log(JSON.stringify({ level: 'info', message }));
@@ -41,7 +53,9 @@ function poller<T>(name: string, limitMs: number, read: () => Promise<T>) {
   let stopped = false;
   const failed = (error: Error) => {
     if (state.up !== false) {
-      diag.error(`datastore metrics: ${name} not read: ${error.message}`);
+      diag.error(
+        `datastore metrics: ${name} not read: ${redact(error.message)}`,
+      );
     }
     state.value = undefined;
     state.up = false;
@@ -82,9 +96,9 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
 }
 
-// Reads PostgreSQL (as the monitoring role), Redis and the outbox every
-// 60 s for the data-store figures, and logs the slow statements each
-// reading finds. A store that fails reports motorfix_datastore_up 0 and
+// Reads PostgreSQL (as the monitoring role), Redis, the outbox and, when
+// given, Keycloak's heap every 60 s for the data-store figures, and logs
+// the slow statements each reading finds. A store that fails reports motorfix_datastore_up 0 and
 // none of its figures; the others carry on. Off, with telemetry off.
 // Returns the stop function.
 export function observeDataStores(stores: DataStores): () => void {
@@ -127,6 +141,12 @@ export function observeDataStores(stores: DataStores): () => void {
   const outbox = poller('outbox', POSTGRES_LIMIT_MS, async () =>
     figure(await stores.outbox.oldestPendingSeconds()),
   );
+  const keycloakStore = stores.keycloak;
+  const keycloak =
+    keycloakStore &&
+    poller('keycloak', KEYCLOAK_LIMIT_MS, async () =>
+      parseKeycloakMetrics(await keycloakStore.metrics()),
+    );
 
   const pg = {
     connections: gauge('motorfix_pg_connections', 'Sessions by state'),
@@ -164,6 +184,18 @@ export function observeDataStores(stores: DataStores): () => void {
     'Age of the oldest outbox event not relayed, 0 when none',
     's',
   );
+  const heap = {
+    max: gauge(
+      'motorfix_keycloak_heap_max_bytes',
+      'Keycloak heap maximum, summed over the pools that have one',
+      'By',
+    ),
+    used: gauge(
+      'motorfix_keycloak_heap_used_bytes',
+      'Keycloak heap in use, summed over its pools',
+      'By',
+    ),
+  };
   const up = gauge('motorfix_datastore_up', 'Last reading succeeded, by store');
 
   const observePostgres = (
@@ -197,6 +229,13 @@ export function observeDataStores(stores: DataStores): () => void {
       result.observe(cache.keys, count, { db });
     }
   };
+  const observeKeycloak = (
+    result: BatchObservableResult,
+    r: KeycloakReading,
+  ) => {
+    result.observe(heap.used, r.heapUsedBytes);
+    result.observe(heap.max, r.heapMaxBytes);
+  };
   const observeUp = (
     result: BatchObservableResult,
     store: string,
@@ -207,6 +246,8 @@ export function observeDataStores(stores: DataStores): () => void {
   const callback = (result: BatchObservableResult) => {
     observeUp(result, 'postgres', postgres?.state.up);
     observeUp(result, 'redis', redis.state.up);
+    observeUp(result, 'keycloak', keycloak?.state.up);
+    if (keycloak?.state.value) observeKeycloak(result, keycloak.state.value);
     if (postgres?.state.value) observePostgres(result, postgres.state.value);
     if (redis.state.value) observeRedis(result, redis.state.value);
     if (outbox.state.value !== undefined) {
@@ -217,11 +258,12 @@ export function observeDataStores(stores: DataStores): () => void {
     ...Object.values(pg),
     ...Object.values(cache),
     outboxAge,
+    ...Object.values(heap),
     up,
   ];
   meter.addBatchObservableCallback(callback, observables);
 
-  const pollers = [postgres, redis, outbox].filter(
+  const pollers = [postgres, redis, outbox, keycloak].filter(
     (poll) => poll !== undefined,
   );
   const read = () => {
