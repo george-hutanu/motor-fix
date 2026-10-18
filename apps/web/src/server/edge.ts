@@ -1,4 +1,8 @@
-import { type ClientRequest, request as httpRequest } from 'node:http';
+import {
+  type ClientRequest,
+  request as httpRequest,
+  type IncomingHttpHeaders,
+} from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
 import { logEntry, setRoute } from '@motor-fix/observability';
@@ -8,6 +12,15 @@ import type { Express } from 'express';
 import { reportServerError } from './render-error/render-error';
 
 const READY_TIMEOUT_MS = 2_000;
+
+// Whether a connection stays open, and for how long, is each connection's own:
+// the API's word on its connection to this server is not passed on, so the
+// browser hears this server's (keep-alive/keep-alive.ts).
+const HOP_BY_HOP = new Set(['connection', 'keep-alive']);
+const ownHeaders = (headers: IncomingHttpHeaders) =>
+  Object.fromEntries(
+    Object.entries(headers).filter(([name]) => !HOP_BY_HOP.has(name)),
+  );
 
 // The browser reaches the API on the web app's own address. Answers are piped
 // as they arrive, never buffered, so server-sent events stream through.
@@ -89,7 +102,7 @@ export function mountEdge(app: Express, apiUrl: string) {
           port: api.port,
         },
         (answer) => {
-          res.writeHead(answer.statusCode ?? 502, answer.headers);
+          res.writeHead(answer.statusCode ?? 502, ownHeaders(answer.headers));
           answer.on('close', () => {
             if (!answer.complete && !left && !res.writableFinished) cut();
           });

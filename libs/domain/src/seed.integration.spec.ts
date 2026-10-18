@@ -445,7 +445,7 @@ describe('seed of the listed garages', () => {
     ).toEqual({ businessKind: 'mobile', serviceRadiusKm: 20 });
   });
 
-  // @traces 355-price-list-ranges-FR-015
+  // @traces 355-FR-015
   it("gives Service Auto Militari the mock's price list, a BMW range and the BMW ticks", async () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);

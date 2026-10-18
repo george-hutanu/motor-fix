@@ -23,6 +23,7 @@ import express from 'express';
 import { apiInternalUrl } from './api-url';
 import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
+import { keepAlive, mountKeepAlive } from './server/keep-alive/keep-alive';
 import { mountOriginGuard } from './server/origin-guard/origin-guard';
 import { withPageCache } from './server/page-cache/page-cache';
 import { renderError } from './server/render-error/render-error';
@@ -54,6 +55,9 @@ const angularApp = new AngularNodeAppEngine({
   allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,
 });
 
+// First, so every answer, a refused one too, leaves its connection open past
+// the idle time of the clients and the proxy that reuse it.
+mountKeepAlive(app);
 // Before everything else: once a secret is set, only the CDN gets an answer.
 mountOriginGuard(app, originSecrets());
 mountEdge(app, apiInternalUrl());
@@ -85,7 +89,7 @@ app.use(renderError);
 
 if (isMainModule(import.meta.url)) {
   readEnv(['API_INTERNAL_URL', 'PUBLIC_WEB_URL']);
-  app.listen(Number(process.env['PORT'] ?? 4000));
+  keepAlive(app.listen(Number(process.env['PORT'] ?? 4000)));
 }
 
 // Used by the Angular CLI dev server and at build time.

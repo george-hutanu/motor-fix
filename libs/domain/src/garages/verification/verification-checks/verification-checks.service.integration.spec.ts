@@ -300,7 +300,7 @@ describe('recording a check', () => {
     });
   });
 
-  // @traces 357-public-price-jobs-FR-006
+  // @traces 357-FR-006
   it('drops the public profile when the activities change, since they decide its jobs', async () => {
     const changed = () =>
       prisma.outboxEvent.findMany({

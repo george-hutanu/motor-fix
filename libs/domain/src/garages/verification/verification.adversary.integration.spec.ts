@@ -181,8 +181,26 @@ describe('the system actor and the test switch', () => {
     expect(garage.status).toBe('approved');
   });
 
+  // @traces 259-FR-002
   it('approves a submission at once, and publishes the garage, when the switch is on', async () => {
-    const file = await inTx((tx) => service(true).submit(tx, owner, garageId));
+    await prisma.platformRule.upsert({
+      create: { defaultValue: false, key: 'skip_rar_check', value: true },
+      update: { value: true },
+      where: { key: 'skip_rar_check' },
+    });
+    const automatic = new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: true,
+      testRules: true,
+    });
+
+    const file = await inTx((tx) =>
+      automatic.submit(tx, owner, garageId),
+    ).finally(() =>
+      prisma.platformRule.update({
+        data: { value: false },
+        where: { key: 'skip_rar_check' },
+      }),
+    );
 
     expect(file.status).toBe('approved');
     const garage = await prisma.garage.findUniqueOrThrow({

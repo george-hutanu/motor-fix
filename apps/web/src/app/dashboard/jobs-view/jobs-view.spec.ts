@@ -250,8 +250,8 @@ describe('Lucrări', () => {
 });
 
 describe('type scale on a phone', () => {
-  // @traces 975-type-scale-FR-003
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-003
+  // @traces 975-FR-008
   const stylesheet = readFileSync(join(__dirname, 'jobs-view.css'), 'utf8');
   const at = stylesheet.indexOf('@media (min-width: 768px)');
   const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);

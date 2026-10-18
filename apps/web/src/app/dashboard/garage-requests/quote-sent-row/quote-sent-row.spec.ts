@@ -252,8 +252,8 @@ describe('a row whose quote the driver accepted', () => {
 });
 
 describe('type scale on a phone', () => {
-  // @traces 975-type-scale-FR-003
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-003
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'quote-sent-row.css'),
     'utf8',

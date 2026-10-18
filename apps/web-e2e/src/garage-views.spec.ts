@@ -143,9 +143,14 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage lists no jobs: the price list's empty panel.
+    // The test garage lists no jobs: the price list's empty panel, with the
+    // owner's switch into editing above it.
+    await expect(page.locator('main')).toContainText('Lista de prețuri');
+    await expect(
+      page.locator('main').getByRole('button', { name: 'Modifică prețurile' }),
+    ).toBeVisible();
     await expect(page.locator('main')).toContainText(
-      'Lista de prețuriNu ai încă lucrări în listă.',
+      'Nu ai încă lucrări în listă.',
     );
 
     await page.goto('/app/garage/assistant');

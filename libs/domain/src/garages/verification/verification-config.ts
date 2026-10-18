@@ -1,8 +1,11 @@
 export interface VerificationConfig {
-  // Approve every submission at once, as the system. Test environments only.
+  // Manual approval switched off by the variable, under APP_ENV=test only;
+  // the stored skip_manual_approval rule is the other source of the switch.
+  // Either way a sending is approved at once only when the RAR rule is met.
   skipManualApproval: boolean;
-  // Whether the test-only platform rules (skip_rar_check) are read at all;
-  // false in production, where they never apply. Absent counts as false.
+  // Whether the test-only platform rules (skip_manual_approval,
+  // skip_rar_check) are read at all; false in production, where they never
+  // apply. Absent counts as false.
   testRules?: boolean;
 }
 

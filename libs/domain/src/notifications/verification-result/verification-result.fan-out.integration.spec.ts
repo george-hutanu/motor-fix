@@ -102,7 +102,18 @@ async function start(withRelay = false) {
 }
 
 const verification = (skipManualApproval = false) =>
-  new VerificationService(new AuditService(), outbox, { skipManualApproval });
+  new VerificationService(new AuditService(), outbox, {
+    skipManualApproval,
+    testRules: true,
+  });
+
+// The stored RAR switch; automatic approval waits on the RAR rule (259-FR-001).
+const skipRarCheck = (value: boolean) =>
+  prisma.platformRule.upsert({
+    create: { defaultValue: false, key: 'skip_rar_check', value },
+    update: { value },
+    where: { key: 'skip_rar_check' },
+  });
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
@@ -305,11 +316,17 @@ describe('the approved message each owner gets', () => {
     const { file, owner } = await staffedGarage();
     await prisma.verificationFile.delete({ where: { id: file.id } });
     await start(true);
-
-    await inTx((tx) => verification(true).submit(tx, SYSTEM, file.garageId));
-    // The sending's event, then the decision's.
-    await until('the approval message', () => handled.mock.calls.length >= 2);
-    await Promise.all(handled.mock.results.map((r) => r.value));
+    // A sending is approved at once only when the RAR rule is met: its check
+    // is not run yet, so the test environment's RAR switch is on.
+    await skipRarCheck(true);
+    try {
+      await inTx((tx) => verification(true).submit(tx, SYSTEM, file.garageId));
+      // The sending's event, then the decision's.
+      await until('the approval message', () => handled.mock.calls.length >= 2);
+      await Promise.all(handled.mock.results.map((r) => r.value));
+    } finally {
+      await skipRarCheck(false);
+    }
 
     const email = await emailOf(owner);
     expect(email?.params).toMatchObject({ decision: 'approved' });

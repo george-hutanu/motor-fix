@@ -4,10 +4,14 @@ name: Backup
 # environment's database in the backup bucket, kept 30 days. The database has
 # no public address, so scripts/backup/dump.sh runs inside its PostgreSQL
 # service over `railway ssh` and refuses any service that is not the
-# environment this job names. An environment whose GitHub environment has no
-# RAILWAY_SERVICE_POSTGRES is skipped (production while it is off); one with
-# the service but a missing bucket or passphrase setting fails. A failed run is
-# the backup alert: GitHub e-mails the owner.
+# environment this job names. The production leg exists only while the
+# repository variable PRODUCTION_ENABLED is true (the owner sets it): a leg
+# bound to the production environment would wait for its reviewer before its
+# first step, so while it is off only staging runs, and notes the skip. Inside
+# a leg, an environment whose GitHub environment has no
+# RAILWAY_SERVICE_POSTGRES is skipped; one with the service but a missing
+# bucket or passphrase setting fails. A failed run is the backup alert: GitHub
+# e-mails the owner.
 on:
   schedule:
     - cron: '0 3 * * *'
@@ -24,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [staging, production]
+        environment: ${{ fromJSON(vars.PRODUCTION_ENABLED == 'true' && '["staging","production"]' || '["staging"]') }}
     concurrency:
       group: backup-${{ matrix.environment }}
       cancel-in-progress: false
@@ -46,6 +50,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      - name: Note that production is off
+        if: matrix.environment == 'staging' && vars.PRODUCTION_ENABLED != 'true'
+        run: |
+          echo "::notice title=Production backup skipped::PRODUCTION_ENABLED is not true, so the production leg did not run tonight"
+          echo "Production backup skipped: the repository variable PRODUCTION_ENABLED is not \`true\`." >> "$GITHUB_STEP_SUMMARY"
       - name: Check the settings
         id: settings
         run: node scripts/backup.ts settings >> "$GITHUB_OUTPUT"
