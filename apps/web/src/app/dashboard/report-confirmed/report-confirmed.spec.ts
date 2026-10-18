@@ -60,6 +60,18 @@ afterEach(() => {
   });
 });
 
+// The first open loads the translations and the overlay's panel, which on a
+// busy machine can outlast a test's 5 s: it is paid once here instead.
+beforeAll(async () => {
+  await open('en');
+  TestBed.resetTestingModule();
+  await open();
+  TestBed.resetTestingModule();
+  document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+    n.innerHTML = '';
+  });
+}, 30_000);
+
 describe('confirming the reports', () => {
   it('asks for the required reason the garage will see, and says the garage is suspended', async () => {
     await open();
