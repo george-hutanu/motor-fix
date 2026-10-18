@@ -182,8 +182,9 @@ export class AdminQueue {
         // Where it stands on screen, rows kept earlier included.
         const index = this.rows().findIndex((shown) => shown.id === id);
         this.api.verificationFileControllerRead({ id }).then(
+          // A read with no file is treated as a failed one.
           ({ file }) => {
-            const status = file.status;
+            const status = file?.status;
             if (status !== 'approved' && status !== 'rejected') return;
             this.kept.update((kept) =>
               new Map(kept).set(id, { index, row, status }),

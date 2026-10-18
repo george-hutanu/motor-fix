@@ -33,12 +33,7 @@ const NOTE = 'Autorizația RAR a expirat în septembrie.';
 // the queue row follow without a reload, the garage stays hidden, and the
 // owner's notice carries the reason and the note.
 // @traces 305-FR-002 305-FR-006 305-FR-011
-test.describe('rejecting a garage with a reason @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'seeds a garage and its file in PostgreSQL, which needs DATABASE_URL',
-  );
-
+test.describe('rejecting a garage with a reason @seeded @database', () => {
   let db: Client;
   let garageId: string;
   let fileId: string;

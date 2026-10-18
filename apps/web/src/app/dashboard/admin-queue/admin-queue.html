@@ -24,7 +24,7 @@
                 <span class="name">{{ row.name }}</span>
                 <span class="area">{{ row.area }}</span>
               </span>
-              <span class="state" [class.rejected]="row.decided?.status === 'rejected'">
+              <span class="state">
                 @if (row.decided; as decided) {
                   <span class="outcome" [class]="decided.status">{{ decided.line }}</span>
                 } @else {

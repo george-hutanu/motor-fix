@@ -597,7 +597,9 @@ describe('a file approved while its row is shown', () => {
       ]);
       const kept = rows(el)[1] as HTMLElement;
       expect(text(kept.querySelector('.state'))).toBe(line);
-      expect(kept.querySelector('.state')?.classList).toContain('rejected');
+      expect(kept.querySelector('.state .outcome')?.classList).toContain(
+        'rejected',
+      );
       expect(kept.querySelector('mf-lamp')).toBeNull();
       expect(kept.querySelector('.waiting')).toBeNull();
       expect(kept.querySelector('a.open')?.getAttribute('href')).toBe(
