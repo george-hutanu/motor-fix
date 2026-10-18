@@ -1302,7 +1302,12 @@ describe('a file already decided', () => {
       });
 
       const results = await Promise.allSettled([
-        decideWith(ioana, file.id, { outcome: 'approved' }),
+        // The documents are missing, so the approval carries its note and
+        // loses only to the race.
+        decideWith(ioana, file.id, {
+          note: 'Acte văzute la sediu',
+          outcome: 'approved',
+        }),
         decideWith(dan, file.id, {
           note: 'Lipsește ONRC',
           outcome: 'rejected',
