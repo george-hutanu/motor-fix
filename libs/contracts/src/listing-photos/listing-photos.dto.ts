@@ -17,7 +17,8 @@ export class PhotoUploadRequestDto {
     example: 'yPQ5Jg==',
   })
   @IsString()
-  @Matches(/^[A-Za-z0-9+/]{6}==$/)
+  // Four bytes: five free characters, a sixth whose low four bits are zero.
+  @Matches(/^[A-Za-z0-9+/]{5}[AQgw]==$/)
   checksum!: string;
 }
 

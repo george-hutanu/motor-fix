@@ -159,6 +159,35 @@ describe('the listing draft routes', () => {
     });
   });
 
+  // @traces 1191-FR-006
+  it.each([
+    ['a photo', 'photos/upload-url', 'image/jpeg'],
+    [
+      'a document page',
+      'documents/onrc_certificate/upload-url',
+      'application/pdf',
+    ],
+  ])(
+    'refuses %s address asked without a sound checksum with validation_failed',
+    async (_what, path, contentType) => {
+      const { body: created } = await create().expect(201);
+      const ask = (extra: Record<string, unknown>) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/listing-drafts/${created.id}/${path}`)
+          .set('X-Listing-Token', created.token)
+          .send({ contentType, size: 1024, ...extra });
+
+      for (const extra of [
+        {},
+        { checksum: 'c8f43926' },
+        { checksum: 'yPQ5Jh==' },
+      ]) {
+        const res = await ask(extra).expect(400);
+        expect(res.body).toMatchObject({ code: 'validation_failed' });
+      }
+    },
+  );
+
   it('takes a draft above the default body limit, up to its own', async () => {
     const note = 'x'.repeat(200 * 1024);
 
