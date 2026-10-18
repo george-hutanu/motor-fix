@@ -92,7 +92,7 @@ _From 229-location-or-address._
 
 _From 267-brand-results._
 
-### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
+### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere, except the visible-area box, which stays a latitude and longitude range over the stored coordinates (`contracts/area-sql.md`) (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
 
 _From 271-garage-distance._
 
@@ -338,7 +338,7 @@ _From 271-garage-distance._
 
 _From 271-garage-distance._
 
-### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
+### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere, except the visible-area box, which stays a latitude and longitude range over the stored coordinates (`contracts/area-sql.md`) (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
 
 _From 271-garage-distance._
 
