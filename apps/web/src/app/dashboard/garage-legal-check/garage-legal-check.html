@@ -1,0 +1,8 @@
+@if (!view.gone()) {
+  <mf-legal-check-panel
+    [data]="view.value()"
+    [loading]="view.isLoading()"
+    [failed]="view.error() !== undefined"
+    (retry)="view.reload()"
+  />
+}

@@ -70,6 +70,47 @@
     },
     "stepsDone": "{done} of {total} done"
   },
+  "legal": {
+    "caen": {
+      "checked": "from the company certificate",
+      "detail": "Maintenance and repair of motor vehicles, at the workshop address",
+      "detailMobile": "Maintenance and repair of motor vehicles, at the registered seat",
+      "label": "CAEN code 4520"
+    },
+    "company": {
+      "checked": "checked at sign-up",
+      "detail": "{company} · tax ID checked at ANAF and ONRC",
+      "label": "Active company"
+    },
+    "documents": {
+      "checked": "checked",
+      "checkedOn": "checked on {day}",
+      "detail": "company certificate and RAR authorisation",
+      "label": "Documents",
+      "missing": {
+        "onrc_certificate": "company certificate missing",
+        "rar_authorisation": "RAR authorisation missing"
+      }
+    },
+    "error": "We could not load the check",
+    "notChecked": "not checked",
+    "pill": "Verified profile",
+    "rar": {
+      "checked": "checked",
+      "checkedOn": "checked on {day}",
+      "label": "RAR technical authorisation",
+      "register": "in the RAR register"
+    },
+    "retry": "Try again",
+    "state": {
+      "failed": "problem",
+      "not_run": "not checked",
+      "ok": "in order",
+      "warning": "attention"
+    },
+    "tag": "Verified",
+    "title": "Legal check"
+  },
   "prices": {
     "done": "Done",
     "edit": "Edit",

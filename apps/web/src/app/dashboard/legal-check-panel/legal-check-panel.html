@@ -1,0 +1,32 @@
+<section aria-labelledby="legal-check-title">
+  <header>
+    <h2 id="legal-check-title">{{ 'garage.legal.title' | t }}</h2>
+    @if (data()) {
+      <span class="tag" data-legal-tag><span class="dot" aria-hidden="true"></span>{{ 'garage.legal.tag' | t }}</span>
+    }
+  </header>
+  @if (data()) {
+    <ul class="rows">
+      @for (row of rows(); track row.kind) {
+        <li class="row" [attr.data-legal-row]="row.kind" [attr.data-lamp]="row.lamp">
+          <div class="what">
+            <strong>{{ row.label }}</strong>&ngsp;<span class="muted">{{ row.detail }}</span>
+          </div>&ngsp;
+          <div class="when"><span class="lamp" aria-hidden="true"></span>{{ row.checked }}</div>&ngsp;
+          <strong class="state" data-legal-state>{{ row.state }}</strong>
+        </li>
+      }
+    </ul>
+  } @else if (failed()) {
+    <div class="error" role="alert">
+      <p>{{ 'garage.legal.error' | t }}</p>&ngsp;
+      <button hlmBtn variant="secondary" type="button" (click)="retry.emit()">{{ 'garage.legal.retry' | t }}</button>
+    </div>
+  } @else if (loading()) {
+    <ul class="rows" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li class="skeleton" data-legal-skeleton aria-hidden="true"></li>
+      }
+    </ul>
+  }
+</section>

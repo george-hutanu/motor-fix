@@ -9,3 +9,19 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.verified {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--mf-space-2);
+  min-height: 36px;
+  padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-green);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-green-ink);
+  font-size: var(--mf-size-body);
+  font-weight: 700;
+}
+.verified svg {
+  flex: none;
+}
