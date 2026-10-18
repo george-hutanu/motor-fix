@@ -2,8 +2,6 @@ import { SYSTEM_LOG_RETENTION_DAYS } from '@motor-fix/contracts';
 
 import type { PrismaClient } from '../../generated/prisma/client';
 
-// The nightly purge deletes what is older than the retention.
-
 export async function purgeSystemLog(
   prisma: PrismaClient,
   now: Date,
