@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 137,
+    "count": 139,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1313,6 +1313,19 @@
       ],
       "reason": "a gauge of stored messages whose support e-mail is pending or waiting for SUPPORT_EMAIL, read from PostgreSQL every 60 s; above 0 for an hour fires support-message-unsent",
       "story": "ST-280"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-price-ranges",
+      "source": "libs/domain/src/garages/price-list/price-list.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/prices/:priceId and /api/v1/garages/:garageId/labour",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's in-place change of a job's range and duration and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
+      "story": "ST-173"
     }
   ]
 }

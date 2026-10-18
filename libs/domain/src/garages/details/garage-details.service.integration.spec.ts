@@ -7,7 +7,10 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
-import { afterRace, refused } from '../prices/garage-prices.testing';
+import {
+  afterRace,
+  refused,
+} from '../prices/garage-prices/garage-prices.testing';
 
 const { account, prisma } = fixtures();
 const details = new GarageDetailsService(new AuditService());

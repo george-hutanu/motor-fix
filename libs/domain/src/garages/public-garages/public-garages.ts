@@ -34,7 +34,7 @@ const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
 
 // A profile entry lives ten minutes before it is refreshed.
 const PROFILE_SECONDS = 600;
-const NO_BRAND = '-';
+export const NO_BRAND = '-';
 
 const CONTROL = /\p{Cc}/u;
 const BRAND_MAX = 60;

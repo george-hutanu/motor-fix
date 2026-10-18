@@ -229,10 +229,14 @@ export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerU
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerSetRange$Params as PriceListControllerSetRange$Params } from './fn/garages/price-list-controller-set-range';
+export { priceListControllerSetRange as priceListControllerSetRange } from './fn/garages/price-list-controller-set-range';
 export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';
 export { priceListControllerSetBrandRange as priceListControllerSetBrandRange } from './fn/garages/price-list-controller-set-brand-range';
 export type { PriceListControllerRemoveBrandRange$Params as PriceListControllerRemoveBrandRange$Params } from './fn/garages/price-list-controller-remove-brand-range';
 export { priceListControllerRemoveBrandRange as priceListControllerRemoveBrandRange } from './fn/garages/price-list-controller-remove-brand-range';
+export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Params } from './fn/garages/garage-labour-controller-set';
+export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';

@@ -224,7 +224,7 @@ describe('every write use case in the domain library calls the audit writer', ()
       expect.arrayContaining([
         join('catalogue', 'brand-loader.ts'),
         join('catalogue', 'job-types', 'job-type-loader.ts'),
-        join('garages', 'prices', 'garage-prices.service.ts'),
+        join('garages', 'prices', 'garage-prices', 'garage-prices.service.ts'),
       ]),
     );
   });
