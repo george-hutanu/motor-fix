@@ -22,7 +22,7 @@ const NONE = {
   canRecordFinalPrice: false,
 };
 const SYSTEM = { accountId: null, role: 'system' } as const;
-const REASON = { code: 'documents_unreadable', note: 'Blurred' };
+const REASON = { code: 'documents_unreadable', note: 'Blurred scans.' };
 
 const service = (skipManualApproval = false) =>
   new VerificationService(new AuditService(), outbox, { skipManualApproval });

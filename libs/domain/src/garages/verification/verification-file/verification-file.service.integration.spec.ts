@@ -325,6 +325,44 @@ describe('reading a file', () => {
     expect((await service().read(file.id)).previousRejection).toBeNull();
   });
 
+  // @traces 305-FR-008
+  it('carries the latest rejection of a garage rejected twice, leaving the earlier files as they were', async () => {
+    const first = await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-09-01T09:00:00Z'),
+        decidedBy: ioana,
+        garageId,
+        reasonCode: 'documents',
+        reasonNote: 'Certificatul ONRC lipsește.',
+        status: 'rejected',
+      },
+    });
+    const second = await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-10-02T15:30:00Z'),
+        decidedBy: ioana,
+        garageId,
+        previousFileId: first.id,
+        reasonCode: 'rar',
+        reasonNote: 'Autorizația RAR a expirat.',
+        status: 'rejected',
+      },
+    });
+    const file = await sent({ previousFileId: second.id });
+
+    expect((await service().read(file.id)).previousRejection).toEqual({
+      decidedAt: '2026-10-02T15:30:00.000Z',
+      reasonCode: 'rar',
+      reasonNote: 'Autorizația RAR a expirat.',
+    });
+    expect(
+      await prisma.verificationFile.findUniqueOrThrow({
+        where: { id: second.id },
+      }),
+    ).toMatchObject({ reasonCode: 'rar', status: 'rejected' });
+    expect(await prisma.garage.count({ where: { id: garageId } })).toBe(1);
+  });
+
   it("names each check's recorder, MotorFix for an automatic one and nobody for one never recorded", async () => {
     const file = await sent();
     const at = new Date();

@@ -4,8 +4,10 @@ import {
   checkSummary,
   normaliseRarNumber,
   queueLamp,
+  REJECTION_NOTE_MIN,
   rarNumberRefused,
   VERIFICATION_CHECK_KINDS,
+  VERIFICATION_REASON_CODES,
   VERIFICATION_TARGET_WORKING_DAYS,
   type VerificationQueueAreaDto,
   type VerificationQueueDto,
@@ -19,6 +21,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 import { isUUID } from 'class-validator';
 
 import {
@@ -41,6 +44,7 @@ import type {
 import {
   countApproval,
   countDecisionRefusal,
+  countRejection,
   countReopening,
 } from '../../metrics/product-counters';
 
@@ -299,7 +303,7 @@ export class VerificationService {
     decision: Decision,
   ): Promise<VerificationFile> {
     trust(actor);
-    const { note, reason, requestedItems } = payloadOf(decision);
+    const { note, reason, requestedItems } = this.payload(fileId, decision);
     const approved = decision.outcome === 'approved';
     const before = await this.file(tx, fileId);
     // Suspension and its lifting belong to the suspension story alone.
@@ -337,12 +341,41 @@ export class VerificationService {
       note,
       reason,
     });
-    // A request for more documents is not a verdict.
-    if (decision.outcome !== 'more_requested') countApproval(decision.outcome);
-    this.logger.log(
-      `file ${fileId} ${decision.outcome} by ${actor.accountId ?? 'system'}`,
-    );
+    this.told(fileId, actor, decision.outcome, reason);
     return file;
+  }
+
+  // A decision's count, span attributes and log line. The reason is one of
+  // five codes; the note is the admin's own words and stays out of both.
+  private told(
+    fileId: string,
+    actor: VerificationActor,
+    outcome: Decision['outcome'],
+    reason: string | null,
+  ) {
+    // A request for more documents is not a verdict.
+    if (outcome !== 'more_requested') countApproval(outcome);
+    const rejection = outcome === 'rejected' ? reasonCode(reason) : null;
+    if (rejection) countRejection(rejection);
+    trace.getActiveSpan()?.setAttributes({
+      'verification.decision': outcome,
+      ...(rejection && { 'verification.reason': rejection }),
+    });
+    this.logger.log(
+      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${rejection ? ` (${rejection})` : ''}`,
+    );
+  }
+
+  // The payload's rules, each refusal counted and logged as the gates' are,
+  // before any row is read.
+  private payload(fileId: string, decision: Decision) {
+    try {
+      return payloadOf(decision);
+    } catch (error) {
+      const code = payloadRefusal(error);
+      if (code) this.refuse(fileId, code);
+      throw error;
+    }
   }
 
   // An approval's checks, read once: an admin's must pass the RAR and CAEN
@@ -751,6 +784,13 @@ function payloadOf(decision: Decision) {
   if (outcome !== 'approved' && !text) {
     throw required('note_required', 'This decision needs a note', 'note');
   }
+  if (outcome === 'rejected' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
+    throw required(
+      'note_too_short',
+      `The message to the garage is at least ${REJECTION_NOTE_MIN} characters`,
+      'note',
+    );
+  }
   return {
     note: text,
     reason: reason ?? null,
@@ -767,6 +807,24 @@ function wellFormed({ outcome, reason, requestedItems }: Decision) {
     throw malformed('Only a request for more lists what is missing');
   }
 }
+
+const PAYLOAD_REFUSALS = [
+  'reason_required',
+  'note_required',
+  'note_too_short',
+] as const;
+
+// The payload refusal an error is, if it is one.
+function payloadRefusal(error: unknown) {
+  if (!(error instanceof HttpException)) return null;
+  const { code } = error.getResponse() as { code?: unknown };
+  return PAYLOAD_REFUSALS.find((known) => known === code) ?? null;
+}
+
+// A stored reason as one of the five codes a rejection is counted by; a
+// reason written before the five (as the oldest files hold) is not counted.
+const reasonCode = (reason: string | null) =>
+  VERIFICATION_REASON_CODES.find((code) => code === reason) ?? null;
 
 const malformed = (detail: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', detail);
