@@ -20,7 +20,7 @@ const documented = (dto: abstract new () => object, name: string) =>
     | Documented
     | undefined;
 
-// @traces 271-garage-distance-FR-014
+// @traces 271-FR-014
 describe('PublicGarageQueryDto', () => {
   it('takes a brand and a place in Romania together', () => {
     expect(errors({ brand: 'dacia', near: '46.771,23.624' })).toEqual([]);

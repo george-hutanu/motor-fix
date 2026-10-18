@@ -684,7 +684,7 @@ describe('a tap on the results map', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-004
+// @traces 271-FR-004
 describe('the "you are here" marker on the results map', () => {
   const OTHER = { lat: 46.771, lng: 23.624 };
 

@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 import * as ts from 'typescript';
 
 // @traces 207-FR-005
-// @traces 271-garage-distance-FR-012
+// @traces 271-FR-012
 
 const GARAGE_READS = new Set([
   'count',

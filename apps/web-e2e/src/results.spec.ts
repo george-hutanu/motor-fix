@@ -736,10 +736,10 @@ test.describe('the map beside the results @seeded', () => {
 
 // The seeded Cluj garages, measured from the Cluj test point the browser
 // gives: Service Mărăști stands 1 km from it.
-// @traces 271-garage-distance-FR-001
-// @traces 271-garage-distance-FR-004
-// @traces 271-garage-distance-FR-006
-// @traces 271-garage-distance-FR-008
+// @traces 271-FR-001
+// @traces 271-FR-004
+// @traces 271-FR-006
+// @traces 271-FR-008
 test.describe('Results measured from where the driver is @seeded', () => {
   test.use({
     geolocation: { latitude: 46.7712, longitude: 23.6236 },
@@ -851,8 +851,8 @@ const refuseLocation = (page: Page) =>
     });
   });
 
-// @traces 271-garage-distance-FR-002
-// @traces 271-garage-distance-FR-008
+// @traces 271-FR-002
+// @traces 271-FR-008
 test.describe('Results with the location refused @seeded', () => {
   test('waits on a focused address field, then searches from the address picked', async ({
     page,

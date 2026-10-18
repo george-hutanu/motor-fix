@@ -99,7 +99,7 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'geolocation');
 });
 
-// @traces 271-garage-distance-FR-005
+// @traces 271-FR-005
 describe('the address field under odd typing', () => {
   it('asks nothing for blanks only', async () => {
     await mount();

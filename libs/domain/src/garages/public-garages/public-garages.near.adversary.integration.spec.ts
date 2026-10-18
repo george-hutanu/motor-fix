@@ -98,7 +98,7 @@ const mobile = (at: number) =>
     serviceRadiusKm: 30,
   });
 
-// @traces 271-garage-distance-FR-014
+// @traces 271-FR-014
 describe('the distance on a profile read', () => {
   it('gives a fixed garage one decimal of kilometres', async () => {
     const garage = await fixed(3_240);
@@ -192,7 +192,7 @@ describe('the distance on a profile read', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-014
+// @traces 271-FR-014
 describe('a profile read with a near that cannot be a place in Romania', () => {
   const refused: [string, string][] = [
     ['an empty value', ''],
@@ -279,7 +279,7 @@ describe('a profile read with a near that cannot be a place in Romania', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-014
+// @traces 271-FR-014
 describe('the profile cache beside near', () => {
   const entries = async (slug: string) => {
     const keys = await other.keys(`v1:profile:${slug}:*`);

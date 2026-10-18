@@ -165,7 +165,7 @@ beforeEach(() => {
 });
 
 describe('step 5, the place', () => {
-  // @traces 271-garage-distance-FR-005
+  // @traces 271-FR-005
   it('is the shared address field, wired by the ids of the step', async () => {
     const { step } = await open();
 

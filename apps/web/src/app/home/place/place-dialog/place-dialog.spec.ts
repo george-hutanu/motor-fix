@@ -146,7 +146,7 @@ afterEach(() => {
 });
 
 describe('the place dialog, by location', () => {
-  // @traces 271-garage-distance-FR-005
+  // @traces 271-FR-005
   it('is the shared address field, wired by the ids of the dialog', async () => {
     await open();
 
@@ -341,7 +341,7 @@ describe('the place dialog, by address', () => {
     },
   );
 
-  // @traces 271-garage-distance-FR-005
+  // @traces 271-FR-005
   it('closes an open list with Escape and stays open, then closes on the next', async () => {
     await open();
     await type('Cluj');

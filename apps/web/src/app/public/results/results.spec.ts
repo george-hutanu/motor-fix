@@ -221,6 +221,7 @@ describe('Results', () => {
     beforeEach(() => configure());
 
     // @traces 267-FR-012
+    // @traces 271-FR-017
     it('reads the brand from the address bar and runs one logged search from the place in it', async () => {
       await open('/ro/garages?brand=bmw');
 
@@ -2050,10 +2051,11 @@ const geolocation = {
 };
 const CLUJ = { lat: 46.7712, lng: 23.6236 };
 
-// @traces 271-garage-distance-FR-001
-// @traces 271-garage-distance-FR-003
-// @traces 271-garage-distance-FR-006
-// @traces 271-garage-distance-FR-007
+// @traces 271-FR-001
+// @traces 271-FR-018
+// @traces 271-FR-003
+// @traces 271-FR-006
+// @traces 271-FR-007
 describe('Results measured from where the driver is', () => {
   beforeEach(async () => {
     asks = [];
@@ -2240,8 +2242,8 @@ describe('Results measured from where the driver is', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-002
-// @traces 271-garage-distance-FR-003
+// @traces 271-FR-002
+// @traces 271-FR-003
 describe('Results waiting for an address the driver types', () => {
   beforeEach(async () => {
     asks = [];

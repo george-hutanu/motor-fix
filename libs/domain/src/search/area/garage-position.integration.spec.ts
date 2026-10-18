@@ -21,7 +21,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// @traces 271-garage-distance-FR-009
+// @traces 271-FR-009
 describe("each garage's stored position", () => {
   it('is the point of its latitude and longitude, and empty without them', async () => {
     for (const [n, place] of PLACED.entries()) {

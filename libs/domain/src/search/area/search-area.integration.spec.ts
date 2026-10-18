@@ -331,7 +331,7 @@ const uncached = {
   entry: (_key, read) => read(),
 } satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
 
-// @traces 271-garage-distance-FR-010
+// @traces 271-FR-010
 describe('the plan of a search page', () => {
   it('finds the garages around the place through the position index', async () => {
     const { id: brandId } = await prisma.brand.create({

@@ -320,7 +320,7 @@ const keepPlace = (page: Page, place: { lat: number; lng: number }) =>
 
 // Service Auto Militari sits at 44.435, 26.015; 0.022 degrees north of it
 // is 2.45 km away. The seeded mobile mechanic serves Cluj.
-// @traces 271-garage-distance-FR-014 271-garage-distance-FR-015
+// @traces 271-FR-014 271-garage-distance-FR-015
 test.describe('the profile read from a kept place @seeded', () => {
   test('says how far a fixed garage is, in Romanian and in English', async ({
     page,

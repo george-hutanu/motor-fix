@@ -1310,7 +1310,7 @@ describe('the save button in the profile header', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-015
+// @traces 271-FR-015
 describe('the distance line in the profile header', () => {
   const PLACE = {
     label: 'Militari',

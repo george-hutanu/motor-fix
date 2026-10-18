@@ -9,7 +9,7 @@ const text = (fragment: { text: string }) =>
 const POINT = { lat: 46.771, lng: 23.624 };
 const BBOX = { east: 23.7, north: 46.8, south: 46.7, west: 23.5 };
 
-// @traces 271-garage-distance-FR-010
+// @traces 271-FR-010
 describe('the area SQL under hostile input', () => {
   it('gives every fragment as a Prisma.Sql', () => {
     const sql = areaSql({ point: POINT });

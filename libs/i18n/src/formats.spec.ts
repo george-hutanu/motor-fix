@@ -166,7 +166,7 @@ describe('formatKm', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-006
+// @traces 271-FR-006
 describe('formatDistance', () => {
   it.each([
     [1, '1,0 km', '1.0 km'],

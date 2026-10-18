@@ -206,7 +206,7 @@ describe('the pins of a search around a place', () => {
   );
 });
 
-// @traces 271-garage-distance-FR-011
+// @traces 271-FR-011
 describe('reading the pins of an area', () => {
   it('counts and pins the area by the area itself, never by the ids an earlier read found', async () => {
     const near = await garage({ at: 2000, stance: 'works_on' });

@@ -15,7 +15,7 @@ const AT_POINT = 'ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography';
 const text = (fragment: { text: string }) =>
   fragment.text.replace(/\s+/g, ' ').trim();
 
-// @traces 271-garage-distance-FR-010
+// @traces 271-FR-010
 describe('the area SQL', () => {
   it('measures metres on the sphere from the place to the garage position', () => {
     const { distance } = areaSql({ point: POINT });

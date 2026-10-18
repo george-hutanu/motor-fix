@@ -737,7 +737,7 @@ describe('the radius', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-011
+// @traces 271-FR-011
 describe('reading the area', () => {
   it('counts and pages both groups of the area by the area itself, never by the ids an earlier read found', async () => {
     for (let n = 0; n < 21; n += 1) {

@@ -2081,7 +2081,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"
@@ -2300,7 +2300,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"
@@ -2415,7 +2415,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"
@@ -2498,7 +2498,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"
@@ -2894,7 +2894,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"
@@ -4861,7 +4861,7 @@
             "name": "near",
             "required": false,
             "in": "query",
-            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "description": "The place counts and distances are measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given",
             "schema": {
               "example": "46.771,23.624",
               "type": "string"

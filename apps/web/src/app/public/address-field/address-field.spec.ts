@@ -158,7 +158,7 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'geolocation');
 });
 
-// @traces 271-garage-distance-FR-005
+// @traces 271-FR-005
 describe('the address field', () => {
   it('is a labelled combobox wired to its listbox and its message', async () => {
     await mount();
@@ -177,7 +177,7 @@ describe('the address field', () => {
     ).toBe('listbox');
   });
 
-  // @traces 271-garage-distance-FR-002
+  // @traces 271-FR-002
   it('takes the label it is given, and names its list by it', async () => {
     await mount({ language: 'en' });
     expect(text(root().querySelector('label'))).toBe('Address');
@@ -191,7 +191,7 @@ describe('the address field', () => {
     ).toBe('Enter an address');
   });
 
-  // @traces 271-garage-distance-FR-002
+  // @traces 271-FR-002
   it('takes focus when asked to', async () => {
     await mount({ autofocus: true });
 
@@ -429,7 +429,7 @@ describe('the address field', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-005
+// @traces 271-FR-005
 describe('the address field, by location', () => {
   it('offers no location unless asked to', async () => {
     await mount();

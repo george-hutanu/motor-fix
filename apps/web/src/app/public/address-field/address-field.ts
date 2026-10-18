@@ -112,7 +112,7 @@ export class AddressField {
     });
   }
 
-  focus() {
+  private focus() {
     this.field().nativeElement.focus();
   }
 

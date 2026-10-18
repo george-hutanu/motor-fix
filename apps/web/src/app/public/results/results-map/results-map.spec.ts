@@ -543,7 +543,7 @@ describe('ResultsMap, a tapped pin and its small card', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-004
+// @traces 271-FR-004
 describe('ResultsMap, the "you are here" marker', () => {
   const OTHER = { lat: 46.771, lng: 23.624 };
   const marker = () => open.mock.calls[0]?.[2];

@@ -602,7 +602,7 @@ describe('the saved list under attack', () => {
   });
 });
 
-// @traces 271-garage-distance-FR-011
+// @traces 271-FR-011
 describe('the distances of the saved list', () => {
   it('measures each garage with the shared area distance, to the same tenths of a kilometre', async () => {
     const { auth } = await driver();

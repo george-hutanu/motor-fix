@@ -421,7 +421,7 @@ describe('HomeService.forBrand near a place', () => {
     expect(best).not.toHaveProperty('city');
   });
 
-  // @traces 271-garage-distance-FR-011
+  // @traces 271-FR-011
   it('counts and ranks the area by the area itself, never by the ids an earlier read found', async () => {
     const reads = watchGarageReads(prisma);
     try {

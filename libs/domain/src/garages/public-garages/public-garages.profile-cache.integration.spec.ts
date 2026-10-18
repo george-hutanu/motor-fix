@@ -327,7 +327,7 @@ const placed = (businessKind?: 'mobile') =>
     },
   });
 
-// @traces 271-garage-distance-FR-014
+// @traces 271-FR-014
 describe('the profile read from a place', () => {
   it('adds the distance to a fixed garage, rounded to one decimal', async () => {
     const garage = await placed();

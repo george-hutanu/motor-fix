@@ -184,7 +184,7 @@ describe('GET /quote-requests/garages', () => {
     ]);
   });
 
-  // @traces 271-garage-distance-FR-011
+  // @traces 271-FR-011
   it('chooses the garages in one statement over the area, never by the ids an earlier read found', async () => {
     const { auth, car, oil } = await scene();
     await placed('Ulei Berceni', car.brandId, [44.382, 26.12], {
