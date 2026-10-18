@@ -71,7 +71,10 @@ export { ListingPhotosModule } from './garages/photos/listing-photos/listing-pho
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos/listing-photos.worker';
 export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices/garage-prices.service';
-export { publicGarages } from './garages/public-garages/public-garages';
+export {
+  publicGarages,
+  publicGaragesSql,
+} from './garages/public-garages/public-garages';
 export {
   type Decision,
   type VerificationActor,

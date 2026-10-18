@@ -9,6 +9,7 @@ import {
   type SearchPoint,
 } from '@motor-fix/contracts/search-place';
 
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
 interface InArea {
@@ -86,7 +87,7 @@ export async function garagesInArea(
         service_radius_km,
         ${distanceMetersSql({ lat, lng })} AS distance_m
       FROM garage
-      WHERE status = 'approved' AND latitude IS NOT NULL
+      WHERE ${publicGaragesSql()} AND latitude IS NOT NULL
     ) measured
     WHERE CASE WHEN mobile THEN ${mobileIn} ELSE ${fixedIn} END
     ${limit === undefined ? Prisma.empty : Prisma.sql`ORDER BY distance_m, id LIMIT ${limit}`}
