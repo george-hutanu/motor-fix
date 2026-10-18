@@ -1,5 +1,6 @@
 import {
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  RADIUS_KM,
   ROMANIA_BOUNDS,
 } from '@motor-fix/contracts/place-section';
 import {
@@ -48,6 +49,8 @@ const at = ({ lat, lng }: SearchPoint) =>
 // whatever the radius or box; with a box and no place there is no place to
 // come to, so none is. A fixed garage is in when inside the box, else within
 // the radius of the place. With neither, every garage with a position.
+// No service radius is wider than the largest a mechanic can set, so that
+// bound lets the position index find the mobile mechanics too.
 export function areaSql({
   bbox,
   point,
@@ -62,7 +65,8 @@ export function areaSql({
       ? Prisma.sql`ST_DWithin(garage.position, ${from}, ${radiusKm * 1000}, false)`
       : Prisma.sql`TRUE`;
   const mobileRule = point
-    ? Prisma.sql`${distance} <= COALESCE(garage.service_radius_km, ${MOBILE_SERVICE_RADIUS_DEFAULT_KM}) * 1000`
+    ? Prisma.sql`ST_DWithin(garage.position, ${from}, ${RADIUS_KM.max * 1000}, false)
+        AND ${distance} <= COALESCE(garage.service_radius_km, ${MOBILE_SERVICE_RADIUS_DEFAULT_KM}) * 1000`
     : bbox
       ? Prisma.sql`FALSE`
       : Prisma.sql`TRUE`;
@@ -70,10 +74,14 @@ export function areaSql({
     AND garage.position IS NOT NULL AND ${fixedRule})`;
   const mobileIn = Prisma.sql`(garage.business_kind = 'mobile'
     AND garage.position IS NOT NULL AND ${mobileRule})`;
+  const area = { distance, fixedIn, mobileIn };
   return {
-    distance,
-    fixedIn,
-    mobileIn,
-    where: Prisma.sql`${publicGaragesSql} AND (${fixedIn} OR ${mobileIn})`,
+    ...area,
+    where: Prisma.sql`${publicGaragesSql} AND ${within(area)}`,
   };
 }
+
+// The area's garages, public or not; TRUE with no area, so a read beside the
+// public scope holds every garage, those with no position too.
+export const within = (area?: Pick<AreaSql, 'fixedIn' | 'mobileIn'>) =>
+  area ? Prisma.sql`(${area.fixedIn} OR ${area.mobileIn})` : Prisma.sql`TRUE`;

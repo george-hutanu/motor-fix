@@ -8,6 +8,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { watchGarageReads } from '../area/area.testing';
 import type { GarageSearchCache } from '../garage-search/garage-search.cache';
 import { GarageSearchService } from '../garage-search/garage-search.service';
 import { SearchLogService } from '../search-log/search-log.service';
@@ -203,6 +204,29 @@ describe('the pins of a search around a place', () => {
       expect(await pins.forBrand(dacia, PLACE)).toEqual({ pins: [], total: 0 });
     },
   );
+});
+
+// @traces 271-garage-distance-FR-011
+describe('reading the pins of an area', () => {
+  it('counts and pins the area by the area itself, never by the ids an earlier read found', async () => {
+    const near = await garage({ at: 2000, stance: 'works_on' });
+    const middle = await garage({ at: 9000, stance: 'does_not_take' });
+    await garage({ at: 26_000, stance: 'works_on' });
+
+    const reads = watchGarageReads(prisma);
+    try {
+      const answer = await pins.forBrand(dacia, PLACE, 25);
+
+      expect(ids(answer)).toEqual([near, middle]);
+      expect(answer.total).toBe(2);
+      expect(reads.counted()).toEqual([]);
+      expect(ids(answer)).toEqual(
+        expect.arrayContaining(reads.listed().flat()),
+      );
+    } finally {
+      reads.restore();
+    }
+  });
 });
 
 // @traces 269-FR-004 269-FR-005

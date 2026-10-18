@@ -1,6 +1,9 @@
-import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
+import {
+  MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  RADIUS_KM,
+} from '@motor-fix/contracts/place-section';
 
-import { areaSql, kmOf } from './area-sql';
+import { areaSql, kmOf, within } from './area-sql';
 import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 
 const POINT = { lat: 46.771, lng: 23.624 };
@@ -63,13 +66,24 @@ describe('the area SQL', () => {
 
     expect(text(mobileIn)).toContain("garage.business_kind = 'mobile'");
     expect(text(mobileIn)).toContain(
-      `ST_Distance(garage.position, ${AT_POINT}, false) <= COALESCE(garage.service_radius_km, $3) * 1000`,
+      'ST_Distance(garage.position, ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography, false) <= COALESCE(garage.service_radius_km, $6) * 1000',
     );
     expect(mobileIn.values).toEqual([
       POINT.lng,
       POINT.lat,
+      RADIUS_KM.max * 1000,
+      POINT.lng,
+      POINT.lat,
       MOBILE_SERVICE_RADIUS_DEFAULT_KM,
     ]);
+  });
+
+  it('bounds the mobile mechanics by the widest service radius, so the position index can find them', () => {
+    const { mobileIn } = areaSql({ point: POINT });
+
+    expect(text(mobileIn)).toContain(
+      `ST_DWithin(garage.position, ${AT_POINT}, $3, false) AND ST_Distance(`,
+    );
   });
 
   it('holds no mobile mechanic for a visible area without a place', () => {
@@ -97,6 +111,9 @@ describe('the area SQL', () => {
       25_000,
       POINT.lng,
       POINT.lat,
+      RADIUS_KM.max * 1000,
+      POINT.lng,
+      POINT.lat,
       MOBILE_SERVICE_RADIUS_DEFAULT_KM,
     ]);
   });
@@ -105,6 +122,15 @@ describe('the area SQL', () => {
     const { where } = areaSql({ bbox: BBOX, point: POINT, radiusKm: 50 });
 
     expect(text(where)).not.toMatch(/46\.7|23\.6|50000/);
+  });
+});
+
+describe('the area beside the public scope', () => {
+  it('holds every garage with no area, and the fixed or mobile ones of an area', () => {
+    expect(text(within())).toBe('TRUE');
+    expect(text(within(areaSql({ point: POINT })))).toMatch(
+      /^\(\(garage\.business_kind IS DISTINCT FROM 'mobile'.*\) OR \(garage\.business_kind = 'mobile'.*\)\)$/,
+    );
   });
 });
 

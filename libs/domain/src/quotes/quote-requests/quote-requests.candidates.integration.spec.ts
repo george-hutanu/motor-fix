@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import { Prisma } from '../../generated/prisma/client';
 import { quotesApp } from '../quotes-api.testing';
 
-const { bearer, get, team, world } = quotesApp();
+const { bearer, client, get, team, world } = quotesApp();
 const { prisma } = world;
 
 const BUCHAREST = '44.427,26.103';
@@ -181,6 +182,44 @@ describe('GET /quote-requests/garages', () => {
       'Atelier D',
       'Atelier E',
     ]);
+  });
+
+  // @traces 271-garage-distance-FR-011
+  it('chooses the garages in one statement over the area, never by the ids an earlier read found', async () => {
+    const { auth, car, oil } = await scene();
+    await placed('Ulei Berceni', car.brandId, [44.382, 26.12], {
+      jobTypeIds: [oil.id],
+    });
+    await placed('Fără Ulei', car.brandId, [44.39, 26.12]);
+    await placed('Mecanic Mobil', car.brandId, [44.6, 26.1], {
+      jobTypeIds: [oil.id],
+      mobileKm: 30,
+    });
+    await placed('Service Mărăști', car.brandId, [46.78, 23.62], {
+      jobTypeIds: [oil.id],
+    });
+    const raw = jest.spyOn(client(), '$queryRaw');
+    const listed = jest.spyOn(client().garage, 'findMany');
+    try {
+      const res = await candidates(
+        `carId=${car.id}&near=${BUCHAREST}&jobTypeIds=${oil.id}`,
+        auth,
+      );
+      const statements = raw.mock.calls.map(
+        ([first, ...values]) =>
+          Prisma.sql(first as readonly string[], ...(values as unknown[])).sql,
+      );
+
+      expect(names(res)).toEqual(['Mecanic Mobil', 'Ulei Berceni']);
+      expect(res.body.items[1].distanceKm).toBeGreaterThan(4);
+      expect(listed).not.toHaveBeenCalled();
+      expect(statements).toHaveLength(1);
+      expect(statements[0]).toContain('ST_DWithin(garage.position');
+      expect(statements[0]).toContain('garage_brand_job');
+    } finally {
+      raw.mockRestore();
+      listed.mockRestore();
+    }
   });
 
   it('answers 404 for another driver’s car', async () => {

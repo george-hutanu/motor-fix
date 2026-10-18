@@ -9,8 +9,10 @@ import { SavedGaragesModule } from './saved-garages.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
+import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
@@ -23,6 +25,8 @@ const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 let app: NestExpressApplication;
+// The client the service reads with, to see the statements it runs.
+let client: PrismaClient;
 // The history and the outbox are never emptied: each test reads its own.
 let since: Date;
 let mark: bigint;
@@ -35,6 +39,7 @@ beforeAll(async () => {
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
+  client = moduleRef.get<PrismaClient>(PRISMA, { strict: false });
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,
@@ -594,5 +599,42 @@ describe('the saved list under attack', () => {
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('invalid_cursor');
     }
+  });
+});
+
+// @traces 271-garage-distance-FR-011
+describe('the distances of the saved list', () => {
+  it('measures each garage with the shared area distance, to the same tenths of a kilometre', async () => {
+    const { auth } = await driver();
+    // 3.2 km north of the place on the sphere the distances are measured on.
+    const north = 3200 / ((6_371_008.8 * Math.PI) / 180);
+    const { id } = await prisma.garage.create({
+      data: {
+        latitude: 46.771 + north,
+        longitude: 23.624,
+        name: 'Service Mărăști',
+        slug: `service-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    await save(auth, id);
+    const read = jest.spyOn(client, '$queryRaw');
+
+    const res = await http()
+      .get('/me/saved-garages?near=46.771,23.624')
+      .set('Authorization', auth);
+    const statements = read.mock.calls.map(
+      ([first, ...values]) =>
+        Prisma.sql(first as readonly string[], ...(values as unknown[])).sql,
+    );
+    const list = statements.filter((text) =>
+      text.includes('saved_garage.saved_at'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({ distanceKm: 3.2, garageId: id });
+    expect(list).toHaveLength(1);
+    expect(list[0]).toContain('ST_Distance(garage.position');
+    expect(list[0]).not.toContain('asin(');
   });
 });
