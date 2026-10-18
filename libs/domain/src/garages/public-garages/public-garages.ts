@@ -28,6 +28,7 @@ import {
 // The one scope of every read a visitor or driver can reach: spread into the
 // `where` of a Prisma garage read, or put in the `WHERE` of a raw one under
 // the alias the query gives `garage`. A test fails when such a read skips it.
+// The alias is spliced as written: pass a literal, never a value.
 export const publicGarages = () => ({ status: 'approved' as const });
 export const publicGaragesSql = (alias = 'garage') =>
   Prisma.sql`${Prisma.raw(alias)}.status = 'approved'`;
@@ -51,7 +52,7 @@ type PhotoRow = {
 
 // What the profile's one statement returns; `brands`, `photos` and `prices`
 // are null for a garage not listed, whose row only tells 404 from 410.
-interface ProfileRow {
+type ProfileRow = {
   address: string | null;
   approved_at: Date | null;
   brand_note: string | null;
@@ -84,7 +85,7 @@ interface ProfileRow {
   slug: string;
   status: string;
   verified_at: Date | null;
-}
+};
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
   Object.fromEntries(
