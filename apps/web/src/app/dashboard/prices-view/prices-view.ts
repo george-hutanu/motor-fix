@@ -3,8 +3,10 @@ import {
   Component,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import {
+  type BrandRangeItemDto,
   GaragesService,
   type PriceListItemDto,
   type PublicLabourDto,
@@ -15,9 +17,16 @@ import {
   I18n,
   TranslatePipe,
 } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 import { filter, merge } from 'rxjs';
 
+import {
+  type EditableRow,
+  PriceRangeEditor,
+  type PriceRangeEditorData,
+  type PriceRangeEditorResult,
+} from './price-range-editor/price-range-editor';
 import { liveView } from '../../live/view';
 import { Live } from '../live';
 import { garageOf, Session } from '../session';
@@ -37,7 +46,8 @@ const REASONS: Record<Reason, true> = {
 
 // "Prețuri": every job of the garage's price list in the list's order, with
 // whether drivers see it and why not, its range and its brand ranges, then the
-// hourly labour range. It reads only; the rows open nothing.
+// hourly labour range. The owner turns editing on to change a range in place;
+// a save re-reads the list rather than patching a row.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -50,14 +60,20 @@ export class PricesView {
   private readonly session = inject(Session);
   private readonly live = inject(Live);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
   protected readonly skeletons = [1, 2, 3];
   private readonly garageId = computed(
     () => garageOf(this.session.shown())?.garageId ?? '',
   );
+  // Only the owner changes prices; the server checks it again.
+  protected readonly owner = computed(
+    () => garageOf(this.session.shown())?.role === 'owner',
+  );
+  protected readonly editing = signal(false);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
   // TODO: nothing emits catalogue_job.decided until the admin's catalogue
-  // decision story lands; the hub already routes it to the owner (FR-007).
+  // decision story lands; the hub already routes it to the owner.
   protected readonly view = liveView(
     () => this.api.priceListControllerRead({ garageId: this.garageId() }),
     {
@@ -103,6 +119,59 @@ export class PricesView {
       });
     }
     return formatWholeLeiRange(fromBani, toBani, language);
+  }
+
+  // Only a job with its own row has a range to change: one priced by brand
+  // alone comes without an id.
+  protected editable(row: PriceListItemDto): row is EditableRow {
+    return Boolean(row.priceId && row.updatedAt);
+  }
+
+  protected editRow(row: EditableRow) {
+    void this.edit(
+      { garageId: this.garageId(), item: row, kind: 'row' },
+      this.name(row),
+    );
+  }
+
+  protected editBrand(row: PriceListItemDto, brand: BrandRangeItemDto) {
+    void this.edit(
+      {
+        brand,
+        garageId: this.garageId(),
+        jobTypeId: row.jobTypeId,
+        kind: 'brand',
+      },
+      `${this.name(row)} · ${brand.name}`,
+    );
+  }
+
+  protected editLabour(labour: PublicLabourDto | undefined) {
+    void this.edit(
+      {
+        garageId: this.garageId(),
+        kind: 'labour',
+        ...(labour && { labour }),
+      },
+      'garage.prices.labourTitle',
+    );
+  }
+
+  // One editor at a time: a second press while one opens is ignored.
+  private opened = false;
+
+  private async edit(data: PriceRangeEditorData, title: string) {
+    if (this.opened) return;
+    this.opened = true;
+    try {
+      const result = await this.overlays.open<
+        PriceRangeEditorResult,
+        PriceRangeEditorData
+      >(PriceRangeEditor, { data, shape: 'dialog', title });
+      if (result === 'saved') this.view.reload();
+    } finally {
+      this.opened = false;
+    }
   }
 
   protected labour({ fromBani, toBani }: PublicLabourDto) {
