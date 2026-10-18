@@ -780,7 +780,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
+      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, note_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
     },
     {

@@ -60,8 +60,33 @@ beforeEach(async () => {
 
 afterAll(() => prisma.$disconnect());
 
+// Every check ok and both legal documents held, so an admin's approval needs
+// no note.
 const submitted = () =>
-  prisma.verificationFile.create({ data: { garageId, status: 'submitted' } });
+  prisma.verificationFile.create({
+    data: {
+      checks: {
+        create: [
+          'company',
+          'caen',
+          'rar',
+          'activities',
+          'representative',
+          'address',
+          'photos',
+          'documents',
+        ].map((kind) => ({ kind: kind as never, result: 'ok' as const })),
+      },
+      documents: {
+        create: ['onrc_certificate', 'rar_authorisation'].map((kind) => ({
+          kind,
+          pages: [`${kind}/1.pdf`],
+        })),
+      },
+      garageId,
+      status: 'submitted',
+    },
+  });
 
 describe('trust and unknown ids', () => {
   it('answers 404 when a garage member opens a file', async () => {

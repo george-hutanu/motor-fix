@@ -40,10 +40,9 @@
               <button
                 type="button"
                 [attr.aria-pressed]="on"
-                [attr.aria-label]="brand.name + ', ' + (fuelKey(fuel) | t)"
                 (click)="tickFuel(brand.id, fuel)"
               >
-                {{ fuelKey(fuel) | t }}
+                <span class="sr-only">{{ brand.name }}, </span>{{ fuelKey(fuel) | t }}
                 @if (on) {
                   <mf-lamp state="green" [label]="'public.listing.brands.fuel.ticked' | t" />
                 }
@@ -85,7 +84,7 @@
   }
 </ul>
 <p aria-live="polite">{{ counter() }}</p>
-<p class="error" id="listing-brands-error" role="status" aria-live="polite">{{ brandsError() ? (brandsError()! | t) : '' }}</p>
+<p class="error mf-message" id="listing-brands-error" role="status" aria-live="polite">{{ brandsError() ? (brandsError()! | t) : '' }}</p>
 <label hlmLabel class="field">
   {{ 'public.listing.brands.note' | t }}
   <input hlmInput name="brandNote" autocomplete="off" [value]="value().brandNote ?? ''" (input)="write(note, input($event))" />

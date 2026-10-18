@@ -179,3 +179,21 @@ describe('the public frame around the consent bar', () => {
     expect(css).toMatch(/:host\(\.no-tab-bar\)\s*\{\s*--tab-bar: 0px/);
   });
 });
+
+// @traces 248-FR-011
+describe('the contact link', () => {
+  it.each([
+    ['/ro', 'ro'],
+    ['/ro/garages/service-auto-militari', 'ro'],
+    ['/en/list-your-garage', 'en'],
+  ] as const)('stays in the footer on %s', async (address, language) => {
+    await open(address, language);
+    const footer = (harness.fixture.nativeElement as HTMLElement).querySelector(
+      'mf-public-frame > mf-public-footer',
+    );
+
+    expect(
+      footer?.querySelector(`a[href="/${language}/contact"]`),
+    ).not.toBeNull();
+  });
+});

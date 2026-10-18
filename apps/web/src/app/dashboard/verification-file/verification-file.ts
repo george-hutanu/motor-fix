@@ -1,4 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,12 @@ import {
   signal,
 } from '@angular/core';
 import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
-import { lamp } from '@motor-fix/contracts/verification-target';
+import {
+  type ApprovalGap,
+  approvalGaps,
+  approvalGapsFrom,
+  lamp,
+} from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
   type AuditEntryDto,
@@ -33,6 +39,10 @@ import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
+import {
+  VerificationApprove,
+  type VerificationApproveData,
+} from '../verification-approve/verification-approve';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
 import { VerificationReopen } from '../verification-reopen/verification-reopen';
@@ -175,6 +185,9 @@ export class VerificationFile {
           : garage.address,
       brands: garage.brands.join(', '),
       cui: garage.cui ? this.t('cui', { cui: garage.cui }) : null,
+      cuiShared: garage.cuiAlsoUsedBy.length
+        ? this.t('cuiShared', { names: garage.cuiAlsoUsedBy.join(', ') })
+        : null,
       kind: garage.businessKind ? this.t(`kinds.${garage.businessKind}`) : null,
       name: garage.name,
       phone: garage.phone,
@@ -247,10 +260,14 @@ export class VerificationFile {
     (this.data()?.activities ?? []).map((a) => a.code),
   );
 
-  // The footer's reminder while the file waits on a RAR check not yet OK.
-  protected readonly rarRequired = computed(
-    () => !this.decided() && this.result('rar') !== 'ok',
-  );
+  // Why the approve button is held: the RAR check first, then CAEN; none
+  // once both are ok or the file is decided.
+  protected readonly gateHint = computed(() => {
+    if (this.decided()) return null;
+    if (this.result('rar') !== 'ok') return this.t('footer.rarRequired');
+    if (this.result('caen') !== 'ok') return this.t('footer.caenHint');
+    return null;
+  });
 
   // What the register form needs to know about the garage and its file.
   protected readonly formFacts = computed(() => {
@@ -372,6 +389,95 @@ export class VerificationFile {
     }
   }
 
+  // Asks first, listing what the approval passes over; the note it needs is
+  // the dialog's to ask for. A note_required answer (a check changed since
+  // the read) reads the file again and asks again with the server's missing
+  // list (the re-read's own when the answer carries none); any other failure
+  // is told and read again, so a decision that committed before the failure
+  // is shown and never offered twice.
+  // Held while the dialog is open, so a second press opens no second one.
+  private asking = false;
+
+  async approve(missing?: ApprovalGap[]) {
+    if (this.asking || this.busy() || this.gateHint() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<{ note?: string }, VerificationApproveData>(VerificationApprove, {
+        data: { missing: missing ?? this.gaps() },
+        shape: 'dialog',
+        title: 'admin.file.approve.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focusApprove();
+      return;
+    }
+    const again = await this.sendApproval(answer);
+    if (again) await this.approve(again.missing ?? undefined);
+  }
+
+  // Sends the approval; the server's missing list (none when it sent no
+  // readable one) when it must be asked for again, else null.
+  private async sendApproval(answer: {
+    note?: string;
+  }): Promise<{ missing: ApprovalGap[] | null } | null> {
+    if (this.busy()) return null;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body: { decision: 'approved', ...answer },
+        id: this.fileId,
+      });
+      this.file.reload();
+      this.focusHeading();
+      return null;
+    } catch (error) {
+      return await this.approvalFailed(error);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private async approvalFailed(error: unknown) {
+    const code = toProblem(error).code ?? '';
+    if (code === 'note_required') {
+      const missing = serverMissing(error);
+      return (await this.reread()) ? { missing } : null;
+    }
+    this.refusal(error);
+    // A named refusal changes nothing; the transition refusal re-reads.
+    const told = REFUSALS[code] || code === 'verification_transition_refused';
+    if (!told) this.file.reload();
+    return null;
+  }
+
+  // The file read again in place; true when it still waits for a decision.
+  private async reread() {
+    try {
+      this.data.set(
+        await this.api.verificationFileControllerRead({ id: this.fileId }),
+      );
+      return !this.decided();
+    } catch {
+      toast(this.t('footer.saveFailed'));
+      this.file.reload();
+      return false;
+    }
+  }
+
+  // What an approval passes over, from the file as last read.
+  private gaps() {
+    return approvalGaps(
+      this.checks(),
+      (this.data()?.documents ?? [])
+        .filter((doc) => doc.present)
+        .map((doc) => doc.kind),
+    );
+  }
+
   // Asks first; a decision that is reopened stays shown until the next one.
   // The button is disabled only while the call is out, so a cancelled
   // confirmation can hand focus back to it.
@@ -420,6 +526,14 @@ export class VerificationFile {
   private focusHeading() {
     setTimeout(() =>
       this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
+    );
+  }
+
+  private focusApprove() {
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>('[data-part="approve"]')
+        ?.focus(),
     );
   }
 
@@ -855,4 +969,15 @@ export class VerificationFile {
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
+}
+
+// The note_required refusal's own list of what the approval passes over;
+// none when the answer carries no readable list or an empty one (the server
+// refuses only an approval that passes something over).
+function serverMissing(error: unknown) {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  const gaps = approvalGapsFrom(
+    (body as { missing?: unknown } | null)?.missing,
+  );
+  return gaps?.length ? gaps : null;
 }

@@ -1,6 +1,14 @@
 // The admins' verification queue rules, free of decorators for the web app.
 
-import type { Lamp, VerificationCheckResult } from './verification-checks';
+import {
+  DOCUMENT_KINDS,
+  type DocumentKind,
+} from './legal-documents/legal-documents';
+import type {
+  Lamp,
+  VerificationCheckKind,
+  VerificationCheckResult,
+} from './verification-checks';
 
 // The target shown to garages is 1 to 2 working days: a file that has
 // waited longer is flagged in the admins' queue.
@@ -9,6 +17,9 @@ export const VERIFICATION_QUEUE_PAGE = 20;
 export const VERIFICATION_QUEUE_PANEL = 5;
 // The most rows one read answers; the view reads more in several reads.
 export const VERIFICATION_QUEUE_MAX = 200;
+
+// The most characters a decision's note holds, counted in code points.
+export const VERIFICATION_NOTE_MAX = 1000;
 
 // The most characters a check's detail holds.
 export const CHECK_DETAIL_MAX = 200;
@@ -53,4 +64,71 @@ export function uncoveredJobs<T extends { rarActivity: string | null }>(
   activities: readonly string[],
 ): T[] {
   return jobs.filter((job) => !coversJob(job.rarActivity, activities));
+}
+
+// The guide checks an approval may pass over with a note, in the drawer's
+// order; rar and caen are gates and never pass over.
+const GUIDE_KINDS = [
+  'company',
+  'activities',
+  'representative',
+  'address',
+  'photos',
+  'documents',
+] as const satisfies readonly VerificationCheckKind[];
+
+export type ApprovalGap =
+  | {
+      kind: (typeof GUIDE_KINDS)[number];
+      result: Exclude<VerificationCheckResult, 'ok'>;
+    }
+  | { document: DocumentKind };
+
+// What an approval passes over: each guide check not ok (a check the file has
+// no row for counts as not run), then each legal document the file lacks.
+export function approvalGaps(
+  checks: readonly { kind: string; result: VerificationCheckResult }[],
+  documentKinds: readonly string[],
+): ApprovalGap[] {
+  const result = (kind: string) =>
+    checks.find((check) => check.kind === kind)?.result ?? 'not_run';
+  return [
+    ...GUIDE_KINDS.flatMap((kind) => {
+      const found = result(kind);
+      return found === 'ok' ? [] : [{ kind, result: found }];
+    }),
+    ...DOCUMENT_KINDS.filter((kind) => !documentKinds.includes(kind)).map(
+      (document) => ({ document }),
+    ),
+  ];
+}
+
+const GAP_RESULTS = [
+  'not_run',
+  'warning',
+  'failed',
+] as const satisfies readonly Exclude<VerificationCheckResult, 'ok'>[];
+
+// A list of what an approval passes over as the server sent it (the
+// note_required refusal's `missing`): the list when every line is one
+// approvalGaps could have made, else none.
+export function approvalGapsFrom(value: unknown): ApprovalGap[] | null {
+  if (!Array.isArray(value)) return null;
+  const gaps: ApprovalGap[] = [];
+  for (const line of value as unknown[]) {
+    const gap = gapFrom(line);
+    if (!gap) return null;
+    gaps.push(gap);
+  }
+  return gaps;
+}
+
+function gapFrom(line: unknown): ApprovalGap | null {
+  if (typeof line !== 'object' || line === null) return null;
+  const { document, kind, result } = line as Record<string, unknown>;
+  const missingDocument = DOCUMENT_KINDS.find((known) => known === document);
+  if (missingDocument) return { document: missingDocument };
+  const guide = GUIDE_KINDS.find((known) => known === kind);
+  const notOk = GAP_RESULTS.find((known) => known === result);
+  return guide && notOk ? { kind: guide, result: notOk } : null;
 }

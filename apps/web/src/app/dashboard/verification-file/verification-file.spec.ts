@@ -139,6 +139,7 @@ function fileOf(
       brands: ['Dacia', 'Renault'],
       businessKind: 'company',
       cui: '12345678',
+      cuiAlsoUsedBy: [],
       id: 'garage-1',
       name: 'Atelier Dinamo',
       phone: '+40722111222',
@@ -1703,9 +1704,7 @@ describe('deciding', () => {
 
       const footer = section(host, 'footer');
       expect(text(alertIn(host))).toBe(refusal);
-      expect(text(footer?.querySelector('[data-part="rar-required"]'))).toBe(
-        note,
-      );
+      expect(text(footer?.querySelector('[data-part="gate-hint"]'))).toBe(note);
       expect(text(footer).split(refusal)).toHaveLength(2);
     },
   );
@@ -2299,5 +2298,410 @@ describe('the RAR and activities rows', () => {
     expect(text(section(host, 'history'))).toContain(
       'Număr RAR: — → CJ 221/2021 — Ioana',
     );
+  });
+});
+
+// @traces 303-FR-001 303-FR-012
+describe('the approve button', () => {
+  const approveButton = (host: HTMLElement) =>
+    [...(section(host, 'footer')?.querySelectorAll('button') ?? [])].find((b) =>
+      ['Aprobă și publică', 'Approve and publish'].includes(text(b)),
+    ) as HTMLButtonElement;
+  const hint = (host: HTMLElement) =>
+    section(host, 'footer')?.querySelector<HTMLElement>(
+      '[data-part="gate-hint"]',
+    ) ?? null;
+  const withChecks = (rar: string, caen: string) =>
+    fileOf({
+      checks: KINDS.map((kind) =>
+        check(kind, {
+          result: (kind === 'rar'
+            ? rar
+            : kind === 'caen'
+              ? caen
+              : 'ok') as VerificationFileCheckDto['result'],
+        }),
+      ),
+    });
+
+  it.each([
+    ['ro', 'Verificarea RAR e obligatorie'],
+    ['en', 'The RAR check is required'],
+  ] as const)(
+    'is disabled while the rar check is not ok, described by the RAR hint in %s',
+    async (language, line) => {
+      const host = await open(withChecks('not_run', 'ok'), language);
+
+      const button = approveButton(host);
+      expect(button.disabled).toBe(true);
+      expect(text(hint(host))).toBe(line);
+      expect(button.getAttribute('aria-describedby')).toBe(hint(host)?.id);
+      expect(hint(host)?.id).toBeTruthy();
+    },
+  );
+
+  it.each([
+    ['ro', 'Verificarea CAEN 4520 e obligatorie'],
+    ['en', 'The CAEN 4520 check is required'],
+  ] as const)(
+    'turns to the CAEN hint in %s once rar is ok and caen is not',
+    async (language, line) => {
+      const host = await open(withChecks('ok', 'warning'), language);
+
+      expect(approveButton(host).disabled).toBe(true);
+      expect(text(hint(host))).toBe(line);
+    },
+  );
+
+  it('names the RAR hint first when both are not ok', async () => {
+    const host = await open(withChecks('failed', 'failed'));
+
+    expect(text(hint(host))).toBe('Verificarea RAR e obligatorie');
+  });
+
+  it('is enabled with no hint when both are ok; the other two stay disabled', async () => {
+    const host = await open(withChecks('ok', 'ok'));
+
+    const button = approveButton(host);
+    expect(button.disabled).toBe(false);
+    expect(button.hasAttribute('aria-describedby')).toBe(false);
+    expect(hint(host)).toBeNull();
+    const others = [
+      ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
+    ].filter((b) => b !== button);
+    expect(others.map((b) => [text(b), b.disabled])).toEqual([
+      ['Cere completări', true],
+      ['Respinge', true],
+    ]);
+  });
+
+  it('shows no hint on a decided file', async () => {
+    const host = await open(rejected());
+
+    expect(hint(host)).toBeNull();
+  });
+});
+
+// @traces 303-FR-002 303-FR-009 303-FR-012
+describe('approving', () => {
+  const allOk = (extra: Parameters<typeof fileOf>[0] = {}) =>
+    fileOf({
+      checks: KINDS.map((kind) => check(kind, { result: 'ok' })),
+      ...extra,
+    });
+  const approved = () =>
+    allOk({
+      file: { decidedAt: DECIDED_AT, decidedBy: ioana, status: 'approved' },
+    });
+  const approveButton = (host: HTMLElement) =>
+    [...(section(host, 'footer')?.querySelectorAll('button') ?? [])].find(
+      (b) => text(b) === 'Aprobă și publică',
+    ) as HTMLButtonElement;
+  const noteRequired = () =>
+    new HttpErrorResponse({
+      error: {
+        code: 'note_required',
+        errors: [{ code: 'required', field: 'note' }],
+        missing: [{ kind: 'photos', result: 'failed' }],
+      },
+      status: 422,
+    });
+
+  it('opens the approval dialog with nothing listed when every check is ok', async () => {
+    const host = await open(allOk());
+    overlays.open.mockResolvedValue('cancelled');
+
+    approveButton(host).click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: { missing: [] },
+        shape: 'dialog',
+        title: 'admin.file.approve.title',
+      }),
+    );
+  });
+
+  it('lists the checks not ok and the documents missing', async () => {
+    const host = await open(
+      allOk({
+        checks: KINDS.map((kind) =>
+          check(kind, { result: kind === 'photos' ? 'warning' : 'ok' }),
+        ),
+        documents: [
+          {
+            id: 'doc-onrc',
+            issuedOn: daysAgo(6),
+            kind: 'onrc_certificate',
+            pages: 2,
+            present: true,
+            stale: false,
+          },
+          {
+            id: null,
+            issuedOn: null,
+            kind: 'rar_authorisation',
+            pages: 0,
+            present: false,
+            stale: null,
+          },
+        ] as VerificationFileDto['documents'],
+      }),
+    );
+    overlays.open.mockResolvedValue('cancelled');
+
+    approveButton(host).click();
+    await settle();
+
+    expect(overlays.open.mock.calls[0]?.[1]?.data).toEqual({
+      missing: [
+        { kind: 'photos', result: 'warning' },
+        { document: 'rar_authorisation' },
+      ],
+    });
+  });
+
+  it.each([
+    ['with the note', { note: 'Verificat la telefon' }],
+    ['with no note', {}],
+  ])(
+    'sends the approval %s, shows it, and moves focus to the title',
+    async (_, closed) => {
+      const host = await open(allOk());
+      overlays.open.mockResolvedValue(closed);
+      api.verificationFileControllerDecision.mockImplementation(async () => {
+        answer = async () => approved();
+        return approved();
+      });
+
+      approveButton(host).click();
+      await settle();
+
+      expect(api.verificationFileControllerDecision).toHaveBeenCalledWith({
+        body: { decision: 'approved', ...closed },
+        id: FILE,
+      });
+      expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
+      expect(document.activeElement).toBe(host.querySelector('h3'));
+    },
+  );
+
+  it('sends nothing on a cancel and hands focus back to the button', async () => {
+    const host = await open(allOk());
+    overlays.open.mockResolvedValue('cancelled');
+
+    approveButton(host).click();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(approveButton(host));
+  });
+
+  it('shows a spinner on the button while the call is on its way, every decision disabled', async () => {
+    const host = await open(allOk());
+    overlays.open.mockResolvedValue({});
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerDecision.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    approveButton(host).click();
+    await settle();
+
+    const button = approveButton(host);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.querySelector('[data-part="spinner"]')).not.toBeNull();
+    expect(
+      [...(section(host, 'footer')?.querySelectorAll('button') ?? [])].every(
+        (b) => b.disabled,
+      ),
+    ).toBe(true);
+    approveButton(host).click();
+    await settle();
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    settleCall(approved());
+    await settle();
+  });
+
+  it('says the decision could not be saved and reads the file again on any other failure', async () => {
+    const host = await open(allOk());
+    overlays.open.mockResolvedValue({});
+    api.verificationFileControllerDecision.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    const reads = api.verificationFileControllerRead.mock.calls.length;
+
+    approveButton(host).click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut salva decizia');
+    expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+      reads + 1,
+    );
+    expect(approveButton(host).disabled).toBe(false);
+  });
+
+  it('shows a decision that committed before the failure, never offering it again', async () => {
+    const host = await open(allOk());
+    overlays.open.mockResolvedValue({});
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => approved();
+      throw new HttpErrorResponse({ status: 0 });
+    });
+
+    approveButton(host).click();
+    await settle();
+
+    expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
+    expect(approveButton(host)).toBeUndefined();
+  });
+
+  it('reads the file again on note_required and asks again, the note now required', async () => {
+    const host = await open(allOk());
+    const stale = allOk({
+      checks: KINDS.map((kind) =>
+        check(kind, { result: kind === 'photos' ? 'failed' : 'ok' }),
+      ),
+    });
+    overlays.open
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ note: 'Poze vechi, atelierul e același' });
+    api.verificationFileControllerDecision
+      .mockImplementationOnce(async () => {
+        answer = async () => stale;
+        throw noteRequired();
+      })
+      .mockImplementationOnce(async () => {
+        answer = async () => approved();
+        return approved();
+      });
+
+    approveButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(2);
+    expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
+      missing: [{ kind: 'photos', result: 'failed' }],
+    });
+    expect(api.verificationFileControllerDecision).toHaveBeenLastCalledWith({
+      body: { decision: 'approved', note: 'Poze vechi, atelierul e același' },
+      id: FILE,
+    });
+    expect(toast).not.toHaveBeenCalled();
+    expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
+  });
+  it("asks again with the server's missing list, not one rebuilt from the re-read", async () => {
+    const host = await open(allOk());
+    overlays.open
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ note: 'Actele vin luni' });
+    const missing = [
+      { kind: 'address', result: 'warning' },
+      { document: 'onrc_certificate' },
+    ];
+    api.verificationFileControllerDecision
+      .mockImplementationOnce(async () => {
+        // The re-read shows every check ok: only the server's list names the gaps.
+        answer = async () => allOk();
+        throw new HttpErrorResponse({
+          error: { code: 'note_required', missing },
+          status: 422,
+        });
+      })
+      .mockImplementationOnce(async () => {
+        answer = async () => approved();
+        return approved();
+      });
+
+    approveButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(2);
+    expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({ missing });
+    expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
+  });
+
+  it.each([
+    ['a line it cannot read', [{ kind: 'rar' }]],
+    ['an empty list', []],
+    ['no list', undefined],
+  ])('falls back to the re-read when the 422 carries %s', async (_, sent) => {
+    const host = await open(allOk());
+    const stale = allOk({
+      checks: KINDS.map((kind) =>
+        check(kind, { result: kind === 'photos' ? 'warning' : 'ok' }),
+      ),
+    });
+    overlays.open.mockResolvedValueOnce({}).mockResolvedValueOnce('cancelled');
+    api.verificationFileControllerDecision.mockImplementationOnce(async () => {
+      answer = async () => stale;
+      throw new HttpErrorResponse({
+        error: { code: 'note_required', missing: sent },
+        status: 422,
+      });
+    });
+
+    approveButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
+      missing: [{ kind: 'photos', result: 'warning' }],
+    });
+  });
+});
+
+// @traces 303-FR-007 303-FR-012
+describe('a CUI held by another garage', () => {
+  const shared = (host: HTMLElement) =>
+    section(host, 'header')?.querySelector<HTMLElement>(
+      '[data-part="cui-shared"]',
+    ) ?? null;
+  const withShared = (names: string[]) =>
+    fileOf({
+      checks: KINDS.map((kind) => check(kind, { result: 'ok' })),
+      garage: { cuiAlsoUsedBy: names } as Partial<
+        VerificationFileDto['garage']
+      >,
+    });
+
+  it.each([
+    ['ro', ['Service Dobre'], 'CUI folosit și de alt service: Service Dobre'],
+    [
+      'ro',
+      ['Auto Ion', 'Service Dobre'],
+      'CUI folosit și de alt service: Auto Ion, Service Dobre',
+    ],
+    ['en', ['Service Dobre'], 'CUI also used by another garage: Service Dobre'],
+  ] as const)(
+    'is named in the header in %s, as a fact with no alert: %j',
+    async (language, names, line) => {
+      const host = await open(withShared([...names]), language);
+
+      const el = shared(host);
+      expect(text(el)).toBe(line);
+      expect(el?.hasAttribute('role')).toBe(false);
+    },
+  );
+
+  it('shows nothing when no other garage holds it', async () => {
+    const host = await open(withShared([]));
+
+    expect(shared(host)).toBeNull();
+  });
+
+  it('leaves the approve button as it was', async () => {
+    const host = await open(withShared(['Service Dobre']));
+
+    const button = [
+      ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
+    ].find((b) => text(b) === 'Aprobă și publică');
+    expect(button?.disabled).toBe(false);
   });
 });

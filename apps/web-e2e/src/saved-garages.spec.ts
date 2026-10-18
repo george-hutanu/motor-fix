@@ -15,8 +15,11 @@ test.describe('the saved garages list @seeded', () => {
     'seeds its cars, garage and saved rows straight in PostgreSQL, which needs DATABASE_URL',
   );
   const stamp = Date.now().toString(36);
-  const slug = 'service-colentina';
-  const name = 'Service Colentina';
+  // A garage of this file's own: save-garage.spec.ts saves the seeded
+  // Colentina for the same driver beside this one, and a garage already
+  // saved sends no save.
+  const slug = `e2e-ales-${stamp}`;
+  const name = `Service Ales ${stamp}`;
   const brands = [
     {
       fuel: 'petrol',
@@ -64,6 +67,11 @@ test.describe('the saved garages list @seeded', () => {
       );
       brandIds.push(made.rows[0]?.id ?? '');
     }
+    await db.query(
+      `INSERT INTO garage (id, name, slug, status, approved_at)
+       VALUES (gen_random_uuid(), $1, $2, 'approved', now())`,
+      [name, slug],
+    );
     const garage = await db.query<{ id: string }>(
       `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count)
        VALUES (gen_random_uuid(), $1, $2, 'approved', now(), 4.5, 3) RETURNING id`,
@@ -102,7 +110,10 @@ test.describe('the saved garages list @seeded', () => {
   });
   test.afterEach(() => clear());
   test.afterAll(async () => {
-    await db.query('DELETE FROM garage WHERE id = $1', [workingId]);
+    await db.query('DELETE FROM garage WHERE id = $1 OR slug = $2', [
+      workingId,
+      slug,
+    ]);
     await db.query('DELETE FROM brand WHERE id = ANY($1)', [brandIds]);
     await db.end();
   });

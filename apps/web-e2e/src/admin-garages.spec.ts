@@ -108,10 +108,23 @@ test.describe('the suspended garages @seeded', () => {
       expect(
         await offTitle(page, 'mf-admin-garages .counts'),
       ).toBeLessThanOrEqual(1);
-      const before = await suspended(page);
       let navigations = 0;
       page.on('framenavigated', (frame) => {
         if (frame === page.mainFrame()) navigations++;
+      });
+      // The count is platform-wide, and other files suspend and put back
+      // garages beside this one: the line shows what its latest live re-read
+      // returned, not this file's garage added to the count before.
+      let reads = 0;
+      let latest = Number.NaN;
+      page.on('response', async (response) => {
+        if (!response.url().endsWith('/api/v1/admin/garages/summary')) return;
+        const body = (await response.json().catch(() => null)) as {
+          suspended?: number;
+        } | null;
+        if (typeof body?.suspended !== 'number') return;
+        reads++;
+        latest = body.suspended;
       });
 
       const res = await request.post(`/api/v1/admin/garages/${id}/suspend`, {
@@ -126,9 +139,12 @@ test.describe('the suspended garages @seeded', () => {
         'suspendat · autorizație RAR expirată',
       );
       await expect(row.locator('.reason')).toHaveText(REASON);
+      await expect.poll(() => reads, { timeout: 15_000 }).toBeGreaterThan(0);
       await expect
-        .poll(() => suspended(page), { timeout: 15_000 })
-        .toBeGreaterThanOrEqual(before + 1);
+        .poll(async () => (await suspended(page)) === latest, {
+          timeout: 15_000,
+        })
+        .toBe(true);
       expect(navigations).toBe(0);
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });

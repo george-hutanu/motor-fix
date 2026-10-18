@@ -315,6 +315,24 @@ describe('step 5, the place', () => {
     expect(shown()?.at).toEqual({ lat: 45.1, lng: 25.2 });
   });
 
+  it('describes the map by the armed hint while the button waits for the tap', async () => {
+    const opened = await open({ address: 'Bulevardul Nicăieri 7' });
+    const map = () => opened.step.querySelector('.map');
+
+    button(opened.step, 'Pune pinul pe hartă').click();
+    await settle(opened.fixture);
+
+    expect(text(opened.step.querySelector('#place-armed'))).toBe(
+      'Atinge harta acolo unde e garajul.',
+    );
+    expect(map()?.getAttribute('aria-describedby')).toBe('place-armed');
+
+    await mapEvent(opened, () => events.tapped({ lat: 45.1, lng: 25.2 }));
+
+    expect(opened.step.querySelector('#place-armed')).toBeNull();
+    expect(map()?.getAttribute('aria-describedby')).toBe('place-map-hint');
+  });
+
   it('leaves a placed pin where it is on a tap, even once the button is pressed', async () => {
     const opened = await open({
       address: STEFAN.label,

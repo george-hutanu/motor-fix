@@ -45,9 +45,6 @@ textarea {
   color: var(--mf-red-ink);
   font-size: var(--mf-size-small);
 }
-.error:empty {
-  display: none;
-}
 .under {
   display: flex;
   justify-content: space-between;

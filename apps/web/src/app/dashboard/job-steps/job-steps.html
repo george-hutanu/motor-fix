@@ -21,7 +21,7 @@
       }
     </div>
 
-    <p class="problem" role="alert">
+    <p class="problem mf-message" role="alert">
       @if (problem(); as key) {
         {{ key | t }}
       }
@@ -156,7 +156,7 @@
       }
     }
   } @else if (view.failed()) {
-    <p class="problem" role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <p class="problem mf-message" role="alert">{{ 'shell.form.problem.error' | t }}</p>
     <button hlmBtn type="button" variant="secondary" (click)="view.reload()">
       {{ 'garage.jobs.retry' | t }}
     </button>

@@ -74,6 +74,22 @@ export class VerificationFileService {
     private readonly publicGarages: PublicGaragesService,
   ) {}
 
+  // The other garages holding the same stored CUI, of any status: a fact
+  // for the admin, never a refusal. Romanian order, then id for a tie.
+  private async cuiAlsoUsedBy(garageId: string, cui: string | null) {
+    if (!cui) return [];
+    const others = await this.prisma.garage.findMany({
+      select: { id: true, name: true },
+      where: { cui, id: { not: garageId } },
+    });
+    return others
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(b.name, 'ro') || a.id.localeCompare(b.id),
+      )
+      .map((other) => other.name);
+  }
+
   async read(id: string): Promise<VerificationFileDto> {
     // PostgreSQL refuses a malformed uuid outright; it is an unknown id.
     if (!isUUID(id)) throw new NotFoundException();
@@ -117,7 +133,7 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, catalogue, prices, reports, entries, total, photos] =
+    const [names, catalogue, prices, reports, entries, total, photos, shared] =
       await Promise.all([
         this.names([
           file.openedBy,
@@ -142,6 +158,7 @@ export class VerificationFileService {
         }),
         this.prisma.activityLog.count({ where }),
         this.publicGarages.photos(garage.photos),
+        this.cuiAlsoUsedBy(garage.id, garage.cui),
       ]);
     const actor = (
       accountId: string | null,
@@ -225,6 +242,7 @@ export class VerificationFileService {
           .sort((a, b) => a.localeCompare(b, 'ro')),
         businessKind: garage.businessKind,
         cui: garage.cui,
+        cuiAlsoUsedBy: shared,
         id: garage.id,
         name: garage.name,
         phone: garage.phone,

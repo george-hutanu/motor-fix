@@ -65,6 +65,18 @@ const checked = (id: string, kind: 'rar' | 'caen', result: string) =>
     [id, kind, result],
   );
 
+// Every check ok and both legal documents held: an approval then owes no note.
+const allOk = async (id: string) => {
+  await db.query(
+    "UPDATE verification_check SET result = 'ok' WHERE file_id = $1",
+    [id],
+  );
+  await db.query(
+    "INSERT INTO legal_document (id, verification_file_id, kind, pages) SELECT gen_random_uuid(), $1::uuid, k, ARRAY[k || '/1.pdf'] FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']::text[]) AS k ON CONFLICT DO NOTHING",
+    [id],
+  );
+};
+
 const post = (
   id: string,
   action: 'decision' | 'reopen',
@@ -211,8 +223,7 @@ describe('decision payload boundaries', () => {
 
   it('stores a blank approval note as null', async () => {
     const { id } = await file();
-    await checked(id, 'rar', 'ok');
-    await checked(id, 'caen', 'ok');
+    await allOk(id);
 
     const res = await post(id, 'decision', admin, {
       decision: 'approved',
@@ -589,8 +600,7 @@ describe('decisions racing and repeating', () => {
       reason: 'documents',
     });
     await post(id, 'reopen', admin);
-    await checked(id, 'rar', 'ok');
-    await checked(id, 'caen', 'ok');
+    await allOk(id);
 
     const res = await post(id, 'decision', admin, { decision: 'approved' });
 
@@ -696,8 +706,7 @@ describe('reopening', () => {
 
   it('keeps an approved garage public after its file is reopened', async () => {
     const { id } = await file();
-    await checked(id, 'rar', 'ok');
-    await checked(id, 'caen', 'ok');
+    await allOk(id);
     const approved = await post(id, 'decision', admin, {
       decision: 'approved',
     });

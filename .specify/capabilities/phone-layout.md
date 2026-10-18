@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -12,6 +12,7 @@ features:
   - 343-live-quote-requests
   - 344-send-quote
   - 172-price-list-states
+  - 303-approve-publish-garage
 ---
 
 # Capability: Phone layout and installable web app
@@ -231,6 +232,10 @@ _From 172-price-list-states._
 ### 172-FR-010 — Every new text MUST exist in Romanian and English with U+2011 in hyphenated Romanian words (080-FR-014); no text smaller than 12 px; the panel MUST read without sideways page scroll at 320 px with every cell wrapping (the row stacks its cells below the dashboard's 768 px breakpoint: name and duration, then state, then price; the mock's phone board shows the same rows stacked); the retry button is a real button at least 44 px tall; the lamp is never the only carrier of the state (the label is, FR-003) and the label, price and lamp colours come from the theme's tokens so they keep the theme's contrast in light and dark; the rows are a list, each row one item, so a screen reader reads name, duration, state and price in that order.
 
 _From 172-price-list-states._
+
+### 303-FR-011 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the hint, the warning line, the dialog and the queue row's state text MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, inside their panel (the dialog's list wraps, the text area is full width at 320 px); every state is conveyed by text as well as colour; the button, the dialog's controls and the row's link are at least 44 px tall and reachable by keyboard; the dialog moves focus to its first control on open and returns it to the button on cancel and to the drawer's title on success.
+
+_From 303-approve-publish-garage._
 
 ## Retired
 

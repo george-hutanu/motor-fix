@@ -73,9 +73,6 @@ textarea {
 .error {
   color: var(--mf-red-ink);
 }
-.error:empty {
-  display: none;
-}
 .warning {
   color: var(--mf-amber-ink);
 }

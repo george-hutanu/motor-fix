@@ -216,6 +216,7 @@ const DECISION_REFUSAL_REASONS = [
   'already_decided',
   'rar_check_required',
   'caen_check_required',
+  'note_required',
 ] as const;
 type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
 

@@ -18,6 +18,28 @@
     "subtitle": "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile"
   },
   "file": {
+    "approve": {
+      "allOk": "Toate verificările sunt în regulă.",
+      "cancel": "Renunță",
+      "confirm": "Aprobă și publică",
+      "count": "{n}/1000",
+      "documents": {
+        "onrc_certificate": "Certificat constatator ONRC",
+        "rar_authorisation": "Autorizația RAR"
+      },
+      "listed": "Aprobi trecând peste:",
+      "missingCheck": "{label}: {result}",
+      "missingDocument": "Lipsește: {document}",
+      "note": "Notă",
+      "noteRequired": "Scrie de ce aprobi așa.",
+      "noteTooLong": "Nota are cel mult 1000 de caractere.",
+      "results": {
+        "failed": "problemă",
+        "not_run": "neverificat",
+        "warning": "atenție"
+      },
+      "title": "Aprobă și publică"
+    },
     "checks": {
       "activities": "Activități",
       "address": "Adresă",
@@ -29,6 +51,7 @@
       "representative": "Telefon"
     },
     "cui": "CUI {cui}",
+    "cuiShared": "CUI folosit și de alt service: {names}",
     "documents": {
       "ago": {
         "few": "emis acum {n} zile",
@@ -58,6 +81,7 @@
       "alreadyDecided": "Deja decis de {name} la {time}",
       "approve": "Aprobă și publică",
       "ask": "Cere completări",
+      "caenHint": "Verificarea CAEN 4520 e obligatorie",
       "caenRequired": "Aprobarea cere verificarea CAEN",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
       "rarCheckRequired": "Aprobarea cere verificarea RAR",
@@ -411,6 +435,7 @@
   },
   "queue": {
     "all": "Vezi toate",
+    "approved": "Aprobat, e pe hartă",
     "brands": {
       "few": "{n} mărci",
       "one": "{n} marcă",

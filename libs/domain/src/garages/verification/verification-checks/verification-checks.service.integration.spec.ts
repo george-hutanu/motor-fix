@@ -387,12 +387,35 @@ describe('recording a check', () => {
   });
 });
 
-// An admin's approval needs both registers checked.
-const registersOk = () =>
-  prisma.verificationCheck.updateMany({
-    data: { result: 'ok' },
-    where: { fileId, kind: { in: ['rar', 'caen'] } },
+// An admin's approval needs both registers checked, and passes over no other
+// check or legal document without a note.
+const registersOk = async () => {
+  await prisma.verificationCheck.createMany({
+    data: [
+      'company',
+      'caen',
+      'rar',
+      'activities',
+      'representative',
+      'address',
+      'photos',
+      'documents',
+    ].map((kind) => ({ fileId, kind: kind as never })),
+    skipDuplicates: true,
   });
+  await prisma.verificationCheck.updateMany({
+    data: { result: 'ok' },
+    where: { fileId },
+  });
+  await prisma.legalDocument.createMany({
+    data: ['onrc_certificate', 'rar_authorisation'].map((kind) => ({
+      kind,
+      pages: [`${kind}/1.pdf`],
+      verificationFileId: fileId,
+    })),
+    skipDuplicates: true,
+  });
+};
 
 describe('a record that is refused', () => {
   const decide = async (

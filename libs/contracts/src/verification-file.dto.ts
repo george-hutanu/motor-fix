@@ -25,6 +25,7 @@ import {
   VerificationActorDto,
   VerificationFileCheckDto,
 } from './verification-checks';
+import { VERIFICATION_NOTE_MAX } from './verification-target';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
@@ -47,8 +48,6 @@ const VERIFICATION_REASON_CODES = [
   'other',
 ] as const;
 type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
-
-const VERIFICATION_NOTE_MAX = 1000;
 
 // A note blank after trimming is no note: the use case asks for one where
 // the decision needs it.
@@ -179,6 +178,13 @@ export class VerificationFileGarageDto {
 
   @ApiProperty({ description: 'Digits only', nullable: true, type: String })
   cui!: string | null;
+
+  @ApiProperty({
+    description:
+      'The names of the other garages holding the same CUI, sorted; empty when none or no CUI',
+    type: [String],
+  })
+  cuiAlsoUsedBy!: string[];
 
   @ApiProperty({
     description: 'The workshop; null for a mobile mechanic',

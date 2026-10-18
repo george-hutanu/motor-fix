@@ -136,7 +136,3 @@ summary:focus-visible {
     font-size: var(--mf-size-body);
   }
 }
-/* An always-present live region takes no room while it says nothing. */
-.error:empty {
-  display: none;
-}

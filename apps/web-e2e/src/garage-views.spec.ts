@@ -141,12 +141,11 @@ test.describe('garage views @seeded', () => {
       expect(await marked(page)).toBe(1);
     }
 
-    // Prețuri has its own screen since ST-172; Recenzii still shows the
-    // line that says what the view will hold.
-    await page.goto('/app/garage/reviews');
-    await expect(title(page)).toHaveText('Recenzii');
+    await page.goto('/app/garage/prices');
+    await expect(title(page)).toHaveText('Prețuri');
+    // The test garage lists no jobs: the price list's empty panel.
     await expect(page.locator('main')).toContainText(
-      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
+      'Lista de prețuriNu ai încă lucrări în listă.',
     );
 
     await page.goto('/app/garage/assistant');
