@@ -141,7 +141,7 @@ test.describe('list your garage, what is missing before sending', () => {
 
     await item(page, /Alege cel puțin o marcă/).click();
     await page
-      .locator('mf-brands-step .chips button', { hasText: 'Dacia' })
+      .locator('mf-brands-step .chips > li > button', { hasText: 'Dacia' })
       .first()
       .click();
     await range(page, 'Manoperă, pe oră', '120', '200');

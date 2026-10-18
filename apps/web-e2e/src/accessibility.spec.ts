@@ -520,7 +520,7 @@ test.describe('axe on the listing steps', () => {
     const found = await listingScan(page, 'the listing, what is missing');
 
     await page
-      .locator('mf-brands-step .chips button', { hasText: 'Dacia' })
+      .locator('mf-brands-step .chips > li > button', { hasText: 'Dacia' })
       .first()
       .click();
     const prices = page.locator('mf-prices-step');

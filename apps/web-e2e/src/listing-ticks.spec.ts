@@ -6,7 +6,7 @@ import { test } from './fixtures.js';
 const brands = (page: Page) => page.locator('mf-brands-step');
 const hours = (page: Page) => page.locator('mf-hours-step');
 const brand = (page: Page, name: string) =>
-  brands(page).locator('.chips button', { hasText: name }).first();
+  brands(page).locator('.chips > li > button', { hasText: name }).first();
 const fuel = (page: Page, name: string) =>
   brands(page).locator('.fuels button').and(page.getByRole('button', { name }));
 const payment = (page: Page, name: string) =>
