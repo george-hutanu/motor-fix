@@ -78,13 +78,22 @@ export class PriceListService {
     assertGarageOwner(actor, garageId);
     const garage = await this.prisma.garage.findUnique({
       select: {
+        labourFromBani: true,
+        labourToBani: true,
         prices: { select: PRICE_ROW_SELECT },
         rarActivities: true,
       },
       where: { id: garageId },
     });
     if (!garage) throw notFound();
-    return { items: priceListJobs(garage.prices, garage.rarActivities) };
+    const { labourFromBani, labourToBani } = garage;
+    return {
+      items: priceListJobs(garage.prices, garage.rarActivities),
+      ...(labourFromBani !== null &&
+        labourToBani !== null && {
+          labour: { fromBani: labourFromBani, toBani: labourToBani },
+        }),
+    };
   }
 
   // The job's own range for a brand the garage takes: a new row for the pair,

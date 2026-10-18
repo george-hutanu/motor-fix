@@ -7,31 +7,23 @@ import {
   inject,
   PLATFORM_ID,
 } from '@angular/core';
-import { AdminService, type SystemLogEntryDto } from '@motor-fix/data-access';
-import {
-  bucharestDayStart,
-  formatClock,
-  I18n,
-  TranslatePipe,
-} from '@motor-fix/i18n';
-import { HlmButton, Lamp, type LampState } from '@motor-fix/ui-cockpit';
+import { RouterLink } from '@angular/router';
+import { AdminService } from '@motor-fix/data-access';
+import { bucharestDayStart, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
-import { lineOf } from './admin-log.line';
+import { lineView } from './admin-log.line';
+import { LogLines } from './log-lines/log-lines';
 import { liveView } from '../../live/view';
 import { Live } from '../live';
 
-const LAMPS: Record<SystemLogEntryDto['severity'], LampState> = {
-  error: 'red',
-  info: 'grey',
-  warning: 'amber',
-};
 // Longer than any day, a summer-time change included, shorter than two.
 const PAST_TOMORROW = 26 * 3_600_000;
 const AFTER_MIDNIGHT = 1_000;
 
 @Component({
-  imports: [HlmButton, Lamp, TranslatePipe],
+  imports: [HlmButton, LogLines, RouterLink, TranslatePipe],
   selector: 'mf-admin-log',
   styleUrl: './admin-log.css',
   templateUrl: './admin-log.html',
@@ -61,24 +53,9 @@ export class AdminLog {
     : undefined;
 
   protected readonly lines = computed(() =>
-    (this.view?.value()?.items ?? []).map((entry) => ({
-      at: entry.at,
-      clock: formatClock(entry.at),
-      count:
-        entry.count > 1
-          ? {
-              mark: `×${entry.count}`,
-              words: this.i18n.t('admin.log.times', {
-                count: entry.count,
-                n: entry.count,
-              }),
-            }
-          : undefined,
-      id: entry.id,
-      lamp: LAMPS[entry.severity],
-      text: lineOf(entry, this.i18n),
-      word: this.i18n.t(`admin.log.severity.${entry.severity}`),
-    })),
+    (this.view?.value()?.items ?? []).map((entry) =>
+      lineView(entry, this.i18n),
+    ),
   );
 
   constructor() {

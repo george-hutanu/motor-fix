@@ -25,6 +25,9 @@ export interface OverlayTask<D = undefined, R = never> {
   close(result: R): void;
   // After a save: closing no longer asks about the changes.
   markUnchanged(): void;
+  // Content shown after opening, such as a form behind a load, takes the
+  // opening focus once rendered, unless the person moved it inside the task.
+  focusStart(): void;
 }
 
 export interface PanelContext extends OverlayOptions<unknown> {

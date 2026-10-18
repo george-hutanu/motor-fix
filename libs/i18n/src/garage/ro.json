@@ -70,6 +70,22 @@
     },
     "stepsDone": "{done} din {total} gata"
   },
+  "prices": {
+    "empty": "Nu ai încă lucrări în listă.",
+    "from": "de la {amount}",
+    "labour": "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă.",
+    "retry": "Încearcă din nou",
+    "state": {
+      "awaiting_approval": "ascuns · așteaptă aprobarea",
+      "hidden": "ascuns",
+      "hidden_by_garage": "ascuns de tine",
+      "no_top_price": "ascuns · fără preț maxim",
+      "not_authorised": "ascuns · nu e în autorizația RAR",
+      "public": "pe profil",
+      "rejected": "respins"
+    },
+    "title": "Lista de prețuri"
+  },
   "quotes": {
     "send": {
       "cancel": "Renunță",

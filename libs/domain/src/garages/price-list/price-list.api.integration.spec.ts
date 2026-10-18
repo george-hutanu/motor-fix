@@ -152,9 +152,9 @@ const read = (w: World, as: string | null = w.owner, id = w.nord.id) => {
 
 const profile = (w: World) => http().get(`/garages/${w.nord.slug}`);
 
-// @traces 357-public-price-jobs-FR-001
-// @traces 357-public-price-jobs-FR-002
-// @traces 357-public-price-jobs-FR-007
+// @traces 357-FR-001
+// @traces 357-FR-002
+// @traces 357-FR-007
 describe('GET /garages/:garageId/prices', () => {
   it('gives every job its state, the first reason and its default range', async () => {
     const w = await world(['ITP']);
@@ -249,7 +249,7 @@ describe('GET /garages/:garageId/prices', () => {
     expect(item).not.toHaveProperty('reason');
   });
 
-  // @traces 357-public-price-jobs-FR-008
+  // @traces 357-FR-008
   it('covers every job while the garage has no RAR activity recorded', async () => {
     const w = await world();
     const itp = await jobType('Inspecție tehnică', 'approved', 'ROTI');
@@ -277,7 +277,7 @@ describe('GET /garages/:garageId/prices', () => {
     expect(res.body).toEqual({ items: [] });
   });
 
-  // @traces 357-public-price-jobs-FR-009
+  // @traces 357-FR-009
   it.each([
     ['a receptionist', 'receptionist', 403, 'forbidden'],
     ['a mechanic', 'mechanic', 403, 'forbidden'],
@@ -334,8 +334,8 @@ describe('GET /garages/:garageId/prices', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-005
-// @traces 357-public-price-jobs-FR-006
+// @traces 357-FR-005
+// @traces 357-FR-006
 describe('the public profile and the owner agree', () => {
   it('lists on the profile exactly the jobs the owner sees as public', async () => {
     const w = await world(['ITP']);
@@ -364,5 +364,38 @@ describe('the public profile and the owner agree', () => {
       owner.filter((item) => item.public).map((item) => item.jobTypeId),
     );
     expect(shown.map((job) => job.id)).toEqual([jobs[0].id, jobs[5].id]);
+  });
+});
+
+// @traces 172-FR-006
+describe("the owner's read and the hourly labour range", () => {
+  it('gives the labour range the profile gives, when both ends are set', async () => {
+    const w = await world();
+    await prisma.garage.update({
+      data: { labourFromBani: 18_000, labourToBani: 24_000 },
+      where: { id: w.nord.id },
+    });
+
+    const res = await read(w);
+
+    expect(res.status).toBe(200);
+    expect(res.body.labour).toEqual({ fromBani: 18_000, toBani: 24_000 });
+    expect((await profile(w)).body.labour).toEqual(res.body.labour);
+  });
+
+  it.each([
+    [null, null],
+    [18_000, null],
+  ])('gives no labour when its ends are %p and %p', async (from, to) => {
+    const w = await world();
+    await prisma.garage.update({
+      data: { labourFromBani: from, labourToBani: to },
+      where: { id: w.nord.id },
+    });
+
+    const res = await read(w);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('labour');
   });
 });

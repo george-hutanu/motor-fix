@@ -105,6 +105,105 @@ describe('the system log read route', () => {
   });
 });
 
+// @traces 299-FR-017
+describe('the whole system log read', () => {
+  it('keeps the route metric and says what the filters, the search and the cursor add', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      name?: string;
+      metric?: string;
+      reason?: string;
+      story?: string;
+    }[] = Object.values(inventory).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    const log = entries.find((each) => each.name === 'admin-system-log');
+
+    expect(log?.story).toMatch(/\bST-299\b/);
+    expect(log?.metric).toBe(
+      'http.server.request.duration by http.route /api/v1/admin/system-log',
+    );
+    expect(log?.reason).toMatch(/type, severity, source/);
+    expect(log?.reason).toMatch(/search/);
+    expect(log?.reason).toMatch(/cursor/);
+  });
+});
+
+// @traces 357-FR-011
+describe('the price list read route', () => {
+  const read = (path: string) =>
+    JSON.parse(readFileSync(join(root, path), 'utf8'));
+
+  repoIt('is counted by the inventory from the OpenAPI document', () => {
+    const openapi = read('apps/api/openapi.json');
+    const operations = Object.values(
+      openapi.paths as Record<string, object>,
+    ).reduce((sum, each) => sum + Object.keys(each).length, 0);
+
+    expect(Object.keys(openapi.paths)).toContain(
+      '/api/v1/garages/{garageId}/prices',
+    );
+    expect(read('infra/observability/inventory.json').endpoints).toEqual({
+      count: operations,
+      source: 'apps/api/openapi.json',
+    });
+    expect(checkInventory(root)).toEqual([]);
+  });
+
+  it("falls under the api's duration and error panels and alerts, which no route filter narrows", () => {
+    const inventory = read('infra/observability/inventory.json');
+    const api = (
+      inventory.entries as {
+        kind: string;
+        name: string;
+        dashboard: string;
+        alerts: string[];
+      }[]
+    ).find((each) => each.kind === 'app' && each.name === 'api');
+    expect(api?.dashboard).toBe('motorfix-api');
+    expect(api?.alerts).toEqual(
+      expect.arrayContaining(['api-error-rate', 'api-latency']),
+    );
+
+    const rules = (
+      read('infra/observability/alerts/api.json').groups as {
+        rules: { uid: string; data: { model: { expr?: string } }[] }[];
+      }[]
+    ).flatMap((group) => group.rules);
+    for (const uid of ['api-error-rate', 'api-latency']) {
+      const exprs = rules
+        .find((rule) => rule.uid === uid)
+        ?.data.map((each) => each.model.expr ?? '')
+        .join(' ');
+      expect(exprs).toMatch(
+        /http_server_request_duration_seconds_\w+\{service_name="api"/,
+      );
+      expect(exprs).not.toContain('http_route');
+    }
+
+    const panels = (
+      read('infra/observability/grafana/dashboards/motorfix-api.json')
+        .panels as {
+        title: string;
+        targets?: { expr?: string }[];
+      }[]
+    ).map((panel) => ({
+      expr: (panel.targets ?? []).map((each) => each.expr ?? '').join(' '),
+      title: panel.title,
+    }));
+    const byRoute = panels.find((each) => each.title === 'Requests by route');
+    const errorsByRoute = panels.find(
+      (each) => each.title === 'Errors by route',
+    );
+    expect(byRoute?.expr).toMatch(
+      /sum by \(http_route\).*http_server_request_duration_seconds_count/,
+    );
+    expect(errorsByRoute?.expr).toMatch(/http_response_status_code=~"5\.\."/);
+  });
+});
+
 describe('the map pins and verification file entries', () => {
   it('keeps the ST-269 pins route and counter beside the ST-302 file routes', () => {
     const inventory = JSON.parse(

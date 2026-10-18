@@ -15,6 +15,24 @@ export interface SystemLogControllerList$Params {
  * Entries at or after this instant
  */
   from: string;
+
+/**
+ * Entries before this instant; after `from`
+ */
+  to?: string;
+  kind?: Array<'status_changed' | 'check_failed' | 'job_failed' | 'service_error' | 'server_error' | 'backup_completed' | 'backup_failed' | 'deploy'>;
+  severity?: Array<'info' | 'warning' | 'error'>;
+  source?: Array<'api' | 'search' | 'maps' | 'email' | 'notifications' | 'backup' | 'worker' | 'webrtc' | 'identity' | 'storage'>;
+
+/**
+ * Text in the message, ignoring case and diacritics; trimmed, empty is absent
+ */
+  q?: string;
+
+/**
+ * A previous answer's nextCursor, sent with the same filters
+ */
+  cursor?: string;
   limit?: number;
 }
 
@@ -22,6 +40,12 @@ export function systemLogControllerList(http: HttpClient, rootUrl: string, param
   const rb = new RequestBuilder(rootUrl, systemLogControllerList.PATH, 'get');
   if (params) {
     rb.query('from', params.from, {});
+    rb.query('to', params.to, {});
+    rb.query('kind', params.kind, {});
+    rb.query('severity', params.severity, {});
+    rb.query('source', params.source, {});
+    rb.query('q', params.q, {});
+    rb.query('cursor', params.cursor, {});
     rb.query('limit', params.limit, {});
   }
 

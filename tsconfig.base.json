@@ -76,6 +76,9 @@
       "@motor-fix/contracts/support": [
         "./libs/contracts/src/support/support.ts"
       ],
+      "@motor-fix/contracts/system-log": [
+        "./libs/contracts/src/system-log/system-log.ts"
+      ],
       "@motor-fix/contracts/verification-target": [
         "./libs/contracts/src/verification-target.ts"
       ],

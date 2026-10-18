@@ -19,6 +19,7 @@ features:
   - 1346-release-green
   - 298-system-log-today
   - 404-demand-searches
+  - 299-system-log-search
 ---
 
 # Capability: Admin dashboard
@@ -595,17 +596,17 @@ _From 066-suspended-garages._
 
 _From 066-suspended-garages._
 
-### 298-FR-001 — The system MUST offer an admin-only read of the System status log, `GET /api/v1/admin/system-log`, with the query `from` (a datetime; entries whose `at` is at or after it) and `limit` (1 to 20, default 20), answering the matching entries newest first, ordered by `at` descending and then by entry id descending, each with its `id`, `at`, `source`, `severity`, `kind`, `message` (the stored English text), `context` and `count`. A `from` that is not a datetime or a `limit` outside 1–20 MUST be refused with 400 `validation_failed`.
+### 299-FR-001 — `GET /api/v1/admin/system-log` (298-FR-001) MUST gain the query parameters `to` (a datetime with a zone; entries whose `at` is before it; default none), `kind` (one or more of the eight kinds, repeatable; default all), `severity` (one or more of `info`, `warning`, `error`; default all), `source` (one or more of the ten sources; default all), `q` (2 to 100 characters; default none) and `cursor` (opaque; default the first page), and its `limit` MUST allow 1 to 50 (default 20, so Jurnal is unchanged). Every filter narrows the others. The answer MUST keep its `items` and gain `nextCursor`: the cursor of the next page, or null when the page is the last.
 
-_From 298-system-log-today._
+_From 299-system-log-search._
 
 ### 298-FR-002 — Every signed-in caller who is not an admin (every other role) MUST receive 404 from `admin/system-log`, and a visitor with no session 401 `sign_in_required`, the same refusals as the other admin reads (the route is gated by an admin capability every admin holds, as the admin overview is).
 
 _From 298-system-log-today._
 
-### 298-FR-003 — The admin dashboard MUST show a Jurnal panel (title "Jurnal" in Romanian, "System log" in English) that reads today's entries, "today" being the calendar day in Europe/Bucharest: the panel asks for entries from the start of that day, newest first, at most 20, and shows no link, button or page control to see more in this story.
+### 299-FR-006 — The admin dashboard MUST get a view "Jurnal de sistem" / "System log" at the path `log` of the admin area, gated by the same capability as the endpoint (every admin holds it), in the side menu and the tab bar as the other admin views; the Jurnal panel (298-FR-003) MUST now show the link "Vezi tot jurnalul" / "See the whole log" under its lines, which opens that view.
 
-_From 298-system-log-today._
+_From 299-system-log-search._
 
 ### 298-FR-004 — Each line MUST show the entry's time as `HH:mm` in Europe/Bucharest in a fixed-width first column, then its text in the admin's language; two entries with the same time keep the server's order.
 
@@ -690,6 +691,69 @@ _From 404-demand-searches._
 ### 404-FR-013 — Tests MUST cover, on a real database: searches and requests counted apart on one brand; a brand with searches and no requests, and one with requests and no searches; the Europe/Bucharest day edge for a search at 00:00 and the window's first day; today's searches counted live beside DEMAND_DAILY rows; a closed day without rows counted live; the migration's backfill of rows written before this story; the nightly job's searches on brand and total rows, its row for a brand searched but not requested, and its idempotence; brand searches adding up to the total; the default order and the ties; `searchesFrom` in its three cases; the overview's top 8 by searches; 404 for each non-admin role. In the browser: the sort toggle re-orders bars, list and table; the line under the subtitle; the empty text. An end-to-end check answers the demand read with three brands (one searched but never requested) and `searchesFrom` (stubbed in the browser, as 103-FR-012 does, since the suite also runs against a deployed address and writes no rows), opens "Mărci și lucrări" as the seeded admin, reads both figures of a row and the counted-from line, presses the toggle, then reads the overview panel, on a phone and a desktop, in both languages.
 
 _From 404-demand-searches._
+### 299-FR-002 — The order MUST stay `at` descending, then `id` descending; the cursor MUST encode the last item's `(at, id)` opaquely, and a page read with it MUST start strictly after that pair, so paging has no gaps and no repeats even while new entries arrive or the purge runs.
+
+_From 299-system-log-search._
+
+### 299-FR-003 — `from` MUST stay required (a call without it is 400 `validation_failed`, as in 298-FR-001). The API MUST read a `from` older than the retention period (90 days before now, the purge's constant) as that instant; `to` not after `from` MUST be refused with 400 `validation_failed`, as MUST an unknown `kind`, `severity` or `source`, a `q` outside 2–100 characters after trimming, a `limit` outside 1–50 and a cursor it cannot decode.
+
+_From 299-system-log-search._
+
+### 299-FR-004 — `q` MUST match entries whose stored `message` contains it as text, comparing both sides with case and diacritics removed (the folding the admin accounts search already uses), with `%`, `_` and `\` in `q` taken literally; it MUST NOT match `context` or the ids.
+
+_From 299-system-log-search._
+
+### 299-FR-005 — The route's refusals MUST stay as in 298-FR-002: 404 `not_found` for every signed-in role that is not admin, 401 `sign_in_required` for a visitor, 403 `account_suspended` for a suspended admin, for every combination of parameters. Reading is a read: it MUST write no audit history row and no System status log entry, and no log line MUST carry `q`.
+
+_From 299-system-log-search._
+
+### 299-FR-007 — The view MUST open on today and the 6 days before (Europe/Bucharest) when the address names no dates, newest first, reading 50 entries per page; it MUST read the next page when the end of the list comes into view, until `nextCursor` is null; a re-read of the first page (a filter change, the new-entries bar, a reconnect, a retry) MUST start from the top.
+
+_From 299-system-log-search._
+
+### 299-FR-008 — The view MUST show a filter bar with: a type picker whose options are the kinds grouped by what an admin would call them, each named in the language — "Stare" / "Status" (`status_changed`), "Verificări" / "Checks" (`check_failed`), "Joburi" / "Jobs" (`job_failed`), "Servicii externe" / "Outside services" (`service_error`), "Erori de server" / "Server errors" (`server_error`), "Backup" (`backup_completed` and `backup_failed`), "Deploy" (`deploy`); a severity picker (Info, Avertisment / Warning, Eroare / Error); a source picker with the ten sources named as Jurnal names them (298-FR-005); a "De la" / "From" and a "Până la" / "To" date; and a search box "Caută în jurnal" / "Search the log". Each picker allows one value or all. On a 320 px and a 390 px phone the pickers and dates MUST live in the dashboard's filter sheet, as the users view's filters do, with the search box and the open-filters button (showing the number of filters set) above the list; on a tablet and a desktop they MUST be a bar above the list.
+
+_From 299-system-log-search._
+
+### 299-FR-009 — The filters MUST live in the view's address as query parameters (`from` and `to` as `YYYY-MM-DD` Bucharest days, `kind` the type's key, `severity`, `source`, `q`), written on every change and read on open, so a reload or a shared link gives the same list; an unknown value in the address MUST be dropped and the rest kept; an address with one date MUST default the other (`from` alone → `to` today; `to` alone → `from` 6 days before it) and write both back; the default range MUST NOT be written (an address with no dates means "the last 7 days" whenever it is opened).
+
+_From 299-system-log-search._
+
+### 299-FR-010 — The date inputs MUST refuse a day after today and a day older than 90 days before today (the retention period, one constant shared with the purge), the "to" input a day before "from"; a range the inputs cannot express is not sent, and the input at fault MUST say so in the language through its described-by text. The dates MUST be sent as the start of the "from" day and the start of the day after the "to" day, in Europe/Bucharest.
+
+_From 299-system-log-search._
+
+### 299-FR-011 — The search box MUST trim its text and send nothing under 2 characters, cut its text at 100, and wait 300 ms after the last keystroke before reading, dropping the answer of an older read when a newer one is on its way (the users view's rule).
+
+_From 299-system-log-search._
+
+### 299-FR-012 — The list MUST be grouped under a header per Bucharest day, the day written in the language (the i18n library's day format), and each line MUST render as in Jurnal (298-FR-004 to 298-FR-007): time `HH:mm` in Europe/Bucharest, severity lamp with its word, the sentence in the language or the stored message, the count of a grouped entry; the renderer is the one Jurnal uses, not a copy.
+
+_From 299-system-log-search._
+
+### 299-FR-013 — While the first page is read the view MUST show three line skeletons; a failed first read MUST read "Nu am putut citi jurnalul." / "Could not read the log." with Reîncearcă / Retry; a failed further page MUST keep every line shown and offer Reîncearcă / Retry at the bottom; while a further page is read a skeleton line MUST show at the bottom. An empty answer MUST read "Nicio intrare pentru acești filtri." / "No entries for these filters." with a "Șterge filtrele" / "Clear the filters" button whenever a filter, a date or a search is set, and the text alone when the default view is empty.
+
+_From 299-system-log-search._
+
+### 299-FR-014 — When `system_log.added` arrives on the admin's live connection while the view's range includes today (no `to`, or `to` is today) and the event's `entryKind`, `severity` and `source` pass the view's type, severity and source filters, the view MUST show a bar above the list, "1 intrare nouă" / "1 new entry", counting each further event ("{n} intrări noi" / "{n} new entries", Romanian plural rules), without moving the list; tapping the bar MUST re-read from the top with the current filters and hide the bar; a reconnect of the live connection MUST re-read from the top; the view MUST NOT poll. The bar is a button and is announced politely to assistive technology.
+
+_From 299-system-log-search._
+
+### 299-FR-015 — The view MUST render on a 320 px and a 390 px phone, a tablet and a desktop, in light and dark, Romanian and English, with no sideways scroll at 320 px; every control MUST be keyboard-operable with a visible focus ring and, on a phone, a touch target of at least 44 × 44 px; the list is a labelled region with a heading per day; the failed text is announced (`role="alert"`); text and lamp contrast meet WCAG 2.2 AA; skeletons do not animate under `prefers-reduced-motion`; every text lives in the shared i18n files; the "new entries" bar is a button inside a polite live region, so a screen reader hears the count change without the focus moving; the phone's filter sheet moves focus into itself, closes on Escape and returns focus to the button that opened it; the next page loads when the end of the list comes into view by any input (scroll, keyboard, switch), with the bottom Reîncearcă button as the keyboard-reachable fallback when a page fails.
+
+_From 299-system-log-search._
+
+### 299-FR-016 — Nothing in this story MUST write a System status log entry or an audit history row, show the raw `context`, list a change a person makes in the app, or export the log; the audit history and its search (#873) stay out.
+
+_From 299-system-log-search._
+
+### 299-FR-017 — The endpoint's entry in `infra/observability/inventory.json` MUST be updated with the new parameters and say what, if anything, changes in its metrics, logs and traces (a read on the existing request instrumentation; the search's duration is covered by the route's duration metric, labelled by route only); the generated client (`libs/data-access`) MUST be regenerated from `apps/api/openapi.json`, never edited by hand; the DTOs live in the contracts library and are validated at the edge.
+
+_From 299-system-log-search._
+
+### 299-FR-018 — Tests MUST exist before the implementation and MUST cover, in Jest on real PostgreSQL and Redis: each filter alone (`to`, each `kind`, `severity`, `source`) and combined with the others and with `q`; `q` ignoring case and diacritics on both sides and taking `%`, `_` and `\` literally; `q` of 1 and of 101 characters refused, 2 and 100 accepted; cursor paging over 120 entries in pages of 50 with no gap and no repeat, with two entries at one instant, and with an entry inserted between pages; `from` older than 90 days clamped, the picker's widest range (90 days ago to tomorrow 00:00) accepted, `to` not after `from` refused, a missing `from` refused, a `q` of spaces around one letter refused; a cursor that cannot be decoded refused; `limit` 50 accepted and 51 refused; Jurnal's call unchanged (no `to`, limit 20); 404 for every non-admin role, 401 for a visitor. Web unit tests cover the address round trip (write, read, unknown values dropped, default range not written), the date limits and the "to before from" message, the type-to-kinds mapping ("Backup" sends both kinds), the 2-character minimum, the 300 ms wait and the dropped older read, the day headers across a Bucharest midnight, the empty state with and without the clear button, the failed first read and the failed further page, the new-entries bar (shown, counted, hidden on a range ending before today and on an event whose kind, severity or source a filter excludes, re-read on tap), the lone-date default and the Jurnal link. One Playwright end-to-end test: as the seeded admin, open the full log from Jurnal, filter the type Backup and a date range, search a word, and read only the matching entries, on a phone (through the sheet) and a desktop, in both languages.
+
+_From 299-system-log-search._
 
 ## Retired
 
@@ -723,3 +787,5 @@ _From 404-demand-searches._
 - `103-FR-006` — superseded by `404-FR-007` (2026-10-18)
 - `103-FR-008` — superseded by `404-FR-008` (2026-10-18)
 - `103-FR-010` — superseded by `404-FR-010` (2026-10-18)
+- `298-FR-001` — superseded by `299-FR-001` (2026-10-17)
+- `298-FR-003` — superseded by `299-FR-006` (2026-10-17)

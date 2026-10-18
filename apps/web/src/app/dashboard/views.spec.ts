@@ -15,6 +15,7 @@ import { I18n } from '@motor-fix/i18n';
 import { NEVER, Subject } from 'rxjs';
 
 import { AdminDemand } from './admin-demand/admin-demand';
+import { AdminLogView } from './admin-log-view/admin-log-view';
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
@@ -26,6 +27,7 @@ import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
 import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
+import { PricesView } from './prices-view/prices-view';
 import { RequestsView } from './requests-view/requests-view';
 import {
   fakeSavedGarages,
@@ -210,6 +212,7 @@ describe('the dashboard view lists', () => {
       'reviews',
       'catalogue',
       'assistant',
+      'log',
       'settings',
     ]);
   });
@@ -260,6 +263,13 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.log',
+        load: expect.any(Function),
+        path: 'log',
+        tab: 'shell.frame.tab.log',
+      },
+      {
+        capability: 'admin.settings',
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
         push: true,
@@ -267,6 +277,13 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.settings',
       },
     ]);
+  });
+
+  // @traces 299-FR-006
+  it('downloads the system log view when it is opened, not with the first page', async () => {
+    const log = DASHBOARDS.admin.views.find((view) => view.path === 'log');
+
+    await expect(log?.load?.()).resolves.toBe(AdminLogView);
   });
 
   it('downloads the admin users view when it is opened, not with the first page', async () => {
@@ -315,6 +332,24 @@ describe('the dashboard view lists', () => {
       'settings',
       'history',
     ]);
+  });
+
+  // @traces 172-FR-001 172-FR-009
+  it('gives the owner alone the prices view, its body downloaded with the view', async () => {
+    const prices = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'prices',
+    );
+    expect(prices?.capability).toBe('garage.prices');
+    await expect(prices?.load?.()).resolves.toBe(PricesView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'prices');
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      PricesView,
+    );
+    expect(paths('garage', OWNER)).toContain('prices');
+    expect(paths('garage', RECEPTIONIST)).not.toContain('prices');
+    expect(
+      paths('garage', ['garage.own_jobs', 'garage.audit_history']),
+    ).not.toContain('prices');
   });
 
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
@@ -392,7 +427,7 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'users', 'catalogue', 'settings']);
+    ).toEqual(['', 'garages', 'users', 'catalogue', 'log', 'settings']);
   });
 
   it('hides an unreleased view even from a role that may open it', () => {
@@ -821,9 +856,9 @@ describe('the dashboard view routes', () => {
     expect(element.textContent).not.toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
     );
-    await harness.navigateByUrl('/app/garage/prices');
+    await harness.navigateByUrl('/app/garage/reviews');
     expect(harness.routeNativeElement?.textContent).toContain(
-      'Aici vei vedea intervalele de preț pe lucrări.',
+      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
     );
     expect(harness.routeNativeElement?.textContent).not.toContain(
       'Profilul tău e în verificare.',
