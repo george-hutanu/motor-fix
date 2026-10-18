@@ -19,6 +19,7 @@ import { auditEntryOf } from '../../../audit/audit-history/audit-history.service
 import { PRISMA } from '../../../auth/prisma';
 import { localDay } from '../../../bucharest';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { shortName } from '../../../quotes/reads';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
@@ -159,38 +160,61 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, catalogue, prices, reports, entries, total, photos, shared] =
-      await Promise.all([
-        this.names([
-          file.openedBy,
-          file.decidedBy,
-          file.reopenedBy,
-          ...file.checks.map((c) => c.recordedBy),
-        ]),
-        this.prisma.rarActivity.findMany({
-          orderBy: { code: 'asc' },
-          select: { code: true, nameEn: true, nameRo: true },
-        }),
-        pricedJobs(this.prisma, garage.id),
-        this.prisma.garageReport.findMany({
-          orderBy: { createdAt: 'desc' },
-          select: { createdAt: true, text: true },
-          where: { garageId: garage.id, status: 'open' },
-        }),
-        this.prisma.activityLog.findMany({
-          orderBy: [{ at: 'desc' }, { id: 'desc' }],
-          take: VERIFICATION_TIMELINE_MAX,
-          where,
-        }),
-        this.prisma.activityLog.count({ where }),
-        this.publicGarages.photos(garage.photos),
-        this.cuiAlsoUsedBy(garage.id, garage.cui),
-      ]);
+    const [
+      names,
+      catalogue,
+      prices,
+      reports,
+      reportsOpen,
+      entries,
+      total,
+      photos,
+      shared,
+    ] = await Promise.all([
+      this.names([
+        file.openedBy,
+        file.decidedBy,
+        file.reopenedBy,
+        ...file.checks.map((c) => c.recordedBy),
+      ]),
+      this.prisma.rarActivity.findMany({
+        orderBy: { code: 'asc' },
+        select: { code: true, nameEn: true, nameRo: true },
+      }),
+      pricedJobs(this.prisma, garage.id),
+      this.prisma.garageReport.findMany({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          createdAt: true,
+          decidedAt: true,
+          decidedBy: true,
+          decisionNote: true,
+          id: true,
+          reporter: { select: { id: true, name: true, status: true } },
+          status: true,
+          text: true,
+        },
+        take: VERIFICATION_TIMELINE_MAX,
+        where: { verificationFileId: file.id },
+      }),
+      this.prisma.garageReport.count({
+        where: { status: 'open', verificationFileId: file.id },
+      }),
+      this.prisma.activityLog.findMany({
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
+        take: VERIFICATION_TIMELINE_MAX,
+        where,
+      }),
+      this.prisma.activityLog.count({ where }),
+      this.publicGarages.photos(garage.photos),
+      this.cuiAlsoUsedBy(garage.id, garage.cui),
+    ]);
     const actor = (
       accountId: string | null,
       at: Date | null,
     ): VerificationActorDto | null =>
       at ? { id: accountId, name: names(accountId) } : null;
+    const deciders = await this.names(reports.map((r) => r.decidedBy));
     const previous = file.previousFile;
 
     return {
@@ -289,8 +313,20 @@ export class VerificationFileService {
           : null,
       reports: reports.map((r) => ({
         createdAt: r.createdAt.toISOString(),
+        decidedAt: iso(r.decidedAt),
+        decidedBy: r.decidedAt
+          ? { id: r.decidedBy, name: deciders(r.decidedBy) }
+          : null,
+        decisionNote: r.decisionNote,
+        id: r.id,
+        reporter:
+          r.reporter.status === 'deleted'
+            ? null
+            : { id: r.reporter.id, name: shortName(r.reporter.name) },
+        status: r.status,
         text: r.text,
       })),
+      reportsOpen,
       storageReady: await storageReady,
       timeline: {
         entries: entries.map((row) => {

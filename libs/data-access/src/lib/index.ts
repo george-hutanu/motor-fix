@@ -183,6 +183,7 @@ export type { RecordVerificationCheckDto } from './models/record-verification-ch
 export type { RefreshDto } from './models/refresh-dto';
 export type { ReorderJobStepsDto } from './models/reorder-job-steps-dto';
 export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto';
+export type { ReportDecisionDto } from './models/report-decision-dto';
 export type { RequestBookingDto } from './models/request-booking-dto';
 export type { RequestDto } from './models/request-dto';
 export type { RequestJobDto } from './models/request-job-dto';
@@ -240,6 +241,7 @@ export type { VerificationFileGarageDto } from './models/verification-file-garag
 export type { VerificationFileJobDto } from './models/verification-file-job-dto';
 export type { VerificationFileRejectionDto } from './models/verification-file-rejection-dto';
 export type { VerificationFileReportDto } from './models/verification-file-report-dto';
+export type { VerificationFileReporterDto } from './models/verification-file-reporter-dto';
 export type { VerificationFileStateDto } from './models/verification-file-state-dto';
 export type { VerificationFileTimelineDto } from './models/verification-file-timeline-dto';
 export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
@@ -391,6 +393,8 @@ export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGa
 export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { ReportDecisionControllerDecide$Params as ReportDecisionControllerDecide$Params } from './fn/admin/report-decision-controller-decide';
+export { reportDecisionControllerDecide as reportDecisionControllerDecide } from './fn/admin/report-decision-controller-decide';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';
 export { suspensionControllerSuspend as suspensionControllerSuspend } from './fn/admin/suspension-controller-suspend';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';

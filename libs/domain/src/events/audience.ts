@@ -33,6 +33,9 @@ export type LiveSubject =
   // A change a visitor sees on the garage's public page; `results` when it can
   // also move the garage in search results.
   | { type: 'public_garage'; garageId: string; results: boolean }
+  // A decision on a garage's reports: the admins and the drivers who sent
+  // them, never the garage.
+  | { type: 'garage_report'; reporterIds: readonly string[] }
   // A rule only the admins act on stays off the system channel.
   | { type: 'platform'; adminOnly?: boolean };
 
@@ -98,6 +101,8 @@ export function audienceOf(subject: LiveSubject): string[] {
         `public:garage:${subject.garageId}`,
         ...when(subject.results, 'public:search'),
       ];
+    case 'garage_report':
+      return ['admin', ...new Set(subject.reporterIds.map(account))];
     case 'platform':
       return subject.adminOnly ? ['admin'] : ['admin', 'system'];
   }

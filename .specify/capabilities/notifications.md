@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 194-email-sending
   - 195-message-templates
@@ -34,6 +34,7 @@ features:
   - 222-booking-from-quote
   - 049-garage-suspension
   - 279-email-inbox
+  - 069-report-decision
 ---
 
 # Capability: Notifications
@@ -745,6 +746,10 @@ _From 279-email-inbox._
 ### 279-FR-012 — Both commands MUST run from the built worker (`node dist/apps/worker/main.js inbox-test [--dry-run]`, `node dist/apps/worker/main.js email-dns-check`) without starting the worker's queues or HTTP listener, and `.env.example` MUST document `EMAIL_DOMAIN` and `INBOX_TEST_TO`.
 
 _From 279-email-inbox._
+
+### 069-FR-007 — The notifications worker MUST consume `garage_report.decided` and queue one GARAGE_REPORT_DECIDED per distinct reporter, keyed by the outbox event id and the reporter so a retry never doubles it, in the reporter's language, with the garage's name: for `unfounded` "Am verificat sesizarea ta despre <garage>. Nu a fost nevoie de nicio măsură." / "We checked your report about <garage>. No action was needed."; for `confirmed` "Am verificat sesizarea ta despre <garage> și am luat măsuri." / "We checked your report about <garage> and took action.". The message MUST carry neither the admin's note nor the suspension reason. GARAGE_REPORT_DECIDED is a new catalogue entry in the driver section: bell, e-mail and push on the channels the driver chose, muteable like ST-312's report messages; its bell row opens the garage's profile.
+
+_From 069-report-decision._
 
 ## Retired
 

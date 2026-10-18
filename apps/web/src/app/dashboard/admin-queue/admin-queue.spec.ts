@@ -360,6 +360,7 @@ describe('the panel', () => {
   });
 });
 
+// @traces 069-FR-006
 describe('live', () => {
   it.each<EventKind>([
     'verification.submitted',
@@ -367,6 +368,7 @@ describe('live', () => {
     'verification.check_recorded',
     'verification.decided',
     'verification.reopened',
+    'garage_report.decided',
   ])('reads the rows again on %s', async (kind) => {
     const el = await open();
     answer = async () => queueOf(5);

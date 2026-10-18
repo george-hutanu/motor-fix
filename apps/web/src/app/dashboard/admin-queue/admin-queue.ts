@@ -67,6 +67,7 @@ export class AdminQueue {
       'verification.check_recorded',
       'verification.decided',
       'verification.reopened',
+      'garage_report.decided',
     ],
   );
 

@@ -61,20 +61,25 @@ export type Decision = {
   requestedItems?: string[];
 };
 
-type Transition = 'open' | 'decide' | 'resend' | 'reopen';
+type Transition = 'open' | 'decide' | 'resend' | 'reopen' | 'reports';
 
 // The statuses each transition may start from; every other pair is refused.
 const FROM: Record<Transition, VerificationFileStatus[]> = {
   decide: ['submitted', 'in_review'],
   open: ['submitted'],
   reopen: ['approved', 'rejected', 'more_requested'],
+  // A file a report reopened goes back to approved with the reports' decision.
+  reports: ['in_review'],
   resend: ['more_requested'],
 };
 
-const KIND: Record<Transition, string> = {
+// The file's history entry for each move; a decision on the reports writes
+// its own, which names the reports, so the move adds none.
+const KIND: Record<Transition, string | null> = {
   decide: 'verification_decided',
   open: 'verification_opened',
   reopen: 'verification_reopened',
+  reports: null,
   resend: 'verification_resent',
 };
 
@@ -601,6 +606,35 @@ export class VerificationService {
     );
   }
 
+  // The file's move when its reports are decided: the garage stays as it is,
+  // so no gate and no publication; the reports' story announces it. A file
+  // in review with no open report is an ordinary review, refused as one.
+  async approveAfterReports(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    fileId: string,
+  ): Promise<VerificationFile> {
+    trust(actor);
+    const before = await this.file(tx, fileId);
+    if (before.status === 'in_review') {
+      const open = await tx.garageReport.count({
+        where: { status: 'open', verificationFileId: fileId },
+      });
+      if (open === 0) {
+        this.refuse(fileId, 'no_open_report');
+        throw await this.refusalFor(tx, before);
+      }
+    }
+    return this.move(tx, actor, before, 'reports', {
+      decidedAt: new Date(),
+      decidedBy: actor.accountId,
+      status: 'approved',
+    }).catch((error: unknown) => {
+      if (decidedAlready(error)) this.refuse(fileId, 'already_decided');
+      throw error;
+    });
+  }
+
   // Who may resend is the submitting story's rule; here only the file counts.
   async resend(
     tx: Prisma.TransactionClient,
@@ -710,19 +744,21 @@ export class VerificationService {
       where: { id: before.id },
     });
     if (count === 0) throw await this.refusalFor(tx, after);
-    await this.audit.record(tx, {
-      action: 'update',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      field: 'status',
-      garageId: before.garageId,
-      kind: KIND[transition],
-      newValue: data.status,
-      oldValue: before.status,
-      subjectId: before.id,
-      subjectType: 'verification_file',
-      text,
-    });
+    const kind = KIND[transition];
+    if (kind)
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        field: 'status',
+        garageId: before.garageId,
+        kind,
+        newValue: data.status,
+        oldValue: before.status,
+        subjectId: before.id,
+        subjectType: 'verification_file',
+        text,
+      });
     return after;
   }
 

@@ -174,6 +174,8 @@
       "rejected": "Respins de {name}, {when}",
       "reopened": "Redeschis de {name}, {when}",
       "reopenedWhy": "Redeschis de {name}, {when} ({reason})",
+      "reportConfirmed": "Sesizări confirmate de {name}, {when}",
+      "reportUnfounded": "Sesizări închise ca nefondate de {name}, {when}",
       "resent": "Retrimis de {name}, {when}",
       "sent": "Trimis de {name}, {when}"
     },
@@ -342,8 +344,32 @@
       "title": "Redeschide dosarul"
     },
     "reopenedReport": "Redeschis după un raport, {when}",
-    "report": "{text} · {when}",
-    "reported": "Raportat",
+    "reportDecision": {
+      "cancel": "Renunță",
+      "confirmed": "Sesizare confirmată",
+      "confirmedSubmit": "Confirmă și suspendă",
+      "note": "Notă internă",
+      "noteCount": "{n}/1000",
+      "noteTooLong": "Nota are cel mult 1000 de caractere.",
+      "reason": "Motivul pe care îl vede service‑ul",
+      "reasonCount": "{n}/200",
+      "reasonTooLong": "Motivul are cel mult 200 de caractere.",
+      "suspends": "Service‑ul va fi suspendat și va primi acest motiv.",
+      "unfounded": "Sesizare nefondată",
+      "unfoundedQuestion": "Închizi sesizările deschise ca nefondate? Dosarul revine la aprobat, iar cine a raportat află că nu a fost nevoie de nicio măsură."
+    },
+    "reports": {
+      "confirmed": "Confirmată de {name}, {when}",
+      "deleted": "Cont șters",
+      "heading": {
+        "few": "SESIZĂRI · {n} DESCHISE",
+        "one": "SESIZĂRI · {n} DESCHISĂ",
+        "other": "SESIZĂRI · {n} DESCHISE"
+      },
+      "note": "Notă internă: {note}",
+      "reason": "Motiv: {reason}",
+      "unfounded": "Nefondată de {name}, {when}"
+    },
     "results": {
       "failed": "problemă",
       "not_run": "neverificat",

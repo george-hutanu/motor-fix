@@ -16,6 +16,7 @@ import {
 import { quotesWorld } from '../../../quotes/quotes.testing';
 
 // @traces 049-FR-001 049-FR-002 049-FR-003 049-FR-004 049-FR-014 049-FR-015
+// @traces 069-FR-004
 
 const reader = countedMetrics();
 const suspensions = (cause: string) =>
@@ -214,6 +215,59 @@ describe('a failed write undoes the whole suspension', () => {
     ).rejects.toThrow('audit down');
 
     await nothingChanged();
+  });
+});
+
+describe('suspending inside the caller’s transaction', () => {
+  it('commits with the caller and counts nothing itself', async () => {
+    const before = await suspensions('report_confirmed');
+
+    await prisma.$transaction((tx) =>
+      service().suspendIn(tx, admin, garage.id, 'report_confirmed', REASON),
+    );
+
+    expect(await status(garage.id)).toBe('suspended');
+    expect(await rows(garage.id)).toHaveLength(1);
+    expect(await suspensions('report_confirmed')).toBe(before);
+  });
+
+  it('leaves no suspension when the caller’s transaction rolls back', async () => {
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await service().suspendIn(tx, admin, garage.id, 'admin', REASON);
+        throw new Error('caller failed');
+      }),
+    ).rejects.toThrow('caller failed');
+
+    expect(await status(garage.id)).toBe('approved');
+    expect(await rows(garage.id)).toHaveLength(0);
+    expect(await history(garage.id)).toHaveLength(0);
+    expect(await events(garage.id)).toHaveLength(0);
+  });
+
+  it('reads the open suspension’s cause, and none once it is lifted', async () => {
+    expect(
+      await prisma.$transaction((tx) =>
+        service().openSuspension(tx, garage.id),
+      ),
+    ).toBeNull();
+
+    await service().suspend(admin, garage.id, 'recheck_failed', REASON);
+    expect(
+      await prisma.$transaction((tx) =>
+        service().openSuspension(tx, garage.id),
+      ),
+    ).toEqual({ cause: 'recheck_failed' });
+
+    await prisma.garageSuspension.updateMany({
+      data: { untilTime: new Date() },
+      where: { garageId: garage.id },
+    });
+    expect(
+      await prisma.$transaction((tx) =>
+        service().openSuspension(tx, garage.id),
+      ),
+    ).toBeNull();
   });
 });
 

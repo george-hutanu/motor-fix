@@ -199,6 +199,7 @@ describe('GET /admin/verification-files/:id', () => {
       garage: { brands: [], id: garage, name: 'Atelier Dinamo', photos: [] },
       previousRejection: null,
       reports: [],
+      reportsOpen: 0,
       timeline: { entries: [], total: 0 },
     });
     expect(res.body.checks.map((c: { kind: string }) => c.kind)).toEqual([

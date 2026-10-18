@@ -202,9 +202,14 @@ test.describe('the verification file @seeded', () => {
       const order = await drawer(page)
         .locator('[data-section]')
         .evaluateAll((els) => els.map((el) => el.getAttribute('data-section')));
-      expect(order.filter((s) => s !== 'reported' && s !== 'rejected')).toEqual(
-        ['header', 'register', 'documents', 'manual', 'history', 'footer'],
-      );
+      expect(order.filter((s) => s !== 'reports' && s !== 'rejected')).toEqual([
+        'header',
+        'register',
+        'documents',
+        'manual',
+        'history',
+        'footer',
+      ]);
 
       await openDocuments(page);
 

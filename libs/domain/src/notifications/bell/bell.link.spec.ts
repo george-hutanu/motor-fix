@@ -42,6 +42,7 @@ const REQUEST_KINDS = [
   'MEDIA_REMOVED',
 ];
 const GARAGE_KINDS = ['GARAGE_SUSPENDED'];
+const PROFILE_KINDS = ['GARAGE_REPORT_DECIDED'];
 const REVIEW_KINDS = [
   'REVIEW_INVITE',
   'REVIEW_REPLIED',
@@ -81,7 +82,13 @@ describe('the view a bell row opens', () => {
 
   it('maps exactly the kinds named, each one a catalogue type', () => {
     expect(Object.keys(VIEW_OF_KIND).sort()).toEqual(
-      [...CAR_KINDS, ...REQUEST_KINDS, ...REVIEW_KINDS, ...GARAGE_KINDS].sort(),
+      [
+        ...CAR_KINDS,
+        ...REQUEST_KINDS,
+        ...REVIEW_KINDS,
+        ...GARAGE_KINDS,
+        ...PROFILE_KINDS,
+      ].sort(),
     );
     for (const kind of Object.keys(VIEW_OF_KIND))
       expect(Object.hasOwn(NOTIFICATION_TYPES, kind)).toBe(true);
@@ -136,5 +143,37 @@ describe('a row whose subject cannot be named', () => {
     expect(
       bellLink({ kind: 'QUOTE_RECEIVED', params: null, subjectId: CAR }),
     ).toBe('/app/driver/requests');
+  });
+});
+
+// @traces 069-FR-007
+describe('a row about a garage a driver reported', () => {
+  const profile = 'https://motorfix.ro/en/garages/atelier-dinamo';
+
+  it.each(PROFILE_KINDS)('opens %s on the garage’s public profile', (kind) => {
+    expect(bellLink({ kind, params: { profile }, subjectId: CAR })).toBe(
+      '/en/garages/atelier-dinamo',
+    );
+  });
+
+  it.each([
+    ['no profile', {}],
+    ['no parameters', null],
+    ['a profile that is not text', { profile: 42 }],
+    ['a profile that is not a URL', { profile: 'http://' }],
+    ['a link to another view', { profile: 'https://motorfix.ro/app/garage' }],
+    [
+      'a language the site has not',
+      { profile: 'https://motorfix.ro/de/garages/x' },
+    ],
+    ['more after the garage', { profile: `${profile}/reviews` }],
+    [
+      'a garage that is not a slug',
+      { profile: 'https://motorfix.ro/ro/garages/..' },
+    ],
+  ])('opens nothing for %s', (_, params) => {
+    expect(
+      bellLink({ kind: 'GARAGE_REPORT_DECIDED', params, subjectId: CAR }),
+    ).toBeNull();
   });
 });

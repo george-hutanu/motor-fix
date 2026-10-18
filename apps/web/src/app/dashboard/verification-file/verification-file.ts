@@ -11,6 +11,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
 import {
   type ApprovalGap,
@@ -27,6 +28,7 @@ import {
   type VerificationFileCheckDto,
   type VerificationFileDocumentDto,
   type VerificationFileDto,
+  type VerificationFileReportDto,
 } from '@motor-fix/data-access';
 import {
   appliedAt,
@@ -39,6 +41,10 @@ import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
+import {
+  ReportDecision,
+  type ReportDecisionData,
+} from '../report-decision/report-decision';
 import {
   VerificationApprove,
   type VerificationApproveData,
@@ -143,6 +149,7 @@ interface VerificationFileData {
   imports: [
     HlmButton,
     Lamp,
+    RouterLink,
     TranslatePipe,
     VerificationChanges,
     VerificationRegisterForm,
@@ -170,6 +177,7 @@ export class VerificationFile {
       'verification.check_recorded',
       'verification.decided',
       'verification.reopened',
+      'garage_report.decided',
     ],
     () => this.fileId,
   );
@@ -241,18 +249,37 @@ export class VerificationFile {
     };
   });
 
-  protected readonly reported = computed(() => {
+  // The file's reports, newest first as read, under a title that counts the
+  // open ones, those past the reports read included; none, no part.
+  protected readonly reports = computed(() => {
     const value = this.data();
-    if (!value) return undefined;
-    const when = (at: string) => this.when(at);
-    const reports = value.reports.map((r) =>
-      this.t('report', { text: r.text, when: when(r.createdAt) }),
-    );
+    if (!value?.reports.length) return undefined;
+    const open = value.reportsOpen;
     const reopened =
       value.file.reopenReason === 'garage_report' && value.file.reopenedAt
-        ? this.t('reopenedReport', { when: when(value.file.reopenedAt) })
+        ? this.t('reopenedReport', { when: this.when(value.file.reopenedAt) })
         : null;
-    return reports.length || reopened ? { reopened, reports } : undefined;
+    return {
+      heading: this.t('reports.heading', {
+        count: open,
+        n: formatNum(open, this.i18n.language()),
+      }),
+      reopened,
+      rows: value.reports.map((r) => ({
+        ...this.outcome(r),
+        id: r.id,
+        reporter: r.reporter,
+        text: r.text,
+        when: this.when(r.createdAt),
+      })),
+    };
+  });
+
+  // An in-review file with an open report is decided by its reports, never
+  // by the three decisions.
+  protected readonly reportOpen = computed(() => {
+    const value = this.data();
+    return value?.file.status === 'in_review' && value.reportsOpen > 0;
   });
 
   protected readonly rejected = computed(() => {
@@ -618,6 +645,49 @@ export class VerificationFile {
         .filter((doc) => doc.present)
         .map((doc) => doc.kind),
     );
+  }
+
+  // Asks first, in the decision's own dialog, then sends it; the answer is
+  // the file as decided. A decision taken first by another admin is named
+  // and read again; any other failure is told and read again, so a decision
+  // that committed before the failure is never offered twice.
+  async decideReports(decision: 'unfounded' | 'confirmed') {
+    if (this.asking || this.busy() || !this.reportOpen()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<{ note?: string } | { reason: string }, ReportDecisionData>(
+        ReportDecision,
+        {
+          data: { decision },
+          shape: 'dialog',
+          title: `admin.file.reportDecision.${decision}`,
+        },
+      )
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus(`[data-part="report-${decision}"]`);
+      return;
+    }
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      this.data.set(
+        await this.api.reportDecisionControllerDecide({
+          body: { decision, ...answer },
+          id: this.fileId,
+        }),
+      );
+      this.focus('h3');
+    } catch (error) {
+      this.refusal(error);
+      if (toProblem(error).code !== 'verification_transition_refused')
+        this.file.reload();
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   // Asks first; a decision that is reopened stays shown until the next one.
@@ -1032,12 +1102,24 @@ export class VerificationFile {
         ),
         when,
       });
+    if (entry.kind === 'report_decided')
+      return this.reportLine(next, name, when);
     if (entry.action === 'create')
       return this.t('lines.sent', {
         name: value.file.declaredByName || name,
         when,
       });
     return this.statusLine(entry, name, when);
+  }
+
+  // A decision on the file's reports, by its outcome.
+  private reportLine(next: unknown, name: string, when: string) {
+    const confirmed =
+      (next as { decision?: string } | null)?.decision === 'confirmed';
+    return this.t(
+      confirmed ? 'lines.reportConfirmed' : 'lines.reportUnfounded',
+      { name, when },
+    );
   }
 
   // A change to the file: an approval refused, its RAR number corrected, or
@@ -1055,6 +1137,26 @@ export class VerificationFile {
         : STATUS_LINES[String(entry.newValue)];
     // A change this drawer has no words for still takes its one line.
     return this.t(`lines.${line ?? 'changed'}`, { name, when });
+  }
+
+  // A decided report's outcome, with who decided it and when, and its note
+  // or, for a confirmed one, the reason the garage was given.
+  private outcome(report: VerificationFileReportDto) {
+    if (report.status === 'open') return { detail: null, outcome: null };
+    const by = {
+      name: report.decidedBy?.name || SYSTEM_NAME,
+      when: this.when(report.decidedAt),
+    };
+    const note = report.decisionNote;
+    if (report.status === 'confirmed')
+      return {
+        detail: note ? this.t('reports.reason', { reason: note }) : null,
+        outcome: this.t('reports.confirmed', by),
+      };
+    return {
+      detail: note ? this.t('reports.note', { note }) : null,
+      outcome: this.t('reports.unfounded', by),
+    };
   }
 
   // A reason's label, any code without one reading as `other` (as the
