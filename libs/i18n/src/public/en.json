@@ -613,6 +613,7 @@
       "worksOn": "takes {brand}"
     },
     "changePlace": "Change place",
+    "enterAddress": "Enter an address",
     "failed": "We couldn't load the results",
     "found": {
       "one": "{count} garage found",
@@ -629,6 +630,7 @@
     },
     "loading": "Loading the results",
     "locating": "Finding your location…",
+    "locationFailed": "We could not get your location.",
     "map": {
       "label": "Map of garages",
       "mobile": "Mobile mechanic · service area",

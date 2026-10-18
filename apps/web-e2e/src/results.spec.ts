@@ -823,3 +823,79 @@ test.describe('Results measured from where the driver is @seeded', () => {
     ).toBe(false);
   });
 });
+
+// The address look-up is answered here, as on Home: only the api's test boot
+// has a stand-in with fixed answers, and a deployed api answers real
+// addresses or none at all.
+const CLUJ_NAPOCA = { label: 'Cluj-Napoca', lat: 46.7712, lng: 23.6236 };
+const answerPlaces = (page: Page) =>
+  page.route('**/api/v1/places?*', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    return route.fulfill({
+      body: JSON.stringify({ items: /cluj/i.test(q) ? [CLUJ_NAPOCA] : [] }),
+      contentType: 'application/json',
+      status: 200,
+    });
+  });
+// A browser that refuses the location at once.
+const refuseLocation = (page: Page) =>
+  page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: (
+          _ok: PositionCallback,
+          fail?: PositionErrorCallback,
+        ) => fail?.({ code: 1, message: 'denied' } as GeolocationPositionError),
+      },
+    });
+  });
+
+// @traces 271-garage-distance-FR-002
+// @traces 271-garage-distance-FR-008
+test.describe('Results with the location refused @seeded', () => {
+  test('waits on a focused address field, then searches from the address picked', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await refuseLocation(page);
+    await answerPlaces(page);
+    await page.goto('/ro/garages?brand=dacia');
+
+    const field = page.getByRole('combobox', { name: 'Introdu o adresă' });
+    await expect(field).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(page.locator('mf-result-card')).toHaveCount(0);
+    await expect(page.locator('.here')).toHaveCount(0);
+    expect(page.url()).not.toContain('near=');
+
+    await field.fill('Cluj');
+    await page.getByRole('option', { name: 'Cluj-Napoca' }).click();
+
+    await expect(page).toHaveURL(/[?&]near=46\.771,23\.624(&|$)/);
+    await expect(
+      page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
+    ).toContainText('1,0 km');
+    await expect(page.locator('.here')).toBeVisible();
+    await expect(page.locator('.summary .area')).toHaveText(
+      'în 25 km de Cluj-Napoca',
+    );
+    await expect(field).toHaveCount(0);
+  });
+
+  test('holds 320 px with no sideways scroll while the field waits', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await refuseLocation(page);
+    await page.setViewportSize({ height: 800, width: 320 });
+    await page.goto('/en/garages?brand=dacia');
+
+    await expect(
+      page.getByRole('combobox', { name: 'Enter an address' }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth > 320),
+    ).toBe(false);
+  });
+});

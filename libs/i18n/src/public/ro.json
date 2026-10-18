@@ -623,6 +623,7 @@
       "worksOn": "primește {brand}"
     },
     "changePlace": "Schimbă locul",
+    "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
     "found": {
       "few": "{count} service‑uri găsite",
@@ -641,6 +642,7 @@
     },
     "loading": "Se încarcă rezultatele",
     "locating": "Se caută locația…",
+    "locationFailed": "Nu am putut afla locația.",
     "map": {
       "label": "Harta service‑urilor",
       "mobile": "Mecanic mobil · zona deservită",

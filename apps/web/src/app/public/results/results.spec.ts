@@ -11,6 +11,7 @@ import {
   type GarageSearchControllerPins$Params,
   type GarageSearchPageDto,
   type ListedGarageDto,
+  PlacesService,
   SearchService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -138,6 +139,14 @@ const live = {
   resync,
 };
 const reduced = signal(false);
+// The address look-up of the field Results shows when it has no place.
+const placesApi = {
+  placesControllerSearch: jest.fn(
+    async (_params: { lang: string; q: string }) => ({
+      items: [] as { label: string; lat: number; lng: number }[],
+    }),
+  ),
+};
 
 let harness: RouterTestingHarness;
 
@@ -151,6 +160,7 @@ async function configure(platform = 'browser') {
     providers: [
       provideRouter([{ component: Results, path: ':lang/garages' }]),
       { provide: SearchService, useValue: searchApi },
+      { provide: PlacesService, useValue: placesApi },
       { provide: Overlays, useValue: overlays },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: PublicLive, useValue: live },
@@ -168,6 +178,7 @@ beforeEach(() => {
   searchApi.garageSearchControllerForBrand.mockClear();
   pinsAnswer = pinsOf(48);
   pinsApi.mockClear();
+  placesApi.placesControllerSearch.mockClear();
   openMap.mockClear();
   mapView.show.mockClear();
   mapView.fit.mockClear();
@@ -2226,5 +2237,197 @@ describe('Results measured from where the driver is', () => {
 
     expect(status()).toBeFalsy();
     expect(searches()).toEqual([]);
+  });
+});
+
+// @traces 271-garage-distance-FR-002
+// @traces 271-garage-distance-FR-003
+describe('Results waiting for an address the driver types', () => {
+  beforeEach(async () => {
+    asks = [];
+    geolocation.getCurrentPosition.mockClear();
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocation,
+    });
+    await configure();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'geolocation');
+  });
+
+  const field = () =>
+    page().querySelector<HTMLInputElement>('input[role="combobox"]');
+  const label = () => {
+    const input = field();
+    return input ? said(page().querySelector(`label[for="${input.id}"]`)) : '';
+  };
+  const options = () => [
+    ...page().querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ];
+  // The field stands before the map in the page, so above it.
+  const aboveMap = () => {
+    const input = field();
+    const map = page().querySelector('mf-results-map');
+    return Boolean(
+      input &&
+        map &&
+        input.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  };
+  const nothingShown = () => {
+    expect(searches()).toEqual([]);
+    expect(pinsApi).not.toHaveBeenCalled();
+    expect(page().querySelector('mf-result-card')).toBeNull();
+    expect(page().querySelector('.card.skeleton')).toBeNull();
+  };
+  const shown = () => {
+    expect(label()).toBe('Introdu o adresă');
+    expect(document.activeElement).toBe(field());
+    expect(aboveMap()).toBe(true);
+    expect(
+      page().querySelector('.locating[role="status"]')?.textContent?.trim(),
+    ).toBeFalsy();
+    nothingShown();
+  };
+
+  it('shows the field, focused above the map, on a refusal, and searches nothing', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.refuse();
+    await settle();
+
+    shown();
+    expect(said(page().querySelector('.placeless'))).toBe(
+      'Nu am putut afla locația.',
+    );
+  });
+
+  it('shows it on a browser error', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    const [ok, fail] = geolocation.getCurrentPosition.mock.calls[0] ?? [];
+    expect(ok).toBeDefined();
+    fail?.({ code: 2 } as GeolocationPositionError);
+    await settle();
+    await settle();
+
+    shown();
+  });
+
+  it('shows it in a browser with no geolocation', async () => {
+    Reflect.deleteProperty(navigator, 'geolocation');
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await settle();
+
+    shown();
+  });
+
+  it('shows it for a location outside Romania', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.found(48.8566, 2.3522);
+    await settle();
+
+    shown();
+  });
+
+  it('shows it after 10 s of silence, and not before', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages?brand=bmw', { placed: false });
+
+    await jest.advanceTimersByTimeAsync(9_999);
+    await settle();
+    expect(field()).toBeNull();
+
+    await jest.advanceTimersByTimeAsync(1);
+    await settle();
+    await settle();
+    shown();
+  });
+
+  it('says it in English', async () => {
+    await open('/en/garages?brand=bmw', { language: 'en', placed: false });
+    await asks[0]?.refuse();
+    await settle();
+
+    expect(label()).toBe('Enter an address');
+    expect(said(page().querySelector('.placeless'))).toBe(
+      'We could not get your location.',
+    );
+  });
+
+  it('shows no field while the location is asked, nor once a place exists', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    expect(field()).toBeNull();
+
+    await harness.navigateByUrl('/ro/garages?brand=bmw&near=44.437,26.117');
+    await settle();
+    expect(field()).toBeNull();
+  });
+
+  it('keeps the place picked, writes it into the bar, runs one logged search and gives way to the summary line', async () => {
+    placesApi.placesControllerSearch.mockResolvedValue({
+      items: [{ label: 'Cluj-Napoca', lat: 46.77123, lng: 23.62361 }],
+    });
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.refuse();
+    await settle();
+
+    const input = field() as HTMLInputElement;
+    input.value = 'Cluj';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await settle();
+    await settle();
+    expect(placesApi.placesControllerSearch).toHaveBeenCalledWith({
+      lang: 'ro',
+      q: 'Cluj',
+    });
+    options()[0]?.click();
+    await settle();
+    await settle();
+
+    const kept = {
+      label: 'Cluj-Napoca',
+      lat: 46.771,
+      lng: 23.624,
+      origin: 'address',
+    };
+    expect(TestBed.inject(PlaceStore).place()).toEqual(kept);
+    expect(JSON.parse(localStorage.getItem('mf-place') ?? 'null')).toEqual(
+      kept,
+    );
+    expect(TestBed.inject(Router).url).toBe(
+      '/ro/garages?brand=bmw&near=46.771,23.624',
+    );
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '46.771,23.624' },
+    ]);
+
+    await reads[0]?.answer();
+    expect(field()).toBeNull();
+    expect(said(page().querySelector('.summary .area'))).toBe(
+      'în 25 km de Cluj-Napoca',
+    );
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+  });
+
+  it('drops a location that answers after an address was picked', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await jest.advanceTimersByTimeAsync(10_000);
+    await settle();
+    TestBed.inject(PlaceStore).set(PLACE);
+    await settle();
+
+    await asks[0]?.found(CLUJ.lat, CLUJ.lng);
+
+    expect(TestBed.inject(PlaceStore).place()).toEqual({
+      ...PLACE,
+      lat: 44.447,
+      lng: 26.117,
+    });
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '44.447,26.117' },
+    ]);
   });
 });

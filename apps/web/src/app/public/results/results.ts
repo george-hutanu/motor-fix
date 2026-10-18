@@ -41,6 +41,10 @@ import { type PinCard, ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
+import {
+  type AddressChoice,
+  AddressField,
+} from '../address-field/address-field';
 import { followPublicView, PublicLive } from '../live';
 import { SavedGarages } from '../saved-garages/saved-garages';
 
@@ -85,7 +89,14 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [LiveChange, ResultCard, ResultsMap, RouterLink, TranslatePipe],
+  imports: [
+    AddressField,
+    LiveChange,
+    ResultCard,
+    ResultsMap,
+    RouterLink,
+    TranslatePipe,
+  ],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -375,6 +386,15 @@ export class Results {
     if (nearOf(place) !== this.near() || this.radius()) this.logNext = true;
     this.store.set(place);
     await this.write({ near: nearOf(place), radius: null });
+  }
+
+  // An address typed while the browser gave no place: it is kept, goes into
+  // the bar and starts one logged search.
+  protected placed({ label, lat, lng, origin }: AddressChoice) {
+    this.logNext = true;
+    this.store.set({ label, lat, lng, origin });
+    const kept = this.store.place();
+    if (kept) void this.write({ near: nearOf(kept) });
   }
 
   // A late answer, after the driver chose a place another way or left, is
