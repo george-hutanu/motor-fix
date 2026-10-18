@@ -6,8 +6,8 @@ section {
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-3);
-  padding: var(--mf-space-4);
-  border: 1px solid var(--mf-line-strong);
+  padding: var(--mf-space-5) var(--mf-space-6);
+  border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
   background: var(--mf-panel);
   color: var(--mf-text);
@@ -124,5 +124,11 @@ h2 {
   }
   .state {
     text-align: left;
+  }
+}
+/* As the garage requests panel: a phone keeps 16 px sides. */
+@media (max-width: 767.98px) {
+  section {
+    padding-inline: var(--mf-space-4);
   }
 }
