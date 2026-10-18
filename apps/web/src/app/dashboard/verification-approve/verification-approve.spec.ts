@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ApprovalGap } from '@motor-fix/contracts/verification-target';
@@ -231,5 +234,23 @@ describe('approving past what is not ok', () => {
     await expect(result).resolves.toEqual({
       note: 'Autorizația vine mâine pe e‑mail',
     });
+  });
+});
+
+describe('VerificationApprove on a 320 px phone', () => {
+  it('keeps the confirm label on one line: the label face shrinks below 390 px', () => {
+    const css = readFileSync(
+      join(__dirname, 'verification-approve.css'),
+      'utf8',
+    );
+    const phone =
+      /@media \(max-width: 389px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+    const submit =
+      /button\[type="submit"\]\s*\{([^}]*)\}/.exec(phone)?.[1] ?? '';
+
+    expect(submit).toMatch(/font-size:\s*var\(--mf-size-label\);/);
+    expect(submit).toMatch(/letter-spacing:\s*0\.08em;/);
+    expect(submit).toMatch(/padding-inline:\s*var\(--mf-space-3\);/);
+    expect(submit).toMatch(/text-wrap:\s*balance;/);
   });
 });

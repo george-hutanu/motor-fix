@@ -48,3 +48,12 @@ textarea {
   min-height: var(--mf-tap);
   white-space: normal;
 }
+/* The label face is wide: below 390 px "Approve and publish" only fits on one line at the label size. */
+@media (max-width: 389px) {
+  .actions button[type="submit"] {
+    padding-inline: var(--mf-space-3);
+    font-size: var(--mf-size-label);
+    letter-spacing: 0.08em;
+    text-wrap: balance;
+  }
+}
