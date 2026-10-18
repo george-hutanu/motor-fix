@@ -22,6 +22,9 @@
             <li class="row" [class.decided]="!!row.decided">
               <span class="who">
                 <span class="name">{{ row.name }}</span>
+                @if (row.updated) {
+                  <span class="tag">{{ 'admin.queue.updated' | t }}</span>
+                }
                 <span class="area">{{ row.area }}</span>
               </span>
               <span class="state">
