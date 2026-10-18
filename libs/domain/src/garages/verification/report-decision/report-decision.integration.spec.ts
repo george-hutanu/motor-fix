@@ -305,9 +305,13 @@ describe('confirming the reports', () => {
 
     await service().decide(ioana, fileId, confirmed);
 
-    expect((await reportsOf()).every((r) => r.status === 'confirmed')).toBe(
-      true,
-    );
+    // @traces 069-FR-003
+    for (const report of await reportsOf()) {
+      expect(report).toMatchObject({
+        decisionNote: REASON,
+        status: 'confirmed',
+      });
+    }
     expect((await fileOf()).status).toBe('approved');
     expect(await garageStatus()).toBe('suspended');
     const [row, ...more] = await suspensionsOf();

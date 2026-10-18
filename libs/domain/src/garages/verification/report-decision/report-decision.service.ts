@@ -95,7 +95,8 @@ export class ReportDecisionService {
       data: {
         decidedAt: new Date(),
         decidedBy: actor.accountId,
-        decisionNote: note,
+        // The one note column holds the admins' note, or the reason given.
+        decisionNote: decision === 'confirmed' ? reason : note,
         status: decision,
       },
       where: { id: { in: reportIds }, status: 'open' },
