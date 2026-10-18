@@ -1,0 +1,68 @@
+name: PostgreSQL image
+
+# Builds the one PostgreSQL every environment runs (infra/postgres: Railway's
+# PostgreSQL 18 image plus PostGIS) for amd64 and arm64, and pushes it to
+# ghcr.io/george-hutanu/motor-fix-postgres as `18`, the tag compose, CI and
+# the drills name, and as the commit sha, the digest Railway can pin. By hand
+# from any branch (moving 18 only when its move_18 input is set, so a branch
+# can publish before its own files need the tag but never by accident), and
+# on main whenever the image changes; a pull request that changes it only
+# builds it, pushing nothing. A failed run is the alert: GitHub e-mails the
+# owner.
+on:
+  workflow_dispatch:
+    inputs:
+      move_18:
+        description: Also move the 18 tag that compose, CI and staging pull (always on from main)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'infra/postgres/**'
+      - '.github/workflows/postgres-image.yml'
+  pull_request:
+    paths:
+      - 'infra/postgres/**'
+      - '.github/workflows/postgres-image.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+# Every publish (main, or by hand) shares one group and none cancels another.
+# A pull request only builds, so its runs get a group per branch, where a newer
+# push replaces an older build, and never queue against a publish.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('postgres-image-pr-{0}', github.ref) || 'postgres-image' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # The arm64 half builds under emulation.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: infra/postgres
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          # A rebuild picks up the base image's and PostGIS's point releases.
+          pull: true
+          # Links the package to this repository, whose visibility it takes.
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          # 18 moves from main, or from a branch only when the dispatch asks.
+          tags: |
+            ghcr.io/george-hutanu/motor-fix-postgres:${{ github.sha }}
+            ${{ (github.ref == 'refs/heads/main' || inputs.move_18) && 'ghcr.io/george-hutanu/motor-fix-postgres:18' || '' }}

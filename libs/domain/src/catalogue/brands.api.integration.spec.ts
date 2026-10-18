@@ -109,23 +109,24 @@ describe('GET /brands', () => {
 
     const res = await search({ q: '   ' });
 
-    expect(res.body.total).toBe(14);
+    expect(res.body.total).toBe(15);
   });
 
-  it('ships Alfa Romeo and Citroën unranked, after every ranked brand', async () => {
+  // @traces 405-FR-005
+  it('ships Alfa Romeo, Citroën and Opel unranked, after every ranked brand', async () => {
     await loader.load(BRANDS);
 
     const res = await search();
     const listed = names(res.body);
 
-    expect(listed.slice(-2)).toEqual(['Alfa Romeo', 'Citroën']);
+    expect(listed.slice(-3)).toEqual(['Alfa Romeo', 'Citroën', 'Opel']);
     expect(
       res.body.items
         .filter((b: { name: string }) =>
-          ['Alfa Romeo', 'Citroën'].includes(b.name),
+          ['Alfa Romeo', 'Citroën', 'Opel'].includes(b.name),
         )
         .map((b: { popularity: number | null }) => b.popularity),
-    ).toEqual([null, null]);
+    ).toEqual([null, null, null]);
   });
 
   it('pages 20 brands at a time with a cursor to the next page', async () => {
@@ -165,7 +166,7 @@ describe('GET /brands', () => {
     const res = await search({ q: 'tesla' });
 
     expect(res.body.items).toEqual([]);
-    expect((await search()).body.total).toBe(13);
+    expect((await search()).body.total).toBe(14);
   });
 
   it.each([

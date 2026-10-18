@@ -36,7 +36,7 @@ const file = async (status = 'submitted') => {
     `g-${garage}`,
   ]);
   await db.query(
-    'INSERT INTO verification_file (id, garage_id, status) VALUES ($1, $2, $3::verification_file_status)',
+    "INSERT INTO verification_file (id, garage_id, status, rar_number) VALUES ($1, $2, $3::verification_file_status, 'RAR-1234')",
     [id, garage, status],
   );
   await db.query(
@@ -75,9 +75,8 @@ afterAll(async () => {
 describe('PUT /admin/verification-files/:id/checks/:kind', () => {
   it('records the check and answers with it, the summary and the activities', async () => {
     const id = await file();
-    // OK on the RAR check needs the file's number and every tick.
     await db.query(
-      "UPDATE verification_file SET rar_number = 'RAR-1234' WHERE id = $1",
+      "INSERT INTO legal_document (id, verification_file_id, kind, pages) VALUES (gen_random_uuid(), $1, 'rar_authorisation', ARRAY['rar_authorisation/1.pdf'])",
       [id],
     );
 
@@ -85,7 +84,6 @@ describe('PUT /admin/verification-files/:id/checks/:kind', () => {
       id,
       'rar',
       {
-        detail: 'Autorizație găsită în registru',
         evidence: { found: true, sameAddress: true, sameCompany: true },
         result: 'ok',
       },
@@ -96,16 +94,14 @@ describe('PUT /admin/verification-files/:id/checks/:kind', () => {
     expect(res.body).toMatchObject({
       check: {
         automatic: false,
-        // The ticks write the detail, and a file with no licence uploaded
-        // still sums up as missing it.
         detail: 'aceeași firmă și adresă',
         kind: 'rar',
         result: 'ok',
       },
       rarActivities: [],
       summary: {
-        en: 'RAR licence missing',
-        ro: 'Lipsește autorizația RAR',
+        en: 'RAR licence checked',
+        ro: 'Autorizație RAR verificată',
       },
     });
     expect(typeof res.body.check.recordedAt).toBe('string');
