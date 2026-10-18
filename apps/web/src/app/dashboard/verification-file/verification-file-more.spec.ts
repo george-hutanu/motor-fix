@@ -17,6 +17,7 @@ import { Live } from '../live';
 
 // @traces 304-request-garage-details-FR-001
 // @traces 304-request-garage-details-FR-011
+// @traces 304-request-garage-details-FR-009
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -161,6 +162,7 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
+  verificationFileControllerChanges: jest.Mock;
   verificationFileControllerCorrect: jest.Mock;
   verificationFileControllerDecision: jest.Mock;
   verificationFileControllerOpen: jest.Mock;
@@ -189,6 +191,12 @@ async function open(
   answer = typeof file === 'function' ? file : async () => file;
   api = {
     verificationChecksControllerRecord: jest.fn(),
+    verificationFileControllerChanges: jest.fn(async () => ({
+      changes: [],
+      requestedAt: DECIDED_AT,
+      resubmitted: true,
+      total: 0,
+    })),
     verificationFileControllerCorrect: jest.fn(),
     verificationFileControllerDecision: jest.fn(),
     verificationFileControllerOpen: jest.fn(() => answer()),
@@ -543,5 +551,73 @@ describe('asking a garage for more from the drawer', () => {
       'Completări cerute de Ioana',
     );
     expect(askButton(host)).toBeNull();
+  });
+});
+
+describe('the changes panel in the drawer', () => {
+  const returned = () =>
+    fileOf({
+      file: {
+        decidedAt: DECIDED_AT,
+        decidedBy: ioana,
+        requestedAt: DECIDED_AT,
+        resubmitted: true,
+        status: 'in_review',
+      },
+    });
+
+  it('shows the panel for a file sent back, read before the checks', async () => {
+    const host = await open(returned());
+
+    const panel = section(host, 'changes');
+    expect(panel).not.toBeNull();
+    expect(api.verificationFileControllerChanges).toHaveBeenCalledWith({
+      id: FILE,
+    });
+    const register = section(host, 'register') as HTMLElement;
+    expect(
+      (panel as HTMLElement).compareDocumentPosition(register) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('shows no panel and reads no changes for a file never sent back', async () => {
+    const host = await open(fileOf({ file: { resubmitted: false } }));
+
+    expect(section(host, 'changes')).toBeNull();
+    expect(api.verificationFileControllerChanges).not.toHaveBeenCalled();
+  });
+
+  it('keeps every decision usable while the panel has failed', async () => {
+    const host = await open(async () => {
+      api.verificationFileControllerChanges.mockRejectedValue(
+        new HttpErrorResponse({ status: 500 }),
+      );
+      return returned();
+    });
+
+    expect(
+      text(section(host, 'changes')?.querySelector('[role="alert"] p')),
+    ).toBe('Nu am putut încărca modificările');
+    expect(askButton(host).disabled).toBe(false);
+    expect(footerButtons(host).some((b) => !b.disabled)).toBe(true);
+  });
+
+  it('reads the file again when the garage sends it back while it is open', async () => {
+    await open(decidedAs('more_requested'));
+    const reads = api.verificationFileControllerRead.mock.calls.length;
+    answer = async () => returned();
+
+    events.next({
+      at: NOW.toISOString(),
+      id: FILE,
+      kind: 'verification.submitted',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(
+      api.verificationFileControllerRead.mock.calls.length,
+    ).toBeGreaterThan(reads);
   });
 });

@@ -76,6 +76,14 @@
       </section>
     }
 
+    @if (data()?.file?.resubmitted) {
+      <mf-verification-changes
+        [fileId]="fileId"
+        [photos]="data()?.garage?.photos?.length ?? 0"
+        [brands]="data()?.garage?.brands?.length ?? 0"
+      />
+    }
+
     <section data-section="register">
       <h4>{{ 'admin.file.register.heading' | t }}</h4>
       <ul class="rows">

@@ -40,6 +40,65 @@
       },
       "title": "Approve and publish"
     },
+    "changes": {
+      "areas": {
+        "brands": "Brands",
+        "documents": "Documents",
+        "photos": "Photos",
+        "prices": "Prices",
+        "profile": "Profile"
+      },
+      "changed": "{label}: changed",
+      "documents": {
+        "added": "{label}: added",
+        "removed": "{label}: removed",
+        "replaced": "{label}: replaced"
+      },
+      "empty": "No change recorded since the request",
+      "failed": "Could not load the changes",
+      "fields": {
+        "address": "Address",
+        "brandNote": "Brands note",
+        "courtesy_car_paid": "Paid courtesy car",
+        "courtesy_car_price_per_day_bani": "Courtesy car, price per day",
+        "duration_minutes": "Duration",
+        "from_bani": "Price from",
+        "hours": "Opening hours",
+        "labour_from_bani": "Labour from",
+        "labour_to_bani": "Labour up to",
+        "location": "Map location",
+        "name": "Name",
+        "payment_card": "Card payment",
+        "payment_cash": "Cash payment",
+        "payment_transfer": "Bank transfer payment",
+        "phone": "Phone",
+        "refusalPhrase": "Refusal phrase",
+        "seatAddress": "Registered seat",
+        "serviceRadiusKm": "Service radius",
+        "to_bani": "Price up to"
+      },
+      "line": "{label}: {old} → {new}",
+      "loading": "Loading the changes",
+      "more": {
+        "one": "and {n} more change",
+        "other": "and {n} more changes"
+      },
+      "no": "No",
+      "retry": "Retry",
+      "since": "since the request of {date}",
+      "subjects": {
+        "garage_brand": "Brands",
+        "garage_brand_job": "Jobs per brand",
+        "garage_closed_day": "Closed days",
+        "garage_facility": "Facilities",
+        "garage_photo": "Photos",
+        "garage_price": "Prices",
+        "onrc_certificate": "ONRC certificate",
+        "rar_authorisation": "RAR authorisation"
+      },
+      "title": "What changed",
+      "yes": "Yes"
+    },
     "checks": {
       "activities": "Activities",
       "address": "Address",

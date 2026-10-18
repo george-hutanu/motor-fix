@@ -40,6 +40,66 @@
       },
       "title": "Aprobă și publică"
     },
+    "changes": {
+      "areas": {
+        "brands": "Mărci",
+        "documents": "Documente",
+        "photos": "Fotografii",
+        "prices": "Prețuri",
+        "profile": "Profil"
+      },
+      "changed": "{label}: modificat",
+      "documents": {
+        "added": "{label}: adăugat",
+        "removed": "{label}: șters",
+        "replaced": "{label}: înlocuit"
+      },
+      "empty": "Nicio modificare înregistrată de la cerere",
+      "failed": "Nu am putut încărca modificările",
+      "fields": {
+        "address": "Adresa",
+        "brandNote": "Nota despre mărci",
+        "courtesy_car_paid": "Mașină de schimb cu plată",
+        "courtesy_car_price_per_day_bani": "Mașină de schimb, preț pe zi",
+        "duration_minutes": "Durata",
+        "from_bani": "Preț de la",
+        "hours": "Programul",
+        "labour_from_bani": "Manoperă de la",
+        "labour_to_bani": "Manoperă până la",
+        "location": "Locația pe hartă",
+        "name": "Numele",
+        "payment_card": "Plată cu cardul",
+        "payment_cash": "Plată în numerar",
+        "payment_transfer": "Plată prin transfer",
+        "phone": "Telefonul",
+        "refusalPhrase": "Fraza de refuz",
+        "seatAddress": "Sediul",
+        "serviceRadiusKm": "Raza de deplasare",
+        "to_bani": "Preț până la"
+      },
+      "line": "{label}: {old} → {new}",
+      "loading": "Se încarcă modificările",
+      "more": {
+        "few": "și încă {n} modificări",
+        "one": "și încă {n} modificare",
+        "other": "și încă {n} de modificări"
+      },
+      "no": "Nu",
+      "retry": "Reîncearcă",
+      "since": "de la cererea din {date}",
+      "subjects": {
+        "garage_brand": "Mărci",
+        "garage_brand_job": "Lucrările pe mărci",
+        "garage_closed_day": "Zilele închise",
+        "garage_facility": "Facilitățile",
+        "garage_photo": "Fotografii",
+        "garage_price": "Prețurile",
+        "onrc_certificate": "Certificatul ONRC",
+        "rar_authorisation": "Autorizația RAR"
+      },
+      "title": "Ce s‑a schimbat",
+      "yes": "Da"
+    },
     "checks": {
       "activities": "Activități",
       "address": "Adresă",

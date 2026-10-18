@@ -43,6 +43,7 @@ import {
   VerificationApprove,
   type VerificationApproveData,
 } from '../verification-approve/verification-approve';
+import { VerificationChanges } from '../verification-changes/verification-changes';
 import {
   VerificationMore,
   type VerificationMoreData,
@@ -139,7 +140,13 @@ interface VerificationFileData {
 // decision and answers a refusal in the footer.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, Lamp, TranslatePipe, VerificationRegisterForm],
+  imports: [
+    HlmButton,
+    Lamp,
+    TranslatePipe,
+    VerificationChanges,
+    VerificationRegisterForm,
+  ],
   selector: 'mf-verification-file',
   styleUrl: './verification-file.css',
   templateUrl: './verification-file.html',
@@ -158,6 +165,7 @@ export class VerificationFile {
   private readonly file = liveResource(
     () => this.load(),
     [
+      'verification.submitted',
       'verification.opened',
       'verification.check_recorded',
       'verification.decided',
