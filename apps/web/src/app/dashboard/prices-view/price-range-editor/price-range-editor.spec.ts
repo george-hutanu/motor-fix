@@ -379,6 +379,7 @@ describe('the range editor: two sessions and a bad network', () => {
     await press();
 
     expect(text()).toContain('Lista s‑a schimbat între timp.');
+    expect(text()).not.toContain('Am adus valorile salvate');
     expect(read).toHaveBeenCalledWith({ garageId: GARAGE });
     expect(field('De la').value).toBe('950');
     expect(field('Până la').value).toBe('1450');
@@ -451,6 +452,20 @@ describe('the range editor: a brand range and the labour range', () => {
     expect(said('Până la')).toBe('Ambele capete sunt necesare');
     expect(button('Salvează')?.disabled).toBe(true);
   });
+
+  it.each([
+    ['brand', BRAND],
+    ['labour', LABOUR],
+  ])(
+    'asks the %s editor for both ends when its bottom is cleared',
+    async (_, data) => {
+      await open(data, { title: 'x' });
+      await fill('De la', '');
+
+      expect(said('De la')).toBe('Ambele capete sunt necesare');
+      expect(button('Salvează')?.disabled).toBe(true);
+    },
+  );
 
   it('saves the labour range through the labour write', async () => {
     await open(LABOUR, { title: 'public.listing.prices.labour' });

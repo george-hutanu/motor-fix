@@ -512,6 +512,8 @@ describe('Prețuri: the editing switch', () => {
     await settle();
     const toggle = named(element, 'Modifică prețurile');
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    // The board's amber button: the kit's primary variant.
+    expect(toggle.classList).toContain('spartan-button-variant-default');
 
     toggle.click();
     await settle();

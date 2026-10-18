@@ -125,11 +125,22 @@ export class PriceRangeEditor {
       if (!at || (at === 'fromBani' && fromBani === null)) continue;
       found.set(at, code);
     }
-    if (fromBani === null) found.set('fromBani', 'required');
-    if (toBani === null && !this.timed) found.set('toBani', 'both_ends');
+    this.missingEnds(found, fromBani, toBani);
     const wide = checked.warnings.length > 0;
     return { found, wide };
   });
+
+  // An empty bottom is always a problem; an empty top only where both ends
+  // are needed.
+  private missingEnds(
+    found: Map<Field, string>,
+    fromBani: number | null,
+    toBani: number | null,
+  ) {
+    if (fromBani === null)
+      found.set('fromBani', this.timed ? 'required' : 'both_ends');
+    if (toBani === null && !this.timed) found.set('toBani', 'both_ends');
+  }
 
   constructor() {
     void this.i18n.enter('garage');

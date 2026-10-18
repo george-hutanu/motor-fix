@@ -180,7 +180,7 @@ const editingOn = async (
 // @traces 173-FR-002
 describe('Prețuri: the editing switch under odd lists', () => {
   it('does not open an editor for a job that has no default row', async () => {
-    const { element, settle } = await editingOn(async () => ({
+    const { element } = await editingOn(async () => ({
       items: [
         item({
           brandRanges: [
@@ -197,12 +197,8 @@ describe('Prețuri: the editing switch under odd lists', () => {
     const rowButtons = [
       ...rows(element)[0].querySelectorAll(':scope > .line button'),
     ] as HTMLButtonElement[];
-    for (const b of rowButtons) b.click();
-    await settle();
-
-    for (const [, options] of open.mock.calls) {
-      expect(options.data.item?.priceId).toBeTruthy();
-    }
+    expect(rowButtons).toHaveLength(0);
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('opens one editor when a row action is pressed twice at once', async () => {

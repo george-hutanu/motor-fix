@@ -88,7 +88,7 @@
       "minutes": "min",
       "problem": {
         "not_found": "The job is no longer on the list.",
-        "stale": "The list changed in the meantime. The saved values are back; check them and save again."
+        "stale": "The list changed in the meantime."
       },
       "save": "Save",
       "to": "To"

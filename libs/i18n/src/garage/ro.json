@@ -88,7 +88,7 @@
       "minutes": "min",
       "problem": {
         "not_found": "Lucrarea nu mai e în listă.",
-        "stale": "Lista s‑a schimbat între timp. Am adus valorile salvate; verifică‑le și salvează din nou."
+        "stale": "Lista s‑a schimbat între timp."
       },
       "save": "Salvează",
       "to": "Până la"

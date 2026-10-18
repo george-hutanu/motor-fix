@@ -2,7 +2,7 @@
   <header class="head">
     <h2>{{ 'garage.prices.title' | t }}</h2>
     @if (owner() && view.value()) {
-      <button hlmBtn variant="secondary" type="button" class="toggle" [attr.aria-pressed]="editing()" (click)="editing.set(!editing())">
+      <button hlmBtn type="button" class="toggle" [attr.aria-pressed]="editing()" (click)="editing.set(!editing())">
         @if (editing()) {
           {{ 'garage.prices.done' | t }}
         } @else {
