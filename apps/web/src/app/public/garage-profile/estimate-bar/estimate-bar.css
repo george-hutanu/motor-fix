@@ -27,10 +27,6 @@
     backdrop-filter: none;
   }
 }
-/* With no tab bar under it, it keeps clear of the home indicator itself. */
-:host-context(.no-tab-bar) {
-  padding-bottom: max(16px, var(--mf-safe-bottom));
-}
 .bar {
   display: flex;
   flex-wrap: wrap;

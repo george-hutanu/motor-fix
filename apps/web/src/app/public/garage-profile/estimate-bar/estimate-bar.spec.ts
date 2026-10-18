@@ -134,12 +134,6 @@ describe('the bar’s stylesheet', () => {
     expect(css).toMatch(/:host\(\[hidden\]\)\s*\{\s*display:\s*none;?\s*\}/);
   });
 
-  it('keeps clear of the home indicator where no tab bar is shown', () => {
-    expect(css).toMatch(
-      /:host-context\(\.no-tab-bar\)\s*\{[^}]*padding-bottom:\s*max\(16px, var\(--mf-safe-bottom\)\)/,
-    );
-  });
-
   it('has tap-sized buttons, readable text, steady digits and a plain fallback', () => {
     expect(css).toContain('min-height: var(--mf-tap)');
     expect(css).toContain('var(--mf-size-small)');
@@ -211,6 +205,25 @@ describe('what the bar shows', () => {
     const note = request().getAttribute('aria-describedby') ?? '';
     expect(note).toMatch(/-bar$/);
     expect(bar().querySelector(`#${note}`)?.classList).toContain('note');
+  });
+
+  it('says where a request went from its own button, inside the one bar', async () => {
+    await render();
+    toggle('j-diag');
+    open.mockImplementationOnce(async (_task, { data }) => {
+      data.sent({
+        recipients: [{ garage: { name: 'Service Auto Militari' } }],
+      });
+      return 'cancelled';
+    });
+    request().click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(bar().querySelectorAll('.bar')).toHaveLength(1);
+    expect(say(bar().querySelector('[role="status"]'))).toBe(
+      'Trimis către Service Auto Militari.',
+    );
   });
 
   it('shows nothing in a garage-side role', async () => {

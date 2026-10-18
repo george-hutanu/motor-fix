@@ -142,7 +142,7 @@ test.describe('the live estimate on a garage profile @seeded', () => {
 
 // The bar keeps the total and CERE OFERTĂ on a phone's screen; from 1024 px
 // the box itself stays in view beside the long sections.
-// @traces 311-FR-013 311-SC-001 311-SC-002 311-SC-003 311-SC-006
+// @traces 311-FR-013
 test.describe('the estimate within reach @seeded', () => {
   const bar = (page: Page) => page.locator('mf-estimate-bar');
 
