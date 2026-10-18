@@ -8,6 +8,7 @@ export * from './brands.dto';
 export * from './cars.dto';
 export * from './consent';
 export * from './consents.dto';
+export * from './demand-order';
 export * from './env';
 export * from './events';
 export * from './files';

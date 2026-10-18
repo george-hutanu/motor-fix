@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -427,6 +430,17 @@ describe('searching the accounts', () => {
     expect(url()).toBe(VIEW);
   });
 
+  // Enter in the box, or its clear button, fires a bubbling search event.
+  it('keeps the search when the box fires the browser search event', async () => {
+    const el = await open('ro', `${VIEW}?q=dinamo`);
+
+    box(el).dispatchEvent(new Event('search', { bubbles: true }));
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=dinamo`);
+    expect(reads).toHaveLength(1);
+  });
+
   it('never shows a read that a newer one replaced', async () => {
     const pending = new Map<string, (page: AdminAccountsPageDto) => void>();
     const el = await open();
@@ -685,5 +699,29 @@ describe('the search on the address', () => {
 
     expect(url()).toBe(`${VIEW}?role=driver,mechanic`);
     expect(reads.at(-1)).toEqual({ role: ['driver', 'mechanic'] });
+  });
+});
+
+describe('the view on the page', () => {
+  const stylesheet = readFileSync(join(__dirname, 'admin-users.css'), 'utf8');
+
+  it("keeps the header's gutter at both sides, so the controls and cards start under the title and end under the bell", () => {
+    expect(stylesheet).toMatch(
+      /^:host \{[^}]*margin-inline: var\(--mf-space-4\);/m,
+    );
+  });
+
+  it('starts the totals line at the view edge, where the title starts', () => {
+    expect(stylesheet).not.toMatch(/\n\.totals \{[^}]*padding-inline/);
+  });
+
+  // @traces 975-FR-003
+  it('reads the count line at the body size on a phone and the small size from 768 px up', () => {
+    expect(stylesheet).toMatch(
+      /\n\.found \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(min-width: 768px\) \{\s*\.found \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });

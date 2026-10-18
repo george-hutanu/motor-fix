@@ -5,7 +5,7 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { ACCOUNTS, headers, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 const REVIEWS = 'Recenzii doar după o lucrare confirmată';
@@ -15,15 +15,6 @@ const REASON = 'Testăm recenziile din profilul service-ului.';
 // Each request carries its own reason, so a history line left by an earlier
 // test or a retry never answers for this one.
 const reasonFor = () => `${REASON} ${Date.now()}`;
-
-async function headers(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  const { accessToken } = (await res.json()) as { accessToken: string };
-  return { Authorization: `Bearer ${accessToken}` };
-}
 
 // No request left waiting and the rule back on, so the suite can run twice
 // against one database.

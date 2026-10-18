@@ -3,24 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
-
-async function signInAsAdmin2(page: Page) {
-  await ready(page, '/ro/garages');
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page
-      .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { exact: true, name: 'Cont' })
-      .click();
-  } else {
-    await page
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-  }
-  await signIn(page, ACCOUNTS.admin2);
-  await expect(page).toHaveURL('/app/admin');
-}
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -130,7 +114,8 @@ test.describe('approving and publishing a garage @seeded', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Toate verificările sunt în regulă.' });
-      await expect(dialog).toBeVisible();
+      // On a phone the dialog's own box is empty; its panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBe(0);
       await dialog.getByRole('button', { name: 'Aprobă și publică' }).click();
 
@@ -184,7 +169,8 @@ test.describe('approving and publishing a garage @seeded', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Every check is ok.' });
-      await expect(dialog).toBeVisible();
+      // On a phone the dialog's own box is empty; its panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await confirmLines(page, dialog)).toBe(1);
       // On a phone the actions stack full width. Cancel keeps the body size,
       // as every other sheet's buttons do; only the wide label face of the

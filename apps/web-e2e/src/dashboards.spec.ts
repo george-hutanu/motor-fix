@@ -77,6 +77,63 @@ for (const [label, size] of [
   });
 }
 
+// The admin's system log and accounts views keep the header's inset at both
+// sides: their controls and cards start under the title and end under the
+// bell, never at the screen's edge.
+for (const [name, path] of [
+  ['system log', '/app/admin/log'],
+  ['accounts', '/app/admin/users?q=dinamo'],
+] as const) {
+  for (const [label, size] of [
+    ['a 320 px phone', { height: 640, width: 320 }],
+    ['a 390 px phone', { height: 844, width: 390 }],
+    ['a desktop', { height: 900, width: 1280 }],
+  ] as const) {
+    test(`the admin's ${name} view lines up with the title and the bell on ${label}`, async ({
+      page,
+    }) => {
+      await signInAs(page, 'admin', '/app/admin', [
+        'admin.garages',
+        'admin.users',
+        'admin.settings',
+      ]);
+      await page.route('**/api/v1/admin/system-log*', (route) =>
+        route.fulfill({ json: { items: [], nextCursor: null } }),
+      );
+      await page.route('**/api/v1/admin/accounts/summary', (route) =>
+        route.fulfill({
+          json: { activeDrivers: 0, garagesListed: 8, mechanics: 2 },
+        }),
+      );
+      await page.route(/\/api\/v1\/admin\/accounts(\?.*)?$/, (route) =>
+        route.fulfill({ json: { items: [], nextCursor: null, total: 0 } }),
+      );
+      await page.route('**/api/v1/admin/growth', (route) =>
+        route.fulfill({ json: { months: [] } }),
+      );
+      await page.setViewportSize(size);
+
+      await page.goto(path);
+
+      const title = page.getByRole('heading', { level: 1 });
+      const tools = page.locator('header .tools');
+      const view = page.locator('main > :not(router-outlet)').first();
+      await expect(title).toBeVisible();
+      await expect(view).toBeVisible();
+      const [titleBox, toolsBox, viewBox] = await Promise.all([
+        title.boundingBox(),
+        tools.boundingBox(),
+        view.boundingBox(),
+      ]);
+      const right = (b: { x: number; width: number } | null) =>
+        b ? b.x + b.width : -1;
+      expect(viewBox?.x).toBeGreaterThan(0);
+      expect(titleBox?.x).toBeCloseTo(viewBox?.x ?? -1, 0);
+      expect(right(viewBox)).toBeCloseTo(right(toolsBox), 0);
+    });
+  }
+}
+
 // A driver with no cars sees the add button centred under the empty state's
 // text, as the requests view centres its own.
 test('the empty cars view centres its add button under the text', async ({

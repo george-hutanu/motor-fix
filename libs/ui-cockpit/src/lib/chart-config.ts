@@ -34,7 +34,16 @@ export type ChartUnit = 'lei' | 'km' | 'count';
 export interface ChartPoint {
   readonly label: string;
   readonly value: number;
+  // A second figure drawn before the value, as its own lighter bar.
+  readonly lead?: number;
 }
+// The names of the two figures when a point carries a lead.
+export interface ChartHeadings {
+  readonly leadHeading: string;
+  readonly valueHeading: string;
+}
+// A category's label: its name, or its name over both figures.
+type ChartLabel = string | string[];
 interface ChartTheme {
   amber: string;
   bg: string;
@@ -108,6 +117,44 @@ function dataset(
   };
 }
 
+// The lead's bar: the value's amber at half strength.
+function leadDataset(
+  type: ChartType,
+  values: number[],
+  theme: ChartTheme,
+): ChartDataset<ChartType, number[]> {
+  const amber = color(theme.amber);
+  const fill = amber.valid ? amber.alpha(0.5).rgbString() : theme.amber;
+  return {
+    ...dataset(type, values, theme),
+    backgroundColor: fill,
+    hoverBackgroundColor: fill,
+  };
+}
+
+// Chart.js gives a side axis at most half the plot's width and clips a name
+// wider than that at the panel's edge; 16 characters of 12 px text stay well
+// inside half of a 320 px phone's panel. A word longer than that is cut.
+const LINE_CHARS = 16;
+
+export function nameLines(label: string): string[] {
+  if (label.length <= LINE_CHARS) return [label];
+  const words = label
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap(
+      (word) => word.match(new RegExp(`.{1,${LINE_CHARS}}`, 'gu')) ?? [],
+    );
+  const lines: string[] = [];
+  for (const word of words) {
+    const last = lines.at(-1);
+    if (last !== undefined && last.length + 1 + word.length <= LINE_CHARS)
+      lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return lines.length ? lines : [label];
+}
+
 export function chartConfig(
   type: ChartType,
   points: readonly ChartPoint[],
@@ -117,8 +164,41 @@ export function chartConfig(
   reducedMotion: boolean,
   // Bars running across, one category per row: for long names.
   horizontal = false,
-): ChartConfiguration<ChartType, number[], string> {
+  // With a lead on the points: two bars per category, both figures as text.
+  headings?: ChartHeadings,
+): ChartConfiguration<ChartType, number[], ChartLabel> {
   const format = (value: unknown) => formatValue(unit, value, language);
+  const lead = points.some((p) => p.lead !== undefined) ? headings : undefined;
+  const value = dataset(
+    type,
+    points.map((p) => p.value),
+    theme,
+  );
+  const datasets = lead
+    ? [
+        {
+          ...leadDataset(
+            type,
+            points.map((p) => p.lead ?? 0),
+            theme,
+          ),
+          label: lead.leadHeading,
+        },
+        { ...value, label: lead.valueHeading },
+      ]
+    : [value];
+  // Down the side a long name wraps; upright, it stays one string.
+  const name = (label: string) => (horizontal ? nameLines(label) : [label]);
+  const labels: ChartLabel[] = lead
+    ? points.map((p) => [
+        ...name(p.label),
+        `${lead.leadHeading} ${format(p.lead ?? 0)}`,
+        `${lead.valueHeading} ${format(p.value)}`,
+      ])
+    : points.map((p) => {
+        const lines = name(p.label);
+        return lines.length > 1 ? lines : p.label;
+      });
   const ticks = {
     color: theme.textSecondary,
     font: { family: theme.font, size: theme.labelSize },
@@ -127,22 +207,18 @@ export function chartConfig(
     ? (['y', 'x'] as const)
     : (['x', 'y'] as const);
   return {
-    data: {
-      datasets: [
-        dataset(
-          type,
-          points.map((p) => p.value),
-          theme,
-        ),
-      ],
-      labels: points.map((p) => p.label),
-    },
+    data: { datasets, labels },
     options: {
       animation: reducedMotion
         ? false
         : { duration: 1000, easing: 'easeOutQuart' },
       ...(horizontal && { indexAxis: 'y' as const }),
-      interaction: { axis: categoryAxis, intersect: false, mode: 'nearest' },
+      // A lead's tooltip shows both bars of the category under its name.
+      interaction: {
+        axis: categoryAxis,
+        intersect: false,
+        mode: lead ? 'index' : 'nearest',
+      },
       maintainAspectRatio: false,
       plugins: {
         tooltip: {
@@ -151,8 +227,9 @@ export function chartConfig(
           bodyFont: { family: theme.font, size: theme.labelSize, weight: 600 },
           callbacks: {
             label: (item: TooltipItem<ChartType>) =>
-              `${item.label} · ${format(item.raw)}`,
-            title: () => '',
+              `${lead ? item.dataset.label : (points[item.dataIndex]?.label ?? item.label)} · ${format(item.raw)}`,
+            title: (items: TooltipItem<ChartType>[]) =>
+              lead ? (points[items[0]?.dataIndex]?.label ?? '') : '',
           },
           caretSize: 0,
           cornerRadius: 7,

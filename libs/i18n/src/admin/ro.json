@@ -3,12 +3,19 @@
     "allBrands": "Vezi toate mărcile",
     "allJobs": "Vezi toate lucrările",
     "brand": "Marcă",
-    "brands": "Cereri pe marcă, 30 de zile",
+    "brands": "Căutări și cereri pe marcă, 30 de zile",
+    "byRequests": "cereri",
+    "bySearches": "căutări",
     "empty": "Încă nu sunt cereri în ultimele 30 de zile.",
+    "emptyBrands": "Încă nu sunt căutări sau cereri în ultimele 30 de zile.",
     "fewer": "Arată mai puține",
+    "from": "Căutările se numără de la {day}",
     "job": "Lucrare",
     "jobs": "Cereri pe lucrare, 30 de zile",
-    "subtitle": "Ce au cerut șoferii în ultimele 30 de zile"
+    "orderBy": "Ordonează după",
+    "requests": "Cereri",
+    "searches": "Căutări",
+    "subtitle": "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile"
   },
   "file": {
     "approve": {
@@ -95,6 +102,7 @@
       "pfa": "PFA"
     },
     "lines": {
+      "approvalRefused": "Aprobare refuzată: {reason} — {name}, {when}",
       "approved": "Aprobat de {name}, {when}",
       "changed": "Modificat de {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
@@ -142,6 +150,11 @@
       "rar": "Autorizație RAR"
     },
     "recorded": "{name}, {when}",
+    "refusalReasons": {
+      "caen_check_required": "verificarea CAEN 4520 nu e în regulă",
+      "note_required": "lipsește nota",
+      "rar_check_required": "verificarea RAR nu e în regulă"
+    },
     "register": {
       "activities": "Activitățile autorizate acoperă lista de prețuri",
       "anaf": "ANAF",

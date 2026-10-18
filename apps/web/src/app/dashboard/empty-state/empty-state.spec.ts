@@ -123,8 +123,8 @@ describe('the empty state for a reader without a pointer', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-003
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-003
+  // @traces 975-FR-008
   const stylesheet = readFileSync(join(__dirname, 'empty-state.css'), 'utf8');
 
   it('takes every text size from a Cockpit size token', () => {

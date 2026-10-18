@@ -35,6 +35,7 @@ features:
   - 173-price-range-in-place
   - 1174-postgres-18-pitr
   - 1178-keycloak-sizing
+  - 1348-release-green
 ---
 
 # Capability: Observability
@@ -789,6 +790,9 @@ _From 1345-staging-observability._
 
 _From 1345-staging-observability._
 
+### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
+
+_From 1348-release-green._
 ### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
 
 _From 173-price-range-in-place._

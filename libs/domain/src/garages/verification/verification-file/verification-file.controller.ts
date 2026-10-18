@@ -8,6 +8,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Inject,
   Logger,
   Param,
@@ -29,7 +30,7 @@ import { CurrentActor, Requires } from '../../../auth/actor.guard';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
 import type { PrismaClient } from '../../../generated/prisma/client';
-import { VerificationService } from '../verification.service';
+import { REFUSAL_CODES, VerificationService } from '../verification.service';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -89,15 +90,35 @@ export class VerificationFileController {
     @Param('id') id: string,
     @Body() body: VerificationDecisionDto,
   ): Promise<VerificationFileDto> {
-    await this.prisma.$transaction((tx) =>
-      this.verification.decide(tx, actor, id, {
-        note: body.note,
-        outcome: body.decision,
-        reason: body.reason,
-        requestedItems: body.requestedItems,
-      }),
-    );
+    await this.prisma
+      .$transaction((tx) =>
+        this.verification.decide(tx, actor, id, {
+          note: body.note,
+          outcome: body.decision,
+          reason: body.reason,
+          requestedItems: body.requestedItems,
+        }),
+      )
+      .catch(async (error: unknown) => {
+        const code = body.decision === 'approved' && refusalCode(error);
+        if (code) await this.recordRefusal(actor, id, code);
+        throw error;
+      });
     return this.files.read(id);
+  }
+
+  // The refusal rolled its transaction back, so its entry gets its own; an
+  // entry that cannot be written never hides the refusal from the admin.
+  private async recordRefusal(actor: Actor, id: string, code: string) {
+    try {
+      await this.prisma.$transaction((tx) =>
+        this.verification.recordRefusal(tx, actor, id, code),
+      );
+    } catch (cause) {
+      this.logger.warn(
+        `file ${id} refusal entry not written: ${String(cause)}`,
+      );
+    }
   }
 
   // A decided file goes back to review; its decision stands until a new one.
@@ -139,4 +160,15 @@ export class VerificationFileController {
     );
     return this.files.read(id);
   }
+}
+
+// The approval rules' refusal code an error carries, if it is one.
+function refusalCode(error: unknown): string | null {
+  if (!(error instanceof HttpException)) return null;
+  const answer = error.getResponse();
+  const code =
+    typeof answer === 'object' && answer !== null && 'code' in answer
+      ? String(answer.code)
+      : null;
+  return code && REFUSAL_CODES.has(code) ? code : null;
 }

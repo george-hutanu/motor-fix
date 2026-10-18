@@ -690,8 +690,8 @@ describe('retrying', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-008
   const source = readFileSync(join(__dirname, 'form-parts.ts'), 'utf8');
 
   it('takes every text size from a Cockpit size token', () => {
