@@ -75,11 +75,15 @@ const post = (
   return authorization ? req.set('Authorization', authorization) : req;
 };
 
+// An upsert: only the seed adds the test-only rules, and CI's database is
+// migrated, never seeded, so an UPDATE alone would change nothing there.
 const setRule = (key: string, value: unknown) =>
-  db.query('UPDATE platform_rule SET value = $2::jsonb WHERE key = $1', [
-    key,
-    JSON.stringify(value),
-  ]);
+  db.query(
+    `INSERT INTO platform_rule (id, key, value, default_value)
+     VALUES (gen_random_uuid(), $1, $2::jsonb, 'false')
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [key, JSON.stringify(value)],
+  );
 
 let adminId: string;
 let admin: string;
