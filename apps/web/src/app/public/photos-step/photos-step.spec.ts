@@ -69,8 +69,9 @@ async function mount(
     for (let i = 0; i < 3; i++) {
       fixture.detectChanges();
       await fixture.whenStable();
-      // The queue and the checksum answer through a few promises.
-      for (let m = 0; m < 10; m++) await Promise.resolve();
+      // The queue, the shrinking (one photo after another) and the checksum
+      // answer through a chain of promises.
+      for (let m = 0; m < 100; m++) await Promise.resolve();
     }
     fixture.detectChanges();
   };
@@ -972,6 +973,53 @@ describe('what the step takes', () => {
       expect(
         (asked?.request.body as { size: number } | undefined)?.size,
       ).toBeLessThan(10 * 1024 * 1024);
+    } finally {
+      delete g['createImageBitmap'];
+      delete g['OffscreenCanvas'];
+    }
+  });
+
+  // A 12 MP photo decodes to about 48 MB: twenty at once would end the tab.
+  it('shrinks the photos of one pick one after another, never two at once', async () => {
+    const g = globalThis as Record<string, unknown>;
+    let open_ = 0;
+    let most = 0;
+    let calls = 0;
+    g['createImageBitmap'] = async () => {
+      calls++;
+      open_++;
+      most = Math.max(most, open_);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return {
+        close() {
+          open_--;
+        },
+        height: 3000,
+        width: 4000,
+      };
+    };
+    g['OffscreenCanvas'] = class {
+      getContext() {
+        return { drawImage() {} };
+      }
+      async convertToBlob() {
+        return new Blob([new Uint8Array(4)], { type: 'image/jpeg' });
+      }
+    };
+    try {
+      const opened = await open();
+
+      await choose(
+        opened,
+        ['a.jpg', 'b.jpg', 'c.jpg'].map((n) => photo(n, 'image/jpeg', 6e6)),
+      );
+      for (let i = 0; i < 10 && calls < 3; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await opened.settle();
+      }
+
+      expect(calls).toBe(3);
+      expect(most).toBe(1);
     } finally {
       delete g['createImageBitmap'];
       delete g['OffscreenCanvas'];

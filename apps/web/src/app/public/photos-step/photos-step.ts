@@ -257,7 +257,9 @@ export class PhotosStep {
   // Type first, then the size of the copy that is sent (FR-007).
   private async take(chosen: File[]) {
     const typed = chosen.filter((file) => TYPES.includes(file.type));
-    const sent = await Promise.all(typed.map((file) => downscale(file)));
+    // One at a time: each decoded photo holds its full pixels in memory.
+    const sent: File[] = [];
+    for (const file of typed) sent.push(await downscale(file));
     const fit = sent.filter(
       (file) => file.size > 0 && file.size <= RULE.maxBytes,
     );
