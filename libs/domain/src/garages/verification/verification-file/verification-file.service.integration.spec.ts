@@ -803,3 +803,35 @@ describe('a file decided before the checks existed', () => {
     });
   });
 });
+
+describe('a file back after a request for more', () => {
+  // @traces 304-request-garage-details-FR-007
+  const ASKED = new Date('2026-10-13T11:00:00+03:00');
+  const LATER = new Date('2026-10-14T11:00:00+03:00');
+
+  it('says so, with the time it was asked for more', async () => {
+    const file = await sent({ decidedAt: ASKED });
+
+    const { file: read } = await service().read(file.id);
+
+    expect(read.resubmitted).toBe(true);
+    expect(read.requestedAt).toBe(ASKED.toISOString());
+  });
+
+  it.each([
+    ['never asked', {}],
+    ['reopened after its decision', { decidedAt: ASKED, reopenedAt: LATER }],
+    ['decided', { decidedAt: ASKED, status: 'approved' as const }],
+    [
+      'still waiting for the garage',
+      { decidedAt: ASKED, status: 'more_requested' as const },
+    ],
+  ])('says nothing when %s', async (_, data) => {
+    const file = await sent(data);
+
+    const { file: read } = await service().read(file.id);
+
+    expect(read.resubmitted).toBe(false);
+    expect(read.requestedAt).toBeNull();
+  });
+});

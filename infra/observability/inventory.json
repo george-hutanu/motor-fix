@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 139,
+    "count": 140,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1021,6 +1021,19 @@
       ],
       "reason": "a read with no writes; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-302"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-changes",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/changes",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read: it writes no entry and counts nothing; the request it answers is counted by motorfix_verification_more_requests_total and the return by motorfix_verification_resubmissions_total",
+      "story": "ST-304"
     },
     {
       "kind": "endpoint",

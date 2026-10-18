@@ -221,10 +221,12 @@ export type { UpdateNotificationGroupDto } from './models/update-notification-gr
 export type { UpdateNotificationPreferenceDto } from './models/update-notification-preference-dto';
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationActorDto } from './models/verification-actor-dto';
+export type { VerificationChangeDto } from './models/verification-change-dto';
 export type { VerificationCheckEvidenceDto } from './models/verification-check-evidence-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
 export type { VerificationDecisionDto } from './models/verification-decision-dto';
 export type { VerificationFileActivityDto } from './models/verification-file-activity-dto';
+export type { VerificationFileChangesDto } from './models/verification-file-changes-dto';
 export type { VerificationFileCheckDto } from './models/verification-file-check-dto';
 export type { VerificationFileDocumentDto } from './models/verification-file-document-dto';
 export type { VerificationFileDto } from './models/verification-file-dto';

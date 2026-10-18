@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { VerificationService } from './verification.service';
+import { resubmission, VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
 import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -333,4 +333,91 @@ describe('the time of the latest sending', () => {
     expect(resent.submittedAt.getTime()).toBeGreaterThan(old.getTime());
     expect(reopened.submittedAt.getTime()).toBeGreaterThan(old.getTime());
   });
+});
+
+describe('a file back after a request for more', () => {
+  // @traces 304-request-garage-details-FR-007
+  const ASKED = new Date('2026-10-13T11:00:00+03:00');
+
+  const rowOf = async (id: string) => {
+    const { items } = await service().queue(prisma, page(), NOW);
+    return items.find((row) => row.id === id);
+  };
+
+  it('is marked, with the time it was asked for more', async () => {
+    const asked = await waiting(MONDAY, 'more_requested');
+    await prisma.verificationFile.update({
+      data: { decidedAt: ASKED },
+      where: { id: asked.id },
+    });
+    const verification = service();
+    const before = await verification.countWaiting(prisma);
+
+    await inTx((tx) => verification.resend(tx, owner, asked.id));
+
+    expect(await rowOf(asked.id)).toMatchObject({
+      requestedAt: ASKED,
+      resubmitted: true,
+    });
+    expect(await verification.countWaiting(prisma)).toBe(before + 1);
+  });
+
+  it('stays marked once an admin opens it', async () => {
+    const asked = await waiting(MONDAY, 'in_review');
+    await prisma.verificationFile.update({
+      data: { decidedAt: ASKED },
+      where: { id: asked.id },
+    });
+
+    expect(await rowOf(asked.id)).toMatchObject({
+      requestedAt: ASKED,
+      resubmitted: true,
+    });
+  });
+
+  it('is not marked when never asked for more', async () => {
+    const fresh = await waiting(MONDAY);
+
+    const row = await rowOf(fresh.id);
+
+    expect(row?.resubmitted).toBe(false);
+    expect(row).not.toHaveProperty('requestedAt');
+  });
+
+  it('is not marked when reopened after its decision', async () => {
+    const decided = await waiting(MONDAY, 'rejected');
+    await prisma.verificationFile.update({
+      data: { decidedAt: ASKED },
+      where: { id: decided.id },
+    });
+
+    await inTx((tx) => service().reopen(tx, admin, decided.id));
+
+    const row = await rowOf(decided.id);
+    expect(row?.resubmitted).toBe(false);
+    expect(row).not.toHaveProperty('requestedAt');
+  });
+});
+
+describe('whether a file came back', () => {
+  // @traces 304-request-garage-details-FR-007
+  const ASKED = new Date('2026-10-13T11:00:00+03:00');
+  const LATER = new Date('2026-10-14T11:00:00+03:00');
+
+  it.each([
+    ['submitted', ASKED, null, true],
+    ['in_review', ASKED, null, true],
+    ['in_review', LATER, ASKED, true],
+    ['submitted', null, null, false],
+    ['in_review', ASKED, LATER, false],
+    ['in_review', ASKED, ASKED, false],
+    ['more_requested', ASKED, null, false],
+    ['approved', ASKED, null, false],
+    ['rejected', ASKED, null, false],
+  ] as const)(
+    '%s, decided %s, reopened %s: %s',
+    (status, decidedAt, reopenedAt, back) => {
+      expect(resubmission({ decidedAt, reopenedAt, status })).toBe(back);
+    },
+  );
 });

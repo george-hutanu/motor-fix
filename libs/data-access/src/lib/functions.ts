@@ -123,6 +123,8 @@ export type { VerificationChecksControllerRecord$Params as VerificationChecksCon
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { VerificationFileControllerRead$Params as VerificationFileControllerRead$Params } from './fn/admin/verification-file-controller-read';
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
+export type { VerificationFileControllerChanges$Params as VerificationFileControllerChanges$Params } from './fn/admin/verification-file-controller-changes';
+export { verificationFileControllerChanges as verificationFileControllerChanges } from './fn/admin/verification-file-controller-changes';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
 export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';

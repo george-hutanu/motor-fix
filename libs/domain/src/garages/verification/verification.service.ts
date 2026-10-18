@@ -83,6 +83,21 @@ const LIVE: VerificationFileStatus[] = ['submitted', 'in_review', 'approved'];
 // Waiting for an admin; a file asked for more waits for its garage.
 const WAITING: VerificationFileStatus[] = ['submitted', 'in_review'];
 
+// A waiting file the garage sent again after a request for more: decided
+// once, and not reopened since. The request's time is its decision's.
+export function resubmission(file: {
+  decidedAt: Date | null;
+  reopenedAt: Date | null;
+  status: VerificationFileStatus;
+}) {
+  const { decidedAt, reopenedAt, status } = file;
+  return (
+    WAITING.includes(status) &&
+    decidedAt !== null &&
+    (reopenedAt === null || reopenedAt < decidedAt)
+  );
+}
+
 export const SYSTEM = { accountId: null, role: 'system' } as const;
 
 export const newestFirst = [
@@ -144,9 +159,11 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          decidedAt: true,
           documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
           id: true,
+          reopenedAt: true,
           status: true,
           submittedAt: true,
         },
@@ -787,9 +804,11 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    decidedAt: true;
     documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
     id: true;
+    reopenedAt: true;
     status: true;
     submittedAt: true;
   };
@@ -809,10 +828,13 @@ export function garageArea(garage: {
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
-  { checks, documents, garage, id, status, submittedAt }: QueueFile,
+  file: QueueFile,
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
+  const { checks, decidedAt, documents, garage, id, status, submittedAt } =
+    file;
+  const resubmitted = resubmission(file);
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
   const area = garageArea(garage);
@@ -827,6 +849,8 @@ function queueRow(
     id,
     lamp: queueLamp(checks, flagged),
     ...(team && { mechanics: garage._count.mechanics }),
+    ...(resubmitted && decidedAt && { requestedAt: decidedAt }),
+    resubmitted,
     status: status as VerificationQueueRowDto['status'],
     submittedAt,
     summary: {

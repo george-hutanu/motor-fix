@@ -34,6 +34,7 @@ const row = (
   id: `file-${n}`,
   lamp: 'green',
   mechanics: 3,
+  resubmitted: false,
   status: 'submitted',
   submittedAt: new Date().toISOString(),
   summary: {

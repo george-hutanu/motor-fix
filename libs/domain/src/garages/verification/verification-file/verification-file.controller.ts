@@ -1,6 +1,7 @@
 import {
   CorrectRarNumberDto,
   VerificationDecisionDto,
+  VerificationFileChangesDto,
   VerificationFileDto,
 } from '@motor-fix/contracts';
 import {
@@ -50,6 +51,15 @@ export class VerificationFileController {
   @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
   read(@Param('id') id: string): Promise<VerificationFileDto> {
     return this.files.read(id);
+  }
+
+  // What the garage changed since it was asked for more; writes nothing.
+  @Get(':id/changes')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationFileChangesDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  changes(@Param('id') id: string): Promise<VerificationFileChangesDto> {
+    return this.files.changes(id);
   }
 
   // A waiting file moves to review for this admin; any other is read as it is.
