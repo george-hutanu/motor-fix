@@ -468,7 +468,14 @@ test.describe('the platform figures', () => {
     await page.goto('/app/admin');
     await expect(tiles(page)).toHaveCount(6);
 
-    await expect(panel(page).getByRole('link')).toHaveCount(0);
+    // The panel's one link is Jurnal's way to the whole log (299-FR-006).
+    await expect(panel(page).getByRole('link')).toHaveText([
+      'Vezi tot jurnalul',
+    ]);
+    await expect(panel(page).getByRole('link')).toHaveAttribute(
+      'href',
+      '/app/admin/log',
+    );
   });
 });
 
