@@ -26,6 +26,7 @@ import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
 import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
+import { PricesView } from './prices-view/prices-view';
 import { RequestsView } from './requests-view/requests-view';
 import {
   fakeSavedGarages,
@@ -315,6 +316,24 @@ describe('the dashboard view lists', () => {
       'settings',
       'history',
     ]);
+  });
+
+  // @traces 172-FR-001 172-FR-009
+  it('gives the owner alone the prices view, its body downloaded with the view', async () => {
+    const prices = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'prices',
+    );
+    expect(prices?.capability).toBe('garage.prices');
+    await expect(prices?.load?.()).resolves.toBe(PricesView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'prices');
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      PricesView,
+    );
+    expect(paths('garage', OWNER)).toContain('prices');
+    expect(paths('garage', RECEPTIONIST)).not.toContain('prices');
+    expect(
+      paths('garage', ['garage.own_jobs', 'garage.audit_history']),
+    ).not.toContain('prices');
   });
 
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
@@ -821,9 +840,9 @@ describe('the dashboard view routes', () => {
     expect(element.textContent).not.toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
     );
-    await harness.navigateByUrl('/app/garage/prices');
+    await harness.navigateByUrl('/app/garage/reviews');
     expect(harness.routeNativeElement?.textContent).toContain(
-      'Aici vei vedea intervalele de preț pe lucrări.',
+      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
     );
     expect(harness.routeNativeElement?.textContent).not.toContain(
       'Profilul tău e în verificare.',

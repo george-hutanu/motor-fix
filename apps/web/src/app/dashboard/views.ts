@@ -245,7 +245,11 @@ export const DASHBOARDS: Record<
         load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
       },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
-      garageView('prices', 'garage.prices'),
+      {
+        ...garageView('prices', 'garage.prices'),
+        load: () =>
+          import('./prices-view/prices-view').then((m) => m.PricesView),
+      },
       garageView('reviews', 'garage.reviews'),
       garageView('profile', 'garage.profile'),
       {
