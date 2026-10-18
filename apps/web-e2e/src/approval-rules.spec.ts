@@ -1,35 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { type APIRequestContext, expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { ACCOUNTS, headers, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
-
-async function headers(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  const { accessToken } = (await res.json()) as { accessToken: string };
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
-async function signInAsAdmin2(page: Page) {
-  await ready(page, '/ro/garages');
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page
-      .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { exact: true, name: 'Cont' })
-      .click();
-  } else {
-    await page
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-  }
-  await signIn(page, ACCOUNTS.admin2);
-  await expect(page).toHaveURL('/app/admin');
-}
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
