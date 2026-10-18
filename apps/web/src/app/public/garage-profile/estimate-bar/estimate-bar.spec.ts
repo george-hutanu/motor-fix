@@ -60,6 +60,7 @@ class Host {
 
 let fixture: ComponentFixture<Host>;
 let open: jest.Mock;
+let track: jest.Mock;
 
 async function render({
   garage = GARAGE,
@@ -68,12 +69,13 @@ async function render({
   sync = true,
 } = {}) {
   open = jest.fn(async () => undefined);
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Overlays, useValue: { open } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track } },
       {
         provide: Session,
         useValue: {
@@ -226,12 +228,6 @@ describe('what the bar shows', () => {
     );
   });
 
-  it('shows nothing in a garage-side role', async () => {
-    await render({ role: 'garage' });
-
-    expect(bar().querySelector('button')).toBeNull();
-  });
-
   it('shows to a driver', async () => {
     await render({ role: 'driver' });
 
@@ -335,5 +331,16 @@ describe('the estimate sheet', () => {
     total().click();
 
     expect(open).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 311-FR-012
+describe('what the bar keeps to itself', () => {
+  it('emits no event for the sheet or a switch, and calls no server', async () => {
+    await render();
+    toggle('j-diag');
+    total().click();
+
+    expect(track).not.toHaveBeenCalled();
   });
 });

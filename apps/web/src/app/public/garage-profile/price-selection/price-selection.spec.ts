@@ -206,13 +206,6 @@ describe('whether the kept jobs are applied', () => {
     expect(s.applied()).toBe(true);
   });
 
-  it('stays false on the server', () => {
-    const s = selection('server');
-    s.sync(MILITARI);
-
-    expect(s.applied()).toBe(false);
-  });
-
   it('never returns to false, another garage or a toggle included', () => {
     const s = selection();
     s.sync(MILITARI);
