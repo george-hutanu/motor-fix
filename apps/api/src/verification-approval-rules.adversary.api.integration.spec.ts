@@ -97,15 +97,20 @@ beforeAll(async () => {
   await db.connect();
 }, 120_000);
 
+// Both switches off before each case, whatever a suite sharing the database
+// left behind, and again after it for the suites that run next.
+const switchesOff = async () => {
+  await setRule('skip_rar_check', false);
+  await setRule('skip_manual_approval', false);
+};
+
 beforeEach(async () => {
+  await switchesOff();
   adminId = await account('admin', 'Ioana Popa');
   admin = bearer(adminId, 'admin');
 });
 
-afterEach(async () => {
-  await setRule('skip_rar_check', false);
-  await setRule('skip_manual_approval', false);
-});
+afterEach(switchesOff);
 
 afterAll(async () => {
   await db.end();

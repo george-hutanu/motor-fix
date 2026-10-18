@@ -70,6 +70,47 @@
     },
     "stepsDone": "{done} din {total} gata"
   },
+  "legal": {
+    "caen": {
+      "checked": "din certificatul constatator",
+      "detail": "Întreținerea și repararea autovehiculelor, la punctul de lucru",
+      "detailMobile": "Întreținerea și repararea autovehiculelor, la sediul social",
+      "label": "Cod CAEN 4520"
+    },
+    "company": {
+      "checked": "verificat la înscriere",
+      "detail": "{company} · CUI verificat la ANAF și ONRC",
+      "label": "Firmă activă"
+    },
+    "documents": {
+      "checked": "verificate",
+      "checkedOn": "verificate pe {day}",
+      "detail": "certificat constatator și autorizație RAR",
+      "label": "Documente",
+      "missing": {
+        "onrc_certificate": "lipsește certificatul constatator",
+        "rar_authorisation": "lipsește autorizația RAR"
+      }
+    },
+    "error": "Nu am putut încărca verificarea",
+    "notChecked": "neverificat",
+    "pill": "Profil verificat",
+    "rar": {
+      "checked": "verificată",
+      "checkedOn": "verificată pe {day}",
+      "label": "Autorizație tehnică RAR",
+      "register": "în registrul RAR"
+    },
+    "retry": "Încearcă din nou",
+    "state": {
+      "failed": "problemă",
+      "not_run": "neverificat",
+      "ok": "în regulă",
+      "warning": "atenție"
+    },
+    "tag": "Verificat",
+    "title": "Verificare legală"
+  },
   "prices": {
     "done": "Gata",
     "edit": "Modifică",

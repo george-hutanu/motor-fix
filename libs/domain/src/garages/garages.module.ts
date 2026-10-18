@@ -36,6 +36,8 @@ import {
   GARAGE_REPORTS_OPTIONS,
   GarageReportsService,
 } from './verification/garage-reports/garage-reports.service';
+import { LegalCheckController } from './verification/legal-check/legal-check.controller';
+import { LegalCheckService } from './verification/legal-check/legal-check.service';
 import { ReportDecisionController } from './verification/report-decision/report-decision.controller';
 import { ReportDecisionService } from './verification/report-decision/report-decision.service';
 import { SuspensionController } from './verification/suspension/suspension.controller';
@@ -77,6 +79,7 @@ export class GaragesModule {
         GarageReportsController,
         GarageSettingsController,
         InvitesController,
+        LegalCheckController,
         LegalDocumentsController,
         ListingDraftsController,
         PriceListController,
@@ -109,6 +112,7 @@ export class GaragesModule {
           useValue: { webUrl: email.webUrl },
         },
         GarageSettingsService,
+        LegalCheckService,
         LegalDocumentsService,
         ListingDraftsService,
         {
