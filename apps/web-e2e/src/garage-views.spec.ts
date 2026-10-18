@@ -143,9 +143,10 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage lists no jobs: the price list's empty panel.
+    // The test garage lists no jobs: the price list's empty panel, under its
+    // header and the owner's switch into editing.
     await expect(page.locator('main')).toContainText(
-      'Lista de prețuriNu ai încă lucrări în listă.',
+      'Lista de prețuri Modifică prețurile Nu ai încă lucrări în listă.',
     );
 
     await page.goto('/app/garage/assistant');
