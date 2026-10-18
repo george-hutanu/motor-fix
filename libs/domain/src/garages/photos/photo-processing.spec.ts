@@ -150,6 +150,20 @@ describe('processing a photo', () => {
     });
   });
 
+  // @traces 1191-FR-005
+  it('refuses a HEIC that claims more pixels than sharp takes, before decoding it', async () => {
+    const heic = Buffer.from(HEIC_BASE64, 'base64');
+    // The image's spatial extent box: 20,000 px a side, 400 MP.
+    const ispe = heic.indexOf('ispe');
+    heic.writeUInt32BE(20_000, ispe + 8);
+    heic.writeUInt32BE(20_000, ispe + 12);
+    store.put(KEY, heic, 'image/heic');
+
+    await expect(processPhoto(storage, KEY)).rejects.toThrow(/pixel limit/);
+
+    expect([...store.objects.keys()]).toEqual([KEY]);
+  });
+
   it('leaves the original untouched', async () => {
     const original = await located(2400, 1200);
     store.put(KEY, original, 'image/jpeg');

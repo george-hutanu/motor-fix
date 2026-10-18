@@ -354,6 +354,7 @@ describe('confirming a photo', () => {
     expect(await filesOf(draft.id)).toEqual([]);
   });
 
+  // @traces 1191-FR-003
   it('answers the photo once when a second confirm of it passed storage at the same time', async () => {
     const draft = await newDraft();
     await hold(draft.id, 18);
@@ -364,12 +365,16 @@ describe('confirming a photo', () => {
     const racing = jest
       .spyOn(storage, 'confirmUpload')
       .mockResolvedValueOnce(confirmed.key);
+    const queued = jest.spyOn(Queue.prototype, 'add');
 
     const again = await photos.confirm(draft.id, draft.token, incoming);
 
     stale.mockRestore();
     racing.mockRestore();
+    queued.mockRestore();
     expect(again).toEqual(confirmed);
+    // Its job was queued by the first confirm; the second adds none.
+    expect(queued).not.toHaveBeenCalled();
     const files = await filesOf(draft.id);
     expect(files.filter((key) => key === confirmed.key)).toHaveLength(1);
     expect(files).toHaveLength(19);

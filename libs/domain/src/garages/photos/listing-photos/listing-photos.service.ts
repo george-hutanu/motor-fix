@@ -107,25 +107,28 @@ export class ListingPhotosService implements OnApplicationShutdown {
       throw full();
     }
     const key = await this.storage.confirmUpload(incoming, PURPOSE, id);
-    const position = await this.prisma
+    const { held: already, position } = await this.prisma
       .$transaction(async (tx) => {
         const row = await locked(tx, id);
         if (row.status === 'submitted') throw submitted();
         const files = filesOf(row.data);
         // A second confirm that passed storage alongside the first.
-        if (files.includes(key)) return files.indexOf(key);
+        if (files.includes(key)) {
+          return { held: true, position: files.indexOf(key) };
+        }
         if (files.length >= PHOTOS_MAX) throw full();
         await tx.listingDraft.update({
           data: { data: { ...(row.data as object), files: [...files, key] } },
           where: { id },
         });
-        return files.length;
+        return { held: false, position: files.length };
       })
       .catch(async (error) => {
         await this.storage.deleteWithCopies(key).catch(() => undefined);
         throw error;
       });
-    await this.queue(key);
+    // The first confirm queued its job.
+    if (!already) await this.queue(key);
     return { key, position, processed: false };
   }
 
