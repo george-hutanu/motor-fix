@@ -21,6 +21,11 @@ import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
 import {
+  GARAGE_REPORT_DECIDED_QUEUE,
+  type GarageReportDecidedEvent,
+  GarageReportDecidedFanOut,
+} from './garage-report-decided/garage-report-decided.fan-out';
+import {
   GARAGE_SUSPENDED_QUEUE,
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
@@ -97,6 +102,7 @@ const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
+const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -145,6 +151,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(GARAGE_SUSPENDED_WORKER)
     private readonly garageSuspendedWorker?: Worker | null,
+    @Optional()
+    @Inject(GARAGE_REPORT_DECIDED_WORKER)
+    private readonly garageReportDecidedWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -427,6 +436,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        GarageReportDecidedFanOut,
+        {
+          inject: [GarageReportDecidedFanOut],
+          provide: GARAGE_REPORT_DECIDED_WORKER,
+          useFactory: (fanOut: GarageReportDecidedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('GarageReports').error(
+                'PUBLIC_WEB_URL missing; report decisions wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<GarageReportDecidedEvent>(
+              GARAGE_REPORT_DECIDED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('GarageReports'));
+            return worker;
+          },
+        },
       ],
     };
   }
@@ -438,6 +474,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.quoteAcceptedWorker?.close();
     await this.verificationResultWorker?.close();
     await this.garageSuspendedWorker?.close();
+    await this.garageReportDecidedWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     await returnStore(this.publisher);

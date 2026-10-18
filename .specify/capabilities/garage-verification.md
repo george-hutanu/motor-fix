@@ -15,6 +15,7 @@ features:
   - 306-decision-record
   - 204-rar-activities-check
   - 303-approve-publish-garage
+  - 069-report-decision
   - 259-approval-rules
   - 305-reject-garage-reason
 ---
@@ -117,9 +118,9 @@ _From 312-report-garage._
 
 _From 312-report-garage._
 
-### 312-FR-007 — A report MUST be stored as a `garage_report` row with id, garage id, the verification file it attaches to, reporter id, the text as written, status `open` and the creation time in UTC; the text is never rendered as markup anywhere (escaped plain text for admins, as the review texts are) and never appears in any public answer (the public profile's allow-list test of 307-FR-005 stays unchanged).
+### 069-FR-003 — An accepted decision MUST, in one transaction: set every `open` report of the file to `unfounded` or `confirmed` with `decided_by` (the admin), `decided_at` (UTC) and `decision_note` (the note, or the reason); set the file `in_review` → `approved` with `decided_by` and `decided_at` the same admin and time, no other file column changed; write one audit entry on the file (action `report_decided`, actor role `admin`, the decision, the ids of the reports it covers, the note or reason); write one outbox row `garage_report.decided` carrying `fileId`, `garageId`, `decision`, `reportIds` and `reporterIds` (the distinct reporters). A failed write MUST fail the transaction.
 
-_From 312-report-garage._
+_From 069-report-decision._
 
 ### 312-FR-008 — In the same transaction as the row, the system MUST take the garage's newest verification file and: when it is `approved`, reopen it through the existing reopen use case, extended with an optional `reason` that sets the column, the audit text and the event payload in one move, with the `system` actor ("MotorFix"), so it becomes `in_review` with `reopened_at` set, `reopened_by` naming no admin and a new `reopen_reason` column set to `garage_report`; when it is `submitted`, `in_review`, `more_requested` or `rejected`, attach the report to it with no transition. The garage's status, `approved_at`, its public profile and the status label shown to the garage MUST NOT change (207-FR-003, 207-FR-006); a refused reopening fails the whole request and stores nothing.
 
@@ -294,9 +295,9 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
-### 306-FR-007 — The drawer MUST show the note "Service-ul primește decizia pe e-mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot." / "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over." in the footer of a decided file too, under the decision line (modifies 302-FR-009); the decided footer keeps its line with the admin's first name, the time, the reason label and the note, and is shown by status: only on `approved`, `rejected` and `more_requested`, never on a reopened `in_review` file, whose earlier decision the timeline shows.
+### 069-FR-009 — On a file `in_review` with at least one `open` report the drawer's footer MUST show "Sesizare nefondată" / "Report unfounded" and "Sesizare confirmată" / "Report confirmed" in place of the three decision buttons, each at least 44 px tall and reachable by keyboard. "Sesizare nefondată" MUST open a confirmation dialog with one optional note field (at most 1,000 characters, "Notă internă" / "Internal note", counted) and send `unfounded`; "Sesizare confirmată" MUST open a dialog with one required reason field (1 to 200 characters, "Motivul pe care îl vede service-ul" / "The reason the garage will see", counted) and the line "Service-ul va fi suspendat și va primi acest motiv." / "The garage will be suspended and receive this reason.", and send `confirmed`; the dialogs MUST refuse to send outside those limits and show the server's 409 as the drawer's existing red line (306-FR-008). On success the drawer MUST show the decided state.
 
-_From 306-decision-record._
+_From 069-report-decision._
 
 ### 302-FR-010 — The read of FR-001 MUST include the file's timeline: the audit entries whose subject is the file, one of its checks or one of its documents and whose action is one of the file's sending, opening, decision, reopening or resending, a check record, or a document `open` (a document upload and the declaration write are left out, on the server), newest first, at most 50 of those with their total, each with action, field, old and new values, actor's first name ("MotorFix" for `system`), reason text and time; the drawer MUST render each as one line in the admin's language and Europe/Bucharest as US4 scenario 1 lists, and "și încă <n>" / "and <n> more" past 50. The refused approvals of 259-FR-005 are among its entries (259-FR-006).
 
@@ -401,9 +402,9 @@ _From 204-rar-activities-check._
 
 _From 204-rar-activities-check._
 
-### 204-FR-009 — The file read MUST give the form what it compares: the garage's price-list jobs (job type id, Romanian and English name, the RAR activity each maps to) and the whole RAR activity catalogue by code and name (modifies 302-FR-001; the garage's recorded activities it already returns). After a save, the row MUST show only the server's answer: the lamp, the detail, the ticks of a `rar` check as text ("găsită · firmă · adresă" or the English equivalents), the ticked activities of an `activities` check by name and its uncovered jobs by name, the recorder's name and the time; the queue line is updated from the answer's summary. On a failure the form keeps what was typed and ticked and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` the drawer re-reads the file and turns read-only (302-FR-007). Another admin's open drawer refreshes through the existing `verification-file:{fileId}` live update, with no new channel. While the file is undecided and `rar` is not `ok`, the footer MUST show "Verificarea RAR e obligatorie" / "The RAR check is required" beside the disabled "Aprobă și publică" (302-FR-009); the server's refusal and the button itself stay with #173 and #58.
+### 069-FR-008 — The file read (302-FR-001) MUST include the file's reports, newest first: id, text, creation time, status, reporter (id, first name and the initial of the family name) and, when decided, the deciding admin's first name, `decided_at` and `decision_note`; the drawer MUST show them in a "Sesizări" / "Reports" part above "Documente", titled with the count of open reports ("Sesizări · <n> deschise" / "Reports · <n> open"), each row with the text, the date and time in the admin's locale and the reporter's name as a link to the admin's accounts view for that account; a file with no report shows no part. The report text and the notes MUST be shown as plain text, never as markup. A reporter whose account is deleted is shown as "Cont șters" / "Deleted account" with no link.
 
-_From 204-rar-activities-check._
+_From 069-report-decision._
 
 ### 204-FR-011 — The result and detail rules of a check MUST live in one layer: the relationship rules (a detail required for `warning` and `failed` and refused with `not_run`; a list, evidence or ticks only on their kind and never with `not_run`; `ok` only with its ticks, number or covered jobs; the fixed `ok` details) in the verification-checks service, and the per-field shape (types, enums, lengths, no control characters) in the DTO; the one rule checked in both is the 200-character detail length, which the service keeps for the detail it stores, so a direct caller that skips the DTO gets a 400 and never the database's 500 (Principle V); one suite covers the service's rules (#591).
 
@@ -505,6 +506,38 @@ _From 305-reject-garage-reason._
 
 _From 305-reject-garage-reason._
 
+### 069-FR-001 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/report-decision` in the verification module, taking `{ decision, reason?, note? }` through a DTO in the contracts library validated at the edge: `decision` ∈ `unfounded`, `confirmed`; `reason` a trimmed string of 1 to 200 characters, read only with `confirmed`; `note` a trimmed string of at most 1,000 characters, read only with `unfounded` (the other field, when sent, is ignored and stored nowhere). A payload outside that shape MUST answer 400 `validation_failed`; `confirmed` with no reason or a blank one MUST answer 422 `reason_required` from the use case. The route MUST be admin-only, as the capability policy answers on admin routes (207-FR-010): every other actor gets 404 with no file data. An id that matches no verification file is 404 `not_found`, the same answer.
+
+_From 069-report-decision._
+
+### 069-FR-002 — The decision MUST be accepted only while the file is `in_review` and holds at least one `open` report, as one conditional update on the file's status; any other file MUST be refused with 409 `verification_transition_refused` as 306-FR-002 answers: a decided file with `decidedBy` (the file's deciding admin's first name), `decidedAt` (UTC) and `currentStatus`; an `in_review` file with no open report with ST-306's "already under review" refusal. Two concurrent report decisions on one file MUST end with exactly one committed.
+
+_From 069-report-decision._
+
+### 069-FR-004 — A `confirmed` decision MUST, inside the same transaction and before this story's own writes, suspend the garage through the ST-49 use case `suspend(garageId, 'report_confirmed', reason, actor)` (049-FR-002), so the SUSPENSION, the garage's status, its audit entry and `garage.suspended` commit with the reports; when the garage already holds an open suspension, no second one MUST be made and nothing of ST-49 written, the reports still close, and this story's audit entry MUST carry `alreadySuspended: true` and the open suspension's cause. An `unfounded` decision MUST write nothing on the garage and send nothing to it.
+
+_From 069-report-decision._
+
+### 069-FR-005 — The decision MUST never change the garage's listing beyond FR-004: the file returns to `approved`, never `rejected` or `more_requested`, and the garage's status is `approved` after an unfounded decision.
+
+_From 069-report-decision._
+
+### 069-FR-006 — `garage_report.decided` MUST reach, through the audience resolver (419-FR-006) and a new subject `garage_report`, `admin` and `account:{reporterId}` for every distinct reporter of the covered reports, and never the garage's channel; the admin queue and the drawer MUST re-read on it, as they do on `verification.decided` (302-FR-008), so the "Raportat" marker goes without a reload.
+
+_From 069-report-decision._
+
+### 069-FR-010 — Every new text MUST live in the shared i18n files in Romanian and English; the part, the buttons and the two dialogs MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll.
+
+_From 069-report-decision._
+
+### 069-FR-011 — The route MUST be listed in `infra/observability/inventory.json` with the API's request metrics by route, a dashboard panel and the reason no alert of its own is needed; the system MUST count decisions by outcome and refusals by code in the API's metrics.
+
+_From 069-report-decision._
+
+### 069-FR-012 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the payload rules of FR-001 (the 400s, the 422, the 404 for a non-admin); an unfounded decision closing every open report, returning the file to `approved`, writing the audit entry and the event, leaving the garage `approved` and sending nothing to its owners; a confirmed decision suspending the garage with cause `report_confirmed` and the reason in the same transaction; the confirmation on an already suspended garage closing the reports with no second suspension; the 409 for a second decision, under two concurrent calls; the 409 on a file with no open report; one GARAGE_REPORT_DECIDED per reporter with the outcome wording and no note or reason; the live re-read on `garage_report.decided`. In Playwright, end to end: a driver reports a test garage; an admin opens the file, reads the report and confirms it with a reason; the garage leaves the results and its owner sees the suspended banner.
+
+_From 069-report-decision._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -536,6 +569,9 @@ _From 305-reject-garage-reason._
 - `207-FR-001` — superseded by `303-FR-005` (2026-10-18)
 - `207-FR-003` — superseded by `303-FR-005` (2026-10-18)
 
+- `204-FR-009` — superseded by `069-FR-008` (2026-10-18)
+- `306-FR-007` — superseded by `069-FR-009` (2026-10-18)
+- `312-FR-007` — superseded by `069-FR-003` (2026-10-18)
 - `207-FR-009` — superseded by `259-FR-002` (2026-10-18)
 - `303-FR-004` — superseded by `259-FR-004` (2026-10-18)
 

@@ -36,6 +36,8 @@ import {
   GARAGE_REPORTS_OPTIONS,
   GarageReportsService,
 } from './verification/garage-reports/garage-reports.service';
+import { ReportDecisionController } from './verification/report-decision/report-decision.controller';
+import { ReportDecisionService } from './verification/report-decision/report-decision.service';
 import { SuspensionController } from './verification/suspension/suspension.controller';
 import { SuspensionService } from './verification/suspension/suspension.service';
 import { VerificationService } from './verification/verification.service';
@@ -80,6 +82,7 @@ export class GaragesModule {
         PriceListController,
         GarageLabourController,
         PublicGaragesController,
+        ReportDecisionController,
         SuspensionController,
         VerificationChecksController,
         VerificationFileController,
@@ -116,6 +119,7 @@ export class GaragesModule {
         StaffInviteService,
         PriceListService,
         PublicGaragesService,
+        ReportDecisionService,
         SuspensionService,
         VerificationService,
         VerificationChecksService,
