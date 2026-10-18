@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -422,5 +422,51 @@ describe('the sweep\'s screenshots', () => {
     const options = shotOptions(page, '/out/shots/x.png');
     assert.equal(VOLATILE, '[data-qa-volatile]');
     assert.deepEqual(options, { ...SHOT_OPTIONS, path: '/out/shots/x.png', mask: [{ selector: VOLATILE }], maskColor: '#808080' });
+  });
+});
+
+// A canvas chart (Chart.js) animates in script, which the shot's animations: "disabled" cannot
+// stop: caught on its first frame, its bars are missing on a page the PR never touched.
+describe('settling canvas charts before the shot', () => {
+  const framesPage = (frames) => {
+    let i = 0;
+    const waits = [];
+    return {
+      waits,
+      evaluate: async () => frames[Math.min(i++, frames.length - 1)],
+      waitForTimeout: async (ms) => {
+        waits.push(ms);
+      },
+    };
+  };
+
+  it('waits until no canvas changes between two frames', async () => {
+    const page = framesPage(['axes', 'bars-low', 'bars-full', 'bars-full']);
+    assert.equal(await settleCanvases(page), true);
+    assert.equal(page.waits.length, 3);
+  });
+
+  it('returns at once on a page with no canvas', async () => {
+    const page = framesPage(['']);
+    assert.equal(await settleCanvases(page), true);
+    assert.equal(page.waits.length, 0);
+  });
+
+  it('gives up, bounded, on a canvas that never stops moving', async () => {
+    let n = 0;
+    const page = { evaluate: async () => `frame-${n++}`, waitForTimeout: async () => new Promise((r) => setTimeout(r, 5)) };
+    assert.equal(await settleCanvases(page, { timeout: 50, interval: 5 }), false);
+  });
+
+  it('never fails the shot when the page cannot be read', async () => {
+    const page = { evaluate: async () => { throw new Error('Execution context was destroyed'); }, waitForTimeout: async () => {} };
+    assert.equal(await settleCanvases(page), false);
+  });
+
+  it('runs before every screenshot of the sweep', async () => {
+    const source = await readFile(fileURLToPath(new URL('./sweep.mjs', import.meta.url)), 'utf8');
+    const body = source.slice(source.indexOf('export async function runSweep'));
+    assert.ok(body.indexOf('await settleCanvases(page)') > 0);
+    assert.ok(body.indexOf('await settleCanvases(page)') < body.indexOf('await page.screenshot('));
   });
 });

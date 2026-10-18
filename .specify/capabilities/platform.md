@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -89,6 +89,7 @@ features:
   - 430-cdn-waf
   - 1019-staging-mcp-connect
   - 1348-release-green
+  - 1174-postgres-18-pitr
 ---
 
 # Capability: Platform
@@ -1669,11 +1670,11 @@ _From 251-monitoring-backups._
 
 _From 251-monitoring-backups._
 
-### 251-FR-015 — A restore drill script MUST, given a backup key (default: the environment's newest), download and decrypt it, restore it into a fresh throwaway PostgreSQL of the manifest's major version (`postgres:18` for staging and production today; staging has no PostGIS, only `plpgsql` and `pg_stat_statements`) (removing a leftover one first), compare every table's row count with the manifest and fail on any difference naming the table, boot the API against it with the compose Redis and object storage and require `GET /health/ready` 200, print the duration of each step and the total, and tear the database down. A workflow MUST run it on `workflow_dispatch` and on the first day of every quarter on staging's newest backup; its failure is the alert.
+### 251-FR-015 — A restore drill script MUST, given a backup key (default: the environment's newest), download and decrypt it, restore it into a fresh throwaway PostgreSQL of the manifest's major version (`ghcr.io/george-hutanu/motor-fix-postgres:<major>`, PostGIS available; `DRILL_IMAGE` overrides) (removing a leftover one first), compare every table's row count with the manifest and fail on any difference naming the table, boot the API against it with the compose Redis and object storage and require `GET /health/ready` 200, print the duration of each step and the total, and tear the database down. A workflow MUST run it on `workflow_dispatch` and on the first day of every quarter on staging's newest backup; its failure is the alert.
 
 _From 251-monitoring-backups._
 
-### 251-FR-016 — The drill MUST time each step in the order download, decrypt, restore, compare, build, boot and print the total; it MUST be run once during this story on staging's backup, and the specs repo MUST gain a runbook (`docs/how-to/`) with the backup and restore steps, the secret and variable names, the measured time of each step, the recovery time and the data-loss window against the targets (back within 4 h; at most 15 min of data lost, which a daily dump does not meet: see Open questions), the on-call and admin-list steps and the source-map check of FR-010.
+### 251-FR-016 — The drill MUST time each step in the order download, decrypt, restore, compare, build, boot and print the total; it MUST be run once during this story on staging's backup, and the specs repo MUST gain a runbook (`docs/how-to/`) with the backup and restore steps, the secret and variable names, the measured time of each step, the recovery time and the data-loss window against the targets (back within 4 h; at most 15 min of data lost, met by point-in-time recovery, whose drill measures it), the on-call and admin-list steps and the source-map check of FR-010.
 
 _From 251-monitoring-backups._
 
@@ -1721,7 +1722,7 @@ _From 1159-mutation-shards._
 
 _From 1159-mutation-shards._
 
-### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
+### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL (the repository's image, `ghcr.io/george-hutanu/motor-fix-postgres:18`) and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
 
 _From 1159-mutation-shards._
 
@@ -1753,7 +1754,7 @@ _From 1159-mutation-shards._
 
 _From 1170-integration-on-demand._
 
-### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with PostgreSQL+PostGIS and Redis service containers, `pg_stat_statements` preloaded and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with the repository's own PostgreSQL 18 + PostGIS 3.6 image (`ghcr.io/george-hutanu/motor-fix-postgres:18`, `pg_stat_statements` preloaded by the image, no `ALTER SYSTEM` step) and Redis service containers and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
 
 _From 1170-integration-on-demand._
 
@@ -2255,6 +2256,42 @@ _From 430-cdn-waf._
 ### 1019-FR-007 — The release's staging job MUST run the check after the deploy against the staging MCP address, before the core flows, when the staging environment names both the MCP service and the MCP address (`MCP_URL`), and its failure MUST fail the job; when either is missing it MUST skip the check with one notice naming what is missing.
 
 _From 1019-staging-mcp-connect._
+
+### 1174-FR-001 — The repository MUST hold one database image definition (`infra/postgres/Dockerfile`), `FROM ghcr.io/railwayapp-templates/postgres-ssl:18` plus the distribution's `postgresql-18-postgis-3` package (PostGIS 3.6.x) from the base image's pgdg repository, nothing else added, with `PGDATA` set under `/var/lib/postgresql/data` so the base entrypoint starts; it MUST be published to `ghcr.io/george-hutanu/motor-fix-postgres` for amd64 and arm64, tagged with the commit sha on every publish and `18` from `main` (from another branch only when the dispatch sets its `move_18` input, so nothing moves the tag compose, CI and staging pull by accident), by a workflow (`postgres-image.yml`) that runs on `workflow_dispatch` from any branch and on a push to `main` that changes `infra/postgres/**` or the workflow itself, and builds both architectures without pushing on a pull request that changes them (the proof before merge, and what registers the workflow for a dispatch from a branch); the package is public, as the application images are, so compose, CI and Railway pull it with no login (making a new package public is an owner step if GitHub creates it private); a failed publish run is its alert.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-002 — `docker-compose.yml`, CI's Integration and E2E service containers (`ci.yml`), the mutation matrix jobs (`mutation.yml`) and the dump drill's throwaway MUST name that image's `18` tag, so the PR QA boot (the PR's own compose file) and `scripts/test-services.ts` use it with no change of their own; a unit spec MUST assert that these files name one and the same image, and that the image definition's base, package and `PGDATA` are as FR-001 says.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-003 — Because the image preloads `pg_stat_statements` on a fresh database, the compose service's `command` and CI's "Preload pg_stat_statements" step (the `ALTER SYSTEM` and restart) MUST be removed; the data-store metric specs that read the view MUST still pass.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-004 — An integration spec MUST assert the server is PostgreSQL 18 (`version()`) and that PostGIS 3.6 is available to install (`pg_available_extensions`), so the suite fails on any environment that boots another image.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-006 — Point-in-time recovery on Railway MUST be configured, not implemented: the image's own archiving and backups, turned on by `WAL_ARCHIVE_BUCKET`, `WAL_ARCHIVE_ENDPOINT`, `WAL_ARCHIVE_REGION`, `WAL_ARCHIVE_KEY` and `WAL_ARCHIVE_SECRET` with its defaults (archive at most 60 s behind, full backup every 168 h, differential every 24 h, four fulls and fourteen differentials kept). The PR's Notes and the how-to MUST list each owner step with the exact service, setting and value or secret name: switch the staging PostgreSQL service to the published image, create the archive bucket, set those five variables, and set the GitHub `staging` environment secrets of FR-008. The code MUST NOT wait on any of them. Rolling the service back is an owner step too, named in the Notes: set it to the previous image's sha tag; the archive variables stay set and harmless. The drill prints no archive key or secret: staging's reach the job only as GitHub secrets (masked in logs), the self-contained mode's are throwaway.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-007 — A point-in-time drill script (`scripts/backup/pitr-drill.sh`) MUST restore from a write-ahead-log archive into a throwaway sibling of the image on the machine it runs on, to a target moment, using the image's own restore variables (`WAL_RECOVER_FROM_*`, `POSTGRES_RECOVERY_TARGET_TIME`); check that a change committed before the target is present and the next one after it is absent; print the restore time (from the sibling's `docker run`, the image already pulled, until it has promoted, `pg_is_in_recovery()` false) and the archive lag (from the second marker's commit until the archive holds its log segment, per pgBackRest's `info`: the data at risk); fail naming the check when a marker check fails, the lag is over 15 min or the sibling has not promoted within 600 s (the script's `READY_SECONDS`; the lag wait is bounded at 900 s, the 15 min target); and remove everything it started however it ends.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-008 — The drill MUST run in two modes: self-contained (`--self-contained`: it starts a throwaway source database of the image archiving to an S3-compatible store it starts on the same machine, commits the two markers itself around the target, and so needs no secret) and staging (the archive's bucket, endpoint, region, key and secret from the GitHub `staging` environment, named `WAL_ARCHIVE_*` like Railway's; the two markers are empty transactions, `SELECT pg_current_xact_id()`, committed on staging over `railway ssh` as `backup.sh` reaches the service, with the same `RAILWAY_API_TOKEN` and service variables; they write no row). In both modes the target is the first marker's commit time (`pg_xact_commit_timestamp`), and the check is `pg_xact_status` on the sibling: the first `committed`, the second still in its future. A workflow (`pitr-drill.yml`) MUST run the self-contained mode on `workflow_dispatch`, on the first day of every quarter and on a pull request that changes `infra/postgres/**`, the drill script or the workflow (drilling the image that commit's Dockerfile builds), and the staging mode on the first two triggers only, its job bound to the `staging` environment and ending green with a notice, its drill steps skipped, while that environment holds no `WAL_ARCHIVE_BUCKET` (until the owner sets it); a failed run is the alert.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-010 — `scripts/backup/restore-drill.sh` MUST restore into `ghcr.io/george-hutanu/motor-fix-postgres:<the copy's major version>` by default (`DRILL_IMAGE` still overrides), so a dump that holds the PostGIS extension restores; its header and the how-to MUST say so. `scripts/backup/dump.sh` and `backup.yml` MUST stay as they are: the nightly encrypted off-platform copy.
+
+_From 1174-postgres-18-pitr._
+
+### 1174-FR-012 — The specs repo's `docs/how-to/back-up-and-restore-the-database.md` MUST describe point-in-time recovery (the variables, what the image does with them, the defaults, how to restore for real with Railway's point-in-time restore into a new service and when to use the dump instead), the point-in-time drill (both modes, how to run it, what it checks), the dump drill's new image, and MUST say under "Timings and targets" that the 15-minute data-loss target is met by the archive (at most 60 s plus the heartbeat behind, as the self-contained drill measured), never again "not met"; `docs/reference/stack.md` MUST record PostgreSQL 18 + PostGIS 3.6 on our image as decided (ST-1174), and `llms.txt`'s summary of the how-to MUST mention point-in-time recovery.
+
+_From 1174-postgres-18-pitr._
 
 ## Retired
 

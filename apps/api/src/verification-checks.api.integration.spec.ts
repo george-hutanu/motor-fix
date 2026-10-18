@@ -36,7 +36,7 @@ const file = async (status = 'submitted') => {
     `g-${garage}`,
   ]);
   await db.query(
-    'INSERT INTO verification_file (id, garage_id, status) VALUES ($1, $2, $3::verification_file_status)',
+    "INSERT INTO verification_file (id, garage_id, status, rar_number) VALUES ($1, $2, $3::verification_file_status, 'RAR-1234')",
     [id, garage, status],
   );
   await db.query(
@@ -75,16 +75,8 @@ afterAll(async () => {
 describe('PUT /admin/verification-files/:id/checks/:kind', () => {
   it('records the check and answers with it, the summary and the activities', async () => {
     const id = await file();
-    // An OK RAR check needs the file's RAR number and the three ticks, and
-    // writes its own detail; the summary reads it once the licence is on the
-    // file.
     await db.query(
-      "UPDATE verification_file SET rar_number = 'RAR-0412' WHERE id = $1",
-      [id],
-    );
-    await db.query(
-      `INSERT INTO legal_document (verification_file_id, kind, pages)
-       VALUES ($1, 'rar_authorisation', ARRAY['legal_document/checks/page'])`,
+      "INSERT INTO legal_document (id, verification_file_id, kind, pages) VALUES (gen_random_uuid(), $1, 'rar_authorisation', ARRAY['rar_authorisation/1.pdf'])",
       [id],
     );
 
