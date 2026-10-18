@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { chartConfig, readTheme } from './chart-config';
+import { chartConfig, nameLines, readTheme } from './chart-config';
 
 type ChartTheme = ReturnType<typeof readTheme>;
 
@@ -324,6 +324,97 @@ describe('chartConfig laid on its side', () => {
       font: { family: dark.font, size: dark.labelSize },
     });
     expect(scales.y.ticks.callback).toBeUndefined();
+  });
+
+  // @traces 404-FR-008
+  it('wraps a name longer than 16 characters onto lines of at most 16, so the side axis never clips it', () => {
+    const jobs = [
+      { label: 'Schimb de ulei și filtre', value: 2 },
+      { label: 'Frâne', value: 1 },
+      { label: 'Diagnosticareelectronică', value: 1 },
+    ];
+    const { data } = chartConfig(
+      'bar',
+      jobs,
+      'count',
+      'ro',
+      dark,
+      false,
+      true,
+    ) as Loose;
+
+    expect(data.labels).toEqual([
+      ['Schimb de ulei', 'și filtre'],
+      'Frâne',
+      ['Diagnosticareele', 'ctronică'],
+    ]);
+    expect(data.labels.flat().every((line: string) => line.length <= 16)).toBe(
+      true,
+    );
+  });
+
+  it('counts the lines a name takes down the side', () => {
+    expect(nameLines('Dacia')).toEqual(['Dacia']);
+    expect(nameLines('Schimb de ulei și filtre')).toEqual([
+      'Schimb de ulei',
+      'și filtre',
+    ]);
+    expect(nameLines('  Reparații   caroserie și vopsitorie  ')).toEqual([
+      'Reparații',
+      'caroserie și',
+      'vopsitorie',
+    ]);
+    expect(nameLines('')).toEqual(['']);
+  });
+
+  it('puts both figures under every line of a wrapped name', () => {
+    const { data } = chartConfig(
+      'bar',
+      [{ label: 'Schimb de ulei și filtre', lead: 3, value: 2 }],
+      'count',
+      'ro',
+      dark,
+      false,
+      true,
+      { leadHeading: 'Căutări', valueHeading: 'Cereri' },
+    ) as Loose;
+
+    expect(data.labels).toEqual([
+      ['Schimb de ulei', 'și filtre', 'Căutări 3', 'Cereri 2'],
+    ]);
+  });
+
+  it('names a wrapped point on one line in its tooltip', () => {
+    const { options } = chartConfig(
+      'bar',
+      [{ label: 'Schimb de ulei și filtre', value: 2 }],
+      'count',
+      'ro',
+      dark,
+      false,
+      true,
+    ) as Loose;
+
+    expect(
+      options.plugins.tooltip.callbacks.label({
+        dataIndex: 0,
+        label: 'Schimb de ulei,și filtre',
+        raw: 2,
+      }),
+    ).toBe('Schimb de ulei și filtre · 2');
+  });
+
+  it('keeps a long name whole when the bars stand upright', () => {
+    const { data } = chartConfig(
+      'bar',
+      [{ label: 'Schimb de ulei și filtre', value: 2 }],
+      'count',
+      'ro',
+      dark,
+      false,
+    ) as Loose;
+
+    expect(data.labels).toEqual(['Schimb de ulei și filtre']);
   });
 
   it('stays upright when not asked to lie down', () => {

@@ -101,6 +101,37 @@ describe('a bar chart with a lead figure', () => {
     );
   });
 
+  it('grows every row by a 15 px line when a name wraps onto a second line', async () => {
+    const [, el] = await render((h) =>
+      h.points.set([
+        { label: 'Schimb de ulei și filtre', lead: 3, value: 2 },
+        ...PAIRS,
+        ...PAIRS,
+      ]),
+    );
+
+    expect(el.querySelector<HTMLElement>('.mf-chart-plot')?.style.height).toBe(
+      `${7 * 75 + 24}px`,
+    );
+  });
+
+  it('grows a one-figure row from 28 to 43 px when its name wraps', async () => {
+    const [, el] = await render((h) => {
+      h.points.set(
+        Array.from({ length: 9 }, (_, i) => ({
+          label: i ? `${i}` : 'Schimb de ulei și filtre',
+          value: i,
+        })),
+      );
+      h.leadHeading.set(undefined);
+      h.valueHeading.set(undefined);
+    });
+
+    expect(el.querySelector<HTMLElement>('.mf-chart-plot')?.style.height).toBe(
+      `${9 * 43 + 24}px`,
+    );
+  });
+
   it('keeps one value column and 28 px rows when no point has a lead', async () => {
     const [fixture, el] = await render((h) => {
       h.points.set(

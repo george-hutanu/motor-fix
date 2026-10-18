@@ -132,6 +132,29 @@ function leadDataset(
   };
 }
 
+// Chart.js gives a side axis at most half the plot's width and clips a name
+// wider than that at the panel's edge; 16 characters of 12 px text stay well
+// inside half of a 320 px phone's panel. A word longer than that is cut.
+const LINE_CHARS = 16;
+
+export function nameLines(label: string): string[] {
+  if (label.length <= LINE_CHARS) return [label];
+  const words = label
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap(
+      (word) => word.match(new RegExp(`.{1,${LINE_CHARS}}`, 'gu')) ?? [],
+    );
+  const lines: string[] = [];
+  for (const word of words) {
+    const last = lines.at(-1);
+    if (last !== undefined && last.length + 1 + word.length <= LINE_CHARS)
+      lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return lines.length ? lines : [label];
+}
+
 export function chartConfig(
   type: ChartType,
   points: readonly ChartPoint[],
@@ -164,13 +187,18 @@ export function chartConfig(
         { ...value, label: lead.valueHeading },
       ]
     : [value];
+  // Down the side a long name wraps; upright, it stays one string.
+  const name = (label: string) => (horizontal ? nameLines(label) : [label]);
   const labels: ChartLabel[] = lead
     ? points.map((p) => [
-        p.label,
+        ...name(p.label),
         `${lead.leadHeading} ${format(p.lead ?? 0)}`,
         `${lead.valueHeading} ${format(p.value)}`,
       ])
-    : points.map((p) => p.label);
+    : points.map((p) => {
+        const lines = name(p.label);
+        return lines.length > 1 ? lines : p.label;
+      });
   const ticks = {
     color: theme.textSecondary,
     font: { family: theme.font, size: theme.labelSize },
@@ -199,7 +227,7 @@ export function chartConfig(
           bodyFont: { family: theme.font, size: theme.labelSize, weight: 600 },
           callbacks: {
             label: (item: TooltipItem<ChartType>) =>
-              `${lead ? item.dataset.label : item.label} · ${format(item.raw)}`,
+              `${lead ? item.dataset.label : (points[item.dataIndex]?.label ?? item.label)} · ${format(item.raw)}`,
             title: (items: TooltipItem<ChartType>[]) =>
               lead ? (points[items[0]?.dataIndex]?.label ?? '') : '',
           },

@@ -25,6 +25,7 @@ import {
   type ChartUnit,
   chartConfig,
   formatValue,
+  nameLines,
   readTheme,
 } from './chart-config';
 import { HlmButton } from './helm/button';
@@ -75,13 +76,16 @@ abstract class CockpitChart {
   });
 
   // 28 px a row keeps every 12 px name on its own line; 60 holds its name over
-  // both figures (three lines, 43.2 px) with a gap before the next name; the
-  // axis takes 24.
-  protected readonly plotHeight = computed(() =>
-    this.horizontal()
-      ? Math.max(200, this.points().length * (this.headings() ? 60 : 28) + 24)
-      : null,
-  );
+  // both figures (three lines, 43.2 px) with a gap before the next name; a
+  // name that wraps adds 15 px a line to every row; the axis takes 24.
+  protected readonly plotHeight = computed(() => {
+    if (!this.horizontal()) return null;
+    const points = this.points();
+    const extra =
+      Math.max(1, ...points.map((p) => nameLines(p.label).length)) - 1;
+    const row = (this.headings() ? 60 : 28) + extra * 15;
+    return Math.max(200, points.length * row + 24);
+  });
 
   protected readonly rows = computed(() =>
     this.points().map((p) => ({
