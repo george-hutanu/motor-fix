@@ -425,7 +425,7 @@ export class VerificationFileDto {
   storageReady!: boolean;
 
   @ApiProperty({
-    description: "The file's reports, newest first",
+    description: "The file's reports, newest first, at most 50",
     type: [VerificationFileReportDto],
   })
   reports!: VerificationFileReportDto[];

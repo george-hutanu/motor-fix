@@ -11,7 +11,7 @@ import {
   NOTIFICATIONS_PRISMA,
   NotificationsService,
 } from '../notifications.service';
-import { REPORT_DECISIONS } from '../templates/garage-report-decided';
+import { REPORT_DECISION_SET } from '../templates/garage-report-decided';
 
 export const GARAGE_REPORT_DECIDED_QUEUE = 'garage-report-decided';
 
@@ -61,7 +61,7 @@ export class GarageReportDecidedFanOut {
     if (
       typeof garageId !== 'string' ||
       !isUUID(garageId) ||
-      !REPORT_DECISIONS.has(decision) ||
+      !REPORT_DECISION_SET.has(decision) ||
       !Array.isArray(reporterIds)
     ) {
       this.untold(garageId);

@@ -363,6 +363,29 @@ describe('reading a file', () => {
     });
   });
 
+  it('carries at most the newest 50 reports', async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const file = await sent({ reopenReason: 'garage_report' });
+    await prisma.garageReport.createMany({
+      data: Array.from({ length: 51 }, (_, i) => ({
+        createdAt: new Date(Date.UTC(2026, 9, 1, 0, i)),
+        decidedAt: new Date('2026-10-14T09:30:00Z'),
+        decidedBy: ioana,
+        garageId,
+        reporterId: radu,
+        status: 'unfounded' as const,
+        text: `Sesizarea numărul ${i} despre service`,
+        verificationFileId: file.id,
+      })),
+    });
+
+    const { reports } = await service().read(file.id);
+
+    expect(reports).toHaveLength(50);
+    expect(reports[0]?.text).toBe('Sesizarea numărul 50 despre service');
+    expect(reports.at(-1)?.text).toBe('Sesizarea numărul 1 despre service');
+  });
+
   it("leaves out a report of the garage's other file, and carries none when the file has none", async () => {
     const radu = await account('Radu Ionescu', ['driver']);
     const earlier = await prisma.verificationFile.create({

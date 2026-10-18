@@ -204,9 +204,14 @@ describe('deciding the reports unfounded', () => {
   });
 
   it('writes one history entry with the decision, the reports and the note', async () => {
+    const fileEntries = () =>
+      prisma.activityLog.count({ where: { subjectId: fileId } });
+    const before = await fileEntries();
+
     await service().decide(ioana, fileId, unfounded);
 
     const ids = (await reportsOf()).map((r) => r.id).sort();
+    expect(await fileEntries()).toBe(before + 1);
     const [entry, ...more] = await decidedEntries();
     expect(more).toEqual([]);
     expect(entry).toMatchObject({

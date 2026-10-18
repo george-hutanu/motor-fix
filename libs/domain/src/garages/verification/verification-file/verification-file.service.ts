@@ -159,6 +159,7 @@ export class VerificationFileService {
             status: true,
             text: true,
           },
+          take: VERIFICATION_TIMELINE_MAX,
           where: { verificationFileId: file.id },
         }),
         this.prisma.activityLog.findMany({

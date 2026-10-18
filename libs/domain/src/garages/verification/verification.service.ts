@@ -67,11 +67,13 @@ const FROM: Record<Transition, VerificationFileStatus[]> = {
   resend: ['more_requested'],
 };
 
-const KIND: Record<Transition, string> = {
+// The file's history entry for each move; a decision on the reports writes
+// its own, which names the reports, so the move adds none.
+const KIND: Record<Transition, string | null> = {
   decide: 'verification_decided',
   open: 'verification_opened',
   reopen: 'verification_reopened',
-  reports: 'verification_decided',
+  reports: null,
   resend: 'verification_resent',
 };
 
@@ -608,19 +610,21 @@ export class VerificationService {
       where: { id: before.id },
     });
     if (count === 0) throw await this.refusalFor(tx, after);
-    await this.audit.record(tx, {
-      action: 'update',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      field: 'status',
-      garageId: before.garageId,
-      kind: KIND[transition],
-      newValue: data.status,
-      oldValue: before.status,
-      subjectId: before.id,
-      subjectType: 'verification_file',
-      text,
-    });
+    const kind = KIND[transition];
+    if (kind)
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        field: 'status',
+        garageId: before.garageId,
+        kind,
+        newValue: data.status,
+        oldValue: before.status,
+        subjectId: before.id,
+        subjectType: 'verification_file',
+        text,
+      });
     return after;
   }
 

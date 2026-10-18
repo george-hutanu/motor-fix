@@ -13806,7 +13806,7 @@
             "description": "Whether the document store answers"
           },
           "reports": {
-            "description": "The file's reports, newest first",
+            "description": "The file's reports, newest first, at most 50",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/VerificationFileReportDto"

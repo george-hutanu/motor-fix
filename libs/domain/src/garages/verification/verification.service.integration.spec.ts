@@ -2189,11 +2189,12 @@ describe('approving a file after its reports are decided', () => {
   });
 
   // @traces 069-FR-002 069-FR-003
-  it('moves an in-review file to approved, stamped with the admin, and leaves its other columns', async () => {
+  it('moves an in-review file to approved, stamped with the admin, leaves its other columns and writes no history entry of its own', async () => {
     const at = new Date('2026-10-10T08:00:00Z');
     const file = await fileIn('rejected', at);
     await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
     await reported(file);
+    const written = (await history(file.id)).length;
 
     const moved = await inTx((tx) =>
       service().approveAfterReports(tx, dan, file.id),
@@ -2210,13 +2211,9 @@ describe('approving a file after its reports are decided', () => {
       status: 'approved',
     });
     expect(after.decidedAt?.getTime()).toBeGreaterThan(at.getTime());
-    const entries = await history(file.id);
-    expect(entries.at(-1)).toMatchObject({
-      actorId: dan.accountId,
-      field: 'status',
-      newValue: 'approved',
-      oldValue: 'in_review',
-    });
+    // The decision on the reports writes the file's one history entry, so
+    // the move itself adds none.
+    expect(await history(file.id)).toHaveLength(written);
   });
 
   // @traces 069-FR-003

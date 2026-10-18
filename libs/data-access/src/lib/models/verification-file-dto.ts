@@ -42,7 +42,7 @@ export interface VerificationFileDto {
 }) | null;
 
   /**
-   * The file's reports, newest first
+   * The file's reports, newest first, at most 50
    */
   reports: Array<VerificationFileReportDto>;
 

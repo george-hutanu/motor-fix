@@ -8,7 +8,7 @@ import {
 } from '@motor-fix/i18n/formats';
 
 import { emailHtml } from './email-layout';
-import { REPORT_DECISIONS } from './templates/garage-report-decided';
+import { REPORT_DECISION_SET } from './templates/garage-report-decided';
 import { TEMPLATES } from './templates/registry';
 import { DECISIONS } from './templates/verification-result';
 
@@ -266,7 +266,7 @@ function renderText(
 
 // The kinds whose wording follows the decision they carry.
 const BY_DECISION: Record<string, ReadonlySet<unknown>> = {
-  GARAGE_REPORT_DECIDED: REPORT_DECISIONS,
+  GARAGE_REPORT_DECIDED: REPORT_DECISION_SET,
   VERIFICATION_RESULT: DECISIONS,
 };
 
