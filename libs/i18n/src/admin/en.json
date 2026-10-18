@@ -21,6 +21,7 @@
       "missingDocument": "Missing: {document}",
       "note": "Note",
       "noteRequired": "Say why you approve as it is.",
+      "noteTooLong": "The note can be at most 1000 characters.",
       "results": {
         "failed": "failure",
         "not_run": "not checked",

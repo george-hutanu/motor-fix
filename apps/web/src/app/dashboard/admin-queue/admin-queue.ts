@@ -171,10 +171,10 @@ export class AdminQueue {
       .on(['verification.decided'])
       .pipe(takeUntilDestroyed())
       .subscribe(({ id }) => {
-        const items = this.queue.value()?.items ?? [];
-        const index = items.findIndex((row) => row.id === id);
-        const row = items[index];
+        const row = this.queue.value()?.items.find((item) => item.id === id);
         if (!row || this.approved().has(id)) return;
+        // Where it stands on screen, rows kept earlier included.
+        const index = this.rows().findIndex((shown) => shown.id === id);
         this.api.verificationFileControllerRead({ id }).then(
           ({ file }) => {
             if (file.status !== 'approved') return;

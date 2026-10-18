@@ -139,6 +139,7 @@ function fileOf(
       brands: ['Dacia', 'Renault'],
       businessKind: 'company',
       cui: '12345678',
+      cuiAlsoUsedBy: [],
       id: 'garage-1',
       name: 'Atelier Dinamo',
       phone: '+40722111222',

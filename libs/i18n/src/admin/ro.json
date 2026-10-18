@@ -21,6 +21,7 @@
       "missingDocument": "Lipsește: {document}",
       "note": "Notă",
       "noteRequired": "Scrie de ce aprobi așa.",
+      "noteTooLong": "Nota are cel mult 1000 de caractere.",
       "results": {
         "failed": "problemă",
         "not_run": "neverificat",

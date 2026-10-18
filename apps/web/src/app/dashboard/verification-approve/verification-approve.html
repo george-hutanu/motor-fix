@@ -26,7 +26,13 @@
     ></textarea>
     <p class="count" id="mf-approve-note-count">{{ 'admin.file.approve.count' | t: { n: count() } }}</p>
     @if (refused()) {
-      <p class="error" id="mf-approve-note-error" role="alert">{{ 'admin.file.approve.noteRequired' | t }}</p>
+      <p class="error" id="mf-approve-note-error" role="alert">
+        @if (refused() === 'noteTooLong') {
+          {{ 'admin.file.approve.noteTooLong' | t }}
+        } @else {
+          {{ 'admin.file.approve.noteRequired' | t }}
+        }
+      </p>
     }
   </div>
   <div class="actions">

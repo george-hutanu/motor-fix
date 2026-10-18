@@ -179,7 +179,7 @@ export class VerificationFile {
           : garage.address,
       brands: garage.brands.join(', '),
       cui: garage.cui ? this.t('cui', { cui: garage.cui }) : null,
-      cuiShared: garage.cuiAlsoUsedBy?.length
+      cuiShared: garage.cuiAlsoUsedBy.length
         ? this.t('cuiShared', { names: garage.cuiAlsoUsedBy.join(', ') })
         : null,
       kind: garage.businessKind ? this.t(`kinds.${garage.businessKind}`) : null,
@@ -388,16 +388,21 @@ export class VerificationFile {
   // the read) reads the file again and asks again with the list as it now
   // stands; any other failure is told and read again, so a decision that
   // committed before the failure is shown and never offered twice.
+  // Held while the dialog is open, so a second press opens no second one.
+  private asking = false;
+
   async approve() {
-    if (this.busy() || this.gateHint() || this.decided()) return;
-    const answer = await this.overlays.open<
-      { note?: string },
-      VerificationApproveData
-    >(VerificationApprove, {
-      data: { missing: this.gaps() },
-      shape: 'dialog',
-      title: 'admin.file.approve.title',
-    });
+    if (this.asking || this.busy() || this.gateHint() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<{ note?: string }, VerificationApproveData>(VerificationApprove, {
+        data: { missing: this.gaps() },
+        shape: 'dialog',
+        title: 'admin.file.approve.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
     if (answer === 'cancelled') {
       this.focusApprove();
       return;

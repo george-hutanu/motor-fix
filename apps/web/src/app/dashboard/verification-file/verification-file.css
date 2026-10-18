@@ -266,6 +266,7 @@ h3:focus {
   font-weight: 600;
 }
 .spinner {
+  flex: none;
   width: 1em;
   height: 1em;
   margin-inline-end: var(--mf-space-2);
