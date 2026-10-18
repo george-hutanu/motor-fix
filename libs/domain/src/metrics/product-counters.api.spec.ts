@@ -46,7 +46,7 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 77 (303 adds the note_required refusal) and one per check kind and result.
+// Every series the API starts: its own 77 (the decision refusals include note_required) and one per check kind and result.
 const API_SERIES =
   77 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
 
