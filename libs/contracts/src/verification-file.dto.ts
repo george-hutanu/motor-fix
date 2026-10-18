@@ -430,6 +430,11 @@ export class VerificationFileDto {
   })
   reports!: VerificationFileReportDto[];
 
+  @ApiProperty({
+    description: "How many of the file's reports are open, all of them counted",
+  })
+  reportsOpen!: number;
+
   @ApiProperty({ nullable: true, type: VerificationFileRejectionDto })
   previousRejection!: VerificationFileRejectionDto | null;
 

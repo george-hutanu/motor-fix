@@ -13812,6 +13812,10 @@
               "$ref": "#/components/schemas/VerificationFileReportDto"
             }
           },
+          "reportsOpen": {
+            "type": "number",
+            "description": "How many of the file's reports are open, all of them counted"
+          },
           "previousRejection": {
             "nullable": true,
             "type": "object",
@@ -13835,6 +13839,7 @@
           "documents",
           "storageReady",
           "reports",
+          "reportsOpen",
           "previousRejection",
           "timeline"
         ]

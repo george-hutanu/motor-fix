@@ -216,11 +216,11 @@ export class VerificationFile {
   });
 
   // The file's reports, newest first as read, under a title that counts the
-  // open ones; none, no part.
+  // open ones, those past the reports read included; none, no part.
   protected readonly reports = computed(() => {
     const value = this.data();
     if (!value?.reports.length) return undefined;
-    const open = value.reports.filter((r) => r.status === 'open').length;
+    const open = value.reportsOpen;
     const reopened =
       value.file.reopenReason === 'garage_report' && value.file.reopenedAt
         ? this.t('reopenedReport', { when: this.when(value.file.reopenedAt) })
@@ -245,10 +245,7 @@ export class VerificationFile {
   // by the three decisions.
   protected readonly reportOpen = computed(() => {
     const value = this.data();
-    return (
-      value?.file.status === 'in_review' &&
-      value.reports.some((r) => r.status === 'open')
-    );
+    return value?.file.status === 'in_review' && value.reportsOpen > 0;
   });
 
   protected readonly rejected = computed(() => {

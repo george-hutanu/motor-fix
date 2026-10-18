@@ -132,6 +132,8 @@ function fileOf(
     ],
     previousRejection: null,
     reports: [],
+    // The server counts the open reports, as read here unless a test says.
+    reportsOpen: (rest.reports ?? []).filter((r) => r.status === 'open').length,
     storageReady: true,
     timeline: { entries: [], total: 0 },
     ...rest,
@@ -2754,6 +2756,21 @@ describe('the reports part', () => {
       expect(text(section(host, 'reports')?.querySelector('h4'))).toBe(title);
     },
   );
+
+  it('titles the part with the open count the server gives, past the reports it carries, and offers the decisions', async () => {
+    const host = await open(
+      fileOf({
+        file: { status: 'in_review' },
+        reports: [report({ status: 'unfounded' })],
+        reportsOpen: 2,
+      }),
+    );
+
+    expect(text(section(host, 'reports')?.querySelector('h4'))).toBe(
+      'SESIZĂRI · 2 DESCHISE',
+    );
+    expect(host.querySelector('[data-part="report-confirmed"]')).not.toBeNull();
+  });
 
   it('reads one row per report: its text, its local date and time, and its reporter linked to the accounts view', async () => {
     const host = await open(

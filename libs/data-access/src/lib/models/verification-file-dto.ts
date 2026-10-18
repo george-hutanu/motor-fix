@@ -47,6 +47,11 @@ export interface VerificationFileDto {
   reports: Array<VerificationFileReportDto>;
 
   /**
+   * How many of the file's reports are open, all of them counted
+   */
+  reportsOpen: number;
+
+  /**
    * Whether the document store answers
    */
   storageReady: boolean;

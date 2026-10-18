@@ -93,6 +93,8 @@ function fileOf(
     ],
     previousRejection: null,
     reports: [],
+    // The server counts the open reports, as read here unless a test says.
+    reportsOpen: (rest.reports ?? []).filter((r) => r.status === 'open').length,
     storageReady: true,
     timeline: { entries: [], total: 0 },
     ...rest,

@@ -134,43 +134,55 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, catalogue, prices, reports, entries, total, photos, shared] =
-      await Promise.all([
-        this.names([
-          file.openedBy,
-          file.decidedBy,
-          file.reopenedBy,
-          ...file.checks.map((c) => c.recordedBy),
-        ]),
-        this.prisma.rarActivity.findMany({
-          orderBy: { code: 'asc' },
-          select: { code: true, nameEn: true, nameRo: true },
-        }),
-        pricedJobs(this.prisma, garage.id),
-        this.prisma.garageReport.findMany({
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          select: {
-            createdAt: true,
-            decidedAt: true,
-            decidedBy: true,
-            decisionNote: true,
-            id: true,
-            reporter: { select: { id: true, name: true, status: true } },
-            status: true,
-            text: true,
-          },
-          take: VERIFICATION_TIMELINE_MAX,
-          where: { verificationFileId: file.id },
-        }),
-        this.prisma.activityLog.findMany({
-          orderBy: [{ at: 'desc' }, { id: 'desc' }],
-          take: VERIFICATION_TIMELINE_MAX,
-          where,
-        }),
-        this.prisma.activityLog.count({ where }),
-        this.publicGarages.photos(garage.photos),
-        this.cuiAlsoUsedBy(garage.id, garage.cui),
-      ]);
+    const [
+      names,
+      catalogue,
+      prices,
+      reports,
+      reportsOpen,
+      entries,
+      total,
+      photos,
+      shared,
+    ] = await Promise.all([
+      this.names([
+        file.openedBy,
+        file.decidedBy,
+        file.reopenedBy,
+        ...file.checks.map((c) => c.recordedBy),
+      ]),
+      this.prisma.rarActivity.findMany({
+        orderBy: { code: 'asc' },
+        select: { code: true, nameEn: true, nameRo: true },
+      }),
+      pricedJobs(this.prisma, garage.id),
+      this.prisma.garageReport.findMany({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          createdAt: true,
+          decidedAt: true,
+          decidedBy: true,
+          decisionNote: true,
+          id: true,
+          reporter: { select: { id: true, name: true, status: true } },
+          status: true,
+          text: true,
+        },
+        take: VERIFICATION_TIMELINE_MAX,
+        where: { verificationFileId: file.id },
+      }),
+      this.prisma.garageReport.count({
+        where: { status: 'open', verificationFileId: file.id },
+      }),
+      this.prisma.activityLog.findMany({
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
+        take: VERIFICATION_TIMELINE_MAX,
+        where,
+      }),
+      this.prisma.activityLog.count({ where }),
+      this.publicGarages.photos(garage.photos),
+      this.cuiAlsoUsedBy(garage.id, garage.cui),
+    ]);
     const actor = (
       accountId: string | null,
       at: Date | null,
@@ -286,6 +298,7 @@ export class VerificationFileService {
         status: r.status,
         text: r.text,
       })),
+      reportsOpen,
       storageReady: await storageReady,
       timeline: {
         entries: entries.map((row) => {
