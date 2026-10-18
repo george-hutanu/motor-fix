@@ -9,7 +9,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   VERIFICATION_QUEUE_PAGE,
@@ -25,7 +25,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { Lamp, Panel } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
-import { liveResource, pagedRead } from '../live';
+import { Live, liveResource, pagedRead } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
 const LIST = '/app/admin/garages';
@@ -85,10 +85,27 @@ export class AdminQueue {
     return this.stale() ? `${count} ${this.t('stale')}` : count;
   });
 
+  // Rows approved while shown, kept where they stood until the view closes;
+  // outside the count and the page size, which are the server's.
+  private readonly approved = signal<
+    ReadonlyMap<string, { index: number; row: VerificationQueueRowDto }>
+  >(new Map());
+
   private readonly now = signal(new Date());
   protected readonly rows = computed(() => {
     const now = this.now();
-    return (this.queue.value()?.items ?? []).map((row) => this.row(row, now));
+    const approved = this.approved();
+    const rows = (this.queue.value()?.items ?? [])
+      .filter((row) => !approved.has(row.id))
+      .map((row) => this.row(row, now));
+    const kept = [...approved.values()].sort((a, b) => a.index - b.index);
+    for (const { index, row } of kept) {
+      rows.splice(Math.min(index, rows.length), 0, {
+        ...this.row(row, now),
+        approved: this.t('approved'),
+      });
+    }
+    return rows;
   });
 
   private readonly hidden = computed(() => {
@@ -127,6 +144,7 @@ export class AdminQueue {
         : row.area?.name;
     return {
       applied: appliedAt(row.submittedAt, language, now),
+      approved: undefined as string | undefined,
       area: [
         area,
         counted('brands', row.brands),
@@ -144,6 +162,30 @@ export class AdminQueue {
       summary: row.summary[language],
       waiting: row.flagged ? counted('waiting', row.workingDays) : undefined,
     };
+  }
+
+  // A decision on a shown row: the message names no outcome, so the file is
+  // read; an approved one keeps its row, any other leaves it to drop.
+  private keepApproved() {
+    inject(Live)
+      .on(['verification.decided'])
+      .pipe(takeUntilDestroyed())
+      .subscribe(({ id }) => {
+        const items = this.queue.value()?.items ?? [];
+        const index = items.findIndex((row) => row.id === id);
+        const row = items[index];
+        if (!row || this.approved().has(id)) return;
+        this.api.verificationFileControllerRead({ id }).then(
+          ({ file }) => {
+            if (file.status !== 'approved') return;
+            this.approved.update((kept) =>
+              new Map(kept).set(id, { index, row }),
+            );
+          },
+          // A failed read leaves the row to drop, as before this story.
+          () => undefined,
+        );
+      });
   }
 
   // The file named in the address, /app/admin/garages/{fileId}, opens as a
@@ -195,6 +237,7 @@ export class AdminQueue {
   constructor() {
     void this.i18n.enter('admin');
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    this.keepApproved();
     if (!this.overview) this.openFiles();
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));

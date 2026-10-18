@@ -134,3 +134,14 @@ mf-lamp {
   gap: var(--mf-space-3);
   padding-top: var(--mf-space-3);
 }
+.approved {
+  font-weight: 600;
+  color: var(--mf-green-ink);
+  overflow-wrap: anywhere;
+}
+/* A decided row has no date: its state takes the date's column too. */
+@media (min-width: 900px) {
+  .row.decided .state {
+    grid-column: 2 / 4;
+  }
+}

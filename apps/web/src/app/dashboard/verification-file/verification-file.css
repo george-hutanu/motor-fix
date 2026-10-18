@@ -261,3 +261,26 @@ h3:focus {
   color: var(--mf-red-ink);
   font-weight: 700;
 }
+.shared {
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}
+.spinner {
+  width: 1em;
+  height: 1em;
+  margin-inline-end: var(--mf-space-2);
+  border: 2px solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: mf-file-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+@keyframes mf-file-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}

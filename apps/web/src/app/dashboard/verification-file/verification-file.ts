@@ -11,7 +11,7 @@ import {
   signal,
 } from '@angular/core';
 import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
-import { lamp } from '@motor-fix/contracts/verification-target';
+import { approvalGaps, lamp } from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
   type AuditEntryDto,
@@ -33,6 +33,10 @@ import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
+import {
+  VerificationApprove,
+  type VerificationApproveData,
+} from '../verification-approve/verification-approve';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
 import { VerificationReopen } from '../verification-reopen/verification-reopen';
@@ -175,6 +179,9 @@ export class VerificationFile {
           : garage.address,
       brands: garage.brands.join(', '),
       cui: garage.cui ? this.t('cui', { cui: garage.cui }) : null,
+      cuiShared: garage.cuiAlsoUsedBy?.length
+        ? this.t('cuiShared', { names: garage.cuiAlsoUsedBy.join(', ') })
+        : null,
       kind: garage.businessKind ? this.t(`kinds.${garage.businessKind}`) : null,
       name: garage.name,
       phone: garage.phone,
@@ -247,10 +254,14 @@ export class VerificationFile {
     (this.data()?.activities ?? []).map((a) => a.code),
   );
 
-  // The footer's reminder while the file waits on a RAR check not yet OK.
-  protected readonly rarRequired = computed(
-    () => !this.decided() && this.result('rar') !== 'ok',
-  );
+  // Why the approve button is held: the RAR check first, then CAEN; none
+  // once both are ok or the file is decided.
+  protected readonly gateHint = computed(() => {
+    if (this.decided()) return null;
+    if (this.result('rar') !== 'ok') return this.t('footer.rarRequired');
+    if (this.result('caen') !== 'ok') return this.t('footer.caenHint');
+    return null;
+  });
 
   // What the register form needs to know about the garage and its file.
   protected readonly formFacts = computed(() => {
@@ -372,6 +383,78 @@ export class VerificationFile {
     }
   }
 
+  // Asks first, listing what the approval passes over; the note it needs is
+  // the dialog's to ask for. A note_required answer (a check changed since
+  // the read) reads the file again and asks again with the list as it now
+  // stands; any other failure is told and read again, so a decision that
+  // committed before the failure is shown and never offered twice.
+  async approve() {
+    if (this.busy() || this.gateHint() || this.decided()) return;
+    const answer = await this.overlays.open<
+      { note?: string },
+      VerificationApproveData
+    >(VerificationApprove, {
+      data: { missing: this.gaps() },
+      shape: 'dialog',
+      title: 'admin.file.approve.title',
+    });
+    if (answer === 'cancelled') {
+      this.focusApprove();
+      return;
+    }
+    if (await this.sendApproval(answer)) await this.approve();
+  }
+
+  // Sends the approval; true when it must be asked for again.
+  private async sendApproval(answer: { note?: string }) {
+    if (this.busy()) return false;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body: { decision: 'approved', ...answer },
+        id: this.fileId,
+      });
+      this.file.reload();
+      this.focusHeading();
+      return false;
+    } catch (error) {
+      const code = toProblem(error).code ?? '';
+      if (code === 'note_required') return await this.reread();
+      this.refusal(error);
+      // A named refusal changes nothing; the transition refusal re-reads.
+      const told = REFUSALS[code] || code === 'verification_transition_refused';
+      if (!told) this.file.reload();
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  // The file read again in place; true when it still waits for a decision.
+  private async reread() {
+    try {
+      this.data.set(
+        await this.api.verificationFileControllerRead({ id: this.fileId }),
+      );
+      return !this.decided();
+    } catch {
+      toast(this.t('footer.saveFailed'));
+      this.file.reload();
+      return false;
+    }
+  }
+
+  // What an approval passes over, from the file as last read.
+  private gaps() {
+    return approvalGaps(
+      this.checks(),
+      (this.data()?.documents ?? [])
+        .filter((doc) => doc.present)
+        .map((doc) => doc.kind),
+    );
+  }
+
   // Asks first; a decision that is reopened stays shown until the next one.
   // The button is disabled only while the call is out, so a cancelled
   // confirmation can hand focus back to it.
@@ -420,6 +503,14 @@ export class VerificationFile {
   private focusHeading() {
     setTimeout(() =>
       this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
+    );
+  }
+
+  private focusApprove() {
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>('[data-part="approve"]')
+        ?.focus(),
     );
   }
 
