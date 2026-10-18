@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 
 // An empty error, warning or status region hidden with `display: none` leaves
 // the accessibility tree, so a screen reader misses the first message put in
@@ -95,5 +95,119 @@ describe('message regions', () => {
     });
 
     expect(hidden).toEqual([]);
+  });
+});
+
+// `.mf-message:empty` matches a region holding nothing or only comments, never
+// one holding a whitespace text node. Angular drops whitespace-only text nodes
+// (and the anchors of a false @if are comments), but a text node holding an
+// interpolation keeps the spaces beside it: `<p class="mf-message"> {{ m() }} </p>`
+// renders " " while m() is empty and the region would sit in the layout.
+// Each region's interpolations therefore touch its tags, or live in a block.
+const CONTROL =
+  /^@(if|else|switch|case|default|for|empty|defer|placeholder|loading|error)\b/;
+
+// Where the block opening at `start` ends: past its head `(...)` to the
+// first `{`, then past the brace that closes it.
+function blockEnd(inner: string, start: number): number {
+  const head = /^@[a-z]+\s*(\((?:[^()]|\([^()]*\))*\))?/.exec(
+    inner.slice(start),
+  );
+  let j = inner.indexOf('{', start + (head?.[0].length ?? 1));
+  if (j < 0) return inner.length;
+  let depth = 0;
+  do {
+    depth += inner[j] === '{' ? 1 : inner[j] === '}' ? -1 : 0;
+    j++;
+  } while (depth > 0 && j < inner.length);
+  return j;
+}
+
+// A region's own content with every control-flow block and comment removed.
+function topLevel(inner: string): string {
+  let out = '';
+  let i = 0;
+  while (i < inner.length) {
+    const rest = inner.slice(i);
+    if (rest.startsWith('<!--')) i = inner.indexOf('-->', i) + 3;
+    else if (CONTROL.test(rest)) i = blockEnd(inner, i);
+    else out += inner[i++];
+  }
+  return out;
+}
+
+// Every element carrying mf-message in its static class, with its content.
+function regions(html: string) {
+  return [...html.matchAll(/<([a-z][\w-]*)\b([^>]*)>/g)]
+    .filter(([, , attributes]) =>
+      /(?:^|\s)class="(?:[^"]*\s)?mf-message(?:\s[^"]*)?"/.test(attributes),
+    )
+    .map((match) => {
+      const [open, name] = match;
+      const start = (match.index ?? 0) + open.length;
+      const tag = new RegExp(`<(/?)${name}\\b[^>]*>`, 'g');
+      let depth = 1;
+      let end = html.length;
+      for (const next of html.slice(start).matchAll(tag)) {
+        depth += next[1] ? -1 : 1;
+        if (depth === 0) {
+          end = start + (next.index ?? 0);
+          break;
+        }
+      }
+      return {
+        inner: html.slice(start, end),
+        open: open.replace(/\s+/g, ' ').slice(0, 120),
+      };
+    });
+}
+
+// True when the region's text could render as whitespace only: an
+// interpolation outside any block with nothing but whitespace beside it.
+function whitespaceWhenEmpty(inner: string): boolean {
+  const own = topLevel(inner);
+  if (!/\{\{[\s\S]*?\}\}/.test(own) || /<[a-z]/i.test(own)) return false;
+  const rest = own.replace(/\{\{[\s\S]*?\}\}/g, '');
+  return rest.length > 0 && rest.trim() === '';
+}
+
+function templates(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return templates(path);
+    return entry.name.endsWith('.html') ? [path] : [];
+  });
+}
+
+// @traces 248-FR-009
+describe('message region content', () => {
+  it('flags whitespace beside an interpolation and passes the safe forms', () => {
+    expect(whitespaceWhenEmpty(' {{ m() }} ')).toBe(true);
+    expect(whitespaceWhenEmpty('\n  {{ m() | t }}\n')).toBe(true);
+    expect(whitespaceWhenEmpty('@if (a) {x} {{ m() }}')).toBe(true);
+    expect(whitespaceWhenEmpty('{{ m() }}')).toBe(false);
+    expect(
+      whitespaceWhenEmpty('\n  @if (m(); as k) {\n    {{ k | t }}\n  }\n'),
+    ).toBe(false);
+    expect(whitespaceWhenEmpty('@if (m()) {{{ k | t }}}')).toBe(false);
+    expect(whitespaceWhenEmpty('{{ a }} · {{ b }}')).toBe(false);
+  });
+
+  it('finds every region in the web templates', () => {
+    const found = templates(__dirname).flatMap((path) =>
+      regions(readFileSync(path, 'utf8')),
+    );
+
+    expect(found.length).toBeGreaterThan(30);
+  });
+
+  it('leaves no region rendering whitespace when its message is empty', () => {
+    const offenders = templates(__dirname).flatMap((path) =>
+      regions(readFileSync(path, 'utf8'))
+        .filter(({ inner }) => whitespaceWhenEmpty(inner))
+        .map(({ open }) => `${relative(__dirname, path)}: ${open}`),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });
