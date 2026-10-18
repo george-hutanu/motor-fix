@@ -35,11 +35,11 @@ const NOTE = 'Adăugați fotografii cu intrarea și cu zona de lucru.';
 // footer and the queue row follow without a reload. The garage's return is
 // done through the database, as no screen offers it yet: the row comes back
 // marked "Actualizat" and the drawer lists what changed since the request.
-// @traces 304-request-garage-details-FR-001
-// @traces 304-request-garage-details-FR-006
-// @traces 304-request-garage-details-FR-007
-// @traces 304-request-garage-details-FR-009
-// @traces 304-request-garage-details-FR-014
+// @traces 304-FR-001
+// @traces 304-FR-006
+// @traces 304-FR-007
+// @traces 304-FR-009
+// @traces 304-FR-014
 test.describe('asking a garage for more and getting the file back @seeded @database', () => {
   let db: Client;
   let garageId: string;

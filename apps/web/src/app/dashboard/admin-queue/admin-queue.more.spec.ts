@@ -13,8 +13,8 @@ import { filter, Subject } from 'rxjs';
 import { AdminQueue } from './admin-queue';
 import { Live } from '../live';
 
-// @traces 304-request-garage-details-FR-006
-// @traces 304-request-garage-details-FR-007
+// @traces 304-FR-006
+// @traces 304-FR-007
 
 const row = (
   n: number,

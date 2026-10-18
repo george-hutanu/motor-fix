@@ -576,7 +576,7 @@ describe('the footer', () => {
         'Respinge',
       ]);
       // @traces 305-FR-001
-      // @traces 304-request-garage-details-FR-001
+      // @traces 304-FR-001
       expect(
         [...(footer?.querySelectorAll('button') ?? [])].map((b) => b.disabled),
       ).toEqual([true, false, false]);

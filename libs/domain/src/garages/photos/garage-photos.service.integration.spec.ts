@@ -117,7 +117,7 @@ describe('a gallery written again, and its history', () => {
       where: { garageId, id: { notIn: seen }, subjectType: 'garage_photo' },
     });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records a create per photo of the first gallery, by the garage', async () => {
     const [a, b] = [keyOf(), keyOf()];
 
@@ -145,7 +145,7 @@ describe('a gallery written again, and its history', () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('replaces the gallery, recording the photos removed, added and moved', async () => {
     const [a, b, c] = [keyOf(), keyOf(), keyOf()];
     await save([a, b]);
@@ -178,7 +178,7 @@ describe('a gallery written again, and its history', () => {
     ]);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records nothing when the same gallery is written again', async () => {
     const keys = [keyOf(), keyOf()];
     await save(keys);
@@ -190,7 +190,7 @@ describe('a gallery written again, and its history', () => {
     expect(await entries(seen)).toEqual([]);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('swaps two photos without breaking the one-photo-per-position rule', async () => {
     const [a, b] = [keyOf(), keyOf()];
     await save([a, b]);

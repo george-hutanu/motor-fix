@@ -614,7 +614,7 @@ describe('the dashboard check on the overview rows', () => {
 });
 
 // @traces 879-FR-008 879-FR-015 244-FR-018
-// @traces 304-request-garage-details-FR-012
+// @traces 304-FR-012
 describe('the product dashboard', () => {
   it('names every product counter, the job steps one included', () => {
     expect(PRODUCT_COUNTERS).toEqual([

@@ -15,9 +15,9 @@ import { filter, Subject } from 'rxjs';
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
 
-// @traces 304-request-garage-details-FR-001
-// @traces 304-request-garage-details-FR-011
-// @traces 304-request-garage-details-FR-009
+// @traces 304-FR-001
+// @traces 304-FR-011
+// @traces 304-FR-009
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),

@@ -278,7 +278,7 @@ describe("writing a garage's payment methods and courtesy car from step 5", () =
     expect(await prisma.outboxEvent.count()).toBe(saved);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records one history entry per changed field, by the garage, with old and new values', async () => {
     await write({
       courtesyCar: { paid: true, pricePerDayBani: 15000 },
@@ -335,7 +335,7 @@ describe("writing a garage's payment methods and courtesy car from step 5", () =
     ]);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records nothing when the same section is written again, or refused', async () => {
     const section = { facilities: [], payments: ['transfer'] };
     await write(section);

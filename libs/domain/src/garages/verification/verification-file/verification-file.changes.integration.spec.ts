@@ -77,7 +77,7 @@ const entry = (
   });
 
 describe("a returned file's changes", () => {
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it('lists what the garage changed after the request, newest first, by area', async () => {
     const file = await returned();
     const document = randomUUID();
@@ -186,7 +186,7 @@ describe("a returned file's changes", () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it("leaves out the file's own lines, internal notes, document openings and other garages", async () => {
     const file = await returned();
     const other = await prisma.garage.create({
@@ -235,7 +235,7 @@ describe("a returned file's changes", () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it('keeps the newest 200 and counts them all', async () => {
     const file = await returned();
     for (let minute = 1; minute <= 203; minute += 1) {
@@ -253,7 +253,7 @@ describe("a returned file's changes", () => {
     expect(read.changes[199]?.newValue).toEqual({ minute: 4 });
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it('counts from the latest request after two', async () => {
     const LATEST = minutes(ASKED, 600);
     const file = await returned({ decidedAt: LATEST });
@@ -273,7 +273,7 @@ describe("a returned file's changes", () => {
     expect(read.changes.map((c) => c.newValue)).toEqual(['second']);
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it.each([
     ['never asked for more', { decidedAt: null, submittedAt: SENT }],
     ['reopened after its decision', { reopenedAt: minutes(ASKED, 60) }],
@@ -292,14 +292,14 @@ describe("a returned file's changes", () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it.each([randomUUID(), 'not-a-file'])('answers 404 to %s', async (id) => {
     await expect(service().changes(id)).rejects.toMatchObject({
       status: 404,
     });
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it('writes nothing when read', async () => {
     const file = await returned();
     await entry({ field: 'phone', subjectType: 'garage' }, 1);

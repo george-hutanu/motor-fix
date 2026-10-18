@@ -336,7 +336,7 @@ describe('the time of the latest sending', () => {
 });
 
 describe('a file back after a request for more', () => {
-  // @traces 304-request-garage-details-FR-007
+  // @traces 304-FR-007
   const ASKED = new Date('2026-10-13T11:00:00+03:00');
 
   const rowOf = async (id: string) => {
@@ -400,7 +400,7 @@ describe('a file back after a request for more', () => {
 });
 
 describe('whether a file came back', () => {
-  // @traces 304-request-garage-details-FR-007
+  // @traces 304-FR-007
   const ASKED = new Date('2026-10-13T11:00:00+03:00');
   const LATER = new Date('2026-10-14T11:00:00+03:00');
 

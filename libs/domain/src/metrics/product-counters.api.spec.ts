@@ -95,7 +95,7 @@ describe("the API's product counters at start", () => {
         (one) => one.labels['reason'],
       ),
     ).toEqual(['documents', 'rar', 'address', 'photos', 'other']);
-    // @traces 304-request-garage-details-FR-012
+    // @traces 304-FR-012
     expect(
       [
         ...named(all, 'motorfix_verification_more_requests_total'),

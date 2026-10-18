@@ -252,7 +252,7 @@ describe("the history of a garage's hours, closed days and facilities", () => {
       e.newValue,
     ]);
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records the hours changed, each closed day and facility added or removed, by the garage', async () => {
     await write({
       closedDays: [
@@ -323,7 +323,7 @@ describe("the history of a garage's hours, closed days and facilities", () => {
     expect(second).toHaveLength(6);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records the first write whole: the hours, every closed day and facility', async () => {
     await write({
       closedDays: [{ day: '2026-12-27' }],
@@ -344,7 +344,7 @@ describe("the history of a garage's hours, closed days and facilities", () => {
     ]);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records nothing when the same section is written again', async () => {
     const section = {
       closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
@@ -359,7 +359,7 @@ describe("the history of a garage's hours, closed days and facilities", () => {
     expect(await prisma.activityLog.count()).toBe(before);
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records nothing for a write that is refused or rolled back', async () => {
     await refusalOf(write({ hours: { mon: 'all day' } }));
     await expect(

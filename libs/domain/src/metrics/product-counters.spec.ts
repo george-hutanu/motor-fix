@@ -245,9 +245,9 @@ describe('the product counters', () => {
           { reason },
         ] as const,
     ),
-    // @traces 304-request-garage-details-FR-012
+    // @traces 304-FR-012
     [() => countMoreRequest(), 'motorfix_verification_more_requests_total', {}],
-    // @traces 304-request-garage-details-FR-012
+    // @traces 304-FR-012
     [
       () => countResubmission(),
       'motorfix_verification_resubmissions_total',

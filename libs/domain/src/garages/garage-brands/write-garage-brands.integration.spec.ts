@@ -294,7 +294,7 @@ describe("the history of a garage's brands from step 2", () => {
     ],
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records each brand taken or refused, and the texts, on the first write', async () => {
     await write(first());
 
@@ -329,7 +329,7 @@ describe("the history of a garage's brands from step 2", () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records only what a later write changed', async () => {
     await write(first());
     const seen = await ids();
@@ -379,7 +379,7 @@ describe("the history of a garage's brands from step 2", () => {
     );
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records nothing when the same section is written again, or refused', async () => {
     await write(first());
     const seen = await ids();
@@ -520,7 +520,7 @@ describe("writing a garage's job ticks from step 2", () => {
     }
   });
 
-  // @traces 304-request-garage-details-FR-010
+  // @traces 304-FR-010
   it('records only the ticks a later write added or took away', async () => {
     const { brakes, given, oil } = await jobs();
     const section = (unticked: string[]) => ({

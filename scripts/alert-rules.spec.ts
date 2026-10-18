@@ -682,7 +682,7 @@ describe('alert rules', () => {
 
   // @traces 880-FR-017
   // @traces 305-FR-009
-  // @traces 304-request-garage-details-FR-012
+  // @traces 304-FR-012
   it('holds forty-one rules in all, under the free tier cap', () => {
     expect(rows(files)).toHaveLength(41);
   });

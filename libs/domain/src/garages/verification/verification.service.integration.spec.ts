@@ -2467,7 +2467,7 @@ const entered = async () => ({
 });
 
 describe('asking a garage for more', () => {
-  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  // @traces 304-FR-003 304-FR-014
   it.each([
     ['nine letters', 'Abcdefghi'],
     ['nine code points, one an emoji', '🚗bcdefghi'],
@@ -2508,7 +2508,7 @@ describe('asking a garage for more', () => {
     },
   );
 
-  // @traces 304-request-garage-details-FR-003
+  // @traces 304-FR-003
   it('names a blank note before a short one, counting each refusal', async () => {
     const file = await fileIn('in_review');
     const before = {
@@ -2529,7 +2529,7 @@ describe('asking a garage for more', () => {
     expect(await refusals('note_too_short')).toBe(before.short + 1);
   });
 
-  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  // @traces 304-FR-003 304-FR-014
   it.each([
     ['ten letters', 'Abcdefghij'],
     ['ten code points, one an emoji', '🚗bcdefghij'],
@@ -2546,7 +2546,7 @@ describe('asking a garage for more', () => {
     });
   });
 
-  // @traces 304-request-garage-details-FR-014
+  // @traces 304-FR-014
   it('stores each of the five items once, a repeated one collapsed', async () => {
     const file = await fileIn('in_review');
 
@@ -2573,7 +2573,7 @@ describe('asking a garage for more', () => {
     ]);
   });
 
-  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  // @traces 304-FR-004 304-FR-014
   it('leaves the garage draft with everything it entered, and the waiting count one lower', async () => {
     const file = await fileIn('in_review');
     await prisma.garagePhoto.create({
@@ -2593,7 +2593,7 @@ describe('asking a garage for more', () => {
     expect(await service().countWaiting(prisma)).toBe(waiting - 1);
   });
 
-  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  // @traces 304-FR-004 304-FR-014
   it.each([
     ['an approval', { outcome: 'approved' }],
     [
@@ -2632,7 +2632,7 @@ describe('asking a garage for more', () => {
     },
   );
 
-  // @traces 304-request-garage-details-FR-004
+  // @traces 304-FR-004
   it('commits one of two requests sent at once', async () => {
     const file = await fileIn('in_review');
     const ask = (actor: Actor) =>
@@ -2651,7 +2651,7 @@ describe('asking a garage for more', () => {
     ).toBe(1);
   });
 
-  // @traces 304-request-garage-details-FR-004
+  // @traces 304-FR-004
   it.each(['garage', 'receptionist', 'mechanic', 'driver'] as const)(
     'answers 404 to a %s asking for more, nothing stored',
     async (role) => {
@@ -2675,7 +2675,7 @@ describe('asking a garage for more', () => {
     },
   );
 
-  // @traces 304-request-garage-details-FR-012
+  // @traces 304-FR-012
   it('counts a stored request once, names it and its items on the span and in one log line, never the note', async () => {
     const file = await fileIn('in_review');
     const before = {
@@ -2716,7 +2716,7 @@ describe('asking a garage for more', () => {
     }
   });
 
-  // @traces 304-request-garage-details-FR-012
+  // @traces 304-FR-012
   it('logs a request with no items with empty brackets', async () => {
     const file = await fileIn('in_review');
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -2737,7 +2737,7 @@ describe('asking a garage for more', () => {
     }
   });
 
-  // @traces 304-request-garage-details-FR-012
+  // @traces 304-FR-012
   it('counts a file sent again once and logs it, and counts nothing when the resend is refused', async () => {
     const file = await fileIn('more_requested');
     const before = await resubmissions();
@@ -2758,7 +2758,7 @@ describe('asking a garage for more', () => {
     }
   });
 
-  // @traces 304-request-garage-details-FR-014
+  // @traces 304-FR-014
   it('raises the waiting count by one when the file is sent again', async () => {
     const file = await fileIn('more_requested');
     const waiting = await service().countWaiting(prisma);

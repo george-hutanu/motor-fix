@@ -12,8 +12,8 @@ import { filter, Subject } from 'rxjs';
 import { VerificationChanges } from './verification-changes';
 import { Live } from '../live';
 
-// @traces 304-request-garage-details-FR-009
-// @traces 304-request-garage-details-FR-013
+// @traces 304-FR-009
+// @traces 304-FR-013
 
 const FILE = 'file-1';
 const REQUESTED = '2026-10-03T09:00:00.000Z';

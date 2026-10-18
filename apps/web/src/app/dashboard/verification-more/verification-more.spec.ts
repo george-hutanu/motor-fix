@@ -9,8 +9,8 @@ import {
   type VerificationMoreRequest,
 } from './verification-more';
 
-// @traces 304-request-garage-details-FR-002
-// @traces 304-request-garage-details-FR-013
+// @traces 304-FR-002
+// @traces 304-FR-013
 
 @Component({ template: '' })
 class Host {

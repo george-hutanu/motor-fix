@@ -688,7 +688,7 @@ describe('asking a garage for more over the API', () => {
     requestedItems: ['photos'],
   };
 
-  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  // @traces 304-FR-003 304-FR-014
   it.each([
     ['note_required', { decision: 'more_requested', note: '   ' }],
     ['note_too_short', { decision: 'more_requested', note: 'Abcdefghi' }],
@@ -705,7 +705,7 @@ describe('asking a garage for more over the API', () => {
     expect(await decided(id)).toHaveLength(0);
   });
 
-  // @traces 304-request-garage-details-FR-003 304-request-garage-details-FR-014
+  // @traces 304-FR-003 304-FR-014
   it('answers 400 validation_failed to a note of 1,001 code points', async () => {
     const { id } = await file('in_review');
 
@@ -718,7 +718,7 @@ describe('asking a garage for more over the API', () => {
     expect((await fileRow(id)).status).toBe('in_review');
   });
 
-  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  // @traces 304-FR-004 304-FR-014
   it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
     'answers 404 to a %s of the garage, with no garage data',
     async (role) => {
@@ -745,7 +745,7 @@ describe('asking a garage for more over the API', () => {
     },
   );
 
-  // @traces 304-request-garage-details-FR-004 304-request-garage-details-FR-014
+  // @traces 304-FR-004 304-FR-014
   it('answers 401 sign_in_required with no token', async () => {
     const { id } = await file('in_review');
 
@@ -782,7 +782,7 @@ describe('GET /admin/verification-files/:id/changes', () => {
   const logged = async () =>
     Number((await db.query('SELECT count(*) FROM activity_log')).rows[0].count);
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it("gives an admin the garage's changes since the request and writes nothing", async () => {
     const { id } = await returned();
     const before = await logged();
@@ -807,7 +807,7 @@ describe('GET /admin/verification-files/:id/changes', () => {
     expect(await logged()).toBe(before);
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
     'answers 404 to a %s of the garage, with none of its changes',
     async (role) => {
@@ -833,7 +833,7 @@ describe('GET /admin/verification-files/:id/changes', () => {
     },
   );
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it.each([
     ['an unknown file', randomUUID()],
     ['a malformed id', 'not-a-file'],
@@ -843,7 +843,7 @@ describe('GET /admin/verification-files/:id/changes', () => {
     expect([res.status, res.body.code]).toEqual([404, 'not_found']);
   });
 
-  // @traces 304-request-garage-details-FR-008
+  // @traces 304-FR-008
   it('answers 401 sign_in_required with no token', async () => {
     const { id } = await returned();
 

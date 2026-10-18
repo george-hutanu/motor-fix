@@ -175,7 +175,7 @@ describe('the garage rejections', () => {
   });
 });
 
-// @traces 304-request-garage-details-FR-012
+// @traces 304-FR-012
 describe('the requests for more and the files returned', () => {
   it('alert on a burst of more than five requests in an hour, show on the product dashboard and are listed', () => {
     const rules = JSON.parse(
