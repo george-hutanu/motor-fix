@@ -99,7 +99,7 @@
 
 /* "You are here": the accent dot ringed in the ink it carries, with a ring that
    pulses out of it. MapLibre centres it on the place; a tap passes through
-   to the pins. Until the map takes it, it is not shown. */
+   to the pins. Until the map takes it out of the page, it is not shown. */
 .here {
   background: var(--mf-amber);
   border: 3px solid var(--mf-on-amber);
@@ -111,7 +111,7 @@
   width: 14px;
 }
 
-.here:not(.maplibregl-marker) {
+.map > .here {
   display: none;
 }
 

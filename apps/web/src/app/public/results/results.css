@@ -41,6 +41,8 @@ h1 {
 /* No place from the browser: the line and the address field wait above the map. */
 .placeless {
   color: var(--mf-text-secondary);
+  font-size: inherit;
+  font-weight: inherit;
   margin: 0 0 var(--mf-space-2);
   overflow-wrap: anywhere;
 }

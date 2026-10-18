@@ -95,6 +95,8 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
+  // False where no pins can be shown, so the colours have nothing to explain.
+  readonly legend = input(true);
   // The garage whose pin is lit, and the small card of a tapped pin.
   readonly lit = input<string | undefined>();
   readonly card = input<PinCard | undefined>();

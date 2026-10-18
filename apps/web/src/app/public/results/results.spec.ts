@@ -2305,6 +2305,17 @@ describe('Results waiting for an address the driver types', () => {
     );
   });
 
+  it('heads the page with the line, and shows no legend for pins that are not there', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.refuse();
+    await settle();
+
+    expect(page().querySelectorAll('h1')).toHaveLength(1);
+    expect(said(page().querySelector('h1'))).toBe('Nu am putut afla locația.');
+    expect(page().querySelector('mf-results-map section.map')).not.toBeNull();
+    expect(page().querySelector('mf-results-map .legend')).toBeNull();
+  });
+
   it('shows it on a browser error', async () => {
     await open('/ro/garages?brand=bmw', { placed: false });
     const [ok, fail] = geolocation.getCurrentPosition.mock.calls[0] ?? [];

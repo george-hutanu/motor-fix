@@ -145,6 +145,15 @@ describe('ResultsMap, the legend', () => {
       element().querySelector('.legend .takes + .skeleton'),
     ).not.toBeNull();
   });
+
+  it('is left out when the page says there is nothing to explain', async () => {
+    await render();
+    fixture.componentRef.setInput('legend', false);
+    fixture.detectChanges();
+
+    expect(element().querySelector('section.map')).not.toBeNull();
+    expect(element().querySelector('.legend')).toBeNull();
+  });
 });
 
 // @traces 269-FR-015
@@ -598,6 +607,13 @@ describe('ResultsMap, the "you are here" marker', () => {
       expect(css).toMatch(/@keyframes mf-ring\s*\{/);
       expect(blocks.join('\n')).toMatch(/animation:\s*mf-ring 2\.2s/);
       expect(outside).not.toMatch(/animation:[^;]*mf-ring/);
+    });
+
+    it('hides the marker while it waits in the page rather than on the map', () => {
+      // MapLibre gives the element its marker class as soon as it wraps it,
+      // so only where it sits tells whether it has been placed.
+      expect(css).toMatch(/\.map\s*>\s*\.here\s*\{[^}]*display:\s*none/);
+      expect(css).not.toMatch(/\.here:not\(\.maplibregl-marker\)/);
     });
 
     it('lets a tap through the marker to the pins under it', () => {

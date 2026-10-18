@@ -24,7 +24,7 @@
   }
   <p class="locating" role="status">@if (state() === 'locating') {{{ 'public.results.locating' | t }}}</p>
   @if (state() === 'placeless') {
-    <p class="placeless">{{ 'public.results.locationFailed' | t }}</p>
+    <h1 class="placeless">{{ 'public.results.locationFailed' | t }}</h1>
     <mf-address-field
       ids="results-place"
       [label]="'public.results.enterAddress' | t"
@@ -37,6 +37,7 @@
   <mf-results-map
     [brand]="answer()?.brand?.name ?? ''"
     [loading]="mapLoading()"
+    [legend]="state() !== 'placeless'"
     [pins]="pinned()"
     [place]="place()"
     [lit]="lit()"
