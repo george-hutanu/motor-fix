@@ -428,7 +428,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusApprove();
+      this.focus('[data-part="approve"]');
       return;
     }
     const again = await this.sendApproval(answer);
@@ -449,7 +449,7 @@ export class VerificationFile {
         id: this.fileId,
       });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
       return null;
     } catch (error) {
       return await this.approvalFailed(error);
@@ -487,7 +487,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusReject();
+      this.focus('[data-part="reject"]');
       return;
     }
     const refused = await this.sendRejection(answer);
@@ -508,7 +508,7 @@ export class VerificationFile {
         id: this.fileId,
       });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
       return null;
     } catch (error) {
       return await this.rejectionFailed(error);
@@ -561,7 +561,7 @@ export class VerificationFile {
       title: 'admin.file.reopen.title',
     });
     if (answer !== true) {
-      this.focusReopen();
+      this.focus('[data-part="reopen"]');
       return;
     }
     if (this.busy()) return;
@@ -570,7 +570,7 @@ export class VerificationFile {
     try {
       await this.api.verificationFileControllerReopen({ id: this.fileId });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
     } catch {
       toast(this.t('reopen.failed'));
     } finally {
@@ -596,33 +596,10 @@ export class VerificationFile {
     }
   }
 
-  private focusHeading() {
+  // Focus moves once the drawer has rendered what changed.
+  private focus(selector: string) {
     setTimeout(() =>
-      this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
-    );
-  }
-
-  private focusApprove() {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>('[data-part="approve"]')
-        ?.focus(),
-    );
-  }
-
-  private focusReject() {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>('[data-part="reject"]')
-        ?.focus(),
-    );
-  }
-
-  private focusReopen() {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>('[data-part="reopen"]')
-        ?.focus(),
+      this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
     );
   }
 

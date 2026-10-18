@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 
 import { VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
@@ -2191,6 +2192,41 @@ describe('rejecting a garage', () => {
       expect(garage).toMatchObject({ approvedAt: null, status: 'draft' });
     },
   );
+
+  // @traces 305-FR-009
+  it('names the rejection and its reason on the request span and in one log line, never the note', async () => {
+    const file = await fileIn('in_review');
+    const setAttributes = jest.fn();
+    const span = jest
+      .spyOn(trace, 'getActiveSpan')
+      .mockReturnValue({ setAttributes } as never);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    try {
+      await decideWith(ioana, file.id, {
+        note: 'Autorizația RAR a expirat.',
+        outcome: 'rejected',
+        reason: 'rar',
+      });
+
+      expect(setAttributes).toHaveBeenCalledWith({
+        'verification.decision': 'rejected',
+        'verification.reason': 'rar',
+      });
+      const lines = log.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.includes(`file ${file.id} rejected`));
+      expect(lines).toEqual([
+        `file ${file.id} rejected by ${ioana.accountId} (rar)`,
+      ]);
+      expect(
+        log.mock.calls.some(([line]) => String(line).includes('expirat')),
+      ).toBe(false);
+    } finally {
+      span.mockRestore();
+      log.mockRestore();
+    }
+  });
 
   // @traces 305-FR-003 305-FR-011
   it.each([
