@@ -5,7 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { BarChart } from './chart';
 import type { ChartPoint } from './chart-config';
 
-// @traces 404-demand-searches-FR-008 404-demand-searches-FR-012
+// @traces 404-FR-008 404-FR-012
 
 const PAIRS: ChartPoint[] = [
   { label: 'Dacia', lead: 8900, value: 2140 },

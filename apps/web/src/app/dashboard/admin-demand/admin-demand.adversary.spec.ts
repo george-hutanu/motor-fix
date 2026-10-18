@@ -342,3 +342,239 @@ describe('AdminDemand under hostile answers', () => {
     expect(focusable).toEqual(['Vezi ca tabel', 'Vezi toate mărcile']);
   });
 });
+
+const row = (name: string, searches: number, requests: number) => ({
+  name,
+  requests,
+  searches,
+});
+const withBrands = (
+  list: ReturnType<typeof row>[],
+  extra: Partial<AdminDemandDto> = {},
+): AdminDemandDto => ({ ...dto(0, 0), brands: list, requests: 1, ...extra });
+const orderAnswers = () => {
+  const list = Array.from({ length: 12 }, (_, i) =>
+    row(`Brand ${String(i).padStart(2, '0')}`, 100 - i, i),
+  );
+  return withBrands(list.reverse());
+};
+const names = (table: (string | undefined)[][]) => table.map((r) => r[0]);
+
+describe('AdminDemand searches and the order toggle', () => {
+  // @traces 404-FR-009
+  it('orders an answer that arrives unsorted by searches in the view', async () => {
+    answer = async () =>
+      withBrands([
+        row('Renault', 1, 90),
+        row('Dacia', 50, 2),
+        row('BMW', 9, 9),
+      ]);
+    const el = await open();
+
+    expect(names(await tableOf(charts(el)[0]))).toEqual([
+      'Dacia',
+      'BMW',
+      'Renault',
+    ]);
+  });
+
+  // @traces 404-FR-008
+  it('shows the top 8 by searches in the overview whatever order the answer came in', async () => {
+    answer = async () => orderAnswers();
+    const el = await open({ overview: true });
+
+    expect(names(await tableOf(charts(el)[0]))).toEqual(
+      Array.from(
+        { length: 8 },
+        (_, i) => `Brand ${String(i).padStart(2, '0')}`,
+      ),
+    );
+  });
+
+  // @traces 404-FR-008
+  it('offers no order toggle and no counted-from line in the overview', async () => {
+    answer = async () =>
+      withBrands([row('Dacia', 1, 1)], { searchesFrom: '2026-10-01' });
+    const el = await open({ overview: true });
+
+    expect(el.querySelectorAll('[aria-pressed]')).toHaveLength(0);
+    expect(el.textContent).not.toContain('Căutările se numără de la');
+  });
+
+  // @traces 404-FR-009
+  it('takes the top 10 of the chosen order when the toggle moves to requests', async () => {
+    answer = async () => orderAnswers();
+    const el = await open();
+
+    buttonsNamed(el, 'cereri')[0].click();
+    await settle();
+
+    const table = await tableOf(charts(el)[0]);
+    expect(table).toHaveLength(10);
+    expect(names(table)[0]).toBe('Brand 11');
+    expect(names(table)).not.toContain('Brand 00');
+    expect(reads).toBe(1);
+  });
+
+  // @traces 404-FR-009
+  it('re-sorts the full list with the toggle and restores it on căutări', async () => {
+    answer = async () => orderAnswers();
+    const el = await open();
+    const chart = charts(el)[0];
+    buttonsNamed(chart, 'Vezi toate mărcile')[0].click();
+    await settle();
+    const before = listOf(chart).map((r) => r[0]);
+
+    buttonsNamed(el, 'cereri')[0].click();
+    await settle();
+    const byRequests = listOf(chart).map((r) => r[0]);
+    buttonsNamed(el, 'căutări')[0].click();
+    await settle();
+
+    expect(byRequests[0]).toBe('Brand 11');
+    expect(byRequests).toHaveLength(12);
+    expect(listOf(chart).map((r) => r[0])).toEqual(before);
+  });
+
+  // @traces 404-FR-012
+  it('marks exactly the chosen order pressed and keeps focus on the toggle', async () => {
+    answer = async () => orderAnswers();
+    const el = await open();
+    const requests = buttonsNamed(el, 'cereri')[0];
+    requests.focus();
+
+    requests.click();
+    await settle();
+
+    expect(requests.getAttribute('aria-pressed')).toBe('true');
+    expect(buttonsNamed(el, 'căutări')[0].getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+    expect(document.activeElement).toBe(requests);
+  });
+
+  // @traces 404-FR-012
+  it('opens with căutări pressed and names the group', async () => {
+    answer = async () => orderAnswers();
+    const el = await open();
+    const group = el.querySelector('[role="group"]') as HTMLElement;
+    const label = el.querySelector(
+      `[id="${group.getAttribute('aria-labelledby')}"]`,
+    );
+
+    expect(buttonsNamed(el, 'căutări')[0].getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(label?.textContent?.trim()).toBe('Ordonează după');
+  });
+
+  // @traces 404-FR-009
+  it('keeps the chosen order across a failed read and its retry', async () => {
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 500 });
+    };
+    const el = await open();
+    buttonsNamed(el, 'cereri')[0].click();
+    await settle();
+    answer = async () => orderAnswers();
+
+    buttonsNamed(el, 'Reîncearcă')[0].click();
+    await settle();
+
+    expect(buttonsNamed(el, 'cereri')[0].getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(names(await tableOf(charts(el)[0]))[0]).toBe('Brand 11');
+  });
+
+  // @traces 404-FR-010
+  it('shows the counted-from line in the interface language and follows a switch', async () => {
+    answer = async () =>
+      withBrands([row('Dacia', 1, 1)], { searchesFrom: '2026-10-05' });
+    const el = await open();
+    const line = () => el.querySelector('p.from')?.textContent?.trim();
+
+    expect(line()).toMatch(/^Căutările se numără de la .*2026|05/);
+    expect(line()).toContain('5');
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(line()).toMatch(/^Searches are counted from /);
+  });
+
+  // @traces 404-FR-010
+  it('shows no counted-from line when the answer names none', async () => {
+    answer = async () => withBrands([row('Dacia', 1, 1)]);
+    const el = await open();
+
+    expect(el.textContent).not.toContain('Căutările se numără de la');
+  });
+
+  // @traces 404-FR-010
+  it('redraws the counted-from line from the retry answer', async () => {
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 500 });
+    };
+    const el = await open();
+    answer = async () =>
+      withBrands([row('Dacia', 1, 1)], { searchesFrom: '2026-10-05' });
+
+    buttonsNamed(el, 'Reîncearcă')[0].click();
+    await settle();
+
+    expect(el.querySelector('p.from')?.textContent).toContain(
+      'Căutările se numără de la',
+    );
+  });
+
+  // @traces 404-FR-001
+  it('shows a brand searched but never requested with zero requests and keeps it in the table', async () => {
+    answer = async () =>
+      withBrands([row('Tesla', 640, 0), row('Dacia', 8900, 2140)]);
+    const el = await open();
+
+    expect(await tableOf(charts(el)[0])).toEqual([
+      ['Dacia', '8.900', '2.140'],
+      ['Tesla', '640', '0'],
+    ]);
+  });
+
+  // @traces 404-FR-010
+  it('shows the empty text when only searches exist but no brand row came', async () => {
+    answer = async () => withBrands([], { requests: 0, searches: 0 });
+    const el = await open();
+
+    expect(
+      el.querySelectorAll('.mf-chart-message')[0]?.textContent?.trim(),
+    ).toBe('Încă nu sunt căutări sau cereri în ultimele 30 de zile.');
+  });
+
+  // @traces 404-FR-009
+  it('groups a million searches in the table in both languages', async () => {
+    answer = async () => withBrands([row('Dacia', 1234567, 3)]);
+    const el = await open();
+    expect(await tableOf(charts(el)[0])).toEqual([['Dacia', '1.234.567', '3']]);
+
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(
+      [...charts(el)[0].querySelectorAll('tbody td')].map((td) =>
+        td.textContent?.trim(),
+      ),
+    ).toEqual(['Dacia', '1,234,567', '3']);
+  });
+
+  // @traces 404-FR-009
+  it('tells two brands apart that differ only by case', async () => {
+    answer = async () =>
+      withBrands([row('Dacia', 2, 0), row('dacia', 2, 0), row('DACIA', 2, 0)]);
+    const el = await open();
+
+    expect(names(await tableOf(charts(el)[0]))).toEqual([
+      'DACIA',
+      'Dacia',
+      'dacia',
+    ]);
+  });
+});

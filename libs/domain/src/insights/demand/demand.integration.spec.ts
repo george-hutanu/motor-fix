@@ -329,7 +329,7 @@ const searchRowsOf = (day: string) =>
   });
 
 describe('searches beside requests', () => {
-  // @traces 404-demand-searches-FR-001 404-demand-searches-FR-002 404-demand-searches-FR-013
+  // @traces 404-FR-001 404-FR-002 404-FR-013
   it('counts the searches and the requests of one brand apart', async () => {
     const brakes = await job('brakes');
     await searched('Dacia', atLocal('2026-10-12', 9), 3);
@@ -344,7 +344,7 @@ describe('searches beside requests', () => {
     expect(demand.requests).toBe(1);
   });
 
-  // @traces 404-demand-searches-FR-002 404-demand-searches-FR-013
+  // @traces 404-FR-002 404-FR-013
   it('keeps a brand searched and never requested, and one requested and never searched', async () => {
     const brakes = await job('brakes');
     await searched('BMW', atLocal('2026-10-12', 9), 2);
@@ -364,7 +364,7 @@ describe('searches beside requests', () => {
     );
   });
 
-  // @traces 404-demand-searches-FR-002
+  // @traces 404-FR-002
   it('joins a request and a search only when the brand names are the same string', async () => {
     const brakes = await job('brakes');
     await searched('Dacia', atLocal('2026-10-12', 9));
@@ -376,7 +376,7 @@ describe('searches beside requests', () => {
     ]);
   });
 
-  // @traces 404-demand-searches-FR-002
+  // @traces 404-FR-002
   it('counts a search with no area', async () => {
     const brand = await searched('Dacia', atLocal('2026-10-12', 9));
     await prisma.searchLog.create({
@@ -390,7 +390,7 @@ describe('searches beside requests', () => {
     expect((await readDemand(prisma, NOW)).searches).toBe(2);
   });
 
-  // @traces 404-demand-searches-FR-002 404-demand-searches-FR-009
+  // @traces 404-FR-002 404-FR-009
   it('orders brands by searches, then requests, then name', async () => {
     const brakes = await job('brakes');
     const at = atLocal('2026-10-12', 9);
@@ -417,7 +417,7 @@ describe('searches beside requests', () => {
     ]);
   });
 
-  // @traces 404-demand-searches-FR-003 404-demand-searches-FR-013
+  // @traces 404-FR-003 404-FR-013
   it('starts the searches at midnight in Bucharest on the first day', async () => {
     const start = atLocal(FIRST, 0);
     await searched('Before', new Date(start.getTime() - 1000));
@@ -429,7 +429,7 @@ describe('searches beside requests', () => {
     expect(demand.searches).toBe(1);
   });
 
-  // @traces 404-demand-searches-FR-003 404-demand-searches-FR-004 404-demand-searches-FR-013
+  // @traces 404-FR-003 404-FR-004 404-FR-013
   it('puts a search at 23:59:59 on its day and one at midnight on the next', async () => {
     const day = addDays(TODAY, -3);
     await searched(
@@ -450,7 +450,7 @@ describe('searches beside requests', () => {
     ]);
   });
 
-  // @traces 404-demand-searches-FR-003
+  // @traces 404-FR-003
   it('reads the searches of a written day from its rows and counts today live', async () => {
     const day = new Date('2026-10-10');
     await prisma.demandDaily.createMany({
@@ -485,14 +485,14 @@ describe('searches beside requests', () => {
     expect(demand.searches).toBe(5);
   });
 
-  // @traces 404-demand-searches-FR-003
+  // @traces 404-FR-003
   it('counts the searches of a closed day without rows live', async () => {
     await searched('Dacia', atLocal('2026-10-05', 15));
 
     expect((await readDemand(prisma, NOW)).searches).toBe(1);
   });
 
-  // @traces 404-demand-searches-FR-002 404-demand-searches-FR-003
+  // @traces 404-FR-002 404-FR-003
   it("keeps a written day's brand name and counts today under the brand's current name", async () => {
     const brand = await searched('Dacia', atLocal(addDays(TODAY, -2), 9));
     await writeDemandDaily(prisma, NOW);
@@ -508,7 +508,7 @@ describe('searches beside requests', () => {
     ]);
   });
 
-  // @traces 404-demand-searches-FR-003 404-demand-searches-FR-004
+  // @traces 404-FR-003 404-FR-004
   it('gives the same searches from the rows as from a live count', async () => {
     const brakes = await job('brakes');
     await searched('Dacia', atLocal(addDays(TODAY, -3), 9), 2);
@@ -526,7 +526,7 @@ describe('searches beside requests', () => {
 describe('the nightly rows with searches', () => {
   const yesterday = addDays(TODAY, -1);
 
-  // @traces 404-demand-searches-FR-004 404-demand-searches-FR-013
+  // @traces 404-FR-004 404-FR-013
   it('writes searches on the brand rows and the total, 0 on the job rows, once', async () => {
     const brakes = await job('brakes');
     await searched('Dacia', atLocal(yesterday, 9), 3);
@@ -547,7 +547,7 @@ describe('the nightly rows with searches', () => {
     expect(await searchRowsOf(yesterday)).toEqual(first);
   });
 
-  // @traces 404-demand-searches-FR-004
+  // @traces 404-FR-004
   it('writes a day with neither search nor request as a total of 0 searches', async () => {
     await writeDemandDaily(prisma, NOW);
 
@@ -558,7 +558,7 @@ describe('the nightly rows with searches', () => {
 });
 
 describe('since when searches are counted', () => {
-  // @traces 404-demand-searches-FR-005 404-demand-searches-FR-013
+  // @traces 404-FR-005 404-FR-013
   it('names the day of the first search when it falls inside the window', async () => {
     await searched('Dacia', atLocal('2026-10-11', 0));
     await searched('Dacia', atLocal('2026-10-15', 9));
@@ -566,26 +566,26 @@ describe('since when searches are counted', () => {
     expect((await readDemand(prisma, NOW)).searchesFrom).toBe('2026-10-11');
   });
 
-  // @traces 404-demand-searches-FR-005
+  // @traces 404-FR-005
   it('names today when no search was ever logged', async () => {
     expect((await readDemand(prisma, NOW)).searchesFrom).toBe(TODAY);
   });
 
-  // @traces 404-demand-searches-FR-005
+  // @traces 404-FR-005
   it('names nothing when searches were counted from the first day or before', async () => {
     await searched('Dacia', atLocal(FIRST, 0));
 
     expect((await readDemand(prisma, NOW)).searchesFrom).toBeUndefined();
   });
 
-  // @traces 404-demand-searches-FR-005
+  // @traces 404-FR-005
   it('names nothing when the first search is older than the window', async () => {
     await searched('Dacia', atLocal('2026-08-01', 9));
 
     expect((await readDemand(prisma, NOW)).searchesFrom).toBeUndefined();
   });
 
-  // @traces 404-demand-searches-FR-005
+  // @traces 404-FR-005
   it('names its own day for a search at midnight in Bucharest', async () => {
     await searched('Dacia', atLocal('2026-10-12', 0));
 
@@ -611,7 +611,7 @@ describe('the searches of days written before searches were counted', () => {
     for (const sql of backfill()) await prisma.$executeRawUnsafe(sql);
   };
 
-  // @traces 404-demand-searches-FR-002 404-demand-searches-FR-003
+  // @traces 404-FR-002 404-FR-003
   it('fills the searches of written days only, adds a searched-only brand and can run again', async () => {
     const written = new Date('2026-10-10');
     await prisma.demandDaily.createMany({

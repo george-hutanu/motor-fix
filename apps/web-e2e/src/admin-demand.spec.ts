@@ -1,5 +1,5 @@
 // @traces 103-FR-006 103-FR-008 103-FR-009 103-FR-011 103-FR-012
-// @traces 404-demand-searches-FR-008 404-demand-searches-FR-009 404-demand-searches-FR-010 404-demand-searches-FR-011 404-demand-searches-FR-013
+// @traces 404-FR-008 404-FR-009 404-FR-010 404-FR-011 404-FR-013
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';

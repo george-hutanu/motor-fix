@@ -1,5 +1,5 @@
 // @traces 103-FR-006 103-FR-007 103-FR-008 103-FR-009 103-FR-010 103-FR-013
-// @traces 404-demand-searches-FR-007 404-demand-searches-FR-008 404-demand-searches-FR-010 404-demand-searches-FR-011
+// @traces 404-FR-007 404-FR-008 404-FR-010 404-FR-011
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -365,7 +365,7 @@ describe('AdminDemand, the overview panel', () => {
   });
 });
 
-// @traces 404-demand-searches-FR-009 404-demand-searches-FR-012
+// @traces 404-FR-009 404-FR-012
 describe('AdminDemand, the order toggle', () => {
   const group = (el: HTMLElement) =>
     el.querySelector<HTMLElement>('[role="group"]');
@@ -487,7 +487,7 @@ describe('AdminDemand, the order toggle', () => {
   });
 });
 
-// @traces 404-demand-searches-FR-005 404-demand-searches-FR-010
+// @traces 404-FR-005 404-FR-010
 describe('AdminDemand, since when searches are counted', () => {
   it('says the day searches are counted from right under the subtitle', async () => {
     const el = await open();

@@ -33,23 +33,7 @@
   align-items: start;
 }
 @media (min-width: 768px) {
-  :host:not([overview]) .from {
-    margin: 0;
-    font-size: var(--mf-size-label);
-    color: var(--mf-text-secondary);
-    overflow-wrap: anywhere;
-  }
-  .order {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--mf-space-2);
-  }
-  .order-label {
-    font-size: var(--mf-size-label);
-    color: var(--mf-text-secondary);
-  }
-  .reports {
+  :host:not([overview]) .reports {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

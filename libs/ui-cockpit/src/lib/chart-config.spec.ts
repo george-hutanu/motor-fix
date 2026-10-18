@@ -341,7 +341,7 @@ describe('chartConfig laid on its side', () => {
   });
 });
 
-// @traces 404-demand-searches-FR-008 404-demand-searches-FR-011
+// @traces 404-FR-008 404-FR-011
 describe('chartConfig with a lead figure', () => {
   const PAIRS = [
     { label: 'Dacia', lead: 8900, value: 2140 },
@@ -415,5 +415,95 @@ describe('chartConfig with a lead figure', () => {
     expect(data.datasets).toHaveLength(1);
     expect(data.labels).toEqual(['Dacia', 'BMW']);
     expect(options.interaction.mode).toBe('nearest');
+  });
+});
+
+// @traces 404-FR-008
+describe('chartConfig with a lead figure under odd input', () => {
+  const headings = { leadHeading: 'Căutări', valueHeading: 'Cereri' };
+  const build = (
+    points: { label: string; value: number; lead?: number }[],
+    language: 'ro' | 'en' = 'ro',
+    withHeadings: typeof headings | null = headings,
+  ): Loose =>
+    chartConfig(
+      'bar',
+      points,
+      'count',
+      language,
+      dark,
+      false,
+      true,
+      withHeadings ?? undefined,
+    );
+
+  it('draws an empty chart with no points as one empty series', () => {
+    const { data } = build([]);
+
+    expect(data.labels).toEqual([]);
+    expect(data.datasets).toHaveLength(1);
+    expect(data.datasets[0].data).toEqual([]);
+  });
+
+  it('draws one plain series when points carry a lead but no headings were given', () => {
+    const { data } = build([{ label: 'Dacia', lead: 5, value: 2 }], 'ro', null);
+
+    expect(data.datasets).toHaveLength(1);
+    expect(data.labels).toEqual(['Dacia']);
+  });
+
+  it('treats a point without a lead as a lead of 0 when another point has one', () => {
+    const { data } = build([
+      { label: 'Dacia', lead: 5, value: 2 },
+      { label: 'BMW', value: 3 },
+    ]);
+
+    expect(data.datasets[0].data).toEqual([5, 0]);
+    expect(data.labels[1]).toEqual(['BMW', 'Căutări 0', 'Cereri 3']);
+  });
+
+  it('keeps a lead of 0 on every point as two series', () => {
+    const { data } = build([{ label: 'Dacia', lead: 0, value: 0 }]);
+
+    expect(data.datasets).toHaveLength(2);
+    expect(data.labels[0]).toEqual(['Dacia', 'Căutări 0', 'Cereri 0']);
+  });
+
+  it('groups a lead of a million in the English format', () => {
+    const { data } = build(
+      [{ label: 'Dacia', lead: 1234567, value: 1000 }],
+      'en',
+      { leadHeading: 'Searches', valueHeading: 'Requests' },
+    );
+
+    expect(data.labels[0]).toEqual([
+      'Dacia',
+      'Searches 1,234,567',
+      'Requests 1,000',
+    ]);
+  });
+
+  it('keeps a markup name as a plain label string', () => {
+    const { data } = build([{ label: '<b>x</b>\nQ', lead: 1, value: 1 }]);
+
+    expect(data.labels[0][0]).toBe('<b>x</b>\nQ');
+  });
+
+  it('returns the tooltip title as empty for an index outside the points', () => {
+    const { options } = build([{ label: 'Dacia', lead: 1, value: 1 }]);
+
+    expect(options.plugins.tooltip.callbacks.title([{ dataIndex: 9 }])).toBe(
+      '',
+    );
+    expect(options.plugins.tooltip.callbacks.title([])).toBe('');
+  });
+
+  it('draws the lead bar in the same colour whether or not the value is 0', () => {
+    const { data } = build([
+      { label: 'A', lead: 1, value: 0 },
+      { label: 'B', lead: 0, value: 1 },
+    ]);
+
+    expect(data.datasets[0].backgroundColor).toBe('rgba(255, 176, 0, 0.5)');
   });
 });

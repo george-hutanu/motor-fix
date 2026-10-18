@@ -52,8 +52,8 @@ export class AdminDemand {
   protected readonly answer = signal<AdminDemandDto | undefined>(undefined);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
-  // The brand report's order, chosen in the view; the overview keeps the
-  // read's, which is by searches.
+  // The brand report's order, chosen in the view; the overview is always by
+  // searches.
   protected readonly order = signal<DemandOrder>('searches');
   protected readonly orders: readonly { by: DemandOrder; key: string }[] = [
     { by: 'searches', key: 'admin.demand.bySearches' },
@@ -86,7 +86,7 @@ export class AdminDemand {
     const requests = this.i18n.t('admin.demand.requests');
     const brands = answer?.brands ?? [];
     const rows = {
-      brands: (overview ? brands : orderBrands(brands, this.order())).map(
+      brands: orderBrands(brands, overview ? 'searches' : this.order()).map(
         (b) => ({
           count: `${searches} ${formatNum(b.searches, language)} · ${requests} ${formatNum(b.requests, language)}`,
           label: b.name,
