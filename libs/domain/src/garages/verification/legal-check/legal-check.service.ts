@@ -1,5 +1,5 @@
 import { type LegalCheckDto, legalCheckRows } from '@motor-fix/contracts';
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
@@ -9,6 +9,12 @@ import type { PrismaClient } from '../../../generated/prisma/client';
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+const forbidden = () =>
+  refusal(
+    HttpStatus.FORBIDDEN,
+    'forbidden',
+    'Only the owner sees the legal check',
+  );
 
 const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 
@@ -17,17 +23,20 @@ const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 // the garage is approved. Notes, reviewers, evidence and pages stay out.
 @Injectable()
 export class LegalCheckService {
+  private readonly logger = new Logger('LegalCheck');
+
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
+  // One line per refusal (FR-013): its code and the actor's role, no account,
+  // garage or request detail.
+  private refuse(actor: Actor, code: 'forbidden' | 'not_found') {
+    this.logger.warn(`legal check refused: ${code} (role ${actor.role})`);
+    return code === 'forbidden' ? forbidden() : notFound();
+  }
+
   async read(actor: Actor, garageId: string): Promise<LegalCheckDto> {
-    if (actor.garageId !== garageId) throw notFound();
-    if (actor.role !== 'garage') {
-      throw refusal(
-        HttpStatus.FORBIDDEN,
-        'forbidden',
-        'Only the owner sees the legal check',
-      );
-    }
+    if (actor.garageId !== garageId) throw this.refuse(actor, 'not_found');
+    if (actor.role !== 'garage') throw this.refuse(actor, 'forbidden');
     const garage = await this.prisma.garage.findUnique({
       select: {
         businessKind: true,
@@ -55,7 +64,9 @@ export class LegalCheckService {
       where: { id: garageId },
     });
     const file = garage?.verificationFiles[0];
-    if (garage?.status !== 'approved' || !file) throw notFound();
+    if (garage?.status !== 'approved' || !file) {
+      throw this.refuse(actor, 'not_found');
+    }
     const activities = await this.prisma.rarActivity.findMany({
       select: { code: true, nameEn: true, nameRo: true },
       where: { code: { in: garage.rarActivities } },
