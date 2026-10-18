@@ -14,6 +14,7 @@ import type { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 
 // @traces 302-FR-001 302-FR-010
+// @traces 069-FR-008
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -262,11 +263,9 @@ describe('reading a file', () => {
     expect(documents.map((d) => d.stale)).toEqual([stale, null]);
   });
 
-  it('carries the open reports, newest first, and the earlier rejection', async () => {
-    const reporters = [
-      await account('Radu', ['driver']),
-      await account('Elena', ['driver']),
-    ];
+  it('carries every report of the file, newest first, each with its reporter, and the earlier rejection', async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const elena = await account('Elena Maria Dobre', ['driver']);
     const rejected = await prisma.verificationFile.create({
       data: {
         decidedAt: new Date('2026-10-01T12:00:00Z'),
@@ -281,30 +280,46 @@ describe('reading a file', () => {
       previousFileId: rejected.id,
       reopenReason: 'garage_report',
     });
-    for (const [text, at] of [
-      ['Prețurile afișate sunt false', '2026-10-10T08:00:00Z'],
-      ['<b>Închis</b> mereu la ora afișată', '2026-10-12T08:00:00Z'],
-    ]) {
-      await prisma.garageReport.create({
-        data: {
-          createdAt: new Date(at),
-          garageId,
-          reporterId: reporters.pop() ?? '',
-          text,
-          verificationFileId: file.id,
-        },
-      });
-    }
+    const older = await prisma.garageReport.create({
+      data: {
+        createdAt: new Date('2026-10-10T08:00:00Z'),
+        garageId,
+        reporterId: radu,
+        text: 'Prețurile afișate sunt false',
+        verificationFileId: file.id,
+      },
+    });
+    const newer = await prisma.garageReport.create({
+      data: {
+        createdAt: new Date('2026-10-12T08:00:00Z'),
+        garageId,
+        reporterId: elena,
+        text: '<b>Închis</b> mereu la ora afișată',
+        verificationFileId: file.id,
+      },
+    });
 
     const read = await service().read(file.id);
 
     expect(read.reports).toEqual([
       {
         createdAt: '2026-10-12T08:00:00.000Z',
+        decidedAt: null,
+        decidedBy: null,
+        decisionNote: null,
+        id: newer.id,
+        reporter: { id: elena, name: 'Elena D.' },
+        status: 'open',
         text: '<b>Închis</b> mereu la ora afișată',
       },
       {
         createdAt: '2026-10-10T08:00:00.000Z',
+        decidedAt: null,
+        decidedBy: null,
+        decisionNote: null,
+        id: older.id,
+        reporter: { id: radu, name: 'Radu I.' },
+        status: 'open',
         text: 'Prețurile afișate sunt false',
       },
     ]);
@@ -314,6 +329,112 @@ describe('reading a file', () => {
       reasonNote: 'CUI neclar',
     });
     expect(read.file.reopenReason).toBe('garage_report');
+  });
+
+  it("carries a decided report's outcome, its admin and time, and no reporter for a deleted account", async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const file = await sent({ reopenReason: 'garage_report' });
+    const decidedAt = new Date('2026-10-14T09:30:00Z');
+    await prisma.garageReport.create({
+      data: {
+        decidedAt,
+        decidedBy: ioana,
+        decisionNote: 'Am sunat service-ul.',
+        garageId,
+        reporterId: radu,
+        status: 'unfounded',
+        text: 'Prețurile afișate sunt false',
+        verificationFileId: file.id,
+      },
+    });
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: radu },
+    });
+
+    const [report] = (await service().read(file.id)).reports;
+
+    expect(report).toMatchObject({
+      decidedAt: '2026-10-14T09:30:00.000Z',
+      decidedBy: { id: ioana, name: 'Ioana' },
+      decisionNote: 'Am sunat service-ul.',
+      reporter: null,
+      status: 'unfounded',
+    });
+  });
+
+  it('carries at most the newest 50 reports', async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const file = await sent({ reopenReason: 'garage_report' });
+    await prisma.garageReport.createMany({
+      data: Array.from({ length: 51 }, (_, i) => ({
+        createdAt: new Date(Date.UTC(2026, 9, 1, 0, i)),
+        decidedAt: new Date('2026-10-14T09:30:00Z'),
+        decidedBy: ioana,
+        garageId,
+        reporterId: radu,
+        status: 'unfounded' as const,
+        text: `Sesizarea numărul ${i} despre service`,
+        verificationFileId: file.id,
+      })),
+    });
+
+    const { reports } = await service().read(file.id);
+
+    expect(reports).toHaveLength(50);
+    expect(reports[0]?.text).toBe('Sesizarea numărul 50 despre service');
+    expect(reports.at(-1)?.text).toBe('Sesizarea numărul 1 despre service');
+  });
+
+  it('counts every open report, the ones past the newest 50 it carries included', async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const elena = await account('Elena Dumitru', ['driver']);
+    const file = await sent({ reopenReason: 'garage_report' });
+    await prisma.garageReport.create({
+      data: {
+        createdAt: new Date(Date.UTC(2026, 8, 30)),
+        garageId,
+        reporterId: elena,
+        text: 'Sesizarea cea mai veche, încă deschisă',
+        verificationFileId: file.id,
+      },
+    });
+    await prisma.garageReport.createMany({
+      data: Array.from({ length: 50 }, (_, i) => ({
+        createdAt: new Date(Date.UTC(2026, 9, 1, 0, i)),
+        decidedAt: new Date('2026-10-14T09:30:00Z'),
+        decidedBy: ioana,
+        garageId,
+        reporterId: radu,
+        status: 'unfounded' as const,
+        text: `Sesizarea numărul ${i} despre service`,
+        verificationFileId: file.id,
+      })),
+    });
+
+    const read = await service().read(file.id);
+
+    expect(read.reports).toHaveLength(50);
+    expect(read.reports.some((r) => r.status === 'open')).toBe(false);
+    expect(read.reportsOpen).toBe(1);
+  });
+
+  it("leaves out a report of the garage's other file, and carries none when the file has none", async () => {
+    const radu = await account('Radu Ionescu', ['driver']);
+    const earlier = await prisma.verificationFile.create({
+      data: { decidedAt: new Date(), garageId, status: 'rejected' },
+    });
+    await prisma.garageReport.create({
+      data: {
+        garageId,
+        reporterId: radu,
+        text: 'Prețurile afișate sunt false',
+        verificationFileId: earlier.id,
+      },
+    });
+    const file = await sent();
+
+    expect((await service().read(file.id)).reports).toEqual([]);
   });
 
   it('carries no earlier rejection when the file before was not rejected', async () => {
@@ -801,5 +922,37 @@ describe('a file decided before the checks existed', () => {
       decidedAt: SENT.toISOString(),
       status: 'approved',
     });
+  });
+});
+
+describe('a file back after a request for more', () => {
+  // @traces 304-FR-007
+  const ASKED = new Date('2026-10-13T11:00:00+03:00');
+  const LATER = new Date('2026-10-14T11:00:00+03:00');
+
+  it('says so, with the time it was asked for more', async () => {
+    const file = await sent({ decidedAt: ASKED });
+
+    const { file: read } = await service().read(file.id);
+
+    expect(read.resubmitted).toBe(true);
+    expect(read.requestedAt).toBe(ASKED.toISOString());
+  });
+
+  it.each([
+    ['never asked', {}],
+    ['reopened after its decision', { decidedAt: ASKED, reopenedAt: LATER }],
+    ['decided', { decidedAt: ASKED, status: 'approved' as const }],
+    [
+      'still waiting for the garage',
+      { decidedAt: ASKED, status: 'more_requested' as const },
+    ],
+  ])('says nothing when %s', async (_, data) => {
+    const file = await sent(data);
+
+    const { file: read } = await service().read(file.id);
+
+    expect(read.resubmitted).toBe(false);
+    expect(read.requestedAt).toBeNull();
   });
 });

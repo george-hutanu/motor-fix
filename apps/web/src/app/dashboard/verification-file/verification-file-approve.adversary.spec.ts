@@ -112,6 +112,8 @@ function fileOf(
     ],
     previousRejection: null,
     reports: [],
+    // The server counts the open reports, as read here unless a test says.
+    reportsOpen: (rest.reports ?? []).filter((r) => r.status === 'open').length,
     storageReady: true,
     timeline: { entries: [], total: 0 },
     ...rest,
@@ -374,9 +376,10 @@ describe('the approve button gate, attacked', () => {
     const others = [
       ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
     ].filter((b) => b !== button);
-    // A rejection needs no check: it stays offered while the approval waits.
+    // A rejection or a request for more needs no check: both stay offered
+    // while the approval waits.
     expect(others.map((b) => [text(b), b.disabled])).toEqual([
-      ['Ask for more', true],
+      ['Ask for more', false],
       ['Reject', false],
     ]);
   });

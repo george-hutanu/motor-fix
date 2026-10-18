@@ -33,7 +33,10 @@ const LIST = '/app/admin/garages';
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
 // A decision that keeps its row in place, by the status it moved to.
-type KeptStatus = 'approved' | 'rejected';
+const KEPT = ['approved', 'more_requested', 'rejected'] as const;
+type KeptStatus = (typeof KEPT)[number];
+const isKept = (status: string | undefined): status is KeptStatus =>
+  (KEPT as readonly (string | undefined)[]).includes(status);
 
 // "Service-uri de verificat": the files waiting for an admin, oldest first,
 // read again whenever one is sent, opened, checked, decided or reopened. On
@@ -64,6 +67,7 @@ export class AdminQueue {
       'verification.check_recorded',
       'verification.decided',
       'verification.reopened',
+      'garage_report.decided',
     ],
   );
 
@@ -87,8 +91,9 @@ export class AdminQueue {
     return this.stale() ? `${count} ${this.t('stale')}` : count;
   });
 
-  // Rows approved or rejected while shown, kept where they stood until the
-  // view closes; outside the count and the page size, which are the server's.
+  // Rows decided while shown, kept where they stood until the view closes or
+  // a read holds the file waiting again; outside the count and the page size,
+  // which are the server's.
   private readonly kept = signal<
     ReadonlyMap<
       string,
@@ -133,6 +138,7 @@ export class AdminQueue {
     const next = await pagedRead(wanted, (page) =>
       this.api.adminOverviewControllerQueue(page),
     );
+    this.forgetWaiting(next);
     this.remember();
     return next;
   }
@@ -149,6 +155,17 @@ export class AdminQueue {
       const index = shown.findIndex((item) => item.id === row.id);
       this.seen.set(row.id, { index, row });
     }
+  }
+
+  // One row per file: a file waiting again (sent back, or reopened) is the
+  // read's row, no longer the kept one.
+  private forgetWaiting(next: VerificationQueueDto) {
+    const kept = this.kept();
+    const waiting = next.items.filter((row) => kept.has(row.id));
+    if (waiting.length === 0) return;
+    const left = new Map(kept);
+    for (const row of waiting) left.delete(row.id);
+    this.kept.set(left);
   }
 
   private t(key: string, params?: Record<string, string | number>) {
@@ -181,13 +198,14 @@ export class AdminQueue {
       name: row.garageName,
       open: this.t('openNamed', { name: row.garageName }),
       summary: row.summary[language],
+      updated: row.resubmitted,
       waiting: row.flagged ? counted('waiting', row.workingDays) : undefined,
     };
   }
 
   // A decision on a shown row: the message names no outcome, so the file is
-  // read; an approved or rejected one keeps its row, any other (more asked
-  // for) leaves it to drop.
+  // read; an approved, rejected or more-requested one keeps its row, any
+  // other leaves it to drop.
   private keepDecided() {
     inject(Live)
       .on(['verification.decided'])
@@ -204,7 +222,7 @@ export class AdminQueue {
           // A read with no file is treated as a failed one.
           ({ file }) => {
             const status = file?.status;
-            if (status !== 'approved' && status !== 'rejected') return;
+            if (!isKept(status)) return;
             this.kept.update((kept) =>
               new Map(kept).set(id, { ...place, status }),
             );

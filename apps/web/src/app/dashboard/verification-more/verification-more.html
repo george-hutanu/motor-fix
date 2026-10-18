@@ -1,0 +1,42 @@
+<form (submit)="confirm($event)" novalidate>
+  <div class="field">
+    <label for="mf-more-note">{{ 'admin.file.more.note' | t }}</label>
+    <textarea
+      #field
+      class="spartan-input"
+      data-slot="input"
+      id="mf-more-note"
+      rows="4"
+      required
+      [value]="note()"
+      [attr.aria-invalid]="refused() ? 'true' : null"
+      [attr.aria-describedby]="refused() ? 'mf-more-note-hint mf-more-note-count mf-more-note-error' : 'mf-more-note-hint mf-more-note-count'"
+      (input)="input($event)"
+    ></textarea>
+    <div class="under">
+      <p class="hint" id="mf-more-note-hint">{{ 'admin.file.more.noteHint' | t }}</p>
+      <p class="count" id="mf-more-note-count">{{ 'admin.file.more.count' | t: { n: count() } }}</p>
+    </div>
+    @if (refusal(); as key) {
+      <p class="error" id="mf-more-note-error" role="alert">{{ key | t }}</p>
+    }
+  </div>
+  <fieldset class="choice">
+    <legend>{{ 'admin.file.more.itemsLegend' | t }}</legend>
+    @for (option of options; track option.code) {
+      <label class="option">
+        <input
+          type="checkbox"
+          [value]="option.code"
+          [checked]="ticked().has(option.code)"
+          (change)="toggle(option.code, $event)"
+        />
+        <span>{{ option.label | t }}</span>
+      </label>
+    }
+  </fieldset>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.file.more.cancel' | t }}</button>
+    <button hlmBtn type="submit">{{ 'admin.file.more.confirm' | t }}</button>
+  </div>
+</form>

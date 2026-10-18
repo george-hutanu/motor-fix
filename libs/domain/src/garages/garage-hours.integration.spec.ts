@@ -3,10 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { HttpException } from '@nestjs/common';
 
 import { writeGarageHours } from './garage-hours';
+import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
-const { prisma, reset } = fixtures();
+const { account, prisma, reset } = fixtures();
+const audit = new AuditService();
 serialDatabase(databaseUrl);
 
 const TODAY = '2026-10-07';
@@ -25,9 +27,11 @@ const hours = {
 };
 
 let garageId: string;
+let actorId: string;
 
 beforeEach(async () => {
   await reset();
+  actorId = await account('Mihai Pop', ['garage']);
   ({ id: garageId } = await prisma.garage.create({
     data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}` },
   }));
@@ -35,7 +39,9 @@ beforeEach(async () => {
 afterAll(() => prisma.$disconnect());
 
 const write = (section: Record<string, unknown>, today = TODAY) =>
-  prisma.$transaction((tx) => writeGarageHours(tx, garageId, section, today));
+  prisma.$transaction((tx) =>
+    writeGarageHours(tx, garageId, section, today, { actorId, audit }),
+  );
 
 const stored = async () => {
   const garage = await prisma.garage.findUniqueOrThrow({
@@ -222,13 +228,150 @@ describe("writing a garage's hours, closed days and facilities", () => {
     expect(await stored()).toEqual(before);
   });
 
-  it('writes nothing to the history or the outbox', async () => {
-    const history = await prisma.activityLog.count();
+  it('writes nothing to the outbox', async () => {
     const events = await prisma.outboxEvent.count();
 
     await write({ facilities: ['waiting_area'], hours });
 
-    expect(await prisma.activityLog.count()).toBe(history);
     expect(await prisma.outboxEvent.count()).toBe(events);
+  });
+});
+
+describe("the history of a garage's hours, closed days and facilities", () => {
+  const entries = () =>
+    prisma.activityLog.findMany({
+      orderBy: [{ subjectType: 'asc' }, { action: 'asc' }, { at: 'asc' }],
+      where: { garageId },
+    });
+  const lines = async () =>
+    (await entries()).map((e) => [
+      e.subjectType,
+      e.action,
+      e.field,
+      e.oldValue,
+      e.newValue,
+    ]);
+
+  // @traces 304-FR-010
+  it('records the hours changed, each closed day and facility added or removed, by the garage', async () => {
+    await write({
+      closedDays: [
+        { day: '2026-12-27' },
+        { day: '2026-12-28', note: 'Inventar' },
+      ],
+      facilities: ['waiting_area', 'courtesy_car'],
+      hours,
+    });
+    const seen = (await entries()).map((e) => e.id);
+    const saturday = { ...hours, sat: [] };
+
+    await write({
+      closedDays: [
+        { day: '2026-12-28', note: 'Inventar anual' },
+        { day: '2026-12-29' },
+      ],
+      facilities: ['waiting_area', 'pickup_dropoff'],
+      hours: saturday,
+    });
+
+    const second = (await entries()).filter((e) => !seen.includes(e.id));
+    expect(second.every((e) => e.actorId === actorId)).toBe(true);
+    expect(second.every((e) => e.actorRole === 'owner')).toBe(true);
+    expect(second.every((e) => !e.internal)).toBe(true);
+    expect(
+      second.map((e) => [
+        e.subjectType,
+        e.action,
+        e.field,
+        e.oldValue,
+        e.newValue,
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['garage', 'update', 'hours', hours, saturday],
+        [
+          'garage_closed_day',
+          'delete',
+          null,
+          { day: '2026-12-27', note: null },
+          null,
+        ],
+        [
+          'garage_closed_day',
+          'update',
+          'note',
+          { day: '2026-12-28', note: 'Inventar' },
+          { day: '2026-12-28', note: 'Inventar anual' },
+        ],
+        [
+          'garage_closed_day',
+          'create',
+          null,
+          null,
+          { day: '2026-12-29', note: null },
+        ],
+        ['garage_facility', 'delete', null, { facility: 'courtesy_car' }, null],
+        [
+          'garage_facility',
+          'create',
+          null,
+          null,
+          { facility: 'pickup_dropoff' },
+        ],
+      ]),
+    );
+    expect(second).toHaveLength(6);
+  });
+
+  // @traces 304-FR-010
+  it('records the first write whole: the hours, every closed day and facility', async () => {
+    await write({
+      closedDays: [{ day: '2026-12-27' }],
+      facilities: ['waiting_area'],
+      hours,
+    });
+
+    expect(await lines()).toEqual([
+      ['garage', 'update', 'hours', {}, hours],
+      [
+        'garage_closed_day',
+        'create',
+        null,
+        null,
+        { day: '2026-12-27', note: null },
+      ],
+      ['garage_facility', 'create', null, null, { facility: 'waiting_area' }],
+    ]);
+  });
+
+  // @traces 304-FR-010
+  it('records nothing when the same section is written again', async () => {
+    const section = {
+      closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
+      facilities: ['waiting_area'],
+      hours,
+    };
+    await write(section);
+    const before = await prisma.activityLog.count();
+
+    await write(section);
+
+    expect(await prisma.activityLog.count()).toBe(before);
+  });
+
+  // @traces 304-FR-010
+  it('records nothing for a write that is refused or rolled back', async () => {
+    await refusalOf(write({ hours: { mon: 'all day' } }));
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await writeGarageHours(tx, garageId, { hours }, TODAY, {
+          actorId,
+          audit,
+        });
+        throw new Error('sending failed');
+      }),
+    ).rejects.toThrow('sending failed');
+
+    expect(await prisma.activityLog.count({ where: { garageId } })).toBe(0);
   });
 });

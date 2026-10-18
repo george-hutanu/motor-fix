@@ -40,6 +40,66 @@
       },
       "title": "Aprobă și publică"
     },
+    "changes": {
+      "areas": {
+        "brands": "Mărci",
+        "documents": "Documente",
+        "photos": "Fotografii",
+        "prices": "Prețuri",
+        "profile": "Profil"
+      },
+      "changed": "{label}: modificat",
+      "documents": {
+        "added": "{label}: adăugat",
+        "removed": "{label}: șters",
+        "replaced": "{label}: înlocuit"
+      },
+      "empty": "Nicio modificare înregistrată de la cerere",
+      "failed": "Nu am putut încărca modificările",
+      "fields": {
+        "address": "Adresa",
+        "brandNote": "Nota despre mărci",
+        "courtesy_car_paid": "Mașină de schimb cu plată",
+        "courtesy_car_price_per_day_bani": "Mașină de schimb, preț pe zi",
+        "duration_minutes": "Durata",
+        "from_bani": "Preț de la",
+        "hours": "Programul",
+        "labour_from_bani": "Manoperă de la",
+        "labour_to_bani": "Manoperă până la",
+        "location": "Locația pe hartă",
+        "name": "Numele",
+        "payment_card": "Plată cu cardul",
+        "payment_cash": "Plată în numerar",
+        "payment_transfer": "Plată prin transfer",
+        "phone": "Telefonul",
+        "refusalPhrase": "Fraza de refuz",
+        "seatAddress": "Sediul",
+        "serviceRadiusKm": "Raza de deplasare",
+        "to_bani": "Preț până la"
+      },
+      "line": "{label}: {old} → {new}",
+      "loading": "Se încarcă modificările",
+      "more": {
+        "few": "și încă {n} modificări",
+        "one": "și încă {n} modificare",
+        "other": "și încă {n} de modificări"
+      },
+      "no": "Nu",
+      "retry": "Reîncearcă",
+      "since": "de la cererea din {date}",
+      "subjects": {
+        "garage_brand": "Mărci",
+        "garage_brand_job": "Lucrările pe mărci",
+        "garage_closed_day": "Zilele închise",
+        "garage_facility": "Facilitățile",
+        "garage_photo": "Fotografii",
+        "garage_price": "Prețurile",
+        "onrc_certificate": "Certificatul ONRC",
+        "rar_authorisation": "Autorizația RAR"
+      },
+      "title": "Ce s‑a schimbat",
+      "yes": "Da"
+    },
     "checks": {
       "activities": "Activități",
       "address": "Adresă",
@@ -83,6 +143,7 @@
       "ask": "Cere completări",
       "caenHint": "Verificarea CAEN 4520 e obligatorie",
       "caenRequired": "Aprobarea cere verificarea CAEN",
+      "items": "Privește: {items}",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
       "rarCheckRequired": "Aprobarea cere verificarea RAR",
       "rarRequired": "Verificarea RAR e obligatorie",
@@ -113,6 +174,8 @@
       "rejected": "Respins de {name}, {when}",
       "reopened": "Redeschis de {name}, {when}",
       "reopenedWhy": "Redeschis de {name}, {when} ({reason})",
+      "reportConfirmed": "Sesizări confirmate de {name}, {when}",
+      "reportUnfounded": "Sesizări închise ca nefondate de {name}, {when}",
       "resent": "Retrimis de {name}, {when}",
       "sent": "Trimis de {name}, {when}"
     },
@@ -129,6 +192,25 @@
       "problemNamed": "Marchează o problemă: {check}",
       "representative": "Telefon confirmat prin apel",
       "saveFailed": "Nu am putut salva verificarea"
+    },
+    "more": {
+      "cancel": "Renunță",
+      "confirm": "Trimite cererea",
+      "count": "{n}/1000",
+      "items": {
+        "address": "Adresa",
+        "documents": "Documente",
+        "other": "Altceva",
+        "photos": "Fotografiile",
+        "rar": "Autorizația RAR"
+      },
+      "itemsLegend": "Privește",
+      "note": "Ce lipsește?",
+      "noteHint": "Service‑ul primește mesajul cuvânt cu cuvânt.",
+      "noteRequired": "Scrie ce lipsește.",
+      "noteTooLong": "Mesajul are cel mult 1000 de caractere.",
+      "noteTooShort": "Cel puțin 10 caractere.",
+      "title": "Ce lipsește?"
     },
     "noReason": "fără motiv",
     "photo": "Fotografia {n}, deschisă în mărime mare",
@@ -262,8 +344,32 @@
       "title": "Redeschide dosarul"
     },
     "reopenedReport": "Redeschis după un raport, {when}",
-    "report": "{text} · {when}",
-    "reported": "Raportat",
+    "reportDecision": {
+      "cancel": "Renunță",
+      "confirmed": "Sesizare confirmată",
+      "confirmedSubmit": "Confirmă și suspendă",
+      "note": "Notă internă",
+      "noteCount": "{n}/1000",
+      "noteTooLong": "Nota are cel mult 1000 de caractere.",
+      "reason": "Motivul pe care îl vede service‑ul",
+      "reasonCount": "{n}/200",
+      "reasonTooLong": "Motivul are cel mult 200 de caractere.",
+      "suspends": "Service‑ul va fi suspendat și va primi acest motiv.",
+      "unfounded": "Sesizare nefondată",
+      "unfoundedQuestion": "Închizi sesizările deschise ca nefondate? Dosarul revine la aprobat, iar cine a raportat află că nu a fost nevoie de nicio măsură."
+    },
+    "reports": {
+      "confirmed": "Confirmată de {name}, {when}",
+      "deleted": "Cont șters",
+      "heading": {
+        "few": "SESIZĂRI · {n} DESCHISE",
+        "one": "SESIZĂRI · {n} DESCHISĂ",
+        "other": "SESIZĂRI · {n} DESCHISE"
+      },
+      "note": "Notă internă: {note}",
+      "reason": "Motiv: {reason}",
+      "unfounded": "Nefondată de {name}, {when}"
+    },
     "results": {
       "failed": "problemă",
       "not_run": "neverificat",
@@ -478,11 +584,13 @@
     },
     "mobile": "Mecanic mobil · rază {km} km",
     "more": "Mai multe",
+    "more_requested": "Cerute completări",
     "open": "Deschide dosarul",
     "openNamed": "Deschide dosarul {name}",
     "rejected": "Respins",
     "retry": "Reîncearcă",
     "stale": "(neactualizat)",
+    "updated": "Actualizat",
     "waiting": {
       "few": "așteaptă de {n} zile lucrătoare",
       "one": "așteaptă de {n} zi lucrătoare",

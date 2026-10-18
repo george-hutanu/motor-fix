@@ -1,10 +1,14 @@
 import {
   DOCUMENT_KINDS,
   issuedWithinWindow,
+  VERIFICATION_CHANGES_MAX,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TIMELINE_MAX,
   type VerificationActorDto,
+  type VerificationChangeArea,
+  type VerificationChangeDto,
   type VerificationCheckEvidenceDto,
+  type VerificationFileChangesDto,
   type VerificationFileDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -15,9 +19,11 @@ import { auditEntryOf } from '../../../audit/audit-history/audit-history.service
 import { PRISMA } from '../../../auth/prisma';
 import { localDay } from '../../../bucharest';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { shortName } from '../../../quotes/reads';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
+import { resubmission } from '../verification.service';
 
 const SYSTEM_NAME = 'MotorFix';
 
@@ -64,6 +70,26 @@ export function timelineWhere(
 }
 
 const iso = (at: Date | null) => at?.toISOString() ?? null;
+
+// Where each of the garage's own records shows among a returned file's
+// changes. The file, its checks, notifications and accounts are none of them.
+const CHANGE_AREAS: Record<string, VerificationChangeArea> = {
+  garage: 'profile',
+  garage_brand: 'brands',
+  garage_brand_job: 'prices',
+  garage_closed_day: 'profile',
+  garage_facility: 'profile',
+  garage_photo: 'photos',
+  garage_price: 'prices',
+  legal_document: 'documents',
+};
+
+// When the request for more was, for a file back after one; else null.
+const requestOf = (file: {
+  decidedAt: Date | null;
+  reopenedAt: Date | null;
+  status: Parameters<typeof resubmission>[0]['status'];
+}) => (resubmission(file) ? file.decidedAt : null);
 
 // Everything an admin reads to decide one verification file, in one answer.
 // It writes nothing: the opening is the open use case's.
@@ -134,38 +160,61 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, catalogue, prices, reports, entries, total, photos, shared] =
-      await Promise.all([
-        this.names([
-          file.openedBy,
-          file.decidedBy,
-          file.reopenedBy,
-          ...file.checks.map((c) => c.recordedBy),
-        ]),
-        this.prisma.rarActivity.findMany({
-          orderBy: { code: 'asc' },
-          select: { code: true, nameEn: true, nameRo: true },
-        }),
-        pricedJobs(this.prisma, garage.id),
-        this.prisma.garageReport.findMany({
-          orderBy: { createdAt: 'desc' },
-          select: { createdAt: true, text: true },
-          where: { garageId: garage.id, status: 'open' },
-        }),
-        this.prisma.activityLog.findMany({
-          orderBy: [{ at: 'desc' }, { id: 'desc' }],
-          take: VERIFICATION_TIMELINE_MAX,
-          where,
-        }),
-        this.prisma.activityLog.count({ where }),
-        this.publicGarages.photos(garage.photos),
-        this.cuiAlsoUsedBy(garage.id, garage.cui),
-      ]);
+    const [
+      names,
+      catalogue,
+      prices,
+      reports,
+      reportsOpen,
+      entries,
+      total,
+      photos,
+      shared,
+    ] = await Promise.all([
+      this.names([
+        file.openedBy,
+        file.decidedBy,
+        file.reopenedBy,
+        ...file.checks.map((c) => c.recordedBy),
+      ]),
+      this.prisma.rarActivity.findMany({
+        orderBy: { code: 'asc' },
+        select: { code: true, nameEn: true, nameRo: true },
+      }),
+      pricedJobs(this.prisma, garage.id),
+      this.prisma.garageReport.findMany({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          createdAt: true,
+          decidedAt: true,
+          decidedBy: true,
+          decisionNote: true,
+          id: true,
+          reporter: { select: { id: true, name: true, status: true } },
+          status: true,
+          text: true,
+        },
+        take: VERIFICATION_TIMELINE_MAX,
+        where: { verificationFileId: file.id },
+      }),
+      this.prisma.garageReport.count({
+        where: { status: 'open', verificationFileId: file.id },
+      }),
+      this.prisma.activityLog.findMany({
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
+        take: VERIFICATION_TIMELINE_MAX,
+        where,
+      }),
+      this.prisma.activityLog.count({ where }),
+      this.publicGarages.photos(garage.photos),
+      this.cuiAlsoUsedBy(garage.id, garage.cui),
+    ]);
     const actor = (
       accountId: string | null,
       at: Date | null,
     ): VerificationActorDto | null =>
       at ? { id: accountId, name: names(accountId) } : null;
+    const deciders = await this.names(reports.map((r) => r.decidedBy));
     const previous = file.previousFile;
 
     return {
@@ -232,7 +281,9 @@ export class VerificationFileService {
         reopenedAt: iso(file.reopenedAt),
         reopenedBy: actor(file.reopenedBy, file.reopenedAt),
         reopenReason: file.reopenReason,
+        requestedAt: iso(requestOf(file)),
         requestedItems: file.requestedItems,
+        resubmitted: resubmission(file),
         status: file.status,
         submittedAt: file.submittedAt.toISOString(),
       },
@@ -262,8 +313,20 @@ export class VerificationFileService {
           : null,
       reports: reports.map((r) => ({
         createdAt: r.createdAt.toISOString(),
+        decidedAt: iso(r.decidedAt),
+        decidedBy: r.decidedAt
+          ? { id: r.decidedBy, name: deciders(r.decidedBy) }
+          : null,
+        decisionNote: r.decisionNote,
+        id: r.id,
+        reporter:
+          r.reporter.status === 'deleted'
+            ? null
+            : { id: r.reporter.id, name: shortName(r.reporter.name) },
+        status: r.status,
         text: r.text,
       })),
+      reportsOpen,
       storageReady: await storageReady,
       timeline: {
         entries: entries.map((row) => {
@@ -274,6 +337,60 @@ export class VerificationFileService {
         }),
         total,
       },
+    };
+  }
+
+  // What the garage changed after the request for more, newest first: its
+  // profile, prices, brands, photos and documents, never an internal line or
+  // a document opening. Nothing for a file not back after a request.
+  async changes(id: string): Promise<VerificationFileChangesDto> {
+    if (!isUUID(id)) throw new NotFoundException();
+    const file = await this.prisma.verificationFile.findUnique({
+      select: {
+        decidedAt: true,
+        garageId: true,
+        reopenedAt: true,
+        status: true,
+      },
+      where: { id },
+    });
+    if (!file) throw new NotFoundException();
+    const requestedAt = requestOf(file);
+    if (!requestedAt) {
+      return { changes: [], requestedAt: null, resubmitted: false, total: 0 };
+    }
+    const where: Prisma.ActivityLogWhereInput = {
+      action: { in: ['create', 'update', 'delete'] },
+      at: { gt: requestedAt },
+      garageId: file.garageId,
+      internal: false,
+      subjectType: { in: Object.keys(CHANGE_AREAS) },
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.activityLog.findMany({
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
+        take: VERIFICATION_CHANGES_MAX,
+        where,
+      }),
+      this.prisma.activityLog.count({ where }),
+    ]);
+    return {
+      changes: rows.map((row): VerificationChangeDto => {
+        const entry = auditEntryOf(row, true);
+        return {
+          action: entry.action as VerificationChangeDto['action'],
+          area: CHANGE_AREAS[entry.subjectType],
+          at: entry.at,
+          field: entry.field,
+          kind: entry.kind,
+          newValue: entry.newValue,
+          oldValue: entry.oldValue,
+          subjectType: entry.subjectType,
+        };
+      }),
+      requestedAt: requestedAt.toISOString(),
+      resubmitted: true,
+      total,
     };
   }
 

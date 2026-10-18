@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/i18n/formats';
 
 import { emailHtml } from './email-layout';
+import { REPORT_DECISION_SET } from './templates/garage-report-decided';
 import { TEMPLATES } from './templates/registry';
 import { DECISIONS } from './templates/verification-result';
 
@@ -263,13 +264,20 @@ function renderText(
   }
 }
 
+// The kinds whose wording follows the decision they carry.
+const BY_DECISION: Record<string, ReadonlySet<unknown>> = {
+  GARAGE_REPORT_DECIDED: REPORT_DECISION_SET,
+  VERIFICATION_RESULT: DECISIONS,
+};
+
 export function templateName(kind: string, params: Params): string {
   if (kind === 'ADMIN_OUTAGE_ALERT') {
     return params['state'] === 'back' ? `${kind}.back` : `${kind}.down`;
   }
-  if (kind === 'VERIFICATION_RESULT') {
+  const decisions = BY_DECISION[kind];
+  if (decisions) {
     const decision = params['decision'];
-    return DECISIONS.has(decision) ? `${kind}.${decision}` : kind;
+    return decisions.has(decision) ? `${kind}.${decision}` : kind;
   }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];

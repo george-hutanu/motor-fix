@@ -117,12 +117,16 @@ export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGa
 export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { ReportDecisionControllerDecide$Params as ReportDecisionControllerDecide$Params } from './fn/admin/report-decision-controller-decide';
+export { reportDecisionControllerDecide as reportDecisionControllerDecide } from './fn/admin/report-decision-controller-decide';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';
 export { suspensionControllerSuspend as suspensionControllerSuspend } from './fn/admin/suspension-controller-suspend';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { VerificationFileControllerRead$Params as VerificationFileControllerRead$Params } from './fn/admin/verification-file-controller-read';
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
+export type { VerificationFileControllerChanges$Params as VerificationFileControllerChanges$Params } from './fn/admin/verification-file-controller-changes';
+export { verificationFileControllerChanges as verificationFileControllerChanges } from './fn/admin/verification-file-controller-changes';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
 export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';

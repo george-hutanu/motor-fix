@@ -709,7 +709,12 @@ describe('PUT /garages/:garageId/brands with fuels under hostile input', () => {
 
 describe('writing payments from a step 5 section', () => {
   const write = (w: World, section: Record<string, unknown>) =>
-    prisma.$transaction((tx) => writeGaragePayments(tx, w.nord.id, section));
+    prisma.$transaction((tx) =>
+      writeGaragePayments(tx, w.nord.id, section, {
+        actorId: w.ownerId,
+        audit: new AuditService(),
+      }),
+    );
   const refused = async (promise: Promise<unknown>) => {
     const error = await promise.then(
       () => undefined,

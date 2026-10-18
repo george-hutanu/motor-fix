@@ -28,6 +28,7 @@ const row = (
   id: `file-${n}`,
   lamp: 'green',
   mechanics: 3,
+  resubmitted: false,
   status: 'submitted',
   submittedAt: new Date().toISOString(),
   summary: {
@@ -176,13 +177,18 @@ describe('rejected queue rows, attacked', () => {
     expect(stateOf(el, 'Service 3')).toBe('Aprobat, e pe hartă');
   });
 
-  it('keeps a rejected row beside a dropped more_requested one, in place', async () => {
+  it('keeps a rejected row beside a requested one, in place', async () => {
     const el = await open();
 
     await settleDecision('file-2', 'more_requested', ['file-2']);
     await settleDecision('file-3', 'rejected', ['file-2', 'file-3']);
 
-    expect(names(el)).toEqual(['Service 1', 'Service 3', 'Service 4']);
+    expect(names(el)).toEqual([
+      'Service 1',
+      'Service 2',
+      'Service 3',
+      'Service 4',
+    ]);
     expect(stateOf(el, 'Service 3')).toBe('Respins');
   });
 

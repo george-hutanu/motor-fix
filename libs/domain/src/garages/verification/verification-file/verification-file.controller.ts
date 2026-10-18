@@ -1,6 +1,7 @@
 import {
   CorrectRarNumberDto,
   VerificationDecisionDto,
+  VerificationFileChangesDto,
   VerificationFileDto,
 } from '@motor-fix/contracts';
 import {
@@ -52,6 +53,15 @@ export class VerificationFileController {
     return this.files.read(id);
   }
 
+  // What the garage changed since it was asked for more; writes nothing.
+  @Get(':id/changes')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationFileChangesDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  changes(@Param('id') id: string): Promise<VerificationFileChangesDto> {
+    return this.files.changes(id);
+  }
+
   // A waiting file moves to review for this admin; any other is read as it is.
   @Post(':id/open')
   @HttpCode(200)
@@ -83,7 +93,7 @@ export class VerificationFileController {
       'verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required',
   })
   @ApiUnprocessableEntityResponse({
-    description: 'reason_required, note_required',
+    description: 'reason_required, note_required, note_too_short',
   })
   async decision(
     @CurrentActor() actor: Actor,

@@ -34,6 +34,7 @@ const row = (
   id: `file-${n}`,
   lamp: 'green',
   mechanics: 3,
+  resubmitted: false,
   status: 'submitted',
   submittedAt: new Date().toISOString(),
   summary: {
@@ -359,6 +360,7 @@ describe('the panel', () => {
   });
 });
 
+// @traces 069-FR-006
 describe('live', () => {
   it.each<EventKind>([
     'verification.submitted',
@@ -366,6 +368,7 @@ describe('live', () => {
     'verification.check_recorded',
     'verification.decided',
     'verification.reopened',
+    'garage_report.decided',
   ])('reads the rows again on %s', async (kind) => {
     const el = await open();
     answer = async () => queueOf(5);
@@ -648,7 +651,20 @@ describe('a file approved while its row is shown', () => {
     expect(rows(again)).toHaveLength(3);
   });
 
-  it.each(['more_requested'])(
+  it('keeps the row when more details were asked for', async () => {
+    const el = await open();
+
+    await decide(el, 'file-2', 'more_requested');
+
+    expect(rows(el).map((r) => text(r.querySelector('.name')))).toEqual([
+      'Service 1',
+      'Service 2',
+      'Service 3',
+      'Service 4',
+    ]);
+  });
+
+  it.each(['submitted', 'in_review'])(
     'leaves the row to drop when the file was %s',
     async (status) => {
       const el = await open();

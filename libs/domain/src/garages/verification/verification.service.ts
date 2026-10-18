@@ -44,8 +44,10 @@ import type {
 import {
   countApproval,
   countDecisionRefusal,
+  countMoreRequest,
   countRejection,
   countReopening,
+  countResubmission,
 } from '../../metrics/product-counters';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
@@ -59,20 +61,25 @@ export type Decision = {
   requestedItems?: string[];
 };
 
-type Transition = 'open' | 'decide' | 'resend' | 'reopen';
+type Transition = 'open' | 'decide' | 'resend' | 'reopen' | 'reports';
 
 // The statuses each transition may start from; every other pair is refused.
 const FROM: Record<Transition, VerificationFileStatus[]> = {
   decide: ['submitted', 'in_review'],
   open: ['submitted'],
   reopen: ['approved', 'rejected', 'more_requested'],
+  // A file a report reopened goes back to approved with the reports' decision.
+  reports: ['in_review'],
   resend: ['more_requested'],
 };
 
-const KIND: Record<Transition, string> = {
+// The file's history entry for each move; a decision on the reports writes
+// its own, which names the reports, so the move adds none.
+const KIND: Record<Transition, string | null> = {
   decide: 'verification_decided',
   open: 'verification_opened',
   reopen: 'verification_reopened',
+  reports: null,
   resend: 'verification_resent',
 };
 
@@ -80,6 +87,21 @@ const LIVE: VerificationFileStatus[] = ['submitted', 'in_review', 'approved'];
 
 // Waiting for an admin; a file asked for more waits for its garage.
 const WAITING: VerificationFileStatus[] = ['submitted', 'in_review'];
+
+// A waiting file the garage sent again after a request for more: decided
+// once, and not reopened since. The request's time is its decision's.
+export function resubmission(file: {
+  decidedAt: Date | null;
+  reopenedAt: Date | null;
+  status: VerificationFileStatus;
+}) {
+  const { decidedAt, reopenedAt, status } = file;
+  return (
+    WAITING.includes(status) &&
+    decidedAt !== null &&
+    (reopenedAt === null || reopenedAt < decidedAt)
+  );
+}
 
 export const SYSTEM = { accountId: null, role: 'system' } as const;
 
@@ -142,9 +164,11 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          decidedAt: true,
           documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
           id: true,
+          reopenedAt: true,
           status: true,
           submittedAt: true,
         },
@@ -411,28 +435,34 @@ export class VerificationService {
       note,
       reason,
     });
-    this.told(fileId, actor, decision.outcome, reason);
+    this.told(fileId, actor, decision.outcome, reason, requestedItems);
     return file;
   }
 
-  // A decision's count, span attributes and log line. The reason is one of
-  // five codes; the note is the admin's own words and stays out of both.
+  // A decision's count, span attributes and log line. The reason and the
+  // items are fixed codes; the note is the admin's own words and stays out.
   private told(
     fileId: string,
     actor: VerificationActor,
     outcome: Decision['outcome'],
     reason: string | null,
+    requestedItems: string[],
   ) {
-    // A request for more documents is not a verdict.
-    if (outcome !== 'more_requested') countApproval(outcome);
+    // A request for more is not a verdict.
+    if (outcome === 'more_requested') countMoreRequest();
+    else countApproval(outcome);
+    const asked =
+      outcome === 'more_requested' ? requestedItems.join(',') : null;
     const rejection = outcome === 'rejected' ? reasonCode(reason) : null;
     if (rejection) countRejection(rejection);
     trace.getActiveSpan()?.setAttributes({
       'verification.decision': outcome,
       ...(rejection && { 'verification.reason': rejection }),
+      ...(asked !== null && { 'verification.requested_items': asked }),
     });
+    const codes = rejection ?? asked;
     this.logger.log(
-      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${rejection ? ` (${rejection})` : ''}`,
+      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${codes === null ? '' : ` (${codes})`}`,
     );
   }
 
@@ -576,6 +606,35 @@ export class VerificationService {
     );
   }
 
+  // The file's move when its reports are decided: the garage stays as it is,
+  // so no gate and no publication; the reports' story announces it. A file
+  // in review with no open report is an ordinary review, refused as one.
+  async approveAfterReports(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    fileId: string,
+  ): Promise<VerificationFile> {
+    trust(actor);
+    const before = await this.file(tx, fileId);
+    if (before.status === 'in_review') {
+      const open = await tx.garageReport.count({
+        where: { status: 'open', verificationFileId: fileId },
+      });
+      if (open === 0) {
+        this.refuse(fileId, 'no_open_report');
+        throw await this.refusalFor(tx, before);
+      }
+    }
+    return this.move(tx, actor, before, 'reports', {
+      decidedAt: new Date(),
+      decidedBy: actor.accountId,
+      status: 'approved',
+    }).catch((error: unknown) => {
+      if (decidedAlready(error)) this.refuse(fileId, 'already_decided');
+      throw error;
+    });
+  }
+
   // Who may resend is the submitting story's rule; here only the file counts.
   async resend(
     tx: Prisma.TransactionClient,
@@ -589,6 +648,8 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
+    countResubmission();
+    this.logger.log(`file ${fileId} resent`);
     return this.autoApprove(tx, file);
   }
 
@@ -683,19 +744,21 @@ export class VerificationService {
       where: { id: before.id },
     });
     if (count === 0) throw await this.refusalFor(tx, after);
-    await this.audit.record(tx, {
-      action: 'update',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      field: 'status',
-      garageId: before.garageId,
-      kind: KIND[transition],
-      newValue: data.status,
-      oldValue: before.status,
-      subjectId: before.id,
-      subjectType: 'verification_file',
-      text,
-    });
+    const kind = KIND[transition];
+    if (kind)
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        field: 'status',
+        garageId: before.garageId,
+        kind,
+        newValue: data.status,
+        oldValue: before.status,
+        subjectId: before.id,
+        subjectType: 'verification_file',
+        text,
+      });
     return after;
   }
 
@@ -777,9 +840,11 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    decidedAt: true;
     documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
     id: true;
+    reopenedAt: true;
     status: true;
     submittedAt: true;
   };
@@ -799,10 +864,13 @@ export function garageArea(garage: {
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
-  { checks, documents, garage, id, status, submittedAt }: QueueFile,
+  file: QueueFile,
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
+  const { checks, decidedAt, documents, garage, id, status, submittedAt } =
+    file;
+  const resubmitted = resubmission(file);
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
   const area = garageArea(garage);
@@ -817,6 +885,8 @@ function queueRow(
     id,
     lamp: queueLamp(checks, flagged),
     ...(team && { mechanics: garage._count.mechanics }),
+    ...(resubmitted && decidedAt && { requestedAt: decidedAt }),
+    resubmitted,
     status: status as VerificationQueueRowDto['status'],
     submittedAt,
     summary: {
@@ -845,8 +915,8 @@ async function name(tx: Prisma.TransactionClient, accountId: string | null) {
 }
 
 // The rules between the payload's values: a rejection names a reason, a
-// rejection and a request for more carry a note, an approval's blank note is
-// none. A reason or items where the decision has no use for them is a
+// rejection and a request for more carry a note of at least the floor, an
+// approval's blank note is none. A reason or items where the decision has no use for them is a
 // malformed body, as the edge would answer it.
 function payloadOf(decision: Decision) {
   wellFormed(decision);
@@ -858,7 +928,7 @@ function payloadOf(decision: Decision) {
   if (outcome !== 'approved' && !text) {
     throw required('note_required', 'This decision needs a note', 'note');
   }
-  if (outcome === 'rejected' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
+  if (outcome !== 'approved' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
     throw required(
       'note_too_short',
       `The message to the garage is at least ${REJECTION_NOTE_MIN} characters`,

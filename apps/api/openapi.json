@@ -5033,6 +5033,63 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/report-decision": {
+      "post": {
+        "operationId": "ReportDecisionController_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused: decided already (decidedBy, decidedAt, currentStatus), or in review with no open report"
+          },
+          "422": {
+            "description": "reason_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/garages/{id}/suspend": {
       "post": {
         "operationId": "SuspensionController_suspend",
@@ -5194,6 +5251,44 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/changes": {
+      "get": {
+        "operationId": "VerificationFileController_changes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileChangesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/open": {
       "post": {
         "operationId": "VerificationFileController_open",
@@ -5276,7 +5371,7 @@
             "description": "verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required"
           },
           "422": {
-            "description": "reason_required, note_required"
+            "description": "reason_required, note_required, note_too_short"
           }
         },
         "security": [
@@ -11717,6 +11812,15 @@
           "flagged": {
             "type": "boolean",
             "description": "Waited more than the 2 working days"
+          },
+          "resubmitted": {
+            "type": "boolean",
+            "description": "Sent again after a request for more"
+          },
+          "requestedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When more was asked for; only when resubmitted"
           }
         },
         "required": [
@@ -11729,7 +11833,8 @@
           "lamp",
           "submittedAt",
           "workingDays",
-          "flagged"
+          "flagged",
+          "resubmitted"
         ]
       },
       "VerificationQueueDto": {
@@ -13129,6 +13234,696 @@
           "photos"
         ]
       },
+      "ReportDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "unfounded",
+              "confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Trimmed; required with confirmed and shown to the garage, ignored otherwise",
+            "maxLength": 200
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed; optional with unfounded, ignored otherwise",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "VerificationActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Null for the system",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileStateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "in_review",
+              "approved",
+              "more_requested",
+              "rejected"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "The latest sending",
+            "format": "date-time"
+          },
+          "openedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "openedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decidedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedItems": {
+            "description": "What the latest request for more asked for; empty otherwise",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reopenedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "reopenedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reopenReason": {
+            "type": "string",
+            "enum": [
+              "garage_report"
+            ],
+            "nullable": true
+          },
+          "resubmitted": {
+            "type": "boolean",
+            "description": "Sent again after a request for more, with no reopening since that request"
+          },
+          "requestedAt": {
+            "type": "string",
+            "description": "When more was asked for; set only when resubmitted",
+            "format": "date-time",
+            "nullable": true
+          },
+          "declaredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "declaredByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "rarNumber": {
+            "type": "string",
+            "description": "The garage's RAR authorisation number, normalised",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "submittedAt",
+          "openedBy",
+          "openedAt",
+          "decidedBy",
+          "decidedAt",
+          "reasonCode",
+          "reasonNote",
+          "requestedItems",
+          "reopenedBy",
+          "reopenedAt",
+          "reopenReason",
+          "resubmitted",
+          "requestedAt",
+          "declaredAt",
+          "declaredByName",
+          "rarNumber"
+        ]
+      },
+      "VerificationFileGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "cui": {
+            "type": "string",
+            "description": "Digits only",
+            "nullable": true
+          },
+          "cuiAlsoUsedBy": {
+            "description": "The names of the other garages holding the same CUI, sorted; empty when none or no CUI",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "address": {
+            "type": "string",
+            "description": "The workshop; null for a mobile mechanic",
+            "nullable": true
+          },
+          "seatAddress": {
+            "type": "string",
+            "description": "A mobile mechanic's registered seat",
+            "nullable": true
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "brands": {
+            "description": "The brands it works on, by name",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "businessKind",
+          "cui",
+          "cuiAlsoUsedBy",
+          "address",
+          "seatAddress",
+          "serviceRadiusKm",
+          "phone",
+          "brands",
+          "photos"
+        ]
+      },
+      "VerificationCheckEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The company name as the register shows it; company only",
+            "maxLength": 200
+          },
+          "certificate": {
+            "type": "boolean",
+            "description": "4520 on the ONRC certificate; caen only"
+          },
+          "onrc": {
+            "type": "boolean",
+            "description": "4520 in the ONRC record; caen only"
+          },
+          "address": {
+            "type": "boolean",
+            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          },
+          "found": {
+            "type": "boolean",
+            "description": "The file's RAR number is in the public register; rar only"
+          },
+          "sameCompany": {
+            "type": "boolean",
+            "description": "The register names the same company; rar only"
+          },
+          "sameAddress": {
+            "type": "boolean",
+            "description": "The register shows the workshop address, or the registered seat for a mobile mechanic; rar only"
+          },
+          "certificateUploaded": {
+            "type": "boolean",
+            "description": "Whether the file held an ONRC certificate at the save; caen only"
+          },
+          "lookedUpOn": {
+            "type": "string",
+            "description": "The day of the look-up, in Bucharest",
+            "format": "date"
+          },
+          "rarNumber": {
+            "type": "string",
+            "description": "The file's RAR number at the save; rar only",
+            "nullable": true
+          },
+          "uncoveredJobTypeIds": {
+            "description": "The price-list job types the recorded activities leave uncovered; activities only",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "VerificationFileCheckDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "caen",
+              "rar",
+              "activities",
+              "representative",
+              "address",
+              "photos",
+              "documents"
+            ]
+          },
+          "automatic": {
+            "type": "boolean",
+            "description": "False until automatic look-ups exist"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidence": {
+            "description": "What the admin found and the server noted, for company, caen, rar and activities; null otherwise",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationCheckEvidenceDto"
+              }
+            ]
+          },
+          "recordedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fileId",
+          "kind",
+          "automatic",
+          "result",
+          "detail",
+          "evidence",
+          "recordedBy",
+          "recordedAt",
+          "recorder"
+        ]
+      },
+      "VerificationFileActivityDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "VerificationFileJobDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "rarActivity": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "rarActivity"
+        ]
+      },
+      "VerificationFileDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "issuedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The certificate only: no issue date, or issued more than 30 days before the latest sending; null for every other kind",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind",
+          "present",
+          "id",
+          "pages",
+          "issuedOn",
+          "stale"
+        ]
+      },
+      "VerificationFileReporterDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "First name and the family name's initial"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileReportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text, as the reporter wrote it"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "unfounded",
+              "confirmed"
+            ]
+          },
+          "reporter": {
+            "description": "Null once the account is deleted",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileReporterDto"
+              }
+            ]
+          },
+          "decidedBy": {
+            "description": "The admin who decided it; null while open",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decisionNote": {
+            "type": "string",
+            "description": "The admin's note, or the reason the garage was given",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "createdAt",
+          "status",
+          "reporter",
+          "decidedBy",
+          "decidedAt",
+          "decisionNote"
+        ]
+      },
+      "VerificationFileRejectionDto": {
+        "type": "object",
+        "properties": {
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "reasonCode",
+          "reasonNote",
+          "decidedAt"
+        ]
+      },
+      "VerificationFileTimelineDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "description": "Newest first, at most 50",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ]
+      },
+      "VerificationFileDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/VerificationFileStateDto"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/VerificationFileGarageDto"
+          },
+          "checks": {
+            "description": "The 8 kinds, in their order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileCheckDto"
+            }
+          },
+          "activities": {
+            "description": "The garage's recorded RAR activities",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileActivityDto"
+            }
+          },
+          "catalogue": {
+            "description": "The whole RAR activity catalogue, by code",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileActivityDto"
+            }
+          },
+          "jobs": {
+            "description": "The garage's price-list jobs, once each, in the list's order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileJobDto"
+            }
+          },
+          "documents": {
+            "description": "One per kind, in their order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileDocumentDto"
+            }
+          },
+          "storageReady": {
+            "type": "boolean",
+            "description": "Whether the document store answers"
+          },
+          "reports": {
+            "description": "The file's reports, newest first, at most 50",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileReportDto"
+            }
+          },
+          "reportsOpen": {
+            "type": "number",
+            "description": "How many of the file's reports are open, all of them counted"
+          },
+          "previousRejection": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileRejectionDto"
+              }
+            ]
+          },
+          "timeline": {
+            "$ref": "#/components/schemas/VerificationFileTimelineDto"
+          }
+        },
+        "required": [
+          "file",
+          "garage",
+          "checks",
+          "activities",
+          "catalogue",
+          "jobs",
+          "documents",
+          "storageReady",
+          "reports",
+          "reportsOpen",
+          "previousRejection",
+          "timeline"
+        ]
+      },
       "SuspendGarageDto": {
         "type": "object",
         "properties": {
@@ -13260,164 +14055,6 @@
           "result"
         ]
       },
-      "VerificationCheckEvidenceDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The company name as the register shows it; company only",
-            "maxLength": 200
-          },
-          "certificate": {
-            "type": "boolean",
-            "description": "4520 on the ONRC certificate; caen only"
-          },
-          "onrc": {
-            "type": "boolean",
-            "description": "4520 in the ONRC record; caen only"
-          },
-          "address": {
-            "type": "boolean",
-            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
-          },
-          "found": {
-            "type": "boolean",
-            "description": "The file's RAR number is in the public register; rar only"
-          },
-          "sameCompany": {
-            "type": "boolean",
-            "description": "The register names the same company; rar only"
-          },
-          "sameAddress": {
-            "type": "boolean",
-            "description": "The register shows the workshop address, or the registered seat for a mobile mechanic; rar only"
-          },
-          "certificateUploaded": {
-            "type": "boolean",
-            "description": "Whether the file held an ONRC certificate at the save; caen only"
-          },
-          "lookedUpOn": {
-            "type": "string",
-            "description": "The day of the look-up, in Bucharest",
-            "format": "date"
-          },
-          "rarNumber": {
-            "type": "string",
-            "description": "The file's RAR number at the save; rar only",
-            "nullable": true
-          },
-          "uncoveredJobTypeIds": {
-            "description": "The price-list job types the recorded activities leave uncovered; activities only",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "VerificationActorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Null for the system",
-            "format": "uuid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name"
-        ]
-      },
-      "VerificationFileCheckDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fileId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "company",
-              "caen",
-              "rar",
-              "activities",
-              "representative",
-              "address",
-              "photos",
-              "documents"
-            ]
-          },
-          "automatic": {
-            "type": "boolean",
-            "description": "False until automatic look-ups exist"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "not_run",
-              "ok",
-              "warning",
-              "failed"
-            ]
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "evidence": {
-            "description": "What the admin found and the server noted, for company, caen, rar and activities; null otherwise",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationCheckEvidenceDto"
-              }
-            ]
-          },
-          "recordedBy": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "recordedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "recorder": {
-            "description": "Null while never recorded; MotorFix for an automatic record",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "fileId",
-          "kind",
-          "automatic",
-          "result",
-          "detail",
-          "evidence",
-          "recordedBy",
-          "recordedAt",
-          "recorder"
-        ]
-      },
       "VerificationCheckRecordedDto": {
         "type": "object",
         "properties": {
@@ -13441,337 +14078,116 @@
           "rarActivities"
         ]
       },
-      "VerificationFileStateDto": {
+      "VerificationChangeDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
+          "area": {
             "type": "string",
             "enum": [
-              "submitted",
-              "in_review",
-              "approved",
-              "more_requested",
-              "rejected"
+              "profile",
+              "prices",
+              "brands",
+              "photos",
+              "documents"
             ]
           },
-          "submittedAt": {
+          "subjectType": {
             "type": "string",
-            "description": "The latest sending",
-            "format": "date-time"
+            "description": "garage, garage_price, legal_document, …"
           },
-          "openedBy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          },
-          "openedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "decidedBy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          },
-          "decidedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "reasonCode": {
+          "field": {
             "type": "string",
             "nullable": true
           },
-          "reasonNote": {
-            "type": "string",
-            "nullable": true
-          },
-          "requestedItems": {
-            "description": "What the latest request for more asked for; empty otherwise",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "reopenedBy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          },
-          "reopenedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "reopenReason": {
+          "action": {
             "type": "string",
             "enum": [
-              "garage_report"
-            ],
-            "nullable": true
+              "create",
+              "update",
+              "delete"
+            ]
           },
-          "declaredAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "declaredByName": {
-            "type": "string",
-            "nullable": true
-          },
-          "rarNumber": {
-            "type": "string",
-            "description": "The garage's RAR authorisation number, normalised",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "status",
-          "submittedAt",
-          "openedBy",
-          "openedAt",
-          "decidedBy",
-          "decidedAt",
-          "reasonCode",
-          "reasonNote",
-          "requestedItems",
-          "reopenedBy",
-          "reopenedAt",
-          "reopenReason",
-          "declaredAt",
-          "declaredByName",
-          "rarNumber"
-        ]
-      },
-      "VerificationFileGarageDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "businessKind": {
-            "type": "string",
-            "enum": [
-              "company",
-              "pfa",
-              "ii",
-              "mobile"
-            ],
-            "nullable": true
-          },
-          "cui": {
-            "type": "string",
-            "description": "Digits only",
-            "nullable": true
-          },
-          "cuiAlsoUsedBy": {
-            "description": "The names of the other garages holding the same CUI, sorted; empty when none or no CUI",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "address": {
-            "type": "string",
-            "description": "The workshop; null for a mobile mechanic",
-            "nullable": true
-          },
-          "seatAddress": {
-            "type": "string",
-            "description": "A mobile mechanic's registered seat",
-            "nullable": true
-          },
-          "serviceRadiusKm": {
-            "type": "integer",
-            "nullable": true
-          },
-          "phone": {
-            "type": "string",
-            "nullable": true
-          },
-          "brands": {
-            "description": "The brands it works on, by name",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "photos": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PublicGaragePhotoDto"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "businessKind",
-          "cui",
-          "cuiAlsoUsedBy",
-          "address",
-          "seatAddress",
-          "serviceRadiusKm",
-          "phone",
-          "brands",
-          "photos"
-        ]
-      },
-      "VerificationFileActivityDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "nameRo",
-          "nameEn"
-        ]
-      },
-      "VerificationFileJobDto": {
-        "type": "object",
-        "properties": {
-          "jobTypeId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          },
-          "rarActivity": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "jobTypeId",
-          "nameRo",
-          "nameEn",
-          "rarActivity"
-        ]
-      },
-      "VerificationFileDocumentDto": {
-        "type": "object",
-        "properties": {
           "kind": {
             "type": "string",
-            "enum": [
-              "onrc_certificate",
-              "rar_authorisation"
+            "description": "A legal document's kind",
+            "nullable": true
+          },
+          "oldValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
             ]
           },
-          "present": {
+          "newValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "area",
+          "subjectType",
+          "field",
+          "action",
+          "kind",
+          "oldValue",
+          "newValue",
+          "at"
+        ]
+      },
+      "VerificationFileChangesDto": {
+        "type": "object",
+        "properties": {
+          "resubmitted": {
             "type": "boolean"
           },
-          "id": {
+          "requestedAt": {
             "type": "string",
-            "format": "uuid",
+            "format": "date-time",
             "nullable": true
           },
-          "pages": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "issuedOn": {
-            "type": "string",
-            "format": "date",
-            "nullable": true
-          },
-          "stale": {
-            "type": "boolean",
-            "description": "The certificate only: no issue date, or issued more than 30 days before the latest sending; null for every other kind",
-            "nullable": true
-          }
-        },
-        "required": [
-          "kind",
-          "present",
-          "id",
-          "pages",
-          "issuedOn",
-          "stale"
-        ]
-      },
-      "VerificationFileReportDto": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Plain text, as the reporter wrote it"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "text",
-          "createdAt"
-        ]
-      },
-      "VerificationFileRejectionDto": {
-        "type": "object",
-        "properties": {
-          "reasonCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "reasonNote": {
-            "type": "string",
-            "nullable": true
-          },
-          "decidedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "reasonCode",
-          "reasonNote",
-          "decidedAt"
-        ]
-      },
-      "VerificationFileTimelineDto": {
-        "type": "object",
-        "properties": {
-          "entries": {
-            "description": "Newest first, at most 50",
+          "changes": {
+            "description": "Newest first, at most 200",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AuditEntryDto"
+              "$ref": "#/components/schemas/VerificationChangeDto"
             }
           },
           "total": {
@@ -13780,90 +14196,10 @@
           }
         },
         "required": [
-          "entries",
+          "resubmitted",
+          "requestedAt",
+          "changes",
           "total"
-        ]
-      },
-      "VerificationFileDto": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "$ref": "#/components/schemas/VerificationFileStateDto"
-          },
-          "garage": {
-            "$ref": "#/components/schemas/VerificationFileGarageDto"
-          },
-          "checks": {
-            "description": "The 8 kinds, in their order",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileCheckDto"
-            }
-          },
-          "activities": {
-            "description": "The garage's recorded RAR activities",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileActivityDto"
-            }
-          },
-          "catalogue": {
-            "description": "The whole RAR activity catalogue, by code",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileActivityDto"
-            }
-          },
-          "jobs": {
-            "description": "The garage's price-list jobs, once each, in the list's order",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileJobDto"
-            }
-          },
-          "documents": {
-            "description": "One per kind, in their order",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileDocumentDto"
-            }
-          },
-          "storageReady": {
-            "type": "boolean",
-            "description": "Whether the document store answers"
-          },
-          "reports": {
-            "description": "The garage's open reports, newest first",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VerificationFileReportDto"
-            }
-          },
-          "previousRejection": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationFileRejectionDto"
-              }
-            ]
-          },
-          "timeline": {
-            "$ref": "#/components/schemas/VerificationFileTimelineDto"
-          }
-        },
-        "required": [
-          "file",
-          "garage",
-          "checks",
-          "activities",
-          "catalogue",
-          "jobs",
-          "documents",
-          "storageReady",
-          "reports",
-          "previousRejection",
-          "timeline"
         ]
       },
       "VerificationDecisionDto": {

@@ -166,8 +166,6 @@ const NOT_CHANGES = new Set([
   'ListingPhotosService.remove',
   'ListingDocumentsService.confirm',
   'ListingDocumentsService.remove',
-  // Runs inside the sending transaction, which audits the new garage.
-  'GaragePhotosService.saveRows',
   // Runs inside the activities check's record, whose one entry carries the
   // list before and after.
   'VerificationChecksService.writeActivities',

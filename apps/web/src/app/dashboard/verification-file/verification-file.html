@@ -58,22 +58,18 @@
       </section>
     }
 
-    @if (reported(); as r) {
-      <section class="notice" data-section="reported">
-        <mf-lamp state="amber" [label]="'admin.file.reported' | t" />
-        @for (line of r.reports; track $index) {
-          <p>{{ line }}</p>
-        }
-        @if (r.reopened) {
-          <p>{{ r.reopened }}</p>
-        }
-      </section>
-    }
-
     @if (rejected(); as line) {
       <section class="notice" data-section="rejected">
         <p>{{ line }}</p>
       </section>
+    }
+
+    @if (data()?.file?.resubmitted) {
+      <mf-verification-changes
+        [fileId]="fileId"
+        [photos]="data()?.garage?.photos?.length ?? 0"
+        [brands]="data()?.garage?.brands?.length ?? 0"
+      />
     }
 
     <section data-section="register">
@@ -179,6 +175,36 @@
       </ul>
     </section>
 
+    @if (reports(); as r) {
+      <section data-section="reports">
+        <h4>{{ r.heading }}</h4>
+        @if (r.reopened) {
+          <p class="detail" data-part="reopened">{{ r.reopened }}</p>
+        }
+        <ul class="rows">
+          @for (row of r.rows; track row.id) {
+            <li class="report">
+              <span class="report-text">{{ row.text }}</span>
+              <span class="detail">
+                {{ row.when }} ·
+                @if (row.reporter; as reporter) {
+                  <a class="reporter" routerLink="/app/admin/users" [queryParams]="{ q: reporter.id }">{{ reporter.name }}</a>
+                } @else {
+                  {{ 'admin.file.reports.deleted' | t }}
+                }
+              </span>
+              @if (row.outcome) {
+                <span class="by">{{ row.outcome }}</span>
+              }
+              @if (row.detail) {
+                <span class="by">{{ row.detail }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
     <section data-section="documents">
       <h4>{{ 'admin.file.documents.heading' | t }}</h4>
       <ul class="rows">
@@ -262,6 +288,18 @@
         @if (f.reason) {
           <p>{{ f.reason }}</p>
         }
+        @if (f.items) {
+          <p data-part="items">{{ f.items }}</p>
+        }
+      } @else if (reportOpen()) {
+        <div class="decisions">
+          <button type="button" class="action" data-part="report-unfounded" [disabled]="busy()" (click)="decideReports('unfounded')">
+            {{ 'admin.file.reportDecision.unfounded' | t }}
+          </button>
+          <button type="button" class="action danger" data-part="report-confirmed" [disabled]="busy()" (click)="decideReports('confirmed')">
+            {{ 'admin.file.reportDecision.confirmed' | t }}
+          </button>
+        </div>
       } @else {
         <div class="decisions">
           <button
@@ -269,25 +307,37 @@
             class="action primary"
             data-part="approve"
             [disabled]="busy() || !!gateHint()"
-            [attr.aria-busy]="busy() && !rejecting() ? 'true' : null"
+            [attr.aria-busy]="busy() && !inflight() ? 'true' : null"
             [attr.aria-describedby]="gateHint() ? 'mf-file-gate-hint' : null"
             (click)="approve()"
           >
-            @if (busy() && !rejecting()) {
+            @if (busy() && !inflight()) {
               <span class="spinner" data-part="spinner" aria-hidden="true"></span>
             }
             {{ 'admin.file.footer.approve' | t }}
           </button>
-          <button type="button" class="action" disabled>{{ 'admin.file.footer.ask' | t }}</button>
+          <button
+            type="button"
+            class="action"
+            data-part="ask"
+            [disabled]="busy()"
+            [attr.aria-busy]="inflight() === 'more_requested' ? 'true' : null"
+            (click)="ask()"
+          >
+            @if (inflight() === 'more_requested') {
+              <span class="spinner" data-part="spinner" aria-hidden="true"></span>
+            }
+            {{ 'admin.file.footer.ask' | t }}
+          </button>
           <button
             type="button"
             class="action danger"
             data-part="reject"
             [disabled]="busy()"
-            [attr.aria-busy]="rejecting() ? 'true' : null"
+            [attr.aria-busy]="inflight() === 'rejected' ? 'true' : null"
             (click)="reject()"
           >
-            @if (rejecting()) {
+            @if (inflight() === 'rejected') {
               <span class="spinner" data-part="spinner" aria-hidden="true"></span>
             }
             {{ 'admin.file.footer.reject' | t }}

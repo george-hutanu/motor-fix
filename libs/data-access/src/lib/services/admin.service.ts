@@ -51,6 +51,8 @@ import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules
 import { platformRulesControllerList } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesDto } from '../models/platform-rules-dto';
+import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
+import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
 import { SuspensionControllerSuspend$Params } from '../fn/admin/suspension-controller-suspend';
 import { systemLogControllerList } from '../fn/admin/system-log-controller-list';
@@ -59,6 +61,9 @@ import { SystemLogDto } from '../models/system-log-dto';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
+import { VerificationFileChangesDto } from '../models/verification-file-changes-dto';
+import { verificationFileControllerChanges } from '../fn/admin/verification-file-controller-changes';
+import { VerificationFileControllerChanges$Params } from '../fn/admin/verification-file-controller-changes';
 import { verificationFileControllerCorrect } from '../fn/admin/verification-file-controller-correct';
 import { VerificationFileControllerCorrect$Params } from '../fn/admin/verification-file-controller-correct';
 import { verificationFileControllerDecision } from '../fn/admin/verification-file-controller-decision';
@@ -278,6 +283,31 @@ export class AdminService extends BaseService {
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
   }
 
+  /** Path part for operation `reportDecisionControllerDecide()` */
+  static readonly ReportDecisionControllerDecidePath = '/api/v1/admin/verification-files/{id}/report-decision';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reportDecisionControllerDecide()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportDecisionControllerDecide$Response(params: ReportDecisionControllerDecide$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileDto>> {
+    const obs = reportDecisionControllerDecide(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reportDecisionControllerDecide$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportDecisionControllerDecide(params: ReportDecisionControllerDecide$Params, context?: HttpContext): Promise<VerificationFileDto> {
+    const resp = this.reportDecisionControllerDecide$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
   /** Path part for operation `suspensionControllerSuspend()` */
   static readonly SuspensionControllerSuspendPath = '/api/v1/admin/garages/{id}/suspend';
 
@@ -359,6 +389,31 @@ export class AdminService extends BaseService {
   verificationFileControllerRead(params: VerificationFileControllerRead$Params, context?: HttpContext): Promise<VerificationFileDto> {
     const resp = this.verificationFileControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerChanges()` */
+  static readonly VerificationFileControllerChangesPath = '/api/v1/admin/verification-files/{id}/changes';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerChanges()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerChanges$Response(params: VerificationFileControllerChanges$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileChangesDto>> {
+    const obs = verificationFileControllerChanges(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerChanges$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerChanges(params: VerificationFileControllerChanges$Params, context?: HttpContext): Promise<VerificationFileChangesDto> {
+    const resp = this.verificationFileControllerChanges$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileChangesDto>): VerificationFileChangesDto => r.body);
   }
 
   /** Path part for operation `verificationFileControllerOpen()` */

@@ -199,6 +199,7 @@ describe('GET /admin/verification-files/:id', () => {
       garage: { brands: [], id: garage, name: 'Atelier Dinamo', photos: [] },
       previousRejection: null,
       reports: [],
+      reportsOpen: 0,
       timeline: { entries: [], total: 0 },
     });
     expect(res.body.checks.map((c: { kind: string }) => c.kind)).toEqual([
@@ -679,4 +680,176 @@ describe('who may decide or reopen', () => {
       expect([decision.status, reopen.status]).toEqual([404, 404]);
     },
   );
+});
+
+describe('asking a garage for more over the API', () => {
+  const ASK = {
+    decision: 'more_requested',
+    note: 'Trimite pozele atelierului.',
+    requestedItems: ['photos'],
+  };
+
+  // @traces 304-FR-003 304-FR-014
+  it.each([
+    ['note_required', { decision: 'more_requested', note: '   ' }],
+    ['note_too_short', { decision: 'more_requested', note: 'Abcdefghi' }],
+  ])('answers 422 %s on the note, nothing stored', async (code, body) => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, body);
+
+    expect([res.status, res.body.code]).toEqual([422, code]);
+    expect(res.body.errors).toEqual([
+      expect.objectContaining({ field: 'note' }),
+    ]);
+    expect((await fileRow(id)).status).toBe('in_review');
+    expect(await decided(id)).toHaveLength(0);
+  });
+
+  // @traces 304-FR-003 304-FR-014
+  it('answers 400 validation_failed to a note of 1,001 code points', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, {
+      decision: 'more_requested',
+      note: 'a'.repeat(1001),
+    });
+
+    expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+
+  // @traces 304-FR-004 304-FR-014
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s of the garage, with no garage data',
+    async (role) => {
+      const { garage, id } = await file('in_review');
+      const accountId = await account(role);
+      if (role === 'garage' || role === 'receptionist') {
+        await db.query(
+          'INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, $3::garage_member_role)',
+          [garage, accountId, role === 'garage' ? 'owner' : 'receptionist'],
+        );
+      }
+      if (role === 'mechanic') {
+        await db.query(
+          "INSERT INTO mechanic (id, garage_id, account_id, name) VALUES (gen_random_uuid(), $1, $2, 'Vlad')",
+          [garage, accountId],
+        );
+      }
+
+      const res = await post(id, 'decision', bearer(accountId, role), ASK);
+
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('Atelier Dinamo');
+      expect((await fileRow(id)).status).toBe('in_review');
+    },
+  );
+
+  // @traces 304-FR-004 304-FR-014
+  it('answers 401 sign_in_required with no token', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', undefined, ASK);
+
+    expect([res.status, res.body.code]).toEqual([401, 'sign_in_required']);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+});
+
+describe('GET /admin/verification-files/:id/changes', () => {
+  const changes = (id: string, authorization?: string) => {
+    const req = request(app.getHttpServer()).get(
+      `/api/v1/admin/verification-files/${id}/changes`,
+    );
+    return authorization ? req.set('Authorization', authorization) : req;
+  };
+
+  // A file back after a request for more, with the garage's phone changed since.
+  const returned = async () => {
+    const made = await file('submitted');
+    await db.query(
+      "UPDATE verification_file SET decided_at = now() - interval '1 hour' WHERE id = $1",
+      [made.id],
+    );
+    await db.query(
+      `INSERT INTO activity_log (id, action, actor_role, actor_name, garage_id, subject_type, subject_id, field, old_value, new_value)
+       VALUES (gen_random_uuid(), 'update', 'owner', 'Mihai', $1, 'garage', $1, 'phone', '"+40722111222"', '"+40722333444"')`,
+      [made.garage],
+    );
+    return made;
+  };
+
+  const logged = async () =>
+    Number((await db.query('SELECT count(*) FROM activity_log')).rows[0].count);
+
+  // @traces 304-FR-008
+  it("gives an admin the garage's changes since the request and writes nothing", async () => {
+    const { id } = await returned();
+    const before = await logged();
+
+    const res = await changes(id, admin);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      changes: [
+        {
+          action: 'update',
+          area: 'profile',
+          field: 'phone',
+          newValue: '+40722333444',
+          oldValue: '+40722111222',
+          subjectType: 'garage',
+        },
+      ],
+      resubmitted: true,
+      total: 1,
+    });
+    expect(await logged()).toBe(before);
+  });
+
+  // @traces 304-FR-008
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s of the garage, with none of its changes',
+    async (role) => {
+      const { garage, id } = await returned();
+      const accountId = await account(role);
+      if (role === 'garage' || role === 'receptionist') {
+        await db.query(
+          'INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, $3::garage_member_role)',
+          [garage, accountId, role === 'garage' ? 'owner' : 'receptionist'],
+        );
+      }
+      if (role === 'mechanic') {
+        await db.query(
+          "INSERT INTO mechanic (id, garage_id, account_id, name) VALUES (gen_random_uuid(), $1, $2, 'Vlad')",
+          [garage, accountId],
+        );
+      }
+
+      const res = await changes(id, bearer(accountId, role));
+
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('+40722333444');
+    },
+  );
+
+  // @traces 304-FR-008
+  it.each([
+    ['an unknown file', randomUUID()],
+    ['a malformed id', 'not-a-file'],
+  ])('answers 404 to %s', async (_, id) => {
+    const res = await changes(id, admin);
+
+    expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+  });
+
+  // @traces 304-FR-008
+  it('answers 401 sign_in_required with no token', async () => {
+    const { id } = await returned();
+
+    const res = await changes(id);
+
+    expect([res.status, res.body.code]).toEqual([401, 'sign_in_required']);
+  });
 });

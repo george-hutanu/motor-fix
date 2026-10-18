@@ -77,6 +77,14 @@ h4 {
 .label {
   font-weight: 700;
 }
+.report-text {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.reporter {
+  font-weight: 600;
+  color: var(--mf-text);
+}
 .detail,
 .by,
 .unavailable,
@@ -179,6 +187,7 @@ h4 {
   opacity: 0.55;
 }
 .action:focus-visible,
+.reporter:focus-visible,
 .lookup:focus-visible,
 .tick input:focus-visible,
 .photos a:focus-visible {

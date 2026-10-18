@@ -18,10 +18,22 @@ export const VERIFICATION_QUEUE_PANEL = 5;
 // The most rows one read answers; the view reads more in several reads.
 export const VERIFICATION_QUEUE_MAX = 200;
 
+// The parts of a garage an admin sees changed after a request for more, in
+// the order the drawer lists them.
+export const VERIFICATION_CHANGE_AREAS = [
+  'profile',
+  'prices',
+  'brands',
+  'photos',
+  'documents',
+] as const;
+export type VerificationChangeArea = (typeof VERIFICATION_CHANGE_AREAS)[number];
+
 // The most characters a decision's note holds, counted in code points.
 export const VERIFICATION_NOTE_MAX = 1000;
 
-// The fewest characters a rejection's note holds, counted in code points.
+// The fewest characters the note of a rejection or of a request for more
+// holds, counted in code points.
 export const REJECTION_NOTE_MIN = 10;
 
 // What a rejection names, and what a request for more may ask for.
@@ -33,6 +45,10 @@ export const VERIFICATION_REASON_CODES = [
   'other',
 ] as const;
 export type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
+
+// A report decision's reason the garage is given, and the admins' own note.
+export const REPORT_REASON_MAX = 200;
+export const REPORT_NOTE_MAX = 1000;
 
 // The most characters a check's detail holds.
 export const CHECK_DETAIL_MAX = 200;

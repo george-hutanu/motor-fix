@@ -235,8 +235,7 @@ describe("writing a garage's brands from step 2", () => {
     });
   });
 
-  it('writes nothing to the history or the outbox', async () => {
-    const entries = await prisma.activityLog.count();
+  it('writes nothing to the outbox', async () => {
     const saved = await prisma.outboxEvent.count();
 
     await write({
@@ -252,8 +251,143 @@ describe("writing a garage's brands from step 2", () => {
       ],
     });
 
-    expect(await prisma.activityLog.count()).toBe(entries);
     expect(await prisma.outboxEvent.count()).toBe(saved);
+  });
+});
+
+describe("the history of a garage's brands from step 2", () => {
+  // The entries written after the ones `seen`, in a stable order.
+  const history = async (seen: string[] = []) =>
+    (
+      await prisma.activityLog.findMany({
+        where: { garageId, id: { notIn: seen } },
+      })
+    )
+      .map((e) => [
+        e.action,
+        e.subjectType,
+        e.subjectId === garageId ? 'garage' : e.subjectId,
+        e.field,
+        e.oldValue,
+        e.newValue,
+      ])
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const ids = async () =>
+    (await prisma.activityLog.findMany({ where: { garageId } })).map(
+      (e) => e.id,
+    );
+  const sorted = (rows: unknown[][]) =>
+    [...rows].sort((a, b) =>
+      JSON.stringify(a).localeCompare(JSON.stringify(b)),
+    );
+  const fuels = (petrol: boolean, diesel: boolean) => ({
+    diesel,
+    electric: false,
+    hybrid: false,
+    petrol,
+  });
+  const first = () => ({
+    brandNote: 'Doar benzină',
+    brands: [
+      { brandId: dacia, fuels: ['petrol'], name: 'Dacia', stance: 'works_on' },
+      { brandId: tesla, name: 'Tesla', stance: 'does_not_take' },
+    ],
+  });
+
+  // @traces 304-FR-010
+  it('records each brand taken or refused, and the texts, on the first write', async () => {
+    await write(first());
+
+    expect(await history()).toEqual(
+      sorted([
+        ['update', 'garage', 'garage', 'brandNote', null, 'Doar benzină'],
+        [
+          'create',
+          'garage_brand',
+          dacia,
+          null,
+          null,
+          { stance: 'works_on', ...fuels(true, false) },
+        ],
+        [
+          'create',
+          'garage_brand',
+          tesla,
+          null,
+          null,
+          { stance: 'does_not_take', ...fuels(false, false) },
+        ],
+      ]),
+    );
+    const entry = await prisma.activityLog.findFirstOrThrow({
+      where: { garageId, subjectId: dacia },
+    });
+    expect(entry).toMatchObject({
+      actorId,
+      actorRole: 'owner',
+      internal: false,
+    });
+  });
+
+  // @traces 304-FR-010
+  it('records only what a later write changed', async () => {
+    await write(first());
+    const seen = await ids();
+
+    await write({
+      brandNote: 'Doar benzină',
+      brands: [
+        {
+          brandId: dacia,
+          fuels: ['petrol', 'diesel'],
+          name: 'Dacia',
+          stance: 'works_on',
+        },
+        { brandId: bmw, name: 'BMW', stance: 'does_not_take' },
+      ],
+      refusalPhrase: 'Nu lucrăm electrice',
+    });
+
+    expect(await history(seen)).toEqual(
+      sorted([
+        [
+          'update',
+          'garage',
+          'garage',
+          'refusalPhrase',
+          null,
+          'Nu lucrăm electrice',
+        ],
+        ['update', 'garage_brand', dacia, 'diesel', false, true],
+        [
+          'create',
+          'garage_brand',
+          bmw,
+          null,
+          null,
+          { stance: 'does_not_take', ...fuels(false, false) },
+        ],
+        [
+          'delete',
+          'garage_brand',
+          tesla,
+          null,
+          { stance: 'does_not_take', ...fuels(false, false) },
+          null,
+        ],
+      ]),
+    );
+  });
+
+  // @traces 304-FR-010
+  it('records nothing when the same section is written again, or refused', async () => {
+    await write(first());
+    const seen = await ids();
+
+    await write(first());
+    await refusalOf(write({ brandNote: 'Doar BMW' }));
+
+    expect(await history(seen)).toEqual([]);
   });
 });
 
@@ -384,6 +518,30 @@ describe("writing a garage's job ticks from step 2", () => {
         newValue: { brandId: dacia },
       });
     }
+  });
+
+  // @traces 304-FR-010
+  it('records only the ticks a later write added or took away', async () => {
+    const { brakes, given, oil } = await jobs();
+    const section = (unticked: string[]) => ({
+      brands: [{ brandId: dacia, name: 'Dacia', stance: 'works_on', unticked }],
+    });
+    await write(section(['Reglaj faruri']), given);
+    const before = (await entries()).map((e) => e.id);
+
+    await write(section(['Reglaj faruri']), given);
+    await write(section([oil]), given);
+
+    const later = (await entries()).filter((e) => !before.includes(e.id));
+    expect(
+      later
+        .map((e) => [e.action, e.subjectId, e.oldValue, e.newValue])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    ).toEqual([
+      ['create', given[2]?.jobTypeId, null, { brandId: dacia }],
+      ['delete', oil, { brandId: dacia }, null],
+    ]);
+    expect(await ticks()).toContain(`${dacia} ${brakes}`);
   });
 
   // @traces 412-FR-005

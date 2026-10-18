@@ -321,12 +321,12 @@ describe('the drawer rejecting, attacked', () => {
     expect(rejectButton(host).type).toBe('button');
   });
 
-  it('asks for more while the reject button stays the only open decision beside approve', async () => {
+  it('offers the request for more and the rejection while the approval waits for its checks', async () => {
     const host = await open(fileOf({ checks: [] }), 'en');
 
     expect(footerButtons(host).map((b) => [text(b), b.disabled])).toEqual([
       ['Approve and publish', true],
-      ['Ask for more', true],
+      ['Ask for more', false],
       ['Reject', false],
     ]);
   });

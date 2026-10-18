@@ -11,7 +11,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-import { AuditEntryDto } from './audit-history.dto';
+import { AuditEntryDto, JSON_VALUE } from './audit-history.dto';
 import {
   VERIFICATION_FILE_STATUSES,
   type VerificationFileStatus,
@@ -26,13 +26,20 @@ import {
   VerificationFileCheckDto,
 } from './verification-checks';
 import {
+  REPORT_NOTE_MAX,
+  REPORT_REASON_MAX,
+  VERIFICATION_CHANGE_AREAS,
   VERIFICATION_NOTE_MAX,
   VERIFICATION_REASON_CODES,
+  type VerificationChangeArea,
   type VerificationReasonCode,
 } from './verification-target';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
+
+// How many of a returned file's changes one read carries.
+export const VERIFICATION_CHANGES_MAX = 200;
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
 
@@ -50,6 +57,51 @@ const note = ({ value }: { value: unknown }) => {
   return value.trim() || undefined;
 };
 const given = (_: object, value: unknown) => value !== undefined;
+
+export const REPORT_DECISIONS = ['unfounded', 'confirmed'] as const;
+type ReportDecision = (typeof REPORT_DECISIONS)[number];
+const REPORT_STATUSES = ['open', ...REPORT_DECISIONS] as const;
+type ReportStatus = (typeof REPORT_STATUSES)[number];
+
+// Each field is read with its own decision only; the other is ignored.
+const readWith =
+  (decision: ReportDecision) =>
+  (body: { decision?: unknown }, value: unknown) =>
+    body.decision === decision && value !== undefined;
+
+// An admin's decision on a file's open reports.
+export class ReportDecisionDto {
+  @ApiProperty({ enum: REPORT_DECISIONS })
+  @IsIn(REPORT_DECISIONS)
+  decision!: ReportDecision;
+
+  @ApiPropertyOptional({
+    description:
+      'Trimmed; required with confirmed and shown to the garage, ignored otherwise',
+    maxLength: REPORT_REASON_MAX,
+  })
+  @Transform(note)
+  @ValidateIf(readWith('confirmed'))
+  @IsString()
+  @Length(1, REPORT_REASON_MAX)
+  @Matches(/^\P{Cc}*$/u, {
+    message: 'reason must not hold control characters',
+  })
+  reason?: string;
+
+  @ApiPropertyOptional({
+    description: 'Trimmed; optional with unfounded, ignored otherwise',
+    maxLength: REPORT_NOTE_MAX,
+  })
+  @Transform(note)
+  @ValidateIf(readWith('unfounded'))
+  @IsString()
+  @Length(1, REPORT_NOTE_MAX)
+  @Matches(/^(?:[\t\n\r]|\P{Cc})*$/u, {
+    message: 'note must not hold control characters',
+  })
+  note?: string;
+}
 
 export class VerificationDecisionDto {
   @ApiProperty({ enum: VERIFICATION_DECISIONS })
@@ -133,6 +185,20 @@ export class VerificationFileStateDto {
 
   @ApiProperty({ enum: ['garage_report'], nullable: true, type: String })
   reopenReason!: 'garage_report' | null;
+
+  @ApiProperty({
+    description:
+      'Sent again after a request for more, with no reopening since that request',
+  })
+  resubmitted!: boolean;
+
+  @ApiProperty({
+    description: 'When more was asked for; set only when resubmitted',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  requestedAt!: string | null;
 
   @ApiProperty({ format: 'date-time', nullable: true, type: String })
   declaredAt!: string | null;
@@ -261,12 +327,50 @@ export class VerificationFileDocumentDto {
   stale!: boolean | null;
 }
 
+export class VerificationFileReporterDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ description: "First name and the family name's initial" })
+  name!: string;
+}
+
 export class VerificationFileReportDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
   @ApiProperty({ description: 'Plain text, as the reporter wrote it' })
   text!: string;
 
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;
+
+  @ApiProperty({ enum: REPORT_STATUSES })
+  status!: ReportStatus;
+
+  @ApiProperty({
+    description: 'Null once the account is deleted',
+    nullable: true,
+    type: VerificationFileReporterDto,
+  })
+  reporter!: VerificationFileReporterDto | null;
+
+  @ApiProperty({
+    description: 'The admin who decided it; null while open',
+    nullable: true,
+    type: VerificationActorDto,
+  })
+  decidedBy!: VerificationActorDto | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  decidedAt!: string | null;
+
+  @ApiProperty({
+    description: "The admin's note, or the reason the garage was given",
+    nullable: true,
+    type: String,
+  })
+  decisionNote!: string | null;
 }
 
 export class VerificationFileRejectionDto {
@@ -286,6 +390,54 @@ export class VerificationFileTimelineDto {
     type: [AuditEntryDto],
   })
   entries!: AuditEntryDto[];
+
+  @ApiProperty({ minimum: 0, type: 'integer' })
+  total!: number;
+}
+
+// One line of the garage's history after the request for more.
+export class VerificationChangeDto {
+  @ApiProperty({ enum: VERIFICATION_CHANGE_AREAS })
+  area!: VerificationChangeArea;
+
+  @ApiProperty({ description: 'garage, garage_price, legal_document, …' })
+  subjectType!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  field!: string | null;
+
+  @ApiProperty({ enum: ['create', 'update', 'delete'] })
+  action!: 'create' | 'update' | 'delete';
+
+  @ApiProperty({
+    description: "A legal document's kind",
+    nullable: true,
+    type: String,
+  })
+  kind!: string | null;
+
+  @ApiProperty(JSON_VALUE)
+  oldValue!: unknown;
+
+  @ApiProperty(JSON_VALUE)
+  newValue!: unknown;
+
+  @ApiProperty({ format: 'date-time' })
+  at!: string;
+}
+
+export class VerificationFileChangesDto {
+  @ApiProperty()
+  resubmitted!: boolean;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  requestedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Newest first, at most 200',
+    type: [VerificationChangeDto],
+  })
+  changes!: VerificationChangeDto[];
 
   @ApiProperty({ minimum: 0, type: 'integer' })
   total!: number;
@@ -332,10 +484,15 @@ export class VerificationFileDto {
   storageReady!: boolean;
 
   @ApiProperty({
-    description: "The garage's open reports, newest first",
+    description: "The file's reports, newest first, at most 50",
     type: [VerificationFileReportDto],
   })
   reports!: VerificationFileReportDto[];
+
+  @ApiProperty({
+    description: "How many of the file's reports are open, all of them counted",
+  })
+  reportsOpen!: number;
 
   @ApiProperty({ nullable: true, type: VerificationFileRejectionDto })
   previousRejection!: VerificationFileRejectionDto | null;

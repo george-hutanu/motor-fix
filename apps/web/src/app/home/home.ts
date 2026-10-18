@@ -20,14 +20,12 @@ import {
   nearOf,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
-import {
-  type BrandDto,
-  BrandsService,
-  type HealthReadyDto,
-  HealthService,
-  HomeService,
-  PlacesService,
-} from '@motor-fix/data-access';
+import type { BrandDto } from '@motor-fix/data-access/models/brand-dto';
+import type { HealthReadyDto } from '@motor-fix/data-access/models/health-ready-dto';
+import { BrandsService } from '@motor-fix/data-access/services/brands.service';
+import { HealthService } from '@motor-fix/data-access/services/health.service';
+import { HomeService } from '@motor-fix/data-access/services/home.service';
+import { PlacesService } from '@motor-fix/data-access/services/places.service';
 import { formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
