@@ -42,5 +42,5 @@ input[aria-invalid="true"] {
 .fault {
   flex-basis: 100%;
   margin: 0;
-  color: var(--mf-red);
+  color: var(--mf-red-ink);
 }

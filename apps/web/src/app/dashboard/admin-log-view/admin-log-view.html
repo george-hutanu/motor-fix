@@ -1,7 +1,7 @@
 <section [attr.aria-labelledby]="headingId">
   <h2 [id]="headingId">{{ 'admin.log.view.title' | t }}</h2>
   <mf-admin-log-filters [filter]="filter()" (search)="search($event)" (change)="write($event)" />
-  <div class="fresh" aria-live="polite">
+  <div class="fresh mf-message" aria-live="polite">
     @if (fresh() > 0) {
       <button hlmBtn variant="secondary" type="button" (click)="readFirst()">{{ freshName() }}</button>
     }
