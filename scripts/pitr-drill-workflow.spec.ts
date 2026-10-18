@@ -94,6 +94,7 @@ describe('the point-in-time drill workflow', () => {
 
     expect(block).not.toMatch(/environment:/);
     expect(block).not.toContain('secrets.');
+    expect(block).not.toContain('vars.');
     expect(block).toContain(
       'bash scripts/backup/pitr-drill.sh --self-contained',
     );

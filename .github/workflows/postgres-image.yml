@@ -24,9 +24,12 @@ permissions:
   contents: read
   packages: write
 
+# Every publish (main, or by hand) shares one group and none cancels another.
+# A pull request only builds, so its runs get a group per branch, where a newer
+# push replaces an older build, and never queue against a publish.
 concurrency:
-  group: postgres-image
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('postgres-image-pr-{0}', github.ref) || 'postgres-image' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   publish:

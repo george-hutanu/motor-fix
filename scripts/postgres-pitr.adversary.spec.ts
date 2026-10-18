@@ -12,7 +12,6 @@ const workflowNames = readdirSync(join(root, '.github', 'workflows')).filter(
 const workflows = Object.fromEntries(
   workflowNames.map((name) => [name, read('.github', 'workflows', name)]),
 );
-const publish = workflows['postgres-image.yml'];
 const drill = workflows['pitr-drill.yml'];
 const compose = read('docker-compose.yml');
 
@@ -44,13 +43,6 @@ const runBodies = (text: string) => {
   });
   return bodies;
 };
-
-// Step blocks of a job text.
-const steps = (text: string) =>
-  text
-    .split(/^ {6}- /m)
-    .slice(1)
-    .map((s) => `- ${s}`);
 
 describe('the database image across every file', () => {
   it('is the only PostgreSQL image any workflow or compose file runs', () => {
@@ -119,59 +111,11 @@ describe('the database image across every file', () => {
   });
 });
 
-describe('the publish workflow', () => {
-  it('pushes only when the event is not a pull request', () => {
-    expect(publish).toMatch(
-      /push: \$\{\{ github\.event_name != 'pull_request' \}\}/,
-    );
-    expect(publish).not.toMatch(/push: true/);
-  });
-
-  it('logs in to the registry only when it will push', () => {
-    const login = steps(job(publish, 'publish')).find((s) =>
-      s.includes('docker/login-action'),
-    );
-
-    expect(login).toContain("if: github.event_name != 'pull_request'");
-  });
-
-  it('is triggered by dispatch, a push to main and a build-only pull request, as the contract says', () => {
-    const triggers = (publish.match(/^on:\n([\s\S]*?)^\S/m)?.[1] ?? '')
-      .split('\n')
-      .filter((line) => /^ {2}\w/.test(line))
-      .map((line) => line.trim().replace(':', ''));
-
-    expect(triggers).toEqual(['workflow_dispatch', 'push', 'pull_request']);
-  });
-
-  it('never runs on pull_request_target', () => {
+describe('every workflow trigger', () => {
+  it('is never pull_request_target', () => {
     for (const text of Object.values(workflows)) {
       expect(text).not.toContain('pull_request_target');
     }
-  });
-
-  it('pushes the 18 tag and the commit sha for both architectures', () => {
-    expect(publish).toContain(`${IMAGE}:18`);
-    expect(publish).toContain(`${IMAGE}:\${{ github.sha }}`);
-    expect(publish).toContain('platforms: linux/amd64,linux/arm64');
-  });
-
-  it('grants packages write and contents read and nothing more', () => {
-    const perms = publish.match(/^permissions:\n((?: {2}.*\n)+)/m)?.[1];
-
-    expect(
-      perms
-        ?.trim()
-        .split('\n')
-        .map((l) => l.trim())
-        .sort(),
-    ).toEqual(['contents: read', 'packages: write']);
-  });
-
-  it('serialises publishes without cancelling one that is pushing', () => {
-    expect(publish).toMatch(
-      /concurrency:\n\s+group: postgres-image\n\s+cancel-in-progress: false/,
-    );
   });
 });
 
@@ -179,60 +123,10 @@ describe('the point-in-time drill workflow', () => {
   const staging = job(drill, 'staging');
   const selfContained = job(drill, 'self-contained');
 
-  it('keeps the staging job off pull requests', () => {
-    expect(staging).toMatch(/^ {4}if: github\.event_name != 'pull_request'$/m);
-  });
-
-  it('binds the staging job to the staging environment', () => {
-    expect(staging).toMatch(/^ {4}environment: staging$/m);
-  });
-
-  it('gives the self-contained job no environment, secret or variable', () => {
-    expect(selfContained).not.toMatch(/environment:|secrets\.|vars\./);
-  });
-
   it('references secrets only inside the staging job', () => {
     const outside = drill.replace(staging, '');
 
     expect(outside).not.toMatch(/secrets\./);
-  });
-
-  it('is scheduled quarterly one hour after the dump drill', () => {
-    expect(drill).toContain("cron: '0 5 1 1,4,7,10 *'");
-    expect(workflows['restore-drill.yml']).toContain(
-      "cron: '0 4 1 1,4,7,10 *'",
-    );
-  });
-
-  it('runs on pull requests that touch the image, the script or itself', () => {
-    expect(drill).toMatch(
-      /pull_request:\n\s+paths:\n\s+- 'infra\/postgres\/\*\*'\n\s+- 'scripts\/backup\/pitr-drill\.sh'\n\s+- '\.github\/workflows\/pitr-drill\.yml'/,
-    );
-  });
-
-  it('grants contents read and nothing else', () => {
-    expect(drill.match(/^permissions:\n((?: {2}.*\n)+)/m)?.[1].trim()).toBe(
-      'contents: read',
-    );
-  });
-
-  it('skips every drill step of the staging job when no bucket is set', () => {
-    const guarded = steps(staging).filter(
-      (s) => !/id: settings|Note the skip/.test(s),
-    );
-
-    expect(guarded.length).toBeGreaterThanOrEqual(6);
-    for (const step of guarded) {
-      expect(step).toMatch(/steps\.settings\.outputs\.skip != 'true'/);
-    }
-  });
-
-  it('removes the registered ssh key even when an earlier step failed', () => {
-    const removal = steps(staging).find((s) => s.includes('ssh keys remove'));
-
-    expect(removal).toMatch(
-      /if: always\(\) && steps\.settings\.outputs\.skip != 'true'/,
-    );
   });
 
   it('names the ssh key per run and attempt', () => {

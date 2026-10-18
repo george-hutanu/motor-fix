@@ -14,9 +14,9 @@ describe('the database image', () => {
   it('is PostgreSQL 18', async () => {
     const [{ version }] = await prisma.$queryRaw<
       { version: string }[]
-    >`SELECT current_setting('server_version_num') AS version`;
+    >`SELECT version() AS version`;
 
-    expect(Math.floor(Number(version) / 10000)).toBe(18);
+    expect(version).toMatch(/^PostgreSQL 18\./);
   });
 
   it('offers PostGIS 3.6 to install', async () => {

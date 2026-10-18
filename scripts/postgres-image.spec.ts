@@ -177,7 +177,15 @@ describe('the image publish workflow', () => {
   it('is bounded in time and never runs two publishes at once', () => {
     expect(publish).toMatch(/timeout-minutes: \d+/);
     expect(publish).toMatch(
-      /concurrency:\n {2}group: postgres-image\n {2}cancel-in-progress: false/,
+      /^ {2}cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m,
+    );
+  });
+
+  // A pull request only builds: it must never share a group with a publish,
+  // or a queued build cancels a pending publish of the 18 tag.
+  it('keeps pull request builds out of the publish group', () => {
+    expect(publish).toContain(
+      `  group: \${{ github.event_name == 'pull_request' && format('postgres-image-pr-{0}', github.ref) || 'postgres-image' }}`,
     );
   });
 });
