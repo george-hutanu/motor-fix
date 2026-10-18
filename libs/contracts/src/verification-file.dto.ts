@@ -25,7 +25,11 @@ import {
   VerificationActorDto,
   VerificationFileCheckDto,
 } from './verification-checks';
-import { VERIFICATION_NOTE_MAX } from './verification-target';
+import {
+  VERIFICATION_NOTE_MAX,
+  VERIFICATION_REASON_CODES,
+  type VerificationReasonCode,
+} from './verification-target';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
@@ -38,16 +42,6 @@ const VERIFICATION_DECISIONS = [
   'rejected',
 ] as const;
 type VerificationDecision = (typeof VERIFICATION_DECISIONS)[number];
-
-// What a rejection names, and what a request for more may ask for.
-const VERIFICATION_REASON_CODES = [
-  'documents',
-  'rar',
-  'address',
-  'photos',
-  'other',
-] as const;
-type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
 
 // A note blank after trimming is no note: the use case asks for one where
 // the decision needs it.
