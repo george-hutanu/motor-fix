@@ -254,7 +254,7 @@ export class PhotosStep {
     }
   }
 
-  // Type first, then the size of the copy that is sent (FR-007).
+  // Type first, then the size of the copy that is sent.
   private async take(chosen: File[]) {
     const typed = chosen.filter((file) => TYPES.includes(file.type));
     // One at a time: each decoded photo holds its full pixels in memory.
