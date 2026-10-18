@@ -2,7 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { GarageRequestsService, type MeDto } from '@motor-fix/data-access';
+import {
+  GarageRequestsService,
+  GaragesService,
+  type MeDto,
+} from '@motor-fix/data-access';
 
 import { GarageHome } from './garage-home';
 import { Live } from '../../live';
@@ -33,7 +37,11 @@ const account = (
           canMoveBookings: false,
           canRecordFinalPrice: false,
         },
-        role: 'owner',
+        role: capabilities.includes('garage.own_jobs')
+          ? 'mechanic'
+          : capabilities.includes('garage.team')
+            ? 'owner'
+            : 'receptionist',
         status,
       },
     ],
@@ -63,6 +71,14 @@ async function render(
       {
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerList: list },
+      },
+      // The legal check has its own spec; here the garage has no file.
+      {
+        provide: GaragesService,
+        useValue: {
+          legalCheckControllerRead: () =>
+            Promise.reject(new HttpErrorResponse({ status: 404 })),
+        },
       },
     ],
   });
@@ -154,6 +170,8 @@ describe('the garage Panou for each role', () => {
 
     expect(panel(element)).toBeNull();
     expect(element.querySelector('[role="alert"]')).toBeNull();
-    expect(text(element)).toBe('Aici vei vedea ce se întâmplă azi în service.');
+    expect(text(element)).toBe(
+      'Profil verificat Aici vei vedea ce se întâmplă azi în service.',
+    );
   });
 });

@@ -28,6 +28,9 @@ import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-co
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
 import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
+import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
+import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
+import { LegalCheckDto } from '../models/legal-check-dto';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
 import { priceListControllerRemoveBrandRange } from '../fn/garages/price-list-controller-remove-brand-range';
@@ -248,6 +251,39 @@ export class GaragesService extends BaseService {
   garageSettingsControllerUpdate(params: GarageSettingsControllerUpdate$Params, context?: HttpContext): Promise<GarageSettingsDto> {
     const resp = this.garageSettingsControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageSettingsDto>): GarageSettingsDto => r.body);
+  }
+
+  /** Path part for operation `legalCheckControllerRead()` */
+  static readonly LegalCheckControllerReadPath = '/api/v1/garages/{garageId}/legal-check';
+
+  /**
+   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `legalCheckControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalCheckControllerRead$Response(params: LegalCheckControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<LegalCheckDto>> {
+    const obs = legalCheckControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `legalCheckControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalCheckControllerRead(params: LegalCheckControllerRead$Params, context?: HttpContext): Promise<LegalCheckDto> {
+    const resp = this.legalCheckControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<LegalCheckDto>): LegalCheckDto => r.body);
   }
 
   /** Path part for operation `priceListControllerRead()` */

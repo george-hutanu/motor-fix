@@ -163,7 +163,8 @@ afterAll(async () => {
 });
 
 describe('recording a check', () => {
-  it('saves the result with who and when, its history entry and its event', async () => {
+  // @traces 210-FR-011
+  it('saves the result with who and when, its history entry and its event for the admins and the garage', async () => {
     const before = Date.now();
     const detail = SAME_ADDRESS;
 
@@ -207,10 +208,12 @@ describe('recording a check', () => {
     const [event, ...others] = await recorded();
     expect(others).toHaveLength(0);
     expect(event).toMatchObject({
-      audience: ['admin', 'system'],
-      payload: { fileId, kind: 'rar', result: 'ok' },
+      audience: ['admin', `garage:${garageId}`],
+      payload: { fileId, kind: 'rar' },
       subjectId: fileId,
     });
+    // The garage's staff may not read the check, so its result stays out.
+    expect(event?.payload).toEqual({ fileId, kind: 'rar' });
   });
 
   it('answers with the file summary in both languages', async () => {

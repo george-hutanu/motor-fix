@@ -234,9 +234,10 @@ describe('the reporters’ message under hostile events', () => {
   // @traces 069-FR-007
   it('builds a message for each of three hundred reporters once', async () => {
     const { garage, job: ok } = await decided('unfounded');
-    const ids = await Promise.all(
-      Array.from({ length: 300 }, (_, i) => account(`Driver ${i}`, ['driver'])),
-    );
+    // One at a time: three hundred sign-up transactions at once outwait the
+    // connection pool on a slow runner.
+    const ids: string[] = [];
+    for (let i = 0; i < 300; i++) ids.push(await account(`Driver ${i}`));
     const fanOut = await start();
     const event = {
       decision: 'unfounded',

@@ -213,8 +213,12 @@ test.describe('confirming a garage report @seeded', () => {
 
   test('the garage leaves the results', async ({ page }) => {
     await page.goto(`/ro/garages?brand=${brand.slug}`);
-    // The garage was the brand's only one, so the results are empty.
-    await expect(page.getByText('Niciun service găsit')).toBeVisible();
+    // The garage was the brand's only one: the results list only the
+    // garages that do not take the brand, and the suspended one is not among them.
+    await expect(cards(page).first()).toBeVisible();
+    await expect(
+      page.getByText(`0 lucrează pe ${brand.name}`, { exact: false }).first(),
+    ).toBeVisible();
     await expect(cards(page).filter({ hasText: name })).toHaveCount(0);
   });
 
