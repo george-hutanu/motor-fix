@@ -1,0 +1,41 @@
+<form (submit)="confirm($event)" novalidate>
+  @if (lines().length) {
+    <div class="gaps">
+      <p>{{ 'admin.file.approve.listed' | t }}</p>
+      <ul data-part="missing">
+        @for (line of lines(); track $index) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    </div>
+  } @else {
+    <p>{{ 'admin.file.approve.allOk' | t }}</p>
+  }
+  <div class="field">
+    <label for="mf-approve-note">{{ 'admin.file.approve.note' | t }}</label>
+    <textarea
+      hlmInput
+      id="mf-approve-note"
+      rows="3"
+      [value]="note()"
+      [required]="required"
+      [attr.aria-invalid]="refused() ? 'true' : null"
+      [attr.aria-describedby]="refused() ? 'mf-approve-note-count mf-approve-note-error' : 'mf-approve-note-count'"
+      (input)="input($event)"
+    ></textarea>
+    <p class="count" id="mf-approve-note-count">{{ 'admin.file.approve.count' | t: { n: count() } }}</p>
+    @if (refused()) {
+      <p class="error" id="mf-approve-note-error" role="alert">
+        @if (refused() === 'noteTooLong') {
+          {{ 'admin.file.approve.noteTooLong' | t }}
+        } @else {
+          {{ 'admin.file.approve.noteRequired' | t }}
+        }
+      </p>
+    }
+  </div>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.file.approve.cancel' | t }}</button>
+    <button hlmBtn type="submit">{{ 'admin.file.approve.confirm' | t }}</button>
+  </div>
+</form>

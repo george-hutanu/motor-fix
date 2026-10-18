@@ -1,4 +1,6 @@
 import {
+  type ApprovalGap,
+  approvalGaps,
   checkSummary,
   normaliseRarNumber,
   queueLamp,
@@ -304,7 +306,9 @@ export class VerificationService {
     if (approved && before.garageStatus === 'suspended') {
       throw refused('the garage is suspended');
     }
-    if (approved && actor.role !== 'system') await this.gate(tx, fileId);
+    const missing = approved
+      ? await this.judge(tx, actor, fileId, note)
+      : undefined;
     const decidedAt = new Date();
     const file = await this.move(
       tx,
@@ -327,7 +331,7 @@ export class VerificationService {
       }
       throw error;
     });
-    if (approved) await this.publish(tx, actor, before, decidedAt);
+    if (missing) await this.publish(tx, actor, before, decidedAt, missing);
     await this.announce(tx, file, 'verification.decided', {
       decision: decision.outcome,
       note,
@@ -341,45 +345,105 @@ export class VerificationService {
     return file;
   }
 
-  // An admin approves only a file whose RAR and CAEN checks are ok. The row
-  // lock waits for a check being recorded, which holds the file row FOR
-  // SHARE, so the gate reads what is true when the decision commits.
-  private async gate(tx: Prisma.TransactionClient, fileId: string) {
+  // An approval's checks, read once: an admin's must pass the RAR and CAEN
+  // gates, then carry a note when it passes over a guide check not ok or a
+  // missing document; the system's passes neither but its list is recorded.
+  // The row lock waits for a check being recorded, which holds the file row
+  // FOR SHARE, so the rules read what is true when the decision commits.
+  private async judge(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    fileId: string,
+    note: string | null,
+  ): Promise<ApprovalGap[]> {
     const [row] = await tx.$queryRaw<{ status: VerificationFileStatus }[]>`
       SELECT status FROM verification_file WHERE id = ${fileId}::uuid
       FOR UPDATE`;
+    const [checks, documents] = await Promise.all([
+      tx.verificationCheck.findMany({
+        select: { kind: true, result: true },
+        where: { fileId },
+      }),
+      tx.legalDocument.findMany({
+        select: { kind: true },
+        where: { verificationFileId: fileId },
+      }),
+    ]);
+    const missing = approvalGaps(
+      checks,
+      documents.map((document) => document.kind),
+    );
     // A file no longer waiting is refused by the move, saying who decided.
-    if (!row || !FROM.decide.includes(row.status)) return;
-    const checks = await tx.verificationCheck.findMany({
-      select: { kind: true, result: true },
-      where: { fileId, kind: { in: ['rar', 'caen'] } },
-    });
+    if (actor.role === 'system' || !row || !FROM.decide.includes(row.status)) {
+      return missing;
+    }
+    const skipRar = await this.skipRar(tx);
     for (const [kind, code, detail] of GATES) {
       if (
+        (kind === 'rar' && skipRar) ||
         checks.some((check) => check.kind === kind && check.result === 'ok')
       ) {
         continue;
       }
-      countDecisionRefusal(code);
-      this.logger.log(`file ${fileId} refused: ${code}`);
+      this.refuse(fileId, code);
       throw refusal(HttpStatus.CONFLICT, code, detail);
     }
+    if (missing.length && !note) {
+      this.refuse(fileId, 'note_required');
+      throw new HttpException(
+        {
+          code: 'note_required',
+          errors: [{ code: 'required', field: 'note' }],
+          message: 'An approval past a check not ok needs a note',
+          missing,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    return missing;
   }
 
-  // One garage entry: the status, or approved_at when a reopened file of a
-  // published garage is approved again.
+  // The test-only switch, read per decision and never in production.
+  private async skipRar(tx: Prisma.TransactionClient) {
+    if (!this.config.testRules) return false;
+    const rule = await tx.platformRule.findUnique({
+      select: { value: true },
+      where: { key: 'skip_rar_check' },
+    });
+    return rule?.value === true;
+  }
+
+  private refuse(
+    fileId: string,
+    code: Parameters<typeof countDecisionRefusal>[0],
+  ) {
+    countDecisionRefusal(code);
+    this.logger.log(`file ${fileId} refused: ${code}`);
+  }
+
+  // The garage's entries: the status, or approved_at when a reopened file of
+  // a published garage is approved again; the Bucharest day of the check;
+  // and what the approval passed over.
   private async publish(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
     before: Awaited<ReturnType<VerificationService['file']>>,
     decidedAt: Date,
+    missing: ApprovalGap[],
   ) {
+    const day = localDay(decidedAt);
     const garage = await tx.garage.update({
-      data: { approvedAt: decidedAt, status: 'approved' },
+      data: {
+        approvedAt: decidedAt,
+        lastCheckedOn: new Date(day),
+        status: 'approved',
+      },
       select: { approvedAt: true, status: true },
       where: { id: before.garageId },
     });
     const again = before.garageStatus === garage.status;
+    const checkedBefore =
+      before.garageLastCheckedOn?.toISOString().slice(0, 10) ?? null;
     await this.audit.recordChanges(
       tx,
       {
@@ -389,10 +453,19 @@ export class VerificationService {
         subjectId: before.garageId,
         subjectType: 'garage',
       },
-      again
-        ? { approvedAt: before.garageApprovedAt }
-        : { status: before.garageStatus },
-      again ? { approvedAt: garage.approvedAt } : { status: garage.status },
+      {
+        ...(again
+          ? { approvedAt: before.garageApprovedAt }
+          : { status: before.garageStatus }),
+        lastCheckedOn: checkedBefore,
+      },
+      {
+        ...(again
+          ? { approvedAt: garage.approvedAt }
+          : { status: garage.status }),
+        lastCheckedOn: day,
+        verificationMissing: missing,
+      },
     );
   }
 
@@ -462,7 +535,11 @@ export class VerificationService {
     // PostgreSQL refuses a malformed uuid outright; it is an unknown id.
     if (!isUUID(id)) throw new NotFoundException();
     const file = await tx.verificationFile.findUnique({
-      include: { garage: { select: { approvedAt: true, status: true } } },
+      include: {
+        garage: {
+          select: { approvedAt: true, lastCheckedOn: true, status: true },
+        },
+      },
       where: { id },
     });
     if (!file) throw new NotFoundException();
@@ -470,6 +547,7 @@ export class VerificationService {
     return {
       ...row,
       garageApprovedAt: garage.approvedAt,
+      garageLastCheckedOn: garage.lastCheckedOn,
       garageStatus: garage.status,
     };
   }

@@ -8,7 +8,7 @@ describe('verificationConfig', () => {
     (value) => {
       expect(
         verificationConfig('test', { SKIP_MANUAL_APPROVAL: value }),
-      ).toEqual({ skipManualApproval: true });
+      ).toMatchObject({ skipManualApproval: true });
     },
   );
 
@@ -31,4 +31,17 @@ describe('verificationConfig', () => {
       ).toBe(false);
     },
   );
+
+  // @traces 303-FR-004
+  it.each(['test', 'development', 'staging'])(
+    'lets the test-only platform rules be read under %s',
+    (appEnv) => {
+      expect(verificationConfig(appEnv, {}).testRules).toBe(true);
+    },
+  );
+
+  // @traces 303-FR-004
+  it('never reads the test-only platform rules in production', () => {
+    expect(verificationConfig('production', {}).testRules).toBe(false);
+  });
 });
