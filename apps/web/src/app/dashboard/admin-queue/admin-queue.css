@@ -134,7 +134,7 @@ mf-lamp {
   gap: var(--mf-space-3);
   padding-top: var(--mf-space-3);
 }
-.approved {
+.outcome {
   display: inline-flex;
   align-items: center;
   gap: var(--mf-space-2);
@@ -142,8 +142,11 @@ mf-lamp {
   color: var(--mf-green-ink);
   overflow-wrap: anywhere;
 }
-/* The mock's leading success dot; the text says it as well. */
-.approved::before {
+.outcome.rejected {
+  color: var(--mf-red-ink);
+}
+/* The mock's leading dot, green or red; the text says it as well. */
+.outcome::before {
   content: "";
   flex: none;
   width: 10px;

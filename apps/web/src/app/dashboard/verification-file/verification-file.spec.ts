@@ -565,7 +565,7 @@ describe('the sections', () => {
 
 describe('the footer', () => {
   it.each(['submitted', 'in_review'] as const)(
-    'shows the three decisions disabled, with the note, on a %s file',
+    'shows the three decisions, only the rejection open while the checks wait, with the note, on a %s file',
     async (status) => {
       const host = await open(fileOf({ file: { status } }));
       const footer = section(host, 'footer');
@@ -575,11 +575,10 @@ describe('the footer', () => {
         'Cere completări',
         'Respinge',
       ]);
+      // @traces 305-FR-001
       expect(
-        [...(footer?.querySelectorAll('button') ?? [])].every(
-          (b) => b.disabled,
-        ),
-      ).toBe(true);
+        [...(footer?.querySelectorAll('button') ?? [])].map((b) => b.disabled),
+      ).toEqual([true, true, false]);
       expect(text(footer)).toContain('Service‑ul primește decizia pe e‑mail.');
     },
   );
@@ -2359,7 +2358,7 @@ describe('the approve button', () => {
     expect(text(hint(host))).toBe('Verificarea RAR e obligatorie');
   });
 
-  it('is enabled with no hint when both are ok; the other two stay disabled', async () => {
+  it('is enabled with no hint when both are ok; the request for more stays disabled', async () => {
     const host = await open(withChecks('ok', 'ok'));
 
     const button = approveButton(host);
@@ -2371,7 +2370,7 @@ describe('the approve button', () => {
     ].filter((b) => b !== button);
     expect(others.map((b) => [text(b), b.disabled])).toEqual([
       ['Cere completări', true],
-      ['Respinge', true],
+      ['Respinge', false],
     ]);
   });
 
@@ -2704,4 +2703,293 @@ describe('a CUI held by another garage', () => {
     ].find((b) => text(b) === 'Aprobă și publică');
     expect(button?.disabled).toBe(false);
   });
+});
+
+// @traces 305-FR-001 305-FR-007 305-FR-011
+describe('rejecting', () => {
+  const rejectButton = (host: HTMLElement) =>
+    section(host, 'footer')?.querySelector<HTMLButtonElement>(
+      '[data-part="reject"]',
+    ) as HTMLButtonElement;
+  const CLOSED = { note: 'Autorizația RAR a expirat.', reason: 'rar' };
+  const refusedWith = (code: string, field: string) =>
+    new HttpErrorResponse({
+      error: { code, errors: [{ code: 'required', field }], status: 422 },
+      status: 422,
+    });
+  const decidedRar = () =>
+    fileOf({
+      file: {
+        decidedAt: DECIDED_AT,
+        decidedBy: ioana,
+        reasonCode: 'rar',
+        reasonNote: 'Autorizația RAR a expirat.',
+        status: 'rejected',
+      },
+    });
+
+  it.each(['not_run', 'failed', 'ok'] as const)(
+    'is enabled on an undecided file whatever the checks say (%s)',
+    async (result) => {
+      const host = await open(
+        fileOf({ checks: KINDS.map((kind) => check(kind, { result })) }),
+      );
+
+      expect(text(rejectButton(host))).toBe('Respinge');
+      expect(rejectButton(host).disabled).toBe(false);
+    },
+  );
+
+  it('is not offered on a decided file', async () => {
+    const host = await open(rejected());
+
+    expect(rejectButton(host)).toBeNull();
+  });
+
+  it('opens the rejection dialog, one at a time', async () => {
+    const host = await open();
+    let close: (value: unknown) => void = () => undefined;
+    overlays.open.mockReturnValue(
+      new Promise((resolve) => {
+        close = resolve;
+      }),
+    );
+
+    rejectButton(host).click();
+    rejectButton(host).click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+    expect(overlays.open).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: {},
+        shape: 'dialog',
+        title: 'admin.file.reject.title',
+      }),
+    );
+    close('cancelled');
+    await settle();
+  });
+
+  it('sends the rejection once, shows it, and moves focus to the title', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => decidedRar();
+      return decidedRar();
+    });
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledWith({
+      body: { decision: 'rejected', ...CLOSED },
+      id: FILE,
+    });
+    const footer = section(host, 'footer');
+    expect(text(footer)).toContain('Respins de Ioana');
+    expect(text(footer)).toContain('Autorizația RAR a expirat.');
+    expect(document.activeElement).toBe(host.querySelector('h3'));
+  });
+
+  it('sends nothing on a cancel and hands focus back to the button', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue('cancelled');
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(rejectButton(host));
+  });
+
+  it('shows a spinner on the button while the call is on its way, every decision disabled', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerDecision.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    rejectButton(host).click();
+    await settle();
+
+    const button = rejectButton(host);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.querySelector('[data-part="spinner"]')).not.toBeNull();
+    const approve = section(host, 'footer')?.querySelector(
+      '[data-part="approve"]',
+    );
+    expect(approve?.querySelector('[data-part="spinner"]')).toBeNull();
+    expect(approve?.hasAttribute('aria-busy')).toBe(false);
+    expect(
+      [...(section(host, 'footer')?.querySelectorAll('button') ?? [])].every(
+        (b) => b.disabled,
+      ),
+    ).toBe(true);
+    rejectButton(host).click();
+    await settle();
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    settleCall(decidedRar());
+    await settle();
+  });
+
+  it.each([
+    ['ro', 'Deja decis de Dan la'],
+    ['en', 'Already decided by Dan at'],
+  ] as const)(
+    'says in %s who decided first and reads the file again',
+    async (language, line) => {
+      const host = await open(fileOf(), language);
+      overlays.open.mockResolvedValue(CLOSED);
+      api.verificationFileControllerDecision.mockImplementation(async () => {
+        answer = async () => rejected(dan);
+        throw refusedBy('verification_transition_refused', {
+          currentStatus: 'rejected',
+          decidedAt: DECIDED_AT,
+          decidedBy: 'Dan',
+        });
+      });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      rejectButton(host).click();
+      await settle();
+
+      expect(text(alertIn(host))).toBe(
+        `${line} ${appliedAt(DECIDED_AT, language, new Date())}`,
+      );
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 1,
+      );
+      expect(overlays.open).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ['reason_required', 'reason', 'reasonRequired'],
+    ['note_required', 'note', 'noteRequired'],
+    ['note_too_short', 'note', 'noteTooShort'],
+  ] as const)(
+    'reads the file again on %s and re-opens the dialog with the values and the field marked',
+    async (code, field, refused) => {
+      const host = await open();
+      overlays.open
+        .mockResolvedValueOnce({ note: 'Prea scurt', reason: 'address' })
+        .mockResolvedValueOnce(CLOSED);
+      api.verificationFileControllerDecision
+        .mockRejectedValueOnce(refusedWith(code, field))
+        .mockImplementationOnce(async () => {
+          answer = async () => decidedRar();
+          return decidedRar();
+        });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      rejectButton(host).click();
+      await settle();
+      await settle();
+
+      expect(overlays.open).toHaveBeenCalledTimes(2);
+      expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
+        note: 'Prea scurt',
+        reason: 'address',
+        refused,
+      });
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 2,
+      );
+      expect(api.verificationFileControllerDecision).toHaveBeenLastCalledWith({
+        body: { decision: 'rejected', ...CLOSED },
+        id: FILE,
+      });
+      expect(toast).not.toHaveBeenCalled();
+      expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    },
+  );
+
+  it('does not ask again when the re-read finds the file decided', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValueOnce(CLOSED);
+    api.verificationFileControllerDecision.mockImplementationOnce(async () => {
+      answer = async () => rejected(dan);
+      throw refusedWith('note_too_short', 'note');
+    });
+
+    rejectButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+    expect(text(section(host, 'footer'))).toContain('Respins de Dan');
+  });
+
+  it('says the decision could not be saved and reads the file again on any other failure', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    const reads = api.verificationFileControllerRead.mock.calls.length;
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut salva decizia');
+    expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+      reads + 1,
+    );
+    expect(rejectButton(host).disabled).toBe(false);
+  });
+
+  it('shows a rejection that committed before the failure, never offering it again', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => decidedRar();
+      throw new HttpErrorResponse({ status: 0 });
+    });
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    expect(rejectButton(host)).toBeNull();
+  });
+});
+
+// @traces 305-FR-008
+describe('a file after a rejection', () => {
+  it.each([
+    ['ro', 'Respins anterior: Autorizație RAR'],
+    ['en', 'Rejected before: RAR authorisation'],
+  ] as const)(
+    'reads the earlier rejection above the checks, as text, in %s',
+    async (language, line) => {
+      const host = await open(
+        fileOf({
+          previousRejection: {
+            decidedAt: DECIDED_AT,
+            reasonCode: 'rar',
+            reasonNote: '<b>Autorizația</b> RAR a expirat.',
+          },
+        }),
+        language,
+      );
+
+      const rejectedBefore = section(host, 'rejected');
+      expect(text(rejectedBefore)).toContain(line);
+      expect(text(rejectedBefore)).toContain(
+        '<b>Autorizația</b> RAR a expirat.',
+      );
+      expect(rejectedBefore?.querySelector('b')).toBeNull();
+      expect(
+        rejectedBefore?.compareDocumentPosition(
+          section(host, 'register') as Node,
+        ),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
 });

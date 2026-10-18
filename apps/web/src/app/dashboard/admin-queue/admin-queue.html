@@ -19,14 +19,14 @@
       } @else {
         <ul class="list">
           @for (row of rows(); track row.id) {
-            <li class="row" [class.decided]="!!row.approved">
+            <li class="row" [class.decided]="!!row.decided">
               <span class="who">
                 <span class="name">{{ row.name }}</span>
                 <span class="area">{{ row.area }}</span>
               </span>
-              <span class="state">
-                @if (row.approved) {
-                  <span class="approved">{{ row.approved }}</span>
+              <span class="state" [class.rejected]="row.decided?.status === 'rejected'">
+                @if (row.decided; as decided) {
+                  <span class="outcome" [class]="decided.status">{{ decided.line }}</span>
                 } @else {
                   <mf-lamp [state]="row.lamp" [label]="row.summary" />
                   @if (row.waiting) {
@@ -34,7 +34,7 @@
                   }
                 }
               </span>
-              @if (!row.approved) {
+              @if (!row.decided) {
                 <span class="applied">{{ row.applied }}</span>
               }
               <a class="open" [routerLink]="row.link" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>

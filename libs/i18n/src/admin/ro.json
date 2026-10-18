@@ -219,6 +219,26 @@
       },
       "uncoveredLine": "Neacoperite: {jobs}"
     },
+    "reject": {
+      "cancel": "Renunță",
+      "confirm": "Respinge",
+      "count": "{n}/1000",
+      "note": "Mesaj pentru service",
+      "noteHint": "Service‑ul primește mesajul cuvânt cu cuvânt.",
+      "noteRequired": "Scrie un mesaj pentru service.",
+      "noteTooLong": "Mesajul are cel mult 1000 de caractere.",
+      "noteTooShort": "Mesajul are cel puțin 10 caractere.",
+      "reason": "Motivul",
+      "reasonRequired": "Alege un motiv.",
+      "reasons": {
+        "address": "Adresa",
+        "documents": "Documente",
+        "other": "Altceva",
+        "photos": "Fotografiile",
+        "rar": "Autorizația RAR"
+      },
+      "title": "Respinge dosarul"
+    },
     "rejectedBefore": "Respins anterior: {reason}, {when}",
     "reopen": {
       "button": "Redeschide dosarul",
@@ -447,6 +467,7 @@
     "more": "Mai multe",
     "open": "Deschide dosarul",
     "openNamed": "Deschide dosarul {name}",
+    "rejected": "Respins",
     "retry": "Reîncearcă",
     "stale": "(neactualizat)",
     "waiting": {

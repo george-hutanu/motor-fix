@@ -578,7 +578,49 @@ describe('a file approved while its row is shown', () => {
     expect(rows(el)).toHaveLength(41);
   });
 
-  it.each(['rejected', 'more_requested'])(
+  // @traces 305-FR-006 305-FR-011
+  it.each([
+    ['ro', 'Respins'],
+    ['en', 'Rejected'],
+  ] as const)(
+    'keeps a rejected row in its place in %s, reading "%s", the file still open to read',
+    async (language, line) => {
+      const el = await open({}, language);
+
+      await decide(el, 'file-2', 'rejected');
+
+      expect(rows(el).map((r) => text(r.querySelector('.name')))).toEqual([
+        'Service 1',
+        'Service 2',
+        'Service 3',
+        'Service 4',
+      ]);
+      const kept = rows(el)[1] as HTMLElement;
+      expect(text(kept.querySelector('.state'))).toBe(line);
+      expect(kept.querySelector('.state')?.classList).toContain('rejected');
+      expect(kept.querySelector('mf-lamp')).toBeNull();
+      expect(kept.querySelector('.waiting')).toBeNull();
+      expect(kept.querySelector('a.open')?.getAttribute('href')).toBe(
+        '/app/admin/garages/file-2',
+      );
+      expect(text(el.querySelector('h2'))).toContain('· 3');
+    },
+  );
+
+  // @traces 305-FR-006
+  it('forgets a rejected row with the view: a fresh visit lists waiting files only', async () => {
+    const el = await open();
+    await decide(el, 'file-2', 'rejected');
+    TestBed.resetTestingModule();
+    document.body.innerHTML = '';
+    answer = async () => without('file-2');
+
+    const again = await open();
+
+    expect(rows(again)).toHaveLength(3);
+  });
+
+  it.each(['more_requested'])(
     'leaves the row to drop when the file was %s',
     async (status) => {
       const el = await open();

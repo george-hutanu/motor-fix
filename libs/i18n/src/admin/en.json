@@ -216,6 +216,26 @@
       },
       "uncoveredLine": "Not covered: {jobs}"
     },
+    "reject": {
+      "cancel": "Cancel",
+      "confirm": "Reject",
+      "count": "{n}/1000",
+      "note": "Message to the garage",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write a message to the garage.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "The message is at least 10 characters.",
+      "reason": "Reason",
+      "reasonRequired": "Pick a reason.",
+      "reasons": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "title": "Reject the file"
+    },
     "rejectedBefore": "Rejected before: {reason}, {when}",
     "reopen": {
       "button": "Reopen the file",
@@ -436,6 +456,7 @@
     "more": "More",
     "open": "Open the file",
     "openNamed": "Open the file of {name}",
+    "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
     "waiting": {
