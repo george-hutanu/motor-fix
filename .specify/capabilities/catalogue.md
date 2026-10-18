@@ -11,6 +11,7 @@ features:
   - 386-brand-price-range
   - 172-price-list-states
   - 173-price-range-in-place
+  - 405-car-model-licences
 ---
 
 # Capability: Catalogue
@@ -162,6 +163,25 @@ _From 173-price-range-in-place._
 ### 173-FR-012 — Brand lines MUST be edited through the existing brand range write (`PUT /api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}`, 386), with the same editor, errors and saving states; this story adds no brand route and no removal of a brand range from the view (ST-386's own screens own removal).
 
 _From 173-price-range-in-place._
+### 405-FR-002 — The product MUST keep one catalogue of the licensed car models, in a data file beside the brand list (`libs/domain/src/catalogue/`), the file #1241 seeds `CAR_MODEL_3D` from as the brand loader seeds `BRAND` from `brands.ts`, holding exactly the 20 models of the list; each model MUST carry a stable key, its brand key (a key of MotorFix's brand list), its model name, its fuel (one of the four fuel values the cars contract already uses: `petrol`, `diesel`, `hybrid`, `electric`) and its rank within its brand.
+
+_From 405-car-model-licences._
+
+### 405-FR-003 — The product MUST answer, for a brand key alone, which car shows: the brand's rank-1 licensed model when the brand has one; otherwise a generic body shape — the brand's body style in the brand list (`bodyStyle`, #1241's `BRAND.body_style`), set from the mock for `volkswagen` hatchback, `dacia` suv, `toyota` crossover, `skoda` estate, `ford` fastback, else `saloon`. A brand key the brand list does not know MUST get the generic `saloon`, with no error. The answer MUST say which of the two it is: `{ kind: 'licensed', model }` with the model record, or `{ kind: 'generic', bodyStyle }`.
+
+_From 405-car-model-licences._
+
+### 405-FR-004 — A validator MUST refuse a malformed catalogue file, naming the first fault found, in this order: a duplicate model key; two models of one brand with the same rank; a brand whose ranks are not exactly 1..n; a fuel outside the four. The shipped file MUST pass it, and the validator MUST run over the shipped file in a unit test.
+
+_From 405-car-model-licences._
+
+### 405-FR-005 — MotorFix's brand list MUST gain Opel (`opel`, "Opel"), unranked; the brand loader's existing checks and the brand file's existing tests MUST keep passing.
+
+_From 405-car-model-licences._
+
+### 405-FR-006 — A unit test MUST hold every licensed model's brand key to a key of the brand list, so a renamed or removed brand that the catalogue names fails the suite.
+
+_From 405-car-model-licences._
 
 ## Retired
 

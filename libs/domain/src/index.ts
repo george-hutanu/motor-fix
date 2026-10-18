@@ -12,10 +12,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
-export {
-  type AssistantBroker,
-  assistantBroker,
-} from './auth/assistant/assistant.service';
+export { assistantBroker } from './auth/assistant/assistant.service';
 export { AuthModule } from './auth/auth.module';
 export {
   type Capability,
@@ -45,7 +42,15 @@ export {
 export { reminderDayMs } from './cars/reminders/reminders-config';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { BrandLoader } from './catalogue/brand-loader';
-export { BRANDS } from './catalogue/brands';
+export {
+  type BodyStyle,
+  BRANDS,
+} from './catalogue/brands';
+export {
+  CAR_MODELS,
+  type CarForBrand,
+  carForBrand,
+} from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
@@ -112,7 +117,7 @@ export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
-export { type SignedUpload, StorageService } from './storage/storage.service';
+export { StorageService } from './storage/storage.service';
 export { supportMessagesConsumer } from './support/delivery/delivery.consumer';
 export { SupportModule } from './support/support.module';
 export { type SupportConfig, supportConfig } from './support/support-config';
