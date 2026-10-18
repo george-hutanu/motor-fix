@@ -11,12 +11,12 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal, taken } from '../../auth/sign-up.service';
-import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import type { Prisma } from '../../generated/prisma/client';
-import { uniqueSlug } from '../garage-slug';
-import { isRecord, plainText } from '../plain-text';
+import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
+import { refusal, taken } from '../../../auth/sign-up.service';
+import { EVENT_PORT, type EventPort } from '../../../events/event.port';
+import type { Prisma } from '../../../generated/prisma/client';
+import { uniqueSlug } from '../../garage-slug';
+import { isRecord, plainText } from '../../plain-text';
 
 type Job = StartingPricesInput['jobs'][number];
 

@@ -26,6 +26,9 @@ const job = (
   };
 };
 
+// When a row was last saved; the owner's edit sends it back.
+const STAMP = new Date('2026-10-18T08:00:00.000Z');
+
 const row = (
   jobType: PriceRow['jobType'],
   extra: Partial<Omit<PriceRow, 'jobType'>> = {},
@@ -40,6 +43,7 @@ const row = (
   jobType,
   position: 0,
   toBani: 48_000,
+  updatedAt: STAMP,
   visible: true,
   ...extra,
 });
@@ -163,6 +167,7 @@ describe('whether drivers see a job, and why not', () => {
 
 // @traces 357-FR-004
 // @traces 357-FR-007
+// @traces 173-FR-007
 describe('the price list items', () => {
   it('is empty without a price row', () => {
     expect(priceListJobs([], [])).toEqual([]);
@@ -189,8 +194,10 @@ describe('the price list items', () => {
         jobTypeId: j.id,
         nameEn: j.nameEn,
         nameRo: j.nameRo,
+        priceId: `row-${j.id}-default`,
         public: false,
         reason: 'no_top_price',
+        updatedAt: STAMP.toISOString(),
       },
     ]);
   });

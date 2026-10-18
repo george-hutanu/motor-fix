@@ -1,5 +1,5 @@
 import { afterRace, pricesWorld } from './garage-prices.testing';
-import type { Prisma } from '../../generated/prisma/client';
+import type { Prisma } from '../../../generated/prisma/client';
 
 const { prisma } = pricesWorld();
 

@@ -191,8 +191,10 @@ describe('GET /garages/:garageId/prices', () => {
           jobTypeId: oil.id,
           nameEn: 'Schimb ulei',
           nameRo: 'Schimb ulei',
+          priceId: expect.any(String),
           public: true,
           toBani: 48_000,
+          updatedAt: expect.any(String),
         },
         {
           brandRanges: [
@@ -208,8 +210,10 @@ describe('GET /garages/:garageId/prices', () => {
           jobTypeId: suspension.id,
           nameEn: suspension.nameEn,
           nameRo: suspension.nameRo,
+          priceId: expect.any(String),
           public: false,
           reason: 'no_top_price',
+          updatedAt: expect.any(String),
         },
         expect.objectContaining({
           jobTypeId: chain.id,

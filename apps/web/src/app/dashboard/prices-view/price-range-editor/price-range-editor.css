@@ -1,0 +1,74 @@
+:host {
+  display: grid;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.prices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--mf-space-3);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.field > label {
+  font-weight: 700;
+}
+.amount {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+input {
+  flex: 1 1 auto;
+  min-height: var(--mf-tap);
+  min-width: 0;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.unit {
+  flex: none;
+  color: var(--mf-text-secondary);
+}
+.said {
+  color: var(--mf-text-secondary);
+}
+.said.error {
+  color: var(--mf-red-ink);
+}
+.said.warning {
+  color: var(--mf-amber-ink);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+
+/* The two prices stacked on a phone, side by side from a tablet up. */
+@media (max-width: 600px) {
+  .prices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 768px) {
+  .said {
+    font-size: var(--mf-size-small);
+  }
+}
