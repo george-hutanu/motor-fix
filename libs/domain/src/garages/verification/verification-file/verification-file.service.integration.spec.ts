@@ -129,6 +129,8 @@ describe('reading a file', () => {
       brands: ['Audi', 'Dacia'],
       businessKind: 'company',
       cui: '12345678',
+      // No other garage holds its CUI.
+      cuiAlsoUsedBy: [],
       id: garageId,
       name: 'Atelier Dinamo',
       phone: '+40722111222',
