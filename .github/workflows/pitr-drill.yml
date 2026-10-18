@@ -6,12 +6,18 @@ name: Point-in-time drill
 # The self-contained job archives a database of its own to a store of its own,
 # so it needs no setting; the staging job restores staging's archive and ends
 # green with a notice until the staging environment has WAL_ARCHIVE_BUCKET.
-# The log ends with each step's seconds and the archive lag, the data at risk.
-# A failed run is the alert: GitHub e-mails the owner.
+# A pull request that changes the drill or the image runs the self-contained
+# job only. The log ends with each step's seconds and the archive lag, the data
+# at risk. A failed run is the alert: GitHub e-mails the owner.
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 5 1 1,4,7,10 *'
+  pull_request:
+    paths:
+      - 'infra/postgres/**'
+      - 'scripts/backup/pitr-drill.sh'
+      - '.github/workflows/pitr-drill.yml'
 
 permissions:
   contents: read
@@ -31,6 +37,7 @@ jobs:
         run: bash scripts/backup/pitr-drill.sh --self-contained
 
   staging:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 90

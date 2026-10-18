@@ -31,6 +31,28 @@ describe('the point-in-time drill workflow', () => {
     );
   });
 
+  it('runs the self-contained drill on a pull request that changes the drill or the image', () => {
+    const on = workflow.slice(
+      workflow.indexOf('on:'),
+      workflow.indexOf('\npermissions:'),
+    );
+    const paths = on
+      .slice(on.indexOf('  pull_request:'))
+      .split('\n')
+      .filter((line) => /^ {6}- /.test(line))
+      .map((line) => line.trim().slice(2).replace(/^'|'$/g, ''));
+
+    expect(paths).toEqual([
+      'infra/postgres/**',
+      'scripts/backup/pitr-drill.sh',
+      '.github/workflows/pitr-drill.yml',
+    ]);
+    expect(job('staging')).toMatch(
+      /^ {4}if: github\.event_name != 'pull_request'$/m,
+    );
+    expect(job('self-contained')).not.toMatch(/^ {4}if:/m);
+  });
+
   it('reads the repository and nothing more', () => {
     expect(workflow).toMatch(/^permissions:\n {2}contents: read\n\n/m);
     expect(workflow).not.toContain('packages: write');
