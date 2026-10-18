@@ -14,10 +14,12 @@ import express from 'express';
 
 import { mountEdge } from './edge';
 
+// On the loopback address itself: a name would be looked up on every fresh
+// socket, and on a loaded machine that lookup alone can outlast a test.
 const listen = (server: Server) =>
   new Promise<string>((resolve) =>
-    server.listen(0, () =>
-      resolve(`http://localhost:${(server.address() as AddressInfo).port}`),
+    server.listen(0, '127.0.0.1', () =>
+      resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`),
     ),
   );
 
@@ -263,6 +265,10 @@ describe('web edge under hostile conditions', () => {
               hash.update(c);
             });
             res.on('end', () => resolve({ digest: hash.digest('hex'), size }));
+            res.on('close', () => {
+              if (!res.complete)
+                reject(new Error(`the answer was cut after ${size} bytes`));
+            });
           },
         );
         req.on('error', reject);
