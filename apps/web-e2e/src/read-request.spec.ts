@@ -49,10 +49,28 @@ async function sendRequest(request: APIRequestContext) {
     headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
   });
   expect(res.status()).toBe(201);
-  return { id: ((await res.json()) as { id: string }).id, tag };
+  return { id: ((await res.json()) as { id: string }).id, owner, tag };
 }
 
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
+const DAY = 24 * 60 * 60 * 1000;
+const WALL = new Intl.DateTimeFormat('sv-SE', {
+  ...BUCHAREST,
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  month: '2-digit',
+  second: '2-digit',
+  year: 'numeric',
+});
+// The Bucharest wall clock of an instant, "2026-10-18 04:45:12", its date
+// moved on by `days` calendar days.
+const wall = (iso: string, days = 0) => {
+  const [date, time] = WALL.format(new Date(iso)).split(' ');
+  const moved = new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY);
+  return `${moved.toISOString().slice(0, 10)} ${time}`;
+};
 const tomorrow = () =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
     new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -76,7 +94,19 @@ test.describe('reading a request @seeded', () => {
     request,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    const { id, tag } = await sendRequest(request);
+    const { id, owner, tag } = await sendRequest(request);
+    const read = await request.get(`/api/v1/garage/requests/${id}`, {
+      headers: bearer(owner),
+    });
+    const { createdAt, expiresAt } = (await read.json()) as {
+      createdAt: string;
+      expiresAt: string;
+    };
+    // A request waits seven Bucharest calendar days, to the same wall-clock
+    // time: 7 days less a moment as a rule, but 7 days and an hour across
+    // the autumn clock change, so the whole days left read 6 or 7.
+    expect(wall(expiresAt)).toBe(wall(createdAt, 7));
+    const daysLeft = Math.floor((Date.parse(expiresAt) - Date.now()) / DAY);
     await signedIn(page);
 
     const onPanou = page
@@ -90,7 +120,7 @@ test.describe('reading a request @seeded', () => {
     await expect(drawer).toContainText(`Scârțâie la frânare ${tag}`);
     await expect(drawer).toContainText('Sunați după ora 18');
     await expect(drawer).toContainText('orice mecanic');
-    await expect(drawer).toContainText('expiră în 6 zile');
+    await expect(drawer).toContainText(`expiră în ${daysLeft} zile`);
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage');
