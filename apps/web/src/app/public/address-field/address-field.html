@@ -12,6 +12,9 @@
     }
   </button>
 }
+<!-- The static aria-expanded="false" is for Biome, which reads only static
+     attributes and requires it on a combobox; the [attr.aria-expanded]
+     binding replaces it at runtime with whether suggestions are shown. -->
 <label hlmLabel for="{{ ids() }}-address">{{ label() ?? ('public.home.place.field' | t) }}</label>
 <input
   #field

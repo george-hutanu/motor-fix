@@ -526,3 +526,15 @@ describe('type scale', () => {
     );
   });
 });
+
+describe('the template', () => {
+  const template = readFileSync(join(__dirname, 'address-field.html'), 'utf8');
+
+  it('says why the combobox keeps a static aria-expanded beside its binding', () => {
+    expect(template).toContain('aria-expanded="false"');
+    expect(template).toContain(
+      '[attr.aria-expanded]="suggestions().length > 0"',
+    );
+    expect(template).toMatch(/<!--[^>]*Biome[^>]*aria-expanded[^>]*-->/);
+  });
+});
