@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -32,6 +32,7 @@ features:
   - 1347-outage-contact-point
   - 280-contact-motorfix
   - 299-system-log-search
+  - 173-price-range-in-place
 ---
 
 # Capability: Observability
@@ -785,6 +786,10 @@ _From 1345-staging-observability._
 ### 1345-FR-018 — The admin accounts failure log MUST log a 401 at info, with the same route and status fields, and every other status of 400 or above at warn. A colocated test asserts the level per status.
 
 _From 1345-staging-observability._
+
+### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
+
+_From 173-price-range-in-place._
 
 ## Retired
 

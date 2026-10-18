@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -88,6 +88,7 @@ features:
   - 1344-no-mutation-wait
   - 430-cdn-waf
   - 1019-staging-mcp-connect
+  - 173-price-range-in-place
 ---
 
 # Capability: Platform
@@ -2254,6 +2255,10 @@ _From 430-cdn-waf._
 ### 1019-FR-007 — The release's staging job MUST run the check after the deploy against the staging MCP address, before the core flows, when the staging environment names both the MCP service and the MCP address (`MCP_URL`), and its failure MUST fail the job; when either is missing it MUST skip the check with one notice naming what is missing.
 
 _From 1019-staging-mcp-connect._
+
+### 173-FR-013 — `libs/domain/src/garages/prices/garage-prices.service.ts` and `garage-prices.testing.ts`, with their colocated specs, MUST move to `libs/domain/src/garages/prices/garage-prices/` (files named after the subfolder), every import updated, their two entries removed from `scripts/structure-baseline.json`, and `node scripts/structure-check.ts` MUST pass (Constitution IV; folded-in #658).
+
+_From 173-price-range-in-place._
 
 ## Retired
 
