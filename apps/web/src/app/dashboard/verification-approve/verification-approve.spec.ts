@@ -237,14 +237,18 @@ describe('approving past what is not ok', () => {
   });
 });
 
-describe('VerificationApprove on a 320 px phone', () => {
-  it('keeps the confirm label on one line: the label face shrinks below 390 px', () => {
+describe('VerificationApprove on a phone', () => {
+  // Every phone opens the dialog as a bottom sheet (below 768 px, the
+  // overlays' TABLET query): at the full button size "Approve and publish"
+  // needs a 405 px sheet, so the label face covers the whole sheet range,
+  // 390 px phones included, not only the narrowest ones.
+  it('keeps the confirm label on one line: the label face shrinks wherever the dialog is a sheet', () => {
     const css = readFileSync(
       join(__dirname, 'verification-approve.css'),
       'utf8',
     );
     const phone =
-      /@media \(max-width: 389px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+      /@media \(max-width: 767px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
     const submit =
       /button\[type="submit"\]\s*\{([^}]*)\}/.exec(phone)?.[1] ?? '';
 
@@ -252,5 +256,6 @@ describe('VerificationApprove on a 320 px phone', () => {
     expect(submit).toMatch(/letter-spacing:\s*0\.08em;/);
     expect(submit).toMatch(/padding-inline:\s*var\(--mf-space-3\);/);
     expect(submit).toMatch(/text-wrap:\s*balance;/);
+    expect(css).not.toMatch(/max-width: 389px/);
   });
 });
