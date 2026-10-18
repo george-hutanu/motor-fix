@@ -16,6 +16,7 @@ import {
 import { Odometer } from '@motor-fix/ui-cockpit';
 
 import { PriceSelection } from '../price-selection/price-selection';
+import { estimateTotals } from '../price-selection/totals';
 import { RequestQuoteButton } from '../request-quote-button/request-quote-button';
 
 // "Estimarea ta": the jobs switched on in the price list, added up into a
@@ -41,10 +42,10 @@ export class EstimateSection {
   protected readonly title = computed(() =>
     this.i18n.t('public.garageProfile.estimate.title'),
   );
-  private readonly chosen = computed(() => {
-    const on = this.selection.on();
-    return this.garage().prices.filter((row) => on.has(row.jobTypeId));
-  });
+  private readonly totals = computed(() =>
+    estimateTotals(this.garage().prices, this.selection.on()),
+  );
+  private readonly chosen = computed(() => this.totals().chosen);
   protected readonly jobs = computed(() =>
     this.chosen().map((row) => row.jobTypeId),
   );
@@ -56,13 +57,8 @@ export class EstimateSection {
       range: formatWholeLeiRange(row.fromBani, row.toBani, language),
     }));
   });
-  // Summed in bani, then rounded once to whole lei.
-  protected readonly from = computed(() =>
-    Math.round(this.chosen().reduce((sum, row) => sum + row.fromBani, 0) / 100),
-  );
-  protected readonly to = computed(() =>
-    Math.round(this.chosen().reduce((sum, row) => sum + row.toBani, 0) / 100),
-  );
+  protected readonly from = computed(() => this.totals().fromLei);
+  protected readonly to = computed(() => this.totals().toLei);
   protected readonly spoken = computed(() => {
     const language = this.i18n.language();
     return this.i18n.t('public.garageProfile.estimate.spoken', {

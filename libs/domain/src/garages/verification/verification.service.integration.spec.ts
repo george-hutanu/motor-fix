@@ -1318,11 +1318,11 @@ describe('a file already decided', () => {
         },
       });
 
-      // The approval carries a note, so the guide checks and documents this
-      // file lacks never refuse it before the race is decided.
       const results = await Promise.allSettled([
+        // The documents are missing, so the approval carries its note and
+        // loses only to the race.
         decideWith(ioana, file.id, {
-          note: 'Fără ghid',
+          note: 'Acte văzute la sediu',
           outcome: 'approved',
         }),
         decideWith(dan, file.id, {

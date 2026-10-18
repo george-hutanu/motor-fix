@@ -78,11 +78,6 @@
   color: var(--mf-red-ink);
   font-size: var(--mf-size-small);
 }
-
-.problem:empty {
-  display: none;
-}
-
 .steps {
   display: grid;
   margin: 0;

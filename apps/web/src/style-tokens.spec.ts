@@ -48,4 +48,14 @@ describe('screen stylesheets', () => {
 
     expect(literal).toEqual([]);
   });
+
+  // The light theme's --mf-red (#d93a30) is 4.1:1 on its page (#f4f4f1),
+  // under the 4.5:1 text needs; --mf-red-ink is the red for words (WCAG 1.4.3).
+  it('write red text in the ink shade', () => {
+    const faint = sheets.flatMap(({ css, path }) =>
+      [...css.matchAll(/(?<![-\w])color:\s*var\(--mf-red\)/g)].map(() => path),
+    );
+
+    expect(faint).toEqual([]);
+  });
 });

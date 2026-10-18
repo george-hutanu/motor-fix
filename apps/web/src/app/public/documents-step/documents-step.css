@@ -24,7 +24,7 @@ h3 {
   overflow-wrap: anywhere;
 }
 .error {
-  color: var(--mf-red);
+  color: var(--mf-red-ink);
 }
 .warning {
   color: var(--mf-text-secondary);

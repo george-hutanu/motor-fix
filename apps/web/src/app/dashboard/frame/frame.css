@@ -207,10 +207,18 @@ aside nav .action:hover {
 main {
   flex: 1 0 auto;
 }
-/* The tab bar's height on a phone, which the tab bar takes as its own and the consent bar sits on. */
+/* The tab bar's height on a phone, which the tab bar takes as its own and the consent bar sits on.
+   A sticky bar cannot leave the box it sits in: inside the view, which starts under the account
+   block on a phone, a tall consent bar stopped at the view's top and slid under the tab bar.
+   On a phone the view lends its children to the frame, a column, so both bars stick within it. */
 @media (max-width: 767.98px) {
   :host {
     --tab-bar: calc(1px + 8px + 48px + max(16px, var(--mf-safe-bottom)));
+    display: flex;
+    flex-direction: column;
+  }
+  .view {
+    display: contents;
   }
 }
 .chip-skeleton {
@@ -218,9 +226,6 @@ main {
   height: 20px;
   border-radius: 10px;
   background: var(--mf-line);
-}
-.live-offline:empty {
-  display: none;
 }
 .live-offline {
   margin: 0 0 var(--mf-space-3);
