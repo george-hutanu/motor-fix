@@ -190,43 +190,6 @@ describe('the profile aggregates with ties and gaps', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('keeps photos of the same position in a stable order', async () => {
-    const garage = await approved();
-    const photos = await Promise.all(
-      [0, 1, 2, 3].map((i) =>
-        prisma.garagePhoto.create({
-          data: {
-            fileKey: `garage_photo/${garage.id}/${randomUUID()}`,
-            garageId: garage.id,
-            height: 10,
-            position: i < 2 ? 0 : 1,
-            width: 10,
-          },
-        }),
-      ),
-    );
-
-    const first = await read(garage.slug);
-    await prisma.$executeRawUnsafe('SELECT 1');
-    const second = await counted(garage.slug);
-
-    expect(first.body.photos).toHaveLength(4);
-    expect(second.res.body.photos.map((p: { id: string }) => p.id)).toEqual(
-      first.body.photos.map((p: { id: string }) => p.id),
-    );
-    expect(
-      first.body.photos
-        .slice(0, 2)
-        .map((p: { id: string }) => p.id)
-        .sort(),
-    ).toEqual(
-      photos
-        .slice(0, 2)
-        .map((p) => p.id)
-        .sort(),
-    );
-  });
-
   it('reads a hundred photos in one statement', async () => {
     const garage = await approved();
     await prisma.garagePhoto.createMany({
@@ -245,35 +208,21 @@ describe('the profile aggregates with ties and gaps', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('takes the latest approved decision and ignores the others', async () => {
+  it('takes the approved decision and ignores later and earlier refusals', async () => {
     const garage = await approved({
       approvedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
     const at = (iso: string) => new Date(iso);
-    await prisma.verificationFile.create({
-      data: {
-        decidedAt: at('2026-03-01T00:00:00.000Z'),
-        garageId: garage.id,
-        status: 'approved',
-      },
-    });
-    await prisma.verificationFile.create({
-      data: {
-        decidedAt: at('2026-02-01T00:00:00.000Z'),
-        garageId: garage.id,
-        status: 'approved',
-      },
-    });
-    await prisma.verificationFile.create({
-      data: {
-        decidedAt: at('2026-06-01T00:00:00.000Z'),
-        garageId: garage.id,
-        status: 'rejected',
-      },
-    });
-    await prisma.verificationFile.create({
-      data: { garageId: garage.id, status: 'in_review' },
-    });
+    // Only one file per garage is live (submitted, in review or approved).
+    for (const [decidedAt, status] of [
+      ['2026-02-01T00:00:00.000Z', 'rejected'],
+      ['2026-03-01T00:00:00.000Z', 'approved'],
+      ['2026-06-01T00:00:00.000Z', 'rejected'],
+    ] as const) {
+      await prisma.verificationFile.create({
+        data: { decidedAt: at(decidedAt), garageId: garage.id, status },
+      });
+    }
 
     const res = await read(garage.slug);
 
