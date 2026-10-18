@@ -57,8 +57,9 @@ jobs:
       max-parallel: 5
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     services:
+      # The repository's own image, as CI: pg_stat_statements preloaded.
       postgres:
-        image: postgis/postgis:17-3.5
+        image: ghcr.io/george-hutanu/motor-fix-postgres:18
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -81,17 +82,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Service containers take no command, so the slow-statement view is
-      # preloaded here, as in CI: the data-store specs read it.
-      - name: Preload pg_stat_statements
-        run: |
-          docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
-          docker restart ${{ job.services.postgres.id }}
-          for i in $(seq 1 30); do
-            docker exec ${{ job.services.postgres.id }} pg_isready -U postgres && break
-            sleep 1
-          done
-          docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # Keys end in / so mcp's never restores mcp-tools' results.
@@ -140,7 +130,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Download every job's report
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: mutation-*
           path: reports/mutation-all
