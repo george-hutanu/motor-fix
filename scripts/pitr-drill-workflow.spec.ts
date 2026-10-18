@@ -209,6 +209,18 @@ describe('the point-in-time drill script', () => {
     expect(command).toContain('--tmpfs /data:mode=1777');
   });
 
+  // Bash 3.2 (macOS) treats an empty array under set -u as unset.
+  it('expands its option arrays so an empty one survives set -u', () => {
+    expect(script).not.toMatch(/(?<!\+)"\$\{(tls|archive)_env\[@\]\}"/);
+    expect(script).toContain(`\${tls_env[@]+"\${tls_env[@]}"}`);
+  });
+
+  // A text xid past 2^32 is out of range: go through the 64-bit xid8.
+  it('reads the marker’s commit time through xid8, never a 32-bit text xid', () => {
+    expect(script).toContain("pg_xact_commit_timestamp('$before'::xid8::xid)");
+    expect(script).not.toMatch(/'\$\w+'::xid\)/);
+  });
+
   it('removes everything it started however it ends', () => {
     expect(script).toMatch(/^trap teardown EXIT$/m);
   });

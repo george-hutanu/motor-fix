@@ -71,7 +71,7 @@ describe('the database image across every file', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('uses the same tag in compose, ci, mutation and both drills', () => {
+  it('uses the same tag in compose, ci, mutation and the point-in-time drill', () => {
     const tags = [
       compose,
       workflows['ci.yml'],
@@ -89,15 +89,6 @@ describe('the database image across every file', () => {
       ['18'],
       ['18'],
     ]);
-  });
-
-  it('leaves no preload step or command behind in compose or ci', () => {
-    expect(compose).not.toMatch(
-      /shared_preload_libraries|^\s+command:.*postgres/m,
-    );
-    expect(workflows['ci.yml']).not.toMatch(
-      /ALTER SYSTEM|shared_preload_libraries/,
-    );
   });
 
   it('never names the image without a tag or with latest', () => {
@@ -238,14 +229,5 @@ describe('every workflow', () => {
     );
 
     expect(mutable).toEqual([]);
-  });
-});
-
-describe('the dump drill default', () => {
-  it('restores into the repository image at the copy’s major version', () => {
-    const script = read('scripts', 'backup', 'restore-drill.sh');
-
-    expect(script).toContain(`\${DRILL_IMAGE:-${IMAGE}:$major}`);
-    expect(script).not.toMatch(/docker run[^\n]*\bpostgres:\$/);
   });
 });

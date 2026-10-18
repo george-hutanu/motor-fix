@@ -11,7 +11,9 @@
 #
 # The throwaway runs the repository's own image at the backup's major version
 # (infra/postgres: PostgreSQL with PostGIS, as staging runs), so a dump that
-# holds the PostGIS extension restores; DRILL_IMAGE names another.
+# holds the PostGIS extension restores; DRILL_IMAGE names another. Only the
+# majors in PUBLISHED_MAJORS are published: a copy of any other needs
+# DRILL_IMAGE, and the drill says so before it pulls anything.
 #
 # Fails at the first step that does: a size that differs from the manifest's,
 # a dump that does not decrypt, a restore error, a table whose row count
@@ -83,6 +85,11 @@ fi
 step decrypt
 
 major=$(jq -r '.server_version' "$work/manifest.json" | cut -d. -f1)
+PUBLISHED_MAJORS="18"
+if [ -z "${DRILL_IMAGE:-}" ] && ! printf '%s\n' $PUBLISHED_MAJORS | grep -qx "$major"; then
+  echo "drill failed: the copy is PostgreSQL $major and motor-fix-postgres is published for $PUBLISHED_MAJORS only; set DRILL_IMAGE" >&2
+  exit 1
+fi
 docker rm -f "$DB" "$REDIS" "$STORE" >/dev/null 2>&1 || true
 docker run -d --name "$DB" -p 127.0.0.1::5432 \
   -e POSTGRES_PASSWORD=drill -e POSTGRES_DB=drill "${DRILL_IMAGE:-ghcr.io/george-hutanu/motor-fix-postgres:$major}" >/dev/null

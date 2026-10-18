@@ -113,7 +113,7 @@ if [ "$mode" = self-contained ]; then
   tls_env=(-v "$work/ca.crt:/certs/ca.crt:ro" -e PGBACKREST_REPO1_STORAGE_PORT=8443 -e PGBACKREST_REPO1_STORAGE_CA_FILE=/certs/ca.crt)
 
   docker run -d --name "$SOURCE" --network "$NET" -e POSTGRES_PASSWORD=drill \
-    "${archive_env[@]}" "${tls_env[@]}" "$IMAGE" >/dev/null
+    ${archive_env[@]+"${archive_env[@]}"} ${tls_env[@]+${tls_env[@]+"${tls_env[@]}"}} "$IMAGE" >/dev/null
   source_up() { source_sql 'SELECT 1' >/dev/null 2>&1; }
   until_within 120 1 source_up || fail "the source database did not start within 120 s"
   repo_path=$(docker exec "$SOURCE" sh -c 'cat "$PGDATA/.pgbackrest_repo_path"')
@@ -138,7 +138,7 @@ export WAL_RECOVER_FROM_SECRET=$WAL_ARCHIVE_SECRET WAL_RECOVER_FROM_PATH=$repo_p
 
 # pgBackRest's view of the archive, from this machine, through the image.
 archive_info() {
-  docker run --rm --network "$NET" "${tls_env[@]}" --user postgres --entrypoint pgbackrest \
+  docker run --rm --network "$NET" ${tls_env[@]+"${tls_env[@]}"} --user postgres --entrypoint pgbackrest \
     -e PGBACKREST_REPO1_TYPE -e PGBACKREST_REPO1_S3_URI_STYLE -e PGBACKREST_LOG_LEVEL_FILE \
     -e PGBACKREST_REPO1_S3_BUCKET -e PGBACKREST_REPO1_S3_ENDPOINT -e PGBACKREST_REPO1_S3_REGION \
     -e PGBACKREST_REPO1_S3_KEY -e PGBACKREST_REPO1_S3_KEY_SECRET -e PGBACKREST_REPO1_PATH \
@@ -154,7 +154,7 @@ step backup
 # Two empty transactions: committing pg_current_xact_id() gives each its own
 # commit record, so nothing is written to any table.
 before=$(source_sql 'SELECT pg_current_xact_id()')
-target=$(source_sql "SELECT pg_xact_commit_timestamp('$before'::xid)")
+target=$(source_sql "SELECT pg_xact_commit_timestamp('$before'::xid8::xid)")
 [ -n "$target" ] || fail "the source has no commit time for $before (track_commit_timestamp off?)"
 sleep 1
 after=$(source_sql 'SELECT pg_current_xact_id()')
@@ -173,7 +173,7 @@ lag=$((SECONDS - committed_at))
 echo "drill: the archive held the commit after $lag s (at most $MAX_LAG_SECONDS s)"
 step archive
 
-docker run -d --name "$SIBLING" --network "$NET" "${tls_env[@]}" \
+docker run -d --name "$SIBLING" --network "$NET" ${tls_env[@]+"${tls_env[@]}"} \
   -e POSTGRES_PASSWORD=drill -e "POSTGRES_RECOVERY_TARGET_TIME=$target" \
   -e WAL_RECOVER_FROM_BUCKET -e WAL_RECOVER_FROM_ENDPOINT -e WAL_RECOVER_FROM_REGION \
   -e WAL_RECOVER_FROM_KEY -e WAL_RECOVER_FROM_SECRET -e WAL_RECOVER_FROM_PATH \

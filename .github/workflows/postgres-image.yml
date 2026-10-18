@@ -4,12 +4,18 @@ name: PostgreSQL image
 # PostgreSQL 18 image plus PostGIS) for amd64 and arm64, and pushes it to
 # ghcr.io/george-hutanu/motor-fix-postgres as `18`, the tag compose, CI and
 # the drills name, and as the commit sha, the digest Railway can pin. By hand
-# from any branch, so a branch can publish before its own files need the tag,
-# and on main whenever the image changes; a pull request that changes it only
+# from any branch (moving 18 only when its move_18 input is set, so a branch
+# can publish before its own files need the tag but never by accident), and
+# on main whenever the image changes; a pull request that changes it only
 # builds it, pushing nothing. A failed run is the alert: GitHub e-mails the
 # owner.
 on:
   workflow_dispatch:
+    inputs:
+      move_18:
+        description: Also move the 18 tag that compose, CI and staging pull (always on from main)
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -56,6 +62,7 @@ jobs:
           pull: true
           # Links the package to this repository, whose visibility it takes.
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          # 18 moves from main, or from a branch only when the dispatch asks.
           tags: |
-            ghcr.io/george-hutanu/motor-fix-postgres:18
             ghcr.io/george-hutanu/motor-fix-postgres:${{ github.sha }}
+            ${{ (github.ref == 'refs/heads/main' || inputs.move_18) && 'ghcr.io/george-hutanu/motor-fix-postgres:18' || '' }}

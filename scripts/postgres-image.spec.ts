@@ -82,6 +82,18 @@ describe('one database image everywhere', () => {
 
     expect(drill).toContain(`"\${DRILL_IMAGE:-${IMAGE}:$major}"`);
     expect(drill).not.toMatch(/DRILL_IMAGE:-postgres:/);
+    expect(drill).not.toMatch(/docker run[^\n]*\bpostgres:\$/);
+  });
+
+  // Only 18 is published: a copy of another major fails with its reason,
+  // not on a pull of a tag that does not exist.
+  it('the dump drill refuses a major with no published image unless DRILL_IMAGE is set', () => {
+    const drill = read('scripts', 'backup', 'restore-drill.sh');
+
+    expect(drill).toContain('PUBLISHED_MAJORS="18"');
+    expect(drill).toMatch(
+      /if \[ -z "\$\{DRILL_IMAGE:-\}" \] && ! printf '%s\\n' \$PUBLISHED_MAJORS \| grep -qx "\$major"; then/,
+    );
   });
 
   it('the point-in-time drill runs the same image by default', () => {
@@ -144,7 +156,9 @@ describe('the image publish workflow', () => {
       '    paths:',
       /^ {6}- /,
     );
-    expect(paths).toHaveLength(2);
+    expect(
+      paths.map((line) => line.trim().slice(2).replace(/^'|'$/g, '')),
+    ).toEqual(['infra/postgres/**', '.github/workflows/postgres-image.yml']);
     expect(publish).toMatch(
       /- uses: docker\/login-action@v\d+\n {8}if: github\.event_name != 'pull_request'\n/,
     );
@@ -172,6 +186,18 @@ describe('the image publish workflow', () => {
     );
     expect(publish).toContain(`${IMAGE}:18`);
     expect(publish).toContain(`${IMAGE}:\${{ github.sha }}`);
+  });
+
+  // compose, CI and staging pull 18: a dispatch from a branch moves it only
+  // when asked to, and every run pushes its commit tag.
+  it('moves the 18 tag only from main or when a dispatch asks for it', () => {
+    expect(publish).toMatch(
+      /^ {6}move_18:\n {8}description: .+\n {8}type: boolean\n {8}default: false$/m,
+    );
+    expect(publish).toContain(
+      `\${{ (github.ref == 'refs/heads/main' || inputs.move_18) && '${IMAGE}:18' || '' }}`,
+    );
+    expect(publish).not.toMatch(new RegExp(`^ {12}${IMAGE}:18$`, 'm'));
   });
 
   it('is bounded in time and never runs two publishes at once', () => {
