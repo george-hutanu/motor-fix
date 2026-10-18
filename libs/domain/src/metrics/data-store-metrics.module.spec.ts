@@ -43,16 +43,15 @@ function started(keycloakMetricsUrl?: string): Stores {
   return observe.mock.calls.at(-1)?.[0] as Stores;
 }
 
-const answer = (status: number, body = '', length?: number) => {
-  const cancel = jest.fn(async () => undefined);
+// An answer streaming the body; cancel watches the body being let go.
+const answer = (status: number, body = '') => {
+  const stream = new Blob([body]).stream();
+  const cancel = jest.spyOn(stream, 'cancel');
   const response = {
-    body: { cancel },
-    headers: new Headers(
-      length === undefined ? {} : { 'content-length': String(length) },
-    ),
+    body: stream,
+    headers: new Headers(),
     ok: status >= 200 && status < 300,
     status,
-    text: jest.fn(async () => body),
   } as unknown as Response;
   return { cancel, response };
 };
@@ -140,15 +139,29 @@ describe('the Keycloak reading in the data-store readings', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('refuses a body declared past 8 MiB unread, and lets it go', async () => {
-    const { cancel, response } = answer(200, 'x', 8 * 1024 * 1024 + 1);
+  it('cuts off a body past 8 MiB that declares no length', async () => {
+    const { response } = answer(200, 'x'.repeat(8 * 1024 * 1024 + 1));
     fetch.mockResolvedValue(response);
     const stores = started(URL);
 
     await expect(stores.keycloak?.metrics()).rejects.toThrow(
       new Error('metrics body too large'),
     );
-    expect(cancel).toHaveBeenCalledTimes(1);
-    expect(response.text).not.toHaveBeenCalled();
   });
+
+  it('reads a body of exactly 8 MiB', async () => {
+    const body = 'x'.repeat(8 * 1024 * 1024);
+    fetch.mockResolvedValue(answer(200, body).response);
+
+    await expect(started(URL).keycloak?.metrics()).resolves.toBe(body);
+  });
+
+  it.each(['redis://keycloak:6379', 'ftp://keycloak/metrics'])(
+    'fails the boot on the non-HTTP address %s',
+    (url) => {
+      expect(() => started(url)).toThrow(
+        'KEYCLOAK_METRICS_URL is not an http(s) address',
+      );
+    },
+  );
 });

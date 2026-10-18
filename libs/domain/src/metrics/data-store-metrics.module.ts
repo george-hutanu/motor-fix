@@ -74,12 +74,32 @@ function reason(error: unknown): string {
   return typeof name === 'string' && name !== '' ? name : 'fetch failed';
 }
 
-// One GET of Keycloak's metrics text within the reading's limit. A failure
-// names its status, code or kind only, never the address.
-// Keycloak's metrics text is a few hundred kB; a declared body past this
-// is refused unread.
+// Keycloak's metrics text is a few hundred kB; a body past this is cut
+// off, whether or not it declares its length.
 const MAX_METRICS_BYTES = 8 * 1024 * 1024;
 
+// The body as text, or undefined once it runs past the cap (the rest is
+// cancelled unread).
+async function readCapped(response: Response): Promise<string | undefined> {
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+  const decoder = new TextDecoder();
+  let text = '';
+  let bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return text + decoder.decode();
+    bytes += value.byteLength;
+    if (bytes > MAX_METRICS_BYTES) {
+      await reader.cancel().catch(ignore);
+      return undefined;
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+}
+
+// One GET of Keycloak's metrics text within the reading's limit. A failure
+// names its status, code or kind only, never the address.
 async function readMetrics(url: string): Promise<string> {
   let response: Response;
   try {
@@ -94,16 +114,14 @@ async function readMetrics(url: string): Promise<string> {
     await response.body?.cancel().catch(ignore);
     throw new Error(`HTTP ${response.status}`);
   }
-  const length = Number(response.headers?.get('content-length'));
-  if (length > MAX_METRICS_BYTES) {
-    await response.body?.cancel().catch(ignore);
-    throw new Error('metrics body too large');
-  }
+  let text: string | undefined;
   try {
-    return await response.text();
+    text = await readCapped(response);
   } catch (error) {
     throw new Error(reason(error));
   }
+  if (text === undefined) throw new Error('metrics body too large');
+  return text;
 }
 
 const session = (pool: Pool): MonitorSession => ({
@@ -120,8 +138,9 @@ function connect(options: DataStoreOptions): Clients | undefined {
         });
   const redis = borrowStore(options.redisUrl);
   const keycloak = options.keycloakMetricsUrl || undefined;
-  // A malformed address fails the boot, not every reading.
-  if (keycloak) new URL(keycloak);
+  // A malformed or non-HTTP address fails the boot, not every reading.
+  if (keycloak && !/^https?:$/.test(new URL(keycloak).protocol))
+    throw new Error('KEYCLOAK_METRICS_URL is not an http(s) address');
   return { keycloak, outbox: bounded(options.databaseUrl), pool, redis };
 }
 

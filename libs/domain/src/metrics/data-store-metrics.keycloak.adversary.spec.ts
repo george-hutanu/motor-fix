@@ -39,12 +39,16 @@ function started(keycloakMetricsUrl?: string): Stores {
   module.onModuleInit();
   return observe.mock.calls.at(-1)?.[0] as Stores;
 }
-const response = (status: number, text: () => Promise<string>) =>
+// An answer whose body streams the text, or fails midway with the error.
+const response = (status: number, body: string | Error) =>
   ({
-    body: { cancel: jest.fn(async () => undefined) },
+    body:
+      typeof body === 'string'
+        ? new Blob([body]).stream()
+        : new ReadableStream({ start: (stream) => stream.error(body) }),
+    headers: new Headers(),
     ok: status >= 200 && status < 300,
     status,
-    text,
   }) as unknown as Response;
 
 let fetch: jest.SpyInstance;
@@ -59,7 +63,7 @@ describe('the Keycloak fetch under hostile answers', () => {
   it.each([199, 300, 301, 404, 500])(
     'rejects HTTP %s with its status only',
     async (status) => {
-      fetch.mockResolvedValue(response(status, async () => 'body'));
+      fetch.mockResolvedValue(response(status, 'body'));
       await expect(started(URL).keycloak?.metrics()).rejects.toThrow(
         new Error(`HTTP ${status}`),
       );
@@ -67,20 +71,18 @@ describe('the Keycloak fetch under hostile answers', () => {
   );
 
   it('accepts a 204 and hands the empty body on', async () => {
-    fetch.mockResolvedValue(response(204, async () => ''));
+    fetch.mockResolvedValue(response(204, ''));
     await expect(started(URL).keycloak?.metrics()).resolves.toBe('');
   });
 
   it('does not carry the address when the body stream fails midway', async () => {
     fetch.mockResolvedValue(
-      response(200, async () => {
-        throw new Error(`terminated reading ${URL}`);
-      }),
+      response(200, new Error(`terminated reading ${URL}`)),
     );
     const error = await started(URL)
       .keycloak?.metrics()
       .catch((e: Error) => e);
-    expect((error as Error).message).not.toContain('hunter2');
+    expect(error).toEqual(new Error('Error'));
   });
 
   it('fails with a non-empty reason when fetch rejects with a non-Error', async () => {
@@ -88,7 +90,7 @@ describe('the Keycloak fetch under hostile answers', () => {
     const error = await started(URL)
       .keycloak?.metrics()
       .catch((e: Error) => e);
-    expect((error as Error).message.length).toBeGreaterThan(0);
+    expect(error).toEqual(new Error('fetch failed'));
   });
 
   it('fails with a non-empty reason when fetch rejects with null', async () => {
@@ -96,11 +98,11 @@ describe('the Keycloak fetch under hostile answers', () => {
     const error = await started(URL)
       .keycloak?.metrics()
       .catch((e: Error) => e);
-    expect((error as Error).message).not.toMatch(/destructur|null|hunter2/i);
+    expect(error).toEqual(new Error('fetch failed'));
   });
 
   it('sends no credentials header of its own', async () => {
-    fetch.mockResolvedValue(response(200, async () => 'x'));
+    fetch.mockResolvedValue(response(200, 'x'));
     await started(URL).keycloak?.metrics();
     const headers = new Headers(
       (fetch.mock.calls[0]?.[1] as RequestInit | undefined)?.headers,
