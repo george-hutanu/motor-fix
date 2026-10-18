@@ -36,6 +36,7 @@ function controller(failure: Error) {
     {} as never,
     {} as never,
     { on: async () => false },
+    {} as never,
   );
 }
 

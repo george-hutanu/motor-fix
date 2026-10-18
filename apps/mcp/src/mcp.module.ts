@@ -4,13 +4,16 @@ import {
   AccountLoader,
   AUDIT_PORT,
   AuditService,
+  borrowStore,
   createPrisma,
   EVENT_PORT,
   JsonLogger,
   MAINTENANCE,
   outbox,
   PRISMA,
+  RateLimits,
   requestContext,
+  returnStore,
   storedMaintenance,
 } from '@motor-fix/domain';
 import { catalogue, type ToolDefinition } from '@motor-fix/mcp-tools';
@@ -32,6 +35,7 @@ import express, {
   type Request,
   type Response,
 } from 'express';
+import type { Redis } from 'ioredis';
 
 import { McpActorService } from './auth/auth.actor';
 import { AssistantGrants } from './auth/auth.grants';
@@ -45,13 +49,22 @@ import {
 } from './transport/transport.controller';
 import { TransportMetadataController } from './transport/transport.metadata';
 
-export const MCP_ENV = ['DATABASE_URL', 'MCP_URL', 'ASSISTANT_ISSUER'] as const;
+export const MCP_ENV = [
+  'DATABASE_URL',
+  'MCP_URL',
+  'ASSISTANT_ISSUER',
+  'REDIS_URL',
+] as const;
 
 interface McpSettings {
   databaseUrl: string;
   issuer: string;
   mcpUrl: string;
+  redisUrl: string;
 }
+
+// The store the endpoint's call limit counts in.
+const MCP_STORE = Symbol('MCP_STORE');
 
 // A client's id is kept only when it is short and plain, so it cannot flood or
 // forge log lines.
@@ -69,6 +82,7 @@ class LiveController {
 class McpModule implements NestModule, OnModuleDestroy {
   constructor(
     @Inject(PRISMA) private readonly prisma: ReturnType<typeof createPrisma>,
+    @Inject(MCP_STORE) private readonly store: Redis,
   ) {}
 
   static register(
@@ -84,6 +98,15 @@ class McpModule implements NestModule, OnModuleDestroy {
       module: McpModule,
       providers: [
         { provide: PRISMA, useValue: createPrisma(settings.databaseUrl) },
+        {
+          provide: MCP_STORE,
+          useFactory: () => borrowStore(settings.redisUrl),
+        },
+        {
+          inject: [MCP_STORE],
+          provide: RateLimits,
+          useFactory: (store: Redis) => new RateLimits(store),
+        },
         {
           provide: ISSUER_SETTINGS,
           useValue: { issuer: settings.issuer, mcpUrl: settings.mcpUrl },
@@ -114,8 +137,9 @@ class McpModule implements NestModule, OnModuleDestroy {
       .forRoutes({ method: RequestMethod.POST, path: 'mcp' });
   }
 
-  onModuleDestroy() {
-    return this.prisma.$disconnect();
+  async onModuleDestroy() {
+    await returnStore(this.store);
+    await this.prisma.$disconnect();
   }
 }
 

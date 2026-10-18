@@ -14,6 +14,7 @@ import {
   type MaintenanceReader,
   outbox,
   PRISMA,
+  RateLimits,
 } from '@motor-fix/domain';
 import {
   type Caller,
@@ -46,6 +47,7 @@ import {
   type AuthFailure,
   observeToolCall,
   recordAuthFailure,
+  recordRateLimited,
   toolLabel,
 } from '../metrics/metrics';
 
@@ -72,6 +74,7 @@ export class TransportController {
     @Inject(PRISMA) prisma: Prisma,
     accounts: AccountLoader,
     @Inject(MAINTENANCE) maintenance: MaintenanceReader,
+    private readonly limits: RateLimits,
   ) {
     this.metadataUrl = metadataUrlOf(settings.mcpUrl);
     this.toolNames = tools.map((t) => t.name);
@@ -98,6 +101,17 @@ export class TransportController {
   async handle(@Req() req: AuthedRequest, @Res() res: Response) {
     const caller = await this.callerOf(req, res);
     if (!caller) return;
+    const wait = await this.limits.wait('assistant', caller.account.id);
+    if (wait !== null) {
+      recordRateLimited();
+      res.setHeader('Retry-After', String(wait));
+      refuse(res, 429, {
+        code: 'rate_limited',
+        message: 'Too many attempts; try again later',
+        retryAfterSeconds: wait,
+      });
+      return;
+    }
     const server = new Server(
       { name: 'motorfix', version: '1.0.0' },
       { capabilities: { tools: {} } },
