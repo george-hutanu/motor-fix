@@ -6,7 +6,7 @@ import { type BodyStyle, BRANDS } from './brands';
 // passenger-car families in Romania (DRPCIV "Parc auto", 31.12.2025), in that
 // order. A key never changes once shipped. The licence itself (seller, terms,
 // cost, renewal) is kept with the stored model, never here.
-export interface LicensedCarModel {
+interface LicensedCarModel {
   key: string;
   brand: string;
   model: string;

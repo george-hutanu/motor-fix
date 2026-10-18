@@ -12,10 +12,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
-export {
-  type AssistantBroker,
-  assistantBroker,
-} from './auth/assistant/assistant.service';
+export { assistantBroker } from './auth/assistant/assistant.service';
 export { AuthModule } from './auth/auth.module';
 export {
   type Capability,
@@ -55,7 +52,6 @@ export {
   type CarForBrand,
   CarModelFileError,
   carForBrand,
-  type LicensedCarModel,
   validateCarModels,
 } from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
@@ -124,7 +120,7 @@ export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
-export { type SignedUpload, StorageService } from './storage/storage.service';
+export { StorageService } from './storage/storage.service';
 export { supportMessagesConsumer } from './support/delivery/delivery.consumer';
 export { SupportModule } from './support/support.module';
 export { type SupportConfig, supportConfig } from './support/support-config';

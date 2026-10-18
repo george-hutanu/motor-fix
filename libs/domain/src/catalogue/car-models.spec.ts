@@ -5,9 +5,10 @@ import {
   CAR_MODELS,
   CarModelFileError,
   carForBrand,
-  type LicensedCarModel,
   validateCarModels,
 } from './car-models';
+
+type LicensedCarModel = (typeof CAR_MODELS)[number];
 
 const car = (
   key: string,
