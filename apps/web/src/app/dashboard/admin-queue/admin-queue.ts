@@ -33,8 +33,10 @@ const LIST = '/app/admin/garages';
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
 // A decision that keeps its row in place, by the status it moved to.
-type KeptStatus = 'approved' | 'more_requested' | 'rejected';
-const KEPT: readonly string[] = ['approved', 'more_requested', 'rejected'];
+const KEPT = ['approved', 'more_requested', 'rejected'] as const;
+type KeptStatus = (typeof KEPT)[number];
+const isKept = (status: string | undefined): status is KeptStatus =>
+  (KEPT as readonly (string | undefined)[]).includes(status);
 
 // "Service-uri de verificat": the files waiting for an admin, oldest first,
 // read again whenever one is sent, opened, checked, decided or reopened. On
@@ -219,9 +221,9 @@ export class AdminQueue {
           // A read with no file is treated as a failed one.
           ({ file }) => {
             const status = file?.status;
-            if (!status || !KEPT.includes(status)) return;
+            if (!isKept(status)) return;
             this.kept.update((kept) =>
-              new Map(kept).set(id, { ...place, status: status as KeptStatus }),
+              new Map(kept).set(id, { ...place, status }),
             );
           },
           // A failed read leaves the row to drop, as before this story.

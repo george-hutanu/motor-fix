@@ -26,8 +26,10 @@ import {
   VerificationFileCheckDto,
 } from './verification-checks';
 import {
+  VERIFICATION_CHANGE_AREAS,
   VERIFICATION_NOTE_MAX,
   VERIFICATION_REASON_CODES,
+  type VerificationChangeArea,
   type VerificationReasonCode,
 } from './verification-target';
 
@@ -36,16 +38,6 @@ export const VERIFICATION_TIMELINE_MAX = 50;
 
 // How many of a returned file's changes one read carries.
 export const VERIFICATION_CHANGES_MAX = 200;
-
-// The parts of a garage an admin sees changed after a request for more.
-export const VERIFICATION_CHANGE_AREAS = [
-  'profile',
-  'prices',
-  'brands',
-  'photos',
-  'documents',
-] as const;
-export type VerificationChangeArea = (typeof VERIFICATION_CHANGE_AREAS)[number];
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
 

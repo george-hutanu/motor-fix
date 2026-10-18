@@ -75,7 +75,7 @@ export class VerificationMore {
     return refused ? `admin.file.more.${refused}` : null;
   });
   // Code points, as the server counts them, so an emoji is one.
-  protected readonly count = computed(() => [...this.note()].length);
+  protected readonly count = computed(() => [...this.note().trim()].length);
 
   constructor() {
     // The read phase runs after the panel has placed its own first focus.

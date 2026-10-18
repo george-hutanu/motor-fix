@@ -150,6 +150,15 @@ describe('the request-for-more dialog', () => {
     expect(text()).toContain('4/1000');
   });
 
+  it('counts the note as it is sent, without the spaces around it', async () => {
+    await open();
+
+    type('   Abcdefgh   ');
+    await settle();
+
+    expect(text()).toContain('8/1000');
+  });
+
   it('moves focus to the note on open', async () => {
     await open();
 

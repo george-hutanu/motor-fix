@@ -18,6 +18,17 @@ export const VERIFICATION_QUEUE_PANEL = 5;
 // The most rows one read answers; the view reads more in several reads.
 export const VERIFICATION_QUEUE_MAX = 200;
 
+// The parts of a garage an admin sees changed after a request for more, in
+// the order the drawer lists them.
+export const VERIFICATION_CHANGE_AREAS = [
+  'profile',
+  'prices',
+  'brands',
+  'photos',
+  'documents',
+] as const;
+export type VerificationChangeArea = (typeof VERIFICATION_CHANGE_AREAS)[number];
+
 // The most characters a decision's note holds, counted in code points.
 export const VERIFICATION_NOTE_MAX = 1000;
 

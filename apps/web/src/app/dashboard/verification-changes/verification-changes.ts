@@ -8,6 +8,10 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 import {
+  VERIFICATION_CHANGE_AREAS,
+  type VerificationChangeArea,
+} from '@motor-fix/contracts/verification-target';
+import {
   AdminService,
   type VerificationChangeDto,
   type VerificationFileChangesDto,
@@ -25,19 +29,8 @@ import {
 import { type LiveView } from '../../live/view';
 import { liveResource } from '../live';
 
-type Area = VerificationChangeDto['area'];
-const AREAS: readonly Area[] = [
-  'profile',
-  'prices',
-  'brands',
-  'photos',
-  'documents',
-];
 const MISSING = '—';
 const WORKS_ON = 'works_on';
-
-// One line of the panel, keyed so that a field changed twice is one line.
-type Line = { key: string; text: string };
 
 // "Ce s-a schimbat": what the garage changed after the request for more,
 // read from the history, for a file it sent back. The drawer shows it only
@@ -83,7 +76,7 @@ export class VerificationChanges implements OnInit {
     const language = this.i18n.language();
     const cut = answer.total > answer.changes.length;
     return {
-      groups: AREAS.map((area) => ({
+      groups: VERIFICATION_CHANGE_AREAS.map((area) => ({
         area,
         heading: this.t(`areas.${area}`),
         lines: this.linesOf(area, answer, cut),
@@ -103,7 +96,7 @@ export class VerificationChanges implements OnInit {
   }
 
   private linesOf(
-    area: Area,
+    area: VerificationChangeArea,
     answer: VerificationFileChangesDto,
     cut: boolean,
   ): string[] {
@@ -123,7 +116,8 @@ export class VerificationChanges implements OnInit {
   // its latest; a price's field is one line per entry; any other record
   // added, changed or removed is one line for its kind.
   private fields(changes: VerificationChangeDto[]): string[] {
-    const lines = new Map<string, Line>();
+    // Keyed so that a field changed twice is one line.
+    const lines = new Map<string, string>();
     // Newest first: the first entry of a field holds its latest value, the
     // last its value before the request.
     const latest = new Map<string, VerificationChangeDto>();
@@ -135,21 +129,21 @@ export class VerificationChanges implements OnInit {
             : `entry:${n}`;
         const newest = latest.get(key) ?? change;
         latest.set(key, newest);
-        lines.set(key, {
+        lines.set(
           key,
-          text: this.fieldLine(change.field, change.oldValue, newest.newValue),
-        });
+          this.fieldLine(change.field, change.oldValue, newest.newValue),
+        );
         return;
       }
       const key = `subject:${change.subjectType}`;
       if (!lines.has(key)) {
-        lines.set(key, {
+        lines.set(
           key,
-          text: this.t('changed', { label: this.subject(change.subjectType) }),
-        });
+          this.t('changed', { label: this.subject(change.subjectType) }),
+        );
       }
     });
-    return [...lines.values()].map((line) => line.text);
+    return [...lines.values()];
   }
 
   private fieldLine(field: string, before: unknown, after: unknown) {
