@@ -21,6 +21,10 @@ export const VERIFICATION_QUEUE_MAX = 200;
 // The most characters a decision's note holds, counted in code points.
 export const VERIFICATION_NOTE_MAX = 1000;
 
+// A report decision's reason the garage is given, and the admins' own note.
+export const REPORT_REASON_MAX = 200;
+export const REPORT_NOTE_MAX = 1000;
+
 // The most characters a check's detail holds.
 export const CHECK_DETAIL_MAX = 200;
 

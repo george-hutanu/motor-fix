@@ -25,7 +25,11 @@ import {
   VerificationActorDto,
   VerificationFileCheckDto,
 } from './verification-checks';
-import { VERIFICATION_NOTE_MAX } from './verification-target';
+import {
+  REPORT_NOTE_MAX,
+  REPORT_REASON_MAX,
+  VERIFICATION_NOTE_MAX,
+} from './verification-target';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
@@ -61,8 +65,6 @@ export const REPORT_DECISIONS = ['unfounded', 'confirmed'] as const;
 export type ReportDecision = (typeof REPORT_DECISIONS)[number];
 export const REPORT_STATUSES = ['open', ...REPORT_DECISIONS] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
-export const REPORT_REASON_MAX = 200;
-export const REPORT_NOTE_MAX = 1000;
 
 // Each field is read with its own decision only; the other is ignored.
 const readWith =

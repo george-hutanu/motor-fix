@@ -134,6 +134,25 @@ describe('searching by name', () => {
   });
 });
 
+// @traces 069-report-decision-FR-008
+describe('searching by account id', () => {
+  it('finds the one account an id names, as the drawer links a reporter', async () => {
+    const andrei = await person('Andrei Marin');
+    await person('Andrei Popescu');
+
+    expect(await names({ q: andrei })).toEqual(['Andrei Marin']);
+    expect(await names({ q: andrei.toUpperCase() })).toEqual(['Andrei Marin']);
+  });
+
+  it('finds no account by a part of an id, nor a deleted one by its id', async () => {
+    const andrei = await person('Andrei Marin');
+    const gone = await person('Maria Ionescu', { status: 'deleted' });
+
+    expect(await names({ q: andrei.slice(0, 8) })).toEqual([]);
+    expect(await names({ q: gone })).toEqual([]);
+  });
+});
+
 describe('searching by e-mail', () => {
   // @traces 002-FR-003
   it.each(['andrei.marin@', 'gmail.com', 'MARIN@GMAIL'])(
