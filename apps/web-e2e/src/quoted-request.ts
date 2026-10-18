@@ -59,14 +59,18 @@ export async function quotedRequest(
   const db = new Client({ connectionString: process.env['DATABASE_URL'] });
   await db.connect();
 
+  // Always closes the connection, even when a DELETE fails.
   const remove = async () => {
-    if (requestId)
-      await db.query('DELETE FROM quote_request WHERE id = $1', [requestId]);
-    await db.query('DELETE FROM account WHERE email = ANY($1)', [
-      [driver, ...garages.map((g) => g.owner)],
-    ]);
-    await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
-    await db.end();
+    try {
+      if (requestId)
+        await db.query('DELETE FROM quote_request WHERE id = $1', [requestId]);
+      await db.query('DELETE FROM account WHERE email = ANY($1)', [
+        [driver, ...garages.map((g) => g.owner)],
+      ]);
+      await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
+    } finally {
+      await db.end();
+    }
   };
 
   const signUp = async (email: string, n: number) => {
@@ -178,7 +182,8 @@ export async function quotedRequest(
       300,
     );
   } catch (error) {
-    await remove();
+    // The setup's own failure is the one to report, not the cleanup's.
+    await remove().catch(() => undefined);
     throw error;
   }
 

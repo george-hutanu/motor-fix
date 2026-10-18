@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test';
 // The one place the end-to-end specs load axe-core from. Each spec keeps its
 // own rules and filters and passes them through.
 
-export type Violation = {
+type Violation = {
   id: string;
   impact?: string | null;
   nodes: Array<{ html: string; target: unknown[] }>;

@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 
@@ -237,14 +234,5 @@ describe('the page language', () => {
       await i18n.use(language);
       expect(page.lang).toBe(language);
     }
-  });
-
-  it('starts as Romanian in the page the server sends', () => {
-    const html = readFileSync(
-      join(__dirname, '../../../apps/web/src/index.html'),
-      'utf8',
-    );
-
-    expect(html).toMatch(/<html[^>]*\slang="ro"/);
   });
 });

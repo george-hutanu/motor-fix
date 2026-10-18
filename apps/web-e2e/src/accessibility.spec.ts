@@ -13,7 +13,12 @@ import {
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 import { JOBS, jpeg, KEPT } from './listing-kept.js';
-import { type QuotedRequest, quotedRequest } from './quoted-request.js';
+import {
+  accessToken,
+  bearer,
+  type QuotedRequest,
+  quotedRequest,
+} from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // Each test signs in once and walks its screens on the one page: the two
@@ -68,13 +73,13 @@ async function scan(page: Page, where: string): Promise<string[]> {
   const found: string[] = [];
   for (const scheme of SCHEMES) {
     await page.emulateMedia({ colorScheme: scheme });
-    await settled(page);
+    await calm(page);
     let seen = await violations(page, { resultTypes: ['violations'] });
     // A shared account's screen can change under the scan (another file's
     // quote adds a rising panel): a finding counts when a second, settled
     // scan sees it too.
     if (seen.length) {
-      await settled(page);
+      await calm(page);
       seen = await violations(page, { resultTypes: ['violations'] });
     }
     for (const v of seen) {
@@ -91,7 +96,7 @@ async function scan(page: Page, where: string): Promise<string[]> {
 // still rising once its data came, or a colour still easing to the new
 // scheme, would read as low contrast. The page is settled once no finite
 // animation has run and no element has been added for half a second.
-const settled = (page: Page) =>
+const calm = (page: Page) =>
   page.waitForFunction(
     () => {
       const w = window as typeof window & {
@@ -99,14 +104,14 @@ const settled = (page: Page) =>
       };
       const now = performance.now();
       if (!w.mfCalm) {
-        const calm = {
+        const state = {
           since: now,
           watch: new MutationObserver(() => {
-            calm.since = performance.now();
+            state.since = performance.now();
           }),
         };
-        calm.watch.observe(document.body, { childList: true, subtree: true });
-        w.mfCalm = calm;
+        state.watch.observe(document.body, { childList: true, subtree: true });
+        w.mfCalm = state;
       }
       const moving = document
         .getAnimations()
@@ -119,7 +124,7 @@ const settled = (page: Page) =>
       return now - w.mfCalm.since >= 500;
     },
     undefined,
-    { polling: 50 },
+    { polling: 50, timeout: 10_000 },
   );
 
 const noSidewaysScroll = (page: Page) =>
@@ -373,23 +378,14 @@ test.describe('axe on the core screens @seeded', () => {
 const DRIVER = 'cerere@example.test';
 const OWNER = 'militari@example.test';
 
-async function bearer(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  const { accessToken } = (await res.json()) as { accessToken: string };
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
 // The owner's garage has one request waiting: the driver's oil service.
 async function sendRequest(request: APIRequestContext) {
-  const owner = await bearer(request, OWNER);
+  const owner = bearer(await accessToken(request, OWNER));
   const me = await request.get('/api/v1/me', { headers: owner });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await bearer(request, DRIVER);
+  const driver = bearer(await accessToken(request, DRIVER));
   const cars = await request.get('/api/v1/cars', { headers: driver });
   const [car] = ((await cars.json()) as { items: { id: string }[] }).items;
   const res = await request.post('/api/v1/quote-requests', {
