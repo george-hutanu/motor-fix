@@ -1,5 +1,8 @@
 // @traces 103-FR-006 103-FR-007 103-FR-008 103-FR-009 103-FR-010 103-FR-013
 // @traces 404-FR-007 404-FR-008 404-FR-010 404-FR-011
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -511,5 +514,25 @@ describe('AdminDemand, since when searches are counted', () => {
     const el = await open();
 
     expect(el.querySelector('.from')).toBeNull();
+  });
+});
+
+// @traces 404-FR-011
+describe('AdminDemand, read on a phone', () => {
+  const stylesheet = readFileSync(join(__dirname, 'admin-demand.css'), 'utf8');
+  const phone =
+    stylesheet.match(/@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/)?.[1] ??
+    '';
+
+  it('sets the counted-from line and the order label at 16 px on a phone', () => {
+    expect(phone).toMatch(
+      /\.from,\s*\.order-label\s*\{[^}]*font-size:\s*var\(--mf-size-body\);/,
+    );
+  });
+
+  it('keeps the subtitle, the counted-from line and the toggle off the screen edge', () => {
+    expect(stylesheet).toMatch(
+      /\.subtitle,\s*\.from,\s*\.order\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
+    );
   });
 });

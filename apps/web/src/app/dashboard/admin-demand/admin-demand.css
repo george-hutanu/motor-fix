@@ -26,6 +26,20 @@
   font-size: var(--mf-size-label);
   color: var(--mf-text-secondary);
 }
+/* Text rows sit outside the panels: the page's side gutter keeps them off
+   the screen edge at 320 px. */
+.subtitle,
+.from,
+.order {
+  padding-inline: var(--mf-space-4);
+}
+/* Read on a phone: 16 px there, the label size from a tablet up. */
+@media (max-width: 767.98px) {
+  .from,
+  .order-label {
+    font-size: var(--mf-size-body);
+  }
+}
 .reports {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
