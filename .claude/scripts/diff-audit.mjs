@@ -90,7 +90,10 @@ for (const file of sources) {
     ),
   ];
   for (const name of new Set(names)) {
-    const users = corpus.filter((f) => f.path !== file && new RegExp(`\\b${name}\\b`).test(f.text));
+    // A name may hold `$` (a generated client's `Foo$Params`), which a
+    // pattern would read as the end of the line.
+    const used = new RegExp(`\\b${name.replaceAll("$", "\\$")}\\b`);
+    const users = corpus.filter((f) => f.path !== file && used.test(f.text));
     if (users.length === 0) {
       add("ERROR", "dead-export", `${file}`, `\`${name}\` is exported and imported nowhere`);
     } else if (users.every((f) => isSpec(f.path))) {
