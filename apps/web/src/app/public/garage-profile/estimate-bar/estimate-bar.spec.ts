@@ -314,6 +314,10 @@ describe('the room the bar takes', () => {
     for (const callback of observed)
       callback([{ contentRect: { height: 71.2 } }]);
     expect(height()).toBe('72px');
+    // Rounded up to the 4 px grid, which the page's end padding keeps.
+    for (const callback of observed)
+      callback([{ contentRect: { height: 113 } }]);
+    expect(height()).toBe('116px');
 
     fixture.componentInstance.on.set(false);
     fixture.detectChanges();

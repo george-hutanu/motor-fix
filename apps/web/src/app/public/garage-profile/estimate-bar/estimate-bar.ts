@@ -32,6 +32,9 @@ import {
   RequestQuoteButton,
 } from '../request-quote-button/request-quote-button';
 
+// Up to the next 4 px, the grid the page's spacing keeps.
+const grid = (px: number) => Math.ceil(px / 4) * 4;
+
 // A phone's estimate and "Cere ofertă", pinned on the tab bar below 768 px:
 // the total opens the whole box in a sheet. It is hidden while the keyboard
 // is up and for a garage-side role, and gives the page its height as
@@ -97,7 +100,7 @@ export class EstimateBar {
     const observer = new ResizeObserver(([entry]) => {
       root.style.setProperty(
         '--estimate-bar',
-        `${Math.ceil(entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect.height ?? 0)}px`,
+        `${grid(entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect.height ?? 0)}px`,
       );
       const tabBar =
         getComputedStyle(host).getPropertyValue('--tab-bar').trim() || '0px';
