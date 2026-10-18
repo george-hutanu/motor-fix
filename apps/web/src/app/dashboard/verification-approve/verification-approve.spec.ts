@@ -74,7 +74,7 @@ describe('approving with every check ok', () => {
     expect(text()).toContain('Toate verificările sunt în regulă.');
     expect(lines()).toEqual([]);
     expect(note().required).toBe(false);
-    expect(note().getAttribute('maxlength')).toBe('1000');
+    expect(note().hasAttribute('maxlength')).toBe(false);
     expect(text()).toContain('Notă');
   });
 

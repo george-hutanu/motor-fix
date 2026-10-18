@@ -19,7 +19,6 @@
       rows="3"
       [value]="note()"
       [required]="required"
-      [attr.maxlength]="max"
       [attr.aria-invalid]="refused() ? 'true' : null"
       [attr.aria-describedby]="refused() ? 'mf-approve-note-count mf-approve-note-error' : 'mf-approve-note-count'"
       (input)="input($event)"

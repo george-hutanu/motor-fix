@@ -111,6 +111,8 @@ model Garage {
   suspensions                GarageSuspension[]
 
   @@index([cityKey])
+  // The file read names the other garages holding the same CUI.
+  @@index([cui])
   @@map("garage")
 }
 
