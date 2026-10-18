@@ -192,6 +192,7 @@ describe('the file routes in the OpenAPI document', () => {
         'documents',
         'storageReady',
         'reports',
+        'reportsOpen',
         'previousRejection',
         'timeline',
       ]),

@@ -2179,6 +2179,99 @@ describe('the last check date', () => {
   });
 });
 
+describe('approving a file after its reports are decided', () => {
+  // A driver's open report on the file.
+  const reported = async (file: { garageId: string; id: string }) =>
+    prisma.garageReport.create({
+      data: {
+        garageId: file.garageId,
+        reporterId: await account('Elena Dumitru', ['driver']),
+        text: 'Prețuri false la manoperă, peste listă.',
+        verificationFileId: file.id,
+      },
+    });
+
+  // @traces 069-FR-003
+  it('refuses a file in review with no open report as an ordinary review', async () => {
+    const file = await fileIn('in_review');
+
+    const { body, status } = await refusal(
+      inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+    );
+
+    expect(status).toBe(409);
+    expect(body.code).toBe('verification_transition_refused');
+    expect(String(body.message)).toMatch(/^already under review, opened by /);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+
+  // @traces 069-FR-002 069-FR-003
+  it('moves an in-review file to approved, stamped with the admin, leaves its other columns and writes no history entry of its own', async () => {
+    const at = new Date('2026-10-10T08:00:00Z');
+    const file = await fileIn('rejected', at);
+    await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+    await reported(file);
+    const written = (await history(file.id)).length;
+
+    const moved = await inTx((tx) =>
+      service().approveAfterReports(tx, dan, file.id),
+    );
+
+    const after = await fileRow(file.id);
+    expect(moved.status).toBe('approved');
+    expect(after).toMatchObject({
+      decidedBy: dan.accountId,
+      reasonCode: REASON.code,
+      reasonNote: REASON.note,
+      reopenReason: 'garage_report',
+      requestedItems: file.requestedItems,
+      status: 'approved',
+    });
+    expect(after.decidedAt?.getTime()).toBeGreaterThan(at.getTime());
+    // The decision on the reports writes the file's one history entry, so
+    // the move itself adds none.
+    expect(await history(file.id)).toHaveLength(written);
+  });
+
+  // @traces 069-FR-003
+  it.each([
+    'submitted',
+    'approved',
+    'rejected',
+    'more_requested',
+  ] as FileStatus[])(
+    'refuses a %s file with the 409 of a transition',
+    async (status) => {
+      const file = await fileIn(status, new Date('2026-10-17T09:14:00Z'));
+
+      const { body, status: code } = await refusal(
+        inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+      );
+
+      expect(code).toBe(409);
+      expect(body.code).toBe('verification_transition_refused');
+      if (status !== 'submitted') {
+        expect(body).toMatchObject({
+          currentStatus: status,
+          decidedAt: '2026-10-17T09:14:00.000Z',
+          decidedBy: 'Ioana',
+        });
+      }
+      expect((await fileRow(file.id)).status).toBe(status);
+    },
+  );
+
+  // @traces 069-FR-003
+  it('refuses an actor without admin.garages', async () => {
+    const file = await fileIn('in_review');
+
+    await expect(
+      inTx((tx) => service().approveAfterReports(tx, mihai, file.id)),
+    ).rejects.toBeInstanceOf(HttpException);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+});
+
 const rejections = (reason: string) =>
   counterTotal(reader, 'motorfix_verification_rejections_total', { reason });
 

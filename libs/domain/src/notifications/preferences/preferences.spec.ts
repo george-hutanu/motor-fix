@@ -45,6 +45,7 @@ describe('the driver groups', () => {
     expect(groupTypes('news')).toEqual(['NEWS']);
     expect(groupTypes('reviews_history')).toEqual([
       'CAR_TRANSFER_ACCEPTED',
+      'GARAGE_REPORT_DECIDED',
       'REPAIR_UPDATED',
       'REVIEW_APPEAL_DECIDED',
       'REVIEW_DECIDED',

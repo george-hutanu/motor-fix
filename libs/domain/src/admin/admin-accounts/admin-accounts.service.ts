@@ -18,6 +18,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import type { Redis } from 'ioredis';
 
 import { AUTH_REDIS } from '../../auth/attempts';
@@ -109,7 +110,9 @@ function where(filters: Filters, after?: { createdAt: Date; id: string }) {
   if (filters.q) {
     const like = contained(filters.q);
     const digits = phoneDigits(filters.q);
-    // One index-driven arm per field, so each can use its trigram index.
+    // One index-driven arm per field, so each can use its trigram index; a
+    // whole account id, as the verification drawer links a reporter, names
+    // that one account.
     parts.push(Prisma.sql`a.id IN (
       SELECT id FROM account WHERE account_fold(name) LIKE account_fold(${like})
       UNION SELECT id FROM account WHERE email ILIKE ${like}
@@ -118,6 +121,7 @@ function where(filters: Filters, after?: { createdAt: Date; id: string }) {
       UNION SELECT c.account_id FROM mechanic c JOIN garage g ON g.id = c.garage_id
         WHERE account_fold(g.name) LIKE account_fold(${like})
       ${digits ? Prisma.sql`UNION SELECT id FROM account WHERE phone LIKE ${`%${digits}%`}` : Prisma.empty}
+      ${isUUID(filters.q) ? Prisma.sql`UNION SELECT ${filters.q.toLowerCase()}::uuid` : Prisma.empty}
     )`);
   }
   if (after) {

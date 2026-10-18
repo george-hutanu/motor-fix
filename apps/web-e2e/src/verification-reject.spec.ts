@@ -97,8 +97,7 @@ test.describe('rejecting a garage with a reason @seeded @database', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Mesaj pentru service' });
-      // The dialog's container has no box of its own on a phone, where the
-      // panel inside it is a fixed bottom sheet: the panel is what shows.
+      // On a phone the dialog's own box is empty; its panel is what shows.
       await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBe(0);
 

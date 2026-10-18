@@ -111,6 +111,8 @@
       "rejected": "Rejected by {name}, {when}",
       "reopened": "Reopened by {name}, {when}",
       "reopenedWhy": "Reopened by {name}, {when} ({reason})",
+      "reportConfirmed": "Reports confirmed by {name}, {when}",
+      "reportUnfounded": "Reports closed as unfounded by {name}, {when}",
       "resent": "Sent again by {name}, {when}",
       "sent": "Sent by {name}, {when}"
     },
@@ -259,8 +261,31 @@
       "title": "Reopen the file"
     },
     "reopenedReport": "Reopened after a report, {when}",
-    "report": "{text} · {when}",
-    "reported": "Reported",
+    "reportDecision": {
+      "cancel": "Cancel",
+      "confirmed": "Report confirmed",
+      "confirmedSubmit": "Confirm and suspend",
+      "note": "Internal note",
+      "noteCount": "{n}/1000",
+      "noteTooLong": "The note can be at most 1000 characters.",
+      "reason": "The reason the garage will see",
+      "reasonCount": "{n}/200",
+      "reasonTooLong": "The reason can be at most 200 characters.",
+      "suspends": "The garage will be suspended and receive this reason.",
+      "unfounded": "Report unfounded",
+      "unfoundedQuestion": "Close the open reports as unfounded? The file goes back to approved, and whoever reported it learns no action was needed."
+    },
+    "reports": {
+      "confirmed": "Confirmed by {name}, {when}",
+      "deleted": "Deleted account",
+      "heading": {
+        "one": "REPORTS · {n} OPEN",
+        "other": "REPORTS · {n} OPEN"
+      },
+      "note": "Internal note: {note}",
+      "reason": "Reason: {reason}",
+      "unfounded": "Unfounded, by {name}, {when}"
+    },
     "results": {
       "failed": "failure",
       "not_run": "not checked",

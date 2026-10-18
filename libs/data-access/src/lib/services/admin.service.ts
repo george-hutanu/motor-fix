@@ -51,6 +51,8 @@ import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules
 import { platformRulesControllerList } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesDto } from '../models/platform-rules-dto';
+import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
+import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
 import { SuspensionControllerSuspend$Params } from '../fn/admin/suspension-controller-suspend';
 import { systemLogControllerList } from '../fn/admin/system-log-controller-list';
@@ -276,6 +278,31 @@ export class AdminService extends BaseService {
   adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
     const resp = this.adminOverviewControllerGrowth$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
+  }
+
+  /** Path part for operation `reportDecisionControllerDecide()` */
+  static readonly ReportDecisionControllerDecidePath = '/api/v1/admin/verification-files/{id}/report-decision';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reportDecisionControllerDecide()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportDecisionControllerDecide$Response(params: ReportDecisionControllerDecide$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileDto>> {
+    const obs = reportDecisionControllerDecide(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reportDecisionControllerDecide$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportDecisionControllerDecide(params: ReportDecisionControllerDecide$Params, context?: HttpContext): Promise<VerificationFileDto> {
+    const resp = this.reportDecisionControllerDecide$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
   }
 
   /** Path part for operation `suspensionControllerSuspend()` */

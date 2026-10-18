@@ -34,6 +34,10 @@ export const VERIFICATION_REASON_CODES = [
 ] as const;
 export type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
 
+// A report decision's reason the garage is given, and the admins' own note.
+export const REPORT_REASON_MAX = 200;
+export const REPORT_NOTE_MAX = 1000;
+
 // The most characters a check's detail holds.
 export const CHECK_DETAIL_MAX = 200;
 
