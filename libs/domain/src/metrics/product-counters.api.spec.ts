@@ -46,9 +46,9 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 76 and one per check kind and result.
+// Every series the API starts: its own 77 (303 adds the note_required refusal) and one per check kind and result.
 const API_SERIES =
-  76 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+  77 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
 
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
@@ -74,6 +74,12 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_verification_checks_total')).toHaveLength(
       VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length,
     );
+    // @traces 303-FR-010
+    expect(
+      named(all, 'motorfix_verification_decision_refusals_total').map(
+        (one) => one.labels['reason'],
+      ),
+    ).toContain('note_required');
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
