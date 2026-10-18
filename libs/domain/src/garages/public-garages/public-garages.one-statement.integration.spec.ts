@@ -94,6 +94,8 @@ const read = (slug: string, query: Record<string, string> = {}) =>
 
 // The statements one read sends once its brand lookup is cached.
 async function counted(slug: string, query: Record<string, string> = {}) {
+  // Every call reads the maintenance flag; a first call fills it in Redis.
+  await read(`warm-${randomUUID()}`);
   statements.length = 0;
   const res = await read(slug, query);
   return { res, sent: [...statements] };
@@ -149,6 +151,7 @@ async function militari() {
       paymentCash: true,
       rating: 4.6,
       refusalPhrase: 'Nu lucrăm pe electrice',
+      reviewCount: 12,
       slug: `militari-${randomUUID()}`,
       status: 'approved',
     },
@@ -331,7 +334,7 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
     rating: 4.6,
     refusalPhrase: 'Nu lucrăm pe electrice',
     responseRate: { rate: 83, state: 'rate' },
-    reviewCount: 0,
+    reviewCount: 12,
     slug: w.garage.slug,
     verifiedAt: '2026-09-15T10:00:00.000Z',
     worksOn: [{ ...ref(w.dacia), fuels: ['petrol', 'diesel'] }],

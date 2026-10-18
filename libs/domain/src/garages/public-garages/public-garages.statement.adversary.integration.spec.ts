@@ -88,6 +88,8 @@ const read = (slug: string, query: Record<string, string> = {}) =>
 
 // The statements one read sends once its brand lookup is cached.
 async function counted(slug: string, query: Record<string, string> = {}) {
+  // Every call reads the maintenance flag; a first call fills it in Redis.
+  await read(`warm-${randomUUID()}`);
   statements.length = 0;
   const res = await read(slug, query);
   return { res, sent: [...statements] };
