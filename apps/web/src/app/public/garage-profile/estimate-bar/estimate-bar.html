@@ -1,0 +1,18 @@
+@if (shown()) {
+  <div class="bar">
+    @if (garage().prices.length > 0) {
+      @if (!selection.applied()) {
+        <div class="total placeholder" aria-hidden="true"></div>
+      } @else if (jobs().length === 0) {
+        <button type="button" class="total" (click)="open()">
+          <span class="value">{{ 'public.garageProfile.estimate.pick' | t }}</span>
+        </button>
+      } @else {
+        <button type="button" class="total" [attr.aria-label]="spoken()" (click)="open()">
+          <span class="value">{{ range() }}</span>
+        </button>
+      }
+    }
+    <mf-request-quote-button class="request one-line" [garage]="garage()" [jobs]="jobs()" textKey="public.garageProfile.estimate.request" place="bar" />
+  </div>
+}
