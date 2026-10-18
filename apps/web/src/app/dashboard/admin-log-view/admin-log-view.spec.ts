@@ -417,12 +417,29 @@ describe('the address', () => {
 
     const type = el.querySelector('select.type') as HTMLSelectElement;
     type.value = 'jobs';
-    type.dispatchEvent(new Event('change'));
+    // A browser's change event bubbles up through the filters' host.
+    type.dispatchEvent(new Event('change', { bubbles: true }));
     await settle();
 
     expect(path()).toBe(`${VIEW}?kind=jobs`);
     expect(reads.at(-1)).toMatchObject({ kind: ['job_failed'] });
     expect(reads.at(-1)?.cursor).toBeUndefined();
+  });
+
+  it('keeps each choice and date on the wide row as the next one is made', async () => {
+    const el = await open();
+    const pick = async (selector: string, value: string) => {
+      const control = el.querySelector(selector) as HTMLInputElement;
+      control.value = value;
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+      await settle();
+    };
+
+    await pick('select.type', 'backup');
+    await pick('input.from', '2026-10-12');
+    await pick('input.to', '2026-10-17');
+
+    expect(path()).toBe(`${VIEW}?from=2026-10-12&kind=backup&to=2026-10-17`);
   });
 });
 

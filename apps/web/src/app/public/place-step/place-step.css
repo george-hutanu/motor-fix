@@ -8,9 +8,6 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
-p:empty {
-  display: none;
-}
 .hint {
   color: var(--mf-text-secondary);
 }
@@ -81,8 +78,4 @@ button:focus-visible,
   .warning {
     font-size: var(--mf-size-small);
   }
-}
-/* An always-present live region takes no room while it says nothing. */
-.error:empty {
-  display: none;
 }

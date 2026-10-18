@@ -34,7 +34,7 @@
   (keydown)="keys($event)"
   (blur)="left.emit()"
 />
-<p class="message" [id]="ids() + '-message'" aria-live="polite">
+<p class="message mf-message" [id]="ids() + '-message'" aria-live="polite">
   @switch (message()) {
     @case ('locationFailed') {
       {{ 'public.home.place.locationFailed' | t }}
@@ -47,7 +47,7 @@
     }
   }
 </p>
-<p class="message" [id]="ids() + '-found'" aria-live="polite">{{ suggestions().length > 0 ? (words().found | t: { count: suggestions().length }) : '' }}</p>
+<p class="message mf-message" [id]="ids() + '-found'" aria-live="polite">{{ suggestions().length > 0 ? (words().found | t: { count: suggestions().length }) : '' }}</p>
 <div class="suggestions" [id]="ids() + '-options'" role="listbox" [attr.aria-label]="label() ?? ('public.home.place.field' | t)">
   @for (suggestion of suggestions(); track $index) {
     <button

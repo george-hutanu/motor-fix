@@ -2595,6 +2595,66 @@ describe('approving', () => {
     expect(toast).not.toHaveBeenCalled();
     expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
   });
+  it("asks again with the server's missing list, not one rebuilt from the re-read", async () => {
+    const host = await open(allOk());
+    overlays.open
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ note: 'Actele vin luni' });
+    const missing = [
+      { kind: 'address', result: 'warning' },
+      { document: 'onrc_certificate' },
+    ];
+    api.verificationFileControllerDecision
+      .mockImplementationOnce(async () => {
+        // The re-read shows every check ok: only the server's list names the gaps.
+        answer = async () => allOk();
+        throw new HttpErrorResponse({
+          error: { code: 'note_required', missing },
+          status: 422,
+        });
+      })
+      .mockImplementationOnce(async () => {
+        answer = async () => approved();
+        return approved();
+      });
+
+    approveButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(2);
+    expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({ missing });
+    expect(text(section(host, 'footer'))).toContain('Aprobat de Ioana');
+  });
+
+  it.each([
+    ['a line it cannot read', [{ kind: 'rar' }]],
+    ['an empty list', []],
+    ['no list', undefined],
+  ])('falls back to the re-read when the 422 carries %s', async (_, sent) => {
+    const host = await open(allOk());
+    const stale = allOk({
+      checks: KINDS.map((kind) =>
+        check(kind, { result: kind === 'photos' ? 'warning' : 'ok' }),
+      ),
+    });
+    overlays.open.mockResolvedValueOnce({}).mockResolvedValueOnce('cancelled');
+    api.verificationFileControllerDecision.mockImplementationOnce(async () => {
+      answer = async () => stale;
+      throw new HttpErrorResponse({
+        error: { code: 'note_required', missing: sent },
+        status: 422,
+      });
+    });
+
+    approveButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
+      missing: [{ kind: 'photos', result: 'warning' }],
+    });
+  });
 });
 
 // @traces 303-FR-007 303-FR-012

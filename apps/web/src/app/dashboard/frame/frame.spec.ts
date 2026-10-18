@@ -1163,6 +1163,31 @@ describe('Frame consent bar', () => {
   });
 });
 
+// @traces 248-FR-001
+describe('Frame bars on a phone', () => {
+  // A sticky box cannot leave the box it sits in. Inside the view, which
+  // starts under the account block on a phone, a tall consent bar stopped at
+  // the view's top and slid under the tab bar at 320 px. On a phone the view
+  // lends its children to the frame, so both bars stick within the whole
+  // frame and the consent bar always rests on the tab bar.
+  it('let the consent bar and the tab bar stick within the whole frame', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+    const phone = [
+      ...css.matchAll(/@media \(max-width: 767\.98px\) \{(.*?)\} \}/g),
+    ]
+      .map(([, body]) => body)
+      .join(' ');
+
+    expect(phone).toMatch(
+      /:host \{[^}]*display: flex;[^}]*flex-direction: column/,
+    );
+    expect(phone).toMatch(/\.view \{[^}]*display: contents/);
+  });
+});
+
 describe('Frame side links', () => {
   const sheet = () =>
     readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(/\s+/g, ' ');

@@ -8,7 +8,7 @@ import { test } from './fixtures.js';
 
 const step = (page: Page) => page.locator('mf-brands-step');
 const chip = (page: Page, name: string) =>
-  step(page).locator('.chips button', { hasText: name });
+  step(page).locator('.chips > li > button', { hasText: name });
 // The counter, not the polite error region below it.
 const counter = (page: Page) =>
   step(page).locator('[aria-live="polite"]:not(#listing-brands-error)');

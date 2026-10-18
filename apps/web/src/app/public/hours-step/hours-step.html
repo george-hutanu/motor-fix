@@ -18,7 +18,7 @@
     </span>
   }
   @let weekdaysError = errors()['weekdays'];
-  <p class="error" id="hours-weekdays-error" role="status" aria-live="polite">{{ weekdaysError ? (key(weekdaysError) | t) : '' }}</p>
+  <p class="error mf-message" id="hours-weekdays-error" role="status" aria-live="polite">{{ weekdaysError ? (key(weekdaysError) | t) : '' }}</p>
 </div>
 <div class="row" data-row="sat">
   <span class="name">{{ 'public.listing.hours.saturday' | t }}</span>
@@ -41,7 +41,7 @@
   }
   @if (!open()) {
     @let saturdayError = errors()['sat'];
-    <p class="error" id="hours-sat-error" role="status" aria-live="polite">{{ saturdayError ? (key(saturdayError) | t) : '' }}</p>
+    <p class="error mf-message" id="hours-sat-error" role="status" aria-live="polite">{{ saturdayError ? (key(saturdayError) | t) : '' }}</p>
   }
 </div>
 <details [open]="open()" (toggle)="toggled($event)">
@@ -73,13 +73,13 @@
             <button type="button" (click)="join(day)">{{ 'public.listing.hours.removeBreak' | t }}</button>
           }
           @let dayError = errors()[day];
-          <p class="error" [id]="'hours-' + day + '-error'" role="status" aria-live="polite">{{ dayError ? (key(dayError) | t) : '' }}</p>
+          <p class="error mf-message" [id]="'hours-' + day + '-error'" role="status" aria-live="polite">{{ dayError ? (key(dayError) | t) : '' }}</p>
         </div>
       }
     </div>
   }
 </details>
-<p id="hours-error" [class]="week?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ week ? (week.key | t) : '' }}</p>
+<p class="mf-message" id="hours-error" [class]="week?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ week ? (week.key | t) : '' }}</p>
 </div>
 
 <h3>{{ 'public.listing.hours.closedDays' | t }}</h3>
@@ -109,7 +109,7 @@
 <div class="row">
   <button type="button" class="add-closed" (click)="addClosed()">{{ 'public.listing.hours.add' | t }}</button>
   @let closedDayError = closedError();
-  <p id="hours-closed-error" class="closed-error error" role="status" aria-live="polite">{{ closedDayError ? (key(closedDayError) | t) : '' }}</p>
+  <p id="hours-closed-error" class="closed-error error mf-message" role="status" aria-live="polite">{{ closedDayError ? (key(closedDayError) | t) : '' }}</p>
 </div>
 @if (value().closedDays?.length) {
   <ul class="closed-days">
@@ -164,7 +164,7 @@
                 {{ 'public.listing.prices.lei' | t }}
               </span>
             </label>
-            <p id="courtesy-price-error" [class]="messages().price?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ messages().price ? (messages().price!.key | t) : '' }}</p>
+            <p class="mf-message" id="courtesy-price-error" [class]="messages().price?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ messages().price ? (messages().price!.key | t) : '' }}</p>
           }
         </div>
       }
@@ -193,5 +193,5 @@
     </li>
   }
 </ul>
-<p id="payments-error" [class]="paymentMessage?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ paymentMessage ? (paymentMessage.key | t) : '' }}</p>
+<p class="mf-message" id="payments-error" [class]="paymentMessage?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ paymentMessage ? (paymentMessage.key | t) : '' }}</p>
 </div>

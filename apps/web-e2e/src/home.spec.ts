@@ -38,6 +38,33 @@ const placeReads = (page: Page) => {
   return texts;
 };
 const line = (page: Page) => page.locator('mf-home .place');
+// Romania-wide, the count moves with the approved garages other files add
+// beside this one: the line shows what the API answers for Dacia now, and
+// the seed's five takers of eight garages are its floor.
+const daciaLine = async (page: Page, language: 'ro' | 'en' = 'ro') => {
+  const shown = page.getByText(
+    language === 'ro'
+      ? /^\s*\d+ din \d+ service‑uri primesc Dacia\s*$/
+      : /^\s*\d+ of \d+ garages take Dacia\s*$/,
+  );
+  await expect(shown).toBeVisible();
+  await expect
+    .poll(async () => {
+      const answer = await page.request.get('/api/v1/home?brand=dacia');
+      const { takers, total } = (await answer.json()) as {
+        takers: number;
+        total: number;
+      };
+      expect(takers).toBeGreaterThanOrEqual(5);
+      expect(total).toBeGreaterThanOrEqual(8);
+      const want =
+        language === 'ro'
+          ? `${takers} din ${total} service‑uri primesc Dacia`
+          : `${takers} of ${total} garages take Dacia`;
+      return (await shown.textContent())?.trim() === want;
+    })
+    .toBe(true);
+};
 const placeDialog = (page: Page) =>
   page.getByRole('dialog', { name: 'Alege locul' });
 const field = (page: Page) => placeDialog(page).getByRole('combobox');
@@ -81,15 +108,13 @@ test.describe('the brand picker @seeded', () => {
 
     await tile(page, 'Dacia').click();
 
-    await expect(
-      page.getByText('5 din 8 service‑uri primesc Dacia'),
-    ).toBeVisible();
+    await daciaLine(page);
     await expect(page.getByText('Service‑uri pentru Dacia')).toBeVisible();
     expect(reads).toEqual(['dacia']);
 
     await page.getByRole('button', { exact: true, name: 'EN' }).click();
 
-    await expect(page.getByText('5 of 8 garages take Dacia')).toBeVisible();
+    await daciaLine(page, 'en');
     await expect(
       page
         .getByRole('radiogroup', { name: 'Car brand' })
@@ -163,9 +188,7 @@ test.describe('the brand picker @seeded', () => {
     fail = false;
     await count.getByRole('button', { name: 'Reîncearcă' }).click();
 
-    await expect(
-      page.getByText('5 din 8 service‑uri primesc Dacia'),
-    ).toBeVisible();
+    await daciaLine(page);
   });
 });
 
@@ -175,9 +198,7 @@ test.describe('the place on Home @seeded', () => {
     await tile(page, 'Dacia').click();
 
     await expect(line(page)).toHaveText(/În toată România\s*·\s*Alege locul/);
-    await expect(
-      page.getByText('5 din 8 service‑uri primesc Dacia'),
-    ).toBeVisible();
+    await daciaLine(page);
     await expect(page.locator('mf-home')).not.toContainText('km');
   });
 
@@ -193,9 +214,7 @@ test.describe('the place on Home @seeded', () => {
       const nears = nearReads(page);
       await ready(page, '/ro');
       await tile(page, 'Dacia').click();
-      await expect(
-        page.getByText('5 din 8 service‑uri primesc Dacia'),
-      ).toBeVisible();
+      await daciaLine(page);
       nears.length = 0;
 
       await line(page).getByRole('button').click();
@@ -262,9 +281,7 @@ test.describe('the place on Home @seeded', () => {
     );
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
-    await expect(
-      page.getByText('5 din 8 service‑uri primesc Dacia'),
-    ).toBeVisible();
+    await daciaLine(page);
 
     await line(page).getByRole('button').click();
     await field(page).fill('Cluj');
@@ -273,9 +290,7 @@ test.describe('the place on Home @seeded', () => {
       placeDialog(page).getByText('Nu putem căuta adrese acum'),
     ).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(
-      page.getByText('5 din 8 service‑uri primesc Dacia'),
-    ).toBeVisible();
+    await daciaLine(page);
   });
 
   test('keeps the place after a reload and in the other language', async ({

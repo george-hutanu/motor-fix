@@ -22,10 +22,6 @@ input {
   overflow-wrap: anywhere;
 }
 
-.message:empty {
-  display: none;
-}
-
 .suggestions {
   display: grid;
   min-width: 0;

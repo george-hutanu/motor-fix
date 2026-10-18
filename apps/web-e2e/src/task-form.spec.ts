@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
 import { settled } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
 type Language = 'ro' | 'en';
@@ -27,17 +27,6 @@ const t = (language: Language, key: string): string =>
       (node, part) => (node as Texts)[part],
       TEXTS[language],
     ) as string;
-
-type Axe = {
-  run: (context: unknown) => Promise<{
-    violations: Array<{ id: string; nodes: unknown[] }>;
-  }>;
-};
-
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 async function openForm(page: Page, language: Language = 'ro') {
   if (language === 'en')
@@ -231,15 +220,10 @@ test.describe('accessibility', () => {
     }) => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await openForm(page);
-      await page.evaluate(AXE);
-      const scan = () =>
-        page.evaluate(async () => {
-          const axe = (globalThis as unknown as { axe: Axe }).axe;
-          const result = await axe.run({
-            include: [['.cdk-overlay-container']],
-          });
-          return result.violations.map((v) => `${v.id} (${v.nodes.length})`);
-        });
+      const scan = async () =>
+        (
+          await violations(page, {}, { include: [['.cdk-overlay-container']] })
+        ).map((v) => `${v.id} (${v.nodes.length})`);
 
       await save(page).click();
       await expect(task(page)).toContainText(

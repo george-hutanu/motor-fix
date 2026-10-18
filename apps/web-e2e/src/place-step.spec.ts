@@ -133,6 +133,7 @@ async function noSidewaysScroll(page: Page) {
 }
 
 test.describe('step 5 of list your garage, the place step', () => {
+  // @traces 248-FR-010
   test('at 320 px: a chosen suggestion drops the pin, a drag moves it, and both come back after a reload', async ({
     page,
   }) => {

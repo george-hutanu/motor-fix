@@ -1283,11 +1283,16 @@ describe('type scale', () => {
 describe('empty messages', () => {
   // @traces 1204-hours-row-live-regions-FR-006
   it('take no space but stay known to a reader, never removed from it', () => {
-    const stylesheet = readFileSync(join(__dirname, 'hours-step.css'), 'utf8');
-    const rule = stylesheet.match(
-      /\.error:empty,\s*\.warning:empty\s*\{([^}]*)\}/,
-    )?.[1];
+    // The step's regions carry mf-message; the one global rule hides them
+    // while empty without removing them from the accessibility tree.
+    const template = readFileSync(join(__dirname, 'hours-step.html'), 'utf8');
+    const stylesheet = readFileSync(
+      join(__dirname, '../../../styles.css'),
+      'utf8',
+    );
+    const rule = stylesheet.match(/\.mf-message:empty\s*\{([^}]*)\}/)?.[1];
 
+    expect(template.match(/class="[^"]*\bmf-message\b/g)?.length).toBe(7);
     expect(rule).toBeDefined();
     expect(rule).not.toMatch(/display:\s*none/);
     expect(rule).toMatch(/position:\s*absolute/);

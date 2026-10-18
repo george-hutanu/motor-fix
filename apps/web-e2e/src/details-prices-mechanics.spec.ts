@@ -79,7 +79,7 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     );
 
     await page
-      .locator('mf-brands-step .chips button', { hasText: 'BMW' })
+      .locator('mf-brands-step .chips > li > button', { hasText: 'BMW' })
       .click();
 
     await range(prices(page), 'Manoperă, pe oră', '120', '200');

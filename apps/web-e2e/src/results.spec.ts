@@ -203,8 +203,10 @@ test.describe('the Results page @seeded', () => {
       { timeout: 15_000 },
     );
     await expect(cards(page).nth(0)).toHaveText(garages[1].name);
+    // The card leaves at once; the counts come from a re-read after it.
     await expect(page.locator('.tally')).toContainText(
       `1 lucrează pe ${brand.name}`,
+      { timeout: 15_000 },
     );
     expect(navigations).toBe(0);
   });

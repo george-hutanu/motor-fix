@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -501,5 +504,45 @@ describe('the reason line', () => {
     await openWith(undefined);
 
     expect(panel().textContent).not.toContain('ca să continui');
+  });
+});
+
+const paste = (input: HTMLInputElement) => {
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  input.dispatchEvent(event);
+  return event;
+};
+
+// @traces 248-FR-011
+describe('pasting into the sign-in form', () => {
+  it('takes a pasted password: nothing cancels the paste', async () => {
+    await open();
+
+    expect(paste(field('Parolă')).defaultPrevented).toBe(false);
+    expect(field('Parolă').getAttribute('autocomplete')).toBe(
+      'current-password',
+    );
+  });
+
+  it('binds no paste handler in its template', () => {
+    const html = readFileSync(join(__dirname, 'sign-in.html'), 'utf8');
+
+    expect(html).not.toMatch(/\(paste\)|onpaste/i);
+  });
+});
+
+// The Jest transform drops component styles, so they are read from the source.
+// @traces 248-FR-002
+describe('the remember checkbox on the sign-in sheet', () => {
+  it('is drawn by the global mf-check rule, a 44 px tap target', async () => {
+    await open();
+
+    expect(field('Ține‑mă autentificat').classList).toContain('mf-check');
+  });
+
+  it('keeps no 20 px copy of the box in its own stylesheet', () => {
+    const css = readFileSync(join(__dirname, 'sign-in.css'), 'utf8');
+
+    expect(css).not.toMatch(/\.remember input\s*\{[^}]*width:\s*20px/);
   });
 });

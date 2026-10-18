@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { ownMap, ready } from './accounts.js';
 import { test } from './fixtures.js';
+import { JOBS, jpeg, KEPT } from './listing-kept.js';
 
 // The place step's map draws the app's empty style.
 test.beforeEach(({ context }) => ownMap(context));
@@ -16,12 +17,6 @@ const cui = (page: Page) => page.locator('#listing-cui');
 
 const prices = (page: Page) => page.locator('mf-prices-step');
 const photos = (page: Page) => page.locator('mf-photos-step');
-// The three jobs a new listing starts with.
-const JOBS: [string, string, string][] = [
-  ['Diagnoză și citire coduri de eroare', '100', '250'],
-  ['Schimb de ulei și filtre', '150', '300'],
-  ['Plăcuțe și discuri de frână față', '300', '600'],
-];
 
 async function range(page: Page, name: string, from: string, to: string) {
   await prices(page)
@@ -31,45 +26,6 @@ async function range(page: Page, name: string, from: string, to: string) {
     .getByRole('textbox', { exact: true, name: `${name}, până la` })
     .fill(to);
 }
-
-// The store checks the first bytes only.
-const jpeg = (name: string) => ({
-  buffer: Buffer.from([
-    0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46,
-  ]),
-  mimeType: 'image/jpeg',
-  name,
-});
-
-// A browser copy with steps 1, 5 and 6 filled in: what is left is the
-// brands, the prices and a photo, which the test fixes from the summary.
-const KEPT = {
-  data: {
-    declaredAt: '2026-10-11T10:00:00.000Z',
-    declaredByName: 'Ion Popescu',
-    steps: {
-      '1': {
-        businessKind: 'company',
-        knownFor: 'Frâne și distribuție',
-        name: 'Service Popescu',
-        phone: '0722 123 456',
-      },
-      '5': {
-        payments: ['cash'],
-        place: {
-          address: 'Strada Ștefan cel Mare 12, Sector 2, București',
-          lat: 44.4512,
-          lng: 26.1207,
-        },
-      },
-      '6': { cui: '18547290', rarNumber: 'BV-123' },
-    },
-  },
-  dirty: false,
-  language: 'ro',
-  savedAt: '2026-10-11T10:00:00.000Z',
-  step: 1,
-};
 
 const count = async (page: Page) =>
   Number((await title(page).textContent())?.match(/\d+/)?.[0]);
@@ -185,7 +141,7 @@ test.describe('list your garage, what is missing before sending', () => {
 
     await item(page, /Alege cel puțin o marcă/).click();
     await page
-      .locator('mf-brands-step .chips button', { hasText: 'Dacia' })
+      .locator('mf-brands-step .chips > li > button', { hasText: 'Dacia' })
       .first()
       .click();
     await range(page, 'Manoperă, pe oră', '120', '200');

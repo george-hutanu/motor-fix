@@ -66,9 +66,17 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
     return async (host, on, here) => {
-      const map = await openMapLibre(host, styleFor(document));
-      const { Marker } = await import('maplibre-gl');
+      // From the start: MapLibre adds its focusable canvas while the style
+      // is still loading, under the grey placeholder.
       const stop = keepOutOfTabOrder(host);
+      let map: Awaited<ReturnType<typeof openMapLibre>>;
+      try {
+        map = await openMapLibre(host, styleFor(document));
+      } catch (error) {
+        stop();
+        throw error;
+      }
+      const { Marker } = await import('maplibre-gl');
       const pins = drawPins(map, host, on, new Marker({ element: here }));
       return {
         ...pins,

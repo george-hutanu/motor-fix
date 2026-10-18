@@ -53,7 +53,7 @@ export class VerificationApprove {
       'document' in gap
         ? this.i18n.t('admin.file.approve.missingDocument', {
             document: this.i18n.t(
-              `public.listing.documents.kinds.${gap.document}.label`,
+              `admin.file.approve.documents.${gap.document}`,
             ),
           })
         : this.i18n.t('admin.file.approve.missingCheck', {

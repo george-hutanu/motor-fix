@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
@@ -24,6 +24,27 @@ async function signInAsAdmin2(page: Page) {
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+// The line boxes the dialog's confirm label lays out in, once its font loaded.
+const confirmLines = async (page: Page, dialog: Locator) => {
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  return dialog.locator('button[type="submit"]').evaluate((button) => {
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    return new Set(
+      [...range.getClientRects()]
+        .filter((rect) => rect.width > 0)
+        .map((rect) => Math.round(rect.top)),
+    ).size;
+  });
+};
+// The dialog's two actions as laid out: each one's width and text size.
+const actionFaces = (dialog: Locator) =>
+  dialog.locator('.actions button').evaluateAll((buttons) =>
+    buttons.map((button) => ({
+      size: getComputedStyle(button).fontSize,
+      width: Math.round(button.getBoundingClientRect().width),
+    })),
+  );
 const drawer = (page: Page) => page.locator('mf-verification-file');
 const footer = (page: Page) => drawer(page).locator('[data-section="footer"]');
 
@@ -135,6 +156,44 @@ test.describe('approving and publishing a garage @seeded', () => {
         [garageId],
       );
       expect(rows[0]?.last).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  }
+
+  // English holds the longer label: at the full button size it wraps in a
+  // 390 px phone's sheet. The account answers in English for this test only.
+  for (const width of [320, 390]) {
+    test(`keeps the English confirm label on one line at ${width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 640, width });
+      await page.route('**/api/v1/me', async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const response = await route.fetch();
+        const me = (await response.json()) as Record<string, unknown>;
+        await route.fulfill({ json: { ...me, language: 'en' }, response });
+      });
+      await signInAsAdmin2(page);
+      await page.goto('/app/admin/garages');
+      const row = page.locator('li.row').filter({ hasText: name });
+      await expect(row).toHaveCount(1);
+      await row.getByRole('link').click();
+
+      await footer(page)
+        .getByRole('button', { name: 'Approve and publish' })
+        .click();
+      const dialog = page
+        .getByRole('dialog')
+        .filter({ hasText: 'Every check is ok.' });
+      await expect(dialog).toBeVisible();
+      expect(await confirmLines(page, dialog)).toBe(1);
+      // On a phone the actions stack full width. Cancel keeps the body size,
+      // as every other sheet's buttons do; only the wide label face of the
+      // confirm takes the small size, which keeps it on one line.
+      const [cancel, confirm] = await actionFaces(dialog);
+      expect(cancel?.size).toBe('16px');
+      expect(confirm?.size).toBe('13px');
+      expect(confirm?.width).toBe(cancel?.width);
+      expect(await sideways(page)).toBe(0);
     });
   }
 });

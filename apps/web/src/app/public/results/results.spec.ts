@@ -858,6 +858,29 @@ describe('Results', () => {
     });
 
     // @traces 267-FR-019
+    // @traces 267-FR-020
+    it('lowers the counts for a suspended card even when other garages raised the total meanwhile', async () => {
+      quietly();
+      await loaded();
+
+      send('garage.suspended', 'one');
+      await coalesce();
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+      // Two garages were approved while the suspension was written: the
+      // re-read counts them and leaves the suspended one out.
+      await reads[1]?.answer(
+        pageOf({ counts: { doesNotTake: 18, worksOn: 31 }, total: 49 }),
+      );
+
+      expect(names()).toEqual(['Service Doi']);
+      expect(tally()).toBe(
+        '49 de service‑uri găsite · 31 lucrează pe BMW · 18 nu o primesc',
+      );
+      expect(chip()).toBeDefined();
+    });
+
+    // @traces 267-FR-019
     it('removes a suspended card at once under reduced motion', async () => {
       reduced.set(true);
       await loaded();

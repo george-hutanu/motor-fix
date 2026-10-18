@@ -248,9 +248,15 @@ describe('keepOutOfTabOrder', () => {
     await Promise.resolve();
 
     // MapLibre's compact attribution is a <details>, whose <summary> takes focus.
-    for (const control of host.querySelectorAll('canvas, button, a, summary')) {
+    for (const control of host.querySelectorAll('button, a, summary')) {
       expect(control.getAttribute('tabindex')).toBe('-1');
     }
+    // A canvas at -1 still takes focus from a click, so a tap on a pin would
+    // move it: the canvas drops its tabindex and takes no focus at all.
+    const canvas = host.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.hasAttribute('tabindex')).toBe(false);
+    canvas.focus();
+    expect(document.activeElement).not.toBe(canvas);
 
     stop();
     const after = document.createElement('button');
