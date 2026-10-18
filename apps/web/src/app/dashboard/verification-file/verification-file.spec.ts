@@ -7,6 +7,7 @@ import {
   VerificationDocumentsService,
   type VerificationFileCheckDto,
   type VerificationFileDto,
+  type VerificationFileReportDto,
 } from '@motor-fix/data-access';
 import { appliedAt, I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
@@ -64,6 +65,22 @@ const check = (
 });
 
 const ioana = { id: 'admin-1', name: 'Ioana' };
+const elena = { id: 'driver-1', name: 'Elena D.' };
+
+// An open report from Elena, as the file read returns it.
+const report = (
+  extra: Partial<VerificationFileReportDto> = {},
+): VerificationFileReportDto => ({
+  createdAt: NOW.toISOString(),
+  decidedAt: null,
+  decidedBy: null,
+  decisionNote: null,
+  id: 'report-1',
+  reporter: elena,
+  status: 'open',
+  text: 'Adresă greșită pe pagina service-ului.',
+  ...extra,
+});
 
 function fileOf(
   extra: Partial<Omit<VerificationFileDto, 'file' | 'garage'>> & {
@@ -350,7 +367,7 @@ describe('the sections', () => {
           reasonCode: 'documents_unreadable',
           reasonNote: 'Certificatul nu se citește.',
         },
-        reports: [{ createdAt: NOW.toISOString(), text: 'Adresă greșită' }],
+        reports: [report()],
       }),
     );
 
@@ -440,9 +457,7 @@ describe('the sections', () => {
     const host = await open(
       fileOf({
         file: { reopenedAt: NOW.toISOString(), reopenReason: 'garage_report' },
-        reports: [
-          { createdAt: NOW.toISOString(), text: '<b>Nu există</b> atelierul' },
-        ],
+        reports: [report({ text: '<b>Nu există</b> atelierul' })],
       }),
     );
     const reported = section(host, 'reported');

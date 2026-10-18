@@ -473,7 +473,8 @@ export class VerificationService {
   }
 
   // The file's move when its reports are decided: the garage stays as it is,
-  // so no gate and no publication; the reports' story announces it.
+  // so no gate and no publication; the reports' story announces it. A file
+  // in review with no open report is an ordinary review, refused as one.
   async approveAfterReports(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
@@ -481,10 +482,22 @@ export class VerificationService {
   ): Promise<VerificationFile> {
     trust(actor);
     const before = await this.file(tx, fileId);
+    if (before.status === 'in_review') {
+      const open = await tx.garageReport.count({
+        where: { status: 'open', verificationFileId: fileId },
+      });
+      if (open === 0) {
+        this.refuse(fileId, 'no_open_report');
+        throw await this.refusalFor(tx, before);
+      }
+    }
     return this.move(tx, actor, before, 'reports', {
       decidedAt: new Date(),
       decidedBy: actor.accountId,
       status: 'approved',
+    }).catch((error: unknown) => {
+      if (decidedAlready(error)) this.refuse(fileId, 'already_decided');
+      throw error;
     });
   }
 

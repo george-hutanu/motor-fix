@@ -2163,11 +2163,37 @@ describe('the last check date', () => {
 });
 
 describe('approving a file after its reports are decided', () => {
+  // A driver's open report on the file.
+  const reported = async (file: { garageId: string; id: string }) =>
+    prisma.garageReport.create({
+      data: {
+        garageId: file.garageId,
+        reporterId: await account('Elena Dumitru', ['driver']),
+        text: 'Prețuri false la manoperă, peste listă.',
+        verificationFileId: file.id,
+      },
+    });
+
+  // @traces 069-report-decision-FR-003
+  it('refuses a file in review with no open report as an ordinary review', async () => {
+    const file = await fileIn('in_review');
+
+    const { body, status } = await refusal(
+      inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+    );
+
+    expect(status).toBe(409);
+    expect(body.code).toBe('verification_transition_refused');
+    expect(String(body.message)).toMatch(/^already under review, opened by /);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+
   // @traces 069-report-decision-FR-002 069-report-decision-FR-003
   it('moves an in-review file to approved, stamped with the admin, and leaves its other columns', async () => {
     const at = new Date('2026-10-10T08:00:00Z');
     const file = await fileIn('rejected', at);
     await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+    await reported(file);
 
     const moved = await inTx((tx) =>
       service().approveAfterReports(tx, dan, file.id),

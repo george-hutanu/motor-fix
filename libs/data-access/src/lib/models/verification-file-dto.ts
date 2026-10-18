@@ -42,7 +42,7 @@ export interface VerificationFileDto {
 }) | null;
 
   /**
-   * The garage's open reports, newest first
+   * The file's reports, newest first
    */
   reports: Array<VerificationFileReportDto>;
 

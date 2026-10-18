@@ -57,6 +57,53 @@ const note = ({ value }: { value: unknown }) => {
 };
 const given = (_: object, value: unknown) => value !== undefined;
 
+export const REPORT_DECISIONS = ['unfounded', 'confirmed'] as const;
+export type ReportDecision = (typeof REPORT_DECISIONS)[number];
+export const REPORT_STATUSES = ['open', ...REPORT_DECISIONS] as const;
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
+export const REPORT_REASON_MAX = 200;
+export const REPORT_NOTE_MAX = 1000;
+
+// Each field is read with its own decision only; the other is ignored.
+const readWith =
+  (decision: ReportDecision) =>
+  (body: { decision?: unknown }, value: unknown) =>
+    body.decision === decision && value !== undefined;
+
+// An admin's decision on a file's open reports.
+export class ReportDecisionDto {
+  @ApiProperty({ enum: REPORT_DECISIONS })
+  @IsIn(REPORT_DECISIONS)
+  decision!: ReportDecision;
+
+  @ApiPropertyOptional({
+    description:
+      'Trimmed; required with confirmed and shown to the garage, ignored otherwise',
+    maxLength: REPORT_REASON_MAX,
+  })
+  @Transform(note)
+  @ValidateIf(readWith('confirmed'))
+  @IsString()
+  @Length(1, REPORT_REASON_MAX)
+  @Matches(/^\P{Cc}*$/u, {
+    message: 'reason must not hold control characters',
+  })
+  reason?: string;
+
+  @ApiPropertyOptional({
+    description: 'Trimmed; optional with unfounded, ignored otherwise',
+    maxLength: REPORT_NOTE_MAX,
+  })
+  @Transform(note)
+  @ValidateIf(readWith('unfounded'))
+  @IsString()
+  @Length(1, REPORT_NOTE_MAX)
+  @Matches(/^(?:[\t\n\r]|\P{Cc})*$/u, {
+    message: 'note must not hold control characters',
+  })
+  note?: string;
+}
+
 export class VerificationDecisionDto {
   @ApiProperty({ enum: VERIFICATION_DECISIONS })
   @IsIn(VERIFICATION_DECISIONS)
@@ -267,12 +314,50 @@ export class VerificationFileDocumentDto {
   stale!: boolean | null;
 }
 
+export class VerificationFileReporterDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ description: "First name and the family name's initial" })
+  name!: string;
+}
+
 export class VerificationFileReportDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
   @ApiProperty({ description: 'Plain text, as the reporter wrote it' })
   text!: string;
 
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;
+
+  @ApiProperty({ enum: REPORT_STATUSES })
+  status!: ReportStatus;
+
+  @ApiProperty({
+    description: 'Null once the account is deleted',
+    nullable: true,
+    type: VerificationFileReporterDto,
+  })
+  reporter!: VerificationFileReporterDto | null;
+
+  @ApiProperty({
+    description: 'The admin who decided it; null while open',
+    nullable: true,
+    type: VerificationActorDto,
+  })
+  decidedBy!: VerificationActorDto | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  decidedAt!: string | null;
+
+  @ApiProperty({
+    description: "The admin's note, or the reason the garage was given",
+    nullable: true,
+    type: String,
+  })
+  decisionNote!: string | null;
 }
 
 export class VerificationFileRejectionDto {
@@ -338,7 +423,7 @@ export class VerificationFileDto {
   storageReady!: boolean;
 
   @ApiProperty({
-    description: "The garage's open reports, newest first",
+    description: "The file's reports, newest first",
     type: [VerificationFileReportDto],
   })
   reports!: VerificationFileReportDto[];

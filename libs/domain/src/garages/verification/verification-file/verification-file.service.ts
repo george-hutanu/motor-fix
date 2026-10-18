@@ -15,6 +15,7 @@ import { auditEntryOf } from '../../../audit/audit-history/audit-history.service
 import { PRISMA } from '../../../auth/prisma';
 import { localDay } from '../../../bucharest';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { shortName } from '../../../quotes/reads';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
@@ -147,9 +148,18 @@ export class VerificationFileService {
         }),
         pricedJobs(this.prisma, garage.id),
         this.prisma.garageReport.findMany({
-          orderBy: { createdAt: 'desc' },
-          select: { createdAt: true, text: true },
-          where: { garageId: garage.id, status: 'open' },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          select: {
+            createdAt: true,
+            decidedAt: true,
+            decidedBy: true,
+            decisionNote: true,
+            id: true,
+            reporter: { select: { id: true, name: true, status: true } },
+            status: true,
+            text: true,
+          },
+          where: { verificationFileId: file.id },
         }),
         this.prisma.activityLog.findMany({
           orderBy: [{ at: 'desc' }, { id: 'desc' }],
@@ -165,6 +175,7 @@ export class VerificationFileService {
       at: Date | null,
     ): VerificationActorDto | null =>
       at ? { id: accountId, name: names(accountId) } : null;
+    const deciders = await this.names(reports.map((r) => r.decidedBy));
     const previous = file.previousFile;
 
     return {
@@ -261,6 +272,17 @@ export class VerificationFileService {
           : null,
       reports: reports.map((r) => ({
         createdAt: r.createdAt.toISOString(),
+        decidedAt: iso(r.decidedAt),
+        decidedBy: r.decidedAt
+          ? { id: r.decidedBy, name: deciders(r.decidedBy) }
+          : null,
+        decisionNote: r.decisionNote,
+        id: r.id,
+        reporter:
+          r.reporter.status === 'deleted'
+            ? null
+            : { id: r.reporter.id, name: shortName(r.reporter.name) },
+        status: r.status,
         text: r.text,
       })),
       storageReady: await storageReady,
