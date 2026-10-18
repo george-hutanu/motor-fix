@@ -5740,12 +5740,106 @@
             }
           },
           {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Entries before this instant; after `from`",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "status_changed",
+                  "check_failed",
+                  "job_failed",
+                  "service_error",
+                  "server_error",
+                  "backup_completed",
+                  "backup_failed",
+                  "deploy"
+                ]
+              }
+            }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ]
+              }
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "api",
+                  "search",
+                  "maps",
+                  "email",
+                  "notifications",
+                  "backup",
+                  "worker",
+                  "webrtc",
+                  "identity",
+                  "storage"
+                ]
+              }
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text in the message, ignoring case and diacritics; trimmed, empty is absent",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "A previous answer's nextCursor, sent with the same filters",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
             "name": "limit",
             "required": false,
             "in": "query",
             "schema": {
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 50,
               "default": 20,
               "type": "integer"
             }
@@ -5763,7 +5857,7 @@
             }
           },
           "400": {
-            "description": "validation_failed"
+            "description": "validation_failed: a bad filter, an end not after the start or a cursor this list did not give out"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -13829,10 +13923,16 @@
             "items": {
               "$ref": "#/components/schemas/SystemLogEntryDto"
             }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "The next page, or null when there is none",
+            "nullable": true
           }
         },
         "required": [
-          "items"
+          "items",
+          "nextCursor"
         ]
       },
       "PlatformRuleDto": {

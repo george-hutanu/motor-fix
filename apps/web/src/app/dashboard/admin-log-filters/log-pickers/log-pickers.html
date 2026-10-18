@@ -1,0 +1,29 @@
+@for (picker of pickers(); track picker.field) {
+  <div class="field">
+    <label [for]="id + '-' + picker.field">{{ picker.label | t }}</label>
+    <select [id]="id + '-' + picker.field" [class]="picker.field" (change)="pick(picker.field, $any($event.target).value)">
+      @for (option of picker.options; track option.key) {
+        <option [value]="option.key" [selected]="option.key === (draft()[picker.field] ?? '')">{{ option.name }}</option>
+      }
+    </select>
+  </div>
+}
+@for (day of days; track day.field) {
+  <div class="field">
+    <label [for]="id + '-' + day.field">{{ day.label | t }}</label>
+    <input
+      type="date"
+      [id]="id + '-' + day.field"
+      [class]="day.field"
+      [min]="limits.min"
+      [max]="limits.max"
+      [value]="draft()[day.field]"
+      [attr.aria-invalid]="fault()?.field === day.field ? 'true' : null"
+      [attr.aria-describedby]="fault()?.field === day.field ? id + '-fault' : null"
+      (change)="pick(day.field, $any($event.target).value)"
+    />
+  </div>
+}
+@if (fault(); as fault) {
+  <p class="fault" [id]="id + '-fault'">{{ fault.key | t }}</p>
+}

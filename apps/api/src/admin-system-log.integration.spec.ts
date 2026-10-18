@@ -9,6 +9,7 @@ import request from 'supertest';
 import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 298-FR-001 298-FR-003 298-FR-014
+// @traces 299-FR-001 299-FR-003 299-FR-004 299-FR-005 299-FR-018
 
 const api = apiBoot();
 let app: INestApplication;
@@ -178,7 +179,7 @@ describe('GET /admin/system-log', () => {
     ]);
   });
 
-  // @traces 298-FR-012
+  // @traces 298-FR-012 299-FR-016
   it('writes no log entry and no audit row when read', async () => {
     await entry('2100-06-02T07:00:00Z');
     // Other specs write to both tables at the same time, so only what this
@@ -204,12 +205,196 @@ describe('GET /admin/system-log', () => {
     ['a calendar day as from', 'from=2100-06-02'],
     ['a time without a zone', 'from=2100-06-02T00:00:00'],
     ['a limit of 0', `from=${DAY_START}&limit=0`],
-    ['a limit of 21', `from=${DAY_START}&limit=21`],
+    ['a limit of 51', `from=${DAY_START}&limit=51`],
     ['a limit that is not a whole number', `from=${DAY_START}&limit=1.5`],
   ])('refuses %s with validation_failed', async (_, query) => {
     const res = await list(query);
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('validation_failed');
+  });
+});
+
+const ids = (res: { body: { items: { id: string }[] } }) =>
+  res.body.items.map((item) => item.id);
+const NEXT_DAY = '2100-06-02T21:00:00.000Z';
+
+describe('GET /admin/system-log narrowed and paged', () => {
+  it('answers a limit of 20 as before, with the next page cursor', async () => {
+    for (let n = 0; n < 21; n++) {
+      await entry(`2100-06-02T11:${String(n).padStart(2, '0')}:00Z`);
+    }
+
+    const res = await list(`from=${DAY_START}&limit=20`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(20);
+    expect(res.body.nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('reads the next page from the cursor and ends with no cursor', async () => {
+    const written: string[] = [];
+    for (let n = 0; n < 55; n++) {
+      written.push(
+        await entry(`2100-06-02T12:${String(n).padStart(2, '0')}:00Z`),
+      );
+    }
+
+    const first = await list(`from=${DAY_START}&limit=50`);
+    const second = await list(
+      `from=${DAY_START}&limit=50&cursor=${first.body.nextCursor}`,
+    );
+
+    expect([...ids(first), ...ids(second)]).toEqual(written.reverse());
+    expect(second.body.nextCursor).toBeNull();
+  });
+
+  it('answers a null cursor on the last page', async () => {
+    await entry('2100-06-02T07:00:00Z');
+
+    expect((await list(`from=${DAY_START}`)).body).toMatchObject({
+      nextCursor: null,
+    });
+  });
+
+  it('leaves out the entries at or after the end', async () => {
+    const kept = await entry('2100-06-02T20:59:59Z');
+    await entry(NEXT_DAY);
+
+    expect(ids(await list(`from=${DAY_START}&to=${NEXT_DAY}`))).toEqual([kept]);
+  });
+
+  it('accepts the widest range the date pickers allow', async () => {
+    const day = 24 * 3_600_000;
+    const from = new Date(Date.now() - 90 * day).toISOString();
+    const to = new Date(Date.now() + day).toISOString();
+
+    const res = await list(`from=${from}&to=${to}&limit=50`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('narrows by repeated kinds, a severity and a source together', async () => {
+    const failed = await entry('2100-06-02T08:00:00Z', {
+      kind: 'backup_failed',
+      severity: 'error',
+      source: 'backup',
+    });
+    await entry('2100-06-02T09:00:00Z', {
+      kind: 'backup_completed',
+      severity: 'info',
+      source: 'backup',
+    });
+    await entry('2100-06-02T10:00:00Z', {
+      kind: 'job_failed',
+      severity: 'error',
+      source: 'worker',
+    });
+
+    const res = await list(
+      `from=${DAY_START}&kind=backup_completed&kind=backup_failed&severity=error&source=backup`,
+    );
+
+    expect(ids(res)).toEqual([failed]);
+  });
+
+  it('finds the text ignoring case and diacritics', async () => {
+    const late = await entry('2100-06-02T08:00:00Z', {
+      message: 'Hartă: răspuns târziu.',
+      source: 'maps',
+    });
+    await entry('2100-06-02T09:00:00Z', { message: 'Deployed v2.' });
+
+    expect(ids(await list(`from=${DAY_START}&q=TARZIU`))).toEqual([late]);
+  });
+
+  // @traces 299-FR-016
+  it('writes no log entry and keeps the search text out of every entry', async () => {
+    const before = await db.query(
+      `SELECT count(*) FROM system_log_entry WHERE message LIKE '%zzsecretzz%'
+         OR context::text LIKE '%zzsecretzz%'`,
+    );
+
+    await list(`from=${DAY_START}&q=zzsecretzz`);
+
+    const after = await db.query(
+      `SELECT count(*) FROM system_log_entry WHERE message LIKE '%zzsecretzz%'
+         OR context::text LIKE '%zzsecretzz%'`,
+    );
+    expect(after.rows).toEqual(before.rows);
+  });
+
+  it.each([
+    ['an end not after the start', `from=${DAY_START}&to=${DAY_START}`],
+    ['an end before the start', `from=${NEXT_DAY}&to=${DAY_START}`],
+    ['a calendar day as the end', `from=${DAY_START}&to=2100-06-03`],
+    ['no start with an end', `to=${NEXT_DAY}`],
+    ['words as a cursor', `from=${DAY_START}&cursor=not-a-cursor`],
+    [
+      'a cursor of two words',
+      `from=${DAY_START}&cursor=${Buffer.from('x|y').toString('base64url')}`,
+    ],
+    ['an unknown kind', `from=${DAY_START}&kind=backup`],
+    ['an unknown severity', `from=${DAY_START}&severity=fatal`],
+    ['an unknown source', `from=${DAY_START}&source=mailgun`],
+    ['a search of one character', `from=${DAY_START}&q=a`],
+    ['one letter between spaces', `from=${DAY_START}&q=%20%20a%20%20`],
+    ['a search of 101 characters', `from=${DAY_START}&q=${'a'.repeat(101)}`],
+  ])('refuses %s with validation_failed', async (_, query) => {
+    const res = await list(query);
+
+    expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+  });
+
+  it.each([
+    ['2', 'ab'],
+    ['100', 'a'.repeat(100)],
+  ])('accepts a search of %s characters', async (_, q) => {
+    expect((await list(`from=${DAY_START}&q=${q}`)).status).toBe(200);
+  });
+
+  const NARROWED = `from=${DAY_START}&to=${NEXT_DAY}&kind=deploy&severity=info&source=worker&q=deploy&limit=50`;
+
+  it.each(['receptionist', 'mechanic', 'garage', 'driver'] as const)(
+    'answers not_found to a %s, with or without the narrowing',
+    async (role) => {
+      const { id } = await app.get(AccountsService).createAccount({
+        consent: CURRENT_CONSENT,
+        identity: { method: 'google', subject: `${role}-${randomUUID()}` },
+        name: role,
+        roles: [role],
+      });
+      const bearer = `Bearer ${signAccessToken({ accountId: id, role } as never, TEST_TOKEN_SECRET, Date.now())}`;
+
+      const plain = await list(`from=${DAY_START}`, bearer);
+      const narrowed = await list(NARROWED, bearer);
+
+      expect([plain.status, narrowed.status]).toEqual([404, 404]);
+      expect(narrowed.body.code).toBe('not_found');
+    },
+  );
+
+  it('answers sign_in_required to a visitor, with or without the narrowing', async () => {
+    const plain = await request(app.getHttpServer()).get(
+      `/api/v1/admin/system-log?from=${DAY_START}`,
+    );
+    const narrowed = await request(app.getHttpServer()).get(
+      `/api/v1/admin/system-log?${NARROWED}`,
+    );
+
+    expect([plain.status, narrowed.status]).toEqual([401, 401]);
+    expect(narrowed.body.code).toBe('sign_in_required');
+  });
+
+  it('answers account_suspended to a suspended admin, with or without the narrowing', async () => {
+    await db.query("UPDATE account SET status = 'suspended' WHERE id = $1", [
+      adminId,
+    ]);
+
+    const plain = await list(`from=${DAY_START}`);
+    const narrowed = await list(NARROWED);
+
+    expect([plain.status, narrowed.status]).toEqual([403, 403]);
+    expect(narrowed.body.code).toBe('account_suspended');
   });
 });

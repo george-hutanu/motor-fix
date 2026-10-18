@@ -140,6 +140,14 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.log',
+        load: () =>
+          import('./admin-log-view/admin-log-view').then((m) => m.AdminLogView),
+        path: 'log',
+        tab: 'shell.frame.tab.log',
+      },
+      {
+        capability: 'admin.settings',
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
         push: true,

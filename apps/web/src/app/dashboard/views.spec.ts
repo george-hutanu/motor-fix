@@ -15,6 +15,7 @@ import { I18n } from '@motor-fix/i18n';
 import { NEVER, Subject } from 'rxjs';
 
 import { AdminDemand } from './admin-demand/admin-demand';
+import { AdminLogView } from './admin-log-view/admin-log-view';
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
@@ -211,6 +212,7 @@ describe('the dashboard view lists', () => {
       'reviews',
       'catalogue',
       'assistant',
+      'log',
       'settings',
     ]);
   });
@@ -261,6 +263,13 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.log',
+        load: expect.any(Function),
+        path: 'log',
+        tab: 'shell.frame.tab.log',
+      },
+      {
+        capability: 'admin.settings',
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
         push: true,
@@ -268,6 +277,13 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.settings',
       },
     ]);
+  });
+
+  // @traces 299-FR-006
+  it('downloads the system log view when it is opened, not with the first page', async () => {
+    const log = DASHBOARDS.admin.views.find((view) => view.path === 'log');
+
+    await expect(log?.load?.()).resolves.toBe(AdminLogView);
   });
 
   it('downloads the admin users view when it is opened, not with the first page', async () => {
@@ -411,7 +427,7 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'users', 'catalogue', 'settings']);
+    ).toEqual(['', 'garages', 'users', 'catalogue', 'log', 'settings']);
   });
 
   it('hides an unreleased view even from a role that may open it', () => {

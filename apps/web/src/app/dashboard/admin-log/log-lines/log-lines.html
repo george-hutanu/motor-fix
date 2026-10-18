@@ -1,0 +1,14 @@
+<ol>
+  @for (line of lines(); track line.id) {
+    <li>
+      <time [attr.datetime]="line.at">{{ line.clock }}</time>
+      <span class="entry">
+        <mf-lamp [state]="line.lamp" [label]="line.word" />
+        <span class="text">{{ line.text }}</span>
+        @if (line.count; as count) {
+          <span class="count"><span aria-hidden="true">{{ count.mark }}</span><span class="sr-only">{{ count.words }}</span></span>
+        }
+      </span>
+    </li>
+  }
+</ol>
