@@ -75,7 +75,7 @@ const sideways = (page: Page) =>
 // `verification.submitted` event; the relay carries it to the open queue.
 // Every run that boots the stack has the database, so the flow needs
 // DATABASE_URL.
-test.describe('the verification queue @seeded', () => {
+test.describe('the verification queue @seeded @database', () => {
   let db: Client;
   let garageId: string | undefined;
 

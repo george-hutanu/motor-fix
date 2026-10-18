@@ -1,0 +1,86 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.choice {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.choice legend,
+.field > label {
+  padding: 0;
+  font-weight: 700;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  cursor: pointer;
+}
+.option input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+textarea {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+  resize: vertical;
+}
+.under {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+}
+.hint,
+.count {
+  color: var(--mf-text-secondary);
+}
+.count {
+  margin-inline-start: auto;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.actions .danger {
+  color: var(--mf-red-ink);
+  border-color: var(--mf-red-ink);
+}
+/* On a phone the dialog is a bottom sheet: the actions stack at its width, the rejection nearest the thumb. */
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .actions button {
+    padding-inline: var(--mf-space-3);
+  }
+}
