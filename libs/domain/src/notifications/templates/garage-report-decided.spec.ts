@@ -23,7 +23,7 @@ const WORDS = {
   },
 } as const;
 
-// @traces 069-report-decision-FR-007
+// @traces 069-FR-007
 describe('the message telling a driver what became of their report', () => {
   it('goes by e-mail and push to drivers, muteable under reviews and history', () => {
     const type = NOTIFICATION_TYPES[KIND];

@@ -5,7 +5,7 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { ReportUnfounded } from './report-unfounded';
 
-// @traces 069-report-decision-FR-009 069-report-decision-FR-010
+// @traces 069-FR-009 069-FR-010
 
 @Component({ template: '' })
 class Host {

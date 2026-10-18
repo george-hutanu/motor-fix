@@ -14,7 +14,7 @@ import type { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 
 // @traces 302-FR-001 302-FR-010
-// @traces 069-report-decision-FR-008
+// @traces 069-FR-008
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);

@@ -8,7 +8,7 @@ import {
   ReportDecisionDto,
 } from './verification-file.dto';
 
-// @traces 069-report-decision-FR-001 069-report-decision-FR-008
+// @traces 069-FR-001 069-FR-008
 
 const read = (plain: unknown) => plainToInstance(ReportDecisionDto, plain);
 const errorsFor = async (plain: unknown) =>

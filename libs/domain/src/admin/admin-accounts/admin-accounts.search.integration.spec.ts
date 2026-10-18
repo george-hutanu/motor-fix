@@ -134,7 +134,7 @@ describe('searching by name', () => {
   });
 });
 
-// @traces 069-report-decision-FR-008
+// @traces 069-FR-008
 describe('searching by account id', () => {
   it('finds the one account an id names, as the drawer links a reporter', async () => {
     const andrei = await person('Andrei Marin');

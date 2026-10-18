@@ -18,10 +18,10 @@ import { GarageReportsService } from '../garage-reports/garage-reports.service';
 import { SuspensionService } from '../suspension/suspension.service';
 import { VerificationService } from '../verification.service';
 
-// @traces 069-report-decision-FR-002 069-report-decision-FR-003
-// @traces 069-report-decision-FR-004 069-report-decision-FR-005
-// @traces 069-report-decision-FR-006 069-report-decision-FR-011
-// @traces 069-report-decision-FR-012
+// @traces 069-FR-002 069-FR-003
+// @traces 069-FR-004 069-FR-005
+// @traces 069-FR-006 069-FR-011
+// @traces 069-FR-012
 
 const reader = countedMetrics();
 const decisions = (outcome: string) =>

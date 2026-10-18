@@ -19,7 +19,7 @@ import {
 } from '../notifications.testing';
 import { bellText } from '../templates';
 
-// @traces 069-report-decision-FR-007 069-report-decision-FR-012
+// @traces 069-FR-007 069-FR-012
 
 const redisUrl = redisUrlFor(12);
 const { account, prisma, reset } = fixtures();

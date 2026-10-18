@@ -2727,7 +2727,7 @@ describe('a CUI held by another garage', () => {
   });
 });
 
-// @traces 069-report-decision-FR-006 069-report-decision-FR-008 069-report-decision-FR-009 069-report-decision-FR-010
+// @traces 069-FR-006 069-FR-008 069-FR-009 069-FR-010
 describe('the reports part', () => {
   const EARLIER = new Date(NOW.getTime() - 2 * 3_600_000).toISOString();
   const rows = (host: HTMLElement) => [

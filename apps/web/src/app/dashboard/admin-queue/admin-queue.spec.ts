@@ -359,7 +359,7 @@ describe('the panel', () => {
   });
 });
 
-// @traces 069-report-decision-FR-006
+// @traces 069-FR-006
 describe('live', () => {
   it.each<EventKind>([
     'verification.submitted',

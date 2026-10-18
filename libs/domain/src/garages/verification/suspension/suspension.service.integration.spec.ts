@@ -16,7 +16,7 @@ import {
 import { quotesWorld } from '../../../quotes/quotes.testing';
 
 // @traces 049-FR-001 049-FR-002 049-FR-003 049-FR-004 049-FR-014 049-FR-015
-// @traces 069-report-decision-FR-004
+// @traces 069-FR-004
 
 const reader = countedMetrics();
 const suspensions = (cause: string) =>

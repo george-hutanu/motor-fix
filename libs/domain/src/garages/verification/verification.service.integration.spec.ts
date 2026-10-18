@@ -2174,7 +2174,7 @@ describe('approving a file after its reports are decided', () => {
       },
     });
 
-  // @traces 069-report-decision-FR-003
+  // @traces 069-FR-003
   it('refuses a file in review with no open report as an ordinary review', async () => {
     const file = await fileIn('in_review');
 
@@ -2188,7 +2188,7 @@ describe('approving a file after its reports are decided', () => {
     expect((await fileRow(file.id)).status).toBe('in_review');
   });
 
-  // @traces 069-report-decision-FR-002 069-report-decision-FR-003
+  // @traces 069-FR-002 069-FR-003
   it('moves an in-review file to approved, stamped with the admin, and leaves its other columns', async () => {
     const at = new Date('2026-10-10T08:00:00Z');
     const file = await fileIn('rejected', at);
@@ -2219,7 +2219,7 @@ describe('approving a file after its reports are decided', () => {
     });
   });
 
-  // @traces 069-report-decision-FR-003
+  // @traces 069-FR-003
   it.each([
     'submitted',
     'approved',
@@ -2247,7 +2247,7 @@ describe('approving a file after its reports are decided', () => {
     },
   );
 
-  // @traces 069-report-decision-FR-003
+  // @traces 069-FR-003
   it('refuses an actor without admin.garages', async () => {
     const file = await fileIn('in_review');
 

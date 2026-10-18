@@ -88,7 +88,7 @@ describe("the API's product counters at start", () => {
         'reason_required',
       ]),
     );
-    // @traces 069-report-decision-FR-011
+    // @traces 069-FR-011
     expect(
       named(all, 'motorfix_report_decisions_total').map(
         (one) => one.labels['outcome'],

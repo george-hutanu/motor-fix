@@ -11,7 +11,7 @@ import { test } from './fixtures.js';
 // admin confirms the report in the drawer, a visitor's results lose the
 // garage and its owner reads the suspension. A deployed address, whose run
 // has no DATABASE_URL, skips the file.
-// @traces 069-report-decision-FR-012
+// @traces 069-FR-012
 test.describe('confirming a garage report @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],

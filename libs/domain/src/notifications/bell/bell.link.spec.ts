@@ -146,7 +146,7 @@ describe('a row whose subject cannot be named', () => {
   });
 });
 
-// @traces 069-report-decision-FR-007
+// @traces 069-FR-007
 describe('a row about a garage a driver reported', () => {
   const profile = 'https://motorfix.ro/en/garages/atelier-dinamo';
 

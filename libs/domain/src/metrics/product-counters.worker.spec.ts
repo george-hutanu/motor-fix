@@ -50,7 +50,7 @@ describe("the worker's product counters at start", () => {
     // Its own 24, one per e-mailed template, and one per support e-mail kind
     // and outcome.
     expect(all).toHaveLength(emails.length + 24 + SUPPORT_EMAILS.length);
-    // @traces 069-report-decision-FR-011
+    // @traces 069-FR-011
     expect(
       named(all, 'motorfix_garage_report_decided_notices_total').map(
         (one) => one.labels['outcome'],
