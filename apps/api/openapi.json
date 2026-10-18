@@ -4377,6 +4377,55 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/legal-check": {
+      "get": {
+        "operationId": "LegalCheckController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalCheckDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, not approved, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The approved garage's legal check: company, CAEN, RAR and documents, for its owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url": {
       "get": {
         "operationId": "LegalDocumentsController_pageAddress",
@@ -12236,6 +12285,120 @@
           "kind",
           "name",
           "email"
+        ]
+      },
+      "RarActivityNameDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "brakes"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "LegalCheckRowDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "caen",
+              "rar",
+              "documents"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "checkedOn": {
+            "type": "string",
+            "description": "The Europe/Bucharest day it was checked; null when not run",
+            "example": "2026-10-01",
+            "format": "date",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "description": "The check's recorded detail, only when it is not ok",
+            "nullable": true
+          },
+          "missing": {
+            "type": "array",
+            "description": "The documents row: each kind missing or not valid",
+            "items": {
+              "type": "string",
+              "enum": [
+                "onrc_certificate",
+                "rar_authorisation"
+              ]
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "state",
+          "checkedOn",
+          "detail",
+          "missing"
+        ]
+      },
+      "LegalCheckDto": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "example": "ATELIER DINAMO SRL"
+          },
+          "isMobile": {
+            "type": "boolean",
+            "description": "A mobile mechanic, with no workshop"
+          },
+          "rarActivities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "example": "2026-10-01",
+            "format": "date",
+            "nullable": true
+          },
+          "rows": {
+            "description": "company, caen, rar and documents, in that order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalCheckRowDto"
+            }
+          }
+        },
+        "required": [
+          "companyName",
+          "isMobile",
+          "rarActivities",
+          "lastCheckedOn",
+          "rows"
         ]
       },
       "DocumentPageAddressDto": {

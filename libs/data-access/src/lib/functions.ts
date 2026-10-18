@@ -227,6 +227,8 @@ export type { GarageReportsControllerReport$Params as GarageReportsControllerRep
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
+export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params } from './fn/garages/legal-check-controller-read';
+export { legalCheckControllerRead as legalCheckControllerRead } from './fn/garages/legal-check-controller-read';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
 export type { PriceListControllerSetRange$Params as PriceListControllerSetRange$Params } from './fn/garages/price-list-controller-set-range';

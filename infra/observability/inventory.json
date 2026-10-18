@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 139,
+    "count": 140,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -900,6 +900,19 @@
       ],
       "reason": "refusals show on the request-duration metric by route and status code",
       "story": "ST-312"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-legal-check",
+      "source": "libs/domain/src/garages/verification/legal-check/legal-check.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/legal-check",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read only: it changes nothing, so no product counter or audit row; its refusals and latency show on the request-duration metric by route and status code, its spans come from the HTTP and Prisma auto-instrumentation, and the API-wide error and latency rules cover it",
+      "story": "ST-210"
     },
     {
       "kind": "endpoint",
