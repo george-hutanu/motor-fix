@@ -109,6 +109,7 @@ const ZERO_WAIT = new Set([
   'mcp-key-fetch-failures',
   'decline-window-sweep-late',
   'verification-rejection-burst',
+  'verification-more-request-burst',
   'outage',
 ]);
 
@@ -730,8 +731,9 @@ describe('alert rules', () => {
   // @traces 880-FR-017
   // @traces 1178-FR-009
   // @traces 305-FR-009
-  it('holds forty-two rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(42);
+  // @traces 304-FR-012
+  it('holds forty-three rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(43);
   });
 
   // @traces 1345-FR-004

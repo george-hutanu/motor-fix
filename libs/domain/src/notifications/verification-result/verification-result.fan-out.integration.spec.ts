@@ -357,6 +357,30 @@ describe('a message that is always sent', () => {
     expect(await channels(owner)).toEqual(['email', 'in_app']);
     expect(await channels(english)).toEqual(['email', 'in_app', 'push']);
   });
+
+  // @traces 304-FR-005
+  it('still sends a request for more, its note word for word, to an owner who muted every channel', async () => {
+    const { file, owner } = await staffedGarage();
+    await prisma.notificationPreference.createMany({
+      data: (['email', 'push', 'whatsapp'] as const).map((channel) => ({
+        accountId: owner,
+        channel,
+        enabled: false,
+        garageId: file.garageId,
+        type: 'VERIFICATION_RESULT',
+      })),
+    });
+    const { job } = await decided(file.id, negative('more_requested'));
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    expect(await channels(owner)).toEqual(['email', 'in_app']);
+    expect((await emailOf(owner))?.params).toMatchObject({
+      decision: 'more_requested',
+      note: NOTE,
+    });
+  });
 });
 
 // @traces 209-FR-007 209-FR-008 209-FR-009 209-FR-010 209-FR-003

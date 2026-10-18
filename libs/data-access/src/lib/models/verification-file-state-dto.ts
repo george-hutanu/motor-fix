@@ -25,9 +25,19 @@ export interface VerificationFileStateDto {
 }) | null;
 
   /**
+   * When more was asked for; set only when resubmitted
+   */
+  requestedAt: string | null;
+
+  /**
    * What the latest request for more asked for; empty otherwise
    */
   requestedItems: Array<string>;
+
+  /**
+   * Sent again after a request for more, with no reopening since that request
+   */
+  resubmitted: boolean;
   status: 'submitted' | 'in_review' | 'approved' | 'more_requested' | 'rejected';
 
   /**

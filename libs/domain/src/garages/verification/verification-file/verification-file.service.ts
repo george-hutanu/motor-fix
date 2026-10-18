@@ -1,10 +1,14 @@
 import {
   DOCUMENT_KINDS,
   issuedWithinWindow,
+  VERIFICATION_CHANGES_MAX,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TIMELINE_MAX,
   type VerificationActorDto,
+  type VerificationChangeArea,
+  type VerificationChangeDto,
   type VerificationCheckEvidenceDto,
+  type VerificationFileChangesDto,
   type VerificationFileDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -19,6 +23,7 @@ import { shortName } from '../../../quotes/reads';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
+import { resubmission } from '../verification.service';
 
 const SYSTEM_NAME = 'MotorFix';
 
@@ -65,6 +70,26 @@ export function timelineWhere(
 }
 
 const iso = (at: Date | null) => at?.toISOString() ?? null;
+
+// Where each of the garage's own records shows among a returned file's
+// changes. The file, its checks, notifications and accounts are none of them.
+const CHANGE_AREAS: Record<string, VerificationChangeArea> = {
+  garage: 'profile',
+  garage_brand: 'brands',
+  garage_brand_job: 'prices',
+  garage_closed_day: 'profile',
+  garage_facility: 'profile',
+  garage_photo: 'photos',
+  garage_price: 'prices',
+  legal_document: 'documents',
+};
+
+// When the request for more was, for a file back after one; else null.
+const requestOf = (file: {
+  decidedAt: Date | null;
+  reopenedAt: Date | null;
+  status: Parameters<typeof resubmission>[0]['status'];
+}) => (resubmission(file) ? file.decidedAt : null);
 
 // Everything an admin reads to decide one verification file, in one answer.
 // It writes nothing: the opening is the open use case's.
@@ -256,7 +281,9 @@ export class VerificationFileService {
         reopenedAt: iso(file.reopenedAt),
         reopenedBy: actor(file.reopenedBy, file.reopenedAt),
         reopenReason: file.reopenReason,
+        requestedAt: iso(requestOf(file)),
         requestedItems: file.requestedItems,
+        resubmitted: resubmission(file),
         status: file.status,
         submittedAt: file.submittedAt.toISOString(),
       },
@@ -310,6 +337,60 @@ export class VerificationFileService {
         }),
         total,
       },
+    };
+  }
+
+  // What the garage changed after the request for more, newest first: its
+  // profile, prices, brands, photos and documents, never an internal line or
+  // a document opening. Nothing for a file not back after a request.
+  async changes(id: string): Promise<VerificationFileChangesDto> {
+    if (!isUUID(id)) throw new NotFoundException();
+    const file = await this.prisma.verificationFile.findUnique({
+      select: {
+        decidedAt: true,
+        garageId: true,
+        reopenedAt: true,
+        status: true,
+      },
+      where: { id },
+    });
+    if (!file) throw new NotFoundException();
+    const requestedAt = requestOf(file);
+    if (!requestedAt) {
+      return { changes: [], requestedAt: null, resubmitted: false, total: 0 };
+    }
+    const where: Prisma.ActivityLogWhereInput = {
+      action: { in: ['create', 'update', 'delete'] },
+      at: { gt: requestedAt },
+      garageId: file.garageId,
+      internal: false,
+      subjectType: { in: Object.keys(CHANGE_AREAS) },
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.activityLog.findMany({
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
+        take: VERIFICATION_CHANGES_MAX,
+        where,
+      }),
+      this.prisma.activityLog.count({ where }),
+    ]);
+    return {
+      changes: rows.map((row): VerificationChangeDto => {
+        const entry = auditEntryOf(row, true);
+        return {
+          action: entry.action as VerificationChangeDto['action'],
+          area: CHANGE_AREAS[entry.subjectType],
+          at: entry.at,
+          field: entry.field,
+          kind: entry.kind,
+          newValue: entry.newValue,
+          oldValue: entry.oldValue,
+          subjectType: entry.subjectType,
+        };
+      }),
+      requestedAt: requestedAt.toISOString(),
+      resubmitted: true,
+      total,
     };
   }
 

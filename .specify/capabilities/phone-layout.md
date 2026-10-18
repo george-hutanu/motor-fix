@@ -15,6 +15,7 @@ features:
   - 303-approve-publish-garage
   - 173-price-range-in-place
   - 305-reject-garage-reason
+  - 304-request-garage-details
 ---
 
 # Capability: Phone layout and installable web app
@@ -262,6 +263,10 @@ _From 173-price-range-in-place._
 ### 305-FR-010 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the dialog MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, its options one per line, the text area full width at 320 px, its controls and the "Respinge" button at least 44 px tall and reachable by keyboard, the radio group and the text area labelled, every refusal conveyed by text as well as colour; the dialog moves focus to the radio group on open, returns it to the "Respinge" button on cancel and to the drawer's title on success; the queue row's "Respins" state is text, not colour alone.
 
 _From 305-reject-garage-reason._
+
+### 304-FR-013 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the dialog, the tag and the panel MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, the ticks one per line at 320 px, the text area full width, every control and the "Cere completări" button at least 44 px tall and reachable by keyboard, the text area and the tick group labelled, every refusal and state conveyed by text as well as colour; the dialog moves focus to the text area on open, returns it to the "Cere completări" button on cancel and to the drawer's title on success; the panel is a region named by its title and is read before the checks in document order.
+
+_From 304-request-garage-details._
 
 ## Retired
 

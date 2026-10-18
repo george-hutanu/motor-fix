@@ -16,11 +16,9 @@ import {
   ANALYTICS_CONSENT_VERSION,
   CONSENT_DECISIONS,
 } from '@motor-fix/contracts/consent';
-import {
-  type AnalyticsConsentDto,
-  ConsentsService,
-  type RecordConsentDto,
-} from '@motor-fix/data-access';
+import type { AnalyticsConsentDto } from '@motor-fix/data-access/models/analytics-consent-dto';
+import type { RecordConsentDto } from '@motor-fix/data-access/models/record-consent-dto';
+import { ConsentsService } from '@motor-fix/data-access/services/consents.service';
 import { I18n } from '@motor-fix/i18n';
 
 import {

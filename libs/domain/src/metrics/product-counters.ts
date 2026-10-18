@@ -126,6 +126,16 @@ const decisionRefusals = () =>
     'motorfix_verification_decision_refusals_total',
     'Verification decisions refused, by reason',
   );
+const moreRequests = () =>
+  counter(
+    'motorfix_verification_more_requests_total',
+    'Garage verification files sent back for more details',
+  );
+const resubmissions = () =>
+  counter(
+    'motorfix_verification_resubmissions_total',
+    'Verification files sent again after a request for more',
+  );
 const reportDecisions = () =>
   counter(
     'motorfix_report_decisions_total',
@@ -255,6 +265,14 @@ export function countRejection(reason: VerificationReasonCode) {
   rejections().add(1, { reason });
 }
 
+export function countMoreRequest() {
+  moreRequests().add(1);
+}
+
+export function countResubmission() {
+  resubmissions().add(1);
+}
+
 export function countReportDecision(outcome: ReportDecisionOutcome) {
   reportDecisions().add(1, { outcome });
 }
@@ -373,6 +391,8 @@ const STARTS: Record<
     [rejections, each('reason', VERIFICATION_REASON_CODES)],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
+    [moreRequests, [{}]],
+    [resubmissions, [{}]],
     [reportDecisions, each('outcome', REPORT_DECISION_OUTCOMES)],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
