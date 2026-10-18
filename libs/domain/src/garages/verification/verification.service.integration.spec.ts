@@ -1288,18 +1288,7 @@ describe('a file already decided', () => {
   // @traces 306-FR-002 306-FR-012
   it('lets exactly one of two racing decisions commit, every time', async () => {
     for (let lap = 0; lap < 10; lap += 1) {
-      const file = await prisma.verificationFile.create({
-        data: {
-          checks: {
-            create: [
-              { kind: 'rar', result: 'ok' },
-              { kind: 'caen', result: 'ok' },
-            ],
-          },
-          garageId,
-          status: 'in_review',
-        },
-      });
+      const file = await fileIn('in_review');
 
       const results = await Promise.allSettled([
         decideWith(ioana, file.id, { outcome: 'approved' }),
