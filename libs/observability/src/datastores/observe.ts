@@ -6,7 +6,11 @@ import {
 } from '@opentelemetry/api';
 
 import { figure } from './figure';
-import { type KeycloakReading, parseKeycloakMetrics } from './keycloak';
+import {
+  KEYCLOAK_LIMIT_MS,
+  type KeycloakReading,
+  parseKeycloakMetrics,
+} from './keycloak';
 import {
   logSlowStatements,
   type MonitorSession,
@@ -31,7 +35,6 @@ interface DataStores {
 const READ_INTERVAL_MS = 60_000;
 const POSTGRES_LIMIT_MS = 5_000;
 const REDIS_LIMIT_MS = 2_000;
-const KEYCLOAK_LIMIT_MS = 5_000;
 
 // An address in a failure's message may carry credentials; it is logged
 // as a placeholder.

@@ -1,5 +1,10 @@
 // Keycloak's heap, read from the Prometheus text its management /metrics
 // serves (Micrometer's jvm_memory_* series).
+
+// How long one reading of Keycloak's /metrics may take: the worker's fetch
+// and the poller's limit both use it.
+export const KEYCLOAK_LIMIT_MS = 5_000;
+
 export interface KeycloakReading {
   heapUsedBytes: number;
   heapMaxBytes: number;

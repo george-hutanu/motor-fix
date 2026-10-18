@@ -1,4 +1,5 @@
-import { parseKeycloakMetrics } from './keycloak';
+import { KEYCLOAK_LIMIT_MS, parseKeycloakMetrics } from './keycloak';
+import { KEYCLOAK_LIMIT_MS as exported } from '../index';
 
 // What Keycloak 26.8's management /metrics serves for the heap, as read
 // from the running image (G1: only the old generation carries a maximum).
@@ -83,5 +84,12 @@ describe('parseKeycloakMetrics', () => {
     expect(() => parseKeycloakMetrics('<html>Not found</html>')).toThrow(
       new Error('no heap series'),
     );
+  });
+});
+
+describe('KEYCLOAK_LIMIT_MS', () => {
+  it('is the one 5 s limit of a Keycloak reading, exported for the worker', () => {
+    expect(KEYCLOAK_LIMIT_MS).toBe(5_000);
+    expect(exported).toBe(KEYCLOAK_LIMIT_MS);
   });
 });

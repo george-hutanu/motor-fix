@@ -2,7 +2,10 @@ import { observeDataStores } from '@motor-fix/observability';
 
 import { DataStoreMetricsModule } from './data-store-metrics.module';
 
+// A limit no other reading uses, so the test proves the module reads the
+// one the observability library defines rather than a copy of its own.
 jest.mock('@motor-fix/observability', () => ({
+  KEYCLOAK_LIMIT_MS: 4_321,
   observeDataStores: jest.fn(() => () => undefined),
   telemetryStarted: jest.fn(() => true),
 }));
@@ -80,7 +83,7 @@ describe('the Keycloak reading in the data-store readings', () => {
     },
   );
 
-  it('fetches the address once a reading, asking for text within 5 s, and returns the body', async () => {
+  it('fetches the address once a reading, asking for text within the shared Keycloak limit, and returns the body', async () => {
     const timeout = jest.spyOn(AbortSignal, 'timeout');
     fetch.mockResolvedValue(answer(200, 'jvm_memory_used_bytes 1').response);
     const stores = started(URL);
@@ -91,7 +94,7 @@ describe('the Keycloak reading in the data-store readings', () => {
     );
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch.mock.calls[0]?.[0]).toBe(URL);
-    expect(timeout).toHaveBeenCalledWith(5_000);
+    expect(timeout).toHaveBeenCalledWith(4_321);
     const init = fetch.mock.calls[0]?.[1] as RequestInit;
     expect(init.signal).toBe(timeout.mock.results[0]?.value);
     expect(new Headers(init.headers).get('accept')).toBe('text/plain');

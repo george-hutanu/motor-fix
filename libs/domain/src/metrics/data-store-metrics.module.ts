@@ -1,4 +1,5 @@
 import {
+  KEYCLOAK_LIMIT_MS,
   type MonitorSession,
   observeDataStores,
   telemetryStarted,
@@ -19,7 +20,6 @@ import { borrowStore, returnStore } from '../store/store';
 const DATA_STORE_CLIENTS = Symbol('DATA_STORE_CLIENTS');
 const DATA_STORE_INTERVAL = Symbol('DATA_STORE_INTERVAL');
 const STATEMENT_LIMIT_MS = 5_000;
-const KEYCLOAK_LIMIT_MS = 5_000;
 
 interface DataStoreOptions {
   // The application URL, for the outbox SELECT.
