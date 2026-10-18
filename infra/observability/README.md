@@ -124,7 +124,7 @@ hour, and the spec fails on one.
 
 | Service | Signals (the file holds each threshold) | No data |
 |---|---|---|
-| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 over 300 ms for 10 minutes (`api-search-latency`) | OK |
+| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 and the garage profile p95 over 300 ms for 10 minutes (`api-search-latency`, `api-profile-latency`) | OK |
 | worker | down, event-loop delay, oldest waiting job per queue, waiting jobs growing for 15 minutes per queue (`worker-queue-growing`), a job's final failure per queue (`verification-result` keeps its own rule), memory (`worker-memory`) | `worker-queue-backlog` alerts |
 | mcp | memory (`mcp-memory`, in `mcp.json`) beside its own signals | OK |
 | PostgreSQL | unreachable, connections used, database size, the oldest outbox event waiting more than 60 s for 5 minutes (`postgres-outbox-stuck`) | `postgres-unreachable` alerts |

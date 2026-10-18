@@ -178,6 +178,15 @@ const EXPECTED: Record<
     type: 'lt',
     value: 0.3,
   },
+  'api-profile-latency': {
+    expr: [
+      'histogram_quantile(0.95, sum by (deployment_environment, le) (rate(http_server_request_duration_seconds_bucket{service_name="api", http_route="/api/v1/garages/:slug"}[5m])))',
+    ],
+    for: '10m',
+    from: 300,
+    type: 'gt',
+    value: 0.3,
+  },
   'api-search-cache-fallback-rate': {
     expr: [
       'motorfix_search_cache_total{service_name="api", outcome="fallback"}[10m]',
@@ -615,7 +624,7 @@ describe('alert rules', () => {
   // @traces 880-FR-005
   // @traces 880-FR-007
   // @traces 880-FR-009
-  it('holds exactly the twenty-seven rules, each with its threshold, window and wait', () => {
+  it('holds exactly the twenty-eight rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
@@ -679,8 +688,8 @@ describe('alert rules', () => {
   });
 
   // @traces 880-FR-017
-  it('holds thirty-nine rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(39);
+  it('holds forty rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(40);
   });
 
   // @traces 1345-FR-004

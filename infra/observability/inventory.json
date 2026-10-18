@@ -18,6 +18,7 @@
         "api-search-log-failure-rate",
         "api-prefetch-hit-rate",
         "api-search-latency",
+        "api-profile-latency",
         "api-memory"
       ],
       "story": "ST-881"
@@ -87,6 +88,7 @@
         "api-search-log-failure-rate",
         "api-prefetch-hit-rate",
         "api-search-latency",
+        "api-profile-latency",
         "api-memory"
       ],
       "story": "ST-881"
@@ -1221,6 +1223,20 @@
       ],
       "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
       "story": "ST-267"
+    },
+    {
+      "kind": "endpoint",
+      "name": "public-garage-profile",
+      "source": "libs/domain/src/garages/public-garages/public-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:slug",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency",
+        "api-profile-latency"
+      ],
+      "reason": "one PostgreSQL statement on a cache miss, the answer cached ten minutes and purged by the garage tag; the cache outcomes are the motorfix_cache_total entry (kind profile)",
+      "story": "ST-1183"
     },
     {
       "kind": "endpoint",
