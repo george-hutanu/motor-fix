@@ -60,6 +60,8 @@ interface Tile {
   progress?: number;
   // The photo's entry in the browser queue, until its confirm lands.
   queueId?: string;
+  // Left waiting for a connection, until its next send starts.
+  offline?: boolean;
 }
 
 type Drain = 'load' | 'online' | 'pick' | 'retry';
@@ -119,13 +121,11 @@ export class PhotosStep {
       this.failedLately() &&
       this.tiles().some((tile) => tile.status === 'failed'),
   );
-  // Photos still held in this browser, not yet on the draft.
+  // Photos held in this browser for want of a connection.
   protected readonly waiting = computed(
     () =>
       this.tiles().filter(
-        (tile) =>
-          tile.queueId &&
-          (tile.status === 'waiting' || tile.status === 'uploading'),
+        (tile) => tile.queueId && tile.offline && tile.status === 'waiting',
       ).length,
   );
 
@@ -526,7 +526,7 @@ export class PhotosStep {
           body: { key: incoming },
         }),
       );
-    this.patch(id, { progress: 0, status: 'uploading' });
+    this.patch(id, { offline: false, progress: 0, status: 'uploading' });
     const queueId = this.tiles().find((t) => t.id === id)?.queueId;
     const events: Observable<
       { progress: number } | { sent: string } | { done: { key: string } }
@@ -611,7 +611,7 @@ export class PhotosStep {
 
   // Waiting for signal: counted once per photo.
   private wait(id: number) {
-    this.patch(id, { status: 'waiting' });
+    this.patch(id, { offline: true, status: 'waiting' });
     const queueId = this.tiles().find((t) => t.id === id)?.queueId;
     if (queueId && !this.counted.has(queueId)) {
       this.counted.add(queueId);

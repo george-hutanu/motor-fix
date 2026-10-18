@@ -987,9 +987,24 @@ describe('the chip that counts photos waiting for signal', () => {
     setOnline(true);
     window.dispatchEvent(new Event('online'));
     await opened.settle();
-    await upload(opened, askedForAddress(opened.http)[0] as TestRequest, 0);
+    // The first is sending; the second has not been tried since the signal came back.
     expect(text(chip(opened.step))).toBe('O fotografie așteaptă semnal');
+    await upload(opened, askedForAddress(opened.http)[0] as TestRequest, 0);
+    expect(text(chip(opened.step))).toBe('');
     await upload(opened, askedForAddress(opened.http)[0] as TestRequest, 1);
+
+    expect(text(chip(opened.step))).toBe('');
+  });
+
+  // @traces 1191-FR-002
+  it('stays empty while a photo picked online uploads', async () => {
+    setOnline(true);
+    const opened = await open();
+
+    await choose(opened, [photo('unu.jpg')]);
+    expect(text(chip(opened.step))).toBe('');
+    expect(text(tiles(opened.step)[0])).not.toContain('Așteaptă conexiunea');
+    await upload(opened, askedForAddress(opened.http)[0] as TestRequest, 0);
 
     expect(text(chip(opened.step))).toBe('');
   });
