@@ -37,6 +37,14 @@ const confirmLines = async (page: Page, dialog: Locator) => {
     ).size;
   });
 };
+// The dialog's two actions as laid out: each one's width and text size.
+const actionFaces = (dialog: Locator) =>
+  dialog.locator('.actions button').evaluateAll((buttons) =>
+    buttons.map((button) => ({
+      size: getComputedStyle(button).fontSize,
+      width: Math.round(button.getBoundingClientRect().width),
+    })),
+  );
 const drawer = (page: Page) => page.locator('mf-verification-file');
 const footer = (page: Page) => drawer(page).locator('[data-section="footer"]');
 
@@ -178,6 +186,10 @@ test.describe('approving and publishing a garage @seeded', () => {
         .filter({ hasText: 'Every check is ok.' });
       await expect(dialog).toBeVisible();
       expect(await confirmLines(page, dialog)).toBe(1);
+      // On a phone the actions stack full width, one text size for both.
+      const [cancel, confirm] = await actionFaces(dialog);
+      expect(confirm?.size).toBe(cancel?.size);
+      expect(confirm?.width).toBe(cancel?.width);
       expect(await sideways(page)).toBe(0);
     });
   }

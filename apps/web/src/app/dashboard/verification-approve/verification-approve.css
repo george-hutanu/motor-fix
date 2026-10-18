@@ -48,13 +48,19 @@ textarea {
   min-height: var(--mf-tap);
   white-space: normal;
 }
-/* The label face is wide: at the full size "Approve and publish" needs a 405 px sheet, so on every phone,
-   where the dialog opens as a bottom sheet (below the overlays' 768 px), it takes the label size. */
+/* On a phone the dialog is a bottom sheet (below the overlays' 768 px). The label face is wide: at the full size
+   "Approve and publish" needs a 405 px sheet. So the actions stack at the sheet's width, confirm nearest the thumb,
+   and both take the small size, which keeps the label on one line in a 320 px sheet. */
 @media (max-width: 767px) {
-  .actions button[type="submit"] {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .actions button {
     padding-inline: var(--mf-space-3);
-    font-size: var(--mf-size-label);
+    font-size: var(--mf-size-small);
+  }
+  .actions button[type="submit"] {
     letter-spacing: 0.08em;
-    text-wrap: balance;
   }
 }
