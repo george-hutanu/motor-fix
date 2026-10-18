@@ -1,4 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,12 @@ import {
   signal,
 } from '@angular/core';
 import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
-import { approvalGaps, lamp } from '@motor-fix/contracts/verification-target';
+import {
+  type ApprovalGap,
+  approvalGaps,
+  approvalGapsFrom,
+  lamp,
+} from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
   type AuditEntryDto,
@@ -385,18 +391,19 @@ export class VerificationFile {
 
   // Asks first, listing what the approval passes over; the note it needs is
   // the dialog's to ask for. A note_required answer (a check changed since
-  // the read) reads the file again and asks again with the list as it now
-  // stands; any other failure is told and read again, so a decision that
-  // committed before the failure is shown and never offered twice.
+  // the read) reads the file again and asks again with the server's missing
+  // list (the re-read's own when the answer carries none); any other failure
+  // is told and read again, so a decision that committed before the failure
+  // is shown and never offered twice.
   // Held while the dialog is open, so a second press opens no second one.
   private asking = false;
 
-  async approve() {
+  async approve(missing?: ApprovalGap[]) {
     if (this.asking || this.busy() || this.gateHint() || this.decided()) return;
     this.asking = true;
     const answer = await this.overlays
       .open<{ note?: string }, VerificationApproveData>(VerificationApprove, {
-        data: { missing: this.gaps() },
+        data: { missing: missing ?? this.gaps() },
         shape: 'dialog',
         title: 'admin.file.approve.title',
       })
@@ -407,12 +414,16 @@ export class VerificationFile {
       this.focusApprove();
       return;
     }
-    if (await this.sendApproval(answer)) await this.approve();
+    const again = await this.sendApproval(answer);
+    if (again) await this.approve(again.missing ?? undefined);
   }
 
-  // Sends the approval; true when it must be asked for again.
-  private async sendApproval(answer: { note?: string }) {
-    if (this.busy()) return false;
+  // Sends the approval; the server's missing list (none when it sent no
+  // readable one) when it must be asked for again, else null.
+  private async sendApproval(answer: {
+    note?: string;
+  }): Promise<{ missing: ApprovalGap[] | null } | null> {
+    if (this.busy()) return null;
     this.busy.set(true);
     this.refused.set(null);
     try {
@@ -422,18 +433,25 @@ export class VerificationFile {
       });
       this.file.reload();
       this.focusHeading();
-      return false;
+      return null;
     } catch (error) {
-      const code = toProblem(error).code ?? '';
-      if (code === 'note_required') return await this.reread();
-      this.refusal(error);
-      // A named refusal changes nothing; the transition refusal re-reads.
-      const told = REFUSALS[code] || code === 'verification_transition_refused';
-      if (!told) this.file.reload();
-      return false;
+      return await this.approvalFailed(error);
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private async approvalFailed(error: unknown) {
+    const code = toProblem(error).code ?? '';
+    if (code === 'note_required') {
+      const missing = serverMissing(error);
+      return (await this.reread()) ? { missing } : null;
+    }
+    this.refusal(error);
+    // A named refusal changes nothing; the transition refusal re-reads.
+    const told = REFUSALS[code] || code === 'verification_transition_refused';
+    if (!told) this.file.reload();
+    return null;
   }
 
   // The file read again in place; true when it still waits for a decision.
@@ -951,4 +969,15 @@ export class VerificationFile {
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
+}
+
+// The note_required refusal's own list of what the approval passes over;
+// none when the answer carries no readable list or an empty one (the server
+// refuses only an approval that passes something over).
+function serverMissing(error: unknown) {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  const gaps = approvalGapsFrom(
+    (body as { missing?: unknown } | null)?.missing,
+  );
+  return gaps?.length ? gaps : null;
 }
