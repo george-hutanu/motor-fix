@@ -37,6 +37,7 @@ features:
   - 1183-garage-profile-page
   - 1178-keycloak-sizing
   - 1348-release-green
+  - 1191-resilient-uploads
 ---
 
 # Capability: Observability
@@ -828,6 +829,10 @@ _From 1178-keycloak-sizing._
 ### 1178-FR-012 — The two gauges carry no label of their own; the environment and service come from the worker's OpenTelemetry resource attributes, as for every other data-store figure, so the existing environment filters select them.
 
 _From 1178-keycloak-sizing._
+
+### 1191-FR-011 — Browser upload outcomes MUST be reported through the existing browser measurement sink as one measurement type (`upload`) with context `purpose` (`garage_photo`, `legal_document`) and `outcome` (`queued` when a photo waits for signal, `resumed` when a drain starts after a reload or `online`, `sent` on a confirmed upload, `failed` when a drain gives up or the server refuses), and for `sent` the value `duration` in milliseconds from the first attempt; no file name, draft id or other personal data. `infra/observability/inventory.json`'s `grafana-faro` entry MUST describe the measurement, the `motorfix-web-vitals` dashboard MUST gain an uploads panel (outcomes over time and the send duration p75), and `scripts/observability-inventory.ts` and the dashboard check MUST pass. The PR's Observability section lists them.
+
+_From 1191-resilient-uploads._
 
 ## Retired
 
