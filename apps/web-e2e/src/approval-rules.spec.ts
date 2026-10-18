@@ -39,14 +39,10 @@ const drawer = (page: Page) => page.locator('mf-verification-file');
 // history, written by the endpoint after the refusal rolled back; the seeded
 // stack keeps both test-only rules off, as every environment starts. The RAR
 // switch is not turned on here: it is one platform-wide value, and the suite's
-// other workers approve files under the gate it would lift.
+// other workers approve files under the gate it would lift. Every run that
+// boots the stack has the database, so the flow needs DATABASE_URL.
 // @traces 259-FR-005 259-FR-006 259-FR-008
 test.describe('a refused approval in the history @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'seeds a garage and its file in PostgreSQL, which needs DATABASE_URL',
-  );
-
   let db: Client;
   let garageId: string;
   let fileId: string;
