@@ -61,11 +61,6 @@
   color: var(--mf-text-secondary);
   cursor: default;
 }
-.label {
-  color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
-  font-weight: 400;
-}
 .request {
   flex: 1 1 160px;
   min-width: 0;

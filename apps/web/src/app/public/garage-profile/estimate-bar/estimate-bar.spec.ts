@@ -138,7 +138,10 @@ describe('the bar’s stylesheet', () => {
 
   it('has tap-sized buttons, readable text, steady digits and a plain fallback', () => {
     expect(css).toContain('min-height: var(--mf-tap)');
-    expect(css).toContain('var(--mf-size-small)');
+    // No size below the small step: the bar's text inherits the body size.
+    for (const size of css.match(/font-size:[^;]+/g) ?? []) {
+      expect(size).toBe('font-size: var(--mf-size-small)');
+    }
     expect(css).toContain('tabular-nums');
     expect(css).toContain('prefers-reduced-transparency: reduce');
   });
