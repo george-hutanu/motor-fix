@@ -151,7 +151,7 @@ describe('lamp colours', () => {
 })
 class Translated {}
 
-// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-FR-007
 describe('a lamp named in both languages', () => {
   it('carries its word in Romanian, then in English, beside the hidden dot', async () => {
     const i18n = TestBed.inject(I18n);

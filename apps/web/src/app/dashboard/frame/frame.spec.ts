@@ -1163,7 +1163,7 @@ describe('Frame consent bar', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-001
+// @traces 248-FR-001
 describe('Frame bars on a phone', () => {
   // A sticky box cannot leave the box it sits in. Inside the view, which
   // starts under the account block on a phone, a tall consent bar stopped at

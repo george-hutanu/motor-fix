@@ -979,7 +979,7 @@ const describedBy = (field: HTMLElement) =>
     .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
     .join(' ');
 
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-008
 describe('the quote request’s errors tied to their fields', () => {
   it('points the description at its error and marks it invalid while it shows', async () => {
     await open();

@@ -401,7 +401,7 @@ describe('ResultsMap, a move of the map', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-004
+// @traces 248-FR-004
 describe('RESULTS_MAP, the map while it loads', () => {
   const { fake } = jest.requireMock<MapFake>('maplibre-gl');
 

@@ -179,8 +179,8 @@ async function barProblems(page: Page, where: string) {
   return found;
 }
 
-// @traces 248-launch-screens-accessible-FR-001
-// @traces 248-launch-screens-accessible-FR-004
+// @traces 248-FR-001
+// @traces 248-FR-004
 test.describe('the consent bar over the dashboard tab bar at 320 px @seeded', () => {
   test("keeps the tab bar's links clear and every control 44 px, in both languages and schemes", async ({
     page,
@@ -281,10 +281,13 @@ async function walk(page: Page, screens: readonly Screen[]) {
   return found;
 }
 
-// @traces 248-launch-screens-accessible-FR-001
-// @traces 248-launch-screens-accessible-FR-003
-// @traces 248-launch-screens-accessible-FR-007
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-001
+// @traces 248-FR-003
+// @traces 248-FR-007
+// @traces 248-FR-008
+// Each finding is named with its screen, language, scheme and rule; the
+// screen-reader run is FR-014's manual part.
+// @traces 248-FR-014
 test.describe('axe on the core screens @seeded', () => {
   // One test per screen: both languages and schemes of four screens do not
   // fit one test's 30 s on a CI runner, and apart they run in parallel.
@@ -420,10 +423,10 @@ async function dashboards(page: Page, paths: readonly string[]) {
   return found;
 }
 
-// @traces 248-launch-screens-accessible-FR-001
-// @traces 248-launch-screens-accessible-FR-003
-// @traces 248-launch-screens-accessible-FR-007
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-001
+// @traces 248-FR-003
+// @traces 248-FR-007
+// @traces 248-FR-008
 test.describe('axe on the quotes a driver compares @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],
@@ -505,10 +508,10 @@ async function listingScan(page: Page, where: string) {
   return found;
 }
 
-// @traces 248-launch-screens-accessible-FR-001
-// @traces 248-launch-screens-accessible-FR-003
-// @traces 248-launch-screens-accessible-FR-007
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-001
+// @traces 248-FR-003
+// @traces 248-FR-007
+// @traces 248-FR-008
 test.describe('axe on the listing steps', () => {
   // The place step's map draws the app's empty style.
   test.beforeEach(({ context }) => ownMap(context));

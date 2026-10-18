@@ -111,9 +111,9 @@ async function tabTo(
   throw new Error(`Tab never reached ${target}`);
 }
 
-// @traces 248-launch-screens-accessible-FR-004
-// @traces 248-launch-screens-accessible-FR-005
-// @traces 248-launch-screens-accessible-FR-006
+// @traces 248-FR-004
+// @traces 248-FR-005
+// @traces 248-FR-006
 test.describe('the core flow by keyboard alone @seeded', () => {
   test('from home to a sent request, every stop visible and ringed', async ({
     page,
@@ -228,7 +228,7 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await expect(opener).toBeFocused();
   });
 
-  // @traces 248-launch-screens-accessible-FR-010
+  // @traces 248-FR-010
   test('a result opens its garage profile from the keyboard', async ({
     page,
   }) => {

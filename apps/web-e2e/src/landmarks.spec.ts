@@ -4,6 +4,7 @@ import { settled } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
+// @traces 248-FR-013
 const RULES = [
   'landmark-one-main',
   'region',

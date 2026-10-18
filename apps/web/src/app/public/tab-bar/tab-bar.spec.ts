@@ -123,7 +123,7 @@ describe('the account screen on the server', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-FR-007
 describe('the public tab bar', () => {
   beforeEach(() => setUp());
 

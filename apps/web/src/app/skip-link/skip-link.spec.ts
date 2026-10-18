@@ -34,7 +34,7 @@ afterEach(() => {
   for (const main of mains.splice(0)) main.remove();
 });
 
-// @traces 248-launch-screens-accessible-FR-006
+// @traces 248-FR-006
 describe('the skip link', () => {
   it('reads "Sari la conținut" and points at the main content', async () => {
     const { link } = await render();

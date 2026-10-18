@@ -469,8 +469,8 @@ describe('Overlays: focus', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-005
-// @traces 248-launch-screens-accessible-FR-004
+// @traces 248-FR-005
+// @traces 248-FR-004
 describe('Overlays: focus when the opener is gone', () => {
   let main: HTMLElement;
 

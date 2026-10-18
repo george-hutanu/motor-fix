@@ -239,7 +239,7 @@ async function closeName(language: 'ro' | 'en', trigger: string) {
   return name;
 }
 
-// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-FR-007
 describe('helm dialog and sheet close buttons named in both languages', () => {
   it.each([
     ['ro', '#named-dialog', 'Închide'],

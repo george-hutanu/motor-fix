@@ -44,8 +44,8 @@ function tags(html: string) {
   );
 }
 
-// @traces 248-launch-screens-accessible-FR-009
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-009
+// @traces 248-FR-008
 describe('message regions', () => {
   it.each(REGIONS)('%s marks every %p region mf-message', (template, names) => {
     const regions = tags(read(template)).filter(({ bound, classes }) =>

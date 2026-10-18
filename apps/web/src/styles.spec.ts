@@ -16,7 +16,7 @@ function rule(selector: string): string | undefined {
   return undefined;
 }
 
-// @traces 248-launch-screens-accessible-FR-009
+// @traces 248-FR-009
 describe('the shared rule for an empty message region', () => {
   it('hides an empty .mf-message visually and keeps it in the accessibility tree', () => {
     const body = rule('.mf-message:empty');
@@ -32,7 +32,7 @@ describe('the shared rule for an empty message region', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-004
+// @traces 248-FR-004
 describe('the room a focused control keeps clear of the bars', () => {
   const FOCUSABLES =
     ':where(a, button, input, select, textarea, summary, [tabindex])';

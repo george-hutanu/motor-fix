@@ -180,7 +180,7 @@ describe('the public frame around the consent bar', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-011
+// @traces 248-FR-011
 describe('the contact link', () => {
   it.each([
     ['/ro', 'ro'],

@@ -131,7 +131,8 @@ test.describe('with reduced motion', () => {
     ).toEqual(['1', 'none']);
   });
 
-  // @traces 248-launch-screens-accessible-FR-006
+  // @traces 248-FR-006
+  // @traces 248-FR-012
   test('the skip link appears at once on the first Tab, still', async ({
     page,
   }) => {

@@ -398,7 +398,7 @@ describe('the contact form', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-008
 describe('the contact form’s errors tied to their fields', () => {
   it('points each field at the error it shows and marks it invalid', async () => {
     await open();

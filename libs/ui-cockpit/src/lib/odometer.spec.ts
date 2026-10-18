@@ -158,7 +158,7 @@ describe('Odometer', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-FR-007
 describe('the odometer read aloud in both languages', () => {
   it('speaks the value in Romanian, then in English, the digits hidden', async () => {
     const { fixture, part, spoken } = render(125000, 160000);

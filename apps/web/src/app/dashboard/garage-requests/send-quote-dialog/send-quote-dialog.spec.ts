@@ -797,7 +797,7 @@ describe('the request answered event for a quote', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-008
+// @traces 248-FR-008
 describe('the send-quote dialog: errors tied to their fields', () => {
   it('points a field at its error, marks it invalid and says it politely without moving the focus', async () => {
     await open(detail({ jobs: [job({ price: null })] }));

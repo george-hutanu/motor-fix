@@ -227,7 +227,7 @@ describe('provideI18n', () => {
   });
 });
 
-// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-FR-007
 describe('the page language', () => {
   it('follows every switch, there and back', async () => {
     const i18n = TestBed.inject(I18n);

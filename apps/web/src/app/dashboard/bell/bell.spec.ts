@@ -108,7 +108,7 @@ describe('Bell', () => {
 
   // Its name is its own hidden text, never an aria-label over the badge: a
   // label that left out what the badge shows ("9+") would not match it.
-  // @traces 248-launch-screens-accessible-FR-007
+  // @traces 248-FR-007
   it("names the count in the button's text, not over the badge", async () => {
     const name = (button: HTMLElement) =>
       button.querySelector('.sr-only')?.textContent?.trim();

@@ -513,7 +513,7 @@ const paste = (input: HTMLInputElement) => {
   return event;
 };
 
-// @traces 248-launch-screens-accessible-FR-011
+// @traces 248-FR-011
 describe('pasting into the sign-in form', () => {
   it('takes a pasted password: nothing cancels the paste', async () => {
     await open();
@@ -532,7 +532,7 @@ describe('pasting into the sign-in form', () => {
 });
 
 // The Jest transform drops component styles, so they are read from the source.
-// @traces 248-launch-screens-accessible-FR-002
+// @traces 248-FR-002
 describe('the remember checkbox on the sign-in sheet', () => {
   it('is drawn by the global mf-check rule, a 44 px tap target', async () => {
     await open();
