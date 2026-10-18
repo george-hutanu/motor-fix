@@ -11,7 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import {
-  formatKm,
+  formatDistance,
   formatLei,
   formatRating,
   I18n,
@@ -175,7 +175,7 @@ export class ResultCard {
     const city = garage.city ?? '';
     const km =
       typeof garage.distanceKm === 'number'
-        ? formatKm(garage.distanceKm, this.i18n.language())
+        ? formatDistance(garage.distanceKm, this.i18n.language())
         : '';
     return { city, rest: city && km ? ` · ${km}` : km };
   });

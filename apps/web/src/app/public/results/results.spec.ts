@@ -23,7 +23,7 @@ import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { routes } from '../../app.routes';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
-import type { Place } from '../../home/place/place-store';
+import { type Place, PlaceStore } from '../../home/place/place-store';
 import { PublicFrame } from '../frame/frame';
 import { PublicLive } from '../live';
 
@@ -108,6 +108,7 @@ const mapView: jest.Mocked<ResultsMapView> = {
   destroy: jest.fn(),
   fit: jest.fn(),
   light: jest.fn(),
+  mark: jest.fn(),
   show: jest.fn(),
   spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
 };
@@ -178,9 +179,20 @@ beforeEach(() => {
 
 afterEach(() => jest.useRealTimers());
 
-async function open(url: string, { language = 'ro' as 'ro' | 'en' } = {}) {
+// Results searches only from a place: a page opened with a brand and neither
+// a place in the bar nor a kept one gets the bar's, unless the test wants
+// none.
+const NEAR = '44.437,26.117';
+async function open(
+  url: string,
+  { language = 'ro' as 'ro' | 'en', placed = true } = {},
+) {
   if (language === 'en') await TestBed.inject(I18n).use('en');
-  await harness.navigateByUrl(url);
+  const bare =
+    url.includes('brand=') &&
+    !url.includes('near=') &&
+    localStorage.getItem('mf-place') === null;
+  await harness.navigateByUrl(placed && bare ? `${url}&near=${NEAR}` : url);
   await settle();
 }
 
@@ -198,10 +210,10 @@ describe('Results', () => {
     beforeEach(() => configure());
 
     // @traces 267-FR-012
-    it('reads the brand from the address bar and runs one logged search, with no place', async () => {
+    it('reads the brand from the address bar and runs one logged search from the place in it', async () => {
       await open('/ro/garages?brand=bmw');
 
-      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+      expect(searches()).toEqual([{ brand: 'bmw', log: '1', near: NEAR }]);
     });
 
     // @traces 267-FR-022
@@ -209,7 +221,7 @@ describe('Results', () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
 
-      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+      expect(searches()).toEqual([{ brand: 'bmw', log: '1', near: NEAR }]);
     });
 
     // @traces 267-FR-007
@@ -218,12 +230,12 @@ describe('Results', () => {
       await reads[0]?.answer();
       await open('/ro/garages?brand=audi');
       await reads[1]?.answer();
-      await open('/ro/garages?brand=audi&near=44.437,26.117');
+      await open('/ro/garages?brand=audi&near=44.447,26.117');
 
       expect(searches()).toEqual([
-        { brand: 'bmw', log: '1' },
-        { brand: 'audi', log: '1' },
-        { brand: 'audi', log: '1', near: '44.437,26.117' },
+        { brand: 'bmw', log: '1', near: NEAR },
+        { brand: 'audi', log: '1', near: NEAR },
+        { brand: 'audi', log: '1', near: '44.447,26.117' },
       ]);
     });
 
@@ -232,7 +244,11 @@ describe('Results', () => {
       await open('/ro/garages?brand=6f1c0a52-3b7e-4c1d-9a2f-0e8b7d6c5a41');
 
       expect(searches()).toEqual([
-        { brandId: '6f1c0a52-3b7e-4c1d-9a2f-0e8b7d6c5a41', log: '1' },
+        {
+          brandId: '6f1c0a52-3b7e-4c1d-9a2f-0e8b7d6c5a41',
+          log: '1',
+          near: NEAR,
+        },
       ]);
     });
 
@@ -266,10 +282,10 @@ describe('Results', () => {
     });
 
     // @traces 267-FR-012
-    it('leaves the radius out without a place', async () => {
-      await open('/ro/garages?brand=bmw&radius=50');
+    it('runs no search without a place, whatever the radius', async () => {
+      await open('/ro/garages?brand=bmw&radius=50', { placed: false });
 
-      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+      expect(searches()).toEqual([]);
     });
 
     // @traces 267-FR-016
@@ -315,11 +331,11 @@ describe('Results', () => {
     });
 
     // @traces 267-FR-013
-    it('says no area without a place', async () => {
-      await open('/ro/garages?brand=bmw');
-      await reads[0]?.answer();
+    it('says no area and sums up nothing without a place', async () => {
+      await open('/ro/garages?brand=bmw', { placed: false });
 
-      expect(page().querySelector('.summary .tally')).not.toBeNull();
+      expect(searches()).toEqual([]);
+      expect(page().querySelector('.summary .tally')).toBeNull();
       expect(page().querySelector('.summary .area')).toBeNull();
     });
 
@@ -528,13 +544,15 @@ describe('Results', () => {
     });
 
     // @traces 267-FR-017
-    it('reads "Niciun service găsit" with "Schimbă locul" only without a place, ignoring the radius', async () => {
+    it('reads "Niciun service în 50 km" with only "Schimbă locul" at the widest radius in the bar', async () => {
       await open('/ro/garages?brand=bmw&radius=50');
       await reads[0]?.answer(empty());
 
-      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+      expect(searches()).toEqual([
+        { brand: 'bmw', log: '1', near: NEAR, radius: 50 },
+      ]);
       expect(said(state()?.querySelector('h1, h2'))).toBe(
-        'Niciun service găsit',
+        'Niciun service în 50 km',
       );
       expect(actions()).toEqual(['Schimbă locul']);
     });
@@ -615,7 +633,11 @@ describe('Results', () => {
       await coalesce();
 
       expect(reads).toHaveLength(2);
-      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'one,two' });
+      expect(reads[1]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'one,two',
+        near: NEAR,
+      });
       await reads[1]?.answer(
         pageOf({
           items: [
@@ -660,7 +682,11 @@ describe('Results', () => {
 
       send('review.posted', 'review-9');
       await coalesce();
-      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'one,two' });
+      expect(reads[1]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'one,two',
+        near: NEAR,
+      });
       await open('/ro/garages?brand=audi');
       await reads[2]?.answer(
         pageOf({
@@ -702,7 +728,11 @@ describe('Results', () => {
 
       send('garage.updated', 'one');
       await coalesce();
-      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'one' });
+      expect(reads[1]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'one',
+        near: NEAR,
+      });
       await reads[1]?.answer(
         pageOf({
           items: [
@@ -729,7 +759,11 @@ describe('Results', () => {
       await settle();
 
       expect(reads).toHaveLength(3);
-      expect(reads[2]?.params).toEqual({ brand: 'bmw', ids: 'two' });
+      expect(reads[2]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'two',
+        near: NEAR,
+      });
     });
 
     // @traces 267-FR-021
@@ -773,7 +807,7 @@ describe('Results', () => {
 
       expect(names()).toEqual(['Service Doi']);
       expect(reads).toHaveLength(2);
-      expect(reads[1]?.params).toEqual({ brand: 'bmw' });
+      expect(reads[1]?.params).toEqual({ brand: 'bmw', near: NEAR });
       await reads[1]?.answer(
         pageOf({ counts: { doesNotTake: 17, worksOn: 30 }, total: 47 }),
       );
@@ -838,7 +872,7 @@ describe('Results', () => {
         await coalesce();
 
         expect(reads).toHaveLength(2);
-        expect(reads[1]?.params).toEqual({ brand: 'bmw' });
+        expect(reads[1]?.params).toEqual({ brand: 'bmw', near: NEAR });
         await reads[1]?.answer(
           pageOf({
             counts: { doesNotTake: 16, worksOn: 31 },
@@ -893,7 +927,7 @@ describe('Results', () => {
       chip()?.click();
       await settle();
       expect(reads).toHaveLength(3);
-      expect(reads[2]?.params).toEqual({ brand: 'bmw' });
+      expect(reads[2]?.params).toEqual({ brand: 'bmw', near: NEAR });
       await reads[2]?.answer(
         pageOf({
           counts: { doesNotTake: 17, worksOn: 32 },
@@ -911,7 +945,7 @@ describe('Results', () => {
       );
       expect(chip()).toBeUndefined();
       expect(navigate).not.toHaveBeenCalled();
-      expect(router.url).toBe('/ro/garages?brand=bmw');
+      expect(router.url).toBe(`/ro/garages?brand=bmw&near=${NEAR}`);
     });
 
     // @traces 267-FR-018
@@ -927,8 +961,8 @@ describe('Results', () => {
 
       expect(reads.slice(1).map((read) => read.params)).toEqual(
         expect.arrayContaining([
-          { brand: 'bmw', ids: 'one,two' },
-          { brand: 'bmw' },
+          { brand: 'bmw', ids: 'one,two', near: NEAR },
+          { brand: 'bmw', near: NEAR },
         ]),
       );
       expect(reads).toHaveLength(3);
@@ -988,7 +1022,10 @@ describe('Results', () => {
           send(kind, 'pin-3');
           await coalesce();
 
-          expect(pinsAsked()).toEqual([{ brand: 'bmw' }, { brand: 'bmw' }]);
+          expect(pinsAsked()).toEqual([
+            { brand: 'bmw', near: NEAR },
+            { brand: 'bmw', near: NEAR },
+          ]);
           expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(47));
         },
       );
@@ -1193,7 +1230,7 @@ describe('Results', () => {
       );
 
       expect(said(page().querySelector('.state h2'))).toBe(
-        'Niciun service găsit',
+        'Niciun service în 25 km',
       );
     });
 
@@ -1339,14 +1376,18 @@ describe('Results', () => {
       expect(said(back())).toBe('Înapoi la 50 km');
     });
 
-    it('offers "Înapoi la toată România" without a place', async () => {
+    it('offers "Înapoi la 25 km" from the place in the bar, with no place kept', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
       await settleOn(BOX);
       await reads[1]?.answer();
 
-      expect(searches().at(-1)).toEqual({ bbox: BOX, brand: 'bmw' });
-      expect(said(back())).toBe('Înapoi la toată România');
+      expect(searches().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: '44.437,26.117',
+      });
+      expect(said(back())).toBe('Înapoi la 25 km');
     });
 
     it('restores the first search on "Înapoi la 25 km", unlogged, and fits the map to it', async () => {
@@ -1514,7 +1555,9 @@ describe('Results', () => {
       await tap('Service Doi');
       await point('Atelier Unu', 'pointerenter');
 
-      expect(TestBed.inject(Router).url).toBe('/ro/garages?brand=bmw');
+      expect(TestBed.inject(Router).url).toBe(
+        `/ro/garages?brand=bmw&near=${NEAR}`,
+      );
       expect(localStorage.length).toBe(stored);
       expect(searches()).toHaveLength(1);
       expect(pinsApi).toHaveBeenCalledTimes(1);
@@ -1657,7 +1700,11 @@ describe('Results', () => {
       expect(amber()).toEqual([]);
       expect(small()).not.toBeNull();
       expect(small()?.querySelector('mf-lamp')).not.toBeNull();
-      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'pin-3' });
+      expect(reads[1]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'pin-3',
+        near: NEAR,
+      });
 
       await reads[1]?.answer(
         pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
@@ -1719,7 +1766,11 @@ describe('Results', () => {
 
       expect(small()).not.toBeNull();
       expect(said(small())).not.toContain('Service Trei');
-      expect(reads[2]?.params).toEqual({ brand: 'bmw', ids: 'pin-4' });
+      expect(reads[2]?.params).toEqual({
+        brand: 'bmw',
+        ids: 'pin-4',
+        near: NEAR,
+      });
     });
 
     // @traces 270-FR-005 270-FR-010
@@ -1954,5 +2005,226 @@ describe('Results', () => {
     expect(garages?.component).toBeUndefined();
     expect(await garages?.loadComponent?.()).toBe(Results);
     expect(await lang.loadComponent?.()).toBe(PublicFrame);
+  });
+});
+
+// The browser's location, answered when the test says so.
+type Ask = {
+  options: PositionOptions | undefined;
+  found: (lat: number, lng: number) => Promise<void>;
+  refuse: () => Promise<void>;
+};
+let asks: Ask[];
+const geolocation = {
+  getCurrentPosition: jest.fn(
+    (
+      ok: PositionCallback,
+      fail?: PositionErrorCallback | null,
+      options?: PositionOptions,
+    ) => {
+      asks.push({
+        found: async (latitude, longitude) => {
+          ok({ coords: { latitude, longitude } } as GeolocationPosition);
+          await settle();
+          await settle();
+        },
+        options,
+        refuse: async () => {
+          fail?.({ code: 1 } as GeolocationPositionError);
+          await settle();
+        },
+      });
+    },
+  ),
+};
+const CLUJ = { lat: 46.7712, lng: 23.6236 };
+
+// @traces 271-garage-distance-FR-001
+// @traces 271-garage-distance-FR-003
+// @traces 271-garage-distance-FR-006
+// @traces 271-garage-distance-FR-007
+describe('Results measured from where the driver is', () => {
+  beforeEach(async () => {
+    asks = [];
+    geolocation.getCurrentPosition.mockClear();
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocation,
+    });
+    await configure();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'geolocation');
+  });
+
+  const status = () => said(page().querySelector('.locating[role="status"]'));
+
+  it('asks the location once, within 10 s, with no place in the bar and none kept', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+
+    expect(geolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(asks[0]?.options).toEqual(
+      expect.objectContaining({ timeout: 10_000 }),
+    );
+  });
+
+  it('says "Se caută locația…" politely and searches nothing while the request is open, showing the loading state', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+
+    expect(status()).toBe('Se caută locația…');
+    expect(searches()).toEqual([]);
+    expect(pinsApi).not.toHaveBeenCalled();
+    expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
+    expect(page().querySelector('mf-result-card')).toBeNull();
+  });
+
+  it('says "Finding your location…" in English', async () => {
+    await open('/en/garages?brand=bmw', { language: 'en', placed: false });
+
+    expect(status()).toBe('Finding your location…');
+  });
+
+  it('takes a box in the bar for no place, and asks', async () => {
+    await open('/ro/garages?brand=bmw&bbox=26.0,44.4,26.2,44.5', {
+      placed: false,
+    });
+
+    expect(geolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(searches()).toEqual([]);
+  });
+
+  it('keeps a location inside Romania as the place, writes it into the bar and runs one logged search from it', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.found(CLUJ.lat, CLUJ.lng);
+
+    expect(JSON.parse(localStorage.getItem('mf-place') ?? 'null')).toEqual({
+      label: null,
+      lat: 46.771,
+      lng: 23.624,
+      origin: 'location',
+    });
+    expect(TestBed.inject(PlaceStore).place()).toEqual({
+      label: null,
+      lat: 46.771,
+      lng: 23.624,
+      origin: 'location',
+    });
+    expect(TestBed.inject(Router).url).toBe(
+      '/ro/garages?brand=bmw&near=46.771,23.624',
+    );
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '46.771,23.624' },
+    ]);
+    expect(status()).toBeFalsy();
+  });
+
+  it('measures the cards from the place found and names it as the driver', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.found(CLUJ.lat, CLUJ.lng);
+    await reads[0]?.answer(
+      pageOf({
+        items: [{ ...garageOf('one', 'Service Mărăști'), distanceKm: 1 }],
+        total: 1,
+      }),
+    );
+
+    expect(said(page().querySelector('mf-result-card'))).toContain('1,0 km');
+    expect(said(page().querySelector('.summary .area'))).toBe(
+      'în 25 km de tine',
+    );
+    expect(searches()).toHaveLength(1);
+  });
+
+  it('runs one new logged search from the place chosen after the location', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.found(CLUJ.lat, CLUJ.lng);
+    await reads[0]?.answer();
+
+    const change = [...page().querySelectorAll('button')].find(
+      (b) => said(b) === 'Schimbă locul',
+    );
+    change?.click();
+    await settle();
+    dialog(PLACE);
+    await settle();
+    await settle();
+
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '46.771,23.624' },
+      { brand: 'bmw', log: '1', near: '44.447,26.117' },
+    ]);
+  });
+
+  it('asks nothing and searches at once with a place in the bar', async () => {
+    await open('/ro/garages?brand=bmw&near=44.437,26.117');
+
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '44.437,26.117' },
+    ]);
+    expect(status()).toBeFalsy();
+  });
+
+  it('asks nothing and searches at once with a kept place', async () => {
+    keep(PLACE);
+    await open('/ro/garages?brand=bmw', { placed: false });
+
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '44.447,26.117' },
+    ]);
+  });
+
+  it('asks nothing without a brand', async () => {
+    await open('/ro/garages');
+
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it('drops a location that answers after a place was chosen another way', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    TestBed.inject(PlaceStore).set(PLACE);
+    await settle();
+    await asks[0]?.found(CLUJ.lat, CLUJ.lng);
+
+    expect(TestBed.inject(PlaceStore).place()).toEqual({
+      ...PLACE,
+      lat: 44.447,
+      lng: 26.117,
+    });
+    expect(TestBed.inject(Router).url).toBe(
+      '/ro/garages?brand=bmw&near=44.447,26.117',
+    );
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: '44.447,26.117' },
+    ]);
+  });
+
+  it('ends the wait without searching when the location is refused', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.refuse();
+
+    expect(status()).toBeFalsy();
+    expect(searches()).toEqual([]);
+    expect(pinsApi).not.toHaveBeenCalled();
+    expect(page().querySelector('.card.skeleton')).toBeNull();
+  });
+
+  it('takes a location outside Romania for no place, and searches nothing', async () => {
+    await open('/ro/garages?brand=bmw', { placed: false });
+    await asks[0]?.found(48.8566, 2.3522);
+
+    expect(localStorage.getItem('mf-place')).toBeNull();
+    expect(status()).toBeFalsy();
+    expect(searches()).toEqual([]);
+  });
+
+  it('ends the wait without searching in a browser with no geolocation', async () => {
+    Reflect.deleteProperty(navigator, 'geolocation');
+    await open('/ro/garages?brand=bmw', { placed: false });
+
+    expect(status()).toBeFalsy();
+    expect(searches()).toEqual([]);
   });
 });

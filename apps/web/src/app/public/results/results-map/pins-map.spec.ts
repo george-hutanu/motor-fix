@@ -1,5 +1,5 @@
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
-import type { Map as MapLibre } from 'maplibre-gl';
+import type { Map as MapLibre, Marker } from 'maplibre-gl';
 
 import { drawPins } from './pins-map';
 import { ring } from '../../map-libre/map-libre';
@@ -75,6 +75,9 @@ beforeEach(() => {
   map = mapFake();
   moved.mockClear();
   picked.mockClear();
+  here.addTo.mockClear();
+  here.remove.mockClear();
+  here.setLngLat.mockClear();
   shifted.mockClear();
   host = document.createElement('div');
   host.style.setProperty('--mf-green', GREEN);
@@ -86,8 +89,19 @@ beforeEach(() => {
 
 afterEach(() => host.remove());
 
+// The "you are here" marker MapLibre places on the map.
+const here = {
+  addTo: jest.fn().mockReturnThis(),
+  remove: jest.fn().mockReturnThis(),
+  setLngLat: jest.fn().mockReturnThis(),
+};
 const draw = () =>
-  drawPins(map as unknown as MapLibre, host, { moved, picked, shifted });
+  drawPins(
+    map as unknown as MapLibre,
+    host,
+    { moved, picked, shifted },
+    here as unknown as Marker,
+  );
 const fire = (type: string, event: object = {}) => {
   for (const [name, handler] of map.on.mock.calls) {
     if (name === type) handler(event);
@@ -667,5 +681,61 @@ describe('a tap on the results map', () => {
 
     fire('move');
     expect(shifted).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 271-garage-distance-FR-004
+describe('the "you are here" marker on the results map', () => {
+  const OTHER = { lat: 46.771, lng: 23.624 };
+
+  it('puts one marker at the place', () => {
+    draw().mark(PLACE);
+
+    expect(here.setLngLat).toHaveBeenLastCalledWith([PLACE.lng, PLACE.lat]);
+    expect(here.addTo).toHaveBeenCalledTimes(1);
+    expect(here.addTo).toHaveBeenCalledWith(map);
+  });
+
+  it('moves the same marker when the place changes', () => {
+    const view = draw();
+    view.mark(PLACE);
+    view.mark(OTHER);
+
+    expect(here.setLngLat).toHaveBeenLastCalledWith([OTHER.lng, OTHER.lat]);
+    expect(here.addTo).toHaveBeenCalledTimes(1);
+    expect(here.remove).not.toHaveBeenCalled();
+  });
+
+  it('takes the marker off with no place, and puts it back with one', () => {
+    const view = draw();
+    view.mark(PLACE);
+    view.mark(undefined);
+
+    expect(here.remove).toHaveBeenCalledTimes(1);
+
+    view.mark(OTHER);
+    expect(here.addTo).toHaveBeenCalledTimes(2);
+    expect(here.setLngLat).toHaveBeenLastCalledWith([OTHER.lng, OTHER.lat]);
+  });
+
+  it('puts nothing on the map before there is a place', () => {
+    draw().mark(undefined);
+
+    expect(here.addTo).not.toHaveBeenCalled();
+  });
+
+  it('keeps the place in the fit with no pin around it', () => {
+    const view = draw();
+    view.mark(PLACE);
+    view.fit(PLACE, answer([]));
+
+    expect(map.fitBounds).toHaveBeenCalledWith(
+      [
+        [PLACE.lng, PLACE.lat],
+        [PLACE.lng, PLACE.lat],
+      ],
+      { animate: false, maxZoom: 15, padding: 40 },
+    );
+    expect(map.jumpTo).not.toHaveBeenCalled();
   });
 });

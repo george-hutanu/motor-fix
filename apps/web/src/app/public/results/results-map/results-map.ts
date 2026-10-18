@@ -45,6 +45,7 @@ export interface ResultsMapView {
   show(answer: GaragePinsDto | undefined): void;
   light(id: string | undefined): void;
   spot(at: LatLng): { x: number; y: number };
+  mark(place: LatLng | undefined): void;
 }
 
 // A tapped pin whose garage the list does not show, and that garage once read.
@@ -56,6 +57,7 @@ export interface PinCard {
 type OpenResultsMap = (
   host: HTMLElement,
   on: MapEvents,
+  here: HTMLElement,
 ) => Promise<ResultsMapView>;
 
 // Opens the results map in the browser; the component never sees MapLibre,
@@ -63,10 +65,11 @@ type OpenResultsMap = (
 export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, on) => {
+    return async (host, on, here) => {
       const map = await openMapLibre(host, styleFor(document));
+      const { Marker } = await import('maplibre-gl');
       const stop = keepOutOfTabOrder(host);
-      const pins = drawPins(map, host, on);
+      const pins = drawPins(map, host, on, new Marker({ element: here }));
       return {
         ...pins,
         destroy: () => {
@@ -108,6 +111,8 @@ export class ResultsMap {
   );
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  // The "you are here" marker, styled here and moved onto the map by MapLibre.
+  private readonly here = viewChild.required<ElementRef<HTMLElement>>('here');
   protected readonly view = signal<ResultsMapView | undefined>(undefined);
   private fitWanted = false;
   // Bumped on every move of the map, so the small card follows its pin.
@@ -141,11 +146,15 @@ export class ResultsMap {
     });
     afterNextRender(() => {
       if (!browser) return;
-      open(this.host().nativeElement, {
-        moved: (move) => this.follow(move),
-        picked: (id) => this.picked.emit(id),
-        shifted: () => this.shifts.update((n) => n + 1),
-      }).then(
+      open(
+        this.host().nativeElement,
+        {
+          moved: (move) => this.follow(move),
+          picked: (id) => this.picked.emit(id),
+          shifted: () => this.shifts.update((n) => n + 1),
+        },
+        this.here().nativeElement,
+      ).then(
         (view) => {
           if (closed) return view.destroy();
           this.view.set(view);
@@ -156,6 +165,7 @@ export class ResultsMap {
     });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
+    effect(() => this.view()?.mark(this.place()));
     // Measured again once the garage fills the card, which makes it taller.
     afterRenderEffect(() => {
       this.card();

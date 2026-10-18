@@ -1,5 +1,6 @@
 <section class="map" [attr.aria-label]="'public.results.map.label' | t">
   <div #host class="canvas" aria-hidden="true"></div>
+  <div #here class="here" aria-hidden="true"></div>
   @if (!view() || loading()) {
     <div class="placeholder" aria-hidden="true"></div>
   }

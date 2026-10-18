@@ -104,6 +104,7 @@ const mapView: jest.Mocked<ResultsMapView> = {
   destroy: jest.fn(),
   fit: jest.fn(),
   light: jest.fn(),
+  mark: jest.fn(),
   show: jest.fn(),
   spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
 };
@@ -174,9 +175,20 @@ beforeEach(() => {
 
 afterEach(() => jest.useRealTimers());
 
-async function open(url: string, { language = 'ro' as 'ro' | 'en' } = {}) {
+// Results searches only from a place: a page opened with a brand and neither
+// a place in the bar nor a kept one gets the bar's, unless the test wants
+// none.
+const NEAR = '44.437,26.117';
+async function open(
+  url: string,
+  { language = 'ro' as 'ro' | 'en', placed = true } = {},
+) {
   if (language === 'en') await TestBed.inject(I18n).use('en');
-  await harness.navigateByUrl(url);
+  const bare =
+    url.includes('brand=') &&
+    !url.includes('near=') &&
+    localStorage.getItem('mf-place') === null;
+  await harness.navigateByUrl(placed && bare ? `${url}&near=${NEAR}` : url);
   await settle();
 }
 

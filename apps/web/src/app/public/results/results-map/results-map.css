@@ -97,9 +97,56 @@
   box-sizing: border-box;
 }
 
+/* "You are here": the accent dot ringed in the ink it carries, with a ring that
+   pulses out of it. MapLibre centres it on the place; a tap passes through
+   to the pins. Until the map takes it, it is not shown. */
+.here {
+  background: var(--mf-amber);
+  border: 3px solid var(--mf-on-amber);
+  border-radius: 50%;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--mf-amber) 80%, transparent);
+  box-sizing: border-box;
+  height: 14px;
+  pointer-events: none;
+  width: 14px;
+}
+
+.here:not(.maplibregl-marker) {
+  display: none;
+}
+
+.here::before {
+  border: 1.5px solid var(--mf-amber);
+  border-radius: 50%;
+  box-sizing: border-box;
+  content: "";
+  height: 18px;
+  left: 50%;
+  margin: -9px 0 0 -9px;
+  position: absolute;
+  top: 50%;
+  width: 18px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .canvas {
     animation: mf-mapin 800ms var(--mf-motion-ease) both;
+  }
+
+  .here::before {
+    animation: mf-ring 2.2s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+}
+
+@keyframes mf-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.8);
   }
 }
 

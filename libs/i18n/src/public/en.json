@@ -605,7 +605,6 @@
     "areaPicked": "within {km} km of the chosen place",
     "areaYou": "within {km} km of you",
     "back": "Back to {km} km",
-    "backRomania": "Back to all of Romania",
     "card": {
       "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
@@ -629,6 +628,7 @@
       "updated": "{name} was updated"
     },
     "loading": "Loading the results",
+    "locating": "Finding your location…",
     "map": {
       "label": "Map of garages",
       "mobile": "Mobile mechanic · service area",
@@ -639,7 +639,6 @@
       "zoomIn": "Zoom in"
     },
     "newSearch": "New search",
-    "none": "No garage found",
     "noneNear": "No garage within {km} km",
     "others": {
       "one": "{count} doesn't take it",

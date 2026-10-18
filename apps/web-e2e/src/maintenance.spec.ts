@@ -4,7 +4,8 @@ import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 import { restore } from './platform-rules.js';
 
-const RESULTS = '/ro/garages?brand=dacia';
+// With a place: Results searches only from one.
+const RESULTS = '/ro/garages?brand=dacia&near=44.435,26.015';
 
 const maintenancePage = (page: Page) =>
   page.getByRole('heading', { level: 1, name: 'Mentenanță' });

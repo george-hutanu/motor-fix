@@ -16,12 +16,13 @@
     @if (newer()) {
       <button type="button" class="chip" (click)="reload()">{{ 'public.results.reload' | t }}</button>
     }
-  } @else if (state() === 'loading') {
+  } @else if (state() === 'loading' || state() === 'locating') {
     <h1>
       <span class="sr-only">{{ 'public.results.loading' | t }}</span>
       <span class="line skeleton" aria-hidden="true"></span>
     </h1>
   }
+  <p class="locating" role="status">@if (state() === 'locating') {{{ 'public.results.locating' | t }}}</p>
 </header>
 @if (state() !== 'missing') {
   <mf-results-map
@@ -37,7 +38,8 @@
   />
 }
 <div class="found">
-  @switch (state()) {
+  <!-- The location being asked loads the page as a search would. -->
+  @switch (state() === 'locating' ? 'loading' : state()) {
     @case ('loading') {
       <div class="cards" aria-busy="true">
         @for (card of skeletons; track card) {
@@ -68,11 +70,7 @@
     }
     @case ('empty') {
       <section class="state" aria-live="polite">
-        @if (near()) {
-          <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
-        } @else {
-          <h2>{{ 'public.results.none' | t }}</h2>
-        }
+        <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
         <div class="actions">
           @if (widen(); as wide) {
             <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>

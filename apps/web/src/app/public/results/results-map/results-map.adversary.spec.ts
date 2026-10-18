@@ -55,6 +55,7 @@ beforeEach(() => {
     destroy: jest.fn(),
     fit: jest.fn(),
     light: jest.fn(),
+    mark: jest.fn(),
     show: jest.fn(),
     spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 80 })),
   };

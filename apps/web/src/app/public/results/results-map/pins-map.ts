@@ -14,6 +14,7 @@ import type {
   GeoJSONSourceSpecification,
   LayerSpecification,
   Map as MapLibre,
+  Marker,
 } from 'maplibre-gl';
 
 import { type LatLng, ring, START } from '../../map-libre/map-libre';
@@ -46,7 +47,12 @@ interface PinsMap {
   light(id: string | undefined): void;
   // Where a place sits on the map, in pixels from its top left corner.
   spot(at: LatLng): { x: number; y: number };
+  // Puts the "you are here" marker at the place, or takes it off.
+  mark(place: LatLng | undefined): void;
 }
+
+// The part of MapLibre's marker the map moves.
+export type PlaceMarker = Pick<Marker, 'addTo' | 'remove' | 'setLngLat'>;
 
 // A mobile mechanic has no place of its own to pin; its area is drawn apart.
 const fixedOf = (answer: GaragePinsDto | undefined) =>
@@ -91,6 +97,7 @@ export function drawPins(
   map: MapLibre,
   host: HTMLElement,
   on: MapEvents,
+  here: PlaceMarker,
 ): PinsMap {
   const look = getComputedStyle(host);
   const token = (name: string) => look.getPropertyValue(name).trim();
@@ -284,6 +291,7 @@ export function drawPins(
   build(false);
   follow(map, on.moved);
   tappable(map, on);
+  let marked = false;
 
   return {
     fit(place, answer) {
@@ -308,6 +316,16 @@ export function drawPins(
     light(id) {
       lit = id ?? '';
       relight();
+    },
+    mark(place) {
+      if (!place) {
+        if (marked) here.remove();
+        marked = false;
+        return;
+      }
+      here.setLngLat([place.lng, place.lat]);
+      if (!marked) here.addTo(map);
+      marked = true;
     },
     show(answer) {
       const fixed = fixedOf(answer);

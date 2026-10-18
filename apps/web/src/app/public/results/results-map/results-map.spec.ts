@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { PLATFORM_ID } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
@@ -21,7 +24,7 @@ let moved: (move: MapMove) => void;
 let tapped: (id: string | undefined) => void;
 let shifted: () => void;
 const open = jest.fn(
-  (_host: HTMLElement, on: MapEvents) =>
+  (_host: HTMLElement, on: MapEvents, _here: HTMLElement) =>
     new Promise<ResultsMapView>((resolve, reject) => {
       moved = on.moved;
       tapped = on.picked;
@@ -74,6 +77,7 @@ beforeEach(() => {
     destroy: jest.fn(),
     fit: jest.fn(),
     light: jest.fn(),
+    mark: jest.fn(),
     show: jest.fn(),
     spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 40 })),
   };
@@ -103,11 +107,15 @@ describe('ResultsMap, the map region', () => {
 
     expect(host?.hasAttribute('inert')).toBe(false);
     expect(host?.getAttribute('aria-hidden')).toBe('true');
-    expect(open).toHaveBeenCalledWith(host, {
-      moved: expect.any(Function),
-      picked: expect.any(Function),
-      shifted: expect.any(Function),
-    });
+    expect(open).toHaveBeenCalledWith(
+      host,
+      {
+        moved: expect.any(Function),
+        picked: expect.any(Function),
+        shifted: expect.any(Function),
+      },
+      element().querySelector('.here'),
+    );
   });
 });
 
@@ -532,5 +540,68 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     fixture.detectChanges();
 
     expect(card()).toBeNull();
+  });
+});
+
+// @traces 271-garage-distance-FR-004
+describe('ResultsMap, the "you are here" marker', () => {
+  const OTHER = { lat: 46.771, lng: 23.624 };
+  const marker = () => open.mock.calls[0]?.[2];
+
+  it('hands the map one marker, hidden from assistive technology', async () => {
+    await render();
+
+    expect(marker()).toBeInstanceOf(HTMLElement);
+    expect(marker()?.getAttribute('aria-hidden')).toBe('true');
+    expect(marker()?.textContent?.trim()).toBe('');
+  });
+
+  it('marks the place once the map has opened, and each place after', async () => {
+    await render();
+    await ready();
+
+    expect(view.mark).toHaveBeenLastCalledWith(PLACE);
+
+    fixture.componentRef.setInput('place', OTHER);
+    fixture.detectChanges();
+    expect(view.mark).toHaveBeenLastCalledWith(OTHER);
+
+    fixture.componentRef.setInput('place', undefined);
+    fixture.detectChanges();
+    expect(view.mark).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('marks nothing before the map has opened', async () => {
+    await render();
+
+    expect(view.mark).not.toHaveBeenCalled();
+  });
+
+  describe('its stylesheet', () => {
+    const css = readFileSync(join(__dirname, 'results-map.css'), 'utf8');
+    // The rules inside each "no-preference" block, and those outside them.
+    const blocks = [
+      ...css.matchAll(
+        /@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/g,
+      ),
+    ].map((m) => m[1] ?? '');
+    const outside = blocks.reduce(
+      (rest, block) => rest.replace(block, ''),
+      css,
+    );
+
+    it('draws the marker in the theme accent', () => {
+      expect(css).toMatch(/\.here\s*\{[^}]*var\(--mf-amber\)/);
+    });
+
+    it('pulses the ring with mf-ring only when the device allows motion', () => {
+      expect(css).toMatch(/@keyframes mf-ring\s*\{/);
+      expect(blocks.join('\n')).toMatch(/animation:\s*mf-ring 2\.2s/);
+      expect(outside).not.toMatch(/animation:[^;]*mf-ring/);
+    });
+
+    it('lets a tap through the marker to the pins under it', () => {
+      expect(css).toMatch(/\.here\s*\{[^}]*pointer-events:\s*none/);
+    });
   });
 });
