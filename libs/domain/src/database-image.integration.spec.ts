@@ -28,8 +28,6 @@ describe('the database image', () => {
     expect(rows[0].default_version).toMatch(/^3\.6\./);
   });
 
-  // Commit times are on only while the log is archived, which the
-  // point-in-time drill proves.
   it('preloads pg_stat_statements', async () => {
     const [{ preload }] = await prisma.$queryRaw<
       { preload: string }[]

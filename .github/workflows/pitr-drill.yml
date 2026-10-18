@@ -31,7 +31,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      # A pull request drills the image its own Dockerfile builds.
+      - name: Build the image from this commit
+        if: github.event_name == 'pull_request'
+        run: docker build --pull -t ghcr.io/george-hutanu/motor-fix-postgres:18 infra/postgres
       - name: Pull the image
+        if: github.event_name != 'pull_request'
         run: docker pull ghcr.io/george-hutanu/motor-fix-postgres:18
       - name: Archive, restore and check
         run: bash scripts/backup/pitr-drill.sh --self-contained
