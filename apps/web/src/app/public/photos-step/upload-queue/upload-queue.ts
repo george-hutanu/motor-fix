@@ -139,8 +139,9 @@ export class UploadQueue {
     } catch {
       // Read what memory holds.
     }
+    // A change the store refused lives in memory, over its stale row.
     return [
-      ...stored.map(fromStored),
+      ...stored.filter((s) => !this.memory.has(s.id)).map(fromStored),
       ...[...this.memory.values()].filter((e) => e.draftId === draftId),
     ].sort((a, b) => a.position - b.position);
   }

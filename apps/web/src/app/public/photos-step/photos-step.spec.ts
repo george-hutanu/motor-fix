@@ -889,6 +889,37 @@ describe('photos waiting for signal survive the page', () => {
   });
 
   // @traces 1191-FR-001
+  it('gives a photo up as failed when its fifth try finds the store lost it', async () => {
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    try {
+      const opened = await open();
+      await choose(opened, [photo('atelier.jpg')]);
+      await answerAddress(opened, askedForAddress(opened.http)[0]!, 0);
+      opened.http
+        .expectOne(STORE)
+        .flush(null, { status: 200, statusText: 'OK' });
+      await opened.settle();
+      for (const wait of [1000, 2000, 4000, 8000]) {
+        dropped(confirmOf(opened.http));
+        await opened.settle();
+        await jest.advanceTimersByTimeAsync(wait);
+        await opened.settle();
+      }
+
+      confirmOf(opened.http).flush(
+        { code: 'file_missing' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await opened.settle();
+
+      expect(askedForAddress(opened.http)).toHaveLength(0);
+      expect(button(tiles(opened.step)[0], /^Reîncearcă/)).toBeDefined();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  // @traces 1191-FR-001
   it('drops a restored photo the draft no longer takes: full, or already sent', async () => {
     const opened = await open({
       queued: [photo('unu.jpg'), photo('doi.jpg')],

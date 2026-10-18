@@ -152,6 +152,20 @@ describe('the browser queue of photos waiting to reach the draft', () => {
   });
 
   // @traces 1191-FR-001
+  it('reads a photo once when the store refuses a change and memory keeps it', async () => {
+    const queue = reopen();
+    const [first] = await queue.add(DRAFT, [photo('unu.jpg')]);
+    jest.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+
+    await queue.update(first!.id, { key: 'incoming/k' });
+
+    const held = await queue.forDraft(DRAFT);
+    expect(held.map((e) => [e.id, e.key])).toEqual([[first!.id, 'incoming/k']]);
+  });
+
+  // @traces 1191-FR-001
   it('keeps the photos in memory for the page when IndexedDB is missing, without throwing', async () => {
     const saved = globalThis.indexedDB;
     Reflect.deleteProperty(globalThis, 'indexedDB');
