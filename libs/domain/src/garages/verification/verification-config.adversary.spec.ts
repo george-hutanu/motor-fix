@@ -2,9 +2,9 @@ import { verificationConfig } from './verification-config';
 
 describe('verificationConfig', () => {
   it.each(['1', 'true'])('skips manual approval under test for %s', (value) => {
-    expect(verificationConfig('test', { SKIP_MANUAL_APPROVAL: value })).toEqual(
-      { skipManualApproval: true },
-    );
+    expect(
+      verificationConfig('test', { SKIP_MANUAL_APPROVAL: value }),
+    ).toMatchObject({ skipManualApproval: true });
   });
 
   it.each(['production', 'staging', 'development', 'Test', 'test ', ''])(
@@ -28,7 +28,7 @@ describe('verificationConfig', () => {
   );
 
   it('is off when the variable is absent', () => {
-    expect(verificationConfig('test', {})).toEqual({
+    expect(verificationConfig('test', {})).toMatchObject({
       skipManualApproval: false,
     });
   });

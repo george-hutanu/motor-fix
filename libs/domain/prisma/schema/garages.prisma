@@ -40,6 +40,8 @@ model Garage {
   slug                       String                   @unique
   status                     GarageStatus             @default(draft)
   approvedAt                 DateTime?                @map("approved_at") @db.Timestamptz(3)
+  // The Bucharest day of the latest approval; written by every approval only.
+  lastCheckedOn              DateTime?                @map("last_checked_on") @db.Date
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
   reports                    GarageReport[]
@@ -109,6 +111,8 @@ model Garage {
   suspensions                GarageSuspension[]
 
   @@index([cityKey])
+  // The file read names the other garages holding the same CUI.
+  @@index([cui])
   @@map("garage")
 }
 

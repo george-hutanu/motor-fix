@@ -42,6 +42,17 @@ const NONE = {
   canRecordFinalPrice: false,
 };
 const SYSTEM = { accountId: null, role: 'system' } as const;
+const CHECK_KINDS = [
+  'company',
+  'caen',
+  'rar',
+  'activities',
+  'representative',
+  'address',
+  'photos',
+  'documents',
+] as const;
+const DOCUMENT_KINDS = ['onrc_certificate', 'rar_authorisation'] as const;
 
 const service = (skipManualApproval = false, events: EventPort = outbox) =>
   new VerificationService(new AuditService(), events, { skipManualApproval });
@@ -113,13 +124,12 @@ async function fileIn(status: FileStatus, at = new Date()) {
   const checked = ['submitted', 'in_review', 'approved'].includes(status);
   return prisma.verificationFile.create({
     data: {
-      // An admin's approval needs both registers checked.
+      // An admin's approval needs both registers checked, and a note unless
+      // every other check is ok and both documents are held.
       ...(checked && {
-        checks: {
-          create: [
-            { kind: 'rar', result: 'ok' },
-            { kind: 'caen', result: 'ok' },
-          ],
+        checks: { create: CHECK_KINDS.map((kind) => ({ kind, result: 'ok' })) },
+        documents: {
+          create: DOCUMENT_KINDS.map((kind) => ({ kind, pages: ['p1'] })),
         },
       }),
       createdAt: at,
@@ -457,7 +467,10 @@ describe('deciding', () => {
     expect(garage.status).toBe('approved');
     expect(garage.approvedAt).toEqual(after.decidedAt);
     const [garageEntry, ...more] = await history(garageId);
-    expect(more).toHaveLength(0);
+    expect(more.map((entry) => entry.field)).toEqual([
+      'lastCheckedOn',
+      'verificationMissing',
+    ]);
     expect(garageEntry).toMatchObject({
       actorId: ioana.accountId,
       field: 'status',
@@ -604,7 +617,11 @@ describe('reopening', () => {
     expect(garage.status).toBe('approved');
     expect(garage.approvedAt).toEqual(after.decidedAt);
     const garageHistory = await history(garageId);
-    expect(garageHistory.map((entry) => entry.field)).toEqual(['approvedAt']);
+    expect(garageHistory.map((entry) => entry.field)).toEqual([
+      'approvedAt',
+      'lastCheckedOn',
+      'verificationMissing',
+    ]);
   });
 
   it('overwrites the reopener each time and keeps every reopening in the history', async () => {
@@ -967,11 +984,11 @@ const refusals = (reason: string) =>
 const reopenings = (role: string) =>
   counterTotal(reader, 'motorfix_verification_reopenings_total', { role });
 
-const setCheck = (fileId: string, kind: 'rar' | 'caen', result: string) =>
+const setCheck = (fileId: string, kind: string, result: string) =>
   prisma.verificationCheck.upsert({
-    create: { fileId, kind, result: result as never },
+    create: { fileId, kind: kind as never, result: result as never },
     update: { result: result as never },
-    where: { fileId_kind: { fileId, kind } },
+    where: { fileId_kind: { fileId, kind: kind as never } },
   });
 
 const fileRow = (id: string) =>
@@ -1756,5 +1773,397 @@ describe('the RAR number of a file', () => {
     const [first, second] = await corrections(file.id);
     expect(second?.oldValue).toEqual(first?.newValue);
     expect(await numberOf(file.id)).toBe(second?.newValue);
+  });
+});
+
+describe('the approval note', () => {
+  // @traces 303-FR-003 303-FR-006 303-FR-010 303-FR-012
+  const GUIDE = [
+    'company',
+    'activities',
+    'representative',
+    'address',
+    'photos',
+    'documents',
+  ] as const;
+  const guide = (fileId: string, kind: string, result: string) =>
+    prisma.verificationCheck.update({
+      data: { result: result as never },
+      where: { fileId_kind: { fileId, kind: kind as never } },
+    });
+  const drop = (verificationFileId: string, kind: string) =>
+    prisma.legalDocument.delete({
+      where: { verificationFileId_kind: { kind, verificationFileId } },
+    });
+  const missingOn = async () =>
+    (await history(garageId)).find(
+      (entry) => entry.field === 'verificationMissing',
+    );
+  const approve = (
+    actor: Actor | typeof SYSTEM,
+    fileId: string,
+    note?: string,
+  ) =>
+    decideWith(actor, fileId, {
+      outcome: 'approved',
+      ...(note !== undefined && { note }),
+    });
+
+  it('saves an approval with no note when every check is ok and both documents are held', async () => {
+    const file = await fileIn('in_review');
+
+    await approve(ioana, file.id);
+
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonNote: null,
+      status: 'approved',
+    });
+    expect(await missingOn()).toMatchObject({
+      newValue: [],
+      oldValue: null,
+      subjectType: 'garage',
+    });
+  });
+
+  describe.each(GUIDE)('a %s check', (kind) => {
+    it.each(['not_run', 'warning', 'failed'])(
+      'that is %s refuses an approval without a note, saying so',
+      async (result) => {
+        const file = await fileIn('in_review');
+        await guide(file.id, kind, result);
+        const before = await refusals('note_required');
+
+        const refused = await refusal(approve(ioana, file.id));
+
+        expect(refused).toMatchObject({
+          body: {
+            code: 'note_required',
+            errors: [{ code: 'required', field: 'note' }],
+            missing: [{ kind, result }],
+          },
+          status: 422,
+        });
+        expect(await refusals('note_required')).toBe(before + 1);
+        expect((await fileRow(file.id)).status).toBe('in_review');
+        expect(await history(file.id)).toHaveLength(0);
+        expect(await history(garageId)).toHaveLength(0);
+        expect(await events(file.id)).toHaveLength(0);
+      },
+    );
+
+    it.each(['not_run', 'warning', 'failed'])(
+      'that is %s lets an approval with a note through, recording what it passed over',
+      async (result) => {
+        const file = await fileIn('in_review');
+        await guide(file.id, kind, result);
+
+        await approve(ioana, file.id, 'Am sunat service-ul, e în regulă');
+
+        expect(await fileRow(file.id)).toMatchObject({
+          reasonNote: 'Am sunat service-ul, e în regulă',
+          status: 'approved',
+        });
+        expect((await missingOn())?.newValue).toEqual([{ kind, result }]);
+      },
+    );
+  });
+
+  it('counts a guide check with no row at all as not run', async () => {
+    const file = await fileIn('in_review');
+    await prisma.verificationCheck.delete({
+      where: { fileId_kind: { fileId: file.id, kind: 'photos' } },
+    });
+
+    const refused = await refusal(approve(ioana, file.id));
+
+    expect(refused.body).toMatchObject({
+      code: 'note_required',
+      missing: [{ kind: 'photos', result: 'not_run' }],
+    });
+  });
+
+  it.each(['onrc_certificate', 'rar_authorisation'])(
+    'refuses an approval without a note while the %s is missing, and saves it with one',
+    async (document) => {
+      const file = await fileIn('in_review');
+      await drop(file.id, document);
+
+      const refused = await refusal(approve(ioana, file.id));
+      expect(refused).toMatchObject({
+        body: { code: 'note_required', missing: [{ document }] },
+        status: 422,
+      });
+
+      await approve(ioana, file.id, 'Documentul vine prin e-mail');
+      expect((await fileRow(file.id)).status).toBe('approved');
+      expect((await missingOn())?.newValue).toEqual([{ document }]);
+    },
+  );
+
+  it('lists the checks in the drawer order, then the documents in theirs', async () => {
+    const file = await fileIn('in_review');
+    await guide(file.id, 'photos', 'warning');
+    await guide(file.id, 'company', 'failed');
+    await drop(file.id, 'rar_authorisation');
+    await drop(file.id, 'onrc_certificate');
+
+    const refused = await refusal(approve(ioana, file.id));
+
+    expect((refused.body as { missing?: unknown }).missing).toEqual([
+      { kind: 'company', result: 'failed' },
+      { kind: 'photos', result: 'warning' },
+      { document: 'onrc_certificate' },
+      { document: 'rar_authorisation' },
+    ]);
+  });
+
+  it('takes a blank note for none', async () => {
+    const file = await fileIn('in_review');
+    await guide(file.id, 'address', 'warning');
+
+    const refused = await refusal(approve(ioana, file.id, '   '));
+
+    expect(refused.body.code).toBe('note_required');
+  });
+
+  // OD-29: caen recorded ok from the ONRC record, the certificate missing.
+  it('asks a note of an approval whose caen passed without the certificate', async () => {
+    const file = await fileIn('in_review');
+    await prisma.verificationCheck.update({
+      data: { evidence: { certificate: false, certificateUploaded: false } },
+      where: { fileId_kind: { fileId: file.id, kind: 'caen' } },
+    });
+    await drop(file.id, 'onrc_certificate');
+
+    const refused = await refusal(approve(ioana, file.id));
+    expect(refused.body).toMatchObject({
+      code: 'note_required',
+      missing: [{ document: 'onrc_certificate' }],
+    });
+
+    await approve(ioana, file.id, 'CAEN confirmat din ONRC');
+    expect((await fileRow(file.id)).status).toBe('approved');
+  });
+
+  it('judges the rar and caen gates first', async () => {
+    const file = await fileIn('in_review');
+    await guide(file.id, 'photos', 'failed');
+    await setCheck(file.id, 'caen', 'warning');
+
+    const refused = await refusal(approve(ioana, file.id));
+
+    expect(refused).toMatchObject({
+      body: { code: 'caen_check_required' },
+      status: 409,
+    });
+  });
+
+  it('answers a file decided already with who decided it, not with the note', async () => {
+    const file = await fileIn('in_review');
+    await guide(file.id, 'photos', 'failed');
+    await approve(ioana, file.id, 'Poze vechi, dar e în regulă');
+
+    const refused = await refusal(approve(dan, file.id));
+
+    expect(refused).toMatchObject({
+      body: { code: 'verification_transition_refused' },
+      status: 409,
+    });
+  });
+
+  it('asks nothing of the system, and still records what it passed over', async () => {
+    const file = await prisma.verificationFile.create({
+      data: { garageId, status: 'submitted' },
+    });
+    const before = await refusals('note_required');
+
+    await approve(SYSTEM, file.id);
+
+    expect((await fileRow(file.id)).status).toBe('approved');
+    expect(await refusals('note_required')).toBe(before);
+    expect((await missingOn())?.newValue).toEqual([
+      ...GUIDE.map((kind) => ({ kind, result: 'not_run' })),
+      { document: 'onrc_certificate' },
+      { document: 'rar_authorisation' },
+    ]);
+  });
+
+  it('logs one line per refusal, with the file and the reason', async () => {
+    const file = await fileIn('in_review');
+    await guide(file.id, 'photos', 'failed');
+    const log = jest.spyOn(Logger.prototype, 'log');
+
+    await refusal(approve(ioana, file.id));
+
+    expect(
+      log.mock.calls.filter(([line]) =>
+        String(line).includes(`file ${file.id} refused: note_required`),
+      ),
+    ).toHaveLength(1);
+    log.mockRestore();
+  });
+});
+
+describe('the RAR test switch', () => {
+  // @traces 303-FR-004 303-FR-012
+  const rules = (testRules: boolean) =>
+    new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: false,
+      testRules,
+    });
+  const switchTo = (value: boolean) =>
+    prisma.platformRule.upsert({
+      create: { defaultValue: false, key: 'skip_rar_check', value },
+      update: { value },
+      where: { key: 'skip_rar_check' },
+    });
+
+  afterEach(() =>
+    prisma.platformRule.deleteMany({ where: { key: 'skip_rar_check' } }),
+  );
+
+  it('lets an approval through without the rar check outside production', async () => {
+    const file = await fileIn('in_review');
+    await setCheck(file.id, 'rar', 'not_run');
+    await switchTo(true);
+
+    await inTx((tx) =>
+      rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
+    );
+
+    expect((await fileRow(file.id)).status).toBe('approved');
+  });
+
+  it('still holds the approval on the caen check', async () => {
+    const file = await fileIn('in_review');
+    await setCheck(file.id, 'rar', 'not_run');
+    await setCheck(file.id, 'caen', 'not_run');
+    await switchTo(true);
+
+    const refused = await refusal(
+      inTx((tx) =>
+        rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
+      ),
+    );
+
+    expect(refused.body.code).toBe('caen_check_required');
+  });
+
+  it('holds the rar gate when the switch is off', async () => {
+    const file = await fileIn('in_review');
+    await setCheck(file.id, 'rar', 'failed');
+    await switchTo(false);
+
+    const refused = await refusal(
+      inTx((tx) =>
+        rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
+      ),
+    );
+
+    expect(refused.body.code).toBe('rar_check_required');
+  });
+
+  it('never reads the switch in production, so the rar gate stands', async () => {
+    const file = await fileIn('in_review');
+    await setCheck(file.id, 'rar', 'not_run');
+    await switchTo(true);
+    const read = jest.spyOn(prisma.platformRule, 'findUnique');
+
+    const refused = await refusal(
+      inTx((tx) =>
+        rules(false).decide(tx, ioana, file.id, { outcome: 'approved' }),
+      ),
+    );
+
+    expect(refused).toMatchObject({
+      body: { code: 'rar_check_required' },
+      status: 409,
+    });
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
+  });
+});
+
+describe('the last check date', () => {
+  // @traces 303-FR-005 303-FR-012
+  const lastCheckedOn = async () =>
+    (await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }))
+      .lastCheckedOn;
+  // Only Date is faked: the database and the timers keep real time.
+  const at = (iso: string) =>
+    jest
+      .useFakeTimers({
+        doNotFake: [
+          'nextTick',
+          'setImmediate',
+          'clearImmediate',
+          'setTimeout',
+          'clearTimeout',
+          'setInterval',
+          'clearInterval',
+          'queueMicrotask',
+          'hrtime',
+          'performance',
+        ],
+      })
+      .setSystemTime(new Date(iso));
+
+  afterEach(() => jest.useRealTimers());
+
+  it('is the Bucharest day of the approval: 23:30 UTC on a summer day is the next', async () => {
+    const file = await fileIn('in_review');
+    at('2026-07-15T23:30:00Z');
+
+    await decideWith(ioana, file.id, { outcome: 'approved' });
+
+    expect(await lastCheckedOn()).toEqual(new Date('2026-07-16T00:00:00Z'));
+    const entry = (await history(garageId)).find(
+      (e) => e.field === 'lastCheckedOn',
+    );
+    expect(entry).toMatchObject({ newValue: '2026-07-16', oldValue: null });
+  });
+
+  it('is written by the system approval too', async () => {
+    const file = await fileIn('submitted');
+    at('2026-11-10T10:00:00Z');
+
+    await decideWith(SYSTEM, file.id, { outcome: 'approved' });
+
+    expect(await lastCheckedOn()).toEqual(new Date('2026-11-10T00:00:00Z'));
+  });
+
+  it('moves to the approval of a reopened file, the garage staying approved', async () => {
+    const file = await fileIn('in_review');
+    at('2026-10-01T08:00:00Z');
+    await decideWith(ioana, file.id, { outcome: 'approved' });
+    at('2026-10-20T08:00:00Z');
+    await inTx((tx) => service().reopen(tx, dan, file.id));
+
+    await decideWith(dan, file.id, { outcome: 'approved' });
+
+    expect(await lastCheckedOn()).toEqual(new Date('2026-10-20T00:00:00Z'));
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage.status).toBe('approved');
+    const moves = (await history(garageId)).filter(
+      (e) => e.field === 'lastCheckedOn',
+    );
+    expect(moves.map((e) => [e.oldValue, e.newValue])).toEqual([
+      [null, '2026-10-01'],
+      ['2026-10-01', '2026-10-20'],
+    ]);
+  });
+
+  it('is left alone by a decision that is not an approval', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note: REASON.note,
+      outcome: 'rejected',
+      reason: REASON.code,
+    });
+
+    expect(await lastCheckedOn()).toBeNull();
   });
 });
