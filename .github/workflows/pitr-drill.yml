@@ -26,6 +26,10 @@ jobs:
   self-contained:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # A newer push to the same pull request replaces a drill still running.
+    concurrency:
+      group: pitr-drill-${{ github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

@@ -68,7 +68,7 @@ describe('the database image across every file', () => {
 
   it('is never pulled or run by a docker command on another tag', () => {
     const dockerImage =
-      /docker (?:run|pull|create)[^\n]*?\s((?:\S*\/)?(?:postgres|postgis)\S*)/g;
+      /docker (?:run|pull|create)[^\n]*?\s(\S*(?:postgres|postgis)\S*)/g;
     const offenders = Object.entries(workflows).flatMap(([name, text]) =>
       runBodies(text)
         .flatMap((body) => [...body.matchAll(dockerImage)].map((m) => m[1]))
@@ -309,19 +309,6 @@ describe('secrets in every workflow', () => {
 });
 
 describe('every workflow', () => {
-  it('gives every job of the two new workflows a timeout', () => {
-    const missing = ['postgres-image.yml', 'pitr-drill.yml'].flatMap((name) => {
-      const jobsBlock = workflows[name].split(/^jobs:\n/m)[1] ?? '';
-      return [
-        ...jobsBlock.matchAll(/^ {2}([a-z][\w-]*):\n((?: {4}.*\n|\n)+)/gm),
-      ]
-        .filter((m) => !/^ {4}timeout-minutes: \d+$/m.test(m[2]))
-        .map((m) => `${name}/${m[1]}`);
-    });
-
-    expect(missing).toEqual([]);
-  });
-
   it('gives every job of every workflow this feature touches a timeout', () => {
     const touched = [
       'ci.yml',
@@ -357,11 +344,6 @@ describe('every workflow', () => {
     );
 
     expect(mutable).toEqual([]);
-  });
-
-  it('declares its permissions for the two new workflows at the top', () => {
-    expect(publish).toMatch(/^permissions:$/m);
-    expect(drill).toMatch(/^permissions:$/m);
   });
 });
 

@@ -64,6 +64,16 @@ describe('the point-in-time drill workflow', () => {
     );
   });
 
+  it('lets a newer push to the same pull request replace a running drill', () => {
+    expect(job('self-contained')).toContain(
+      [
+        '    concurrency:',
+        `      group: pitr-drill-\${{ github.event.pull_request.number || github.run_id }}`,
+        `      cancel-in-progress: \${{ github.event_name == 'pull_request' }}`,
+      ].join('\n'),
+    );
+  });
+
   it('reads the repository and nothing more', () => {
     expect(workflow).toMatch(/^permissions:\n {2}contents: read\n\n/m);
     expect(workflow).not.toContain('packages: write');
