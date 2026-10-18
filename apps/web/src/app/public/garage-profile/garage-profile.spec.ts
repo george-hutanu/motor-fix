@@ -1384,8 +1384,9 @@ describe('the profile in two columns', () => {
     const sheet = css('garage-profile.css');
     const wide = sheet.slice(sheet.indexOf('@media (min-width: 1024px)'));
 
-    expect(wide).toMatch(/\.main\s*\{[^}]*flex:\s*999 1 560px/);
-    expect(wide).toMatch(/\.side\s*\{[^}]*flex:\s*1 1 360px/);
+    // 520 + 400 fit side by side at 1024 px, and 400 holds "REQUEST A QUOTE →" on one line.
+    expect(wide).toMatch(/\.main\s*\{[^}]*flex:\s*999 1 520px/);
+    expect(wide).toMatch(/\.side\s*\{[^}]*flex:\s*1 1 400px/);
     expect(wide).toMatch(/\.side\s*\{[^}]*position:\s*sticky/);
     expect(wide).toContain(
       'top: calc(var(--public-site-bar, 0px) + var(--mf-space-4))',
