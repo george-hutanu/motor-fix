@@ -523,7 +523,7 @@ describe('approving, attacked', () => {
   });
 
   // @traces 303-FR-009
-  it('reopens the dialog from the re-read file, not from the 422 body', async () => {
+  it("reopens the dialog from the 422 body's missing list, not from the re-read file", async () => {
     const host = await open(gated('ok', 'ok'));
     overlays.open.mockResolvedValueOnce({}).mockResolvedValueOnce('cancelled');
     api.verificationFileControllerDecision.mockImplementation(async () => {
@@ -541,7 +541,7 @@ describe('approving, attacked', () => {
     await settle();
 
     expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
-      missing: [{ kind: 'address', result: 'warning' }],
+      missing: [{ kind: 'photos', result: 'failed' }],
     });
     expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
   });

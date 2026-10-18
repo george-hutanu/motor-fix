@@ -1,5 +1,6 @@
 import {
   approvalGaps,
+  approvalGapsFrom,
   queueLamp,
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
@@ -114,5 +115,34 @@ describe('what an approval passes over', () => {
     expect(approvalGaps(allOk, ['rar_authorisation'])).toEqual([
       { document: 'onrc_certificate' },
     ]);
+  });
+});
+
+// @traces 303-FR-009
+describe("the server's list of what an approval passes over", () => {
+  it('keeps every well-formed check and document line, in order', () => {
+    const missing = [
+      { kind: 'photos', result: 'warning' },
+      { kind: 'company', result: 'not_run' },
+      { document: 'onrc_certificate' },
+    ];
+    expect(approvalGapsFrom(missing)).toEqual(missing);
+  });
+
+  it('is an empty list when the server lists nothing', () => {
+    expect(approvalGapsFrom([])).toEqual([]);
+  });
+
+  it.each([
+    ['no list', undefined],
+    ['not a list', { kind: 'photos', result: 'failed' }],
+    ['a gate check', [{ kind: 'rar', result: 'failed' }]],
+    ['an ok check', [{ kind: 'photos', result: 'ok' }]],
+    ['an unknown result', [{ kind: 'photos', result: 'bad' }]],
+    ['an unknown document', [{ document: 'passport' }]],
+    ['a bare value', ['photos']],
+    ['a null line', [null]],
+  ])('is none for %s', (_, value) => {
+    expect(approvalGapsFrom(value)).toBeNull();
   });
 });

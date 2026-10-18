@@ -16,6 +16,10 @@
       "cancel": "Renunță",
       "confirm": "Aprobă și publică",
       "count": "{n}/1000",
+      "documents": {
+        "onrc_certificate": "Certificat constatator ONRC",
+        "rar_authorisation": "Autorizația RAR"
+      },
       "listed": "Aprobi trecând peste:",
       "missingCheck": "{label}: {result}",
       "missingDocument": "Lipsește: {document}",

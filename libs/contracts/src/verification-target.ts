@@ -102,3 +102,33 @@ export function approvalGaps(
     ),
   ];
 }
+
+const GAP_RESULTS = [
+  'not_run',
+  'warning',
+  'failed',
+] as const satisfies readonly Exclude<VerificationCheckResult, 'ok'>[];
+
+// A list of what an approval passes over as the server sent it (the
+// note_required refusal's `missing`): the list when every line is one
+// approvalGaps could have made, else none.
+export function approvalGapsFrom(value: unknown): ApprovalGap[] | null {
+  if (!Array.isArray(value)) return null;
+  const gaps: ApprovalGap[] = [];
+  for (const line of value as unknown[]) {
+    const gap = gapFrom(line);
+    if (!gap) return null;
+    gaps.push(gap);
+  }
+  return gaps;
+}
+
+function gapFrom(line: unknown): ApprovalGap | null {
+  if (typeof line !== 'object' || line === null) return null;
+  const { document, kind, result } = line as Record<string, unknown>;
+  const missingDocument = DOCUMENT_KINDS.find((known) => known === document);
+  if (missingDocument) return { document: missingDocument };
+  const guide = GUIDE_KINDS.find((known) => known === kind);
+  const notOk = GAP_RESULTS.find((known) => known === result);
+  return guide && notOk ? { kind: guide, result: notOk } : null;
+}
