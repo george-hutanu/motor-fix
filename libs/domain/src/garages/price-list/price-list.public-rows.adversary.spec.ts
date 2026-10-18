@@ -36,6 +36,7 @@ const row = (
   jobType,
   position: 0,
   toBani: 2000,
+  updatedAt: new Date(0),
   visible: true,
   ...extra,
 });

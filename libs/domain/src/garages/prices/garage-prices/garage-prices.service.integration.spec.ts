@@ -12,8 +12,8 @@ import {
   pricesWorld,
   refused,
 } from './garage-prices.testing';
-import { audienceOf } from '../../events/audience';
-import { Prisma } from '../../generated/prisma/client';
+import { audienceOf } from '../../../events/audience';
+import { Prisma } from '../../../generated/prisma/client';
 
 const { history, job, nothingStored, prices, prisma, rows, save, world } =
   pricesWorld();

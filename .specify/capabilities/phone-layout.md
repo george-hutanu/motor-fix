@@ -13,6 +13,7 @@ features:
   - 344-send-quote
   - 172-price-list-states
   - 303-approve-publish-garage
+  - 173-price-range-in-place
 ---
 
 # Capability: Phone layout and installable web app
@@ -236,6 +237,26 @@ _From 172-price-list-states._
 ### 303-FR-011 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the hint, the warning line, the dialog and the queue row's state text MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, inside their panel (the dialog's list wraps, the text area is full width at 320 px); every state is conveyed by text as well as colour; the button, the dialog's controls and the row's link are at least 44 px tall and reachable by keyboard; the dialog moves focus to its first control on open and returns it to the button on cancel and to the drawer's title on success.
 
 _From 303-approve-publish-garage._
+
+### 173-FR-001 — The Prețuri view (`/app/garage/prices`, ST-172) MUST gain, in its panel header, a button "Modifică prețurile" / "Edit prices" that switches the view into editing: each row, each brand line and the labour note get a "Modifică" / "Edit" action, and the button reads "Gata" / "Done" while editing is on. Nothing else in the view changes; with editing off, the view reads exactly as ST-172 built it. The button is only ever rendered for the owner, since the view is (172-FR-009).
+
+_From 173-price-range-in-place._
+
+### 173-FR-002 — A row's "Modifică" MUST open a row editor in the shared overlay task (the `dialog` shape: centred from 768 px, the bottom sheet below it, 158-FR-010) titled with the job's name, holding three fields: "De la" / "From" and "Până la" / "To" in whole lei (the shared `LeiInput`, holding bani) and "Durată" / "Duration" (minutes in steps of 15, shown through the shared duration format), a "Salvează" / "Save" button and a cancel; the brand line's and the labour note's editors are the same task with the two price fields only. Fields are pre-filled with the stored values; an empty top stays empty.
+
+_From 173-price-range-in-place._
+
+### 173-FR-003 — The editor MUST judge every range through the one shared range check (354-FR-006, `checkPriceRange`) as the owner types, showing the listing form's existing texts for each code (109-FR-005, `listing-check-texts`): `below_from` "Prețul minim trebuie să fie mai mic decât maximul" / "The low price must be below the high one", the 1 and 100.000 lei bounds and the duration steps in words, and the `wide_range` warning under the range; a field error disables Save, a warning never does. No second copy of the rule exists in the web app (Principle V). The labour editor MUST additionally require both ends (a cleared end reads "Ambele capete sunt necesare" / "Both ends are needed" and disables Save), since the garage's labour range is both or nothing (109-FR-015, 172-FR-006); the brand editor requires both ends the same way, since the brand write refuses a missing top. The editor maps each code to its own text keys: the listing form's wording for the range codes, new texts for the duration bounds and steps.
+
+_From 173-price-range-in-place._
+
+### 173-FR-011 — The view MUST, on a save: lock the editor (fields and buttons disabled, a spinner, `aria-busy`) until the answer; on 200 close the editor and show the saved values, state and lamp (the list is re-read through the owner's read, never patched by hand, so the state and reason come from the server); on 422 show each field error under its field and keep the editor open; on 409 show "Lista s-a schimbat între timp." / "The list changed in the meantime." as a problem line, re-read the list and show the stored values in the editor; on a network or 5xx failure keep the editor open with the typed values and the shared problem line. Nothing is ever half saved: one write per row, in one transaction.
+
+_From 173-price-range-in-place._
+
+### 173-FR-015 — Every new text MUST exist in Romanian and English with U+2011 in hyphenated Romanian words (080-FR-014); no text smaller than 12 px; the editor MUST read without sideways scroll at 320 px, with fields at least 44 px tall and the lei unit shown beside each price field; the "Modifică" actions are real buttons named for assistive technology with the job's or brand's name ("Modifică Frâne față"); the error and warning texts are tied to their fields (`aria-describedby`) and the problem line is a live region; colours come from the theme's tokens in light and dark. Focus: the editor takes focus on its first field when it opens and returns it to the "Modifică" button that opened it when it closes (the overlay task's own rule); the "Modifică prețurile" / "Gata" button is a toggle whose on state is exposed to assistive technology (`aria-pressed`); Esc and the cancel close the editor without saving.
+
+_From 173-price-range-in-place._
 
 ## Retired
 

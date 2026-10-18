@@ -90,6 +90,7 @@ features:
   - 1019-staging-mcp-connect
   - 1348-release-green
   - 1174-postgres-18-pitr
+  - 173-price-range-in-place
 ---
 
 # Capability: Platform
@@ -2257,6 +2258,9 @@ _From 430-cdn-waf._
 
 _From 1019-staging-mcp-connect._
 
+### 173-FR-013 — `libs/domain/src/garages/prices/garage-prices.service.ts` and `garage-prices.testing.ts`, with their colocated specs, MUST move to `libs/domain/src/garages/prices/garage-prices/` (files named after the subfolder), every import updated, their two entries removed from `scripts/structure-baseline.json`, and `node scripts/structure-check.ts` MUST pass (Constitution IV; folded-in #658).
+
+_From 173-price-range-in-place._
 ### 1174-FR-001 — The repository MUST hold one database image definition (`infra/postgres/Dockerfile`), `FROM ghcr.io/railwayapp-templates/postgres-ssl:18` plus the distribution's `postgresql-18-postgis-3` package (PostGIS 3.6.x) from the base image's pgdg repository, nothing else added, with `PGDATA` set under `/var/lib/postgresql/data` so the base entrypoint starts; it MUST be published to `ghcr.io/george-hutanu/motor-fix-postgres` for amd64 and arm64, tagged with the commit sha on every publish and `18` from `main` (from another branch only when the dispatch sets its `move_18` input, so nothing moves the tag compose, CI and staging pull by accident), by a workflow (`postgres-image.yml`) that runs on `workflow_dispatch` from any branch and on a push to `main` that changes `infra/postgres/**` or the workflow itself, and builds both architectures without pushing on a pull request that changes them (the proof before merge, and what registers the workflow for a dispatch from a branch); the package is public, as the application images are, so compose, CI and Railway pull it with no login (making a new package public is an owner step if GitHub creates it private); a failed publish run is its alert.
 
 _From 1174-postgres-18-pitr._

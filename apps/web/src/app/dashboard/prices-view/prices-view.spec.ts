@@ -9,8 +9,10 @@ import {
   type PriceListItemDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
+import { PriceRangeEditor } from './price-range-editor/price-range-editor';
 import { PricesView } from './prices-view';
 import { Live } from '../live';
 import { Session } from '../session';
@@ -24,8 +26,10 @@ const item = (over: Partial<PriceListItemDto> = {}): PriceListItemDto => ({
   jobTypeId: 'diagnosis',
   nameEn: 'Diagnosis and fault-code read',
   nameRo: 'Diagnoză și citire coduri de eroare',
+  priceId: `price-${over.jobTypeId ?? 'diagnosis'}`,
   public: true,
   toBani: 22_000,
+  updatedAt: '2026-10-18T09:00:00.000Z',
   ...over,
 });
 
@@ -89,6 +93,7 @@ const me = {
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let read: jest.Mock;
+let open: jest.Mock;
 
 async function render(
   answer: () => Promise<PriceListDto> = async () => ({
@@ -96,14 +101,17 @@ async function render(
     labour: LABOUR,
   }),
   language: 'ro' | 'en' = 'ro',
+  session: MeDto = me,
 ) {
   events = new Subject();
   resync = new Subject();
   read = jest.fn(answer);
+  open = jest.fn(async () => 'saved');
   TestBed.configureTestingModule({
     providers: [
       { provide: GaragesService, useValue: { priceListControllerRead: read } },
-      { provide: Session, useValue: { shown: signal(me) } },
+      { provide: Session, useValue: { shown: signal(session) } },
+      { provide: Overlays, useValue: { open } },
       {
         provide: Live,
         useValue: {
@@ -272,11 +280,13 @@ describe('Prețuri: every job with its state', () => {
     expect(rows(without.element)).toHaveLength(6);
   });
 
-  it('has no button and no row action', async () => {
+  it('has one button, the editing switch, and no row action while editing is off', async () => {
     const { element, settle } = await render();
     await settle();
 
-    expect(element.querySelectorAll('button, a')).toHaveLength(0);
+    expect([...element.querySelectorAll('button, a')].map(text)).toEqual([
+      'Modifică prețurile',
+    ]);
   });
 });
 
@@ -423,7 +433,9 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     expect(panel?.children).toHaveLength(2);
     expect(rows(element)).toHaveLength(0);
     expect(element.querySelector('[data-labour]')).toBeNull();
-    expect(element.querySelector('button')).toBeNull();
+    expect([...element.querySelectorAll('button')].map(text)).toEqual([
+      'Modifică prețurile',
+    ]);
   });
 
   it('never says the list is empty when the garage is gone', async () => {
@@ -483,5 +495,167 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
 
     expect(read).toHaveBeenCalledTimes(2);
     expect(rows(element)).toHaveLength(6);
+  });
+});
+
+const buttons = (root: Element) => [...root.querySelectorAll('button')];
+const named = (root: Element, name: string) =>
+  buttons(root).find((b) => text(b) === name) as HTMLButtonElement;
+const editButtons = (root: Element) =>
+  buttons(root).filter((b) => text(b) === 'Modifică');
+
+// @traces 173-FR-001
+// @traces 173-FR-011
+describe('Prețuri: the editing switch', () => {
+  it('turns every row, brand line and the labour note editable, and back', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const toggle = named(element, 'Modifică prețurile');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    // The board's amber button: the kit's primary variant.
+    expect(toggle.classList).toContain('spartan-button-variant-default');
+
+    toggle.click();
+    await settle();
+
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(text(toggle)).toBe('Gata');
+    // Six rows, one brand line, the labour note.
+    expect(editButtons(element)).toHaveLength(8);
+    for (const row of rows(element))
+      expect(
+        [...row.querySelectorAll(':scope > .line button, :scope > button')]
+          .length,
+      ).toBe(1);
+
+    toggle.click();
+    await settle();
+
+    expect(text(toggle)).toBe('Modifică prețurile');
+    expect(editButtons(element)).toHaveLength(0);
+  });
+
+  it("names each row's action after its job", async () => {
+    const { element, settle } = await render();
+    await settle();
+    named(element, 'Modifică prețurile').click();
+    await settle();
+
+    const [first] = editButtons(element);
+    expect(first.getAttribute('aria-label')).toBe(
+      'Modifică Diagnoză și citire coduri de eroare',
+    );
+  });
+
+  it('speaks English in English', async () => {
+    const { element, settle } = await render(undefined, 'en');
+    await settle();
+    const toggle = named(element, 'Edit prices');
+
+    toggle.click();
+    await settle();
+
+    expect(text(toggle)).toBe('Done');
+    expect(buttons(element).filter((b) => text(b) === 'Edit')).toHaveLength(8);
+  });
+
+  it('offers an unset labour range only while editing', async () => {
+    const { element, settle } = await render(async () => ({
+      items: SEEDED,
+    }));
+    await settle();
+    expect(element.querySelector('[data-labour]')).toBeNull();
+
+    named(element, 'Modifică prețurile').click();
+    await settle();
+
+    expect(text(element.querySelector('[data-labour]'))).toBe(
+      'Manoperă: nesetată Modifică',
+    );
+  });
+
+  it('shows no switch and no action to anyone but the owner', async () => {
+    const { element, settle } = await render(undefined, 'ro', {
+      garageAccess: [{ garageId: GARAGE, role: 'receptionist' }],
+      garageId: GARAGE,
+    } as unknown as MeDto);
+    await settle();
+
+    expect(buttons(element)).toHaveLength(0);
+  });
+});
+
+// @traces 173-FR-002
+// @traces 173-FR-005
+// @traces 173-FR-012
+describe('Prețuri: opening an editor', () => {
+  const editing = async () => {
+    const view = await render();
+    await view.settle();
+    named(view.element, 'Modifică prețurile').click();
+    await view.settle();
+    return view;
+  };
+
+  it("opens a row's editor titled with its job and re-reads after a save, never patching the row", async () => {
+    const { element, settle } = await editing();
+    const brakes = rows(element)[2];
+
+    (brakes.querySelector('button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(PriceRangeEditor, {
+      data: { garageId: GARAGE, item: SEEDED[2], kind: 'row' },
+      shape: 'dialog',
+      title: 'Plăcuțe și discuri de frână față',
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(cell(rows(element)[2], 'price')).toBe(cell(brakes, 'price'));
+  });
+
+  it('reads nothing again when the editor is cancelled', async () => {
+    const { element, settle } = await editing();
+    open.mockResolvedValueOnce('cancelled');
+
+    (rows(element)[0].querySelector('button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a brand line's editor on its brand", async () => {
+    const { element, settle } = await editing();
+
+    (element.querySelector('[data-brand] button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(PriceRangeEditor, {
+      data: {
+        brand: SEEDED[2].brandRanges[0],
+        garageId: GARAGE,
+        jobTypeId: 'brakes',
+        kind: 'brand',
+      },
+      shape: 'dialog',
+      title: 'Plăcuțe și discuri de frână față · BMW',
+    });
+  });
+
+  it("opens the labour editor on the garage's labour range", async () => {
+    const { element, settle } = await editing();
+    const action = element.querySelector(
+      '[data-labour] button',
+    ) as HTMLButtonElement;
+
+    // Named from the garage texts the view loads, not the public listing's.
+    expect(action.getAttribute('aria-label')).toBe('Modifică Manoperă, pe oră');
+    action.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(PriceRangeEditor, {
+      data: { garageId: GARAGE, kind: 'labour', labour: LABOUR },
+      shape: 'dialog',
+      title: 'garage.prices.labourTitle',
+    });
   });
 });

@@ -29,6 +29,7 @@ const row = (
   jobType,
   position: 0,
   toBani: 2000,
+  updatedAt: new Date(0),
   visible: true,
   ...extra,
 });
@@ -129,8 +130,10 @@ describe('priceListJobs brand rows', () => {
       jobTypeId: j.id,
       nameEn: j.nameEn,
       nameRo: j.nameRo,
+      priceId: `adv-row-${j.id}-default`,
       public: true,
       toBani: 200,
+      updatedAt: new Date(0).toISOString(),
     });
   });
 
