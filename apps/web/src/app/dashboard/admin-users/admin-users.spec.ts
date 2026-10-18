@@ -714,4 +714,14 @@ describe('the view on the page', () => {
   it('starts the totals line at the view edge, where the title starts', () => {
     expect(stylesheet).not.toMatch(/\n\.totals \{[^}]*padding-inline/);
   });
+
+  // @traces 975-type-scale-FR-003
+  it('reads the count line at the body size on a phone and the small size from 768 px up', () => {
+    expect(stylesheet).toMatch(
+      /\n\.found \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(min-width: 768px\) \{\s*\.found \{\s*font-size: var\(--mf-size-small\);/,
+    );
+  });
 });

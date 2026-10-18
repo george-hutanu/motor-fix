@@ -171,10 +171,16 @@ mf-lamp {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
   outline-offset: var(--mf-focus-offset);
 }
+/* Running text on a phone reads at the body size; the small size from 768 px up. */
 .found {
   margin: 0 0 var(--mf-space-2);
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
+}
+@media (min-width: 768px) {
+  .found {
+    font-size: var(--mf-size-small);
+  }
 }
 .no-match {
   display: flex;
