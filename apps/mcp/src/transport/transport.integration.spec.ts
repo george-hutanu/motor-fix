@@ -7,6 +7,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { AuditService, createPrisma, ROUTE_LIMITS } from '@motor-fix/domain';
 import { databaseTurn } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { type INestApplication, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
@@ -497,7 +498,11 @@ describe('the MCP endpoint past its limit', () => {
     prisma.activityLog.count({ where: { actorId: accountId } });
 
   it('counts every call, refuses the one past the limit with the wait, runs no tool, and counts the refusal', async () => {
-    const counted = jest.spyOn(metrics, 'recordRateLimited');
+    const reader = countedMetrics();
+    const refusals = () =>
+      counterTotal(reader, 'motorfix_rate_limit_refusals_total', {
+        route: 'POST /mcp',
+      });
     const { id } = await newAccount();
     const client = await connect(await tokenFor(id));
     await used(id, limit - 1);
@@ -523,7 +528,7 @@ describe('the MCP endpoint past its limit', () => {
       client.callTool({ arguments: {}, name: 'touch_account' }),
     ).rejects.toThrow();
     expect(await touched(id)).toBe(before + 1);
-    expect(counted).toHaveBeenCalledTimes(2);
+    expect(await refusals()).toBe(2);
     await client.close().catch(() => undefined);
   });
 

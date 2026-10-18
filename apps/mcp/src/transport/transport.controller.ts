@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import {
   AccountLoader,
   AuditService,
+  countRateLimitRefusal,
   type createPrisma,
   DaySheetService,
   DeclineService,
@@ -47,7 +48,6 @@ import {
   type AuthFailure,
   observeToolCall,
   recordAuthFailure,
-  recordRateLimited,
   toolLabel,
 } from '../metrics/metrics';
 
@@ -103,7 +103,7 @@ export class TransportController {
     if (!caller) return;
     const wait = await this.limits.wait('assistant', caller.account.id);
     if (wait !== null) {
-      recordRateLimited();
+      countRateLimitRefusal('POST /mcp');
       res.setHeader('Retry-After', String(wait));
       refuse(res, 429, {
         code: 'rate_limited',

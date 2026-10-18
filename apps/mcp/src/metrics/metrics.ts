@@ -1,5 +1,4 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { countRateLimitRefusal } from '@motor-fix/domain';
 import { Logger } from '@nestjs/common';
 import {
   type Counter,
@@ -81,11 +80,6 @@ export function recordRequest(status: number) {
 
 export function recordAuthFailure(reason: AuthFailure) {
   meter().authFailures.add(1, { reason });
-}
-
-// A call refused past the endpoint's limit, beside the API's refusals.
-export function recordRateLimited() {
-  countRateLimitRefusal('POST /mcp');
 }
 
 export function recordKeyFetch(outcome: 'ok' | 'error') {

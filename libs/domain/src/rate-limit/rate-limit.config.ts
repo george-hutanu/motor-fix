@@ -6,7 +6,7 @@ const HOUR = 60 * MINUTE;
 
 // Calls counted in Redis over a window that begins with the first, under a
 // key prefix of their own.
-export interface CountRule {
+interface CountRule {
   key: string;
   limit: number;
   // The logger's name, so a skipped count says whose it was.
@@ -16,7 +16,7 @@ export interface CountRule {
 
 // A route's limit, refused with `rate_limited`: per client address, or per
 // key the route names (an account, a draft).
-export interface RouteRule extends CountRule {
+interface RouteRule extends CountRule {
   per: 'address' | 'key';
 }
 

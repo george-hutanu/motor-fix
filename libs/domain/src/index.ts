@@ -114,13 +114,7 @@ export { DeclineWindowModule } from './quotes/decline-window/decline-window.modu
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';
-export {
-  AUTH_LIMITS,
-  COUNTED_IN_DATABASE,
-  ROUTE_LIMITS,
-  type RouteLimit,
-  THROTTLES,
-} from './rate-limit/rate-limit.config';
+export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
 export { SearchModule } from './search/search.module';

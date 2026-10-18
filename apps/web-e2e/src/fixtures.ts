@@ -97,7 +97,7 @@ export async function routedContext(
  * The `request` fixture: the API calls a flow sets up with, sign-ins among
  * them, from an address of the test's own like its browser's.
  */
-export async function addressedRequest(
+async function addressedRequest(
   {
     baseURL,
     playwright,
