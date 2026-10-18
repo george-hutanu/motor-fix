@@ -9,12 +9,10 @@ import {
   signal,
 } from '@angular/core';
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import {
-  AuthService,
-  type MeDto,
-  MeService,
-  type OAuthPendingDto,
-} from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access/models/me-dto';
+import type { OAuthPendingDto } from '@motor-fix/data-access/models/o-auth-pending-dto';
+import { AuthService } from '@motor-fix/data-access/services/auth.service';
+import { MeService } from '@motor-fix/data-access/services/me.service';
 import { type Language, LanguageChoice } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
 
