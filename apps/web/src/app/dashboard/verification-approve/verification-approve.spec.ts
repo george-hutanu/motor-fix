@@ -178,14 +178,20 @@ describe('approving past what is not ok', () => {
     expect(lines()).toEqual([
       'Firmă: problemă',
       'Lipsește: Certificat constatator ONRC',
-      'Lipsește: Autorizația tehnică RAR',
+      'Lipsește: Autorizația RAR',
     ]);
   });
 
   it('names a missing document in English', async () => {
-    await open([{ document: 'onrc_certificate' }], 'en');
+    await open(
+      [{ document: 'onrc_certificate' }, { document: 'rar_authorisation' }],
+      'en',
+    );
 
-    expect(lines()).toEqual(['Missing: ONRC company certificate']);
+    expect(lines()).toEqual([
+      'Missing: ONRC company certificate',
+      'Missing: RAR authorisation',
+    ]);
   });
 
   it.each(['', '   '])(
