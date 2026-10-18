@@ -124,11 +124,12 @@
       "kind": "railway-service",
       "name": "keycloak",
       "source": "scripts/railway-deploy.ts",
-      "dashboard": "motorfix-mcp",
+      "dashboard": "motorfix-overview",
       "alerts": [
-        "mcp-issuer-unreachable"
+        "mcp-issuer-unreachable",
+        "keycloak-memory"
       ],
-      "reason": "staging only; health at /realms/master, answering once the realm is imported; the MCP server's mcp_issuer_up probe is the only signal (Keycloak itself sends no telemetry)",
+      "reason": "staging only; health at /realms/master, answering once the realm is imported; Keycloak sends no telemetry itself: the worker reads its management /metrics (port 9000, private network) at KEYCLOAK_METRICS_URL once a minute into motorfix_keycloak_heap_used_bytes, motorfix_keycloak_heap_max_bytes and motorfix_datastore_up{store=\"keycloak\"} on the overview dashboard's keycloak row, which fire keycloak-memory; the MCP server's mcp_issuer_up probe still fires mcp-issuer-unreachable",
       "story": "ST-1016"
     },
     {
