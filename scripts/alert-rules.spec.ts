@@ -637,6 +637,45 @@ describe('alert rules', () => {
     expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
   });
 
+  // @traces 1178-FR-008
+  // @traces 1178-FR-009
+  it('tells the owner when Keycloak holds more than 90% of its heap for ten minutes', () => {
+    const file = files['keycloak.json'] as AlertFile;
+    expect(file?.groups.map((g) => [g.name, g.folder, g.interval])).toEqual([
+      ['keycloak', 'MotorFix', '1m'],
+    ]);
+    const rule = rulesOf(file).find((r) => r.uid === 'keycloak-memory');
+    expect(rule).toBeDefined();
+    expectRule(rule as Rule, {
+      expr: [
+        'max by (deployment_environment) (motorfix_keycloak_heap_used_bytes)',
+        '/',
+        'max by (deployment_environment) (motorfix_keycloak_heap_max_bytes)',
+      ],
+      for: '10m',
+      from: 300,
+      type: 'gt',
+      value: 0.9,
+    });
+    expect(rule?.noDataState).toBe('OK');
+    expect(rule?.labels['service']).toBe('keycloak');
+    expect(rule?.annotations['dashboard_uid']).toBe('motorfix-overview');
+    expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
+    expect((rule?.annotations['runbook'] ?? '').length).toBeGreaterThan(20);
+
+    const overview = readFileSync(
+      join(dashboardsDir, 'motorfix-overview.json'),
+      'utf8',
+    );
+    const watched = exprs(overview).join('\n');
+    for (const fragment of [
+      'motorfix_datastore_up{store="keycloak"',
+      'motorfix_keycloak_heap_used_bytes',
+      'motorfix_keycloak_heap_max_bytes',
+    ])
+      expect([fragment, watched.includes(fragment)]).toEqual([fragment, true]);
+  });
+
   // @traces 880-FR-002
   it('fires with no wait only the rules whose query already holds one', () => {
     const zero = rows(files)
@@ -680,9 +719,10 @@ describe('alert rules', () => {
   });
 
   // @traces 880-FR-017
+  // @traces 1178-FR-009
   // @traces 305-FR-009
-  it('holds forty rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(40);
+  it('holds forty-one rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(41);
   });
 
   // @traces 1345-FR-004
@@ -932,7 +972,11 @@ describe('the inventory lists the rules', () => {
         Array.isArray(e.alerts) ? e.alerts : [],
       ),
     );
-    for (const uid of [...Object.keys(EXPECTED), 'mcp-memory'])
+    for (const uid of [
+      ...Object.keys(EXPECTED),
+      'mcp-memory',
+      'keycloak-memory',
+    ])
       expect([uid, listed.has(uid)]).toEqual([uid, true]);
     const waiting = inventory.entries.filter((e) =>
       /ST-\d+ adds the (?:queue )?alert/.test(e.reason ?? ''),
