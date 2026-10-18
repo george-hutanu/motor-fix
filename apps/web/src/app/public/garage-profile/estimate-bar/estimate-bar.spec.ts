@@ -129,6 +129,21 @@ describe('the bar’s stylesheet', () => {
     expect(css).toMatch(/z-index:\s*10;/);
   });
 
+  // "REQUEST A QUOTE" stays on one line: the button takes its own width and
+  // the total the rest, wrapping to a row of its own only on a 320 px phone.
+  it('never breaks the request’s label', () => {
+    expect(css).toMatch(/\.request\s*\{[^}]*flex:\s*1 0 auto/);
+    const html = readFileSync(join(__dirname, 'estimate-bar.html'), 'utf8');
+    expect(html).toMatch(/<mf-request-quote-button class="request one-line"/);
+    const button = readFileSync(
+      join(__dirname, '../request-quote-button/request-quote-button.css'),
+      'utf8',
+    );
+    expect(button).toMatch(
+      /:host\(\.one-line\) button\s*\{\s*white-space:\s*nowrap;?\s*\}/,
+    );
+  });
+
   it('is gone from 768 px and while hidden', () => {
     expect(css).toMatch(
       /@media \(min-width: 768px\)\s*\{\s*:host\s*\{\s*display:\s*none;?\s*\}/,
@@ -291,6 +306,7 @@ describe('the room the bar takes', () => {
   afterEach(() => {
     globalThis.ResizeObserver = original;
     document.documentElement.style.removeProperty('--estimate-bar');
+    document.documentElement.style.removeProperty('scroll-padding-bottom');
   });
 
   it('gives the page its height as --estimate-bar and takes it back on leaving', async () => {
@@ -302,6 +318,22 @@ describe('the room the bar takes', () => {
     fixture.componentInstance.on.set(false);
     fixture.detectChanges();
     expect(height()).toBe('');
+  });
+
+  // A switch scrolled or tabbed into view lands above the bar, the consent
+  // bar and the tab bar, never under them.
+  it('keeps what scrolls into view clear of the bar and what it sits on', async () => {
+    const padding = () =>
+      document.documentElement.style.getPropertyValue('scroll-padding-bottom');
+    await render();
+    for (const callback of observed)
+      callback([{ contentRect: { height: 60 } }]);
+    expect(padding()).toContain('var(--estimate-bar, 0px)');
+    expect(padding()).toContain('var(--consent-bar, 0px)');
+
+    fixture.componentInstance.on.set(false);
+    fixture.detectChanges();
+    expect(padding()).toBe('');
   });
 
   it('writes nothing on the server', async () => {

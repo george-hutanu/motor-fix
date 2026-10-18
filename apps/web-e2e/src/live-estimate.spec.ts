@@ -206,14 +206,15 @@ test.describe('the estimate within reach @seeded', () => {
         'true',
       );
     await page.keyboard.press('Escape');
-    await expect(quote).toBeHidden();
-    await expect(sheet).toBeVisible();
+    await expect(quote).toHaveCount(0);
+    // The overlay's container reads as hidden to Playwright: its content shows.
+    await expect(sheet.getByText(BRAKES).first()).toBeVisible();
 
     await sheet
       .getByRole('button', { name: /închide/i })
       .first()
       .click();
-    await expect(sheet).toBeHidden();
+    await expect(sheet).toHaveCount(0);
     expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
   });
 

@@ -61,7 +61,8 @@
   color: var(--mf-text-secondary);
   cursor: default;
 }
+/* The request takes its label's width on one line and the total the rest;
+   on a 320 px phone the request wraps to a full-width row of its own. */
 .request {
-  flex: 1 1 160px;
-  min-width: 0;
+  flex: 1 0 auto;
 }

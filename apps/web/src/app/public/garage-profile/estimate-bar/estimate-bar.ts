@@ -91,16 +91,26 @@ export class EstimateBar {
     )
       return;
     const root = inject(DOCUMENT).documentElement;
-    const observer = new ResizeObserver(([entry]) =>
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    // What scrolls or is tabbed into view stops above the bar and what it
+    // sits on (the consent bar, the tab bar), never under them.
+    const observer = new ResizeObserver(([entry]) => {
       root.style.setProperty(
         '--estimate-bar',
-        `${Math.ceil(entry?.contentRect.height ?? 0)}px`,
-      ),
-    );
-    observer.observe(inject(ElementRef).nativeElement);
+        `${Math.ceil(entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect.height ?? 0)}px`,
+      );
+      const tabBar =
+        getComputedStyle(host).getPropertyValue('--tab-bar').trim() || '0px';
+      root.style.setProperty(
+        'scroll-padding-bottom',
+        `calc(var(--estimate-bar, 0px) + var(--consent-bar, 0px) + ${tabBar})`,
+      );
+    });
+    observer.observe(host);
     inject(DestroyRef).onDestroy(() => {
       observer.disconnect();
       root.style.removeProperty('--estimate-bar');
+      root.style.removeProperty('scroll-padding-bottom');
     });
   }
 

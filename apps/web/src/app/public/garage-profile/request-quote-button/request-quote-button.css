@@ -39,6 +39,10 @@ p {
     width: 100%;
   }
 }
+/* The phone bar's button keeps its label on one line. */
+:host(.one-line) button {
+  white-space: nowrap;
+}
 /* The estimate box's button: full width, with a trailing arrow nobody hears. */
 :host(.wide) .request {
   justify-items: stretch;
