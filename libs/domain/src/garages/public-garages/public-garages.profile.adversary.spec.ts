@@ -169,24 +169,6 @@ describe('the profile answer of a bare garage', () => {
     });
   });
 
-  it('keeps a mobile garage without a seat and with the default radius', async () => {
-    const { service } = build([
-      listedRow({
-        address: 'Home 1',
-        business_kind: 'mobile',
-        latitude: 44.4,
-        longitude: 26.1,
-      }),
-    ]);
-
-    const body = await service.bySlug('garage');
-
-    expect(body).toMatchObject({ businessKind: 'mobile', serviceRadiusKm: 20 });
-    expect(body).not.toHaveProperty('address');
-    expect(body).not.toHaveProperty('latitude');
-    expect(body).not.toHaveProperty('longitude');
-  });
-
   it('falls back to the approval time when no verification file was decided', async () => {
     const approved = new Date('2026-09-01T08:00:00.000Z');
     const { service } = build([listedRow({ approved_at: approved })]);

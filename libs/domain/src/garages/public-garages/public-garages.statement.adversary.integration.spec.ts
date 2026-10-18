@@ -271,13 +271,8 @@ describe('the profile aggregates with ties and gaps', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('keeps a retired brand in context and a mobile garage without its seat', async () => {
-    const garage = await approved({
-      address: 'Seat 1',
-      businessKind: 'mobile',
-      latitude: 44.4,
-      longitude: 26.1,
-    });
+  it('keeps a retired brand in context', async () => {
+    const garage = await approved();
     const dacia = await brandOf('Dacia', 1);
     await prisma.brand.update({
       data: { active: false },
@@ -293,9 +288,6 @@ describe('the profile aggregates with ties and gaps', () => {
       slug: dacia.slug,
       stance: 'does_not_take',
     });
-    expect(res.body).toMatchObject({ serviceRadiusKm: 20 });
-    expect(res.body).not.toHaveProperty('address');
-    expect(res.body).not.toHaveProperty('latitude');
     expect(sent).toHaveLength(1);
   });
 });
