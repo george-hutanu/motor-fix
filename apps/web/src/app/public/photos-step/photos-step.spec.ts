@@ -794,6 +794,43 @@ describe('photos waiting for signal survive the page', () => {
   });
 
   // @traces 1191-FR-001
+  it('drains without the lock when the browser refuses it', async () => {
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: () =>
+          Promise.reject(new DOMException('refused', 'SecurityError')),
+      },
+    });
+    try {
+      const opened = await open();
+      await choose(opened, [photo('unu.jpg')]);
+
+      expect(askedForAddress(opened.http)).toHaveLength(1);
+    } finally {
+      Reflect.deleteProperty(navigator, 'locks');
+    }
+  });
+
+  // @traces 1191-FR-001
+  it('leaves a photo the store lost right after a fresh send failed, not sent again', async () => {
+    const opened = await open();
+    await choose(opened, [photo('unu.jpg')]);
+
+    await answerAddress(opened, askedForAddress(opened.http)[0]!, 0);
+    opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
+    await opened.settle();
+    confirmOf(opened.http).flush(
+      { code: 'file_missing' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await opened.settle();
+
+    expect(askedForAddress(opened.http)).toHaveLength(0);
+    expect(button(tiles(opened.step)[0], /reîncearcă/i)).toBeDefined();
+  });
+
+  // @traces 1191-FR-001
   it('only confirms a photo whose upload already landed, and sends it again when the store lost it', async () => {
     const queue = () => TestBed.inject(UploadQueue);
     TestBed.configureTestingModule({

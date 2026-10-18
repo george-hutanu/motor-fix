@@ -33,6 +33,8 @@ beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });
 
+afterEach(() => jest.restoreAllMocks());
+
 describe('the browser queue of photos waiting to reach the draft', () => {
   // @traces 1191-FR-001
   it('keeps the photos of a draft in the order picked, across a reload', async () => {
@@ -93,6 +95,60 @@ describe('the browser queue of photos waiting to reach the draft', () => {
     expect(all.map((e) => e.position)).toEqual(
       [...all.map((e) => e.position)].sort((a, b) => a - b),
     );
+  });
+
+  // @traces 1191-FR-001
+  it('keeps both photos when two tabs of one draft pick at the same moment', async () => {
+    reopen();
+    const [tabA, tabB] = [0, 1].map(() =>
+      TestBed.runInInjectionContext(() => new UploadQueue()),
+    );
+
+    const [[a], [b]] = await Promise.all([
+      tabA!.add(DRAFT, [photo('din-a.jpg')]),
+      tabB!.add(DRAFT, [photo('din-b.jpg')]),
+    ]);
+
+    expect(a?.id).not.toBe(b?.id);
+    expect(names(await reopen().forDraft(DRAFT)).sort()).toEqual([
+      'din-a.jpg',
+      'din-b.jpg',
+    ]);
+  });
+
+  // @traces 1191-FR-001
+  it('gives up on a pick rather than trying positions without end', async () => {
+    const queue = reopen();
+    jest.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
+      this: IDBObjectStore,
+    ) {
+      const request = {} as IDBRequest;
+      queueMicrotask(() => {
+        Object.defineProperty(request, 'error', {
+          value: new DOMException('taken', 'ConstraintError'),
+        });
+        request.onerror?.(new Event('error'));
+      });
+      return request;
+    });
+
+    await expect(queue.add(DRAFT, [photo('unu.jpg')])).resolves.toEqual([]);
+  });
+
+  // @traces 1191-FR-001
+  it('changes one photo without reading every photo of its draft', async () => {
+    const queue = reopen();
+    const [first] = await queue.add(DRAFT, [
+      photo('unu.jpg'),
+      photo('doi.jpg'),
+    ]);
+    const all = jest.spyOn(IDBIndex.prototype, 'getAll');
+
+    await queue.update(first!.id, { key: 'incoming/k' });
+
+    expect(all).not.toHaveBeenCalled();
+    all.mockRestore();
+    expect((await reopen().forDraft(DRAFT))[0]?.key).toBe('incoming/k');
   });
 
   // @traces 1191-FR-001

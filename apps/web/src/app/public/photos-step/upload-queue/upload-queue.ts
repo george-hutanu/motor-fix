@@ -1,5 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { PHOTOS_MAX } from '@motor-fix/contracts/listing-photos';
 
 const DATABASE = 'mf-uploads';
 const STORE = 'photos';
@@ -50,6 +51,13 @@ const answer = <T>(request: IDBRequest<T>) =>
     request.onerror = () => reject(request.error);
   });
 
+const at = (draftId: string, file: File, position: number): QueuedPhoto => ({
+  draftId,
+  file,
+  id: `${draftId}/${position}`,
+  position,
+});
+
 const fromStored = ({ bytes, name, type, ...rest }: Stored): QueuedPhoto => ({
   ...rest,
   file: new File([bytes], name, { type }),
@@ -69,12 +77,20 @@ export class UploadQueue {
   add(draftId: string, files: File[]): Promise<QueuedPhoto[]> {
     return this.serial(async () => {
       const db = await this.database;
-      const last = (await this.read(draftId)).at(-1)?.position ?? -1;
-      const added = files.map((file, i) => {
-        const position = last + 1 + i;
-        return { draftId, file, id: `${draftId}/${position}`, position };
-      });
-      for (const entry of added) await this.write(entry, db);
+      let position = ((await this.read(draftId)).at(-1)?.position ?? -1) + 1;
+      const added: QueuedPhoto[] = [];
+      // Another tab of the draft may have taken a position: try the next,
+      // and give the rest of the pick up once a draft's worth were taken.
+      let taken = 0;
+      for (const file of files) {
+        let entry = at(draftId, file, position);
+        while (!(await this.write(entry, db, true))) {
+          if (++taken >= PHOTOS_MAX) return added;
+          entry = at(draftId, file, ++position);
+        }
+        added.push(entry);
+        position++;
+      }
       return added;
     });
   }
@@ -85,9 +101,9 @@ export class UploadQueue {
 
   update(id: string, change: Change): Promise<void> {
     return this.serial(async () => {
-      const draftId = id.slice(0, id.lastIndexOf('/'));
-      const entry = (await this.read(draftId)).find((e) => e.id === id);
-      if (entry) await this.write({ ...entry, ...change }, await this.database);
+      const db = await this.database;
+      const entry = await this.one(id, db);
+      if (entry) await this.write({ ...entry, ...change }, db);
     });
   }
 
@@ -129,30 +145,54 @@ export class UploadQueue {
     ].sort((a, b) => a.position - b.position);
   }
 
-  // Without a browser store, synchronously into memory.
+  private async one(
+    id: string,
+    db: IDBDatabase | null,
+  ): Promise<QueuedPhoto | undefined> {
+    try {
+      if (db) {
+        const stored = await answer<Stored | undefined>(
+          this.store(db, 'readonly').get(id),
+        );
+        if (stored) return fromStored(stored);
+      }
+    } catch {
+      // Read what memory holds.
+    }
+    return this.memory.get(id);
+  }
+
+  // Without a browser store, synchronously into memory. A `fresh` entry
+  // never overwrites one: false says its id is taken.
   private async write(
     entry: QueuedPhoto,
     db: IDBDatabase | null,
-  ): Promise<void> {
+    fresh = false,
+  ): Promise<boolean> {
     try {
       if (db) {
         const { file, ...rest } = entry;
         const bytes = await file.arrayBuffer();
-        await answer(
-          this.store(db, 'readwrite').put({
-            ...rest,
-            bytes,
-            name: file.name,
-            type: file.type,
-          } satisfies Stored),
-        );
+        const value: Stored = {
+          ...rest,
+          bytes,
+          name: file.name,
+          type: file.type,
+        };
+        const store = this.store(db, 'readwrite');
+        await answer(fresh ? store.add(value) : store.put(value));
         this.memory.delete(entry.id);
-        return;
+        return true;
       }
-    } catch {
+    } catch (error) {
+      if ((error as DOMException | null)?.name === 'ConstraintError') {
+        return false;
+      }
       // Quota or a closed store: keep it for the page instead.
     }
+    if (fresh && this.memory.has(entry.id)) return false;
     this.memory.set(entry.id, entry);
+    return true;
   }
 
   private store(db: IDBDatabase, mode: IDBTransactionMode) {

@@ -271,6 +271,8 @@ export class PhotosStep {
     if (!draftId || !kept.length) return;
     const entries = await this.queue.add(draftId, kept);
     if (this.destroyed) return;
+    // Other tabs of the draft took the room left.
+    if (entries.length < kept.length) this.full.set(true);
     const added = entries.map((entry) => this.tileOf(entry));
     this.tiles.update((tiles) => [...tiles, ...added]);
     if (!navigator.onLine) for (const tile of added) this.wait(tile.id);
@@ -310,12 +312,19 @@ export class PhotosStep {
         this.draining = false;
       }
     };
+    let granted = false;
+    const held = () => {
+      granted = true;
+      return run();
+    };
     try {
       const locks = navigator.locks;
-      if (locks?.request) await locks.request(`mf-photos-${draftId}`, run);
-      else await run();
+      if (locks?.request) await locks.request(`mf-photos-${draftId}`, held);
+      else await held();
     } catch {
-      this.draining = false;
+      // A browser that refuses the lock still sends, from this tab alone.
+      if (granted) this.draining = false;
+      else await held().catch(() => undefined);
     }
   }
 
@@ -407,12 +416,16 @@ export class PhotosStep {
   ): Promise<Step> {
     if (!this.started.has(entry.id)) this.started.set(entry.id, Date.now());
     if (entry.key) this.incoming.set(id, entry.key);
-    for (let attempt = 1; ; attempt++) {
+    for (let attempt = 1; attempt <= ATTEMPTS_MAX; attempt++) {
       const key = this.incoming.get(id);
       const outcome = await this.attempt(id, entry.file, key, params);
       const step = await this.judge(id, entry.id, outcome, attempt, params);
       if (step !== 'again') return step;
     }
+    // The store lost every copy sent: leave it to the owner's retry.
+    this.patch(id, { status: 'failed' });
+    this.measure('failed');
+    return 'next';
   }
 
   // After one try: go again, move on to the next photo, or stop the drain.
