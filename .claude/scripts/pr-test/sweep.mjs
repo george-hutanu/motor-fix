@@ -206,6 +206,37 @@ export async function openPage(page, url) {
   return res;
 }
 
+// A canvas chart (Chart.js) animates in script, which SHOT_OPTIONS' animations: "disabled" cannot stop:
+// wait, bounded, until no canvas changes between two frames `interval` ms apart. A page with no canvas
+// returns at once; one that cannot be read, or never settles, is shot as it is (false).
+export const CANVAS_SETTLE_MS = 3000;
+export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interval = 100 } = {}) {
+  const frame = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("canvas")]
+        .map((canvas) => {
+          try {
+            return canvas.toDataURL();
+          } catch {
+            return "";
+          }
+        })
+        .join("|"),
+    );
+  try {
+    const deadline = Date.now() + timeout;
+    let last = await frame();
+    if (!last) return true;
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(interval);
+      const next = await frame();
+      if (next === last) return true;
+      last = next;
+    }
+  } catch {}
+  return false;
+}
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -254,6 +285,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
         // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
+        await settleCanvases(page);
         await page.screenshot(shotOptions(page, screenshot));
         screenshots.push(screenshot);
         if (!problem) {
