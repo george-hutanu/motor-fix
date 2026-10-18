@@ -427,6 +427,17 @@ describe('searching the accounts', () => {
     expect(url()).toBe(VIEW);
   });
 
+  // Enter in the box, or its clear button, fires a bubbling search event.
+  it('keeps the search when the box fires the browser search event', async () => {
+    const el = await open('ro', `${VIEW}?q=dinamo`);
+
+    box(el).dispatchEvent(new Event('search', { bubbles: true }));
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=dinamo`);
+    expect(reads).toHaveLength(1);
+  });
+
   it('never shows a read that a newer one replaced', async () => {
     const pending = new Map<string, (page: AdminAccountsPageDto) => void>();
     const el = await open();

@@ -424,6 +424,30 @@ describe('the address', () => {
     expect(reads.at(-1)).toMatchObject({ kind: ['job_failed'] });
     expect(reads.at(-1)?.cursor).toBeUndefined();
   });
+
+  // A browser's change event bubbles out of the filter row: it is not a filter.
+  it('keeps each filter chosen on the screen as the browser bubbles its change event', async () => {
+    const el = await open();
+
+    const type = el.querySelector('select.type') as HTMLSelectElement;
+    type.value = 'backup';
+    type.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle();
+    const from = el.querySelector('input.from') as HTMLInputElement;
+    from.value = '2026-10-13';
+    from.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle();
+    await search(el, 'disk');
+
+    expect(path()).toBe(
+      `${VIEW}?from=2026-10-13&kind=backup&q=disk&to=2026-10-17`,
+    );
+    expect(reads.at(-1)).toMatchObject({
+      from: '2026-10-12T21:00:00.000Z',
+      kind: ['backup_completed', 'backup_failed'],
+      q: 'disk',
+    });
+  });
 });
 
 // @traces 299-FR-011
@@ -444,6 +468,21 @@ describe('the search', () => {
 
     expect(reads.at(-1)).toMatchObject({ q: 'brevo' });
     expect(path()).toBe(`${VIEW}?q=brevo`);
+  });
+
+  // Enter in the box, or its clear button, fires a bubbling search event.
+  it('keeps the search when the box fires the browser search event', async () => {
+    const el = await open();
+    await search(el, 'brevo');
+    const before = reads.length;
+
+    el.querySelector('input[type="search"]')?.dispatchEvent(
+      new Event('search', { bubbles: true }),
+    );
+    await settle();
+
+    expect(path()).toBe(`${VIEW}?q=brevo`);
+    expect(reads).toHaveLength(before);
   });
 
   it('drops the answer of an older read when a newer one is on its way', async () => {

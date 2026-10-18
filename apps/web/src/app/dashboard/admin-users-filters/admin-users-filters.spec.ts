@@ -14,7 +14,7 @@ import type { UsersFilter } from '../admin-users-filters-sheet/admin-users-filte
 
 @Component({
   imports: [AdminUsersFilters],
-  template: `<mf-admin-users-filters [q]="q()" [roles]="roles()" [status]="status()" (search)="searched.push($event)" (filter)="filtered.push($event)" />`,
+  template: `<mf-admin-users-filters [q]="q()" [roles]="roles()" [status]="status()" (settled)="searched.push($event)" (filter)="filtered.push($event)" />`,
 })
 class Host {
   readonly q = signal('');

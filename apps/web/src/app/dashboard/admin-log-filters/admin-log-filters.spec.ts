@@ -7,7 +7,7 @@ import type { LogFilter } from '../admin-log-view/narrowing';
 
 @Component({
   imports: [AdminLogFilters],
-  template: `<mf-admin-log-filters [filter]="filter()" (search)="searched.push($event)" (change)="changed.push($event)" />`,
+  template: `<mf-admin-log-filters [filter]="filter()" (settled)="searched.push($event)" (narrowed)="changed.push($event)" />`,
 })
 class Host {
   readonly filter = signal<LogFilter>({
@@ -77,7 +77,8 @@ const choose = (
   value: string,
 ) => {
   control.value = value;
-  control.dispatchEvent(new Event('change'));
+  // As a browser does: the event bubbles to the host.
+  control.dispatchEvent(new Event('change', { bubbles: true }));
 };
 const labelOf = (el: HTMLElement, control: HTMLElement) =>
   el.querySelector(`label[for="${control.id}"]`)?.textContent?.trim();
