@@ -70,9 +70,15 @@ test.describe('deciding a file while another admin has it open @seeded', () => {
     fileId = rows[0]?.id ?? '';
     await db.query(
       `INSERT INTO verification_check (id, file_id, kind, result)
-       SELECT gen_random_uuid(), $1, kind,
-         CASE WHEN kind IN ('rar', 'caen') THEN 'ok' ELSE 'not_run' END::verification_check_result
+       SELECT gen_random_uuid(), $1, kind, 'ok'::verification_check_result
        FROM unnest(enum_range(NULL::verification_check_kind)) AS kind`,
+      [fileId],
+    );
+    // Every check ok and both legal documents held: the approval owes no note.
+    await db.query(
+      `INSERT INTO legal_document (id, verification_file_id, kind, pages)
+       SELECT gen_random_uuid(), $1::uuid, kind, ARRAY[kind || '/1.pdf']
+       FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']::text[]) AS kind`,
       [fileId],
     );
   });

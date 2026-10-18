@@ -11,6 +11,24 @@
     "subtitle": "Ce au cerut șoferii în ultimele 30 de zile"
   },
   "file": {
+    "approve": {
+      "allOk": "Toate verificările sunt în regulă.",
+      "cancel": "Renunță",
+      "confirm": "Aprobă și publică",
+      "count": "{n}/1000",
+      "listed": "Aprobi trecând peste:",
+      "missingCheck": "{label}: {result}",
+      "missingDocument": "Lipsește: {document}",
+      "note": "Notă",
+      "noteRequired": "Scrie de ce aprobi așa.",
+      "noteTooLong": "Nota are cel mult 1000 de caractere.",
+      "results": {
+        "failed": "problemă",
+        "not_run": "neverificat",
+        "warning": "atenție"
+      },
+      "title": "Aprobă și publică"
+    },
     "checks": {
       "activities": "Activități",
       "address": "Adresă",
@@ -22,6 +40,7 @@
       "representative": "Telefon"
     },
     "cui": "CUI {cui}",
+    "cuiShared": "CUI folosit și de alt service: {names}",
     "documents": {
       "ago": {
         "few": "emis acum {n} zile",
@@ -51,6 +70,7 @@
       "alreadyDecided": "Deja decis de {name} la {time}",
       "approve": "Aprobă și publică",
       "ask": "Cere completări",
+      "caenHint": "Verificarea CAEN 4520 e obligatorie",
       "caenRequired": "Aprobarea cere verificarea CAEN",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
       "rarCheckRequired": "Aprobarea cere verificarea RAR",
@@ -239,6 +259,7 @@
     "title": "Creștere, ultimele 12 luni"
   },
   "log": {
+    "all": "Vezi tot jurnalul",
     "empty": "Nimic de semnalat azi.",
     "failed": "Nu am putut citi jurnalul.",
     "figure": {
@@ -290,7 +311,51 @@
       "one": "o dată",
       "other": "de {n} de ori"
     },
-    "title": "Jurnal"
+    "title": "Jurnal",
+    "view": {
+      "clear": "Șterge filtrele",
+      "dates": {
+        "beforeFrom": "„Până la” nu poate fi înainte de „De la”.",
+        "future": "Alege o zi până azi.",
+        "missing": "Alege o zi.",
+        "tooOld": "Jurnalul păstrează doar ultimele 90 de zile."
+      },
+      "empty": "Nicio intrare pentru acești filtri.",
+      "filters": {
+        "allSeverities": "Toate gravitățile",
+        "allSources": "Toate sursele",
+        "allTypes": "Toate tipurile",
+        "apply": "Aplică",
+        "button": "Filtre",
+        "buttonSet": {
+          "few": "Filtre, {n} setate",
+          "one": "Filtre, 1 setat",
+          "other": "Filtre, {n} setate"
+        },
+        "from": "De la",
+        "severity": "Gravitate",
+        "source": "Sursă",
+        "title": "Filtre",
+        "to": "Până la",
+        "type": "Tip"
+      },
+      "fresh": {
+        "few": "{n} intrări noi",
+        "one": "1 intrare nouă",
+        "other": "{n} de intrări noi"
+      },
+      "search": "Caută în jurnal",
+      "title": "Jurnal de sistem",
+      "types": {
+        "backup": "Backup",
+        "checks": "Verificări",
+        "deploy": "Deploy",
+        "jobs": "Joburi",
+        "servers": "Erori de server",
+        "services": "Servicii externe",
+        "status": "Stare"
+      }
+    }
   },
   "panel": {
     "activeDrivers": "Șoferi activi",
@@ -359,6 +424,7 @@
   },
   "queue": {
     "all": "Vezi toate",
+    "approved": "Aprobat, e pe hartă",
     "brands": {
       "few": "{n} mărci",
       "one": "{n} marcă",

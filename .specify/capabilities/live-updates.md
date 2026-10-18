@@ -19,6 +19,7 @@ features:
   - 290-save-garage
   - 049-garage-suspension
   - 270-card-pin-link
+  - 172-price-list-states
 ---
 
 # Capability: Live updates
@@ -381,6 +382,10 @@ _From 049-garage-suspension._
 ### 270-FR-006 — When the selected garage's card fades out (267-FR-019) the selection MUST pass to the first card left in the list (none when the list is empty); a pointed garage whose card fades out MUST stop being pointed.
 
 _From 270-card-pin-link._
+
+### 172-FR-007 — The view MUST be live as the dashboard's other views are: it re-reads on `price_list.updated` and `catalogue_job.decided` events of its garage and on every resync, with a 300 ms burst as one re-read; `price_list.updated` already reaches the owner's stream through the garage channel (386-FR-010, the hub's `garage.prices` family); `catalogue_job.decided`, once a story emits it, MUST reach the garage's stream for the owner through the same `garage.prices` family: this story adds `/^catalogue_job\./ → garage.prices` to the hub's family table (`KIND_CAPABILITY`), so a receptionist or mechanic does not hear it. A re-read that fails keeps the rows shown. A failed read is tried again by itself after 60 seconds (`liveView`'s `retryAfter`), as the dashboard's other live views do.
+
+_From 172-price-list-states._
 
 ## Retired
 

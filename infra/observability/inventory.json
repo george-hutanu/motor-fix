@@ -780,7 +780,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
+      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, note_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
     },
     {
@@ -1135,8 +1135,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the admin's read of today's log entries, twenty at most on an indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
-      "story": "ST-298"
+      "reason": "the admin's read of the log, today's entries for the Jurnal panel or any range of the last 90 days for the full log, narrowed by type, severity, source and a text search, fifty a page at most behind an opaque cursor on the indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-298, ST-299"
     },
     {
       "kind": "endpoint",

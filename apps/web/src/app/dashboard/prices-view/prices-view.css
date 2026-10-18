@@ -1,0 +1,126 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  margin: var(--mf-space-4);
+  min-width: 0;
+}
+p,
+h2 {
+  margin: 0;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+h2 {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+.rows,
+.brands {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows {
+  gap: var(--mf-space-2);
+}
+.brands {
+  gap: var(--mf-space-1);
+  color: var(--mf-text-secondary);
+}
+.row,
+.skeleton {
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-height: var(--mf-tap);
+  padding: var(--mf-space-3);
+  background: var(--mf-panel);
+  color: var(--mf-text);
+}
+.skeleton {
+  height: 72px;
+  background: var(--mf-line);
+}
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  min-width: 0;
+}
+.line > *,
+.brands > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.name {
+  font-weight: 600;
+}
+.muted {
+  color: var(--mf-text-secondary);
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+.lamp {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mf-green);
+}
+.row[data-public="false"] .lamp {
+  background: var(--mf-amber);
+}
+.row[data-public="false"] .state {
+  color: var(--mf-amber-ink);
+}
+/* Stacked on a phone: the state, then the price under it (FR-010). */
+.meta {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* One line per job from a tablet up; stacked on a phone. */
+@media (min-width: 768px) {
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr);
+    align-items: center;
+    column-gap: var(--mf-space-3);
+  }
+  .brands {
+    grid-column: 1 / -1;
+  }
+  .meta {
+    flex-direction: row;
+    align-items: center;
+  }
+  .price {
+    margin-inline-start: auto;
+  }
+  .muted,
+  .brands {
+    font-size: var(--mf-size-small);
+  }
+}

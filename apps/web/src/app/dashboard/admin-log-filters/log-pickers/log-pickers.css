@@ -1,0 +1,46 @@
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+label {
+  color: var(--mf-text-secondary);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 700;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+select,
+input {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  padding: 0 var(--mf-space-3);
+  font: inherit;
+  font-size: var(--mf-size-field);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+select:focus-visible,
+input:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+input[aria-invalid="true"] {
+  border-color: var(--mf-red);
+}
+.fault {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--mf-red);
+}

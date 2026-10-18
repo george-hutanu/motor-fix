@@ -31,6 +31,9 @@
           @if (h.cui) {
             <p>{{ h.cui }}</p>
           }
+          @if (h.cuiShared) {
+            <p class="shared" data-part="cui-shared">{{ h.cuiShared }}</p>
+          }
           @if (h.address) {
             <p>{{ h.address }}</p>
           }
@@ -261,12 +264,25 @@
         }
       } @else {
         <div class="decisions">
-          <button type="button" class="action primary" disabled>{{ 'admin.file.footer.approve' | t }}</button>
+          <button
+            type="button"
+            class="action primary"
+            data-part="approve"
+            [disabled]="busy() || !!gateHint()"
+            [attr.aria-busy]="busy() ? 'true' : null"
+            [attr.aria-describedby]="gateHint() ? 'mf-file-gate-hint' : null"
+            (click)="approve()"
+          >
+            @if (busy()) {
+              <span class="spinner" data-part="spinner" aria-hidden="true"></span>
+            }
+            {{ 'admin.file.footer.approve' | t }}
+          </button>
           <button type="button" class="action" disabled>{{ 'admin.file.footer.ask' | t }}</button>
           <button type="button" class="action danger" disabled>{{ 'admin.file.footer.reject' | t }}</button>
         </div>
-        @if (rarRequired()) {
-          <p class="note" data-part="rar-required">{{ 'admin.file.footer.rarRequired' | t }}</p>
+        @if (gateHint(); as hint) {
+          <p class="note" id="mf-file-gate-hint" data-part="gate-hint">{{ hint }}</p>
         }
       }
       <p class="note">{{ 'admin.file.footer.note' | t }}</p>

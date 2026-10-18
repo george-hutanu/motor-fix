@@ -1,0 +1,51 @@
+<section [attr.aria-labelledby]="headingId">
+  <h2 [id]="headingId">{{ 'admin.log.view.title' | t }}</h2>
+  <mf-admin-log-filters [filter]="filter()" (search)="search($event)" (change)="write($event)" />
+  <div class="fresh" aria-live="polite">
+    @if (fresh() > 0) {
+      <button hlmBtn variant="secondary" type="button" (click)="readFirst()">{{ freshName() }}</button>
+    }
+  </div>
+  @switch (listState()) {
+    @case ('loading') {
+      <div class="loading" aria-hidden="true">
+        <span class="skeleton"></span>
+        <span class="skeleton"></span>
+        <span class="skeleton"></span>
+      </div>
+    }
+    @case ('failed') {
+      <div class="failed">
+        <p role="alert">{{ 'admin.log.failed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="readFirst()">{{ 'admin.log.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (days().length === 0) {
+        <div class="empty">
+          <p>{{ 'admin.log.view.empty' | t }}</p>
+          @if (isNarrowed()) {
+            <button hlmBtn variant="secondary" type="button" (click)="clear()">{{ 'admin.log.view.clear' | t }}</button>
+          }
+        </div>
+      } @else {
+        @for (day of days(); track day.name) {
+          <h3>{{ day.name }}</h3>
+          <mf-log-lines [lines]="day.lines" />
+        }
+        @if (moreState() === 'failed') {
+          <div class="more failed">
+            <p role="alert">{{ 'admin.log.failed' | t }}</p>
+            <button hlmBtn variant="secondary" type="button" (click)="readMore(true)">{{ 'admin.log.retry' | t }}</button>
+          </div>
+        } @else if (hasMore()) {
+          <div #sentinel class="more" aria-hidden="true">
+            @if (moreState() === 'loading') {
+              <span class="skeleton"></span>
+            }
+          </div>
+        }
+      }
+    }
+  }
+</section>
