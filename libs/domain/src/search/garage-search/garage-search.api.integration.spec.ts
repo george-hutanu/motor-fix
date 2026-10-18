@@ -534,4 +534,14 @@ describe('GET /search/garages past its limit', () => {
 
     expect(await store.get(countOf(ADDRESS))).toBeNull();
   });
+
+  it('admits a call whose forwarded address cannot be read', async () => {
+    await from('not-an-address', { brandId: dacia }).expect(200);
+  });
+
+  it('counts an IPv4-mapped IPv6 address as the plain address', async () => {
+    await used(ADDRESS, limit);
+
+    await from(`::ffff:${ADDRESS}`, { brandId: dacia }).expect(429);
+  });
 });

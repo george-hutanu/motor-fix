@@ -806,4 +806,18 @@ describe('POST /quotes past its limit', () => {
     expect(res.status).toBe(400);
     expect(await store.get(countOf(dinamo.owner))).toBeNull();
   });
+
+  it('spends no count on a send from an account that cannot answer quotes', async () => {
+    const { andrei, request } = await open();
+
+    const res = await post(
+      '/quotes',
+      sendBody(request.id),
+      bearer(andrei, 'driver'),
+      randomUUID(),
+    );
+
+    expect(res.status).toBe(404);
+    expect(await store.get(countOf(andrei))).toBeNull();
+  });
 });

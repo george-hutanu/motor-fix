@@ -1,22 +1,14 @@
 // Every rate limit of the API and the assistant endpoint: a change to a
 // count or a window is a change here and nowhere else.
 
+import type { AddressRule } from './address-throttle';
+
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
 
-// Calls counted in Redis over a window that begins with the first, under a
-// key prefix of their own.
-interface CountRule {
-  key: string;
-  limit: number;
-  // The logger's name, so a skipped count says whose it was.
-  name: string;
-  windowSeconds: number;
-}
-
 // A route's limit, refused with `rate_limited`: per client address, or per
 // key the route names (an account, a draft).
-interface RouteRule extends CountRule {
+interface RouteRule extends AddressRule {
   per: 'address' | 'key';
 }
 
@@ -123,7 +115,7 @@ export const THROTTLES = {
     name: 'SupportThrottle',
     windowSeconds: HOUR,
   },
-} as const satisfies Record<string, CountRule>;
+} as const satisfies Record<string, AddressRule>;
 
 // The sign-in, sign-up and code limits, counted by Attempts.
 export const AUTH_LIMITS = {

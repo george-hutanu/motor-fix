@@ -31,6 +31,7 @@ import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 import { refusal } from '../../auth/sign-up.service';
 import { RateLimits } from '../../rate-limit/rate-limit.service';
+import { ANSWERING } from '../answers';
 
 const KEY = 'Idempotency-Key';
 
@@ -84,7 +85,10 @@ export class QuotesController {
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }
-    await this.limits.take('quoteSend', actor.accountId);
+    // Only an account that can answer spends a share; any other is refused
+    // by the service as not found.
+    if (ANSWERING.has(actor.role))
+      await this.limits.take('quoteSend', actor.accountId);
     return this.quotes.send(actor, key, body);
   }
 }
