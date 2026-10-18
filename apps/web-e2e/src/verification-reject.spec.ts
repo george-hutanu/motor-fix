@@ -97,7 +97,8 @@ test.describe('rejecting a garage with a reason @seeded @database', () => {
       const dialog = page
         .getByRole('dialog')
         .filter({ hasText: 'Mesaj pentru service' });
-      await expect(dialog).toBeVisible();
+      // On a phone the dialog's own box is empty; its panel is what shows.
+      await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBe(0);
 
       const confirm = dialog.getByRole('button', { name: 'Respinge' });
