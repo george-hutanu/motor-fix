@@ -150,6 +150,9 @@ export class UploadQueue {
     id: string,
     db: IDBDatabase | null,
   ): Promise<QueuedPhoto | undefined> {
+    // A change the store refused lives in memory, over its stale row.
+    const held = this.memory.get(id);
+    if (held) return held;
     try {
       if (db) {
         const stored = await answer<Stored | undefined>(
@@ -158,9 +161,9 @@ export class UploadQueue {
         if (stored) return fromStored(stored);
       }
     } catch {
-      // Read what memory holds.
+      // Gone with the store.
     }
-    return this.memory.get(id);
+    return undefined;
   }
 
   // Without a browser store, synchronously into memory. A `fresh` entry
