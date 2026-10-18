@@ -11,11 +11,12 @@ import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-sec
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 import type {
   GarageBrandStance,
   PrismaClient,
 } from '../../generated/prisma/client';
-import { areaSql } from '../area/area-sql';
+import { areaSql, within } from '../area/area-sql';
 import type { AreaRow } from '../area/search-area';
 import { GarageSearchCache } from '../garage-search/garage-search.cache';
 import { recordSearchPins } from '../garage-search/garage-search.metrics';
@@ -76,7 +77,7 @@ export class GaragePinsService {
     const [found, rows] = await Promise.all([
       countGroups(this.prisma, brandId, placed ? area : undefined),
       this.prisma.$queryRaw<
-        (AreaRow & {
+        (Omit<AreaRow, 'distance_m'> & {
           labour_from_bani: number | null;
           service_radius_km: number | null;
           stance: GarageBrandStance | null;
@@ -84,7 +85,6 @@ export class GaragePinsService {
       >`
         SELECT
           garage.id,
-          ${area.distance} AS distance_m,
           garage.latitude,
           garage.longitude,
           garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
@@ -94,8 +94,8 @@ export class GaragePinsService {
             WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
           ) AS stance
         FROM garage
-        WHERE ${area.where}
-        ORDER BY distance_m, garage.id
+        WHERE ${publicGaragesSql} AND ${within(area)}
+        ORDER BY ${area.nearness}, garage.id
         LIMIT ${SEARCH_PINS_MAX}`,
     ]);
     const pins = rows.map((row): GaragePinDto => {

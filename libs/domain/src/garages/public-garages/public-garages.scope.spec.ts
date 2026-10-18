@@ -85,20 +85,10 @@ function calls(body: ts.Node) {
 const GARAGE_SOURCE = /\b(?:FROM|JOIN)\s+"?garage"?(?![\w"])/i;
 const RAW_READS = new Set(['$queryRaw', '$queryRawUnsafe']);
 
-// The names a body binds to the area builder: `const area = areaSql(...)`.
-const builtAreas = (body: ts.Node) =>
-  [...body.getText().matchAll(/(\w+)\s*=\s*areaSql\(/g)].map((m) => m[1]);
-
-// A raw statement passes when it splices the public scope, or the `where` of
-// the area builder, which carries it.
-function scopedRaw(text: string, areas: string[]) {
+// A raw statement passes only when it splices the public scope itself.
+function scopedRaw(text: string) {
   const spliced = [...text.matchAll(/\$\{\s*([^}]+?)\s*\}/g)].map((m) => m[1]);
-  return spliced.some(
-    (value) =>
-      value === 'publicGaragesSql' ||
-      /^areaSql\(.*\)\.where$/.test(value) ||
-      areas.some((name) => value === `${name}.where`),
-  );
+  return spliced.includes('publicGaragesSql');
 }
 
 // `anything.garage.findMany(...)` whose arguments skip the scope.
@@ -116,16 +106,16 @@ function unscopedPrismaRead(node: ts.Node) {
   return !SCOPED.test(args) && !STATUS_ONLY.test(args);
 }
 
-// A raw statement on `garage` that splices neither the scope nor the area
-// builder; an unsafe raw statement on `garage` never passes.
-function unscopedRawRead(node: ts.Node, areas: string[]) {
+// A raw statement on `garage` that does not splice the scope; an unsafe raw
+// statement on `garage` never passes.
+function unscopedRawRead(node: ts.Node) {
   if (
     ts.isTaggedTemplateExpression(node) &&
     ts.isPropertyAccessExpression(node.tag) &&
     node.tag.name.text === '$queryRaw'
   ) {
     const text = node.template.getText();
-    return GARAGE_SOURCE.test(text) && !scopedRaw(text, areas);
+    return GARAGE_SOURCE.test(text) && !scopedRaw(text);
   }
   if (
     ts.isCallExpression(node) &&
@@ -134,16 +124,15 @@ function unscopedRawRead(node: ts.Node, areas: string[]) {
   ) {
     const text = node.arguments.map((a) => a.getText()).join(',');
     const unsafe = node.expression.name.text === '$queryRawUnsafe';
-    return GARAGE_SOURCE.test(text) && (unsafe || !scopedRaw(text, areas));
+    return GARAGE_SOURCE.test(text) && (unsafe || !scopedRaw(text));
   }
   return false;
 }
 
 function unscopedGarageReads(body: ts.Node) {
   let found = false;
-  const areas = builtAreas(body);
   const walk = (node: ts.Node) => {
-    if (unscopedPrismaRead(node) || unscopedRawRead(node, areas)) found = true;
+    if (unscopedPrismaRead(node) || unscopedRawRead(node)) found = true;
     ts.forEachChild(node, walk);
   };
   walk(body);
@@ -326,7 +315,7 @@ describe('the public garages scope', () => {
     ]);
   });
 
-  it('passes a public handler whose raw query reads garages through the scope or the area builder', () => {
+  it('passes a public handler whose raw query reads garages through the scope', () => {
     const sources: Sources = new Map([
       [
         'pins/pins.controller.ts',
@@ -335,7 +324,6 @@ describe('the public garages scope', () => {
            constructor(private readonly pins: PinsService) {}
            @Get() scoped() { return this.pins.scoped(); }
            @Get('area') area() { return this.pins.inArea(); }
-           @Get('inline') inline() { return this.pins.inline(); }
            @Get('brands') brands() { return this.pins.brands(); }
          }`,
       ],
@@ -348,10 +336,7 @@ describe('the public garages scope', () => {
            }
            inArea(area: Area) {
              const sql = areaSql(area);
-             return this.prisma.$queryRaw\`SELECT id, \${sql.distance} FROM garage WHERE \${sql.where}\`;
-           }
-           inline(area: Area) {
-             return this.prisma.$queryRaw\`SELECT id FROM "garage" WHERE \${areaSql(area).where}\`;
+             return this.prisma.$queryRaw\`SELECT id, \${sql.distance} FROM garage WHERE \${publicGaragesSql} AND \${within(sql)}\`;
            }
            brands() {
              return this.prisma.$queryRaw\`SELECT id FROM brand\`;
@@ -363,7 +348,38 @@ describe('the public garages scope', () => {
     expect(publicGarageReads(sources)).toEqual([
       { bypasses: false, name: 'pins/pins.service.ts#scoped' },
       { bypasses: false, name: 'pins/pins.service.ts#inArea' },
-      { bypasses: false, name: 'pins/pins.service.ts#inline' },
+    ]);
+  });
+
+  it('names a raw query that splices the area without the scope', () => {
+    const sources: Sources = new Map([
+      [
+        'pins/pins.controller.ts',
+        `@Public() @Controller('pins')
+         export class PinsController {
+           constructor(private readonly pins: PinsService) {}
+           @Get() area() { return this.pins.inArea(); }
+           @Get('where') where() { return this.pins.byWhere(); }
+         }`,
+      ],
+      [
+        'pins/pins.service.ts',
+        `export class PinsService {
+           constructor(private readonly prisma: PrismaClient) {}
+           inArea(area: Area) {
+             const sql = areaSql(area);
+             return this.prisma.$queryRaw\`SELECT id FROM garage WHERE \${within(sql)}\`;
+           }
+           byWhere(area: Area) {
+             return this.prisma.$queryRaw\`SELECT id FROM "garage" WHERE \${areaSql(area).where}\`;
+           }
+         }`,
+      ],
+    ]);
+
+    expect(publicGarageReads(sources)).toEqual([
+      { bypasses: true, name: 'pins/pins.service.ts#inArea' },
+      { bypasses: true, name: 'pins/pins.service.ts#byWhere' },
     ]);
   });
 

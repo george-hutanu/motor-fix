@@ -24,13 +24,14 @@ import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { addLocalDays, atLocal, localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 import {
   type Car,
   type Fuel,
   Prisma,
   type PrismaClient,
 } from '../../generated/prisma/client';
-import { areaSql, kmOf } from '../../search/area/area-sql';
+import { areaSql, kmOf, within } from '../../search/area/area-sql';
 import {
   REQUEST_DAILY_LIMIT,
   REQUEST_MAX_GARAGES,
@@ -336,7 +337,7 @@ export class QuoteRequestsService {
         ${area.distance} AS distance_m,
         garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
       FROM garage
-      WHERE ${area.where}
+      WHERE ${publicGaragesSql} AND ${within(area)}
         ${query.exclude ? Prisma.sql`AND garage.id <> ${query.exclude}::uuid` : Prisma.empty}
         AND EXISTS (
           SELECT 1 FROM garage_brand gb

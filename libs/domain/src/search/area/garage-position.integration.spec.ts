@@ -68,7 +68,23 @@ describe("each garage's stored position", () => {
     expect(await prisma.garage.count()).toBe(1);
   });
 
-  it('is a geography point on the WGS 84 datum with a GiST index', async () => {
+  it('empties when the garage loses its place', async () => {
+    const { id } = await prisma.garage.create({
+      data: { name: 'unplacing', slug: 'unplacing', ...PLACED[0] },
+    });
+    await prisma.garage.update({
+      data: { latitude: null, longitude: null },
+      where: { id },
+    });
+
+    const [row] = await prisma.$queryRaw<{ empty: boolean }[]>`
+      SELECT position IS NULL AS empty FROM garage WHERE id = ${id}::uuid
+    `;
+
+    expect(row).toEqual({ empty: true });
+  });
+
+  it('is a plain geography point on the WGS 84 datum, kept by a trigger, with a GiST index', async () => {
     const [column] = await prisma.$queryRaw<
       { type: string; generated: string }[]
     >`
@@ -76,12 +92,17 @@ describe("each garage's stored position", () => {
       FROM pg_attribute a
       WHERE a.attrelid = 'garage'::regclass AND a.attname = 'position'
     `;
+    const triggers = await prisma.$queryRaw<{ tgname: string }[]>`
+      SELECT tgname FROM pg_trigger
+      WHERE tgrelid = 'garage'::regclass AND tgname = 'garage_position_keep'
+    `;
     const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
       SELECT indexdef FROM pg_indexes
       WHERE tablename = 'garage' AND indexname = 'garage_position_idx'
     `;
 
-    expect(column).toEqual({ generated: 's', type: 'geography(Point,4326)' });
+    expect(column).toEqual({ generated: '', type: 'geography(Point,4326)' });
+    expect(triggers).toHaveLength(1);
     expect(indexes).toHaveLength(1);
     expect(indexes[0].indexdef).toMatch(/USING gist \(\s*"?position"?\s*\)/);
   });

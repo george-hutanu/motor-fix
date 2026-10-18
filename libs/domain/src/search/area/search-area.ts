@@ -6,8 +6,8 @@ import type {
 
 import { kmOf } from './area-sql';
 
-export interface InArea {
-  distanceM: number;
+interface InArea {
+  distanceM: number | null;
   lat: number;
   lng: number;
   mobile: boolean;
@@ -33,7 +33,7 @@ export const inAreaOf = (rows: AreaRow[]): Map<string, InArea> =>
     rows.map((row) => [
       row.id,
       {
-        distanceM: Number(row.distance_m),
+        distanceM: row.distance_m === null ? null : Number(row.distance_m),
         lat: row.latitude,
         lng: row.longitude,
         mobile: row.mobile,
@@ -42,7 +42,7 @@ export const inAreaOf = (rows: AreaRow[]): Map<string, InArea> =>
   );
 
 // A mobile mechanic's distance would tell where its seat is; it only says it
-// comes to the place.
+// comes to the place. Without a place there is no distance.
 export function placed<T extends { id: string }>(
   item: T,
   area: Map<string, InArea> | undefined,
@@ -52,6 +52,7 @@ export function placed<T extends { id: string }>(
   return {
     ...item,
     comesToYou: found.mobile,
-    distanceKm: found.mobile ? null : kmOf(found.distanceM),
+    distanceKm:
+      found.mobile || found.distanceM === null ? null : kmOf(found.distanceM),
   };
 }

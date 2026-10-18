@@ -1,6 +1,7 @@
 import {
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
   RADIUS_KM,
+  ROMANIA_BOUNDS,
 } from '@motor-fix/contracts/place-section';
 
 import { areaSql, kmOf, within } from './area-sql';
@@ -25,10 +26,30 @@ describe('the area SQL', () => {
     expect(distance.values).toEqual([POINT.lng, POINT.lat]);
   });
 
-  it('measures from the centre of the visible area without a place', () => {
+  it('measures no distance for a visible area without a place', () => {
     const { distance } = areaSql({ bbox: BBOX });
 
-    expect(distance.values).toEqual([23.6, 46.75]);
+    expect(text(distance)).toBe('NULL');
+    expect(distance.values).toEqual([]);
+  });
+
+  it('orders by nearness to the centre of the visible area without a place', () => {
+    const { nearness } = areaSql({ bbox: BBOX });
+
+    expect(text(nearness)).toBe(
+      `ST_Distance(garage.position, ${AT_POINT}, false)`,
+    );
+    expect(nearness.values).toEqual([23.6, 46.75]);
+  });
+
+  it('orders by nearness to the middle of Romania with neither place nor area', () => {
+    const { distance, nearness } = areaSql({});
+
+    expect(text(distance)).toBe('NULL');
+    expect(nearness.values).toEqual([
+      (ROMANIA_BOUNDS.lngMin + ROMANIA_BOUNDS.lngMax) / 2,
+      (ROMANIA_BOUNDS.latMin + ROMANIA_BOUNDS.latMax) / 2,
+    ]);
   });
 
   it('holds a fixed garage within 25 km of the place by default', () => {
@@ -99,12 +120,10 @@ describe('the area SQL', () => {
     expect(text(mobileIn)).toContain('TRUE');
   });
 
-  it('splices the public scope into the area it filters on', () => {
-    const { where } = areaSql({ point: POINT });
+  it('holds the fixed garages within the radius or the mobile ones that reach the place', () => {
+    const where = within(areaSql({ point: POINT }));
 
-    expect(text(where)).toMatch(
-      /^garage\.status = 'approved'::garage_status AND \(\(.*ST_DWithin.*\) OR \(.*COALESCE.*\)\)$/,
-    );
+    expect(text(where)).toMatch(/^\(\(.*ST_DWithin.*\) OR \(.*COALESCE.*\)\)$/);
     expect(where.values).toEqual([
       POINT.lng,
       POINT.lat,
@@ -119,9 +138,11 @@ describe('the area SQL', () => {
   });
 
   it('binds every value instead of writing it into the text', () => {
-    const { where } = areaSql({ bbox: BBOX, point: POINT, radiusKm: 50 });
+    const area = areaSql({ bbox: BBOX, point: POINT, radiusKm: 50 });
 
-    expect(text(where)).not.toMatch(/46\.7|23\.6|50000/);
+    for (const fragment of [within(area), area.distance, area.nearness]) {
+      expect(text(fragment)).not.toMatch(/46\.7|23\.6|50000/);
+    }
   });
 });
 

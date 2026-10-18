@@ -1,7 +1,8 @@
 import { watchGarageReads } from './area.testing';
-import { areaSql } from './area-sql';
+import { areaSql, within } from './area-sql';
 import type { Area } from './search-area';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 import { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
@@ -17,7 +18,8 @@ serialDatabase(databaseUrl);
 // The garages the builder holds for an area, each with its distance in
 // metres, its position and whether it comes to you.
 async function inArea(area: Area) {
-  const { distance, where } = areaSql(area);
+  const built = areaSql(area);
+  const { distance } = built;
   const rows = await prisma.$queryRaw<
     {
       id: string;
@@ -30,7 +32,7 @@ async function inArea(area: Area) {
     SELECT id, ${distance} AS distance_m, latitude, longitude,
       business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
     FROM garage
-    WHERE ${where}
+    WHERE ${publicGaragesSql} AND ${within(built)}
   `;
   return new Map(
     rows.map((row) => [
