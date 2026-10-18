@@ -62,8 +62,24 @@ function bounded(connectionString: string, extra: { options?: string } = {}) {
   return pool;
 }
 
+// What a failed fetch or read is reported as: its code or its kind, never
+// its message, which may name the address.
+function reason(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'fetch failed';
+  const { cause, name } = error as {
+    cause?: { code?: unknown };
+    name?: unknown;
+  };
+  if (typeof cause?.code === 'string') return cause.code;
+  return typeof name === 'string' && name !== '' ? name : 'fetch failed';
+}
+
 // One GET of Keycloak's metrics text within the reading's limit. A failure
 // names its status, code or kind only, never the address.
+// Keycloak's metrics text is a few hundred kB; a declared body past this
+// is refused unread.
+const MAX_METRICS_BYTES = 8 * 1024 * 1024;
+
 async function readMetrics(url: string): Promise<string> {
   let response: Response;
   try {
@@ -72,14 +88,22 @@ async function readMetrics(url: string): Promise<string> {
       signal: AbortSignal.timeout(KEYCLOAK_LIMIT_MS),
     });
   } catch (error) {
-    const { cause, name } = error as Error & { cause?: { code?: string } };
-    throw new Error(cause?.code ?? name);
+    throw new Error(reason(error));
   }
   if (!response.ok) {
     await response.body?.cancel().catch(ignore);
     throw new Error(`HTTP ${response.status}`);
   }
-  return response.text();
+  const length = Number(response.headers?.get('content-length'));
+  if (length > MAX_METRICS_BYTES) {
+    await response.body?.cancel().catch(ignore);
+    throw new Error('metrics body too large');
+  }
+  try {
+    return await response.text();
+  } catch (error) {
+    throw new Error(reason(error));
+  }
 }
 
 const session = (pool: Pool): MonitorSession => ({
@@ -96,12 +120,14 @@ function connect(options: DataStoreOptions): Clients | undefined {
         });
   const redis = borrowStore(options.redisUrl);
   const keycloak = options.keycloakMetricsUrl || undefined;
+  // A malformed address fails the boot, not every reading.
+  if (keycloak) new URL(keycloak);
   return { keycloak, outbox: bounded(options.databaseUrl), pool, redis };
 }
 
 // The worker's readings of PostgreSQL (as the monitoring role), Redis, the
-// outbox and Keycloak's heap for the data-store figures. Off, holding no client, while
-// telemetry is off.
+// outbox and Keycloak's heap for the data-store figures. Off, holding no
+// client, while telemetry is off.
 @Module({})
 export class DataStoreMetricsModule
   implements OnModuleInit, OnApplicationShutdown

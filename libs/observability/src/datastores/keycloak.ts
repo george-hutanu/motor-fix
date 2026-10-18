@@ -5,16 +5,26 @@ export interface KeycloakReading {
   heapMaxBytes: number;
 }
 
-const SAMPLE = /^jvm_memory_(used|max)_bytes\{([^}]*)\}\s+(\S+)(?:\s+\d+)?\s*$/;
+// A sample line: the name, its labels (a quoted value may hold a brace),
+// the value, an optional timestamp and an optional OpenMetrics exemplar.
+const SAMPLE =
+  /^jvm_memory_(used|max)_bytes\{((?:[^"}]|"(?:[^"\\]|\\.)*")*)\}\s+(\S+)(?:\s+-?\d+)?(?:\s*#.*)?$/;
+const LABEL = /(\w+)\s*=\s*"((?:[^"\\]|\\.)*)"/g;
+// A plain decimal number, as Prometheus writes it; no hex, no separators.
+const DECIMAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+const isHeap = (labels: string) =>
+  [...labels.matchAll(LABEL)].some(
+    ([, name, value]) => name === 'area' && value === 'heap',
+  );
 
 // The heap samples of the body, as [kind, value]: the area="heap" series
-// whatever the label order, with a value that is a finite number of 0 or more.
+// whatever the label order, with a decimal value of 0 or more.
 function heapSamples(text: string): ['used' | 'max', number][] {
   return text.split('\n').flatMap((line) => {
-    const [, kind, labels = '', raw] = SAMPLE.exec(line.trim()) ?? [];
-    const value = Number(raw);
-    const heap = /(?:^|,)\s*area="heap"/.test(labels);
-    return heap && Number.isFinite(value) && value >= 0
+    const [, kind, labels = '', raw = ''] = SAMPLE.exec(line.trim()) ?? [];
+    const value = DECIMAL.test(raw) ? Number(raw) : Number.NaN;
+    return kind && isHeap(labels) && Number.isFinite(value) && value >= 0
       ? [[kind as 'used' | 'max', value]]
       : [];
   });
@@ -30,6 +40,9 @@ export function parseKeycloakMetrics(text: string): KeycloakReading {
   if (!samples.some(([kind]) => kind === 'used'))
     throw new Error('no heap series');
   const max = sum('max');
+  const used = sum('used');
   if (max <= 0) throw new Error('no positive heap maximum');
-  return { heapMaxBytes: max, heapUsedBytes: sum('used') };
+  if (!Number.isFinite(max) || !Number.isFinite(used))
+    throw new Error('heap sum out of range');
+  return { heapMaxBytes: max, heapUsedBytes: used };
 }
