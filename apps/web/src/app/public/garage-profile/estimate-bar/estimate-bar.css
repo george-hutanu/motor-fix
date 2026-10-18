@@ -1,0 +1,76 @@
+/* Pinned on the tab bar, and on the consent bar while it asks; under the
+   overlays, which open over it. */
+:host {
+  display: block;
+  box-sizing: border-box;
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
+  z-index: 10;
+  border-top: 1px solid var(--mf-line);
+  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
+}
+:host([hidden]) {
+  display: none;
+}
+@media (min-width: 768px) {
+  :host {
+    display: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :host {
+    background: var(--mf-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+/* With no tab bar under it, it keeps clear of the home indicator itself. */
+:host-context(.no-tab-bar) {
+  padding-bottom: max(16px, var(--mf-safe-bottom));
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  padding: var(--mf-space-2) var(--mf-space-4);
+}
+.total {
+  display: grid;
+  flex: 1 1 120px;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-2);
+  border: 0;
+  border-radius: var(--mf-radius-control);
+  background: none;
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.total:focus-visible {
+  outline: 2px solid var(--mf-amber);
+  outline-offset: 2px;
+}
+.placeholder {
+  color: var(--mf-text-secondary);
+  cursor: default;
+}
+.label {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  font-weight: 400;
+}
+.request {
+  flex: 1 1 160px;
+  min-width: 0;
+}

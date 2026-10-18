@@ -498,9 +498,13 @@ describe('the estimate box on the profile', () => {
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
 
-    const slots = [...page().querySelectorAll('.sections > section')];
-    const at = slots.findIndex((s) => s.matches('[data-slot="prices"]'));
-    expect(slots[at + 1]).toBe(estimate());
+    // Below 1024 px the two columns dissolve and the order puts the box
+    // next; from 1024 px it heads the side column.
+    const main = [...page().querySelectorAll('.sections > .main > section')];
+    expect(main.at(-2)?.matches('[data-slot="prices"]')).toBe(true);
+    expect(page().querySelector('.sections > .side > section')).toBe(
+      estimate(),
+    );
     expect(estimate()?.getAttribute('aria-label')).toBe('Estimarea ta');
   });
 
@@ -538,9 +542,10 @@ describe('the estimate box on the profile', () => {
         'mf-request-quote-button button',
       ),
     ];
-    expect(buttons).toHaveLength(2);
+    // The header's, the box's and the phone bar's.
+    expect(buttons).toHaveLength(3);
     const ids = buttons.map((b) => b.getAttribute('aria-describedby'));
-    expect(new Set(ids).size).toBe(2);
+    expect(new Set(ids).size).toBe(3);
     for (const id of ids) {
       expect(page().querySelector(`#${id}`)?.classList).toContain('note');
     }
@@ -1303,5 +1308,91 @@ describe('the save button in the profile header', () => {
         request.compareDocumentPosition(save) &
           Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// @traces 311-FR-001 311-FR-007
+describe('the estimate bar on the profile', () => {
+  const bar = () => page().querySelector('mf-estimate-bar');
+
+  it('is in the garage branch only', async () => {
+    await open('/ro/garages/service-auto-militari');
+    expect(bar()).toBeNull();
+
+    await reads[0]?.answer(FIXED);
+    expect(bar()).not.toBeNull();
+    expect(
+      bar()?.previousElementSibling?.matches('mf-report-garage-link'),
+    ).toBe(true);
+  });
+
+  it('is not shown for an unknown garage', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.fail(404);
+
+    expect(bar()).toBeNull();
+  });
+
+  it('leaves the page room at its end for the bar', () => {
+    expect(css('garage-profile.css')).toContain(
+      'padding-bottom: calc(var(--mf-space-8) + var(--estimate-bar, 0px))',
+    );
+  });
+});
+
+// @traces 311-FR-009
+describe('the profile in two columns', () => {
+  it('splits the sections into a main and a side column', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({
+      ...FIXED,
+      prices: [
+        {
+          durationMinutes: 30,
+          fromBani: 15_000,
+          jobTypeId: 'j-diag',
+          nameEn: 'Diagnosis',
+          nameRo: 'Diagnoză',
+          toBani: 22_000,
+        },
+      ],
+    });
+    const slots = (column: string) =>
+      [...page().querySelectorAll(`.sections > .${column} > section`)].map(
+        (s) => s.getAttribute('data-slot') ?? 'estimate',
+      );
+
+    expect(slots('main')).toEqual([
+      'photos',
+      'brands',
+      'mechanics',
+      'prices',
+      'reviews',
+    ]);
+    expect(slots('side')).toEqual(['estimate', 'where']);
+  });
+
+  it('keeps one column below 1024 px with the estimate after the prices', () => {
+    const sheet = css('garage-profile.css');
+
+    expect(sheet).toMatch(/\.main,\s*\.side\s*\{\s*display:\s*contents;?\s*\}/);
+    expect(sheet).toMatch(/\[data-slot="reviews"\]\s*\{\s*order:\s*1;?\s*\}/);
+    expect(sheet).toMatch(/\[data-slot="where"\]\s*\{\s*order:\s*2;?\s*\}/);
+  });
+
+  it('holds the side column in view from 1024 px', () => {
+    const sheet = css('garage-profile.css');
+    const wide = sheet.slice(sheet.indexOf('@media (min-width: 1024px)'));
+
+    expect(wide).toMatch(/\.main\s*\{[^}]*flex:\s*999 1 560px/);
+    expect(wide).toMatch(/\.side\s*\{[^}]*flex:\s*1 1 360px/);
+    expect(wide).toMatch(/\.side\s*\{[^}]*position:\s*sticky/);
+    expect(wide).toContain(
+      'top: calc(var(--public-site-bar, 0px) + var(--mf-space-4))',
+    );
+    expect(wide).toMatch(/\.side\s*\{[^}]*overflow-y:\s*auto/);
+    expect(sheet).toContain(
+      '.side:not(:has(section:not(:empty))) {\n  display: none;',
+    );
   });
 });

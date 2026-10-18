@@ -3,7 +3,9 @@
   max-width: 1280px;
   margin-inline: auto;
   padding-inline: var(--mf-space-4);
-  padding-block: var(--mf-space-4) var(--mf-space-8);
+  padding-top: var(--mf-space-4);
+  /* Room at the end for a phone's estimate bar, 0 where it is gone. */
+  padding-bottom: calc(var(--mf-space-8) + var(--estimate-bar, 0px));
   overflow-x: clip;
 }
 
@@ -131,6 +133,57 @@ h1 {
 
 .sections section:empty {
   display: none;
+}
+
+/* One column below 1024 px: the columns dissolve and the estimate comes
+   right after the prices, as before. */
+.main,
+.side {
+  display: contents;
+}
+
+[data-slot="reviews"] {
+  order: 1;
+}
+
+[data-slot="where"] {
+  order: 2;
+}
+
+.side:not(:has(section:not(:empty))) {
+  display: none;
+}
+
+/* From 1024 px the side column stays in view beside the long sections. */
+@media (min-width: 1024px) {
+  .sections {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .main {
+    display: grid;
+    flex: 999 1 560px;
+    gap: var(--mf-space-6);
+    min-width: 0;
+  }
+
+  .side {
+    display: grid;
+    flex: 1 1 360px;
+    gap: var(--mf-space-6);
+    min-width: 0;
+    position: sticky;
+    top: calc(var(--public-site-bar, 0px) + var(--mf-space-4));
+    max-height: calc(
+      100dvh -
+      var(--public-site-bar, 0px) -
+      2 *
+      var(--mf-space-4)
+    );
+    overflow-y: auto;
+  }
 }
 
 .report {
