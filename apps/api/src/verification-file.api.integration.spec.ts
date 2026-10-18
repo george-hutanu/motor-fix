@@ -397,7 +397,6 @@ describe('POST /admin/verification-files/:id/decision', () => {
     expect(res.body.file.requestedItems).toEqual([]);
   });
 
-  // The answer an admin gets is the one the contract already names (FR-007).
   // @traces 259-FR-005 259-FR-007
   it.each([
     ['rar_check_required', 'warning', 'ok'],

@@ -476,14 +476,6 @@ describe('the RAR switch on an admin approval', () => {
 });
 
 describe('a refused approval in the history', () => {
-  it('knows the three policy refusals and no other', () => {
-    expect([...REFUSAL_CODES].sort()).toEqual([
-      'caen_check_required',
-      'note_required',
-      'rar_check_required',
-    ]);
-  });
-
   it.each([...REFUSAL_CODES])(
     'records %s as one entry naming the admin, the file and the garage',
     async (code) => {

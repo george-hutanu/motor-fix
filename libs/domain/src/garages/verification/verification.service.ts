@@ -250,7 +250,7 @@ export class VerificationService {
       select: { id: true },
       where: { fileId, kind: 'rar', result: 'ok' },
     });
-    return ok !== null || this.skipRar(tx);
+    return ok !== null || this.testRule(tx, 'skip_rar_check');
   }
 
   // A refused approval as one history entry, in the transaction it is given.
@@ -449,7 +449,7 @@ export class VerificationService {
       return missing;
     }
     // The RAR switch lifts both register gates, never the note rule.
-    const skipRegisters = await this.skipRar(tx);
+    const skipRegisters = await this.testRule(tx, 'skip_rar_check');
     for (const [kind, code, detail] of GATES) {
       if (
         skipRegisters ||
@@ -473,11 +473,6 @@ export class VerificationService {
       );
     }
     return missing;
-  }
-
-  // The RAR test switch, read per decision and never in production.
-  private skipRar(tx: Prisma.TransactionClient) {
-    return this.testRule(tx, 'skip_rar_check');
   }
 
   // A test-only platform rule; production never reads one.
