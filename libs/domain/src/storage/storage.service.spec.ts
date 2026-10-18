@@ -1,9 +1,14 @@
+// @traces 1191-FR-005
+// @traces 1191-FR-006
+import { crc32 } from 'node:zlib';
+
 import { HttpException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { S3TestStore } from './s3-test-store';
 import { StorageModule } from './storage.module';
 import { type SignedUpload, StorageService } from './storage.service';
+import { HEIC_BASE64 } from '../garages/photos/heic/heic.fixture';
 
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49]);
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -13,6 +18,9 @@ const WEBP = Buffer.concat([
   Buffer.from('WEBPVP8 '),
 ]);
 const PDF = Buffer.from('%PDF-1.7\n%âãÏÓ\n');
+const HEIC = Buffer.from(HEIC_BASE64, 'base64');
+const ftyp = (brand: string) =>
+  Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from(`ftyp${brand}`)]);
 const EXE = Buffer.from('MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00');
 const TEN_MB = 10 * 1024 * 1024;
 const MINUTE = 60_000;
@@ -29,11 +37,21 @@ async function refusal(promise: Promise<unknown>) {
   return { code: body.code, status: http.getStatus() };
 }
 
-function send(upload: SignedUpload, file: Buffer, fields = upload.fields) {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  form.append('file', new Blob([new Uint8Array(file)]));
-  return fetch(upload.url, { body: form, method: 'POST' });
+// The base64 of the big-endian CRC32, as the browser declares it.
+function checksumOf(file: Buffer) {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+}
+const ANY_SUM = checksumOf(Buffer.from('any'));
+
+function send(
+  upload: SignedUpload,
+  file: Buffer,
+  headers = upload.headers,
+  url = upload.url,
+) {
+  return fetch(url, { body: new Uint8Array(file), headers, method: 'PUT' });
 }
 
 describe('StorageService', () => {
@@ -67,26 +85,37 @@ describe('StorageService', () => {
       'acc_1',
       contentType,
       file.length,
+      checksumOf(file),
     );
-    expect((await send(upload, file)).status).toBe(204);
+    expect((await send(upload, file)).status).toBe(200);
     return upload.key;
   }
 
   describe('asking for an upload', () => {
-    it('signs a form for one incoming key, the declared type, valid 15 minutes', async () => {
+    it('signs a PUT for one incoming key bound to type, length and checksum, valid 15 minutes', async () => {
       const upload = await storage.createUpload(
         'garage_photo',
         'acc_1',
         'image/jpeg',
         3 * 1024 * 1024,
+        ANY_SUM,
       );
 
       expect(upload.key).toMatch(INCOMING_KEY);
-      expect(upload.url).toBe(`${store.env().STORAGE_ENDPOINT}/motorfix`);
-      expect(upload.fields).toMatchObject({
+      const url = new URL(upload.url);
+      expect(`${url.origin}${url.pathname}`).toBe(
+        `${store.env().STORAGE_ENDPOINT}/motorfix/${upload.key}`,
+      );
+      expect(url.searchParams.get('X-Amz-SignedHeaders')).toBe(
+        'content-length;content-type;host;x-amz-checksum-crc32',
+      );
+      expect(url.searchParams.get('X-Amz-Expires')).toBe('900');
+      expect(url.searchParams.has('x-amz-checksum-crc32')).toBe(false);
+      expect(upload.headers).toEqual({
         'Content-Type': 'image/jpeg',
-        key: upload.key,
+        'x-amz-checksum-crc32': ANY_SUM,
       });
+      expect(upload).not.toHaveProperty('fields');
       const lifetime = Date.parse(upload.expiresAt) - Date.now();
       expect(lifetime).toBeGreaterThan(14 * MINUTE);
       expect(lifetime).toBeLessThanOrEqual(15 * MINUTE);
@@ -94,8 +123,20 @@ describe('StorageService', () => {
 
     it('gives every upload its own key', async () => {
       const [a, b] = await Promise.all([
-        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', 10),
-        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', 10),
+        storage.createUpload(
+          'garage_photo',
+          'acc_1',
+          'image/jpeg',
+          10,
+          ANY_SUM,
+        ),
+        storage.createUpload(
+          'garage_photo',
+          'acc_1',
+          'image/jpeg',
+          10,
+          ANY_SUM,
+        ),
       ]);
 
       expect(a.key).not.toBe(b.key);
@@ -104,7 +145,13 @@ describe('StorageService', () => {
     it('refuses a type the purpose does not allow', async () => {
       expect(
         await refusal(
-          storage.createUpload('garage_photo', 'acc_1', 'application/zip', 10),
+          storage.createUpload(
+            'garage_photo',
+            'acc_1',
+            'application/zip',
+            10,
+            ANY_SUM,
+          ),
         ),
       ).toEqual({ code: 'file_type_not_allowed', status: 422 });
     });
@@ -112,13 +159,25 @@ describe('StorageService', () => {
     it('refuses a PDF as a garage photo but takes it as a legal document', async () => {
       expect(
         await refusal(
-          storage.createUpload('garage_photo', 'acc_1', 'application/pdf', 10),
+          storage.createUpload(
+            'garage_photo',
+            'acc_1',
+            'application/pdf',
+            10,
+            ANY_SUM,
+          ),
         ),
       ).toEqual({ code: 'file_type_not_allowed', status: 422 });
       await expect(
-        storage.createUpload('legal_document', 'acc_1', 'application/pdf', 10),
+        storage.createUpload(
+          'legal_document',
+          'acc_1',
+          'application/pdf',
+          10,
+          ANY_SUM,
+        ),
       ).resolves.toMatchObject({
-        fields: { 'Content-Type': 'application/pdf' },
+        headers: { 'Content-Type': 'application/pdf' },
       });
     });
 
@@ -130,11 +189,18 @@ describe('StorageService', () => {
             'acc_1',
             'image/jpeg',
             12 * 1024 * 1024,
+            ANY_SUM,
           ),
         ),
       ).toEqual({ code: 'file_too_large', status: 422 });
       await expect(
-        storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', TEN_MB),
+        storage.createUpload(
+          'garage_photo',
+          'acc_1',
+          'image/jpeg',
+          TEN_MB,
+          ANY_SUM,
+        ),
       ).resolves.toBeDefined();
       expect(
         await refusal(
@@ -143,6 +209,7 @@ describe('StorageService', () => {
             'acc_1',
             'image/jpeg',
             TEN_MB + 1,
+            ANY_SUM,
           ),
         ),
       ).toEqual({ code: 'file_too_large', status: 422 });
@@ -165,6 +232,7 @@ describe('StorageService', () => {
           owner,
           'image/jpeg',
           size,
+          ANY_SUM,
         ),
       );
 
@@ -172,7 +240,10 @@ describe('StorageService', () => {
     });
   });
 
-  describe('the signed upload form', () => {
+  describe('the signed upload address', () => {
+    const address = (size = JPEG.length, sum = checksumOf(JPEG)) =>
+      storage.createUpload('garage_photo', 'acc_1', 'image/jpeg', size, sum);
+
     it('lets the browser store the declared file under its key', async () => {
       const key = await uploaded(JPEG);
 
@@ -182,31 +253,25 @@ describe('StorageService', () => {
       });
     });
 
-    it('is refused by the store for a file larger than declared', async () => {
-      const upload = await storage.createUpload(
-        'garage_photo',
-        'acc_1',
-        'image/jpeg',
-        JPEG.length - 1,
-      );
+    it.each([
+      ['larger', JPEG.length - 1],
+      ['smaller', JPEG.length + 1],
+    ])(
+      'is refused by the store for a file %s than declared',
+      async (_, size) => {
+        const res = await send(await address(size), JPEG);
 
-      const res = await send(upload, JPEG);
-
-      expect(res.status).toBe(400);
-      expect(await res.text()).toContain('EntityTooLarge');
-      expect(store.objects.size).toBe(0);
-    });
+        expect(res.status).toBe(403);
+        expect(await res.text()).toContain('SignatureDoesNotMatch');
+        expect(store.objects.size).toBe(0);
+      },
+    );
 
     it('is refused by the store for another content type', async () => {
-      const upload = await storage.createUpload(
-        'garage_photo',
-        'acc_1',
-        'image/jpeg',
-        JPEG.length,
-      );
+      const upload = await address();
 
       const res = await send(upload, JPEG, {
-        ...upload.fields,
+        ...upload.headers,
         'Content-Type': 'text/html',
       });
 
@@ -214,33 +279,48 @@ describe('StorageService', () => {
       expect(store.objects.size).toBe(0);
     });
 
-    it('is refused by the store for another key', async () => {
-      const upload = await storage.createUpload(
-        'garage_photo',
-        'acc_1',
-        'image/jpeg',
-        JPEG.length,
-      );
+    it('is refused by the store for another declared checksum', async () => {
+      const upload = await address();
 
       const res = await send(upload, JPEG, {
-        ...upload.fields,
-        key: 'garage_photo/acc_2/taken',
+        ...upload.headers,
+        'x-amz-checksum-crc32': checksumOf(PNG),
       });
 
       expect(res.status).toBe(403);
       expect(store.objects.size).toBe(0);
     });
 
-    it('is refused by the store after 15 minutes', async () => {
-      const upload = await storage.createUpload(
-        'garage_photo',
-        'acc_1',
-        'image/jpeg',
-        JPEG.length,
+    it('is refused by the store for another key', async () => {
+      const upload = await address();
+
+      const res = await send(
+        upload,
+        JPEG,
+        upload.headers,
+        upload.url.replace(upload.key, 'garage_photo/acc_2/taken'),
       );
+
+      expect(res.status).toBe(403);
+      expect(store.objects.size).toBe(0);
+    });
+
+    it('is refused by the store after 15 minutes', async () => {
+      const upload = await address();
       store.now = () => Date.now() + 16 * MINUTE;
 
       expect((await send(upload, JPEG)).status).toBe(403);
+    });
+
+    it('is refused by the test store for a body that does not match the declared checksum', async () => {
+      const other = Buffer.from(JPEG);
+      other[JPEG.length - 1] ^= 0xff;
+
+      const res = await send(await address(), other);
+
+      expect(res.status).toBe(400);
+      expect(await res.text()).toContain('BadDigest');
+      expect(store.objects.size).toBe(0);
     });
   });
 
@@ -264,6 +344,8 @@ describe('StorageService', () => {
       ['a WebP', WEBP, 'image/webp', 'message_photo'],
       ['a PDF', PDF, 'application/pdf', 'legal_document'],
       ['a JPEG invoice', JPEG, 'image/jpeg', 'repair_invoice'],
+      ['a HEIC photo', HEIC, 'image/heic', 'garage_photo'],
+      ['a HEIF photo', ftyp('mif1'), 'image/heif', 'garage_photo'],
     ] as const)(
       'accepts %s whose first bytes match its type',
       async (_, file, type, purpose) => {
@@ -272,6 +354,7 @@ describe('StorageService', () => {
           'acc_1',
           type,
           file.length,
+          checksumOf(file),
         );
         await send(upload, file);
 
@@ -283,6 +366,30 @@ describe('StorageService', () => {
 
     it('deletes a file whose first bytes do not match its type', async () => {
       const key = await uploaded(EXE);
+
+      expect(
+        await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
+      ).toEqual({ code: 'file_type_mismatch', status: 422 });
+      expect(store.objects.size).toBe(0);
+    });
+
+    it.each(['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'heif'])(
+      'recognises a HEIC whose ftyp brand is %s',
+      async (brand) => {
+        const key = await uploaded(ftyp(brand), 'image/heic');
+
+        await expect(
+          storage.confirmUpload(key, 'garage_photo', 'acc_1'),
+        ).resolves.toBe(key.replace(/^incoming\//, ''));
+      },
+    );
+
+    it.each([
+      ['a HEIC sent as a JPEG', HEIC, 'image/jpeg'],
+      ['a JPEG sent as a HEIC', JPEG, 'image/heic'],
+      ['an AVIF sent as a HEIF', ftyp('avif'), 'image/heif'],
+    ])('deletes %s', async (_, file, type) => {
+      const key = await uploaded(file, type);
 
       expect(
         await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
@@ -325,6 +432,7 @@ describe('StorageService', () => {
         'acc_1',
         'image/jpeg',
         10,
+        ANY_SUM,
       );
 
       expect(

@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 
+import { HEIC_BASE64 } from './heic/heic.fixture';
 import { processPhoto } from './photo-processing';
 import { S3TestStore } from '../../storage/s3-test-store';
 import { StorageService } from '../../storage/storage.service';
@@ -121,6 +122,46 @@ describe('processing a photo', () => {
     expect((await sharp(copy('display').body).metadata()).format).toBe('png');
     expect(copy('display').contentType).toBe('image/png');
     expect((await sharp(copy('thumb').body).metadata()).format).toBe('jpeg');
+  });
+
+  // @traces 1191-FR-005
+  it('decodes a HEIC original into a JPEG thumbnail and a JPEG display copy with no metadata', async () => {
+    const heic = Buffer.from(HEIC_BASE64, 'base64');
+    expect((await sharp(heic).metadata()).exif).toBeDefined();
+    store.put(KEY, heic, 'image/heic');
+
+    await processPhoto(storage, KEY);
+
+    for (const name of ['thumb', 'display'] as const) {
+      const meta = await sharp(copy(name).body).metadata();
+      expect([
+        name,
+        meta.format,
+        meta.width,
+        meta.height,
+        meta.exif,
+        meta.xmp,
+        copy(name).contentType,
+      ]).toEqual([name, 'jpeg', 16, 16, undefined, undefined, 'image/jpeg']);
+    }
+    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual({
+      height: '16',
+      width: '16',
+    });
+  });
+
+  // @traces 1191-FR-005
+  it('refuses a HEIC that claims more pixels than sharp takes, before decoding it', async () => {
+    const heic = Buffer.from(HEIC_BASE64, 'base64');
+    // The image's spatial extent box: 20,000 px a side, 400 MP.
+    const ispe = heic.indexOf('ispe');
+    heic.writeUInt32BE(20_000, ispe + 8);
+    heic.writeUInt32BE(20_000, ispe + 12);
+    store.put(KEY, heic, 'image/heic');
+
+    await expect(processPhoto(storage, KEY)).rejects.toThrow(/pixel limit/);
+
+    expect([...store.objects.keys()]).toEqual([KEY]);
   });
 
   it('leaves the original untouched', async () => {

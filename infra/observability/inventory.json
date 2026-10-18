@@ -510,7 +510,7 @@
         "web-error-rate",
         "web-latency"
       ],
-      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel",
+      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel",
       "story": "ST-877"
     },
     {

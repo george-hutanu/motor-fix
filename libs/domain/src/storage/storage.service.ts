@@ -11,7 +11,6 @@ import {
   type S3ClientConfig,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
-import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   FILE_RULES,
@@ -38,10 +37,28 @@ type FileCopy = (typeof FILE_COPIES)[number];
 
 export interface SignedUpload {
   expiresAt: string;
-  fields: Record<string, string>;
+  headers: Record<string, string>;
   key: string;
   url: string;
 }
+
+// Signed into the PUT, so the store refuses a body of another type, length
+// or checksum; the checksum stays a header, never a query parameter.
+const SIGNED_HEADERS = new Set([
+  'content-length',
+  'content-type',
+  'x-amz-checksum-crc32',
+]);
+const CHECKSUM_HEADER = new Set(['x-amz-checksum-crc32']);
+const HEIF_BRANDS = new Set([
+  'heic',
+  'heix',
+  'hevc',
+  'hevx',
+  'mif1',
+  'msf1',
+  'heif',
+]);
 
 const READY_LIMIT_MS = 2000;
 const OWNER_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -51,9 +68,15 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const ascii = (head: Uint8Array, from: number, to: number) =>
   Buffer.from(head.subarray(from, to)).toString('latin1');
 
+// An ISO media file names its brand in the ftyp box at byte 4.
+const heif = (head: Uint8Array) =>
+  ascii(head, 4, 8) === 'ftyp' && HEIF_BRANDS.has(ascii(head, 8, 12));
+
 // What a file of each type starts with; a renamed executable fails here.
 const SIGNATURES: Record<string, (head: Uint8Array) => boolean> = {
   'application/pdf': (head) => ascii(head, 0, 5) === '%PDF-',
+  'image/heic': heif,
+  'image/heif': heif,
   'image/jpeg': (head) =>
     head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff,
   'image/png': (head) => PNG.equals(head.subarray(0, 8)),
@@ -130,6 +153,7 @@ export class StorageService implements OnApplicationShutdown {
     ownerRef: string,
     contentType: string,
     size: number,
+    checksum: string,
   ): Promise<SignedUpload> {
     const rule = this.rule(purpose, ownerRef);
     if (!Number.isInteger(size) || size < 1) {
@@ -148,18 +172,27 @@ export class StorageService implements OnApplicationShutdown {
 
     const key = `incoming/${purpose}/${ownerRef}/${randomUUID()}`;
     const seconds = UPLOAD_URL_MINUTES * 60;
-    const { url, fields } = await createPresignedPost(this.s3, {
-      Bucket: this.bucket,
-      Conditions: [
-        ['content-length-range', 1, size],
-        ['eq', '$Content-Type', contentType],
-      ],
-      Expires: seconds,
-      Fields: { 'Content-Type': contentType },
-      Key: key,
-    });
+    const url = await getSignedUrl(
+      this.signer,
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        ChecksumCRC32: checksum,
+        ContentLength: size,
+        ContentType: contentType,
+        Key: key,
+      }),
+      {
+        expiresIn: seconds,
+        signableHeaders: SIGNED_HEADERS,
+        unhoistableHeaders: CHECKSUM_HEADER,
+      },
+    );
     const expiresAt = new Date(Date.now() + seconds * 1000).toISOString();
-    return { expiresAt, fields, key, url };
+    const headers = {
+      'Content-Type': contentType,
+      'x-amz-checksum-crc32': checksum,
+    };
+    return { expiresAt, headers, key, url };
   }
 
   async confirmUpload(
@@ -195,7 +228,7 @@ export class StorageService implements OnApplicationShutdown {
     }
 
     const finalKey = `${purpose}/${ownerRef}/${id}`;
-    // A form stays valid for its whole lifetime, so it can be posted again
+    // An address stays valid for its whole lifetime, so it can be used again
     // after its file was confirmed; a confirmed file is never replaced.
     if (await this.exists(finalKey)) throw missing();
     // The upload address is still valid while this runs; the ETag pins the

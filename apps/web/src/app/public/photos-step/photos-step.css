@@ -38,6 +38,18 @@ p {
 .warning {
   color: var(--mf-text-secondary);
 }
+/* Empty, the global .mf-message:empty rule hides it and keeps it announced. */
+.queued {
+  justify-self: start;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--mf-space-1) var(--mf-space-2);
+  border: 1px solid var(--mf-amber);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+  font-size: var(--mf-size-small);
+}
 ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

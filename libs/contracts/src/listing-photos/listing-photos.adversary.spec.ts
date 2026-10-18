@@ -1,3 +1,4 @@
+// @traces 1191-FR-006
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
@@ -7,6 +8,7 @@ import { isListingDraftData } from '../listing-sections';
 
 const OWNER = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
 const ID = '5e0a8f3b-91c2-4d7e-8b6a-0c4f2e9d1a37';
+const SUM = 'yPQ5Jg==';
 const check = async <T extends object>(cls: new () => T, value: unknown) =>
   (await validate(plainToInstance(cls, value) as object)).map(
     (e) => e.property,
@@ -16,6 +18,7 @@ describe('the upload request', () => {
   it('accepts a plain request', async () => {
     expect(
       await check(PhotoUploadRequestDto, {
+        checksum: SUM,
         contentType: 'image/jpeg',
         size: 1,
       }),
@@ -34,12 +37,31 @@ describe('the upload request', () => {
     ['a missing type', { size: 1 }],
     ['a 101 character type', { contentType: 'x'.repeat(101), size: 1 }],
   ])('refuses %s', async (_, body) => {
-    expect(await check(PhotoUploadRequestDto, body)).toHaveLength(1);
+    expect(
+      await check(PhotoUploadRequestDto, { checksum: SUM, ...body }),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ['a missing checksum', undefined],
+    ['a hex checksum', 'cbf43926'],
+    ['a checksum of the wrong length', 'yPQ5Jg'],
+    ['a SHA-256 in base64', 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg='],
+    ['a numeric checksum', 12345678],
+  ])('refuses %s', async (_, checksum) => {
+    expect(
+      await check(PhotoUploadRequestDto, {
+        checksum,
+        contentType: 'image/jpeg',
+        size: 1,
+      }),
+    ).toEqual(['checksum']);
   });
 
   it('accepts a 100 character type, the boundary', async () => {
     expect(
       await check(PhotoUploadRequestDto, {
+        checksum: SUM,
         contentType: 'x'.repeat(100),
         size: 1,
       }),

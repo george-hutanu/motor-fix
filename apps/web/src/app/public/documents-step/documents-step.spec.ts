@@ -157,14 +157,12 @@ async function upload(
 ) {
   req.flush({
     expiresAt: new Date(Date.now() + 900_000).toISOString(),
-    fields: { key: `incoming/${keyOf(n)}` },
+    headers: { 'x-amz-checksum-crc32': 'AAAAAA==' },
     key: `incoming/${keyOf(n)}`,
     url: STORE,
   });
   await opened.settle();
-  opened.http
-    .expectOne(STORE)
-    .flush(null, { status: 204, statusText: 'No Content' });
+  opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
   await opened.settle();
   const confirm = opened.http.expectOne(
     (r) => r.method === 'POST' && r.url === base,
@@ -303,6 +301,7 @@ describe('uploading the pages', () => {
     const asked = askedForAddress(opened.http, CERTIFICATE);
     expect(asked).toHaveLength(1);
     expect(asked[0]?.request.body).toEqual({
+      checksum: expect.stringMatching(/^[A-Za-z0-9+/]{6}==$/),
       contentType: 'application/pdf',
       size: 2048,
     });
@@ -338,7 +337,7 @@ describe('uploading the pages', () => {
     const [asked] = askedForAddress(opened.http, CERTIFICATE);
     (asked as TestRequest).flush({
       expiresAt: new Date(Date.now() + 900_000).toISOString(),
-      fields: { key: `incoming/${keyOf(0)}` },
+      headers: { 'x-amz-checksum-crc32': 'AAAAAA==' },
       key: `incoming/${keyOf(0)}`,
       url: STORE,
     });
@@ -346,9 +345,7 @@ describe('uploading the pages', () => {
     expect(
       pages(certificate(opened.step))[0]?.querySelector('progress'),
     ).toBeTruthy();
-    opened.http
-      .expectOne(STORE)
-      .flush(null, { status: 204, statusText: 'No Content' });
+    opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
     await opened.settle();
     opened.http
       .expectOne((r) => r.method === 'POST' && r.url === CERTIFICATE)
@@ -402,14 +399,12 @@ describe('uploading the pages', () => {
     await choose(opened, certificate(opened.step), [file('fals.pdf')]);
     askedForAddress(opened.http, CERTIFICATE)[0]?.flush({
       expiresAt: new Date(Date.now() + 900_000).toISOString(),
-      fields: {},
+      headers: {},
       key: `incoming/${keyOf(0)}`,
       url: STORE,
     });
     await opened.settle();
-    opened.http
-      .expectOne(STORE)
-      .flush(null, { status: 204, statusText: 'No Content' });
+    opened.http.expectOne(STORE).flush(null, { status: 200, statusText: 'OK' });
     await opened.settle();
     opened.http
       .expectOne((r) => r.method === 'POST' && r.url === CERTIFICATE)
@@ -596,7 +591,7 @@ describe('ordering and removing the pages', () => {
     await choose(opened, certificate(opened.step), [file('certificat.pdf')]);
     askedForAddress(opened.http, CERTIFICATE)[0]?.flush({
       expiresAt: new Date(Date.now() + 900_000).toISOString(),
-      fields: {},
+      headers: {},
       key: `incoming/${keyOf(0)}`,
       url: STORE,
     });

@@ -1,5 +1,7 @@
 // @traces 1176-FR-003
+// @traces 1191-FR-006
 import { randomUUID } from 'node:crypto';
+import { crc32 } from 'node:zlib';
 
 import {
   CompleteMultipartUploadCommand,
@@ -31,6 +33,12 @@ const PNG = Buffer.concat([
 ]);
 const PART = 5 * 1024 * 1024;
 const WEB_ORIGIN = 'http://localhost:4200';
+
+const checksumOf = (file: Buffer) => {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+};
 
 function variable(name: (typeof STORAGE_ENV)[number]): string {
   const value = process.env[name];
@@ -74,20 +82,32 @@ describeStore(
       return Buffer.from((await object.Body?.transformToByteArray()) ?? []);
     };
 
-    const postUpload = async () => {
+    const address = async () => {
       const upload = await storage.createUpload(
         'garage_photo',
         owner,
         'image/png',
         PNG.length,
+        checksumOf(PNG),
       );
       written.push(upload.key);
-      const form = new FormData();
-      for (const [name, value] of Object.entries(upload.fields)) {
-        form.append(name, value);
-      }
-      form.append('file', new Blob([PNG], { type: 'image/png' }));
-      const response = await fetch(upload.url, { body: form, method: 'POST' });
+      return upload;
+    };
+    const put = (
+      upload: Awaited<ReturnType<typeof address>>,
+      body: Buffer,
+      headers = upload.headers,
+    ) =>
+      fetch(upload.url, { body: new Uint8Array(body), headers, method: 'PUT' });
+    const stored = (key: string) =>
+      s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key })).then(
+        () => true,
+        () => false,
+      );
+
+    const putUpload = async () => {
+      const upload = await address();
+      const response = await put(upload, PNG);
       expect(response.status).toBeLessThan(300);
       return upload.key;
     };
@@ -122,15 +142,70 @@ describeStore(
       }
     });
 
-    it('takes a browser upload through a presigned POST policy', async () => {
-      const key = await postUpload();
+    it('takes a browser upload through the PUT address storage signs', async () => {
+      const key = await putUpload();
 
       expect(await read(key)).toEqual(PNG);
     });
 
+    it('refuses a body whose bytes do not match the declared checksum', async () => {
+      const upload = await address();
+      const other = Buffer.from(PNG);
+      other[PNG.length - 1] ^= 0xff;
+
+      const response = await put(upload, other);
+
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(await stored(upload.key)).toBe(false);
+    });
+
+    it('refuses a body of another length than declared', async () => {
+      const upload = await address();
+      const longer = Buffer.concat([PNG, Buffer.from('!')]);
+
+      const response = await put(upload, longer, {
+        ...upload.headers,
+        'x-amz-checksum-crc32': checksumOf(longer),
+      });
+
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(await stored(upload.key)).toBe(false);
+    });
+
+    it('refuses a body sent as another content type', async () => {
+      const upload = await address();
+
+      const response = await put(upload, PNG, {
+        ...upload.headers,
+        'Content-Type': 'text/html',
+      });
+
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(await stored(upload.key)).toBe(false);
+    });
+
+    it("answers the web origin's preflight for the signed PUT", async () => {
+      const origin = process.env['PUBLIC_WEB_URL'] ?? WEB_ORIGIN;
+      const { key } = await address();
+
+      const response = await fetch(`${endpoint}/${bucket}/${key}`, {
+        headers: {
+          'access-control-request-headers': 'content-type,x-amz-checksum-crc32',
+          'access-control-request-method': 'PUT',
+          origin,
+        },
+        method: 'OPTIONS',
+      });
+
+      expect(response.status).toBeLessThan(300);
+      expect([origin, '*']).toContain(
+        response.headers.get('access-control-allow-origin'),
+      );
+    });
+
     it('confirms an upload by copying it pinned to its ETag', async () => {
       const key = await storage.confirmUpload(
-        await postUpload(),
+        await putUpload(),
         'garage_photo',
         owner,
       );
@@ -142,7 +217,7 @@ describeStore(
     it.each(['inline', 'attachment'] as const)(
       'serves a signed download %s, with its file name',
       async (disposition) => {
-        const key = await postUpload();
+        const key = await putUpload();
         const url = await storage.createDownloadUrl(
           key,
           'garage.png',
@@ -163,7 +238,7 @@ describeStore(
     });
 
     it('deletes a file with its copies', async () => {
-      const key = await postUpload();
+      const key = await putUpload();
       const keys = [key, storage.derivedKey(key, 'thumb')];
       await storage.putObject(keys[1], PNG, 'image/png');
 
