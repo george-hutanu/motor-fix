@@ -64,25 +64,22 @@ describe('the mutate job', () => {
 
   // @traces 1175-FR-001
   it('gives each job its own PostgreSQL and Redis and migrates before mutating', () => {
-    expect(mutate).toMatch(/^ {6}postgres:\n {8}image: postgis\/postgis/m);
+    expect(mutate).toMatch(
+      /^ {6}postgres:\n {8}image: ghcr\.io\/george-hutanu\/motor-fix-postgres:18$/m,
+    );
     expect(mutate).toMatch(/^ {6}redis:\n {8}image: valkey\/valkey:9$/m);
     const migrate = mutate.indexOf('prisma migrate deploy');
     expect(migrate).toBeGreaterThan(-1);
     expect(migrate).toBeLessThan(mutate.indexOf(':test:mutation'));
   });
 
-  // The data-store metrics specs read pg_stat_statements, which a service
-  // container cannot preload by command: without it domain's rest shard
-  // fails its initial test run (run 38127622063).
-  it('preloads pg_stat_statements before migrating, as CI does', () => {
-    const preload = mutate.indexOf(
-      "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'",
-    );
-    expect(preload).toBeGreaterThan(-1);
-    expect(mutate).toMatch(
-      /docker restart \$\{\{ job\.services\.postgres\.id \}\}/,
-    );
-    expect(preload).toBeLessThan(mutate.indexOf('prisma migrate deploy'));
+  // The data-store metrics specs read pg_stat_statements (without it
+  // domain's rest shard failed its initial test run, run 38127622063): the
+  // image preloads it, so no step restarts the service container.
+  // @traces 1174-FR-003
+  it('relies on the image to preload pg_stat_statements, as CI does', () => {
+    expect(mutate).not.toContain('ALTER SYSTEM');
+    expect(mutate).not.toMatch(/docker restart/);
   });
 
   // Streamed, so a job cancelled at its limit still shows how far Stryker

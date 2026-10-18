@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const script = fileURLToPath(new URL('../../scripts/cloud-setup.sh', import.meta.url));
 const dirs = [];
 
-export const IMAGES = ['imresamu/postgis:17-3.5', 'valkey/valkey:9'];
+export const IMAGES = ['ghcr.io/george-hutanu/motor-fix-postgres:18', 'valkey/valkey:9'];
 
 export function cleanup() {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
