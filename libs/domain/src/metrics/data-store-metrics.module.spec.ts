@@ -43,10 +43,13 @@ function started(keycloakMetricsUrl?: string): Stores {
   return observe.mock.calls.at(-1)?.[0] as Stores;
 }
 
-const answer = (status: number, body = '') => {
+const answer = (status: number, body = '', length?: number) => {
   const cancel = jest.fn(async () => undefined);
   const response = {
     body: { cancel },
+    headers: new Headers(
+      length === undefined ? {} : { 'content-length': String(length) },
+    ),
     ok: status >= 200 && status < 300,
     status,
     text: jest.fn(async () => body),
@@ -130,5 +133,22 @@ describe('the Keycloak reading in the data-store readings', () => {
     await expect(stores.keycloak?.metrics()).rejects.toThrow(
       new Error('TimeoutError'),
     );
+  });
+
+  it('fails the boot on a malformed address, before any reading', () => {
+    expect(() => started('not a url')).toThrow('Invalid URL');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body declared past 8 MiB unread, and lets it go', async () => {
+    const { cancel, response } = answer(200, 'x', 8 * 1024 * 1024 + 1);
+    fetch.mockResolvedValue(response);
+    const stores = started(URL);
+
+    await expect(stores.keycloak?.metrics()).rejects.toThrow(
+      new Error('metrics body too large'),
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(response.text).not.toHaveBeenCalled();
   });
 });

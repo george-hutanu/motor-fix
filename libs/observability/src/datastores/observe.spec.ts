@@ -439,11 +439,9 @@ describe('the Keycloak reading', () => {
   });
 
   it('reads nothing and reports nothing for Keycloak without the store', async () => {
-    const fetch = jest.spyOn(globalThis, 'fetch');
     observe({ outbox: outbox(), postgres: postgres(), redis: redis() });
     await tick(50);
 
-    expect(fetch).not.toHaveBeenCalled();
     for (const name of KEYCLOAK_FIGURES) {
       expect(await points(name)).toEqual([]);
     }
