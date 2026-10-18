@@ -213,6 +213,7 @@ describe('the point-in-time drill script', () => {
   it('expands its option arrays so an empty one survives set -u', () => {
     expect(script).not.toMatch(/(?<!\+)"\$\{(tls|archive)_env\[@\]\}"/);
     expect(script).toContain(`\${tls_env[@]+"\${tls_env[@]}"}`);
+    expect(script).not.toMatch(/\$\{(tls|archive)_env\[@\]\+\$\{/);
   });
 
   // A text xid past 2^32 is out of range: go through the 64-bit xid8.

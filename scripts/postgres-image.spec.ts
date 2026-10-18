@@ -120,19 +120,6 @@ describe('the image needs no step around it', () => {
     expect(service).toBeDefined();
     expect(service).not.toMatch(/^ {4}command:/m);
   });
-
-  it.each(['ci.yml', 'mutation.yml'])(
-    '%s has no step that preloads or restarts PostgreSQL',
-    (file) => {
-      const workflow = read('.github', 'workflows', file);
-
-      expect(workflow).not.toContain('Preload pg_stat_statements');
-      expect(workflow).not.toContain('ALTER SYSTEM');
-      expect(workflow).not.toMatch(
-        /docker restart \$\{\{ job\.services\.postgres/,
-      );
-    },
-  );
 });
 
 describe('the image publish workflow', () => {

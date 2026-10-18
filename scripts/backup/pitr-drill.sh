@@ -113,7 +113,7 @@ if [ "$mode" = self-contained ]; then
   tls_env=(-v "$work/ca.crt:/certs/ca.crt:ro" -e PGBACKREST_REPO1_STORAGE_PORT=8443 -e PGBACKREST_REPO1_STORAGE_CA_FILE=/certs/ca.crt)
 
   docker run -d --name "$SOURCE" --network "$NET" -e POSTGRES_PASSWORD=drill \
-    ${archive_env[@]+"${archive_env[@]}"} ${tls_env[@]+${tls_env[@]+"${tls_env[@]}"}} "$IMAGE" >/dev/null
+    ${archive_env[@]+"${archive_env[@]}"} ${tls_env[@]+"${tls_env[@]}"} "$IMAGE" >/dev/null
   source_up() { source_sql 'SELECT 1' >/dev/null 2>&1; }
   until_within 120 1 source_up || fail "the source database did not start within 120 s"
   repo_path=$(docker exec "$SOURCE" sh -c 'cat "$PGDATA/.pgbackrest_repo_path"')
