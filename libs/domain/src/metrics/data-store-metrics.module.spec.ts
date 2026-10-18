@@ -134,11 +134,6 @@ describe('the Keycloak reading in the data-store readings', () => {
     );
   });
 
-  it('fails the boot on a malformed address, before any reading', () => {
-    expect(() => started('not a url')).toThrow('Invalid URL');
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
   it('cuts off a body past 8 MiB that declares no length', async () => {
     const { response } = answer(200, 'x'.repeat(8 * 1024 * 1024 + 1));
     fetch.mockResolvedValue(response);
@@ -156,12 +151,83 @@ describe('the Keycloak reading in the data-store readings', () => {
     await expect(started(URL).keycloak?.metrics()).resolves.toBe(body);
   });
 
-  it.each(['redis://keycloak:6379', 'ftp://keycloak/metrics'])(
-    'fails the boot on the non-HTTP address %s',
-    (url) => {
-      expect(() => started(url)).toThrow(
-        'KEYCLOAK_METRICS_URL is not an http(s) address',
+  it.each(['not a url', 'redis://keycloak:6379', 'ftp://keycloak/metrics'])(
+    'fails each reading of %s, fetching nothing, while the worker boots',
+    async (url) => {
+      const stores = started(url);
+
+      await expect(stores.keycloak?.metrics()).rejects.toThrow(
+        new Error('not an http(s) address'),
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+});
+
+// @traces 1178-FR-007
+describe('the Keycloak fetch under hostile answers', () => {
+  const CREDENTIALED =
+    'http://user:hunter2@keycloak.railway.internal:9000/metrics';
+  // An answer whose body streams the text, or fails midway with the error.
+  const streamed = (status: number, body: string | Error) =>
+    ({
+      body:
+        typeof body === 'string'
+          ? new Blob([body]).stream()
+          : new ReadableStream({ start: (stream) => stream.error(body) }),
+      headers: new Headers(),
+      ok: status >= 200 && status < 300,
+      status,
+    }) as unknown as Response;
+
+  it.each([199, 300, 301, 404, 500])(
+    'rejects HTTP %s with its status only',
+    async (status) => {
+      fetch.mockResolvedValue(streamed(status, 'body'));
+      await expect(started(CREDENTIALED).keycloak?.metrics()).rejects.toThrow(
+        new Error(`HTTP ${status}`),
       );
     },
   );
+
+  it('accepts a 204 and hands the empty body on', async () => {
+    fetch.mockResolvedValue(streamed(204, ''));
+    await expect(started(CREDENTIALED).keycloak?.metrics()).resolves.toBe('');
+  });
+
+  it('does not carry the address when the body stream fails midway', async () => {
+    fetch.mockResolvedValue(
+      streamed(200, new Error(`terminated reading ${CREDENTIALED}`)),
+    );
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('Error'));
+  });
+
+  it('fails with a non-empty reason when fetch rejects with a non-Error', async () => {
+    fetch.mockRejectedValue('boom');
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('fetch failed'));
+  });
+
+  it('fails with a non-empty reason when fetch rejects with null', async () => {
+    fetch.mockRejectedValue(null);
+    const error = await started(CREDENTIALED)
+      .keycloak?.metrics()
+      .catch((e: Error) => e);
+    expect(error).toEqual(new Error('fetch failed'));
+  });
+
+  it('sends no credentials header of its own', async () => {
+    fetch.mockResolvedValue(streamed(200, 'x'));
+    await started(CREDENTIALED).keycloak?.metrics();
+    const headers = new Headers(
+      (fetch.mock.calls[0]?.[1] as RequestInit | undefined)?.headers,
+    );
+    expect(headers.get('authorization')).toBeNull();
+    expect(headers.get('cookie')).toBeNull();
+  });
 });

@@ -86,6 +86,8 @@ async function readCapped(response: Response): Promise<string | undefined> {
   const decoder = new TextDecoder();
   let text = '';
   let bytes = 0;
+  // Ends on the last chunk, past the byte cap, or when the fetch's time
+  // limit errors the read.
   for (;;) {
     const { done, value } = await reader.read();
     if (done) return text + decoder.decode();
@@ -101,6 +103,10 @@ async function readCapped(response: Response): Promise<string | undefined> {
 // One GET of Keycloak's metrics text within the reading's limit. A failure
 // names its status, code or kind only, never the address.
 async function readMetrics(url: string): Promise<string> {
+  // A malformed or non-HTTP address is a failed reading like a closed port:
+  // the worker and its other readings carry on.
+  if (!URL.canParse(url) || !/^https?:$/.test(new URL(url).protocol))
+    throw new Error('not an http(s) address');
   let response: Response;
   try {
     response = await fetch(url, {
@@ -138,9 +144,6 @@ function connect(options: DataStoreOptions): Clients | undefined {
         });
   const redis = borrowStore(options.redisUrl);
   const keycloak = options.keycloakMetricsUrl || undefined;
-  // A malformed or non-HTTP address fails the boot, not every reading.
-  if (keycloak && !/^https?:$/.test(new URL(keycloak).protocol))
-    throw new Error('KEYCLOAK_METRICS_URL is not an http(s) address');
   return { keycloak, outbox: bounded(options.databaseUrl), pool, redis };
 }
 
