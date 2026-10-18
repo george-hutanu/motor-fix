@@ -3,12 +3,19 @@
     "allBrands": "See all brands",
     "allJobs": "See all jobs",
     "brand": "Brand",
-    "brands": "Requests by brand, 30 days",
+    "brands": "Searches and requests by brand, 30 days",
+    "byRequests": "requests",
+    "bySearches": "searches",
     "empty": "No requests in the last 30 days yet.",
+    "emptyBrands": "No searches or requests in the last 30 days yet.",
     "fewer": "Show fewer",
+    "from": "Searches are counted from {day}",
     "job": "Job",
     "jobs": "Requests by job, 30 days",
-    "subtitle": "What drivers asked for in the last 30 days"
+    "orderBy": "Order by",
+    "requests": "Requests",
+    "searches": "Searches",
+    "subtitle": "What drivers searched for and asked for in the last 30 days"
   },
   "file": {
     "approve": {
