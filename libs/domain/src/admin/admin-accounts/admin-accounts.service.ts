@@ -28,14 +28,13 @@ import {
   type Role,
 } from '../../generated/prisma/client';
 import { countPlatformFigures } from '../../insights/platform-figures';
+import { decodeCursor, encodeCursor } from '../cursor';
 
 export const SUMMARY_KEY = 'admin:accounts:summary';
 const SUMMARY_SECONDS = 60;
 const PAGE = 20;
 const DAY = 86_400_000;
 const NEW_FOR = 7 * DAY;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const invalidCursor = () =>
   new BadRequestException({
@@ -129,25 +128,13 @@ function where(filters: Filters, after?: { createdAt: Date; id: string }) {
   return Prisma.join(parts, ' AND ');
 }
 
-const encode = (createdAt: Date, id: string) =>
-  Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
-
 function decode(cursor: string) {
-  if (cursor.length > 200 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+  try {
+    const { at, id } = decodeCursor(cursor);
+    return { createdAt: at, id };
+  } catch {
     throw invalidCursor();
   }
-  const parts = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
-  if (parts.length !== 2) throw invalidCursor();
-  const [at, id] = parts;
-  const createdAt = new Date(at);
-  if (
-    Number.isNaN(createdAt.getTime()) ||
-    createdAt.toISOString() !== at ||
-    !UUID.test(id)
-  ) {
-    throw invalidCursor();
-  }
-  return { createdAt, id };
 }
 
 const isSummary = (value: unknown): value is AdminAccountsSummaryDto =>
@@ -298,7 +285,9 @@ export class AdminAccountsService {
     return {
       items: shown.map((row) => item(row, now, suspendedSince.get(row.id))),
       nextCursor:
-        rows.length > PAGE && last ? encode(last.createdAt, last.id) : null,
+        rows.length > PAGE && last
+          ? encodeCursor(last.createdAt, last.id)
+          : null,
     };
   }
 

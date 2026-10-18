@@ -4,4 +4,9 @@
 import { SystemLogEntryDto } from '../models/system-log-entry-dto';
 export interface SystemLogDto {
   items: Array<SystemLogEntryDto>;
+
+  /**
+   * The next page, or null when there is none
+   */
+  nextCursor: string | null;
 }

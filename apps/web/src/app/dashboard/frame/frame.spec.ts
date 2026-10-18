@@ -329,6 +329,7 @@ describe('Frame', () => {
       'Service‑uri',
       'Utilizatori',
       'Mărci și lucrări',
+      'Jurnal de sistem',
       'Setări',
     ]);
   });
@@ -545,6 +546,7 @@ describe('Frame', () => {
       'Garages',
       'Users',
       'Brands and jobs',
+      'System log',
       'Settings',
     ]);
     expect(bar(admin.element).map((a) => a.textContent?.trim())).toEqual([
@@ -552,6 +554,7 @@ describe('Frame', () => {
       'Garages',
       'Users',
       'Brands',
+      'Log',
       'Settings',
     ]);
   });

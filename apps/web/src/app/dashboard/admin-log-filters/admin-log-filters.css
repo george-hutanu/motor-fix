@@ -1,0 +1,76 @@
+/* Phones: the search box over the filter button; from 768 px one row. */
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.search {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.glass {
+  position: absolute;
+  left: var(--mf-space-3);
+  color: var(--mf-text-secondary);
+  pointer-events: none;
+}
+input[type="search"] {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3) 0
+    calc(var(--mf-space-3) + 16px + var(--mf-space-2));
+  font: inherit;
+  font-size: var(--mf-size-field);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+input[type="search"]::placeholder {
+  color: var(--mf-text-secondary);
+}
+.wide {
+  display: none;
+}
+.filter {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font: inherit;
+  font-size: var(--mf-size-field);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  cursor: pointer;
+}
+.count {
+  min-width: 1.5em;
+  padding: 0 var(--mf-space-1);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-amber);
+  color: var(--mf-on-amber);
+  font-size: var(--mf-size-small);
+  text-align: center;
+}
+input[type="search"]:focus-visible,
+.filter:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+@media (min-width: 768px) {
+  .filter {
+    display: none;
+  }
+  .wide {
+    display: flex;
+  }
+}

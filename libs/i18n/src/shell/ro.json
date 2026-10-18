@@ -158,6 +158,7 @@
         "assistant": "Asistent AI",
         "catalogue": "Mărci și lucrări",
         "garages": "Service‑uri",
+        "log": "Jurnal de sistem",
         "reviews": "Recenzii raportate",
         "settings": "Setări",
         "users": "Utilizatori"
@@ -222,6 +223,7 @@
       "garages": "Service‑uri",
       "history": "Istoric",
       "jobs": "Lucrări",
+      "log": "Jurnal",
       "overview": "Panou",
       "prices": "Prețuri",
       "profile": "Profil",

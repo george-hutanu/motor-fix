@@ -140,6 +140,14 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.log',
+        load: () =>
+          import('./admin-log-view/admin-log-view').then((m) => m.AdminLogView),
+        path: 'log',
+        tab: 'shell.frame.tab.log',
+      },
+      {
+        capability: 'admin.settings',
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
         push: true,
@@ -245,7 +253,11 @@ export const DASHBOARDS: Record<
         load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
       },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
-      garageView('prices', 'garage.prices'),
+      {
+        ...garageView('prices', 'garage.prices'),
+        load: () =>
+          import('./prices-view/prices-view').then((m) => m.PricesView),
+      },
       garageView('reviews', 'garage.reviews'),
       garageView('profile', 'garage.profile'),
       {

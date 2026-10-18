@@ -105,6 +105,32 @@ describe('the system log read route', () => {
   });
 });
 
+// @traces 299-FR-017
+describe('the whole system log read', () => {
+  it('keeps the route metric and says what the filters, the search and the cursor add', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      name?: string;
+      metric?: string;
+      reason?: string;
+      story?: string;
+    }[] = Object.values(inventory).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    const log = entries.find((each) => each.name === 'admin-system-log');
+
+    expect(log?.story).toMatch(/\bST-299\b/);
+    expect(log?.metric).toBe(
+      'http.server.request.duration by http.route /api/v1/admin/system-log',
+    );
+    expect(log?.reason).toMatch(/type, severity, source/);
+    expect(log?.reason).toMatch(/search/);
+    expect(log?.reason).toMatch(/cursor/);
+  });
+});
+
 // @traces 357-FR-011
 describe('the price list read route', () => {
   const read = (path: string) =>

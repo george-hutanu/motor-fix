@@ -1,5 +1,6 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
@@ -28,7 +29,10 @@ const entry = (
     ...extra,
   }) as SystemLogEntryDto;
 
-const logOf = (...items: SystemLogEntryDto[]): SystemLogDto => ({ items });
+const logOf = (...items: SystemLogEntryDto[]): SystemLogDto => ({
+  items,
+  nextCursor: null,
+});
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
@@ -51,6 +55,7 @@ async function open(
   asked = [];
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: PLATFORM_ID, useValue: platform },
       {
         provide: Live,
@@ -131,14 +136,31 @@ describe('AdminLog', () => {
     expect(asked).toEqual([{ from: '2026-10-16T21:00:00.000Z' }]);
   });
 
-  // @traces 298-FR-003
-  it('offers no link, button or page control to see more', async () => {
+  // @traces 299-FR-006
+  it('offers the whole log through one link under the lines, and no page control', async () => {
     answer = async () =>
       logOf(...Array.from({ length: 20 }, (_, i) => entry(i + 1)));
     const element = await open();
 
-    expect(element.querySelector('a')).toBeNull();
+    const links = element.querySelectorAll('a');
+    expect(links).toHaveLength(1);
+    expect(links[0].textContent?.trim()).toBe('Vezi tot jurnalul');
+    expect(links[0].getAttribute('href')).toBe('/app/admin/log');
+    const list = element.querySelector('ol') as HTMLElement;
+    expect(
+      list.compareDocumentPosition(links[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(element.querySelector('button')).toBeNull();
+  });
+
+  // @traces 299-FR-006
+  it('names the link to the whole log in English', async () => {
+    answer = async () => logOf(entry(1));
+    const element = await open('en');
+
+    expect(element.querySelector('a')?.textContent?.trim()).toBe(
+      'See the whole log',
+    );
   });
 
   // @traces 298-FR-004 298-FR-016

@@ -239,6 +239,7 @@
     "title": "Creștere, ultimele 12 luni"
   },
   "log": {
+    "all": "Vezi tot jurnalul",
     "empty": "Nimic de semnalat azi.",
     "failed": "Nu am putut citi jurnalul.",
     "figure": {
@@ -290,7 +291,51 @@
       "one": "o dată",
       "other": "de {n} de ori"
     },
-    "title": "Jurnal"
+    "title": "Jurnal",
+    "view": {
+      "clear": "Șterge filtrele",
+      "dates": {
+        "beforeFrom": "„Până la” nu poate fi înainte de „De la”.",
+        "future": "Alege o zi până azi.",
+        "missing": "Alege o zi.",
+        "tooOld": "Jurnalul păstrează doar ultimele 90 de zile."
+      },
+      "empty": "Nicio intrare pentru acești filtri.",
+      "filters": {
+        "allSeverities": "Toate gravitățile",
+        "allSources": "Toate sursele",
+        "allTypes": "Toate tipurile",
+        "apply": "Aplică",
+        "button": "Filtre",
+        "buttonSet": {
+          "few": "Filtre, {n} setate",
+          "one": "Filtre, 1 setat",
+          "other": "Filtre, {n} setate"
+        },
+        "from": "De la",
+        "severity": "Gravitate",
+        "source": "Sursă",
+        "title": "Filtre",
+        "to": "Până la",
+        "type": "Tip"
+      },
+      "fresh": {
+        "few": "{n} intrări noi",
+        "one": "1 intrare nouă",
+        "other": "{n} de intrări noi"
+      },
+      "search": "Caută în jurnal",
+      "title": "Jurnal de sistem",
+      "types": {
+        "backup": "Backup",
+        "checks": "Verificări",
+        "deploy": "Deploy",
+        "jobs": "Joburi",
+        "servers": "Erori de server",
+        "services": "Servicii externe",
+        "status": "Stare"
+      }
+    }
   },
   "panel": {
     "activeDrivers": "Șoferi activi",
