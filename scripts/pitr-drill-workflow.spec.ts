@@ -222,6 +222,19 @@ describe('the point-in-time drill script', () => {
     expect(script).not.toMatch(/'\$\w+'::xid\)/);
   });
 
+  // pgBackRest records a backup's stop in whole seconds and restores only from
+  // one that stopped before the target: a marker in that same second has none.
+  it('takes its target only once the source clock is past the newest backup’s stop', () => {
+    const marker = script.indexOf(
+      "before=$(source_sql 'SELECT pg_current_xact_id()')",
+    );
+    const wait = script.indexOf('until_within 30 1 past_backup_stop');
+
+    expect(script).toContain('[.[0].backup[].timestamp.stop] | max');
+    expect(wait).toBeGreaterThan(script.indexOf('step backup'));
+    expect(wait).toBeLessThan(marker);
+  });
+
   it('removes everything it started however it ends', () => {
     expect(script).toMatch(/^trap teardown EXIT$/m);
   });

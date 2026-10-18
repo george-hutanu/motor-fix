@@ -151,6 +151,16 @@ has_backup() { [ "$(archive_info | jq '[.[0].backup[]?] | length' 2>/dev/null ||
 until_within "$READY_SECONDS" 1 has_backup || fail "the archive holds no base backup after $READY_SECONDS s"
 step backup
 
+# pgBackRest records a backup's stop in whole seconds and restores only from
+# one that stopped before the target: start the markers once the source's
+# clock is past the newest stop, or a target in that same second has no backup.
+backup_stop=$(archive_info | jq '[.[0].backup[].timestamp.stop] | max')
+[[ "$backup_stop" =~ ^[0-9]+$ ]] || fail "the archive names no backup stop time"
+past_backup_stop() {
+  [ "$(source_sql 'SELECT floor(extract(epoch FROM clock_timestamp()))::bigint')" -gt "$backup_stop" ]
+}
+until_within 30 1 past_backup_stop || fail "the source clock did not pass the backup's stop within 30 s"
+
 # Two empty transactions: committing pg_current_xact_id() gives each its own
 # commit record, so nothing is written to any table.
 before=$(source_sql 'SELECT pg_current_xact_id()')
