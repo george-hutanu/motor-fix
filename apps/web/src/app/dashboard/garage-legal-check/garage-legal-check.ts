@@ -4,7 +4,7 @@ import {
   computed,
   inject,
 } from '@angular/core';
-import { GaragesService } from '@motor-fix/data-access';
+import { GaragesService } from '@motor-fix/data-access/services/garages.service';
 
 import { liveView } from '../../live/view';
 import { LegalCheckPanel } from '../legal-check-panel/legal-check-panel';

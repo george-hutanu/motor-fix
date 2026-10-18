@@ -6,7 +6,8 @@ import {
   input,
   output,
 } from '@angular/core';
-import type { LegalCheckDto, LegalCheckRowDto } from '@motor-fix/data-access';
+import type { LegalCheckDto } from '@motor-fix/data-access/models/legal-check-dto';
+import type { LegalCheckRowDto } from '@motor-fix/data-access/models/legal-check-row-dto';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
