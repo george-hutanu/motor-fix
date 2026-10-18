@@ -53,10 +53,34 @@ async function sendRequest(request: APIRequestContext) {
 }
 
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
+const DAY = 24 * 60 * 60 * 1000;
 const tomorrow = () =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
+    new Date(Date.now() + DAY),
   );
+
+// An instant as Bucharest reads it: its day and its wall-clock time.
+const wall = (at: string) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    ...BUCHAREST,
+    day: '2-digit',
+    fractionalSecondDigits: 3,
+    hour: '2-digit',
+    hourCycle: 'h23',
+    minute: '2-digit',
+    month: '2-digit',
+    second: '2-digit',
+    year: 'numeric',
+  }).formatToParts(new Date(at));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value;
+  return {
+    day: `${part('year')}-${part('month')}-${part('day')}`,
+    time: `${part('hour')}:${part('minute')}:${part('second')}.${part('fractionalSecond')}`,
+  };
+};
+const plusDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
@@ -82,15 +106,32 @@ test.describe('reading a request @seeded', () => {
     const onPanou = page
       .locator('mf-garage-requests-panel')
       .locator(`[data-live-id="${id}"]`);
+    const detail = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/v1/garage/requests/${id}`) &&
+        response.request().method() === 'GET',
+    );
     await onPanou.getByRole('button', { name: /^Deschide cererea / }).click();
     await expect(page).toHaveURL(`/app/garage/requests/${id}`);
+    const { createdAt, expiresAt } = (await (await detail).json()) as {
+      createdAt: string;
+      expiresAt: string;
+    };
+    // Seven Bucharest days at the same wall-clock time (221-FR-010), so 169 h
+    // over the autumn clock change; the drawer rounds the time left down to
+    // whole days (347-FR-003): 6 in most weeks, 7 in the week before it.
+    expect(wall(expiresAt)).toEqual({
+      day: plusDays(wall(createdAt).day, 7),
+      time: wall(createdAt).time,
+    });
+    const daysLeft = Math.floor((Date.parse(expiresAt) - Date.now()) / DAY);
     const drawer = page.getByRole('dialog', { name: 'Cerere de ofertă' });
     await expect(drawer).toContainText('Dacia Logan');
     await expect(drawer).toContainText(OIL);
     await expect(drawer).toContainText(`Scârțâie la frânare ${tag}`);
     await expect(drawer).toContainText('Sunați după ora 18');
     await expect(drawer).toContainText('orice mecanic');
-    await expect(drawer).toContainText('expiră în 6 zile');
+    await expect(drawer).toContainText(`expiră în ${daysLeft} zile`);
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage');
