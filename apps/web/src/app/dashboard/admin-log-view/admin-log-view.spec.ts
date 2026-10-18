@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -463,6 +466,21 @@ describe('the search', () => {
     expect(path()).toBe(`${VIEW}?q=brevo`);
   });
 
+  // Enter in the box, or its clear button, fires a bubbling search event.
+  it('keeps the search when the box fires the browser search event', async () => {
+    const el = await open();
+    await search(el, 'brevo');
+    const before = reads.length;
+
+    el.querySelector('input[type="search"]')?.dispatchEvent(
+      new Event('search', { bubbles: true }),
+    );
+    await settle();
+
+    expect(path()).toBe(`${VIEW}?q=brevo`);
+    expect(reads).toHaveLength(before);
+  });
+
   it('drops the answer of an older read when a newer one is on its way', async () => {
     let first: (log: SystemLogDto) => void = () => undefined;
     answer = async (read) =>
@@ -589,5 +607,18 @@ describe('the new entries bar', () => {
     await open();
 
     expect(every).not.toHaveBeenCalled();
+  });
+});
+
+describe('the view on the page', () => {
+  const stylesheet = readFileSync(
+    join(__dirname, 'admin-log-view.css'),
+    'utf8',
+  );
+
+  it("keeps the header's gutter at both sides, so the search, the filters and the entries start under the title and end under the bell", () => {
+    expect(stylesheet).toMatch(
+      /^:host \{[^}]*margin-inline: var\(--mf-space-4\);/m,
+    );
   });
 });

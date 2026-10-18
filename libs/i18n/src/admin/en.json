@@ -3,12 +3,19 @@
     "allBrands": "See all brands",
     "allJobs": "See all jobs",
     "brand": "Brand",
-    "brands": "Requests by brand, 30 days",
+    "brands": "Searches and requests by brand, 30 days",
+    "byRequests": "requests",
+    "bySearches": "searches",
     "empty": "No requests in the last 30 days yet.",
+    "emptyBrands": "No searches or requests in the last 30 days yet.",
     "fewer": "Show fewer",
+    "from": "Searches are counted from {day}",
     "job": "Job",
     "jobs": "Requests by job, 30 days",
-    "subtitle": "What drivers asked for in the last 30 days"
+    "orderBy": "Order by",
+    "requests": "Requests",
+    "searches": "Searches",
+    "subtitle": "What drivers searched for and asked for in the last 30 days"
   },
   "file": {
     "approve": {
@@ -221,6 +228,26 @@
         "seat": "at the registered seat"
       },
       "uncoveredLine": "Not covered: {jobs}"
+    },
+    "reject": {
+      "cancel": "Cancel",
+      "confirm": "Reject",
+      "count": "{n}/1000",
+      "note": "Message to the garage",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write a message to the garage.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "The message is at least 10 characters.",
+      "reason": "Reason",
+      "reasonRequired": "Pick a reason.",
+      "reasons": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "title": "Reject the file"
     },
     "rejectedBefore": "Rejected before: {reason}, {when}",
     "reopen": {
@@ -442,6 +469,7 @@
     "more": "More",
     "open": "Open the file",
     "openNamed": "Open the file of {name}",
+    "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
     "waiting": {

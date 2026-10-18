@@ -410,6 +410,25 @@ describe('release workflow', () => {
     );
   });
 
+  // @traces 1348-FR-001
+  it('switches only the production job, on the PRODUCTION_ENABLED variable', () => {
+    const lines = release.split('\n');
+    const jobs = lines
+      .slice(lines.indexOf('jobs:') + 1)
+      .filter((l) => /^ {2}[\w-]+:$/.test(l))
+      .map((l) => l.trim().slice(0, -1));
+    const conditions = jobs.flatMap((id) =>
+      [...jobBlock(release, id).matchAll(/^ {4}if: (.+)$/gm)].map(
+        ([, condition]) => `${id}: ${condition}`,
+      ),
+    );
+
+    expect(jobs).toEqual(['checks', 'images', 'staging', 'production']);
+    expect(conditions).toEqual([
+      "production: vars.PRODUCTION_ENABLED == 'true'",
+    ]);
+  });
+
   it('collapses only the checks job and never cancels a running one', () => {
     const checks = jobBlock(release, 'checks');
     expect(checks).toMatch(

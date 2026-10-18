@@ -1,0 +1,69 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "keycloak",
+      "folder": "MotorFix",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "keycloak-memory",
+          "title": "Keycloak heap near its maximum",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "keycloak"
+          },
+          "annotations": {
+            "summary": "Keycloak has held more than 90% of its heap maximum for 10 minutes and may slow down or run out of memory ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-overview",
+            "runbook": "Open the keycloak row on the overview dashboard: if the heap stays near its maximum, raise the keycloak service's memory limit in Railway (the heap is 70% of it), read Keycloak's logs, and look for session or cache growth since the last deploy."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_keycloak_heap_used_bytes) / max by (deployment_environment) (motorfix_keycloak_heap_max_bytes)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.9
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

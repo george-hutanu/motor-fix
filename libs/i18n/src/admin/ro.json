@@ -3,12 +3,19 @@
     "allBrands": "Vezi toate mărcile",
     "allJobs": "Vezi toate lucrările",
     "brand": "Marcă",
-    "brands": "Cereri pe marcă, 30 de zile",
+    "brands": "Căutări și cereri pe marcă, 30 de zile",
+    "byRequests": "cereri",
+    "bySearches": "căutări",
     "empty": "Încă nu sunt cereri în ultimele 30 de zile.",
+    "emptyBrands": "Încă nu sunt căutări sau cereri în ultimele 30 de zile.",
     "fewer": "Arată mai puține",
+    "from": "Căutările se numără de la {day}",
     "job": "Lucrare",
     "jobs": "Cereri pe lucrare, 30 de zile",
-    "subtitle": "Ce au cerut șoferii în ultimele 30 de zile"
+    "orderBy": "Ordonează după",
+    "requests": "Cereri",
+    "searches": "Căutări",
+    "subtitle": "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile"
   },
   "file": {
     "approve": {
@@ -224,6 +231,26 @@
         "seat": "la sediul social"
       },
       "uncoveredLine": "Neacoperite: {jobs}"
+    },
+    "reject": {
+      "cancel": "Renunță",
+      "confirm": "Respinge",
+      "count": "{n}/1000",
+      "note": "Mesaj pentru service",
+      "noteHint": "Service‑ul primește mesajul cuvânt cu cuvânt.",
+      "noteRequired": "Scrie un mesaj pentru service.",
+      "noteTooLong": "Mesajul are cel mult 1000 de caractere.",
+      "noteTooShort": "Mesajul are cel puțin 10 caractere.",
+      "reason": "Motivul",
+      "reasonRequired": "Alege un motiv.",
+      "reasons": {
+        "address": "Adresa",
+        "documents": "Documente",
+        "other": "Altceva",
+        "photos": "Fotografiile",
+        "rar": "Autorizația RAR"
+      },
+      "title": "Respinge dosarul"
     },
     "rejectedBefore": "Respins anterior: {reason}, {when}",
     "reopen": {
@@ -453,6 +480,7 @@
     "more": "Mai multe",
     "open": "Deschide dosarul",
     "openNamed": "Deschide dosarul {name}",
+    "rejected": "Respins",
     "retry": "Reîncearcă",
     "stale": "(neactualizat)",
     "waiting": {

@@ -6,7 +6,7 @@ import { AdminDemandJobDto } from '../models/admin-demand-job-dto';
 export interface AdminDemandDto {
 
   /**
-   * Every brand with a request in the window, most first, then by name in code-point order
+   * Every brand searched or requested in the window, most searched first, then most requested, then by name in code-point order
    */
   brands: Array<AdminDemandBrandDto>;
 
@@ -29,4 +29,14 @@ export interface AdminDemandDto {
    * Requests created in the window
    */
   requests: number;
+
+  /**
+   * Searches logged in the window; the sum of the brands' searches
+   */
+  searches: number;
+
+  /**
+   * The Europe/Bucharest day searches are counted from, when it falls after firstDay: the day of the earliest logged search, or lastDay when none was ever logged
+   */
+  searchesFrom?: string;
 }

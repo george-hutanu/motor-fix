@@ -106,12 +106,15 @@ describe('the search log table', () => {
     ).rejects.toThrow();
   });
 
-  it('has no index besides its key', async () => {
+  // ST-404's demand read counts a window of days from the log: one index on
+  // the time, none other.
+  it('has no index besides its key and the time the demand read counts by', async () => {
     const indexes = await prisma.$queryRaw<{ indexname: string }[]>`
       SELECT indexname FROM pg_indexes
       WHERE schemaname = current_schema() AND tablename = 'search_log'`;
 
-    expect(indexes.map((index) => index.indexname)).toEqual([
+    expect(indexes.map((index) => index.indexname).sort()).toEqual([
+      'search_log_at_idx',
       'search_log_pkey',
     ]);
   });

@@ -1540,6 +1540,106 @@
       }
     },
     {
+      "id": 46,
+      "type": "row",
+      "title": "keycloak",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "panels": []
+    },
+    {
+      "id": 47,
+      "type": "stat",
+      "title": "Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(motorfix_datastore_up{store=\"keycloak\", deployment_environment=\"$env\"})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Up",
+                  "color": "green"
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Heap (alert above 90% of max)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 4,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(motorfix_keycloak_heap_used_bytes{deployment_environment=\"$env\"})",
+          "legendFormat": "used"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(motorfix_keycloak_heap_max_bytes{deployment_environment=\"$env\"})",
+          "legendFormat": "max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
+    },
+    {
       "id": 41,
       "type": "row",
       "title": "Grafana Cloud usage (free tier: 10k series, 50 GB logs, 50 GB traces)",
@@ -1548,7 +1648,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 95
       },
       "panels": []
     },
@@ -1564,7 +1664,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 87
+        "y": 96
       },
       "targets": [
         {
@@ -1597,7 +1697,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 87
+        "y": 96
       },
       "targets": [
         {
@@ -1631,7 +1731,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 87
+        "y": 96
       },
       "targets": [
         {

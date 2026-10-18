@@ -196,6 +196,7 @@
     {
       // A labelled role="group" of tiles, buttons or role chips outside any form, where a fieldset would be wrong.
       "includes": [
+        "apps/web/src/app/dashboard/admin-demand/admin-demand.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/frame/frame.html"
       ],

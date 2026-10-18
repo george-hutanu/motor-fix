@@ -32,6 +32,8 @@ const LIST = '/app/admin/garages';
 // How often a page left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
+// A decision that keeps its row in place, by the status it moved to.
+type KeptStatus = 'approved' | 'rejected';
 
 // "Service-uri de verificat": the files waiting for an admin, oldest first,
 // read again whenever one is sent, opened, checked, decided or reopened. On
@@ -85,24 +87,27 @@ export class AdminQueue {
     return this.stale() ? `${count} ${this.t('stale')}` : count;
   });
 
-  // Rows approved while shown, kept where they stood until the view closes;
-  // outside the count and the page size, which are the server's.
-  private readonly approved = signal<
-    ReadonlyMap<string, { index: number; row: VerificationQueueRowDto }>
+  // Rows approved or rejected while shown, kept where they stood until the
+  // view closes; outside the count and the page size, which are the server's.
+  private readonly kept = signal<
+    ReadonlyMap<
+      string,
+      { index: number; row: VerificationQueueRowDto; status: KeptStatus }
+    >
   >(new Map());
 
   private readonly now = signal(new Date());
   protected readonly rows = computed(() => {
     const now = this.now();
-    const approved = this.approved();
+    const kept = this.kept();
     const rows = (this.queue.value()?.items ?? [])
-      .filter((row) => !approved.has(row.id))
+      .filter((row) => !kept.has(row.id))
       .map((row) => this.row(row, now));
-    const kept = [...approved.values()].sort((a, b) => a.index - b.index);
-    for (const { index, row } of kept) {
+    const decided = [...kept.values()].sort((a, b) => a.index - b.index);
+    for (const { index, row, status } of decided) {
       rows.splice(Math.min(index, rows.length), 0, {
         ...this.row(row, now),
-        approved: this.t('approved'),
+        decided: { line: this.t(status), status },
       });
     }
     return rows;
@@ -124,10 +129,26 @@ export class AdminQueue {
     this.queue.reload();
   }
 
-  private read(wanted: number): Promise<VerificationQueueDto> {
-    return pagedRead(wanted, (page) =>
+  private async read(wanted: number): Promise<VerificationQueueDto> {
+    const next = await pagedRead(wanted, (page) =>
       this.api.adminOverviewControllerQueue(page),
     );
+    this.remember();
+    return next;
+  }
+
+  // Every row shown since the view opened, where it last stood: a re-read for
+  // another file's event can drop a row before its own decision arrives.
+  private readonly seen = new Map<
+    string,
+    { index: number; row: VerificationQueueRowDto }
+  >();
+  private remember() {
+    const shown = this.rows();
+    for (const row of this.queue.value()?.items ?? []) {
+      const index = shown.findIndex((item) => item.id === row.id);
+      this.seen.set(row.id, { index, row });
+    }
   }
 
   private t(key: string, params?: Record<string, string | number>) {
@@ -144,7 +165,6 @@ export class AdminQueue {
         : row.area?.name;
     return {
       applied: appliedAt(row.submittedAt, language, now),
-      approved: undefined as string | undefined,
       area: [
         area,
         counted('brands', row.brands),
@@ -154,6 +174,7 @@ export class AdminQueue {
       ]
         .filter(Boolean)
         .join(' · '),
+      decided: undefined as { line: string; status: KeptStatus } | undefined,
       id: row.id,
       lamp: row.lamp,
       link: [LIST, row.id],
@@ -165,21 +186,27 @@ export class AdminQueue {
   }
 
   // A decision on a shown row: the message names no outcome, so the file is
-  // read; an approved one keeps its row, any other leaves it to drop.
-  private keepApproved() {
+  // read; an approved or rejected one keeps its row, any other (more asked
+  // for) leaves it to drop.
+  private keepDecided() {
     inject(Live)
       .on(['verification.decided'])
       .pipe(takeUntilDestroyed())
       .subscribe(({ id }) => {
+        if (this.kept().has(id)) return;
         const row = this.queue.value()?.items.find((item) => item.id === id);
-        if (!row || this.approved().has(id)) return;
         // Where it stands on screen, rows kept earlier included.
-        const index = this.rows().findIndex((shown) => shown.id === id);
+        const place = row
+          ? { index: this.rows().findIndex((item) => item.id === id), row }
+          : this.seen.get(id);
+        if (!place) return;
         this.api.verificationFileControllerRead({ id }).then(
+          // A read with no file is treated as a failed one.
           ({ file }) => {
-            if (file.status !== 'approved') return;
-            this.approved.update((kept) =>
-              new Map(kept).set(id, { index, row }),
+            const status = file?.status;
+            if (status !== 'approved' && status !== 'rejected') return;
+            this.kept.update((kept) =>
+              new Map(kept).set(id, { ...place, status }),
             );
           },
           // A failed read leaves the row to drop, as before this story.
@@ -237,7 +264,7 @@ export class AdminQueue {
   constructor() {
     void this.i18n.enter('admin');
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-    this.keepApproved();
+    this.keepDecided();
     if (!this.overview) this.openFiles();
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));

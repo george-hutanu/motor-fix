@@ -1,9 +1,13 @@
 // @traces 103-FR-006 103-FR-007 103-FR-008 103-FR-009 103-FR-010 103-FR-013
+// @traces 404-FR-007 404-FR-008 404-FR-010 404-FR-011
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { type AdminDemandDto, AdminService } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { formatDay, I18n } from '@motor-fix/i18n';
 
 import { AdminDemand } from './admin-demand';
 
@@ -34,7 +38,14 @@ const BRANDS = [
   'Hyundai',
   'Mercedes-Benz',
   'Peugeot',
-].map((name, i) => ({ name, requests: 2140 - i * 100 }));
+]
+  .map((name, i) => ({
+    name,
+    requests: 2140 - i * 100,
+    searches: 1000 + i * 100,
+  }))
+  .reverse()
+  .concat({ name: 'Lada', requests: 0, searches: 50 });
 
 const JOBS = [
   { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne', requests: 1200 },
@@ -47,6 +58,8 @@ const FULL: AdminDemandDto = {
   jobs: JOBS,
   lastDay: '2026-10-17',
   requests: BRANDS.reduce((sum, b) => sum + b.requests, 0),
+  searches: BRANDS.reduce((sum, b) => sum + b.searches, 0),
+  searchesFrom: '2026-10-11',
 };
 
 let answer: () => Promise<AdminDemandDto>;
@@ -92,6 +105,7 @@ async function open(
   if (options.language === 'en') await TestBed.inject(I18n).use('en');
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.overview.set(options.overview ?? false);
+  document.body.replaceChildren(fixture.nativeElement);
   await settle();
   return fixture.nativeElement as HTMLElement;
 }
@@ -126,10 +140,10 @@ describe('AdminDemand, the view', () => {
     const el = await open();
 
     expect(el.querySelector('.subtitle')?.textContent?.trim()).toBe(
-      'Ce au cerut șoferii în ultimele 30 de zile',
+      'Ce au căutat și ce au cerut șoferii în ultimele 30 de zile',
     );
     expect(titles(el)).toEqual([
-      'Cereri pe marcă, 30 de zile',
+      'Căutări și cereri pe marcă, 30 de zile',
       'Cereri pe lucrare, 30 de zile',
     ]);
     for (const chart of charts(el))
@@ -137,13 +151,13 @@ describe('AdminDemand, the view', () => {
     expect(el.querySelector('.subtitle')).toBe(el.querySelector('p, h2'));
   });
 
-  it('draws the top 10 brands most first, grouping the counts', async () => {
+  it('draws the top 10 brands most searched first, with both counts grouped', async () => {
     const el = await open();
 
     const rows = await tableOf(charts(el)[0]);
     expect(rows).toHaveLength(10);
-    expect(rows[0]).toEqual(['Dacia', '2.140']);
-    expect(rows[9]).toEqual(['Hyundai', '1.240']);
+    expect(rows[0]).toEqual(['Peugeot', '2.100', '1.040']);
+    expect(rows[9]).toEqual(['Renault', '1.200', '1.940']);
   });
 
   it('heads each table by what it lists, in either language', async () => {
@@ -154,12 +168,16 @@ describe('AdminDemand, the view', () => {
       );
     };
     const ro = await open();
-    expect(await heads(charts(ro)[0])).toEqual(['Marcă', 'Valoare']);
+    expect(await heads(charts(ro)[0])).toEqual(['Marcă', 'Căutări', 'Cereri']);
     expect(await heads(charts(ro)[1])).toEqual(['Lucrare', 'Valoare']);
     TestBed.resetTestingModule();
 
     const en = await open({ language: 'en' });
-    expect(await heads(charts(en)[0])).toEqual(['Brand', 'Value']);
+    expect(await heads(charts(en)[0])).toEqual([
+      'Brand',
+      'Searches',
+      'Requests',
+    ]);
     expect(await heads(charts(en)[1])).toEqual(['Job', 'Value']);
   });
 
@@ -187,9 +205,9 @@ describe('AdminDemand, the view', () => {
     expect(all.textContent?.trim()).toBe('Arată mai puține');
     expect(all.getAttribute('aria-expanded')).toBe('true');
     const list = listOf(brands);
-    expect(list).toHaveLength(12);
-    expect(list[0]).toEqual(['Dacia', '2.140']);
-    expect(list[11]).toEqual(['Peugeot', '1.040']);
+    expect(list).toHaveLength(13);
+    expect(list[0]).toEqual(['Peugeot', 'Căutări 2.100 · Cereri 1.040']);
+    expect(list[12]).toEqual(['Lada', 'Căutări 50 · Cereri 0']);
     const controlled = all.getAttribute('aria-controls');
     expect(controlled && el.querySelector(`[id="${controlled}"]`)).toBeTruthy();
 
@@ -223,13 +241,17 @@ describe('AdminDemand, the view', () => {
     const el = await open({ language: 'en' });
 
     expect(el.querySelector('.subtitle')?.textContent?.trim()).toBe(
-      'What drivers asked for in the last 30 days',
+      'What drivers searched for and asked for in the last 30 days',
     );
     expect(titles(el)).toEqual([
-      'Requests by brand, 30 days',
+      'Searches and requests by brand, 30 days',
       'Requests by job, 30 days',
     ]);
-    expect((await tableOf(charts(el)[0]))[0]).toEqual(['Dacia', '2,140']);
+    expect((await tableOf(charts(el)[0]))[0]).toEqual([
+      'Peugeot',
+      '2,100',
+      '1,040',
+    ]);
     expect(buttonsNamed(el, 'See all brands')).toHaveLength(1);
 
     await TestBed.inject(I18n).use('ro');
@@ -264,10 +286,19 @@ describe('AdminDemand, the view', () => {
     expect(reads).toBe(2);
     expect(el.querySelectorAll('canvas')).toHaveLength(2);
     expect(buttonsNamed(el, 'Reîncearcă')).toHaveLength(0);
+    expect(el.querySelector('.from')?.textContent?.trim()).toBe(
+      `Căutările se numără de la ${formatDay('2026-10-11', 'ro')}`,
+    );
   });
 
-  it('says there are no requests yet in both reports for an empty window', async () => {
-    answer = async () => ({ ...FULL, brands: [], jobs: [], requests: 0 });
+  it('says there are no searches or requests in the brand report, and no requests in the job report', async () => {
+    answer = async () => ({
+      ...FULL,
+      brands: [],
+      jobs: [],
+      requests: 0,
+      searches: 0,
+    });
     const el = await open();
 
     expect(
@@ -275,7 +306,7 @@ describe('AdminDemand, the view', () => {
         m.textContent?.trim(),
       ),
     ).toEqual([
-      'Încă nu sunt cereri în ultimele 30 de zile.',
+      'Încă nu sunt căutări sau cereri în ultimele 30 de zile.',
       'Încă nu sunt cereri în ultimele 30 de zile.',
     ]);
     expect(el.querySelector('canvas')).toBeNull();
@@ -299,12 +330,15 @@ describe('AdminDemand, the overview panel', () => {
   it('shows only the brand report, with the top 8 brands and no full list', async () => {
     const el = await open({ overview: true });
 
-    expect(titles(el)).toEqual(['Cereri pe marcă, 30 de zile']);
+    expect(titles(el)).toEqual(['Căutări și cereri pe marcă, 30 de zile']);
     expect(el.querySelector('.subtitle')).toBeNull();
     const rows = await tableOf(charts(el)[0]);
     expect(rows).toHaveLength(8);
-    expect(rows[7]).toEqual(['Toyota', '1.440']);
+    expect(rows[0]).toEqual(['Peugeot', '2.100', '1.040']);
+    expect(rows[7]).toEqual(['Skoda', '1.400', '1.740']);
     expect(buttonsNamed(el, 'Vezi toate mărcile')).toHaveLength(0);
+    expect(el.querySelector('[role="group"]')).toBeNull();
+    expect(el.querySelector('.from')).toBeNull();
   });
 
   it('has the same loading, failed and empty states', async () => {
@@ -320,10 +354,196 @@ describe('AdminDemand, the overview panel', () => {
     expect(buttonsNamed(el, 'Reîncearcă')).toHaveLength(1);
     TestBed.resetTestingModule();
 
-    answer = async () => ({ ...FULL, brands: [], jobs: [], requests: 0 });
+    answer = async () => ({
+      ...FULL,
+      brands: [],
+      jobs: [],
+      requests: 0,
+      searches: 0,
+    });
     el = await open({ overview: true });
     expect(el.textContent).toContain(
-      'Încă nu sunt cereri în ultimele 30 de zile.',
+      'Încă nu sunt căutări sau cereri în ultimele 30 de zile.',
+    );
+  });
+});
+
+// @traces 404-FR-009 404-FR-012
+describe('AdminDemand, the order toggle', () => {
+  const group = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[role="group"]');
+  const nameOf = (node: HTMLElement | null) =>
+    node?.getAttribute('aria-label') ??
+    document
+      .getElementById(node?.getAttribute('aria-labelledby') ?? '')
+      ?.textContent?.trim();
+  const choices = (el: HTMLElement) => [
+    ...(group(el)?.querySelectorAll('button') ?? []),
+  ];
+  const pressed = (el: HTMLElement) =>
+    choices(el).map((b) => [
+      b.textContent?.trim(),
+      b.getAttribute('aria-pressed'),
+    ]);
+  const press = async (el: HTMLElement, name: string) => {
+    const button = choices(el).find((b) => b.textContent?.trim() === name);
+    button?.focus();
+    button?.click();
+    await settle();
+    return button;
+  };
+
+  it('offers searches and requests as two buttons before the brand chart, searches pressed', async () => {
+    const el = await open();
+
+    expect(nameOf(group(el))).toBe('Ordonează după');
+    expect(choices(el).every((b) => b.type === 'button')).toBe(true);
+    expect(pressed(el)).toEqual([
+      ['căutări', 'true'],
+      ['cereri', 'false'],
+    ]);
+    expect(
+      (group(el)?.compareDocumentPosition(charts(el)[0]) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('re-sorts the bars, the full list and the table by requests, and back, without a new read', async () => {
+    const el = await open();
+
+    const button = await press(el, 'cereri');
+
+    expect(pressed(el)).toEqual([
+      ['căutări', 'false'],
+      ['cereri', 'true'],
+    ]);
+    expect(document.activeElement).toBe(button);
+    const rows = await tableOf(charts(el)[0]);
+    expect(rows).toHaveLength(10);
+    expect(rows[0]).toEqual(['Dacia', '1.000', '2.140']);
+    expect(rows[9]).toEqual(['Hyundai', '1.900', '1.240']);
+    buttonsNamed(el, 'Vezi toate mărcile')[0].click();
+    await settle();
+    expect(listOf(charts(el)[0]).at(-1)).toEqual([
+      'Lada',
+      'Căutări 50 · Cereri 0',
+    ]);
+    expect(listOf(charts(el)[0])[0]).toEqual([
+      'Dacia',
+      'Căutări 1.000 · Cereri 2.140',
+    ]);
+
+    await press(el, 'căutări');
+
+    // The table is still open from the first read of it.
+    expect(
+      [...charts(el)[0].querySelectorAll('tbody tr td')]
+        .slice(0, 3)
+        .map((td) => td.textContent?.trim()),
+    ).toEqual(['Peugeot', '2.100', '1.040']);
+    expect(reads).toBe(1);
+  });
+
+  it('breaks a tie on requests by searches, then by name', async () => {
+    answer = async () => ({
+      ...FULL,
+      brands: [
+        { name: 'audi', requests: 5, searches: 1 },
+        { name: 'BMW', requests: 5, searches: 1 },
+        { name: 'Opel', requests: 5, searches: 3 },
+      ],
+    });
+    const el = await open();
+
+    await press(el, 'cereri');
+
+    expect((await tableOf(charts(el)[0])).map(([name]) => name)).toEqual([
+      'Opel',
+      'BMW',
+      'audi',
+    ]);
+  });
+
+  it('keeps the chosen order across a retry', async () => {
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 500 });
+    };
+    const el = await open();
+    await press(el, 'cereri');
+
+    answer = async () => FULL;
+    buttonsNamed(el, 'Reîncearcă')[0].click();
+    await settle();
+
+    expect(pressed(el)[1]).toEqual(['cereri', 'true']);
+    expect((await tableOf(charts(el)[0]))[0][0]).toBe('Dacia');
+  });
+
+  it('is named in English too', async () => {
+    const el = await open({ language: 'en' });
+
+    expect(nameOf(group(el))).toBe('Order by');
+    expect(pressed(el)).toEqual([
+      ['searches', 'true'],
+      ['requests', 'false'],
+    ]);
+  });
+});
+
+// @traces 404-FR-005 404-FR-010
+describe('AdminDemand, since when searches are counted', () => {
+  it('says the day searches are counted from right under the subtitle', async () => {
+    const el = await open();
+    const line = el.querySelector('.subtitle')?.nextElementSibling;
+
+    expect(line?.classList.contains('from')).toBe(true);
+    expect(line?.textContent?.trim()).toBe(
+      `Căutările se numără de la ${formatDay('2026-10-11', 'ro')}`,
+    );
+
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(el.querySelector('.from')?.textContent?.trim()).toBe(
+      `Searches are counted from ${formatDay('2026-10-11', 'en')}`,
+    );
+  });
+
+  it('says nothing when searches cover the whole window', async () => {
+    answer = async () => ({ ...FULL, searchesFrom: undefined });
+    const el = await open();
+
+    expect(el.querySelector('.from')).toBeNull();
+  });
+});
+
+// @traces 404-FR-011
+describe('AdminDemand, read on a phone', () => {
+  const stylesheet = readFileSync(join(__dirname, 'admin-demand.css'), 'utf8');
+  const phone =
+    stylesheet.match(/@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/)?.[1] ??
+    '';
+
+  it('sets the counted-from line and the order label at 16 px on a phone', () => {
+    expect(phone).toMatch(
+      /\.from,\s*\.order-label\s*\{[^}]*font-size:\s*var\(--mf-size-body\);/,
+    );
+  });
+
+  it('keeps the two order buttons together as one control, the label free to wrap above it', async () => {
+    const el = await open();
+    const options = el.querySelector('[role="group"] .order-options');
+
+    expect(options?.querySelectorAll('button')).toHaveLength(2);
+    expect(stylesheet).toMatch(/\.order\s*\{[^}]*flex-wrap:\s*wrap;/);
+    expect(stylesheet).toMatch(
+      /\.order-options\s*\{[^}]*display:\s*inline-flex;[^}]*flex-wrap:\s*nowrap;/,
+    );
+  });
+
+  it('keeps the subtitle, the counted-from line and the toggle off the screen edge', () => {
+    expect(stylesheet).toMatch(
+      /\.subtitle,\s*\.from,\s*\.order\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
     );
   });
 });

@@ -1,4 +1,5 @@
 // @traces 103-FR-006 103-FR-008 103-FR-009 103-FR-011 103-FR-012
+// @traces 404-FR-008 404-FR-009 404-FR-010 404-FR-011 404-FR-013
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
@@ -10,9 +11,10 @@ const sideways = (page: Page) =>
 // The suite also runs against a deployed address, so the demand is stubbed.
 const DEMAND = {
   brands: [
-    { name: 'Dacia', requests: 2140 },
-    { name: 'Volkswagen', requests: 880 },
-    { name: 'Renault', requests: 412 },
+    { name: 'Dacia', requests: 2140, searches: 8900 },
+    { name: 'BMW', requests: 0, searches: 2600 },
+    { name: 'Volkswagen', requests: 880, searches: 1200 },
+    { name: 'Renault', requests: 412, searches: 0 },
   ],
   firstDay: '2026-09-18',
   jobs: [
@@ -26,6 +28,8 @@ const DEMAND = {
   ],
   lastDay: '2026-10-17',
   requests: 3432,
+  searches: 12700,
+  searchesFrom: '2026-10-11',
 };
 
 const stubDemand = (page: Page) =>
@@ -78,22 +82,50 @@ const expectTable = async (
 
 const COPY = {
   en: {
-    brands: 'Requests by brand, 30 days',
+    brands: 'Searches and requests by brand, 30 days',
+    byRequests: 'requests',
+    from: /^Searches are counted from .*2026$/,
     jobs: 'Requests by job, 30 days',
+    orderBy: 'Order by',
     rows: {
-      brands: ['Dacia\t2,140', 'Volkswagen\t880', 'Renault\t412'],
+      brands: [
+        'Dacia\t8,900\t2,140',
+        'BMW\t2,600\t0',
+        'Volkswagen\t1,200\t880',
+        'Renault\t0\t412',
+      ],
+      byRequests: [
+        'Dacia\t8,900\t2,140',
+        'Volkswagen\t1,200\t880',
+        'Renault\t0\t412',
+        'BMW\t2,600\t0',
+      ],
       jobs: ['Brakes\t1,900', 'Oil change\t1,532'],
     },
-    subtitle: 'What drivers asked for in the last 30 days',
+    subtitle: 'What drivers searched for and asked for in the last 30 days',
   },
   ro: {
-    brands: 'Cereri pe marcă, 30 de zile',
+    brands: 'Căutări și cereri pe marcă, 30 de zile',
+    byRequests: 'cereri',
+    from: /^Căutările se numără de la .*2026$/,
     jobs: 'Cereri pe lucrare, 30 de zile',
+    orderBy: 'Ordonează după',
     rows: {
-      brands: ['Dacia\t2.140', 'Volkswagen\t880', 'Renault\t412'],
+      brands: [
+        'Dacia\t8.900\t2.140',
+        'BMW\t2.600\t0',
+        'Volkswagen\t1.200\t880',
+        'Renault\t0\t412',
+      ],
+      byRequests: [
+        'Dacia\t8.900\t2.140',
+        'Volkswagen\t1.200\t880',
+        'Renault\t0\t412',
+        'BMW\t2.600\t0',
+      ],
       jobs: ['Frâne\t1.900', 'Schimb ulei\t1.532'],
     },
-    subtitle: 'Ce au cerut șoferii în ultimele 30 de zile',
+    subtitle: 'Ce au căutat și ce au cerut șoferii în ultimele 30 de zile',
   },
 } as const;
 
@@ -120,11 +152,29 @@ test.describe('requests by brand and by job @seeded', () => {
         await expect(
           overview.getByRole('region', { exact: true, name: copy.jobs }),
         ).toHaveCount(0);
+        await expect(
+          overview.getByRole('group', { name: copy.orderBy }),
+        ).toHaveCount(0);
+        await expect(overview.getByText(copy.from)).toHaveCount(0);
+        await expectTable(page, copy.brands, copy.rows.brands);
         expect(await sideways(page)).toBeLessThanOrEqual(0);
 
         await page.goto('/app/admin/catalogue');
         await expect(page.getByText(copy.subtitle)).toBeVisible();
+        await expect(page.getByText(copy.from)).toBeVisible();
         await expectTable(page, copy.brands, copy.rows.brands);
+        await page
+          .getByRole('group', { name: copy.orderBy })
+          .getByRole('button', { exact: true, name: copy.byRequests })
+          .click();
+        await expect
+          .poll(() =>
+            page
+              .getByRole('region', { exact: true, name: copy.brands })
+              .locator('tbody tr')
+              .allInnerTexts(),
+          )
+          .toEqual(copy.rows.byRequests);
         await expectTable(page, copy.jobs, copy.rows.jobs);
         // One column below 768 px, side by side from it.
         const [brands, jobs] = await Promise.all(

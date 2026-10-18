@@ -411,7 +411,8 @@ export class OverlayPanel {
           // Closed while it was loading: nothing left to show it in.
           if (this.destroyed.destroyed) return;
           this.task.set(component);
-          this.afterRender(() => this.focusStart());
+          // A person who tabbed to the X while it loaded keeps the focus there.
+          this.taskApi.focusStart();
         },
         () => {
           if (this.destroyed.destroyed) return;

@@ -104,12 +104,16 @@ describe('release workflow', () => {
     },
   );
 
-  it('promotes to production only after images and staging pass', () => {
+  // @traces 1348-FR-001 1348-FR-002
+  it('promotes to production only after images and staging pass, and only while it is on', () => {
     const block = job('production');
+    const condition = setting(block, 'if');
 
+    expect(condition).toBe("vars.PRODUCTION_ENABLED == 'true'");
+    expect(condition).not.toMatch(/needs\.|success\(|failure\(|always\(/);
     expect(setting(block, 'needs')).toBe('[images, staging]');
     expect(setting(block, 'environment')).toBe('production');
-    expect(block).not.toMatch(/^ +if:/m);
+    expect(setting(block, 'group')).toBe('release-production');
     expect(block).toContain(
       'run: exec node scripts/railway-deploy.ts production',
     );

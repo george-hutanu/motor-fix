@@ -11403,14 +11403,21 @@
           },
           "requests": {
             "type": "integer",
-            "description": "Requests for the brand in the window",
+            "description": "Requests for the brand in the window; 0 for a brand only searched",
             "example": 412,
-            "minimum": 1
+            "minimum": 0
+          },
+          "searches": {
+            "type": "integer",
+            "description": "Logged searches for the brand in the window; 0 for a brand only requested",
+            "example": 8900,
+            "minimum": 0
           }
         },
         "required": [
           "name",
-          "requests"
+          "requests",
+          "searches"
         ]
       },
       "AdminDemandJobDto": {
@@ -11464,8 +11471,20 @@
             "example": 1240,
             "minimum": 0
           },
+          "searches": {
+            "type": "integer",
+            "description": "Searches logged in the window; the sum of the brands' searches",
+            "example": 12900,
+            "minimum": 0
+          },
+          "searchesFrom": {
+            "type": "string",
+            "description": "The Europe/Bucharest day searches are counted from, when it falls after firstDay: the day of the earliest logged search, or lastDay when none was ever logged",
+            "example": "2026-10-11",
+            "format": "date"
+          },
           "brands": {
-            "description": "Every brand with a request in the window, most first, then by name in code-point order",
+            "description": "Every brand searched or requested in the window, most searched first, then most requested, then by name in code-point order",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminDemandBrandDto"
@@ -11483,6 +11502,7 @@
           "firstDay",
           "lastDay",
           "requests",
+          "searches",
           "brands",
           "jobs"
         ]

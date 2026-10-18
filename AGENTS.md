@@ -478,9 +478,11 @@ source for anything the constitution does not fix.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   core flows there (tests tagged `@core`: search to a quote request, the
-  quote, a listing to its approval; `--grep @core`), and promotes the same digests to production with
-  no manual approval: a merge reaches production only when CI and staging
-  both passed. Release checks run one at a time (`release-checks`); a waiting
+  quote, a listing to its approval; `--grep @core`), and promotes the same
+  digests to production while the repository variable `PRODUCTION_ENABLED`
+  is `true` (the owner sets it; unset is off, and the production job is
+  skipped before it binds its environment): a merge reaches production only
+  when CI and staging both passed. Release checks run one at a time (`release-checks`); a waiting
   one is replaced by the newest merge, which carries it. The full suite
   against staging runs by hand: `BASE_URL=<staging> E2E_PASSWORD=<seed
   password> npx nx run web-e2e:e2e`.

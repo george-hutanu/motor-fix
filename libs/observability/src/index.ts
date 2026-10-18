@@ -1,3 +1,4 @@
+export { KEYCLOAK_LIMIT_MS } from './datastores/keycloak';
 export { observeDataStores } from './datastores/observe';
 export type { MonitorSession } from './datastores/postgres';
 export { logEntry } from './log/log';
