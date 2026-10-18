@@ -30,6 +30,8 @@ import { FileUploader } from '@motor-fix/media';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 import { defer, map, type Subscription } from 'rxjs';
 
+import { measure } from '../../../telemetry/browser/measure/measure';
+
 const RULE = FILE_RULES.legal_document;
 const TYPES: readonly string[] = RULE.types;
 
@@ -78,6 +80,8 @@ export class DocumentArea {
 
   private nextId = 0;
   private readonly sending = new Map<number, Subscription>();
+  // When each page was first sent, for the measured duration.
+  private readonly started = new Map<number, number>();
 
   constructor() {
     effect(() => {
@@ -198,6 +202,7 @@ export class DocumentArea {
       'x-listing-token': token,
     };
     this.patch(id, { progress: 0, status: 'uploading' });
+    if (!this.started.has(id)) this.started.set(id, Date.now());
     const sub = this.uploader
       .upload(
         file,
@@ -219,6 +224,9 @@ export class DocumentArea {
       .subscribe({
         error: (error: unknown) => {
           this.sending.delete(id);
+          const offline =
+            error instanceof HttpErrorResponse && error.status === 0;
+          if (!offline) this.measure('failed');
           if (
             error instanceof HttpErrorResponse &&
             error.status === HttpStatusCode.UnprocessableEntity
@@ -226,8 +234,6 @@ export class DocumentArea {
             this.refuse(id, error.error?.code === 'document_full');
             return;
           }
-          const offline =
-            error instanceof HttpErrorResponse && error.status === 0;
           this.patch(id, { status: offline ? 'waiting' : 'failed' });
         },
         next: (event) => {
@@ -237,6 +243,9 @@ export class DocumentArea {
           }
           if (!('done' in event)) return;
           this.sending.delete(id);
+          const started = this.started.get(id) ?? Date.now();
+          this.started.delete(id);
+          this.measure('sent', { duration: Math.max(0, Date.now() - started) });
           this.patch(id, { key: event.done, status: 'ready' });
           this.setShown(this.shown());
           const n = this.shown().findIndex((p) => p.id === id) + 1;
@@ -244,6 +253,13 @@ export class DocumentArea {
         },
       });
     this.sending.set(id, sub);
+  }
+
+  private measure(
+    outcome: 'sent' | 'failed',
+    values: Record<string, number> = {},
+  ) {
+    measure('upload', values, { outcome, purpose: 'legal_document' });
   }
 
   // The keys came from the page: a reload, another device or the link.
