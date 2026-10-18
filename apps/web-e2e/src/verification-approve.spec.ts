@@ -186,9 +186,12 @@ test.describe('approving and publishing a garage @seeded', () => {
         .filter({ hasText: 'Every check is ok.' });
       await expect(dialog).toBeVisible();
       expect(await confirmLines(page, dialog)).toBe(1);
-      // On a phone the actions stack full width, one text size for both.
+      // On a phone the actions stack full width. Cancel keeps the body size,
+      // as every other sheet's buttons do; only the wide label face of the
+      // confirm takes the small size, which keeps it on one line.
       const [cancel, confirm] = await actionFaces(dialog);
-      expect(confirm?.size).toBe(cancel?.size);
+      expect(cancel?.size).toBe('16px');
+      expect(confirm?.size).toBe('13px');
       expect(confirm?.width).toBe(cancel?.width);
       expect(await sideways(page)).toBe(0);
     });

@@ -50,7 +50,8 @@ textarea {
 }
 /* On a phone the dialog is a bottom sheet (below the overlays' 768 px). The label face is wide: at the full size
    "Approve and publish" needs a 405 px sheet. So the actions stack at the sheet's width, confirm nearest the thumb,
-   and both take the small size, which keeps the label on one line in a 320 px sheet. */
+   and only the confirm's label face takes the small size at half the label tracking, which keeps it on one line in a
+   320 px sheet. Cancel is set in the body face and keeps the body size, as every other sheet's buttons do. */
 @media (max-width: 767px) {
   .actions {
     flex-direction: column;
@@ -58,9 +59,9 @@ textarea {
   }
   .actions button {
     padding-inline: var(--mf-space-3);
-    font-size: var(--mf-size-small);
   }
   .actions button[type="submit"] {
-    letter-spacing: 0.08em;
+    font-size: var(--mf-size-small);
+    letter-spacing: calc(var(--mf-label-tracking) / 2);
   }
 }
