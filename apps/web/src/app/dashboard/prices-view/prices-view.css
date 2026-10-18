@@ -22,6 +22,29 @@ h2 {
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
 }
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.toggle,
+.edit {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.edit {
+  min-width: var(--mf-tap);
+}
+.brand,
+.labour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-3);
+}
 .rows,
 .brands {
   display: flex;

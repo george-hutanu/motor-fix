@@ -71,9 +71,33 @@
     "stepsDone": "{done} of {total} done"
   },
   "prices": {
+    "done": "Done",
+    "edit": "Edit",
+    "editAll": "Edit prices",
+    "editor": {
+      "bothEnds": "Both ends are needed",
+      "cancel": "Cancel",
+      "duration": {
+        "integer": "Whole minutes only",
+        "label": "Duration",
+        "max": "At most 4,800 minutes (80 hours)",
+        "min": "At least 15 minutes",
+        "step": "In steps of 15 minutes"
+      },
+      "from": "From",
+      "minutes": "min",
+      "problem": {
+        "not_found": "The job is no longer on the list.",
+        "stale": "The list changed in the meantime. The saved values are back; check them and save again."
+      },
+      "save": "Save",
+      "to": "To"
+    },
+    "editRow": "Edit {name}",
     "empty": "No jobs in your list yet.",
     "from": "from {amount}",
     "labour": "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.",
+    "labourUnset": "Labour: not set",
     "retry": "Try again",
     "state": {
       "awaiting_approval": "hidden · awaiting approval",

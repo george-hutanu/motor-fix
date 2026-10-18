@@ -1,0 +1,76 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="sending() ? 'true' : null">
+  <div class="prices">
+    <div class="field">
+      <label for="mf-range-from">{{ 'garage.prices.editor.from' | t }}</label>
+      <div class="amount">
+        <input
+          hlmInput
+          id="mf-range-from"
+          type="text"
+          autocomplete="off"
+          [mfLei]="bani(f.from)"
+          (mfLeiChange)="typed(f.from, $event)"
+          (blur)="left(f.from)"
+          [attr.disabled]="sending() ? '' : null"
+          aria-describedby="mf-range-from-said"
+          [attr.aria-invalid]="problem(f.from) ? 'true' : null"
+        />
+        <span class="unit" aria-hidden="true">{{ 'public.listing.prices.lei' | t }}</span>
+      </div>
+      <p class="said mf-message" [class.error]="problem(f.from)" id="mf-range-from-said" role="status">{{ said(f.from) }}</p>
+    </div>
+    <div class="field">
+      <label for="mf-range-to">{{ 'garage.prices.editor.to' | t }}</label>
+      <div class="amount">
+        <input
+          hlmInput
+          id="mf-range-to"
+          type="text"
+          autocomplete="off"
+          [mfLei]="bani(f.to)"
+          (mfLeiChange)="typed(f.to, $event)"
+          (blur)="left(f.to)"
+          [attr.disabled]="sending() ? '' : null"
+          aria-describedby="mf-range-to-said"
+          [attr.aria-invalid]="problem(f.to) ? 'true' : null"
+        />
+        <span class="unit" aria-hidden="true">{{ 'public.listing.prices.lei' | t }}</span>
+      </div>
+      <p
+        class="said mf-message"
+        [class.error]="problem(f.to)"
+        [class.warning]="!problem(f.to) && said(f.to)"
+        id="mf-range-to-said"
+        role="status"
+      >{{ said(f.to) }}</p>
+    </div>
+  </div>
+  @if (timed) {
+    <div class="field">
+      <label for="mf-range-duration">{{ 'garage.prices.editor.duration.label' | t }}</label>
+      <div class="amount">
+        <input
+          hlmInput
+          id="mf-range-duration"
+          type="number"
+          inputmode="numeric"
+          min="15"
+          max="4800"
+          step="15"
+          formControlName="durationMinutes"
+          (blur)="left(f.duration)"
+          [attr.disabled]="sending() ? '' : null"
+          aria-describedby="mf-range-duration-said"
+          [attr.aria-invalid]="problem(f.duration) ? 'true' : null"
+        />
+        <span class="unit" aria-hidden="true">{{ 'garage.prices.editor.minutes' | t }}</span>
+      </div>
+      <p class="said mf-message" [class.error]="problem(f.duration)" id="mf-range-duration-said" role="status">{{ said(f.duration) }}</p>
+    </div>
+  }
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.prices.editor.cancel' | t }}</button>
+    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="blocked()">{{ 'garage.prices.editor.save' | t }}</button>
+  </div>
+</form>

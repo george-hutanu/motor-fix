@@ -1,5 +1,16 @@
 <section class="panel">
-  <h2>{{ 'garage.prices.title' | t }}</h2>
+  <header class="head">
+    <h2>{{ 'garage.prices.title' | t }}</h2>
+    @if (owner() && view.value()) {
+      <button hlmBtn variant="secondary" type="button" class="toggle" [attr.aria-pressed]="editing()" (click)="editing.set(!editing())">
+        @if (editing()) {
+          {{ 'garage.prices.done' | t }}
+        } @else {
+          {{ 'garage.prices.editAll' | t }}
+        }
+      </button>
+    }
+  </header>
   @if (view.value(); as list) {
     @if (list.items.length) {
       <ul class="rows">
@@ -9,6 +20,9 @@
               <span class="name" data-name>{{ name(row) }}</span>
               @if (duration(row); as time) {
                 <span class="muted" data-duration>{{ time }}</span>
+              }
+              @if (editing() && owner()) {
+                <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) }" (click)="editRow(row)">{{ 'garage.prices.edit' | t }}</button>
               }
             </span>
             <span class="line meta">
@@ -21,15 +35,25 @@
             @if (row.brandRanges.length) {
               <ul class="brands">
                 @for (brand of row.brandRanges; track brand.brandId) {
-                  <li data-brand>{{ brand.name }} · {{ price(brand) }}</li>
+                  <li data-brand class="brand">
+                    {{ brand.name }} · {{ price(brand) }}
+                    @if (editing() && owner()) {
+                      <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) + ' · ' + brand.name }" (click)="editBrand(row, brand)">{{ 'garage.prices.edit' | t }}</button>
+                    }
+                  </li>
                 }
               </ul>
             }
           </li>
         }
       </ul>
-      @if (list.labour; as rate) {
-        <p class="muted" data-labour>{{ labour(rate) }}</p>
+      @if (list.labour || (editing() && owner())) {
+        <p class="muted labour" data-labour>
+          {{ list.labour ? labour(list.labour) : ('garage.prices.labourUnset' | t) }}
+          @if (editing() && owner()) {
+            <button hlmBtn variant="secondary" type="button" class="edit" [attr.aria-label]="'garage.prices.editRow' | t: { name: ('public.listing.prices.labour' | t) }" (click)="editLabour(list.labour)">{{ 'garage.prices.edit' | t }}</button>
+          }
+        </p>
       }
     } @else {
       <p class="muted">{{ 'garage.prices.empty' | t }}</p>
