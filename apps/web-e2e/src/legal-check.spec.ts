@@ -1,58 +1,48 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { expect } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
-const SLUG = 'atelier-test';
-
-// The seed approves the owner's garage with no verification file, so the
-// test gives it an approved one, with every check in order, both legal
-// documents valid and its last check day, and removes them afterwards.
+// An approved garage and its owner of this file's own: the seed leaves the
+// shared owner's garage a draft, and another spec gives it a live file of
+// its own, so the test builds its garage with an approved file, every check
+// in order, both legal documents valid and its last check day, and removes
+// them afterwards. A deployed address, whose run has no DATABASE_URL, skips
+// the file.
 test.describe('the legal check panel @seeded', () => {
-  let db: Client;
-  let fileId: string | undefined;
-  let lastCheckedOn: string | null = null;
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its garage, file and owner straight to PostgreSQL, which needs DATABASE_URL',
+  );
 
-  test.beforeAll(async () => {
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const owner = {
+    email: `verificat-${stamp}@example.test`,
+    password: 'proprietar-verificat-2026',
+  };
+  let db: Client;
+  let garageId = '';
+
+  test.beforeAll(async ({ request }) => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
     await db.connect();
-  });
-
-  test.afterEach(async () => {
-    if (!fileId) return;
-    await db.query('DELETE FROM verification_file WHERE id = $1', [fileId]);
-    await db.query('UPDATE garage SET last_checked_on = $1 WHERE slug = $2', [
-      lastCheckedOn,
-      SLUG,
-    ]);
-    fileId = undefined;
-  });
-
-  test.afterAll(async () => {
-    await db.end();
-  });
-
-  // @traces 210-FR-014
-  // @traces 210-SC-001
-  test('the owner of an approved garage sees "Verificat" and four rows in order', async ({
-    page,
-  }) => {
-    const before = await db.query<{ day: string | null }>(
-      `SELECT last_checked_on::text AS day FROM garage WHERE slug = $1`,
-      [SLUG],
+    const garage = await db.query<{ id: string }>(
+      `INSERT INTO garage (id, name, slug, status, approved_at, last_checked_on)
+       VALUES (gen_random_uuid(), $1, $2, 'approved', now(),
+               (now() AT TIME ZONE 'Europe/Bucharest')::date)
+       RETURNING id::text`,
+      [`Service Verificat ${stamp}`, `e2e-verificat-${stamp}`],
     );
-    expect(before.rows[0], 'the seeded garage is missing').toBeDefined();
-    lastCheckedOn = before.rows[0]?.day ?? null;
-    const { rows } = await db.query<{ file: string }>(
+    garageId = garage.rows[0]?.id ?? '';
+    const file = await db.query<{ id: string }>(
       `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at)
-       SELECT gen_random_uuid(), g.id, 'approved', now(), now() FROM garage g
-       WHERE g.slug = $1 AND g.status = 'approved'
-       RETURNING id::text AS file`,
-      [SLUG],
+       VALUES (gen_random_uuid(), $1, 'approved', now(), now())
+       RETURNING id::text`,
+      [garageId],
     );
-    expect(rows[0], 'the seeded garage is not approved').toBeDefined();
-    fileId = rows[0]?.file;
+    const fileId = file.rows[0]?.id ?? '';
     await db.query(
       `INSERT INTO verification_check (id, file_id, kind, result, recorded_at)
        SELECT gen_random_uuid(), $1, k::verification_check_kind, 'ok', now()
@@ -65,17 +55,62 @@ test.describe('the legal check panel @seeded', () => {
        FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']) AS k`,
       [fileId],
     );
-    await db.query(
-      `UPDATE garage SET last_checked_on = (now() AT TIME ZONE 'Europe/Bucharest')::date
-       WHERE slug = $1`,
-      [SLUG],
+    const signUp = await request.post('/api/v1/auth/sign-up', {
+      data: {
+        consent: CURRENT_CONSENT,
+        email: owner.email,
+        language: 'ro',
+        name: `Proprietar ${stamp}`,
+        password: owner.password,
+      },
+      headers: { 'x-forwarded-for': `203.0.113.${(Date.now() + 11) % 250}` },
+    });
+    expect(signUp.status()).toBe(201);
+    const account = await db.query<{ id: string }>(
+      'SELECT id FROM account WHERE email = $1',
+      [owner.email],
     );
+    const accountId = account.rows[0]?.id ?? '';
+    await db.query(
+      `INSERT INTO account_role (account_id, role) VALUES ($1, 'garage')
+       ON CONFLICT DO NOTHING`,
+      [accountId],
+    );
+    await db.query(`UPDATE account SET last_role = 'garage' WHERE id = $1`, [
+      accountId,
+    ]);
+    await db.query(
+      `INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, 'owner')`,
+      [garageId, accountId],
+    );
+  });
 
+  test.afterAll(async () => {
+    await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
+    await db.query('DELETE FROM verification_file WHERE garage_id = $1', [
+      garageId,
+    ]);
+    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
+    await db.end();
+  });
+
+  // @traces 210-FR-014
+  // @traces 210-SC-001
+  test('the owner of an approved garage sees "Verificat" and four rows in order', async ({
+    page,
+  }) => {
     await ready(page, '/ro');
-    await page
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-    await signIn(page, ACCOUNTS.garage);
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await page
+        .getByRole('navigation', { name: 'Navigare principală' })
+        .getByRole('link', { exact: true, name: 'Cont' })
+        .click();
+    } else {
+      await page
+        .getByRole('button', { exact: true, name: 'Autentificare' })
+        .click();
+    }
+    await signIn(page, owner.email, { password: owner.password });
     await expect(page).toHaveURL('/app/garage');
 
     await expect(page.getByText('Profil verificat')).toBeVisible();

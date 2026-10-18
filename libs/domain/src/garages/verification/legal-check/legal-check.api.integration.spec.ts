@@ -84,8 +84,9 @@ async function world(
     businessKind: 'company' | 'mobile';
   }> = {},
 ) {
+  // The catalogue's own row, as its migration seeds it.
   await prisma.rarActivity.upsert({
-    create: { code: 'brakes', nameEn: 'brakes', nameRo: 'frâne' },
+    create: { code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
     update: {},
     where: { code: 'brakes' },
   });
@@ -192,7 +193,7 @@ describe('the legal check, for the owner', () => {
       companyName: 'ATELIER DINAMO SRL',
       isMobile: false,
       lastCheckedOn: APPROVED_ON,
-      rarActivities: [{ code: 'brakes', nameEn: 'brakes', nameRo: 'frâne' }],
+      rarActivities: [{ code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' }],
       rows: [
         {
           checkedOn: APPROVED_ON,
@@ -256,7 +257,14 @@ describe('the legal check, for the owner', () => {
 describe('which file it reads', () => {
   it('reads the newest file, even one reopened since its approval', async () => {
     const w = await world();
-    await file(w, {}, new Date('2026-01-01T08:00:00Z'));
+    // One file per garage is live, so the older one was decided and closed
+    // (rejected) before the newer was sent; a reopen moves the newer one,
+    // approved, back to in review.
+    const older = await file(w, {}, new Date('2026-01-01T08:00:00Z'));
+    await prisma.verificationFile.update({
+      data: { status: 'rejected' },
+      where: { id: older.id },
+    });
     const newest = await file(w, { rar: 'failed' });
     await prisma.verificationFile.update({
       data: { status: 'in_review' },
