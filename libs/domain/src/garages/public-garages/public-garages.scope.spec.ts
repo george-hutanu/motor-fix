@@ -436,7 +436,7 @@ function walk(program: Program, entries: Entry[]): Found[] {
   const visit = (step: Step, entry: string) => {
     if (seen.has(step.at)) return;
     seen.add(step.at);
-    if (gated(program, step.body, step.owner, 0)) return;
+    if (gated(program, step, 0)) return;
     for (const read of garageReads(step.body)) {
       found.push({ ...read, at: step.at, entry });
     }
@@ -454,23 +454,120 @@ function walk(program: Program, entries: Entry[]): Found[] {
   return found;
 }
 
-// Whether a body refuses all but staff, itself or through helpers of its
-// class it calls (`this.ownInvite()` → `this.assertOwner()`).
-function gated(
+// Whether a body refuses all but staff before it reads anything: a staff
+// check that runs on every path, itself or through a helper of its class it
+// calls (`this.ownInvite()` → `this.assertOwner()`), as a statement of the
+// body ahead of any that reads a garage or calls on to code that may. A check
+// inside a branch, a short-circuit or a callback leaves the other path open,
+// so the walk goes on past it (FR-007: only a staff gate on the path excludes
+// a read).
+function gated(program: Program, step: Step, depth: number): boolean {
+  const body = step.body;
+  const statements = ts.isBlock(body) ? [...body.statements] : [body];
+  for (const statement of statements) {
+    if (staffStatement(program, step, statement, depth)) return true;
+    if (reaches(program, step, statement)) return false;
+  }
+  return false;
+}
+
+// A guard `if (<staff role test>) throw …` with no else, or a statement whose
+// staff check is called unconditionally.
+function staffStatement(
   program: Program,
-  body: ts.Node,
-  owner: string | undefined,
+  step: Step,
+  statement: ts.Node,
   depth: number,
 ): boolean {
-  const text = body.getText();
-  if (STAFF_GATE.test(text)) return true;
-  const node = owner ? program.classes.get(owner)?.node : undefined;
-  if (!node || depth > 2) return false;
-  return [...text.matchAll(/\bthis\.(\w+)\(/g)].some(([, name]) => {
-    const helper = methodOf(node, name)?.body;
-    return helper !== undefined && gated(program, helper, owner, depth + 1);
-  });
+  if (ts.isIfStatement(statement)) {
+    return (
+      !statement.elseStatement &&
+      throws(statement.thenStatement) &&
+      STAFF_GATE.test(statement.expression.getText()) &&
+      !/&&|\?\?/.test(statement.expression.getText())
+    );
+  }
+  let found = false;
+  const visit = (node: ts.Node) => {
+    if (found || opensPath(node)) return;
+    if (ts.isCallExpression(node) && staffCall(program, step, node, depth)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(statement);
+  return found;
 }
+
+const throws = (node: ts.Statement): boolean =>
+  ts.isThrowStatement(node) ||
+  (ts.isBlock(node) &&
+    node.statements.length === 1 &&
+    ts.isThrowStatement(node.statements[0]));
+
+// A node below which code runs on some paths only.
+const opensPath = (node: ts.Node) =>
+  ts.isIfStatement(node) ||
+  ts.isConditionalExpression(node) ||
+  ts.isFunctionLike(node) ||
+  ts.isIterationStatement(node, false) ||
+  ts.isSwitchStatement(node) ||
+  ts.isTryStatement(node) ||
+  ts.isCatchClause(node) ||
+  (ts.isBinaryExpression(node) &&
+    [
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      ts.SyntaxKind.BarBarToken,
+      ts.SyntaxKind.QuestionQuestionToken,
+    ].includes(node.operatorToken.kind)) ||
+  ((ts.isCallExpression(node) || ts.isPropertyAccessExpression(node)) &&
+    node.questionDotToken !== undefined);
+
+function staffCall(
+  program: Program,
+  step: Step,
+  call: ts.CallExpression,
+  depth: number,
+): boolean {
+  const text = call.getText();
+  if (/^(assertGarage|assertGarageOwner)\(/.test(text)) return true;
+  if (/^requireCapability\([^,]+,\s*'(garage|admin)\./.test(text)) return true;
+  const callee = call.expression;
+  const node = step.owner ? program.classes.get(step.owner)?.node : undefined;
+  if (
+    !node ||
+    depth > 2 ||
+    !ts.isPropertyAccessExpression(callee) ||
+    callee.expression.kind !== ts.SyntaxKind.ThisKeyword
+  ) {
+    return false;
+  }
+  const helper = methodOf(node, callee.name.text)?.body;
+  return (
+    helper !== undefined &&
+    gated(
+      program,
+      { ...step, at: `${step.path}#${callee.name.text}`, body: helper },
+      depth + 1,
+    )
+  );
+}
+
+// Whether a statement reads a garage or calls code the walk can follow,
+// outside what it throws.
+const reaches = (program: Program, step: Step, statement: ts.Node) => {
+  if (garageReads(statement).length > 0) return true;
+  let found = false;
+  const visit = (node: ts.Node) => {
+    // What a throw builds runs on the refusing path only.
+    if (found || ts.isThrowStatement(node)) return;
+    if (ts.isCallExpression(node) && stepOf(program, node, step)) found = true;
+    else ts.forEachChild(node, visit);
+  };
+  visit(statement);
+  return found;
+};
 
 // The failures: an unscoped read not excepted, by `file:line`, and an
 // exception the walk no longer reaches.
@@ -659,6 +756,58 @@ describe('the public garages scope, on fixtures', () => {
 
     expect(verdict(files, {}).bypasses).toEqual([
       'libs/domain/src/desk/desk.ts:11 (desk/desk.ts#open, from libs/domain/src/desk/desk.controller.ts#c)',
+    ]);
+  });
+
+  it('walks on past a staff check that does not run on every path', () => {
+    const files: Sources = new Map([
+      [
+        'libs/domain/src/desk/desk.controller.ts',
+        `@Controller('desk')
+         export class DeskController {
+           constructor(private readonly desk: Desk) {}
+           @Get('a') a() { return this.desk.branch(); }
+           @Get('b') b() { return this.desk.short(); }
+           @Get('c') c() { return this.desk.late(); }
+           @Get('d') d() { return this.desk.helped(); }
+           @Get('e') e() { return this.desk.thrown(); }
+         }`,
+      ],
+      [
+        'libs/domain/src/desk/desk.ts',
+        `export class Desk {
+           constructor(private readonly prisma: PrismaClient) {}
+           branch(actor) {
+             if (actor.role === 'garage') assertGarage(actor, 'g');
+             return this.prisma.garage.findMany({});
+           }
+           short(actor) {
+             actor.garageId && assertGarage(actor, 'g');
+             return this.prisma.garage.findMany({});
+           }
+           late(actor) {
+             const all = this.prisma.garage.findMany({});
+             assertGarage(actor, 'g');
+             return all;
+           }
+           helped(actor) {
+             if (actor.garageId) this.garageOf(actor);
+             return this.prisma.garage.findMany({});
+           }
+           thrown(actor) {
+             if (actor.role !== 'garage') throw new ForbiddenException();
+             return this.prisma.garage.findMany({});
+           }
+           private garageOf(actor) { requireCapability(actor, 'garage.requests'); }
+         }`,
+      ],
+    ]);
+
+    expect(verdict(files, {}).bypasses).toEqual([
+      'libs/domain/src/desk/desk.ts:12 (desk/desk.ts#late, from libs/domain/src/desk/desk.controller.ts#c)',
+      'libs/domain/src/desk/desk.ts:18 (desk/desk.ts#helped, from libs/domain/src/desk/desk.controller.ts#d)',
+      'libs/domain/src/desk/desk.ts:5 (desk/desk.ts#branch, from libs/domain/src/desk/desk.controller.ts#a)',
+      'libs/domain/src/desk/desk.ts:9 (desk/desk.ts#short, from libs/domain/src/desk/desk.controller.ts#b)',
     ]);
   });
 
