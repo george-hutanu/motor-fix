@@ -8,7 +8,11 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { PublicGarageDto, RequestDto } from '@motor-fix/data-access';
+import type {
+  MeDto,
+  PublicGarageDto,
+  RequestDto,
+} from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
@@ -20,6 +24,10 @@ import type {
   RequestQuoteResult,
 } from '../request-quote/request-quote';
 import { sentLine } from '../request-quote/sent-line';
+
+// A visitor or a driver may ask a garage for a quote; a garage-side role not.
+export const canRequest = (role: MeDto['role'] | null) =>
+  role === null || role === 'driver';
 
 // The profile's "Cere ofertă": opens the request dialog for the garage and,
 // once a request went, says where. A visitor or a driver sees it; a garage-side
@@ -39,11 +47,14 @@ export class RequestQuoteButton {
   readonly textKey = input('public.requestQuote.button');
   readonly announce = input(true);
   readonly said = output<string>();
-  // Named after the text, which tells the header's button from the box's, so
-  // the server and the browser give the note the same id.
-  protected readonly noteId = computed(
-    () => `mf-quote-refused-${this.textKey().replaceAll('.', '-')}`,
-  );
+  // Tells two buttons with the same text apart, the box's and the bar's.
+  readonly place = input('');
+  // Named after the text and the place, which tell the buttons apart, so the
+  // server and the browser give the note the same id.
+  protected readonly noteId = computed(() => {
+    const place = this.place();
+    return `mf-quote-refused-${this.textKey().replaceAll('.', '-')}${place ? `-${place}` : ''}`;
+  });
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
   private readonly route = inject(ActivatedRoute);
@@ -55,10 +66,9 @@ export class RequestQuoteButton {
   // A public page asks nobody who is signed in: without a session loaded, the
   // role this browser last saw decides, so a garage account that opens the
   // profile by its address does not see the button.
-  protected readonly shown = computed(() => {
-    const role = this.session.current()?.role ?? this.session.roleHint();
-    return role === null || role === 'driver';
-  });
+  protected readonly shown = computed(() =>
+    canRequest(this.session.current()?.role ?? this.session.roleHint()),
+  );
   // The brand of the page, when the garage does not take it.
   protected readonly refusedBrand = computed(() => {
     const brand = this.garage().brand;

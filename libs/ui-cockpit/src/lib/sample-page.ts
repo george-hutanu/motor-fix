@@ -64,7 +64,7 @@ import { SAMPLE_GARAGES } from './sample-text';
     }
   `,
   template: `
-    <main>
+    <main id="main">
       <h1>{{ 'cockpit.heading' | t }}</h1>
       <p>{{ 'cockpit.intro' | t }}</p>
 
