@@ -3,24 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
-
-async function signInAsAdmin2(page: Page) {
-  await ready(page, '/ro/garages');
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page
-      .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { exact: true, name: 'Cont' })
-      .click();
-  } else {
-    await page
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-  }
-  await signIn(page, ACCOUNTS.admin2);
-  await expect(page).toHaveURL('/app/admin');
-}
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

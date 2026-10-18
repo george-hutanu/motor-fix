@@ -1184,6 +1184,59 @@ describe('the history', () => {
     ]);
   });
 
+  // @traces 259-FR-006
+  const refused = (code: string) =>
+    entry({
+      field: 'decision',
+      kind: 'verification_approval_refused',
+      newValue: code,
+      oldValue: null,
+    });
+  const REFUSED = [
+    'rar_check_required',
+    'caen_check_required',
+    'note_required',
+    'cake_required',
+  ].map(refused);
+
+  it('reads each refused approval as one line naming why, in Romanian', async () => {
+    const host = await open(history(REFUSED));
+
+    expect(lines(host)).toEqual([
+      expect.stringMatching(
+        /^Aprobare refuzată: verificarea RAR nu e în regulă — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: verificarea CAEN 4520 nu e în regulă — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: lipsește nota — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: cake_required — Ioana, azi, \d\d:\d\d$/,
+      ),
+    ]);
+  });
+
+  it('reads the refused approvals in English', async () => {
+    const host = await open(history(REFUSED), 'en');
+
+    expect(lines(host)).toEqual([
+      expect.stringMatching(
+        /^Approval refused: the RAR check is not ok — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: the CAEN 4520 check is not ok — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: the note is missing — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: cake_required — Ioana, today, \d\d:\d\d$/,
+      ),
+    ]);
+  });
+
   it('gives a status change it has no words for its one plain line', async () => {
     const odd = entry({ field: 'status', newValue: 'archived' });
     const ro = await open(history([odd]));
