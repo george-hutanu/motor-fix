@@ -1,8 +1,6 @@
 import { fold } from '@motor-fix/contracts';
 
-// The brand list MotorFix keeps. A brand is matched by its `key` across
-// loads, so a key never changes once shipped; renaming a brand changes only
-// its name. A brand removed from this list is retired, never deleted.
+// The generic car body shapes a brand without a licensed model is drawn as.
 export type BodyStyle =
   | 'saloon'
   | 'hatchback'
@@ -11,6 +9,9 @@ export type BodyStyle =
   | 'estate'
   | 'fastback';
 
+// The brand list MotorFix keeps. A brand is matched by its `key` across
+// loads, so a key never changes once shipped; renaming a brand changes only
+// its name. A brand removed from this list is retired, never deleted.
 export interface BrandRecord {
   key: string;
   name: string;
