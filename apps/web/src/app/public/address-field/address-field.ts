@@ -40,7 +40,7 @@ export interface AddressChoice {
 
 // Where a field's placeholder, its messages and its count are read from:
 // Home's place texts, or the listing's, which point to the map.
-export type AddressTexts = 'public.home.place' | 'public.listing.place';
+type AddressTexts = 'public.home.place' | 'public.listing.place';
 
 // The address look-up: a combobox that asks from the third character, a
 // pause after the last key, in the page's language, and shows only the
@@ -76,6 +76,7 @@ export class AddressField {
 
   private readonly places = inject(PlacesService);
   private readonly i18n = inject(I18n);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly field =
     viewChild.required<ElementRef<HTMLInputElement>>('field');
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -102,7 +103,7 @@ export class AddressField {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyRef.onDestroy(() => {
       clearTimeout(this.timer);
       this.asked++;
     });
@@ -115,17 +116,21 @@ export class AddressField {
     this.field().nativeElement.focus();
   }
 
+  // An answer after the field is gone is dropped.
   protected findMe() {
     this.locating.set(true);
     this.message.set(null);
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
+        if (this.destroyRef.destroyed) return;
         const { latitude: lat, longitude: lng } = coords;
         if (!inRomania(lat, lng)) return this.located();
         this.locating.set(false);
         this.chosen.emit({ label: null, lat, lng, origin: 'location' });
       },
-      () => this.located(),
+      () => {
+        if (!this.destroyRef.destroyed) this.located();
+      },
       { timeout: LOCATE_TIMEOUT_MS },
     );
   }

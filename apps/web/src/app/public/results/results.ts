@@ -388,13 +388,11 @@ export class Results {
     await this.write({ near: nearOf(place), radius: null });
   }
 
-  // An address typed while the browser gave no place: it is kept, goes into
-  // the bar and starts one logged search.
+  // An address typed while the browser gave no place: it is kept, which the
+  // bar then follows, and starts one logged search.
   protected placed({ label, lat, lng, origin }: AddressChoice) {
     this.logNext = true;
     this.store.set({ label, lat, lng, origin });
-    const kept = this.store.place();
-    if (kept) void this.write({ near: nearOf(kept) });
   }
 
   // A late answer, after the driver chose a place another way or left, is

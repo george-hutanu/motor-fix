@@ -220,17 +220,6 @@
       }
     },
     {
-      // The shared address field binds its label's [for] and its input's [id] from the ids prefix its host gives, which Biome reads as a label with no control.
-      "includes": ["apps/web/src/app/public/address-field/address-field.html"],
-      "linter": {
-        "rules": {
-          "a11y": {
-            "noLabelWithoutControl": "off"
-          }
-        }
-      }
-    },
-    {
       // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
       "includes": [
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",

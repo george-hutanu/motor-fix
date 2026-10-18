@@ -15,9 +15,11 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS } from '@motor-fix/contracts/events';
+import { nearOf } from '@motor-fix/contracts/search-place';
 import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import {
   DayPipe,
+  formatDistance,
   formatRating,
   I18n,
   KmPipe,
@@ -158,6 +160,11 @@ export class GarageProfile {
       ? measured.km
       : undefined;
   });
+  // The distance as the result card writes it: one decimal, "1,0 km".
+  protected readonly distanceSaid = computed(() => {
+    const km = this.distanceKm();
+    return km === undefined ? '' : formatDistance(km, this.i18n.language());
+  });
   protected readonly removed = computed(
     () => this.profile.gone() && this.status() === 410,
   );
@@ -233,7 +240,7 @@ export class GarageProfile {
   // The kept place as the profile read takes it.
   private near(): string | undefined {
     const place = this.places.place();
-    return place ? `${place.lat},${place.lng}` : undefined;
+    return place ? nearOf(place) : undefined;
   }
 
   // A failed read leaves the line out; the rest of the page stands.

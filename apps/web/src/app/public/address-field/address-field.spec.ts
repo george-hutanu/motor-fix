@@ -490,6 +490,22 @@ describe('the address field, by location', () => {
     expect(locateButton()?.disabled).toBe(false);
     expect(chosen()).toEqual([]);
   });
+
+  it.each([
+    ['a location', (l: Located) => l.ok(position(46.7712, 23.6236))],
+    ['a refusal', (l: Located) => l.fail(refusal(1))],
+  ])('drops %s that comes after the field is gone', async (_, end) => {
+    await mount({ locate: true });
+    locateButton()?.click();
+    await settle();
+    const host = fixture.componentInstance;
+    const before = document.activeElement;
+    fixture.destroy();
+
+    expect(() => end(located[0])).not.toThrow();
+    expect(host.chosen).toEqual([]);
+    expect(document.activeElement).toBe(before);
+  });
 });
 
 describe('type scale', () => {

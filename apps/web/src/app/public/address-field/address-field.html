@@ -12,11 +12,11 @@
     }
   </button>
 }
-<label hlmLabel [for]="ids() + '-address'">{{ label() ?? ('public.home.place.field' | t) }}</label>
+<label hlmLabel for="{{ ids() }}-address">{{ label() ?? ('public.home.place.field' | t) }}</label>
 <input
   #field
   hlmInput
-  [id]="ids() + '-address'"
+  id="{{ ids() }}-address"
   autocomplete="street-address"
   role="combobox"
   aria-autocomplete="list"

@@ -48,9 +48,9 @@
               | t: { km: (garage.serviceRadiusKm | km) }
           }}
         </p>
-      } @else if (distanceKm() !== undefined) {
+      } @else if (distanceSaid()) {
         <p class="place">
-          {{ 'public.garageProfile.distance' | t: { km: (distanceKm() | km) } }}
+          {{ 'public.garageProfile.distance' | t: { km: distanceSaid() } }}
         </p>
       }
       @if (garage.description) {

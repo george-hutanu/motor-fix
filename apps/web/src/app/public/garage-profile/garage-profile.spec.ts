@@ -1347,6 +1347,15 @@ describe('the distance line in the profile header', () => {
     expect(reads).toHaveLength(2);
   });
 
+  it('writes a whole kilometre with its decimal, as the result card does', async () => {
+    keep();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await reads[1]?.answer({ ...FIXED, distanceKm: 1 });
+
+    expect(line()).toEqual(['la 1,0 km']);
+  });
+
   it('reads "2.4 km away" in English', async () => {
     await TestBed.inject(I18n).use('en');
     keep();
