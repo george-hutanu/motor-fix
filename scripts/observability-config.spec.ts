@@ -78,6 +78,23 @@ describe('the MCP server and its identity server', () => {
   });
 });
 
+describe('the identity server itself', () => {
+  // @traces 1178-FR-010
+  it('lists its memory alert and the overview dashboard on its Railway service, and the worker reading', () => {
+    const service = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'railway-service' && e.name === 'keycloak',
+    );
+    expect(service).toMatchObject({
+      alerts: ['mcp-issuer-unreachable', 'keycloak-memory'],
+      dashboard: 'motorfix-overview',
+    });
+    expect(service.reason).toContain('KEYCLOAK_METRICS_URL');
+  });
+});
+
 describe('the verification result queue', () => {
   // @traces 209-FR-014
   it('alerts on its final job failures, shows its counter on the queues dashboard and lists both', () => {
