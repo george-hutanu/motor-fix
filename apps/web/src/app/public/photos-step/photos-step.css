@@ -33,7 +33,7 @@ p {
   color: var(--mf-text);
 }
 .error {
-  color: var(--mf-red);
+  color: var(--mf-red-ink);
 }
 .warning {
   color: var(--mf-text-secondary);

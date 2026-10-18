@@ -40,10 +40,9 @@
               <button
                 type="button"
                 [attr.aria-pressed]="on"
-                [attr.aria-label]="brand.name + ', ' + (fuelKey(fuel) | t)"
                 (click)="tickFuel(brand.id, fuel)"
               >
-                {{ fuelKey(fuel) | t }}
+                <span class="sr-only">{{ brand.name }}, </span>{{ fuelKey(fuel) | t }}
                 @if (on) {
                   <mf-lamp state="green" [label]="'public.listing.brands.fuel.ticked' | t" />
                 }
