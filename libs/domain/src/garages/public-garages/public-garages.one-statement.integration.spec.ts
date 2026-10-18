@@ -338,7 +338,7 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
   };
 }
 
-// @traces 1183-FR-001 1183-FR-002
+// @traces 1183-FR-001 1183-FR-002 1183-FR-003
 describe('the profile read on a cache miss', () => {
   it('reads a fully filled garage in one statement, field for field', async () => {
     const w = await militari();
