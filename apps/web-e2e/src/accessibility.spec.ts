@@ -2,9 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, hydrated, PASSWORD, ready, signIn } from './accounts.js';
+import {
+  ACCOUNTS,
+  hydrated,
+  ownMap,
+  PASSWORD,
+  ready,
+  signIn,
+} from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
+import { JOBS, jpeg, KEPT } from './listing-kept.js';
+import { type QuotedRequest, quotedRequest } from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // Each test signs in once and walks its screens on the one page: the two
@@ -24,13 +33,13 @@ const languageGroup = (page: Page) =>
 // Signed in at desktop size, where the site bar shows its sign-in button;
 // the dashboard is turned to Romanian whatever an earlier run left saved on
 // the shared account, without saving it (keepSeededLanguage).
-async function signedIn(page: Page, email: string) {
+async function signedIn(page: Page, email: string, password = PASSWORD) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
-  await signIn(page, email);
+  await signIn(page, email, { password });
   await page.waitForURL(/\/app\//);
   await useLanguage(page, 'ro');
 }
@@ -381,3 +390,195 @@ async function dashboards(page: Page, paths: readonly string[]) {
   }
   return found;
 }
+
+// @traces 248-launch-screens-accessible-FR-001
+// @traces 248-launch-screens-accessible-FR-003
+// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-launch-screens-accessible-FR-008
+test.describe('axe on the quotes a driver compares @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its driver, car and garages straight to PostgreSQL, which needs DATABASE_URL',
+  );
+
+  // A driver of its own with two quotes and one garage still to answer: the
+  // seeded driver's requests are quoted and accepted by other specs.
+  let quoted: QuotedRequest;
+  test.beforeAll(async ({ request }) => {
+    quoted = await quotedRequest(request, 'axe-oferte');
+  });
+  test.afterAll(async () => {
+    await quoted?.remove();
+  });
+
+  test('the quotes compared, then one accepted', async ({ page }) => {
+    await signedIn(page, quoted.driver, quoted.password);
+    const rows = page.locator('mf-quotes-compare li[data-quote]');
+    const found: string[] = [];
+    for (const path of [
+      '/app/driver',
+      `/app/driver/requests?request=${quoted.requestId}`,
+    ]) {
+      await page.setViewportSize(DESKTOP);
+      await dashboard(page, path);
+      await expect(rows).toHaveCount(2);
+      found.push(...(await quotesShown(page, `the quotes on ${path}`)));
+    }
+
+    // Accepting the first quote turns its row and locks the other.
+    await page.setViewportSize(DESKTOP);
+    await rows
+      .first()
+      .locator('[data-part="action"]')
+      .getByRole('button')
+      .click();
+    await expect(
+      rows.first().locator('[data-part="action"] .state'),
+    ).toBeVisible();
+    found.push(...(await quotesShown(page, 'a quote accepted')));
+    expect(found).toEqual([]);
+  });
+});
+
+// The quotes as shown, scanned in both languages, then checked at 320 px.
+async function quotesShown(page: Page, where: string) {
+  const found: string[] = [];
+  for (const language of LANGUAGES) {
+    await useLanguage(page, language);
+    found.push(...(await scan(page, `${where} ${language}`)));
+  }
+  await page.setViewportSize(PHONE);
+  if (!(await noSidewaysScroll(page)))
+    found.push(`${where}: scrolls sideways at 320 px`);
+  await useLanguage(page, 'ro');
+  return found;
+}
+
+// The listing's language switch turns the page without a reload, so what is
+// typed and shown stays; a click that does not scroll keeps the step.
+async function listingLanguage(page: Page, language: Language) {
+  await languageGroup(page)
+    .first()
+    .getByRole('button', { exact: true, name: language.toUpperCase() })
+    .dispatchEvent('click');
+  await expect(page.locator('html')).toHaveAttribute('lang', language);
+  await expect(page.locator('mf-list-your-garage h1')).toBeVisible();
+}
+
+// The listing as it stands, scanned in both languages, back in Romanian.
+async function listingScan(page: Page, where: string) {
+  const found: string[] = [];
+  for (const language of LANGUAGES) {
+    await listingLanguage(page, language);
+    found.push(...(await scan(page, `${where} ${language}`)));
+  }
+  await listingLanguage(page, 'ro');
+  return found;
+}
+
+// @traces 248-launch-screens-accessible-FR-001
+// @traces 248-launch-screens-accessible-FR-003
+// @traces 248-launch-screens-accessible-FR-007
+// @traces 248-launch-screens-accessible-FR-008
+test.describe('axe on the listing steps', () => {
+  // The place step's map draws the app's empty style.
+  test.beforeEach(({ context }) => ownMap(context));
+
+  test('every step filled in: what is missing, then complete', async ({
+    context,
+    page,
+  }) => {
+    // An upload and a server check, each screen in both languages.
+    test.slow();
+    await context.addInitScript((copy) => {
+      if (sessionStorage.getItem('kept')) return;
+      localStorage.setItem('mf.listing-draft', copy);
+      sessionStorage.setItem('kept', '1');
+    }, JSON.stringify(KEPT));
+    await page.setViewportSize(DESKTOP);
+    await ready(page, '/ro/list-your-garage');
+    const email = page.locator('#listing-email');
+    await email.fill(
+      `axe-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`,
+    );
+    await email.blur();
+    const photos = page.locator('mf-photos-step');
+    // The photo picker opens once the draft exists on the server.
+    await expect(
+      photos.getByRole('button', { name: 'Alege fotografii' }),
+    ).toBeEnabled();
+    const mechanics = page.locator('mf-mechanics-step');
+    await mechanics.getByRole('button', { name: 'Adaugă un mecanic' }).click();
+    await mechanics.locator('input[name="name"]').fill('Ion Marin');
+    const summary = page.locator('mf-missing-summary .summary');
+    const send = page.locator('mf-list-your-garage .actions button.send');
+
+    // Nothing chosen on the brands, prices or photos: every step shows what
+    // it misses, and the summary lists it.
+    await send.click();
+    await expect(summary.locator('h2')).toBeVisible();
+    const found = await listingScan(page, 'the listing, what is missing');
+
+    await page
+      .locator('mf-brands-step .chips button', { hasText: 'Dacia' })
+      .first()
+      .click();
+    const prices = page.locator('mf-prices-step');
+    for (const [job, from, to] of [
+      ['Manoperă, pe oră', '120', '200'],
+      ...JOBS,
+    ]) {
+      await prices
+        .getByRole('textbox', { exact: true, name: `${job}, de la` })
+        .fill(from);
+      await prices
+        .getByRole('textbox', { exact: true, name: `${job}, până la` })
+        .fill(to);
+    }
+    await photos
+      .locator('input[type="file"]')
+      .setInputFiles([jpeg('fata.jpg')]);
+    await expect(photos.locator('li.photo')).toHaveCount(1);
+    await expect(summary.getByRole('button')).toHaveCount(0);
+    await send.click();
+    await expect(summary).toHaveText('Totul e complet');
+    found.push(...(await listingScan(page, 'the listing, complete')));
+
+    // At 320 px the steps fold into a bar; open, its list scrolls nothing.
+    await page.setViewportSize(PHONE);
+    if (!(await noSidewaysScroll(page)))
+      found.push('the listing: scrolls sideways at 320 px');
+    await page.locator('nav > button[aria-expanded]').click();
+    if (!(await noSidewaysScroll(page)))
+      found.push('the listing, steps open: scrolls sideways at 320 px');
+    expect(found).toEqual([]);
+  });
+
+  // A link to a draft ends the page when the draft is unknown, or already
+  // sent; the API answers the second here, which no seed holds.
+  for (const [name, status] of [
+    ['an unknown draft link', 404],
+    ['a draft already sent', 409],
+  ] as const)
+    test(name, async ({ page }) => {
+      await page.route('**/api/v1/listing-drafts/current', (route) =>
+        route.fulfill({ json: { code: 'draft' }, status }),
+      );
+      const found: string[] = [];
+      for (const language of LANGUAGES) {
+        await page.setViewportSize(DESKTOP);
+        await hydrated(
+          page,
+          `/${language}/list-your-garage?draft=${'a'.repeat(43)}`,
+        );
+        await expect(
+          page.locator('mf-list-your-garage .ended h1'),
+        ).toBeVisible();
+        found.push(...(await scan(page, `${name} ${language}`)));
+        await page.setViewportSize(PHONE);
+        if (!(await noSidewaysScroll(page)))
+          found.push(`${name} ${language}: scrolls sideways at 320 px`);
+      }
+      expect(found).toEqual([]);
+    });
+});
