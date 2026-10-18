@@ -11,7 +11,7 @@ accepts. Nothing else is ours.
 What the base entrypoint already does, read from the image:
 
 - SSL with a self-signed certificate, and `pg_stat_statements` preloaded on a
-  fresh database. `track_commit_timestamp` is on.
+  fresh database.
 - Point-in-time recovery, off until `WAL_ARCHIVE_BUCKET` is set. With
   `WAL_ARCHIVE_ENDPOINT`, `WAL_ARCHIVE_REGION`, `WAL_ARCHIVE_KEY` and
   `WAL_ARCHIVE_SECRET` it streams the write-ahead log to that bucket with
@@ -19,7 +19,8 @@ What the base entrypoint already does, read from the image:
   full backup every 168 h and a differential one every 24 h
   (`WAL_BACKUP_FULL_INTERVAL_HOURS`, `WAL_BACKUP_DIFF_INTERVAL_HOURS`), keeps
   four fulls and fourteen differentials (`WAL_BACKUP_RETENTION_FULL`,
-  `WAL_BACKUP_RETENTION_DIFF`), and records its archive path in
+  `WAL_BACKUP_RETENTION_DIFF`), turns `track_commit_timestamp` on (a
+  restore target is a commit time) and records its archive path in
   `$PGDATA/.pgbackrest_repo_path`.
 - A restore, on an empty data directory only, when `WAL_RECOVER_FROM_BUCKET`,
   `_ENDPOINT`, `_REGION`, `_KEY`, `_SECRET` and `_PATH` name an archive and

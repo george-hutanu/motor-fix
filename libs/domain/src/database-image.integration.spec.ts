@@ -28,15 +28,15 @@ describe('the database image', () => {
     expect(rows[0].default_version).toMatch(/^3\.6\./);
   });
 
-  it('preloads pg_stat_statements and keeps commit times', async () => {
-    const [settings] = await prisma.$queryRaw<
-      { preload: string; commit_ts: string }[]
-    >`SELECT current_setting('shared_preload_libraries') AS preload,
-             current_setting('track_commit_timestamp') AS commit_ts`;
+  // Commit times are on only while the log is archived, which the
+  // point-in-time drill proves.
+  it('preloads pg_stat_statements', async () => {
+    const [{ preload }] = await prisma.$queryRaw<
+      { preload: string }[]
+    >`SELECT current_setting('shared_preload_libraries') AS preload`;
 
-    expect(settings.preload.split(',').map((name) => name.trim())).toContain(
+    expect(preload.split(',').map((name) => name.trim())).toContain(
       'pg_stat_statements',
     );
-    expect(settings.commit_ts).toBe('on');
   });
 });
