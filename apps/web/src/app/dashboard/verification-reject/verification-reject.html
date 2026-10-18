@@ -1,0 +1,64 @@
+<form (submit)="confirm($event)" novalidate>
+  <fieldset
+    #group
+    class="choice"
+    [attr.aria-invalid]="reasonRefused() ? 'true' : null"
+    [attr.aria-describedby]="reasonRefused() ? 'mf-reject-reason-error' : null"
+  >
+    <legend>{{ 'admin.file.reject.reason' | t }}</legend>
+    @for (option of options; track option.code) {
+      <label class="option">
+        <input
+          type="radio"
+          name="mf-reject-reason"
+          required
+          [value]="option.code"
+          [checked]="reason() === option.code"
+          (change)="pick(option.code)"
+        />
+        <span>{{ option.label | t }}</span>
+      </label>
+    }
+    @if (reasonRefused()) {
+      <p class="error" id="mf-reject-reason-error" role="alert">{{ 'admin.file.reject.reasonRequired' | t }}</p>
+    }
+  </fieldset>
+  <div class="field">
+    <label for="mf-reject-note">{{ 'admin.file.reject.note' | t }}</label>
+    <textarea
+      #field
+      class="spartan-input"
+      data-slot="input"
+      id="mf-reject-note"
+      rows="4"
+      required
+      [value]="note()"
+      [attr.aria-invalid]="noteRefused() ? 'true' : null"
+      [attr.aria-describedby]="noteRefused() ? 'mf-reject-note-hint mf-reject-note-count mf-reject-note-error' : 'mf-reject-note-hint mf-reject-note-count'"
+      (input)="input($event)"
+    ></textarea>
+    <div class="under">
+      <p class="hint" id="mf-reject-note-hint">{{ 'admin.file.reject.noteHint' | t }}</p>
+      <p class="count" id="mf-reject-note-count">{{ 'admin.file.reject.count' | t: { n: count() } }}</p>
+    </div>
+    @if (noteRefused()) {
+      <p class="error" id="mf-reject-note-error" role="alert">
+        @switch (refused()) {
+          @case ('noteTooShort') {
+            {{ 'admin.file.reject.noteTooShort' | t }}
+          }
+          @case ('noteTooLong') {
+            {{ 'admin.file.reject.noteTooLong' | t }}
+          }
+          @default {
+            {{ 'admin.file.reject.noteRequired' | t }}
+          }
+        }
+      </p>
+    }
+  </div>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.file.reject.cancel' | t }}</button>
+    <button hlmBtn variant="secondary" class="danger" type="submit">{{ 'admin.file.reject.confirm' | t }}</button>
+  </div>
+</form>

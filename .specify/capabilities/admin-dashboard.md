@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -18,6 +18,7 @@ features:
   - 066-suspended-garages
   - 1346-release-green
   - 298-system-log-today
+  - 404-demand-searches
   - 299-system-log-search
 ---
 
@@ -527,9 +528,9 @@ _From 002-find-account-search._
 
 _From 250-launch-analytics-events._
 
-### 103-FR-001 — An admin MUST be able to read the demand of the last 30 days (`GET /api/v1/admin/demand`): the window's first and last Europe/Bucharest day, the window's total requests, every brand with at least one request in the window (its name from the car snapshot and its request count) and every job type with at least one request (its key, its Romanian and English names and its request count), each list ordered by count descending, then brands by their stored name and jobs by their key, in plain code-point order. Nothing in the answer is personal data; every value is a count or a catalogue name. The DTO lives in the contracts library and the generated client is regenerated.
+### 404-FR-001 — An admin MUST be able to read the demand of the last 30 days (`GET /api/v1/admin/demand`): the window's first and last Europe/Bucharest day, the window's total requests and total searches, every brand searched or requested in the window (its name, its searches and its requests, either of which may be 0 but not both) and every job type with at least one request (its key, its Romanian and English names and its request count); the brands ordered by searches descending, then requests descending, then name in plain code-point order, the jobs by count descending then key in plain code-point order; and `searchesFrom` (FR-005). Nothing in the answer is personal data; every value is a count, a day or a catalogue name. The DTO lives in the contracts library and the generated client is regenerated.
 
-_From 103-demand-brands-jobs._
+_From 404-demand-searches._
 
 ### 103-FR-002 — The demand read MUST follow the `admin/*` access policy (161-FR-003): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; the route joins the admin-route guard test's list of known routes. A failure inside the read answers the API's standard error body (no partial answer).
 
@@ -543,29 +544,29 @@ _From 103-demand-brands-jobs._
 
 _From 103-demand-brands-jobs._
 
-### 103-FR-005 — The `insights` nightly job (01:00 Europe/Bucharest, `0 1 * * *`, beside the existing schedulers with its own id) MUST write to DEMAND_DAILY, for every closed day of the last 30 that has no total row yet, one row per brand with at least one request (dimension `brand`, key the snapshot's brand name, requests), one row per job type with at least one request-job row (dimension `job`, key the job type's key, requests) and always one total row (dimension `total`, key `all`, the day's requests, 0 included), in one transaction per day; running it again for a written day changes nothing. The job and the new route are listed in the observability inventory with their dashboard and alerts.
+### 404-FR-004 — The `insights` nightly job (01:00 Europe/Bucharest, `0 1 * * *`, its own scheduler id) MUST write to DEMAND_DAILY, for every closed day of the last 30 that has no total row yet, one row per brand with at least one request or one search that day (dimension `brand`, key the brand name, its requests and its searches, either 0), one row per job type with at least one request-job row (dimension `job`, key the job type's key, its requests, searches 0) and always one total row (dimension `total`, key `all`, the day's requests and the day's searches, 0 included), in one transaction per day; running it again for a written day changes nothing. The job and the route stay listed in the observability inventory with their dashboard and alerts.
 
-_From 103-demand-brands-jobs._
+_From 404-demand-searches._
 
-### 103-FR-006 — The admin dashboard MUST get the view "Mărci și lucrări" / "Brands and jobs" (the existing unreleased placeholder: path `catalogue`, capability `admin.catalogue`, tab "Mărci" / "Brands", in the side menu and the tab bar as the other admin views, released by this story), whose body opens with the subtitle "Ce au cerut șoferii în ultimele 30 de zile" / "What drivers asked for in the last 30 days" as its first line under the view header, then two panels in this order: "Cereri pe marcă, 30 de zile" / "Requests by brand, 30 days" and "Cereri pe lucrare, 30 de zile" / "Requests by job, 30 days". Each panel is a labelled section whose heading is its title and holds one bar chart in the shared Cockpit chart style (cockpit-charts) with the count unit, one bar per brand or job, most first, labelled with the brand name or the job's name in the interface language.
+### 404-FR-007 — The admin dashboard's view "Mărci și lucrări" / "Brands and jobs" (path `catalogue`, capability `admin.catalogue`, tab "Mărci" / "Brands", in the side menu and the tab bar as the other admin views) MUST open with the subtitle "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile" / "What drivers searched for and asked for in the last 30 days" as its first line under the view header, then two panels in this order: "Căutări și cereri pe marcă, 30 de zile" / "Searches and requests by brand, 30 days" and "Cereri pe lucrare, 30 de zile" / "Requests by job, 30 days". Each panel is a labelled section whose heading is its title and holds one bar chart in the shared Cockpit chart style (cockpit-charts) with the count unit, one row per brand or job, labelled with the brand name or the job's name in the interface language; the brand report draws two bars per row (FR-008), the job report one.
 
-_From 103-demand-brands-jobs._
+_From 404-demand-searches._
 
 ### 103-FR-007 — Each report MUST show at most 10 bars; when the read holds more than 10 brands (jobs), the panel MUST show under the chart a button "Vezi toate mărcile" / "See all brands" ("Vezi toate lucrările" / "See all jobs") that reveals, in the panel, the full list of brands (jobs) with their counts, most first, and becomes "Arată mai puține" / "Show fewer", which hides it again; with 10 or fewer the button is not rendered.
 
 _From 103-demand-brands-jobs._
 
-### 103-FR-008 — "Panou" MUST show, under the growth panel (162-FR-004), one panel "Cereri pe marcă, 30 de zile" / "Requests by brand, 30 days" with the top 8 brands of the same demand read as a bar chart in the shared chart style, and no "Vezi toate" button; "Panou" shows no requests-by-job report. The tiles and the growth panel are not affected by this panel's loading or failure.
+### 404-FR-008 — The brand report and the overview panel MUST show two bars per brand in the shared Cockpit chart style: a lighter bar for searches (the amber token at 50% opacity) above the amber request bar, and both figures readable as text in the row (labelled "Căutări" / "Searches" and "Cereri" / "Requests"), formatted through the shared locale formatters (103-FR-009); the chart's tooltip, summary line and "Vezi ca tabel" table carry both figures, with a column per figure; the full list under "Vezi toate mărcile" shows both counts per brand. "Panou" MUST show, under the growth panel (162-FR-004), one panel "Căutări și cereri pe marcă, 30 de zile" / "Searches and requests by brand, 30 days" with the top 8 brands by searches of the same demand read, drawn this way, with no "Vezi toate" button and no sort toggle; "Panou" shows no requests-by-job report, and its tiles and growth panel are not affected by this panel's loading or failure.
 
-_From 103-demand-brands-jobs._
+_From 404-demand-searches._
 
 ### 103-FR-009 — Every count on screen MUST be formatted through the shared locale formatters for the current language (Romanian grouping "2.140", English grouping "2,140") in the chart's bars, tooltips, summary, table and the full list, and the subtitle, titles, job names and numbers MUST re-render in the other language when the admin switches it, without a reload; every text exists in Romanian and English in the shared i18n files.
 
 _From 103-demand-brands-jobs._
 
-### 103-FR-010 — While the demand read is on its way, each report, and the overview panel, MUST show the shared chart skeleton; when the read fails, each report MUST show its own shared retry button "Reîncearcă" / "Retry", and each press sends one read and redraws both reports from it; when the read succeeds with no request in the window, each report MUST show "Încă nu sunt cereri în ultimele 30 de zile." / "No requests in the last 30 days yet." in place of its chart. The view and the overview panel read the demand once when they open and again on retry; no event, polling or cache is added.
+### 404-FR-010 — While the demand read is on its way, each report, and the overview panel, MUST show the shared chart skeleton; when the read fails, each report MUST show its own shared retry button "Reîncearcă" / "Retry", and each press sends one read and redraws both reports and the counted-from line from it; when the read succeeds with no search and no request in the window, the brand report MUST show "Încă nu sunt căutări sau cereri în ultimele 30 de zile." / "No searches or requests in the last 30 days yet." in place of its chart, and with no request the job report shows "Încă nu sunt cereri în ultimele 30 de zile." / "No requests in the last 30 days yet.". When `searchesFrom` is present, the view MUST show the line "Căutările se numără de la <date>" / "Searches are counted from <date>" as the first line under the subtitle, the date in the interface language's format; the overview panel shows no such line. The overview panel has the same states: on a failed read it shows the shared error state with "Reîncearcă", which re-reads the demand for the panel alone (tiles and growth panel untouched), and with no search and no request it shows the brand report's empty text. The view and the overview panel read the demand once when they open and again on retry; no event, polling or cache is added.
 
-_From 103-demand-brands-jobs._
+_From 404-demand-searches._
 
 ### 103-FR-011 — Below 768 px the two panels of "Mărci și lucrări" MUST stack one under the other; from 768 px they MUST sit side by side; at 320 px neither the view nor "Panou" scrolls sideways, every rendered label is 12 px or larger, and a brand or job whose axis label is skipped stays reachable through the shared chart's tooltip and "Vezi ca tabel" table, and the subtitle and counts are 12 px or larger on a phone.
 
@@ -659,6 +660,37 @@ _From 298-system-log-today._
 
 _From 298-system-log-today._
 
+### 404-FR-002 — A search MUST count once for its brand, named by the catalogue brand's name (frozen on a closed day as the night wrote it, the current name for a day counted live), in the Europe/Bucharest calendar day of its time; a request's brand keeps the snapshot string as stored (103-FR-003); a search row and a request row merge into one brand row only when the two strings are equal, with no normalisation. The brand rows' searches add up to the window's total searches, and their requests to the window's total requests.
+
+_From 404-demand-searches._
+
+### 404-FR-003 — The window MUST serve searches as it serves requests: today, and any closed day of the window without a DEMAND_DAILY total row, counted live from SEARCH_LOG; the other closed days from DEMAND_DAILY's new `searches` figure, which the migration backfills from SEARCH_LOG on the rows written before this story.
+
+_From 404-demand-searches._
+
+### 404-FR-005 — The read MUST return `searchesFrom`: the Europe/Bucharest day of the earliest search ever logged when that day lies inside the window after its first day; today when no search has ever been logged; absent when the earliest search lies on or before the window's first day.
+
+_From 404-demand-searches._
+
+### 404-FR-006 — The access policy MUST stay as it is (103-FR-002): an admin reads it, any other role answers 404 `not_found`; nothing garage-side changes, and no garage reads a search figure.
+
+_From 404-demand-searches._
+
+### 404-FR-009 — The view's brand report MUST order its brands by searches, most first, by default, and carry a toggle "Ordonează după: căutări / cereri" / "Order by: searches / requests" (a two-option control, "căutări" selected on open) that re-orders the bars, the full list and the table on the rows already read, without a new read: by requests descending, then searches, then name; or by searches descending, then requests, then name. The top 10 (103-FR-007) are the top 10 of the chosen order; the overview panel shows the top 8 by searches with no toggle.
+
+_From 404-demand-searches._
+
+### 404-FR-011 — Every state of 103-FR-010 and the layout rules of 103-FR-011 MUST hold for the two-bar report: the skeleton while reading, the error state with "Reîncearcă", at 320 px no sideways scroll and every label and figure 12 px or larger, with both bars and both figures fitting the row on a phone; every new text exists in Romanian and English in the shared i18n files and re-renders on a language switch without a reload.
+
+_From 404-demand-searches._
+
+### 404-FR-012 — Accessibility: the sort toggle is two native buttons with `aria-pressed` in a group labelled "Ordonează după" / "Order by", reachable and operable by keyboard, in the tab order before the brand chart, announcing its current choice; each row's two figures reach assistive technology as text (not by bar length or shade alone), and the "Vezi ca tabel" table names its columns; after a toggle press focus stays on the toggle; 103-FR-013 holds for the rest.
+
+_From 404-demand-searches._
+
+### 404-FR-013 — Tests MUST cover, on a real database: searches and requests counted apart on one brand; a brand with searches and no requests, and one with requests and no searches; the Europe/Bucharest day edge for a search at 00:00 and the window's first day; today's searches counted live beside DEMAND_DAILY rows; a closed day without rows counted live; the migration's backfill of rows written before this story; the nightly job's searches on brand and total rows, its row for a brand searched but not requested, and its idempotence; brand searches adding up to the total; the default order and the ties; `searchesFrom` in its three cases; the overview's top 8 by searches; 404 for each non-admin role. In the browser: the sort toggle re-orders bars, list and table; the line under the subtitle; the empty text. An end-to-end check answers the demand read with three brands (one searched but never requested) and `searchesFrom` (stubbed in the browser, as 103-FR-012 does, since the suite also runs against a deployed address and writes no rows), opens "Mărci și lucrări" as the seeded admin, reads both figures of a row and the counted-from line, presses the toggle, then reads the overview panel, on a phone and a desktop, in both languages.
+
+_From 404-demand-searches._
 ### 299-FR-002 — The order MUST stay `at` descending, then `id` descending; the cursor MUST encode the last item's `(at, id)` opaquely, and a page read with it MUST start strictly after that pair, so paging has no gaps and no repeats even while new entries arrive or the purge runs.
 
 _From 299-system-log-search._
@@ -750,5 +782,10 @@ _From 299-system-log-search._
 
 - `162-FR-011` — superseded by `1346-FR-006` (2026-10-17)
 
+- `103-FR-001` — superseded by `404-FR-001` (2026-10-18)
+- `103-FR-005` — superseded by `404-FR-004` (2026-10-18)
+- `103-FR-006` — superseded by `404-FR-007` (2026-10-18)
+- `103-FR-008` — superseded by `404-FR-008` (2026-10-18)
+- `103-FR-010` — superseded by `404-FR-010` (2026-10-18)
 - `298-FR-001` — superseded by `299-FR-001` (2026-10-17)
 - `298-FR-003` — superseded by `299-FR-006` (2026-10-17)

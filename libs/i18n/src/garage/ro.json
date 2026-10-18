@@ -70,10 +70,76 @@
     },
     "stepsDone": "{done} din {total} gata"
   },
+  "legal": {
+    "caen": {
+      "checked": "din certificatul constatator",
+      "detail": "Întreținerea și repararea autovehiculelor, la punctul de lucru",
+      "detailMobile": "Întreținerea și repararea autovehiculelor, la sediul social",
+      "label": "Cod CAEN 4520"
+    },
+    "company": {
+      "checked": "verificat la înscriere",
+      "detail": "{company} · CUI verificat la ANAF și ONRC",
+      "label": "Firmă activă"
+    },
+    "documents": {
+      "checked": "verificate",
+      "checkedOn": "verificate pe {day}",
+      "detail": "certificat constatator și autorizație RAR",
+      "label": "Documente",
+      "missing": {
+        "onrc_certificate": "lipsește certificatul constatator",
+        "rar_authorisation": "lipsește autorizația RAR"
+      }
+    },
+    "error": "Nu am putut încărca verificarea",
+    "notChecked": "neverificat",
+    "pill": "Profil verificat",
+    "rar": {
+      "checked": "verificată",
+      "checkedOn": "verificată pe {day}",
+      "label": "Autorizație tehnică RAR",
+      "register": "în registrul RAR"
+    },
+    "retry": "Încearcă din nou",
+    "state": {
+      "failed": "problemă",
+      "not_run": "neverificat",
+      "ok": "în regulă",
+      "warning": "atenție"
+    },
+    "tag": "Verificat",
+    "title": "Verificare legală"
+  },
   "prices": {
+    "done": "Gata",
+    "edit": "Modifică",
+    "editAll": "Modifică prețurile",
+    "editor": {
+      "bothEnds": "Ambele capete sunt necesare",
+      "cancel": "Anulează",
+      "duration": {
+        "integer": "Doar minute întregi",
+        "label": "Durată",
+        "max": "Cel mult 4.800 minute (80 de ore)",
+        "min": "Cel puțin 15 minute",
+        "step": "În pași de 15 minute"
+      },
+      "from": "De la",
+      "minutes": "min",
+      "problem": {
+        "not_found": "Lucrarea nu mai e în listă.",
+        "stale": "Lista s‑a schimbat între timp."
+      },
+      "save": "Salvează",
+      "to": "Până la"
+    },
+    "editRow": "Modifică {name}",
     "empty": "Nu ai încă lucrări în listă.",
     "from": "de la {amount}",
     "labour": "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă.",
+    "labourTitle": "Manoperă, pe oră",
+    "labourUnset": "Manoperă: nesetată",
     "retry": "Încearcă din nou",
     "state": {
       "awaiting_approval": "ascuns · așteaptă aprobarea",

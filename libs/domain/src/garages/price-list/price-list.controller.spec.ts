@@ -70,3 +70,18 @@ describe('the brand range routes', () => {
     ]);
   });
 });
+
+// @traces 173-FR-004
+// @traces 173-FR-005
+describe('the in-place range routes', () => {
+  it("changes a default row's range with a JSON PATCH on its id", () => {
+    const { setRange } = PriceListController.prototype;
+
+    expect(Reflect.getMetadata(METHOD_METADATA, setRange)).toBe(
+      RequestMethod.PATCH,
+    );
+    expect(Reflect.getMetadata(PATH_METADATA, setRange)).toBe(':priceId');
+    expect(Reflect.getMetadata(GUARDS_METADATA, setRange)).toContain(JsonOnly);
+    expect(uuidParams(setRange)).toEqual(['garageId', 'priceId']);
+  });
+});

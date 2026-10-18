@@ -11,23 +11,83 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
-import { Prisma, type PrismaClient } from '../../generated/prisma/client';
+import {
+  type BusinessKind,
+  type GarageBrandStance,
+  Prisma,
+  type PrismaClient,
+} from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { areaSql, kmOf } from '../../search/area/area-sql';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
 import {
-  PRICE_ROW_SELECT,
   type PriceRow,
   priceListJobs,
   publicPriceRows,
 } from '../price-list/price-list';
 
-// The one scope of every read a visitor can reach: spread into the `where`
-// of a garage read. A test fails when a public handler's read skips it.
+// The one scope of every read a visitor or driver can reach: spread into the
+// `where` of a Prisma garage read, or put in the `WHERE` of a raw one under
+// the alias the query gives `garage`. A test fails when such a read skips it.
+// The alias is spliced as written: pass a literal, never a value.
 export const publicGarages = () => ({ status: 'approved' as const });
-// The same scope for a raw read whose statement reads `garage`.
-export const publicGaragesSql = Prisma.sql`garage.status = 'approved'::garage_status`;
+export const publicGaragesSql = (alias = 'garage') =>
+  Prisma.sql`${Prisma.raw(alias)}.status = 'approved'`;
+
+type BrandRow = {
+  brand: { id: string; name: string; popularity: number | null; slug: string };
+  diesel: boolean;
+  electric: boolean;
+  hybrid: boolean;
+  jobs: { jobTypeId: string }[];
+  petrol: boolean;
+  stance: GarageBrandStance;
+};
+
+type PhotoRow = {
+  fileKey: string;
+  height: number | null;
+  id: string;
+  width: number | null;
+};
+
+// What the profile's one statement returns; `brands`, `photos` and `prices`
+// are null for a garage not listed, whose row only tells 404 from 410.
+type ProfileRow = {
+  address: string | null;
+  approved_at: Date | null;
+  brand_note: string | null;
+  brands: BrandRow[] | null;
+  business_kind: BusinessKind | null;
+  courtesy_car: boolean;
+  courtesy_car_paid: boolean;
+  courtesy_car_price_per_day_bani: number | null;
+  id: string;
+  known_for: string | null;
+  labour_from_bani: number | null;
+  labour_to_bani: number | null;
+  latitude: number | null;
+  lifetime_requests: number | null;
+  listed: boolean;
+  longitude: number | null;
+  name: string;
+  payment_card: boolean;
+  payment_cash: boolean;
+  payment_transfer: boolean;
+  photos: PhotoRow[] | null;
+  // JSON carries the time as text.
+  prices: (Omit<PriceRow, 'updatedAt'> & { updatedAt: string })[] | null;
+  rar_activities: string[];
+  rate: number | null;
+  rating: number | null;
+  refusal_phrase: string | null;
+  review_count: number;
+  service_radius_km: number | null;
+  slug: string;
+  status: string;
+  verified_at: Date | null;
+};
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
   Object.fromEntries(
@@ -38,7 +98,7 @@ const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
 
 // A profile entry lives ten minutes before it is refreshed.
 const PROFILE_SECONDS = 600;
-const NO_BRAND = '-';
+export const NO_BRAND = '-';
 
 const CONTROL = /\p{Cc}/u;
 const BRAND_MAX = 60;
@@ -107,6 +167,31 @@ function priceListOf(
   };
 }
 
+// The courtesy car, when the garage lists one.
+const courtesyCarOf = (row: ProfileRow) =>
+  row.courtesy_car
+    ? {
+        courtesyCar: {
+          paid: row.courtesy_car_paid,
+          ...present({ pricePerDayBani: row.courtesy_car_price_per_day_bani }),
+        },
+      }
+    : {};
+
+// A mobile mechanic is shown by the area it serves: its position is the
+// owner's seat, so it never leaves with the garage.
+const placeOf = (row: ProfileRow) =>
+  row.business_kind === 'mobile'
+    ? {
+        serviceRadiusKm:
+          row.service_radius_km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+      }
+    : present({
+        address: row.address,
+        latitude: row.latitude,
+        longitude: row.longitude,
+      });
+
 @Injectable()
 export class PublicGaragesService {
   private readonly logger = new Logger('PublicGarages');
@@ -149,7 +234,7 @@ export class PublicGaragesService {
     const [row] = await this.prisma.$queryRaw<{ metres: number | null }[]>`
       SELECT ${area.distance} AS metres
       FROM garage
-      WHERE garage.id = ${id}::uuid AND ${publicGaragesSql}`;
+      WHERE garage.id = ${id}::uuid AND ${publicGaragesSql()}`;
     return typeof row?.metres === 'number' ? kmOf(row.metres) : undefined;
   }
 
@@ -176,151 +261,139 @@ export class PublicGaragesService {
     slug: string,
     held: CatalogueBrand | null,
   ): Promise<Filled<PublicGarageDto | null>> {
-    const answer = await this.read(slug, held);
-    if (answer) return { tags: [`garage:${answer.id}`], value: answer };
-    const hidden = await this.prisma.garage.findUnique({
-      select: { status: true },
-      where: { slug },
-    });
-    if (hidden?.status === 'suspended') {
+    const row = await this.read(slug);
+    if (!row) return { negative: true, value: null };
+    if (row.listed) {
+      return {
+        tags: [`garage:${row.id}`],
+        value: await this.answerOf(row, held),
+      };
+    }
+    if (row.status === 'suspended') {
       throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
     }
-    if (hidden) throw notFound();
-    return { negative: true, value: null };
+    throw notFound();
   }
 
-  private async read(
-    slug: string,
+  // The whole profile in one statement: the garage, its brands with their
+  // fuels and job ticks, photos, price rows, courtesy car, response figures
+  // and latest approval. Outside the scope only the status comes back.
+  private async read(slug: string): Promise<ProfileRow | undefined> {
+    const [row] = await this.prisma.$queryRaw<ProfileRow[]>`
+      SELECT g.id, g.slug, g.name, g.status::text AS status, s.listed,
+        g.address, g.approved_at, g.brand_note, g.refusal_phrase,
+        g.business_kind::text AS business_kind, g.courtesy_car_paid,
+        g.courtesy_car_price_per_day_bani, g.known_for, g.labour_from_bani,
+        g.labour_to_bani, g.latitude, g.longitude, g.payment_card,
+        g.payment_cash, g.payment_transfer, g.rar_activities,
+        g.rating::float8 AS rating, g.review_count, g.service_radius_km,
+        rs.lifetime_requests, rs.rate,
+        EXISTS (
+          SELECT 1 FROM garage_facility f
+          WHERE f.garage_id = g.id AND f.facility = 'courtesy_car'
+        ) AS courtesy_car,
+        (
+          SELECT max(v.decided_at) FROM verification_file v
+          WHERE v.garage_id = g.id AND v.status = 'approved'
+            AND v.decided_at IS NOT NULL
+        ) AS verified_at,
+        d.brands, d.photos, d.prices
+      FROM garage g
+      CROSS JOIN LATERAL (SELECT ${publicGaragesSql('g')} AS listed) s
+      LEFT JOIN garage_response_stats rs ON rs.garage_id = g.id
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+              'brand', jsonb_build_object('id', b.id, 'name', b.name,
+                'popularity', b.popularity, 'slug', b.slug),
+              'diesel', gb.diesel, 'electric', gb.electric,
+              'hybrid', gb.hybrid, 'petrol', gb.petrol,
+              'stance', gb.stance::text,
+              'jobs', COALESCE((
+                SELECT jsonb_agg(jsonb_build_object('jobTypeId', j.job_type_id)
+                  ORDER BY j.job_type_id)
+                FROM garage_brand_job j
+                WHERE j.garage_id = gb.garage_id AND j.brand_id = gb.brand_id
+              ), '[]'::jsonb)
+            ) ORDER BY b.popularity NULLS LAST, b.name, b.id)
+            FROM garage_brand gb JOIN brand b ON b.id = gb.brand_id
+            WHERE gb.garage_id = g.id
+          ), '[]'::jsonb) AS brands,
+          COALESCE((
+            SELECT jsonb_agg(jsonb_build_object('fileKey', ph.file_key,
+              'height', ph.height, 'id', ph.id, 'width', ph.width)
+              ORDER BY ph.position, ph.id)
+            FROM garage_photo ph WHERE ph.garage_id = g.id
+          ), '[]'::jsonb) AS photos,
+          COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+              'id', p.id, 'brandId', p.brand_id,
+              'brand', CASE WHEN pb.id IS NULL THEN NULL ELSE
+                jsonb_build_object('name', pb.name, 'popularity', pb.popularity)
+              END,
+              'visible', p.visible, 'fromBani', p.from_bani,
+              'toBani', p.to_bani, 'durationMinutes', p.duration_minutes,
+              'position', p.position, 'updatedAt', p.updated_at,
+              'jobType', jsonb_build_object('id', jt.id,
+                'nameRo', jt.name_ro, 'nameEn', jt.name_en,
+                'status', jt.status::text, 'rarActivity', jt.rar_activity)
+            ) ORDER BY p.position, p.id)
+            FROM garage_price p
+            JOIN job_type jt ON jt.id = p.job_type_id
+            LEFT JOIN brand pb ON pb.id = p.brand_id
+            WHERE p.garage_id = g.id
+          ), '[]'::jsonb) AS prices
+        WHERE s.listed
+      ) d ON TRUE
+      WHERE g.slug = ${slug}`;
+    return row;
+  }
+
+  private async answerOf(
+    row: ProfileRow,
     wanted: CatalogueBrand | null,
-  ): Promise<PublicGarageDto | null> {
-    const garage = await this.prisma.garage.findFirst({
-      select: {
-        address: true,
-        approvedAt: true,
-        brandNote: true,
-        brands: {
-          select: {
-            brand: {
-              select: { id: true, name: true, popularity: true, slug: true },
-            },
-            diesel: true,
-            electric: true,
-            hybrid: true,
-            jobs: { select: { jobTypeId: true } },
-            petrol: true,
-            stance: true,
-          },
-        },
-        businessKind: true,
-        courtesyCarPaid: true,
-        courtesyCarPricePerDayBani: true,
-        facilities: {
-          select: { facility: true },
-          where: { facility: 'courtesy_car' },
-        },
-        id: true,
-        knownFor: true,
-        labourFromBani: true,
-        labourToBani: true,
-        latitude: true,
-        longitude: true,
-        name: true,
-        paymentCard: true,
-        paymentCash: true,
-        paymentTransfer: true,
-        photos: {
-          orderBy: { position: 'asc' },
-          select: { fileKey: true, height: true, id: true, width: true },
-        },
-        // The jobs a request from the profile can ask for: the public ones
-        // of the price list, as the price list rule decides.
-        prices: { select: PRICE_ROW_SELECT },
-        rarActivities: true,
-        rating: true,
-        refusalPhrase: true,
-        responseStats: { select: { lifetimeRequests: true, rate: true } },
-        reviewCount: true,
-        serviceRadiusKm: true,
-        slug: true,
-        verificationFiles: {
-          orderBy: { decidedAt: 'desc' },
-          select: { decidedAt: true },
-          take: 1,
-          where: { decidedAt: { not: null }, status: 'approved' },
-        },
-      },
-      where: { slug, ...publicGarages() },
-    });
-    if (!garage) return null;
-    const {
-      address,
-      approvedAt,
-      brands,
-      businessKind,
-      courtesyCarPaid,
-      courtesyCarPricePerDayBani,
-      facilities,
-      id,
-      knownFor,
-      labourFromBani,
-      labourToBani,
-      latitude,
-      longitude,
-      name,
-      paymentCard,
-      paymentCash,
-      paymentTransfer,
-      photos,
-      prices,
-      rarActivities,
-      rating,
-      responseStats,
-      reviewCount,
-      serviceRadiusKm,
-      slug: held,
-      verificationFiles,
-      ...texts
-    } = garage;
-    const verifiedAt = verificationFiles[0]?.decidedAt ?? approvedAt;
+  ): Promise<PublicGarageDto> {
+    const brands = row.brands ?? [];
+    const prices: PriceRow[] = (row.prices ?? []).map((price) => ({
+      ...price,
+      updatedAt: new Date(price.updatedAt),
+    }));
+    const verifiedAt = row.verified_at ?? row.approved_at;
     const inContext = wanted ? inContextOf(wanted, brands) : undefined;
     return {
-      id,
-      name,
-      slug: held,
-      ...brandAnswerWithFuels(brands, texts),
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      ...brandAnswerWithFuels(brands, {
+        brandNote: row.brand_note,
+        refusalPhrase: row.refusal_phrase,
+      }),
       ...priceListOf(
         brands,
-        labourFromBani,
-        labourToBani,
+        row.labour_from_bani,
+        row.labour_to_bani,
         prices,
-        rarActivities,
+        row.rar_activities,
         inContext?.id,
       ),
       paymentMethods: {
-        card: paymentCard,
-        cash: paymentCash,
-        transfer: paymentTransfer,
+        card: row.payment_card,
+        cash: row.payment_cash,
+        transfer: row.payment_transfer,
       },
-      photos: await this.photos(photos),
-      ...(facilities.length > 0 && {
-        courtesyCar: {
-          paid: courtesyCarPaid,
-          ...present({ pricePerDayBani: courtesyCarPricePerDayBani }),
-        },
-      }),
-      // A mobile mechanic is shown by the area it serves: its position is
-      // the owner's seat, so it never leaves with the garage.
-      ...(businessKind === 'mobile'
-        ? {
-            serviceRadiusKm:
-              serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
-          }
-        : present({ address, latitude, longitude })),
-      ...present({ businessKind }),
-      ...(knownFor?.trim() ? { description: knownFor } : {}),
-      rating: rating === null ? null : rating.toNumber(),
-      responseRate: responseRateOf(responseStats),
-      reviewCount,
+      photos: await this.photos(row.photos ?? []),
+      ...courtesyCarOf(row),
+      ...placeOf(row),
+      ...present({ businessKind: row.business_kind }),
+      ...(row.known_for?.trim() ? { description: row.known_for } : {}),
+      rating: row.rating,
+      responseRate: responseRateOf(
+        row.lifetime_requests === null
+          ? null
+          : { lifetimeRequests: row.lifetime_requests, rate: row.rate },
+      ),
+      reviewCount: row.review_count,
       verifiedAt: verifiedAt?.toISOString() ?? null,
       ...(inContext ? { brand: inContext } : {}),
     };
@@ -329,14 +402,7 @@ export class PublicGaragesService {
   // A row the worker has sized has its copies. An unsized one is asked of its
   // thumbnail, which also carries the size; without one it is not ready yet.
   // The admin's verification file signs the gallery the same way.
-  async photos(
-    rows: {
-      fileKey: string;
-      height: number | null;
-      id: string;
-      width: number | null;
-    }[],
-  ): Promise<PublicGaragePhotoDto[]> {
+  async photos(rows: PhotoRow[]): Promise<PublicGaragePhotoDto[]> {
     const answered = await Promise.all(
       rows.map(async ({ fileKey, id, ...size }) => {
         const thumb = this.storage.derivedKey(fileKey, 'thumb');

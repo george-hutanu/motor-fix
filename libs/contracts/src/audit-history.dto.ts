@@ -31,7 +31,7 @@ const INSTANT =
 const instantMessage = '$property must be a date-time with a zone';
 
 // Stored values are free JSON: text, numbers, objects or lists.
-const JSON_VALUE = {
+export const JSON_VALUE = {
   description: 'The value as stored (money in bani, times in UTC)',
   nullable: true,
   oneOf: [

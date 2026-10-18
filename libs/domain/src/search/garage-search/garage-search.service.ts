@@ -133,7 +133,7 @@ export async function countGroups(
       COUNT(*) FILTER (WHERE ${takes(brandId)})::int AS works_on,
       COUNT(*) FILTER (WHERE NOT ${takes(brandId)})::int AS other
     FROM garage
-    WHERE ${publicGaragesSql} AND ${within(area)}`;
+    WHERE ${publicGaragesSql()} AND ${within(area)}`;
   return {
     counts: { doesNotTake: row.other, worksOn: row.works_on },
     total: row.works_on + row.other,
@@ -159,7 +159,7 @@ export function groupPage(
       garage.longitude,
       garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
     FROM garage
-    WHERE ${publicGaragesSql} AND ${within(area)}
+    WHERE ${publicGaragesSql()} AND ${within(area)}
       AND ${group === 'works_on' ? takes(brandId) : Prisma.sql`NOT ${takes(brandId)}`}
       ${after ? Prisma.sql`AND ${beyond(after)}` : Prisma.empty}
       ${ids ? Prisma.sql`AND garage.id = ANY(${ids}::uuid[])` : Prisma.empty}

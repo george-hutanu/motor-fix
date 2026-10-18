@@ -5,6 +5,7 @@ import {
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
   emailConfig,
+  GARAGE_REPORT_DECIDED_CONSUMER,
   GARAGE_SUSPENDED_CONSUMER,
   HealthModule,
   InsightsModule,
@@ -75,6 +76,7 @@ export function workerModule(
         consumers: [
           CAR_REMINDERS_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
+          GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
@@ -131,6 +133,7 @@ export function workerModule(
       }),
       DataStoreMetricsModule.register({
         databaseUrl: env.DATABASE_URL,
+        keycloakMetricsUrl: process.env['KEYCLOAK_METRICS_URL'],
         monitorUrl: process.env['MONITOR_DATABASE_URL'],
         redisUrl: env.REDIS_URL,
       }),

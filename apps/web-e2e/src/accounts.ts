@@ -1,4 +1,9 @@
-import { type BrowserContext, expect, type Page } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type BrowserContext,
+  expect,
+  type Page,
+} from '@playwright/test';
 
 // The accounts libs/domain/src/seed.ts adds outside production. Their password
 // is a fake default locally and in CI; a deployed address has its own secret.
@@ -84,4 +89,31 @@ export async function signIn(
   await dialog.getByLabel('Parolă').fill(password);
   if (!remember) await dialog.getByLabel('Ține‑mă autentificat').uncheck();
   await dialog.getByRole('button', { name: 'Intră în cont' }).click();
+}
+
+// A bearer header for one seeded account, for the API calls a flow sets up with.
+export async function headers(request: APIRequestContext, email: string) {
+  const res = await request.post('/api/v1/auth/sign-in', {
+    data: { email, password: PASSWORD, remember: false },
+  });
+  expect(res.ok()).toBe(true);
+  const { accessToken } = (await res.json()) as { accessToken: string };
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+// The second admin, signed in from the public header, landing on the dashboard.
+export async function signInAsAdmin2(page: Page) {
+  await ready(page, '/ro/garages');
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page
+      .getByRole('navigation', { name: 'Navigare principală' })
+      .getByRole('link', { exact: true, name: 'Cont' })
+      .click();
+  } else {
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+  }
+  await signIn(page, ACCOUNTS.admin2);
+  await expect(page).toHaveURL('/app/admin');
 }

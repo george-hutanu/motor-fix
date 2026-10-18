@@ -88,7 +88,10 @@ features:
   - 1344-no-mutation-wait
   - 430-cdn-waf
   - 1019-staging-mcp-connect
+  - 173-price-range-in-place
   - 1174-postgres-18-pitr
+  - 1178-keycloak-sizing
+  - 1348-release-green
 ---
 
 # Capability: Platform
@@ -205,13 +208,13 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 1348-FR-001 — (replaces 000-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (000-FR-004), a service whose Railway id is unset skipped with a notice (000-FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then, while production is on, promote to production with no approval step of its own (the `production` environment's protection rules are the owner's). Production is on only while the repository variable `PRODUCTION_ENABLED` is `true`, compared by GitHub's expression `==` (which ignores letter case); unset, empty or any other value is off. While it is off the production job MUST NOT start (it is skipped before it binds the `production` environment, so no run waits on that environment's reviewer or holds the `release-production` group), and the run MUST end green after staging with a notice and a step-summary line naming the variable. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
-_From 1016-mcp-staging._
+_From 1348-release-green._
 
-### 000-FR-014 — (replaces 516-FR-002) Once staging and its `@core` end-to-end flows pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
+### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
-_From 1016-mcp-staging._
+_From 1348-release-green._
 
 ### 516-FR-003 — Staging deploys and production deploys MUST each run one at a time, in commit order, and a deploy already running MUST NOT be cancelled by a newer commit: the newer one waits, and of several waiting only the latest proven commit runs next. There MUST be no path that deploys a branch or an unproven commit to production.
 
@@ -221,7 +224,7 @@ _From 516-production-release-queue._
 
 _From 421-monorepo-platform._
 
-### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command `start --import-realm --features=cimd,resource-indicators --proxy-headers=xforwarded --http-enabled=true` and the JVM heap cap (FR-006); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
+### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command and heap sizing of 1178-FR-001 and 1178-FR-002 (a `kc.sh build` stage, then `start --optimized`; amended by ST-1178); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
 
 _From 1016-mcp-staging._
 
@@ -1465,15 +1468,15 @@ _From 1016-mcp-staging._
 
 _From 1016-mcp-staging; path modified by 1021-keycloak-health-path and 1022-keycloak-health-hyphen._
 
-### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
+### 1178-FR-001 — The Keycloak image MUST NOT set a fixed maximum or initial heap in bytes. Its heap MUST be a percentage of the container's memory limit: the maximum at 70% and the initial heap at a percentage too, so a change to the limit on Railway changes the heap with no change to the image.
 
-_From 1016-mcp-staging._
+_From 1178-keycloak-sizing._
 
 ### 000-FR-007 — When `RAILWAY_SERVICE_MCP` or `RAILWAY_SERVICE_KEYCLOAK` is empty on staging, the deploy script MUST skip that service alone, print one GitHub workflow notice naming the variable and that the service was not deployed, deploy every other service and exit 0. A set id with a missing `IMAGE_<NAME>` MUST fail naming the variable, as for every service today.
 
 _From 1016-mcp-staging._
 
-### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB=postgres`, `KC_DB_URL`, `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365.
+### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB_URL` (`KC_DB` is baked into the image, 1178-FR-002), `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365; and, per 1178-FR-011, the service's memory limit, `KEYCLOAK_METRICS_URL` on the worker, the management port 9000 and the `keycloak.json` alert import (amended by ST-1178).
 
 _From 1016-mcp-staging._
 
@@ -1657,9 +1660,9 @@ _From 1037-remove-notion._
 
 _From 1037-remove-notion._
 
-### 251-FR-012 — A scheduled workflow MUST run every day at 03:00 UTC and on `workflow_dispatch`, one job per environment (`staging`, `production`), each in its GitHub environment. An environment whose `RAILWAY_SERVICE_POSTGRES` variable is unset MUST be skipped with a notice and MUST NOT fail the run; one whose variable is set but whose backup settings (`BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_GPG_PASSPHRASE`) are incomplete MUST fail naming the missing setting. A failed run is the backup alert at launch.
+### 1348-FR-003 — (replaces 251-FR-012) A scheduled workflow MUST run every day at 03:00 UTC and on `workflow_dispatch`, one job per environment, each in its GitHub environment: `staging` always, `production` only while production is on (1348-FR-001). While production is off its leg MUST NOT be started at all (a job bound to the `production` environment waits for that environment's reviewer before its first step, so a leg that starts and skips its steps still waits: the leg is left out of the job's matrix), the run MUST stay green while the staging leg is (a failing staging leg still fails it), and the staging leg MUST note production's skip with a notice and a step-summary line naming the variable, whether or not staging's own `RAILWAY_SERVICE_POSTGRES` is set (the note is about production). An environment in the matrix whose `RAILWAY_SERVICE_POSTGRES` variable is unset MUST be skipped with a notice and MUST NOT fail the run; one whose variable is set but whose backup settings (`BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_GPG_PASSPHRASE`) are incomplete MUST fail naming the missing setting. A failed run is the backup alert at launch.
 
-_From 251-monitoring-backups._
+_From 1348-release-green._
 
 ### 251-FR-013 — The dump MUST run inside the environment's PostgreSQL service over `railway ssh` (the service's own tools, PostgreSQL 18): one transaction-consistent snapshot that produces the dump in PostgreSQL's custom format and a manifest (JSON: environment, UTC timestamp, database server version, the encrypted object's size (`dump_size_bytes`, which the drill checks before it downloads), and the row count of every table in `public` taken in the same snapshot). Both MUST be streamed back to the runner, the dump encrypted with symmetric AES-256 (`gpg`) under the passphrase secret before it touches the runner's disk, and uploaded to the S3-compatible bucket as `<environment>/<timestamp>.dump.gpg` and `<environment>/<timestamp>.manifest.json`. The run's log MUST never print the passphrase, the keys, the database URL or the dump.
 
@@ -2256,6 +2259,9 @@ _From 430-cdn-waf._
 
 _From 1019-staging-mcp-connect._
 
+### 173-FR-013 — `libs/domain/src/garages/prices/garage-prices.service.ts` and `garage-prices.testing.ts`, with their colocated specs, MUST move to `libs/domain/src/garages/prices/garage-prices/` (files named after the subfolder), every import updated, their two entries removed from `scripts/structure-baseline.json`, and `node scripts/structure-check.ts` MUST pass (Constitution IV; folded-in #658).
+
+_From 173-price-range-in-place._
 ### 1174-FR-001 — The repository MUST hold one database image definition (`infra/postgres/Dockerfile`), `FROM ghcr.io/railwayapp-templates/postgres-ssl:18` plus the distribution's `postgresql-18-postgis-3` package (PostGIS 3.6.x) from the base image's pgdg repository, nothing else added, with `PGDATA` set under `/var/lib/postgresql/data` so the base entrypoint starts; it MUST be published to `ghcr.io/george-hutanu/motor-fix-postgres` for amd64 and arm64, tagged with the commit sha on every publish and `18` from `main` (from another branch only when the dispatch sets its `move_18` input, so nothing moves the tag compose, CI and staging pull by accident), by a workflow (`postgres-image.yml`) that runs on `workflow_dispatch` from any branch and on a push to `main` that changes `infra/postgres/**` or the workflow itself, and builds both architectures without pushing on a pull request that changes them (the proof before merge, and what registers the workflow for a dispatch from a branch); the package is public, as the application images are, so compose, CI and Railway pull it with no login (making a new package public is an owner step if GitHub creates it private); a failed publish run is its alert.
 
 _From 1174-postgres-18-pitr._
@@ -2291,6 +2297,22 @@ _From 1174-postgres-18-pitr._
 ### 1174-FR-012 — The specs repo's `docs/how-to/back-up-and-restore-the-database.md` MUST describe point-in-time recovery (the variables, what the image does with them, the defaults, how to restore for real with Railway's point-in-time restore into a new service and when to use the dump instead), the point-in-time drill (both modes, how to run it, what it checks), the dump drill's new image, and MUST say under "Timings and targets" that the 15-minute data-loss target is met by the archive (at most 60 s plus the heartbeat behind, as the self-contained drill measured), never again "not met"; `docs/reference/stack.md` MUST record PostgreSQL 18 + PostGIS 3.6 on our image as decided (ST-1174), and `llms.txt`'s summary of the how-to MUST mention point-in-time recovery.
 
 _From 1174-postgres-18-pitr._
+
+### 1178-FR-002 — The Keycloak image MUST be built in two stages: a build stage that runs Keycloak's build with the build-time options (database `postgres`, features `cimd` and `resource-indicators`, health enabled, metrics enabled), and a runtime stage that copies the built server and starts it with `--optimized`, `--import-realm`, `--proxy-headers=xforwarded` and `--http-enabled=true`.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-003 — Persistent user sessions MUST stay on (Keycloak 26's default): no build or runtime option disables the feature.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-004 — The runtime image MUST keep the realm file at `/opt/keycloak/data/import/`, expose 8080, and answer the Railway health check `/realms/master` on 8080 once the realm import has finished, as today; the deploy script and the health-check path are unchanged.
+
+_From 1178-keycloak-sizing._
+
+### 1178-FR-011 — `infra/keycloak/README.md` MUST document the heap rule and the memory limit the owner sets on Railway (1.36–1.5 GB, with the guide's figures and the 768 MiB failure as the reason), the new `KEYCLOAK_METRICS_URL` variable on the worker (kind, value shape, that unset means no reading), the management port's role and the new alert in its import step; `infra/observability/README.md` MUST say how Keycloak's memory reaches Grafana. The PR's Notes MUST list the owner-only steps: the Railway memory limit, the variable and the alert import. The agent never sets a Railway variable or setting.
+
+_From 1178-keycloak-sizing._
 
 ## Retired
 
@@ -2381,3 +2403,8 @@ _From 1174-postgres-18-pitr._
 - `1324-FR-011` — removed by 1324-retire-debt-and-ready (2026-10-16): a process check, not a behaviour; SC-004's doctor run is the check
 
 - `431-FR-011` — superseded by `1344-FR-004` (2026-10-17)
+
+- `000-FR-006` — superseded by `1178-FR-001` (2026-10-18)
+- `000-FR-001` — superseded by `1348-FR-001` (2026-10-17)
+- `000-FR-014` — superseded by `1348-FR-002` (2026-10-17)
+- `251-FR-012` — superseded by `1348-FR-003` (2026-10-17)

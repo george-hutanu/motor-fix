@@ -94,7 +94,7 @@ export class GaragePinsService {
             WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
           ) AS stance
         FROM garage
-        WHERE ${publicGaragesSql} AND ${within(area)}
+        WHERE ${publicGaragesSql()} AND ${within(area)}
         ORDER BY ${area.nearness}, garage.id
         LIMIT ${SEARCH_PINS_MAX}`,
     ]);

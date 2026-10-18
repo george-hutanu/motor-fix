@@ -18,6 +18,7 @@ export interface PriceRow {
   toBani: number | null;
   durationMinutes: number | null;
   position: number;
+  updatedAt: Date;
   jobType: {
     id: string;
     nameRo: string;
@@ -46,6 +47,7 @@ export const PRICE_ROW_SELECT = {
   },
   position: true,
   toBani: true,
+  updatedAt: true,
   visible: true,
 } as const;
 
@@ -126,6 +128,10 @@ export function priceListJobs(
         }),
         ...(defaultRow && { fromBani: defaultRow.fromBani }),
         ...(defaultRow?.toBani != null && { toBani: defaultRow.toBani }),
+        ...(defaultRow && {
+          priceId: defaultRow.id,
+          updatedAt: defaultRow.updatedAt.toISOString(),
+        }),
         brandRanges,
       };
     });

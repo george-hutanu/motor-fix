@@ -27,7 +27,7 @@ async function decisionMails(page: Page, email: string): Promise<Mail[]> {
 // records the decision's event as the verification service would; the relay
 // and the worker do the rest. Every run that has the mailbox has the
 // database too, so the flow needs DATABASE_URL and fails without it.
-test.describe('the verification result e-mail @seeded @mailbox', () => {
+test.describe('the verification result e-mail @seeded @mailbox @database', () => {
   let db: Client;
   let eventId: string | undefined;
   let fileId: string | undefined;

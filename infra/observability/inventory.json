@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 137,
+    "count": 142,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -18,6 +18,7 @@
         "api-search-log-failure-rate",
         "api-prefetch-hit-rate",
         "api-search-latency",
+        "api-profile-latency",
         "api-memory"
       ],
       "story": "ST-881"
@@ -87,6 +88,7 @@
         "api-search-log-failure-rate",
         "api-prefetch-hit-rate",
         "api-search-latency",
+        "api-profile-latency",
         "api-memory"
       ],
       "story": "ST-881"
@@ -124,11 +126,12 @@
       "kind": "railway-service",
       "name": "keycloak",
       "source": "scripts/railway-deploy.ts",
-      "dashboard": "motorfix-mcp",
+      "dashboard": "motorfix-overview",
       "alerts": [
-        "mcp-issuer-unreachable"
+        "mcp-issuer-unreachable",
+        "keycloak-memory"
       ],
-      "reason": "staging only; health at /realms/master, answering once the realm is imported; the MCP server's mcp_issuer_up probe is the only signal (Keycloak itself sends no telemetry)",
+      "reason": "staging only; health at /realms/master, answering once the realm is imported; Keycloak sends no telemetry itself: the worker reads its management /metrics (port 9000, private network) at KEYCLOAK_METRICS_URL once a minute into motorfix_keycloak_heap_used_bytes, motorfix_keycloak_heap_max_bytes and motorfix_datastore_up{store=\"keycloak\"} on the overview dashboard's keycloak row, which fire keycloak-memory; the MCP server's mcp_issuer_up probe still fires mcp-issuer-unreachable",
       "story": "ST-1016"
     },
     {
@@ -276,6 +279,19 @@
       ],
       "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
       "story": "ST-49"
+    },
+    {
+      "kind": "queue",
+      "name": "garage-report-decided",
+      "source": "libs/domain/src/notifications/garage-report-decided/garage-report-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_garage_report_decided_notices_total (built, skipped) on motorfix-queues; one log line per event with the garage id, the decision and how many reporters were told, never a name, the note or the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
+      "story": "ST-69"
     },
     {
       "kind": "queue",
@@ -494,7 +510,7 @@
         "web-error-rate",
         "web-latency"
       ],
-      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel",
+      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel",
       "story": "ST-877"
     },
     {
@@ -627,6 +643,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_garage_report_decided_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each report decision told to its reporters by outcome (built, skipped: no garage, an unknown decision or no reporter list), with the fan-out's log line naming the garage id; a count has no failure to alert on, the garage-report-decided queue entry owns the failed-job alert",
+      "story": "ST-69"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_suspensions_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
@@ -655,6 +680,19 @@
       ],
       "reason": "each suspension and each refused one is audited with the admin, the cause and the reason; the count by cause is the motorfix_garage_suspensions_total entry",
       "story": "ST-49"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-report-decision",
+      "source": "libs/domain/src/garages/verification/report-decision/report-decision.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/report-decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one log line per decision naming the file id, the decision and the reports closed, never the note or the reason; each decision and each refused one is audited with the admin; the count by outcome is the motorfix_report_decisions_total entry and the refusals are on motorfix_verification_decision_refusals_total; no alert of its own, as the …/:id/decision endpoint: a refusal is the rule working, and the API error-rate and latency rules cover the route",
+      "story": "ST-69"
     },
     {
       "kind": "endpoint",
@@ -780,8 +818,19 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each admin decision refused by reason (rar_check_required, caen_check_required, note_required, already_decided), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
+      "reason": "counts each admin decision or request for more refused by reason (rar_check_required, caen_check_required, note_required, reason_required, note_too_short, already_decided, and for a report decision no_open_report), with the Verification log line naming the file; a refusal is the rule working, not a failure, so it has no alert; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_rejections_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "verification-rejection-burst"
+      ],
+      "reason": "counts each garage verification file rejected, by reason (documents, rar, address, photos, other), with the Verification log line naming the file, the admin and the reason (never the message) and the reason on the request span; more than 5 in an hour fires the burst alert",
+      "story": "ST-305"
     },
     {
       "kind": "product-counter",
@@ -791,6 +840,26 @@
       "alerts": "none",
       "reason": "counts each reopened verification file by who reopened it (admin, system); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-306"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_more_requests_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "verification-more-request-burst"
+      ],
+      "reason": "counts each garage verification file sent back for more details, with the Verification log line naming the file, the admin and the items asked for (never the message) and the items on the request span; more than 5 in an hour fires the burst alert",
+      "story": "ST-304"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_resubmissions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each file a garage sends again after a request for more, with one Verification log line naming the file; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-304"
     },
     {
       "kind": "product-counter",
@@ -903,6 +972,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-legal-check",
+      "source": "libs/domain/src/garages/verification/legal-check/legal-check.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/legal-check",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read only: it changes nothing, so no product counter or audit row; its refusals and latency show on the request-duration metric by route and status code, each refusal writes one LegalCheck warn line with its code and the actor's role, its spans come from the HTTP and Prisma auto-instrumentation, and the API-wide error and latency rules cover it",
+      "story": "ST-210"
+    },
+    {
+      "kind": "endpoint",
       "name": "saved-garages",
       "source": "libs/domain/src/cars/saved-garages/saved-garages.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages, /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
@@ -922,6 +1004,15 @@
       "alerts": "none",
       "reason": "outcomes created, already_reported and refused (both 409); 404 and 429 read from the request-duration metric by route and status; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-312"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_report_decisions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "an admin's decision through POST /api/v1/admin/verification-files/:id/report-decision reaches it; counts each decision on a garage's open reports by outcome (unfounded, confirmed, confirmed_already_suspended), with the GarageReports log line naming the file; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-69"
     },
     {
       "kind": "endpoint",
@@ -1013,6 +1104,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "admin-verification-file-changes",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/changes",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read: it writes no entry and counts nothing; the request it answers is counted by motorfix_verification_more_requests_total and the return by motorfix_verification_resubmissions_total",
+      "story": "ST-304"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-verification-file-open",
       "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/open",
@@ -1047,7 +1151,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each decision logs one Verification line (file, outcome, admin; never the note), writes its audit entry and the verification.decided outbox row, and is counted by motorfix_garage_approvals_total, a refusal by motorfix_verification_decision_refusals_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "reason": "each decision logs one Verification line (file, outcome, admin; never the note), writes its audit entry and the verification.decided outbox row, and is counted by motorfix_garage_approvals_total, a rejection by reason by motorfix_verification_rejections_total, a refusal by motorfix_verification_decision_refusals_total; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-306"
     },
     {
@@ -1224,6 +1328,20 @@
     },
     {
       "kind": "endpoint",
+      "name": "public-garage-profile",
+      "source": "libs/domain/src/garages/public-garages/public-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:slug",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency",
+        "api-profile-latency"
+      ],
+      "reason": "one PostgreSQL statement on a cache miss, the answer cached ten minutes and purged by the garage tag; the cache outcomes are the motorfix_cache_total entry (kind profile)",
+      "story": "ST-1183"
+    },
+    {
+      "kind": "endpoint",
       "name": "search-garages-pins",
       "source": "libs/domain/src/search/garage-search/garage-search.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/search/garages/pins",
@@ -1313,6 +1431,19 @@
       ],
       "reason": "a gauge of stored messages whose support e-mail is pending or waiting for SUPPORT_EMAIL, read from PostgreSQL every 60 s; above 0 for an hour fires support-message-unsent",
       "story": "ST-280"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-price-ranges",
+      "source": "libs/domain/src/garages/price-list/price-list.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/prices/:priceId and /api/v1/garages/:garageId/labour",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's in-place change of a job's range and duration and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
+      "story": "ST-173"
     }
   ]
 }

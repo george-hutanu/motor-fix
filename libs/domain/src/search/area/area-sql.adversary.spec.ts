@@ -92,7 +92,7 @@ describe('the area SQL under hostile input', () => {
   });
 
   it('numbers the placeholders of the public scope and the area without a gap', () => {
-    const where = Prisma.sql`${publicGaragesSql} AND ${within(areaSql({ point: POINT }))}`;
+    const where = Prisma.sql`${publicGaragesSql()} AND ${within(areaSql({ point: POINT }))}`;
     const numbers = [...text(where).matchAll(/\$(\d+)/g)].map((m) =>
       Number(m[1]),
     );

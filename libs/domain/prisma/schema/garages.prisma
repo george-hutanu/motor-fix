@@ -381,16 +381,19 @@ enum VerificationReopenReason {
   @@map("verification_reopen_reason")
 }
 
-// TODO: the decision story adds the closed states.
+// An admin's decision closes every open report of the file at once.
 enum GarageReportStatus {
   open
+  unfounded
+  confirmed
 
   @@map("garage_report_status")
 }
 
 // A driver's report of a garage, attached to the garage's newest verification
 // file. SQL only, in the migration: the text's 20 to 1,000 characters and one
-// open report per reporter and garage.
+// open report per reporter and garage. A decided report carries who decided,
+// when, and the admin's note or the reason the garage was given.
 model GarageReport {
   id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   garageId           String             @map("garage_id") @db.Uuid
@@ -399,6 +402,9 @@ model GarageReport {
   text               String
   status             GarageReportStatus @default(open)
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  decidedBy          String?            @map("decided_by") @db.Uuid
+  decidedAt          DateTime?          @map("decided_at") @db.Timestamptz(3)
+  decisionNote       String?            @map("decision_note")
   garage             Garage             @relation(fields: [garageId], references: [id], onDelete: Cascade)
   verificationFile   VerificationFile   @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
   reporter           Account            @relation(fields: [reporterId], references: [id], onDelete: Cascade)

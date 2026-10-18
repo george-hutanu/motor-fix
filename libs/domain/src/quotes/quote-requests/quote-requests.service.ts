@@ -337,7 +337,7 @@ export class QuoteRequestsService {
         ${area.distance} AS distance_m,
         garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
       FROM garage
-      WHERE ${publicGaragesSql} AND ${within(area)}
+      WHERE ${publicGaragesSql()} AND ${within(area)}
         ${query.exclude ? Prisma.sql`AND garage.id <> ${query.exclude}::uuid` : Prisma.empty}
         AND EXISTS (
           SELECT 1 FROM garage_brand gb

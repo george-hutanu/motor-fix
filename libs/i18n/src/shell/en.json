@@ -23,6 +23,7 @@
     "label": "Period",
     "retry": "Retry",
     "summary": "{title}, {period}. Highest: {high}, {highLabel}. Lowest: {low}, {lowLabel}.",
+    "summaryTwo": "{title}, {period}. Highest: {highLabel}, {leadHeading} {highLead}, {valueHeading} {high}. Lowest: {lowLabel}, {leadHeading} {lowLead}, {valueHeading} {low}.",
     "table": "View as table",
     "value": "Value"
   },
@@ -347,6 +348,7 @@
       "DOCUMENT_OVERDUE": "Document expired",
       "FACILITY_RE_ADD_DECIDED": "Decision on adding a facility back",
       "FACILITY_REMOVED": "Facility removed",
+      "GARAGE_REPORT_DECIDED": "What became of your report",
       "GARAGE_RESTORED": "Garage restored",
       "GARAGE_SUSPENDED": "Garage suspended",
       "MESSAGE_RECEIVED": "New message",

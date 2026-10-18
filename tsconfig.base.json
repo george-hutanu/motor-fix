@@ -17,6 +17,9 @@
         "./libs/contracts/src/account-search.ts"
       ],
       "@motor-fix/contracts/consent": ["./libs/contracts/src/consent.ts"],
+      "@motor-fix/contracts/demand-order": [
+        "./libs/contracts/src/demand-order.ts"
+      ],
       "@motor-fix/contracts/email": ["./libs/contracts/src/email.ts"],
       "@motor-fix/contracts/env": ["./libs/contracts/src/env.ts"],
       "@motor-fix/contracts/events": ["./libs/contracts/src/events.ts"],
@@ -80,6 +83,7 @@
         "./libs/contracts/src/verification-target.ts"
       ],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
+      "@motor-fix/data-access/*": ["./libs/data-access/src/lib/*"],
       "@motor-fix/domain": ["./libs/domain/src/index.ts"],
       "@motor-fix/domain/testing": [
         "./libs/domain/src/storage/s3-test-store.ts"
@@ -88,6 +92,9 @@
       "@motor-fix/i18n/formats": ["./libs/i18n/src/formats.ts"],
       "@motor-fix/mcp-tools": ["./libs/mcp-tools/src/index.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
+      "@motor-fix/media/testing": [
+        "./libs/media/src/blob-array-buffer.testing.ts"
+      ],
       "@motor-fix/observability": ["./libs/observability/src/index.ts"],
       "@motor-fix/observability/scrub": [
         "./libs/observability/src/scrub/scrub.ts"

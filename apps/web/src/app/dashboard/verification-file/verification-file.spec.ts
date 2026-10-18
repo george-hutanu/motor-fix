@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
@@ -7,6 +8,7 @@ import {
   VerificationDocumentsService,
   type VerificationFileCheckDto,
   type VerificationFileDto,
+  type VerificationFileReportDto,
 } from '@motor-fix/data-access';
 import { appliedAt, I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
@@ -15,6 +17,7 @@ import { filter, Subject } from 'rxjs';
 
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
+import { ReportDecision } from '../report-decision/report-decision';
 
 // @traces 203-FR-006 203-FR-008
 // @traces 204-FR-007 204-FR-009
@@ -64,6 +67,22 @@ const check = (
 });
 
 const ioana = { id: 'admin-1', name: 'Ioana' };
+const elena = { id: 'driver-1', name: 'Elena D.' };
+
+// An open report from Elena, as the file read returns it.
+const report = (
+  extra: Partial<VerificationFileReportDto> = {},
+): VerificationFileReportDto => ({
+  createdAt: NOW.toISOString(),
+  decidedAt: null,
+  decidedBy: null,
+  decisionNote: null,
+  id: 'report-1',
+  reporter: elena,
+  status: 'open',
+  text: 'Adresă greșită pe pagina service-ului.',
+  ...extra,
+});
 
 function fileOf(
   extra: Partial<Omit<VerificationFileDto, 'file' | 'garage'>> & {
@@ -113,6 +132,8 @@ function fileOf(
     ],
     previousRejection: null,
     reports: [],
+    // The server counts the open reports, as read here unless a test says.
+    reportsOpen: (rest.reports ?? []).filter((r) => r.status === 'open').length,
     storageReady: true,
     timeline: { entries: [], total: 0 },
     ...rest,
@@ -169,6 +190,7 @@ let api: {
   verificationFileControllerReopen: jest.Mock;
   verificationFileControllerRead: jest.Mock;
   verificationChecksControllerRecord: jest.Mock;
+  reportDecisionControllerDecide: jest.Mock;
 };
 let documents: { legalDocumentsControllerPageAddress: jest.Mock };
 let overlays: { open: jest.Mock };
@@ -190,6 +212,7 @@ async function open(
   resync = new Subject();
   answer = typeof file === 'function' ? file : async () => file;
   api = {
+    reportDecisionControllerDecide: jest.fn(),
     verificationChecksControllerRecord: jest.fn(),
     verificationFileControllerCorrect: jest.fn(),
     verificationFileControllerDecision: jest.fn(),
@@ -209,6 +232,7 @@ async function open(
   jest.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: AdminService, useValue: api },
       { provide: VerificationDocumentsService, useValue: documents },
       { provide: Overlays, useValue: overlays },
@@ -342,7 +366,7 @@ describe('opening the file', () => {
 });
 
 describe('the sections', () => {
-  it('reads in order: header, reported, rejected before, register, documents, manual, history, footer', async () => {
+  it('reads in order: header, rejected before, register, reports, documents, manual, history, footer', async () => {
     const host = await open(
       fileOf({
         previousRejection: {
@@ -350,7 +374,7 @@ describe('the sections', () => {
           reasonCode: 'documents_unreadable',
           reasonNote: 'Certificatul nu se citește.',
         },
-        reports: [{ createdAt: NOW.toISOString(), text: 'Adresă greșită' }],
+        reports: [report()],
       }),
     );
 
@@ -360,9 +384,9 @@ describe('the sections', () => {
       ),
     ).toEqual([
       'header',
-      'reported',
       'rejected',
       'register',
+      'reports',
       'documents',
       'manual',
       'history',
@@ -432,7 +456,7 @@ describe('the sections', () => {
     expect(header?.querySelector('img')).toBeNull();
     expect(header?.querySelector('[data-part="phone"]')).toBeNull();
     expect(header?.querySelector('[data-part="brands"]')).toBeNull();
-    expect(section(host, 'reported')).toBeNull();
+    expect(section(host, 'reports')).toBeNull();
     expect(section(host, 'rejected')).toBeNull();
   });
 
@@ -440,14 +464,11 @@ describe('the sections', () => {
     const host = await open(
       fileOf({
         file: { reopenedAt: NOW.toISOString(), reopenReason: 'garage_report' },
-        reports: [
-          { createdAt: NOW.toISOString(), text: '<b>Nu există</b> atelierul' },
-        ],
+        reports: [report({ text: '<b>Nu există</b> atelierul' })],
       }),
     );
-    const reported = section(host, 'reported');
+    const reported = section(host, 'reports');
 
-    expect(text(reported)).toContain('Raportat');
     expect(text(reported)).toContain('<b>Nu există</b> atelierul');
     expect(reported?.querySelector('b')).toBeNull();
     expect(text(reported)).toContain('Redeschis după un raport');
@@ -565,7 +586,7 @@ describe('the sections', () => {
 
 describe('the footer', () => {
   it.each(['submitted', 'in_review'] as const)(
-    'shows the three decisions disabled, with the note, on a %s file',
+    'shows the three decisions, the request for more and the rejection open while the checks wait, with the note, on a %s file',
     async (status) => {
       const host = await open(fileOf({ file: { status } }));
       const footer = section(host, 'footer');
@@ -575,11 +596,11 @@ describe('the footer', () => {
         'Cere completări',
         'Respinge',
       ]);
+      // @traces 305-FR-001
+      // @traces 304-FR-001
       expect(
-        [...(footer?.querySelectorAll('button') ?? [])].every(
-          (b) => b.disabled,
-        ),
-      ).toBe(true);
+        [...(footer?.querySelectorAll('button') ?? [])].map((b) => b.disabled),
+      ).toEqual([true, false, false]);
       expect(text(footer)).toContain('Service‑ul primește decizia pe e‑mail.');
     },
   );
@@ -1036,6 +1057,7 @@ describe('the live re-read', () => {
     'verification.check_recorded',
     'verification.decided',
     'verification.reopened',
+    'garage_report.decided',
   ] as const)('re-reads on %s for this file', async (kind) => {
     await open();
 
@@ -1181,6 +1203,59 @@ describe('the history', () => {
       expect.stringMatching(/^Respins de Ioana, azi/),
       expect.stringMatching(/^Completări cerute de Ioana, azi/),
       expect.stringMatching(/^Retrimis de Andrei, azi/),
+    ]);
+  });
+
+  // @traces 259-FR-006
+  const refused = (code: string) =>
+    entry({
+      field: 'decision',
+      kind: 'verification_approval_refused',
+      newValue: code,
+      oldValue: null,
+    });
+  const REFUSED = [
+    'rar_check_required',
+    'caen_check_required',
+    'note_required',
+    'cake_required',
+  ].map(refused);
+
+  it('reads each refused approval as one line naming why, in Romanian', async () => {
+    const host = await open(history(REFUSED));
+
+    expect(lines(host)).toEqual([
+      expect.stringMatching(
+        /^Aprobare refuzată: verificarea RAR nu e în regulă — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: verificarea CAEN 4520 nu e în regulă — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: lipsește nota — Ioana, azi, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Aprobare refuzată: cake_required — Ioana, azi, \d\d:\d\d$/,
+      ),
+    ]);
+  });
+
+  it('reads the refused approvals in English', async () => {
+    const host = await open(history(REFUSED), 'en');
+
+    expect(lines(host)).toEqual([
+      expect.stringMatching(
+        /^Approval refused: the RAR check is not ok — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: the CAEN 4520 check is not ok — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: the note is missing — Ioana, today, \d\d:\d\d$/,
+      ),
+      expect.stringMatching(
+        /^Approval refused: cake_required — Ioana, today, \d\d:\d\d$/,
+      ),
     ]);
   });
 
@@ -2359,7 +2434,7 @@ describe('the approve button', () => {
     expect(text(hint(host))).toBe('Verificarea RAR e obligatorie');
   });
 
-  it('is enabled with no hint when both are ok; the other two stay disabled', async () => {
+  it('is enabled with no hint when both are ok, beside the request for more and the rejection', async () => {
     const host = await open(withChecks('ok', 'ok'));
 
     const button = approveButton(host);
@@ -2370,8 +2445,8 @@ describe('the approve button', () => {
       ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
     ].filter((b) => b !== button);
     expect(others.map((b) => [text(b), b.disabled])).toEqual([
-      ['Cere completări', true],
-      ['Respinge', true],
+      ['Cere completări', false],
+      ['Respinge', false],
     ]);
   });
 
@@ -2704,4 +2779,723 @@ describe('a CUI held by another garage', () => {
     ].find((b) => text(b) === 'Aprobă și publică');
     expect(button?.disabled).toBe(false);
   });
+});
+
+// @traces 069-FR-006 069-FR-008 069-FR-009 069-FR-010
+describe('the reports part', () => {
+  const EARLIER = new Date(NOW.getTime() - 2 * 3_600_000).toISOString();
+  const rows = (host: HTMLElement) => [
+    ...(section(host, 'reports')?.querySelectorAll('li') ?? []),
+  ];
+
+  it.each([
+    ['ro', [report()], 'SESIZĂRI · 1 DESCHISĂ'],
+    [
+      'ro',
+      [report(), report({ id: 'report-2' }), report({ id: 'report-3' })],
+      'SESIZĂRI · 3 DESCHISE',
+    ],
+    ['en', [report()], 'REPORTS · 1 OPEN'],
+    [
+      'en',
+      [report(), report({ id: 'report-2', status: 'unfounded' })],
+      'REPORTS · 1 OPEN',
+    ],
+  ] as const)(
+    'titles the part in %s with the open count',
+    async (language, reports, title) => {
+      const host = await open(fileOf({ reports: [...reports] }), language);
+
+      expect(text(section(host, 'reports')?.querySelector('h4'))).toBe(title);
+    },
+  );
+
+  it('titles the part with the open count the server gives, past the reports it carries, and offers the decisions', async () => {
+    const host = await open(
+      fileOf({
+        file: { status: 'in_review' },
+        reports: [report({ status: 'unfounded' })],
+        reportsOpen: 2,
+      }),
+    );
+
+    expect(text(section(host, 'reports')?.querySelector('h4'))).toBe(
+      'SESIZĂRI · 2 DESCHISE',
+    );
+    expect(host.querySelector('[data-part="report-confirmed"]')).not.toBeNull();
+  });
+
+  it('reads one row per report: its text, its local date and time, and its reporter linked to the accounts view', async () => {
+    const host = await open(
+      fileOf({
+        reports: [
+          report(),
+          report({
+            createdAt: EARLIER,
+            id: 'report-2',
+            reporter: { id: 'driver-2', name: 'Andrei M.' },
+            text: 'Prețuri care nu sunt cele reale.',
+          }),
+        ],
+      }),
+    );
+    const [first, second] = rows(host);
+
+    expect(rows(host)).toHaveLength(2);
+    expect(text(first)).toContain('Adresă greșită pe pagina service-ului.');
+    expect(text(first)).toContain(appliedAt(NOW.toISOString(), 'ro', NOW));
+    const link = first?.querySelector('a');
+    expect(text(link)).toBe('Elena D.');
+    expect(link?.getAttribute('href')).toBe('/app/admin/users?q=driver-1');
+    expect(text(second)).toContain('Prețuri care nu sunt cele reale.');
+    expect(text(second)).toContain(appliedAt(EARLIER, 'ro', NOW));
+    expect(second?.querySelector('a')?.getAttribute('href')).toBe(
+      '/app/admin/users?q=driver-2',
+    );
+  });
+
+  it.each([
+    ['ro', 'Cont șters'],
+    ['en', 'Deleted account'],
+  ] as const)(
+    'names a deleted reporter in %s with no link',
+    async (language, name) => {
+      const host = await open(
+        fileOf({ reports: [report({ reporter: null })] }),
+        language,
+      );
+      const [only] = rows(host);
+
+      expect(text(only)).toContain(name);
+      expect(only?.querySelector('a')).toBeNull();
+    },
+  );
+
+  it('reads a decided report with its outcome, the admin, the time and the note or the reason', async () => {
+    const host = await open(
+      fileOf({
+        reports: [
+          report({
+            decidedAt: EARLIER,
+            decidedBy: ioana,
+            decisionNote: 'Am sunat, adresa e corectă.',
+            status: 'unfounded',
+          }),
+          report({
+            decidedAt: EARLIER,
+            decidedBy: ioana,
+            decisionNote: 'Prețuri false confirmate la telefon',
+            id: 'report-2',
+            status: 'confirmed',
+          }),
+        ],
+      }),
+    );
+    const [unfounded, confirmed] = rows(host);
+    const when = appliedAt(EARLIER, 'ro', NOW);
+
+    expect(text(section(host, 'reports')?.querySelector('h4'))).toBe(
+      'SESIZĂRI · 0 DESCHISE',
+    );
+    expect(text(unfounded)).toContain(`Nefondată de Ioana, ${when}`);
+    expect(text(unfounded)).toContain(
+      'Notă internă: Am sunat, adresa e corectă.',
+    );
+    expect(text(confirmed)).toContain(`Confirmată de Ioana, ${when}`);
+    expect(text(confirmed)).toContain(
+      'Motiv: Prețuri false confirmate la telefon',
+    );
+  });
+
+  it('reads the decided outcomes in English', async () => {
+    const host = await open(
+      fileOf({
+        reports: [
+          report({ decidedAt: EARLIER, decidedBy: ioana, status: 'unfounded' }),
+          report({
+            decidedAt: EARLIER,
+            decidedBy: ioana,
+            id: 'report-2',
+            status: 'confirmed',
+          }),
+        ],
+      }),
+      'en',
+    );
+    const [unfounded, confirmed] = rows(host);
+    const when = appliedAt(EARLIER, 'en', NOW);
+
+    expect(text(unfounded)).toContain(`Unfounded, by Ioana, ${when}`);
+    expect(text(confirmed)).toContain(`Confirmed by Ioana, ${when}`);
+  });
+
+  it('shows no part on a file with no report', async () => {
+    const host = await open();
+
+    expect(section(host, 'reports')).toBeNull();
+  });
+
+  it('leaves the part as it was when a manual check is recorded', async () => {
+    const host = await open(fileOf({ reports: [report()] }));
+    const before = text(section(host, 'reports'));
+    api.verificationChecksControllerRecord.mockImplementation(
+      async ({ kind, body }) => ({
+        check: check(kind, { recorder: ioana, result: body.result }),
+        rarActivities: [],
+        summary: { en: '', ro: '' },
+      }),
+    );
+
+    tick(host, 'address', true);
+    await settle();
+
+    expect(text(section(host, 'reports'))).toBe(before);
+  });
+});
+
+describe('deciding the reports', () => {
+  const DECIDED_AT_REPORT = new Date(NOW.getTime() - 60_000).toISOString();
+  const reported = (extra: Partial<VerificationFileReportDto> = {}) =>
+    fileOf({ reports: [report(extra)] });
+  // The file as the decision answers it: approved again by Ioana, its
+  // report closed with the outcome.
+  const decidedAs = (status: 'unfounded' | 'confirmed', note: string | null) =>
+    fileOf({
+      file: {
+        decidedAt: DECIDED_AT_REPORT,
+        decidedBy: ioana,
+        status: 'approved',
+      },
+      reports: [
+        report({
+          decidedAt: DECIDED_AT_REPORT,
+          decidedBy: ioana,
+          decisionNote: note,
+          status,
+        }),
+      ],
+    });
+  const footerButton = (host: HTMLElement, part: string) =>
+    section(host, 'footer')?.querySelector<HTMLButtonElement>(
+      `[data-part="${part}"]`,
+    ) ?? null;
+
+  it.each([
+    ['ro', ['Sesizare nefondată', 'Sesizare confirmată']],
+    ['en', ['Report unfounded', 'Report confirmed']],
+  ] as const)(
+    'offers the two report decisions in %s in place of the three, on an in-review file with an open report',
+    async (language, labels) => {
+      const host = await open(reported(), language);
+      const footer = section(host, 'footer');
+
+      expect(buttons(footer)).toEqual([...labels]);
+      const unfounded = footerButton(host, 'report-unfounded');
+      const confirmed = footerButton(host, 'report-confirmed');
+      expect(unfounded?.disabled).toBe(false);
+      expect(confirmed?.disabled).toBe(false);
+      expect(unfounded?.classList).toContain('action');
+      expect(confirmed?.classList).toContain('danger');
+      expect(footer?.querySelector('[data-part="gate-hint"]')).toBeNull();
+    },
+  );
+
+  it.each([
+    [
+      'a submitted file with an open report',
+      { reports: [report()] },
+      'submitted',
+    ],
+    [
+      'an in-review file whose reports are all decided',
+      {
+        reports: [
+          report({
+            decidedAt: NOW.toISOString(),
+            decidedBy: ioana,
+            status: 'unfounded',
+          }),
+        ],
+      },
+      'in_review',
+    ],
+  ] satisfies [
+    string,
+    { reports: VerificationFileReportDto[] },
+    'submitted' | 'in_review',
+  ][])('keeps the three decisions on %s', async (_, extra, status) => {
+    const host = await open(fileOf({ ...extra, file: { status } }));
+
+    expect(buttons(section(host, 'footer'))).toEqual([
+      'Aprobă și publică',
+      'Cere completări',
+      'Respinge',
+    ]);
+  });
+
+  it('asks first and sends unfounded with the note, then shows the decided state', async () => {
+    const host = await open(reported());
+    overlays.open.mockResolvedValue({ note: 'Am sunat, adresa e corectă.' });
+    api.reportDecisionControllerDecide.mockImplementation(async () => {
+      answer = async () =>
+        decidedAs('unfounded', 'Am sunat, adresa e corectă.');
+      return answer();
+    });
+
+    footerButton(host, 'report-unfounded')?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      ReportDecision,
+      expect.objectContaining({
+        data: { decision: 'unfounded' },
+        shape: 'dialog',
+        title: 'admin.file.reportDecision.unfounded',
+      }),
+    );
+    expect(api.reportDecisionControllerDecide).toHaveBeenCalledWith({
+      body: { decision: 'unfounded', note: 'Am sunat, adresa e corectă.' },
+      id: FILE,
+    });
+    const footer = section(host, 'footer');
+    expect(text(footer)).toContain('Aprobat de Ioana');
+    expect(buttons(footer)).toEqual([]);
+    expect(text(section(host, 'reports'))).toContain('Nefondată de Ioana');
+  });
+
+  it('sends unfounded with no note when none was written', async () => {
+    const host = await open(reported());
+    overlays.open.mockResolvedValue({});
+    api.reportDecisionControllerDecide.mockResolvedValue(
+      decidedAs('unfounded', null),
+    );
+
+    footerButton(host, 'report-unfounded')?.click();
+    await settle();
+
+    expect(api.reportDecisionControllerDecide).toHaveBeenCalledWith({
+      body: { decision: 'unfounded' },
+      id: FILE,
+    });
+  });
+
+  it('asks for the reason and sends confirmed with it', async () => {
+    const host = await open(reported());
+    overlays.open.mockResolvedValue({
+      reason: 'Prețuri false confirmate la telefon',
+    });
+    api.reportDecisionControllerDecide.mockResolvedValue(
+      decidedAs('confirmed', 'Prețuri false confirmate la telefon'),
+    );
+
+    footerButton(host, 'report-confirmed')?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      ReportDecision,
+      expect.objectContaining({
+        data: { decision: 'confirmed' },
+        shape: 'dialog',
+        title: 'admin.file.reportDecision.confirmed',
+      }),
+    );
+    expect(api.reportDecisionControllerDecide).toHaveBeenCalledWith({
+      body: {
+        decision: 'confirmed',
+        reason: 'Prețuri false confirmate la telefon',
+      },
+      id: FILE,
+    });
+    expect(text(section(host, 'reports'))).toContain('Confirmată de Ioana');
+  });
+
+  it.each(['report-unfounded', 'report-confirmed'])(
+    'sends nothing when the %s dialog is cancelled, and hands focus back',
+    async (part) => {
+      const host = await open(reported());
+      overlays.open.mockResolvedValue('cancelled');
+
+      footerButton(host, part)?.click();
+      await settle();
+
+      expect(api.reportDecisionControllerDecide).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(footerButton(host, part));
+    },
+  );
+
+  it('opens one dialog however often it is pressed', async () => {
+    const host = await open(reported());
+    overlays.open.mockReturnValue(new Promise(() => undefined));
+
+    footerButton(host, 'report-unfounded')?.click();
+    footerButton(host, 'report-confirmed')?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['ro', 'Deja decis de Dan la'],
+    ['en', 'Already decided by Dan at'],
+  ] as const)(
+    'says in %s who decided first and reads the file again',
+    async (language, line) => {
+      const host = await open(reported(), language);
+      overlays.open.mockResolvedValue({});
+      api.reportDecisionControllerDecide.mockImplementation(async () => {
+        answer = async () => rejected(dan);
+        throw refusedBy('verification_transition_refused', {
+          decidedAt: DECIDED_AT,
+          decidedBy: 'Dan',
+        });
+      });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      footerButton(host, 'report-unfounded')?.click();
+      await settle();
+
+      expect(text(alertIn(host))).toBe(
+        `${line} ${appliedAt(DECIDED_AT, language, new Date())}`,
+      );
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 1,
+      );
+    },
+  );
+
+  it('says in a toast that the decision could not be saved on any other failure, and reads the file again', async () => {
+    const host = await open(reported());
+    overlays.open.mockResolvedValue({ reason: 'Motiv' });
+    api.reportDecisionControllerDecide.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    const reads = api.verificationFileControllerRead.mock.calls.length;
+
+    footerButton(host, 'report-confirmed')?.click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut salva decizia');
+    expect(alertIn(host)).toBeNull();
+    expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+      reads + 1,
+    );
+  });
+
+  it.each([
+    ['unfounded', 'ro', 'Sesizări închise ca nefondate de Ioana'],
+    ['confirmed', 'ro', 'Sesizări confirmate de Ioana'],
+    ['unfounded', 'en', 'Reports closed as unfounded by Ioana'],
+    ['confirmed', 'en', 'Reports confirmed by Ioana'],
+  ] as const)(
+    'writes a %s decision in the history in %s',
+    async (decision, language, line) => {
+      const host = await open(
+        fileOf({
+          timeline: {
+            entries: [
+              entry({
+                field: 'reports',
+                kind: 'report_decided',
+                newValue: { decision, reportIds: ['report-1'] },
+                oldValue: 'open',
+              }),
+            ],
+            total: 1,
+          },
+        }),
+        language,
+      );
+
+      expect(text(section(host, 'history'))).toContain(line);
+    },
+  );
+});
+
+// @traces 305-FR-001 305-FR-007 305-FR-011
+describe('rejecting', () => {
+  const rejectButton = (host: HTMLElement) =>
+    section(host, 'footer')?.querySelector<HTMLButtonElement>(
+      '[data-part="reject"]',
+    ) as HTMLButtonElement;
+  const CLOSED = { note: 'Autorizația RAR a expirat.', reason: 'rar' };
+  const refusedWith = (code: string, field: string) =>
+    new HttpErrorResponse({
+      error: { code, errors: [{ code: 'required', field }], status: 422 },
+      status: 422,
+    });
+  const decidedRar = () =>
+    fileOf({
+      file: {
+        decidedAt: DECIDED_AT,
+        decidedBy: ioana,
+        reasonCode: 'rar',
+        reasonNote: 'Autorizația RAR a expirat.',
+        status: 'rejected',
+      },
+    });
+
+  it.each(['not_run', 'failed', 'ok'] as const)(
+    'is enabled on an undecided file whatever the checks say (%s)',
+    async (result) => {
+      const host = await open(
+        fileOf({ checks: KINDS.map((kind) => check(kind, { result })) }),
+      );
+
+      expect(text(rejectButton(host))).toBe('Respinge');
+      expect(rejectButton(host).disabled).toBe(false);
+    },
+  );
+
+  it('is not offered on a decided file', async () => {
+    const host = await open(rejected());
+
+    expect(rejectButton(host)).toBeNull();
+  });
+
+  it('opens the rejection dialog, one at a time', async () => {
+    const host = await open();
+    let close: (value: unknown) => void = () => undefined;
+    overlays.open.mockReturnValue(
+      new Promise((resolve) => {
+        close = resolve;
+      }),
+    );
+
+    rejectButton(host).click();
+    rejectButton(host).click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+    expect(overlays.open).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: {},
+        shape: 'dialog',
+        title: 'admin.file.reject.title',
+      }),
+    );
+    close('cancelled');
+    await settle();
+  });
+
+  it('sends the rejection once, shows it, and moves focus to the title', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => decidedRar();
+      return decidedRar();
+    });
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledWith({
+      body: { decision: 'rejected', ...CLOSED },
+      id: FILE,
+    });
+    const footer = section(host, 'footer');
+    expect(text(footer)).toContain('Respins de Ioana');
+    expect(text(footer)).toContain('Autorizația RAR a expirat.');
+    expect(document.activeElement).toBe(host.querySelector('h3'));
+  });
+
+  it('sends nothing on a cancel and hands focus back to the button', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue('cancelled');
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(rejectButton(host));
+  });
+
+  it('shows a spinner on the button while the call is on its way, every decision disabled', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerDecision.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    rejectButton(host).click();
+    await settle();
+
+    const button = rejectButton(host);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.querySelector('[data-part="spinner"]')).not.toBeNull();
+    const approve = section(host, 'footer')?.querySelector(
+      '[data-part="approve"]',
+    );
+    expect(approve?.querySelector('[data-part="spinner"]')).toBeNull();
+    expect(approve?.hasAttribute('aria-busy')).toBe(false);
+    expect(
+      [...(section(host, 'footer')?.querySelectorAll('button') ?? [])].every(
+        (b) => b.disabled,
+      ),
+    ).toBe(true);
+    rejectButton(host).click();
+    await settle();
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    settleCall(decidedRar());
+    await settle();
+  });
+
+  it.each([
+    ['ro', 'Deja decis de Dan la'],
+    ['en', 'Already decided by Dan at'],
+  ] as const)(
+    'says in %s who decided first and reads the file again',
+    async (language, line) => {
+      const host = await open(fileOf(), language);
+      overlays.open.mockResolvedValue(CLOSED);
+      api.verificationFileControllerDecision.mockImplementation(async () => {
+        answer = async () => rejected(dan);
+        throw refusedBy('verification_transition_refused', {
+          currentStatus: 'rejected',
+          decidedAt: DECIDED_AT,
+          decidedBy: 'Dan',
+        });
+      });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      rejectButton(host).click();
+      await settle();
+
+      expect(text(alertIn(host))).toBe(
+        `${line} ${appliedAt(DECIDED_AT, language, new Date())}`,
+      );
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 1,
+      );
+      expect(overlays.open).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ['reason_required', 'reason', 'reasonRequired'],
+    ['note_required', 'note', 'noteRequired'],
+    ['note_too_short', 'note', 'noteTooShort'],
+  ] as const)(
+    'reads the file again on %s and re-opens the dialog with the values and the field marked',
+    async (code, field, refused) => {
+      const host = await open();
+      overlays.open
+        .mockResolvedValueOnce({ note: 'Prea scurt', reason: 'address' })
+        .mockResolvedValueOnce(CLOSED);
+      api.verificationFileControllerDecision
+        .mockRejectedValueOnce(refusedWith(code, field))
+        .mockImplementationOnce(async () => {
+          answer = async () => decidedRar();
+          return decidedRar();
+        });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      rejectButton(host).click();
+      await settle();
+      await settle();
+
+      expect(overlays.open).toHaveBeenCalledTimes(2);
+      expect(overlays.open.mock.calls[1]?.[1]?.data).toEqual({
+        note: 'Prea scurt',
+        reason: 'address',
+        refused,
+      });
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 2,
+      );
+      expect(api.verificationFileControllerDecision).toHaveBeenLastCalledWith({
+        body: { decision: 'rejected', ...CLOSED },
+        id: FILE,
+      });
+      expect(toast).not.toHaveBeenCalled();
+      expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    },
+  );
+
+  it('does not ask again when the re-read finds the file decided', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValueOnce(CLOSED);
+    api.verificationFileControllerDecision.mockImplementationOnce(async () => {
+      answer = async () => rejected(dan);
+      throw refusedWith('note_too_short', 'note');
+    });
+
+    rejectButton(host).click();
+    await settle();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+    expect(text(section(host, 'footer'))).toContain('Respins de Dan');
+  });
+
+  it('says the decision could not be saved and reads the file again on any other failure', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    const reads = api.verificationFileControllerRead.mock.calls.length;
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut salva decizia');
+    expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+      reads + 1,
+    );
+    expect(rejectButton(host).disabled).toBe(false);
+  });
+
+  it('shows a rejection that committed before the failure, never offering it again', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValue(CLOSED);
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => decidedRar();
+      throw new HttpErrorResponse({ status: 0 });
+    });
+
+    rejectButton(host).click();
+    await settle();
+
+    expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    expect(rejectButton(host)).toBeNull();
+  });
+});
+
+// @traces 305-FR-008
+describe('a file after a rejection', () => {
+  it.each([
+    ['ro', 'Respins anterior: Autorizație RAR'],
+    ['en', 'Rejected before: RAR authorisation'],
+  ] as const)(
+    'reads the earlier rejection above the checks, as text, in %s',
+    async (language, line) => {
+      const host = await open(
+        fileOf({
+          previousRejection: {
+            decidedAt: DECIDED_AT,
+            reasonCode: 'rar',
+            reasonNote: '<b>Autorizația</b> RAR a expirat.',
+          },
+        }),
+        language,
+      );
+
+      const rejectedBefore = section(host, 'rejected');
+      expect(text(rejectedBefore)).toContain(line);
+      expect(text(rejectedBefore)).toContain(
+        '<b>Autorizația</b> RAR a expirat.',
+      );
+      expect(rejectedBefore?.querySelector('b')).toBeNull();
+      expect(
+        rejectedBefore?.compareDocumentPosition(
+          section(host, 'register') as Node,
+        ),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
 });

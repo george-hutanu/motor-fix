@@ -114,6 +114,15 @@ export class VerificationQueueRowDto {
 
   @ApiProperty({ description: 'Waited more than the 2 working days' })
   flagged!: boolean;
+
+  @ApiProperty({ description: 'Sent again after a request for more' })
+  resubmitted!: boolean;
+
+  @ApiPropertyOptional({
+    description: 'When more was asked for; only when resubmitted',
+    format: 'date-time',
+  })
+  requestedAt?: Date;
 }
 
 export class VerificationQueueDto {

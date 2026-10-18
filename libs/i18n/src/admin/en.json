@@ -3,12 +3,19 @@
     "allBrands": "See all brands",
     "allJobs": "See all jobs",
     "brand": "Brand",
-    "brands": "Requests by brand, 30 days",
+    "brands": "Searches and requests by brand, 30 days",
+    "byRequests": "requests",
+    "bySearches": "searches",
     "empty": "No requests in the last 30 days yet.",
+    "emptyBrands": "No searches or requests in the last 30 days yet.",
     "fewer": "Show fewer",
+    "from": "Searches are counted from {day}",
     "job": "Job",
     "jobs": "Requests by job, 30 days",
-    "subtitle": "What drivers asked for in the last 30 days"
+    "orderBy": "Order by",
+    "requests": "Requests",
+    "searches": "Searches",
+    "subtitle": "What drivers searched for and asked for in the last 30 days"
   },
   "file": {
     "approve": {
@@ -32,6 +39,65 @@
         "warning": "warning"
       },
       "title": "Approve and publish"
+    },
+    "changes": {
+      "areas": {
+        "brands": "Brands",
+        "documents": "Documents",
+        "photos": "Photos",
+        "prices": "Prices",
+        "profile": "Profile"
+      },
+      "changed": "{label}: changed",
+      "documents": {
+        "added": "{label}: added",
+        "removed": "{label}: removed",
+        "replaced": "{label}: replaced"
+      },
+      "empty": "No change recorded since the request",
+      "failed": "Could not load the changes",
+      "fields": {
+        "address": "Address",
+        "brandNote": "Brands note",
+        "courtesy_car_paid": "Paid courtesy car",
+        "courtesy_car_price_per_day_bani": "Courtesy car, price per day",
+        "duration_minutes": "Duration",
+        "from_bani": "Price from",
+        "hours": "Opening hours",
+        "labour_from_bani": "Labour from",
+        "labour_to_bani": "Labour up to",
+        "location": "Map location",
+        "name": "Name",
+        "payment_card": "Card payment",
+        "payment_cash": "Cash payment",
+        "payment_transfer": "Bank transfer payment",
+        "phone": "Phone",
+        "refusalPhrase": "Refusal phrase",
+        "seatAddress": "Registered seat",
+        "serviceRadiusKm": "Service radius",
+        "to_bani": "Price up to"
+      },
+      "line": "{label}: {old} → {new}",
+      "loading": "Loading the changes",
+      "more": {
+        "one": "and {n} more change",
+        "other": "and {n} more changes"
+      },
+      "no": "No",
+      "retry": "Retry",
+      "since": "since the request of {date}",
+      "subjects": {
+        "garage_brand": "Brands",
+        "garage_brand_job": "Jobs per brand",
+        "garage_closed_day": "Closed days",
+        "garage_facility": "Facilities",
+        "garage_photo": "Photos",
+        "garage_price": "Prices",
+        "onrc_certificate": "ONRC certificate",
+        "rar_authorisation": "RAR authorisation"
+      },
+      "title": "What changed",
+      "yes": "Yes"
     },
     "checks": {
       "activities": "Activities",
@@ -74,6 +140,7 @@
       "ask": "Ask for more",
       "caenHint": "The CAEN 4520 check is required",
       "caenRequired": "Approval needs the CAEN check",
+      "items": "It concerns: {items}",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
       "rarCheckRequired": "Approval needs the RAR check",
       "rarRequired": "The RAR check is required",
@@ -93,6 +160,7 @@
       "pfa": "PFA"
     },
     "lines": {
+      "approvalRefused": "Approval refused: {reason} — {name}, {when}",
       "approved": "Approved by {name}, {when}",
       "changed": "Changed by {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
@@ -103,6 +171,8 @@
       "rejected": "Rejected by {name}, {when}",
       "reopened": "Reopened by {name}, {when}",
       "reopenedWhy": "Reopened by {name}, {when} ({reason})",
+      "reportConfirmed": "Reports confirmed by {name}, {when}",
+      "reportUnfounded": "Reports closed as unfounded by {name}, {when}",
       "resent": "Sent again by {name}, {when}",
       "sent": "Sent by {name}, {when}"
     },
@@ -119,6 +189,25 @@
       "problemNamed": "Mark a problem: {check}",
       "representative": "Phone confirmed by call",
       "saveFailed": "Could not save the check"
+    },
+    "more": {
+      "cancel": "Cancel",
+      "confirm": "Send the request",
+      "count": "{n}/1000",
+      "items": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "itemsLegend": "It concerns",
+      "note": "What is missing?",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write what is missing.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "At least 10 characters.",
+      "title": "What is missing?"
     },
     "noReason": "no reason",
     "photo": "Photo {n}, opened full size",
@@ -140,6 +229,11 @@
       "rar": "RAR authorisation"
     },
     "recorded": "{name}, {when}",
+    "refusalReasons": {
+      "caen_check_required": "the CAEN 4520 check is not ok",
+      "note_required": "the note is missing",
+      "rar_check_required": "the RAR check is not ok"
+    },
     "register": {
       "activities": "Authorised activities cover the price list",
       "anaf": "ANAF",
@@ -216,6 +310,26 @@
       },
       "uncoveredLine": "Not covered: {jobs}"
     },
+    "reject": {
+      "cancel": "Cancel",
+      "confirm": "Reject",
+      "count": "{n}/1000",
+      "note": "Message to the garage",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write a message to the garage.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "The message is at least 10 characters.",
+      "reason": "Reason",
+      "reasonRequired": "Pick a reason.",
+      "reasons": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "title": "Reject the file"
+    },
     "rejectedBefore": "Rejected before: {reason}, {when}",
     "reopen": {
       "button": "Reopen the file",
@@ -226,8 +340,31 @@
       "title": "Reopen the file"
     },
     "reopenedReport": "Reopened after a report, {when}",
-    "report": "{text} · {when}",
-    "reported": "Reported",
+    "reportDecision": {
+      "cancel": "Cancel",
+      "confirmed": "Report confirmed",
+      "confirmedSubmit": "Confirm and suspend",
+      "note": "Internal note",
+      "noteCount": "{n}/1000",
+      "noteTooLong": "The note can be at most 1000 characters.",
+      "reason": "The reason the garage will see",
+      "reasonCount": "{n}/200",
+      "reasonTooLong": "The reason can be at most 200 characters.",
+      "suspends": "The garage will be suspended and receive this reason.",
+      "unfounded": "Report unfounded",
+      "unfoundedQuestion": "Close the open reports as unfounded? The file goes back to approved, and whoever reported it learns no action was needed."
+    },
+    "reports": {
+      "confirmed": "Confirmed by {name}, {when}",
+      "deleted": "Deleted account",
+      "heading": {
+        "one": "REPORTS · {n} OPEN",
+        "other": "REPORTS · {n} OPEN"
+      },
+      "note": "Internal note: {note}",
+      "reason": "Reason: {reason}",
+      "unfounded": "Unfounded, by {name}, {when}"
+    },
     "results": {
       "failed": "failure",
       "not_run": "not checked",
@@ -434,10 +571,13 @@
     },
     "mobile": "Mobile mechanic · {km} km radius",
     "more": "More",
+    "more_requested": "More details requested",
     "open": "Open the file",
     "openNamed": "Open the file of {name}",
+    "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
+    "updated": "Updated",
     "waiting": {
       "one": "waiting {n} working day",
       "other": "waiting {n} working days"

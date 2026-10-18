@@ -1,6 +1,7 @@
 /**
  * @jest-environment @stryker-mutator/jest-runner/jest-env/node
  */
+import { createHash } from 'node:crypto';
 import {
   createServer,
   request as httpRequest,
@@ -13,10 +14,12 @@ import express from 'express';
 
 import { mountEdge } from './edge';
 
+// On the loopback address itself: a name would be looked up on every fresh
+// socket, and on a loaded machine that lookup alone can outlast a test.
 const listen = (server: Server) =>
   new Promise<string>((resolve) =>
-    server.listen(0, () =>
-      resolve(`http://localhost:${(server.address() as AddressInfo).port}`),
+    server.listen(0, '127.0.0.1', () =>
+      resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`),
     ),
   );
 
@@ -37,6 +40,10 @@ function raw(base: string, path: string, method = 'GET') {
   });
 }
 
+// Moving 8 MB through two sockets takes well under a second alone, but a
+// loaded machine (a pre-commit beside other suites) can pass Jest's 5 s.
+const EIGHT_MB_BUDGET = 30_000;
+
 describe('web edge under hostile conditions', () => {
   let upstream: Server;
   let web: Server;
@@ -47,6 +54,7 @@ describe('web edge under hostile conditions', () => {
     url?: string;
     headers: IncomingHttpHeaders;
     size: number;
+    digest: string;
   }[];
   let behave: (
     req: import('node:http').IncomingMessage,
@@ -56,11 +64,14 @@ describe('web edge under hostile conditions', () => {
   async function boot(apiUrl?: (url: string) => string) {
     upstream = createServer((req, res) => {
       let size = 0;
+      const hash = createHash('sha256');
       req.on('data', (c) => {
         size += c.length;
+        hash.update(c);
       });
       req.on('end', () => {
         seen.push({
+          digest: hash.digest('hex'),
           headers: req.headers,
           method: req.method,
           size,
@@ -173,32 +184,117 @@ describe('web edge under hostile conditions', () => {
     expect(seen[0]?.headers['authorization']).toBe('Bearer t');
   });
 
-  it('forwards an 8 MB request body whole', async () => {
-    await boot();
-    const body = Buffer.alloc(8 * 1024 * 1024, 7);
+  it(
+    'forwards an 8 MB request body whole, in order',
+    async () => {
+      await boot();
+      // 128 distinct 64 KB parts written as the socket drains, on a socket of
+      // its own: the digest checks order as well as length, and no 8 MB buffer
+      // or pooled connection from an earlier test is held while it runs.
+      const parts = 128;
+      const part = 64 * 1024;
+      const sent = createHash('sha256');
 
-    const res = await fetch(`${base}/api/v1/upload`, {
-      body,
-      headers: { 'content-type': 'application/octet-stream' },
-      method: 'POST',
-    });
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = httpRequest(
+          base,
+          {
+            agent: false,
+            headers: {
+              'content-length': String(parts * part),
+              'content-type': 'application/octet-stream',
+            },
+            method: 'POST',
+            path: '/api/v1/upload',
+          },
+          (res) => {
+            res.resume();
+            res.on('end', () => resolve(res.statusCode ?? 0));
+          },
+        );
+        req.on('error', reject);
+        let i = 0;
+        const write = () => {
+          while (i < parts) {
+            const chunk = Buffer.alloc(part, i);
+            sent.update(chunk);
+            i += 1;
+            if (!req.write(chunk)) return void req.once('drain', write);
+          }
+          req.end();
+        };
+        write();
+      });
 
-    expect(res.status).toBe(200);
-    expect(seen[0]?.size).toBe(body.length);
-  });
+      expect(status).toBe(200);
+      expect(seen[0]).toMatchObject({
+        digest: sent.digest('hex'),
+        size: parts * part,
+      });
+    },
+    EIGHT_MB_BUDGET,
+  );
 
-  it('returns an 8 MB binary response byte for byte', async () => {
-    await boot();
-    const payload = Buffer.alloc(8 * 1024 * 1024, 9);
-    behave = (_req, res) => {
-      res.writeHead(200, { 'content-type': 'application/octet-stream' });
-      res.end(payload);
-    };
+  it(
+    'returns an 8 MB binary response byte for byte',
+    async () => {
+      await boot();
+      // Written the same way as the upload above, in distinct parts as the
+      // socket drains, and read on a socket of its own into a digest.
+      const parts = 128;
+      const part = 64 * 1024;
+      const written = createHash('sha256');
+      behave = (_req, res) => {
+        res.writeHead(200, {
+          'content-length': String(parts * part),
+          'content-type': 'application/octet-stream',
+        });
+        let i = 0;
+        const write = () => {
+          while (i < parts) {
+            const chunk = Buffer.alloc(part, 255 - i);
+            written.update(chunk);
+            i += 1;
+            if (!res.write(chunk)) return void res.once('drain', write);
+          }
+          res.end();
+        };
+        write();
+      };
 
-    const res = await fetch(`${base}/api/v1/download`);
+      const read = await new Promise<{ digest: string; size: number }>(
+        (resolve, reject) => {
+          const req = httpRequest(
+            base,
+            { agent: false, path: '/api/v1/download' },
+            (res) => {
+              const hash = createHash('sha256');
+              let size = 0;
+              res.on('data', (c: Buffer) => {
+                size += c.length;
+                hash.update(c);
+              });
+              res.on('end', () =>
+                resolve({ digest: hash.digest('hex'), size }),
+              );
+              res.on('close', () => {
+                if (!res.complete)
+                  reject(new Error(`the answer was cut after ${size} bytes`));
+              });
+            },
+          );
+          req.on('error', reject);
+          req.end();
+        },
+      );
 
-    expect(Buffer.from(await res.arrayBuffer()).equals(payload)).toBe(true);
-  });
+      expect(read).toEqual({
+        digest: written.digest('hex'),
+        size: parts * part,
+      });
+    },
+    EIGHT_MB_BUDGET,
+  );
 
   it('keeps percent-encoded and repeated query parameters intact', async () => {
     await boot();

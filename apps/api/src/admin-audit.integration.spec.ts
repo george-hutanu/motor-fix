@@ -46,6 +46,10 @@ const FIXTURES: Record<
   'GET /api/v1/admin/verification-files/{id}': {
     path: async () => `/api/v1/admin/verification-files/${await submitted()}`,
   },
+  'GET /api/v1/admin/verification-files/{id}/changes': {
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/changes`,
+  },
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url':
     {
       entries: 1,
@@ -150,6 +154,12 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted('rejected')}/reopen`,
   },
+  // An unfounded verdict on the one open report that reopened the file.
+  'POST /api/v1/admin/verification-files/{id}/report-decision': {
+    body: () => ({ decision: 'unfounded', note: 'Prețurile sunt corecte.' }),
+    path: async () =>
+      `/api/v1/admin/verification-files/${await reported()}/report-decision`,
+  },
   // OK on the RAR check needs the file's number and every tick.
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
     body: () => ({
@@ -193,6 +203,26 @@ async function submitted(status = 'submitted') {
       [`audit-${randomUUID()}`, status],
     )
   ).rows[0].id as string;
+}
+
+// An approved garage's file that a driver's open report put back in review.
+async function reported() {
+  const file = (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug, status, approved_at)
+         VALUES (gen_random_uuid(), 'Audit', $1, 'approved', now()) RETURNING id)
+       INSERT INTO verification_file (id, garage_id, status, reopen_reason, reopened_at)
+       SELECT gen_random_uuid(), id, 'in_review', 'garage_report', now() FROM g
+       RETURNING id, garage_id`,
+      [`audit-${randomUUID()}`],
+    )
+  ).rows[0] as { garage_id: string; id: string };
+  await db.query(
+    `INSERT INTO garage_report (garage_id, verification_file_id, reporter_id, text)
+     VALUES ($1, $2, $3, 'Prețuri false la manoperă, peste listă.')`,
+    [file.garage_id, file.id, admin],
+  );
+  return file.id;
 }
 
 // The reviews rule back on, with no request waiting on it.

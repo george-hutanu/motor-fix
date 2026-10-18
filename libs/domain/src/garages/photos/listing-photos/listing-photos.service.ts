@@ -44,8 +44,6 @@ const submitted = () =>
     'draft_submitted',
     'This listing was already sent',
   );
-const held = () =>
-  refusal(HttpStatus.CONFLICT, 'file_missing', 'The draft holds this photo');
 const filesOf = (data: unknown) =>
   isListingDraftData(data) ? (data.files ?? []) : [];
 
@@ -66,15 +64,23 @@ export class ListingPhotosService implements OnApplicationShutdown {
   async uploadAddress(
     id: string,
     token: string | undefined,
-    file: { contentType: string; size: number },
+    file: { checksum: string; contentType: string; size: number },
   ): Promise<PhotoUploadAddressDto> {
     const draft = await this.drafts.open(id, token);
     if (filesOf(draft.data).length >= PHOTOS_MAX) throw full();
-    return this.storage.createUpload(PURPOSE, id, file.contentType, file.size);
+    return this.storage.createUpload(
+      PURPOSE,
+      id,
+      file.contentType,
+      file.size,
+      file.checksum,
+    );
   }
 
   // The cap is checked again, binding, under the row lock: two confirms at
-  // once count one after the other. A refused upload is deleted.
+  // once count one after the other. A refused upload is deleted. A confirm
+  // the draft already holds answers the photo again, so a client that lost
+  // the first answer can safely send it twice.
   async confirm(
     id: string,
     token: string | undefined,
@@ -86,36 +92,43 @@ export class ListingPhotosService implements OnApplicationShutdown {
         await this.discard(incoming);
       throw error;
     });
-    if (filesOf(draft.data).length >= PHOTOS_MAX) {
+    const held = filesOf(draft.data);
+    const final = incoming.slice('incoming/'.length);
+    if (ours && held.includes(final)) {
+      const { width } = await this.sizeOf(final);
+      return {
+        key: final,
+        position: held.indexOf(final),
+        processed: width !== undefined,
+      };
+    }
+    if (held.length >= PHOTOS_MAX) {
       if (ours) await this.discard(incoming);
       throw full();
     }
     const key = await this.storage.confirmUpload(incoming, PURPOSE, id);
-    let kept = false;
-    const position = await this.prisma
+    const { held: already, position } = await this.prisma
       .$transaction(async (tx) => {
         const row = await locked(tx, id);
         if (row.status === 'submitted') throw submitted();
         const files = filesOf(row.data);
         // A second confirm that passed storage alongside the first.
         if (files.includes(key)) {
-          kept = true;
-          throw held();
+          return { held: true, position: files.indexOf(key) };
         }
         if (files.length >= PHOTOS_MAX) throw full();
         await tx.listingDraft.update({
           data: { data: { ...(row.data as object), files: [...files, key] } },
           where: { id },
         });
-        return files.length;
+        return { held: false, position: files.length };
       })
       .catch(async (error) => {
-        if (!kept) {
-          await this.storage.deleteWithCopies(key).catch(() => undefined);
-        }
+        await this.storage.deleteWithCopies(key).catch(() => undefined);
         throw error;
       });
-    await this.queue(key);
+    // The first confirm queued its job.
+    if (!already) await this.queue(key);
     return { key, position, processed: false };
   }
 

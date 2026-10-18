@@ -5,7 +5,6 @@ import {
 } from '@motor-fix/contracts/place-section';
 
 import { areaSql, kmOf, within } from './area-sql';
-import { publicGaragesSql } from '../../garages/public-garages/public-garages';
 
 const POINT = { lat: 46.771, lng: 23.624 };
 const BBOX = { east: 23.7, north: 46.8, south: 46.7, west: 23.5 };
@@ -152,15 +151,6 @@ describe('the area beside the public scope', () => {
     expect(text(within(areaSql({ point: POINT })))).toMatch(
       /^\(\(garage\.business_kind IS DISTINCT FROM 'mobile'.*\) OR \(garage\.business_kind = 'mobile'.*\)\)$/,
     );
-  });
-});
-
-describe('the public scope in SQL', () => {
-  it('reads approved garages only', () => {
-    expect(text(publicGaragesSql)).toBe(
-      "garage.status = 'approved'::garage_status",
-    );
-    expect(publicGaragesSql.values).toEqual([]);
   });
 });
 

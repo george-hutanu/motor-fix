@@ -18,15 +18,14 @@ import {
 
 const address = (
   n: number,
-  fields?: Record<string, string>,
+  headers?: Record<string, string>,
 ): UploadAddress => ({
-  fields: fields ?? {
+  headers: headers ?? {
     'Content-Type': 'image/jpeg',
-    key: `incoming/k${n}`,
-    Policy: 'p',
+    'x-amz-checksum-crc32': 'c3VtMQ==',
   },
   key: `incoming/k${n}`,
-  url: `https://store.example/motorfix?n=${n}`,
+  url: `https://store.example/motorfix/incoming/k${n}?n=${n}`,
 });
 
 describe('FileUploader under hostile conditions', () => {
@@ -71,10 +70,13 @@ describe('FileUploader under hostile conditions', () => {
     });
   }
 
+  // Lets the checksum of the blob resolve so the address is asked for.
+  const flush = () => jest.advanceTimersByTimeAsync(0);
+
   const ok = (n: number) =>
     http
       .expectOne(address(n).url)
-      .flush(null, { status: 204, statusText: 'No Content' });
+      .flush(null, { status: 200, statusText: 'OK' });
 
   const dropConnection = (n: number) =>
     http
@@ -86,70 +88,86 @@ describe('FileUploader under hostile conditions', () => {
       .expectOne(address(n).url)
       .flush('<Error/>', { status, statusText: 'Refused' });
 
-  it('posts an empty file', () => {
+  it('PUTs an empty file', async () => {
     start(new Blob([]));
+    await flush();
 
     const req = http.expectOne(address(1).url);
-    expect((req.request.body as FormData).get('file')).toHaveProperty(
-      'size',
-      0,
-    );
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(req.request.body).toHaveProperty('size', 0);
+    req.flush(null, { status: 200, statusText: 'OK' });
 
-    expect(events).toEqual([{ done: 'final:incoming/k1' }]);
+    expect(events).toEqual([
+      { sent: 'incoming/k1' },
+      { done: 'final:incoming/k1' },
+    ]);
   });
 
-  it('posts a file of tens of megabytes as one blob', () => {
+  it('PUTs a file of tens of megabytes as one blob', async () => {
     const big = new Blob([new Uint8Array(20 * 1024 * 1024)]);
     start(big);
+    await flush();
 
     const req = http.expectOne(address(1).url);
-    expect((req.request.body as FormData).get('file')).toHaveProperty(
-      'size',
-      20 * 1024 * 1024,
-    );
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(req.request.body).toBe(big);
+    req.flush(null, { status: 200, statusText: 'OK' });
 
     expect(confirm).toHaveBeenCalledTimes(1);
   });
 
-  it('sends unicode and empty field values unchanged and the file last', () => {
+  it('sends the address headers unchanged and no others', async () => {
     ask.mockReturnValue(
-      of(address(1, { a: '', key: 'incoming/ș', 'x-amz-meta-n': 'Șerban' })),
+      of(
+        address(1, {
+          a: '',
+          'Content-Type': 'image/heic',
+          'x-amz-meta-n': 'n',
+        }),
+      ),
     );
     start();
+    await flush();
 
     const req = http.expectOne(address(1).url);
-    const body = req.request.body as FormData;
-    expect([...body.keys()]).toEqual(['a', 'key', 'x-amz-meta-n', 'file']);
-    expect(body.get('a')).toBe('');
-    expect(body.get('x-amz-meta-n')).toBe('Șerban');
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(req.request.headers.keys().sort()).toEqual([
+      'Content-Type',
+      'a',
+      'x-amz-meta-n',
+    ]);
+    expect(req.request.headers.get('a')).toBe('');
+    expect(req.request.headers.get('Content-Type')).toBe('image/heic');
+    req.flush(null, { status: 200, statusText: 'OK' });
   });
 
-  it('posts a file when the address has no fields', () => {
+  it('PUTs a file when the address has no headers', async () => {
     ask.mockReturnValue(of(address(1, {})));
     start();
+    await flush();
 
     const req = http.expectOne(address(1).url);
-    expect([...(req.request.body as FormData).keys()]).toEqual(['file']);
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.headers.keys()).toEqual([]);
+    req.flush(null, { status: 200, statusText: 'OK' });
   });
 
-  it('confirms after a 200 and a 201 as well as a 204', () => {
+  it('confirms after a 201 as well as a 200', async () => {
     start();
+    await flush();
     http
       .expectOne(address(1).url)
       .flush('', { status: 201, statusText: 'Created' });
 
     expect(confirm).toHaveBeenCalledWith('incoming/k1');
-    expect(events).toEqual([{ done: 'final:incoming/k1' }]);
+    expect(events).toEqual([
+      { sent: 'incoming/k1' },
+      { done: 'final:incoming/k1' },
+    ]);
     expect(completed).toBe(true);
   });
 
-  it('fails without posting or confirming when asking for an address fails', () => {
+  it('fails without posting or confirming when asking for an address fails', async () => {
     ask.mockReturnValue(throwError(() => ({ status: 500 })));
     start();
+    await flush();
 
     http.expectNone(() => true);
     expect(failure).toEqual({ status: 500 });
@@ -157,9 +175,10 @@ describe('FileUploader under hostile conditions', () => {
     expect(events).toEqual([]);
   });
 
-  it('completes without posting or confirming when asking yields no address', () => {
+  it('completes without posting or confirming when asking yields no address', async () => {
     ask.mockReturnValue(EMPTY);
     start();
+    await flush();
 
     http.expectNone(() => true);
     expect(confirm).not.toHaveBeenCalled();
@@ -167,12 +186,13 @@ describe('FileUploader under hostile conditions', () => {
     expect(failure).toBeUndefined();
   });
 
-  it('fails with the error of the second ask when the first address expired', () => {
+  it('fails with the error of the second ask when the first address expired', async () => {
     let asked = 0;
     ask.mockImplementation(() =>
       ++asked === 1 ? of(address(1)) : throwError(() => ({ status: 503 })),
     );
     start();
+    await flush();
 
     refuse(1, 403);
 
@@ -180,8 +200,9 @@ describe('FileUploader under hostile conditions', () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it('fails with an HttpErrorResponse carrying the status of the last refusal', () => {
+  it('fails with an HttpErrorResponse carrying the status of the last refusal', async () => {
     start();
+    await flush();
 
     refuse(1, 403);
     refuse(2, 403);
@@ -190,8 +211,9 @@ describe('FileUploader under hostile conditions', () => {
     expect((failure as HttpErrorResponse).status).toBe(403);
   });
 
-  it('waits one second before the first retry and not less', () => {
+  it('waits one second before the first retry and not less', async () => {
     start();
+    await flush();
 
     dropConnection(1);
     jest.advanceTimersByTime(999);
@@ -199,11 +221,15 @@ describe('FileUploader under hostile conditions', () => {
     jest.advanceTimersByTime(1);
 
     ok(1);
-    expect(events).toEqual([{ done: 'final:incoming/k1' }]);
+    expect(events).toEqual([
+      { sent: 'incoming/k1' },
+      { done: 'final:incoming/k1' },
+    ]);
   });
 
-  it('makes exactly four requests for a connection that always drops', () => {
+  it('makes exactly four requests for a connection that always drops', async () => {
     start();
+    await flush();
     let requests = 0;
 
     for (const wait of [0, 1000, 2000, 4000]) {
@@ -219,8 +245,9 @@ describe('FileUploader under hostile conditions', () => {
     expect(ask).toHaveBeenCalledTimes(1);
   });
 
-  it('asks for a new address after dropped connections followed by an expiry and then uploads', () => {
+  it('asks for a new address after dropped connections followed by an expiry and then uploads', async () => {
     start();
+    await flush();
 
     dropConnection(1);
     jest.advanceTimersByTime(1000);
@@ -231,11 +258,15 @@ describe('FileUploader under hostile conditions', () => {
 
     expect(ask).toHaveBeenCalledTimes(2);
     expect(confirm).toHaveBeenCalledWith('incoming/k2');
-    expect(events).toEqual([{ done: 'final:incoming/k2' }]);
+    expect(events).toEqual([
+      { sent: 'incoming/k2' },
+      { done: 'final:incoming/k2' },
+    ]);
   });
 
-  it('asks for at most one new address however the refusals arrive', () => {
+  it('asks for at most one new address however the refusals arrive', async () => {
     start();
+    await flush();
 
     refuse(1, 403);
     refuse(2, 403);
@@ -249,8 +280,9 @@ describe('FileUploader under hostile conditions', () => {
     ['unauthorised', 401],
     ['too large', 413],
     ['not found', 404],
-  ])('gives up at once when the store answers %s', (_, status) => {
+  ])('gives up at once when the store answers %s', async (_, status) => {
     start();
+    await flush();
 
     refuse(1, status);
     jest.advanceTimersByTime(60_000);
@@ -261,14 +293,15 @@ describe('FileUploader under hostile conditions', () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it('never reports a progress that is not a number from 0 to 100', () => {
+  it('never reports a progress that is not a number from 0 to 100', async () => {
     start();
+    await flush();
 
     const req = http.expectOne(address(1).url);
     req.event({ loaded: 5, type: HttpEventType.UploadProgress });
     req.event({ loaded: 0, total: 0, type: HttpEventType.UploadProgress });
     req.event({ loaded: 20, total: 10, type: HttpEventType.UploadProgress });
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    req.flush(null, { status: 200, statusText: 'OK' });
 
     for (const event of events) {
       if ('progress' in event) {
@@ -280,24 +313,27 @@ describe('FileUploader under hostile conditions', () => {
     expect(events[events.length - 1]).toEqual({ done: 'final:incoming/k1' });
   });
 
-  it('reports progress before done and completes after done', () => {
+  it('reports progress before done and completes after done', async () => {
     start();
+    await flush();
 
     const req = http.expectOne(address(1).url);
     req.event({ loaded: 1, total: 4, type: HttpEventType.UploadProgress });
     req.event({ loaded: 4, total: 4, type: HttpEventType.UploadProgress });
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    req.flush(null, { status: 200, statusText: 'OK' });
 
     expect(events).toEqual([
       { progress: 25 },
       { progress: 100 },
+      { sent: 'incoming/k1' },
       { done: 'final:incoming/k1' },
     ]);
     expect(completed).toBe(true);
   });
 
-  it('confirms exactly once', () => {
+  it('confirms exactly once', async () => {
     start();
+    await flush();
 
     ok(1);
     jest.advanceTimersByTime(60_000);
@@ -305,9 +341,10 @@ describe('FileUploader under hostile conditions', () => {
     expect(confirm).toHaveBeenCalledTimes(1);
   });
 
-  it('does not retry or confirm twice when confirm fails', () => {
+  it('does not retry or confirm twice when confirm fails', async () => {
     confirm.mockReturnValue(throwError(() => ({ status: 409 })));
     start();
+    await flush();
 
     ok(1);
     jest.advanceTimersByTime(60_000);
@@ -318,8 +355,9 @@ describe('FileUploader under hostile conditions', () => {
     expect(failure).toEqual({ status: 409 });
   });
 
-  it('cancels the request and never confirms when unsubscribed mid-upload', () => {
+  it('cancels the request and never confirms when unsubscribed mid-upload', async () => {
     const subscription = start();
+    await flush();
     const req = http.expectOne(address(1).url);
 
     subscription.unsubscribe();
@@ -329,8 +367,9 @@ describe('FileUploader under hostile conditions', () => {
     expect(events).toEqual([]);
   });
 
-  it('sends no further request when unsubscribed during the wait before a retry', () => {
+  it('sends no further request when unsubscribed during the wait before a retry', async () => {
     const subscription = start();
+    await flush();
     dropConnection(1);
 
     subscription.unsubscribe();
@@ -340,9 +379,11 @@ describe('FileUploader under hostile conditions', () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it('runs two uploads of the same helper independently', () => {
+  it('runs two uploads of the same helper independently', async () => {
     start();
+    await flush();
     start();
+    await flush();
 
     ok(1);
     ok(2);
@@ -354,12 +395,14 @@ describe('FileUploader under hostile conditions', () => {
     ]);
   });
 
-  it('asks again on every subscription instead of reusing an old address', () => {
+  it('asks again on every subscription instead of reusing an old address', async () => {
     const upload = uploader.upload(file, ask, confirm);
 
     upload.subscribe();
+    await flush();
     ok(1);
     upload.subscribe();
+    await flush();
     ok(2);
 
     expect(ask).toHaveBeenCalledTimes(2);

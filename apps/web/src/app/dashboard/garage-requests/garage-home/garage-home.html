@@ -1,4 +1,12 @@
 <mf-suspended-banner />
+@if (verified()) {
+  <p class="verified" data-verified-pill>
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{{ 'garage.legal.pill' | t }}
+  </p>
+}
+@if (owner()) {
+  <mf-garage-legal-check />
+}
 @if (draft()) {
   <p>{{ 'shell.frame.verification' | t }}</p>
 } @else if (feed.visible()) {

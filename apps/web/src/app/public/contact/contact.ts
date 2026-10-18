@@ -1,5 +1,5 @@
 import { inject, resource } from '@angular/core';
-import { SupportService } from '@motor-fix/data-access';
+import { SupportService } from '@motor-fix/data-access/services/support.service';
 
 import { publicRead } from '../../public-read';
 

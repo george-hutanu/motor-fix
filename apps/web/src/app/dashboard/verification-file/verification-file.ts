@@ -11,6 +11,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
 import {
   type ApprovalGap,
@@ -27,6 +28,7 @@ import {
   type VerificationFileCheckDto,
   type VerificationFileDocumentDto,
   type VerificationFileDto,
+  type VerificationFileReportDto,
 } from '@motor-fix/data-access';
 import {
   appliedAt,
@@ -40,11 +42,28 @@ import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
 import {
+  ReportDecision,
+  type ReportDecisionData,
+} from '../report-decision/report-decision';
+import {
   VerificationApprove,
   type VerificationApproveData,
 } from '../verification-approve/verification-approve';
+import { VerificationChanges } from '../verification-changes/verification-changes';
+import {
+  VerificationMore,
+  type VerificationMoreData,
+  type VerificationMoreRefusal,
+  type VerificationMoreRequest,
+} from '../verification-more/verification-more';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
+import {
+  VerificationReject,
+  type VerificationRejectData,
+  type VerificationRejection,
+  type VerificationRejectRefusal,
+} from '../verification-reject/verification-reject';
 import { VerificationReopen } from '../verification-reopen/verification-reopen';
 
 type CheckKind = VerificationFileCheckDto['kind'];
@@ -97,6 +116,20 @@ const REFUSALS: Record<string, string | undefined> = {
   caen_check_required: 'caenRequired',
   rar_check_required: 'rarCheckRequired',
 };
+// The 422s a rejection answers by asking again, each by the field it marks.
+const REJECTION_REFUSALS: Record<
+  string,
+  VerificationRejectRefusal | undefined
+> = {
+  note_required: 'noteRequired',
+  note_too_short: 'noteTooShort',
+  reason_required: 'reasonRequired',
+};
+// The 422s a request for more answers by asking again, the note marked.
+const MORE_REFUSALS: Record<string, VerificationMoreRefusal | undefined> = {
+  note_required: 'noteRequired',
+  note_too_short: 'noteTooShort',
+};
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
@@ -113,7 +146,14 @@ interface VerificationFileData {
 // decision and answers a refusal in the footer.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, Lamp, TranslatePipe, VerificationRegisterForm],
+  imports: [
+    HlmButton,
+    Lamp,
+    RouterLink,
+    TranslatePipe,
+    VerificationChanges,
+    VerificationRegisterForm,
+  ],
   selector: 'mf-verification-file',
   styleUrl: './verification-file.css',
   templateUrl: './verification-file.html',
@@ -132,10 +172,12 @@ export class VerificationFile {
   private readonly file = liveResource(
     () => this.load(),
     [
+      'verification.submitted',
       'verification.opened',
       'verification.check_recorded',
       'verification.decided',
       'verification.reopened',
+      'garage_report.decided',
     ],
     () => this.fileId,
   );
@@ -160,6 +202,11 @@ export class VerificationFile {
   protected readonly refused = signal<string | null>(null);
   // A decision or a reopening on its way: a second press waits for nothing.
   protected readonly busy = signal(false);
+  // The rejection or the request for more on its way, so its own button
+  // carries the spinner; null while no such call is out.
+  protected readonly inflight = signal<'rejected' | 'more_requested' | null>(
+    null,
+  );
   // The RAR number's correction field: what is typed, and its refusal.
   protected readonly correcting = signal<string | null>(null);
   protected readonly correctError = signal<string | null>(null);
@@ -202,18 +249,37 @@ export class VerificationFile {
     };
   });
 
-  protected readonly reported = computed(() => {
+  // The file's reports, newest first as read, under a title that counts the
+  // open ones, those past the reports read included; none, no part.
+  protected readonly reports = computed(() => {
     const value = this.data();
-    if (!value) return undefined;
-    const when = (at: string) => this.when(at);
-    const reports = value.reports.map((r) =>
-      this.t('report', { text: r.text, when: when(r.createdAt) }),
-    );
+    if (!value?.reports.length) return undefined;
+    const open = value.reportsOpen;
     const reopened =
       value.file.reopenReason === 'garage_report' && value.file.reopenedAt
-        ? this.t('reopenedReport', { when: when(value.file.reopenedAt) })
+        ? this.t('reopenedReport', { when: this.when(value.file.reopenedAt) })
         : null;
-    return reports.length || reopened ? { reopened, reports } : undefined;
+    return {
+      heading: this.t('reports.heading', {
+        count: open,
+        n: formatNum(open, this.i18n.language()),
+      }),
+      reopened,
+      rows: value.reports.map((r) => ({
+        ...this.outcome(r),
+        id: r.id,
+        reporter: r.reporter,
+        text: r.text,
+        when: this.when(r.createdAt),
+      })),
+    };
+  });
+
+  // An in-review file with an open report is decided by its reports, never
+  // by the three decisions.
+  protected readonly reportOpen = computed(() => {
+    const value = this.data();
+    return value?.file.status === 'in_review' && value.reportsOpen > 0;
   });
 
   protected readonly rejected = computed(() => {
@@ -356,12 +422,26 @@ export class VerificationFile {
         name: file.decidedBy?.name || SYSTEM_NAME,
         when: this.when(file.decidedAt),
       }),
-      reason:
-        file.reasonCode || file.reasonNote
-          ? this.t('footer.reason', {
-              reason: this.reason(file.reasonCode, file.reasonNote),
-            })
-          : null,
+      ...(file.status === 'more_requested'
+        ? {
+            items: file.requestedItems?.length
+              ? this.t('footer.items', {
+                  items: file.requestedItems
+                    .map((code) => this.t(`more.items.${code}`))
+                    .join(', '),
+                })
+              : null,
+            reason: file.reasonNote,
+          }
+        : {
+            items: null,
+            reason:
+              file.reasonCode || file.reasonNote
+                ? this.t('footer.reason', {
+                    reason: this.reason(file.reasonCode, file.reasonNote),
+                  })
+                : null,
+          }),
     };
   });
 
@@ -411,7 +491,7 @@ export class VerificationFile {
         this.asking = false;
       });
     if (answer === 'cancelled') {
-      this.focusApprove();
+      this.focus('[data-part="approve"]');
       return;
     }
     const again = await this.sendApproval(answer);
@@ -432,7 +512,7 @@ export class VerificationFile {
         id: this.fileId,
       });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
       return null;
     } catch (error) {
       return await this.approvalFailed(error);
@@ -451,6 +531,95 @@ export class VerificationFile {
     // A named refusal changes nothing; the transition refusal re-reads.
     const told = REFUSALS[code] || code === 'verification_transition_refused';
     if (!told) this.file.reload();
+    return null;
+  }
+
+  // Asks for a reason and a message, then sends them. A 422 on either field
+  // reads the file again and, while it still waits, asks again with what was
+  // written and the field marked; any other failure is told as an approval's.
+  async reject(values: VerificationRejectData = {}) {
+    if (this.asking || this.busy() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<VerificationRejection, VerificationRejectData>(VerificationReject, {
+        data: values,
+        shape: 'dialog',
+        title: 'admin.file.reject.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus('[data-part="reject"]');
+      return;
+    }
+    const refused = await this.send(
+      { decision: 'rejected', ...answer },
+      REJECTION_REFUSALS,
+    );
+    if (refused) await this.reject({ ...answer, refused });
+  }
+
+  // Asks what is missing, then sends the request for more; answered as a
+  // rejection is, the note the field a 422 marks.
+  async ask(values: VerificationMoreData = {}) {
+    if (this.asking || this.busy() || this.decided()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<VerificationMoreRequest, VerificationMoreData>(VerificationMore, {
+        data: values,
+        shape: 'dialog',
+        title: 'admin.file.more.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus('[data-part="ask"]');
+      return;
+    }
+    const refused = await this.send(
+      { decision: 'more_requested', ...answer },
+      MORE_REFUSALS,
+    );
+    if (refused) await this.ask({ ...answer, refused });
+  }
+
+  // Sends a rejection or a request for more; the field to mark when it must
+  // be asked again, by `refusals`.
+  private async send<R>(
+    body: VerificationDecisionDto & { decision: 'rejected' | 'more_requested' },
+    refusals: Record<string, R | undefined>,
+  ): Promise<R | null> {
+    if (this.busy()) return null;
+    this.busy.set(true);
+    this.inflight.set(body.decision);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body,
+        id: this.fileId,
+      });
+      this.file.reload();
+      this.focus('h3');
+      return null;
+    } catch (error) {
+      return await this.sendFailed(error, refusals);
+    } finally {
+      this.busy.set(false);
+      this.inflight.set(null);
+    }
+  }
+
+  private async sendFailed<R>(
+    error: unknown,
+    refusals: Record<string, R | undefined>,
+  ) {
+    const code = toProblem(error).code ?? '';
+    const refused = refusals[code];
+    if (refused) return (await this.reread()) ? refused : null;
+    this.refusal(error);
+    if (code !== 'verification_transition_refused') this.file.reload();
     return null;
   }
 
@@ -478,6 +647,49 @@ export class VerificationFile {
     );
   }
 
+  // Asks first, in the decision's own dialog, then sends it; the answer is
+  // the file as decided. A decision taken first by another admin is named
+  // and read again; any other failure is told and read again, so a decision
+  // that committed before the failure is never offered twice.
+  async decideReports(decision: 'unfounded' | 'confirmed') {
+    if (this.asking || this.busy() || !this.reportOpen()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<{ note?: string } | { reason: string }, ReportDecisionData>(
+        ReportDecision,
+        {
+          data: { decision },
+          shape: 'dialog',
+          title: `admin.file.reportDecision.${decision}`,
+        },
+      )
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus(`[data-part="report-${decision}"]`);
+      return;
+    }
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      this.data.set(
+        await this.api.reportDecisionControllerDecide({
+          body: { decision, ...answer },
+          id: this.fileId,
+        }),
+      );
+      this.focus('h3');
+    } catch (error) {
+      this.refusal(error);
+      if (toProblem(error).code !== 'verification_transition_refused')
+        this.file.reload();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   // Asks first; a decision that is reopened stays shown until the next one.
   // The button is disabled only while the call is out, so a cancelled
   // confirmation can hand focus back to it.
@@ -488,7 +700,7 @@ export class VerificationFile {
       title: 'admin.file.reopen.title',
     });
     if (answer !== true) {
-      this.focusReopen();
+      this.focus('[data-part="reopen"]');
       return;
     }
     if (this.busy()) return;
@@ -497,7 +709,7 @@ export class VerificationFile {
     try {
       await this.api.verificationFileControllerReopen({ id: this.fileId });
       this.file.reload();
-      this.focusHeading();
+      this.focus('h3');
     } catch {
       toast(this.t('reopen.failed'));
     } finally {
@@ -523,25 +735,10 @@ export class VerificationFile {
     }
   }
 
-  private focusHeading() {
+  // Focus moves once the drawer has rendered what changed.
+  private focus(selector: string) {
     setTimeout(() =>
-      this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
-    );
-  }
-
-  private focusApprove() {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>('[data-part="approve"]')
-        ?.focus(),
-    );
-  }
-
-  private focusReopen() {
-    setTimeout(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>('[data-part="reopen"]')
-        ?.focus(),
+      this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
     );
   }
 
@@ -905,6 +1102,8 @@ export class VerificationFile {
         ),
         when,
       });
+    if (entry.kind === 'report_decided')
+      return this.reportLine(next, name, when);
     if (entry.action === 'create')
       return this.t('lines.sent', {
         name: value.file.declaredByName || name,
@@ -913,19 +1112,21 @@ export class VerificationFile {
     return this.statusLine(entry, name, when);
   }
 
-  // A change to the file: its RAR number corrected, or its status opened,
-  // decided, reopened (with its reason) or resent.
+  // A decision on the file's reports, by its outcome.
+  private reportLine(next: unknown, name: string, when: string) {
+    const confirmed =
+      (next as { decision?: string } | null)?.decision === 'confirmed';
+    return this.t(
+      confirmed ? 'lines.reportConfirmed' : 'lines.reportUnfounded',
+      { name, when },
+    );
+  }
+
+  // A change to the file: an approval refused, its RAR number corrected, or
+  // its status opened, decided, reopened (with its reason) or resent.
   private statusLine(entry: AuditEntryDto, name: string, when: string) {
-    if (
-      entry.subjectType === 'verification_file' &&
-      entry.field === 'rar_number'
-    )
-      return this.t('lines.rarNumber', {
-        name,
-        new: String(entry.newValue ?? '—'),
-        old: String(entry.oldValue ?? '—'),
-        when,
-      });
+    const own = this.fileLine(entry, name, when);
+    if (own) return own;
     if (entry.kind === 'verification_reopened')
       return entry.text
         ? this.t('lines.reopenedWhy', { name, reason: entry.text, when })
@@ -938,6 +1139,26 @@ export class VerificationFile {
     return this.t(`lines.${line ?? 'changed'}`, { name, when });
   }
 
+  // A decided report's outcome, with who decided it and when, and its note
+  // or, for a confirmed one, the reason the garage was given.
+  private outcome(report: VerificationFileReportDto) {
+    if (report.status === 'open') return { detail: null, outcome: null };
+    const by = {
+      name: report.decidedBy?.name || SYSTEM_NAME,
+      when: this.when(report.decidedAt),
+    };
+    const note = report.decisionNote;
+    if (report.status === 'confirmed')
+      return {
+        detail: note ? this.t('reports.reason', { reason: note }) : null,
+        outcome: this.t('reports.confirmed', by),
+      };
+    return {
+      detail: note ? this.t('reports.note', { note }) : null,
+      outcome: this.t('reports.unfounded', by),
+    };
+  }
+
   // A reason's label, any code without one reading as `other` (as the
   // garage's e-mail names it); then the note.
   private reason(code: string | null, note: string | null) {
@@ -948,6 +1169,35 @@ export class VerificationFile {
       note,
     ].filter(Boolean);
     return parts.length ? parts.join(' — ') : this.t('noReason');
+  }
+
+  // The file's lines that are not a status: a refused approval and a RAR
+  // number correction.
+  private fileLine(entry: AuditEntryDto, name: string, when: string) {
+    if (entry.kind === 'verification_approval_refused')
+      return this.t('lines.approvalRefused', {
+        name,
+        reason: this.refusalReason(String(entry.newValue ?? '')),
+        when,
+      });
+    if (
+      entry.subjectType === 'verification_file' &&
+      entry.field === 'rar_number'
+    )
+      return this.t('lines.rarNumber', {
+        name,
+        new: String(entry.newValue ?? '—'),
+        old: String(entry.oldValue ?? '—'),
+        when,
+      });
+    return null;
+  }
+
+  // A refusal code this drawer has no words for reads as the code itself.
+  private refusalReason(code: string) {
+    const key = `admin.file.refusalReasons.${code}`;
+    const label = this.i18n.t(key);
+    return label === key ? code : label;
   }
 
   private documentName(kind: string) {

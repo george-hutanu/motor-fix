@@ -509,8 +509,8 @@ describe('the address field, by location', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-002
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-002
+  // @traces 975-FR-008
   const stylesheet = readFileSync(join(__dirname, 'address-field.css'), 'utf8');
 
   it('takes every text size from a Cockpit size token', () => {

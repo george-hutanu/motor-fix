@@ -1,0 +1,37 @@
+<section data-section="changes" aria-labelledby="mf-changes-title">
+  <h4 id="mf-changes-title">{{ 'admin.file.changes.title' | t }}</h4>
+  @switch (state()) {
+    @case ('loading') {
+      <div class="loading" aria-busy="true" [attr.aria-label]="'admin.file.changes.loading' | t">
+        <span class="skeleton wide"></span>
+        <span class="skeleton"></span>
+      </div>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.file.changes.failed' | t }}</p>
+        <button type="button" class="action" (click)="retry()">{{ 'admin.file.changes.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (view(); as v) {
+        <p class="since">{{ v.since }}</p>
+        @for (group of v.groups; track group.area) {
+          <div class="group">
+            <h5>{{ group.heading }}</h5>
+            <ul class="lines" [attr.data-area]="group.area">
+              @for (line of group.lines; track $index) {
+                <li>{{ line }}</li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <p class="empty">{{ 'admin.file.changes.empty' | t }}</p>
+        }
+        @if (v.more) {
+          <p class="more">{{ v.more }}</p>
+        }
+      }
+    }
+  }
+</section>

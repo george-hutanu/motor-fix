@@ -245,3 +245,33 @@ describe('the reads a result card and its pin use', () => {
     expect(alerted('search-garages-pins')).toBeGreaterThan(0);
   });
 });
+
+// @traces 210-FR-013
+describe('the garage legal check read route', () => {
+  it('is an OpenAPI operation the inventory lists with its metric and alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/legal-check'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      name?: string;
+      metric?: string;
+      alerts?: string[];
+      story?: string;
+    }[] = Object.values(inventory).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    const legal = entries.find((each) => each.name === 'garage-legal-check');
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(legal?.story).toBe('ST-210');
+    expect(legal?.metric).toMatch(
+      /\/api\/v1\/garages\/:garageId\/legal-check$/,
+    );
+    expect(legal?.alerts).toEqual(
+      expect.arrayContaining(['api-error-rate', 'api-latency']),
+    );
+  });
+});

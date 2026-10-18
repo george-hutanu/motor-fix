@@ -5,9 +5,9 @@ export interface PhotoUploadAddressDto {
   expiresAt: string;
 
   /**
-   * Form fields to send before the file
+   * Headers to send with the PUT, exactly as given
    */
-  fields: {
+  headers: {
 [key: string]: string;
 };
 
@@ -17,7 +17,7 @@ export interface PhotoUploadAddressDto {
   key: string;
 
   /**
-   * Where the browser posts the form
+   * Where the browser PUTs the file
    */
   url: string;
 }

@@ -745,30 +745,8 @@ describe('a staging release whose identity server fails its health check', () =>
 const keycloak = (file: string) =>
   readFileSync(join(__dirname, '..', 'infra', 'keycloak', file), 'utf8');
 
+// Its Dockerfile's shape is pinned in keycloak-image.spec.ts.
 describe('the keycloak image', () => {
-  const dockerfile = keycloak('Dockerfile');
-
-  it('is Keycloak 26.8 with the realm in its import folder and a small heap', () => {
-    expect(dockerfile).toMatch(/^FROM quay\.io\/keycloak\/keycloak:26\.8$/m);
-    expect(dockerfile).toMatch(
-      /^COPY realm-motorfix-assistants\.json \/opt\/keycloak\/data\/import\/$/m,
-    );
-    expect(dockerfile).toMatch(/^ENV JAVA_OPTS_KC_HEAP="-Xms128m -Xmx512m"$/m);
-  });
-
-  it('starts behind the proxy, imports the realm and takes its address from the environment', () => {
-    const cmd = dockerfile.match(/^CMD (\[.*\])$/m)?.[1];
-
-    expect(cmd && JSON.parse(cmd)).toEqual([
-      'start',
-      '--import-realm',
-      '--features=cimd,resource-indicators',
-      '--proxy-headers=xforwarded',
-      '--http-enabled=true',
-    ]);
-    expect(dockerfile).not.toContain('--hostname');
-  });
-
   // The master realm's endpoint: Keycloak opens its port only once the
   // import has finished, and a failed import stops the server. Railway
   // refuses the imported realm's own path, whose name has a hyphen.
@@ -810,6 +788,28 @@ describe('the keycloak README', () => {
     const setup = readme.slice(readme.indexOf('## Railway'));
 
     expect(setup).toMatch(new RegExp(`\`${name}\``));
+  });
+
+  // @traces 1178-FR-011
+  it('says how the heap is sized, which limit the owner sets and how its memory is watched', () => {
+    for (const fact of [
+      'MaxRAMPercentage',
+      '70%',
+      '1.36–1.5 GB',
+      '1360 MB',
+      '768 MiB',
+      '358 MB',
+      'before a release',
+      'start --optimized',
+      'kc.sh build',
+      'port 9000',
+      '`KEYCLOAK_METRICS_URL`',
+      'infra/observability/alerts/keycloak.json',
+      'keycloak-memory',
+    ]) {
+      expect([fact, readme.includes(fact)]).toEqual([fact, true]);
+    }
+    expect(readme).not.toMatch(/\| `KC_DB` \| name \| `postgres` \|/);
   });
 
   it('leaves ASSISTANT_ALLOW_HTTP off staging', () => {

@@ -161,6 +161,7 @@
         "apps/web/src/app/dashboard/quotes-compare/quotes-compare.html",
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
         "apps/web/src/app/dashboard/view/view.html",
+        "apps/web/src/app/dashboard/verification-file/verification-file.html",
         "apps/web/src/app/dashboard/garage-requests/garage-requests-panel/garage-requests-panel.html",
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
         "apps/web/src/app/dashboard/saved-garages/saved-garage-row/saved-garage-row.html",
@@ -196,6 +197,7 @@
     {
       // A labelled role="group" of tiles, buttons or role chips outside any form, where a fieldset would be wrong.
       "includes": [
+        "apps/web/src/app/dashboard/admin-demand/admin-demand.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/frame/frame.html"
       ],

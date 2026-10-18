@@ -139,6 +139,32 @@ describe('heavy.sh', () => {
     assert.equal(run(dir, ['true'], { HEAVY_SLOTS: '1', HEAVY_WAIT: '1' }).status, 0);
   }, 20000);
 
+  // ST-1350: a shell whose child is stopped before it runs its next step, so
+  // the tree is listed first and signalled parent first, in one kill.
+  it('stops a command tree parent first: lists the whole tree root first, then signals it in one kill', async () => {
+    const dir = scratch();
+    const sh = readFileSync(heavy, 'utf8');
+    const fns = join(dir, 'fns.sh');
+    writeFileSync(fns, sh.match(/^tree\(\) \{[\s\S]*?^\}\nkilltree\(\) \{[\s\S]*?^\}$/m)[0]);
+    assert.match(readFileSync(fns, 'utf8'), /^\s*kill -TERM \$\(tree "\$1"\)/m, 'killtree does not signal the listed tree in one kill');
+    const root = spawn('sh', ['-c', 'sh -c "sleep 30; :" & sleep 30 & wait'], { stdio: 'ignore' });
+    holders.push(root);
+    await new Promise((r) => setTimeout(r, 500));
+    const out = spawnSync('sh', ['-c', `. ${fns}; tree ${root.pid}`], { encoding: 'utf8' });
+    const pids = out.stdout.trim().split('\n').map(Number);
+    assert.equal(pids[0], root.pid, 'the root is not listed first');
+    assert.equal(pids.length, 4, `expected root, two children and a grandchild, got ${pids}`);
+    for (const [i, pid] of pids.entries()) {
+      if (i === 0) continue;
+      const ppid = Number(spawnSync('ps', ['-o', 'ppid=', '-p', String(pid)], { encoding: 'utf8' }).stdout.trim());
+      assert.ok(pids.indexOf(ppid) > -1 && pids.indexOf(ppid) < i, `pid ${pid} is listed before its parent ${ppid}`);
+    }
+    const exited = new Promise((resolve) => root.once('exit', (code, signal) => resolve(signal)));
+    spawnSync('sh', ['-c', `. ${fns}; killtree ${root.pid}`]);
+    assert.equal(await exited, 'SIGTERM');
+    for (const pid of pids) assert.notEqual(spawnSync('kill', ['-0', String(pid)]).status, 0, `pid ${pid} still runs`);
+  }, 20000);
+
   it('on SIGTERM ends a heavy.sh that is still waiting for a slot', async () => {
     const dir = scratch();
     await hold(dir, 'one', { HEAVY_SLOTS: '1' });

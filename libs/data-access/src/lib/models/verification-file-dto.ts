@@ -42,9 +42,14 @@ export interface VerificationFileDto {
 }) | null;
 
   /**
-   * The garage's open reports, newest first
+   * The file's reports, newest first, at most 50
    */
   reports: Array<VerificationFileReportDto>;
+
+  /**
+   * How many of the file's reports are open, all of them counted
+   */
+  reportsOpen: number;
 
   /**
    * Whether the document store answers

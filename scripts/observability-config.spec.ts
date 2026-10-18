@@ -78,6 +78,23 @@ describe('the MCP server and its identity server', () => {
   });
 });
 
+describe('the identity server itself', () => {
+  // @traces 1178-FR-010
+  it('lists its memory alert and the overview dashboard on its Railway service, and the worker reading', () => {
+    const service = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'railway-service' && e.name === 'keycloak',
+    );
+    expect(service).toMatchObject({
+      alerts: ['mcp-issuer-unreachable', 'keycloak-memory'],
+      dashboard: 'motorfix-overview',
+    });
+    expect(service.reason).toContain('KEYCLOAK_METRICS_URL');
+  });
+});
+
 describe('the verification result queue', () => {
   // @traces 209-FR-014
   it('alerts on its final job failures, shows its counter on the queues dashboard and lists both', () => {
@@ -116,6 +133,185 @@ describe('the verification result queue', () => {
       alerts: [rule?.uid],
       dashboard: 'motorfix-queues',
     });
+  });
+});
+
+// @traces 305-FR-009
+describe('the garage rejections', () => {
+  it('alert on a burst of more than five in an hour, show on the product dashboard and are listed', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'verification.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      for: string;
+      annotations: { dashboard_uid: string };
+      data: {
+        model: { expr?: string; conditions?: { evaluator: unknown }[] };
+      }[];
+    }[];
+    const rule = rules.find((r) => r.uid === 'verification-rejection-burst');
+    expect(rule?.annotations.dashboard_uid).toBe('motorfix-product');
+    expect(rule?.data[0]?.model.expr).toMatch(
+      /^sum by \(deployment_environment\) \(increase\(motorfix_verification_rejections_total\{[^}]*\}\[1h\]\)\)$/,
+    );
+    expect(rule?.data[1]?.model.conditions?.[0]?.evaluator).toEqual({
+      params: [5],
+      type: 'gt',
+    });
+
+    const dashboard = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-product.json',
+      ),
+    ) as { panels: { title?: string; targets?: { expr: string }[] }[] };
+    const titles = dashboard.panels.map((p) => p.title);
+    expect(titles).toContain('Garage rejections');
+    expect(
+      dashboard.panels.filter((p) =>
+        (p.targets ?? []).some((t) =>
+          t.expr.includes('motorfix_verification_rejections_total'),
+        ),
+      ).length,
+    ).toBeGreaterThanOrEqual(3);
+
+    const counter = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'product-counter' &&
+        e.name === 'motorfix_verification_rejections_total',
+    );
+    expect(counter).toMatchObject({
+      alerts: ['verification-rejection-burst'],
+      dashboard: 'motorfix-product',
+    });
+  });
+});
+
+// @traces 304-FR-012
+describe('the requests for more and the files returned', () => {
+  it('alert on a burst of more than five requests in an hour, show on the product dashboard and are listed', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'verification.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      for: string;
+      annotations: { dashboard_uid: string; runbook?: string };
+      data: {
+        model: { expr?: string; conditions?: { evaluator: unknown }[] };
+      }[];
+    }[];
+    const rule = rules.find((r) => r.uid === 'verification-more-request-burst');
+    expect(rule?.for).toBe('0s');
+    expect(rule?.annotations.dashboard_uid).toBe('motorfix-product');
+    expect(rule?.annotations.runbook).toContain(
+      'Requests for more and files returned',
+    );
+    expect(rule?.data[0]?.model.expr).toMatch(
+      /^sum by \(deployment_environment\) \(increase\(motorfix_verification_more_requests_total\{[^}]*\}\[1h\]\)\)$/,
+    );
+    expect(rule?.data[1]?.model.conditions?.[0]?.evaluator).toEqual({
+      params: [5],
+      type: 'gt',
+    });
+
+    const dashboard = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-product.json',
+      ),
+    ) as { panels: { title?: string; targets?: { expr: string }[] }[] };
+    expect(dashboard.panels.map((p) => p.title)).toContain(
+      'Requests for more and files returned',
+    );
+    for (const counter of [
+      'motorfix_verification_more_requests_total',
+      'motorfix_verification_resubmissions_total',
+    ]) {
+      expect(
+        dashboard.panels.filter((p) =>
+          (p.targets ?? []).some((t) => t.expr.includes(counter)),
+        ).length,
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
+      .entries as { kind: string; name: string }[];
+    expect(
+      entries.find(
+        (e) =>
+          e.kind === 'product-counter' &&
+          e.name === 'motorfix_verification_more_requests_total',
+      ),
+    ).toMatchObject({
+      alerts: ['verification-more-request-burst'],
+      dashboard: 'motorfix-product',
+    });
+    expect(
+      entries.find(
+        (e) =>
+          e.kind === 'product-counter' &&
+          e.name === 'motorfix_verification_resubmissions_total',
+      ),
+    ).toMatchObject({ dashboard: 'motorfix-product' });
+  });
+});
+
+// @traces 1183-FR-006
+describe('the garage profile latency', () => {
+  const ROUTE = 'http_route="/api/v1/garages/:slug"';
+
+  it('has a p95 panel and an alert above 300 ms for 10 minutes, both listed', () => {
+    const panels = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-api.json',
+      ),
+    ).panels as { title?: string; targets?: { expr?: string }[] }[];
+    const panel = panels.find(
+      (p) => p.title === 'Profile p95 (alert above 300 ms)',
+    );
+    expect(panel?.targets?.some((t) => t.expr?.includes(ROUTE))).toBe(true);
+
+    const rule = (
+      JSON.parse(
+        read('infra', 'observability', 'alerts', 'api.json'),
+      ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+        uid: string;
+        for: string;
+        data: {
+          model: {
+            expr?: string;
+            conditions?: { evaluator: { type: string; params: number[] } }[];
+          };
+        }[];
+      }[]
+    ).find((r) => r.uid === 'api-profile-latency');
+    expect(rule?.for).toBe('10m');
+    expect(rule?.data.some((d) => d.model.expr?.includes(ROUTE))).toBe(true);
+    expect(
+      rule?.data.flatMap((d) => d.model.conditions ?? [])[0]?.evaluator,
+    ).toEqual({ params: [0.3], type: 'gt' });
+
+    const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
+      .entries as { kind: string; name: string; alerts?: string[] }[];
+    const alertsOf = (kind: string, name: string) =>
+      entries.find((e) => e.kind === kind && e.name === name)?.alerts;
+    expect(alertsOf('app', 'api')).toContain('api-profile-latency');
+    expect(alertsOf('railway-service', 'api')).toContain('api-profile-latency');
+    expect(alertsOf('endpoint', 'public-garage-profile')).toContain(
+      'api-profile-latency',
+    );
   });
 });
 

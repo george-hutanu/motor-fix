@@ -12,10 +12,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
-export {
-  type AssistantBroker,
-  assistantBroker,
-} from './auth/assistant/assistant.service';
+export { assistantBroker } from './auth/assistant/assistant.service';
 export { AuthModule } from './auth/auth.module';
 export {
   type Capability,
@@ -45,7 +42,15 @@ export {
 export { reminderDayMs } from './cars/reminders/reminders-config';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { BrandLoader } from './catalogue/brand-loader';
-export { BRANDS } from './catalogue/brands';
+export {
+  type BodyStyle,
+  BRANDS,
+} from './catalogue/brands';
+export {
+  CAR_MODELS,
+  type CarForBrand,
+  carForBrand,
+} from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
@@ -65,8 +70,7 @@ export { GaragePhotosService } from './garages/photos/garage-photos.service';
 export { ListingPhotosModule } from './garages/photos/listing-photos/listing-photos.module';
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos/listing-photos.worker';
 export { GaragePlaceService } from './garages/place/garage-place.service';
-export { GaragePricesService } from './garages/prices/garage-prices.service';
-export { publicGarages } from './garages/public-garages/public-garages';
+export { GaragePricesService } from './garages/prices/garage-prices/garage-prices.service';
 export {
   type Decision,
   type VerificationActor,
@@ -88,6 +92,7 @@ export {
   type DnsResolver,
   dnsReport,
 } from './notifications/email-dns/email-dns';
+export { GARAGE_REPORT_DECIDED_CONSUMER } from './notifications/garage-report-decided/garage-report-decided.fan-out';
 export { GARAGE_SUSPENDED_CONSUMER } from './notifications/garage-suspended/garage-suspended.fan-out';
 export {
   inboxMailboxes,
@@ -112,7 +117,7 @@ export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
-export { type SignedUpload, StorageService } from './storage/storage.service';
+export { StorageService } from './storage/storage.service';
 export { supportMessagesConsumer } from './support/delivery/delivery.consumer';
 export { SupportModule } from './support/support.module';
 export { type SupportConfig, supportConfig } from './support/support-config';

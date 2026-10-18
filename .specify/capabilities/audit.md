@@ -1,12 +1,14 @@
 ---
 capability: audit
-updated: 2026-10-08
+updated: 2026-10-18
 features:
   - 390-audit-history
   - 391-audit-history-api
   - 164-admin-audit-log
   - 365-mcp-oauth
   - 220-requests-quotes-bookings
+  - 173-price-range-in-place
+  - 304-request-garage-details
 ---
 
 # Capability: Audit history
@@ -158,6 +160,14 @@ _From 164-admin-audit-log._
 ### 365-FR-011 — Each tool call MUST carry one request id on the actor, and the audit writer MUST store it in a new optional `request_id` column of the activity log next to `via_assistant` and `assistant_grant_id`. (D11; brief Request id)
 
 _From 365-mcp-oauth._
+
+### 173-FR-008 — Each successful write MUST, in one transaction, write one audit entry per changed field through the audit writer (390-FR-001, FR-003): subject type `garage_price` with the row id for `from_bani`, `to_bani`, `duration_minutes`; subject type `garage` with the garage id for `labour_from_bani`, `labour_to_bani`; action `update`, old and new value, the actor, the role `owner`, the garage id; `via_assistant` and the grant id when the actor acts through an assistant (the writer does this). A write that changes nothing writes no entry.
+
+_From 173-price-range-in-place._
+
+### 304-FR-010 — Every change the panel lists MUST exist as an audit entry: where a garage write of a profile field, price, brand, photo or legal document writes no audit entry today, this story MUST add that entry through the existing writer in the write's own transaction (390-FR-001, 390-FR-003), one per changed field with old and new values and one per photo or brand added or removed, and no more; the reach is the garage's own writers under `libs/domain/src/garages`, which the plan lists; a write outside them lacking an entry is a needs-confirmation question on the issue. Fields the garage never edits itself and operational fields (cache keys, counters, timestamps the system sets) are flagged internal or not written, so the panel never shows them.
+
+_From 304-request-garage-details._
 
 ## Retired
 

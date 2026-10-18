@@ -19,9 +19,12 @@ import {
   countGarageReport,
   countGarageSignUp,
   countJobStep,
+  countMoreRequest,
   countNotification,
   countQuote,
+  countRejection,
   countRequestReceived,
+  countResubmission,
   countSearch,
   countSignIn,
   countSupportEmail,
@@ -54,6 +57,14 @@ const SUPPORT_EMAILS = (['support', 'acknowledgement'] as const).flatMap(
       (outcome) => [kind, outcome] as const,
     ),
 );
+
+const REJECTION_REASONS = [
+  'documents',
+  'rar',
+  'address',
+  'photos',
+  'other',
+] as const;
 
 const GARAGE_REPORT_OUTCOMES = [
   'created',
@@ -114,6 +125,11 @@ function countEverySeries() {
   countGarageSignUp();
   for (const outcome of ['approved', 'rejected'] as const)
     countApproval(outcome);
+  REJECTION_REASONS.forEach((reason) => {
+    countRejection(reason);
+  });
+  countMoreRequest();
+  countResubmission();
   countQuote();
   // Only a template with an e-mail text is ever counted as an e-mail sent.
   for (const [template, text] of Object.entries(TEMPLATES)) {
@@ -219,6 +235,23 @@ describe('the product counters', () => {
       () => countApproval('rejected'),
       'motorfix_garage_approvals_total',
       { outcome: 'rejected' },
+    ],
+    // @traces 305-FR-009
+    ...REJECTION_REASONS.map(
+      (reason) =>
+        [
+          () => countRejection(reason),
+          'motorfix_verification_rejections_total',
+          { reason },
+        ] as const,
+    ),
+    // @traces 304-FR-012
+    [() => countMoreRequest(), 'motorfix_verification_more_requests_total', {}],
+    // @traces 304-FR-012
+    [
+      () => countResubmission(),
+      'motorfix_verification_resubmissions_total',
+      {},
     ],
     [() => countQuote(), 'motorfix_quotes_total', {}],
     [

@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import {
+  type BeforeApplicationShutdown,
+  type INestApplication,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
@@ -11,11 +16,15 @@ import { WarmModule } from './warm.module';
 import { AuditService } from '../../audit/audit.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AccountsService } from '../../auth/accounts.service';
+import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import * as password from '../../auth/password/password';
+import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { HOME_WARM } from '../../auth/sign-in.service';
 import { CarsModule } from '../../cars/my-cars/cars/cars.module';
+import { CarsService } from '../../cars/my-cars/cars/cars.service';
 import { noEvents } from '../../events/event.port';
 import { QuotesModule } from '../../quotes/quotes.module';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
@@ -405,6 +414,88 @@ describe('a garage owner’s sign-in', () => {
     expect((await signIn(alone.email)).status).toBe(200);
     await sleep(300);
     expect(await warmKeys()).toEqual([]);
+  });
+});
+
+// @traces 1348-FR-005
+describe('the app’s shutdown', () => {
+  it('waits for the warm in flight before the stores close, and starts none while it waits', async () => {
+    const second = await start();
+    const held = Promise.withResolvers<void>();
+    const listCalled = Promise.withResolvers<void>();
+    const storesClosing = Promise.withResolvers<void>();
+    const waitBegan = Promise.withResolvers<void>();
+    const order: string[] = [];
+    let closing: Promise<void> | undefined;
+    try {
+      const andrei = await driver();
+      const list = jest
+        .spyOn(second.get(CarsService), 'list')
+        .mockImplementation(async () => {
+          listCalled.resolve();
+          await held.promise;
+          return { items: [] };
+        });
+      const database = second.get(PRISMA);
+      const disconnect = database.$disconnect.bind(database);
+      jest.spyOn(database, '$disconnect').mockImplementation(() => {
+        order.push('disconnect');
+        storesClosing.resolve();
+        return disconnect();
+      });
+      const store: Redis = second.get(AUTH_REDIS);
+      const evaluate = store.eval.bind(store);
+      jest.spyOn(store, 'eval').mockImplementation((...args) => {
+        const script = String(args[0]);
+        order.push(
+          script.includes('ZADD')
+            ? 'store'
+            : script.includes("'DEL'")
+              ? 'release'
+              : 'eval',
+        );
+        return evaluate(...args);
+      });
+      // Wrapped only where the warm has the hook: a wrapper of its own would
+      // hand Nest a shutdown hook the warm lacks, and the race would pass.
+      const warm: Partial<BeforeApplicationShutdown> = second.get(HOME_WARM);
+      const wait = warm.beforeApplicationShutdown?.bind(warm);
+      if (wait) {
+        jest
+          .spyOn(warm as BeforeApplicationShutdown, 'beforeApplicationShutdown')
+          .mockImplementation((signal) => {
+            waitBegan.resolve();
+            return wait(signal);
+          });
+      }
+
+      expect((await signIn(andrei.email, PASSWORD, second)).status).toBe(200);
+      await listCalled.promise;
+      closing = second.close();
+
+      expect(
+        await Promise.race([
+          storesClosing.promise.then(() => 'stores closed'),
+          waitBegan.promise.then(() => 'warm waited'),
+        ]),
+      ).toBe('warm waited');
+
+      const later = await person(['driver']);
+      expect((await signIn(later.email, PASSWORD, second)).status).toBe(200);
+
+      held.resolve();
+      await closing;
+
+      expect(list).toHaveBeenCalledTimes(1);
+      expect(await redis.exists(...driverKeys(later.id))).toBe(0);
+      const disconnected = order.indexOf('disconnect');
+      expect(disconnected).toBeGreaterThan(order.lastIndexOf('store'));
+      expect(disconnected).toBeGreaterThan(order.lastIndexOf('release'));
+      expect(order.slice(disconnected + 1)).toEqual([]);
+    } finally {
+      held.resolve();
+      await (closing ?? second.close());
+    }
   });
 });
 

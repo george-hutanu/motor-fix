@@ -29,8 +29,8 @@ describe('certificateStale', () => {
 });
 
 describe('timelineWhere', () => {
-  // @traces 204-FR-001
-  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes and RAR number corrections, its checks' records and its documents' openings", () => {
+  // @traces 204-FR-001 259-FR-006
+  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes, RAR number corrections and refused approvals, its checks' records and its documents' openings", () => {
     expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'])).toEqual({
       garageId: 'g',
       OR: [
@@ -39,6 +39,7 @@ describe('timelineWhere', () => {
             { action: 'create' },
             { action: 'update', field: 'status' },
             { action: 'update', field: 'rar_number' },
+            { action: 'update', kind: 'verification_approval_refused' },
           ],
           subjectId: 'f',
           subjectType: 'verification_file',

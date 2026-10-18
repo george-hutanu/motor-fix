@@ -1,4 +1,9 @@
+// @traces 1191-FR-003
+// @traces 1191-FR-006
+// @traces 1191-FR-005
+// @traces 1191-FR-007
 import { randomUUID } from 'node:crypto';
+import { crc32 } from 'node:zlib';
 
 import { HttpException } from '@nestjs/common';
 import { Queue } from 'bullmq';
@@ -17,12 +22,21 @@ import {
 import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageService } from '../../../storage/storage.service';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
+import { HEIC_BASE64 } from '../heic/heic.fixture';
+import { processPhoto } from '../photo-processing';
 
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49]);
+const HEIC = Buffer.from(HEIC_BASE64, 'base64');
 const TEN_MB = 10 * 1024 * 1024;
+const checksumOf = (file: Buffer) => {
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(file));
+  return sum.toString('base64');
+};
+const ANY_SUM = checksumOf(JPEG);
 
 const store = new S3TestStore();
 const queue = new Queue(LISTING_PHOTOS_QUEUE, {
@@ -91,18 +105,23 @@ const hold = (id: string, count: number) =>
     where: { id },
   });
 
-async function uploaded(id: string, token: string, file = JPEG) {
+async function uploaded(
+  id: string,
+  token: string,
+  file = JPEG,
+  contentType = 'image/jpeg',
+) {
   const address = await photos.uploadAddress(id, token, {
-    contentType: 'image/jpeg',
+    checksum: checksumOf(file),
+    contentType,
     size: file.length,
   });
-  const form = new FormData();
-  for (const [name, value] of Object.entries(address.fields)) {
-    form.append(name, value);
-  }
-  form.append('file', new Blob([new Uint8Array(file)]));
-  const posted = await fetch(address.url, { body: form, method: 'POST' });
-  expect(posted.status).toBe(204);
+  const put = await fetch(address.url, {
+    body: new Uint8Array(file),
+    headers: address.headers,
+    method: 'PUT',
+  });
+  expect(put.status).toBe(200);
   return address.key;
 }
 
@@ -112,6 +131,7 @@ describe('the upload address', () => {
     const before = Date.now();
 
     const address = await photos.uploadAddress(draft.id, draft.token, {
+      checksum: ANY_SUM,
       contentType: 'image/jpeg',
       size: 3 * 1024 * 1024,
     });
@@ -133,6 +153,7 @@ describe('the upload address', () => {
     for (const token of ['not-a-key', other.token, undefined]) {
       const refused = await refusalOf(
         photos.uploadAddress(draft.id, token, {
+          checksum: ANY_SUM,
           contentType: 'image/jpeg',
           size: 100,
         }),
@@ -151,6 +172,7 @@ describe('the upload address', () => {
 
     const refused = await refusalOf(
       photos.uploadAddress(draft.id, draft.token, {
+        checksum: ANY_SUM,
         contentType: 'image/jpeg',
         size: 100,
       }),
@@ -162,13 +184,17 @@ describe('the upload address', () => {
 
   it.each([
     ['a PDF', 'application/pdf', 100, 'file_type_not_allowed'],
-    ['a HEIC photo', 'image/heic', 100, 'file_type_not_allowed'],
+    ['a GIF', 'image/gif', 100, 'file_type_not_allowed'],
     ['a photo over 10 MB', 'image/jpeg', TEN_MB + 1, 'file_too_large'],
   ])('refuses %s with a stable code', async (_, contentType, size, code) => {
     const draft = await newDraft();
 
     const refused = await refusalOf(
-      photos.uploadAddress(draft.id, draft.token, { contentType, size }),
+      photos.uploadAddress(draft.id, draft.token, {
+        checksum: ANY_SUM,
+        contentType,
+        size,
+      }),
     );
 
     expect(refused.status).toBe(422);
@@ -181,6 +207,7 @@ describe('the upload address', () => {
 
     const refused = await refusalOf(
       photos.uploadAddress(draft.id, draft.token, {
+        checksum: ANY_SUM,
         contentType: 'image/jpeg',
         size: 100,
       }),
@@ -251,33 +278,103 @@ describe('confirming a photo', () => {
     expect(store.objects.size).toBe(0);
   });
 
-  it('answers a replayed confirm with file_missing and holds the photo once', async () => {
+  it('takes a real HEIC photo and processes it into JPEG copies', async () => {
     const draft = await newDraft();
-    const key = await uploaded(draft.id, draft.token);
-    await photos.confirm(draft.id, draft.token, key);
+    const key = await uploaded(draft.id, draft.token, HEIC, 'image/heic');
+
+    const confirmed = await photos.confirm(draft.id, draft.token, key);
+    await processPhoto(storage, confirmed.key);
+
+    expect(await filesOf(draft.id)).toEqual([confirmed.key]);
+    expect([
+      await storage.contentTypeOf(`${confirmed.key}.display`),
+      await storage.contentTypeOf(`${confirmed.key}.thumb`),
+      await storage.metadataOf(`${confirmed.key}.thumb`),
+    ]).toEqual(['image/jpeg', 'image/jpeg', { height: '16', width: '16' }]);
+  });
+
+  it.each([
+    ['a HEIC declared as JPEG', HEIC, 'image/jpeg'],
+    ['a JPEG declared as HEIC', JPEG, 'image/heic'],
+  ])('refuses %s and deletes it', async (_, file, contentType) => {
+    const draft = await newDraft();
+    const key = await uploaded(draft.id, draft.token, file, contentType);
 
     const refused = await refusalOf(photos.confirm(draft.id, draft.token, key));
 
-    expect(refused.status).toBe(409);
-    expect(refused.body).toMatchObject({ code: 'file_missing' });
-    expect(await filesOf(draft.id)).toHaveLength(1);
+    expect(refused.status).toBe(422);
+    expect(refused.body).toMatchObject({ code: 'file_type_mismatch' });
+    expect(await filesOf(draft.id)).toEqual([]);
+    expect(store.objects.size).toBe(0);
   });
 
-  it('keeps the photo once when a second confirm of it passed storage at the same time', async () => {
+  it('answers a repeated confirm with the same photo and holds it once', async () => {
+    const draft = await newDraft();
+    const key = await uploaded(draft.id, draft.token);
+
+    const first = await photos.confirm(draft.id, draft.token, key);
+    const again = await photos.confirm(draft.id, draft.token, key);
+
+    expect(first).toEqual({
+      key: key.replace(/^incoming\//, ''),
+      position: 0,
+      processed: false,
+    });
+    expect(again).toEqual(first);
+    expect(await filesOf(draft.id)).toEqual([first.key]);
+    expect(store.objects.has(first.key)).toBe(true);
+  });
+
+  it('answers a repeated confirm of the 20th photo once the draft is full', async () => {
+    const draft = await newDraft();
+    await hold(draft.id, 19);
+    const key = await uploaded(draft.id, draft.token);
+    const first = await photos.confirm(draft.id, draft.token, key);
+
+    const again = await photos.confirm(draft.id, draft.token, key);
+
+    expect(again).toEqual({ ...first, position: 19 });
+    expect(await filesOf(draft.id)).toHaveLength(20);
+  });
+
+  it('answers file_missing for a key the draft never held whose object is gone', async () => {
+    const draft = await newDraft();
+    const address = await photos.uploadAddress(draft.id, draft.token, {
+      checksum: ANY_SUM,
+      contentType: 'image/jpeg',
+      size: JPEG.length,
+    });
+
+    const refused = await refusalOf(
+      photos.confirm(draft.id, draft.token, address.key),
+    );
+
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'file_missing' });
+    expect(await filesOf(draft.id)).toEqual([]);
+  });
+
+  // @traces 1191-FR-003
+  it('answers the photo once when a second confirm of it passed storage at the same time', async () => {
     const draft = await newDraft();
     await hold(draft.id, 18);
     const incoming = await uploaded(draft.id, draft.token);
+    const before = await drafts.open(draft.id, draft.token);
     const confirmed = await photos.confirm(draft.id, draft.token, incoming);
+    const stale = jest.spyOn(drafts, 'open').mockResolvedValueOnce(before);
     const racing = jest
       .spyOn(storage, 'confirmUpload')
       .mockResolvedValueOnce(confirmed.key);
+    const queued = jest.spyOn(Queue.prototype, 'add');
 
-    const refused = await refusalOf(
-      photos.confirm(draft.id, draft.token, incoming),
-    );
+    const again = await photos.confirm(draft.id, draft.token, incoming);
 
+    stale.mockRestore();
     racing.mockRestore();
-    expect(refused.body).toMatchObject({ code: 'file_missing' });
+    queued.mockRestore();
+    expect(again).toEqual(confirmed);
+    // Its job was queued by the first confirm; the second adds none.
+    expect(queued).not.toHaveBeenCalled();
     const files = await filesOf(draft.id);
     expect(files.filter((key) => key === confirmed.key)).toHaveLength(1);
     expect(files).toHaveLength(19);

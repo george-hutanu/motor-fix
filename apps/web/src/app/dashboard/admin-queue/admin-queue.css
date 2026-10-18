@@ -47,6 +47,18 @@
   color: var(--mf-text);
   overflow-wrap: anywhere;
 }
+.tag {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 var(--mf-space-2);
+  border-radius: var(--mf-radius-chip);
+  border: 1px solid var(--mf-line-strong);
+  font-size: var(--mf-size-body);
+  font-weight: 600;
+  color: var(--mf-text);
+}
 .area,
 .applied,
 .waiting {
@@ -134,7 +146,7 @@ mf-lamp {
   gap: var(--mf-space-3);
   padding-top: var(--mf-space-3);
 }
-.approved {
+.outcome {
   display: inline-flex;
   align-items: center;
   gap: var(--mf-space-2);
@@ -142,8 +154,14 @@ mf-lamp {
   color: var(--mf-green-ink);
   overflow-wrap: anywhere;
 }
-/* The mock's leading success dot; the text says it as well. */
-.approved::before {
+.outcome.rejected {
+  color: var(--mf-red-ink);
+}
+.outcome.more_requested {
+  color: var(--mf-text-secondary);
+}
+/* The mock's leading dot, green or red; the text says it as well. */
+.outcome::before {
   content: "";
   flex: none;
   width: 10px;

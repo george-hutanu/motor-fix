@@ -36,6 +36,16 @@ export interface VerificationQueueRowDto {
    * The garage's mechanics; absent when it keeps no team
    */
   mechanics?: number;
+
+  /**
+   * When more was asked for; only when resubmitted
+   */
+  requestedAt?: string;
+
+  /**
+   * Sent again after a request for more
+   */
+  resubmitted: boolean;
   status: 'submitted' | 'in_review';
 
   /**

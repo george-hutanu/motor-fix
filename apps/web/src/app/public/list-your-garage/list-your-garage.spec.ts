@@ -1987,9 +1987,9 @@ describe('the details, prices and mechanics in the draft', () => {
 });
 
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-001
-  // @traces 975-type-scale-FR-004
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-001
+  // @traces 975-FR-004
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'list-your-garage.css'),
     'utf8',

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 
 import { VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
@@ -805,8 +806,25 @@ describe('a failed write', () => {
 });
 
 describe('the test switch', () => {
+  // @traces 259-FR-002
+  // The RAR rule of an automatic approval is met by the RAR test switch.
+  const rarSwitch = (value: boolean) =>
+    prisma.platformRule.upsert({
+      create: { defaultValue: false, key: 'skip_rar_check', value },
+      update: { value },
+      where: { key: 'skip_rar_check' },
+    });
+
+  afterEach(() => rarSwitch(false));
+
   it('approves a submission at once as MotorFix, with both transitions recorded', async () => {
-    const file = await inTx((tx) => service(true).submit(tx, mihai, garageId));
+    await rarSwitch(true);
+    const automatic = new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: true,
+      testRules: true,
+    });
+
+    const file = await inTx((tx) => automatic.submit(tx, mihai, garageId));
 
     expect(file).toMatchObject({ decidedBy: null, status: 'approved' });
     const garage = await prisma.garage.findUniqueOrThrow({
@@ -2028,19 +2046,18 @@ describe('the RAR test switch', () => {
     expect((await fileRow(file.id)).status).toBe('approved');
   });
 
-  it('still holds the approval on the caen check', async () => {
+  // @traces 259-FR-004
+  it('lifts the caen gate too', async () => {
     const file = await fileIn('in_review');
     await setCheck(file.id, 'rar', 'not_run');
     await setCheck(file.id, 'caen', 'not_run');
     await switchTo(true);
 
-    const refused = await refusal(
-      inTx((tx) =>
-        rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
-      ),
+    await inTx((tx) =>
+      rules(true).decide(tx, ioana, file.id, { outcome: 'approved' }),
     );
 
-    expect(refused.body.code).toBe('caen_check_required');
+    expect((await fileRow(file.id)).status).toBe('approved');
   });
 
   it('holds the rar gate when the switch is off', async () => {
@@ -2159,5 +2176,688 @@ describe('the last check date', () => {
     });
 
     expect(await lastCheckedOn()).toBeNull();
+  });
+});
+
+describe('approving a file after its reports are decided', () => {
+  // A driver's open report on the file.
+  const reported = async (file: { garageId: string; id: string }) =>
+    prisma.garageReport.create({
+      data: {
+        garageId: file.garageId,
+        reporterId: await account('Elena Dumitru', ['driver']),
+        text: 'Prețuri false la manoperă, peste listă.',
+        verificationFileId: file.id,
+      },
+    });
+
+  // @traces 069-FR-003
+  it('refuses a file in review with no open report as an ordinary review', async () => {
+    const file = await fileIn('in_review');
+
+    const { body, status } = await refusal(
+      inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+    );
+
+    expect(status).toBe(409);
+    expect(body.code).toBe('verification_transition_refused');
+    expect(String(body.message)).toMatch(/^already under review, opened by /);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+
+  // @traces 069-FR-002 069-FR-003
+  it('moves an in-review file to approved, stamped with the admin, leaves its other columns and writes no history entry of its own', async () => {
+    const at = new Date('2026-10-10T08:00:00Z');
+    const file = await fileIn('rejected', at);
+    await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+    await reported(file);
+    const written = (await history(file.id)).length;
+
+    const moved = await inTx((tx) =>
+      service().approveAfterReports(tx, dan, file.id),
+    );
+
+    const after = await fileRow(file.id);
+    expect(moved.status).toBe('approved');
+    expect(after).toMatchObject({
+      decidedBy: dan.accountId,
+      reasonCode: REASON.code,
+      reasonNote: REASON.note,
+      reopenReason: 'garage_report',
+      requestedItems: file.requestedItems,
+      status: 'approved',
+    });
+    expect(after.decidedAt?.getTime()).toBeGreaterThan(at.getTime());
+    // The decision on the reports writes the file's one history entry, so
+    // the move itself adds none.
+    expect(await history(file.id)).toHaveLength(written);
+  });
+
+  // @traces 069-FR-003
+  it.each([
+    'submitted',
+    'approved',
+    'rejected',
+    'more_requested',
+  ] as FileStatus[])(
+    'refuses a %s file with the 409 of a transition',
+    async (status) => {
+      const file = await fileIn(status, new Date('2026-10-17T09:14:00Z'));
+
+      const { body, status: code } = await refusal(
+        inTx((tx) => service().approveAfterReports(tx, dan, file.id)),
+      );
+
+      expect(code).toBe(409);
+      expect(body.code).toBe('verification_transition_refused');
+      if (status !== 'submitted') {
+        expect(body).toMatchObject({
+          currentStatus: status,
+          decidedAt: '2026-10-17T09:14:00.000Z',
+          decidedBy: 'Ioana',
+        });
+      }
+      expect((await fileRow(file.id)).status).toBe(status);
+    },
+  );
+
+  // @traces 069-FR-003
+  it('refuses an actor without admin.garages', async () => {
+    const file = await fileIn('in_review');
+
+    await expect(
+      inTx((tx) => service().approveAfterReports(tx, mihai, file.id)),
+    ).rejects.toBeInstanceOf(HttpException);
+    expect((await fileRow(file.id)).status).toBe('in_review');
+  });
+});
+
+const rejections = (reason: string) =>
+  counterTotal(reader, 'motorfix_verification_rejections_total', { reason });
+
+describe('rejecting a garage', () => {
+  // @traces 305-FR-003 305-FR-009 305-FR-011
+  it.each(['documents', 'rar', 'address', 'photos', 'other'])(
+    'stores the reason %s with its note, counts it and leaves the garage hidden',
+    async (reason) => {
+      const file = await fileIn('in_review');
+      const before = await rejections(reason);
+
+      await decideWith(ioana, file.id, {
+        note: '  Autorizația RAR a expirat.  ',
+        outcome: 'rejected',
+        reason,
+      });
+
+      expect(await fileRow(file.id)).toMatchObject({
+        reasonCode: reason,
+        reasonNote: 'Autorizația RAR a expirat.',
+        status: 'rejected',
+      });
+      expect(await rejections(reason)).toBe(before + 1);
+      const garage = await prisma.garage.findUniqueOrThrow({
+        where: { id: garageId },
+      });
+      expect(garage).toMatchObject({ approvedAt: null, status: 'draft' });
+    },
+  );
+
+  // @traces 305-FR-009
+  it('names the rejection and its reason on the request span and in one log line, never the note', async () => {
+    const file = await fileIn('in_review');
+    const setAttributes = jest.fn();
+    const span = jest
+      .spyOn(trace, 'getActiveSpan')
+      .mockReturnValue({ setAttributes } as never);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    try {
+      await decideWith(ioana, file.id, {
+        note: 'Autorizația RAR a expirat.',
+        outcome: 'rejected',
+        reason: 'rar',
+      });
+
+      expect(setAttributes).toHaveBeenCalledWith({
+        'verification.decision': 'rejected',
+        'verification.reason': 'rar',
+      });
+      const lines = log.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.includes(`file ${file.id} rejected`));
+      expect(lines).toEqual([
+        `file ${file.id} rejected by ${ioana.accountId} (rar)`,
+      ]);
+      expect(
+        log.mock.calls.some(([line]) => String(line).includes('expirat')),
+      ).toBe(false);
+    } finally {
+      span.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+  // @traces 305-FR-003 305-FR-011
+  it.each([
+    ['ten letters', 'Abcdefghij'],
+    ['ten code points, one an emoji', '🚗bcdefghij'],
+    ['1,000 code points', `${'🚗'.repeat(10)}${'a'.repeat(990)}`],
+  ])('accepts a note of %s', async (_name, note) => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note,
+      outcome: 'rejected',
+      reason: 'other',
+    });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonNote: note,
+      status: 'rejected',
+    });
+  });
+
+  // @traces 305-FR-003 305-FR-009 305-FR-011
+  it.each([
+    ['nine letters', 'Abcdefghi'],
+    ['nine code points, one an emoji', '🚗bcdefghi'],
+    ['nine letters padded with spaces', '   Abcdefghi      '],
+  ])(
+    'answers 422 note_too_short to a note of %s, storing and announcing nothing',
+    async (_name, note) => {
+      const file = await fileIn('in_review');
+      const before = await refusals('note_too_short');
+
+      const refused = await refusal(
+        decideWith(ioana, file.id, {
+          note,
+          outcome: 'rejected',
+          reason: 'rar',
+        }),
+      );
+
+      expect(refused).toMatchObject({
+        body: {
+          code: 'note_too_short',
+          errors: [{ code: 'required', field: 'note' }],
+        },
+        status: 422,
+      });
+      expect(await refusals('note_too_short')).toBe(before + 1);
+      expect((await fileRow(file.id)).status).toBe('in_review');
+      expect(await history(file.id)).toHaveLength(0);
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 305-FR-003 305-FR-009
+  it('names the reason first, then a blank note, then a short one, counting each refusal', async () => {
+    const file = await fileIn('in_review');
+    const before = {
+      blank: await refusals('note_required'),
+      reason: await refusals('reason_required'),
+      short: await refusals('note_too_short'),
+    };
+
+    const noReason = await refusal(
+      decideWith(ioana, file.id, { note: 'scurt', outcome: 'rejected' }),
+    );
+    const blank = await refusal(
+      decideWith(ioana, file.id, {
+        note: '   ',
+        outcome: 'rejected',
+        reason: 'rar',
+      }),
+    );
+    const short = await refusal(
+      decideWith(ioana, file.id, {
+        note: 'scurt',
+        outcome: 'rejected',
+        reason: 'rar',
+      }),
+    );
+
+    expect(noReason.body.code).toBe('reason_required');
+    expect(blank.body.code).toBe('note_required');
+    expect(short.body.code).toBe('note_too_short');
+    expect(await refusals('reason_required')).toBe(before.reason + 1);
+    expect(await refusals('note_required')).toBe(before.blank + 1);
+    expect(await refusals('note_too_short')).toBe(before.short + 1);
+  });
+
+  // @traces 305-FR-003
+  it('keeps the approval free of the floor', async () => {
+    const approved = await fileIn('in_review');
+
+    await decideWith(ioana, approved.id, { note: 'OK', outcome: 'approved' });
+
+    expect((await fileRow(approved.id)).reasonNote).toBe('OK');
+  });
+
+  // @traces 305-FR-004
+  it('answers 409 to a second rejection of the same file', async () => {
+    const file = await fileIn('in_review');
+    await decideWith(ioana, file.id, {
+      note: 'Lipsește certificatul ONRC.',
+      outcome: 'rejected',
+      reason: 'documents',
+    });
+
+    const { body, status } = await refusal(
+      decideWith(dan, file.id, {
+        note: 'Adresa nu corespunde.',
+        outcome: 'rejected',
+        reason: 'address',
+      }),
+    );
+
+    expect(status).toBe(409);
+    expect(body).toMatchObject({
+      code: 'verification_transition_refused',
+      currentStatus: 'rejected',
+      decidedBy: 'Ioana',
+    });
+    expect(await fileRow(file.id)).toMatchObject({ reasonCode: 'documents' });
+  });
+
+  // @traces 305-FR-004 305-FR-011
+  it('answers 409 to a rejection of an approved file, the approval kept', async () => {
+    const file = await fileIn('in_review');
+    await decideWith(ioana, file.id, { outcome: 'approved' });
+
+    const { body, status } = await refusal(
+      decideWith(dan, file.id, {
+        note: 'Adresa nu corespunde.',
+        outcome: 'rejected',
+        reason: 'address',
+      }),
+    );
+
+    expect(status).toBe(409);
+    expect(body).toMatchObject({
+      code: 'verification_transition_refused',
+      currentStatus: 'approved',
+      decidedBy: 'Ioana',
+    });
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonCode: null,
+      status: 'approved',
+    });
+  });
+
+  // @traces 305-FR-004 305-FR-011
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s rejecting, nothing stored',
+    async (role) => {
+      const outsider = person(
+        await account(`reject-${role}`, [role]),
+        role,
+        garageId,
+      );
+      const file = await fileIn('in_review');
+
+      const { status } = await refusal(
+        decideWith(outsider, file.id, {
+          note: 'Autorizația RAR a expirat.',
+          outcome: 'rejected',
+          reason: 'rar',
+        }),
+      );
+
+      expect(status).toBe(404);
+      expect(await fileRow(file.id)).toMatchObject({
+        reasonCode: null,
+        status: 'in_review',
+      });
+      expect(
+        await prisma.outboxEvent.count({
+          where: { kind: 'verification.decided', subjectId: file.id },
+        }),
+      ).toBe(0);
+    },
+  );
+
+  // @traces 305-FR-008
+  it('lets the garage send a new file linked to the rejection, keeping one garage', async () => {
+    const file = await fileIn('in_review');
+    await decideWith(ioana, file.id, {
+      note: 'Autorizația RAR a expirat.',
+      outcome: 'rejected',
+      reason: 'rar',
+    });
+
+    const next = await inTx((tx) => service().submit(tx, mihai, garageId));
+
+    expect(next).toMatchObject({
+      previousFileId: file.id,
+      status: 'submitted',
+    });
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonCode: 'rar',
+      reasonNote: 'Autorizația RAR a expirat.',
+      status: 'rejected',
+    });
+    expect(
+      await prisma.garage.count({ where: { name: 'Atelier Dinamo' } }),
+    ).toBe(1);
+  });
+});
+
+const moreRequests = () =>
+  counterTotal(reader, 'motorfix_verification_more_requests_total', {});
+const resubmissions = () =>
+  counterTotal(reader, 'motorfix_verification_resubmissions_total', {});
+
+// Everything the garage entered, as the rows hold it.
+const entered = async () => ({
+  brands: await prisma.garageBrand.findMany({ where: { garageId } }),
+  documents: await prisma.legalDocument.findMany({
+    where: { verificationFile: { garageId } },
+  }),
+  garage: await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }),
+  photos: await prisma.garagePhoto.findMany({ where: { garageId } }),
+  prices: await prisma.garagePrice.findMany({ where: { garageId } }),
+});
+
+describe('asking a garage for more', () => {
+  // @traces 304-FR-003 304-FR-014
+  it.each([
+    ['nine letters', 'Abcdefghi'],
+    ['nine code points, one an emoji', '🚗bcdefghi'],
+    ['nine letters padded with spaces', '   Abcdefghi      '],
+  ])(
+    'answers 422 note_too_short to a note of %s, storing, announcing and counting nothing',
+    async (_name, note) => {
+      const file = await fileIn('in_review');
+      const before = {
+        asked: await moreRequests(),
+        short: await refusals('note_too_short'),
+      };
+
+      const refused = await refusal(
+        decideWith(ioana, file.id, {
+          note,
+          outcome: 'more_requested',
+          requestedItems: ['photos'],
+        }),
+      );
+
+      expect(refused).toMatchObject({
+        body: {
+          code: 'note_too_short',
+          errors: [{ code: 'required', field: 'note' }],
+        },
+        status: 422,
+      });
+      expect(await refusals('note_too_short')).toBe(before.short + 1);
+      expect(await moreRequests()).toBe(before.asked);
+      expect(await fileRow(file.id)).toMatchObject({
+        reasonNote: null,
+        requestedItems: [],
+        status: 'in_review',
+      });
+      expect(await history(file.id)).toHaveLength(0);
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 304-FR-003
+  it('names a blank note before a short one, counting each refusal', async () => {
+    const file = await fileIn('in_review');
+    const before = {
+      blank: await refusals('note_required'),
+      short: await refusals('note_too_short'),
+    };
+
+    const blank = await refusal(
+      decideWith(ioana, file.id, { note: '  \t ', outcome: 'more_requested' }),
+    );
+    const short = await refusal(
+      decideWith(ioana, file.id, { note: 'Poze', outcome: 'more_requested' }),
+    );
+
+    expect([blank.status, blank.body.code]).toEqual([422, 'note_required']);
+    expect([short.status, short.body.code]).toEqual([422, 'note_too_short']);
+    expect(await refusals('note_required')).toBe(before.blank + 1);
+    expect(await refusals('note_too_short')).toBe(before.short + 1);
+  });
+
+  // @traces 304-FR-003 304-FR-014
+  it.each([
+    ['ten letters', 'Abcdefghij'],
+    ['ten code points, one an emoji', '🚗bcdefghij'],
+    ['1,000 code points', `${'🚗'.repeat(10)}${'a'.repeat(990)}`],
+  ])('accepts a note of %s', async (_name, note) => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, { note, outcome: 'more_requested' });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonNote: note,
+      requestedItems: [],
+      status: 'more_requested',
+    });
+  });
+
+  // @traces 304-FR-014
+  it('stores each of the five items once, a repeated one collapsed', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note: 'Lipsesc câteva lucruri.',
+      outcome: 'more_requested',
+      requestedItems: [
+        'documents',
+        'rar',
+        'address',
+        'photos',
+        'other',
+        'photos',
+        'rar',
+      ],
+    });
+
+    expect((await fileRow(file.id)).requestedItems).toEqual([
+      'documents',
+      'rar',
+      'address',
+      'photos',
+      'other',
+    ]);
+  });
+
+  // @traces 304-FR-004 304-FR-014
+  it('leaves the garage draft with everything it entered, and the waiting count one lower', async () => {
+    const file = await fileIn('in_review');
+    await prisma.garagePhoto.create({
+      data: { fileKey: `p-${randomUUID()}`, garageId, position: 1 },
+    });
+    const before = await entered();
+    const waiting = await service().countWaiting(prisma);
+
+    await decideWith(ioana, file.id, {
+      note: 'Trimite pozele atelierului.',
+      outcome: 'more_requested',
+      requestedItems: ['photos'],
+    });
+
+    expect(await entered()).toEqual(before);
+    expect(before.garage.status).toBe('draft');
+    expect(await service().countWaiting(prisma)).toBe(waiting - 1);
+  });
+
+  // @traces 304-FR-004 304-FR-014
+  it.each([
+    ['an approval', { outcome: 'approved' }],
+    [
+      'a rejection',
+      {
+        note: 'Lipsește certificatul ONRC.',
+        outcome: 'rejected',
+        reason: 'rar',
+      },
+    ],
+    [
+      'a request for more',
+      { note: 'Trimite pozele atelierului.', outcome: 'more_requested' },
+    ],
+  ] as const)(
+    'answers 409 to a request for more after %s, the first decision kept',
+    async (_name, first) => {
+      const file = await fileIn('in_review');
+      await decideWith(ioana, file.id, first as Body);
+
+      const { body, status } = await refusal(
+        decideWith(dan, file.id, {
+          note: 'Adresa nu corespunde.',
+          outcome: 'more_requested',
+          requestedItems: ['address'],
+        }),
+      );
+
+      expect(status).toBe(409);
+      expect(body).toMatchObject({
+        code: 'verification_transition_refused',
+        currentStatus: first.outcome,
+        decidedBy: 'Ioana',
+      });
+      expect((await fileRow(file.id)).decidedBy).toBe(ioana.accountId);
+    },
+  );
+
+  // @traces 304-FR-004
+  it('commits one of two requests sent at once', async () => {
+    const file = await fileIn('in_review');
+    const ask = (actor: Actor) =>
+      decideWith(actor, file.id, {
+        note: 'Trimite pozele atelierului.',
+        outcome: 'more_requested',
+      });
+
+    const results = await Promise.allSettled([ask(ioana), ask(dan)]);
+
+    expect(results.filter((one) => one.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'verification.decided', subjectId: file.id },
+      }),
+    ).toBe(1);
+  });
+
+  // @traces 304-FR-004
+  it.each(['garage', 'receptionist', 'mechanic', 'driver'] as const)(
+    'answers 404 to a %s asking for more, nothing stored',
+    async (role) => {
+      const outsider = person(
+        await account(`more-${role}`, [role]),
+        role,
+        role === 'driver' ? null : garageId,
+      );
+      const file = await fileIn('in_review');
+
+      const { status } = await refusal(
+        decideWith(outsider, file.id, {
+          note: 'Trimite pozele atelierului.',
+          outcome: 'more_requested',
+        }),
+      );
+
+      expect(status).toBe(404);
+      expect((await fileRow(file.id)).status).toBe('in_review');
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 304-FR-012
+  it('counts a stored request once, names it and its items on the span and in one log line, never the note', async () => {
+    const file = await fileIn('in_review');
+    const before = {
+      approvals: await approvals('more_requested'),
+      asked: await moreRequests(),
+    };
+    const setAttributes = jest.fn();
+    const span = jest
+      .spyOn(trace, 'getActiveSpan')
+      .mockReturnValue({ setAttributes } as never);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    try {
+      await decideWith(ioana, file.id, {
+        note: 'Trimite pozele atelierului.',
+        outcome: 'more_requested',
+        requestedItems: ['photos', 'documents', 'photos'],
+      });
+
+      expect(await moreRequests()).toBe(before.asked + 1);
+      expect(await approvals('more_requested')).toBe(before.approvals);
+      expect(setAttributes).toHaveBeenCalledWith({
+        'verification.decision': 'more_requested',
+        'verification.requested_items': 'photos,documents',
+      });
+      const lines = log.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.includes(`file ${file.id} more_requested`));
+      expect(lines).toEqual([
+        `file ${file.id} more_requested by ${ioana.accountId} (photos,documents)`,
+      ]);
+      expect(
+        log.mock.calls.some(([line]) => String(line).includes('atelierului')),
+      ).toBe(false);
+    } finally {
+      span.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+  // @traces 304-FR-012
+  it('logs a request with no items with empty brackets', async () => {
+    const file = await fileIn('in_review');
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    try {
+      await decideWith(ioana, file.id, {
+        note: 'Trimite pozele atelierului.',
+        outcome: 'more_requested',
+      });
+
+      expect(
+        log.mock.calls
+          .map(([line]) => String(line))
+          .filter((line) => line.includes(`file ${file.id} more_requested`)),
+      ).toEqual([`file ${file.id} more_requested by ${ioana.accountId} ()`]);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  // @traces 304-FR-012
+  it('counts a file sent again once and logs it, and counts nothing when the resend is refused', async () => {
+    const file = await fileIn('more_requested');
+    const before = await resubmissions();
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    try {
+      await inTx((tx) => service().resend(tx, mihai, file.id));
+      await refusal(inTx((tx) => service().resend(tx, mihai, file.id)));
+
+      expect(await resubmissions()).toBe(before + 1);
+      expect(
+        log.mock.calls
+          .map(([line]) => String(line))
+          .filter((line) => line === `file ${file.id} resent`),
+      ).toHaveLength(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  // @traces 304-FR-014
+  it('raises the waiting count by one when the file is sent again', async () => {
+    const file = await fileIn('more_requested');
+    const waiting = await service().countWaiting(prisma);
+
+    await inTx((tx) => service().resend(tx, mihai, file.id));
+
+    expect(await service().countWaiting(prisma)).toBe(waiting + 1);
   });
 });

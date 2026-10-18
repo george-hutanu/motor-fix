@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-17
+updated: 2026-10-18
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -10,6 +10,8 @@ features:
   - 357-public-price-jobs
   - 386-brand-price-range
   - 172-price-list-states
+  - 173-price-range-in-place
+  - 405-car-model-licences
 ---
 
 # Capability: Catalogue
@@ -137,6 +139,50 @@ _From 386-brand-price-range._
 ### 172-FR-006 — The owner's read MUST carry the garage's hourly labour range, `labour: { fromBani, toBani }`, present only when both ends are set (the shape the public profile's `labour` already has), so the view shows under the list the note "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă." / "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.", `{range}` the whole-lei range ("180–240 lei"); the note is absent when `labour` is. Nothing else in the read changes; the DTO is in the contracts library, the OpenAPI file and the generated client are regenerated (Principle V). Extends the read of 386-FR-011, which stays.
 
 _From 172-price-list-states._
+
+### 173-FR-004 — The API MUST serve `PATCH /api/v1/garages/{garageId}/prices/{priceId}` for a job's default row: body `{ fromBani, toBani, durationMinutes, expectedUpdatedAt }` from a DTO in the contracts library, `fromBani` required, `toBani` and `durationMinutes` each required and either an integer or `null` (clear), an omitted one refused with 422 `required`, `expectedUpdatedAt` the row's `updatedAt` as the read gave it; the shared range check decides, a failure answering 422 with the field errors (the shape of the brand range write, 386), a bare 400 `validation_failed` only for a malformed body or id. It writes `from_bani`, `to_bani`, `duration_minutes`, `updated_at` (now) and `updated_by` (the actor) and answers the saved row (`priceId`, `jobTypeId`, `fromBani`, `toBani`, `durationMinutes`, `updatedAt`, `warnings`). A body with no change writes nothing and answers 200 with the stored row. The OpenAPI document and the generated client are regenerated.
+
+_From 173-price-range-in-place._
+
+### 173-FR-005 — The API MUST serve `PATCH /api/v1/garages/{garageId}/labour` with body `{ fromBani, toBani }`, both required integers (a missing one refused with `required` before the range check, as 109-FR-015), the shared range check deciding (422 on a field error); clearing the labour range is out of scope, writing `labour_from_bani` and `labour_to_bani` on the garage and answering `{ fromBani, toBani, warnings }`. The garage's verification status, approval and every other column stay as they are.
+
+_From 173-price-range-in-place._
+
+### 173-FR-006 — Both writes MUST be the owner's alone (`assertGarageOwner`): the garage's receptionist or mechanic answers 403, another garage's owner 404, as the price list's reads and the brand write do (357-FR-009). A `priceId` that is not one of this garage's default rows (another garage's row, a brand row, an unknown id) answers 404 with nothing about it.
+
+_From 173-price-range-in-place._
+
+### 173-FR-007 — The row write MUST be optimistically concurrent on `GARAGE_PRICE.updated_at`: it updates the row only where `updated_at` equals `expectedUpdatedAt` (to the millisecond, as stored), and when no row matches but the row exists it answers 409 `stale`, writing nothing; this check runs before the no-change short-circuit of FR-004. The owner's read MUST carry on each item `priceId` (the default row's id, absent for a job with no default row) and `updatedAt` (ISO 8601 UTC), so the view has them to send back (modifies 386-FR-011 and 172-FR-006, whose "nothing else changes" clauses this extends). The labour write is last-write-wins (the garage row carries no edit stamp for it).
+
+_From 173-price-range-in-place._
+
+### 173-FR-010 — A price or labour change MUST never start or change a MotorFix review: the garage's verification status, its listing and its approval are untouched by these writes, and the profile shows the new range at once (acceptance criterion; unlike the changes of #127). A quote keeps the range it was sent with: `QUOTE.from_bani`/`to_bani` are never read from or written by these writes (220-FR-005 already stores them).
+
+_From 173-price-range-in-place._
+
+### 173-FR-012 — Brand lines MUST be edited through the existing brand range write (`PUT /api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}`, 386), with the same editor, errors and saving states; this story adds no brand route and no removal of a brand range from the view (ST-386's own screens own removal).
+
+_From 173-price-range-in-place._
+
+### 405-FR-002 — The product MUST keep one catalogue of the licensed car models, in a data file beside the brand list (`libs/domain/src/catalogue/`), the file #1241 seeds `CAR_MODEL_3D` from as the brand loader seeds `BRAND` from `brands.ts`, holding exactly the 20 models of the list; each model MUST carry a stable key, its brand key (a key of MotorFix's brand list), its model name, its fuel (one of the four fuel values the cars contract already uses: `petrol`, `diesel`, `hybrid`, `electric`) and its rank within its brand.
+
+_From 405-car-model-licences._
+
+### 405-FR-003 — The product MUST answer, for a brand key alone, which car shows: the brand's rank-1 licensed model when the brand has one; otherwise a generic body shape — the brand's body style in the brand list (`bodyStyle`, #1241's `BRAND.body_style`), set from the mock for `volkswagen` hatchback, `dacia` suv, `toyota` crossover, `skoda` estate, `ford` fastback, else `saloon`. A brand key the brand list does not know MUST get the generic `saloon`, with no error. The answer MUST say which of the two it is: `{ kind: 'licensed', model }` with the model record, or `{ kind: 'generic', bodyStyle }`.
+
+_From 405-car-model-licences._
+
+### 405-FR-004 — A validator MUST refuse a malformed catalogue file, naming the first fault found, in this order: a duplicate model key; two models of one brand with the same rank; a brand whose ranks are not exactly 1..n; a fuel outside the four. The shipped file MUST pass it, and the validator MUST run over the shipped file in a unit test.
+
+_From 405-car-model-licences._
+
+### 405-FR-005 — MotorFix's brand list MUST gain Opel (`opel`, "Opel"), unranked; the brand loader's existing checks and the brand file's existing tests MUST keep passing.
+
+_From 405-car-model-licences._
+
+### 405-FR-006 — A unit test MUST hold every licensed model's brand key to a key of the brand list, so a renamed or removed brand that the catalogue names fails the suite.
+
+_From 405-car-model-licences._
 
 ## Retired
 

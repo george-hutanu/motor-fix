@@ -299,7 +299,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: [
         'photos',
         'documents',
@@ -318,7 +318,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos', 'documents', 'rar', 'address', 'other'],
     });
 
@@ -337,7 +337,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: [],
     });
 
@@ -349,7 +349,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos', 'photos'],
     });
 
@@ -362,7 +362,7 @@ describe('decision payload boundaries', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'x',
+      note: 'Trimite pozele atelierului.',
       reason: 'photos',
     });
 
@@ -391,6 +391,90 @@ describe('decision payload boundaries', () => {
     });
 
     expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+  });
+});
+
+// @traces 305-FR-003 305-FR-004 305-FR-011
+describe("a rejection's reason and note at the edge", () => {
+  it.each([
+    [
+      'an unknown reason',
+      {
+        decision: 'rejected',
+        note: 'Mesaj suficient de lung.',
+        reason: 'weather',
+      },
+    ],
+    [
+      'a stored reason the form never sends',
+      {
+        decision: 'rejected',
+        note: 'Mesaj suficient de lung.',
+        reason: 'documents_unreadable',
+      },
+    ],
+    [
+      '1,001 code points, emoji counted once',
+      { decision: 'rejected', note: `${'🚗'.repeat(1001)}`, reason: 'other' },
+    ],
+  ])(
+    'answers 400 validation_failed to %s and stores nothing',
+    async (_name, body) => {
+      const { id } = await file();
+
+      const res = await post(id, 'decision', admin, body);
+
+      expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+      expect((await fileRow(id)).status).toBe('in_review');
+      expect(await count('verification.decided', id)).toBe(0);
+    },
+  );
+
+  it('answers 422 note_too_short naming the note to nine code points, and accepts ten', async () => {
+    const { id } = await file();
+
+    const short = await post(id, 'decision', admin, {
+      decision: 'rejected',
+      note: '🚗 scurtă!',
+      reason: 'rar',
+    });
+
+    expect([short.status, short.body.code, short.body.errors]).toEqual([
+      422,
+      'note_too_short',
+      [{ code: 'required', field: 'note' }],
+    ]);
+    expect((await fileRow(id)).status).toBe('in_review');
+    expect(await count('verification.decided', id)).toBe(0);
+
+    const enough = await post(id, 'decision', admin, {
+      decision: 'rejected',
+      note: '🚗 scurtă!!',
+      reason: 'rar',
+    });
+
+    expect(enough.status).toBe(200);
+    expect(await fileRow(id)).toMatchObject({
+      reason_code: 'rar',
+      reason_note: '🚗 scurtă!!',
+      status: 'rejected',
+    });
+  });
+
+  it('answers 404 to a driver and 401 to no token, leaving the file waiting', async () => {
+    const { id } = await file();
+    const driver = bearer(await account('driver'), 'driver');
+    const body = {
+      decision: 'rejected',
+      note: 'Mesaj suficient de lung.',
+      reason: 'rar',
+    };
+
+    const asDriver = await post(id, 'decision', driver, body);
+    const anonymous = await post(id, 'decision', undefined, body);
+
+    expect([asDriver.status, anonymous.status]).toEqual([404, 401]);
+    expect((await fileRow(id)).status).toBe('in_review');
   });
 });
 
@@ -468,10 +552,13 @@ describe('decisions racing and repeating', () => {
     const [a, b] = await Promise.all([
       post(id, 'decision', admin, {
         decision: 'rejected',
-        note: 'a',
+        note: 'Prima respingere.',
         reason: 'other',
       }),
-      post(id, 'decision', other, { decision: 'more_requested', note: 'b' }),
+      post(id, 'decision', other, {
+        decision: 'more_requested',
+        note: 'Trimite pozele atelierului.',
+      }),
     ]);
 
     expect([a.status, b.status].sort()).toEqual([200, 409]);
@@ -490,7 +577,7 @@ describe('decisions racing and repeating', () => {
       Array.from({ length: 10 }, () =>
         post(id, 'decision', admin, {
           decision: 'rejected',
-          note: 'n',
+          note: 'Respins de zece ori.',
           reason: 'other',
         }),
       ),
@@ -503,7 +590,11 @@ describe('decisions racing and repeating', () => {
 
   it('refuses the same decision sent twice with 409 and writes nothing the second time', async () => {
     const { id } = await file();
-    const body = { decision: 'rejected', note: 'n', reason: 'other' };
+    const body = {
+      decision: 'rejected',
+      note: 'Respins de două ori.',
+      reason: 'other',
+    };
     await post(id, 'decision', admin, body);
     const before = await fileRow(id);
 
@@ -555,7 +646,7 @@ describe('decisions racing and repeating', () => {
 
     const res = await post(id, 'decision', admin, {
       decision: 'rejected',
-      note: 'n',
+      note: 'RAR neconfirmat.',
       reason: 'rar',
     });
 
@@ -596,7 +687,7 @@ describe('decisions racing and repeating', () => {
     const { id } = await file();
     await post(id, 'decision', admin, {
       decision: 'rejected',
-      note: 'n',
+      note: 'Acte necitețe.',
       reason: 'documents',
     });
     await post(id, 'reopen', admin);
@@ -617,14 +708,14 @@ describe('decisions racing and repeating', () => {
     const { id } = await file();
     await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'n',
+      note: 'Trimite pozele atelierului.',
       requestedItems: ['photos'],
     });
     await post(id, 'reopen', admin);
 
     const res = await post(id, 'decision', admin, {
       decision: 'rejected',
-      note: 'n',
+      note: 'Respins după redeschidere.',
       reason: 'other',
     });
 
@@ -669,7 +760,7 @@ describe('reopening', () => {
     const { id } = await file();
     await post(id, 'decision', admin, {
       decision: 'rejected',
-      note: 'Lipsă',
+      note: 'Lipsă certificatul.',
       reason: 'documents',
     });
     const decided = await fileRow(id);
@@ -681,7 +772,7 @@ describe('reopening', () => {
     expect([row.decided_by, row.reason_code, row.reason_note]).toEqual([
       decided.decided_by,
       'documents',
-      'Lipsă',
+      'Lipsă certificatul.',
     ]);
     expect(row.submitted_at.getTime()).toBeGreaterThanOrEqual(
       decided.submitted_at.getTime(),
@@ -755,14 +846,14 @@ describe('reopening', () => {
     const { id } = await file();
     await post(id, 'decision', admin, {
       decision: 'rejected',
-      note: 'n',
+      note: 'Respins prima dată.',
       reason: 'other',
     });
     await post(id, 'reopen', admin);
 
     const res = await post(id, 'decision', admin, {
       decision: 'more_requested',
-      note: 'again',
+      note: 'Trimite pozele atelierului.',
     });
 
     expect([res.status, res.body.file.status]).toEqual([200, 'more_requested']);

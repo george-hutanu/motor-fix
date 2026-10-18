@@ -29,6 +29,7 @@ features:
   - 049-garage-suspension
   - 386-brand-price-range
   - 271-garage-distance
+  - 1191-resilient-uploads
 ---
 
 # Capability: Garage listing
@@ -429,9 +430,9 @@ _From 861-jump-holds-step._
 
 _From 110-workshop-photos._
 
-### 110-FR-002 — Each photo MUST be JPEG, PNG or WebP and at most 10 MB; the draft MUST hold at most 20 photos. The form MUST refuse a file of another type or size before asking for an upload address with "Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB" / "Only JPG, PNG or WEBP photos, up to 10 MB", and a 21st photo with "Cel mult 20 de fotografii" / "At most 20 photos"; the other files of the same drop carry on. The server MUST refuse the same cases on its own (type and size through the storage rules, 422-FR-002 and 422-FR-005; the 21st against the draft's current photos, 422 with a stable code, checked when the upload address is asked for and again, binding, at confirm, which counts and appends in one update and deletes a refused object), so the limits live in one place shared by the form and the API.
+### 1191-FR-007 — Each photo MUST be JPEG, PNG, WebP, HEIC or HEIF and at most 10 MB after downscaling; the draft MUST hold at most 20 photos. The form MUST refuse a file of another type or size before asking for an upload address with "Doar fotografii JPG, PNG, WEBP sau HEIC, de cel mult 10 MB" / "Only JPG, PNG, WEBP or HEIC photos, up to 10 MB", and a 21st photo with "Cel mult 20 de fotografii" / "At most 20 photos"; the other files of the same pick carry on. The server MUST refuse the same cases on its own (type and size through the storage rules, 422-FR-002 and 422-FR-005; the 21st against the draft's current photos, 422 `photos_full`, checked when the address is asked for and again, binding, at confirm), so the limits live in the one table of FR-005 shared by the form and the API (supersedes 110-FR-002: HEIC and HEIF accepted, the size judged on the file that is sent).
 
-_From 110-workshop-photos._
+_From 1191-resilient-uploads._
 
 ### 110-FR-004 — The browser MUST ask the API for a signed upload address for the draft (`POST /api/v1/listing-drafts/{id}/photos/upload-url`, the draft's token in `X-Listing-Token`, the declared type and size), send the file straight to the private store through the shared upload helper (progress, retries, one address renewal, 422-FR-012), and then confirm it (`POST /api/v1/listing-drafts/{id}/photos`, the key), which adds the photo at the end of the draft's photos and answers the photo. The API MUST never carry the file's bytes. The address is signed for the storage module's lifetime (15 minutes, 422-FR-003) and its owner id is the draft id (422-FR-004), so the keys belong to the draft and its clean-up deletes exactly them (114-FR-016).
 
@@ -469,9 +470,9 @@ _From 110-workshop-photos._
 
 _From 110-workshop-photos._
 
-### 110-FR-013 — While the device is offline the step MUST keep the chosen files in a browser queue for as long as the page is open, show them as waiting, and upload them in order when the connection returns; files waiting when the page is closed are lost and the owner is told nothing more than that they are not in the draft (they are simply absent). When the API refuses to issue addresses (storage down, 5xx), the rest of the draft MUST keep saving and a line "Fotografiile se încarcă mai târziu" / "The photos will upload later" MUST show under the drop area until an upload succeeds; each waiting file is retried on the next drop, on "Reîncearcă" and when the connection returns.
+### 1191-FR-001 — A photo picked on the listing photos step MUST be kept in a persistent browser queue until its confirm succeeds: the file's bytes, name, type and the draft id, in the order picked. The queue MUST be drained in order on page load (for the open draft), on the `online` event and after a new pick, each attempt asking for a fresh address unless the entry already holds the incoming key of a landed PUT, in which case only the confirm is called (an expired address refused by the store clears the key); drains run one at a time per draft under a Web Lock and re-read the queue inside it; an attempt that fails with a dropped connection (status 0) MUST be retried with exponential backoff starting at 1 s, doubling (waits of 1, 2, 4 and 8 s), at most 5 attempts per drain, after which the tile shows as failed and the owner's "Reîncearcă" starts a new drain. A confirmed, refused (422) or removed entry MUST leave the queue. When the browser store cannot be opened the step MUST fall back to an in-memory queue for as long as the page is open, without an error shown. When the API refuses to issue addresses (storage down, 5xx), the rest of the draft MUST keep saving and the line "Fotografiile se încarcă mai târziu" / "The photos will upload later" MUST show under the drop area until an upload succeeds (FR-009); each waiting file is retried on the next pick, on "Reîncearcă" and when the connection returns. (Supersedes 110-FR-013: the queue now outlives the page.)
 
-_From 110-workshop-photos._
+_From 1191-resilient-uploads._
 
 ### 110-FR-014 — The step MUST say what is needed when photos cannot be taken yet: without a server copy (no e-mail at step 1, 114-FR-005) the drop area reads "Adaugă un e-mail la pasul 1 ca să încarci fotografii" / "Add an e-mail at step 1 to upload photos" and takes no files; the line goes away as soon as the server copy exists.
 
@@ -958,6 +959,37 @@ _From 271-garage-distance._
 ### 271-FR-016 — The ST-111 documents in the specs repo (`specs/111-garage-address-map/tasks.md` T021, `plan.md`, `research.md`, `quickstart.md`, `deferred.md`) MUST name the metrics as built, `motorfix_places_lookups_total{provider,outcome}` and `motorfix_places_provider_duration_seconds{provider}`, and no client span, which was never built (#654); nothing in the code changes for it.
 
 _From 271-garage-distance._
+### 1191-FR-002 — While one or more photos of the open draft wait for a connection, the step MUST show a chip under the drop area reading "O fotografie așteaptă semnal" / "N fotografii așteaptă semnal" / "N de fotografii așteaptă semnal" (Romanian one, few, other) and "1 photo waiting for signal" / "N photos waiting for signal" (English one, other), on every browser, counting waiting tiles and restored queue entries alike; it MUST disappear when none wait, and it MUST be a polite status region (`role="status"`) so a screen reader announces the count when it changes. The tile's own waiting mark stays (110-FR-007).
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-003 — Confirming a photo MUST be idempotent for a retried confirm: when the incoming key's final key is already among the draft's photos, the confirm MUST answer success with that key and its position (and `processed` as the read would report it), not 409 `file_missing`; the object-store checks are skipped since the file was already checked and moved. A confirm of a key the draft never held and whose object is gone keeps answering `file_missing`. An integration test MUST confirm the same key twice and read one photo on the draft; a Playwright test MUST cut the network mid-upload, restore it and read exactly one photo on the draft and one tile on the screen.
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-004 — Before asking for an address, the browser MUST downscale a photo whose long side exceeds 2,048 px to 2,048 px on its long side as a JPEG at quality 0.82, keeping its orientation, and send the result in place of the original; a browser without the needed decoding and canvas APIs, a decoding failure, or a result larger than the original MUST send the original. The size and type checks of 110-FR-002 run on the file that is sent. A unit test MUST cover: a large photo downscaled with its aspect kept, a small photo untouched, the fallback.
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-008 — Removing a photo whose confirm is in flight MUST remove its key from the draft once the confirm lands (the step remembers the removal and calls the delete with the confirmed key), and after a reload the photo MUST not come back. A Playwright test with a slowed confirm MUST prove it (#651).
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-009 — The "Fotografiile se încarcă mai târziu" / "The photos will upload later" line MUST clear on the next successful upload even when an older tile is still failed; the failed tile keeps its "Reîncearcă". A unit test MUST prove it (#653).
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-010 — The listing photos screen (the "List your garage" page at its photos step, with a draft that has a server copy) MUST be in the PR QA sweep's routes and flows for this PR, so it is walked at 320 px and 390 px (and the tablet and desktop sizes) in light and dark, Romanian and English; a screen that scrolls sideways at 320 px is a finding.
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-012 — Tests MUST be written before the change (Constitution II) and cover, in colocated Jest specs: the queue store (add, restore for a draft, remove, fall back without a browser store), the drain order and backoff (fake timers), the chip's texts per count in both languages, FR-004, FR-009 and the helper's PUT with headers and renewal; in Jest on real PostgreSQL and Redis with the compose store: FR-003, FR-005 and FR-006; in Playwright: the network cut (FR-003), the reload drain (FR-001) and the slowed-confirm removal (FR-008), each tagged for the on-demand suite, not `@core`.
+
+_From 1191-resilient-uploads._
+
+### 1191-FR-013 — The change MUST stay small (Constitution I): one queue store module in the web app, the helper's PUT in place of the form, the DTO change, the confirm's idempotence branch, the HEIC signature and decoder, the texts, the panel and the tests; no service worker, no Background Sync, no multipart, no new table, and no dependency beyond the worker's HEIC decoder.
+
+_From 1191-resilient-uploads._
 
 ## Retired
 
@@ -986,3 +1018,5 @@ _From 271-garage-distance._
 - `108-FR-010` — superseded by `115-FR-007` (2026-10-11)
 - `109-FR-012` — superseded by `115-FR-007` (2026-10-11)
 - `397-FR-004` — superseded by `115-FR-002` (2026-10-11)
+- `110-FR-013` — superseded by `1191-FR-001` (2026-10-18)
+- `110-FR-002` — superseded by `1191-FR-007` (2026-10-18)

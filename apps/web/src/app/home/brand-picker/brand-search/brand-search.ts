@@ -10,7 +10,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { type BrandDto, BrandsService } from '@motor-fix/data-access';
+import type { BrandDto } from '@motor-fix/data-access/models/brand-dto';
+import { BrandsService } from '@motor-fix/data-access/services/brands.service';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 

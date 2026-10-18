@@ -374,8 +374,8 @@ describe('the place dialog, by address', () => {
 
 // The dialog's field is the shared one, so its sizes are the field's.
 describe('type scale', () => {
-  // @traces 975-type-scale-FR-002
-  // @traces 975-type-scale-FR-008
+  // @traces 975-FR-002
+  // @traces 975-FR-008
   const stylesheet = readFileSync(
     join(__dirname, '../../../public/address-field/address-field.css'),
     'utf8',
@@ -394,7 +394,7 @@ describe('type scale', () => {
     );
   });
 
-  // @traces 975-type-scale-FR-003
+  // @traces 975-FR-003
   it('keeps the message at the body size on a phone, small from a tablet up', () => {
     const at = stylesheet.indexOf('@media (min-width: 768px)');
     expect(stylesheet.slice(0, at)).not.toMatch(/\.message \{[^}]*font-size/);

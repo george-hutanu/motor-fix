@@ -1,7 +1,7 @@
 import { fuelColumns, isBrandsSection } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import type { AuditPort } from '../../audit/audit.port';
+import type { AuditEntry, AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
 
@@ -46,8 +46,10 @@ function untickedIds(refs: string[], jobs: GarageJobRef[], at: number) {
 
 // Writes a garage's brands, their fuels, the jobs each taken brand does and
 // the two texts from the listing's step 2 section, inside the caller's
-// transaction. The caller records the event; this writes rows and their
-// audit entries. With no jobs (no price list yet) a brand gets no job row.
+// transaction. The caller records the event; this writes rows and records
+// what changed against the rows already there, so a section written again
+// adds nothing to the history. With no jobs (no price list yet) a brand gets
+// no job row.
 export async function writeGarageBrands(
   tx: Prisma.TransactionClient,
   garageId: string,
@@ -83,33 +85,107 @@ export async function writeGarageBrands(
     tx,
     section.brands.map((brand) => brand.brandId),
   );
-  await tx.garageBrand.deleteMany({ where: { garageId } });
-  await tx.garageBrand.createMany({
-    data: section.brands.map(({ brandId, fuels, stance }) => ({
-      brandId: brandId.toLowerCase(),
-      garageId,
-      stance,
-      ...fuelColumns(stance === 'works_on' ? fuels : []),
-    })),
-  });
-  await tx.garageBrandJob.createMany({ data: rows });
-  await audit.recordMany(
-    tx,
-    rows.map(({ brandId, jobTypeId }) => ({
-      action: 'create',
-      actorId,
-      actorRole: 'garage',
-      garageId,
-      newValue: { brandId },
-      subjectId: jobTypeId,
-      subjectType: 'garage_brand_job',
-    })),
-  );
-  await tx.garage.update({
-    data: {
-      brandNote: section.brandNote ?? null,
-      refusalPhrase: section.refusalPhrase ?? null,
+  const brandsBefore = await tx.garageBrand.findMany({
+    select: {
+      brandId: true,
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
+      stance: true,
     },
+    where: { garageId },
+  });
+  const ticksBefore = await tx.garageBrandJob.findMany({
+    select: { brandId: true, jobTypeId: true },
+    where: { garageId },
+  });
+  const textsBefore = await tx.garage.findUniqueOrThrow({
+    select: { brandNote: true, refusalPhrase: true },
     where: { id: garageId },
   });
+  const brands = section.brands.map(({ brandId, fuels, stance }) => ({
+    brandId: brandId.toLowerCase(),
+    stance,
+    ...fuelColumns(stance === 'works_on' ? fuels : []),
+  }));
+  await tx.garageBrand.deleteMany({ where: { garageId } });
+  await tx.garageBrand.createMany({
+    data: brands.map((brand) => ({ ...brand, garageId })),
+  });
+  await tx.garageBrandJob.createMany({ data: rows });
+  const texts = {
+    brandNote: section.brandNote ?? null,
+    refusalPhrase: section.refusalPhrase ?? null,
+  };
+  await tx.garage.update({ data: texts, where: { id: garageId } });
+
+  const change = { actorId, actorRole: 'garage' as const, garageId };
+  await audit.recordChanges(
+    tx,
+    { ...change, subjectId: garageId, subjectType: 'garage' },
+    textsBefore,
+    texts,
+  );
+  const was = new Map(
+    brandsBefore.map(({ brandId, ...row }) => [brandId, row]),
+  );
+  const is = new Set(brands.map((brand) => brand.brandId));
+  const brand = { ...change, subjectType: 'garage_brand' };
+  for (const { brandId, ...after } of brands) {
+    const before = was.get(brandId);
+    if (before) {
+      await audit.recordChanges(
+        tx,
+        { ...brand, subjectId: brandId },
+        before,
+        after,
+      );
+    }
+  }
+  const tick = ({
+    brandId,
+    jobTypeId,
+  }: {
+    brandId: string;
+    jobTypeId: string;
+  }) => `${brandId} ${jobTypeId}`;
+  const ticked = new Set(ticksBefore.map(tick));
+  const ticks = new Set(rows.map(tick));
+  const job = { ...change, subjectType: 'garage_brand_job' };
+  const entries: AuditEntry[] = [
+    ...brands
+      .filter(({ brandId }) => !was.has(brandId))
+      .map(({ brandId, ...after }) => ({
+        ...brand,
+        action: 'create' as const,
+        newValue: after,
+        subjectId: brandId,
+      })),
+    ...[...was]
+      .filter(([brandId]) => !is.has(brandId))
+      .map(([brandId, before]) => ({
+        ...brand,
+        action: 'delete' as const,
+        oldValue: before,
+        subjectId: brandId,
+      })),
+    ...rows
+      .filter((row) => !ticked.has(tick(row)))
+      .map(({ brandId, jobTypeId }) => ({
+        ...job,
+        action: 'create' as const,
+        newValue: { brandId },
+        subjectId: jobTypeId,
+      })),
+    ...ticksBefore
+      .filter((row) => !ticks.has(tick(row)))
+      .map(({ brandId, jobTypeId }) => ({
+        ...job,
+        action: 'delete' as const,
+        oldValue: { brandId },
+        subjectId: jobTypeId,
+      })),
+  ];
+  await audit.recordMany(tx, entries);
 }

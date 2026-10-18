@@ -211,3 +211,193 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
     });
   }
 });
+
+// The photo's PUT to the store, and its confirm on the draft (not the list,
+// which shares the path).
+const toStore = (url: URL) => url.pathname.includes('/incoming/');
+const toConfirm = (url: URL) =>
+  /\/listing-drafts\/[^/]+\/photos$/.test(url.pathname);
+const toAddress = (url: URL) =>
+  /\/listing-drafts\/[^/]+\/photos\/upload-url$/.test(url.pathname);
+
+// Entries the browser still holds for any draft; 0 once all were confirmed.
+const queuedInBrowser = (page: Page) =>
+  page.evaluate(async () => {
+    const all = await indexedDB.databases();
+    if (!all.some((db) => db.name === 'mf-uploads')) return 0;
+    return new Promise<number>((resolve) => {
+      const open = indexedDB.open('mf-uploads');
+      open.onerror = () => resolve(-1);
+      open.onsuccess = () => {
+        const db = open.result;
+        if (!db.objectStoreNames.contains('photos')) {
+          db.close();
+          resolve(0);
+          return;
+        }
+        const count = db.transaction('photos').objectStore('photos').count();
+        count.onsuccess = () => {
+          db.close();
+          resolve(count.result);
+        };
+        count.onerror = () => {
+          db.close();
+          resolve(-1);
+        };
+      };
+    });
+  });
+
+// Every one of `count` tiles holds its confirmed key. An empty list does not
+// count: the tiles appear only once the picked files were read and shrunk.
+const confirmedKeys = (page: Page, count: number) =>
+  expect
+    .poll(async () => {
+      const held = await keys(page);
+      return held.length === count && held.every((key) => key !== null);
+    })
+    .toBe(true);
+
+const newEmail = (what: string) =>
+  `${what}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
+
+test.describe('step 5 of list your garage, photos on a bad connection @mailbox', () => {
+  test.beforeEach(({ context }) => ownMap(context));
+
+  // @traces 1191-FR-003
+  test('a PUT cut off mid-way is sent again and the photo lands once', async ({
+    page,
+  }) => {
+    test.slow();
+    let cut = false;
+    await page.route(toStore, async (route) => {
+      if (route.request().method() === 'PUT' && !cut) {
+        cut = true;
+        await route.abort('connectionreset');
+        return;
+      }
+      await route.fallback();
+    });
+    await toPhotos(page, newEmail('photos-cut'));
+
+    await step(page)
+      .locator('input[type="file"]')
+      .setInputFiles([jpeg('atelier.jpg')]);
+
+    await expect(tiles(page)).toHaveCount(1);
+    await confirmedKeys(page, 1);
+    expect(cut).toBe(true);
+    await confirmedCount(page, 1);
+  });
+
+  // @traces 1191-FR-003
+  test('a confirm whose answer was lost is confirmed again, and the draft holds the photo once', async ({
+    page,
+  }) => {
+    test.slow();
+    let lost = false;
+    await page.route(toConfirm, async (route) => {
+      if (route.request().method() === 'POST' && !lost) {
+        lost = true;
+        // The API confirms it; the answer never reaches the browser.
+        await route.fetch();
+        await route.abort('connectionreset');
+        return;
+      }
+      await route.fallback();
+    });
+    await toPhotos(page, newEmail('photos-lost'));
+
+    await step(page)
+      .locator('input[type="file"]')
+      .setInputFiles([jpeg('atelier.jpg')]);
+
+    await expect(tiles(page)).toHaveCount(1);
+    await expect.poll(() => lost).toBe(true);
+    await confirmedKeys(page, 1);
+    await confirmedCount(page, 1);
+  });
+
+  // @traces 1191-FR-001 1191-FR-002
+  test('photos picked offline stay in the browser across a reload and go once the connection returns', async ({
+    context,
+    page,
+  }) => {
+    test.slow();
+    await toPhotos(page, newEmail('photos-offline'));
+
+    await context.setOffline(true);
+    await step(page)
+      .locator('input[type="file"]')
+      .setInputFiles([jpeg('unu.jpg'), jpeg('doi.jpg')]);
+    await expect(tiles(page)).toHaveCount(2);
+    await expect(step(page).locator('.queued[role="status"]')).toHaveText(
+      /2 fotografii așteaptă semnal/i,
+    );
+    await expect.poll(() => queuedInBrowser(page)).toBe(2);
+
+    // Back online with the addresses still refused, so nothing leaves this
+    // page; the reload is what sends them.
+    let held = true;
+    await page.route(toAddress, (route) =>
+      held ? route.abort('internetdisconnected') : route.fallback(),
+    );
+    await context.setOffline(false);
+    await page.reload({ waitUntil: 'commit' });
+    held = false;
+    await hydrated(page);
+
+    await expect(tiles(page)).toHaveCount(2);
+    await confirmedKeys(page, 2);
+    expect(await names(page)).toEqual(['unu.jpg', 'doi.jpg']);
+    await expect(step(page).locator('.queued[role="status"]')).toHaveText('');
+    await expect.poll(() => queuedInBrowser(page)).toBe(0);
+    await confirmedCount(page, 2);
+  });
+
+  // @traces 1191-FR-008
+  test('a photo removed while its confirm is slow is deleted once it lands, and does not come back', async ({
+    page,
+  }) => {
+    test.slow();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reached: () => void = () => undefined;
+    const confirming = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    await page.route(toConfirm, async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      reached();
+      await held;
+      return route.fallback();
+    });
+    await toPhotos(page, newEmail('photos-slow'));
+
+    await step(page)
+      .locator('input[type="file"]')
+      .setInputFiles([jpeg('atelier.jpg')]);
+    await confirming;
+    await tiles(page)
+      .first()
+      .getByRole('button', { name: /Șterge/ })
+      .click();
+    await expect(tiles(page)).toHaveCount(0);
+
+    const deleted = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'DELETE' &&
+        /\/listing-drafts\/[^/]+\/photos\//.test(res.url()),
+    );
+    release();
+    expect((await deleted).ok()).toBe(true);
+    await expect.poll(() => queuedInBrowser(page)).toBe(0);
+
+    await page.reload();
+    await hydrated(page);
+    await expect(step(page)).toBeVisible();
+    await expect(tiles(page)).toHaveCount(0);
+  });
+});

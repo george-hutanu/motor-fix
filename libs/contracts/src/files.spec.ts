@@ -1,3 +1,4 @@
+// @traces 1191-FR-005
 import {
   DOWNLOAD_URL_MINUTES,
   FILE_RULES,
@@ -7,6 +8,7 @@ import {
 
 const TEN_MB = 10 * 1024 * 1024;
 const IMAGES = ['image/jpeg', 'image/png', 'image/webp'];
+const GARAGE_PHOTOS = [...IMAGES, 'image/heic', 'image/heif'];
 const DOCUMENTS = ['application/pdf', 'image/jpeg', 'image/png'];
 
 describe('file rules', () => {
@@ -21,7 +23,7 @@ describe('file rules', () => {
   });
 
   it.each([
-    ['garage_photo', IMAGES],
+    ['garage_photo', GARAGE_PHOTOS],
     ['message_photo', IMAGES],
     ['mechanic_photo', IMAGES],
     ['legal_document', DOCUMENTS],

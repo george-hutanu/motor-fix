@@ -30,6 +30,7 @@ import {
   EVENT_PORT,
   type EventPort,
 } from '../../events/event.port';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import {
   Prisma,
   type PrismaClient,
@@ -242,7 +243,7 @@ export class SavedGaragesService {
       if (kept) return { created: false, row: answer(kept) };
       const garage = await tx.garage.findFirst({
         select: { id: true },
-        where: { id: key.garageId, status: 'approved' },
+        where: { id: key.garageId, ...publicGarages() },
       });
       if (!garage) {
         throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');

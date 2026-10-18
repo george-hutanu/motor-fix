@@ -544,6 +544,279 @@
       }
     },
     {
+      "id": 117,
+      "type": "row",
+      "title": "Garage rejections",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "panels": []
+    },
+    {
+      "id": 118,
+      "type": "stat",
+      "title": "Garage rejections, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 21
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (reason) (increase(motorfix_verification_rejections_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 119,
+      "type": "stat",
+      "title": "Garage rejections, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 21
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (reason) (increase(motorfix_verification_rejections_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 120,
+      "type": "timeseries",
+      "title": "Garage rejections per hour, by reason",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (reason) (increase(motorfix_verification_rejections_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 121,
+      "type": "stat",
+      "title": "Rejections by reason, 30 days",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (reason) (increase(motorfix_verification_rejections_total{deployment_environment=\"$env\"}[30d]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 122,
+      "type": "row",
+      "title": "Requests for more and files returned",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "panels": []
+    },
+    {
+      "id": 123,
+      "type": "stat",
+      "title": "Requests for more and files returned, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_more_requests_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Requests for more"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Files returned"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 124,
+      "type": "stat",
+      "title": "Requests for more and files returned, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_more_requests_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "Requests for more"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "Files returned"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 125,
+      "type": "timeseries",
+      "title": "Requests for more and files returned, per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_more_requests_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Requests for more"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Files returned"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
       "id": 17,
       "type": "row",
       "title": "Quotes",
@@ -552,7 +825,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 34
       },
       "panels": []
     },
@@ -568,7 +841,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 21
+        "y": 35
       },
       "targets": [
         {
@@ -600,7 +873,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 21
+        "y": 35
       },
       "targets": [
         {
@@ -632,7 +905,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 35
       },
       "targets": [
         {
@@ -659,7 +932,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 39
       },
       "panels": []
     },
@@ -675,7 +948,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 26
+        "y": 40
       },
       "targets": [
         {
@@ -707,7 +980,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 26
+        "y": 40
       },
       "targets": [
         {
@@ -739,7 +1012,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 40
       },
       "targets": [
         {
@@ -766,7 +1039,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 44
       },
       "panels": []
     },
@@ -782,7 +1055,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 31
+        "y": 45
       },
       "targets": [
         {
@@ -814,7 +1087,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 31
+        "y": 45
       },
       "targets": [
         {
@@ -846,7 +1119,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 45
       },
       "targets": [
         {
@@ -873,7 +1146,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 49
       },
       "panels": []
     },
@@ -889,7 +1162,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 36
+        "y": 50
       },
       "targets": [
         {
@@ -921,7 +1194,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 36
+        "y": 50
       },
       "targets": [
         {
@@ -953,7 +1226,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 50
       },
       "targets": [
         {
@@ -980,7 +1253,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 54
       },
       "panels": []
     },
@@ -996,7 +1269,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 41
+        "y": 55
       },
       "targets": [
         {
@@ -1028,7 +1301,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 41
+        "y": 55
       },
       "targets": [
         {
@@ -1060,7 +1333,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 55
       },
       "targets": [
         {
@@ -1087,7 +1360,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 59
       },
       "panels": []
     },
@@ -1103,7 +1376,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 46
+        "y": 60
       },
       "targets": [
         {
@@ -1135,7 +1408,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 46
+        "y": 60
       },
       "targets": [
         {
@@ -1167,7 +1440,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 60
       },
       "targets": [
         {
@@ -1194,7 +1467,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 64
       },
       "panels": []
     },
@@ -1210,7 +1483,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 51
+        "y": 65
       },
       "targets": [
         {
@@ -1242,7 +1515,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 51
+        "y": 65
       },
       "targets": [
         {
@@ -1274,7 +1547,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 65
       },
       "targets": [
         {
@@ -1301,7 +1574,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 69
       },
       "panels": []
     },
@@ -1317,7 +1590,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 56
+        "y": 70
       },
       "targets": [
         {
@@ -1349,7 +1622,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 56
+        "y": 70
       },
       "targets": [
         {
@@ -1381,7 +1654,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 56
+        "y": 70
       },
       "targets": [
         {
@@ -1411,7 +1684,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 56
+        "y": 70
       },
       "targets": [
         {
@@ -1449,7 +1722,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 74
       },
       "panels": []
     },
@@ -1465,7 +1738,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 61
+        "y": 75
       },
       "targets": [
         {
@@ -1497,7 +1770,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 61
+        "y": 75
       },
       "targets": [
         {
@@ -1529,7 +1802,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 61
+        "y": 75
       },
       "targets": [
         {
@@ -1556,7 +1829,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 79
       },
       "panels": []
     },
@@ -1572,7 +1845,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 66
+        "y": 80
       },
       "targets": [
         {
@@ -1604,7 +1877,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 66
+        "y": 80
       },
       "targets": [
         {
@@ -1636,7 +1909,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 66
+        "y": 80
       },
       "targets": [
         {
@@ -1663,7 +1936,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 84
       },
       "panels": []
     },
@@ -1679,7 +1952,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 71
+        "y": 85
       },
       "targets": [
         {
@@ -1711,7 +1984,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 71
+        "y": 85
       },
       "targets": [
         {
@@ -1743,7 +2016,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 85
       },
       "targets": [
         {
@@ -1770,7 +2043,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 89
       },
       "panels": []
     },
@@ -1786,7 +2059,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 76
+        "y": 90
       },
       "targets": [
         {
@@ -1818,7 +2091,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 76
+        "y": 90
       },
       "targets": [
         {
@@ -1850,7 +2123,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 76
+        "y": 90
       },
       "targets": [
         {
@@ -1877,7 +2150,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 80
+        "y": 94
       },
       "panels": []
     },
@@ -1893,7 +2166,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 81
+        "y": 95
       },
       "targets": [
         {
@@ -1925,7 +2198,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 81
+        "y": 95
       },
       "targets": [
         {
@@ -1957,7 +2230,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 81
+        "y": 95
       },
       "targets": [
         {
@@ -1984,7 +2257,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 100
       },
       "panels": []
     },
@@ -2000,7 +2273,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 87
+        "y": 101
       },
       "targets": [
         {
@@ -2032,7 +2305,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 87
+        "y": 101
       },
       "targets": [
         {
@@ -2064,7 +2337,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 87
+        "y": 101
       },
       "targets": [
         {
@@ -2091,7 +2364,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 105
       },
       "panels": []
     },
@@ -2107,7 +2380,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 92
+        "y": 106
       },
       "targets": [
         {
@@ -2139,7 +2412,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 92
+        "y": 106
       },
       "targets": [
         {
@@ -2171,7 +2444,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 92
+        "y": 106
       },
       "targets": [
         {
@@ -2198,7 +2471,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 110
       },
       "panels": []
     },
@@ -2214,7 +2487,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 97
+        "y": 111
       },
       "targets": [
         {
@@ -2246,7 +2519,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 97
+        "y": 111
       },
       "targets": [
         {
@@ -2278,7 +2551,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 97
+        "y": 111
       },
       "targets": [
         {
@@ -2305,7 +2578,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 115
       },
       "panels": []
     },
@@ -2321,7 +2594,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 102
+        "y": 116
       },
       "targets": [
         {
@@ -2353,7 +2626,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 102
+        "y": 116
       },
       "targets": [
         {
@@ -2394,7 +2667,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 102
+        "y": 116
       },
       "targets": [
         {
@@ -2421,7 +2694,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 106
+        "y": 120
       },
       "panels": []
     },
@@ -2437,7 +2710,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 107
+        "y": 121
       },
       "targets": [
         {
@@ -2469,7 +2742,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 107
+        "y": 121
       },
       "targets": [
         {
@@ -2498,7 +2771,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 111
+        "y": 125
       },
       "panels": []
     },
@@ -2514,7 +2787,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 112
+        "y": 126
       },
       "targets": [
         {
@@ -2546,7 +2819,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 112
+        "y": 126
       },
       "targets": [
         {
@@ -2578,7 +2851,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 112
+        "y": 126
       },
       "targets": [
         {
@@ -2608,7 +2881,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 116
+        "y": 130
       },
       "targets": [
         {
@@ -2640,7 +2913,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 116
+        "y": 130
       },
       "targets": [
         {
@@ -2672,7 +2945,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 116
+        "y": 130
       },
       "targets": [
         {
@@ -2696,7 +2969,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 134
       },
       "id": 96,
       "panels": [],
@@ -2716,7 +2989,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 121
+        "y": 135
       },
       "id": 97,
       "targets": [
@@ -2742,7 +3015,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 125
+        "y": 139
       },
       "panels": []
     },
@@ -2758,7 +3031,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 126
+        "y": 140
       },
       "targets": [
         {
@@ -2790,7 +3063,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 126
+        "y": 140
       },
       "targets": [
         {
@@ -2822,7 +3095,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 126
+        "y": 140
       },
       "targets": [
         {
@@ -2853,7 +3126,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 130
+        "y": 144
       },
       "id": 102,
       "targets": [
@@ -2885,7 +3158,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 130
+        "y": 144
       },
       "id": 103,
       "targets": [
@@ -2910,7 +3183,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 134
+        "y": 148
       },
       "panels": [],
       "id": 104
@@ -2926,7 +3199,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 135
+        "y": 149
       },
       "targets": [
         {
@@ -2958,7 +3231,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 135
+        "y": 149
       },
       "targets": [
         {
@@ -2990,7 +3263,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 135
+        "y": 149
       },
       "targets": [
         {
@@ -3020,7 +3293,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 139
+        "y": 153
       },
       "targets": [
         {
@@ -3052,7 +3325,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 139
+        "y": 153
       },
       "targets": [
         {
@@ -3084,7 +3357,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 139
+        "y": 153
       },
       "targets": [
         {
@@ -3114,7 +3387,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 143
+        "y": 157
       },
       "targets": [
         {
@@ -3142,7 +3415,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 147
+        "y": 161
       },
       "panels": []
     },
@@ -3158,7 +3431,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 148
+        "y": 162
       },
       "targets": [
         {
@@ -3190,7 +3463,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 148
+        "y": 162
       },
       "targets": [
         {
@@ -3220,7 +3493,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 148
+        "y": 162
       },
       "targets": [
         {
@@ -3252,7 +3525,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 148
+        "y": 162
       },
       "targets": [
         {
@@ -3263,6 +3536,207 @@
           },
           "expr": "sum by (role) (increase(motorfix_verification_reopenings_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{role}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 126,
+      "type": "row",
+      "title": "Report decisions",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 166
+      },
+      "panels": []
+    },
+    {
+      "id": 127,
+      "type": "stat",
+      "title": "Report decisions, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 167
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_report_decisions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 128,
+      "type": "stat",
+      "title": "Report decisions, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 167
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_report_decisions_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 129,
+      "type": "timeseries",
+      "title": "Report decisions per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 167
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_report_decisions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 130,
+      "type": "stat",
+      "title": "Report decision notices, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 171
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_report_decided_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 131,
+      "type": "stat",
+      "title": "Report decision notices, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 171
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_report_decided_notices_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 132,
+      "type": "timeseries",
+      "title": "Report decision notices per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 171
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_report_decided_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {

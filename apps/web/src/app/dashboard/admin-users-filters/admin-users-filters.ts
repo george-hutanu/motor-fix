@@ -51,8 +51,10 @@ export class AdminUsersFilters implements OnDestroy {
   readonly q = input.required<string>();
   readonly roles = input.required<readonly AccountRole[]>();
   readonly status = input.required<AccountState | null>();
-  // The settled search text, 300 ms after the last key or at once when cleared.
-  readonly search = output<string>();
+  // The settled search text, 300 ms after the last key or at once when
+  // cleared. Not named search: the box's own search event bubbles to the
+  // host, where a binding would take it for this.
+  readonly settled = output<string>();
   // The roles and state, at each change.
   readonly filter = output<UsersFilter>();
 
@@ -118,7 +120,7 @@ export class AdminUsersFilters implements OnDestroy {
     clearTimeout(this.wait);
     this.wait = setTimeout(() => {
       this.wait = undefined;
-      this.search.emit(committed(value));
+      this.settled.emit(committed(value));
     }, SETTLE_MS);
   }
 
@@ -126,7 +128,7 @@ export class AdminUsersFilters implements OnDestroy {
     clearTimeout(this.wait);
     this.wait = undefined;
     this.text.set('');
-    this.search.emit('');
+    this.settled.emit('');
     this.focusSearch();
   }
 

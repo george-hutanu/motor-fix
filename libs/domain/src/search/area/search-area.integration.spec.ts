@@ -32,7 +32,7 @@ async function inArea(area: Area) {
     SELECT id, ${distance} AS distance_m, latitude, longitude,
       business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
     FROM garage
-    WHERE ${publicGaragesSql} AND ${within(built)}
+    WHERE ${publicGaragesSql()} AND ${within(built)}
   `;
   return new Map(
     rows.map((row) => [

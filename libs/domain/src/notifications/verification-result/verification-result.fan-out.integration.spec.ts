@@ -102,7 +102,18 @@ async function start(withRelay = false) {
 }
 
 const verification = (skipManualApproval = false) =>
-  new VerificationService(new AuditService(), outbox, { skipManualApproval });
+  new VerificationService(new AuditService(), outbox, {
+    skipManualApproval,
+    testRules: true,
+  });
+
+// The stored RAR switch; automatic approval waits on the RAR rule (259-FR-001).
+const skipRarCheck = (value: boolean) =>
+  prisma.platformRule.upsert({
+    create: { defaultValue: false, key: 'skip_rar_check', value },
+    update: { value },
+    where: { key: 'skip_rar_check' },
+  });
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
@@ -305,11 +316,17 @@ describe('the approved message each owner gets', () => {
     const { file, owner } = await staffedGarage();
     await prisma.verificationFile.delete({ where: { id: file.id } });
     await start(true);
-
-    await inTx((tx) => verification(true).submit(tx, SYSTEM, file.garageId));
-    // The sending's event, then the decision's.
-    await until('the approval message', () => handled.mock.calls.length >= 2);
-    await Promise.all(handled.mock.results.map((r) => r.value));
+    // A sending is approved at once only when the RAR rule is met: its check
+    // is not run yet, so the test environment's RAR switch is on.
+    await skipRarCheck(true);
+    try {
+      await inTx((tx) => verification(true).submit(tx, SYSTEM, file.garageId));
+      // The sending's event, then the decision's.
+      await until('the approval message', () => handled.mock.calls.length >= 2);
+      await Promise.all(handled.mock.results.map((r) => r.value));
+    } finally {
+      await skipRarCheck(false);
+    }
 
     const email = await emailOf(owner);
     expect(email?.params).toMatchObject({ decision: 'approved' });
@@ -339,6 +356,30 @@ describe('a message that is always sent', () => {
 
     expect(await channels(owner)).toEqual(['email', 'in_app']);
     expect(await channels(english)).toEqual(['email', 'in_app', 'push']);
+  });
+
+  // @traces 304-FR-005
+  it('still sends a request for more, its note word for word, to an owner who muted every channel', async () => {
+    const { file, owner } = await staffedGarage();
+    await prisma.notificationPreference.createMany({
+      data: (['email', 'push', 'whatsapp'] as const).map((channel) => ({
+        accountId: owner,
+        channel,
+        enabled: false,
+        garageId: file.garageId,
+        type: 'VERIFICATION_RESULT',
+      })),
+    });
+    const { job } = await decided(file.id, negative('more_requested'));
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    expect(await channels(owner)).toEqual(['email', 'in_app']);
+    expect((await emailOf(owner))?.params).toMatchObject({
+      decision: 'more_requested',
+      note: NOTE,
+    });
   });
 });
 
@@ -376,6 +417,35 @@ describe('the reason and the note', () => {
       reason: 'Autorizație RAR',
     });
   });
+
+  // @traces 305-FR-005 305-FR-011
+  it.each([
+    ['documents', 'Documente', 'Documents'],
+    ['rar', 'Autorizație RAR', 'RAR authorisation'],
+    ['address', 'Adresă', 'Address'],
+    ['photos', 'Fotografii', 'Photos'],
+    ['other', 'Alt motiv', 'Other reason'],
+  ])(
+    'tells each owner of a garage rejected for %s the reason in their language and the note word for word',
+    async (code, ro, en) => {
+      const { english, file, owner } = await staffedGarage(`rejected-${code}`);
+      const { job } = await decided(file.id, negative('rejected', code));
+      const { fanOut } = await start();
+
+      await fanOut.handle(job);
+
+      expect((await emailOf(owner))?.params).toMatchObject({
+        decision: 'rejected',
+        note: NOTE,
+        reason: ro,
+      });
+      expect((await emailOf(english))?.params).toMatchObject({
+        decision: 'rejected',
+        note: NOTE,
+        reason: en,
+      });
+    },
+  );
 
   it('gives a code it does not know the other label, the note intact', async () => {
     const { file, owner } = await staffedGarage();

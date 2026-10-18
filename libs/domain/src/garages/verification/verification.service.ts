@@ -4,8 +4,10 @@ import {
   checkSummary,
   normaliseRarNumber,
   queueLamp,
+  REJECTION_NOTE_MIN,
   rarNumberRefused,
   VERIFICATION_CHECK_KINDS,
+  VERIFICATION_REASON_CODES,
   VERIFICATION_TARGET_WORKING_DAYS,
   type VerificationQueueAreaDto,
   type VerificationQueueDto,
@@ -19,6 +21,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 import { isUUID } from 'class-validator';
 
 import {
@@ -41,7 +44,10 @@ import type {
 import {
   countApproval,
   countDecisionRefusal,
+  countMoreRequest,
+  countRejection,
   countReopening,
+  countResubmission,
 } from '../../metrics/product-counters';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
@@ -55,20 +61,25 @@ export type Decision = {
   requestedItems?: string[];
 };
 
-type Transition = 'open' | 'decide' | 'resend' | 'reopen';
+type Transition = 'open' | 'decide' | 'resend' | 'reopen' | 'reports';
 
 // The statuses each transition may start from; every other pair is refused.
 const FROM: Record<Transition, VerificationFileStatus[]> = {
   decide: ['submitted', 'in_review'],
   open: ['submitted'],
   reopen: ['approved', 'rejected', 'more_requested'],
+  // A file a report reopened goes back to approved with the reports' decision.
+  reports: ['in_review'],
   resend: ['more_requested'],
 };
 
-const KIND: Record<Transition, string> = {
+// The file's history entry for each move; a decision on the reports writes
+// its own, which names the reports, so the move adds none.
+const KIND: Record<Transition, string | null> = {
   decide: 'verification_decided',
   open: 'verification_opened',
   reopen: 'verification_reopened',
+  reports: null,
   resend: 'verification_resent',
 };
 
@@ -76,6 +87,21 @@ const LIVE: VerificationFileStatus[] = ['submitted', 'in_review', 'approved'];
 
 // Waiting for an admin; a file asked for more waits for its garage.
 const WAITING: VerificationFileStatus[] = ['submitted', 'in_review'];
+
+// A waiting file the garage sent again after a request for more: decided
+// once, and not reopened since. The request's time is its decision's.
+export function resubmission(file: {
+  decidedAt: Date | null;
+  reopenedAt: Date | null;
+  status: VerificationFileStatus;
+}) {
+  const { decidedAt, reopenedAt, status } = file;
+  return (
+    WAITING.includes(status) &&
+    decidedAt !== null &&
+    (reopenedAt === null || reopenedAt < decidedAt)
+  );
+}
 
 export const SYSTEM = { accountId: null, role: 'system' } as const;
 
@@ -92,6 +118,13 @@ const GATES = [
   ['rar', 'rar_check_required', 'the rar check is not ok'],
   ['caen', 'caen_check_required', 'the caen check is not ok'],
 ] as const;
+
+// An admin's approval refused by the approval rules; each refused attempt is
+// written to the history by the endpoint, after the refusal rolled back.
+export const REFUSAL_CODES: ReadonlySet<string> = new Set([
+  ...GATES.map(([, code]) => code),
+  'note_required',
+]);
 
 // A garage's verification file and its moves. Each use case runs in the
 // caller's transaction, so a story that creates the garage can submit in the
@@ -131,9 +164,11 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          decidedAt: true,
           documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
           id: true,
+          reopenedAt: true,
           status: true,
           submittedAt: true,
         },
@@ -199,8 +234,71 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    if (!this.config.skipManualApproval) return file;
+    return this.autoApprove(tx, file);
+  }
+
+  // Outside production, with manual approval switched off, a sending is
+  // approved at once as the system when the RAR rule is met: its rar check
+  // ok, or the RAR check switched off. Otherwise it waits for an admin; the
+  // sending itself is never refused for it.
+  private async autoApprove(
+    tx: Prisma.TransactionClient,
+    file: VerificationFile,
+  ): Promise<VerificationFile> {
+    if (!(await this.autoApprovalOn(tx))) return file;
+    const garage = await tx.garage.findUniqueOrThrow({
+      select: { status: true },
+      where: { id: file.garageId },
+    });
+    const cause =
+      garage.status === 'suspended'
+        ? 'garage_suspended'
+        : (await this.rarRuleMet(tx, file.id))
+          ? null
+          : 'rar_check_required';
+    if (cause) {
+      this.logger.log(`file ${file.id} automatic approval waited: ${cause}`);
+      return file;
+    }
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
+  }
+
+  // The variable (APP_ENV=test only) or the stored switch, never read in
+  // production.
+  private async autoApprovalOn(tx: Prisma.TransactionClient) {
+    return (
+      this.config.skipManualApproval ||
+      this.testRule(tx, 'skip_manual_approval')
+    );
+  }
+
+  private async rarRuleMet(tx: Prisma.TransactionClient, fileId: string) {
+    const ok = await tx.verificationCheck.findFirst({
+      select: { id: true },
+      where: { fileId, kind: 'rar', result: 'ok' },
+    });
+    return ok !== null || this.testRule(tx, 'skip_rar_check');
+  }
+
+  // A refused approval as one history entry, in the transaction it is given.
+  async recordRefusal(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    fileId: string,
+    code: string,
+  ): Promise<void> {
+    const file = await this.file(tx, fileId);
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'decision',
+      garageId: file.garageId,
+      kind: 'verification_approval_refused',
+      newValue: code,
+      subjectId: fileId,
+      subjectType: 'verification_file',
+    });
   }
 
   // An admin sets or corrects the file's RAR number while it is undecided:
@@ -299,7 +397,7 @@ export class VerificationService {
     decision: Decision,
   ): Promise<VerificationFile> {
     trust(actor);
-    const { note, reason, requestedItems } = payloadOf(decision);
+    const { note, reason, requestedItems } = this.payload(fileId, decision);
     const approved = decision.outcome === 'approved';
     const before = await this.file(tx, fileId);
     // Suspension and its lifting belong to the suspension story alone.
@@ -337,12 +435,47 @@ export class VerificationService {
       note,
       reason,
     });
-    // A request for more documents is not a verdict.
-    if (decision.outcome !== 'more_requested') countApproval(decision.outcome);
-    this.logger.log(
-      `file ${fileId} ${decision.outcome} by ${actor.accountId ?? 'system'}`,
-    );
+    this.told(fileId, actor, decision.outcome, reason, requestedItems);
     return file;
+  }
+
+  // A decision's count, span attributes and log line. The reason and the
+  // items are fixed codes; the note is the admin's own words and stays out.
+  private told(
+    fileId: string,
+    actor: VerificationActor,
+    outcome: Decision['outcome'],
+    reason: string | null,
+    requestedItems: string[],
+  ) {
+    // A request for more is not a verdict.
+    if (outcome === 'more_requested') countMoreRequest();
+    else countApproval(outcome);
+    const asked =
+      outcome === 'more_requested' ? requestedItems.join(',') : null;
+    const rejection = outcome === 'rejected' ? reasonCode(reason) : null;
+    if (rejection) countRejection(rejection);
+    trace.getActiveSpan()?.setAttributes({
+      'verification.decision': outcome,
+      ...(rejection && { 'verification.reason': rejection }),
+      ...(asked !== null && { 'verification.requested_items': asked }),
+    });
+    const codes = rejection ?? asked;
+    this.logger.log(
+      `file ${fileId} ${outcome} by ${actor.accountId ?? 'system'}${codes === null ? '' : ` (${codes})`}`,
+    );
+  }
+
+  // The payload's rules, each refusal counted and logged as the gates' are,
+  // before any row is read.
+  private payload(fileId: string, decision: Decision) {
+    try {
+      return payloadOf(decision);
+    } catch (error) {
+      const code = payloadRefusal(error);
+      if (code) this.refuse(fileId, code);
+      throw error;
+    }
   }
 
   // An approval's checks, read once: an admin's must pass the RAR and CAEN
@@ -377,10 +510,11 @@ export class VerificationService {
     if (actor.role === 'system' || !row || !FROM.decide.includes(row.status)) {
       return missing;
     }
-    const skipRar = await this.skipRar(tx);
+    // The RAR switch lifts both register gates, never the note rule.
+    const skipRegisters = await this.testRule(tx, 'skip_rar_check');
     for (const [kind, code, detail] of GATES) {
       if (
-        (kind === 'rar' && skipRar) ||
+        skipRegisters ||
         checks.some((check) => check.kind === kind && check.result === 'ok')
       ) {
         continue;
@@ -403,12 +537,15 @@ export class VerificationService {
     return missing;
   }
 
-  // The test-only switch, read per decision and never in production.
-  private async skipRar(tx: Prisma.TransactionClient) {
+  // A test-only platform rule; production never reads one.
+  private async testRule(
+    tx: Prisma.TransactionClient,
+    key: 'skip_manual_approval' | 'skip_rar_check',
+  ) {
     if (!this.config.testRules) return false;
     const rule = await tx.platformRule.findUnique({
       select: { value: true },
-      where: { key: 'skip_rar_check' },
+      where: { key },
     });
     return rule?.value === true;
   }
@@ -469,6 +606,35 @@ export class VerificationService {
     );
   }
 
+  // The file's move when its reports are decided: the garage stays as it is,
+  // so no gate and no publication; the reports' story announces it. A file
+  // in review with no open report is an ordinary review, refused as one.
+  async approveAfterReports(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    fileId: string,
+  ): Promise<VerificationFile> {
+    trust(actor);
+    const before = await this.file(tx, fileId);
+    if (before.status === 'in_review') {
+      const open = await tx.garageReport.count({
+        where: { status: 'open', verificationFileId: fileId },
+      });
+      if (open === 0) {
+        this.refuse(fileId, 'no_open_report');
+        throw await this.refusalFor(tx, before);
+      }
+    }
+    return this.move(tx, actor, before, 'reports', {
+      decidedAt: new Date(),
+      decidedBy: actor.accountId,
+      status: 'approved',
+    }).catch((error: unknown) => {
+      if (decidedAlready(error)) this.refuse(fileId, 'already_decided');
+      throw error;
+    });
+  }
+
   // Who may resend is the submitting story's rule; here only the file counts.
   async resend(
     tx: Prisma.TransactionClient,
@@ -482,7 +648,9 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    return file;
+    countResubmission();
+    this.logger.log(`file ${fileId} resent`);
+    return this.autoApprove(tx, file);
   }
 
   // Only the garage's newest file, and only while no other file is live.
@@ -576,19 +744,21 @@ export class VerificationService {
       where: { id: before.id },
     });
     if (count === 0) throw await this.refusalFor(tx, after);
-    await this.audit.record(tx, {
-      action: 'update',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      field: 'status',
-      garageId: before.garageId,
-      kind: KIND[transition],
-      newValue: data.status,
-      oldValue: before.status,
-      subjectId: before.id,
-      subjectType: 'verification_file',
-      text,
-    });
+    const kind = KIND[transition];
+    if (kind)
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        field: 'status',
+        garageId: before.garageId,
+        kind,
+        newValue: data.status,
+        oldValue: before.status,
+        subjectId: before.id,
+        subjectType: 'verification_file',
+        text,
+      });
     return after;
   }
 
@@ -670,9 +840,11 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    decidedAt: true;
     documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
     id: true;
+    reopenedAt: true;
     status: true;
     submittedAt: true;
   };
@@ -692,10 +864,13 @@ export function garageArea(garage: {
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
-  { checks, documents, garage, id, status, submittedAt }: QueueFile,
+  file: QueueFile,
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
+  const { checks, decidedAt, documents, garage, id, status, submittedAt } =
+    file;
+  const resubmitted = resubmission(file);
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
   const area = garageArea(garage);
@@ -710,6 +885,8 @@ function queueRow(
     id,
     lamp: queueLamp(checks, flagged),
     ...(team && { mechanics: garage._count.mechanics }),
+    ...(resubmitted && decidedAt && { requestedAt: decidedAt }),
+    resubmitted,
     status: status as VerificationQueueRowDto['status'],
     submittedAt,
     summary: {
@@ -738,8 +915,8 @@ async function name(tx: Prisma.TransactionClient, accountId: string | null) {
 }
 
 // The rules between the payload's values: a rejection names a reason, a
-// rejection and a request for more carry a note, an approval's blank note is
-// none. A reason or items where the decision has no use for them is a
+// rejection and a request for more carry a note of at least the floor, an
+// approval's blank note is none. A reason or items where the decision has no use for them is a
 // malformed body, as the edge would answer it.
 function payloadOf(decision: Decision) {
   wellFormed(decision);
@@ -750,6 +927,13 @@ function payloadOf(decision: Decision) {
   }
   if (outcome !== 'approved' && !text) {
     throw required('note_required', 'This decision needs a note', 'note');
+  }
+  if (outcome !== 'approved' && [...(text ?? '')].length < REJECTION_NOTE_MIN) {
+    throw required(
+      'note_too_short',
+      `The message to the garage is at least ${REJECTION_NOTE_MIN} characters`,
+      'note',
+    );
   }
   return {
     note: text,
@@ -767,6 +951,24 @@ function wellFormed({ outcome, reason, requestedItems }: Decision) {
     throw malformed('Only a request for more lists what is missing');
   }
 }
+
+const PAYLOAD_REFUSALS = [
+  'reason_required',
+  'note_required',
+  'note_too_short',
+] as const;
+
+// The payload refusal an error is, if it is one.
+function payloadRefusal(error: unknown) {
+  if (!(error instanceof HttpException)) return null;
+  const { code } = error.getResponse() as { code?: unknown };
+  return PAYLOAD_REFUSALS.find((known) => known === code) ?? null;
+}
+
+// A stored reason as one of the five codes a rejection is counted by; a
+// reason written before the five (as the oldest files hold) is not counted.
+const reasonCode = (reason: string | null) =>
+  VERIFICATION_REASON_CODES.find((code) => code === reason) ?? null;
 
 const malformed = (detail: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', detail);

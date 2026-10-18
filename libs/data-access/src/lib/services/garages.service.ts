@@ -19,19 +19,28 @@ import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-cont
 import { GarageInvitesControllerRevoke$Params } from '../fn/garages/garage-invites-controller-revoke';
 import { garageInvitesControllerSend } from '../fn/garages/garage-invites-controller-send';
 import { GarageInvitesControllerSend$Params } from '../fn/garages/garage-invites-controller-send';
+import { garageLabourControllerSet } from '../fn/garages/garage-labour-controller-set';
+import { GarageLabourControllerSet$Params } from '../fn/garages/garage-labour-controller-set';
 import { GarageReportCreatedDto } from '../models/garage-report-created-dto';
 import { garageReportsControllerReport } from '../fn/garages/garage-reports-controller-report';
 import { GarageReportsControllerReport$Params } from '../fn/garages/garage-reports-controller-report';
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
+import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
+import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
+import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
+import { LegalCheckDto } from '../models/legal-check-dto';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
 import { priceListControllerRemoveBrandRange } from '../fn/garages/price-list-controller-remove-brand-range';
 import { PriceListControllerRemoveBrandRange$Params } from '../fn/garages/price-list-controller-remove-brand-range';
 import { priceListControllerSetBrandRange } from '../fn/garages/price-list-controller-set-brand-range';
 import { PriceListControllerSetBrandRange$Params } from '../fn/garages/price-list-controller-set-brand-range';
+import { priceListControllerSetRange } from '../fn/garages/price-list-controller-set-range';
+import { PriceListControllerSetRange$Params } from '../fn/garages/price-list-controller-set-range';
 import { PriceListDto } from '../models/price-list-dto';
+import { PriceRangeSavedDto } from '../models/price-range-saved-dto';
 import { profileViewsControllerRecord } from '../fn/garages/profile-views-controller-record';
 import { ProfileViewsControllerRecord$Params } from '../fn/garages/profile-views-controller-record';
 import { PublicGarageDto } from '../models/public-garage-dto';
@@ -244,6 +253,39 @@ export class GaragesService extends BaseService {
     return resp.then((r: StrictHttpResponse<GarageSettingsDto>): GarageSettingsDto => r.body);
   }
 
+  /** Path part for operation `legalCheckControllerRead()` */
+  static readonly LegalCheckControllerReadPath = '/api/v1/garages/{garageId}/legal-check';
+
+  /**
+   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `legalCheckControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalCheckControllerRead$Response(params: LegalCheckControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<LegalCheckDto>> {
+    const obs = legalCheckControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `legalCheckControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalCheckControllerRead(params: LegalCheckControllerRead$Params, context?: HttpContext): Promise<LegalCheckDto> {
+    const resp = this.legalCheckControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<LegalCheckDto>): LegalCheckDto => r.body);
+  }
+
   /** Path part for operation `priceListControllerRead()` */
   static readonly PriceListControllerReadPath = '/api/v1/garages/{garageId}/prices';
 
@@ -275,6 +317,39 @@ export class GaragesService extends BaseService {
   priceListControllerRead(params: PriceListControllerRead$Params, context?: HttpContext): Promise<PriceListDto> {
     const resp = this.priceListControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<PriceListDto>): PriceListDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerSetRange()` */
+  static readonly PriceListControllerSetRangePath = '/api/v1/garages/{garageId}/prices/{priceId}';
+
+  /**
+   * Changes a job's default range and duration in place, against the stamp it was read with.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerSetRange()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerSetRange$Response(params: PriceListControllerSetRange$Params, context?: HttpContext): Promise<StrictHttpResponse<PriceRangeSavedDto>> {
+    const obs = priceListControllerSetRange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Changes a job's default range and duration in place, against the stamp it was read with.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerSetRange$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerSetRange(params: PriceListControllerSetRange$Params, context?: HttpContext): Promise<PriceRangeSavedDto> {
+    const resp = this.priceListControllerSetRange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PriceRangeSavedDto>): PriceRangeSavedDto => r.body);
   }
 
   /** Path part for operation `priceListControllerSetBrandRange()` */
@@ -341,6 +416,39 @@ export class GaragesService extends BaseService {
   priceListControllerRemoveBrandRange(params: PriceListControllerRemoveBrandRange$Params, context?: HttpContext): Promise<void> {
     const resp = this.priceListControllerRemoveBrandRange$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageLabourControllerSet()` */
+  static readonly GarageLabourControllerSetPath = '/api/v1/garages/{garageId}/labour';
+
+  /**
+   * Changes the garage's labour rate, both ends set.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageLabourControllerSet()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageLabourControllerSet$Response(params: GarageLabourControllerSet$Params, context?: HttpContext): Promise<StrictHttpResponse<LabourRangeSavedDto>> {
+    const obs = garageLabourControllerSet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Changes the garage's labour rate, both ends set.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageLabourControllerSet$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageLabourControllerSet(params: GarageLabourControllerSet$Params, context?: HttpContext): Promise<LabourRangeSavedDto> {
+    const resp = this.garageLabourControllerSet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<LabourRangeSavedDto>): LabourRangeSavedDto => r.body);
   }
 
   /** Path part for operation `publicGaragesControllerBySlug()` */
