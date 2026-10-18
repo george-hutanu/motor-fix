@@ -40,6 +40,7 @@
       "lei": "LEI",
       "mechanic": "Mecanic",
       "note": "Unde ajungi în interval depinde de mașină. Service‑ul confirmă după ce o vede.",
+      "pick": "Alege lucrările",
       "request": "CERE OFERTĂ",
       "spoken": "Estimare de la {from} la {to} lei",
       "title": "Estimarea ta",

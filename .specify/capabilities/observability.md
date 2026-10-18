@@ -33,6 +33,7 @@ features:
   - 280-contact-motorfix
   - 299-system-log-search
   - 173-price-range-in-place
+  - 1174-postgres-18-pitr
 ---
 
 # Capability: Observability
@@ -333,7 +334,7 @@ _From 878-data-store-metrics._
 
 _From 878-data-store-metrics._
 
-### 878-FR-013 — `.env.example` MUST name `MONITOR_DATABASE_URL` and `MONITOR_DATABASE_PASSWORD` with no value; the local compose PostgreSQL MUST preload `pg_stat_statements`, and CI's PostgreSQL MUST have it preloaded before the tests (`ALTER SYSTEM` and a restart), so the slow-statement reading is tested, never skipped.
+### 878-FR-013 — `.env.example` MUST name `MONITOR_DATABASE_URL` and `MONITOR_DATABASE_PASSWORD` with no value; the local compose PostgreSQL and CI's PostgreSQL MUST have `pg_stat_statements` preloaded, by the repository's database image itself (no `ALTER SYSTEM` or restart step), so the slow-statement reading is tested, never skipped.
 
 _From 878-data-store-metrics._
 

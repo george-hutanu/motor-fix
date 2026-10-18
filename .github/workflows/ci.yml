@@ -199,8 +199,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services: &services
+      # The repository's own image (infra/postgres), as compose and staging:
+      # it preloads pg_stat_statements, which the data-store specs read.
       postgres:
-        image: postgis/postgis:17-3.5
+        image: ghcr.io/george-hutanu/motor-fix-postgres:18
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -228,17 +230,6 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Object storage
         run: docker compose up -d --wait storage
-      # Service containers take no command, so the slow-statement view is
-      # preloaded here: the data-store specs read it, never skip it.
-      - name: Preload pg_stat_statements
-        run: |
-          docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
-          docker restart ${{ job.services.postgres.id }}
-          for i in $(seq 1 30); do
-            docker exec ${{ job.services.postgres.id }} pg_isready -U postgres && break
-            sleep 1
-          done
-          docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       - name: Integration tests
