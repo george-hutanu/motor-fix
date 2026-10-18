@@ -1,7 +1,7 @@
 import { mergeApplicationConfig } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { provideApiConfiguration } from '@motor-fix/data-access';
+import { provideApiConfiguration } from '@motor-fix/data-access/api-configuration';
 
 import { App } from './app/app';
 import { appConfig } from './app/app.config';

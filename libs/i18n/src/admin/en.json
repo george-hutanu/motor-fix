@@ -40,6 +40,65 @@
       },
       "title": "Approve and publish"
     },
+    "changes": {
+      "areas": {
+        "brands": "Brands",
+        "documents": "Documents",
+        "photos": "Photos",
+        "prices": "Prices",
+        "profile": "Profile"
+      },
+      "changed": "{label}: changed",
+      "documents": {
+        "added": "{label}: added",
+        "removed": "{label}: removed",
+        "replaced": "{label}: replaced"
+      },
+      "empty": "No change recorded since the request",
+      "failed": "Could not load the changes",
+      "fields": {
+        "address": "Address",
+        "brandNote": "Brands note",
+        "courtesy_car_paid": "Paid courtesy car",
+        "courtesy_car_price_per_day_bani": "Courtesy car, price per day",
+        "duration_minutes": "Duration",
+        "from_bani": "Price from",
+        "hours": "Opening hours",
+        "labour_from_bani": "Labour from",
+        "labour_to_bani": "Labour up to",
+        "location": "Map location",
+        "name": "Name",
+        "payment_card": "Card payment",
+        "payment_cash": "Cash payment",
+        "payment_transfer": "Bank transfer payment",
+        "phone": "Phone",
+        "refusalPhrase": "Refusal phrase",
+        "seatAddress": "Registered seat",
+        "serviceRadiusKm": "Service radius",
+        "to_bani": "Price up to"
+      },
+      "line": "{label}: {old} → {new}",
+      "loading": "Loading the changes",
+      "more": {
+        "one": "and {n} more change",
+        "other": "and {n} more changes"
+      },
+      "no": "No",
+      "retry": "Retry",
+      "since": "since the request of {date}",
+      "subjects": {
+        "garage_brand": "Brands",
+        "garage_brand_job": "Jobs per brand",
+        "garage_closed_day": "Closed days",
+        "garage_facility": "Facilities",
+        "garage_photo": "Photos",
+        "garage_price": "Prices",
+        "onrc_certificate": "ONRC certificate",
+        "rar_authorisation": "RAR authorisation"
+      },
+      "title": "What changed",
+      "yes": "Yes"
+    },
     "checks": {
       "activities": "Activities",
       "address": "Address",
@@ -81,6 +140,7 @@
       "ask": "Ask for more",
       "caenHint": "The CAEN 4520 check is required",
       "caenRequired": "Approval needs the CAEN check",
+      "items": "It concerns: {items}",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
       "rarCheckRequired": "Approval needs the RAR check",
       "rarRequired": "The RAR check is required",
@@ -129,6 +189,25 @@
       "problemNamed": "Mark a problem: {check}",
       "representative": "Phone confirmed by call",
       "saveFailed": "Could not save the check"
+    },
+    "more": {
+      "cancel": "Cancel",
+      "confirm": "Send the request",
+      "count": "{n}/1000",
+      "items": {
+        "address": "The address",
+        "documents": "Documents",
+        "other": "Something else",
+        "photos": "The photos",
+        "rar": "The RAR authorisation"
+      },
+      "itemsLegend": "It concerns",
+      "note": "What is missing?",
+      "noteHint": "The garage receives the message word for word.",
+      "noteRequired": "Write what is missing.",
+      "noteTooLong": "The message is at most 1000 characters.",
+      "noteTooShort": "At least 10 characters.",
+      "title": "What is missing?"
     },
     "noReason": "no reason",
     "photo": "Photo {n}, opened full size",
@@ -492,11 +571,13 @@
     },
     "mobile": "Mobile mechanic · {km} km radius",
     "more": "More",
+    "more_requested": "More details requested",
     "open": "Open the file",
     "openNamed": "Open the file of {name}",
     "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
+    "updated": "Updated",
     "waiting": {
       "one": "waiting {n} working day",
       "other": "waiting {n} working days"

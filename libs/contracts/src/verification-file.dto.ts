@@ -11,7 +11,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-import { AuditEntryDto } from './audit-history.dto';
+import { AuditEntryDto, JSON_VALUE } from './audit-history.dto';
 import {
   VERIFICATION_FILE_STATUSES,
   type VerificationFileStatus,
@@ -28,13 +28,18 @@ import {
 import {
   REPORT_NOTE_MAX,
   REPORT_REASON_MAX,
+  VERIFICATION_CHANGE_AREAS,
   VERIFICATION_NOTE_MAX,
   VERIFICATION_REASON_CODES,
+  type VerificationChangeArea,
   type VerificationReasonCode,
 } from './verification-target';
 
 // The timeline's length; the total says how many more there are.
 export const VERIFICATION_TIMELINE_MAX = 50;
+
+// How many of a returned file's changes one read carries.
+export const VERIFICATION_CHANGES_MAX = 200;
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
 
@@ -180,6 +185,20 @@ export class VerificationFileStateDto {
 
   @ApiProperty({ enum: ['garage_report'], nullable: true, type: String })
   reopenReason!: 'garage_report' | null;
+
+  @ApiProperty({
+    description:
+      'Sent again after a request for more, with no reopening since that request',
+  })
+  resubmitted!: boolean;
+
+  @ApiProperty({
+    description: 'When more was asked for; set only when resubmitted',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  requestedAt!: string | null;
 
   @ApiProperty({ format: 'date-time', nullable: true, type: String })
   declaredAt!: string | null;
@@ -371,6 +390,54 @@ export class VerificationFileTimelineDto {
     type: [AuditEntryDto],
   })
   entries!: AuditEntryDto[];
+
+  @ApiProperty({ minimum: 0, type: 'integer' })
+  total!: number;
+}
+
+// One line of the garage's history after the request for more.
+export class VerificationChangeDto {
+  @ApiProperty({ enum: VERIFICATION_CHANGE_AREAS })
+  area!: VerificationChangeArea;
+
+  @ApiProperty({ description: 'garage, garage_price, legal_document, …' })
+  subjectType!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  field!: string | null;
+
+  @ApiProperty({ enum: ['create', 'update', 'delete'] })
+  action!: 'create' | 'update' | 'delete';
+
+  @ApiProperty({
+    description: "A legal document's kind",
+    nullable: true,
+    type: String,
+  })
+  kind!: string | null;
+
+  @ApiProperty(JSON_VALUE)
+  oldValue!: unknown;
+
+  @ApiProperty(JSON_VALUE)
+  newValue!: unknown;
+
+  @ApiProperty({ format: 'date-time' })
+  at!: string;
+}
+
+export class VerificationFileChangesDto {
+  @ApiProperty()
+  resubmitted!: boolean;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  requestedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Newest first, at most 200',
+    type: [VerificationChangeDto],
+  })
+  changes!: VerificationChangeDto[];
 
   @ApiProperty({ minimum: 0, type: 'integer' })
   total!: number;

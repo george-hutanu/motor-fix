@@ -46,6 +46,10 @@ const FIXTURES: Record<
   'GET /api/v1/admin/verification-files/{id}': {
     path: async () => `/api/v1/admin/verification-files/${await submitted()}`,
   },
+  'GET /api/v1/admin/verification-files/{id}/changes': {
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/changes`,
+  },
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url':
     {
       entries: 1,

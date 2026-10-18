@@ -614,6 +614,7 @@ describe('the dashboard check on the overview rows', () => {
 });
 
 // @traces 879-FR-008 879-FR-015 244-FR-018
+// @traces 304-FR-012
 describe('the product dashboard', () => {
   it('names every product counter, the job steps one included', () => {
     expect(PRODUCT_COUNTERS).toEqual([
@@ -642,8 +643,10 @@ describe('the product dashboard', () => {
       'motorfix_support_emails_total',
       'motorfix_system_log_entries_total',
       'motorfix_verification_decision_refusals_total',
+      'motorfix_verification_more_requests_total',
       'motorfix_verification_rejections_total',
       'motorfix_verification_reopenings_total',
+      'motorfix_verification_resubmissions_total',
       'motorfix_report_decisions_total',
     ]);
   });

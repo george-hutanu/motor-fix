@@ -5297,6 +5297,44 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/changes": {
+      "get": {
+        "operationId": "VerificationFileController_changes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileChangesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/open": {
       "post": {
         "operationId": "VerificationFileController_open",
@@ -5379,7 +5417,7 @@
             "description": "verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required"
           },
           "422": {
-            "description": "reason_required, note_required"
+            "description": "reason_required, note_required, note_too_short"
           }
         },
         "security": [
@@ -11820,6 +11858,15 @@
           "flagged": {
             "type": "boolean",
             "description": "Waited more than the 2 working days"
+          },
+          "resubmitted": {
+            "type": "boolean",
+            "description": "Sent again after a request for more"
+          },
+          "requestedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When more was asked for; only when resubmitted"
           }
         },
         "required": [
@@ -11832,7 +11879,8 @@
           "lamp",
           "submittedAt",
           "workingDays",
-          "flagged"
+          "flagged",
+          "resubmitted"
         ]
       },
       "VerificationQueueDto": {
@@ -13475,6 +13523,16 @@
             ],
             "nullable": true
           },
+          "resubmitted": {
+            "type": "boolean",
+            "description": "Sent again after a request for more, with no reopening since that request"
+          },
+          "requestedAt": {
+            "type": "string",
+            "description": "When more was asked for; set only when resubmitted",
+            "format": "date-time",
+            "nullable": true
+          },
           "declaredAt": {
             "type": "string",
             "format": "date-time",
@@ -13504,6 +13562,8 @@
           "reopenedBy",
           "reopenedAt",
           "reopenReason",
+          "resubmitted",
+          "requestedAt",
           "declaredAt",
           "declaredByName",
           "rarNumber"
@@ -14176,6 +14236,130 @@
           "check",
           "summary",
           "rarActivities"
+        ]
+      },
+      "VerificationChangeDto": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string",
+            "enum": [
+              "profile",
+              "prices",
+              "brands",
+              "photos",
+              "documents"
+            ]
+          },
+          "subjectType": {
+            "type": "string",
+            "description": "garage, garage_price, legal_document, …"
+          },
+          "field": {
+            "type": "string",
+            "nullable": true
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "description": "A legal document's kind",
+            "nullable": true
+          },
+          "oldValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ]
+          },
+          "newValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "area",
+          "subjectType",
+          "field",
+          "action",
+          "kind",
+          "oldValue",
+          "newValue",
+          "at"
+        ]
+      },
+      "VerificationFileChangesDto": {
+        "type": "object",
+        "properties": {
+          "resubmitted": {
+            "type": "boolean"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "changes": {
+            "description": "Newest first, at most 200",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationChangeDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "resubmitted",
+          "requestedAt",
+          "changes",
+          "total"
         ]
       },
       "VerificationDecisionDto": {

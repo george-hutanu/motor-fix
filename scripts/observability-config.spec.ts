@@ -192,6 +192,78 @@ describe('the garage rejections', () => {
   });
 });
 
+// @traces 304-FR-012
+describe('the requests for more and the files returned', () => {
+  it('alert on a burst of more than five requests in an hour, show on the product dashboard and are listed', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'verification.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      for: string;
+      annotations: { dashboard_uid: string; runbook?: string };
+      data: {
+        model: { expr?: string; conditions?: { evaluator: unknown }[] };
+      }[];
+    }[];
+    const rule = rules.find((r) => r.uid === 'verification-more-request-burst');
+    expect(rule?.for).toBe('0s');
+    expect(rule?.annotations.dashboard_uid).toBe('motorfix-product');
+    expect(rule?.annotations.runbook).toContain(
+      'Requests for more and files returned',
+    );
+    expect(rule?.data[0]?.model.expr).toMatch(
+      /^sum by \(deployment_environment\) \(increase\(motorfix_verification_more_requests_total\{[^}]*\}\[1h\]\)\)$/,
+    );
+    expect(rule?.data[1]?.model.conditions?.[0]?.evaluator).toEqual({
+      params: [5],
+      type: 'gt',
+    });
+
+    const dashboard = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-product.json',
+      ),
+    ) as { panels: { title?: string; targets?: { expr: string }[] }[] };
+    expect(dashboard.panels.map((p) => p.title)).toContain(
+      'Requests for more and files returned',
+    );
+    for (const counter of [
+      'motorfix_verification_more_requests_total',
+      'motorfix_verification_resubmissions_total',
+    ]) {
+      expect(
+        dashboard.panels.filter((p) =>
+          (p.targets ?? []).some((t) => t.expr.includes(counter)),
+        ).length,
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
+      .entries as { kind: string; name: string }[];
+    expect(
+      entries.find(
+        (e) =>
+          e.kind === 'product-counter' &&
+          e.name === 'motorfix_verification_more_requests_total',
+      ),
+    ).toMatchObject({
+      alerts: ['verification-more-request-burst'],
+      dashboard: 'motorfix-product',
+    });
+    expect(
+      entries.find(
+        (e) =>
+          e.kind === 'product-counter' &&
+          e.name === 'motorfix_verification_resubmissions_total',
+      ),
+    ).toMatchObject({ dashboard: 'motorfix-product' });
+  });
+});
+
 // @traces 1183-FR-006
 describe('the garage profile latency', () => {
   const ROUTE = 'http_route="/api/v1/garages/:slug"';

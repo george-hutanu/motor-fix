@@ -47,12 +47,13 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 88 (the decision refusals include
+// Every series the API starts: its own 90 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
-// no_open_report; the rejections one per reason; the report decisions one
-// per outcome) and one per check kind and result.
+// no_open_report; the rejections one per reason; the requests for more and
+// the files sent again one each; the report decisions one per outcome) and
+// one per check kind and result.
 const API_SERIES =
-  88 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+  90 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
 
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
@@ -97,6 +98,13 @@ describe("the API's product counters at start", () => {
         (one) => one.labels['reason'],
       ),
     ).toEqual(['documents', 'rar', 'address', 'photos', 'other']);
+    // @traces 304-FR-012
+    expect(
+      [
+        ...named(all, 'motorfix_verification_more_requests_total'),
+        ...named(all, 'motorfix_verification_resubmissions_total'),
+      ].map((one) => one.labels),
+    ).toEqual([{}, {}]);
     // @traces 069-FR-011
     expect(
       named(all, 'motorfix_report_decisions_total').map(

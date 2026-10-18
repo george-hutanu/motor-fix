@@ -7,7 +7,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { PlatformService } from '@motor-fix/data-access';
+import { PlatformService } from '@motor-fix/data-access/services/platform.service';
 
 import { Session } from '../dashboard/session';
 

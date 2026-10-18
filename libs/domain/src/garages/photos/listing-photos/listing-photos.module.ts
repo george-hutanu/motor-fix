@@ -8,6 +8,8 @@ import {
   LISTING_PHOTOS_QUEUE,
   ListingPhotosService,
 } from './listing-photos.service';
+import { AUDIT_PORT } from '../../../audit/audit.port';
+import { AuditService } from '../../../audit/audit.service';
 import { GaragePhotosService } from '../garage-photos.service';
 
 // Apart from GaragesModule, whose specs run without storage: `garages` is
@@ -24,6 +26,7 @@ export class ListingPhotosModule {
       imports: [garages],
       module: ListingPhotosModule,
       providers: [
+        { provide: AUDIT_PORT, useClass: AuditService },
         GaragePhotosService,
         ListingPhotosService,
         {
