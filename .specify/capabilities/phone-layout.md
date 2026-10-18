@@ -14,6 +14,7 @@ features:
   - 172-price-list-states
   - 303-approve-publish-garage
   - 173-price-range-in-place
+  - 305-reject-garage-reason
 ---
 
 # Capability: Phone layout and installable web app
@@ -257,6 +258,10 @@ _From 173-price-range-in-place._
 ### 173-FR-015 — Every new text MUST exist in Romanian and English with U+2011 in hyphenated Romanian words (080-FR-014); no text smaller than 12 px; the editor MUST read without sideways scroll at 320 px, with fields at least 44 px tall and the lei unit shown beside each price field; the "Modifică" actions are real buttons named for assistive technology with the job's or brand's name ("Modifică Frâne față"); the error and warning texts are tied to their fields (`aria-describedby`) and the problem line is a live region; colours come from the theme's tokens in light and dark. Focus: the editor takes focus on its first field when it opens and returns it to the "Modifică" button that opened it when it closes (the overlay task's own rule); the "Modifică prețurile" / "Gata" button is a toggle whose on state is exposed to assistive technology (`aria-pressed`); Esc and the cancel close the editor without saving.
 
 _From 173-price-range-in-place._
+
+### 305-FR-010 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the dialog MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, its options one per line, the text area full width at 320 px, its controls and the "Respinge" button at least 44 px tall and reachable by keyboard, the radio group and the text area labelled, every refusal conveyed by text as well as colour; the dialog moves focus to the radio group on open, returns it to the "Respinge" button on cancel and to the drawer's title on success; the queue row's "Respins" state is text, not colour alone.
+
+_From 305-reject-garage-reason._
 
 ## Retired
 

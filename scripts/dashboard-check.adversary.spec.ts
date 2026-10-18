@@ -641,6 +641,7 @@ describe('the product dashboard', () => {
       'motorfix_support_emails_total',
       'motorfix_system_log_entries_total',
       'motorfix_verification_decision_refusals_total',
+      'motorfix_verification_rejections_total',
       'motorfix_verification_reopenings_total',
     ]);
   });

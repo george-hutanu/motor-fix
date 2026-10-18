@@ -9,8 +9,10 @@ import {
   type SystemLogKind,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_CHECK_RESULTS,
+  VERIFICATION_REASON_CODES,
   type VerificationCheckKind,
   type VerificationCheckResult,
+  type VerificationReasonCode,
 } from '@motor-fix/contracts';
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
@@ -106,6 +108,11 @@ const verificationChecks = () =>
   counter(
     'motorfix_verification_checks_total',
     "Checks an admin recorded on a garage's file, by kind and result",
+  );
+const rejections = () =>
+  counter(
+    'motorfix_verification_rejections_total',
+    'Garage verification files rejected, by reason',
   );
 const decisionRefusals = () =>
   counter(
@@ -217,11 +224,17 @@ const DECISION_REFUSAL_REASONS = [
   'rar_check_required',
   'caen_check_required',
   'note_required',
+  'reason_required',
+  'note_too_short',
 ] as const;
 type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
 
 export function countDecisionRefusal(reason: DecisionRefusalReason) {
   decisionRefusals().add(1, { reason });
+}
+
+export function countRejection(reason: VerificationReasonCode) {
+  rejections().add(1, { reason });
 }
 
 const REOPENING_ROLES = ['admin', 'system'] as const;
@@ -328,6 +341,7 @@ const STARTS: Record<
         each('result', VERIFICATION_CHECK_RESULTS),
       ),
     ],
+    [rejections, each('reason', VERIFICATION_REASON_CODES)],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
     [notifications, [{ channel: 'in-app' }]],
