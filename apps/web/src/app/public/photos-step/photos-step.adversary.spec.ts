@@ -45,7 +45,9 @@ async function open({
     for (let i = 0; i < 3; i++) {
       fixture.detectChanges();
       await fixture.whenStable();
+      for (let m = 0; m < 10; m++) await Promise.resolve();
     }
+    fixture.detectChanges();
   };
   await settle();
   return { fixture, http, i18n, settle, step };
@@ -119,7 +121,7 @@ describe('step 5, hostile drops', () => {
       [10 * 1024 * 1024],
     );
     expect(text(opened.step)).toContain(
-      'Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB',
+      'Doar fotografii JPG, PNG, WEBP sau HEIC, de cel mult 10 MB',
     );
   });
 
@@ -130,7 +132,7 @@ describe('step 5, hostile drops', () => {
 
     expect(askedForAddress(opened.http)).toEqual([]);
     expect(text(opened.step)).toContain(
-      'Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB',
+      'Doar fotografii JPG, PNG, WEBP sau HEIC, de cel mult 10 MB',
     );
   });
 
@@ -166,7 +168,11 @@ describe('step 5, hostile drops', () => {
       photo('d.jpg'),
     ]);
 
-    expect(askedForAddress(opened.http)).toHaveLength(2);
+    expect(tiles(opened.step).map((t) => t.dataset['name'])).toEqual([
+      ...held.map(() => undefined),
+      'a.jpg',
+      'b.jpg',
+    ]);
     expect(text(opened.step)).toContain('Cel mult 20 de fotografii');
   });
 

@@ -388,15 +388,19 @@
       "emailFirst": "Add an e-mail at step 1 to upload photos",
       "full": "At most 20 photos",
       "heading": "Photos",
-      "hint": "The first photo is your page's cover. JPG, PNG or WEBP, up to 10 MB each, at most 20.",
+      "hint": "The first photo is your page's cover. JPG, PNG, WEBP or HEIC, up to 10 MB each, at most 20.",
       "later": "The photos will upload later. Press “Retry” when you like.",
       "photo": "Photo {n}",
       "place": "Photo {n} of {m}",
       "processing": "Getting ready",
-      "refused": "Only JPG, PNG or WEBP photos, up to 10 MB",
+      "refused": "Only JPG, PNG, WEBP or HEIC photos, up to 10 MB",
       "release": "Let go to add the photos",
       "remove": "Remove photo {n}",
       "retry": "Retry",
+      "signal": {
+        "one": "1 photo waiting for signal",
+        "other": "{count} photos waiting for signal"
+      },
       "uploaded": "Photo {n} uploaded",
       "waiting": "Waiting for a connection"
     },

@@ -37,6 +37,7 @@
 @if (later()) {
   <p class="error mf-message" role="status">{{ 'public.listing.photos.later' | t }}</p>
 }
+<p class="mf-message queued" role="status" aria-live="polite">{{ waiting() ? ('public.listing.photos.signal' | t: { count: waiting() }) : '' }}</p>
 @let count = tiles().length;
 <ul cdkDropList cdkDropListOrientation="mixed" [cdkDropListData]="tiles()" (cdkDropListDropped)="drop($event)">
   @for (tile of tiles(); track tile.id) {
@@ -56,7 +57,7 @@
       } @else if (tile.status === 'waiting') {
         <span class="state">{{ 'public.listing.photos.waiting' | t }}</span>
       } @else if (tile.status === 'failed') {
-        <button type="button" class="retry" (click)="retry(tile.id)">{{ 'public.listing.photos.retry' | t }}</button>
+        <button type="button" class="retry" (click)="retry()">{{ 'public.listing.photos.retry' | t }}</button>
       }
       <div class="tools">
         <button type="button" data-move="earlier" [disabled]="i === 0" [attr.aria-label]="'public.listing.photos.earlier' | t: { n: n }" (click)="move(i, -1, 'earlier')">
