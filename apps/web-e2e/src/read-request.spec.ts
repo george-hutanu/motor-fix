@@ -117,9 +117,9 @@ test.describe('reading a request @seeded', () => {
       createdAt: string;
       expiresAt: string;
     };
-    // Seven Bucharest days at the same wall-clock time (221-FR-010), so 169 h
-    // over the autumn clock change; the drawer rounds the time left down to
-    // whole days (347-FR-003): 6 in most weeks, 7 in the week before it.
+    // A request expires seven Bucharest days later at the same wall-clock
+    // time, so 169 h over the autumn clock change; the drawer rounds the time
+    // left down to whole days: 6 in most weeks, 7 in the week before it.
     expect(wall(expiresAt)).toEqual({
       day: plusDays(wall(createdAt).day, 7),
       time: wall(createdAt).time,
