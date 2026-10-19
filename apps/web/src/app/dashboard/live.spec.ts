@@ -10,6 +10,7 @@ import type { LiveMessage } from '@motor-fix/contracts';
 
 import { Live, liveResource } from './live';
 import { Session } from './session';
+import { withoutTabs, withTabs } from '../live/tab-fakes.testing';
 
 // jsdom has neither; the browser and Node both do.
 globalThis.TextEncoder ??= NodeEncoder as typeof TextEncoder;
@@ -77,7 +78,14 @@ function setUp(platform = 'browser') {
   TestBed.configureTestingModule({
     providers: [
       { provide: PLATFORM_ID, useValue: platform },
-      { provide: Session, useValue: { renew, token: () => tokens[0] } },
+      {
+        provide: Session,
+        useValue: {
+          current: () => ({ id: 'a1', role: 'driver' }),
+          renew,
+          token: () => tokens[0],
+        },
+      },
     ],
   });
   const live = TestBed.inject(Live);
@@ -570,5 +578,349 @@ describe('liveResource', () => {
     });
 
     expect(ref.failed()).toBe(true);
+  });
+});
+
+const headersOf = (call: number) =>
+  ((fetchMock.mock.calls[call] as [string, RequestInit])[1].headers ??
+    {}) as Record<string, string>;
+
+const created = (position: string) =>
+  `id: ${position}\nevent: notification.created\ndata: ${JSON.stringify({ at: '2026-10-19T12:00:00.000Z', id: `n-${position}`, kind: 'notification.created' })}\n\n`;
+
+// @traces 1190-FR-008
+describe('Live: where a stream picks up', () => {
+  it('names no position on its first stream, and the latest it saw on every one after', async () => {
+    jest.useFakeTimers();
+    try {
+      const { live } = setUp();
+      live.open();
+      await flush();
+
+      bodies[0]?.send(created('5'));
+      bodies[0]?.send(created('9'));
+      bodies[0]?.send(event('live.test'));
+      bodies[0]?.end();
+      await flush();
+      jest.advanceTimersByTime(3_500);
+      await flush();
+
+      expect(headersOf(0)).not.toHaveProperty('Last-Event-ID');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '9' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('reopens at once after a planned reconnect, without renewing, and re-reads the views', async () => {
+    const { live } = setUp();
+    let resyncs = 0;
+    live.resync.subscribe(() => resyncs++);
+    live.open();
+    await flush();
+    bodies[0]?.send(created('3'));
+
+    bodies[0]?.send(event('reconnect'));
+    bodies[0]?.end();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(renew).not.toHaveBeenCalled();
+    expect(headersOf(1)).toMatchObject({
+      Authorization: 'Bearer token-1',
+      'Last-Event-ID': '3',
+    });
+    expect(resyncs).toBe(1);
+    expect(live.state()).toBe('open');
+  });
+});
+
+// @traces 1190-FR-006
+describe('Live: the wait the server asks for', () => {
+  it('waits the retry the server sent before its first reopen after a drop', async () => {
+    jest.useFakeTimers();
+    try {
+      const { live } = setUp();
+      live.open();
+      await flush();
+      bodies[0]?.send('retry: 3000\n\n');
+      bodies[0]?.send(event('hello'));
+
+      bodies[0]?.end();
+      await flush();
+      jest.advanceTimersByTime(2_999);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(1);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('keeps its own backoff for the tries after that', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    try {
+      const { live } = setUp();
+      live.open();
+      await flush();
+      bodies[0]?.send('retry: 3000\n\n');
+      fetchMock.mockRejectedValueOnce(new TypeError('network'));
+      bodies[0]?.end();
+      await flush();
+      jest.advanceTimersByTime(3_000);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      jest.advanceTimersByTime(1_999);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      jest.advanceTimersByTime(1);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.restoreAllMocks();
+      jest.useRealTimers();
+    }
+  });
+});
+
+// @traces 1190-FR-009
+describe('Live: leaving the page for the back/forward cache', () => {
+  it('closes its stream on pagehide, keeps it closed, and wants it again on pageshow from its latest position', async () => {
+    jest.useFakeTimers();
+    try {
+      const { live } = setUp();
+      live.open();
+      await flush();
+      bodies[0]?.send(created('12'));
+      await flush();
+      const [, first] = fetchMock.mock.calls[0] as [string, RequestInit];
+
+      window.dispatchEvent(new Event('pagehide'));
+      bodies[0]?.end();
+      await flush();
+      jest.advanceTimersByTime(60_000);
+      await flush();
+      expect(first.signal?.aborted).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event('pageshow'));
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '12' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('opens nothing on pageshow when the stream was not wanted', async () => {
+    const { live } = setUp();
+    live.open();
+    await flush();
+    live.close();
+
+    window.dispatchEvent(new Event('pageshow'));
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Tabs of one browser, as Live services sharing the fakes.
+function tabsOf(count: number) {
+  const locks = withTabs();
+  bodies = [];
+  tokens = ['token-1', 'token-2', 'token-3'];
+  renew = jest.fn(async () => {
+    tokens.shift();
+    return true;
+  });
+  fetchMock = jest.fn(async () => {
+    const body = new Body();
+    bodies.push(body);
+    return { body: { getReader: () => body.reader }, ok: true, status: 200 };
+  });
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: PLATFORM_ID, useValue: 'browser' },
+      {
+        provide: Session,
+        useValue: {
+          current: () => ({ id: 'a1', role: 'driver' }),
+          renew,
+          token: () => tokens[0],
+        },
+      },
+    ],
+  });
+  const tabs = Array.from({ length: count }, () => {
+    const live = TestBed.runInInjectionContext(() => new Live());
+    const seen: LiveMessage[] = [];
+    let resyncs = 0;
+    live.events.subscribe((m) => seen.push(m));
+    live.resync.subscribe(() => resyncs++);
+    return {
+      live,
+      resyncs: () => resyncs,
+      seen,
+    };
+  });
+  return { locks, tabs };
+}
+
+// @traces 1190-FR-007
+// @traces 1190-FR-010
+describe('Live: one stream per browser', () => {
+  afterEach(() => withoutTabs());
+
+  it('opens one stream for two tabs, and the other tab hears its events and state', async () => {
+    const { locks, tabs } = tabsOf(2);
+    const [holder, follower] = tabs;
+
+    holder?.live.open();
+    await flush();
+    follower?.live.open();
+    await flush();
+    bodies[0]?.send(event('hello'));
+    bodies[0]?.send(event('live.test'));
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(locks.isHeld('mf-live:a1:driver')).toBe(true);
+    expect(follower?.seen.map((m) => m.kind)).toEqual(['hello', 'live.test']);
+    expect(follower?.live.state()).toBe('open');
+    expect(follower?.live.offline()).toBe(false);
+  });
+
+  it('keeps the lock through a drop, fans out reconnecting and the re-read, and reopens itself', async () => {
+    jest.useFakeTimers();
+    try {
+      const { tabs } = tabsOf(2);
+      const [holder, follower] = tabs;
+      holder?.live.open();
+      await flush();
+      follower?.live.open();
+      await flush();
+      bodies[0]?.send(event('hello'));
+      await flush();
+
+      bodies[0]?.end();
+      await flush();
+      expect(follower?.live.state()).toBe('reconnecting');
+
+      jest.advanceTimersByTime(1_200);
+      await flush();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(follower?.live.state()).toBe('open');
+      expect(follower?.resyncs()).toBe(1);
+      expect(holder?.resyncs()).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('keeps the lock through a token renewal', async () => {
+    const { locks, tabs } = tabsOf(2);
+    const [holder, follower] = tabs;
+    holder?.live.open();
+    await flush();
+    follower?.live.open();
+    await flush();
+
+    bodies[0]?.send(event('bye', { reason: 'expired' }));
+    bodies[0]?.end();
+    await flush();
+
+    expect(renew).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(headersOf(1)).toMatchObject({ Authorization: 'Bearer token-2' });
+    expect(locks.isHeld('mf-live:a1:driver')).toBe(true);
+  });
+
+  it('hands the stream to the other tab when the holder closes, from the latest position either saw', async () => {
+    const { tabs } = tabsOf(2);
+    const [holder, follower] = tabs;
+    holder?.live.open();
+    await flush();
+    follower?.live.open();
+    await flush();
+    bodies[0]?.send(event('hello'));
+    bodies[0]?.send(created('7'));
+    await flush();
+
+    holder?.live.close();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '7' });
+    bodies[1]?.send(event('live.test'));
+    await flush();
+    expect(follower?.seen.at(-1)?.kind).toBe('live.test');
+    expect(follower?.resyncs()).toBe(1);
+  });
+
+  it('lets the lock go when evicted', async () => {
+    const { locks, tabs } = tabsOf(1);
+    tabs[0]?.live.open();
+    await flush();
+
+    bodies[0]?.send(event('bye', { reason: 'evicted' }));
+    bodies[0]?.end();
+    await flush();
+
+    expect(locks.isHeld('mf-live:a1:driver')).toBe(false);
+    expect(tabs[0]?.live.state()).toBe('closed');
+  });
+
+  it('lets the lock go when the browser goes offline, so another tab may take it', async () => {
+    const { tabs } = tabsOf(2);
+    const [holder, follower] = tabs;
+    holder?.live.open();
+    await flush();
+    follower?.live.open();
+    await flush();
+    const [, first] = fetchMock.mock.calls[0] as [string, RequestInit];
+
+    window.dispatchEvent(new Event('offline'));
+    await flush();
+
+    expect(first.signal?.aborted).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes the stream and lets the lock go on pagehide, and takes it again on pageshow', async () => {
+    const { locks, tabs } = tabsOf(1);
+    tabs[0]?.live.open();
+    await flush();
+    bodies[0]?.send(created('4'));
+    await flush();
+
+    window.dispatchEvent(new Event('pagehide'));
+    await flush();
+    expect(locks.isHeld('mf-live:a1:driver')).toBe(false);
+
+    window.dispatchEvent(new Event('pageshow'));
+    await flush();
+    expect(locks.isHeld('mf-live:a1:driver')).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '4' });
+  });
+
+  it('gives each tab its own stream where the browser cannot share one', async () => {
+    withoutTabs();
+    const { tabs } = tabsOf(2);
+    withoutTabs();
+
+    tabs[0]?.live.open();
+    tabs[1]?.live.open();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

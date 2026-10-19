@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import type { LiveMessage } from '@motor-fix/contracts';
 import {
   type NotificationDto,
   NotificationsService,
@@ -43,6 +44,8 @@ export class BellStore {
   private asked = 0;
   private shown = 0;
   private readonly reading = new Set<string>();
+  // When the count a live message carried was true; an older one is stale.
+  private carriedAt: string | null = null;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -50,10 +53,9 @@ export class BellStore {
     inject(Live)
       .events.pipe(takeUntilDestroyed(destroyRef))
       .subscribe((message) => {
-        if (message.kind === 'notification.created')
-          void this.arrived(message.id);
+        if (message.kind === 'notification.created') void this.arrived(message);
         if (message.kind === 'notification.read')
-          void this.readElsewhere(message.id, message.at);
+          void this.readElsewhere(message);
       });
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const timer = setInterval(() => void this.refreshCount(), REFRESH_MS);
@@ -154,9 +156,22 @@ export class BellStore {
     this.more.set(next !== null);
   }
 
+  // The count a live message carries, unless a newer one was already shown;
+  // it also outranks any count still being asked for. Null when it has none.
+  private carried({ at, unreadCount }: LiveMessage): number | null {
+    if (typeof unreadCount !== 'number') return null;
+    if (this.carriedAt === null || at >= this.carriedAt) {
+      this.carriedAt = at;
+      this.shown = ++this.asked;
+      this.count.set(unreadCount);
+    }
+    return unreadCount;
+  }
+
   // The new row joins the top; the pages already shown stay.
-  private async arrived(id: string) {
-    void this.refreshCount();
+  private async arrived(message: LiveMessage) {
+    const { id } = message;
+    if (this.carried(message) === null) void this.refreshCount();
     let text = this.i18n.t('shell.bell.new');
     try {
       const page = await this.page();
@@ -174,11 +189,12 @@ export class BellStore {
   // A read, this tab's own echo included, may touch any page: the rows loaded
   // stay, and "Mai multe" keeps following the last one. A "mark all" carries
   // the account's id, so it shows as an unread count of zero.
-  private async readElsewhere(id: string, at: string) {
+  private async readElsewhere(message: LiveMessage) {
+    const { id, at } = message;
     this.markRead((n) => n.id === id, at);
     // Rows that join while the count is reloading are newer than it.
     const shown = new Set(this.items().map((n) => n.id));
-    if ((await this.refreshCount()) === 0)
+    if ((this.carried(message) ?? (await this.refreshCount())) === 0)
       this.markRead((n) => shown.has(n.id), at);
     if (this.state() !== 'ready') return;
     try {
