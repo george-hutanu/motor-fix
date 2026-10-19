@@ -115,6 +115,7 @@ function alreadyChecked(
 }
 
 interface Locked {
+  language: string;
   status: string;
   lastCheckedOn: string | null;
   activities: string[];
@@ -205,16 +206,18 @@ export class RecheckService {
   ): Promise<RecheckRecordedDto> {
     requireCapability(actor, 'admin.garages');
     if (!isUUID(garageId)) throw notFound();
-    const language = await this.languageOf(actor.accountId);
     const done = await this.prisma
       .$transaction(async (tx) => {
         const [garage] = await tx.$queryRaw<Locked[]>`
           SELECT status::text AS status,
+            (SELECT language::text FROM account WHERE id = ${actor.accountId}::uuid) AS language,
             last_checked_on::text AS "lastCheckedOn",
             rar_activities AS activities
           FROM garage WHERE id = ${garageId}::uuid
           FOR UPDATE`;
         if (!garage) throw notFound();
+        // The admin's language rides the locked read: only a refusal uses it.
+        const language: Language = garage.language === 'en' ? 'en' : 'ro';
         const today = localDay(new Date());
         // The moved date first, so the second of two admins learns who
         // recorded before learning that the garage is no longer due.
@@ -253,14 +256,6 @@ export class RecheckService {
       `recorded garage=${garageId} result=${done.result} admin=${actor.accountId}`,
     );
     return done;
-  }
-
-  private async languageOf(accountId: string): Promise<Language> {
-    const account = await this.prisma.account.findUnique({
-      select: { language: true },
-      where: { id: accountId },
-    });
-    return account?.language === 'en' ? 'en' : 'ro';
   }
 
   // Another admin's valid re-check moved the date: name them; otherwise the
