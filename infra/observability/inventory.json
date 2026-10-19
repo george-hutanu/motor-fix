@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 142,
+    "count": 144,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -696,6 +696,19 @@
       ],
       "reason": "each suspension and each refused one is audited with the admin, the cause and the reason; the count by cause is the motorfix_garage_suspensions_total entry",
       "story": "ST-49"
+    },
+    {
+      "kind": "endpoint",
+      "name": "rechecks",
+      "source": "libs/domain/src/garages/verification/recheck/recheck.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/rechecks and /api/v1/admin/garages/:id/rechecks",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each recorded re-check is audited with the admin, the date checked and the activities before and after, and logged once with the garage and the result",
+      "story": "ST-46"
     },
     {
       "kind": "endpoint",
