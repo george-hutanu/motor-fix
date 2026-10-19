@@ -22,6 +22,7 @@ import {
   formatDuration,
   formatKm,
   formatLei,
+  formatLeiRange,
   formatNum,
   I18n,
   TranslatePipe,
@@ -114,8 +115,9 @@ export class VerificationChanges implements OnInit {
   }
 
   // A field of the garage is one line from its value before the request to
-  // its latest; a price's field is one line per entry; any other record
-  // added, changed or removed is one line for its kind.
+  // its latest; a price's field is one line per entry, its addition or
+  // removal too; any other record added, changed or removed is one line for
+  // its kind.
   private fields(changes: VerificationChangeDto[]): string[] {
     // Keyed so that a field changed twice is one line.
     const lines = new Map<string, string>();
@@ -123,7 +125,7 @@ export class VerificationChanges implements OnInit {
     // last its value before the request.
     const latest = new Map<string, VerificationChangeDto>();
     changes.forEach((change, n) => {
-      if (change.action === 'update' && change.field) {
+      if (isField(change)) {
         const key =
           change.subjectType === 'garage'
             ? `field:${change.field}`
@@ -134,8 +136,8 @@ export class VerificationChanges implements OnInit {
           key,
           this.fieldLine(
             change.field,
-            change.oldValue,
-            newest.newValue,
+            change.oldValue ?? null,
+            newest.newValue ?? null,
             change.job,
           ),
         );
@@ -224,10 +226,9 @@ export class VerificationChanges implements OnInit {
   private range({ from, to }: Range) {
     const language = this.i18n.language();
     if (from === null) return MISSING;
-    const low = formatLei(from, language);
     return to === null
-      ? this.t('rangeFrom', { from: low })
-      : this.t('range', { from: low, to: formatLei(to, language) });
+      ? this.t('rangeFrom', { from: formatLei(from, language) })
+      : formatLeiRange(from, to, language);
   }
 
   private number(field: string, value: number) {
@@ -283,6 +284,14 @@ const stanceOf = (value: unknown) =>
   value && typeof value === 'object' && 'stance' in value
     ? (value as { stance: unknown }).stance
     : undefined;
+
+// A field's change, or a price added or removed, which is a line of its
+// own from or to the dash.
+const isField = (
+  change: VerificationChangeDto,
+): change is VerificationChangeDto & { field: string } =>
+  Boolean(change.field) &&
+  (change.action === 'update' || change.job !== undefined);
 
 type Range = { from: number | null; to: number | null };
 

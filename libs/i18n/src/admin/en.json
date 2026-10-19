@@ -89,7 +89,6 @@
       "no": "No",
       "ofJob": "{label}, {job}",
       "ofJobBrand": "{label}, {job}, {brand}",
-      "range": "{from} – {to}",
       "rangeFrom": "from {from}",
       "retry": "Retry",
       "since": "since the request of {date}",

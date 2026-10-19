@@ -6,7 +6,7 @@ import {
   type VerificationChangeDto,
   type VerificationFileChangesDto,
 } from '@motor-fix/data-access';
-import { formatDay, formatLei, I18n } from '@motor-fix/i18n';
+import { formatDay, formatLei, formatLeiRange, I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { VerificationChanges } from './verification-changes';
@@ -248,10 +248,10 @@ describe('the "Ce s-a schimbat" panel', () => {
     );
 
     expect(lines(host, 'profile')).toEqual([
-      `Manoperă: — → ${formatLei(20_000, 'ro')} – ${formatLei(24_000, 'ro')}`,
+      `Manoperă: — → ${formatLeiRange(20_000, 24_000, 'ro')}`,
     ]);
     expect(lines(host, 'prices')).toEqual([
-      `Preț: ${formatLei(89_000, 'ro')} – ${formatLei(140_000, 'ro')} → de la ${formatLei(95_000, 'ro')}`,
+      `Preț: ${formatLeiRange(89_000, 140_000, 'ro')} → de la ${formatLei(95_000, 'ro')}`,
     ]);
   });
 
@@ -293,8 +293,58 @@ describe('the "Ce s-a schimbat" panel', () => {
     );
 
     expect(lines(host, 'prices')).toEqual([
-      `Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW: ${formatLei(110_000, 'ro')} – ${formatLei(160_000, 'ro')} → ${formatLei(120_000, 'ro')} – ${formatLei(170_000, 'ro')}`,
+      `Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW: ${formatLeiRange(110_000, 160_000, 'ro')} → ${formatLeiRange(120_000, 170_000, 'ro')}`,
       expect.stringMatching(/^Durata, Plăcuțe și discuri de frână față: /),
+    ]);
+  });
+
+  // @traces 176-FR-005
+  it('writes a brand range added or removed as its own line, from or to the dash', async () => {
+    const job = {
+      brand: 'BMW',
+      nameEn: 'Front brake pads and discs',
+      nameRo: 'Plăcuțe și discuri de frână față',
+    };
+    const value = (from: number, to: number) => ({
+      brandId: 'b',
+      from,
+      jobTypeId: 'j',
+      to,
+    });
+    const host = await open(async () =>
+      answerOf([
+        change({
+          action: 'create',
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          newValue: value(110_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+        change({
+          action: 'delete',
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          oldValue: value(120_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+        change({
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          newValue: value(120_000, 170_000),
+          oldValue: value(110_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    const label = 'Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW';
+    expect(lines(host, 'prices')).toEqual([
+      `${label}: — → ${formatLeiRange(110_000, 170_000, 'ro')}`,
+      `${label}: ${formatLeiRange(120_000, 170_000, 'ro')} → —`,
+      `${label}: ${formatLeiRange(110_000, 170_000, 'ro')} → ${formatLeiRange(120_000, 170_000, 'ro')}`,
     ]);
   });
 
