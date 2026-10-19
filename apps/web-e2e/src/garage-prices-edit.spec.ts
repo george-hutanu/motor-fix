@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { ACCOUNTS, headers, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -144,4 +144,54 @@ test.describe('the owner changes a price range in place @seeded', () => {
       }
     });
   }
+});
+
+// @seeded: the admin reads the entry through the API; no admin screen shows it yet.
+// @traces 176-FR-012
+test.describe('a price change in the audit history @seeded', () => {
+  test.afterEach(async ({ request }) => {
+    await restore(request);
+  });
+
+  test('an admin finds the old and new front brakes range after the owner saves it', async ({
+    page,
+    request,
+  }) => {
+    const since = new Date().toISOString();
+    await signedIn(page);
+    await page.goto('/app/garage/prices');
+    await page
+      .getByRole('button', { exact: true, name: 'Modifică prețurile' })
+      .click();
+    await page
+      .getByRole('button', { exact: true, name: `Modifică ${BRAKES}` })
+      .click();
+    const editor = page.locator('mf-overlay-panel');
+    await editor.getByLabel('De la').fill('950');
+    await editor.getByLabel('Până la').fill('1.450');
+    await editor.getByRole('button', { exact: true, name: 'Salvează' }).click();
+    await expect(editor).toHaveCount(0);
+
+    const res = await request.get('/api/v1/audit-history', {
+      headers: await headers(request, ACCOUNTS.admin),
+      params: { area: 'prices', from: since },
+    });
+    expect(res.ok()).toBe(true);
+    const { items } = (await res.json()) as {
+      items: {
+        field: string;
+        kind: string;
+        newValue: unknown;
+        oldValue: unknown;
+      }[];
+    };
+    expect(items).toContainEqual(
+      expect.objectContaining({
+        field: 'range',
+        kind: 'price_list',
+        newValue: { from: 95_000, to: 145_000 },
+        oldValue: { from: 89_000, to: 140_000 },
+      }),
+    );
+  });
 });
