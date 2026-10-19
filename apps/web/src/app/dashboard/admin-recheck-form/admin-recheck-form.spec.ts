@@ -192,6 +192,15 @@ describe('the record dialog', () => {
     await expect(result).resolves.toBe('recorded');
   });
 
+  it('does not save while the date is empty', async () => {
+    await open();
+    await press('Valabilă');
+    type(date(), '');
+    await settle();
+
+    expect(button('Salvează')?.disabled).toBe(true);
+  });
+
   it('carries an empty date of last check as null', async () => {
     await open({ ...ROW, daysSince: null, lastCheckedOn: null, overdue: true });
     await press('Valabilă');
@@ -344,6 +353,26 @@ describe('a failed re-check', () => {
     await open();
     await press('Expirată');
     type(detail() as HTMLTextAreaElement, '   ');
+    await settle();
+
+    expect(button('Suspendă service‑ul')?.disabled).toBe(true);
+  });
+
+  it('keeps the detail on one line, a line break read as a space', async () => {
+    await open();
+    await press('Expirată');
+    type(detail() as HTMLTextAreaElement, 'expirată\npe 12\tsept.');
+    await settle();
+
+    expect(detail()?.value).toBe('expirată pe 12 sept.');
+    expect(text()).toContain('20/200');
+  });
+
+  it('does not offer to suspend while the date is empty', async () => {
+    await open();
+    await press('Expirată');
+    type(detail() as HTMLTextAreaElement, 'expirată');
+    type(date(), '');
     await settle();
 
     expect(button('Suspendă service‑ul')?.disabled).toBe(true);

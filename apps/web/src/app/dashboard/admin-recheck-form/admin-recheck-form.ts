@@ -82,6 +82,7 @@ export class AdminRecheckForm {
   protected readonly detailFits = computed(
     () => this.count() > 0 && this.count() <= RECHECK_DETAIL_MAX,
   );
+  protected readonly dated = computed(() => this.checkedOn() !== '');
   protected readonly activities = computed(() => {
     const en = this.i18n.language() === 'en';
     return this.row.activityNames.map((a) => ({
@@ -103,8 +104,13 @@ export class AdminRecheckForm {
     this.checkedOn.set((event.target as HTMLInputElement).value);
   }
 
+  // One line, as the server accepts it: a line break or tab becomes a space,
+  // so the field never sends what the API would refuse as malformed.
   protected typedDetail(event: Event) {
-    this.detail.set((event.target as HTMLTextAreaElement).value);
+    const input = event.target as HTMLTextAreaElement;
+    const line = input.value.replace(/\p{Cc}+/gu, ' ');
+    if (line !== input.value) input.value = line;
+    this.detail.set(line);
   }
 
   protected toggle(code: string, event: Event) {
@@ -133,7 +139,7 @@ export class AdminRecheckForm {
   async submit(event: Event) {
     event.preventDefault();
     const chosen = this.chosen();
-    if (!chosen) return;
+    if (!chosen || !this.dated()) return;
     if (chosen === 'ok') {
       await this.send({
         activities: this.row.activities.filter((code) =>

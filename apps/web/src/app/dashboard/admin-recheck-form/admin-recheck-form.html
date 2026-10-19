@@ -74,9 +74,9 @@
     <div class="actions">
       <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.rechecks.cancel' | t }}</button>
       @if (failure()) {
-        <button hlmBtn type="submit" [disabled]="!detailFits()">{{ 'admin.rechecks.suspend' | t }}</button>
+        <button hlmBtn type="submit" [disabled]="!detailFits() || !dated()">{{ 'admin.rechecks.suspend' | t }}</button>
       } @else {
-        <button hlmBtn type="submit" [disabled]="!chosen() || busy()" [attr.aria-busy]="busy()">{{ 'admin.rechecks.save' | t }}</button>
+        <button hlmBtn type="submit" [disabled]="!chosen() || !dated() || busy()" [attr.aria-busy]="busy()">{{ 'admin.rechecks.save' | t }}</button>
       }
     </div>
   } @else {
