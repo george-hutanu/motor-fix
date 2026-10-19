@@ -146,7 +146,7 @@ test.describe('the owner changes a price range in place @seeded', () => {
   }
 });
 
-// @seeded: the admin reads the entry through the API; no admin screen shows it yet.
+// @seeded: the admin reads the entry through the audit history API, which no admin screen reads yet.
 // @traces 176-FR-012
 test.describe('a price change in the audit history @seeded', () => {
   test.afterEach(async ({ request }) => {

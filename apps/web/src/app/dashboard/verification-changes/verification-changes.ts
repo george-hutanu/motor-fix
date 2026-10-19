@@ -209,7 +209,7 @@ export class VerificationChanges implements OnInit {
     return typeof value === 'string' ? value : undefined;
   }
 
-  // A range with neither end is no range at all.
+  // A range with no bottom has nothing to start from, whatever its top.
   private range({ from, to }: Range) {
     const language = this.i18n.language();
     if (from === null) return MISSING;
@@ -264,13 +264,14 @@ const stanceOf = (value: unknown) =>
     ? (value as { stance: unknown }).stance
     : undefined;
 
-interface Range {
-  from: number | null;
-  to: number | null;
-}
+type Range = { from: number | null; to: number | null };
+
+const isEnd = (end: unknown) => end === null || typeof end === 'number';
 
 const isRange = (value: unknown): value is Range =>
   typeof value === 'object' &&
   value !== null &&
   'from' in value &&
-  'to' in value;
+  'to' in value &&
+  isEnd(value.from) &&
+  isEnd(value.to);
