@@ -58,7 +58,7 @@ export class AdminRechecks {
     const answer = await this.overlays.open<'recorded', AdminRecheckFormData>(
       AdminRecheckForm,
       {
-        data: { row, today },
+        data: { row, stale: () => this.list.reload(), today },
         shape: 'dialog',
         title: 'admin.rechecks.dialog',
       },

@@ -21,6 +21,9 @@ export interface AdminRecheckFormData {
   // The list's Bucharest day: the date checked defaults to it and goes no
   // later.
   today: string;
+  // The list reads again when the garage moved under the admin, the dialog
+  // staying open with what was entered.
+  stale: () => void;
 }
 
 type Choice = 'ok' | NonNullable<RecordRecheckDto['failure']>;
@@ -169,6 +172,9 @@ export class AdminRecheckForm {
     } catch (error) {
       // The refusal is shown on the form, what was entered kept.
       this.confirming.set(false);
+      if (error instanceof HttpErrorResponse && error.status === 409) {
+        this.task.data.stale();
+      }
       this.error.set({
         field: fieldOf(error),
         text: toProblem(error).detail ?? this.i18n.t('admin.rechecks.failed'),

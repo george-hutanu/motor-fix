@@ -215,7 +215,7 @@ describe('the panel', () => {
     expect(open).toHaveBeenCalledWith(
       AdminRecheckForm,
       expect.objectContaining({
-        data: { row: row(2), today: TODAY },
+        data: { row: row(2), stale: expect.any(Function), today: TODAY },
       }),
     );
   });
@@ -223,6 +223,23 @@ describe('the panel', () => {
   it('reads the list again once a re-check is recorded', async () => {
     const el = await show();
     open.mockResolvedValueOnce('recorded');
+    answer = async () => listOf(row(2));
+
+    button(rows(el)[0], 'Înregistrează')?.click();
+    await settle();
+
+    expect(asked).toBe(2);
+    expect(rows(el)).toHaveLength(1);
+  });
+
+  it('reads the list again when the dialog meets a 409, while it stays open', async () => {
+    const el = await show();
+    open.mockImplementationOnce(
+      (_: unknown, options: { data: { stale: () => void } }) => {
+        options.data.stale();
+        return new Promise(() => undefined);
+      },
+    );
     answer = async () => listOf(row(2));
 
     button(rows(el)[0], 'Înregistrează')?.click();

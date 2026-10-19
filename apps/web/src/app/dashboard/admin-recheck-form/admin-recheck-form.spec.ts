@@ -46,6 +46,7 @@ const CONFIRMATION =
   'Service‑ul va fi suspendat și scos de pe hartă. Programările viitoare se anulează și șoferii sunt anunțați.';
 
 let record: jest.Mock;
+let stale: jest.Mock;
 let result: Promise<OverlayResult<'recorded' | 'cancelled'>>;
 
 async function settle() {
@@ -57,6 +58,7 @@ async function settle() {
 
 async function open(row: RecheckDueRowDto = ROW, language: 'ro' | 'en' = 'ro') {
   record = jest.fn(async () => RECORDED);
+  stale = jest.fn();
   jest.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
@@ -68,7 +70,7 @@ async function open(row: RecheckDueRowDto = ROW, language: 'ro' | 'en' = 'ro') {
   await i18n.enter('admin');
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open(AdminRecheckForm, {
-    data: { row, today: TODAY },
+    data: { row, stale, today: TODAY },
     shape: 'dialog',
     title: 'admin.rechecks.record',
   });
@@ -219,6 +221,22 @@ describe('the record dialog', () => {
     expect(panel()).not.toBeNull();
   });
 
+  it('has the list read again on a 409, the dialog kept open', async () => {
+    await open();
+    record.mockRejectedValueOnce(
+      conflict(409, {
+        code: 'recheck_stale',
+        detail: 'Datele service-ului s-au schimbat. Reîncarcă lista.',
+      }),
+    );
+    await press('Valabilă');
+
+    await press('Salvează');
+
+    expect(stale).toHaveBeenCalledTimes(1);
+    expect(panel()).not.toBeNull();
+  });
+
   it('marks the control a 422 names, with its message', async () => {
     await open();
     record.mockRejectedValueOnce(
@@ -233,6 +251,7 @@ describe('the record dialog', () => {
     await press('Salvează');
 
     expect(date().getAttribute('aria-invalid')).toBe('true');
+    expect(stale).not.toHaveBeenCalled();
     expect(text(panel())).toContain(
       'Data verificării trebuie să fie după ultima verificare',
     );
