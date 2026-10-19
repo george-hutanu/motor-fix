@@ -93,10 +93,15 @@ const token = (accountId: string, role: Role, minutes = 15) =>
 interface Message {
   event: string;
   data: Record<string, unknown>;
+  id?: string;
 }
 
 // Opens the stream and collects what arrives, so a test can wait for a kind.
-function stream(target: INestApplication, auth?: string) {
+function stream(
+  target: INestApplication,
+  auth?: string,
+  extra: { headers?: Record<string, string>; path?: string } = {},
+) {
   const { port } = target.getHttpServer().address() as AddressInfo;
   return new Promise<{
     res: IncomingMessage;
@@ -107,9 +112,9 @@ function stream(target: INestApplication, auth?: string) {
   }>((resolve, reject) => {
     const req = get(
       {
-        headers: auth ? { Authorization: auth } : {},
+        headers: { ...(auth && { Authorization: auth }), ...extra.headers },
         host: '127.0.0.1',
-        path: '/live',
+        path: extra.path ?? '/live',
         port,
       },
       (res) => {
@@ -146,15 +151,27 @@ function stream(target: INestApplication, auth?: string) {
         res.on('data', (chunk: string) => {
           out.body += chunk;
           const blocks = out.body.split('\n\n');
-          out.messages = blocks
-            .filter((b) => b.startsWith('event:'))
-            .map((b) => {
-              const [event, data] = b.split('\n');
-              return {
-                data: JSON.parse((data ?? '').replace(/^data: /, '')),
-                event: (event ?? '').replace(/^event: /, ''),
-              };
-            });
+          // The last block may still be arriving.
+          out.messages = blocks.slice(0, -1).flatMap((b) => {
+            const lines = new Map(
+              b
+                .split('\n')
+                .map((l) => [
+                  l.slice(0, l.indexOf(':')),
+                  l.slice(l.indexOf(':') + 2),
+                ]),
+            );
+            const event = lines.get('event');
+            if (event === undefined) return [];
+            const id = lines.get('id');
+            return [
+              {
+                data: JSON.parse(lines.get('data') ?? 'null'),
+                event,
+                ...(id !== undefined && { id }),
+              },
+            ];
+          });
         });
         resolve(out);
       },
@@ -713,5 +730,235 @@ describe('who gets an event at a garage', () => {
     expect(live.messages.at(-1)).toMatchObject({
       data: { kind: 'bye', reason: 'evicted' },
     });
+  });
+});
+
+// A bell row as the notifications use case writes it: the position comes
+// from the database, the account's count moves with it.
+async function bellRow(accountId: string, at = new Date()) {
+  const [row] = await prisma.$transaction([
+    prisma.notification.create({
+      data: {
+        accountId,
+        channel: 'in_app',
+        createdAt: at,
+        eventId: randomUUID(),
+        kind: 'TEST_MESSAGE',
+        params: {},
+        sentAt: at,
+        status: 'sent',
+      },
+    }),
+    prisma.account.update({
+      data: { unreadCount: { increment: 1 } },
+      where: { id: accountId },
+    }),
+  ]);
+  return row;
+}
+
+const settle = () => new Promise((r) => setTimeout(r, 300));
+const created = (live: { messages: Message[] }) =>
+  live.messages.filter((m) => m.event === 'notification.created');
+
+// @traces 1190-FR-002
+// @traces 1190-FR-003
+// @traces 1190-FR-004
+describe('a stream that comes back', () => {
+  it('replays the rows it missed in order, each with its position and the count, before newer live events', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const seen = await bellRow(driver);
+    const missed = [];
+    for (let i = 0; i < 5; i++) missed.push(await bellRow(driver));
+    const redis = new Redis(redisUrl);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      headers: { 'Last-Event-ID': String(seen.position) },
+    });
+    await live.next('hello');
+    await until('the replay', () => created(live).length >= 5);
+    await redis.publish(
+      LIVE_CHANNEL,
+      JSON.stringify({
+        audience: [`account:${driver}`],
+        event: {
+          at: new Date().toISOString(),
+          id: randomUUID(),
+          kind: 'notification.created',
+          unreadCount: 7,
+        },
+        position: String(missed.at(-1)!.position + 1000n),
+      }),
+    );
+    await until('the live one', () => created(live).length >= 6);
+    redis.disconnect();
+
+    expect(created(live).slice(0, 5)).toEqual(
+      missed.map((row) => ({
+        data: {
+          at: row.createdAt.toISOString(),
+          id: row.id,
+          kind: 'notification.created',
+          unreadCount: 6,
+        },
+        event: 'notification.created',
+        id: String(row.position),
+      })),
+    );
+    expect(created(live)[5]?.data['unreadCount']).toBe(7);
+  });
+
+  it('replays at most 200 rows and then goes live', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const first = await bellRow(driver);
+    await prisma.notification.createMany({
+      data: Array.from({ length: 249 }, (_, i) => ({
+        accountId: driver,
+        channel: 'in_app' as const,
+        createdAt: new Date(Date.now() + i),
+        eventId: randomUUID(),
+        kind: 'TEST_MESSAGE',
+        params: {},
+        status: 'sent' as const,
+      })),
+    });
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      path: `/live?since=${first.position}`,
+    });
+    await live.next('hello');
+    await until('the replay', () => created(live).length >= 200);
+    await settle();
+
+    const ids = created(live).map((m) => BigInt(m.id ?? '0'));
+    expect(ids).toHaveLength(200);
+    expect(ids[0]).toBeGreaterThan(first.position);
+    expect([...ids].sort((a, b) => (a < b ? -1 : 1))).toEqual(ids);
+    expect(live.res.complete).toBe(false);
+  });
+
+  it('takes the header over the query', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const a = await bellRow(driver);
+    const b = await bellRow(driver);
+    await bellRow(driver);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      headers: { 'Last-Event-ID': String(b.position) },
+      path: `/live?since=${a.position}`,
+    });
+    await live.next('hello');
+    await until('the replay', () => created(live).length >= 1);
+    await settle();
+
+    expect(created(live)).toHaveLength(1);
+  });
+
+  it.each([
+    ['no position', {}],
+    [
+      'a position that is not a number',
+      { headers: { 'Last-Event-ID': 'abc' } },
+    ],
+    ['a position of zero', { path: '/live?since=0' }],
+    ['a negative position', { path: '/live?since=-5' }],
+  ])('replays nothing for %s', async (_, extra) => {
+    const driver = await account('Andrei', ['driver']);
+    await bellRow(driver);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, extra);
+    await live.next('hello');
+    await settle();
+
+    expect(created(live)).toEqual([]);
+  });
+
+  it("replays nothing of another account's rows", async () => {
+    const driver = await account('Andrei', ['driver']);
+    const other = await account('Ion', ['driver']);
+    const mine = await bellRow(driver);
+    await bellRow(other);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      headers: { 'Last-Event-ID': String(mine.position) },
+    });
+    await live.next('hello');
+    await settle();
+
+    expect(created(live)).toEqual([]);
+  });
+});
+
+// @traces 1190-FR-006
+describe('the limits a stream lives within', () => {
+  it('tells the client to wait three seconds before it reconnects, before hello', async () => {
+    const driver = await account('Andrei', ['driver']);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`);
+    await live.next('hello');
+
+    expect(live.body.startsWith('retry: 3000\n\n')).toBe(true);
+  });
+
+  it('sends a comment within 25 seconds of silence', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`);
+    await live.next('hello');
+
+    await until(
+      'a heartbeat',
+      () => live.body.includes('\n\n: ping\n\n'),
+      27_000,
+    );
+  }, 40_000);
+
+  it('asks the client to reconnect and ends the stream at the planned time', async () => {
+    const short = await Test.createTestingModule({
+      imports: [
+        AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
+        EventsModule.register({ reconnectAfterMs: 1500, redisUrl }),
+      ],
+    }).compile();
+    const copy = short.createNestApplication();
+    await copy.listen(0);
+    try {
+      const driver = await account('Andrei', ['driver']);
+      const live = await stream(copy, `Bearer ${token(driver, 'driver')}`);
+      const hello = await live.next('hello');
+
+      const reconnect = await live.next('reconnect');
+      await live.ended;
+
+      expect(reconnect.data).toEqual({
+        at: expect.any(String),
+        id: hello.data['id'],
+        kind: 'reconnect',
+      });
+    } finally {
+      await copy.close();
+    }
+  });
+});
+
+// @traces 1190-FR-012
+describe('nothing between the stream and the browser holds it', () => {
+  it('answers both streams uncompressed, uncached and unbuffered to a client that accepts compression', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const headers = { 'Accept-Encoding': 'gzip, br' };
+
+    const signedIn = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      headers,
+    });
+    const visitor = await stream(app, undefined, {
+      headers,
+      path: '/live/public',
+    });
+
+    for (const live of [signedIn, visitor]) {
+      expect(live.res.statusCode).toBe(200);
+      expect(live.res.headers['cache-control']).toBe('no-cache, no-transform');
+      expect(live.res.headers['x-accel-buffering']).toBe('no');
+      expect(live.res.headers['content-encoding']).toBeUndefined();
+    }
   });
 });

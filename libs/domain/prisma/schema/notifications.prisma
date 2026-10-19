@@ -45,6 +45,8 @@ model Notification {
   // already have gone, so it is never sent again.
   sendingAt         DateTime?           @map("sending_at") @db.Timestamptz(3)
   createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  // The live stream's cursor (its SSE id): ordered by creation, unlike the id.
+  position          BigInt              @default(autoincrement())
   account           Account?            @relation(fields: [accountId], references: [id], onDelete: Cascade)
   listingDraft      ListingDraft?       @relation(fields: [listingDraftId], references: [id], onDelete: Cascade)
   groupLeader       Notification?       @relation("NotificationGroup", fields: [groupLeaderId], references: [id], onDelete: SetNull)
@@ -55,6 +57,7 @@ model Notification {
   @@unique([kind, accountId, channel, eventId])
   @@unique([kind, listingDraftId, channel, eventId])
   @@index([accountId, createdAt])
+  @@index([accountId, position])
   @@index([kind, accountId, channel, createdAt])
   @@index([providerMessageId])
   @@index([groupLeaderId])

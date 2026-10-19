@@ -205,6 +205,33 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_live_replays_total",
+      "source": "libs/domain/src/events/live/live.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts every replay a returning live stream asked for (Last-Event-ID or ?since=) by outcome none, some or capped (200 rows), never an account; a capped rate is clients away long enough to miss more than a page, which the views' re-read covers; a failed replay read logs one Live warning and the stream goes on live, the database being down already alerted by postgres-unreachable and api-error-rate",
+      "story": "ST-1190"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_live_replayed_rows_total",
+      "source": "libs/domain/src/events/live/live.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts the notifications written by live replays, charted beside motorfix_live_replays_total on the same panel; a count has no failure of its own to alert on",
+      "story": "ST-1190"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_live_stream_closes_total",
+      "source": "libs/domain/src/events/live/live.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts every live stream the server ended by reason (expired, evicted, shutdown, reconnect, the planned close before Railway's 15-minute HTTP limit); an evicted surge is a client opening too many streams, which the one-stream-per-browser lock prevents, so it is watched on the panel, not paged",
+      "story": "ST-1190"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_system_log_entries_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",

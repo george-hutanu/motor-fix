@@ -19,7 +19,7 @@ import { outsideChannels, type SentChannel } from './routing';
 import { locked, STAFF_TYPES } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
-import { LIVE_CHANNEL } from '../events/live/live.hub';
+import { publishLive } from '../events/live/live.hub';
 import type {
   Notification,
   Prisma,
@@ -153,7 +153,7 @@ export class NotificationsService {
         }),
       );
       if (!written) continue;
-      await this.announce(written.bell);
+      await this.announce(written.bell, written.unreadCount);
       countNotification('in-app');
       // The one path a quote takes today; it moves to the quoting use case
       // once there is one.
@@ -540,7 +540,11 @@ export class NotificationsService {
       muted: ReadonlySet<OutsideChannel>;
       whatsapp: boolean;
     },
-  ): Promise<{ bell: Notification; next: NextJob[] } | null> {
+  ): Promise<{
+    bell: Notification;
+    next: NextJob[];
+    unreadCount: number;
+  } | null> {
     // One builder at a time per kind and person, so a burst opens one window.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
     const account = await tx.account.findUnique({
@@ -576,6 +580,12 @@ export class NotificationsService {
         status: 'sent',
       },
     });
+    // The bell's count moves with the row, in the same transaction.
+    const { unreadCount } = await tx.account.update({
+      data: { unreadCount: { increment: 1 } },
+      select: { unreadCount: true },
+      where: { id: accountId },
+    });
     // A change link goes to the address it asks for, not the account's.
     const to = input.params?.['to'];
     const email = typeof to === 'string' ? to : account.email;
@@ -595,7 +605,7 @@ export class NotificationsService {
       const job = await this.outsideRow(tx, type, base, channel, email, at);
       if (job) next.push(job);
     }
-    return { bell, next };
+    return { bell, next, unreadCount };
   }
 
   private outsideRow(
@@ -722,17 +732,20 @@ export class NotificationsService {
     };
   }
 
-  private async announce(bell: Notification) {
-    const message = {
-      audience: [`account:${bell.accountId}`],
-      event: {
-        at: bell.createdAt.toISOString(),
-        id: bell.id,
-        kind: 'notification.created',
-      },
-    };
+  // With the row's position, the stream's cursor, and the account's count.
+  private async announce(bell: Notification, unreadCount: number) {
     try {
-      await this.publisher.publish(LIVE_CHANNEL, JSON.stringify(message));
+      await publishLive(
+        this.publisher,
+        {
+          at: bell.createdAt.toISOString(),
+          id: bell.id,
+          kind: 'notification.created',
+          unreadCount,
+        },
+        [`account:${bell.accountId}`],
+        bell.position,
+      );
     } catch {
       this.logger.warn(
         `notification ${bell.id} not announced live: Redis did not answer`,

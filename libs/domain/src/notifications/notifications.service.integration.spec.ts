@@ -265,7 +265,9 @@ describe('handing an event to the notifications service', () => {
           at: bell?.createdAt.toISOString(),
           id: bell?.id,
           kind: 'notification.created',
+          unreadCount: 1,
         },
+        position: String(bell?.position),
       },
     ]);
   });
@@ -294,6 +296,40 @@ describe('handing an event to the notifications service', () => {
     const before = await prisma.activityLog.count();
     await quote(andrei, 'evt-8');
     expect(await prisma.activityLog.count()).toBe(before);
+  });
+});
+
+// @traces 1190-FR-001
+// @traces 1190-FR-005
+describe('the position and the unread count a bell row writes', () => {
+  const unread = async (accountId: string) =>
+    (
+      await prisma.account.findUniqueOrThrow({
+        select: { unreadCount: true },
+        where: { id: accountId },
+      })
+    ).unreadCount;
+
+  it('gives each bell row a higher position and adds one to the count', async () => {
+    const andrei = await account('andrei');
+
+    await quote(andrei, 'evt-pos-1');
+    await quote(andrei, 'evt-pos-2');
+
+    const bells = (await rows(andrei)).filter((r) => r.channel === 'in_app');
+    expect(bells).toHaveLength(2);
+    expect(bells[1]!.position).toBeGreaterThan(bells[0]!.position);
+    expect(await unread(andrei)).toBe(2);
+  });
+
+  it('adds nothing for a repeat of the same event, or for an e-mail row', async () => {
+    const andrei = await account('andrei');
+
+    await quote(andrei, 'evt-pos-3');
+    await quote(andrei, 'evt-pos-3');
+
+    expect((await rows(andrei)).some((r) => r.channel === 'email')).toBe(true);
+    expect(await unread(andrei)).toBe(1);
   });
 });
 

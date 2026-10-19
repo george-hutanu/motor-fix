@@ -11,7 +11,8 @@ import { Redis } from 'ioredis';
 
 import { loadGarageAccess } from './garage-access';
 import { LiveController } from './live/live.controller';
-import { LIVE_CHANNEL, LiveHub } from './live/live.hub';
+import { LIVE_CHANNEL, LiveHub, RECONNECT_AFTER_MS } from './live/live.hub';
+import { loadReplay } from './live/live.replay';
 import { PublicLiveController } from './public-live.controller';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
@@ -22,6 +23,8 @@ const SUBSCRIBER = Symbol('LIVE_SUBSCRIBER');
 
 interface EventsOptions {
   redisUrl: string;
+  // When a stream asks its client to reconnect; a test shortens it.
+  reconnectAfterMs?: number;
 }
 
 // A Redis that is down never closes a stream: the subscriber keeps retrying
@@ -67,7 +70,10 @@ export class EventsModule
           inject: [PRISMA],
           provide: LiveHub,
           useFactory: (prisma: PrismaClient) =>
-            new LiveHub(loadGarageAccess(prisma)),
+            new LiveHub(loadGarageAccess(prisma), {
+              reconnectAfterMs: options.reconnectAfterMs ?? RECONNECT_AFTER_MS,
+              replay: loadReplay(prisma),
+            }),
         },
       ],
     };

@@ -1256,6 +1256,81 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Live replays by outcome",
+      "description": "Replays a returning live stream asked for, a minute, by what they found (none, some, capped at 200 rows), and the rows they wrote. A capped rise is clients away long enough to miss more than a page.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_live_replays_total{service_name=\"api\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_live_replayed_rows_total{service_name=\"api\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "rows"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Live stream closes by reason",
+      "description": "Live streams the server ended, a minute, by reason. reconnect is the planned close before Railway's 15-minute limit; an evicted rise is a client opening more than ten streams.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 84
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (reason) (increase(motorfix_live_stream_closes_total{service_name=\"api\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }

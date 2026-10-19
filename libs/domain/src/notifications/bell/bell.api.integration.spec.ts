@@ -98,6 +98,12 @@ async function bell(
       subjectId: options.subjectId,
     },
   });
+  // As the notifications use case writes a bell row: the count moves with it.
+  if (row.channel === 'in_app' && !row.readAt)
+    await prisma.account.update({
+      data: { unreadCount: { increment: 1 } },
+      where: { id: accountId },
+    });
   return row.id;
 }
 
@@ -251,8 +257,9 @@ describe('the bell list', () => {
   });
 });
 
+// @traces 1190-FR-005
 describe('the unread count', () => {
-  it('counts the unread bell rows of the last 90 days', async () => {
+  it('answers the count the account holds: every unread bell row, older than 90 days too', async () => {
     const andrei = await account('andrei');
     await bell(andrei);
     await bell(andrei, { ago: 10 * DAY });
@@ -263,7 +270,61 @@ describe('the unread count', () => {
 
     const res = await get('/notifications/unread-count', andrei).expect(200);
 
-    expect(res.body).toEqual({ count: 2 });
+    expect(res.body).toEqual({ count: 3 });
+  });
+
+  it('answers what the account holds, without counting rows', async () => {
+    const andrei = await account('andrei');
+    await prisma.account.update({
+      data: { unreadCount: 41 },
+      where: { id: andrei },
+    });
+
+    const res = await get('/notifications/unread-count', andrei).expect(200);
+
+    expect(res.body).toEqual({ count: 41 });
+  });
+
+  it('takes one off for a read, sets none after read-all, and announces each count', async () => {
+    const andrei = await account('andrei');
+    const id = await bell(andrei);
+    await bell(andrei, { ago: 1000 });
+    await bell(andrei, { ago: 2000 });
+
+    await post(`/notifications/${id}/read`, andrei).expect(200);
+    expect((await get('/notifications/unread-count', andrei)).body).toEqual({
+      count: 2,
+    });
+    await post(`/notifications/${id}/read`, andrei).expect(200);
+    expect((await get('/notifications/unread-count', andrei)).body).toEqual({
+      count: 2,
+    });
+    await post('/notifications/read-all', andrei).expect(204);
+    expect((await get('/notifications/unread-count', andrei)).body).toEqual({
+      count: 0,
+    });
+
+    const reads = () =>
+      published.filter(
+        (m) =>
+          m.event.kind === 'notification.read' &&
+          m.audience.join() === `account:${andrei}`,
+      );
+    await until('both announcements', () => reads().length >= 2);
+    expect(
+      reads().map((m) => (m.event as { unreadCount?: number }).unreadCount),
+    ).toEqual([2, 0]);
+  });
+
+  it('never carries a position to the bell', async () => {
+    const andrei = await account('andrei');
+    const id = await bell(andrei);
+
+    const list = await get('/notifications', andrei).expect(200);
+    const read = await post(`/notifications/${id}/read`, andrei).expect(200);
+
+    expect(list.body.items[0]).not.toHaveProperty('position');
+    expect(read.body).not.toHaveProperty('position');
   });
 });
 

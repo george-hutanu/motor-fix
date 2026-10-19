@@ -5933,7 +5933,17 @@
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "The last position the client saw, for a client that cannot send Last-Event-ID (the header wins)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A server-sent events stream"
