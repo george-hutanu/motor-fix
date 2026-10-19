@@ -184,12 +184,13 @@ describe('the daily re-check reminder', () => {
   });
 
   it('asks no outside register', async () => {
-    await account('Ana Popescu', ['admin']);
+    const ana = await account('Ana Popescu', ['admin']);
     await garage(null);
     const outside = jest.spyOn(globalThis, 'fetch');
 
     await task.run(NOW);
 
+    expect(await bell(ana)).toHaveLength(1);
     expect(outside).not.toHaveBeenCalled();
   });
 });
