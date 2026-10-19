@@ -718,7 +718,12 @@ describe('e-mails to a listing draft', () => {
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .map((r) => ({ id: r.id, link })),
     );
-    expect(JSON.stringify(written)).not.toContain('secret');
+    // A bell row's position is a BigInt, which JSON cannot write as it is.
+    expect(
+      JSON.stringify(written, (_, v) =>
+        typeof v === 'bigint' ? String(v) : v,
+      ),
+    ).not.toContain('secret');
   });
 
   it('holds a reminder until 08:00 at night but never the link asked for', async () => {
