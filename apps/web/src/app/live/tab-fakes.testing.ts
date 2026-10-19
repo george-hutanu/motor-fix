@@ -3,7 +3,7 @@
 
 type Grant = () => Promise<unknown>;
 
-export class FakeLocks {
+class FakeLocks {
   private readonly held = new Set<string>();
   private readonly waiting = new Map<string, Grant[]>();
   readonly requested: string[] = [];

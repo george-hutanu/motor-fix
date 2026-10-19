@@ -191,6 +191,9 @@ export class Live {
   private stop() {
     const wanted = this.wanted;
     this.wanted = null;
+    // The other tabs wait for one of them to take the stream over.
+    if (this.leading)
+      this.tabs?.post({ offline: false, state: 'reconnecting', type: 'state' });
     this.leading = false;
     wanted?.abort();
     this.attempt?.abort('stop');
@@ -217,6 +220,9 @@ export class Live {
         );
         if (!granted || wanted.aborted) return;
         this.leading = true;
+        // What this tab heard was the last holder's: its own stream is not open yet.
+        this.status.set('reconnecting');
+        this.startOfflineTimer();
         this.share();
         if ((await this.run(wanted)) !== 'release') return;
       } finally {
@@ -323,6 +329,8 @@ export class Live {
     );
     if (this.attempt === attempt) this.attempt = null;
     if (wanted.aborted) return 'stop';
+    // A planned close reopens at once: the stream is not lost.
+    if (outcome === 'reconnect') return outcome;
     this.lost();
     const reason = attempt.signal.reason;
     if (reason === 'wake') return 'wake';

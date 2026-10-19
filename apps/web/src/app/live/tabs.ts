@@ -1,6 +1,8 @@
 import type { LiveMessage } from '@motor-fix/contracts';
 import { type Observable, Subject } from 'rxjs';
 
+import { isLiveMessage, POSITION } from './stream';
+
 // A signed-in live connection's state, as the tab holding it reports it.
 export type LiveState = 'closed' | 'reconnecting' | 'polling' | 'open';
 
@@ -20,6 +22,33 @@ export interface LiveTabs {
   post(message: TabMessage): void;
   readonly messages: Observable<TabMessage>;
   close(): void;
+}
+
+const STATES: ReadonlySet<unknown> = new Set<LiveState>([
+  'closed',
+  'reconnecting',
+  'polling',
+  'open',
+]);
+
+// Only what a tab of this app sends: anything else on the channel is dropped.
+function isTabMessage(value: unknown): value is TabMessage {
+  const m = value as Record<string, unknown> | null;
+  switch (m?.['type']) {
+    case 'hello':
+    case 'resync':
+      return true;
+    case 'state':
+      return STATES.has(m['state']) && typeof m['offline'] === 'boolean';
+    case 'message':
+      return (
+        isLiveMessage(m['message']) &&
+        (m['position'] === undefined ||
+          (typeof m['position'] === 'string' && POSITION.test(m['position'])))
+      );
+    default:
+      return false;
+  }
 }
 
 interface LockManager {
@@ -43,8 +72,9 @@ export function openLiveTabs(name: () => string | null): LiveTabs | null {
   const id = `mf-live:${key}`;
   const channel = new BroadcastChannel(id);
   const messages = new Subject<TabMessage>();
-  channel.onmessage = (event: MessageEvent<TabMessage>) =>
-    messages.next(event.data);
+  channel.onmessage = (event: MessageEvent<unknown>) => {
+    if (isTabMessage(event.data)) messages.next(event.data);
+  };
   return {
     close() {
       channel.close();

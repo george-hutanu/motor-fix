@@ -29,28 +29,39 @@ function parse(block: string): {
   return {
     message: message(field('data').join('\n')),
     ...(id !== undefined && POSITION.test(id) && { id }),
-    ...(retry !== undefined && /^\d+$/.test(retry) && { retry: Number(retry) }),
+    // Never longer than the backoff's longest wait: a timer cannot hold more
+    // than 2^31-1 ms and would fire at once.
+    ...(retry !== undefined &&
+      /^\d+$/.test(retry) && {
+        retry: Math.min(Number(retry), BACKOFF.at(-1) ?? 0),
+      }),
   };
 }
 
-const POSITION = /^\d{1,18}$/;
+export const POSITION = /^\d{1,18}$/;
+
+// A value shaped as a message: a kind, an id and a time, all strings.
+export function isLiveMessage(value: unknown): value is LiveMessage {
+  const m = value as Partial<LiveMessage> | null;
+  return (
+    typeof m?.kind === 'string' &&
+    typeof m.id === 'string' &&
+    typeof m.at === 'string'
+  );
+}
 
 function message(data: string): LiveMessage | null {
   if (!data) return null;
   try {
-    const message = JSON.parse(data) as Partial<LiveMessage> | null;
-    return typeof message?.kind === 'string' &&
-      typeof message.id === 'string' &&
-      typeof message.at === 'string'
-      ? (message as LiveMessage)
-      : null;
+    const parsed: unknown = JSON.parse(data);
+    return isLiveMessage(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
 // What the reader reports besides the messages.
-export interface StreamHooks {
+interface StreamHooks {
   // A frame read: its message, and its position when it carried one.
   emit: (message: LiveMessage, id: string | undefined) => void;
   // The wait the server asks for before a reconnect.
