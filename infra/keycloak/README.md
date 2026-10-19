@@ -131,6 +131,7 @@ else; *address* is a public or internal address; *name* is a plain value.
    | Variable | Kind | What it is |
    | --- | --- | --- |
    | `DATABASE_URL` | secret | The app's staging database, as the api has it |
+   | `REDIS_URL` | secret | The app's staging Redis, as the api has it: the endpoint's call limit counts there |
    | `APP_ENV` | name | `staging` |
    | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_PROTOCOL` | address, secret, name | Grafana Cloud, as the api has them |
 

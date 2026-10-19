@@ -19,6 +19,7 @@ import type { Queue } from 'bullmq';
 import { PRISMA } from '../../../auth/prisma';
 import { refusal } from '../../../auth/sign-up.service';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { RateLimits } from '../../../rate-limit/rate-limit.service';
 import { StorageService } from '../../../storage/storage.service';
 import { ListingDraftsService } from '../../listing-drafts/listing-drafts.service';
 
@@ -59,6 +60,7 @@ export class ListingPhotosService implements OnApplicationShutdown {
     private readonly drafts: ListingDraftsService,
     private readonly storage: StorageService,
     @Inject(LISTING_PHOTOS_JOBS) private readonly jobs: Queue,
+    private readonly limits: RateLimits,
   ) {}
 
   async uploadAddress(
@@ -67,6 +69,7 @@ export class ListingPhotosService implements OnApplicationShutdown {
     file: { checksum: string; contentType: string; size: number },
   ): Promise<PhotoUploadAddressDto> {
     const draft = await this.drafts.open(id, token);
+    await this.limits.take('uploadUrl', id);
     if (filesOf(draft.data).length >= PHOTOS_MAX) throw full();
     return this.storage.createUpload(
       PURPOSE,

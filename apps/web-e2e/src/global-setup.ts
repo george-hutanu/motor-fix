@@ -7,6 +7,7 @@ import {
   CONSENT_KEYS,
   clearCounts,
   DRAFT_KEYS,
+  LIMIT_KEYS,
   SIGN_UP_KEYS,
 } from './rate-counts.js';
 
@@ -103,6 +104,7 @@ export default async function globalSetup(): Promise<void> {
   await clearRateCounts({
     consent: CONSENT_KEYS,
     draft: DRAFT_KEYS,
+    limit: LIMIT_KEYS,
     'sign-up': SIGN_UP_KEYS,
   });
   await resetAccounts();

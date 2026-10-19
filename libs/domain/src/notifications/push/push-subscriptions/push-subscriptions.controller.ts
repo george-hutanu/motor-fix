@@ -20,17 +20,22 @@ import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 
 import { PushSubscriptionsService } from './push-subscriptions.service';
 import { CurrentActor } from '../../../auth/actor.guard';
 import type { Actor } from '../../../auth/policy';
+import { RateLimits } from '../../../rate-limit/rate-limit.service';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
 @Controller('push-subscriptions')
 export class PushSubscriptionsController {
-  constructor(private readonly devices: PushSubscriptionsService) {}
+  constructor(
+    private readonly devices: PushSubscriptionsService,
+    private readonly limits: RateLimits,
+  ) {}
 
   @Get('key')
   @ApiOkResponse({ type: PushKeyDto })
@@ -51,7 +56,11 @@ export class PushSubscriptionsController {
   @Post('test')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiAcceptedResponse({ type: PushTestQueuedDto })
-  test(@CurrentActor() actor: Actor): Promise<PushTestQueuedDto> {
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many test notifications for this account',
+  })
+  async test(@CurrentActor() actor: Actor): Promise<PushTestQueuedDto> {
+    await this.limits.take('pushTest', actor.accountId);
     return this.devices.test(actor.accountId);
   }
 

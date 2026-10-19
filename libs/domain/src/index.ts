@@ -114,10 +114,14 @@ export { DeclineWindowModule } from './quotes/decline-window/decline-window.modu
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';
+export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
+export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
+export { RateLimits } from './rate-limit/rate-limit.service';
 export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
 export { StorageService } from './storage/storage.service';
+export { borrowStore, returnStore } from './store/store';
 export { supportMessagesConsumer } from './support/delivery/delivery.consumer';
 export { SupportModule } from './support/support.module';
 export { type SupportConfig, supportConfig } from './support/support-config';

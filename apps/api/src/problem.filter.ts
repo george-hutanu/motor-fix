@@ -6,7 +6,7 @@ import {
   fieldProblems,
   type Problem,
 } from '@motor-fix/contracts';
-import { systemLog } from '@motor-fix/domain';
+import { countRateLimitRefusal, systemLog } from '@motor-fix/domain';
 import {
   ArgumentsHost,
   Catch,
@@ -86,6 +86,7 @@ export class ProblemFilter implements ExceptionFilter {
       return;
     }
     const status = exception.getStatus();
+    if (status === 429) countRefusal(host);
     const body = exception.getResponse();
     const own = (typeof body === 'object' ? body : {}) as Record<
       string,
@@ -125,6 +126,13 @@ function routeOf(host: ArgumentsHost) {
     route:
       typeof path === 'string' ? `${req?.baseUrl ?? ''}${path}` : 'unknown',
   };
+}
+
+// A call refused past a limit, by its method and route template; `unknown`
+// alone when no route matched.
+function countRefusal(host: ArgumentsHost) {
+  const { method, route } = routeOf(host);
+  countRateLimitRefusal(route === 'unknown' ? route : `${method} ${route}`);
 }
 
 const tooLarge = (exception: unknown) =>

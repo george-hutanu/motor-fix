@@ -32,6 +32,7 @@
 // `<messages>.field.<code>`, then `shell.form.field.<validator or code>`.
 // `toProblem(error)` reads any failure as the API's problem shape.
 export {
+  limitText,
   type TaskSave,
   type TaskSaveOptions,
   type TaskSaveState,

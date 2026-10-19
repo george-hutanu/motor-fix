@@ -1,12 +1,15 @@
+import { createHash } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { AuditService, createPrisma } from '@motor-fix/domain';
+import { AuditService, createPrisma, ROUTE_LIMITS } from '@motor-fix/domain';
 import { databaseTurn } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { type INestApplication, Logger } from '@nestjs/common';
+import { Redis } from 'ioredis';
 
 import {
   TEST_MCP_URL,
@@ -18,6 +21,8 @@ import * as metrics from '../metrics/metrics';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
+const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
+const store = new Redis(redisUrl);
 const prisma = createPrisma(databaseUrl);
 const turn = databaseTurn(databaseUrl);
 
@@ -52,7 +57,7 @@ beforeAll(async () => {
   await turn.take();
   realm = await testIssuer();
   app = await createMcpApp(
-    { databaseUrl, issuer: realm.issuer, mcpUrl: TEST_MCP_URL },
+    { databaseUrl, issuer: realm.issuer, mcpUrl: TEST_MCP_URL, redisUrl },
     [...catalogue, touchAccount],
   );
   await app.listen(0, '127.0.0.1');
@@ -64,6 +69,7 @@ afterAll(async () => {
   await app?.close();
   await realm?.close();
   await prisma.$disconnect();
+  await store.quit();
   await turn.release();
 });
 
@@ -473,5 +479,83 @@ describe('what the MCP endpoint reports', () => {
       ['suspended'],
       ['no_account'],
     ]);
+  });
+});
+
+// @traces 1181-FR-001
+// @traces 1181-FR-003
+// @traces 1181-FR-004
+// @traces 1181-FR-008
+// @traces 1181-FR-011
+describe('the MCP endpoint past its limit', () => {
+  const { key, limit, windowSeconds } = ROUTE_LIMITS.assistant;
+  const countOf = (accountId: string) =>
+    `${key}:${createHash('sha256').update(accountId).digest('hex')}`;
+  // Brings the account to `calls` in the window without making them.
+  const used = (accountId: string, calls: number) =>
+    store.set(countOf(accountId), calls, 'EX', windowSeconds);
+  const touched = (accountId: string) =>
+    prisma.activityLog.count({ where: { actorId: accountId } });
+
+  it('counts every call, refuses the one past the limit with the wait, runs no tool, and counts the refusal', async () => {
+    const reader = countedMetrics();
+    const refusals = () =>
+      counterTotal(reader, 'motorfix_rate_limit_refusals_total', {
+        route: 'POST /mcp',
+      });
+    const { id } = await newAccount();
+    const client = await connect(await tokenFor(id));
+    await used(id, limit - 1);
+    const before = await touched(id);
+
+    const last = await client.callTool({
+      arguments: {},
+      name: 'touch_account',
+    });
+    const refused = await initialize(await tokenFor(id));
+
+    expect(last.isError).toBeFalsy();
+    expect(await touched(id)).toBe(before + 1);
+    expect(refused.status).toBe(429);
+    const wait = Number(refused.headers.get('retry-after'));
+    expect(wait).toBeGreaterThanOrEqual(1);
+    expect(wait).toBeLessThanOrEqual(windowSeconds);
+    expect(await refused.json()).toMatchObject({
+      code: 'rate_limited',
+      retryAfterSeconds: wait,
+    });
+    await expect(
+      client.callTool({ arguments: {}, name: 'touch_account' }),
+    ).rejects.toThrow();
+    expect(await touched(id)).toBe(before + 1);
+    expect(await refusals()).toBe(2);
+    await client.close().catch(() => undefined);
+  });
+
+  it('admits the account again once its window is over', async () => {
+    const { id } = await newAccount();
+    const token = await tokenFor(id);
+    await used(id, limit);
+    expect((await initialize(token)).status).toBe(429);
+
+    await store.del(countOf(id));
+
+    expect((await initialize(token)).status).toBe(200);
+  });
+
+  it('never refuses a second account for the first one’s count', async () => {
+    const first = await newAccount();
+    const second = await newAccount();
+    await used(first.id, limit);
+
+    expect((await initialize(await tokenFor(second.id))).status).toBe(200);
+  });
+
+  it('spends no count on a call without a token', async () => {
+    const before = (await store.keys(`${key}:*`)).length;
+
+    expect((await initialize()).status).toBe(401);
+
+    expect((await store.keys(`${key}:*`)).length).toBe(before);
   });
 });

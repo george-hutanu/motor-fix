@@ -25,6 +25,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
@@ -53,6 +54,9 @@ export class ListingPhotosController {
   @ApiConflictResponse({ description: 'draft_submitted' })
   @ApiUnprocessableEntityResponse({
     description: 'photos_full, file_type_not_allowed, file_too_large',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many upload addresses for this draft',
   })
   uploadAddress(
     @Param('id') id: string,

@@ -19,6 +19,7 @@ type RequestOutcome =
   | 'unauthorized'
   | 'forbidden'
   | 'method_not_allowed'
+  | 'rate_limited'
   | 'unavailable'
   | 'error';
 type ToolOutcome = 'ok' | 'refused' | 'error';
@@ -68,6 +69,7 @@ const OUTCOMES: Record<number, RequestOutcome> = {
   401: 'unauthorized',
   403: 'forbidden',
   405: 'method_not_allowed',
+  429: 'rate_limited',
   503: 'unavailable',
 };
 

@@ -12,6 +12,7 @@ import { SignJWT } from 'jose';
 
 import type { PrismaClient } from '../../generated/prisma/client';
 import { AddressThrottle } from '../../rate-limit/address-throttle';
+import { THROTTLES } from '../../rate-limit/rate-limit.config';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { PRISMA } from '../prisma';
 import { refusal } from '../sign-up.service';
@@ -55,15 +56,9 @@ export function assistantBroker(
 
 export const ASSISTANT_THROTTLE = Symbol('ASSISTANT_THROTTLE');
 
-// authorize and token per address a minute: well above what sign-ins need,
-// since every token call comes from the identity server's one address.
+// authorize and token per address a minute.
 export const assistantThrottle = (redis: Redis) =>
-  new AddressThrottle(redis, {
-    key: 'auth:assistant',
-    limit: 120,
-    name: 'AssistantSignIn',
-    windowSeconds: 60,
-  });
+  new AddressThrottle(redis, THROTTLES.assistantSignIn);
 
 const REQUEST_TTL_S = 10 * 60;
 const CODE_TTL_MS = 60_000;

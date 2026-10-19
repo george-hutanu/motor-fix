@@ -15,6 +15,7 @@ import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
+import { ROUTE_LIMITS } from '../rate-limit/rate-limit.config';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -59,7 +60,10 @@ afterAll(async () => {
 beforeEach(async () => {
   maintenance = false;
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-  const keys = await redis.keys('auth:fail:*');
+  const keys = [
+    ...(await redis.keys('auth:fail:*')),
+    ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
+  ];
   if (keys.length) await redis.del(...keys);
   jest.restoreAllMocks();
 });
@@ -537,7 +541,7 @@ describe('attempt limits at their boundaries', () => {
     await person('elena@example.test');
     const attacker = '192.0.2.90';
     await wrongInOrder('andrei@example.test', attacker, 5);
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 24; i++) {
       await signIn({ email: 'andrei@example.test', password: 'x' }, attacker);
     }
 

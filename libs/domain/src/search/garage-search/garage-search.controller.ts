@@ -6,16 +6,19 @@ import {
   parseBbox,
   parseNear,
 } from '@motor-fix/contracts';
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 
 import { GarageSearchService } from './garage-search.service';
 import { Public } from '../../auth/actor.guard';
+import { RateLimits } from '../../rate-limit/rate-limit.service';
 import { GaragePinsService } from '../garage-pins/garage-pins.service';
 
 // The query holds exactly one of the two.
@@ -31,6 +34,7 @@ export class GarageSearchController {
   constructor(
     private readonly search: GarageSearchService,
     private readonly pinned: GaragePinsService,
+    private readonly limits: RateLimits,
   ) {}
 
   @Get()
@@ -45,7 +49,14 @@ export class GarageSearchController {
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
   })
-  forBrand(@Query() query: GarageSearchQueryDto): Promise<GarageSearchPageDto> {
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many searches from this address',
+  })
+  async forBrand(
+    @Query() query: GarageSearchQueryDto,
+    @Req() req: Request,
+  ): Promise<GarageSearchPageDto> {
+    await this.limits.take('search', req.ip ?? '');
     const brand = brandIn(query);
     const near = parseNear(query.near);
     const bbox = bboxIn(query);

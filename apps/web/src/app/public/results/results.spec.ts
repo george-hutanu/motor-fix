@@ -1,5 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, type Route, Router } from '@angular/router';
@@ -68,7 +68,7 @@ const pageOf = (
 type Read = {
   params: GarageSearchControllerForBrand$Params;
   answer: (page?: GarageSearchPageDto) => Promise<void>;
-  fail: (status?: number) => Promise<void>;
+  fail: (status?: number, retryAfter?: number) => Promise<void>;
 };
 let reads: Read[];
 const searchApi = {
@@ -80,8 +80,16 @@ const searchApi = {
             resolve(page);
             await settle();
           },
-          fail: async (status = 500) => {
-            reject(new HttpErrorResponse({ status }));
+          fail: async (status = 500, retryAfter?: number) => {
+            reject(
+              new HttpErrorResponse({
+                headers:
+                  retryAfter === undefined
+                    ? undefined
+                    : new HttpHeaders({ 'Retry-After': String(retryAfter) }),
+                status,
+              }),
+            );
             await settle();
           },
           params,
@@ -442,6 +450,53 @@ describe('Results', () => {
       expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
       expect(state()).toBeNull();
     });
+
+    // @traces 1181-FR-006
+    it('says calmly how long to wait when the searches from here are past their limit, keeping "Reîncearcă"', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail(429, 120);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Prea multe încercări. Încearcă din nou peste aproximativ 2 minute.',
+      );
+      expect(actions()).toEqual(['Reîncearcă']);
+      expect(headings()).toHaveLength(1);
+    });
+
+    it('says it in English too, one minute for a wait under a minute', async () => {
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.fail(429, 45);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Too many attempts. Try again in about 1 minute.',
+      );
+    });
+
+    it('keeps a neutral line when the refused search names no wait', async () => {
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.fail(429);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Too many attempts. Try again in a little while.',
+      );
+    });
+
+    // @traces 1181-FR-006
+    it.each([
+      ['past the limit', 429],
+      ['failed', 500],
+    ])(
+      'keeps the map but leaves out its legend when the search is %s, so no loose "nu primește" sits above the message',
+      async (_, status) => {
+        await open('/ro/garages?brand=bmw');
+        await reads[0]?.fail(status);
+
+        expect(
+          page().querySelector('mf-results-map section.map'),
+        ).not.toBeNull();
+        expect(page().querySelector('mf-results-map .legend')).toBeNull();
+      },
+    );
 
     // @traces 267-FR-016
     it('offers "Căutare nouă" to Home instead of a retry when the brand is unknown', async () => {

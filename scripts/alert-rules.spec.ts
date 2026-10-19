@@ -189,6 +189,15 @@ const EXPECTED: Record<
     type: 'gt',
     value: 0.3,
   },
+  'api-rate-limit-surge': {
+    expr: [
+      'sum by (deployment_environment, route) (increase(motorfix_rate_limit_refusals_total{service_name="api"}[1m]))',
+    ],
+    for: '5m',
+    from: 120,
+    type: 'gt',
+    value: 30,
+  },
   'api-search-cache-fallback-rate': {
     expr: [
       'motorfix_search_cache_total{service_name="api", outcome="fallback"}[10m]',
@@ -626,7 +635,7 @@ describe('alert rules', () => {
   // @traces 880-FR-005
   // @traces 880-FR-007
   // @traces 880-FR-009
-  it('holds exactly the twenty-eight rules, each with its threshold, window and wait', () => {
+  it('holds exactly the twenty-nine rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
@@ -646,6 +655,43 @@ describe('alert rules', () => {
     expect(rule?.annotations['dashboard_uid']).toBe('motorfix-mcp');
     expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
   });
+
+  // @traces 1181-FR-009
+  it.each([
+    ['api', 'api.json', 'motorfix-api'],
+    ['mcp', 'mcp.json', 'motorfix-mcp'],
+  ])(
+    'tells the owner when more than 30 calls a minute on one %s route are refused for 5 minutes, naming the route',
+    (service, file, dashboard) => {
+      const rule = rulesOf(files[file] as AlertFile).find(
+        (r) => r.uid === `${service}-rate-limit-surge`,
+      );
+      expect(rule).toBeDefined();
+      expectRule(rule as Rule, {
+        expr: [
+          `sum by (deployment_environment, route) (increase(motorfix_rate_limit_refusals_total{service_name="${service}"}[1m]))`,
+        ],
+        for: '5m',
+        from: 120,
+        type: 'gt',
+        value: 30,
+      });
+      expect(rule?.noDataState).toBe('OK');
+      expect(rule?.labels['service']).toBe(service);
+      expect(rule?.annotations['dashboard_uid']).toBe(dashboard);
+      expect(rule?.annotations['summary']).toContain('{{ $labels.route }}');
+      expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
+      expect(rule?.annotations['runbook']).toContain(
+        'libs/domain/src/rate-limit/rate-limit.config.ts',
+      );
+      const panels = exprs(
+        readFileSync(join(dashboardsDir, `${dashboard}.json`), 'utf8'),
+      ).join('\n');
+      expect(panels).toContain(
+        `motorfix_rate_limit_refusals_total{service_name="${service}"`,
+      );
+    },
+  );
 
   // @traces 1178-FR-008
   // @traces 1178-FR-009
@@ -732,8 +778,9 @@ describe('alert rules', () => {
   // @traces 1178-FR-009
   // @traces 305-FR-009
   // @traces 304-FR-012
-  it('holds forty-three rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(43);
+  // @traces 1181-FR-009
+  it('holds forty-five rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(45);
   });
 
   // @traces 1345-FR-004
@@ -975,6 +1022,18 @@ describe('the inventory lists the rules', () => {
       ]);
   });
 
+  // @traces 1181-FR-009
+  it('lists the refusal count and its two surge rules under the api and the MCP', () => {
+    const surges = ['api-rate-limit-surge', 'mcp-rate-limit-surge'];
+    expect(
+      entry('product-counter', 'motorfix_rate_limit_refusals_total')?.alerts,
+    ).toEqual(surges);
+    expect(entry('app', 'api')?.alerts).toContain(surges[0]);
+    expect(entry('railway-service', 'api')?.alerts).toContain(surges[0]);
+    expect(entry('app', 'mcp')?.alerts).toContain(surges[1]);
+    expect(entry('railway-service', 'mcp')?.alerts).toContain(surges[1]);
+  });
+
   // @traces 1024-FR-008
   // @traces 880-FR-015
   it('every rule of the five files is listed, and no reason still waits for a later story', () => {
@@ -986,6 +1045,7 @@ describe('the inventory lists the rules', () => {
     for (const uid of [
       ...Object.keys(EXPECTED),
       'mcp-memory',
+      'mcp-rate-limit-surge',
       'keycloak-memory',
     ])
       expect([uid, listed.has(uid)]).toEqual([uid, true]);

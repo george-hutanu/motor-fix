@@ -35,6 +35,7 @@ import { AuditHistoryController } from '../audit/audit-history/audit-history.con
 import { AuditHistoryService } from '../audit/audit-history/audit-history.service';
 import { EVENT_PORT, outbox } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
+import { RateLimits } from '../rate-limit/rate-limit.service';
 import { borrowStore, returnStore } from '../store/store';
 
 @Module({})
@@ -64,6 +65,7 @@ export class AuthModule implements OnApplicationShutdown {
         MAINTENANCE,
         WhoAmI,
         PRISMA,
+        RateLimits,
         SESSION_EVENTS,
         SignInService,
       ],
@@ -96,6 +98,11 @@ export class AuthModule implements OnApplicationShutdown {
           inject: [AUTH_REDIS],
           provide: Attempts,
           useFactory: (redis: Redis) => new Attempts(redis),
+        },
+        {
+          inject: [AUTH_REDIS],
+          provide: RateLimits,
+          useFactory: (redis: Redis) => new RateLimits(redis),
         },
         {
           inject: [AUTH_REDIS],

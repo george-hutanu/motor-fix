@@ -21,6 +21,7 @@ import {
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
@@ -29,6 +30,8 @@ import { CurrentActor } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 import { refusal } from '../../auth/sign-up.service';
+import { RateLimits } from '../../rate-limit/rate-limit.service';
+import { ANSWERING } from '../answers';
 
 const KEY = 'Idempotency-Key';
 
@@ -36,7 +39,10 @@ const KEY = 'Idempotency-Key';
 @ApiBearerAuth()
 @Controller('quotes')
 export class QuotesController {
-  constructor(private readonly quotes: QuotesService) {}
+  constructor(
+    private readonly quotes: QuotesService,
+    private readonly limits: RateLimits,
+  ) {}
 
   @Post()
   @UseGuards(JsonOnly)
@@ -63,7 +69,10 @@ export class QuotesController {
     description:
       'already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed',
   })
-  send(
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many quotes sent from this account',
+  })
+  async send(
     @CurrentActor() actor: Actor,
     @Headers(KEY) key: string | undefined,
     @Body() body: SendQuoteDto,
@@ -76,6 +85,10 @@ export class QuotesController {
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }
+    // Only an account that can answer spends a share; any other is refused
+    // by the service as not found.
+    if (ANSWERING.has(actor.role))
+      await this.limits.take('quoteSend', actor.accountId);
     return this.quotes.send(actor, key, body);
   }
 }

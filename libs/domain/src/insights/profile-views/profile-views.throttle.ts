@@ -1,16 +1,11 @@
 import type { Redis } from 'ioredis';
 
 import { AddressThrottle } from '../../rate-limit/address-throttle';
+import { THROTTLES } from '../../rate-limit/rate-limit.config';
 
-// Beacons per address a minute: far above a person opening profiles, low
-// enough that one source cannot flood the counters.
+// Beacons per address a minute.
 export class ProfileViewsThrottle extends AddressThrottle {
   constructor(redis: Redis) {
-    super(redis, {
-      key: 'insights:pv:address',
-      limit: 60,
-      name: 'ProfileViews',
-      windowSeconds: 60,
-    });
+    super(redis, THROTTLES.profileViews);
   }
 }
