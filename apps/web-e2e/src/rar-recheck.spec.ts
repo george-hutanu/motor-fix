@@ -6,8 +6,8 @@ import { ACCOUNTS, ready, signIn, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
 
 // Garages of this file's own, written due straight to PostgreSQL: recording
-// a seeded garage would move it for every spec running beside this one. A
-// deployed address, whose run has no DATABASE_URL, skips the file.
+// a seeded garage would move it for every spec running beside this one. The
+// @database tag keeps the file out of a deployed run, which has no database.
 // @traces 1351-FR-007 1351-FR-010 1351-FR-011 1351-FR-015
 
 const sideways = (page: Page) =>
@@ -71,12 +71,7 @@ const bucharestToday = () =>
     new Date(),
   );
 
-test.describe('the monthly RAR re-check @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its garages straight to PostgreSQL, which needs DATABASE_URL',
-  );
-
+test.describe('the monthly RAR re-check @seeded @database', () => {
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const brand = { name: `Marca Rev ${stamp}`, slug: `marca-rev-${stamp}` };
   const owner = {

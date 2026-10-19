@@ -21,7 +21,7 @@ export const RECHECK_MAX_AGE_DAYS = 31;
 
 export const RECHECK_RESULTS = ['ok', 'failed'] as const;
 export type RecheckResult = (typeof RECHECK_RESULTS)[number];
-export const RECHECK_FAILURES = ['expired', 'suspended', 'withdrawn'] as const;
+const RECHECK_FAILURES = ['expired', 'suspended', 'withdrawn'] as const;
 export type RecheckFailure = (typeof RECHECK_FAILURES)[number];
 
 const NO_CONTROL = /^\P{Cc}*$/u;

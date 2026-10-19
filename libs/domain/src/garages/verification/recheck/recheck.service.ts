@@ -6,6 +6,7 @@ import {
   type RecheckDueListDto,
   type RecheckRecordedDto,
   type RecordRecheckDto,
+  SUSPENSION_REASON_MAX,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -438,7 +439,7 @@ export class RecheckService {
       },
     });
     const reason = [...`Autorizație RAR ${FAILURE_WORD[failure]} · ${detail}`]
-      .slice(0, RECHECK_DETAIL_MAX)
+      .slice(0, SUSPENSION_REASON_MAX)
       .join('');
     await this.suspensions.suspendIn(
       tx,

@@ -10,7 +10,7 @@ export const SUSPENSION_CAUSES = [
 ] as const;
 export type SuspensionCause = (typeof SUSPENSION_CAUSES)[number];
 
-const SUSPENSION_REASON_MAX = 200;
+export const SUSPENSION_REASON_MAX = 200;
 
 const NO_CONTROL = /^\P{Cc}*$/u;
 
