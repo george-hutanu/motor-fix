@@ -87,6 +87,8 @@
         "other": "and {n} more changes"
       },
       "no": "No",
+      "ofJob": "{label}, {job}",
+      "ofJobBrand": "{label}, {job}, {brand}",
       "range": "{from} – {to}",
       "rangeFrom": "from {from}",
       "retry": "Retry",

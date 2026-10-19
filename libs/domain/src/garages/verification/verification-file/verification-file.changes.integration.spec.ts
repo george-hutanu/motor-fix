@@ -235,6 +235,73 @@ describe("a returned file's changes", () => {
     });
   });
 
+  // @traces 176-FR-005
+  it("names a price entry's job, and its brand for a brand range, even once the row is gone", async () => {
+    const file = await returned();
+    const key = randomUUID();
+    const job = await prisma.jobType.create({
+      data: {
+        key,
+        nameEn: 'Front brake pads and discs',
+        nameRo: 'Plăcuțe și discuri de frână față',
+        status: 'approved',
+      },
+    });
+    const brand = await prisma.brand.create({
+      data: { key, name: `BMW ${key}`, slug: key },
+    });
+    const row = await prisma.garagePrice.create({
+      data: {
+        fromBani: 89_000,
+        garageId,
+        jobTypeId: job.id,
+        position: 0,
+        updatedBy: mihai,
+      },
+    });
+    const range = (from: number) => ({
+      brandId: brand.id,
+      from,
+      jobTypeId: job.id,
+      to: null,
+    });
+    await entry(
+      {
+        field: 'range',
+        newValue: { from: 95_000, to: null },
+        oldValue: { from: 89_000, to: null },
+        subjectId: row.id,
+        subjectType: 'garage_price',
+      },
+      1,
+    );
+    await entry(
+      {
+        action: 'delete',
+        field: 'brand_range',
+        oldValue: range(110_000),
+        subjectId: randomUUID(),
+        subjectType: 'garage_price',
+      },
+      2,
+    );
+    await entry(
+      { field: 'range', subjectId: randomUUID(), subjectType: 'garage_price' },
+      3,
+    );
+    await entry({ field: 'phone', subjectType: 'garage' }, 4);
+
+    const read = await service().changes(file.id);
+
+    const named = { nameEn: job.nameEn, nameRo: job.nameRo };
+    expect(read.changes.map((c) => c.job)).toEqual([
+      undefined,
+      undefined,
+      { ...named, brand: brand.name },
+      named,
+    ]);
+  });
+
   // @traces 304-FR-008
   it('keeps the newest 200 and counts them all', async () => {
     const file = await returned();

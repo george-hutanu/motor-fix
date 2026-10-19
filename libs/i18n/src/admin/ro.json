@@ -88,6 +88,8 @@
         "other": "și încă {n} de modificări"
       },
       "no": "Nu",
+      "ofJob": "{label}, {job}",
+      "ofJobBrand": "{label}, {job}, {brand}",
       "range": "{from} – {to}",
       "rangeFrom": "de la {from}",
       "retry": "Reîncearcă",

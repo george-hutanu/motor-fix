@@ -14,6 +14,7 @@ import {
 import {
   AdminService,
   type VerificationChangeDto,
+  type VerificationChangeJobDto,
   type VerificationFileChangesDto,
 } from '@motor-fix/data-access';
 import {
@@ -131,7 +132,12 @@ export class VerificationChanges implements OnInit {
         latest.set(key, newest);
         lines.set(
           key,
-          this.fieldLine(change.field, change.oldValue, newest.newValue),
+          this.fieldLine(
+            change.field,
+            change.oldValue,
+            newest.newValue,
+            change.job,
+          ),
         );
         return;
       }
@@ -146,8 +152,13 @@ export class VerificationChanges implements OnInit {
     return [...lines.values()];
   }
 
-  private fieldLine(field: string, before: unknown, after: unknown) {
-    const label = this.label(field);
+  private fieldLine(
+    field: string,
+    before: unknown,
+    after: unknown,
+    job?: VerificationChangeJobDto,
+  ) {
+    const label = this.ofJob(this.label(field), job);
     const old = this.value(field, before);
     const now = this.value(field, after);
     return old === undefined || now === undefined
@@ -225,6 +236,15 @@ export class VerificationChanges implements OnInit {
     if (field === 'duration_minutes') return formatDuration(value, language);
     if (field === 'serviceRadiusKm') return formatKm(value, language);
     return formatNum(value, language);
+  }
+
+  // A price field's label names its job, and a brand range's brand.
+  private ofJob(label: string, job?: VerificationChangeJobDto) {
+    if (!job) return label;
+    const name = this.i18n.language() === 'en' ? job.nameEn : job.nameRo;
+    return job.brand
+      ? this.t('ofJobBrand', { brand: job.brand, job: name, label })
+      : this.t('ofJob', { job: name, label });
   }
 
   // A field's label, or its stored name when it has none.

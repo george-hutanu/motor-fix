@@ -255,6 +255,49 @@ describe('the "Ce s-a schimbat" panel', () => {
     ]);
   });
 
+  // @traces 176-FR-005
+  it("names a price line's job, and its brand for a brand range", async () => {
+    const job = {
+      nameEn: 'Front brake pads and discs',
+      nameRo: 'Plăcuțe și discuri de frână față',
+    };
+    const host = await open(async () =>
+      answerOf([
+        change({
+          area: 'prices',
+          field: 'brand_range',
+          job: { ...job, brand: 'BMW' },
+          newValue: {
+            brandId: 'b',
+            from: 120_000,
+            jobTypeId: 'j',
+            to: 170_000,
+          },
+          oldValue: {
+            brandId: 'b',
+            from: 110_000,
+            jobTypeId: 'j',
+            to: 160_000,
+          },
+          subjectType: 'garage_price',
+        }),
+        change({
+          area: 'prices',
+          field: 'duration_minutes',
+          job,
+          newValue: 150,
+          oldValue: 120,
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    expect(lines(host, 'prices')).toEqual([
+      `Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW: ${formatLei(110_000, 'ro')} – ${formatLei(160_000, 'ro')} → ${formatLei(120_000, 'ro')} – ${formatLei(170_000, 'ro')}`,
+      expect.stringMatching(/^Durata, Plăcuțe și discuri de frână față: /),
+    ]);
+  });
+
   it('says "modificat" for a value it cannot write, and names a field with no label by its stored name', async () => {
     const host = await open(async () =>
       answerOf([
