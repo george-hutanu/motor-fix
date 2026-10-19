@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 194-email-sending
   - 195-message-templates
@@ -35,6 +35,7 @@ features:
   - 049-garage-suspension
   - 279-email-inbox
   - 069-report-decision
+  - 1351-rar-monthly-recheck
 ---
 
 # Capability: Notifications
@@ -43,9 +44,9 @@ The one way MotorFix tells a person something: the type catalogue, the NOTIFICAT
 
 ## Requirements
 
-### 194-FR-001 — The catalogue MUST list, in code, every type of the feature's notification catalogue plus TEST_MESSAGE, each with its trigger kind (`event`, `timer` or `direct`), its allowed outside channels (a subset of `email`, `push`, `sms`, `whatsapp`; empty for a bell-only type), whether it is always sent, transactional, groupable and urgent, its driver group (`offers`, `bookings`, `due_dates`, `news`, `reviews_history`, or none), and its template key. Always-sent and transactional types MUST NOT be groupable; the types the feature lists as not urgent (DUE_ITP, DUE_RCA, DUE_ROVINIETA, TYRES_SEASON, SERVICE_DUE, BOOKING_REMINDER, REQUEST_REMINDER, DOCUMENT_DUE, LISTING_REMINDER, NEWS, REVIEW_INVITE) MUST be not urgent and every other type urgent.
+### 1351-FR-008 — The worker MUST, every day at 09:00 Europe/Bucharest through the existing daily mechanism (bucharestDaily), count the due garages and, when the count is above zero, queue one ADMIN_RECHECK_DUE per admin with the count; once per day whatever restarts happen. With a count of zero it MUST send nothing. The type's catalogue entry is timer, e-mail and push (narrowed from the proposed e-mail, push and WhatsApp), mutable.
 
-_From 194-email-sending._
+_From 1351-rar-monthly-recheck._
 
 ### 194-FR-002 — The notifications service MUST offer one entry point that takes a type, the recipient account ids, the subject id, an event id and the message's parameters; it MUST write the rows of FR-003 in PostgreSQL before putting the send jobs on the worker's `notifications` queue, so a job lost from Redis leaves a `queued` row behind rather than nothing; an unknown type MUST be refused before anything is written.
 
@@ -751,6 +752,14 @@ _From 279-email-inbox._
 
 _From 069-report-decision._
 
+### 1351-FR-008 — The worker MUST, every day at 09:00 Europe/Bucharest through the existing daily mechanism (bucharestDaily), count the due garages and, when the count is above zero, queue one ADMIN_RECHECK_DUE per admin with the count; once per day whatever restarts happen. With a count of zero it MUST send nothing. The type's catalogue entry is timer, e-mail and push (narrowed from the proposed e-mail, push and WhatsApp), mutable.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-009 — The system MUST carry a Romanian and an English ADMIN_RECHECK_DUE template for e-mail and push reading "{n} service-uri de reverificat în registrul RAR" / "{n} garages to re-check in the RAR register" ("1 service" / "1 garage" for one), linking to the admin list, holding no other data, and passing the existing template checks (195-FR-009).
+
+_From 1351-rar-monthly-recheck._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -764,3 +773,5 @@ _From 069-report-decision._
 
 - `199-FR-009` — superseded by `032-FR-001` (2026-10-10)
 - `279-FR-013` — the sending-domain how-to page lives in the specs repo, which CI cannot read; docs-lint checks it, no test can trace it (2026-10-18)
+
+- `194-FR-001` — superseded by `1351-FR-008` (2026-10-19)
