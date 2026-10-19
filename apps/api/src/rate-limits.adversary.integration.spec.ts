@@ -16,14 +16,15 @@ const api = apiBoot();
 const store = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
 let app: INestApplication;
 
+// Booting the API on a busy CI runner takes longer than Jest's five seconds.
 beforeAll(async () => {
   app = await api.start();
-});
+}, 120_000);
 
 afterAll(async () => {
   await store.quit();
   await api.stop();
-});
+}, 120_000);
 
 beforeEach(async () => {
   const keys = [

@@ -1,7 +1,13 @@
-import type { APIRequestContext, BrowserContext } from '@playwright/test';
+import type {
+  APIRequestContext,
+  Browser,
+  BrowserContext,
+} from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import {
+  addressed,
+  addressingBrowser,
   analyticsSkipReason,
   needsAnalytics,
   routedContext,
@@ -28,21 +34,23 @@ test('the context fixture removes every route handler once the test ends', async
   expect(calls.slice(-2)).toEqual(['use', 'unrouteAll:ignoreErrors']);
 });
 
-// @traces 115-FR-010
-test("the context fixture sends each test's new drafts from an address of its own", async () => {
-  type Handler = (route: unknown) => Promise<void>;
+type Handler = (route: unknown) => Promise<void>;
+
+// A context that records the routes it is given, by their URL pattern.
+function recordingContext() {
   const handlers = new Map<string, Handler>();
   const context = {
     route: async (url: unknown, handler: Handler) => {
-      if (typeof url === 'string') handlers.set(url, handler);
+      handlers.set(String(url), handler);
     },
     unrouteAll: async () => undefined,
   } as unknown as BrowserContext;
-  await routedContext({ context }, async () => undefined);
-  const drafts = handlers.get('**/api/v1/listing-drafts');
+  return { context, handlers };
+}
 
-  const sent: Record<string, unknown>[] = [];
-  const route = (method: string) => ({
+// A route that records what it was continued or fell back with.
+function recordingRoute(sent: Record<string, unknown>[], method: string) {
+  return {
     continue: async (options: Record<string, unknown>) => {
       sent.push(options);
     },
@@ -53,17 +61,60 @@ test("the context fixture sends each test's new drafts from an address of its ow
       headers: () => ({ accept: 'json' }),
       method: () => method,
     }),
-  });
-  await drafts?.(route('POST'));
-  await drafts?.(route('GET'));
+  };
+}
 
-  expect(sent[0]).toEqual({
-    headers: {
-      accept: 'json',
-      'x-forwarded-for': expect.stringMatching(/^192\.0\.2\.\d{1,3}$/),
-    },
-  });
+const ADDRESSED = {
+  headers: {
+    accept: 'json',
+    'x-forwarded-for': expect.stringMatching(/^192\.0\.2\.\d{1,3}$/),
+  },
+};
+
+// @traces 115-FR-010
+test('each context sends its new drafts from an address of its own', async () => {
+  const { context, handlers } = recordingContext();
+  await addressed(context);
+  const drafts = handlers.get('**/api/v1/listing-drafts');
+
+  const sent: Record<string, unknown>[] = [];
+  await drafts?.(recordingRoute(sent, 'POST'));
+  await drafts?.(recordingRoute(sent, 'GET'));
+
+  expect(sent[0]).toEqual(ADDRESSED);
   expect(sent[1]).toEqual({ fallback: 'GET' });
+});
+
+// ST-1181: sign-ins and searches are limited per address, and every test
+// runs on this one machine.
+test('each context signs in and searches from an address of its own', async () => {
+  const { context, handlers } = recordingContext();
+  await addressed(context);
+  const signIn = handlers.get('**/api/v1/auth/sign-in');
+  const search = [...handlers].find(([url]) => url.includes('search'))?.[1];
+
+  const sent: Record<string, unknown>[] = [];
+  await signIn?.(recordingRoute(sent, 'POST'));
+  await signIn?.(recordingRoute(sent, 'GET'));
+  await search?.(recordingRoute(sent, 'GET'));
+
+  expect(sent).toEqual([ADDRESSED, { fallback: 'GET' }, ADDRESSED]);
+});
+
+// ST-1181: a context a test opens itself, with browser.newContext(), gets
+// the same routes as the test's own.
+test('the browser fixture addresses every context it opens, and is restored', async () => {
+  const opened = recordingContext();
+  const original = async () => opened.context;
+  const browser = { newContext: original } as unknown as Browser;
+
+  await addressingBrowser({ browser }, async (b) => {
+    expect(await b.newContext()).toBe(opened.context);
+  });
+
+  expect(opened.handlers.has('**/api/v1/auth/sign-in')).toBe(true);
+  expect(opened.handlers.has('**/api/v1/listing-drafts')).toBe(true);
+  expect(browser.newContext).toBe(original);
 });
 
 // FR-001..FR-002 (ST-1161): the flows that need analytics to load skip only

@@ -1,5 +1,6 @@
 import type {
   APIRequestContext,
+  Browser,
   BrowserContext,
   PlaywrightTestArgs,
   PlaywrightTestOptions,
@@ -59,6 +60,45 @@ const nextAddress = () => `192.0.2.${(Date.now() + ++addresses) % 250}`;
 // The garage search itself, not its pins.
 const SEARCH = /\/api\/v1\/search\/garages(\?|$)/;
 
+/**
+ * Drafts created, sign-ins and searches are limited per address
+ * (rate-counts.ts), and every spec makes them from this one machine: each
+ * context makes them from an address of its own, on TEST-NET-1. Routes, not
+ * extraHTTPHeaders, which would send the header on every request and turn a
+ * cross-origin call into a CORS preflight. A deployed target trusts no such
+ * header, so this only matters to a run that starts its servers.
+ */
+export async function addressed(context: BrowserContext): Promise<void> {
+  const address = nextAddress();
+  const continued = (route: Route) =>
+    route.continue({
+      headers: { ...route.request().headers(), 'x-forwarded-for': address },
+    });
+  const posted = (route: Route) =>
+    route.request().method() === 'POST' ? continued(route) : route.fallback();
+  await context.route('**/api/v1/listing-drafts', posted);
+  await context.route('**/api/v1/auth/sign-in', posted);
+  await context.route(SEARCH, continued);
+}
+
+/**
+ * The `browser` fixture: every context a test opens, the `context` fixture's
+ * and its own from browser.newContext(), is addressed.
+ */
+export async function addressingBrowser(
+  { browser }: { browser: Browser },
+  use: (browser: Browser) => Promise<void>,
+) {
+  const newContext = browser.newContext;
+  browser.newContext = async (options) => {
+    const context = await newContext.call(browser, options);
+    await addressed(context);
+    return context;
+  };
+  await use(browser);
+  browser.newContext = newContext;
+}
+
 /** The `context` fixture: the routes every test shares, removed when it ends. */
 export async function routedContext(
   { context }: { context: BrowserContext },
@@ -71,23 +111,6 @@ export async function routedContext(
   await context.route('https://plausible.io/**', (route) =>
     route.fulfill({ status: 204 }),
   );
-  // Drafts created, sign-ins and searches are limited per address
-  // (rate-counts.ts), and every spec makes them from this one machine: each
-  // test makes them from an address of its own, on TEST-NET-1. A deployed
-  // target trusts no such header, so this only matters to a run that starts
-  // its servers.
-  const address = nextAddress();
-  const addressed = (route: Route) =>
-    route.continue({
-      headers: { ...route.request().headers(), 'x-forwarded-for': address },
-    });
-  await context.route('**/api/v1/listing-drafts', (route) =>
-    route.request().method() === 'POST' ? addressed(route) : route.fallback(),
-  );
-  await context.route('**/api/v1/auth/sign-in', (route) =>
-    route.request().method() === 'POST' ? addressed(route) : route.fallback(),
-  );
-  await context.route(SEARCH, addressed);
   await use(context);
   // Handlers still answering when the test ends must not outlive it.
   await context.unrouteAll({ behavior: 'ignoreErrors' });
@@ -115,7 +138,8 @@ async function addressedRequest(
   await request.dispose();
 }
 
-export const test = base.extend({
+export const test = base.extend<Record<never, never>, { browser: Browser }>({
+  browser: [addressingBrowser, { scope: 'worker' }],
   context: routedContext,
   request: addressedRequest,
 });

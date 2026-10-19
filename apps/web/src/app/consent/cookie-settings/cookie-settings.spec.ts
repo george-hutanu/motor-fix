@@ -12,6 +12,11 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
+// The first dialog loads its component and the consent texts lazily, which on
+// a loaded machine (the pre-commit hook beside other suites) takes longer than
+// Jest's five seconds.
+jest.setTimeout(20_000);
+
 let consent: { granted: ReturnType<typeof signal<boolean>>; save: jest.Mock };
 
 async function settle() {
