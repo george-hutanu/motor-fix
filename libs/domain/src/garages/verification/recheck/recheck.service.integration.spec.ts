@@ -517,7 +517,11 @@ describe('recording a valid re-check', () => {
       actorName: 'Ana',
       actorRole: 'admin',
       field: 'last_checked_on',
-      newValue: { activities: ['mechanics', 'brakes'], checkedOn: today() },
+      newValue: {
+        activities: ['mechanics', 'brakes'],
+        checkedOn: today(),
+        result: 'ok',
+      },
       oldValue: {
         activities: ['mechanics', 'brakes', 'air_con'],
         checkedOn: ago(29),
@@ -853,6 +857,7 @@ describe('recording a failed re-check', () => {
     expect(own[0]).toMatchObject({
       actorId: ana,
       field: 'status',
+      newValue: { checkedOn: today(), failure: 'expired', result: 'failed' },
       text: DETAIL,
     });
     expect(await entries(g.id, 'garage_suspended')).toHaveLength(1);

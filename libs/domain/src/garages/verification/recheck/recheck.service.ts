@@ -377,7 +377,11 @@ export class RecheckService {
       field: 'last_checked_on',
       garageId,
       kind: 'recheck_recorded',
-      newValue: { activities: after, checkedOn: body.checkedOn },
+      newValue: {
+        activities: after,
+        checkedOn: body.checkedOn,
+        result: 'ok',
+      },
       oldValue: {
         activities: garage.activities,
         checkedOn: garage.lastCheckedOn,
@@ -450,7 +454,7 @@ export class RecheckService {
       field: 'status',
       garageId,
       kind: 'recheck_recorded',
-      newValue: { checkedOn: body.checkedOn, failure },
+      newValue: { checkedOn: body.checkedOn, failure, result: 'failed' },
       oldValue: { checkedOn: garage.lastCheckedOn },
       subjectId: garageId,
       subjectType: 'garage',
