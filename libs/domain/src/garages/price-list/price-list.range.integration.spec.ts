@@ -664,6 +664,27 @@ describe('the price list entry format', () => {
     expect(await entries(w)).toEqual([]);
   });
 
+  it('writes nothing when a save leaves out a top that is already empty', async () => {
+    const w = await world();
+    const cleared = await setRange(w, {
+      durationMinutes: 120,
+      fromBani: 89_000,
+      toBani: null,
+    });
+
+    await patch(
+      rangePath(w),
+      {
+        durationMinutes: 120,
+        expectedUpdatedAt: cleared.body.updatedAt,
+        fromBani: 89_000,
+      },
+      w.owner,
+    );
+
+    expect(await entries(w)).toHaveLength(1);
+  });
+
   it('keeps neither the change nor an entry when the entry cannot be written', async () => {
     const w = await world();
     const audit = app.get<AuditPort>(AUDIT_PORT);
@@ -760,6 +781,24 @@ describe('who reads a price entry', () => {
         }),
       ]);
     }
+  });
+
+  it('shows it to an admin reading every garage, in the prices area', async () => {
+    const w = await world();
+    const admin = bearer(await account('ana', ['admin']), 'admin');
+    const from = new Date().toISOString();
+    await setRange(w, NEW_RANGE);
+
+    const res = await read(admin, { area: 'prices', from });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toContainEqual(
+      expect.objectContaining({
+        field: 'range',
+        newValue: { from: 95_000, to: 145_000 },
+        subjectId: w.row.id,
+      }),
+    );
   });
 
   it("answers 404 to another garage's owner and to a driver", async () => {
