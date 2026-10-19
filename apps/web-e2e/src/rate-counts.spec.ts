@@ -6,6 +6,7 @@ import {
   CONSENT_KEYS,
   clearCounts,
   DRAFT_KEYS,
+  LIMIT_KEYS,
   SIGN_UP_KEYS,
 } from './rate-counts.js';
 
@@ -72,6 +73,19 @@ test.describe('the per-address counts a local run clears', () => {
     expect(await clearCounts(redis, CONSENT_KEYS)).toBe(2);
 
     expect([...store]).toEqual(['listing-drafts:create:bbb']);
+  });
+
+  test('deletes every route limit count and nothing else', async () => {
+    const { redis, store } = keyStore([
+      'limit:sign-in:aaa',
+      'auth:fail:address:bbb',
+      'limit:search:ccc',
+      'limit:quote-send:ddd',
+    ]);
+
+    expect(await clearCounts(redis, LIMIT_KEYS)).toBe(3);
+
+    expect([...store]).toEqual(['auth:fail:address:bbb']);
   });
 
   test('stops scanning after its page cap when the cursor never ends', async () => {

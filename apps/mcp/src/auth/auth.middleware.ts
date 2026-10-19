@@ -20,6 +20,7 @@ import { recordAuthFailure } from '../metrics/metrics';
 export interface Refusal {
   code: string;
   message: string;
+  retryAfterSeconds?: number;
 }
 
 export type AuthedRequest = Request & { auth?: AuthInfo };

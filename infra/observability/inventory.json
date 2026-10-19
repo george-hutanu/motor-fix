@@ -19,7 +19,8 @@
         "api-prefetch-hit-rate",
         "api-search-latency",
         "api-profile-latency",
-        "api-memory"
+        "api-memory",
+        "api-rate-limit-surge"
       ],
       "story": "ST-881"
     },
@@ -31,9 +32,10 @@
       "alerts": [
         "mcp-auth-failures",
         "mcp-tool-errors",
-        "mcp-memory"
+        "mcp-memory",
+        "mcp-rate-limit-surge"
       ],
-      "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool}, mcp_key_fetches_total{outcome} and mcp_issuer_up (the IssuerProbe, once a minute), one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
+      "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool}, mcp_key_fetches_total{outcome}, mcp_issuer_up (the IssuerProbe, once a minute) and, for a call past the endpoint's limit per account, motorfix_rate_limit_refusals_total{route=\"POST /mcp\"}, one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
       "story": "ST-365"
     },
     {
@@ -89,7 +91,8 @@
         "api-prefetch-hit-rate",
         "api-search-latency",
         "api-profile-latency",
-        "api-memory"
+        "api-memory",
+        "api-rate-limit-surge"
       ],
       "story": "ST-881"
     },
@@ -142,7 +145,8 @@
       "alerts": [
         "mcp-down",
         "mcp-issuer-unreachable",
-        "mcp-memory"
+        "mcp-memory",
+        "mcp-rate-limit-surge"
       ],
       "reason": "staging only; health at /health/live; mcp_issuer_up is its liveness series",
       "story": "ST-1016"
@@ -186,6 +190,18 @@
       ],
       "reason": "the system_log_entry table's purge: one scheduler, system-log-purge, at 03:30 Europe/Bucharest deletes system log entries older than 90 days, counted by motorfix_jobs_total{job_name,outcome}, logging the rows deleted and once on its final failure, which worker-jobs-failed alerts; each new entry also publishes system_log.added to the admin live channel straight to Redis, a failed publish logging one SystemLog warning",
       "story": "ST-297"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_rate_limit_refusals_total",
+      "source": "libs/domain/src/rate-limit/rate-limit.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-rate-limit-surge",
+        "mcp-rate-limit-surge"
+      ],
+      "reason": "counts every call refused past a rate limit (the route limits of rate-limit.config.ts and the existing ones alike) by method and route template only, 'unknown' when no route matched, never an address, account or e-mail; the api counts its 429s in ProblemFilter, the MCP its own as 'POST /mcp' (panel on motorfix-mcp too); a refusal logs nothing, and Redis down logs one warning per limit and admits the call",
+      "story": "ST-1181"
     },
     {
       "kind": "product-counter",

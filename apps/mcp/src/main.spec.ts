@@ -9,7 +9,7 @@ jest.mock('@motor-fix/contracts', () => ({
 jest.mock('./telemetry', () => ({}));
 jest.mock('./mcp.module', () => ({
   createMcpApp: (...args: unknown[]) => mockCreateMcpApp(...args),
-  MCP_ENV: ['DATABASE_URL', 'MCP_URL', 'ASSISTANT_ISSUER'],
+  MCP_ENV: ['DATABASE_URL', 'MCP_URL', 'ASSISTANT_ISSUER', 'REDIS_URL'],
 }));
 
 async function start(port: string | undefined) {
@@ -36,6 +36,7 @@ describe('mcp entry point', () => {
         'https://id.motorfix.example/realms/motorfix-assistants',
       DATABASE_URL: 'postgresql://localhost/db',
       MCP_URL: 'https://mcp.motorfix.example/mcp',
+      REDIS_URL: 'redis://localhost:6379',
     });
     mockCreateMcpApp.mockResolvedValue({
       enableShutdownHooks: mockEnableShutdownHooks,
@@ -43,18 +44,20 @@ describe('mcp entry point', () => {
     });
   });
 
-  it('checks the database, the MCP address and the identity server are set', async () => {
+  it('checks the database, the MCP address, the identity server and the store are set', async () => {
     await start(undefined);
 
     expect(mockReadEnv).toHaveBeenCalledWith([
       'DATABASE_URL',
       'MCP_URL',
       'ASSISTANT_ISSUER',
+      'REDIS_URL',
     ]);
     expect(mockCreateMcpApp).toHaveBeenCalledWith({
       databaseUrl: 'postgresql://localhost/db',
       issuer: 'https://id.motorfix.example/realms/motorfix-assistants',
       mcpUrl: 'https://mcp.motorfix.example/mcp',
+      redisUrl: 'redis://localhost:6379',
     });
     expect(mockEnableShutdownHooks).toHaveBeenCalled();
   });

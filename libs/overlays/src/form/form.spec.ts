@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -530,6 +530,91 @@ describe('failures', () => {
     await press();
 
     expect(text('mf-task-error')).toBe('Ceva nu a mers. Încearcă din nou.');
+  });
+
+  // @traces 1181-FR-006
+  // @traces 1181-FR-007
+  it.each(['rate_limited', 'too_many_requests', 'brand_new_limit'])(
+    'shows the calm message with the real wait for a 429 with %s, keeps the text and sends nothing again',
+    async (code) => {
+      answer = () =>
+        Promise.reject(problem(429, { code, retryAfterSeconds: 60 }));
+      await openTask();
+      await type('name', 'Ana Pop');
+      await press();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await settle();
+
+      expect(text('mf-task-error')).toBe(
+        'Prea multe încercări. Încearcă din nou peste aproximativ un minut.',
+      );
+      expect($<HTMLInputElement>('#name')?.value).toBe('Ana Pop');
+      expect(current.sent).toHaveLength(1);
+    },
+  );
+
+  // ST-1181 (owner, 2026-10-19): the wait from Retry-After, rounded up to
+  // whole minutes, in each plural form.
+  it.each([
+    [61, 'Prea multe încercări. Încearcă din nou peste aproximativ 2 minute.'],
+    [
+      900,
+      'Prea multe încercări. Încearcă din nou peste aproximativ 15 minute.',
+    ],
+    [
+      3600,
+      'Prea multe încercări. Încearcă din nou peste aproximativ 60 de minute.',
+    ],
+  ])('names a %i-second wait in whole minutes', async (seconds, said) => {
+    answer = () =>
+      Promise.reject(
+        problem(429, { code: 'rate_limited', retryAfterSeconds: seconds }),
+      );
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+
+    expect(text('mf-task-error')).toBe(said);
+  });
+
+  it('reads the wait from the Retry-After header when the body has none', async () => {
+    answer = () =>
+      Promise.reject(
+        new HttpErrorResponse({
+          error: { code: 'rate_limited' },
+          headers: new HttpHeaders({ 'Retry-After': '300' }),
+          status: 429,
+          url: '/api/sample',
+        }),
+      );
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+
+    expect(text('mf-task-error')).toBe(
+      'Prea multe încercări. Încearcă din nou peste aproximativ 5 minute.',
+    );
+  });
+
+  it('keeps a neutral line when the refusal names no wait', async () => {
+    answer = () => Promise.reject(problem(429, { code: 'rate_limited' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+
+    expect(text('mf-task-error')).toBe(
+      'Prea multe încercări. Încearcă din nou puțin mai târziu.',
+    );
+  });
+
+  // @traces 1181-FR-006
+  it('keeps a 429 code’s own message over the calm one', async () => {
+    answer = () => Promise.reject(problem(429, { code: 'maintenance' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+
+    expect(text('mf-task-error')).toBe(ro('shell.form.problem.maintenance'));
   });
 
   it('shows the network message when nothing answers', async () => {

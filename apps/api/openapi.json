@@ -77,6 +77,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "rate_limited: too many sign-ins from this address"
           }
         },
         "tags": [
@@ -1204,6 +1207,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "rate_limited: too many test notifications for this account"
           }
         },
         "security": [
@@ -2400,6 +2406,9 @@
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
+          },
+          "429": {
+            "description": "rate_limited: too many searches from this address"
           }
         },
         "tags": [
@@ -3010,6 +3019,9 @@
           },
           "409": {
             "description": "already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed"
+          },
+          "429": {
+            "description": "rate_limited: too many quotes sent from this account"
           }
         },
         "security": [
@@ -5588,6 +5600,9 @@
           },
           "422": {
             "description": "photos_full, file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited: too many upload addresses for this draft"
           }
         },
         "tags": [
@@ -5797,6 +5812,9 @@
           },
           "422": {
             "description": "document_kind_unknown, document_full, file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited: too many upload addresses for this draft"
           }
         },
         "tags": [

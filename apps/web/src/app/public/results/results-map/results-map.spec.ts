@@ -151,8 +151,10 @@ describe('ResultsMap, the legend', () => {
     ).not.toBeNull();
   });
 
-  it('is left out when the page says there is nothing to explain', async () => {
+  // @traces 1181-FR-006
+  it('leaves the legend out when the results have nothing to explain, keeping the map', async () => {
     await render();
+    fixture.componentRef.setInput('brand', '');
     fixture.componentRef.setInput('legend', false);
     fixture.detectChanges();
 

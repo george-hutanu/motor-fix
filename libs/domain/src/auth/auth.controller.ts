@@ -27,6 +27,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
   ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
@@ -35,6 +36,7 @@ import type { CookieOptions, Request, Response } from 'express';
 import { OpenInMaintenance, Public } from './actor.guard';
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
+import { RateLimits } from '../rate-limit/rate-limit.service';
 
 const COOKIE = 'mf_refresh';
 
@@ -107,6 +109,7 @@ export class AuthController {
   constructor(
     private readonly signIns: SignInService,
     private readonly signUps: SignUpService,
+    private readonly limits: RateLimits,
   ) {}
 
   @Post('sign-in')
@@ -114,11 +117,15 @@ export class AuthController {
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
+  @ApiTooManyRequestsResponse({
+    description: 'rate_limited: too many sign-ins from this address',
+  })
   async signIn(
     @Body() body: SignInDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
+    await this.limits.take('signInAttempts', req.ip ?? '');
     const issued = await this.signIns.signIn(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };

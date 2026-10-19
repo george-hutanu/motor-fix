@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-07
+updated: 2026-10-18
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -9,6 +9,7 @@ features:
   - 491-back-closes-task
   - 492-task-load-error
   - 496-task-done-close-name
+  - 1181-rate-limits
 ---
 
 # Capability: overlays
@@ -236,6 +237,14 @@ _From 492-task-load-error._
 ### 492-FR-010 — The message and the button label MUST come from i18n keys in Romanian and English; Romanian text uses U+2011 non-breaking hyphens inside words.
 
 _From 492-task-load-error._
+
+### 1181-FR-006 — The web MUST show a calm message on a 429 with the code `rate_limited`, and on any 429 whose code has no more specific message of its own: naming the wait the refusal gives (its `Retry-After`, else `retryAfterSeconds`) rounded up to whole minutes, Romanian "Prea multe încercări. Încearcă din nou peste aproximativ N minute." (plural forms: "un minut", "N minute", "N de minute"), English "Too many attempts. Try again in about N minutes." ("1 minute"), and a neutral "Prea multe încercări. Încearcă din nou puțin mai târziu." / "Too many attempts. Try again in a little while." when the refusal names no wait, in the app's existing error surface, with no new component; existing route-specific 429 messages stay. The existing codes that keep their own shape are `too_many_attempts`, `too_many_requests`, `too_many_messages`, `draft_rate_limited` and `profile_views_rate_limited`; any of them without a web text shows the calm message.
+
+_From 1181-rate-limits._
+
+### 1181-FR-007 — The web MUST NOT retry a 429 on its own and MUST leave the user's input in place.
+
+_From 1181-rate-limits._
 
 ## Retired
 

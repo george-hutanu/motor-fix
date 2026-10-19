@@ -38,6 +38,7 @@ features:
   - 1178-keycloak-sizing
   - 1348-release-green
   - 1191-resilient-uploads
+  - 1181-rate-limits
 ---
 
 # Capability: Observability
@@ -833,6 +834,14 @@ _From 1178-keycloak-sizing._
 ### 1191-FR-011 — Browser upload outcomes MUST be reported through the existing browser measurement sink as one measurement type (`upload`) with context `purpose` (`garage_photo`, `legal_document`) and `outcome` (`queued` when a photo waits for signal, `resumed` when a drain starts after a reload or `online`, `sent` on a confirmed upload, `failed` when a drain gives up or the server refuses), and for `sent` the value `duration` in milliseconds from the first attempt; no file name, draft id or other personal data. `infra/observability/inventory.json`'s `grafana-faro` entry MUST describe the measurement, the `motorfix-web-vitals` dashboard MUST gain an uploads panel (outcomes over time and the send duration p75), and `scripts/observability-inventory.ts` and the dashboard check MUST pass. The PR's Observability section lists them.
 
 _From 1191-resilient-uploads._
+
+### 1181-FR-008 — The system MUST count every 429 refusal, from new and existing limits alike, in a metric labelled by route only (the method and route template, `unknown` when none; no address, account or e-mail) for the API and for the assistant endpoint.
+
+_From 1181-rate-limits._
+
+### 1181-FR-009 — An alert MUST fire when the refusal rate on a route passes the threshold for the hold time, with a summary naming the route and a runbook; the metric and the alert MUST be listed in `infra/observability/inventory.json` under the API and MCP entries, so the inventory check passes.
+
+_From 1181-rate-limits._
 
 ## Retired
 

@@ -10,6 +10,7 @@ async function main() {
     databaseUrl: env.DATABASE_URL,
     issuer: env.ASSISTANT_ISSUER,
     mcpUrl: env.MCP_URL,
+    redisUrl: env.REDIS_URL,
   });
   app.enableShutdownHooks();
   await app.listen(Number(process.env['PORT'] ?? 3002));
