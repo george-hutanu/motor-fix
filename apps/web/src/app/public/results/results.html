@@ -27,6 +27,7 @@
   <mf-results-map
     [brand]="answer()?.brand?.name ?? ''"
     [loading]="mapLoading()"
+    [legend]="state() !== 'failed' && state() !== 'limited'"
     [pins]="pinned()"
     [place]="place()"
     [lit]="lit()"

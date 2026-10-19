@@ -100,6 +100,8 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
+  // Off when the search failed or was refused: no brand ever comes to fill it.
+  readonly legend = input(true);
   // The garage whose pin is lit, and the small card of a tapped pin.
   readonly lit = input<string | undefined>();
   readonly card = input<PinCard | undefined>();

@@ -481,6 +481,23 @@ describe('Results', () => {
       );
     });
 
+    // @traces 1181-FR-006
+    it.each([
+      ['past the limit', 429],
+      ['failed', 500],
+    ])(
+      'keeps the map but leaves out its legend when the search is %s, so no loose "nu primește" sits above the message',
+      async (_, status) => {
+        await open('/ro/garages?brand=bmw');
+        await reads[0]?.fail(status);
+
+        expect(
+          page().querySelector('mf-results-map section.map'),
+        ).not.toBeNull();
+        expect(page().querySelector('mf-results-map .legend')).toBeNull();
+      },
+    );
+
     // @traces 267-FR-016
     it('offers "Căutare nouă" to Home instead of a retry when the brand is unknown', async () => {
       await open('/ro/garages?brand=nu-exista');

@@ -14,12 +14,14 @@
     />
   }
   <p class="hint" role="status">@if (failed()) {{{ 'public.results.map.unavailable' | t }}}@else if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>
-  <ul class="legend">
-    <li><span class="dot takes" aria-hidden="true"></span>@if (brand()) {{{ 'public.results.map.takes' | t: { brand: brand() } }}}@else {<span class="skeleton" aria-hidden="true"></span>}</li>
-    <li><span class="dot refuses" aria-hidden="true"></span>{{ 'public.results.map.refuses' | t }}</li>
-    <li>{{ 'public.results.map.rate' | t }}</li>
-    @if (hasArea()) {
-      <li><span class="dot area" aria-hidden="true"></span>{{ 'public.results.map.mobile' | t }}</li>
-    }
-  </ul>
+  @if (legend()) {
+    <ul class="legend">
+      <li><span class="dot takes" aria-hidden="true"></span>@if (brand()) {{{ 'public.results.map.takes' | t: { brand: brand() } }}}@else {<span class="skeleton" aria-hidden="true"></span>}</li>
+      <li><span class="dot refuses" aria-hidden="true"></span>{{ 'public.results.map.refuses' | t }}</li>
+      <li>{{ 'public.results.map.rate' | t }}</li>
+      @if (hasArea()) {
+        <li><span class="dot area" aria-hidden="true"></span>{{ 'public.results.map.mobile' | t }}</li>
+      }
+    </ul>
+  }
 </section>

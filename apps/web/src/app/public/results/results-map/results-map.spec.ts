@@ -142,6 +142,17 @@ describe('ResultsMap, the legend', () => {
       element().querySelector('.legend .takes + .skeleton'),
     ).not.toBeNull();
   });
+
+  // @traces 1181-FR-006
+  it('leaves the legend out when the results have nothing to explain, keeping the map', async () => {
+    await render();
+    fixture.componentRef.setInput('brand', '');
+    fixture.componentRef.setInput('legend', false);
+    fixture.detectChanges();
+
+    expect(element().querySelector('section.map')).not.toBeNull();
+    expect(element().querySelector('.legend')).toBeNull();
+  });
 });
 
 // @traces 269-FR-015
