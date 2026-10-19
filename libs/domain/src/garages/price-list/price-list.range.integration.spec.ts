@@ -534,6 +534,35 @@ describe('what a range change records', () => {
   });
 });
 
+// @traces 176-FR-011
+describe('where a price change is kept', () => {
+  it('keeps it in the activity log alone, with nothing in the System status log', async () => {
+    const w = await world();
+    const since = new Date();
+
+    await setRange(w, {
+      durationMinutes: 120,
+      fromBani: 95_000,
+      toBani: 145_000,
+    });
+    await setLabour(w, { fromBani: 20_000, toBani: 24_000 });
+
+    const logged = await prisma.systemLogEntry.findMany({
+      where: { at: { gte: since }, message: { contains: w.nord.id } },
+    });
+    const kept = await prisma.systemLogEntry.findMany({
+      where: {
+        at: { gte: since },
+        context: { equals: w.nord.id, path: ['garageId'] },
+      },
+    });
+    expect([...logged, ...kept]).toEqual([]);
+    expect(
+      await prisma.activityLog.count({ where: { garageId: w.nord.id } }),
+    ).toBe(2);
+  });
+});
+
 // @traces 176-FR-001 176-FR-003 176-FR-006 176-FR-007 176-FR-010
 describe('the price list entry format', () => {
   const entries = (w: World) =>
