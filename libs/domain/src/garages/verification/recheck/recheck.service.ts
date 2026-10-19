@@ -24,6 +24,7 @@ import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import { Prisma, type PrismaClient } from '../../../generated/prisma/client';
 import { countRecheck } from '../../../metrics/product-counters';
 import { shortName } from '../../../quotes/reads';
+import { SuspensionService } from '../suspension/suspension.service';
 
 type Language = 'ro' | 'en';
 type Said = Record<Language, string>;
@@ -68,6 +69,13 @@ const SAID = {
     ro: 'Datele service-ului s-au schimbat. Reîncarcă lista.',
   },
 } satisfies Record<string, Said>;
+
+// The suspension reason the garage's history and its owner read.
+const FAILURE_WORD = {
+  expired: 'expirată',
+  suspended: 'suspendată',
+  withdrawn: 'retrasă',
+} as const;
 
 const TIME_ZONE = 'Europe/Bucharest';
 const clock = new Intl.DateTimeFormat('en-GB', {
@@ -132,6 +140,7 @@ export class RecheckService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly suspensions: SuspensionService,
   ) {}
 
   async due(actor: Actor): Promise<RecheckDueListDto> {
@@ -182,39 +191,48 @@ export class RecheckService {
     requireCapability(actor, 'admin.garages');
     if (!isUUID(garageId)) throw notFound();
     const language = await this.languageOf(actor.accountId);
-    const done = await this.prisma.$transaction(async (tx) => {
-      const [garage] = await tx.$queryRaw<Locked[]>`
-        SELECT status::text AS status,
-          last_checked_on::text AS "lastCheckedOn",
-          rar_activities AS activities
-        FROM garage WHERE id = ${garageId}::uuid
-        FOR UPDATE`;
-      if (!garage) throw notFound();
-      const today = localDay(new Date());
-      // The moved date first, so the second of two admins learns who
-      // recorded before learning that the garage is no longer due.
-      if (garage.lastCheckedOn !== body.lastCheckedOn) {
-        throw await this.moved(
-          tx,
+    const done = await this.prisma
+      .$transaction(async (tx) => {
+        const [garage] = await tx.$queryRaw<Locked[]>`
+          SELECT status::text AS status,
+            last_checked_on::text AS "lastCheckedOn",
+            rar_activities AS activities
+          FROM garage WHERE id = ${garageId}::uuid
+          FOR UPDATE`;
+        if (!garage) throw notFound();
+        const today = localDay(new Date());
+        // The moved date first, so the second of two admins learns who
+        // recorded before learning that the garage is no longer due.
+        if (garage.lastCheckedOn !== body.lastCheckedOn) {
+          throw await this.moved(
+            tx,
+            garageId,
+            body.lastCheckedOn,
+            today,
+            language,
+          );
+        }
+        if (!isDue(garage, today)) {
+          throw conflict('recheck_not_due', SAID.notDue[language]);
+        }
+        this.validate(body, garage, today, language);
+        return body.result === 'ok'
+          ? this.recordOk(tx, actor, garageId, garage, body, language)
+          : this.recordFailed(tx, actor, garageId, garage, body);
+      })
+      .catch(async (error: unknown) => {
+        // A suspension refused inside the rolled-back transaction still
+        // owes the history its attempt.
+        throw await this.suspensions.refused(
+          error,
           garageId,
-          body.lastCheckedOn,
-          today,
-          language,
+          'recheck_failed',
+          actor.role,
         );
-      }
-      if (!isDue(garage, today)) {
-        throw conflict('recheck_not_due', SAID.notDue[language]);
-      }
-      this.validate(body, garage, today, language);
-      if (body.result !== 'ok') {
-        throw refusal(
-          HttpStatus.NOT_IMPLEMENTED,
-          'not_implemented',
-          'A failed re-check cannot be recorded yet',
-        );
-      }
-      return this.recordOk(tx, actor, garageId, garage, body, language);
-    });
+      });
+    if (done.result === 'failed') {
+      this.suspensions.committed(garageId, 'recheck_failed', actor.role);
+    }
     countRecheck(done.result);
     this.logger.log(
       `recorded garage=${garageId} result=${done.result} admin=${actor.accountId}`,
@@ -376,6 +394,67 @@ export class RecheckService {
       lastCheckedOn: body.checkedOn,
       result: 'ok',
       status: 'approved',
+    };
+  }
+
+  // The garage leaves the map in the same transaction: the date and the
+  // activities stay as the last valid check left them.
+  private async recordFailed(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    garageId: string,
+    garage: Locked,
+    body: RecordRecheckDto,
+  ): Promise<RecheckRecordedDto> {
+    // The edge requires the failure on a failed result, validate() the detail.
+    const failure = body.failure!;
+    const detail = body.detail!;
+    const row = await tx.recheck.create({
+      data: {
+        checkedOn: new Date(body.checkedOn),
+        detail,
+        failure,
+        garageId,
+        recordedBy: actor.accountId,
+        result: 'failed',
+      },
+    });
+    const reason = [...`Autorizație RAR ${FAILURE_WORD[failure]} · ${detail}`]
+      .slice(0, RECHECK_DETAIL_MAX)
+      .join('');
+    await this.suspensions.suspendIn(
+      tx,
+      actor,
+      garageId,
+      'recheck_failed',
+      reason,
+    );
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'status',
+      garageId,
+      kind: 'recheck_recorded',
+      newValue: { checkedOn: body.checkedOn, failure },
+      oldValue: { checkedOn: garage.lastCheckedOn },
+      subjectId: garageId,
+      subjectType: 'garage',
+      text: detail,
+    });
+    await this.events.record(tx, {
+      audience: { garageId, published: true, type: 'verification' },
+      kind: 'recheck.recorded',
+      payload: { garageId, result: 'failed' },
+      subjectId: garageId,
+    });
+    return {
+      checkedOn: body.checkedOn,
+      garageId,
+      id: row.id,
+      lastCheckedOn: garage.lastCheckedOn,
+      result: 'failed',
+      status: 'suspended',
     };
   }
 }

@@ -22,6 +22,7 @@ import {
 import { UNUSED_STORAGE } from '../../../storage/s3-test-store';
 import { StorageModule } from '../../../storage/storage.module';
 import { GaragesModule } from '../../garages.module';
+import { SuspensionService } from '../suspension/suspension.service';
 
 const redisUrl = redisUrlFor(13);
 const tokenSecret = 'test-secret';
@@ -31,12 +32,17 @@ serialDatabase(databaseUrl);
 const reader = countedMetrics();
 const rechecksCounted = (result: string) =>
   counterTotal(reader, 'motorfix_rechecks_total', { result });
+const suspensionsCounted = () =>
+  counterTotal(reader, 'motorfix_garage_suspensions_total', {
+    cause: 'recheck_failed',
+  });
 
 const WIDER_RO =
   'O autorizație mai largă se înregistrează printr-o modificare a datelor';
 const WIDER_EN =
   'A wider authorisation is recorded through a change of details';
 const STALE_RO = 'Datele service-ului s-au schimbat. Reîncarcă lista.';
+const DETAIL = 'expirată pe 12 sept. 2026';
 
 let app: NestExpressApplication;
 
@@ -166,6 +172,18 @@ const valid = (
   checkedOn: today(),
   lastCheckedOn,
   result: 'ok',
+  ...extra,
+});
+
+const failed = (
+  lastCheckedOn: string | null,
+  extra: Record<string, unknown> = {},
+) => ({
+  checkedOn: today(),
+  detail: DETAIL,
+  failure: 'expired',
+  lastCheckedOn,
+  result: 'failed',
   ...extra,
 });
 
@@ -757,5 +775,152 @@ describe('a narrowing seen on the price list', () => {
       public: false,
       reason: 'not_authorised',
     });
+  });
+});
+
+// @traces 1351-FR-002 1351-FR-007 1351-FR-012
+describe('recording a failed re-check', () => {
+  it.each([
+    ['expired', 'expirată'],
+    ['suspended', 'suspendată'],
+    ['withdrawn', 'retrasă'],
+  ])(
+    'stores the %s re-check and suspends the garage with cause recheck_failed',
+    async (failure, word) => {
+      const g = await garage({ checkedDaysAgo: 29 });
+      const before = await stored(g.id);
+      const counted = await suspensionsCounted();
+
+      const res = await record(g.id, failed(ago(29), { failure }));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        garageId: g.id,
+        lastCheckedOn: ago(29),
+        result: 'failed',
+        status: 'suspended',
+      });
+      expect(await rechecks(g.id)).toEqual([
+        {
+          activities: [],
+          automatic: false,
+          checkedOn: today(),
+          detail: DETAIL,
+          failure,
+          kind: 'rar',
+          recordedBy: ana,
+          result: 'failed',
+        },
+      ]);
+      const [suspension] = await suspensions(g.id);
+      expect(suspension).toMatchObject({
+        cause: 'recheck_failed',
+        reason: `Autorizație RAR ${word} · ${DETAIL}`,
+        suspendedBy: ana,
+      });
+      const after = await stored(g.id);
+      expect(after.status).toBe('suspended');
+      expect(dayOf(after.lastCheckedOn)).toBe(dayOf(before.lastCheckedOn));
+      expect(after.rarActivities).toEqual(before.rarActivities);
+      expect(await suspensionsCounted()).toBe(counted + 1);
+    },
+  );
+
+  it('trims the suspension reason to 200 characters', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const detail = 'd'.repeat(200);
+
+    await record(g.id, failed(ago(29), { detail }));
+
+    const [suspension] = await suspensions(g.id);
+    expect(suspension?.reason).toHaveLength(200);
+    expect(suspension?.reason.startsWith('Autorizație RAR expirată · d')).toBe(
+      true,
+    );
+  });
+
+  it('leaves its own audit entry beside the suspension’s, and both events', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+
+    await record(g.id, failed(ago(29)));
+
+    const own = await entries(g.id);
+    expect(own).toHaveLength(1);
+    expect(own[0]).toMatchObject({
+      actorId: ana,
+      field: 'status',
+      text: DETAIL,
+    });
+    expect(await entries(g.id, 'garage_suspended')).toHaveLength(1);
+    const recorded = await events(g.id, 'recheck.recorded');
+    expect(recorded.map((e) => e.payload)).toEqual([
+      { garageId: g.id, result: 'failed' },
+    ]);
+    expect(await events(g.id, 'garage.suspended')).toHaveLength(1);
+  });
+
+  it('takes the garage off the due list', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+
+    await record(g.id, failed(ago(29)));
+
+    expect((await list()).body.items).toEqual([]);
+  });
+
+  it.each([
+    ['without a detail', { detail: undefined }],
+    ['with a blank detail', { detail: '  ' }],
+    ['with a detail over 200 characters', { detail: 'a'.repeat(201) }],
+  ])(
+    'refuses a failure %s with 422 naming the field and stores nothing',
+    async (_, extra) => {
+      const g = await garage({ checkedDaysAgo: 29 });
+      const before = await stored(g.id);
+
+      const res = await record(g.id, failed(ago(29), extra));
+
+      expect(res.status).toBe(422);
+      expect(res.body).toMatchObject({
+        code: 'recheck_detail_invalid',
+        field: 'detail',
+      });
+      await unchanged(before, g.id);
+      expect(await rechecks(g.id)).toEqual([]);
+    },
+  );
+
+  it('refuses a failure without a failure kind at the edge and stores nothing', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const before = await stored(g.id);
+
+    const res = await record(g.id, failed(ago(29), { failure: undefined }));
+
+    expect(res.status).toBe(400);
+    await unchanged(before, g.id);
+    expect(await rechecks(g.id)).toEqual([]);
+  });
+
+  it('rolls the re-check back with the suspension’s 409 and keeps its record of the refused attempt', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const suspending = app.get(SuspensionService, { strict: false });
+    const real = suspending.suspendIn.bind(suspending);
+    // A suspension by another cause lands between the lock and the write.
+    jest
+      .spyOn(suspending, 'suspendIn')
+      .mockImplementationOnce(async (...args) => {
+        await real(...args);
+        return real(...args);
+      });
+
+    const res = await record(g.id, failed(ago(29)));
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('garage_already_suspended');
+    expect(await rechecks(g.id)).toEqual([]);
+    expect(await suspensions(g.id)).toHaveLength(0);
+    expect((await stored(g.id)).status).toBe('approved');
+    expect(await entries(g.id)).toHaveLength(0);
+    expect(await events(g.id)).toHaveLength(0);
+    expect(await entries(g.id, 'garage_suspension_refused')).toHaveLength(1);
   });
 });
