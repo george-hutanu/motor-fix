@@ -5,7 +5,7 @@ import { metrics } from '@opentelemetry/api';
 // registered stays a no-op. No account, garage or address is ever a label.
 const meter = () => metrics.getMeter('motorfix');
 
-export type ReplayOutcome = 'none' | 'some' | 'capped';
+type ReplayOutcome = 'none' | 'some' | 'capped';
 
 // One count per replay a returning stream asked for, by what it found, and
 // the rows it wrote.

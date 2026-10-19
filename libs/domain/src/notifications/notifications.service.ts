@@ -153,7 +153,7 @@ export class NotificationsService {
         }),
       );
       if (!written) continue;
-      await this.announce(written.bell, written.unreadCount);
+      await this.announce(written);
       countNotification('in-app');
       // The one path a quote takes today; it moves to the quoting use case
       // once there is one.
@@ -544,6 +544,7 @@ export class NotificationsService {
     bell: Notification;
     next: NextJob[];
     unreadCount: number;
+    countedAt: Date;
   } | null> {
     // One builder at a time per kind and person, so a burst opens one window.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
@@ -586,6 +587,8 @@ export class NotificationsService {
       select: { unreadCount: true },
       where: { id: accountId },
     });
+    // Taken with the account's row locked, so counts order as they commit.
+    const countedAt = this.now();
     // A change link goes to the address it asks for, not the account's.
     const to = input.params?.['to'];
     const email = typeof to === 'string' ? to : account.email;
@@ -605,7 +608,7 @@ export class NotificationsService {
       const job = await this.outsideRow(tx, type, base, channel, email, at);
       if (job) next.push(job);
     }
-    return { bell, next, unreadCount };
+    return { bell, countedAt, next, unreadCount };
   }
 
   private outsideRow(
@@ -733,12 +736,20 @@ export class NotificationsService {
   }
 
   // With the row's position, the stream's cursor, and the account's count.
-  private async announce(bell: Notification, unreadCount: number) {
+  private async announce({
+    bell,
+    countedAt,
+    unreadCount,
+  }: {
+    bell: Notification;
+    countedAt: Date;
+    unreadCount: number;
+  }) {
     try {
       await publishLive(
         this.publisher,
         {
-          at: bell.createdAt.toISOString(),
+          at: countedAt.toISOString(),
           id: bell.id,
           kind: 'notification.created',
           unreadCount,

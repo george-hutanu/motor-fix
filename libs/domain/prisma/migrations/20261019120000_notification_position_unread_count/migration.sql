@@ -1,4 +1,4 @@
--- ST-1190: the live stream's cursor and the bell's stored unread count.
+-- The live stream's cursor and the bell's stored unread count.
 
 -- Existing rows are numbered in creation order, then the sequence carries on.
 ALTER TABLE "notification" ADD COLUMN "position" BIGINT;

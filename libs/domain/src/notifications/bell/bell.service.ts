@@ -15,7 +15,11 @@ import {
 import { bellLink } from './bell.link';
 import type { Role } from '../../auth/capabilities';
 import { publishLive } from '../../events/live/live.hub';
-import type { Notification, PrismaClient } from '../../generated/prisma/client';
+import type {
+  Notification,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 import {
   LIVE_PUBLISHER,
   NOTIFICATIONS_PRISMA,
@@ -95,40 +99,26 @@ export class BellService {
         data: { readAt: new Date() },
         where: { ...where, readAt: null },
       });
-      if (!count) return null;
-      // Never below zero, whatever wrote rows around the count.
-      await tx.account.updateMany({
-        data: { unreadCount: { decrement: 1 } },
-        where: { id: accountId, unreadCount: { gt: 0 } },
-      });
-      const account = await tx.account.findUnique({
-        select: { unreadCount: true },
-        where: { id: accountId },
-      });
-      return account?.unreadCount ?? 0;
+      return count ? lower(tx, accountId, count) : null;
     });
     const [row, language] = await Promise.all([
       this.prisma.notification.findFirst({ where }),
       this.language(accountId),
     ]);
     if (!row) throw new NotFoundException();
-    if (left !== null) await this.announce(accountId, id, left);
+    if (left) await this.announce(accountId, id, left);
     return view(row, language, role);
   }
 
   async readAll(accountId: string): Promise<void> {
-    const count = await this.prisma.$transaction(async (tx) => {
-      const read = await tx.notification.updateMany({
+    const left = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.notification.updateMany({
         data: { readAt: new Date() },
         where: { accountId, channel: 'in_app', readAt: null },
       });
-      await tx.account.update({
-        data: { unreadCount: 0 },
-        where: { id: accountId },
-      });
-      return read.count;
+      return count ? lower(tx, accountId, count) : null;
     });
-    if (count) await this.announce(accountId, accountId, 0);
+    if (left) await this.announce(accountId, accountId, left);
   }
 
   private shown(accountId: string) {
@@ -149,15 +139,15 @@ export class BellService {
 
   // The person's other tabs follow a read that changed something; `id` is
   // the row read, or the account when all were.
-  private async announce(accountId: string, id: string, unreadCount: number) {
+  private async announce(accountId: string, id: string, left: Left) {
     try {
       await publishLive(
         this.publisher,
         {
-          at: new Date().toISOString(),
+          at: left.at.toISOString(),
           id,
           kind: 'notification.read',
-          unreadCount,
+          unreadCount: left.unreadCount,
         },
         [`account:${accountId}`],
       );
@@ -167,6 +157,36 @@ export class BellService {
       );
     }
   }
+}
+
+interface Left {
+  at: Date;
+  unreadCount: number;
+}
+
+// Takes `read` off the stored count, never below zero: a row written while
+// these were read keeps its place in the count. The time is taken after the
+// account's row is locked, so the bell can order counts that cross in Redis.
+async function lower(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  read: number,
+): Promise<Left> {
+  const { count } = await tx.account.updateMany({
+    data: { unreadCount: { decrement: read } },
+    where: { id: accountId, unreadCount: { gte: read } },
+  });
+  if (!count) {
+    await tx.account.updateMany({
+      data: { unreadCount: 0 },
+      where: { id: accountId },
+    });
+  }
+  const account = await tx.account.findUnique({
+    select: { unreadCount: true },
+    where: { id: accountId },
+  });
+  return { at: new Date(), unreadCount: account?.unreadCount ?? 0 };
 }
 
 // The same kinds also reach garage staff, so a row read from any other

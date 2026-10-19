@@ -316,6 +316,39 @@ describe('the unread count', () => {
     ).toEqual([2, 0]);
   });
 
+  it('takes off only the rows read-all read, so a row counted meanwhile stays counted', async () => {
+    const andrei = await account('andrei');
+    await bell(andrei);
+    await bell(andrei, { ago: 1000 });
+    // Two rows read, three counted: the third was written while they were read.
+    await prisma.account.update({
+      data: { unreadCount: 3 },
+      where: { id: andrei },
+    });
+
+    await post('/notifications/read-all', andrei).expect(204);
+
+    expect((await get('/notifications/unread-count', andrei)).body).toEqual({
+      count: 1,
+    });
+  });
+
+  it('never takes the count below zero', async () => {
+    const andrei = await account('andrei');
+    await bell(andrei);
+    await bell(andrei, { ago: 1000 });
+    await prisma.account.update({
+      data: { unreadCount: 1 },
+      where: { id: andrei },
+    });
+
+    await post('/notifications/read-all', andrei).expect(204);
+
+    expect((await get('/notifications/unread-count', andrei)).body).toEqual({
+      count: 0,
+    });
+  });
+
   it('never carries a position to the bell', async () => {
     const andrei = await account('andrei');
     const id = await bell(andrei);

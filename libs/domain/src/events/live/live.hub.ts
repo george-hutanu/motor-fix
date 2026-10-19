@@ -1,10 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type {
-  LiveByeReason,
-  LiveCloseReason,
-  LiveMessage,
-} from '@motor-fix/contracts';
+import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
 import { countReplay, countStreamClose } from './live.metrics';
@@ -269,7 +265,7 @@ function outgoing(event: LiveMessage, position: unknown): Outgoing {
     : { message };
 }
 
-export interface LiveHubOptions {
+interface LiveHubOptions {
   // Unset, a stream lives until its token expires.
   reconnectAfterMs?: number;
   // Unset, a returning stream is not replayed to.
@@ -341,16 +337,15 @@ export class LiveHub {
     const { reconnectAfterMs, replay } = this.options;
     if (reconnectAfterMs !== undefined) {
       connection.planned = setTimeout(
-        () => this.end(connection, 'reconnect'),
+        () => this.end(connection),
         reconnectAfterMs,
       );
     }
-    if (target.since !== null && target.since !== undefined) {
-      connection.replayedTo = target.since;
-      if (replay) {
-        connection.held = [];
-        void this.replay(connection, replay, target.since);
-      }
+    // Only what the replay wrote arms the drop rule: a position that is not
+    // the account's replays nothing and must not hide what comes live.
+    if (target.since !== null && target.since !== undefined && replay) {
+      connection.held = [];
+      void this.replay(connection, replay, target.since);
     }
     const own = [...this.connections.values()].filter(
       (c) => !isPublic(c) && c.accountId === target.accountId,
@@ -581,14 +576,11 @@ export class LiveHub {
   }
 
   // The planned close: the client reopens at once from its last position.
-  private end(
-    connection: Connection,
-    reason: Extract<LiveCloseReason, 'reconnect'>,
-  ) {
-    this.send(connection, this.control(reason, connection));
+  private end(connection: Connection) {
+    this.send(connection, this.control('reconnect', connection));
     this.release(connection);
     connection.sink.end();
-    countStreamClose(reason);
+    countStreamClose('reconnect');
   }
 
   private release(connection: Connection) {

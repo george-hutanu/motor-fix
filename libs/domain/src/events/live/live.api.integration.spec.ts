@@ -873,6 +873,40 @@ describe('a stream that comes back', () => {
     expect(created(live)).toEqual([]);
   });
 
+  it("opens as a first stream on another account's position: what comes live still arrives", async () => {
+    const driver = await account('Andrei', ['driver']);
+    const other = await account('Ion', ['driver']);
+    const mine = await bellRow(driver);
+    const theirs = await bellRow(other);
+    const redis = new Redis(redisUrl);
+
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`, {
+      headers: { 'Last-Event-ID': String(theirs.position + 1000n) },
+    });
+    await live.next('hello');
+    await settle();
+    // Below the position the client named, above the account's own rows.
+    await redis.publish(
+      LIVE_CHANNEL,
+      JSON.stringify({
+        audience: [`account:${driver}`],
+        event: {
+          at: new Date().toISOString(),
+          id: randomUUID(),
+          kind: 'notification.created',
+          unreadCount: 2,
+        },
+        position: String(mine.position + 1n),
+      }),
+    );
+    await until('the live one', () => created(live).length >= 1);
+    redis.disconnect();
+
+    expect(created(live).map((e) => e.id)).toEqual([
+      String(mine.position + 1n),
+    ]);
+  });
+
   it("replays nothing of another account's rows", async () => {
     const driver = await account('Andrei', ['driver']);
     const other = await account('Ion', ['driver']);
