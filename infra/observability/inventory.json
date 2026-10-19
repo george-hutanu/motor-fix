@@ -222,7 +222,8 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "story": "ST-881"
+      "story": "ST-881",
+      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run"
     },
     {
       "kind": "queue",

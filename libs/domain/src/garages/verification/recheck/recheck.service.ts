@@ -131,6 +131,12 @@ const due = (today: string) => Prisma.sql`
   AND (g.last_checked_on IS NULL
     OR g.last_checked_on <= ${addDays(today, -RECHECK_DUE_AFTER_DAYS)}::date)`;
 
+export async function countDue(prisma: PrismaClient, today: string) {
+  const [row] = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT count(*)::int AS n FROM garage g WHERE ${due(today)}`;
+  return row?.n ?? 0;
+}
+
 // The monthly look-up of a published garage in the RAR register, done by an
 // admin by hand: the list of garages due, and the record of each look-up.
 @Injectable()
