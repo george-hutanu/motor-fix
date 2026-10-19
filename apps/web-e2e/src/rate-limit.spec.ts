@@ -29,7 +29,7 @@ test.describe('a refusal past a limit', () => {
       'E‑mail',
       'Parolă',
       'Intră în cont',
-      'Prea multe încercări. Încearcă din nou peste un minut.',
+      'Prea multe încercări. Încearcă din nou peste aproximativ un minut.',
     ],
     [
       '/en',
@@ -38,7 +38,7 @@ test.describe('a refusal past a limit', () => {
       'E-mail',
       'Password',
       'Sign in',
-      'Too many attempts. Try again in a minute.',
+      'Too many attempts. Try again in about 1 minute.',
     ],
   ] as const) {
     test(`shows the calm message at ${path}, keeps what was typed and sends nothing again`, async ({

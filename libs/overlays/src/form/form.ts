@@ -104,6 +104,9 @@ export function taskSave<F extends AbstractControl, R>(
     }
     return keys.at(-1) ?? '';
   };
+  // The first of the keys that has a text, else none.
+  const found = (keys: string[]) =>
+    keys.map((k) => i18n.t(k)).find((said, i) => said !== keys[i]) ?? null;
   const own = (kind: 'field' | 'problem', code: string) =>
     messages ? [`${messages}.${kind}.${code}`] : [];
   const fieldText = (code: string, params?: Record<string, number>) =>
@@ -163,16 +166,15 @@ export function taskSave<F extends AbstractControl, R>(
       const unknownFields = (failure.errors ?? []).filter(
         ({ field }: FieldProblem) => !editable(form.get(field)),
       );
+      // Any limit, the ones a later change adds too, says how long to wait;
+      // a code with a text of its own keeps it.
+      const limited = failure.status === 429 ? limitText(i18n, failure) : null;
       return [
-        text([
-          ...own('problem', failure.code),
-          `shell.form.problem.${failure.code}`,
-          // Any limit, the ones a later change adds too.
-          ...(failure.status === 429
-            ? ['shell.form.problem.rate_limited']
-            : []),
-          'shell.form.problem.error',
-        ]),
+        found(own('problem', failure.code)) ??
+          (failure.code === 'rate_limited' ? limited : null) ??
+          found([`shell.form.problem.${failure.code}`]) ??
+          limited ??
+          i18n.t('shell.form.problem.error'),
         ...unknownFields.map(({ code }) => fieldText(code)),
       ];
     },
@@ -227,7 +229,28 @@ export function toProblem(error: unknown): Problem {
   // The service worker answers a fetch it could not make with a bare 504.
   if (status === 504 && offline && !codeOf(answer))
     return { code: 'offline', status };
-  return fromBody(answer, status);
+  const problem = fromBody(answer, status);
+  // A refusal past a limit names its wait in Retry-After.
+  const retryAfterSeconds = wholeFrom(
+    Number(error.headers?.get('Retry-After') ?? Number.NaN),
+    1,
+  );
+  return retryAfterSeconds === null
+    ? problem
+    : { ...problem, retryAfterSeconds };
+}
+
+/**
+ * The line for a call refused past a limit: the wait it names, rounded up to
+ * whole minutes, else a neutral "a little while".
+ */
+export function limitText(i18n: I18n, problem: Problem): string {
+  const seconds = problem.retryAfterSeconds;
+  return seconds === undefined
+    ? i18n.t('shell.form.problem.rate_limited')
+    : i18n.t('shell.form.problem.rate_limited_wait', {
+        count: Math.ceil(seconds / 60),
+      });
 }
 
 // A call that answers nothing on success reads its failure as text.

@@ -81,7 +81,12 @@
       "network": "Nu am putut ajunge la MotorFix. Verifică conexiunea și încearcă din nou.",
       "not_found": "Nu mai găsim ce voiai să salvezi. Reîncarcă pagina.",
       "offline": "Nu ești conectat. Încearcă din nou când revine conexiunea.",
-      "rate_limited": "Prea multe încercări. Încearcă din nou peste un minut.",
+      "rate_limited": "Prea multe încercări. Încearcă din nou puțin mai târziu.",
+      "rate_limited_wait": {
+        "few": "Prea multe încercări. Încearcă din nou peste aproximativ {count} minute.",
+        "one": "Prea multe încercări. Încearcă din nou peste aproximativ un minut.",
+        "other": "Prea multe încercări. Încearcă din nou peste aproximativ {count} de minute."
+      },
       "service_unavailable": "MotorFix nu răspunde acum. Încearcă din nou în câteva minute.",
       "sign_in_required": "Intră în cont ca să continui.",
       "validation_failed": "Verifică câmpurile marcate."

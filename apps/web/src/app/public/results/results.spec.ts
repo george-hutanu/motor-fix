@@ -1,5 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, type Route, Router } from '@angular/router';
@@ -68,7 +68,7 @@ const pageOf = (
 type Read = {
   params: GarageSearchControllerForBrand$Params;
   answer: (page?: GarageSearchPageDto) => Promise<void>;
-  fail: (status?: number) => Promise<void>;
+  fail: (status?: number, retryAfter?: number) => Promise<void>;
 };
 let reads: Read[];
 const searchApi = {
@@ -80,8 +80,16 @@ const searchApi = {
             resolve(page);
             await settle();
           },
-          fail: async (status = 500) => {
-            reject(new HttpErrorResponse({ status }));
+          fail: async (status = 500, retryAfter?: number) => {
+            reject(
+              new HttpErrorResponse({
+                headers:
+                  retryAfter === undefined
+                    ? undefined
+                    : new HttpHeaders({ 'Retry-After': String(retryAfter) }),
+                status,
+              }),
+            );
             await settle();
           },
           params,
@@ -444,15 +452,33 @@ describe('Results', () => {
     });
 
     // @traces 1181-FR-006
-    it('says calmly to wait a minute when the searches from here are past their limit, keeping "Reîncearcă"', async () => {
+    it('says calmly how long to wait when the searches from here are past their limit, keeping "Reîncearcă"', async () => {
       await open('/ro/garages?brand=bmw');
-      await reads[0]?.fail(429);
+      await reads[0]?.fail(429, 120);
 
       expect(said(state()?.querySelector('h1, h2'))).toBe(
-        'Prea multe încercări. Încearcă din nou peste un minut.',
+        'Prea multe încercări. Încearcă din nou peste aproximativ 2 minute.',
       );
       expect(actions()).toEqual(['Reîncearcă']);
       expect(headings()).toHaveLength(1);
+    });
+
+    it('says it in English too, one minute for a wait under a minute', async () => {
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.fail(429, 45);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Too many attempts. Try again in about 1 minute.',
+      );
+    });
+
+    it('keeps a neutral line when the refused search names no wait', async () => {
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.fail(429);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Too many attempts. Try again in a little while.',
+      );
     });
 
     // @traces 267-FR-016

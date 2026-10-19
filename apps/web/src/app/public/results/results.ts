@@ -30,7 +30,7 @@ import {
   SearchService,
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { Overlays } from '@motor-fix/overlays';
+import { limitText, Overlays, toProblem } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ResultCard } from './result-card/result-card';
@@ -245,6 +245,11 @@ export class Results {
     // Past the searches' limit: the same retry, a calmer reason.
     return httpStatus(this.results.error()) === 429 ? 'limited' : 'failed';
   });
+
+  // Past the searches' limit: how long to wait, from the refusal.
+  protected readonly limited = computed(() =>
+    limitText(this.i18n, toProblem(this.results.error())),
+  );
 
   // The 50 km search is offered once, near a place, before it has run.
   protected readonly widen = computed(() =>
