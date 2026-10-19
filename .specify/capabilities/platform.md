@@ -92,6 +92,7 @@ features:
   - 1174-postgres-18-pitr
   - 1178-keycloak-sizing
   - 1348-release-green
+  - 1181-rate-limits
 ---
 
 # Capability: Platform
@@ -2313,6 +2314,38 @@ _From 1178-keycloak-sizing._
 ### 1178-FR-011 — `infra/keycloak/README.md` MUST document the heap rule and the memory limit the owner sets on Railway (1.36–1.5 GB, with the guide's figures and the 768 MiB failure as the reason), the new `KEYCLOAK_METRICS_URL` variable on the worker (kind, value shape, that unset means no reading), the management port's role and the new alert in its import step; `infra/observability/README.md` MUST say how Keycloak's memory reaches Grafana. The PR's Notes MUST list the owner-only steps: the Railway memory limit, the variable and the alert import. The agent never sets a Railway variable or setting.
 
 _From 1178-keycloak-sizing._
+
+### 1181-FR-001 — The system MUST limit each route in the table below per the key(s) shown, counting calls in the shared store over a window that begins with the first call, and MUST refuse a call past the limit with status 429, a stable code and a `Retry-After` header holding the whole seconds left in the window (at least 1). The routes with a limit already on `main` keep it; the table credits them.
+
+_From 1181-rate-limits._
+
+### 1181-FR-002 — Every limit's value (count and window) MUST live in one configuration module, read by the routes and by their tests; no limit value is repeated elsewhere in code.
+
+_From 1181-rate-limits._
+
+### 1181-FR-003 — A refused call MUST do none of the route's work: no code sent, no row written, no upload address issued, no message stored, no search log row, no push queued, no tool call run.
+
+_From 1181-rate-limits._
+
+### 1181-FR-004 — The counts MUST be keyed by account when the route is limited per account and the caller is signed in (by draft for the two upload-url routes, which have no account), and by address otherwise, with both applied where the table names both; the keys MUST never hold the raw address, e-mail, phone, draft or account id (digests, as today).
+
+_From 1181-rate-limits._
+
+### 1181-FR-005 — When the count store does not answer, the system MUST admit the call and log a warning; it MUST never refuse a user because the counter is unavailable.
+
+_From 1181-rate-limits._
+
+### 1181-FR-010 — Each new limit's route documentation (its OpenAPI description) MUST name the 429 and its code, and the generated client MUST be regenerated when the document changes.
+
+_From 1181-rate-limits._
+
+### 1181-FR-011 — Integration tests on the real store MUST show, for every route in the table with a **new** limit: the refusal past the limit with `Retry-After`, admission again after the window, and a second client unaffected; the push test's spec also shows no push queued on the sixth call.
+
+_From 1181-rate-limits._
+
+### 1181-FR-012 — The system MUST use the one existing counting mechanism, generalised as needed (a per-request guard or helper over it); it MUST NOT add a second rate-limiting library or store.
+
+_From 1181-rate-limits._
 
 ## Retired
 
