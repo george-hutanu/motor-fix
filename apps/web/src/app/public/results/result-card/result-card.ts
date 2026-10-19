@@ -166,6 +166,7 @@ export class ResultCard {
       const km = garage.serviceRadiusKm;
       return {
         city: '',
+        distance: '',
         rest:
           km === undefined
             ? this.i18n.t('public.home.dial.mobile')
@@ -177,7 +178,8 @@ export class ResultCard {
       typeof garage.distanceKm === 'number'
         ? formatDistance(garage.distanceKm, this.i18n.language())
         : '';
-    return { city, rest: city && km ? ` · ${km}` : km };
+    // The distance is its own piece, so "km" never wraps away from its number.
+    return { city, distance: km, rest: city && km ? ' · ' : '' };
   });
 
   protected readonly rated = computed(() => {

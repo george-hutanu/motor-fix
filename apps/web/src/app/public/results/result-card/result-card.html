@@ -4,11 +4,13 @@
     <div class="head">
       <div class="id">
         <h2>{{ garage().name }}</h2>
-        @if (where().city || where().rest) {
+        @if (where().city || where().rest || where().distance) {
           <p class="where">
             @if (where().city) {
               <span translate="no">{{ where().city }}</span>
-            }{{ where().rest }}
+            }{{ where().rest }}@if (where().distance) {
+              <span class="distance">{{ where().distance }}</span>
+            }
           </p>
         }
       </div>
