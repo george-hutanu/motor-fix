@@ -1,0 +1,89 @@
+<form (submit)="submit($event)" novalidate>
+  <div class="garage">
+    <p class="name">{{ row.name }}</p>
+    <p class="number">
+      <span>{{ row.rarNumber ?? '—' }}</span>
+      <a href="https://portal.rarom.ro/" target="_blank" rel="noopener noreferrer" (click)="copy()">{{ 'admin.file.register.rarRegister' | t }}</a>
+    </p>
+  </div>
+
+  @if (!confirming()) {
+    <fieldset class="results">
+      <legend>{{ 'admin.rechecks.result' | t }}</legend>
+      @for (c of choices(); track c.choice) {
+        <button hlmBtn variant="secondary" type="button" [attr.aria-pressed]="chosen() === c.choice" (click)="choose(c.choice)">
+          {{ c.label }}
+        </button>
+      }
+    </fieldset>
+
+    <div class="field">
+      <label for="mf-recheck-date">{{ 'admin.rechecks.date' | t }}</label>
+      <input
+        hlmInput
+        id="mf-recheck-date"
+        type="date"
+        required
+        [value]="checkedOn()"
+        [max]="today"
+        [attr.aria-invalid]="faulty('checkedOn') ? 'true' : null"
+        [attr.aria-describedby]="faulty('checkedOn') ? 'mf-recheck-error' : null"
+        (input)="typedDate($event)"
+      />
+    </div>
+
+    @if (failure()) {
+      <div class="field">
+        <label for="mf-recheck-detail">{{ 'admin.rechecks.detail' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-recheck-detail"
+          rows="3"
+          required
+          [attr.maxlength]="detailMax"
+          [value]="detail()"
+          [attr.aria-invalid]="faulty('detail') ? 'true' : null"
+          [attr.aria-describedby]="'mf-recheck-count' + (faulty('detail') ? ' mf-recheck-error' : '')"
+          (input)="typedDetail($event)"
+        ></textarea>
+        <p class="count" id="mf-recheck-count">{{ 'admin.rechecks.count' | t: { n: count() } }}</p>
+      </div>
+    } @else {
+      <fieldset class="ticks">
+        <legend>{{ 'admin.rechecks.activities' | t }}</legend>
+        @for (a of activities(); track a.code) {
+          <label class="tick">
+            <input
+              type="checkbox"
+              [value]="a.code"
+              [checked]="ticked().has(a.code)"
+              [attr.aria-invalid]="faulty('activities') ? 'true' : null"
+              [attr.aria-describedby]="faulty('activities') ? 'mf-recheck-error' : null"
+              (change)="toggle(a.code, $event)"
+            />
+            <span>{{ a.name }}</span>
+          </label>
+        }
+      </fieldset>
+    }
+
+    @if (error(); as e) {
+      <p class="error" id="mf-recheck-error" role="alert">{{ e.text }}</p>
+    }
+
+    <div class="actions">
+      <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.rechecks.cancel' | t }}</button>
+      @if (failure()) {
+        <button hlmBtn type="submit" [disabled]="!detailFits()">{{ 'admin.rechecks.suspend' | t }}</button>
+      } @else {
+        <button hlmBtn type="submit" [disabled]="!chosen() || busy()" [attr.aria-busy]="busy()">{{ 'admin.rechecks.save' | t }}</button>
+      }
+    </div>
+  } @else {
+    <p class="suspends" role="status">{{ 'admin.rechecks.suspends' | t }}</p>
+    <div class="actions">
+      <button hlmBtn variant="secondary" type="button" (click)="confirming.set(false)">{{ 'admin.rechecks.back' | t }}</button>
+      <button hlmBtn type="submit" [disabled]="busy()" [attr.aria-busy]="busy()">{{ 'admin.rechecks.confirm' | t }}</button>
+    </div>
+  }
+</form>

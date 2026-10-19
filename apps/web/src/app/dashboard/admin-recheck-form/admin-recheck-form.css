@@ -1,0 +1,109 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.garage {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+.name {
+  font-weight: 700;
+}
+.number {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  color: var(--mf-text-secondary);
+}
+.number a {
+  color: var(--mf-text);
+  text-underline-offset: 0.2em;
+}
+.results,
+.ticks {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.results legend,
+.ticks legend,
+.field > label {
+  width: 100%;
+  margin-bottom: var(--mf-space-2);
+  padding: 0;
+  font-weight: 700;
+}
+.results button,
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.results button[aria-pressed="true"] {
+  border-color: var(--mf-text);
+  font-weight: 700;
+}
+.field {
+  display: grid;
+}
+input[type="date"],
+textarea {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+textarea {
+  resize: vertical;
+}
+.count {
+  margin-top: var(--mf-space-1);
+  color: var(--mf-text-secondary);
+  text-align: end;
+}
+.ticks {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+.tick {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+}
+.tick input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-green);
+}
+.error,
+.suspends {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+/* On a phone the dialog is a bottom sheet: the actions stack at its width,
+   the one that sends nearest the thumb. */
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

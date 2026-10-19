@@ -262,6 +262,10 @@ describe('the due list', () => {
       expect(items).toEqual([
         {
           activities: ['mechanics', 'brakes'],
+          activityNames: [
+            { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+            { code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
+          ],
           daysSince: days,
           garageId: g.id,
           lastCheckedOn: ago(days),

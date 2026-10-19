@@ -1,4 +1,5 @@
 import {
+  type RarActivityNameDto,
   RECHECK_DETAIL_MAX,
   RECHECK_DUE_AFTER_DAYS,
   RECHECK_MAX_AGE_DAYS,
@@ -152,11 +153,17 @@ export class RecheckService {
         name: string;
         lastCheckedOn: string | null;
         activities: string[];
+        activityNames: RarActivityNameDto[];
         rarNumber: string | null;
       }[]
     >`
       SELECT g.id::text, g.name, g.last_checked_on::text AS "lastCheckedOn",
         g.rar_activities AS activities,
+        (SELECT coalesce(jsonb_agg(jsonb_build_object('code', a.code,
+            'nameRo', a.name_ro, 'nameEn', a.name_en)
+            ORDER BY array_position(g.rar_activities, a.code)), '[]')
+          FROM rar_activity a
+          WHERE a.code = ANY(g.rar_activities)) AS "activityNames",
         (SELECT f.rar_number FROM verification_file f
           WHERE f.garage_id = g.id
           ORDER BY f.created_at DESC, f.id DESC LIMIT 1) AS "rarNumber"
@@ -171,6 +178,7 @@ export class RecheckService {
             : daysBetween(row.lastCheckedOn, today);
         return {
           activities: row.activities,
+          activityNames: row.activityNames,
           daysSince: days,
           garageId: row.id,
           lastCheckedOn: row.lastCheckedOn,

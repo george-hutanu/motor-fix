@@ -11,12 +11,13 @@ import {
 } from 'class-validator';
 
 import { calendarDay } from './cars.dto';
+import { RarActivityNameDto } from './legal-check.dto';
+import { RECHECK_DETAIL_MAX } from './verification-target';
 
 // A garage is due this many Bucharest days after its last check, and
 // overdue past the other.
 export const RECHECK_DUE_AFTER_DAYS = 28;
 export const RECHECK_MAX_AGE_DAYS = 31;
-export const RECHECK_DETAIL_MAX = 200;
 
 export const RECHECK_RESULTS = ['ok', 'failed'] as const;
 export type RecheckResult = (typeof RECHECK_RESULTS)[number];
@@ -133,6 +134,13 @@ export class RecheckDueRowDto {
     type: [String],
   })
   activities!: string[];
+
+  @ApiProperty({
+    description:
+      'The current codes the catalogue knows, by name, for the record form',
+    type: [RarActivityNameDto],
+  })
+  activityNames!: RarActivityNameDto[];
 }
 
 export class RecheckDueListDto {

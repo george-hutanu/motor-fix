@@ -13560,6 +13560,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "activityNames": {
+            "description": "The current codes the catalogue knows, by name, for the record form",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
           }
         },
         "required": [
@@ -13569,7 +13576,8 @@
           "lastCheckedOn",
           "daysSince",
           "overdue",
-          "activities"
+          "activities",
+          "activityNames"
         ]
       },
       "RecheckDueListDto": {

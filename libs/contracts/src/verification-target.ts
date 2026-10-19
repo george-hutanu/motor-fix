@@ -52,6 +52,8 @@ export const REPORT_NOTE_MAX = 1000;
 
 // The most characters a check's detail holds.
 export const CHECK_DETAIL_MAX = 200;
+// The most characters a failed RAR re-check's detail holds.
+export const RECHECK_DETAIL_MAX = 200;
 
 const LAMPS: Record<VerificationCheckResult, Lamp> = {
   failed: 'red',
