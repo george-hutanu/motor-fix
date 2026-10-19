@@ -132,4 +132,18 @@ describe('the route limits', () => {
 
     expect(await limits.wait('assistant', 'account-1')).toBe(12);
   });
+
+  it('counts every rule of the table under its own key, a new one included', async () => {
+    const { keys, redis } = countingRedis(30);
+    const limits = new RateLimits(redis);
+
+    for (const rule of Object.keys(
+      ROUTE_LIMITS,
+    ) as (keyof typeof ROUTE_LIMITS)[])
+      expect(await limits.wait(rule, '203.0.113.7')).toBeNull();
+
+    expect(keys.map((key) => key.split(':').slice(0, 2).join(':'))).toEqual(
+      Object.values(ROUTE_LIMITS).map((rule) => rule.key),
+    );
+  });
 });

@@ -10,14 +10,13 @@ export class RateLimits {
   private readonly throttles: Record<RouteLimit, AddressThrottle>;
 
   constructor(redis: Redis) {
-    this.throttles = {
-      assistant: new AddressThrottle(redis, ROUTE_LIMITS.assistant),
-      pushTest: new AddressThrottle(redis, ROUTE_LIMITS.pushTest),
-      quoteSend: new AddressThrottle(redis, ROUTE_LIMITS.quoteSend),
-      search: new AddressThrottle(redis, ROUTE_LIMITS.search),
-      signInAttempts: new AddressThrottle(redis, ROUTE_LIMITS.signInAttempts),
-      uploadUrl: new AddressThrottle(redis, ROUTE_LIMITS.uploadUrl),
-    };
+    // One count per rule of the table: a new rule needs no line here.
+    this.throttles = Object.fromEntries(
+      Object.entries(ROUTE_LIMITS).map(([name, rule]) => [
+        name,
+        new AddressThrottle(redis, rule),
+      ]),
+    ) as Record<RouteLimit, AddressThrottle>;
   }
 
   // Counts one call; the seconds to wait once the address or key is past
