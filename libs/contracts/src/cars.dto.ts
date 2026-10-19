@@ -35,7 +35,7 @@ const notAfterNextYear = () =>
   });
 
 // YYYY-MM-DD naming a day the calendar has.
-const calendarDay = () =>
+export const calendarDay = () =>
   ValidateBy({
     name: 'calendarDay',
     validator: {

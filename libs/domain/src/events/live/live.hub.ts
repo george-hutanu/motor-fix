@@ -75,6 +75,7 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
       'garage.restored',
       'garage.slots_changed',
       'response_stats.updated',
+      'recheck.recorded',
     ]),
   ],
   [/^public:mechanic:/, new Set(['mechanic.updated', ...REVIEW_KINDS])],
