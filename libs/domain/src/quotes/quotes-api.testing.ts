@@ -7,7 +7,9 @@ import { databaseUrl, quotesWorld } from './quotes.testing';
 import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
 import type { Role } from '../auth/capabilities';
+import { PRISMA } from '../auth/prisma';
 import { serialDatabase } from '../auth/serial-db.testing';
+import type { PrismaClient } from '../generated/prisma/client';
 import { WorkshopModule } from '../workshop/workshop.module';
 
 // Boots the auth, quotes and workshop modules over HTTP for a whole spec
@@ -116,5 +118,8 @@ export function quotesApp() {
     };
   }
 
-  return { bearer, get, post, send, team, world };
+  // The client the app reads with, to see the statements it runs.
+  const client = () => app.get<PrismaClient>(PRISMA, { strict: false });
+
+  return { bearer, client, get, post, send, team, world };
 }

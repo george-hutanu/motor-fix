@@ -123,6 +123,11 @@ test.describe('the brand picker @seeded', () => {
   });
 
   test('opens the results for the chosen brand @core', async ({ page }) => {
+    // Results searches only from a place: here, the one the browser gives.
+    await page.context().grantPermissions(['geolocation']);
+    await page
+      .context()
+      .setGeolocation({ latitude: 44.4268, longitude: 26.1025 });
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
     const search = page.waitForResponse(
@@ -132,7 +137,7 @@ test.describe('the brand picker @seeded', () => {
 
     await page.getByRole('link', { name: 'Caută service‑uri' }).click();
 
-    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+    await expect(page).toHaveURL('/ro/garages?brand=dacia&near=44.427,26.103');
     await search;
   });
 

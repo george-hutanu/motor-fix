@@ -8,6 +8,7 @@ import {
 } from './garage-brands.dto';
 import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
+import { NearQueryDto } from './near.dto';
 
 const STANCES = ['works_on', 'does_not_take'] as const;
 
@@ -22,7 +23,7 @@ export class PublicGarageBrandDto extends BrandRefDto {
 
 // Any brand value is accepted: one that names no catalogue brand reads as
 // none, so a shared link never fails.
-export class PublicGarageQueryDto {
+export class PublicGarageQueryDto extends NearQueryDto {
   @ApiPropertyOptional({
     description: "A catalogue brand's slug; anything else reads as none",
     example: 'dacia',
@@ -184,6 +185,15 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: PublicGarageBrandDto,
   })
   brand?: PublicGarageBrandDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Km from the place, one decimal. Only with near, and never for a mobile mechanic',
+    format: 'double',
+    minimum: 0,
+    type: Number,
+  })
+  distanceKm?: number;
 
   @ApiProperty({ type: [PublicBrandDto] })
   declare worksOn: PublicBrandDto[];

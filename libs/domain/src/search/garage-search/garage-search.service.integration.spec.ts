@@ -11,6 +11,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { watchGarageReads } from '../area/area.testing';
 import { SearchLogService } from '../search-log/search-log.service';
 
 type Stance = 'works_on' | 'does_not_take';
@@ -733,6 +734,59 @@ describe('the radius', () => {
     const page = await search.forBrand(dacia, undefined, undefined, 50);
 
     expect(page.total).toBe(5);
+  });
+});
+
+// @traces 271-FR-011
+describe('reading the area', () => {
+  it('counts and pages both groups of the area by the area itself, never by the ids an earlier read found', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await at(`Taker ${String(n).padStart(2, '0')}`, 0.01 * (n + 1));
+    }
+    const other = await garage('Zeta');
+    await prisma.garage.update({
+      data: { latitude: CLUJ.lat + 0.05, longitude: CLUJ.lng },
+      where: { id: other },
+    });
+    await at('Far taker', 0.5);
+
+    const reads = watchGarageReads(prisma);
+    try {
+      const first = await search.forBrand(dacia, undefined, CLUJ);
+      const shownFirst = first.items.map((item) => item.id);
+      const [countedFirst, listedFirst] = [reads.counted(), reads.listed()];
+      const second = await search.forBrand(
+        dacia,
+        first.nextCursor ?? undefined,
+        CLUJ,
+      );
+      const shownSecond = second.items.map((item) => item.id);
+
+      expect(first.counts).toEqual({ doesNotTake: 1, worksOn: 21 });
+      expect(first.items).toHaveLength(20);
+      expect(first.items[0]).toMatchObject({
+        distanceKm: 1.1,
+        name: 'Taker 00',
+      });
+      expect(second.items.map((item) => item.name)).toEqual([
+        'Taker 20',
+        'Zeta',
+      ]);
+      expect(countedFirst).toEqual([]);
+      expect(reads.counted()).toEqual([]);
+      expect(shownFirst).toEqual(expect.arrayContaining(listedFirst.flat()));
+      expect([...shownFirst, ...shownSecond]).toEqual(
+        expect.arrayContaining(reads.listed().flat()),
+      );
+      expect(
+        reads
+          .listed()
+          .slice(listedFirst.length)
+          .every((list) => list.every((id) => shownSecond.includes(id))),
+      ).toBe(true);
+    } finally {
+      reads.restore();
+    }
   });
 });
 

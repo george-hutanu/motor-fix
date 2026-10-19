@@ -1,7 +1,7 @@
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type { Map as MapLibre } from 'maplibre-gl';
 
-import { drawPins } from './pins-map';
+import { drawPins, type PlaceMarker } from './pins-map';
 
 const pinOf = (n: number): GaragePinDto => ({
   id: `g-${n}`,
@@ -68,8 +68,14 @@ beforeEach(() => {
 
 afterEach(() => host.remove());
 
+// The "you are here" marker: not under attack here.
+const here: PlaceMarker = {
+  addTo: jest.fn().mockReturnThis(),
+  remove: jest.fn().mockReturnThis(),
+  setLngLat: jest.fn().mockReturnThis(),
+};
 const draw = () =>
-  drawPins(map as unknown as MapLibre, host, { moved, picked, shifted });
+  drawPins(map as unknown as MapLibre, host, { moved, picked, shifted }, here);
 const click = async (hits: Hit[]) => {
   map.queryRenderedFeatures.mockReturnValueOnce(hits);
   for (const [name, handler] of map.on.mock.calls) {

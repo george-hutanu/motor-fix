@@ -47,8 +47,8 @@ test.describe('suspending a garage @seeded', () => {
     brandId = made.rows[0]?.id ?? '';
     for (const [i, name] of [taken, kept].entries()) {
       const row = await db.query<{ id: string }>(
-        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count)
-         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, 5) RETURNING id`,
+        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count, latitude, longitude)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, 5, 44.2, 24.9) RETURNING id`,
         [name, `e2e-suspendat-${stamp}-${i}`, i === 0 ? 4.9 : 4.1],
       );
       const id = row.rows[0]?.id ?? '';
@@ -108,7 +108,8 @@ test.describe('suspending a garage @seeded', () => {
         r.url().includes('garages=') &&
         r.ok(),
     );
-    await page.goto(`/ro/garages?brand=${brand.slug}`);
+    // Opened where the two garages stand: Results searches only from a place.
+    await page.goto(`/ro/garages?brand=${brand.slug}&near=44.200,24.900`);
     await expect(cards(page).nth(0)).toHaveText(taken);
     await stream;
     let navigations = 0;

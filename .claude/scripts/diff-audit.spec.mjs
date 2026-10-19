@@ -106,6 +106,22 @@ describe('diff-audit import-extension', () => {
   });
 });
 
+describe('diff-audit dead-export', () => {
+  const dead = () => run().filter((l) => l.includes('[dead-export]'));
+
+  it('finds the user of an export whose name holds a dollar sign', () => {
+    write('libs/client/src/fn.ts', 'export interface Find$Params { q: string }\n');
+    write('libs/client/src/service.ts', "import { Find$Params } from './fn';\nexport const find = (p: Find$Params) => p;\nconst use = find;\n");
+    write('libs/client/src/index.ts', "export { find } from './service';\n");
+    assert.deepEqual(dead().filter((l) => l.includes('Find$Params')), []);
+  });
+
+  it('still names an export with a dollar sign that nothing imports', () => {
+    write('libs/client/src/fn.ts', 'export interface Lost$Params { q: string }\n');
+    assert.equal(dead().filter((l) => l.includes('Lost$Params')).length, 1);
+  });
+});
+
 // The base is origin/main's merge-base: a worktree made from origin/main
 // leaves the local main where the main checkout last had it, and diffing
 // against that reports every file merged since as this branch's.

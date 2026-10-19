@@ -6,6 +6,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { watchGarageReads } from '../area/area.testing';
 
 type Stance = 'works_on' | 'does_not_take';
 
@@ -418,6 +419,22 @@ describe('HomeService.forBrand near a place', () => {
       slug: 'mobile-in',
     });
     expect(best).not.toHaveProperty('city');
+  });
+
+  // @traces 271-FR-011
+  it('counts and ranks the area by the area itself, never by the ids an earlier read found', async () => {
+    const reads = watchGarageReads(prisma);
+    try {
+      const answer = await home.forBrand('dacia', CLUJ);
+      const shown = answer.preview.map((garage) => garage.id);
+
+      expect(answer).toMatchObject({ takers: 2, total: 3 });
+      expect(slugs(answer)).toEqual(['mobile-in', 'in-taker', 'in-refuser']);
+      expect(reads.counted()).toEqual([]);
+      expect(shown).toEqual(expect.arrayContaining(reads.listed().flat()));
+    } finally {
+      reads.restore();
+    }
   });
 
   it('ranks all of Romania without a place, with no distance', async () => {

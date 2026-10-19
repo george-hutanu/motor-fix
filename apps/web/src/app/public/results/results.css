@@ -31,6 +31,24 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* "Se caută locația…" while the browser is asked; empty, it takes no room. */
+.locating {
+  color: var(--mf-text-secondary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* No place from the browser: the line and the address field wait above the map. */
+.placeless {
+  color: var(--mf-text-secondary);
+  margin: 0 0 var(--mf-space-2);
+  overflow-wrap: anywhere;
+}
+
+mf-address-field {
+  max-width: 40rem;
+}
+
 .change,
 .back {
   background: none;

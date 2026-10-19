@@ -6,9 +6,10 @@ import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
 // PostgreSQL: no seeded garage takes the brand, so the takers on the page are
-// exactly these, and no other spec's counts move while they live. They hold
-// no coordinates, so a search near a place never finds them. A deployed
-// address, whose run has no DATABASE_URL, skips the file.
+// exactly these, and no other spec's counts move while they live. They stand
+// together near Caracal, where no seeded garage does, and the page opens
+// there: Results searches only from a place. A deployed address, whose run
+// has no DATABASE_URL, skips the file.
 // @traces 267-FR-001 267-FR-007 267-FR-013 267-FR-017 267-FR-019
 test.describe('the Results page @seeded', () => {
   test.skip(
@@ -39,6 +40,9 @@ test.describe('the Results page @seeded', () => {
       stance: 'does_not_take',
     },
   ] as const;
+  // Where the three garages stand, and the page with its place.
+  const near = '44.100,24.400';
+  const opened = () => `/ro/garages?brand=${brand.slug}&near=${near}`;
   // The Danube delta: no seeded garage within 50 km.
   const empty = '45.160,29.650';
   let db: Client;
@@ -66,8 +70,8 @@ test.describe('the Results page @seeded', () => {
     brandId = made.rows[0]?.id ?? '';
     for (const [i, garage] of garages.entries()) {
       const row = await db.query<{ id: string }>(
-        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count)
-         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, $4) RETURNING id`,
+        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count, latitude, longitude)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, $4, 44.1, 24.4) RETURNING id`,
         [
           garage.name,
           `e2e-rezultat-${stamp}-${i}`,
@@ -99,7 +103,7 @@ test.describe('the Results page @seeded', () => {
   test('lists the takers first, in rating order, with the counts, and logs the search once', async ({
     page,
   }) => {
-    await ready(page, `/ro/garages?brand=${brand.slug}`);
+    await ready(page, opened());
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       `Service‑uri pentru ${brand.name}`,
@@ -145,7 +149,7 @@ test.describe('the Results page @seeded', () => {
       first = false;
       return route.fulfill({ body: '{}', status: 500 });
     });
-    await page.goto(`/ro/garages?brand=${brand.slug}`);
+    await page.goto(opened());
 
     await expect(
       page.getByRole('heading', { name: 'Nu am putut încărca rezultatele' }),
@@ -172,7 +176,7 @@ test.describe('the Results page @seeded', () => {
         r.url().includes('garages=') &&
         r.ok(),
     );
-    await page.goto(`/ro/garages?brand=${brand.slug}`);
+    await page.goto(opened());
     await expect(cards(page).nth(0)).toHaveText(garages[0].name);
     await stream;
     let navigations = 0;
@@ -729,5 +733,171 @@ test.describe('the map beside the results @seeded', () => {
       .filter({ hasText: `Service Harta ${stamp} 0` });
     await expect(card).toHaveCount(0, { timeout: 15_000 });
     await expect.poll(pinned, { timeout: 2_000 }).not.toContain(id);
+  });
+});
+
+// The seeded Cluj garages, measured from the Cluj test point the browser
+// gives: Service Mărăști stands 1 km from it.
+// @traces 271-FR-001
+// @traces 271-FR-004
+// @traces 271-FR-006
+// @traces 271-FR-008
+test.describe('Results measured from where the driver is @seeded', () => {
+  test.use({
+    geolocation: { latitude: 46.7712, longitude: 23.6236 },
+    permissions: ['geolocation'],
+  });
+
+  type LiveMap = { project(at: [number, number]): { x: number; y: number } };
+
+  for (const [lang, km] of [
+    ['ro', '1,0 km'],
+    ['en', '1.0 km'],
+  ] as const) {
+    test(`reads "${km}" on Service Mărăști and marks the place, with no tap (${lang})`, async ({
+      page,
+    }) => {
+      await ownMap(page);
+      await page.goto(`/${lang}/garages?brand=dacia`);
+
+      await expect(page).toHaveURL(/[?&]near=46\.771,23\.624(&|$)/);
+      await expect(
+        page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
+      ).toContainText(km);
+
+      const marker = page.locator('.here');
+      await expect(marker).toHaveCount(1);
+      await expect(marker).toBeVisible();
+      await expect(marker).toHaveAttribute('aria-hidden', 'true');
+      // Centred on the place on the live map, within a pixel or two.
+      await page.waitForFunction(
+        () => (window as { __MF_MAP?: unknown }).__MF_MAP !== undefined,
+      );
+      const spot = await page.evaluate(() => {
+        const map = (window as { __MF_MAP?: LiveMap }).__MF_MAP as LiveMap;
+        const canvas = document
+          .querySelector('.maplibregl-canvas')
+          ?.getBoundingClientRect();
+        const { x, y } = map.project([23.624, 46.771]);
+        return { x: (canvas?.left ?? 0) + x, y: (canvas?.top ?? 0) + y };
+      });
+      await expect
+        .poll(async () => {
+          const box = await marker.boundingBox();
+          if (!box) return Number.POSITIVE_INFINITY;
+          return Math.max(
+            Math.abs(box.x + box.width / 2 - spot.x),
+            Math.abs(box.y + box.height / 2 - spot.y),
+          );
+        })
+        .toBeLessThanOrEqual(2);
+    });
+  }
+
+  test('holds 320 px with no sideways scroll, while it asks and with the marker', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 800, width: 320 });
+    const sideways = () =>
+      page.evaluate(() => document.documentElement.scrollWidth > 320);
+
+    // A browser that never answers keeps the status line up.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'geolocation', {
+        configurable: true,
+        value: { getCurrentPosition: () => undefined },
+      });
+    });
+    await page.goto('/ro/garages?brand=dacia');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Se caută locația…' }),
+    ).toBeVisible();
+    expect(await sideways()).toBe(false);
+
+    const answered = await page.context().newPage();
+    await ownMap(answered);
+    await answered.setViewportSize({ height: 800, width: 320 });
+    await answered.goto('/en/garages?brand=dacia');
+    await expect(answered.locator('.here')).toBeVisible();
+    expect(
+      await answered.evaluate(() => document.documentElement.scrollWidth > 320),
+    ).toBe(false);
+  });
+});
+
+// The address look-up is answered here, as on Home: only the api's test boot
+// has a stand-in with fixed answers, and a deployed api answers real
+// addresses or none at all.
+const CLUJ_NAPOCA = { label: 'Cluj-Napoca', lat: 46.7712, lng: 23.6236 };
+const answerPlaces = (page: Page) =>
+  page.route('**/api/v1/places?*', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    return route.fulfill({
+      body: JSON.stringify({ items: /cluj/i.test(q) ? [CLUJ_NAPOCA] : [] }),
+      contentType: 'application/json',
+      status: 200,
+    });
+  });
+// A browser that refuses the location at once.
+const refuseLocation = (page: Page) =>
+  page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: (
+          _ok: PositionCallback,
+          fail?: PositionErrorCallback,
+        ) => fail?.({ code: 1, message: 'denied' } as GeolocationPositionError),
+      },
+    });
+  });
+
+// @traces 271-FR-002
+// @traces 271-FR-008
+test.describe('Results with the location refused @seeded', () => {
+  test('waits on a focused address field, then searches from the address picked', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await refuseLocation(page);
+    await answerPlaces(page);
+    await page.goto('/ro/garages?brand=dacia');
+
+    const field = page.getByRole('combobox', { name: 'Introdu o adresă' });
+    await expect(field).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(page.locator('mf-result-card')).toHaveCount(0);
+    await expect(page.locator('.here')).toHaveCount(0);
+    expect(page.url()).not.toContain('near=');
+
+    await field.fill('Cluj');
+    await page.getByRole('option', { name: 'Cluj-Napoca' }).click();
+
+    await expect(page).toHaveURL(/[?&]near=46\.771,23\.624(&|$)/);
+    await expect(
+      page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
+    ).toContainText('1,0 km');
+    await expect(page.locator('.here')).toBeVisible();
+    await expect(page.locator('.summary .area')).toHaveText(
+      'în 25 km de Cluj-Napoca',
+    );
+    await expect(field).toHaveCount(0);
+  });
+
+  test('holds 320 px with no sideways scroll while the field waits', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await refuseLocation(page);
+    await page.setViewportSize({ height: 800, width: 320 });
+    await page.goto('/en/garages?brand=dacia');
+
+    await expect(
+      page.getByRole('combobox', { name: 'Enter an address' }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth > 320),
+    ).toBe(false);
   });
 });

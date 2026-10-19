@@ -1,6 +1,8 @@
 import { PublicGarageDto, PublicGarageQueryDto } from '@motor-fix/contracts';
+import { parseNear } from '@motor-fix/contracts/search-place';
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiGoneResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -20,12 +22,15 @@ export class PublicGaragesController {
   @PublicCache()
   @Get(':slug')
   @ApiOkResponse({ type: PublicGarageDto })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: near is not a lat,lng in Romania',
+  })
   @ApiNotFoundResponse({ description: 'not_found: never approved, or unknown' })
   @ApiGoneResponse({ description: 'gone: suspended' })
   bySlug(
     @Param('slug') slug: string,
     @Query() query: PublicGarageQueryDto,
   ): Promise<PublicGarageDto> {
-    return this.garages.bySlug(slug, query.brand);
+    return this.garages.bySlug(slug, query.brand, parseNear(query.near));
   }
 }

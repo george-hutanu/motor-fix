@@ -8,6 +8,7 @@ import {
   daysUntil,
   formatClock,
   formatDay,
+  formatDistance,
   formatDuration,
   formatKm,
   formatLei,
@@ -162,6 +163,23 @@ describe('formatKm', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(formatKm(value, 'ro')).toBe(MISSING);
+  });
+});
+
+// @traces 271-FR-006
+describe('formatDistance', () => {
+  it.each([
+    [1, '1,0 km', '1.0 km'],
+    [0.8, '0,8 km', '0.8 km'],
+    [3.24, '3,2 km', '3.2 km'],
+    [12, '12,0 km', '12.0 km'],
+  ])('writes %p km as %p / %p', (value, ro, en) => {
+    expect(formatDistance(value, 'ro')).toBe(ro);
+    expect(formatDistance(value, 'en')).toBe(en);
+  });
+
+  it.each(notNumbers)('shows a dash for %p', (value) => {
+    expect(formatDistance(value, 'ro')).toBe(MISSING);
   });
 });
 

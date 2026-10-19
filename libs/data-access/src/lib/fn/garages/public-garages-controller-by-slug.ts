@@ -13,6 +13,11 @@ export interface PublicGaragesControllerBySlug$Params {
   slug: string;
 
 /**
+ * The place counts and distances are measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given
+ */
+  near?: string;
+
+/**
  * A catalogue brand's slug; anything else reads as none
  */
   brand?: string;
@@ -22,6 +27,7 @@ export function publicGaragesControllerBySlug(http: HttpClient, rootUrl: string,
   const rb = new RequestBuilder(rootUrl, publicGaragesControllerBySlug.PATH, 'get');
   if (params) {
     rb.path('slug', params.slug, {});
+    rb.query('near', params.near, {});
     rb.query('brand', params.brand, {});
   }
 

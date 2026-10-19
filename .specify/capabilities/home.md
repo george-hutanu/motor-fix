@@ -1,12 +1,13 @@
 ---
 capability: home
-updated: 2026-10-10
+updated: 2026-10-18
 features:
   - 225-brand-picker
   - 229-location-or-address
   - 230-brand-search
   - 226-best-rated-brand-dial
   - 227-garage-cards-home
+  - 271-garage-distance
 ---
 
 # Capability: Home
@@ -81,9 +82,9 @@ _From 229-location-or-address._
 
 _From 229-location-or-address._
 
-### 229-FR-004 — The address field MUST ask the address look-up from the third character, 300 ms after the last key, with the page's language, and show at most 5 suggestions as a listbox the keyboard can walk; choosing one makes it the place (its label and point) and closes the dialog. An empty answer shows "Nu am găsit adresa" / "Address not found"; a failed or rate-limited look-up shows "Nu putem căuta adrese acum" / "We cannot search addresses now" and keeps the previous place; a text under three characters asks nothing and shows nothing. These messages and the hint of FR-003 sit in a polite live region so a screen reader announces them.
+### 271-FR-005 — One shared address field component MUST serve the place dialog, the listing's place step and the Results field: a combobox with the suggestion list, the look-up from the third character 300 ms after the last key with the page's language, only the latest answer shown, Arrow keys and Enter to walk and choose, Escape to close the list, rows at least 44 px tall, its messages in a polite live region (229-FR-004, 111 unchanged in behaviour). The two older copies are deleted, and their existing unit tests pass against the shared component.
 
-_From 229-location-or-address._
+_From 271-garage-distance._
 
 ### 229-FR-005 — The place MUST be kept in the browser's local storage only (label, point, origin: location or address) and read back on the next visit, so the same browser starts from the last place; a stored value that does not parse or lies outside Romania is dropped. The server never stores the point: it leaves the browser only as a search parameter of the Home and garage search reads.
 
@@ -253,8 +254,14 @@ _From 227-garage-cards-home._
 
 _From 227-garage-cards-home._
 
+### 271-FR-005 — One shared address field component MUST serve the place dialog, the listing's place step and the Results field: a combobox with the suggestion list, the look-up from the third character 300 ms after the last key with the page's language, only the latest answer shown, Arrow keys and Enter to walk and choose, Escape to close the list, rows at least 44 px tall, its messages in a polite live region (229-FR-004, 111 unchanged in behaviour). The two older copies are deleted, and their existing unit tests pass against the shared component.
+
+_From 271-garage-distance._
+
 ## Retired
 
 - `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
 - `226-FR-004` — superseded by `227-FR-011` (2026-10-10)
 - `226-FR-008` — superseded by `227-FR-010` (2026-10-10)
+
+- `229-FR-004` — superseded by `271-FR-005` (2026-10-18)

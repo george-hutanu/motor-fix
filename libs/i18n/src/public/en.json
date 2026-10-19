@@ -32,6 +32,7 @@
     "backBrand": "Garages for {brand}",
     "backHome": "Home",
     "badge": "Verified · RAR authorisation",
+    "distance": "{km} away",
     "estimate": {
       "anyMechanic": "Any mechanic",
       "dropped": "A job you switched on is no longer offered by the garage.",
@@ -115,6 +116,10 @@
       "change": "Change",
       "choose": "Choose a place",
       "field": "Address",
+      "found": {
+        "one": "One address found",
+        "other": "{count} addresses found"
+      },
       "locating": "Finding your location…",
       "locationFailed": "We could not get your location; type an address",
       "near": "Near {label}",
@@ -422,9 +427,8 @@
       "placeholder": "Street and number, sector, town",
       "radius": "Area you work in",
       "radiusHint": "Between 1 and 100 km",
-      "searchDown": "Address search is not working right now. You can place the pin on the map.",
-      "seat": "Registered seat",
-      "suggestions": "Addresses found"
+      "searchUnavailable": "Address search is not working right now. You can place the pin on the map.",
+      "seat": "Registered seat"
     },
     "preview": {
       "draft": "Draft · published after verification",
@@ -609,7 +613,6 @@
     "areaPicked": "within {km} km of the chosen place",
     "areaYou": "within {km} km of you",
     "back": "Back to {km} km",
-    "backRomania": "Back to all of Romania",
     "card": {
       "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
@@ -618,6 +621,7 @@
       "worksOn": "takes {brand}"
     },
     "changePlace": "Change place",
+    "enterAddress": "Enter an address",
     "failed": "We couldn't load the results",
     "found": {
       "one": "{count} garage found",
@@ -633,6 +637,8 @@
       "updated": "{name} was updated"
     },
     "loading": "Loading the results",
+    "locating": "Finding your location…",
+    "locationFailed": "We could not get your location.",
     "map": {
       "label": "Map of garages",
       "mobile": "Mobile mechanic · service area",
@@ -643,12 +649,12 @@
       "zoomIn": "Zoom in"
     },
     "newSearch": "New search",
-    "none": "No garage found",
     "noneNear": "No garage within {km} km",
     "others": {
       "one": "{count} doesn't take it",
       "other": "{count} don't take it"
     },
+    "placeTitle": "Where should we look for a garage?",
     "reload": "Reload",
     "retry": "Try again",
     "takers": {
