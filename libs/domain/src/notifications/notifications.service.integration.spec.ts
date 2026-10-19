@@ -326,6 +326,41 @@ describe('the position and the unread count a bell row writes', () => {
     expect(await unread(andrei)).toBe(2);
   });
 
+  // @traces 1190-FR-004
+  it('takes the position only once the account is locked, so a row committed later never has a lower one', async () => {
+    const andrei = await account('andrei');
+    let held!: { position: bigint };
+    let waiting!: Promise<unknown>;
+
+    await prisma.$transaction(async (tx) => {
+      // Another writer holds the account row, as a second bell row's build does.
+      await tx.account.update({
+        data: { unreadCount: { increment: 1 } },
+        where: { id: andrei },
+      });
+      waiting = quote(andrei, 'evt-pos-order');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      held = await tx.notification.create({
+        data: {
+          accountId: andrei,
+          channel: 'in_app',
+          createdAt: new Date(DAY),
+          eventId: 'evt-pos-held',
+          kind: 'QUOTE_ACCEPTED',
+          params: {},
+          sentAt: new Date(DAY),
+          status: 'sent',
+        },
+      });
+    });
+    await waiting;
+
+    const later = (await rows(andrei)).find(
+      (r) => r.channel === 'in_app' && r.eventId === 'evt-pos-order',
+    );
+    expect(later!.position).toBeGreaterThan(held.position);
+  });
+
   it('adds nothing for a repeat of the same event, or for an e-mail row', async () => {
     const andrei = await account('andrei');
 

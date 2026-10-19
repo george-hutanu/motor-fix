@@ -572,6 +572,17 @@ export class NotificationsService {
       params: (input.params ?? {}) as Prisma.InputJsonObject,
       subjectId: input.subjectId ?? null,
     };
+    // The bell's count moves with the row, in the same transaction. Raising
+    // it first locks the account row before the row takes its position, so
+    // one account's positions commit in the order they were taken and a
+    // stream never drops a row as already replayed (FR-004).
+    const { unreadCount } = await tx.account.update({
+      data: { unreadCount: { increment: 1 } },
+      select: { unreadCount: true },
+      where: { id: accountId },
+    });
+    // Taken with the account's row locked, so counts order as they commit.
+    const countedAt = this.now();
     const bell = await tx.notification.create({
       data: {
         ...base,
@@ -581,14 +592,6 @@ export class NotificationsService {
         status: 'sent',
       },
     });
-    // The bell's count moves with the row, in the same transaction.
-    const { unreadCount } = await tx.account.update({
-      data: { unreadCount: { increment: 1 } },
-      select: { unreadCount: true },
-      where: { id: accountId },
-    });
-    // Taken with the account's row locked, so counts order as they commit.
-    const countedAt = this.now();
     // A change link goes to the address it asks for, not the account's.
     const to = input.params?.['to'];
     const email = typeof to === 'string' ? to : account.email;
