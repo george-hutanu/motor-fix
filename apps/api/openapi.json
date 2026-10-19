@@ -7536,7 +7536,7 @@
         "properties": {
           "count": {
             "type": "number",
-            "description": "Unread bell notifications of the last 90 days"
+            "description": "The account's unread bell notifications, of any age"
           }
         },
         "required": [
