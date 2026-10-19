@@ -228,6 +228,33 @@ describe('the "Ce s-a schimbat" panel', () => {
     ]);
   });
 
+  // @traces 176-FR-002 176-FR-004
+  it('writes a price range from one end to the other, and an open top as from its bottom', async () => {
+    const host = await open(async () =>
+      answerOf([
+        change({
+          field: 'labour_range',
+          newValue: { from: 20_000, to: 24_000 },
+          oldValue: { from: null, to: null },
+        }),
+        change({
+          area: 'prices',
+          field: 'range',
+          newValue: { from: 95_000, to: null },
+          oldValue: { from: 89_000, to: 140_000 },
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    expect(lines(host, 'profile')).toEqual([
+      `Manoperă: — → ${formatLei(20_000, 'ro')} – ${formatLei(24_000, 'ro')}`,
+    ]);
+    expect(lines(host, 'prices')).toEqual([
+      `Preț: ${formatLei(89_000, 'ro')} – ${formatLei(140_000, 'ro')} → de la ${formatLei(95_000, 'ro')}`,
+    ]);
+  });
+
   it('says "modificat" for a value it cannot write, and names a field with no label by its stored name', async () => {
     const host = await open(async () =>
       answerOf([

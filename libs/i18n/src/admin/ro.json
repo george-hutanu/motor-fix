@@ -58,6 +58,7 @@
       "failed": "Nu am putut încărca modificările",
       "fields": {
         "address": "Adresa",
+        "brand_range": "Preț pentru o marcă",
         "brandNote": "Nota despre mărci",
         "courtesy_car_paid": "Mașină de schimb cu plată",
         "courtesy_car_price_per_day_bani": "Mașină de schimb, preț pe zi",
@@ -65,6 +66,7 @@
         "from_bani": "Preț de la",
         "hours": "Programul",
         "labour_from_bani": "Manoperă de la",
+        "labour_range": "Manoperă",
         "labour_to_bani": "Manoperă până la",
         "location": "Locația pe hartă",
         "name": "Numele",
@@ -72,6 +74,7 @@
         "payment_cash": "Plată în numerar",
         "payment_transfer": "Plată prin transfer",
         "phone": "Telefonul",
+        "range": "Preț",
         "refusalPhrase": "Fraza de refuz",
         "seatAddress": "Sediul",
         "serviceRadiusKm": "Raza de deplasare",
@@ -85,6 +88,8 @@
         "other": "și încă {n} de modificări"
       },
       "no": "Nu",
+      "range": "{from} – {to}",
+      "rangeFrom": "de la {from}",
       "retry": "Reîncearcă",
       "since": "de la cererea din {date}",
       "subjects": {

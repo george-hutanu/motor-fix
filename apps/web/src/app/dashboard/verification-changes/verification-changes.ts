@@ -203,9 +203,20 @@ export class VerificationChanges implements OnInit {
   // A value as the admin reads it, or undefined when it cannot be written.
   private value(field: string, value: unknown): string | undefined {
     if (value === null || value === '') return MISSING;
+    if (isRange(value)) return this.range(value);
     if (typeof value === 'boolean') return this.t(value ? 'yes' : 'no');
     if (typeof value === 'number') return this.number(field, value);
     return typeof value === 'string' ? value : undefined;
+  }
+
+  // A range with neither end is no range at all.
+  private range({ from, to }: Range) {
+    const language = this.i18n.language();
+    if (from === null) return MISSING;
+    const low = formatLei(from, language);
+    return to === null
+      ? this.t('rangeFrom', { from: low })
+      : this.t('range', { from: low, to: formatLei(to, language) });
   }
 
   private number(field: string, value: number) {
@@ -252,3 +263,14 @@ const stanceOf = (value: unknown) =>
   value && typeof value === 'object' && 'stance' in value
     ? (value as { stance: unknown }).stance
     : undefined;
+
+interface Range {
+  from: number | null;
+  to: number | null;
+}
+
+const isRange = (value: unknown): value is Range =>
+  typeof value === 'object' &&
+  value !== null &&
+  'from' in value &&
+  'to' in value;
