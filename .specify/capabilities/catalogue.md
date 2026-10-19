@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -12,6 +12,7 @@ features:
   - 172-price-list-states
   - 173-price-range-in-place
   - 405-car-model-licences
+  - 176-price-change-activity-log
 ---
 
 # Capability: Catalogue
@@ -183,6 +184,10 @@ _From 405-car-model-licences._
 ### 405-FR-006 — A unit test MUST hold every licensed model's brand key to a key of the brand list, so a renamed or removed brand that the catalogue names fails the suite.
 
 _From 405-car-model-licences._
+
+### 176-FR-009 — The entries MUST be readable through the existing audit history read (ST-391) by the garage's owner, its receptionist and its mechanics, and by every admin, under the `prices` area for the `garage_price` entries; another garage's staff MUST get 404; a driver MUST never receive them in the audit history, and each entry's `is_key_change` and `internal` are false so no driver short history can include it. No new read is added.
+
+_From 176-price-change-activity-log._
 
 ## Retired
 

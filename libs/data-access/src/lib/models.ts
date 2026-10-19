@@ -226,6 +226,7 @@ export type { UpdateNotificationPreferenceDto } from './models/update-notificati
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationActorDto } from './models/verification-actor-dto';
 export type { VerificationChangeDto } from './models/verification-change-dto';
+export type { VerificationChangeJobDto } from './models/verification-change-job-dto';
 export type { VerificationCheckEvidenceDto } from './models/verification-check-evidence-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
 export type { VerificationDecisionDto } from './models/verification-decision-dto';

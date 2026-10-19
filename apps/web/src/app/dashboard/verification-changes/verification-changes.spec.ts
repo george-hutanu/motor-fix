@@ -6,7 +6,7 @@ import {
   type VerificationChangeDto,
   type VerificationFileChangesDto,
 } from '@motor-fix/data-access';
-import { formatDay, formatLei, I18n } from '@motor-fix/i18n';
+import { formatDay, formatLei, formatLeiRange, I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { VerificationChanges } from './verification-changes';
@@ -225,6 +225,126 @@ describe('the "Ce s-a schimbat" panel', () => {
     ]);
     expect(lines(host, 'prices')).toEqual([
       `Preț până la: — → ${formatLei(30_000, 'ro')}`,
+    ]);
+  });
+
+  // @traces 176-FR-002 176-FR-004
+  it('writes a price range from one end to the other, and an open top as from its bottom', async () => {
+    const host = await open(async () =>
+      answerOf([
+        change({
+          field: 'labour_range',
+          newValue: { from: 20_000, to: 24_000 },
+          oldValue: { from: null, to: null },
+        }),
+        change({
+          area: 'prices',
+          field: 'range',
+          newValue: { from: 95_000, to: null },
+          oldValue: { from: 89_000, to: 140_000 },
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    expect(lines(host, 'profile')).toEqual([
+      `Manoperă: — → ${formatLeiRange(20_000, 24_000, 'ro')}`,
+    ]);
+    expect(lines(host, 'prices')).toEqual([
+      `Preț: ${formatLeiRange(89_000, 140_000, 'ro')} → de la ${formatLei(95_000, 'ro')}`,
+    ]);
+  });
+
+  // @traces 176-FR-005
+  it("names a price line's job, and its brand for a brand range", async () => {
+    const job = {
+      nameEn: 'Front brake pads and discs',
+      nameRo: 'Plăcuțe și discuri de frână față',
+    };
+    const host = await open(async () =>
+      answerOf([
+        change({
+          area: 'prices',
+          field: 'brand_range',
+          job: { ...job, brand: 'BMW' },
+          newValue: {
+            brandId: 'b',
+            from: 120_000,
+            jobTypeId: 'j',
+            to: 170_000,
+          },
+          oldValue: {
+            brandId: 'b',
+            from: 110_000,
+            jobTypeId: 'j',
+            to: 160_000,
+          },
+          subjectType: 'garage_price',
+        }),
+        change({
+          area: 'prices',
+          field: 'duration_minutes',
+          job,
+          newValue: 150,
+          oldValue: 120,
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    expect(lines(host, 'prices')).toEqual([
+      `Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW: ${formatLeiRange(110_000, 160_000, 'ro')} → ${formatLeiRange(120_000, 170_000, 'ro')}`,
+      expect.stringMatching(/^Durata, Plăcuțe și discuri de frână față: /),
+    ]);
+  });
+
+  // @traces 176-FR-005
+  it('writes a brand range added or removed as its own line, from or to the dash', async () => {
+    const job = {
+      brand: 'BMW',
+      nameEn: 'Front brake pads and discs',
+      nameRo: 'Plăcuțe și discuri de frână față',
+    };
+    const value = (from: number, to: number) => ({
+      brandId: 'b',
+      from,
+      jobTypeId: 'j',
+      to,
+    });
+    const host = await open(async () =>
+      answerOf([
+        change({
+          action: 'create',
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          newValue: value(110_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+        change({
+          action: 'delete',
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          oldValue: value(120_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+        change({
+          area: 'prices',
+          field: 'brand_range',
+          job,
+          newValue: value(120_000, 170_000),
+          oldValue: value(110_000, 170_000),
+          subjectType: 'garage_price',
+        }),
+      ]),
+    );
+
+    const label = 'Preț pentru o marcă, Plăcuțe și discuri de frână față, BMW';
+    expect(lines(host, 'prices')).toEqual([
+      `${label}: — → ${formatLeiRange(110_000, 170_000, 'ro')}`,
+      `${label}: ${formatLeiRange(120_000, 170_000, 'ro')} → —`,
+      `${label}: ${formatLeiRange(110_000, 170_000, 'ro')} → ${formatLeiRange(120_000, 170_000, 'ro')}`,
     ]);
   });
 
