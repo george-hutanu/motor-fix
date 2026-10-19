@@ -3,16 +3,27 @@ import {
   RECHECK_DUE_AFTER_DAYS,
   RECHECK_MAX_AGE_DAYS,
   type RecheckDueListDto,
+  type RecheckRecordedDto,
   type RecordRecheckDto,
 } from '@motor-fix/contracts';
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
+import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
 import { refusal } from '../../../auth/sign-up.service';
 import { addDays, daysBetween, localDay } from '../../../bucharest';
+import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import { Prisma, type PrismaClient } from '../../../generated/prisma/client';
+import { countRecheck } from '../../../metrics/product-counters';
+import { shortName } from '../../../quotes/reads';
 
 type Language = 'ro' | 'en';
 type Said = Record<Language, string>;
@@ -32,6 +43,14 @@ const SAID = {
     en: 'Tick at least one activity; an authorisation that covers nothing is recorded as failed',
     ro: 'Bifează cel puțin o activitate; o autorizație care nu acoperă nimic se înregistrează ca eșuată',
   },
+  activitiesWider: {
+    en: 'A wider authorisation is recorded through a change of details',
+    ro: 'O autorizație mai largă se înregistrează printr-o modificare a datelor',
+  },
+  activityUnknown: {
+    en: 'Unknown RAR activity',
+    ro: 'Activitate RAR necunoscută',
+  },
   date: {
     en: 'The date checked must be after the last check and no later than today',
     ro: 'Data verificării trebuie să fie după ultima verificare și cel mult azi',
@@ -44,7 +63,46 @@ const SAID = {
     en: 'The garage is not due',
     ro: 'Service-ul nu e de reverificat',
   },
+  stale: {
+    en: "The garage's details changed. Reload the list.",
+    ro: 'Datele service-ului s-au schimbat. Reîncarcă lista.',
+  },
 } satisfies Record<string, Said>;
+
+const TIME_ZONE = 'Europe/Bucharest';
+const clock = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  timeZone: TIME_ZONE,
+});
+const dayMonth: Record<Language, Intl.DateTimeFormat> = {
+  en: new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: TIME_ZONE,
+  }),
+  ro: new Intl.DateTimeFormat('ro-RO', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: TIME_ZONE,
+  }),
+};
+
+// "Deja reverificat de Ana P. la 10:42", with "pe 3 oct." before "la" when
+// the re-check was not today's.
+function alreadyChecked(
+  language: Language,
+  name: string,
+  at: Date,
+  today: string,
+) {
+  const time = clock.format(at);
+  const day = localDay(at) === today ? null : dayMonth[language].format(at);
+  return language === 'en'
+    ? `Already re-checked by ${name}${day ? ` on ${day}` : ''} at ${time}`
+    : `Deja reverificat de ${name}${day ? ` pe ${day}` : ''} la ${time}`;
+}
 
 interface Locked {
   status: string;
@@ -68,7 +126,13 @@ const due = (today: string) => Prisma.sql`
 // admin by hand: the list of garages due, and the record of each look-up.
 @Injectable()
 export class RecheckService {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  private readonly logger = new Logger('Recheck');
+
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
+  ) {}
 
   async due(actor: Actor): Promise<RecheckDueListDto> {
     requireCapability(actor, 'admin.garages');
@@ -114,11 +178,11 @@ export class RecheckService {
     actor: Actor,
     garageId: string,
     body: RecordRecheckDto,
-  ): Promise<never> {
+  ): Promise<RecheckRecordedDto> {
     requireCapability(actor, 'admin.garages');
     if (!isUUID(garageId)) throw notFound();
     const language = await this.languageOf(actor.accountId);
-    await this.prisma.$transaction(async (tx) => {
+    const done = await this.prisma.$transaction(async (tx) => {
       const [garage] = await tx.$queryRaw<Locked[]>`
         SELECT status::text AS status,
           last_checked_on::text AS "lastCheckedOn",
@@ -127,16 +191,35 @@ export class RecheckService {
         FOR UPDATE`;
       if (!garage) throw notFound();
       const today = localDay(new Date());
+      // The moved date first, so the second of two admins learns who
+      // recorded before learning that the garage is no longer due.
+      if (garage.lastCheckedOn !== body.lastCheckedOn) {
+        throw await this.moved(
+          tx,
+          garageId,
+          body.lastCheckedOn,
+          today,
+          language,
+        );
+      }
       if (!isDue(garage, today)) {
         throw conflict('recheck_not_due', SAID.notDue[language]);
       }
       this.validate(body, garage, today, language);
+      if (body.result !== 'ok') {
+        throw refusal(
+          HttpStatus.NOT_IMPLEMENTED,
+          'not_implemented',
+          'A failed re-check cannot be recorded yet',
+        );
+      }
+      return this.recordOk(tx, actor, garageId, garage, body, language);
     });
-    throw refusal(
-      HttpStatus.NOT_IMPLEMENTED,
-      'not_implemented',
-      'A re-check cannot be recorded yet',
+    countRecheck(done.result);
+    this.logger.log(
+      `recorded garage=${garageId} result=${done.result} admin=${actor.accountId}`,
     );
+    return done;
   }
 
   private async languageOf(accountId: string): Promise<Language> {
@@ -145,6 +228,44 @@ export class RecheckService {
       where: { id: accountId },
     });
     return account?.language === 'en' ? 'en' : 'ro';
+  }
+
+  // Another admin's valid re-check moved the date: name them; otherwise the
+  // date moved some other way (an approval) and the row is just stale.
+  private async moved(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    carried: string | null,
+    today: string,
+    language: Language,
+  ) {
+    const newer = await tx.recheck.findFirst({
+      orderBy: { recordedAt: 'desc' },
+      select: { recordedAt: true, recordedBy: true },
+      where: {
+        garageId,
+        result: 'ok',
+        ...(carried !== null && { checkedOn: { gt: new Date(carried) } }),
+      },
+    });
+    const recorder =
+      newer?.recordedBy &&
+      (await tx.account.findUnique({
+        select: { name: true },
+        where: { id: newer.recordedBy },
+      }));
+    if (!newer || !recorder) {
+      return conflict('recheck_stale', SAID.stale[language]);
+    }
+    return conflict(
+      'recheck_conflict',
+      alreadyChecked(
+        language,
+        shortName(recorder.name),
+        newer.recordedAt,
+        today,
+      ),
+    );
   }
 
   // The rules that need the locked garage, or that the story answers as 422.
@@ -175,5 +296,86 @@ export class RecheckService {
         SAID.activitiesEmpty[language],
       );
     }
+  }
+
+  private async recordOk(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    garageId: string,
+    garage: Locked,
+    body: RecordRecheckDto,
+    language: Language,
+  ): Promise<RecheckRecordedDto> {
+    const after = [...new Set(body.activities)];
+    const known = await tx.rarActivity.count({
+      where: { code: { in: after } },
+    });
+    if (known !== after.length) {
+      throw invalid(
+        'recheck_activity_unknown',
+        'activities',
+        SAID.activityUnknown[language],
+      );
+    }
+    if (after.some((code) => !garage.activities.includes(code))) {
+      throw invalid(
+        'recheck_activities_wider',
+        'activities',
+        SAID.activitiesWider[language],
+      );
+    }
+
+    const row = await tx.recheck.create({
+      data: {
+        checkedOn: new Date(body.checkedOn),
+        garageId,
+        rarActivities: after,
+        recordedBy: actor.accountId,
+        result: 'ok',
+      },
+    });
+    await tx.garage.update({
+      data: { lastCheckedOn: new Date(body.checkedOn), rarActivities: after },
+      where: { id: garageId },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'last_checked_on',
+      garageId,
+      kind: 'recheck_recorded',
+      newValue: { activities: after, checkedOn: body.checkedOn },
+      oldValue: {
+        activities: garage.activities,
+        checkedOn: garage.lastCheckedOn,
+      },
+      subjectId: garageId,
+      subjectType: 'garage',
+    });
+    await this.events.record(tx, {
+      audience: { garageId, published: true, type: 'verification' },
+      kind: 'recheck.recorded',
+      payload: { garageId, result: 'ok' },
+      subjectId: garageId,
+    });
+    // The price list hides the jobs a narrower set no longer covers on its
+    // own reads; its readers only need telling.
+    if (after.length < garage.activities.length) {
+      await this.events.record(tx, {
+        audience: { garageId, results: false, type: 'public_garage' },
+        kind: 'price_list.updated',
+        payload: {},
+        subjectId: garageId,
+      });
+    }
+    return {
+      checkedOn: body.checkedOn,
+      garageId,
+      id: row.id,
+      lastCheckedOn: body.checkedOn,
+      result: 'ok',
+      status: 'approved',
+    };
   }
 }

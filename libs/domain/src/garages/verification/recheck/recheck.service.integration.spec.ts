@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import type { Role } from '../../../auth/capabilities';
@@ -25,6 +27,16 @@ const redisUrl = redisUrlFor(13);
 const tokenSecret = 'test-secret';
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
+
+const reader = countedMetrics();
+const rechecksCounted = (result: string) =>
+  counterTotal(reader, 'motorfix_rechecks_total', { result });
+
+const WIDER_RO =
+  'O autorizație mai largă se înregistrează printr-o modificare a datelor';
+const WIDER_EN =
+  'A wider authorisation is recorded through a change of details';
+const STALE_RO = 'Datele service-ului s-au schimbat. Reîncarcă lista.';
 
 let app: NestExpressApplication;
 
@@ -73,13 +85,21 @@ const asDate = (day: string | null) => (day === null ? null : new Date(day));
 const dayOf = (at: Date | null) => at?.toISOString().slice(0, 10) ?? null;
 
 let ana: string;
+let dan: string;
+let ioana: string;
 let admin: string;
+let otherAdmin: string;
+let englishAdmin: string;
 
 beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
   ana = await account('Ana Popescu', ['admin']);
+  dan = await account('Dan Ene', ['admin']);
+  ioana = await account('Ioana Marin', ['admin'], { language: 'en' });
   admin = bearer(ana, 'admin');
+  otherAdmin = bearer(dan, 'admin');
+  englishAdmin = bearer(ioana, 'admin');
 });
 
 // Every earlier file was rejected; the latest is the one the garage stands on.
@@ -411,5 +431,331 @@ describe('the date checked', () => {
       field: 'detail',
     });
     await unchanged(before, g.id);
+  });
+});
+
+// @traces 1351-FR-005 1351-FR-006 1351-FR-012 1351-FR-013 1351-FR-014
+describe('recording a valid re-check', () => {
+  it('stores the re-check, moves the date and keeps the activities', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const counted = await rechecksCounted('ok');
+
+    const res = await record(g.id, valid(ago(29)));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      checkedOn: today(),
+      garageId: g.id,
+      id: expect.any(String),
+      lastCheckedOn: today(),
+      result: 'ok',
+      status: 'approved',
+    });
+    expect(await rechecks(g.id)).toEqual([
+      {
+        activities: ['mechanics', 'brakes'],
+        automatic: false,
+        checkedOn: today(),
+        detail: null,
+        failure: null,
+        kind: 'rar',
+        recordedBy: ana,
+        result: 'ok',
+      },
+    ]);
+    const after = await stored(g.id);
+    expect(dayOf(after.lastCheckedOn)).toBe(today());
+    expect(after.rarActivities).toEqual(['mechanics', 'brakes']);
+    expect(after.status).toBe('approved');
+    expect(await rechecksCounted('ok')).toBe(counted + 1);
+  });
+
+  it('takes the row off the list', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+
+    await record(g.id, valid(ago(29)));
+
+    expect((await list()).body.items).toEqual([]);
+    expect((await list(otherAdmin)).body.items).toEqual([]);
+    expect(g.id).toEqual(expect.any(String));
+  });
+
+  it('writes one audit entry with the activities before and after', async () => {
+    const g = await garage({
+      activities: ['mechanics', 'brakes', 'air_con'],
+      checkedDaysAgo: 29,
+    });
+
+    await record(g.id, valid(ago(29)));
+
+    const written = await entries(g.id);
+    expect(written).toHaveLength(1);
+    expect(written[0]).toMatchObject({
+      actorId: ana,
+      actorName: 'Ana',
+      actorRole: 'admin',
+      field: 'last_checked_on',
+      newValue: { activities: ['mechanics', 'brakes'], checkedOn: today() },
+      oldValue: {
+        activities: ['mechanics', 'brakes', 'air_con'],
+        checkedOn: ago(29),
+      },
+      subjectId: g.id,
+    });
+  });
+
+  it('writes one recheck.recorded row for the admins, the owner and the public profile, and no price-list row when nothing narrowed', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+
+    await record(g.id, valid(ago(29)));
+
+    const recorded = await events(g.id, 'recheck.recorded');
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.payload).toEqual({ garageId: g.id, result: 'ok' });
+    expect(recorded[0]?.audience).toEqual(
+      expect.arrayContaining([
+        'admin',
+        `garage:${g.id}`,
+        `public:garage:${g.id}`,
+      ]),
+    );
+    expect(await events(g.id, 'price_list.updated')).toHaveLength(0);
+  });
+
+  it('narrows the activities and emits price_list.updated for the garage', async () => {
+    const g = await garage({
+      activities: ['mechanics', 'brakes', 'air_con'],
+      checkedDaysAgo: 29,
+    });
+
+    const res = await record(
+      g.id,
+      valid(ago(29), { activities: ['mechanics', 'brakes'] }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await stored(g.id)).rarActivities).toEqual(['mechanics', 'brakes']);
+    const updated = await events(g.id, 'price_list.updated');
+    expect(updated).toHaveLength(1);
+    expect(updated[0]?.audience).toEqual(
+      expect.arrayContaining([`garage:${g.id}`, `public:garage:${g.id}`]),
+    );
+  });
+
+  it('takes any date up to today when the garage had none', async () => {
+    const g = await garage({ checkedDaysAgo: null });
+
+    const res = await record(g.id, valid(null, { checkedOn: ago(400) }));
+
+    expect(res.status).toBe(200);
+    expect(dayOf((await stored(g.id)).lastCheckedOn)).toBe(ago(400));
+  });
+
+  // The price list reads an empty set as covering every job.
+  it('refuses a valid re-check with no activity at all with 422 and changes nothing', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const before = await stored(g.id);
+
+    const res = await record(g.id, valid(ago(29), { activities: [] }));
+
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({
+      code: 'recheck_activities_empty',
+      field: 'activities',
+    });
+    await unchanged(before, g.id);
+    expect(await rechecks(g.id)).toEqual([]);
+    expect(await events(g.id, 'price_list.updated')).toHaveLength(0);
+  });
+
+  it.each([
+    ['ro', () => admin, WIDER_RO],
+    ['en', () => englishAdmin, WIDER_EN],
+  ])(
+    'refuses a wider set with 422 in %s and changes nothing',
+    async (_, as, message) => {
+      const g = await garage({ activities: ['mechanics'], checkedDaysAgo: 29 });
+      const before = await stored(g.id);
+
+      const res = await record(
+        g.id,
+        valid(ago(29), { activities: ['mechanics', 'brakes'] }),
+        as(),
+      );
+
+      expect(res.status).toBe(422);
+      expect(res.body).toMatchObject({
+        code: 'recheck_activities_wider',
+        field: 'activities',
+        message,
+      });
+      await unchanged(before, g.id);
+    },
+  );
+
+  it('refuses an activity code that is not a RAR activity with 422', async () => {
+    const g = await garage({
+      activities: ['mechanics', 'tuning'],
+      checkedDaysAgo: 29,
+    });
+    const before = await stored(g.id);
+
+    const res = await record(g.id, valid(ago(29), { activities: ['tuning'] }));
+
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({
+      code: 'recheck_activity_unknown',
+      field: 'activities',
+    });
+    await unchanged(before, g.id);
+  });
+
+  it('rolls everything back when a write inside the transaction fails', async () => {
+    const g = await garage({ checkedDaysAgo: 29 });
+    const before = await stored(g.id);
+    const audit = app.get<AuditPort>(AUDIT_PORT, { strict: false });
+    jest.spyOn(audit, 'record').mockRejectedValue(new Error('audit down'));
+
+    const res = await record(g.id, valid(ago(29)));
+
+    expect(res.status).toBe(500);
+    await unchanged(before, g.id);
+    expect(await rechecks(g.id)).toEqual([]);
+    expect(await events(g.id)).toHaveLength(0);
+  });
+});
+
+// @traces 1351-FR-005
+describe('two admins on the same row', () => {
+  it('refuses the second admin with 409 naming the first and the time', async () => {
+    const g = await garage({ checkedDaysAgo: 40 });
+    expect((await record(g.id, valid(ago(40)))).status).toBe(200);
+    const after = await stored(g.id);
+
+    const res = await record(g.id, valid(ago(40)), otherAdmin);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('recheck_conflict');
+    expect(res.body.message).toMatch(
+      /^Deja reverificat de Ana P\. la \d{2}:\d{2}$/,
+    );
+    expect(await rechecks(g.id)).toHaveLength(1);
+    expect(dayOf((await stored(g.id)).lastCheckedOn)).toBe(
+      dayOf(after.lastCheckedOn),
+    );
+    expect(await entries(g.id)).toHaveLength(1);
+  });
+
+  it('answers an English admin in English', async () => {
+    const g = await garage({ checkedDaysAgo: 40 });
+    await record(g.id, valid(ago(40)));
+
+    const res = await record(g.id, valid(ago(40)), englishAdmin);
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(
+      /^Already re-checked by Ana P\. at \d{2}:\d{2}$/,
+    );
+  });
+
+  it('names the day too when the newer re-check is not today’s', async () => {
+    const g = await garage({ checkedDaysAgo: 40 });
+    await record(g.id, valid(ago(40), { checkedOn: ago(30) }));
+    await prisma.$executeRaw`
+      UPDATE recheck SET recorded_at = recorded_at - interval '3 days'
+      WHERE garage_id = ${g.id}::uuid`;
+
+    const res = await record(g.id, valid(ago(40)), otherAdmin);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('recheck_conflict');
+    expect(res.body.message).toMatch(
+      /^Deja reverificat de Ana P\. pe \d{1,2} \S+ la \d{2}:\d{2}$/,
+    );
+  });
+
+  it('refuses the same admin’s second save of the day as a conflict', async () => {
+    const g = await garage({ checkedDaysAgo: 40 });
+    await record(g.id, valid(ago(40)));
+
+    const res = await record(g.id, valid(ago(40)));
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('recheck_conflict');
+    expect(await rechecks(g.id)).toHaveLength(1);
+  });
+
+  it('answers recheck_stale when the date moved without a newer re-check', async () => {
+    const g = await garage({ checkedDaysAgo: 40 });
+    await prisma.garage.update({
+      data: { lastCheckedOn: asDate(ago(35)) },
+      where: { id: g.id },
+    });
+
+    const res = await record(g.id, valid(ago(40)));
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'recheck_stale',
+      message: STALE_RO,
+    });
+    expect(await rechecks(g.id)).toEqual([]);
+    expect(dayOf((await stored(g.id)).lastCheckedOn)).toBe(ago(35));
+  });
+});
+
+// @traces 1351-FR-006
+describe('a narrowing seen on the price list', () => {
+  it('hides exactly the jobs whose activity left the set, through the existing rule', async () => {
+    const g = await garage({
+      activities: ['mechanics', 'air_con'],
+      checkedDaysAgo: 29,
+    });
+    const owner = await account('Mihai Owner', ['garage']);
+    await prisma.garageMember.create({
+      data: { accountId: owner, garageId: g.id, role: 'owner' },
+    });
+    const job = async (rarActivity: string | null, position: number) => {
+      const created = await prisma.jobType.create({
+        data: {
+          key: `job-${randomUUID()}`,
+          nameEn: `Job ${position}`,
+          nameRo: `Lucrare ${position}`,
+          rarActivity,
+          status: 'approved',
+        },
+      });
+      await prisma.garagePrice.create({
+        data: {
+          fromBani: 10_000,
+          garageId: g.id,
+          jobTypeId: created.id,
+          position,
+          toBani: 20_000,
+          updatedBy: owner,
+        },
+      });
+      return created.id;
+    };
+    const engine = await job('mechanics', 0);
+    const aircon = await job('air_con', 1);
+    const unmapped = await job(null, 2);
+    const prices = async () =>
+      (
+        await http()
+          .get(`/garages/${g.id}/prices`)
+          .set('Authorization', bearer(owner, 'garage'))
+      ).body.items as { jobTypeId: string; public: boolean; reason?: string }[];
+    expect((await prices()).every((i) => i.public)).toBe(true);
+
+    await record(g.id, valid(ago(29), { activities: ['mechanics'] }));
+
+    const after = new Map((await prices()).map((i) => [i.jobTypeId, i]));
+    expect(after.get(engine)).toMatchObject({ public: true });
+    expect(after.get(unmapped)).toMatchObject({ public: true });
+    expect(after.get(aircon)).toMatchObject({
+      public: false,
+      reason: 'not_authorised',
+    });
   });
 });

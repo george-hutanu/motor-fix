@@ -677,6 +677,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_rechecks_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each monthly register re-check an admin recorded, by result (ok, failed); the audit holds who, the date checked and the activities; a count has no failure to alert on, the rechecks endpoint entry owns the error and latency alerts",
+      "story": "ST-46"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_quote_received_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
