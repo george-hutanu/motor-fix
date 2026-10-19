@@ -149,11 +149,11 @@ export class HomeDto {
 }
 
 export class PopularBrandsQueryDto {
-  @ApiPropertyOptional({ default: 8, maximum: 12, minimum: 1, type: 'integer' })
+  @ApiPropertyOptional({ default: 8, maximum: 16, minimum: 1, type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(12)
+  @Max(16)
   limit: number = 8;
 }

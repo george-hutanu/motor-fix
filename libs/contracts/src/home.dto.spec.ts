@@ -65,12 +65,14 @@ describe('PopularBrandsQueryDto', () => {
     expect(plainToInstance(PopularBrandsQueryDto, {}).limit).toBe(8);
   });
 
-  it.each(['1', '12'])('takes the limit %s as a number', (value) => {
+  // @traces 228-FR-011
+  it.each(['1', '12', '16'])('takes the limit %s as a number', (value) => {
     expect(limit(value).limit).toBe(Number(value));
     expect(errors(PopularBrandsQueryDto, { limit: value })).toEqual([]);
   });
 
-  it.each(['0', '13', '2.5', 'eight', ''])('refuses the limit %s', (value) => {
+  // @traces 228-FR-011
+  it.each(['0', '17', '2.5', 'eight', ''])('refuses the limit %s', (value) => {
     expect(errors(PopularBrandsQueryDto, { limit: value })).not.toEqual([]);
   });
 });

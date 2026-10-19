@@ -59,13 +59,17 @@ export class BrandLoader {
       const after = {
         active: true,
         name: record.name,
-        popularity: record.popularity ?? null,
         slug: slugOf(record.name),
       };
       const brand = byKey.get(record.key);
+      // The file's rank seeds a brand it inserts; a stored brand keeps the
+      // rank the nightly ranking gave it.
       const wrote = brand
         ? await this.update(tx, brand, after)
-        : await this.create(tx, record.key, after);
+        : await this.create(tx, record.key, {
+            ...after,
+            popularity: record.popularity ?? null,
+          });
       if (wrote) changed++;
     }
     const keys = new Set(records.map((record) => record.key));
