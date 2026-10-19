@@ -4,7 +4,7 @@
 export interface UnreadCountDto {
 
   /**
-   * Unread bell notifications of the last 90 days
+   * The account's unread bell notifications, of any age
    */
   count: number;
 }

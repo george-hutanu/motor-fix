@@ -262,12 +262,18 @@ describe('handing an event to the notifications service', () => {
       {
         audience: [`account:${andrei}`],
         event: {
-          at: bell?.createdAt.toISOString(),
+          at: expect.any(String),
           id: bell?.id,
           kind: 'notification.created',
+          unreadCount: 1,
         },
+        position: String(bell?.position),
       },
     ]);
+    // The count's time, taken once the account was locked: never before the row.
+    expect(Date.parse(toAndrei()[0].event.at)).toBeGreaterThanOrEqual(
+      bell?.createdAt.getTime() ?? Number.NaN,
+    );
   });
 
   it('keeps the rows when the live publish fails', async () => {
@@ -294,6 +300,75 @@ describe('handing an event to the notifications service', () => {
     const before = await prisma.activityLog.count();
     await quote(andrei, 'evt-8');
     expect(await prisma.activityLog.count()).toBe(before);
+  });
+});
+
+// @traces 1190-FR-001
+// @traces 1190-FR-005
+describe('the position and the unread count a bell row writes', () => {
+  const unread = async (accountId: string) =>
+    (
+      await prisma.account.findUniqueOrThrow({
+        select: { unreadCount: true },
+        where: { id: accountId },
+      })
+    ).unreadCount;
+
+  it('gives each bell row a higher position and adds one to the count', async () => {
+    const andrei = await account('andrei');
+
+    await quote(andrei, 'evt-pos-1');
+    await quote(andrei, 'evt-pos-2');
+
+    const bells = (await rows(andrei)).filter((r) => r.channel === 'in_app');
+    expect(bells).toHaveLength(2);
+    expect(bells[1]!.position).toBeGreaterThan(bells[0]!.position);
+    expect(await unread(andrei)).toBe(2);
+  });
+
+  // @traces 1190-FR-004
+  it('takes the position only once the account is locked, so a row committed later never has a lower one', async () => {
+    const andrei = await account('andrei');
+    let held!: { position: bigint };
+    let waiting!: Promise<unknown>;
+
+    await prisma.$transaction(async (tx) => {
+      // Another writer holds the account row, as a second bell row's build does.
+      await tx.account.update({
+        data: { unreadCount: { increment: 1 } },
+        where: { id: andrei },
+      });
+      waiting = quote(andrei, 'evt-pos-order');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      held = await tx.notification.create({
+        data: {
+          accountId: andrei,
+          channel: 'in_app',
+          createdAt: new Date(DAY),
+          eventId: 'evt-pos-held',
+          kind: 'QUOTE_ACCEPTED',
+          params: {},
+          sentAt: new Date(DAY),
+          status: 'sent',
+        },
+      });
+    });
+    await waiting;
+
+    const later = (await rows(andrei)).find(
+      (r) => r.channel === 'in_app' && r.eventId === 'evt-pos-order',
+    );
+    expect(later!.position).toBeGreaterThan(held.position);
+  });
+
+  it('adds nothing for a repeat of the same event, or for an e-mail row', async () => {
+    const andrei = await account('andrei');
+
+    await quote(andrei, 'evt-pos-3');
+    await quote(andrei, 'evt-pos-3');
+
+    expect((await rows(andrei)).some((r) => r.channel === 'email')).toBe(true);
+    expect(await unread(andrei)).toBe(1);
   });
 });
 
@@ -678,7 +753,12 @@ describe('e-mails to a listing draft', () => {
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .map((r) => ({ id: r.id, link })),
     );
-    expect(JSON.stringify(written)).not.toContain('secret');
+    // A bell row's position is a BigInt, which JSON cannot write as it is.
+    expect(
+      JSON.stringify(written, (_, v) =>
+        typeof v === 'bigint' ? String(v) : v,
+      ),
+    ).not.toContain('secret');
   });
 
   it('holds a reminder until 08:00 at night but never the link asked for', async () => {

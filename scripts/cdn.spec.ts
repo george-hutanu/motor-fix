@@ -190,6 +190,20 @@ describe('infra/cdn/bunny.json', () => {
     expect(zone.EnableCookieVary).toBe(false);
   });
 
+  // @traces 1190-FR-012
+  it.each(envs)('%s: never caches either live stream', (env) => {
+    const rule = config.environments[env].edgeRules.find(
+      (r: { Description: string }) => r.Description === 'mf-no-cache-app-api',
+    );
+    const patterns: string[] = rule.Triggers[0].PatternMatches;
+    for (const url of [
+      'https://motorfix.ro/api/v1/live',
+      'https://motorfix.ro/api/v1/live/public?garages=x',
+    ]) {
+      expect(patterns.some((p) => glob(p).test(url))).toBe(true);
+    }
+  });
+
   it.each(envs)(
     '%s: never caches /api/, /app/ or a signed-in request',
     (env) => {

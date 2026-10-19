@@ -47,6 +47,8 @@ model Account {
   lastRole                Role                     @map("last_role")
   lastActiveAt            DateTime?                @map("last_active_at") @db.Timestamptz(3)
   emailBouncedAt          DateTime?                @map("email_bounced_at") @db.Timestamptz(3)
+  // Unread in-app notifications, kept in the transaction that changes them.
+  unreadCount             Int                      @default(0) @map("unread_count")
   createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   roles                   AccountRole[]
   identities              AccountIdentity[]

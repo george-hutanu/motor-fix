@@ -10,6 +10,7 @@ import {
   Inject,
   NotFoundException,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiProduces,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
@@ -37,6 +39,14 @@ import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { EVENT_PORT, type EventPort } from '../event.port';
 
+// A client's last position: anything but a whole number above zero, of at
+// most 18 digits, replays nothing.
+export function positionOf(value: string | undefined): bigint | null {
+  if (value === undefined || !/^\d{1,18}$/.test(value)) return null;
+  const position = BigInt(value);
+  return position > 0n ? position : null;
+}
+
 @ApiTags('live')
 @ApiBearerAuth()
 @Controller()
@@ -53,10 +63,18 @@ export class LiveController {
   @OpenInMaintenance()
   @ApiProduces('text/event-stream')
   @ApiOkResponse({ description: 'A server-sent events stream' })
+  @ApiQuery({
+    description:
+      'The last position the client saw, for a client that cannot send Last-Event-ID (the header wins)',
+    name: 'since',
+    required: false,
+    type: String,
+  })
   async live(
     @CurrentActor() actor: Actor,
     @Req() req: Request,
     @Res() res: Response,
+    @Query('since') since?: string,
   ) {
     const token = req.header('authorization')?.slice('Bearer '.length) ?? '';
     // The guard accepted this token; reading it again gives its expiry.
@@ -71,6 +89,7 @@ export class LiveController {
       expiresAt,
       garageId: actor.garageId,
       role: actor.role,
+      since: positionOf(req.header('last-event-id') ?? since),
     });
   }
 

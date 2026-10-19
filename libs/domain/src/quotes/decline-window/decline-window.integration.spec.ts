@@ -229,7 +229,10 @@ describe('closing the decline window', () => {
       reason: 'make_model_engine_not_done',
     });
     expect(email.subjectId).toBe(recipient.id);
-    const all = JSON.stringify(await messages(driverId));
+    // A bell row's position is a BigInt, which JSON cannot write as it is.
+    const all = JSON.stringify(await messages(driverId), (_, v) =>
+      typeof v === 'bigint' ? String(v) : v,
+    );
     expect(all).not.toContain(testPhone(8));
     expect(all).not.toContain('B123ABC');
   });

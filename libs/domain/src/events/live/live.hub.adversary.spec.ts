@@ -242,7 +242,7 @@ describe('LiveHub fan-out input', () => {
     );
 
     const data = JSON.parse(
-      (sink.chunks[1]?.split('\n')[1] ?? '').replace(/^data: /, ''),
+      (sink.chunks.at(-1)?.split('\n')[1] ?? '').replace(/^data: /, ''),
     );
     expect(data).toEqual(good);
   });

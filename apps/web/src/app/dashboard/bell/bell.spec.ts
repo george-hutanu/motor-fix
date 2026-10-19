@@ -734,3 +734,87 @@ describe('BellStore without a session', () => {
     expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
   });
 });
+
+// @traces 1190-FR-011
+describe('BellStore: the count the stream carries', () => {
+  it('takes the count a new notification carries, without asking for it', async () => {
+    const { fixture, store } = await render(2);
+    api.bellControllerUnreadCount.mockClear();
+
+    events.next({
+      at: '2026-10-19T12:00:00.000Z',
+      id: 'new',
+      kind: 'notification.created',
+      unreadCount: 3,
+    });
+    await settle(fixture);
+
+    expect(store.count()).toBe(3);
+    expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
+  });
+
+  it('takes the count a read carries, and a read of all at zero marks every row read', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    api.bellControllerUnreadCount.mockClear();
+    // The rows shown are marked from the messages alone.
+    api.bellControllerList.mockRejectedValue(new Error('offline'));
+
+    events.next({
+      at: '2026-10-19T12:00:00.000Z',
+      id: 'a',
+      kind: 'notification.read',
+      unreadCount: 1,
+    });
+    await settle(fixture);
+    expect(store.count()).toBe(1);
+
+    events.next({
+      at: '2026-10-19T12:00:01.000Z',
+      id: 'account-1',
+      kind: 'notification.read',
+      unreadCount: 0,
+    });
+    await settle(fixture);
+
+    expect(store.count()).toBe(0);
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+    expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
+  });
+
+  it('keeps the count of a newer message over an older one that comes after it', async () => {
+    const { fixture, store } = await render(0);
+
+    events.next({
+      at: '2026-10-19T12:00:05.000Z',
+      id: 'b',
+      kind: 'notification.created',
+      unreadCount: 2,
+    });
+    events.next({
+      at: '2026-10-19T12:00:01.000Z',
+      id: 'a',
+      kind: 'notification.created',
+      unreadCount: 1,
+    });
+    await settle(fixture);
+
+    expect(store.count()).toBe(2);
+  });
+
+  it('still asks for the count when a message carries none', async () => {
+    const { fixture, store } = await render(0);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 4 });
+    api.bellControllerUnreadCount.mockClear();
+
+    events.next({
+      at: '2026-10-19T12:00:00.000Z',
+      id: 'new',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+
+    expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
+    expect(store.count()).toBe(4);
+  });
+});
