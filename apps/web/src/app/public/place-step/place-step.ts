@@ -16,25 +16,24 @@ import {
 import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import type { BusinessKind } from '@motor-fix/contracts/listing-sections';
 import {
-  ADDRESS_MAX,
-  PLACE_SEARCH_MIN,
-  PLACE_SUGGESTIONS_MAX,
   type PlaceSection,
   RADIUS_KM,
   radiusAllowed,
 } from '@motor-fix/contracts/place-section';
-import { type PlaceSuggestionDto, PlacesService } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
 import { type LatLng, PLACE_MAP, type PlaceMap } from './place-map';
+import {
+  type AddressChoice,
+  AddressField,
+} from '../address-field/address-field';
 import { type FieldMessage, FieldWatch, NO_PROBLEMS } from '../field-watch';
 
 const ADDRESS = 'steps.5.place.address';
 const POSITION = 'steps.5.place.lat';
 const RADIUS = 'steps.5.place.radiusKm';
 
-const SEARCH_AFTER_MS = 300;
 // One arrow key moves the pin about 20 m.
 const NUDGE = 0.0002;
 const NUDGES: Record<string, [number, number]> = {
@@ -55,7 +54,7 @@ const positionOf = ({ lat, lng }: PlaceSection): LatLng | undefined =>
 // when it opens wrong, or when sending is asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmInput, HlmLabel, TranslatePipe],
+  imports: [AddressField, HlmInput, HlmLabel, TranslatePipe],
   selector: 'mf-place-step',
   styleUrl: './place-step.css',
   templateUrl: './place-step.html',
@@ -69,25 +68,14 @@ export class PlaceStep {
   // Whether any field shows an error, for the step list's dot.
   readonly shown = output<boolean>();
 
-  private readonly i18n = inject(I18n);
-  private readonly places = inject(PlacesService);
   private readonly openMap = inject(PLACE_MAP);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('map');
   private readonly map = signal<PlaceMap | undefined>(undefined);
-  private timer: ReturnType<typeof setTimeout> | undefined;
-  // Only the answer to the latest text is shown.
-  private asked = 0;
-  private lastAsked = '';
   private readonly watch = new FieldWatch();
 
-  protected readonly addressMax = ADDRESS_MAX;
   protected readonly radiusMin = RADIUS_KM.min;
   protected readonly radiusMax = RADIUS_KM.max;
   protected readonly mobile = computed(() => this.businessKind() === 'mobile');
-  protected readonly suggestions = signal<PlaceSuggestionDto[]>([]);
-  protected readonly active = signal(-1);
-  protected readonly nothingFound = signal(false);
-  protected readonly searchDown = signal(false);
   protected readonly armed = signal(false);
   protected readonly mapDown = signal(false);
   // What is typed in the radius field while it is not a radius to keep.
@@ -121,15 +109,6 @@ export class PlaceStep {
         : null,
     };
   });
-  protected readonly addressDescribedBy = computed(
-    () =>
-      [
-        this.messages().address && 'place-address-error',
-        this.searchDown() && 'place-search-down',
-      ]
-        .filter(Boolean)
-        .join(' ') || null,
-  );
   protected readonly errors = computed(() => {
     const { address, position, radius } = this.messages();
     const error = (message: FieldMessage | null) =>
@@ -146,7 +125,6 @@ export class PlaceStep {
     let destroyed = false;
     destroyRef.onDestroy(() => {
       destroyed = true;
-      clearTimeout(this.timer);
       this.map()?.destroy();
     });
     afterNextRender(() => {
@@ -177,71 +155,21 @@ export class PlaceStep {
     );
   }
 
-  protected type(event: Event) {
-    const typed = (event.target as HTMLInputElement).value;
+  protected type(typed: string) {
     this.watch.type(ADDRESS);
     // A typed address is no longer the suggestion the town came with.
     const { address: _, locality: __, ...rest } = this.value();
     this.value.set(typed ? { ...rest, address: typed } : rest);
-    const q = typed.trim();
-    // Spaces around the text asked last change nothing to ask.
-    if (q && q === this.lastAsked) return;
-    clearTimeout(this.timer);
-    this.asked++;
-    this.close();
-    this.nothingFound.set(false);
-    this.searchDown.set(false);
-    if (q.length < PLACE_SEARCH_MIN) return;
-    this.timer = setTimeout(() => this.search(q), SEARCH_AFTER_MS);
   }
 
-  private async search(q: string) {
-    const asked = ++this.asked;
-    this.lastAsked = q;
-    try {
-      const { items } = await this.places.placesControllerSearch({
-        lang: this.i18n.language(),
-        q,
-      });
-      if (asked !== this.asked) return;
-      this.suggestions.set(items.slice(0, PLACE_SUGGESTIONS_MAX));
-      this.nothingFound.set(items.length === 0);
-    } catch {
-      if (asked !== this.asked) return;
-      this.lastAsked = '';
-      this.searchDown.set(true);
-    }
-  }
-
-  protected choose({ label, lat, lng, locality }: PlaceSuggestionDto) {
-    clearTimeout(this.timer);
-    this.asked++;
-    this.close();
-    // The draft refuses a longer address, so a longer label is cut to fit.
-    const address = label.slice(0, ADDRESS_MAX);
+  protected choose({ label, lat, lng, locality }: AddressChoice) {
     this.value.update(({ locality: _, ...value }) => ({
       ...value,
-      address,
+      ...(label !== null && { address: label }),
       lat,
       lng,
       ...(locality && { locality }),
     }));
-  }
-
-  protected keys(event: KeyboardEvent) {
-    const shown = this.suggestions();
-    if (event.key === 'Escape') return this.close();
-    if (shown.length === 0) return;
-    const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
-    if (event.key in moves) {
-      event.preventDefault();
-      this.active.update(
-        (i) => (i + moves[event.key] + shown.length) % shown.length,
-      );
-    } else if (event.key === 'Enter' && this.active() >= 0) {
-      event.preventDefault();
-      this.choose(shown[this.active()]);
-    }
   }
 
   protected leave(field: 'address' | 'radius') {
@@ -274,11 +202,5 @@ export class PlaceStep {
 
   private place(at: LatLng) {
     this.value.update((value) => ({ ...value, lat: at.lat, lng: at.lng }));
-  }
-
-  private close() {
-    this.lastAsked = '';
-    this.suggestions.set([]);
-    this.active.set(-1);
   }
 }

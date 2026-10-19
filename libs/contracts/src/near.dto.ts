@@ -6,7 +6,7 @@ import { inRomania } from './place-section';
 export class NearQueryDto {
   @ApiPropertyOptional({
     description:
-      'The place the count is measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, all of Romania',
+      'The place counts and distances are measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given',
     example: '46.771,23.624',
   })
   @IsOptional()

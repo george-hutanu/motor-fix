@@ -36,7 +36,7 @@ import {
   type PrismaClient,
   type SavedGarage,
 } from '../../generated/prisma/client';
-import { distanceMetersSql } from '../../search/area/search-area';
+import { areaSql } from '../../search/area/area-sql';
 
 // Whether the save made the row, so the controller answers 201 or 200.
 type Saved = { created: boolean; row: SavedGarageDto };
@@ -293,8 +293,9 @@ export class SavedGaragesService {
       query.cursor === undefined ? undefined : readCursor(query.cursor);
     const point = parseNear(query.near);
     const me = actor.accountId;
+    // NULL for a garage with no position.
     const distance = point
-      ? Prisma.sql`CASE WHEN garage.latitude IS NULL THEN NULL ELSE ${distanceMetersSql(point)} END`
+      ? areaSql({ point }).distance
       : Prisma.sql`NULL::float8`;
     const from = after
       ? Prisma.sql`AND (saved_garage.saved_at, saved_garage.garage_id) < (${after.at}::timestamptz, ${after.id}::uuid)`

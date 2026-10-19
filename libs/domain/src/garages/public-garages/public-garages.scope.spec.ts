@@ -3,7 +3,7 @@ import { dirname, join, normalize, relative } from 'node:path';
 
 import * as ts from 'typescript';
 
-// @traces 207-FR-005 1183-FR-007 1183-FR-008
+// @traces 207-FR-005 1183-FR-007 1183-FR-008 271-FR-012
 
 type Sources = Map<string, string>;
 
@@ -646,6 +646,34 @@ describe('the public garages scope, on fixtures', () => {
 
     expect(verdict(files, {}).bypasses).toEqual([
       'libs/domain/src/map/map.service.ts:4 (map/map.service.ts#pins, from libs/domain/src/map/map.controller.ts#pins)',
+    ]);
+  });
+
+  it('names a raw read that splices the search area but not the scope', () => {
+    const files: Sources = new Map([
+      [
+        'libs/domain/src/map/map.controller.ts',
+        `@Controller('map')
+         export class MapController {
+           constructor(private readonly map: MapService) {}
+           @Public() @Get() pins() { return this.map.pins(); }
+         }`,
+      ],
+      [
+        'libs/domain/src/map/map.service.ts',
+        `export class MapService {
+           constructor(private readonly prisma: PrismaClient) {}
+           pins(area: Area) {
+             const sql = areaSql(area);
+             this.prisma.$queryRaw\`SELECT id, \${sql.distance} FROM garage WHERE \${publicGaragesSql()} AND \${within(sql)}\`;
+             return this.prisma.$queryRaw\`SELECT id FROM garage WHERE \${within(sql)}\`;
+           }
+         }`,
+      ],
+    ]);
+
+    expect(verdict(files, {}).bypasses).toEqual([
+      'libs/domain/src/map/map.service.ts:6 (map/map.service.ts#pins, from libs/domain/src/map/map.controller.ts#pins)',
     ]);
   });
 

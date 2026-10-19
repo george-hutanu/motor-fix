@@ -11,9 +11,13 @@ import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-sec
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
-import { publicGarages } from '../../garages/public-garages/public-garages';
-import type { PrismaClient } from '../../generated/prisma/client';
-import { garagesInArea, groupsOf } from '../area/search-area';
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
+import type {
+  GarageBrandStance,
+  PrismaClient,
+} from '../../generated/prisma/client';
+import { areaSql, within } from '../area/area-sql';
+import type { AreaRow } from '../area/search-area';
 import { GarageSearchCache } from '../garage-search/garage-search.cache';
 import { recordSearchPins } from '../garage-search/garage-search.metrics';
 import {
@@ -66,53 +70,53 @@ export class GaragePinsService {
     radiusKm?: number,
     bbox?: SearchBbox,
   ): Promise<GaragePinsDto> {
-    // With neither a place nor a box the count reads no area, so the nearest
-    // pins are all that is needed.
+    // With neither a place nor a box the count reads no area, and the pins
+    // are the nearest garages to the middle of Romania.
     const placed = Boolean(point || bbox);
-    const area = await garagesInArea(this.prisma, {
-      bbox,
-      limit: placed ? undefined : SEARCH_PINS_MAX,
-      point,
-      radiusKm,
-    });
+    const area = areaSql({ bbox, point, radiusKm });
     const [found, rows] = await Promise.all([
-      countGroups(this.prisma, groupsOf(brandId, placed ? area : undefined)),
-      this.prisma.garage.findMany({
-        select: {
-          brands: { select: { stance: true }, where: { brandId } },
-          id: true,
-          labourFromBani: true,
-          serviceRadiusKm: true,
-        },
-        where: { ...publicGarages(), id: { in: [...area.keys()] } },
-      }),
+      countGroups(this.prisma, brandId, placed ? area : undefined),
+      this.prisma.$queryRaw<
+        (Omit<AreaRow, 'distance_m'> & {
+          labour_from_bani: number | null;
+          service_radius_km: number | null;
+          stance: GarageBrandStance | null;
+        })[]
+      >`
+        SELECT
+          garage.id,
+          garage.latitude,
+          garage.longitude,
+          garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
+          garage.labour_from_bani,
+          garage.service_radius_km,
+          (SELECT gb.stance::text FROM garage_brand gb
+            WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
+          ) AS stance
+        FROM garage
+        WHERE ${publicGaragesSql()} AND ${within(area)}
+        ORDER BY ${area.nearness}, garage.id
+        LIMIT ${SEARCH_PINS_MAX}`,
     ]);
-    const pins = rows
-      .flatMap((row) => {
-        const at = area.get(row.id);
-        return at ? [{ at, row }] : [];
-      })
-      .sort((a, b) => a.at.distanceM - b.at.distanceM)
-      .slice(0, SEARCH_PINS_MAX)
-      .map(({ at, row }): GaragePinDto => {
-        const pin = {
-          id: row.id,
-          rateLei:
-            row.labourFromBani === null
-              ? null
-              : Math.round(row.labourFromBani / 100),
-          stance: row.brands[0]?.stance ?? 'unstated',
-        };
-        return at.mobile
-          ? {
-              ...pin,
-              lat: roughly(at.lat),
-              lng: roughly(at.lng),
-              serviceRadiusKm:
-                row.serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
-            }
-          : { ...pin, lat: at.lat, lng: at.lng };
-      });
+    const pins = rows.map((row): GaragePinDto => {
+      const pin = {
+        id: row.id,
+        rateLei:
+          row.labour_from_bani === null
+            ? null
+            : Math.round(row.labour_from_bani / 100),
+        stance: row.stance ?? ('unstated' as const),
+      };
+      return row.mobile
+        ? {
+            ...pin,
+            lat: roughly(row.latitude),
+            lng: roughly(row.longitude),
+            serviceRadiusKm:
+              row.service_radius_km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+          }
+        : { ...pin, lat: row.latitude, lng: row.longitude };
+    });
     return { pins, total: found.total };
   }
 }

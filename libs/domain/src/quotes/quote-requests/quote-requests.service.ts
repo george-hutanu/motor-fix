@@ -24,14 +24,14 @@ import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { addLocalDays, atLocal, localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import { publicGarages } from '../../garages/public-garages/public-garages';
-import type {
-  Car,
-  Fuel,
+import { publicGaragesSql } from '../../garages/public-garages/public-garages';
+import {
+  type Car,
+  type Fuel,
   Prisma,
-  PrismaClient,
+  type PrismaClient,
 } from '../../generated/prisma/client';
-import { garagesInArea } from '../../search/area/search-area';
+import { areaSql, kmOf, within } from '../../search/area/area-sql';
 import {
   REQUEST_DAILY_LIMIT,
   REQUEST_MAX_GARAGES,
@@ -103,20 +103,13 @@ function assertShape(dto: CreateQuoteRequestDto) {
   }
 }
 
-// The garages that take the car and, when there are jobs, one of them: the
-// brand row says works_on, ticks the fuel and ticks a job for the brand.
-const takes = (car: Pick<Car, 'brandId' | 'fuel'>, jobTypeIds: string[]) => ({
-  brands: {
-    some: {
-      brandId: car.brandId,
-      [car.fuel]: true,
-      stance: 'works_on' as const,
-      ...(jobTypeIds.length > 0 && {
-        jobs: { some: { jobTypeId: { in: jobTypeIds } } },
-      }),
-    },
-  },
-});
+// The fuel column of a brand row that says the garage takes the car's fuel.
+const FUEL_TICKED = {
+  diesel: Prisma.sql`gb.diesel`,
+  electric: Prisma.sql`gb.electric`,
+  hybrid: Prisma.sql`gb.hybrid`,
+  petrol: Prisma.sql`gb.petrol`,
+} satisfies Record<Car['fuel'], Prisma.Sql>;
 
 // The first garage, in the order sent, that cannot take the request.
 async function assertRouted(
@@ -323,30 +316,52 @@ export class QuoteRequestsService {
     if (!car) throw new NotFoundException();
     const point = parseNear(query.near);
     if (!point) return { items: [] };
-    const area = await garagesInArea(this.prisma, { point });
-    area.delete(query.exclude ?? '');
-    const garages = await this.prisma.garage.findMany({
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      select: { id: true, name: true, slug: true },
-      take: REQUEST_MAX_GARAGES,
-      where: {
-        id: { in: [...area.keys()] },
-        ...publicGarages(),
-        ...takes(car, query.jobTypeIds ?? []),
-      },
-    });
+    const area = areaSql({ point });
+    const jobTypeIds = query.jobTypeIds ?? [];
+    // The garages in the area that take the car and, when there are jobs,
+    // one of them: the brand row says works_on, ticks the fuel and ticks a
+    // job for the brand. The profile's own garage is left out.
+    const rows = await this.prisma.$queryRaw<
+      {
+        distance_m: number;
+        id: string;
+        mobile: boolean;
+        name: string;
+        slug: string;
+      }[]
+    >`
+      SELECT
+        garage.id,
+        garage.name,
+        garage.slug,
+        ${area.distance} AS distance_m,
+        garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
+      FROM garage
+      WHERE ${publicGaragesSql()} AND ${within(area)}
+        ${query.exclude ? Prisma.sql`AND garage.id <> ${query.exclude}::uuid` : Prisma.empty}
+        AND EXISTS (
+          SELECT 1 FROM garage_brand gb
+          WHERE gb.garage_id = garage.id
+            AND gb.brand_id = ${car.brandId}::uuid
+            AND gb.stance = 'works_on'
+            AND ${FUEL_TICKED[car.fuel]}
+            ${
+              jobTypeIds.length > 0
+                ? Prisma.sql`AND EXISTS (
+                    SELECT 1 FROM garage_brand_job j
+                    WHERE j.garage_id = gb.garage_id AND j.brand_id = gb.brand_id
+                      AND j.job_type_id = ANY(${jobTypeIds}::uuid[]))`
+                : Prisma.empty
+            }
+        )
+      ORDER BY garage.name, garage.id
+      LIMIT ${REQUEST_MAX_GARAGES}`;
     return {
-      items: garages.map((garage) => {
-        const { distanceM, mobile } = area.get(garage.id) as {
-          distanceM: number;
-          mobile: boolean;
-        };
-        return {
-          ...garage,
-          comesToYou: mobile,
-          distanceKm: mobile ? null : Math.round(distanceM / 100) / 10,
-        };
-      }),
+      items: rows.map(({ distance_m, mobile, ...garage }) => ({
+        ...garage,
+        comesToYou: mobile,
+        distanceKm: mobile ? null : kmOf(Number(distance_m)),
+      })),
     };
   }
 }

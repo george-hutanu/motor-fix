@@ -72,6 +72,10 @@ p {
   overflow-wrap: anywhere;
 }
 
+.where .distance {
+  white-space: nowrap;
+}
+
 .score {
   align-items: center;
   display: flex;

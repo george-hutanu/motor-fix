@@ -28,6 +28,7 @@ features:
   - 1204-hours-row-live-regions
   - 049-garage-suspension
   - 386-brand-price-range
+  - 271-garage-distance
   - 1191-resilient-uploads
 ---
 
@@ -951,6 +952,13 @@ _From 386-brand-price-range._
 
 _From 386-brand-price-range._
 
+### 271-FR-009 — The garage MUST hold its position as a spatial point column (`geography(Point, 4326)`) with a GiST index, derived by the database from latitude and longitude so the two can never disagree and nothing writes it; one migration enables the spatial extension and fills it for every garage with a position, losing none; the migration is additive (a new column and index; no existing column changes), so undoing it is dropping them and the previous release keeps working against it; latitude and longitude stay the fields the API, the listing and the seed write and read.
+
+_From 271-garage-distance._
+
+### 271-FR-016 — The ST-111 documents in the specs repo (`specs/111-garage-address-map/tasks.md` T021, `plan.md`, `research.md`, `quickstart.md`, `deferred.md`) MUST name the metrics as built, `motorfix_places_lookups_total{provider,outcome}` and `motorfix_places_provider_duration_seconds{provider}`, and no client span, which was never built (#654); nothing in the code changes for it.
+
+_From 271-garage-distance._
 ### 1191-FR-002 — While one or more photos of the open draft wait for a connection, the step MUST show a chip under the drop area reading "O fotografie așteaptă semnal" / "N fotografii așteaptă semnal" / "N de fotografii așteaptă semnal" (Romanian one, few, other) and "1 photo waiting for signal" / "N photos waiting for signal" (English one, other), on every browser, counting waiting tiles and restored queue entries alike; it MUST disappear when none wait, and it MUST be a polite status region (`role="status"`) so a screen reader announces the count when it changes. The tile's own waiting mark stays (110-FR-007).
 
 _From 1191-resilient-uploads._

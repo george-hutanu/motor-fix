@@ -17,7 +17,7 @@ const REGIONS: ReadonlyArray<readonly [string, readonly string[]]> = [
     ['error'],
   ],
   ['dashboard/job-steps/job-steps.html', ['problem']],
-  ['home/place/place-dialog/place-dialog.html', ['message']],
+  ['public/address-field/address-field.html', ['message']],
   ['public/brands-step/brands-step.html', ['error']],
   ['public/contact/contact-form/contact-form.html', ['status']],
   ['public/details-step/details-step.html', ['error']],
@@ -26,10 +26,7 @@ const REGIONS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['public/list-your-garage/list-your-garage.html', ['error', 'warning']],
   ['public/mechanics-step/mechanics-step.html', ['error']],
   ['public/photos-step/photos-step.html', ['error', 'warning']],
-  [
-    'public/place-step/place-step.html',
-    ['error', 'warning', '#place-suggested'],
-  ],
+  ['public/place-step/place-step.html', ['error', 'warning']],
   ['public/prices-step/prices-step.html', ['error']],
   ['sign-in/consent/consent.html', ['error']],
 ];

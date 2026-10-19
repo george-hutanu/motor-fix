@@ -32,6 +32,7 @@
     "backBrand": "Service‑uri pentru {brand}",
     "backHome": "Acasă",
     "badge": "Verificat · autorizație RAR",
+    "distance": "la {km}",
     "estimate": {
       "anyMechanic": "Orice mecanic",
       "dropped": "O lucrare pornită nu mai este oferită de service.",
@@ -117,6 +118,11 @@
       "change": "Schimbă",
       "choose": "Alege locul",
       "field": "Adresă",
+      "found": {
+        "few": "{count} adrese găsite",
+        "one": "O adresă găsită",
+        "other": "{count} de adrese găsite"
+      },
       "locating": "Se caută locația…",
       "locationFailed": "Nu am putut afla locația; scrie o adresă",
       "near": "Lângă {label}",
@@ -432,9 +438,8 @@
       "placeholder": "Stradă și număr, sector, oraș",
       "radius": "Zona în care lucrezi",
       "radiusHint": "Între 1 și 100 km",
-      "searchDown": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
-      "seat": "Sediul înregistrat",
-      "suggestions": "Adrese găsite"
+      "searchUnavailable": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
+      "seat": "Sediul înregistrat"
     },
     "preview": {
       "draft": "Ciornă · se publică după verificare",
@@ -620,7 +625,6 @@
     "areaPicked": "în {km} km de locul ales",
     "areaYou": "în {km} km de tine",
     "back": "Înapoi la {km} km",
-    "backRomania": "Înapoi la toată România",
     "card": {
       "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
@@ -629,6 +633,7 @@
       "worksOn": "primește {brand}"
     },
     "changePlace": "Schimbă locul",
+    "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
     "found": {
       "few": "{count} service‑uri găsite",
@@ -646,6 +651,8 @@
       "updated": "{name} s‑a actualizat"
     },
     "loading": "Se încarcă rezultatele",
+    "locating": "Se caută locația…",
+    "locationFailed": "Nu am putut afla locația.",
     "map": {
       "label": "Harta service‑urilor",
       "mobile": "Mecanic mobil · zona deservită",
@@ -656,13 +663,13 @@
       "zoomIn": "Apropie harta"
     },
     "newSearch": "Căutare nouă",
-    "none": "Niciun service găsit",
     "noneNear": "Niciun service în {km} km",
     "others": {
       "few": "{count} nu o primesc",
       "one": "{count} nu o primește",
       "other": "{count} nu o primesc"
     },
+    "placeTitle": "Unde cauți service?",
     "reload": "Reîncarcă",
     "retry": "Reîncearcă",
     "takers": {

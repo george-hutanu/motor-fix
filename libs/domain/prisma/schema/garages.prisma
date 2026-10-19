@@ -85,6 +85,9 @@ model Garage {
   seatAddress                String?                  @map("seat_address") @db.VarChar(200)
   latitude                   Float?
   longitude                  Float?
+  // latitude and longitude as a geography for the area reads, kept by a
+  // trigger in the migration; NULL when either is. Read only in raw SQL.
+  position                   Unsupported("geography(Point, 4326)")?
   // The town of the address or seat, for the admin's figures by city; admin
   // only, as the seat is. CHECKs in the migration: a slug key, both or neither.
   cityKey                    String?                  @map("city_key") @db.VarChar(80)
@@ -111,6 +114,7 @@ model Garage {
   suspensions                GarageSuspension[]
 
   @@index([cityKey])
+  @@index([position], map: "garage_position_idx", type: Gist)
   // The file read names the other garages holding the same CUI.
   @@index([cui])
   @@map("garage")

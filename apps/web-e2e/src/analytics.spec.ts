@@ -75,25 +75,23 @@ const nearMilitari = (page: Page) =>
     );
   }, MILITARI);
 
-// Home → a brand → Results → the garage's profile, as a driver walks it.
-async function toProfile(page: Page, near?: typeof MILITARI) {
+// Home → a brand → Results → the garage's profile, as a driver walks it,
+// from Militari: Results searches only from a place.
+async function toProfile(page: Page) {
+  await nearMilitari(page);
   await ready(page, '/ro');
   await page
     .getByRole('radiogroup', { name: 'Marca mașinii' })
     .getByRole('radio', { exact: true, name: 'Dacia' })
     .click();
   await page.getByRole('link', { name: 'Caută service‑uri' }).click();
-  if (near) {
-    // The place joins the query once the stored one is read, so wait for it.
-    await expect
-      .poll(() => {
-        const url = new URL(page.url());
-        return `${url.pathname}?brand=${url.searchParams.get('brand')}&near=${url.searchParams.get('near')}`;
-      })
-      .toBe(`/ro/garages?brand=dacia&near=${near.lat},${near.lng}`);
-  } else {
-    await expect(page).toHaveURL('/ro/garages?brand=dacia');
-  }
+  // The place joins the query once the stored one is read, so wait for it.
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return `${url.pathname}?brand=${url.searchParams.get('brand')}&near=${url.searchParams.get('near')}`;
+    })
+    .toBe(`/ro/garages?brand=dacia&near=${MILITARI.lat},${MILITARI.lng}`);
   await page
     .locator('article.card', {
       has: page.getByRole('heading', { exact: true, name: GARAGE }),
@@ -153,7 +151,7 @@ test.describe('the launch events @seeded', () => {
     await accept(page);
     await signedIn(page);
 
-    await toProfile(page, MILITARI);
+    await toProfile(page);
     await sendRequest(page, [NEARBY]);
 
     await expect

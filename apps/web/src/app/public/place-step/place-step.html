@@ -1,56 +1,16 @@
-<label hlmLabel class="field" for="place-address">
-  @if (mobile()) {
-    {{ 'public.listing.place.seat' | t }}
-  } @else {
-    {{ 'public.listing.place.address' | t }}
-  }
-</label>
-<div class="search">
-  <input
-    hlmInput
-    id="place-address"
-    name="address"
-    data-field="steps.5.place.address"
-    autocomplete="street-address"
-    role="combobox"
-    aria-autocomplete="list"
-    aria-controls="place-options"
-    aria-expanded="false"
-    [attr.aria-expanded]="suggestions().length > 0"
-    [attr.aria-activedescendant]="active() >= 0 ? 'place-option-' + active() : null"
-    [attr.aria-invalid]="errors().address ? true : null"
-    [attr.aria-describedby]="addressDescribedBy()"
-    [attr.maxlength]="addressMax"
-    [placeholder]="'public.listing.place.placeholder' | t"
-    [value]="value().address ?? ''"
-    (input)="type($event)"
-    (keydown)="keys($event)"
-    (blur)="leave('address')"
-  />
-  <div class="suggestions" id="place-options" role="listbox" [attr.aria-label]="'public.listing.place.suggestions' | t">
-    @for (suggestion of suggestions(); track $index) {
-      <button
-        type="button"
-        role="option"
-        tabindex="-1"
-        [id]="'place-option-' + $index"
-        [attr.aria-selected]="active() === $index"
-        (click)="choose(suggestion)"
-      >{{ suggestion.label }}</button>
-    }
-  </div>
-</div>
+<mf-address-field
+  ids="place"
+  texts="public.listing.place"
+  path="steps.5.place.address"
+  [label]="(mobile() ? 'public.listing.place.seat' : 'public.listing.place.address') | t"
+  [text]="value().address ?? ''"
+  [describedBy]="messages().address ? 'place-address-error' : ''"
+  [invalid]="!!errors().address"
+  (textChange)="type($event)"
+  (chosen)="choose($event)"
+  (left)="leave('address')"
+/>
 <p class="mf-message" [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
-<p class="hint mf-message" id="place-suggested" aria-live="polite">
-  @if (suggestions().length > 0) {
-    {{ 'public.listing.place.found' | t: { count: suggestions().length } }}
-  } @else if (nothingFound()) {
-    {{ 'public.listing.place.nothingFound' | t }}
-  }
-</p>
-@if (searchDown()) {
-  <p class="error mf-message" id="place-search-down">{{ 'public.listing.place.searchDown' | t }}</p>
-}
 
 <div class="map-area">
   <button type="button" class="manual" [attr.aria-pressed]="armed()" (click)="arm()">

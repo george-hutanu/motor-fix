@@ -41,10 +41,15 @@ const GAP = 14;
 
 export interface ResultsMapView {
   destroy(): void;
-  fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
+  fit(
+    place: LatLng | undefined,
+    answer: GaragePinsDto | undefined,
+    covered?: number,
+  ): void;
   show(answer: GaragePinsDto | undefined): void;
   light(id: string | undefined): void;
   spot(at: LatLng): { x: number; y: number };
+  mark(place: LatLng | undefined): void;
 }
 
 // A tapped pin whose garage the list does not show, and that garage once read.
@@ -56,6 +61,7 @@ export interface PinCard {
 type OpenResultsMap = (
   host: HTMLElement,
   on: MapEvents,
+  here: HTMLElement,
 ) => Promise<ResultsMapView>;
 
 // Opens the results map in the browser; the component never sees MapLibre,
@@ -63,7 +69,7 @@ type OpenResultsMap = (
 export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, on) => {
+    return async (host, on, here) => {
       // From the start: MapLibre adds its focusable canvas while the style
       // is still loading, under the grey placeholder.
       const stop = keepOutOfTabOrder(host);
@@ -74,7 +80,8 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
         stop();
         throw error;
       }
-      const pins = drawPins(map, host, on);
+      const { Marker } = await import('maplibre-gl');
+      const pins = drawPins(map, host, on, new Marker({ element: here }));
       return {
         ...pins,
         destroy: () => {
@@ -100,7 +107,7 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
-  // Off when the search failed or was refused: no brand ever comes to fill it.
+  // Off where no pins can be shown or the search failed or was refused: the colours have nothing to explain.
   readonly legend = input(true);
   // The garage whose pin is lit, and the small card of a tapped pin.
   readonly lit = input<string | undefined>();
@@ -118,6 +125,8 @@ export class ResultsMap {
   );
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  // The "you are here" marker, styled here and moved onto the map by MapLibre.
+  private readonly here = viewChild.required<ElementRef<HTMLElement>>('here');
   protected readonly view = signal<ResultsMapView | undefined>(undefined);
   private fitWanted = false;
   // Bumped on every move of the map, so the small card follows its pin.
@@ -151,11 +160,15 @@ export class ResultsMap {
     });
     afterNextRender(() => {
       if (!browser) return;
-      open(this.host().nativeElement, {
-        moved: (move) => this.follow(move),
-        picked: (id) => this.picked.emit(id),
-        shifted: () => this.shifts.update((n) => n + 1),
-      }).then(
+      open(
+        this.host().nativeElement,
+        {
+          moved: (move) => this.follow(move),
+          picked: (id) => this.picked.emit(id),
+          shifted: () => this.shifts.update((n) => n + 1),
+        },
+        this.here().nativeElement,
+      ).then(
         (view) => {
           if (closed) return view.destroy();
           this.view.set(view);
@@ -166,6 +179,7 @@ export class ResultsMap {
     });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
+    effect(() => this.view()?.mark(this.place()));
     // Measured again once the garage fills the card, which makes it taller.
     afterRenderEffect(() => {
       this.card();
@@ -186,6 +200,17 @@ export class ResultsMap {
     const view = untracked(this.view);
     this.fitWanted = !view;
     this.tooWide.set(false);
-    view?.fit(untracked(this.place), untracked(this.pins));
+    view?.fit(untracked(this.place), untracked(this.pins), this.covered());
+  }
+
+  // How far up the map's bottom edge the legend reaches, in pixels.
+  private covered() {
+    const map = this.host().nativeElement.parentElement;
+    const key = map?.querySelector('.legend');
+    if (!map || !key) return 0;
+    return Math.max(
+      0,
+      map.getBoundingClientRect().bottom - key.getBoundingClientRect().top,
+    );
   }
 }

@@ -96,6 +96,13 @@ describe('ResultCard', () => {
     expect(said(card.querySelector('.where'))).toBe('2,4 km');
   });
 
+  // @traces 271-FR-006
+  it('keeps the distance in one piece, so "km" never wraps away from its number', async () => {
+    const card = await render(garageOf());
+
+    expect(said(card.querySelector('.where .distance'))).toBe('2,4 km');
+  });
+
   // @traces 267-FR-014
   it('says a mobile mechanic comes to you, with its radius, never a city', async () => {
     const card = await render(

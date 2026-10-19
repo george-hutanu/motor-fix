@@ -12,7 +12,7 @@ import { GaragePinsDto } from '../../models/garage-pins-dto';
 export interface GarageSearchControllerPins$Params {
 
 /**
- * The place the count is measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, all of Romania
+ * The place counts and distances are measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, a count covers all of Romania and no distance is given
  */
   near?: string;
 

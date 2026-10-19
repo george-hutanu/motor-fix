@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { PLATFORM_ID } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
@@ -26,7 +29,7 @@ let moved: (move: MapMove) => void;
 let tapped: (id: string | undefined) => void;
 let shifted: () => void;
 const open = jest.fn(
-  (_host: HTMLElement, on: MapEvents) =>
+  (_host: HTMLElement, on: MapEvents, _here: HTMLElement) =>
     new Promise<ResultsMapView>((resolve, reject) => {
       moved = on.moved;
       tapped = on.picked;
@@ -79,6 +82,7 @@ beforeEach(() => {
     destroy: jest.fn(),
     fit: jest.fn(),
     light: jest.fn(),
+    mark: jest.fn(),
     show: jest.fn(),
     spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 40 })),
   };
@@ -108,11 +112,15 @@ describe('ResultsMap, the map region', () => {
 
     expect(host?.hasAttribute('inert')).toBe(false);
     expect(host?.getAttribute('aria-hidden')).toBe('true');
-    expect(open).toHaveBeenCalledWith(host, {
-      moved: expect.any(Function),
-      picked: expect.any(Function),
-      shifted: expect.any(Function),
-    });
+    expect(open).toHaveBeenCalledWith(
+      host,
+      {
+        moved: expect.any(Function),
+        picked: expect.any(Function),
+        shifted: expect.any(Function),
+      },
+      element().querySelector('.here'),
+    );
   });
 });
 
@@ -323,7 +331,7 @@ describe('ResultsMap, the pins it is given', () => {
 
     fixture.componentInstance.fit();
 
-    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS);
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 0);
   });
 
   it('fits once the map has opened when asked before', async () => {
@@ -335,7 +343,25 @@ describe('ResultsMap, the pins it is given', () => {
     await ready();
 
     expect(view.fit).toHaveBeenCalledTimes(1);
-    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS);
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 0);
+  });
+
+  // @traces 271-FR-004
+  it("fits the place clear of the legend over the map's bottom edge", async () => {
+    await render();
+    await ready();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    const rect = (top: number, bottom: number) => ({ bottom, top }) as DOMRect;
+    const section = element().querySelector<HTMLElement>('section.map');
+    const key = element().querySelector<HTMLElement>('.legend');
+    if (!section || !key) throw new Error('no map or legend');
+    section.getBoundingClientRect = () => rect(100, 500);
+    key.getBoundingClientRect = () => rect(430, 488);
+
+    fixture.componentInstance.fit();
+
+    expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 70);
   });
 
   it('closes the map with the page', async () => {
@@ -424,11 +450,15 @@ describe('RESULTS_MAP, the map while it loads', () => {
     fake.manualLoad = true;
     const host = document.createElement('div');
     document.body.append(host);
-    void TestBed.inject(RESULTS_MAP)(host, {
-      moved: jest.fn(),
-      picked: jest.fn(),
-      shifted: jest.fn(),
-    });
+    void TestBed.inject(RESULTS_MAP)(
+      host,
+      {
+        moved: jest.fn(),
+        picked: jest.fn(),
+        shifted: jest.fn(),
+      },
+      document.createElement('div'),
+    );
     // The opener awaits MapLibre's import before it builds the map.
     await new Promise((resolve) => setTimeout(resolve));
 
@@ -579,5 +609,75 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     fixture.detectChanges();
 
     expect(card()).toBeNull();
+  });
+});
+
+// @traces 271-FR-004
+describe('ResultsMap, the "you are here" marker', () => {
+  const OTHER = { lat: 46.771, lng: 23.624 };
+  const marker = () => open.mock.calls[0]?.[2];
+
+  it('hands the map one marker, hidden from assistive technology', async () => {
+    await render();
+
+    expect(marker()).toBeInstanceOf(HTMLElement);
+    expect(marker()?.getAttribute('aria-hidden')).toBe('true');
+    expect(marker()?.textContent?.trim()).toBe('');
+  });
+
+  it('marks the place once the map has opened, and each place after', async () => {
+    await render();
+    await ready();
+
+    expect(view.mark).toHaveBeenLastCalledWith(PLACE);
+
+    fixture.componentRef.setInput('place', OTHER);
+    fixture.detectChanges();
+    expect(view.mark).toHaveBeenLastCalledWith(OTHER);
+
+    fixture.componentRef.setInput('place', undefined);
+    fixture.detectChanges();
+    expect(view.mark).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('marks nothing before the map has opened', async () => {
+    await render();
+
+    expect(view.mark).not.toHaveBeenCalled();
+  });
+
+  describe('its stylesheet', () => {
+    const css = readFileSync(join(__dirname, 'results-map.css'), 'utf8');
+    // The rules inside each "no-preference" block, and those outside them.
+    const blocks = [
+      ...css.matchAll(
+        /@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/g,
+      ),
+    ].map((m) => m[1] ?? '');
+    const outside = blocks.reduce(
+      (rest, block) => rest.replace(block, ''),
+      css,
+    );
+
+    it('draws the marker in the theme accent', () => {
+      expect(css).toMatch(/\.here\s*\{[^}]*var\(--mf-amber\)/);
+    });
+
+    it('pulses the ring with mf-ring only when the device allows motion', () => {
+      expect(css).toMatch(/@keyframes mf-ring\s*\{/);
+      expect(blocks.join('\n')).toMatch(/animation:\s*mf-ring 2\.2s/);
+      expect(outside).not.toMatch(/animation:[^;]*mf-ring/);
+    });
+
+    it('hides the marker while it waits in the page rather than on the map', () => {
+      // MapLibre gives the element its marker class as soon as it wraps it,
+      // so only where it sits tells whether it has been placed.
+      expect(css).toMatch(/\.map\s*>\s*\.here\s*\{[^}]*display:\s*none/);
+      expect(css).not.toMatch(/\.here:not\(\.maplibregl-marker\)/);
+    });
+
+    it('lets a tap through the marker to the pins under it', () => {
+      expect(css).toMatch(/\.here\s*\{[^}]*pointer-events:\s*none/);
+    });
   });
 });

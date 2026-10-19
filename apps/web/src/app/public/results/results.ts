@@ -1,6 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { isPlatformServer } from '@angular/common';
 import {
+  afterNextRender,
   afterRenderEffect,
   Component,
   computed,
@@ -10,6 +11,7 @@ import {
   linkedSignal,
   PLATFORM_ID,
   resource,
+  signal,
   untracked,
   viewChild,
   viewChildren,
@@ -17,6 +19,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
+import { inRomania } from '@motor-fix/contracts/place-section';
 import {
   nearOf,
   parseNear,
@@ -38,6 +41,10 @@ import { type PinCard, ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
+import {
+  type AddressChoice,
+  AddressField,
+} from '../address-field/address-field';
 import { followPublicView, PublicLive } from '../live';
 import { SavedGarages } from '../saved-garages/saved-garages';
 
@@ -47,6 +54,8 @@ const WIDE = SEARCH_RADII[1];
 // A suspended card's fade, and the burst of events that makes one read.
 const FADE_MS = 300;
 const BURST_MS = 300;
+// How long the browser has to say where the driver is.
+const LOCATE_MS = 10_000;
 
 const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
   kind.startsWith('review.'),
@@ -80,7 +89,14 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [LiveChange, ResultCard, ResultsMap, RouterLink, TranslatePipe],
+  imports: [
+    AddressField,
+    LiveChange,
+    ResultCard,
+    ResultsMap,
+    RouterLink,
+    TranslatePipe,
+  ],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -115,6 +131,10 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
 
+  // The browser could not give a place: refused, failed, outside Romania or
+  // silent for 10 s. Results then waits for one the driver gives.
+  protected readonly placeless = signal(false);
+
   // The box the driver moved the map to; never in the bar, and forgotten
   // when the bar names another search.
   protected readonly box = linkedSignal<unknown, string | undefined>({
@@ -123,17 +143,17 @@ export class Results {
   });
 
   // The search the bar names, in the map's box once the driver moved it,
-  // without what marks a single read.
+  // without what marks a single read. Nothing is searched without a place.
   private readonly query = computed((): Query | undefined => {
     const brand = this.brand();
-    if (this.server || !brand) return undefined;
     const near = this.near();
+    if (this.server || !brand || !near) return undefined;
     const radius = this.radius();
     const bbox = this.box();
     return {
       ...(bbox ? { bbox } : {}),
       ...(UUID.test(brand) ? { brandId: brand } : { brand }),
-      ...(near ? { near } : {}),
+      near,
       ...(radius ? { radius } : {}),
     };
   });
@@ -179,7 +199,9 @@ export class Results {
   });
   // The grey map while the search runs; a box loading keeps the pins shown.
   protected readonly mapLoading = computed(
-    () => !this.box() && (this.results.isLoading() || this.pins.isLoading()),
+    () =>
+      this.state() === 'locating' ||
+      (!this.box() && (this.results.isLoading() || this.pins.isLoading())),
   );
   // The kept place where it is the one searched, else the bar's.
   protected readonly place = computed(() => {
@@ -235,8 +257,17 @@ export class Results {
     { equal: sameIds },
   );
 
+  // A brand and no place yet: the browser is asked for one, or gave none.
+  private readonly waiting = computed(() => {
+    if (!this.brand() || this.near()) return null;
+    return this.placeless() ? 'placeless' : 'locating';
+  });
+
   protected readonly state = computed(() => {
-    if (this.server || this.results.isLoading()) return 'loading';
+    if (this.server) return 'loading';
+    const waiting = this.waiting();
+    if (waiting) return waiting;
+    if (this.results.isLoading()) return 'loading';
     const answer = this.answer();
     if (answer) return answer.items.length === 0 ? 'empty' : 'list';
     // No brand, or one the catalogue does not hold: a retry would not help.
@@ -279,12 +310,9 @@ export class Results {
   });
 
   // The way back from the map's box to the search the bar names.
-  protected readonly back = computed(() => {
-    if (!this.box()) return null;
-    return this.near()
-      ? this.i18n.t('public.results.back', { km: this.km() })
-      : this.i18n.t('public.results.backRomania');
-  });
+  protected readonly back = computed(() =>
+    this.box() ? this.i18n.t('public.results.back', { km: this.km() }) : null,
+  );
 
   // The kept place is named; a place only the bar knows is "the chosen place".
   protected readonly area = computed(() => {
@@ -321,6 +349,9 @@ export class Results {
     });
     // Which garages a driver saved, for the cards' bookmarks.
     void this.saved.load();
+    // The kept place is read before the first render; only a page without
+    // one asks the browser, once.
+    afterNextRender(() => this.locate());
     // The kept place goes into the bar, so the link shared opens this search.
     effect(() => {
       const kept = this.store.place();
@@ -363,6 +394,46 @@ export class Results {
     if (nearOf(place) !== this.near() || this.radius()) this.logNext = true;
     this.store.set(place);
     await this.write({ near: nearOf(place), radius: null });
+  }
+
+  // An address typed while the browser gave no place: it is kept, which the
+  // bar then follows, and starts one logged search.
+  protected placed({ label, lat, lng, origin }: AddressChoice) {
+    this.logNext = true;
+    this.store.set({ label, lat, lng, origin });
+  }
+
+  // A late answer, after the driver chose a place another way or left, is
+  // dropped; one inside Romania becomes the kept place, which the bar and
+  // the search then follow.
+  private locate() {
+    if (untracked(this.near) || !untracked(this.brand)) return;
+    const geolocation =
+      typeof navigator === 'undefined' ? undefined : navigator.geolocation;
+    if (!geolocation) return this.placeless.set(true);
+    let open = true;
+    const answer = (coords?: GeolocationCoordinates) => {
+      if (!open) return;
+      open = false;
+      clearTimeout(silence);
+      if (this.destroyRef.destroyed || untracked(this.near)) return;
+      if (coords && inRomania(coords.latitude, coords.longitude)) {
+        this.store.set({
+          label: null,
+          lat: coords.latitude,
+          lng: coords.longitude,
+          origin: 'location',
+        });
+      } else this.placeless.set(true);
+    };
+    // The browser's own timeout waits on the permission prompt; this does not.
+    const silence = setTimeout(() => answer(), LOCATE_MS);
+    this.destroyRef.onDestroy(() => clearTimeout(silence));
+    geolocation.getCurrentPosition(
+      ({ coords }) => answer(coords),
+      () => answer(),
+      { timeout: LOCATE_MS },
+    );
   }
 
   protected retry() {

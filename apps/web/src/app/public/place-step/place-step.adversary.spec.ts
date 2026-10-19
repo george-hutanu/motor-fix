@@ -87,7 +87,7 @@ const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const address = (step: HTMLElement) =>
   step.querySelector<HTMLInputElement>(
-    'input[name="address"]',
+    'mf-address-field input[role="combobox"]',
   ) as HTMLInputElement;
 const radius = (step: HTMLElement) =>
   step.querySelector<HTMLInputElement>('input[name="radiusKm"]');

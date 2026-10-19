@@ -132,6 +132,11 @@ export function formatKm(value: unknown, language: Language): string {
   return isNumber(value) ? `${digits(value, language, 0, 1)} km` : MISSING;
 }
 
+// How far a garage is: always one decimal, "1,0 km" as much as "3,2 km".
+export function formatDistance(value: unknown, language: Language): string {
+  return isNumber(value) ? `${digits(value, language, 1, 1)} km` : MISSING;
+}
+
 export function formatPct(value: unknown, language: Language): string {
   return isNumber(value) ? `${digits(value, language, 0, 0)}%` : MISSING;
 }
