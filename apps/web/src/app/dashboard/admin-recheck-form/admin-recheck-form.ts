@@ -16,6 +16,8 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
+import { RAR_REGISTER } from '../verification-file/verification-file';
+
 export interface AdminRecheckFormData {
   row: RecheckDueRowDto;
   // The list's Bucharest day: the date checked defaults to it and goes no
@@ -54,6 +56,7 @@ export class AdminRecheckForm {
   protected readonly row = this.task.data.row;
   protected readonly today = this.task.data.today;
   protected readonly detailMax = RECHECK_DETAIL_MAX;
+  protected readonly register = RAR_REGISTER;
   protected readonly choices = computed(() => {
     this.i18n.language();
     return CHOICES.map((choice) => ({

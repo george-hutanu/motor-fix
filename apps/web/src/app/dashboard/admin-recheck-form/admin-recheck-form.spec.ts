@@ -378,17 +378,30 @@ describe('a failed re-check', () => {
     expect(button('Suspendă service‑ul')?.disabled).toBe(true);
   });
 
-  it('goes back to the form from the confirmation, sending nothing', async () => {
+  it('cancels the confirmation back to the form, sending nothing', async () => {
     await open();
     await press('Expirată');
     type(detail() as HTMLTextAreaElement, 'expirată');
     await settle();
     await press('Suspendă service‑ul');
 
-    await press('Înapoi');
+    await press('Renunță');
 
     expect(text()).not.toContain(CONFIRMATION);
     expect(detail()?.value).toBe('expirată');
     expect(record).not.toHaveBeenCalled();
   });
+});
+
+it('warns in English that future bookings are cancelled', async () => {
+  await open(ROW, 'en');
+  await press('Expired');
+  type(detail() as HTMLTextAreaElement, 'expired');
+  await settle();
+
+  await press('Suspend the garage');
+
+  expect(text()).toContain(
+    'The garage will be suspended and taken off the map. Future bookings are cancelled and the drivers are told.',
+  );
 });
