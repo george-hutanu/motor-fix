@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 194-email-sending
   - 195-message-templates
@@ -35,6 +35,7 @@ features:
   - 049-garage-suspension
   - 279-email-inbox
   - 069-report-decision
+  - 1190-live-reconnects
 ---
 
 # Capability: Notifications
@@ -167,9 +168,9 @@ _From 199-notification-bell._
 
 _From 199-notification-bell._
 
-### 199-FR-003 — `GET /api/v1/notifications/unread-count` MUST return the number of the person's unread `in_app` rows of the last 90 days.
+### 1190-FR-005 — The account row MUST hold its unread in-app notification count, written in the same transaction as every change to it: a created in-app row adds one, a read row takes one, "mark all read" takes off the rows it marked, never below zero (a row written meanwhile stays counted); a migration computes it once from the existing rows. `GET /api/v1/notifications/unread-count` MUST answer it, and every `notification.created` and `notification.read` message MUST carry it as `unreadCount` (199-FR-003 modified: the count is the account's unread in-app rows, no longer windowed to 90 days).
 
-_From 199-notification-bell._
+_From 1190-live-reconnects._
 
 ### 199-FR-004 — `POST /api/v1/notifications/:id/read` MUST set `read_at` once (a second call keeps the first time) and return the item; a row that is not the caller's own `in_app` row answers 404.
 
@@ -195,9 +196,9 @@ _From 199-notification-bell._
 
 _From 032-notifications-bell._
 
-### 199-FR-010 — On `notification.created` the bell MUST show a 5-second toast with the row's text and refresh its badge and list without a reload; on `notification.read` it MUST refresh them.
+### 1190-FR-011 — The bell MUST take its badge from `unreadCount` on every `notification.created` and `notification.read` message instead of re-reading the count on each, applying a count only when its message's `at` is not older than the last count applied; its 60-second refresh and the read on open stay (199-FR-010 modified).
 
-_From 199-notification-bell._
+_From 1190-live-reconnects._
 
 ### 199-FR-011 — The bell MUST refresh its badge every 60 seconds while a dashboard is shown, and each time it opens.
 
@@ -751,6 +752,10 @@ _From 279-email-inbox._
 
 _From 069-report-decision._
 
+### 1190-FR-001 — Every in-app notification row MUST carry an ordered position, unique per account and increasing with creation, kept with the row; the migration gives every existing row its position in creation order.
+
+_From 1190-live-reconnects._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -764,3 +769,6 @@ _From 069-report-decision._
 
 - `199-FR-009` — superseded by `032-FR-001` (2026-10-10)
 - `279-FR-013` — the sending-domain how-to page lives in the specs repo, which CI cannot read; docs-lint checks it, no test can trace it (2026-10-18)
+
+- `199-FR-003` — superseded by `1190-FR-005` (2026-10-19)
+- `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)

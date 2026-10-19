@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -39,6 +39,7 @@ features:
   - 1348-release-green
   - 1191-resilient-uploads
   - 1181-rate-limits
+  - 1190-live-reconnects
 ---
 
 # Capability: Observability
@@ -842,6 +843,10 @@ _From 1181-rate-limits._
 ### 1181-FR-009 — An alert MUST fire when the refusal rate on a route passes the threshold for the hold time, with a summary naming the route and a runbook; the metric and the alert MUST be listed in `infra/observability/inventory.json` under the API and MCP entries, so the inventory check passes.
 
 _From 1181-rate-limits._
+
+### 1190-FR-014 — A replay MUST be counted by outcome (`none`, `some`, `capped`) with the rows replayed, and a planned close by its reason, in the API's metrics, each listed in `infra/observability/inventory.json` with the reason no alert is needed (a failed replay degrades to the open views' re-read; a Redis outage already alerts).
+
+_From 1190-live-reconnects._
 
 ## Retired
 
