@@ -541,6 +541,26 @@ describe('a result card linked with its pin', () => {
     box.remove();
   });
 
+  // @traces 270-FR-004 1358-FR-001
+  it("scrolls the page from a tablet up, where the sheet's list box has no box of its own", async () => {
+    const card = await linked();
+    const box = document.createElement('div');
+    box.style.overflowY = 'auto';
+    box.style.display = 'contents';
+    card.before(box);
+    box.append(card);
+    const page = jest.fn();
+    card.scrollIntoView = page;
+    const scrolled = jest.fn();
+    box.scrollBy = scrolled as typeof box.scrollBy;
+
+    fixture.componentInstance.reveal(true);
+
+    expect(page).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+    expect(scrolled).not.toHaveBeenCalled();
+    box.remove();
+  });
+
   it('adds nothing to the tab order', async () => {
     const card = await linked();
 

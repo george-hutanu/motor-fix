@@ -24,14 +24,19 @@ import { SaveGarageButton } from '../../saved-garages/save-garage-button/save-ga
 
 const REST_MS = 100;
 
-// The nearest box between the card and the page that scrolls its own content.
+// The nearest box between the card and the page that scrolls its own
+// content. A box laid out as `display: contents` (the sheet's list from a
+// tablet up) has no box to scroll, whatever its overflow says.
 function scroller(from: HTMLElement): HTMLElement | undefined {
   for (
     let at = from.parentElement;
     at && at !== document.body;
     at = at.parentElement
-  )
-    if (/auto|scroll/.test(getComputedStyle(at).overflowY)) return at;
+  ) {
+    const style = getComputedStyle(at);
+    if (style.display !== 'contents' && /auto|scroll/.test(style.overflowY))
+      return at;
+  }
   return undefined;
 }
 
