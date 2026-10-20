@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Location } from '@angular/common';
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
@@ -2946,5 +2949,33 @@ describe('Results changing the brand', () => {
       expect.stringContaining('lucrează pe Audi'),
       'polite',
     );
+  });
+});
+
+describe('the brand chips and the brand search from a tablet up', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+  const topLevel = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '');
+  const rule = (selector: string) =>
+    [...topLevel.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(
+      ([, sel]) => sel.trim() === selector,
+    )?.[2] ?? '';
+
+  it('keeps the search on the chips line: the row does not wrap, the chips shrink and wrap inside their own box', () => {
+    expect(rule('.brands')).toMatch(/flex-wrap: nowrap;/);
+    expect(rule('mf-brand-chips')).toMatch(/flex: 1 1 0;/);
+    expect(rule('mf-brand-chips')).toMatch(/min-width: 0;/);
+    expect(rule('.brands mf-brand-search')).toMatch(/flex: 0 0 16rem;/);
+  });
+
+  it('stacks them again on a phone', () => {
+    const phone =
+      css.match(
+        /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+    expect(phone).toMatch(/\.brands \{ flex-wrap: wrap; \}/);
+    expect(phone).toMatch(/flex-basis: 100%;/);
   });
 });

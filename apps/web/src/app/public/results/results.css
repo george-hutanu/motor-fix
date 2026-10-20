@@ -70,25 +70,28 @@ mf-address-field {
 .brands {
   align-items: flex-start;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--mf-space-3);
   margin-block-start: var(--mf-space-3);
 }
 
 mf-brand-chips {
-  flex: 0 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .brands mf-brand-search {
-  flex: 1 1 16rem;
-  max-width: 28rem;
+  flex: 0 0 16rem;
 }
 
 @media (max-width: 767px) {
+  .brands {
+    flex-wrap: wrap;
+  }
+
   mf-brand-chips,
   .brands mf-brand-search {
     flex-basis: 100%;
-    max-width: none;
   }
 }
 
