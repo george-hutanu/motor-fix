@@ -113,6 +113,7 @@ test.describe('a server-rendered page read once @seeded', () => {
   }) => {
     await hydrated(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);

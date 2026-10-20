@@ -122,6 +122,7 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     // button, so the request goes out without the sign-in sheet.
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, DRIVER);

@@ -28,6 +28,7 @@ async function signInAsAdmin(page: Page) {
       .click();
   } else {
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
   }
@@ -206,6 +207,7 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
     await ownerPage.setViewportSize({ height: 800, width: 1280 });
     await ready(ownerPage, '/ro/garages');
     await ownerPage
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(ownerPage, owner.email, { password: owner.password });

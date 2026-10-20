@@ -13,6 +13,7 @@ async function signUp(page: Page) {
   await ownAddress(page, '198.51.100');
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await page

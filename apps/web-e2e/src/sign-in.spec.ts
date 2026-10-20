@@ -8,7 +8,7 @@ const dialog = (page: Page, name = 'Autentificare') =>
   page.getByRole('dialog', { name });
 
 const openFromHeader = (page: Page, name = 'Autentificare') =>
-  page.getByRole('button', { exact: true, name }).click();
+  page.getByRole('banner').getByRole('button', { exact: true, name }).click();
 
 test.describe('signing in for real @seeded', () => {
   for (const [who, email, landing, menu] of [

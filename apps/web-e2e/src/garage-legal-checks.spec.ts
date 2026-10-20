@@ -97,6 +97,7 @@ test.describe('the garage’s legal checks after a re-check @seeded @database', 
         .click();
     } else {
       await page
+        .getByRole('banner')
         .getByRole('button', { exact: true, name: 'Autentificare' })
         .click();
     }

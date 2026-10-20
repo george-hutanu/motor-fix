@@ -46,7 +46,10 @@ test.describe('a refusal past a limit', () => {
     }) => {
       const calls = await refusedPastTheLimit(page);
       await ready(page, path);
-      await page.getByRole('button', { exact: true, name: open }).click();
+      await page
+        .getByRole('banner')
+        .getByRole('button', { exact: true, name: open })
+        .click();
       const dialog = page.getByRole('dialog', { name });
       await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
 

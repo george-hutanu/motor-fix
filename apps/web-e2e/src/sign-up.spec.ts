@@ -22,7 +22,10 @@ const fresh = () =>
 
 async function openSignUp(page: Page, language: 'ro' | 'en' = 'ro') {
   const titles = TITLE[language];
-  await page.getByRole('button', { exact: true, name: titles.signIn }).click();
+  await page
+    .getByRole('banner')
+    .getByRole('button', { exact: true, name: titles.signIn })
+    .click();
   await dialog(page, titles.signIn)
     .getByRole('button', {
       name: language === 'ro' ? 'Creează un cont' : 'Create an account',
@@ -179,6 +182,7 @@ test.describe('the sign-up form', () => {
   }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     const signIn = dialog(page, 'Autentificare');
@@ -279,6 +283,7 @@ async function openAt(page: Page, width: number, language: 'ro' | 'en') {
       .click();
   } else {
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: titles.signIn })
       .click();
   }

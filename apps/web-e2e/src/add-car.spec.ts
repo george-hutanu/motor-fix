@@ -23,6 +23,7 @@ async function signUp(page: Page, email: string) {
   await ownAddress(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await page
@@ -41,6 +42,7 @@ async function signUp(page: Page, email: string) {
 async function signInFromHome(page: Page, email: string, password?: string) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email, password ? { password } : {});

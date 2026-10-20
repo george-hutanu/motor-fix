@@ -43,6 +43,7 @@ test.describe('inviting a mechanic @seeded @mailbox', () => {
 
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.garage);

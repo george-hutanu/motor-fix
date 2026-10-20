@@ -57,6 +57,7 @@ const switchOf = (page: Page, channel: string) =>
 async function openSettings(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.garage);
