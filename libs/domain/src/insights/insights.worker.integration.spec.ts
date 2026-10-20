@@ -239,6 +239,69 @@ describe('the night job', () => {
     }
   });
 
+  // @traces 228-FR-014
+  it('fails the demand job when the ranking cannot be written, keeps the ranks and logs the final failure once', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE brand, demand_daily CASCADE');
+    await prisma.brand.create({
+      data: { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+    });
+    const dacia = await prisma.brand.create({
+      data: { key: 'dacia', name: 'Dacia', popularity: 2, slug: 'dacia' },
+    });
+    const at = atLocal(addDays(localDay(new Date()), -3), 12);
+    await prisma.searchLog.createMany({
+      data: [1, 2, 3].map(() => ({ at, brandId: dacia.id })),
+    });
+    // The ranking's write is the only brand update the job makes.
+    await prisma.$executeRawUnsafe(
+      "CREATE FUNCTION refuse_brand_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'brand writes refused'; END $$",
+    );
+    await prisma.$executeRawUnsafe(
+      'CREATE TRIGGER refuse_brand_update BEFORE UPDATE ON brand FOR EACH ROW EXECUTE FUNCTION refuse_brand_update()',
+    );
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add(
+        'demand-daily',
+        {},
+        { attempts: 2, backoff: { delay: 10, type: 'fixed' } },
+      );
+      await expect(job.waitUntilFinished(events, 20_000)).rejects.toThrow();
+
+      expect(
+        await prisma.brand.findMany({
+          orderBy: { name: 'asc' },
+          select: { name: true, popularity: true },
+        }),
+      ).toEqual([
+        { name: 'BMW', popularity: 1 },
+        { name: 'Dacia', popularity: 2 },
+      ]);
+      const lines = error.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.includes('demand-daily'));
+      expect(lines).toEqual([
+        expect.stringMatching(/^insights job demand-daily failed: /),
+      ]);
+    } finally {
+      error.mockRestore();
+      await events.close();
+      await app.close();
+      await prisma.$executeRawUnsafe(
+        'DROP TRIGGER refuse_brand_update ON brand',
+      );
+      await prisma.$executeRawUnsafe('DROP FUNCTION refuse_brand_update()');
+    }
+  });
+
   // @traces 143-FR-011
   it('writes the daily figures when the profile views job runs', async () => {
     await prisma.garage.create({
