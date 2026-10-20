@@ -2950,6 +2950,47 @@ describe('Results changing the brand', () => {
       'polite',
     );
   });
+
+  // @traces 1355-FR-006
+  it("rises the new brand's cards and blurs its name in only after a brand change, and only until the row-in has run", async () => {
+    const rising = () => ({
+      cards: page().querySelector('.cards.rising') !== null,
+      title: page().querySelector('h1.rising') !== null,
+    });
+    await shown();
+    expect(rising()).toEqual({ cards: false, title: false });
+
+    await tap('Audi');
+    expect(rising()).toEqual({ cards: false, title: false });
+    await reads.at(-1)?.answer(AUDI_PAGE());
+    expect(rising()).toEqual({ cards: true, title: true });
+
+    await new Promise((r) => setTimeout(r, 560));
+    await settle();
+    expect(rising()).toEqual({ cards: false, title: false });
+
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+    await reads.at(-1)?.answer(AUDI_PAGE());
+    expect(rising()).toEqual({ cards: false, title: false });
+  });
+});
+
+describe('the row-in after a brand change', () => {
+  const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+
+  // @traces 1355-FR-006
+  it('plays the rise and the blur-in only on a rising list and title, never on every render', () => {
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      ([, sel, body]) => ({ body, sel: sel.trim() }),
+    );
+    const animating = (name: string) =>
+      rules.filter(({ body }) => body.includes(name)).map(({ sel }) => sel);
+    expect(animating('mf-row-in 320ms')).toEqual(['.cards.rising > li']);
+    expect(animating('mf-swap-in 520ms')).toEqual(['h1.rising .titled']);
+  });
 });
 
 describe('the brand chips and the brand search from a tablet up', () => {

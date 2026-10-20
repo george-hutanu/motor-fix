@@ -64,6 +64,8 @@ const WIDE = SEARCH_RADII[1];
 // A suspended card's fade, and the burst of events that makes one read.
 const FADE_MS = 300;
 const BURST_MS = 300;
+// The new brand's row-in: its cards' 320 ms rise and its name's 520 ms blur-in.
+const RISE_MS = 520;
 // How long the browser has to say where the driver is.
 const LOCATE_MS = 10_000;
 
@@ -287,6 +289,21 @@ export class Results {
   >({
     computation: ({ page, keep }, previous) =>
       page ?? (keep ? previous?.value : undefined),
+    source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
+      equal: (a, b) => a.page === b.page && a.keep === b.keep,
+    }),
+  });
+  // The new brand's answer has just landed: its cards rise and its name
+  // blurs in, once (RISE_MS); a first load, a map move or a live update does not.
+  protected readonly rising = linkedSignal<
+    { keep: boolean; page: Page | undefined },
+    boolean
+  >({
+    computation: (now, previous) =>
+      !!now.page &&
+      !!previous &&
+      (previous.source.keep ||
+        (previous.value && previous.source.page === now.page)),
     source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
       equal: (a, b) => a.page === b.page && a.keep === b.keep,
     }),
@@ -533,6 +550,8 @@ export class Results {
   }
 
   private swappedIn() {
+    const risen = setTimeout(() => this.rising.set(false), RISE_MS);
+    this.destroyRef.onDestroy(() => clearTimeout(risen));
     const tally = this.tally();
     if (tally) void this.announcer.announce(tally, 'polite');
     const top = this.found()?.nativeElement.getBoundingClientRect().top ?? 0;

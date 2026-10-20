@@ -244,12 +244,13 @@ li.leaving {
     animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
   }
 
-  /* A new brand's cards rise into place and its name blurs in. */
-  li {
+  /* A new brand's cards rise into place and its name blurs in, only after
+     a brand change (FR-006). */
+  .cards.rising > li {
     animation: mf-row-in 320ms var(--mf-motion-ease) backwards;
   }
 
-  .titled {
+  h1.rising .titled {
     animation: mf-swap-in 520ms var(--mf-motion-ease) backwards;
   }
 }
