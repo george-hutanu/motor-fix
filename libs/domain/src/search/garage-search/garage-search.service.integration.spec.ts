@@ -948,6 +948,23 @@ describe('the list of a box on the map', () => {
       ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
     });
 
+    // @traces 1356-FR-009
+    it("makes a cursor within the query's 256 characters at the largest review count", async () => {
+      await prisma.garage.updateMany({
+        data: { rating: 4.5, reviewCount: 2_147_483_647 },
+        where: { name: { startsWith: 'Garage ' } },
+      });
+      const page = await search.forBrand(dacia, undefined, CLUJ, 25, false, {
+        east: 23.999,
+        north: 46.999,
+        south: 46.555,
+        west: 23.555,
+      });
+
+      expect(page.nextCursor?.length).toBeLessThanOrEqual(256);
+      expect(page.nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
+    });
+
     it('refuses a cursor of the circle search in a box', async () => {
       const circle = (await search.forBrand(dacia, undefined, CLUJ)).nextCursor;
 

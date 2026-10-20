@@ -7,14 +7,10 @@ import { test } from './fixtures.js';
 // A brand and 48 garages of this file's own, written straight to PostgreSQL:
 // 31 that take the brand and 17 that do not, so the list runs to three pages
 // (20, 20, 8). They stand together near Iași, where no seeded garage does and
-// no other spec writes one, and the page opens there. A deployed address,
-// whose run has no DATABASE_URL, skips the file.
+// no other spec writes one, and the page opens there. A deployed address has
+// no database to write to, and leaves @database flows out.
 // @traces 1356-FR-001 1356-FR-003 1356-FR-004 1356-FR-005 1356-FR-006 1356-FR-007 1356-FR-008
-test.describe('loading more garages on the Results page @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its brand and garages straight to PostgreSQL, which needs DATABASE_URL',
-  );
+test.describe('loading more garages on the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
 
   const stamp = Date.now().toString(36);
@@ -120,8 +116,7 @@ test.describe('loading more garages on the Results page @seeded', () => {
       `31 lucrează pe ${brand.name}`,
     );
     expect(reads).toHaveLength(2);
-    await page.waitForTimeout(1_000);
-    expect(await logged()).toBe(1);
+    await expect.poll(logged).toBe(1);
   });
 
   test('loads the next page from the keyboard', async ({ page }) => {
@@ -176,7 +171,8 @@ test.describe('loading more garages on the Results page @seeded', () => {
     });
     await page.goBack();
     await expect(cards(page)).toHaveCount(count);
-    await page.waitForTimeout(1_000);
+    // The kept list's one first-page read, then nothing more.
+    await expect.poll(() => searches.length).toBe(1);
     expect(searches.filter((url) => url.includes('cursor='))).toEqual([]);
     expect(searches.filter((url) => url.includes('log='))).toEqual([]);
   });

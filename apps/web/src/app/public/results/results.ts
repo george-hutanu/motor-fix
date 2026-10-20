@@ -251,8 +251,9 @@ export class Results {
   });
 
   // Never on the server: it renders the skeletons, the browser searches.
-  // The search left for a garage's profile shows again at once as it was,
-  // and its first page is read again in place.
+  // The search left shows again at once as it was when Results opens again
+  // for it in this tab (a profile's way back, most often), and its first
+  // page is read again in place.
   protected readonly results = resource({
     loader: async ({ params }) => {
       const kept = this.memory.take(params);
@@ -410,6 +411,9 @@ export class Results {
   });
   // Bumped when the list starts again, so a page asked before is dropped.
   private turn = 0;
+  // The list is starting again from its first page: no later page until it
+  // lands, or the old list's cursor would add a page after the new first one.
+  private readonly restarting = signal(false);
   protected readonly pageSkeletons = [0, 1, 2];
   // At the pins' cap the list stops, whatever the cursor says.
   protected readonly capped = computed(
@@ -417,7 +421,11 @@ export class Results {
   );
   // Never while another brand loads: the cursor is the previous brand's.
   protected readonly canLoad = computed(
-    () => !!this.answer()?.nextCursor && !this.capped() && !this.keep(),
+    () =>
+      !!this.answer()?.nextCursor &&
+      !this.capped() &&
+      !this.keep() &&
+      !this.restarting(),
   );
   protected readonly ending = computed(() => {
     const answer = this.answer();
@@ -574,12 +582,12 @@ export class Results {
     });
     this.keepShown();
     this.watchEnd();
-    // The kept results shown again, where the page was scrolled to.
     // The kept results read again in place once they show.
     effect(() => {
       if (this.searched() && this.refreshWanted)
         untracked(() => void this.flush());
     });
+    // The kept results shown again, where the list was scrolled to.
     afterRenderEffect(() => {
       if (this.state() !== 'list' || this.scrollBack === undefined) return;
       const { inSheet, y } = this.scrollBack;
@@ -611,7 +619,9 @@ export class Results {
     effect(() => {
       const query = this.query();
       const page = this.answer();
-      if (query && page && this.state() === 'list') shown = { page, query };
+      // While another brand loads, the cards shown are the previous search's.
+      if (query && page && this.state() === 'list' && !this.keep())
+        shown = { page, query };
     });
     this.destroyRef.onDestroy(() => {
       if (!shown) return;
@@ -911,6 +921,7 @@ export class Results {
   // "Reîncarcă": the first page again, in place of the list shown.
   protected reload() {
     this.turn += 1;
+    this.restarting.set(true);
     this.paging.set('idle');
     this.newer.set(false);
     this.pageWanted = true;
@@ -965,6 +976,8 @@ export class Results {
         this.pagedOn.set(false);
         this.first();
       }
+      this.turn += 1;
+      this.restarting.set(false);
     } else if (this.refreshWanted) {
       this.refreshWanted = false;
       await this.read(undefined, (page, now) =>

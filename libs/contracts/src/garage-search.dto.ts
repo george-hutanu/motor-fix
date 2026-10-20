@@ -155,10 +155,13 @@ export class GarageSearchQueryDto extends GaragePinsQueryDto {
   @ApiPropertyOptional({
     description: 'The nextCursor of the previous page; opaque',
     maxLength: 256,
+    pattern: '^[A-Za-z0-9_-]*$',
   })
   @IsOptional()
   @IsString()
   @MaxLength(256)
+  // Base64url, so its 256 characters are 256 bytes whatever is sent.
+  @Matches(/^[A-Za-z0-9_-]*$/)
   cursor?: string;
 }
 

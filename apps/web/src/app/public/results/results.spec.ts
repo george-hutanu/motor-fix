@@ -3257,8 +3257,12 @@ describe('the phone results screen in the stylesheet', () => {
   });
 
   it('cuts only the summary title to one line, not the list states the sheet holds', () => {
-    expect(rule('.intro h1')).toMatch(/white-space: nowrap;/);
+    expect(rule('.intro h1.title')).toMatch(/white-space: nowrap;/);
     expect(rule('h1')).toBe('');
+  });
+
+  it('lets the question asked for a place wrap at 320 px', () => {
+    expect(rule('.intro h1')).not.toMatch(/nowrap|ellipsis|overflow/);
   });
 
   it('keeps the title to one line and shows the whole count and place line under it, never cut', () => {
@@ -3852,5 +3856,58 @@ describe('Results loading more', () => {
     expect(searches().at(-1)).toEqual({ brand: 'audi', log: '1', near: NEAR });
     expect(cursors()).toHaveLength(0);
     expect(button()).toBeNull();
+  });
+
+  // @traces 1356-FR-002 1356-FR-010
+  it("asks for no page with the old list's cursor while the list starts again", async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await scrolledToEnd();
+    await reads[2]?.fail(400, undefined, {
+      code: 'invalid_cursor',
+      message: 'cursor is not a page of this search',
+    });
+    await scrolledToEnd();
+    await scrolledToEnd(1);
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2']);
+    expect(button()).toBeNull();
+    await reads[3]?.answer(
+      first({ items: garages(100, 20), nextCursor: 'n1' }),
+    );
+    await scrolledToEnd();
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2', 'n1']);
+  });
+
+  // @traces 1356-FR-008
+  it('keeps nothing for the new brand when Results is left while it loads', async () => {
+    Element.prototype.scrollTo = jest.fn();
+    await loaded();
+    page()
+      .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
+      ?.click();
+    await settle();
+    await settle();
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=audi&near=${NEAR}`);
+    await settle();
+
+    expect(names()).toEqual([]);
+    expect(searches().at(-1)).toEqual({ brand: 'audi', log: '1', near: NEAR });
+  });
+
+  it("draws the load-more button as the states' primary retry", async () => {
+    await loaded();
+
+    expect(button()?.classList).toContain('primary');
+    const css = readFileSync(join(__dirname, 'results.css'), 'utf8');
+    expect(css).toMatch(
+      /\.more\.primary \{[^}]*background: var\(--mf-amber\);[^}]*color: var\(--mf-on-amber\);/,
+    );
   });
 });
