@@ -134,9 +134,9 @@ describe('GarageSearchQueryDto under hostile input', () => {
     expect(search({ brand: 'bmw', log: '1' })).toEqual([]);
   });
 
-  it('takes a cursor of 200 characters and refuses 201', () => {
-    expect(search({ brand: 'bmw', cursor: 'a'.repeat(200) })).toEqual([]);
-    expect(search({ brand: 'bmw', cursor: 'a'.repeat(201) })).toContain(
+  it('takes a cursor of 256 characters and refuses 257', () => {
+    expect(search({ brand: 'bmw', cursor: 'a'.repeat(256) })).toEqual([]);
+    expect(search({ brand: 'bmw', cursor: 'a'.repeat(257) })).toContain(
       'cursor',
     );
   });

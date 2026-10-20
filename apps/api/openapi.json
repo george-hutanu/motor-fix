@@ -2385,7 +2385,7 @@
             "in": "query",
             "description": "The nextCursor of the previous page; opaque",
             "schema": {
-              "maxLength": 200,
+              "maxLength": 256,
               "type": "string"
             }
           }

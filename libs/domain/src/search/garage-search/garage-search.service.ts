@@ -32,33 +32,37 @@ const GROUPS = ['works_on', 'other'] as const;
 // Unsigned on purpose: it only says where the next page starts, and a
 // tampered one is refused or reads a page the visitor could read anyway.
 // It carries the last garage's id, not its name: a name has no length limit
-// and the query caps the cursor at 200 characters. A page of a box names the
-// box, so it never pages on another box or the search around the place.
+// and the query caps the cursor at 256 characters. It carries the rating and
+// review count the last garage had when its page was answered, so a review
+// landing between two pages moves no page boundary. A page of a box names
+// the box, so it never pages on another box or the search around the place.
 interface Cursor {
   b: string;
+  c: number;
   g: (typeof GROUPS)[number];
   i: string;
+  r: string | null;
   x?: string;
 }
 
 interface After extends Cursor {
   name: string;
-  rating: Prisma.Decimal | null;
-  reviewCount: number;
 }
 
 // Every garage after the boundary in the order of a group.
-function beyond({ i, name, rating, reviewCount }: After): Prisma.Sql {
+function beyond({ c, i, name, r }: After): Prisma.Sql {
   const later = Prisma.sql`(garage.name > ${name}
     OR (garage.name = ${name} AND garage.id > ${i}::uuid))`;
-  if (rating === null) return Prisma.sql`garage.rating IS NULL AND ${later}`;
-  const r = rating.toString();
+  if (r === null) return Prisma.sql`garage.rating IS NULL AND ${later}`;
   return Prisma.sql`(garage.rating IS NULL
     OR garage.rating < ${r}::numeric
-    OR (garage.rating = ${r}::numeric AND garage.review_count < ${reviewCount})
-    OR (garage.rating = ${r}::numeric AND garage.review_count = ${reviewCount}
+    OR (garage.rating = ${r}::numeric AND garage.review_count < ${c})
+    OR (garage.rating = ${r}::numeric AND garage.review_count = ${c}
       AND ${later}))`;
 }
+
+// A rating as the garage table holds it: 1.0 to 5.0, one decimal.
+const RATING = /^(?:[1-4]\.\d|5\.0)$/;
 
 const invalidCursor = () =>
   refusal(
@@ -74,12 +78,15 @@ function decode(cursor: string, brandId: string, box?: string): Cursor {
   } catch {
     throw invalidCursor();
   }
-  const { b, g, i, x } = parsed ?? {};
+  const { b, c, g, i, r, x } = parsed ?? {};
   if (
     b !== brandId ||
     !GROUPS.includes(g as Cursor['g']) ||
     !isUUID(i) ||
-    x !== box
+    x !== box ||
+    !(r === null || (typeof r === 'string' && RATING.test(r))) ||
+    !Number.isSafeInteger(c) ||
+    (c as number) < 0
   ) {
     throw invalidCursor();
   }
@@ -95,8 +102,10 @@ const cursorAfter = (
   Buffer.from(
     JSON.stringify({
       b: brandId,
+      c: last.reviewCount,
       g: last.stance === 'works_on' ? 'works_on' : 'other',
       i: last.id,
+      r: last.rating === null ? null : last.rating.toFixed(1),
       ...(box && { x: box }),
     } satisfies Cursor),
   ).toString('base64url');
@@ -144,14 +153,15 @@ export async function countGroups(
 // unrated last, more reviews first, then name and id (an unrated garage has
 // no reviews, garage_rating_reviewed). In the area when there is one, after
 // the boundary or among the ids when given; each with its place in the area.
-export function groupPage(
-  prisma: PrismaClient,
+// garage_list_order_idx holds the order of the approved garages, so a page
+// with no area reads the index instead of sorting every garage.
+export function groupPageSql(
   brandId: string,
   group: Group,
   area: AreaSql | undefined,
-  { after, ids, take }: { after?: After; ids?: string[]; take: number },
+  { after, ids, take }: GroupPageOptions,
 ) {
-  return prisma.$queryRaw<AreaRow[]>`
+  return Prisma.sql`
     SELECT
       garage.id,
       ${area ? area.distance : Prisma.sql`NULL::float8`} AS distance_m,
@@ -166,6 +176,24 @@ export function groupPage(
     ORDER BY garage.rating DESC NULLS LAST, garage.review_count DESC,
       garage.name, garage.id
     LIMIT ${take}`;
+}
+
+interface GroupPageOptions {
+  after?: After;
+  ids?: string[];
+  take: number;
+}
+
+export function groupPage(
+  prisma: PrismaClient,
+  brandId: string,
+  group: Group,
+  area: AreaSql | undefined,
+  options: GroupPageOptions,
+) {
+  return prisma.$queryRaw<AreaRow[]>(
+    groupPageSql(brandId, group, area, options),
+  );
 }
 
 // The rows of a page, read back in their order: the public ones among them.
@@ -349,12 +377,12 @@ export class GarageSearchService {
     };
   }
 
-  // The boundary's place in the order, by id: a garage suspended since the
-  // last page still marks where the next one starts, and is never listed
-  // again.
+  // The boundary's name, by id: a garage suspended since the last page
+  // still marks where the next one starts, and is never listed again. Its
+  // rating and review count are the cursor's, as its page showed them.
   private async after(cursor: Cursor): Promise<After> {
     const last = await this.prisma.garage.findUnique({
-      select: { name: true, rating: true, reviewCount: true },
+      select: { name: true },
       where: { id: cursor.i },
     });
     if (!last) throw invalidCursor();

@@ -154,11 +154,11 @@ export class GarageSearchQueryDto extends GaragePinsQueryDto {
 
   @ApiPropertyOptional({
     description: 'The nextCursor of the previous page; opaque',
-    maxLength: 200,
+    maxLength: 256,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(200)
+  @MaxLength(256)
   cursor?: string;
 }
 
