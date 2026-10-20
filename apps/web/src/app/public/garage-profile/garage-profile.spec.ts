@@ -472,6 +472,28 @@ describe('the price list on the profile', () => {
     expect(prices()?.textContent).not.toContain('890–1.400 lei');
   });
 
+  // @traces 1357-FR-004
+  it('drops a job in place when a price list change no longer lists it', async () => {
+    jest.useFakeTimers();
+    const REGAS = {
+      ...BRAKES,
+      jobTypeId: 'j-regas',
+      nameEn: 'Air-con regas',
+      nameRo: 'Încărcare freon climă',
+    };
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES, REGAS] });
+    expect(prices()?.textContent).toContain('Încărcare freon climă');
+
+    send('price_list.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    expect(prices()?.textContent).not.toContain('Încărcare freon climă');
+    expect(prices()?.textContent).toContain('Plăcuțe și discuri de frână față');
+  });
+
   it('keeps the same section and its switch through the read that follows', async () => {
     await open('/ro/garages/service-auto-militari?brand=bmw');
     await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });

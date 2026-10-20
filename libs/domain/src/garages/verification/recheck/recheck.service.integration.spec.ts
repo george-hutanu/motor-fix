@@ -548,6 +548,7 @@ describe('recording a valid re-check', () => {
     expect(await events(g.id, 'price_list.updated')).toHaveLength(0);
   });
 
+  // @traces 1357-FR-004
   it('narrows the activities and emits price_list.updated for the garage', async () => {
     const g = await garage({
       activities: ['mechanics', 'brakes', 'air_con'],
@@ -732,6 +733,7 @@ describe('two admins on the same row', () => {
 
 // @traces 1351-FR-006
 describe('a narrowing seen on the price list', () => {
+  // @traces 1357-FR-004
   it('hides exactly the jobs whose activity left the set, through the existing rule', async () => {
     const g = await garage({
       activities: ['mechanics', 'air_con'],

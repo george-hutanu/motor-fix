@@ -379,6 +379,54 @@ describe('Prețuri: brand ranges under their job', () => {
   });
 });
 
+// @traces 1357-FR-002
+// @traces 1357-FR-004
+describe('Prețuri: a job outside the RAR authorisation', () => {
+  const regas = (shown: boolean) =>
+    item({
+      jobTypeId: 'ac-regas',
+      nameEn: 'Air-con regas',
+      nameRo: 'Încărcare freon climă',
+      public: shown,
+      ...(shown ? {} : { reason: 'not_authorised' as const }),
+    });
+
+  it('reads the row as hidden by the RAR authorisation with an amber lamp, in both languages', async () => {
+    const answer = async () => ({ items: [regas(false)] });
+    const romanian = await render(answer);
+    await romanian.settle();
+    const [row] = rows(romanian.element);
+    expect(cell(row, 'state')).toBe('ascuns · nu e în autorizația RAR');
+    expect(row.dataset['public']).toBe('false');
+    expect(row.querySelector('[data-lamp]')).not.toBeNull();
+    TestBed.resetTestingModule();
+
+    const english = await render(answer, 'en');
+    await english.settle();
+    expect(cell(rows(english.element)[0], 'state')).toBe(
+      'hidden · not in your RAR authorisation',
+    );
+  });
+
+  it('turns the row to on the profile when a price list change re-reads it covered', async () => {
+    let covered = false;
+    const { element, settle } = await render(async () => ({
+      items: [regas(covered)],
+    }));
+    await settle();
+    expect(rows(element)[0].dataset['public']).toBe('false');
+
+    covered = true;
+    events.next(message('price_list.updated', GARAGE));
+    await wait(350);
+    await settle();
+
+    const [row] = rows(element);
+    expect(cell(row, 'state')).toBe('pe profil');
+    expect(row.dataset['public']).toBe('true');
+  });
+});
+
 // @traces 172-FR-007 172-FR-008
 // @traces 1352-FR-001
 describe('Prețuri: live, loading, failure and an empty list', () => {

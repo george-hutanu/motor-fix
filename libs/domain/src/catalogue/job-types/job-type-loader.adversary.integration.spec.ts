@@ -52,7 +52,9 @@ describe('JobTypeLoader under hostile files and failures', () => {
 
   it('keeps Romanian diacritics and emoji exactly as written', async () => {
     const name = 'Încărcare ștergătoare și țevi 🚗 – ΑΒΓ';
-    await loader.load([{ key: 'wipers', nameEn: 'Wipers', nameRo: name }]);
+    await loader.load([
+      { key: 'wipers', nameEn: 'Wipers', nameRo: name, rarActivity: null },
+    ]);
 
     const row = await prisma.jobType.findUniqueOrThrow({
       where: { key: 'wipers' },
@@ -62,8 +64,13 @@ describe('JobTypeLoader under hostile files and failures', () => {
 
   it('treats keys that differ only in case as different jobs', async () => {
     await loader.load([
-      { key: 'Brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
-      { key: 'brakes', nameEn: 'Brakes 2', nameRo: 'Frâne 2' },
+      { key: 'Brakes', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null },
+      {
+        key: 'brakes',
+        nameEn: 'Brakes 2',
+        nameRo: 'Frâne 2',
+        rarActivity: null,
+      },
     ]);
 
     expect(await count()).toBe(2);
@@ -71,7 +78,9 @@ describe('JobTypeLoader under hostile files and failures', () => {
 
   it('stores a very long name whole', async () => {
     const long = 'x'.repeat(10_000);
-    await loader.load([{ key: 'long', nameEn: long, nameRo: `${long}r` }]);
+    await loader.load([
+      { key: 'long', nameEn: long, nameRo: `${long}r`, rarActivity: null },
+    ]);
 
     const row = await prisma.jobType.findUniqueOrThrow({
       where: { key: 'long' },
@@ -114,7 +123,7 @@ describe('JobTypeLoader under hostile files and failures', () => {
   it('rolls the whole load back when a name holds a NUL byte at the end of the file', async () => {
     const records: JobTypeRecord[] = [
       ...JOB_TYPES,
-      { key: 'bad', nameEn: 'Bad\u0000', nameRo: 'Rau' },
+      { key: 'bad', nameEn: 'Bad\u0000', nameRo: 'Rau', rarActivity: null },
     ];
 
     await expect(loader.load(records)).rejects.toThrow();

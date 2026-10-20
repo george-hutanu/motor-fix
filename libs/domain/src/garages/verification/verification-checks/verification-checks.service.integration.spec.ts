@@ -241,6 +241,7 @@ describe('recording a check', () => {
     );
   });
 
+  // @traces 1357-FR-004
   it('stores the activities on the garage in the same save', async () => {
     const answer = await record('activities', {
       activities: ['mechanics', 'brakes'],
@@ -304,6 +305,7 @@ describe('recording a check', () => {
   });
 
   // @traces 357-FR-006
+  // @traces 1357-FR-004
   it('drops the public profile when the activities change, since they decide its jobs', async () => {
     const changed = () =>
       prisma.outboxEvent.findMany({

@@ -29,7 +29,14 @@ afterAll(async () => {
 const stored = () =>
   prisma.jobType.findMany({
     orderBy: { key: 'asc' },
-    select: { id: true, key: true, nameEn: true, nameRo: true, status: true },
+    select: {
+      id: true,
+      key: true,
+      nameEn: true,
+      nameRo: true,
+      rarActivity: true,
+      status: true,
+    },
   });
 
 const history = () =>
@@ -38,38 +45,46 @@ const history = () =>
     where: { at: { gte: since }, subjectType: 'job_type' },
   });
 
+// @traces 1357-FR-001
+// @traces 1357-FR-007
 describe('the job catalogue file', () => {
-  it('holds the six jobs of the listing wizard, named in Romanian and English', () => {
+  it('holds the six jobs of the listing wizard, named in Romanian and English, each with its kind of work', () => {
     expect(JOB_TYPES).toEqual([
       {
         key: 'diagnosis',
         nameEn: 'Diagnosis and fault-code read',
         nameRo: 'Diagnoză și citire coduri de eroare',
+        rarActivity: null,
       },
       {
         key: 'oil-service',
         nameEn: 'Oil and filter service',
         nameRo: 'Schimb de ulei și filtre',
+        rarActivity: 'mechanics',
       },
       {
         key: 'front-brakes',
         nameEn: 'Front brake pads and discs',
         nameRo: 'Plăcuțe și discuri de frână față',
+        rarActivity: 'brakes',
       },
       {
         key: 'timing-chain',
         nameEn: 'Timing chain kit',
         nameRo: 'Kit lanț de distribuție',
+        rarActivity: 'mechanics',
       },
       {
         key: 'ac-regas',
         nameEn: 'Air-con regas',
         nameRo: 'Încărcare freon climă',
+        rarActivity: 'air_con',
       },
       {
         key: 'suspension-alignment',
         nameEn: 'Suspension check and alignment',
         nameRo: 'Verificare suspensie și geometrie',
+        rarActivity: 'suspension',
       },
     ]);
   });
@@ -146,23 +161,115 @@ describe('JobTypeLoader', () => {
     ]);
   });
 
+  it('stores each created job with its kind of work', async () => {
+    await loader.load(JOB_TYPES);
+
+    expect(
+      (await stored()).map(({ key, rarActivity }) => ({ key, rarActivity })),
+    ).toEqual([
+      { key: 'ac-regas', rarActivity: 'air_con' },
+      { key: 'diagnosis', rarActivity: null },
+      { key: 'front-brakes', rarActivity: 'brakes' },
+      { key: 'oil-service', rarActivity: 'mechanics' },
+      { key: 'suspension-alignment', rarActivity: 'suspension' },
+      { key: 'timing-chain', rarActivity: 'mechanics' },
+    ]);
+  });
+
+  it.each<[string, string | null, string | null]>([
+    ['a job stored without a kind gains it', null, 'brakes'],
+    ["a job stored with another kind takes the file's", 'steering', 'brakes'],
+    ['a job the file gives no kind loses the stored one', 'brakes', null],
+  ])('%s and the history records the change', async (_, before, after) => {
+    const job = await prisma.jobType.create({
+      data: {
+        key: 'front-brakes',
+        nameEn: 'Front brake pads and discs',
+        nameRo: 'Plăcuțe și discuri de frână față',
+        rarActivity: before,
+        status: 'approved',
+      },
+    });
+
+    const result = await loader.load([
+      {
+        key: 'front-brakes',
+        nameEn: 'Front brake pads and discs',
+        nameRo: 'Plăcuțe și discuri de frână față',
+        rarActivity: after,
+      },
+    ]);
+
+    expect(result.changed).toBe(1);
+    expect(
+      await prisma.jobType.findUniqueOrThrow({ where: { id: job.id } }),
+    ).toMatchObject({ rarActivity: after, status: 'approved' });
+    expect(await history()).toEqual([
+      expect.objectContaining({
+        action: 'update',
+        actorRole: 'system',
+        field: 'rarActivity',
+        newValue: after,
+        oldValue: before,
+        subjectId: job.id,
+      }),
+    ]);
+  });
+
+  it('writes nothing for a stored job whose kind and names match the file', async () => {
+    await prisma.jobType.create({
+      data: { ...JOB_TYPES[0], status: 'approved' },
+    });
+
+    const result = await loader.load([JOB_TYPES[0]]);
+
+    expect(result.changed).toBe(0);
+    expect(await history()).toEqual([]);
+  });
+
+  it('maps every job only to a kind of work the RAR catalogue holds', async () => {
+    const codes = (await prisma.rarActivity.findMany()).map(
+      (activity) => activity.code,
+    );
+
+    for (const job of JOB_TYPES) {
+      if (job.rarActivity !== null) expect(codes).toContain(job.rarActivity);
+    }
+  });
+
   it.each<[string, JobTypeRecord[]]>([
     [
       'a duplicate key',
       [
-        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
-        { key: 'brakes', nameEn: 'Rear brakes', nameRo: 'Frâne spate' },
+        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null },
+        {
+          key: 'brakes',
+          nameEn: 'Rear brakes',
+          nameRo: 'Frâne spate',
+          rarActivity: null,
+        },
       ],
     ],
     [
       'a duplicate name',
       [
-        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
-        { key: 'rear-brakes', nameEn: 'Brakes', nameRo: 'Frâne spate' },
+        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null },
+        {
+          key: 'rear-brakes',
+          nameEn: 'Brakes',
+          nameRo: 'Frâne spate',
+          rarActivity: null,
+        },
       ],
     ],
-    ['a blank key', [{ key: ' ', nameEn: 'Brakes', nameRo: 'Frâne' }]],
-    ['a blank name', [{ key: 'brakes', nameEn: 'Brakes', nameRo: '' }]],
+    [
+      'a blank key',
+      [{ key: ' ', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null }],
+    ],
+    [
+      'a blank name',
+      [{ key: 'brakes', nameEn: 'Brakes', nameRo: '', rarActivity: null }],
+    ],
   ])('refuses a file with %s and stores nothing', async (_, records) => {
     await loader.load(JOB_TYPES);
     const before = await stored();
