@@ -18,7 +18,7 @@ export const FEATURE_KEYS = [
   'day_sheets',
   'whatsapp',
 ] as const;
-export type FeatureKey = (typeof FEATURE_KEYS)[number];
+type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export interface SurveySection {
   mechanicsCount?: (typeof MECHANICS_COUNTS)[number];
@@ -50,11 +50,14 @@ export function isSurveySection(value: unknown): value is SurveySection {
   );
 }
 
+// Each of the five answers held by the section itself and in its codes: an
+// inherited value would be lost when the answers are spread into a row.
 export const surveyComplete = (
   section: SurveySection,
 ): section is SurveyAnswers =>
-  Object.keys(RULES).every(
-    (key) => section[key as keyof SurveySection] !== undefined,
+  Object.entries(RULES).every(
+    ([key, rule]) =>
+      Object.hasOwn(section, key) && rule(section[key as keyof SurveySection]),
   );
 
 // WhatsApp starts on whatever the answers; the source sets nothing.

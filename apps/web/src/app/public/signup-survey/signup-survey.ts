@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import {
   FOUND_VIA,
+  isSurveySection,
   LIFTS_COUNTS,
   MECHANICS_COUNTS,
   type SurveySection,
@@ -212,22 +213,29 @@ export class SignupSurvey {
   readonly back = output<void>();
   readonly finish = output<void>();
 
+  // A value outside the answer codes restores nothing, as the draft's own
+  // restore does.
+  private readonly answers = computed<SurveySection>(() => {
+    const value = this.value();
+    return isSurveySection(value) ? value : {};
+  });
+
   protected readonly sample = SAMPLE;
   protected readonly summaryScreen = SUMMARY;
   // Read from the answers once, then moved only by the owner's presses.
   protected readonly screen = linkedSignal<SurveySection, number>({
     computation: (value, previous) => previous?.value ?? resumeAt(value),
-    source: this.value,
+    source: this.answers,
   });
   protected readonly question = computed(
     () => QUESTIONS[this.screen() - 1] ?? null,
   );
   protected readonly answer = computed(() => {
     const question = this.question();
-    return question ? this.value()[question.field] : undefined;
+    return question ? this.answers()[question.field] : undefined;
   });
   protected readonly segments = computed(() =>
-    QUESTIONS.map((question) => this.value()[question.field] !== undefined),
+    QUESTIONS.map((question) => this.answers()[question.field] !== undefined),
   );
   protected readonly forwardLabel = computed(() => {
     const screen = this.screen();
@@ -239,10 +247,10 @@ export class SignupSurvey {
     () =>
       this.busy() ||
       (this.question() !== null && this.answer() === undefined) ||
-      (this.screen() === SUMMARY && !surveyComplete(this.value())),
+      (this.screen() === SUMMARY && !surveyComplete(this.answers())),
   );
   protected readonly features = computed(() => {
-    const value = this.value();
+    const value = this.answers();
     if (!surveyComplete(value)) return [];
     const on = startingFeatures(value);
     return [
@@ -263,7 +271,7 @@ export class SignupSurvey {
   protected pick(value: Answer) {
     const question = this.question();
     if (!question) return;
-    this.valueChange.emit({ ...this.value(), [question.field]: value });
+    this.valueChange.emit({ ...this.answers(), [question.field]: value });
   }
 
   protected move(event: KeyboardEvent, index: number) {
