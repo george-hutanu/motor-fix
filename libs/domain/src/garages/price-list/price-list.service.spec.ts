@@ -11,8 +11,12 @@ const actor = {
 
 // A removal that commits between the write's read and its own statement
 // leaves the write's update or delete touching no row.
-function world(rows: { brandId: string | null; id: string }[]) {
+function world(
+  rows: { brandId: string | null; id: string }[],
+  listedUnderLock = 1,
+) {
   const garagePrice = {
+    count: jest.fn().mockResolvedValue(listedUnderLock),
     create: jest.fn().mockResolvedValue({ id: 'new' }),
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     findFirst: jest.fn().mockResolvedValue({
@@ -33,7 +37,11 @@ function world(rows: { brandId: string | null; id: string }[]) {
     updateMany: jest.fn().mockResolvedValue({ count: 0 }),
   };
   const prisma = {
-    $transaction: (work: (tx: unknown) => unknown) => work({ garagePrice }),
+    $transaction: (work: (tx: unknown) => unknown) =>
+      work({
+        $queryRaw: jest.fn().mockResolvedValue([{ slug: 'nord' }]),
+        garagePrice,
+      }),
     brand: { findUnique: jest.fn().mockResolvedValue({ slug: 'bmw' }) },
     garage: {
       findUnique: jest.fn().mockResolvedValue({
@@ -78,6 +86,26 @@ describe('a brand range write racing a removal', () => {
       subjectId: 'new',
     });
     expect(w.events.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses the range and stores nothing when the job itself was removed', async () => {
+    const w = world(
+      [
+        { brandId: null, id: 'default' },
+        { brandId: 'b1', id: 'own' },
+      ],
+      0,
+    );
+
+    await expect(
+      w.service.setBrandRange(actor, pair, {
+        fromBani: 110_000,
+        toBani: 170_000,
+      }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(w.garagePrice.create).not.toHaveBeenCalled();
+    expect(w.audit.record).not.toHaveBeenCalled();
+    expect(w.events.record).not.toHaveBeenCalled();
   });
 
   it('answers not found and records nothing when the row is already removed', async () => {

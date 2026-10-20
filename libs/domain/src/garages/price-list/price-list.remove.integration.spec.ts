@@ -11,6 +11,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import type { Prisma } from '../../generated/prisma/client';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -387,6 +388,88 @@ describe('DELETE /garages/:garageId/prices/:priceId', () => {
 
     expect((await remove(w, 'frane')).status).toBe(400);
     expect((await remove(w, w.brakesRow.id, w.owner, 'x')).status).toBe(400);
+  });
+});
+
+// Holds the garage as a write to its list does, runs `meanwhile` inside, and
+// lets go once another write is waiting on it.
+async function holdingGarage(
+  w: World,
+  meanwhile: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  then: () => Promise<request.Response>,
+) {
+  let answer: Promise<request.Response> | undefined;
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`
+        SELECT id FROM garage WHERE id = ${w.nord.id}::uuid FOR UPDATE`;
+      await meanwhile(tx);
+      answer = then();
+      for (let waited = 0; waited < 5_000; waited += 25) {
+        const [{ n }] = await prisma.$queryRaw<{ n: number }[]>`
+          SELECT count(*)::int AS n FROM pg_locks WHERE NOT granted`;
+        if (n > 0) break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+    },
+    { timeout: 15_000 },
+  );
+  return answer as Promise<request.Response>;
+}
+
+const jobsListed = async (w: World) => [
+  ...new Set((await rowsOf(w)).map((row) => row.jobTypeId)),
+];
+
+describe('a removal racing a brand range', () => {
+  it('refuses a brand range that reaches the job after its removal', async () => {
+    const w = await world();
+
+    const res = await holdingGarage(
+      w,
+      (tx) =>
+        tx.garagePrice.deleteMany({
+          where: { garageId: w.nord.id, jobTypeId: w.brakes.id },
+        }),
+      () =>
+        http()
+          .put(
+            `/garages/${w.nord.id}/prices/${w.brakes.id}/brands/${w.mini.id}`,
+          )
+          .set('Authorization', w.owner)
+          .send({ fromBani: 120_000, toBani: 180_000 })
+          .then((answered) => answered),
+    );
+
+    expect(res.status).toBe(422);
+    expect(res.body.errors).toEqual([
+      { code: 'no_default_range', field: 'jobTypeId' },
+    ]);
+    expect(await jobsListed(w)).toEqual([w.oil.id]);
+  });
+
+  it('takes away a brand range stored while the removal waited', async () => {
+    const w = await world();
+
+    const res = await holdingGarage(
+      w,
+      (tx) =>
+        tx.garagePrice.create({
+          data: {
+            brandId: w.mini.id,
+            fromBani: 120_000,
+            garageId: w.nord.id,
+            jobTypeId: w.brakes.id,
+            position: 3,
+            toBani: 180_000,
+            updatedBy: w.mihai,
+          },
+        }),
+      () => remove(w).then((answered) => answered),
+    );
+
+    expect(res.status).toBe(204);
+    expect(await jobsListed(w)).toEqual([w.oil.id]);
   });
 });
 
