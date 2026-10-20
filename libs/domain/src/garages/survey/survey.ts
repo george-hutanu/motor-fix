@@ -7,8 +7,15 @@ import {
 import { HttpStatus } from '@nestjs/common';
 
 import type { AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/sign-up.service';
+import { refusal, taken } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
+
+const answered = () =>
+  refusal(
+    HttpStatus.CONFLICT,
+    'survey_already_answered',
+    'This garage has answered its survey already',
+  );
 
 // Stores a new garage's sign-up survey and switches its five features on or
 // off from the answers, inside the caller's transaction (the account's
@@ -33,13 +40,15 @@ export async function applySurvey(
     );
   }
   if (await tx.garageSurvey.findUnique({ where: { garageId } })) {
-    throw refusal(
-      HttpStatus.CONFLICT,
-      'survey_already_answered',
-      'This garage has answered its survey already',
-    );
+    throw answered();
   }
-  await tx.garageSurvey.create({ data: { garageId, ...answers } });
+  // A survey applied at the same time passes the look above too: its row,
+  // stored first, makes this insert the second, answered as the look would.
+  await tx.garageSurvey
+    .create({ data: { garageId, ...answers } })
+    .catch((error: unknown) => {
+      throw taken(error) ? answered() : error;
+    });
   const features = startingFeatures(answers);
   await tx.garageFeature.createMany({
     data: FEATURE_KEYS.map((key) => ({

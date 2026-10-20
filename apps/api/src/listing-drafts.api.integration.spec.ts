@@ -50,6 +50,11 @@ const create = (payload: object = body(), address = freshAddress()) =>
     .set('X-Forwarded-For', address)
     .send(payload);
 
+// A survey holds no free text any more, so the size is made of photo keys.
+const PHOTO = `garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/${'x'.repeat(64)}`;
+const filesOf = (bytes: number) =>
+  Array.from({ length: Math.ceil(bytes / (PHOTO.length + 3)) }, () => PHOTO);
+
 describe('the listing draft routes', () => {
   it('creates a draft without a session and answers its key', async () => {
     const res = await create().expect(201);
@@ -190,15 +195,21 @@ describe('the listing draft routes', () => {
   );
 
   it('takes a draft above the default body limit, up to its own', async () => {
-    const note = 'x'.repeat(200 * 1024);
+    // Valid data no longer reaches 200 KB, so JSON's own whitespace does.
+    const padded = `${JSON.stringify(body())}${' '.repeat(200 * 1024)}`;
 
-    await create(body({ data: { survey: { note } } })).expect(201);
+    await request(app.getHttpServer())
+      .post('/api/v1/listing-drafts')
+      .set('X-Forwarded-For', freshAddress())
+      .set('Content-Type', 'application/json')
+      .send(padded)
+      .expect(201);
   });
 
   it('refuses a draft above its limit with draft_too_large', async () => {
-    const note = 'x'.repeat(300 * 1024);
-
-    const res = await create(body({ data: { survey: { note } } })).expect(413);
+    const res = await create(
+      body({ data: { files: filesOf(300 * 1024) } }),
+    ).expect(413);
 
     expect(res.body).toMatchObject({ code: 'draft_too_large' });
   });

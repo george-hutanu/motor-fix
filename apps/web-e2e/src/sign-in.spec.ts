@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ready, signIn } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -239,17 +239,8 @@ const SIZES = [
 const TITLE = { en: 'Sign in', ro: 'Autentificare' } as const;
 
 // Phones open it from the tab bar, wider screens from the top bar.
-async function openAt(page: Page, width: number, language: 'ro' | 'en') {
-  if (width < 768) {
-    await page
-      .getByRole('link', {
-        exact: true,
-        name: language === 'ro' ? 'Cont' : 'Account',
-      })
-      .click();
-  } else {
-    await openFromHeader(page, TITLE[language]);
-  }
+async function openAt(page: Page, language: 'ro' | 'en') {
+  await openSignIn(page, language);
   await expect(panel(page, language)).toBeVisible();
 }
 
@@ -283,7 +274,7 @@ test.describe('the dialog on every screen size', () => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await ready(page, `/${language}/garages`);
 
-      await openAt(page, width, language);
+      await openAt(page, language);
 
       const box = await panel(page, language).boundingBox();
       expect(box?.x).toBeGreaterThanOrEqual(0);

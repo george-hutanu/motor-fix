@@ -1,7 +1,7 @@
 <header class="intro">
   @if (answer(); as answer) {
     <!-- Re-created for another brand, whose name blurs in once it lands. -->
-    <h1 [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ 'public.results.title' | t: { brand: shown.name } }}</span>}</h1>
+    <h1 class="title" [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ 'public.results.title' | t: { brand: shown.name } }}</span>}</h1>
     <p class="summary">
       @if (answer.total > 0) {
         <span class="tally" [mfLiveChange]="tally()">{{ tally() }}</span>
@@ -105,6 +105,23 @@
               </li>
             }
           </ul>
+          @if (paging() === 'loading') {
+            <div class="cards later" aria-hidden="true">
+              @for (card of pageSkeletons; track card) {
+                <div class="card skeleton"></div>
+              }
+            </div>
+          }
+          @if (canLoad()) {
+            <button type="button" class="more primary" [attr.aria-busy]="paging() === 'loading'" (click)="press()">
+              @if (paging() === 'failed') {
+                {{ 'public.results.retry' | t }}
+              } @else {
+                {{ 'public.results.more' | t }}
+              }
+            </button>
+          }
+          <p #endLine class="end" role="status" tabindex="-1">{{ ending() }}</p>
         }
       }
       @case ('empty') {

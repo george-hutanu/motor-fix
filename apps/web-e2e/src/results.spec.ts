@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ownMap, ready, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -209,6 +209,29 @@ test.describe('the Results page @seeded', () => {
       { timeout: 15_000 },
     );
     expect(navigations).toBe(0);
+    // The describe runs in order and the brand chips below expect the top
+    // garage first: it is restored as an admin's restore would write it, so
+    // the cached searches are dropped too.
+    await db.query('BEGIN');
+    await db.query(`UPDATE garage SET status = 'approved' WHERE id = $1`, [id]);
+    const restored = await db.query<{ id: string }>(
+      `INSERT INTO outbox_event (kind, subject_id, audience)
+       VALUES ('garage.restored', $1, $2) RETURNING id`,
+      [id, [`garage:${id}`, `public:garage:${id}`, 'public:search']],
+    );
+    await db.query('COMMIT');
+    await expect
+      .poll(
+        async () =>
+          (
+            await db.query(
+              'SELECT 1 FROM outbox_event WHERE id = $1 AND relayed_at IS NOT NULL',
+              [restored.rows[0]?.id],
+            )
+          ).rowCount,
+        { timeout: 15_000 },
+      )
+      .toBe(1);
   });
 
   // The brand chips above the list: a popular brand's chip changes the
@@ -247,8 +270,12 @@ test.describe('the Results page @seeded', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
         `Service‑uri pentru ${name}`,
       );
-      await expect(other).toHaveAttribute('aria-pressed', 'true');
-      await expect(other).toBeFocused();
+      // The row leads with the current brand, so the tapped chip moves first.
+      const tapped = page
+        .getByRole('group', { name: 'Marca' })
+        .getByRole('button', { exact: true, name });
+      await expect(tapped).toHaveAttribute('aria-pressed', 'true');
+      await expect(tapped).toBeFocused();
       const bar = new URL(page.url());
       expect(bar.searchParams.get('near')).toBe(near);
       const slug = bar.searchParams.get('brand') ?? '';
@@ -309,9 +336,7 @@ test.describe('the Results page @seeded', () => {
       );
       try {
         await ready(page, '/ro');
-        await page
-          .getByRole('button', { exact: true, name: 'Autentificare' })
-          .click();
+        await openSignIn(page);
         await signIn(page, ACCOUNTS.driver);
         await expect(
           page.getByRole('dialog', { name: 'Autentificare' }),
@@ -602,7 +627,7 @@ test.describe('the map beside the results @seeded', () => {
     await rests(page, 'half');
 
     await sheet(page)
-      .locator('.body')
+      .locator(':scope > .body')
       .evaluate((body) => {
         body.scrollTop = 400;
       });
@@ -677,7 +702,7 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await rests(page, 'half');
     await sheet(page)
-      .locator('.body')
+      .locator(':scope > .body')
       .evaluate((body) => {
         body.scrollTop = 200;
       });
@@ -693,7 +718,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect
       .poll(() =>
         sheet(page)
-          .locator('.body')
+          .locator(':scope > .body')
           .evaluate((b) => b.scrollTop),
       )
       .toBe(0);
@@ -732,7 +757,7 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await rests(page, 'full');
-    await expect(page.locator('header.intro').getByRole('status')).toHaveText(
+    await expect(page.locator('header.intro p.unavailable')).toHaveText(
       'Harta nu este disponibilă acum',
     );
     await expect(page.locator('mf-result-card')).toHaveCount(4);

@@ -134,15 +134,42 @@ describe('GarageSearchQueryDto under hostile input', () => {
     expect(search({ brand: 'bmw', log: '1' })).toEqual([]);
   });
 
-  it('takes a cursor of 200 characters and refuses 201', () => {
-    expect(search({ brand: 'bmw', cursor: 'a'.repeat(200) })).toEqual([]);
-    expect(search({ brand: 'bmw', cursor: 'a'.repeat(201) })).toContain(
+  it('takes a cursor of 256 characters and refuses 257', () => {
+    expect(search({ brand: 'bmw', cursor: 'a'.repeat(256) })).toEqual([]);
+    expect(search({ brand: 'bmw', cursor: 'a'.repeat(257) })).toContain(
       'cursor',
     );
   });
 
   it('refuses a cursor sent as a list', () => {
     expect(search({ brand: 'bmw', cursor: ['a', 'b'] })).toContain('cursor');
+  });
+
+  it('takes an empty cursor string', () => {
+    expect(search({ brand: 'bmw', cursor: '' })).toEqual([]);
+  });
+
+  it.each([[12], [{}], [true]])('refuses a cursor of %j', (cursor) => {
+    expect(search({ brand: 'bmw', cursor })).toContain('cursor');
+  });
+
+  it.each([
+    ['an emoji', '😀'.repeat(128)],
+    ['a space', 'abc def'],
+    ['base64 padding', 'YWJj='],
+    ['a plus', 'a+b'],
+  ])('refuses a cursor holding %s, which no page answers', (_, cursor) => {
+    expect(search({ brand: 'bmw', cursor })).toContain('cursor');
+  });
+
+  it('takes a base64url cursor of 256 characters', () => {
+    expect(search({ brand: 'bmw', cursor: 'aZ0_-'.repeat(51) + 'x' })).toEqual(
+      [],
+    );
+  });
+
+  it('takes a cursor beside a list of ids', () => {
+    expect(search({ brand: 'bmw', cursor: 'abc', ids: uuid(1) })).toEqual([]);
   });
 
   it('takes a place in Romania', () => {

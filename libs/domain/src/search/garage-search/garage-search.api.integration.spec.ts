@@ -110,8 +110,12 @@ describe('GET /search/garages', () => {
     ['a slug with capitals', { brand: 'Dacia' }],
     ['an unknown parameter', { brandId: randomUUID(), sort: 'rating' }],
     [
-      'a cursor over 200 characters',
-      { brandId: randomUUID(), cursor: 'a'.repeat(201) },
+      'a cursor over 256 characters',
+      { brandId: randomUUID(), cursor: 'a'.repeat(257) },
+    ],
+    [
+      'a cursor outside base64url',
+      { brandId: randomUUID(), cursor: '+++/===' },
     ],
   ])('answers 400 to %s', async (_, query) => {
     expect((await search(query)).status).toBe(400);

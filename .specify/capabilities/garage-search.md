@@ -19,6 +19,7 @@ features:
   - 228-how-it-works-list-garage
   - 1355-results-brand-chips
   - 1358-results-phone-map-list
+  - 1356-results-load-more
 ---
 
 # Capability: Garage search
@@ -47,9 +48,9 @@ _From 042-brand-verdict._
 
 _From 043-brand-first-garage-list._
 
-### 267-FR-002 — The cursor of 043-FR-006 MUST continue that order: it carries the brand, the group and the last garage's id, and the search reads that garage's rating, review count and name back by id as the keyset, so no garage is repeated or skipped between two consecutive pages of an unchanged list, even when that garage has left the public list since. A rating change between two pages may move the boundary; paging through a changing list is ST-273's.
+### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
 
-_From 267-brand-results._
+_From 1356-results-load-more._
 
 ### 267-FR-001 — The garage search for a brand (`GET /api/v1/search/garages`) MUST order each group by rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z under the database's default collation, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same; the group rule of 043-FR-001 (takers first, on every page) is unchanged.
 
@@ -59,9 +60,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 043-FR-009 — The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a missing brand, a value that is not a uuid, an unknown query field, or a cursor that is longer than 200 characters, does not decode, names another brand or names no group, MUST be refused as a bad request, in the API's one error shape with a stable code (`validation_failed`, `invalid_cursor`, `not_found`).
+### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
 
-_From 043-brand-first-garage-list._
+_From 1356-results-load-more._
 
 ### 043-FR-010 — The search MUST read a garage's answer for a brand from the garage brand rows ST-39 created (one row per garage and brand, no row is `unstated`), never from a second copy.
 
@@ -485,6 +486,70 @@ _From 1358-results-phone-map-list._
 
 _From 1358-results-phone-map-list._
 
+### 1356-FR-001 — Results MUST show the first page as today (20 cards, 043-FR-006) and, while the answer carries a cursor, load the next page of the same search (same brand, place, radius or box) when the driver scrolls to within three cards of the end of the loaded list; the loaded pages add up in one list, in the order the API answers them, and the brand groups of 043-FR-001 hold across every page.
+
+_From 1356-results-load-more._
+
+### 1356-FR-002 — While a page loads, three skeleton cards MUST show under the loaded cards; one page at a time: reaching the end again while a page loads requests nothing more; a reload, a new search or a moved map while a page loads drops that page's answer; a page that answers zero items with a cursor requests the next one at once, at most three times in a row, then shows the retry (FR-006).
+
+_From 1356-results-load-more._
+
+### 1356-FR-003 — When the answer carries no cursor after more than one page was loaded, the list MUST end with the line "Ai văzut toate cele {total}" / "You have seen all {total}", in the list's polite live region; with one page only (20 or fewer found) nothing is added to today's screen.
+
+_From 1356-results-load-more._
+
+### 1356-FR-004 — The top of the list MUST keep showing the search's `total` and counts (267-FR-013, 269-FR-008) whatever number of cards is loaded; the total is never the loaded count.
+
+_From 1356-results-load-more._
+
+### 1356-FR-005 — A "Încarcă mai multe" / "Load more" button MUST sit at the end of the loaded cards while a cursor exists; pressing it does what scrolling to the end does, the focus stays on it while it loads (`aria-busy`), and when the last page lands the focus moves to the end line (`tabindex="-1"`) before the button is removed. The scroll trigger is a convenience over the button, never the only way.
+
+_From 1356-results-load-more._
+
+### 1356-FR-006 — When a page fails to load, the same end-of-list button MUST read "Reîncearcă" / "Try again" (the screen's other retry) in place of the skeletons at the end of the list, the loaded cards MUST stay, nothing MUST be retried on scroll, and pressing it MUST request the same page again; a page that fails three times in a row still shows the retry (no cap on presses).
+
+_From 1356-results-load-more._
+
+### 1356-FR-007 — At 500 or more loaded cards the page MUST stop loading (the pins' cap, 269-FR-003; a page that would carry the list past 500 is cut at 500) and end the list with "Ai văzut primele 500 · apropie harta pentru mai puține" / "You have seen the first 500 · zoom in for fewer" even when a cursor exists; the top keeps the total.
+
+_From 1356-results-load-more._
+
+### 1356-FR-008 — The loaded pages, the cursor, the scroll position and the search's logged mark MUST be kept in the tab's memory when the driver leaves Results and shown at once when Results opens again for the same search (same brand, place, radius or box) in the same tab, only the last search being kept and nothing expiring but the tab (a profile opened from a card and the browser's back); the first page is then read again without `log=1` and applied in place to the kept cards, and no later page is requested. A different search, a reload or a new tab starts from the first page.
+
+_From 1356-results-load-more._
+
+### 1356-FR-010 — A page read MUST write no search-log row and MUST carry no new-search mark (267-FR-007 unchanged: `log=1` is the first page's only); a cursor the API refuses (`invalid_cursor`, 043-FR-006) MUST make the page start the list again from the top as "Reîncarcă" does (the first page in place of the list, the first card selected), silently and without a search-log row.
+
+_From 1356-results-load-more._
+
+### 1356-FR-011 — The page MUST never add a card for a garage it already shows: a garage answered again on a later page (it fell in the order after its page was loaded) is left where it is, its card replaced in place by the fresher answer and never added a second time. The API's page is not deduplicated across requests.
+
+_From 1356-results-load-more._
+
+### 1356-FR-012 — The live stream MUST keep following the first page's garages (its 20-id cap, 267-FR-018), and every re-read by ids (267-FR-006, 267-FR-019, 419-FR-009) MUST name followed garages only, never more than 20 ids; garages loaded later are shown as answered and are not followed. The pins keep their own re-reads (269-FR-005, every garage found).
+
+_From 1356-results-load-more._
+
+### 1356-FR-013 — A card loaded on a later page MUST be linked to its pin exactly as a first-page card is (270-FR-001 to FR-008: pointed, selected, lit pin, scrolled into view on a pin tap, the selected state kept); and when a tapped pin's garage arrives with a page while its small card (270-FR-010) is open, the small card MUST close and that card MUST be the selected one.
+
+_From 1356-results-load-more._
+
+### 1356-FR-014 — Loading a page MUST change no selected or pointed garage and MUST not move the map (269-FR-012 fits the bounds on load only).
+
+_From 1356-results-load-more._
+
+### 1356-FR-015 — The `garage` table MUST carry an index matching the brand-first list's order key (267-FR-001: approved garages, rating high to low with unrated garages last, review count high to low, name, id), added by a migration, and `EXPLAIN` of a page's list query with no area over 10,000 approved garages after `ANALYZE` MUST use it, proven by an integration test. If the planner does not take it, no index ships and the criterion is answered on #572.
+
+_From 1356-results-load-more._
+
+### 1356-FR-016 — Both Results screens (Results + map, Mobile · Results) MUST load more the same way, in the list's own scroll container; long lists are not designed (Build brief, Screens): the end line, the load-more and retry buttons and the skeletons follow the Cockpit look of today's "Reîncearcă" and skeleton cards (267-FR-016), and the page MUST never scroll sideways at 320 px.
+
+_From 1356-results-load-more._
+
+### 1356-FR-017 — Observability: the story adds no service, endpoint, queue or outside call; page reads are counted by the existing HTTP metrics and the search metrics count first pages only (`countFirstPage`, unchanged). No inventory entry.
+
+_From 1356-results-load-more._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -515,3 +580,6 @@ _From 1358-results-phone-map-list._
 - `269-FR-010` — superseded by `1358-FR-001` (2026-10-20)
 - `269-FR-017` — superseded by `1358-FR-010` (2026-10-20)
 - `270-FR-004` — superseded by `1358-FR-007` (2026-10-20)
+
+- `267-FR-002` — superseded by `1356-FR-009` (2026-10-20)
+- `043-FR-009` — superseded by `1356-FR-009` (2026-10-20)

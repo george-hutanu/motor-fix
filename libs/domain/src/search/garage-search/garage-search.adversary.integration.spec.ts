@@ -286,14 +286,23 @@ describe('GET /search/garages under attack', () => {
         'an object with numbers for strings',
         encode({ brandId: 1, group: 1, id: 1, name: 1 }),
       ],
-      ['plain base64 with padding and plus signs', '+++/==='],
-      ['a unicode string', 'ăîșțâ'],
-      ['exactly 200 characters of junk', 'a'.repeat(200)],
+      ['exactly 256 characters of junk', 'a'.repeat(256)],
     ])('refuses %s with invalid_cursor', async (_, cursor) => {
       const res = await search({ brandId: bmw, cursor });
 
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('invalid_cursor');
+    });
+
+    // Outside base64url the query itself is refused, before any decoding.
+    it.each([
+      ['plain base64 with padding and plus signs', '+++/==='],
+      ['a unicode string', 'ăîșțâ'],
+    ])('refuses %s as a bad query', async (_, cursor) => {
+      const res = await search({ brandId: bmw, cursor });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).not.toBe('invalid_cursor');
     });
 
     it('refuses a forged cursor naming this brand but no valid position', async () => {

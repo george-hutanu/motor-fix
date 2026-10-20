@@ -6,7 +6,7 @@ import {
   Component,
   computed,
   DestroyRef,
-  type ElementRef,
+  ElementRef,
   effect,
   inject,
   linkedSignal,
@@ -29,6 +29,9 @@ import { inRomania } from '@motor-fix/contracts/place-section';
 import {
   nearOf,
   parseNear,
+  SEARCH_IDS_MAX,
+  SEARCH_PAGE_SIZE,
+  SEARCH_PINS_MAX,
   SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
@@ -47,6 +50,7 @@ import { filter } from 'rxjs';
 import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
+import { ResultsMemory } from './results-memory/results-memory';
 import { ResultsSheet } from './results-sheet/results-sheet';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
@@ -69,6 +73,9 @@ const BURST_MS = 300;
 const RISE_MS = 520;
 // How long the browser has to say where the driver is.
 const LOCATE_MS = 10_000;
+// A page that answers no garage but a cursor asks for the next one at once,
+// this many times in a row before the retry shows.
+const EMPTY_PAGES = 3;
 
 const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
   kind.startsWith('review.'),
@@ -96,7 +103,16 @@ const KINDS: readonly EventKind[] = [
 ];
 
 type Page = GarageSearchPageDto;
-type Query = Omit<GarageSearchControllerForBrand$Params, 'ids' | 'log'>;
+type Query = Omit<
+  GarageSearchControllerForBrand$Params,
+  'cursor' | 'ids' | 'log'
+>;
+type Paging = 'idle' | 'loading' | 'failed';
+
+// The garages the live stream follows: the first page's, as many as one
+// read by ids may name.
+const firstPage = (page: Page | undefined) =>
+  page?.items.slice(0, SEARCH_IDS_MAX).map((garage) => garage.id) ?? [];
 
 const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
@@ -131,6 +147,7 @@ export class Results {
   protected readonly phone = computed(() => this.layout.current() === 'phone');
   private readonly destroyRef = inject(DestroyRef);
   private readonly saved = inject(SavedGarages);
+  private readonly memory = inject(ResultsMemory);
   protected readonly i18n = inject(I18n);
 
   private readonly bar = toSignal(this.route.queryParamMap, {
@@ -155,8 +172,18 @@ export class Results {
 
   // The box the driver moved the map to; never in the bar, and forgotten
   // when the bar names another search.
+  // The kept search's box comes back with it, once.
+  private keptBox = this.server
+    ? undefined
+    : this.memory.boxOf(
+        this.searchOf(this.brand(), this.near(), this.radius()),
+      );
   protected readonly box = linkedSignal<unknown, string | undefined>({
-    computation: () => undefined,
+    computation: () => {
+      const kept = this.keptBox;
+      this.keptBox = undefined;
+      return kept;
+    },
     source: () => [this.brand(), this.near(), this.radius()],
   });
 
@@ -166,14 +193,7 @@ export class Results {
     const brand = this.brand();
     const near = this.near();
     if (this.server || !brand || !near) return undefined;
-    const radius = this.radius();
-    const bbox = this.box();
-    return {
-      ...(bbox ? { bbox } : {}),
-      ...(UUID.test(brand) ? { brandId: brand } : { brand }),
-      near,
-      ...(radius ? { radius } : {}),
-    };
+    return this.searchOf(brand, near, this.radius(), this.box());
   });
 
   // Only a new search is logged: the opening one, another brand or place in
@@ -181,6 +201,8 @@ export class Results {
   // move of the map or a step back or forward through the history.
   private logNext = false;
   private logged: string | undefined;
+  // Where the page was scrolled to when the kept results were shown again.
+  private scrollBack: { inSheet: boolean; y: number } | undefined;
   private popped = false;
 
   // The brand last picked in the search beside the chips.
@@ -230,8 +252,19 @@ export class Results {
   });
 
   // Never on the server: it renders the skeletons, the browser searches.
+  // The search left shows again at once as it was when Results opens again
+  // for it in this tab (a profile's way back, most often), and its first
+  // page is read again in place.
   protected readonly results = resource({
-    loader: ({ params }) => {
+    loader: async ({ params }) => {
+      const kept = this.memory.take(params);
+      if (kept) {
+        this.logged = kept.logged;
+        this.logNext = false;
+        this.scrollBack = { inSheet: kept.inSheet, y: kept.scrollY };
+        this.refreshWanted = true;
+        return kept.page;
+      }
       if (params.bbox)
         return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
@@ -349,11 +382,66 @@ export class Results {
     source: this.searched,
   });
   private readonly cards = viewChildren(ResultCard);
+  private readonly items = viewChildren(ResultCard, { read: ElementRef });
+  private readonly endLine = viewChild<ElementRef<HTMLElement>>('endLine');
+  // The garages followed live and read again by ids: the first page's that
+  // the list still shows. Those loaded on later pages show as answered.
+  private readonly followed = linkedSignal<Page | undefined, string[]>({
+    computation: firstPage,
+    source: this.searched,
+  });
   private readonly found = viewChild<ElementRef<HTMLElement>>('found');
   private readonly loaded = computed(
-    () => this.answer()?.items.map((garage) => garage.id) ?? [],
+    () => {
+      const shown = new Set(this.answer()?.items.map((garage) => garage.id));
+      return this.followed().filter((id) => shown.has(id));
+    },
     { equal: sameIds },
   );
+
+  // The page after the loaded ones: one at a time, and a failed one waits
+  // for the button.
+  protected readonly paging = linkedSignal<unknown, Paging>({
+    computation: () => 'idle',
+    source: this.searched,
+  });
+  // More than the first page is shown, so the end of the list is told.
+  private readonly pagedOn = linkedSignal<Page | undefined, boolean>({
+    computation: (page) => (page?.items.length ?? 0) > SEARCH_PAGE_SIZE,
+    source: this.searched,
+  });
+  // Bumped when the list starts again, so a page asked before is dropped.
+  private turn = 0;
+  // The list is starting again from its first page: no later page until it
+  // lands, or the old list's cursor would add a page after the new first one.
+  private readonly restarting = signal(false);
+  protected readonly pageSkeletons = [0, 1, 2];
+  // At the pins' cap the list stops, whatever the cursor says.
+  protected readonly capped = computed(
+    () => (this.answer()?.items.length ?? 0) >= SEARCH_PINS_MAX,
+  );
+  // Never while another brand loads: the cursor is the previous brand's.
+  protected readonly canLoad = computed(
+    () =>
+      !!this.answer()?.nextCursor &&
+      !this.capped() &&
+      !this.keep() &&
+      !this.restarting(),
+  );
+  protected readonly ending = computed(() => {
+    const answer = this.answer();
+    if (!answer) return null;
+    // Stopped at the cap with garages left, whether a cursor or the total says so.
+    if (
+      this.capped() &&
+      (answer.nextCursor || answer.total > answer.items.length)
+    )
+      return this.i18n.t('public.results.endCapped', {
+        max: SEARCH_PINS_MAX,
+      });
+    if (answer.nextCursor || !this.pagedOn()) return null;
+    return this.i18n.t('public.results.end', { total: answer.total });
+  });
 
   // A brand and no place yet: the browser is asked for one, or gave none.
   private readonly waiting = computed(() => {
@@ -432,6 +520,7 @@ export class Results {
   // A loaded card was suspended: its counts read shows even when the total rose.
   private suspended = false;
   private pageWanted = false;
+  private refreshWanted = false;
   private pinsWanted = false;
   private reading = false;
   private burst: ReturnType<typeof setTimeout> | undefined;
@@ -498,6 +587,171 @@ export class Results {
       clearTimeout(this.burst);
       for (const fade of this.fades) clearTimeout(fade);
     });
+    this.keepShown();
+    this.watchEnd();
+    // The kept results read again in place once they show.
+    effect(() => {
+      if (this.searched() && this.refreshWanted)
+        untracked(() => void this.flush());
+    });
+    // The kept results shown again, where the list was scrolled to.
+    afterRenderEffect(() => {
+      if (this.state() !== 'list' || this.scrollBack === undefined) return;
+      const { inSheet, y } = this.scrollBack;
+      this.scrollBack = undefined;
+      // On a phone the list scrolls inside its sheet, not the page.
+      if (inSheet) this.sheet().scrollBack(y);
+      else window.scrollTo({ top: y });
+    });
+  }
+
+  private searchOf(
+    brand: string,
+    near: string | undefined,
+    radius: 25 | 50 | undefined,
+    bbox?: string,
+  ): Query {
+    return {
+      ...(bbox ? { bbox } : {}),
+      ...(UUID.test(brand) ? { brandId: brand } : { brand }),
+      near,
+      ...(radius ? { radius } : {}),
+    };
+  }
+
+  // The results shown, kept for the way back to this search; read while
+  // they show, since the search is gone by the time Results is.
+  private keepShown() {
+    let shown: { page: Page; query: Query } | undefined;
+    effect(() => {
+      const query = this.query();
+      const page = this.answer();
+      // While another brand loads, the cards shown are the previous search's.
+      if (query && page && this.state() === 'list' && !this.keep())
+        shown = { page, query };
+    });
+    this.destroyRef.onDestroy(() => {
+      if (!shown) return;
+      const leaving = untracked(this.leaving);
+      const items = shown.page.items.filter((g) => !leaving.has(g.id));
+      const inSheet = untracked(this.phone);
+      this.memory.keep(shown.query, {
+        inSheet,
+        logged: this.logged,
+        page: { ...shown.page, items },
+        scrollY: inSheet ? untracked(this.sheet).scrolled() : window.scrollY,
+      });
+    });
+  }
+
+  // The card three from the end coming into view asks for the next page; so
+  // does the last card, for a jump to the bottom that passes the first one
+  // between two frames (the End key, a dragged scrollbar).
+  private watchEnd() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void this.more();
+    });
+    this.destroyRef.onDestroy(() => observer.disconnect());
+    afterRenderEffect(() => {
+      const items = this.items();
+      const watched = this.canLoad() && this.paging() === 'idle';
+      observer.disconnect();
+      if (!watched) return;
+      const ends = [items[Math.max(0, items.length - 3)], items.at(-1)];
+      for (const end of ends) if (end) observer.observe(end.nativeElement);
+    });
+  }
+
+  // "Încarcă mai multe", and "Reîncearcă" after a page failed: the same page.
+  protected press() {
+    if (untracked(this.paging) === 'failed') this.paging.set('idle');
+    void this.more();
+  }
+
+  // The next page after the loaded ones, added at the end of the list.
+  protected async more() {
+    const query = untracked(this.query);
+    if (untracked(this.paging) !== 'idle' || !untracked(this.canLoad)) return;
+    if (!query) return;
+    const stale = this.staleAfter(query);
+    this.paging.set('loading');
+    const paging = await this.pages(query, stale);
+    if (paging) this.paging.set(paging);
+  }
+
+  // A reload, another search or a moved map since drops a page's answer.
+  private staleAfter(query: Query) {
+    const turn = this.turn;
+    const from = untracked(this.searched);
+    return () =>
+      this.destroyRef.destroyed ||
+      this.turn !== turn ||
+      untracked(this.searched) !== from ||
+      untracked(this.query) !== query;
+  }
+
+  // Pages until one adds a garage or ends the list; an empty page with a
+  // cursor asks again at once, three times at most. Undefined when stale.
+  private async pages(
+    query: Query,
+    stale: () => boolean,
+  ): Promise<Paging | undefined> {
+    for (let empty = 0; empty < EMPTY_PAGES; empty += 1) {
+      const next = await this.nextPage(query, stale);
+      if (next !== 'empty') return next;
+    }
+    return 'failed';
+  }
+
+  // One page read and added; 'empty' when it added nothing but a cursor.
+  private async nextPage(
+    query: Query,
+    stale: () => boolean,
+  ): Promise<Paging | 'empty' | undefined> {
+    const cursor = untracked(this.answer)?.nextCursor ?? undefined;
+    const page = await this.search
+      .garageSearchControllerForBrand({ ...query, cursor })
+      .catch((error: unknown) => toProblem(error));
+    const now = untracked(this.answer);
+    if (stale() || !now) return undefined;
+    if (!('items' in page)) {
+      if (page.code !== 'invalid_cursor') return 'failed';
+      // The cursor is no page of this search any more: the list starts
+      // again from the top, as "Reîncarcă" does.
+      this.reload();
+      return undefined;
+    }
+    this.added(page, now);
+    return page.items.length === 0 && page.nextCursor ? 'empty' : 'idle';
+  }
+
+  // A page's garages after the loaded ones; one the list already shows keeps
+  // its place with the fresher card. The total and counts stay the search's.
+  private added(page: Page, now: Page) {
+    const fresh = new Map(page.items.map((garage) => [garage.id, garage]));
+    const shown = new Set(now.items.map((garage) => garage.id));
+    const items = [
+      ...now.items.map((garage) =>
+        reuse(garage, fresh.get(garage.id) ?? garage),
+      ),
+      ...page.items.filter((garage) => !shown.has(garage.id)),
+    ].slice(0, SEARCH_PINS_MAX);
+    const last = !page.nextCursor || items.length >= SEARCH_PINS_MAX;
+    // The end line takes the focus from the button before it goes.
+    if (last && this.focusedMore()) this.endLine()?.nativeElement.focus();
+    this.answer.set({ ...now, items, nextCursor: page.nextCursor });
+    this.pagedOn.set(true);
+    // A tapped pin's garage now in the list: its card is the selected one.
+    const card = untracked(this.card);
+    if (card && fresh.has(card.pin.id) && !shown.has(card.pin.id))
+      this.card.set(undefined);
+  }
+
+  private focusedMore() {
+    const active =
+      typeof document === 'undefined' ? null : document.activeElement;
+    return active instanceof HTMLElement && active.classList.contains('more');
   }
 
   protected async changePlace() {
@@ -673,6 +927,9 @@ export class Results {
 
   // "Reîncarcă": the first page again, in place of the list shown.
   protected reload() {
+    this.turn += 1;
+    this.restarting.set(true);
+    this.paging.set('idle');
     this.newer.set(false);
     this.pageWanted = true;
     void this.flush();
@@ -681,18 +938,19 @@ export class Results {
   private heard(kind: string, id: string) {
     const page = untracked(this.answer);
     if (!page) return;
-    const loaded = page.items.some((garage) => garage.id === id);
+    const followed = untracked(this.loaded);
+    const loaded = followed.includes(id);
     if (PIN_KINDS.has(kind)) this.pinsWanted = true;
     // A suspended card fades out; the counts come from a re-read, which never
     // holds it, so one already re-read after the suspension is not lowered twice.
-    if (kind === 'garage.suspended' && loaded) {
+    if (kind === 'garage.suspended' && page.items.some((g) => g.id === id)) {
       this.leave(id);
       this.countsWanted = true;
       this.suspended = true;
     } else if (CARD_KINDS.has(kind) && loaded) this.wanted.add(id);
     // A review names itself, not its garage; only loaded garages send them.
     else if (REVIEWS.has(kind))
-      for (const garage of page.items) this.wanted.add(garage.id);
+      for (const garageId of followed) this.wanted.add(garageId);
     else this.countsWanted = true;
     clearTimeout(this.burst);
     this.burst = setTimeout(() => void this.flush(), BURST_MS);
@@ -720,8 +978,19 @@ export class Results {
       this.wanted.clear();
       this.countsWanted = false;
       this.suspended = false;
-      if (await this.read(undefined, (page, now) => reuse(now, page)))
+      if (await this.read(undefined, (page, now) => reuse(now, page))) {
+        this.followed.set(firstPage(untracked(this.answer)));
+        this.pagedOn.set(false);
         this.first();
+      }
+      this.turn += 1;
+      // A second start-again asked meanwhile holds the paging until it lands.
+      if (!this.pageWanted) this.restarting.set(false);
+    } else if (this.refreshWanted) {
+      this.refreshWanted = false;
+      await this.read(undefined, (page, now) =>
+        this.counted(page, this.withCards(page, now)),
+      );
     } else if (this.wanted.size > 0) {
       const ids = [...this.wanted].join(',');
       this.wanted.clear();

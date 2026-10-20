@@ -118,6 +118,26 @@ afterEach(() => jest.restoreAllMocks());
 describe('ResultsSheet on a phone', () => {
   beforeEach(() => render());
 
+  // A short stage (a small phone with the consent bar open) keeps the map's
+  // zoom buttons, 104 px from the stage's top, clear of the half sheet.
+  it('rests half no higher than under the zoom buttons on a short stage', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 40 : 160;
+      });
+    pointer(handle(), 'pointerdown', 300);
+    pointer(handle(), 'pointermove', 301);
+    await settle();
+
+    expect(offset()).toBe('105px');
+    pointer(handle(), 'pointerup', 301);
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
+    expect(css).toMatch(
+      /:host \{\s*--rest: min\(max\(50%, 6\.5rem\), calc\(100% - var\(--sheet-top, 160px\)\)\);/,
+    );
+  });
+
   it('opens at half', () => {
     expect(position()).toBe('half');
   });

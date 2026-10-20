@@ -13,13 +13,14 @@ function errors(query: Record<string, unknown>) {
 }
 
 // @traces 267-FR-004 267-FR-005 267-FR-006
+// @traces 1356-FR-009
 describe('GarageSearchQueryDto', () => {
   it('takes a brand id alone', () => {
     expect(errors({ brandId: BRAND })).toEqual([]);
   });
 
-  it('takes a brand id and a cursor of 200 characters', () => {
-    expect(errors({ brandId: BRAND, cursor: 'a'.repeat(200) })).toEqual([]);
+  it('takes a brand id and a cursor of 256 characters', () => {
+    expect(errors({ brandId: BRAND, cursor: 'a'.repeat(256) })).toEqual([]);
   });
 
   it('refuses a search without a brand', () => {
@@ -30,9 +31,9 @@ describe('GarageSearchQueryDto', () => {
     expect(errors({ brandId: 'dacia' })).toContain('brandId must be a UUID');
   });
 
-  it('refuses a cursor of 201 characters', () => {
-    expect(errors({ brandId: BRAND, cursor: 'a'.repeat(201) })).toContain(
-      'cursor must be shorter than or equal to 200 characters',
+  it('refuses a cursor of 257 characters', () => {
+    expect(errors({ brandId: BRAND, cursor: 'a'.repeat(257) })).toContain(
+      'cursor must be shorter than or equal to 256 characters',
     );
   });
 

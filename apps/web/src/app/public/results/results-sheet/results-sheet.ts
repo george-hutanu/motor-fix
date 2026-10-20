@@ -18,6 +18,9 @@ import { Layout } from '@motor-fix/ui-cockpit';
 import { takesText } from '../../tab-bar/tab-bar';
 
 type SheetPosition = 'low' | 'half' | 'full';
+// The map's two 44 px zoom buttons and their 10 px margin, as 6.5rem in the
+// stylesheet: half never rests over them.
+const ZOOM_CLEAR = 104;
 
 const NEXT: Record<SheetPosition, SheetPosition> = {
   full: 'low',
@@ -98,6 +101,16 @@ export class ResultsSheet {
       behavior: smooth ? 'smooth' : 'auto',
       top: 0,
     });
+  }
+
+  // How far the list is scrolled inside the sheet; nothing from a tablet up,
+  // where the page scrolls instead.
+  scrolled(): number {
+    return this.body()?.nativeElement.scrollTop ?? 0;
+  }
+
+  scrollBack(top: number) {
+    this.body()?.nativeElement.scrollTo({ top });
   }
 
   // A pointer-led click follows a drag on the handle; only a press moves it.
@@ -212,10 +225,11 @@ export class ResultsSheet {
 
   private offsets(): Record<SheetPosition, number> {
     const height = this.host.offsetHeight;
+    const low = height - (untracked(this.top) ?? 0);
     return {
       full: 0,
-      half: height / 2,
-      low: height - (untracked(this.top) ?? 0),
+      half: Math.min(Math.max(height / 2, ZOOM_CLEAR), low),
+      low,
     };
   }
 

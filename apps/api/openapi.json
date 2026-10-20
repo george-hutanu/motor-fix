@@ -2394,7 +2394,8 @@
             "in": "query",
             "description": "The nextCursor of the previous page; opaque",
             "schema": {
-              "maxLength": 200,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_-]*$",
               "type": "string"
             }
           }

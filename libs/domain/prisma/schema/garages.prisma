@@ -120,6 +120,9 @@ model Garage {
   @@index([position], map: "garage_position_idx", type: Gist)
   // The file read names the other garages holding the same CUI.
   @@index([cui])
+  // garage_list_order_idx, a partial index the migration writes: the order of
+  // the brand-first list (rating DESC NULLS LAST, review_count DESC, name, id)
+  // over the approved garages, which Prisma cannot express.
   @@map("garage")
 }
 

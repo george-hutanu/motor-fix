@@ -58,6 +58,11 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
+// A survey holds no free text any more, so the size is made of photo keys.
+const PHOTO = `garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/${'x'.repeat(64)}`;
+const filesOf = (bytes: number) =>
+  Array.from({ length: Math.ceil(bytes / (PHOTO.length + 3)) }, () => PHOTO);
+
 describe('creating a draft', () => {
   it('keeps only the hashes of the browser key and the link token', async () => {
     const created = await service.create(body());
@@ -155,7 +160,7 @@ describe('creating a draft', () => {
   });
 
   it('refuses data over the size limit with draft_too_large', async () => {
-    const big = { survey: { note: 'x'.repeat(DRAFT_MAX_BYTES) } };
+    const big = { files: filesOf(DRAFT_MAX_BYTES) };
 
     const refused = await refusalOf(service.create(body({ data: big })));
 

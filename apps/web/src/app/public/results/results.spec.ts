@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Location } from '@angular/common';
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { PLATFORM_ID, signal } from '@angular/core';
+import { Component, PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, type Route, Router } from '@angular/router';
@@ -79,7 +79,7 @@ const pageOf = (
 type Read = {
   params: GarageSearchControllerForBrand$Params;
   answer: (page?: GarageSearchPageDto) => Promise<void>;
-  fail: (status?: number, retryAfter?: number) => Promise<void>;
+  fail: (status?: number, retryAfter?: number, body?: unknown) => Promise<void>;
 };
 let reads: Read[];
 const searchApi = {
@@ -91,9 +91,10 @@ const searchApi = {
             resolve(page);
             await settle();
           },
-          fail: async (status = 500, retryAfter?: number) => {
+          fail: async (status = 500, retryAfter?: number, body?: unknown) => {
             reject(
               new HttpErrorResponse({
+                error: body,
                 headers:
                   retryAfter === undefined
                     ? undefined
@@ -190,10 +191,10 @@ async function settle() {
   harness.detectChanges();
 }
 
-async function configure(platform = 'browser') {
+async function configure(platform = 'browser', more: Route[] = []) {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ component: Results, path: ':lang/garages' }]),
+      provideRouter([{ component: Results, path: ':lang/garages' }, ...more]),
       { provide: SearchService, useValue: searchApi },
       { provide: PlacesService, useValue: placesApi },
       { provide: Overlays, useValue: overlays },
@@ -3251,13 +3252,28 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule(':host')).toMatch(/overflow: hidden;/);
   });
 
+  it('lets the consent bar lie over the stage on a short phone, so the map and the half sheet keep their room', () => {
+    const short =
+      css.match(
+        /@media \(max-width: 767px\) and \(max-height: 667px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+
+    expect(short).toMatch(
+      /:host \{ height: calc\(100dvh - var\(--public-site-bar\) - var\(--tab-bar\)\); \}/,
+    );
+  });
+
   it('keeps the one column as wide as the screen, whatever the title holds', () => {
     expect(rule(':host')).toMatch(/grid-template-columns: minmax\(0, 1fr\);/);
   });
 
   it('cuts only the summary title to one line, not the list states the sheet holds', () => {
-    expect(rule('.intro h1')).toMatch(/white-space: nowrap;/);
+    expect(rule('.intro h1.title')).toMatch(/white-space: nowrap;/);
     expect(rule('h1')).toBe('');
+  });
+
+  it('lets the question asked for a place wrap at 320 px', () => {
+    expect(rule('.intro h1')).not.toMatch(/nowrap|ellipsis|overflow/);
   });
 
   it('keeps the title to one line and shows the whole count and place line under it, never cut', () => {
@@ -3265,7 +3281,8 @@ describe('the phone results screen in the stylesheet', () => {
       /font-size: var\(--mf-size-subheading\);/,
     );
     expect(rule('.summary')).toMatch(/flex-wrap: wrap;/);
-    expect(rule('.summary')).toMatch(/font-size: var\(--mf-size-small\);/);
+    // A phone's running text stays at body size: the summary is read, not a caption.
+    expect(rule('.summary')).not.toMatch(/font-size/);
     expect(phone).not.toMatch(/\.tally|\.area/);
     expect(rule('.summary')).not.toMatch(/nowrap|ellipsis/);
   });
@@ -3291,6 +3308,662 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule('mf-results-sheet')).toMatch(/grid-area: stage;/);
     expect(rule(':host:has(mf-results-sheet.typing)')).toMatch(
       /height: calc\(100dvh - var\(--public-site-bar\) - var\(--consent-bar, 0px\)\);/,
+    );
+  });
+});
+
+// A garage's profile, say: any screen but Results.
+@Component({ template: '' })
+class Elsewhere {}
+
+// @traces 1356-FR-001 1356-FR-002 1356-FR-003 1356-FR-004 1356-FR-005 1356-FR-007
+describe('Results loading more', () => {
+  let observers: {
+    callback: IntersectionObserverCallback;
+    targets: Element[];
+  }[];
+  class FakeObserver {
+    private readonly at: number;
+    constructor(callback: IntersectionObserverCallback) {
+      this.at = observers.push({ callback, targets: [] }) - 1;
+    }
+    observe(target: Element) {
+      observers[this.at].targets.push(target);
+    }
+    disconnect() {
+      observers[this.at].targets = [];
+    }
+    unobserve() {}
+  }
+  let scroll: jest.Mock;
+
+  beforeEach(async () => {
+    observers = [];
+    Object.assign(window, { IntersectionObserver: FakeObserver });
+    scroll = jest.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scroll,
+    });
+    await configure('browser', [
+      { component: Elsewhere, path: ':lang/elsewhere' },
+    ]);
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'IntersectionObserver');
+  });
+
+  const garages = (from: number, count: number, stance = 'works_on') =>
+    Array.from({ length: count }, (_, i) => ({
+      ...garageOf(`g${from + i}`, `Garage ${from + i}`),
+      stance: stance as ListedGarageDto['stance'],
+    }));
+  const first = (over: Partial<GarageSearchPageDto> = {}) =>
+    pageOf({ items: garages(0, 20), nextCursor: 'c1', ...over });
+  const hosts = () => [...page().querySelectorAll('mf-result-card')];
+  const names = () => hosts().map((card) => said(card.querySelector('h2')));
+  // Results makes the first observer; each card has its own after it.
+  const watched = () => observers[0]?.targets[0];
+  const skeletons = () =>
+    page().querySelectorAll('.cards.later .card.skeleton');
+  const button = () => page().querySelector<HTMLButtonElement>('button.more');
+  const end = () => page().querySelector<HTMLElement>('p.end');
+  const cursors = () => searches().filter((q) => q.cursor);
+  async function loaded(answer = first()) {
+    await open('/ro/garages?brand=bmw');
+    await reads[0]?.answer(answer);
+  }
+  // The card three from the end scrolls into view.
+  async function scrolledToEnd(at = 0) {
+    for (const o of observers.slice(0, 1)) {
+      const target = o.targets[at];
+      if (target)
+        o.callback(
+          [{ isIntersecting: true, target } as IntersectionObserverEntry],
+          o as unknown as IntersectionObserver,
+        );
+    }
+    await settle();
+  }
+
+  // @traces 1356-FR-001 1356-FR-002
+  it('asks for the next page of the same search when the card three from the end shows', async () => {
+    await loaded();
+
+    expect(watched()).toBe(hosts()[17]);
+    await scrolledToEnd();
+
+    expect(searches().at(-1)).toEqual({
+      brand: 'bmw',
+      cursor: 'c1',
+      near: NEAR,
+    });
+    expect(skeletons()).toHaveLength(3);
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+
+    expect(names()).toEqual(
+      Array.from({ length: 40 }, (_, i) => `Garage ${i}`),
+    );
+    expect(skeletons()).toHaveLength(0);
+    expect(watched()).toBe(hosts()[37]);
+  });
+
+  // @traces 1356-FR-001
+  it('asks for the next page when a jump to the bottom shows only the last card', async () => {
+    await loaded();
+
+    expect(observers[0]?.targets).toEqual([hosts()[17], hosts()[19]]);
+    await scrolledToEnd(1);
+
+    expect(cursors()).toEqual([{ brand: 'bmw', cursor: 'c1', near: NEAR }]);
+  });
+
+  // @traces 1356-FR-001
+  it('keeps the brand groups in the order the pages answer them', async () => {
+    await loaded(first({ items: garages(0, 20) }));
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({
+        items: [...garages(20, 11), ...garages(31, 9, 'does_not_take')],
+        nextCursor: null,
+      }),
+    );
+
+    expect(names()).toHaveLength(40);
+    expect(names()).toEqual(
+      Array.from({ length: 40 }, (_, i) => `Garage ${i}`),
+    );
+  });
+
+  // @traces 1356-FR-002
+  it('asks for one page at a time', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await scrolledToEnd();
+    button()?.click();
+    await settle();
+
+    expect(cursors()).toHaveLength(1);
+  });
+
+  // @traces 1356-FR-002
+  it('drops a page answered after another search started', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await open('/ro/garages?brand=audi');
+    await reads[2]?.answer(pageOf());
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+
+    expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
+  });
+
+  // @traces 1356-FR-002
+  it('drops a page answered after the map moved', async () => {
+    await loaded();
+    await scrolledToEnd();
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+    const box = reads.findIndex((read) => read.params.bbox);
+    await reads[box]?.answer(pageOf());
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+
+    expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
+  });
+
+  // @traces 1356-FR-002
+  it('asks again at once after an empty page with a cursor, three times at most, then offers the retry', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(pageOf({ items: [], nextCursor: 'c2' }));
+    await reads[2]?.answer(pageOf({ items: [], nextCursor: 'c3' }));
+    await reads[3]?.answer(pageOf({ items: [], nextCursor: 'c4' }));
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2', 'c3']);
+    expect(said(button())).toBe('Reîncearcă');
+    expect(names()).toHaveLength(20);
+  });
+
+  // @traces 1356-FR-003 1356-FR-004
+  it('ends the list with the total once the last page came, the top unchanged', async () => {
+    await loaded();
+    const tally = said(page().querySelector('.summary .tally'));
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await scrolledToEnd();
+    await reads[2]?.answer(pageOf({ items: garages(40, 8), nextCursor: null }));
+
+    expect(names()).toHaveLength(48);
+    expect(said(end())).toBe('Ai văzut toate cele 48');
+    expect(end()?.getAttribute('role')).toBe('status');
+    expect(button()).toBeNull();
+    expect(watched()).toBeUndefined();
+    expect(said(page().querySelector('.summary .tally'))).toBe(tally);
+  });
+
+  // @traces 1356-FR-003
+  it('adds nothing under a list of one page', async () => {
+    await loaded(pageOf());
+
+    expect(said(end())).toBe('');
+    expect(button()).toBeNull();
+    expect(watched()).toBeUndefined();
+  });
+
+  // @traces 1356-FR-003
+  it('says the end in English', async () => {
+    await TestBed.inject(I18n).use('en');
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(pageOf({ items: garages(20, 5), nextCursor: null }));
+
+    expect(said(end())).toBe('You have seen all 48');
+  });
+
+  // @traces 1356-FR-007
+  it('stops at 500 cards, cutting the page that would pass them, even with a cursor', async () => {
+    await loaded(
+      pageOf({ items: garages(0, 490), nextCursor: 'c1', total: 900 }),
+    );
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(490, 20), nextCursor: 'c2', total: 900 }),
+    );
+
+    expect(names()).toHaveLength(500);
+    expect(said(end())).toBe(
+      'Ai văzut primele 500 · apropie harta pentru mai puține',
+    );
+    expect(button()).toBeNull();
+    expect(watched()).toBeUndefined();
+    await scrolledToEnd();
+    expect(cursors()).toHaveLength(1);
+    expect(said(page().querySelector('.summary .tally'))).toContain('900');
+  });
+
+  // @traces 1356-FR-007
+  it('says the first 500 when the last page passes them and has no next', async () => {
+    await loaded(
+      pageOf({ items: garages(0, 495), nextCursor: 'c1', total: 505 }),
+    );
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(495, 10), nextCursor: null, total: 505 }),
+    );
+
+    expect(names()).toHaveLength(500);
+    expect(said(end())).toBe(
+      'Ai văzut primele 500 · apropie harta pentru mai puține',
+    );
+  });
+
+  // @traces 1356-FR-005
+  it('loads the next page from its button, keeping the focus on it, and gives the focus to the end line at the last page', async () => {
+    await loaded();
+    expect(said(button())).toBe('Încarcă mai multe');
+    button()?.focus();
+    button()?.click();
+    await settle();
+
+    expect(searches().at(-1)).toEqual({
+      brand: 'bmw',
+      cursor: 'c1',
+      near: NEAR,
+    });
+    expect(button()?.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(button());
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+
+    expect(button()?.getAttribute('aria-busy')).toBe('false');
+    expect(document.activeElement).toBe(button());
+    button()?.click();
+    await settle();
+    await reads[2]?.answer(pageOf({ items: garages(40, 8), nextCursor: null }));
+
+    expect(button()).toBeNull();
+    expect(end()?.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(end());
+  });
+
+  // @traces 1356-FR-006
+  it('keeps the cards when a page fails and asks for the same page again only from the retry', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.fail();
+
+    expect(names()).toHaveLength(20);
+    expect(skeletons()).toHaveLength(0);
+    expect(said(button())).toBe('Reîncearcă');
+    await scrolledToEnd();
+    expect(cursors()).toHaveLength(1);
+
+    for (const lap of [2, 3, 4]) {
+      button()?.click();
+      await settle();
+      expect(searches().at(-1)).toEqual({
+        brand: 'bmw',
+        cursor: 'c1',
+        near: NEAR,
+      });
+      await reads[lap]?.fail();
+      expect(said(button())).toBe('Reîncearcă');
+    }
+    button()?.click();
+    await settle();
+    await reads[5]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: null }),
+    );
+
+    expect(names()).toHaveLength(40);
+  });
+
+  // @traces 1356-FR-010
+  it('starts the list again from the top when the cursor is refused', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await scrolledToEnd();
+    await reads[2]?.fail(400, undefined, {
+      code: 'invalid_cursor',
+      message: 'cursor is not a page of this search',
+    });
+
+    expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+    await reads[3]?.answer(first({ items: garages(100, 20) }));
+
+    expect(names()).toEqual(
+      Array.from({ length: 20 }, (_, i) => `Garage ${100 + i}`),
+    );
+    expect(
+      hosts().filter((card) => card.querySelector('article.card.selected')),
+    ).toEqual([hosts()[0]]);
+    expect(page().querySelector('[role="alert"]')).toBeNull();
+  });
+
+  // @traces 1356-FR-011
+  it('never adds a card twice: a garage answered again keeps its place with the fresher card', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({
+        items: [
+          ...garages(20, 10),
+          { ...garageOf('g5', 'Garage 5 nou'), rating: 3 },
+          ...garages(30, 9),
+        ],
+        nextCursor: null,
+      }),
+    );
+
+    expect(names()).toHaveLength(39);
+    expect(names()[5]).toBe('Garage 5 nou');
+    expect(
+      names().filter((name) => name?.startsWith('Garage 5 ')),
+    ).toHaveLength(1);
+  });
+
+  // @traces 1356-FR-012
+  it('follows and reads again by ids the first page garages only', async () => {
+    jest.useFakeTimers();
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: null }),
+    );
+    const ids = Array.from({ length: 20 }, (_, i) => `g${i}`);
+
+    expect(live.register).toHaveBeenLastCalledWith({
+      brand: 'b-bmw',
+      garages: ids,
+    });
+    messages.next({
+      at: '2026-10-20T12:00:00.000Z',
+      id: 'review-1',
+      kind: 'review.posted',
+    });
+    await jest.advanceTimersByTimeAsync(300);
+    await settle();
+
+    expect(reads[2]?.params).toEqual({
+      brand: 'bmw',
+      ids: ids.join(','),
+      near: NEAR,
+    });
+    messages.next({
+      at: '2026-10-20T12:00:01.000Z',
+      id: 'g30',
+      kind: 'garage.updated',
+    });
+    await reads[2]?.answer(pageOf({ items: garages(0, 20) }));
+    await jest.advanceTimersByTimeAsync(300);
+    await settle();
+    const idsReads = searches().filter((q) => q.ids);
+    expect(idsReads.every((q) => (q.ids?.split(',').length ?? 0) <= 20)).toBe(
+      true,
+    );
+    expect(idsReads.some((q) => q.ids?.includes('g30'))).toBe(false);
+  });
+
+  // @traces 1356-FR-013 1356-FR-014
+  it('links a card of a later page to its pin, and changes no selection or map while a page loads', async () => {
+    pinsAnswer = {
+      pins: Array.from({ length: 40 }, (_, i) => ({
+        id: `g${i}`,
+        lat: 44.4 + i / 1000,
+        lng: 26.1,
+        rateLei: 150,
+        stance: 'works_on' as const,
+      })),
+      total: 40,
+    };
+    await loaded();
+    await settle();
+    hosts()[3]?.querySelector('h2')?.click();
+    await settle();
+    const fits = mapView.fit.mock.calls.length;
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: null }),
+    );
+
+    const amber = () =>
+      hosts()
+        .filter((card) => card.querySelector('article.card.selected'))
+        .map((card) => said(card.querySelector('h2')));
+    expect(amber()).toEqual(['Garage 3']);
+    expect(mapView.fit.mock.calls.length).toBe(fits);
+
+    const pointed = new Event('pointerenter');
+    Object.defineProperty(pointed, 'pointerType', { value: 'mouse' });
+    hosts()[30]?.dispatchEvent(pointed);
+    await settle();
+    expect(mapView.light.mock.calls.at(-1)?.[0]).toBe('g30');
+
+    mapPicked('g35');
+    await settle();
+    expect(amber()).toEqual(['Garage 35']);
+    expect(scroll).toHaveBeenCalled();
+    expect(page().querySelector('mf-map-card')).toBeNull();
+  });
+
+  // @traces 1356-FR-013
+  it('closes a tapped pin small card when its garage comes with a page, that card selected', async () => {
+    pinsAnswer = {
+      pins: Array.from({ length: 40 }, (_, i) => ({
+        id: `g${i}`,
+        lat: 44.4 + i / 1000,
+        lng: 26.1,
+        rateLei: 150,
+        stance: 'works_on' as const,
+      })),
+      total: 40,
+    };
+    await loaded();
+    await settle();
+    mapPicked('g25');
+    await settle();
+    expect(page().querySelector('mf-map-card')).not.toBeNull();
+    await reads[1]?.answer(pageOf({ items: garages(25, 1) }));
+    await scrolledToEnd();
+    await reads[2]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: null }),
+    );
+
+    expect(page().querySelector('mf-map-card')).toBeNull();
+    expect(
+      hosts()
+        .filter((card) => card.querySelector('article.card.selected'))
+        .map((card) => said(card.querySelector('h2'))),
+    ).toEqual(['Garage 25']);
+  });
+
+  // @traces 1356-FR-008
+  it('shows the loaded pages again at once on the way back, reads the first page again without log and no later one', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await settle();
+
+    expect(names()).toHaveLength(40);
+    expect(searches().slice(2)).toEqual([{ brand: 'bmw', near: NEAR }]);
+    await reads[2]?.answer(
+      first({
+        items: [{ ...garageOf('g0', 'Garage 0 nou') }, ...garages(1, 19)],
+      }),
+    );
+
+    expect(names()).toHaveLength(40);
+    expect(names()[0]).toBe('Garage 0 nou');
+    expect(button()).not.toBeNull();
+    expect(cursors()).toHaveLength(1);
+  });
+
+  // @traces 1356-FR-008
+  it('starts another search from its first page, logged', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=audi&near=${NEAR}`);
+    await settle();
+
+    expect(searches().at(-1)).toEqual({ brand: 'audi', log: '1', near: NEAR });
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(0);
+  });
+
+  // @traces 1356-FR-008
+  it("scrolls the phone's sheet back to where the list was on the way back, not the page", async () => {
+    jest.spyOn(ResultsSheet.prototype, 'scrolled').mockReturnValue(640);
+    const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
+    window.scrollTo = jest.fn();
+    await loaded();
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await settle();
+
+    expect(back).toHaveBeenCalledWith(640);
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+
+  // @traces 1356-FR-008
+  it('scrolls the page back from a tablet up, where the sheet does not scroll', async () => {
+    layout.set('tablet');
+    const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
+    window.scrollTo = jest.fn();
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 900,
+    });
+    await loaded();
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await settle();
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 900 });
+    expect(back).not.toHaveBeenCalled();
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    jest.restoreAllMocks();
+  });
+
+  // @traces 1356-FR-001
+  it("asks for no page with the previous brand's cursor while another brand loads", async () => {
+    Element.prototype.scrollTo = jest.fn();
+    await loaded();
+
+    page()
+      .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
+      ?.click();
+    await settle();
+    await settle();
+    await scrolledToEnd();
+    await scrolledToEnd(1);
+
+    expect(searches().at(-1)).toEqual({ brand: 'audi', log: '1', near: NEAR });
+    expect(cursors()).toHaveLength(0);
+    expect(button()).toBeNull();
+  });
+
+  // @traces 1356-FR-002 1356-FR-010
+  it("asks for no page with the old list's cursor while the list starts again", async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await scrolledToEnd();
+    await reads[2]?.fail(400, undefined, {
+      code: 'invalid_cursor',
+      message: 'cursor is not a page of this search',
+    });
+    await scrolledToEnd();
+    await scrolledToEnd(1);
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2']);
+    expect(button()).toBeNull();
+    await reads[3]?.answer(
+      first({ items: garages(100, 20), nextCursor: 'n1' }),
+    );
+    await scrolledToEnd();
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2', 'n1']);
+  });
+
+  // @traces 1356-FR-002 1356-FR-010
+  it('asks for no page while a second start-again waits behind the first', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.fail(400, undefined, {
+      code: 'invalid_cursor',
+      message: 'cursor is not a page of this search',
+    });
+    const results = harness.routeDebugElement?.componentInstance as
+      | { reload(): void }
+      | undefined;
+    results?.reload();
+    await settle();
+    await reads[2]?.answer(
+      first({ items: garages(100, 20), nextCursor: 'n1' }),
+    );
+    await scrolledToEnd();
+    await scrolledToEnd(1);
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1']);
+    await reads[3]?.answer(
+      first({ items: garages(200, 20), nextCursor: 'n2' }),
+    );
+    await scrolledToEnd();
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'n2']);
+  });
+
+  // @traces 1356-FR-008
+  it('keeps nothing for the new brand when Results is left while it loads', async () => {
+    Element.prototype.scrollTo = jest.fn();
+    await loaded();
+    page()
+      .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
+      ?.click();
+    await settle();
+    await settle();
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=audi&near=${NEAR}`);
+    await settle();
+
+    expect(names()).toEqual([]);
+    expect(searches().at(-1)).toEqual({ brand: 'audi', log: '1', near: NEAR });
+  });
+
+  it("draws the load-more button as the states' primary retry", async () => {
+    await loaded();
+
+    expect(button()?.classList).toContain('primary');
+    const css = readFileSync(join(__dirname, 'results.css'), 'utf8');
+    expect(css).toMatch(
+      /\.more\.primary \{[^}]*background: var\(--mf-amber\);[^}]*color: var\(--mf-on-amber\);/,
     );
   });
 });
