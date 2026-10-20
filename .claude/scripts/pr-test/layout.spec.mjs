@@ -203,6 +203,14 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: page('visible'), at: 'desktop' }), 'overlap')).toEqual(['button#cut × button#below']);
     });
 
+    it('faults an absolute control drawn outside a clipping box that is not its containing block', async () => {
+      const page = `<div style="height:100px;overflow:hidden"><button id="out" style="position:absolute;top:150px;left:8px;width:200px;height:48px">Out</button></div>
+        <button id="below" style="width:200px;height:48px;margin-top:50px">Below</button>`;
+      expect(selectors(await measure(null, { html: page, at: 'desktop' }), 'overlap')).toEqual(['button#out × button#below']);
+      const held = page.replace('overflow:hidden', 'overflow:hidden;position:relative');
+      expect(of(await measure(null, { html: held, at: 'desktop' }), 'overlap')).toEqual([]);
+    });
+
     it('passes a button inside a link card and two buttons side by side', async () => {
       expect(of(await measure('overlap-pass', { at: 'desktop' }), 'overlap')).toEqual([]);
     });
