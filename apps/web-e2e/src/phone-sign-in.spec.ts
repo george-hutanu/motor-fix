@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { openSignIn, ready } from './accounts.js';
 import { MAILBOX, test } from './fixtures.js';
 import { freshPhone } from './fresh-phone.js';
 
@@ -34,6 +34,7 @@ test.describe('signing in with a phone number @seeded @mailbox', () => {
   }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     const dialog = page.getByRole('dialog', { name: 'Autentificare' });
@@ -56,6 +57,7 @@ test.describe('signing in with a phone number @seeded @mailbox', () => {
     const phone = freshPhone();
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     const dialog = page.getByRole('dialog', { name: 'Autentificare' });
@@ -128,12 +130,7 @@ async function atField(page: Page, field: Locator) {
 async function phoneStep(page: Page, lang: keyof typeof TEXTS) {
   const t = TEXTS[lang];
   await ready(page, `/${lang}/garages`);
-  // Phones open it from the tab bar, wider screens from the top bar.
-  if ((page.viewportSize()?.width ?? 0) < 768) {
-    await page.getByRole('link', { exact: true, name: t.account }).click();
-  } else {
-    await page.getByRole('button', { exact: true, name: t.title }).click();
-  }
+  await openSignIn(page, lang);
   const dialog = page.getByRole('dialog', { name: t.title });
   await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
   await dialog.getByRole('button', { name: t.withPhone }).click();

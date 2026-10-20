@@ -203,7 +203,30 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     const hit = document.elementFromPoint(x, y);
     return hit !== null && page.contains(hit);
   };
-  const rects = controls.map((el) => [el, el.getBoundingClientRect(), pinned(el)]);
+  // The part of a control its scrolling or clipping boxes leave drawn: a control cut off by an ancestor's
+  // overflow (a sheet's body scrolled past it, a stage that hides what hangs below) is not drawn over what
+  // lies there. An absolute or fixed box is clipped only from its containing block up: for an absolute
+  // box the nearest positioned ancestor, and for either one that is transformed (translate, rotate and
+  // scale too), filtered, given perspective, contained or about to change one of those.
+  const holdsFixed = (s) =>
+    [s.transform, s.translate, s.rotate, s.scale, s.filter, s.backdropFilter, s.perspective].some((v) => v && v !== "none") ||
+    /paint|layout|strict|content/.test(s.contain) ||
+    /transform|translate|rotate|scale|filter|perspective/.test(s.willChange);
+  const drawn = (el) => {
+    let { left, top, right, bottom } = el.getBoundingClientRect();
+    let escaping = style(el).position;
+    for (let e = el.parentElement; e; e = e.parentElement) {
+      const s = style(e);
+      const holds = holdsFixed(s) || (escaping === "absolute" && s.position !== "static");
+      if ((escaping === "absolute" || escaping === "fixed") && !holds) continue;
+      escaping = s.position;
+      const box = e.getBoundingClientRect();
+      if (s.overflowX !== "visible") (left = Math.max(left, box.left)), (right = Math.min(right, box.right));
+      if (s.overflowY !== "visible") (top = Math.max(top, box.top)), (bottom = Math.min(bottom, box.bottom));
+    }
+    return { left, top, right, bottom };
+  };
+  const rects = controls.map((el) => [el, drawn(el), pinned(el)]);
   for (let i = 0; i < rects.length; i++)
     for (let j = i + 1; j < rects.length; j++) {
       const [a, ra, pa] = rects[i];

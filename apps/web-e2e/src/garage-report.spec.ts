@@ -81,6 +81,7 @@ test.describe('a report of a garage from its profile @seeded', () => {
   }) => {
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);

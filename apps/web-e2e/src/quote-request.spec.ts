@@ -21,6 +21,7 @@ async function accessToken(request: APIRequestContext, email: string) {
 async function signedInDriver(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, DRIVER);

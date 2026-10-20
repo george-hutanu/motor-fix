@@ -11,6 +11,7 @@ import {
   isCalendarDate,
   isDocumentKind,
 } from './legal-documents/legal-documents';
+import { isSurveySection, type SurveySection } from './listing-survey';
 import { isStep6Section, type Step6Section } from './listing-verification';
 import { type BrandsSection, isBrandsSection } from './marked-brands';
 import { normalisePhone } from './phone';
@@ -232,7 +233,7 @@ export interface ListingDraftData {
     '5': Record<string, unknown> & HoursSection & { place?: PlaceSection };
     '6': Step6Section;
   }>;
-  survey?: Record<string, unknown>;
+  survey?: SurveySection;
   files?: string[];
   documents?: DraftDocuments;
   // Stamped by the server; a value the browser sends only says "ticked".
@@ -291,7 +292,7 @@ const ENVELOPE: Record<string, (value: unknown) => boolean> = {
   documents: isDraftDocuments,
   files: (files) => Array.isArray(files) && files.every(isFileKey),
   steps: isSteps,
-  survey: isRecord,
+  survey: isSurveySection,
 };
 
 // The envelope only: an object holding nothing but those keys.

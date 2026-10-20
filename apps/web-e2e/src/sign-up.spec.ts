@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ownAddress, ready } from './accounts.js';
+import { ACCOUNTS, openSignIn, ownAddress, ready } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -22,7 +22,10 @@ const fresh = () =>
 
 async function openSignUp(page: Page, language: 'ro' | 'en' = 'ro') {
   const titles = TITLE[language];
-  await page.getByRole('button', { exact: true, name: titles.signIn }).click();
+  await page
+    .getByRole('banner')
+    .getByRole('button', { exact: true, name: titles.signIn })
+    .click();
   await dialog(page, titles.signIn)
     .getByRole('button', {
       name: language === 'ro' ? 'Creează un cont' : 'Create an account',
@@ -179,6 +182,7 @@ test.describe('the sign-up form', () => {
   }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     const signIn = dialog(page, 'Autentificare');
@@ -218,7 +222,7 @@ test.describe('the sign-up form', () => {
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await ready(page, '/ro/garages');
-    const opener = page.getByRole('button', {
+    const opener = page.getByRole('banner').getByRole('button', {
       exact: true,
       name: 'Autentificare',
     });
@@ -268,20 +272,9 @@ const SIZES = [
   ['a desktop', 1440, 900],
 ] as const;
 
-async function openAt(page: Page, width: number, language: 'ro' | 'en') {
+async function openAt(page: Page, language: 'ro' | 'en') {
   const titles = TITLE[language];
-  if (width < 768) {
-    await page
-      .getByRole('link', {
-        exact: true,
-        name: language === 'ro' ? 'Cont' : 'Account',
-      })
-      .click();
-  } else {
-    await page
-      .getByRole('button', { exact: true, name: titles.signIn })
-      .click();
-  }
+  await openSignIn(page, language);
   await dialog(page, titles.signIn)
     .getByRole('button', {
       name: language === 'ro' ? 'Creează un cont' : 'Create an account',
@@ -316,7 +309,7 @@ test.describe('the sign-up dialog on every screen size', () => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await ready(page, `/${language}/garages`);
 
-      await openAt(page, width, language);
+      await openAt(page, language);
 
       const box = await surface(page, TITLE[language].signUp).boundingBox();
       expect(box?.x).toBeGreaterThanOrEqual(0);

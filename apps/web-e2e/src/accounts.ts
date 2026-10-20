@@ -101,19 +101,34 @@ export async function headers(request: APIRequestContext, email: string) {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
+// Opens the sign-in dialog as the public frame offers it at this width: a
+// phone from the tab bar's account link, a tablet (768 to 1023 px) from the
+// top bar's account button, which stands in for the sign-in link there, and a
+// desktop from the top bar's sign-in button.
+const BAR = {
+  en: { account: 'Account', nav: 'Main navigation', signIn: 'Sign in' },
+  ro: { account: 'Cont', nav: 'Navigare principală', signIn: 'Autentificare' },
+} as const;
+
+export async function openSignIn(page: Page, language: 'ro' | 'en' = 'ro') {
+  const width = page.viewportSize()?.width ?? 1280;
+  const bar = BAR[language];
+  const opener =
+    width < 768
+      ? page
+          .getByRole('navigation', { name: bar.nav })
+          .getByRole('link', { exact: true, name: bar.account })
+      : page.getByRole('banner').getByRole('button', {
+          exact: true,
+          name: width < 1024 ? bar.account : bar.signIn,
+        });
+  await opener.click();
+}
+
 // The second admin, signed in from the public header, landing on the dashboard.
 export async function signInAsAdmin2(page: Page) {
   await ready(page, '/ro/garages');
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page
-      .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { exact: true, name: 'Cont' })
-      .click();
-  } else {
-    await page
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-  }
+  await openSignIn(page);
   await signIn(page, ACCOUNTS.admin2);
   await expect(page).toHaveURL('/app/admin');
 }

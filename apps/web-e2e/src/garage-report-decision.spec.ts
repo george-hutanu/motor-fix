@@ -164,6 +164,7 @@ test.describe('confirming a garage report @seeded', () => {
   }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.admin);
@@ -212,7 +213,8 @@ test.describe('confirming a garage report @seeded', () => {
   });
 
   test('the garage leaves the results', async ({ page }) => {
-    await page.goto(`/ro/garages?brand=${brand.slug}`);
+    // Results search near a place: Militari, where the seeded garages are.
+    await page.goto(`/ro/garages?brand=${brand.slug}&near=44.435,26.015`);
     // The garage was the brand's only one: the results list only the
     // garages that do not take the brand, and the suspended one is not among them.
     await expect(cards(page).first()).toBeVisible();
@@ -225,6 +227,7 @@ test.describe('confirming a garage report @seeded', () => {
   test('its owner reads the suspension and the reason', async ({ page }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, owner.email, { password: owner.password });

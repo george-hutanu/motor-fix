@@ -52,6 +52,7 @@ model Garage {
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]
   features                   GarageFeature[]
+  survey                     GarageSurvey?
   invites                    StaffInvite[]
   // CHECKs in the migration: at most 140 and 60 characters, never blank.
   brandNote                  String?                                @map("brand_note")
@@ -119,6 +120,9 @@ model Garage {
   @@index([position], map: "garage_position_idx", type: Gist)
   // The file read names the other garages holding the same CUI.
   @@index([cui])
+  // garage_list_order_idx, a partial index the migration writes: the order of
+  // the brand-first list (rating DESC NULLS LAST, review_count DESC, name, id)
+  // over the approved garages, which Prisma cannot express.
   @@map("garage")
 }
 
@@ -221,6 +225,21 @@ model GarageFeature {
 
   @@id([garageId, key])
   @@map("garage_feature")
+}
+
+// The sign-up survey's five answers, one row per garage, kept for the reports
+// on where owners heard of the product. CHECKs in the migration hold the codes.
+model GarageSurvey {
+  garageId       String   @id @map("garage_id") @db.Uuid
+  mechanicsCount String   @map("mechanics_count")
+  liftsCount     String   @map("lifts_count")
+  wantsLiveMedia Boolean  @map("wants_live_media")
+  wantsDaySheets Boolean  @map("wants_day_sheets")
+  foundVia       String   @map("found_via")
+  answeredAt     DateTime @default(now()) @map("answered_at") @db.Timestamptz(3)
+  garage         Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@map("garage_survey")
 }
 
 enum StaffInviteKind {

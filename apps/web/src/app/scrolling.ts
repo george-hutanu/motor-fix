@@ -5,8 +5,10 @@ import { NavigationStart, Router, Scroll } from '@angular/router';
 // A new screen opens at the top. A navigation that keeps the screen (only the
 // query or the fragment changes: an overlay, a wizard step) or rewrites its
 // address in place (the language) leaves the page where it is, and so does the
-// back button, whose position the browser restores. A navigation that must not
-// move the page also says scroll: 'manual'. Needs withInMemoryScrolling().
+// back button, whose position the browser restores. A navigation to another
+// screen with a fragment (Home's "how it works") leaves the scroll to the part
+// it names. A navigation that must not move the page also says scroll:
+// 'manual'. Needs withInMemoryScrolling().
 export function provideViewScrolling() {
   return provideEnvironmentInitializer(() => {
     const router = inject(Router);
@@ -20,7 +22,7 @@ export function provideViewScrolling() {
       const next = router.url.split(/[?#]/)[0];
       const moved = path !== undefined && next !== path;
       path = next;
-      if (moved && !keep && event.scrollBehavior !== 'manual')
+      if (moved && !keep && !event.anchor && event.scrollBehavior !== 'manual')
         scroller.scrollToPosition([0, 0]);
     };
     router.events.subscribe((event) => {

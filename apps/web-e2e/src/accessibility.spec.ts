@@ -42,6 +42,7 @@ async function signedIn(page: Page, email: string, password = PASSWORD) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email, { password });
@@ -242,6 +243,7 @@ const PUBLIC: readonly Screen[] = [
     name: 'the sign-in sheet',
     open: (page) =>
       page
+        .getByRole('banner')
         .getByRole('button', {
           exact: true,
           name: /^(Autentificare|Sign in)$/,
@@ -300,6 +302,49 @@ test.describe('axe on the core screens @seeded', () => {
     test(screen.name, async ({ page }) => {
       expect(await walk(page, [screen])).toEqual([]);
     });
+
+  // @traces 1358-FR-011 1358-FR-012 1358-FR-014
+  test('the results on a phone, with the list in its sheet', async ({
+    page,
+  }) => {
+    const found: string[] = [];
+    await page.setViewportSize({ height: 800, width: 320 });
+    // With a place, as a search sends it: with none the page asks for one and
+    // shows no list or brand chips.
+    for (const language of LANGUAGES) {
+      await hydrated(
+        page,
+        inLanguage('/ro/garages?brand=dacia&near=44.435,26.015', language),
+      );
+      found.push(...(await scan(page, `the results at 320 px ${language}`)));
+      if (!(await noSidewaysScroll(page)))
+        found.push(`the results ${language}: scrolls sideways at 320 px`);
+    }
+    expect(found).toEqual([]);
+
+    const handle = page.locator('mf-results-sheet button.handle');
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    await expect(handle).toHaveAccessibleName('Show more of the list');
+    const order = await page.evaluate(() => {
+      const at = (selector: string) => document.querySelector(selector);
+      const follows = (a: Element | null, b: Element | null) =>
+        !!a &&
+        !!b &&
+        !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return [
+        follows(at('h1'), at('mf-results-sheet button.handle')),
+        follows(
+          at('mf-results-sheet button.handle'),
+          at('mf-results-sheet mf-brand-chips'),
+        ),
+        follows(
+          at('mf-results-sheet mf-brand-chips'),
+          at('mf-results-sheet .found'),
+        ),
+      ];
+    });
+    expect(order).toEqual([true, true, true]);
+  });
 
   test("the driver's quote request dialog and my requests", async ({
     page,
@@ -569,7 +614,7 @@ test.describe('axe on the listing steps', () => {
     await expect(photos.locator('li.photo')).toHaveCount(1);
     await expect(summary.getByRole('button')).toHaveCount(0);
     await send.click();
-    await expect(summary).toHaveText('Totul e complet');
+    await expect(summary.locator('.complete')).toHaveText('Totul e complet');
     found.push(...(await listingScan(page, 'the listing, complete')));
 
     // At 320 px the steps fold into a bar; open, its list scrolls nothing.
@@ -579,6 +624,25 @@ test.describe('axe on the listing steps', () => {
     await page.locator('nav > button[aria-expanded]').click();
     if (!(await noSidewaysScroll(page)))
       found.push('the listing, steps open: scrolls sideways at 320 px');
+    await page.locator('nav > button[aria-expanded]').click();
+
+    // The sign-up survey the complete listing offers: its intro, a question
+    // answered, and its summary.
+    await page.getByRole('button', { name: /SPUNE‑NE CUM LUCREZI/ }).click();
+    const survey = page.locator('mf-signup-survey');
+    const forward = survey.locator('button.forward');
+    found.push(...(await listingScan(page, 'the survey, intro')));
+    await forward.click();
+    await survey.getByRole('radio').first().click();
+    found.push(...(await listingScan(page, 'the survey, a question')));
+    for (let question = 1; question <= 5; question++) {
+      await survey.getByRole('radio').first().click();
+      await forward.click();
+    }
+    await expect(survey.locator('.features li')).toHaveCount(5);
+    found.push(...(await listingScan(page, 'the survey, summary')));
+    if (!(await noSidewaysScroll(page)))
+      found.push('the survey: scrolls sideways at 320 px');
     expect(found).toEqual([]);
   });
 

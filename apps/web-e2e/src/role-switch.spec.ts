@@ -16,6 +16,7 @@ const chip = (page: Page, name: string) =>
 async function signInFromHome(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.switcher);
@@ -56,6 +57,7 @@ test.describe('switching between the driver and garage roles @seeded', () => {
   test('an account with one role shows no role chips', async ({ page }) => {
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);

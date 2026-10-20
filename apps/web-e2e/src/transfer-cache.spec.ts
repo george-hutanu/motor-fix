@@ -113,6 +113,7 @@ test.describe('a server-rendered page read once @seeded', () => {
   }) => {
     await hydrated(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);
@@ -126,8 +127,12 @@ test.describe('a server-rendered page read once @seeded', () => {
     expect(paths).not.toContain('/api/v1/brands/popular');
     expect(paths).not.toContain('/health/ready');
     expect(paths).not.toContain('/api/v1/garages/service-auto-militari');
+    // The person's own reads (/me) and their live stream, which the signed-in
+    // frame may open or reopen at any moment, carry the token by design.
     expect(
-      seen.filter((read) => read.token && !/^\/api\/v1\/me/.test(read.path)),
+      seen.filter(
+        (read) => read.token && !/^\/api\/v1\/(me|live)\b/.test(read.path),
+      ),
     ).toEqual([]);
   });
 });

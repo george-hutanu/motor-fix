@@ -289,3 +289,26 @@ describe('the draft envelope with documents and the declaration', () => {
     expect(isListingDraftData(data)).toBe(false);
   });
 });
+
+// @traces 1359-FR-008
+describe('the draft survey section', () => {
+  it('accepts a draft holding survey answers', () => {
+    expect(
+      isListingDraftData({
+        survey: {
+          foundVia: 'client',
+          liftsCount: '2-3',
+          wantsLiveMedia: false,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['an unknown key', { survey: { mechanicsCount: '0', notes: 'x' } }],
+    ['an answer outside its codes', { survey: { liftsCount: '5' } }],
+    ['a yes that is text', { survey: { wantsDaySheets: 'yes' } }],
+  ])('refuses a survey with %s', (_, data) => {
+    expect(isListingDraftData(data)).toBe(false);
+  });
+});

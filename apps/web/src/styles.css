@@ -103,7 +103,20 @@ input[type="checkbox"].mf-check:checked::after {
   mf-consent-bar,
   mf-list-your-garage nav,
   mf-list-your-garage .actions,
+  mf-signup-survey .footer,
   mf-request-drawer .actions
 ) :where(a, button, input, select, textarea, summary, [tabindex]) {
   scroll-margin: 0;
+}
+
+/* On a phone the results list scrolls inside its sheet, a box often shorter
+   than the bars' room together, which would scroll a focused card past the
+   box's top, under the brand chips: there a control keeps a small gap to the
+   box's edges only. From a tablet up the page scrolls the list again. */
+@media (max-width: 767px) {
+  mf-results-sheet
+    > .body
+    :where(a, button, input, select, textarea, summary, [tabindex]) {
+    scroll-margin: var(--mf-space-2);
+  }
 }

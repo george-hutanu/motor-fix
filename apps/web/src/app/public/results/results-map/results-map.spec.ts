@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
@@ -40,16 +41,22 @@ const open = jest.fn(
 );
 
 let fixture: ComponentFixture<ResultsMap>;
+// On a phone the summary above the map says it is unavailable, so most of
+// these tests look at the map from a tablet up.
+const layout = signal<LayoutName>('tablet');
 
 async function render({
   language = 'ro' as 'ro' | 'en',
   platform = 'browser',
   loading = false,
+  on = 'tablet' as LayoutName,
 } = {}) {
+  layout.set(on);
   TestBed.configureTestingModule({
     providers: [
       { provide: RESULTS_MAP, useValue: open },
       { provide: PLATFORM_ID, useValue: platform },
+      { provide: Layout, useValue: { current: layout } },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -164,6 +171,36 @@ describe('ResultsMap, the legend', () => {
 });
 
 // @traces 269-FR-015
+// @traces 1358-FR-004
+describe('ResultsMap, the legend on a phone', () => {
+  const phone =
+    readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+      .replace(/\s+/g, ' ')
+      .match(/@media \(max-width: 767\.98px\) \{(.*?\}) \}/)?.[1] ?? '';
+
+  it('sits at the top of the map, above the results sheet', () => {
+    expect(phone).toMatch(
+      /\.legend \{ bottom: auto; [^}]*top: var\(--mf-space-3\); \}/,
+    );
+  });
+
+  it('leaves the zoom buttons at its right free at every phone width', () => {
+    expect(phone).toMatch(
+      /\.legend \{[^}]*max-width: calc\(100% - var\(--mf-space-3\) - var\(--zoom-room\)\);/,
+    );
+    // The buttons are tap-sized (styles.css), not MapLibre's 29 px.
+    expect(phone).toMatch(/--zoom-room: calc\(var\(--mf-tap\) \+ \d+px\);/);
+    // The padding counts inside the width, or the legend runs 24 px further.
+    expect(phone).toMatch(/\.legend \{[^}]*box-sizing: border-box;/);
+  });
+
+  it('gives way to the zoom hint there', () => {
+    expect(phone).toMatch(
+      /\.hint:not\(:empty\) ~ \.legend \{ visibility: hidden; \}/,
+    );
+  });
+});
+
 describe('ResultsMap, the legend with a mobile mechanic', () => {
   const WITH_AREA: GaragePinsDto = {
     pins: [
@@ -271,6 +308,16 @@ describe('ResultsMap, when the map cannot open', () => {
     expect(status()?.closest('[aria-hidden="true"]')).toBeNull();
   });
 
+  // @traces 1358-FR-010
+  it('leaves the text to the summary on a phone', async () => {
+    await render({ on: 'phone' });
+    failed(new Error('style 500'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(said(status())).toBe('');
+  });
+
   it('reads "The map is not available now" in English', async () => {
     await broken('en');
 
@@ -362,6 +409,36 @@ describe('ResultsMap, the pins it is given', () => {
     fixture.componentInstance.fit();
 
     expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 70);
+  });
+
+  // @traces 1358-FR-004
+  it('on a phone fits the place and the pins between the legend at the top and the results sheet over the bottom', async () => {
+    await render({ on: 'phone' });
+    await ready();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    const rect = (top: number, bottom: number) => ({ bottom, top }) as DOMRect;
+    const section = element().querySelector<HTMLElement>('section.map');
+    const key = element().querySelector<HTMLElement>('.legend');
+    if (!section || !key) throw new Error('no map or legend');
+    const stage = document.createElement('div');
+    const sheet = document.createElement('mf-results-sheet');
+    element().before(stage);
+    stage.append(element(), sheet);
+    section.getBoundingClientRect = () => rect(180, 720);
+    key.getBoundingClientRect = () => rect(192, 258);
+    sheet.getBoundingClientRect = () => rect(450, 1000);
+
+    fixture.componentInstance.fit();
+    // A sheet over nearly all of the map leaves the pins room to be framed.
+    sheet.getBoundingClientRect = () => rect(200, 1000);
+    fixture.componentInstance.fit();
+
+    expect(view.fit.mock.calls).toEqual([
+      [PLACE, PINS, 270, 78],
+      [PLACE, PINS, 342, 78],
+    ]);
+    stage.remove();
   });
 
   it('closes the map with the page', async () => {

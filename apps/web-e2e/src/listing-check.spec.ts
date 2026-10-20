@@ -171,7 +171,9 @@ test.describe('list your garage, what is missing before sending', () => {
     };
     expect(warnings.map((w) => w.code)).toContain('document_missing');
 
-    await expect(summary(page)).toHaveText('Totul e complet');
+    await expect(summary(page).locator('.complete')).toHaveText(
+      'Totul e complet',
+    );
     await expect(send(page)).toBeFocused();
     expect(await sideways(page)).toBe(false);
   });

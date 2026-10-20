@@ -16,3 +16,7 @@ globalThis.matchMedia ??= (query: string) =>
     removeEventListener() {},
     removeListener() {},
   }) as unknown as MediaQueryList;
+
+// jsdom has no element scrolling; the results sheet scrolls its list to the top.
+if (typeof Element !== 'undefined')
+  Element.prototype.scrollTo ??= () => undefined;

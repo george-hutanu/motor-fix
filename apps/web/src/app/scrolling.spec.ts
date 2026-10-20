@@ -73,6 +73,14 @@ describe('the router scrolling', () => {
     expect(scroller['scrollToPosition']).not.toHaveBeenCalled();
   });
 
+  // @traces 228-FR-002
+  it('leaves a navigation to another view with a fragment to that fragment, not the top', async () => {
+    await router.navigate(['/app/driver/cars'], { fragment: 'how-it-works' });
+    await scrolled();
+
+    expect(scroller['scrollToPosition']).not.toHaveBeenCalled();
+  });
+
   it('leaves the page where it is when only the fragment changes', async () => {
     await router.navigate([], { fragment: 'mechanics' });
     await scrolled();

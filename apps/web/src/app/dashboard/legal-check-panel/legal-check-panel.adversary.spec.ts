@@ -20,8 +20,10 @@ const answer = (over: Partial<LegalCheckDto> = {}): LegalCheckDto => ({
   companyName: 'ATELIER DINAMO SRL',
   isMobile: false,
   lastCheckedOn: '2026-10-01',
+  latestRecheck: null,
   rarActivities: [],
   rows: [row('company'), row('caen'), row('rar'), row('documents')],
+  status: 'approved',
   ...over,
 });
 
@@ -374,5 +376,201 @@ describe('the legal check panel adversary', () => {
         ),
       ),
     ).toBe('problemă');
+  });
+});
+
+const failedRar = (failure: 'expired' | 'suspended' | 'withdrawn' | null) =>
+  answer({
+    latestRecheck: {
+      checkedOn: '2026-09-12',
+      detail: 'Autorizația a expirat la 31 august',
+      failure,
+      result: 'failed',
+    },
+    rows: [
+      row('company'),
+      row('caen'),
+      row('rar', {
+        checkedOn: '2026-09-12',
+        detail: 'Autorizația a expirat la 31 august',
+        ...(failure ? { failure } : {}),
+        state: 'failed',
+      }),
+      row('documents'),
+    ],
+    status: 'suspended',
+  });
+
+describe('the legal check panel after approval adversary', () => {
+  // @traces 1354-FR-004
+  it.each([
+    ['expired', 'expirată pe 12 sept. 2026'],
+    ['suspended', 'suspendată pe 12 sept. 2026'],
+    ['withdrawn', 'retrasă pe 12 sept. 2026'],
+  ] as const)(
+    'says %s on the failed RAR row with the recorded detail',
+    async (failure, said) => {
+      const el = (await render({ data: failedRar(failure) }))
+        .nativeElement as HTMLElement;
+      const rar = rowEl(el, 'rar');
+
+      expect(text(rar?.querySelector('.what'))).toContain(
+        `${said} · Autorizația a expirat la 31 august`,
+      );
+      expect(rar?.getAttribute('data-lamp')).toBe('red');
+      expect(text(rar?.querySelector('[data-legal-state]'))).toBe('problemă');
+      expect(text(rar?.querySelector('.when'))).toBe(
+        'reverificată pe 12 sept. 2026',
+      );
+    },
+  );
+
+  // @traces 1354-FR-004
+  it('says expired in English on the failed RAR row', async () => {
+    const el = (await render({ data: failedRar('expired') }, 'en'))
+      .nativeElement as HTMLElement;
+    const rar = rowEl(el, 'rar');
+
+    expect(text(rar?.querySelector('.what'))).toContain(
+      'expired on 12 Sep 2026',
+    );
+    expect(text(rar?.querySelector('.when'))).toBe('re-checked on 12 Sep 2026');
+    expect(text(rar?.querySelector('[data-legal-state]'))).toBe('problem');
+  });
+
+  // @traces 1354-FR-004
+  it('shows the failed RAR row without the dot when the recorded detail is empty', async () => {
+    const data = failedRar('withdrawn');
+    data.rows[2].detail = null;
+    const el = (await render({ data })).nativeElement as HTMLElement;
+
+    expect(text(rowEl(el, 'rar')?.querySelector('.what'))).not.toContain('·');
+  });
+
+  // @traces 1354-FR-004
+  it('tags a suspended garage Suspendat and an approved one Verificat', async () => {
+    const suspended = (await render({ data: failedRar('expired') }))
+      .nativeElement as HTMLElement;
+    const tag = suspended.querySelector('[data-legal-tag]');
+
+    expect(text(tag)).toBe('Suspendat');
+    expect(tag?.hasAttribute('data-suspended')).toBe(true);
+    TestBed.resetTestingModule();
+    const approved = (await render({ data: answer() }))
+      .nativeElement as HTMLElement;
+
+    expect(text(approved.querySelector('[data-legal-tag]'))).toBe('Verificat');
+    expect(
+      approved
+        .querySelector('[data-legal-tag]')
+        ?.hasAttribute('data-suspended'),
+    ).toBe(false);
+  });
+
+  // @traces 1354-FR-004
+  it('keeps the four ordinary rows for a suspension that was not a failed re-check', async () => {
+    const el = (await render({ data: answer({ status: 'suspended' }) }))
+      .nativeElement as HTMLElement;
+
+    expect(text(el.querySelector('[data-legal-tag]'))).toBe('Suspendat');
+    expect(rowEl(el, 'rar')?.getAttribute('data-lamp')).toBe('green');
+    expect(text(rowEl(el, 'rar')?.querySelector('.when'))).toBe(
+      'verificată pe 1 oct. 2026',
+    );
+  });
+
+  // @traces 1354-FR-003
+  it('says re-checked when the latest re-check is ok and on the stored day', async () => {
+    const data = answer({
+      latestRecheck: {
+        checkedOn: '2026-10-01',
+        detail: null,
+        failure: null,
+        result: 'ok',
+      },
+    });
+    const el = (await render({ data })).nativeElement as HTMLElement;
+
+    expect(text(rowEl(el, 'rar')?.querySelector('.when'))).toBe(
+      'reverificată pe 1 oct. 2026',
+    );
+  });
+
+  // @traces 1354-FR-003
+  it('says checked, not re-checked, when the latest re-check predates the stored day', async () => {
+    const data = answer({
+      latestRecheck: {
+        checkedOn: '2026-09-30',
+        detail: null,
+        failure: null,
+        result: 'ok',
+      },
+    });
+    const el = (await render({ data })).nativeElement as HTMLElement;
+
+    expect(text(rowEl(el, 'rar')?.querySelector('.when'))).toBe(
+      'verificată pe 1 oct. 2026',
+    );
+  });
+
+  // @traces 1354-FR-003
+  it('says checked in English for an approval-only garage', async () => {
+    const el = (await render({ data: answer() }, 'en'))
+      .nativeElement as HTMLElement;
+
+    expect(text(rowEl(el, 'rar')?.querySelector('.when'))).toBe(
+      'checked on 1 Oct 2026',
+    );
+  });
+
+  // @traces 1354-FR-003
+  it('says checked with no day when the stored date is empty', async () => {
+    const data = answer({
+      lastCheckedOn: null,
+      rows: [
+        row('company'),
+        row('caen'),
+        row('rar', { checkedOn: null }),
+        row('documents'),
+      ],
+    });
+    const el = (await render({ data })).nativeElement as HTMLElement;
+
+    expect(text(rowEl(el, 'rar')?.querySelector('.when'))).toBe('verificată');
+  });
+
+  // @traces 1354-FR-006
+  it.each([
+    [
+      'ro',
+      'Reverificăm lunar autorizația în registrul RAR. Dacă e suspendată sau retrasă, profilul iese de pe hartă până se rezolvă.',
+    ],
+    [
+      'en',
+      'We re-check the authorisation in the RAR register every month. If it is suspended or withdrawn, the profile comes off the map until that is fixed.',
+    ],
+  ] as const)(
+    'shows the monthly re-check note in %s after the rows',
+    async (language, note) => {
+      const el = (await render({ data: answer() }, language))
+        .nativeElement as HTMLElement;
+      const noteEl = el.querySelector('[data-legal-note]');
+
+      expect(text(noteEl)).toBe(note);
+      expect(
+        el.querySelector('.rows')?.compareDocumentPosition(noteEl as Node),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
+
+  // @traces 1354-FR-006
+  it('shows no note while loading or after a failed read', async () => {
+    const loading = (await render({ loading: true }))
+      .nativeElement as HTMLElement;
+    const failed = (await render({ failed: true }))
+      .nativeElement as HTMLElement;
+
+    expect(loading.querySelector('[data-legal-note]')).toBeNull();
+    expect(failed.querySelector('[data-legal-note]')).toBeNull();
   });
 });

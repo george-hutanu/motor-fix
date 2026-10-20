@@ -32,6 +32,7 @@ async function signUp(page: Page) {
   await ownAddress(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await page

@@ -16,6 +16,7 @@ async function settled(page: Page) {
 async function openSettings(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.admin);

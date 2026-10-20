@@ -20,6 +20,9 @@ const HOW_IT_WORKS = 'how-it-works';
 // A fixed illustration, not a garage's figure.
 const RATE = 180;
 const ROLL_MS = 1200;
+// How long the jump follows a page still growing under it.
+const FOLLOW_MS = 3000;
+const TAKEN_OVER = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
 const TAKEN = ['BMW', 'Mercedes-Benz', 'Volkswagen'];
 const REFUSED = ['Dacia', 'Tesla'];
 
@@ -50,6 +53,7 @@ export class HowItWorks {
     }),
   );
   private frame = 0;
+  private stopFollowing?: () => void;
 
   constructor() {
     const destroy = inject(DestroyRef);
@@ -68,6 +72,7 @@ export class HowItWorks {
         cancelAnimationFrame(this.frame);
       });
     });
+    destroy.onDestroy(() => this.stopFollowing?.());
     // Followed on Home itself, the link navigates to the same address again.
     this.router.events
       .pipe(
@@ -82,11 +87,42 @@ export class HowItWorks {
   private jumpIfAsked() {
     if (this.router.parseUrl(this.router.url).fragment !== HOW_IT_WORKS) return;
     const section = this.section().nativeElement;
-    section.scrollIntoView({
-      behavior: this.reduced() ? 'auto' : 'smooth',
-      block: 'start',
-    });
+    const jump = () =>
+      section.scrollIntoView({
+        behavior: this.reduced() ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    jump();
     section.focus({ preventScroll: true });
+    this.follow(section.ownerDocument, jump);
+  }
+
+  // Arriving from another screen, Home is still growing under the section
+  // (its later parts render after the first frame), and the browser stops the
+  // scroll at the page's end as it was, short of the section. Until the page
+  // settles, or the person scrolls, types or taps, jump again as it grows.
+  private follow(document: Document, jump: () => void) {
+    this.stopFollowing?.();
+    const window = document.defaultView;
+    if (!window || typeof window.ResizeObserver === 'undefined') return;
+    let height = document.body.getBoundingClientRect().height;
+    const observer = new window.ResizeObserver((entries) => {
+      const grown = entries[0]?.contentRect.height ?? 0;
+      if (grown <= height) return;
+      height = grown;
+      jump();
+    });
+    const stop = () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+      for (const type of TAKEN_OVER) window.removeEventListener(type, stop);
+      this.stopFollowing = undefined;
+    };
+    const timer = window.setTimeout(stop, FOLLOW_MS);
+    for (const type of TAKEN_OVER)
+      window.addEventListener(type, stop, { passive: true });
+    observer.observe(document.body);
+    this.stopFollowing = stop;
   }
 
   private roll() {

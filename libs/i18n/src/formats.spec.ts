@@ -8,6 +8,7 @@ import {
   daysUntil,
   formatClock,
   formatDay,
+  formatDayMonth,
   formatDistance,
   formatDuration,
   formatKm,
@@ -276,6 +277,23 @@ describe('dates and times', () => {
     const instant = new Date('2026-03-08T23:30:00Z');
     expect(formatDay(instant, 'ro')).toBe('9 mart. 2026');
     expect(formatDay(instant, 'en')).toBe('9 Mar 2026');
+  });
+
+  // @traces 1354-FR-005 1354-FR-008
+  it('writes a day and its short month without the year', () => {
+    expect(formatDayMonth('2026-10-01', 'ro')).toBe('1 oct.');
+    expect(formatDayMonth('2026-10-01', 'en')).toBe('1 Oct');
+  });
+
+  // @traces 1354-FR-008
+  it('takes the day and month in Bucharest on a summer night', () => {
+    expect(formatDayMonth('2026-07-31T21:30:00Z', 'ro')).toBe('1 aug.');
+    expect(formatDayMonth('2026-07-31T21:30:00Z', 'en')).toBe('1 Aug');
+  });
+
+  it('writes the missing dash for a day and month it cannot read', () => {
+    expect(formatDayMonth(null, 'ro')).toBe(MISSING);
+    expect(formatDayMonth('not a date', 'en')).toBe(MISSING);
   });
 
   it('accepts an ISO string and epoch milliseconds', () => {

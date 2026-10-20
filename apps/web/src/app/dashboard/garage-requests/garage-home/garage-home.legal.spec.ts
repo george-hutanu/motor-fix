@@ -28,6 +28,7 @@ const ANSWER: LegalCheckDto = {
   companyName: 'ATELIER DINAMO SRL',
   isMobile: false,
   lastCheckedOn: '2026-10-01',
+  latestRecheck: null,
   rarActivities: [],
   rows: (['company', 'caen', 'rar', 'documents'] as const).map((kind) => ({
     checkedOn: '2026-10-01',
@@ -36,9 +37,16 @@ const ANSWER: LegalCheckDto = {
     missing: [],
     state: 'ok' as const,
   })),
+  status: 'approved',
 };
 
-const account = (role: Role, status: Status) =>
+type Checked = { lastCheckedOn: string | null; rechecked: boolean };
+
+const account = (
+  role: Role,
+  status: Status,
+  checked: Checked = { lastCheckedOn: null, rechecked: false },
+) =>
   ({
     capabilities: CAPABILITIES[role],
     garageAccess: [
@@ -53,6 +61,7 @@ const account = (role: Role, status: Status) =>
         },
         role,
         status,
+        ...checked,
       },
     ],
     garageId: 'garage-1',
@@ -76,12 +85,17 @@ async function render(
   role: Role,
   {
     answer = () => Promise.resolve(ANSWER),
+    checked,
     status = 'approved',
-  }: { answer?: () => Promise<LegalCheckDto>; status?: Status } = {},
+  }: {
+    answer?: () => Promise<LegalCheckDto>;
+    checked?: Checked;
+    status?: Status;
+  } = {},
 ) {
   read = jest.fn(answer);
   live = fakeLive();
-  const me = signal(account(role, status));
+  const me = signal(account(role, status, checked));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -139,17 +153,14 @@ describe('the verified profile on the garage Panou', () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  it.each(['draft', 'suspended'] as const)(
-    'shows neither while the garage is %s',
-    async (status) => {
-      const element: HTMLElement = (await render('owner', { status }))
-        .nativeElement;
+  it('shows neither while the garage is a draft', async () => {
+    const element: HTMLElement = (await render('owner', { status: 'draft' }))
+      .nativeElement;
 
-      expect(pill(element)).toBeNull();
-      expect(panel(element)).toBeNull();
-      expect(read).not.toHaveBeenCalled();
-    },
-  );
+    expect(pill(element)).toBeNull();
+    expect(panel(element)).toBeNull();
+    expect(read).not.toHaveBeenCalled();
+  });
 
   it('drops the panel, with no error, when the read answers 404', async () => {
     const element: HTMLElement = (
@@ -224,5 +235,77 @@ describe('the legal check, live', () => {
     await settle(fixture);
 
     expect(read).toHaveBeenCalledTimes(1);
+  });
+});
+
+const line = (element: HTMLElement) =>
+  element.querySelector('[data-verified-line]');
+
+// @traces 1354-FR-001 1354-FR-005
+describe('the legal check of a suspended garage on the Panou', () => {
+  it('shows the owner the panel and no pill', async () => {
+    const element: HTMLElement = (
+      await render('owner', {
+        checked: { lastCheckedOn: '2026-10-01', rechecked: true },
+        status: 'suspended',
+      })
+    ).nativeElement;
+
+    expect(pill(element)).toBeNull();
+    expect(line(element)).toBeNull();
+    expect(panel(element)).not.toBeNull();
+    expect(read).toHaveBeenCalledWith({ garageId: 'garage-1' });
+  });
+
+  it('shows the receptionist neither', async () => {
+    const element: HTMLElement = (
+      await render('receptionist', { status: 'suspended' })
+    ).nativeElement;
+
+    expect(pill(element)).toBeNull();
+    expect(panel(element)).toBeNull();
+  });
+});
+
+// @traces 1354-FR-005 1354-FR-008
+describe('the RAR line under the verified pill', () => {
+  it('tells the owner the authorisation was re-checked, with day and month', async () => {
+    const element: HTMLElement = (
+      await render('owner', {
+        checked: { lastCheckedOn: '2026-10-01', rechecked: true },
+      })
+    ).nativeElement;
+
+    expect(text(line(element))).toBe('Autorizația RAR, reverificată pe 1 oct.');
+  });
+
+  it('tells the receptionist it was checked when no re-check is recorded since', async () => {
+    const element: HTMLElement = (
+      await render('receptionist', {
+        checked: { lastCheckedOn: '2026-06-14', rechecked: false },
+      })
+    ).nativeElement;
+
+    expect(text(line(element))).toBe('Autorizația RAR, verificată pe 14 iun.');
+  });
+
+  it('shows no line when the garage has no stored check day', async () => {
+    const element: HTMLElement = (await render('owner')).nativeElement;
+
+    expect(text(pill(element))).toBe('Profil verificat');
+    expect(line(element)).toBeNull();
+  });
+});
+
+// @traces 1354-FR-007
+describe('the legal check, live, on a suspension', () => {
+  it('reads again when the garage is suspended', async () => {
+    const fixture = await render('owner');
+
+    live.emit('garage.suspended', 'garage-1');
+    await wait(350);
+    await settle(fixture);
+
+    expect(read).toHaveBeenCalledTimes(2);
   });
 });

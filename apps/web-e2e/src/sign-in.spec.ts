@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ready, signIn } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -8,7 +8,7 @@ const dialog = (page: Page, name = 'Autentificare') =>
   page.getByRole('dialog', { name });
 
 const openFromHeader = (page: Page, name = 'Autentificare') =>
-  page.getByRole('button', { exact: true, name }).click();
+  page.getByRole('banner').getByRole('button', { exact: true, name }).click();
 
 test.describe('signing in for real @seeded', () => {
   for (const [who, email, landing, menu] of [
@@ -239,17 +239,8 @@ const SIZES = [
 const TITLE = { en: 'Sign in', ro: 'Autentificare' } as const;
 
 // Phones open it from the tab bar, wider screens from the top bar.
-async function openAt(page: Page, width: number, language: 'ro' | 'en') {
-  if (width < 768) {
-    await page
-      .getByRole('link', {
-        exact: true,
-        name: language === 'ro' ? 'Cont' : 'Account',
-      })
-      .click();
-  } else {
-    await openFromHeader(page, TITLE[language]);
-  }
+async function openAt(page: Page, language: 'ro' | 'en') {
+  await openSignIn(page, language);
   await expect(panel(page, language)).toBeVisible();
 }
 
@@ -283,7 +274,7 @@ test.describe('the dialog on every screen size', () => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await ready(page, `/${language}/garages`);
 
-      await openAt(page, width, language);
+      await openAt(page, language);
 
       const box = await panel(page, language).boundingBox();
       expect(box?.x).toBeGreaterThanOrEqual(0);
@@ -317,7 +308,7 @@ test.describe('the dialog on every screen size', () => {
   test('works from the keyboard alone', async ({ page }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await ready(page, '/ro/garages');
-    const opener = page.getByRole('button', {
+    const opener = page.getByRole('banner').getByRole('button', {
       exact: true,
       name: 'Autentificare',
     });

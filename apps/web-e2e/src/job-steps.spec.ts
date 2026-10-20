@@ -12,6 +12,7 @@ async function openJob(page: Page, email: string, landing: string) {
   await page.setViewportSize({ height: 900, width: 1280 });
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email);

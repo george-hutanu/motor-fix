@@ -17,6 +17,9 @@ features:
   - 270-card-pin-link
   - 271-garage-distance
   - 228-how-it-works-list-garage
+  - 1355-results-brand-chips
+  - 1358-results-phone-map-list
+  - 1356-results-load-more
 ---
 
 # Capability: Garage search
@@ -45,9 +48,9 @@ _From 042-brand-verdict._
 
 _From 043-brand-first-garage-list._
 
-### 267-FR-002 — The cursor of 043-FR-006 MUST continue that order: it carries the brand, the group and the last garage's id, and the search reads that garage's rating, review count and name back by id as the keyset, so no garage is repeated or skipped between two consecutive pages of an unchanged list, even when that garage has left the public list since. A rating change between two pages may move the boundary; paging through a changing list is ST-273's.
+### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
 
-_From 267-brand-results._
+_From 1356-results-load-more._
 
 ### 267-FR-001 — The garage search for a brand (`GET /api/v1/search/garages`) MUST order each group by rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z under the database's default collation, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same; the group rule of 043-FR-001 (takers first, on every page) is unchanged.
 
@@ -57,9 +60,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 043-FR-009 — The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a missing brand, a value that is not a uuid, an unknown query field, or a cursor that is longer than 200 characters, does not decode, names another brand or names no group, MUST be refused as a bad request, in the API's one error shape with a stable code (`validation_failed`, `invalid_cursor`, `not_found`).
+### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
 
-_From 043-brand-first-garage-list._
+_From 1356-results-load-more._
 
 ### 043-FR-010 — The search MUST read a garage's answer for a brand from the garage brand rows ST-39 created (one row per garage and brand, no row is `unstated`), never from a second copy.
 
@@ -157,9 +160,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 267-FR-016 — While the search runs the page MUST show six skeleton cards; on an API error or no answer it MUST show "Nu am putut încărca rezultatele" with "Reîncearcă", which runs the same request again (not logged); the page MUST never scroll sideways at 320 px.
+### 1355-FR-011 — While a search runs the page MUST show six skeleton cards, except after a brand change: then the previous answer's cards MUST stay in place, dimmed to half opacity and not tappable, under a progress bar at most 4 px tall exposed to assistive technology as a progress indicator labelled with the new brand's name, and the chips and the search MUST stay usable. On an API error or no answer the page MUST show "Nu am putut încărca rezultatele" with "Reîncearcă", which runs the same request again (not logged); the page MUST never scroll sideways at 320 px.
 
-_From 267-brand-results._
+_From 1355-results-brand-chips._
 
 ### 267-FR-017 — Without a place, zero garages read "Niciun service găsit" with "Schimbă locul" only, and `radius` is ignored (no `validation_failed`). With a place and zero garages the page MUST show "Niciun service în 25 km" with "Caută în 50 km" (offered once per place: after it the empty state at 50 km offers "Schimbă locul" only) and "Schimbă locul", which opens the existing place dialog; a place chosen there runs a new, logged search at 25 km.
 
@@ -213,9 +216,9 @@ _From 269-map-price-pins._
 
 _From 269-map-price-pins._
 
-### 269-FR-010 — Results MUST show an interactive MapLibre map beside the list on desktop (the list and the map side by side from 1024 px), and above the list at full width and a fixed height below that; the phone layout of #51 (summary, map, list sheet) is not built here, and the page never scrolls sideways at 320 px (267-FR-016). The map uses MapLibre's cooperative gestures (one finger scrolls the page, two move the map; Ctrl or ⌘ with the wheel zooms), so it never traps a page scroll.
+### 1358-FR-001 — Below 768 px (the shared `phone` layout, 286-FR-008) Results MUST lay out as: a summary bar at the top, the map under it filling the screen down to the public tab bar, and a sheet over the lower part of the map holding the list; from 768 px the layout built today is unchanged (the map above the list on a tablet, beside it from 1024 px). The decision uses the same breakpoint as the stylesheet, so the two never disagree.
 
-_From 269-map-price-pins._
+_From 1358-results-phone-map-list._
 
 ### 269-FR-011 — The map MUST use the tile styles and the dark-scheme choice of the place-step map (A17's provider, openfreemap `liberty` and `dark`), honouring the same test override that points it at the app's empty style, so the neighbourhood names come from the style and no test fetches a tile from outside.
 
@@ -241,9 +244,9 @@ _From 269-map-price-pins._
 
 _From 269-map-price-pins._
 
-### 269-FR-017 — While the search runs the map area MUST show a grey map with the legend; pins appear when the pins request answers. When the map's style fails to load (a map `error` before `load`, or no `load` within 10 s; a single tile error is ignored) the map area MUST read "Harta nu este disponibilă acum" ("The map is not available now") and the list is unchanged; when the pins request fails the map stays without pins, with no message over the list. The map is browser-only: the server renders the placeholder and the legend.
+### 1358-FR-010 — When the map's style failed to load (269-FR-017's condition), the sheet MUST rest at full and the summary bar MUST carry the existing text "Harta nu este disponibilă acum" / "The map is not available now" in a polite live region; the list is unchanged, and the visitor may still drag the sheet down.
 
-_From 269-map-price-pins._
+_From 1358-results-phone-map-list._
 
 ### 269-FR-018 — The pins MUST be re-read (one pins request for the current parameters) within 2 seconds when a live message of the kinds the list follows about a public garage arrives (`garage.updated`, `garage.suspended`, `garage.restored`, `verification.decided`), through the same stream as the list (267-FR-019), bursts folded as the list folds them; a review event re-reads nothing (a pin shows no rating).
 
@@ -275,13 +278,13 @@ _From 270-card-pin-link._
 
 _From 270-card-pin-link._
 
-### 270-FR-004 — A tap on a pin (its dot or its rate label) or on a mobile mechanic's rate label MUST select its garage and, when its card is in the list, scroll that card into view (the nearest edge, smooth unless reduced motion), without moving the keyboard focus; a tap on a circle's fill, on the map away from any pin, or on the cluster selects nothing. A tap on a cluster MUST zoom the map to the zoom at which it splits, as the page's own move (no list reload, no selection change). Selecting a card MUST NOT move the map.
+### 1358-FR-007 — A tap on a pin whose garage is in the list MUST, besides selecting it (270-FR-004), raise the sheet from low to half (keeping half or full where it already is) and scroll the list inside the sheet so the card is in view (the nearest edge, smooth unless reduced motion); a tap on a pin whose garage is not in the list opens the small card on the map (270-FR-010) and moves the sheet nowhere.
 
-_From 270-card-pin-link._
+_From 1358-results-phone-map-list._
 
-### 270-FR-005 — When the list shown is replaced by a fresh answer (a new brand, place or radius, a visible-area load of 269-FR-007, "Înapoi la 25 km" of 269-FR-008, the "Reîncarcă" chip of 267-FR-020, and any later sort or filter change) the first card's garage MUST become selected and the pointed state cleared, without scrolling the list; with an empty list nothing is selected. An in-place card change (267-FR-019) and a pins re-read (269-FR-018) MUST keep the selection.
+### 1355-FR-006 — When the list shown is replaced by a fresh answer (a new brand, place or radius, a visible-area load, "Înapoi la 25 km", the "Reîncarcă" chip, and any later sort or filter change) the first card's garage MUST become selected and the pointed state cleared; with an empty list nothing is selected. An in-place card change and a pins re-read MUST keep the selection. Only after a brand change MUST the list also go back to the top, its cards re-ordered with a short animation (a 16 px rise lasting at most 520 ms, as the mock's row-in; none under reduced motion); any other replacement does not scroll the list.
 
-_From 270-card-pin-link._
+_From 1355-results-brand-chips._
 
 ### 270-FR-007 — The selected card MUST show the theme's selected state (050-FR-007: amber border and text accent on the 10% amber tint, the `--mf-amber*` tokens of `libs/ui-cockpit`), in both schemes; its lamp, texts and controls are otherwise unchanged. A pointed card that is not selected shows no card change: only its pin lights.
 
@@ -363,6 +366,190 @@ _From 271-garage-distance._
 
 _From 271-garage-distance._
 
+### 1355-FR-001 — Results MUST show a row of brand chips above the list on every size, each chip naming one active brand, with the brand of the current search marked as selected.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-002 — The row MUST hold at most 8 chips, ordered: the brands of the signed-in driver's own cars (cars removed from the account not counted) in the account's order, then the current brand when it is not already in the row, then the most popular brands in their popularity order until the row is full; a brand appears once.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-003 — For a visitor who is not signed in the row MUST be the most popular brands, the current brand added first when it is not among them, 8 chips in all.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-004 — Choosing a chip MUST change the search to that brand without leaving the page: the heading, the summary line, the garage list and the map pins show the new brand's answer, and the address bar names the new brand.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-005 — A brand change MUST keep every other search setting the address bar carries (the place, the radius, and the sort and filters once they exist) and MUST forget a map area the driver had moved to, as a new search from the address bar does today.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-007 — A brand change MUST be a step in the browser's history: the back button returns to the previous brand with its results, and a brand reached by back or forward records no search.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-008 — Each brand change MUST be recorded as exactly one new search for the new brand, by the search ST-267 built; a retry, a widening, a reload or a map move after it records none; choosing the brand already shown changes nothing and records nothing.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-009 — After a brand change the page MUST receive live updates for the new brand's garages and stop receiving the old brand's.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-010 — Beside the chips Results MUST offer the brand search of Home (ST-230) as it is, its field 44 px tall, after the chips on a tablet or desktop and full width under the chip row on a phone, over every active brand; picking a brand there MUST act as choosing a chip, and that brand MUST then show as the marked chip in the row, which stays at 8.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-012 — A read behind the chips that fails (the popular brands, or the driver's cars) MUST add nothing to the row and MUST NOT open the sign-in dialog; when both fail, or the visitor's popular read fails, the row MUST show the current brand alone, marked, and the search MUST still work; the results are unaffected. The driver's cars are read only while the session is a signed-in driver.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-013 — On a phone the row MUST scroll sideways with the marked chip in view on opening, each chip at least 44 px tall, and the page MUST NOT scroll sideways at 320 px.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-014 — The chips MUST be a labelled group of buttons whose selected one is announced as the current choice, focus MUST stay on the tapped chip after a brand change, the selected state MUST NOT rest on colour alone (the pressed state is exposed and the marked chip has its own border) and chip text MUST meet 4.5:1 contrast in light and dark, and a brand change MUST be announced to assistive technology as a new search is today (through the page's existing polite status region); the row MUST work in light and dark, Romanian and English.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-015 — The row MUST need no new server operation: the chips are composed in the page from the public popular-brands read (limit 8) and, for a signed-in driver, the driver's own cars read; no brand data is written.
+
+_From 1355-results-brand-chips._
+
+### 1355-FR-016 — Once the search has answered and until the reads behind the chips have answered or failed, the row MUST show the current brand alone, marked; once they have, the row fills in. After that no chip moves or disappears except by a brand change, and the row is never blank.
+
+_From 1355-results-brand-chips._
+
+### 1358-FR-001 — Below 768 px (the shared `phone` layout, 286-FR-008) Results MUST lay out as: a summary bar at the top, the map under it filling the screen down to the public tab bar, and a sheet over the lower part of the map holding the list; from 768 px the layout built today is unchanged (the map above the list on a tablet, beside it from 1024 px). The decision uses the same breakpoint as the stylesheet, so the two never disagree.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-002 — The summary bar MUST show the brand (the page's title), the place line (the area, or the "în zona hărții" counts in visible-area mode) and the total found, plus the actions the summary carries today ("Schimbă locul", "Înapoi la 25 km", the "Reîncarcă" chip when a newer answer exists), in both languages with the texts that exist; the title stays the page's one heading. While the place is unknown it holds the address field, and while locating, the status line, as the header does today.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-003 — The sheet MUST rest in exactly one of three positions: **low** (its handle and its header visible, the map large), **half** (about half the screen, the map visible above it), and **full** (the list fills the screen below the summary bar; the map may be covered). It opens at half. The handle is a drag target at least 44 px tall; a drag released rests the sheet at the position nearest to where it was let go, a drag shorter than 10 % of the screen height returns it to where it started, one long drag may skip a position, and there is no velocity rule; the move uses the theme's motion and none under reduced motion.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-004 — The map MUST stay visible, and usable (drag, zoom, pin taps, the visible-area search), in the low and half positions; the public tab bar MUST stay visible at every position, the sheet ending above it, except while a field is focused, when the bar hides by its existing rule and the sheet rests on the screen's bottom edge; the sheet's full position ends under the summary bar, which stays visible.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-005 — The list MUST scroll inside the sheet at half and full; the page behind the sheet MUST NOT scroll on a phone, and scrolling the list MUST NOT move the sheet. Only the handle and the header's free space drag the sheet; the chip rows scroll sideways on their own. The results screen is exactly one screen tall, so scrolling the list never scrolls the page; the site footer stays below that screen.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-006 — The sheet's header, under the handle, MUST hold the brand chip row and the brand search of ST-268 (1355-FR-010, 1355-FR-013), and nothing else: the sort and the facility chips of ST-328 and ST-329 join the header when those stories land, and this story adds no placeholder or code for them; every control in the header is at least 44 px tall and reachable with one thumb at every position (the header is the sheet's top in all three).
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-007 — A tap on a pin whose garage is in the list MUST, besides selecting it (270-FR-004), raise the sheet from low to half (keeping half or full where it already is) and scroll the list inside the sheet so the card is in view (the nearest edge, smooth unless reduced motion); a tap on a pin whose garage is not in the list opens the small card on the map (270-FR-010) and moves the sheet nowhere.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-008 — A brand, place, sort or filter change MUST keep the sheet's position; the list goes to its top inside the sheet with the first card selected (1355-FR-006); the brand-change loading state (1355-FR-011: the dimmed cards and the progress bar) shows inside the sheet. A live update, a pins re-read and a map move MUST keep the sheet's position and the list's scroll.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-009 — Reaching the full position by the visitor's own act (a drag or the handle's button) MUST add one step to the browser's history at the same address, carrying a sheet marker the page recognises, never a router navigation; a full forced by a failed map (FR-010) adds no step; the back gesture or button from full returns the sheet to half without leaving the page and without recording a search (the page already treats a history step as no new search); leaving full by hand MUST consume that step, so a later back leaves the page as before. The sheet adds no step for low or half. A history step carrying the marker that the visitor reaches again by going forward, or after a reload, leaves the sheet at half (the position is never restored from history), and a back over it then leaves the page as before.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-010 — When the map's style failed to load (269-FR-017's condition), the sheet MUST rest at full and the summary bar MUST carry the existing text "Harta nu este disponibilă acum" / "The map is not available now" in a polite live region; the list is unchanged, and the visitor may still drag the sheet down.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-011 — At 320 px wide nothing on the phone results screen MUST scroll sideways except the chip rows inside the sheet's header (`document.documentElement.scrollWidth` ≤ 320, 286-FR-002); no text is smaller than 12 px (286-FR-004); the handle, every chip, button, field and link is at least 44 px tall (286-FR-003); the sheet respects the bottom safe-area inset through the tab bar it rests on.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-012 — The sheet MUST be reachable without the map: the summary bar, the handle (a button whose accessible name says what it does next, "Arată mai mult din listă" / "Show more of the list" at low and half and "Arată mai mult din hartă" / "Show more of the map" at full, with the sheet's position exposed as expanded or collapsed), the header controls and the cards keep that reading order at every position; no card is hidden from assistive technology or removed from the keyboard order by the sheet's position; moving the sheet never moves keyboard focus away from the control that moved it, and a field or card taking focus while the sheet is low raises it to half so the focused control is in view; the map keeps 269-FR-016 and 270-FR-011 (not the accessible path).
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-013 — The sheet's position, the drag and the pin reaction MUST live in the page only: no address-bar entry other than the history step of FR-009, no storage, no request, no new API, no write; the story reads what the list and the map already hold.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-014 — Every new text (the handle's names, the summary bar's labels) MUST exist in Romanian and English in the shared i18n files; the screen MUST hold at 320 px, 390 px, tablet and desktop, light and dark, both languages, in the PR QA sweep.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-015 — Tests: web unit tests (Jest) MUST cover the sheet's position state (open at half; drag to each of the three positions; the nearest position in the drag direction; kept on a brand change, a live update and a map move; full when the map failed; the history step added at full and consumed by a hand drag), its reaction to a pin tap (low → half with the card revealed; half kept; not in the list → no move), and the breakpoint rule (phone below 768 px, unchanged above). End to end (Playwright) at 375 × 812 and at 320 px: open Results, drag the sheet through its positions, tap a pin and see its card in the sheet; no sideways scroll at 320 px.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-016 — Observability: the story adds no service, endpoint, queue, outside call or product action; the PR's Observability section states this and the inventory is unchanged.
+
+_From 1358-results-phone-map-list._
+
+### 1356-FR-001 — Results MUST show the first page as today (20 cards, 043-FR-006) and, while the answer carries a cursor, load the next page of the same search (same brand, place, radius or box) when the driver scrolls to within three cards of the end of the loaded list; the loaded pages add up in one list, in the order the API answers them, and the brand groups of 043-FR-001 hold across every page.
+
+_From 1356-results-load-more._
+
+### 1356-FR-002 — While a page loads, three skeleton cards MUST show under the loaded cards; one page at a time: reaching the end again while a page loads requests nothing more; a reload, a new search or a moved map while a page loads drops that page's answer; a page that answers zero items with a cursor requests the next one at once, at most three times in a row, then shows the retry (FR-006).
+
+_From 1356-results-load-more._
+
+### 1356-FR-003 — When the answer carries no cursor after more than one page was loaded, the list MUST end with the line "Ai văzut toate cele {total}" / "You have seen all {total}", in the list's polite live region; with one page only (20 or fewer found) nothing is added to today's screen.
+
+_From 1356-results-load-more._
+
+### 1356-FR-004 — The top of the list MUST keep showing the search's `total` and counts (267-FR-013, 269-FR-008) whatever number of cards is loaded; the total is never the loaded count.
+
+_From 1356-results-load-more._
+
+### 1356-FR-005 — A "Încarcă mai multe" / "Load more" button MUST sit at the end of the loaded cards while a cursor exists; pressing it does what scrolling to the end does, the focus stays on it while it loads (`aria-busy`), and when the last page lands the focus moves to the end line (`tabindex="-1"`) before the button is removed. The scroll trigger is a convenience over the button, never the only way.
+
+_From 1356-results-load-more._
+
+### 1356-FR-006 — When a page fails to load, the same end-of-list button MUST read "Reîncearcă" / "Try again" (the screen's other retry) in place of the skeletons at the end of the list, the loaded cards MUST stay, nothing MUST be retried on scroll, and pressing it MUST request the same page again; a page that fails three times in a row still shows the retry (no cap on presses).
+
+_From 1356-results-load-more._
+
+### 1356-FR-007 — At 500 or more loaded cards the page MUST stop loading (the pins' cap, 269-FR-003; a page that would carry the list past 500 is cut at 500) and end the list with "Ai văzut primele 500 · apropie harta pentru mai puține" / "You have seen the first 500 · zoom in for fewer" even when a cursor exists; the top keeps the total.
+
+_From 1356-results-load-more._
+
+### 1356-FR-008 — The loaded pages, the cursor, the scroll position and the search's logged mark MUST be kept in the tab's memory when the driver leaves Results and shown at once when Results opens again for the same search (same brand, place, radius or box) in the same tab, only the last search being kept and nothing expiring but the tab (a profile opened from a card and the browser's back); the first page is then read again without `log=1` and applied in place to the kept cards, and no later page is requested. A different search, a reload or a new tab starts from the first page.
+
+_From 1356-results-load-more._
+
+### 1356-FR-010 — A page read MUST write no search-log row and MUST carry no new-search mark (267-FR-007 unchanged: `log=1` is the first page's only); a cursor the API refuses (`invalid_cursor`, 043-FR-006) MUST make the page start the list again from the top as "Reîncarcă" does (the first page in place of the list, the first card selected), silently and without a search-log row.
+
+_From 1356-results-load-more._
+
+### 1356-FR-011 — The page MUST never add a card for a garage it already shows: a garage answered again on a later page (it fell in the order after its page was loaded) is left where it is, its card replaced in place by the fresher answer and never added a second time. The API's page is not deduplicated across requests.
+
+_From 1356-results-load-more._
+
+### 1356-FR-012 — The live stream MUST keep following the first page's garages (its 20-id cap, 267-FR-018), and every re-read by ids (267-FR-006, 267-FR-019, 419-FR-009) MUST name followed garages only, never more than 20 ids; garages loaded later are shown as answered and are not followed. The pins keep their own re-reads (269-FR-005, every garage found).
+
+_From 1356-results-load-more._
+
+### 1356-FR-013 — A card loaded on a later page MUST be linked to its pin exactly as a first-page card is (270-FR-001 to FR-008: pointed, selected, lit pin, scrolled into view on a pin tap, the selected state kept); and when a tapped pin's garage arrives with a page while its small card (270-FR-010) is open, the small card MUST close and that card MUST be the selected one.
+
+_From 1356-results-load-more._
+
+### 1356-FR-014 — Loading a page MUST change no selected or pointed garage and MUST not move the map (269-FR-012 fits the bounds on load only).
+
+_From 1356-results-load-more._
+
+### 1356-FR-015 — The `garage` table MUST carry an index matching the brand-first list's order key (267-FR-001: approved garages, rating high to low with unrated garages last, review count high to low, name, id), added by a migration, and `EXPLAIN` of a page's list query with no area over 10,000 approved garages after `ANALYZE` MUST use it, proven by an integration test. If the planner does not take it, no index ships and the criterion is answered on #572.
+
+_From 1356-results-load-more._
+
+### 1356-FR-016 — Both Results screens (Results + map, Mobile · Results) MUST load more the same way, in the list's own scroll container; long lists are not designed (Build brief, Screens): the end line, the load-more and retry buttons and the skeletons follow the Cockpit look of today's "Reîncearcă" and skeleton cards (267-FR-016), and the page MUST never scroll sideways at 320 px.
+
+_From 1356-results-load-more._
+
+### 1356-FR-017 — Observability: the story adds no service, endpoint, queue or outside call; page reads are counted by the existing HTTP metrics and the search metrics count first pages only (`countFirstPage`, unchanged). No inventory entry.
+
+_From 1356-results-load-more._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -386,3 +573,13 @@ _From 271-garage-distance._
 - `229-FR-013` — superseded by `271-FR-010` (2026-10-18)
 
 - `225-FR-010` — superseded by `228-FR-011` (2026-10-20)
+
+- `270-FR-005` — superseded by `1355-FR-006` (2026-10-20)
+- `267-FR-016` — superseded by `1355-FR-011` (2026-10-20)
+
+- `269-FR-010` — superseded by `1358-FR-001` (2026-10-20)
+- `269-FR-017` — superseded by `1358-FR-010` (2026-10-20)
+- `270-FR-004` — superseded by `1358-FR-007` (2026-10-20)
+
+- `267-FR-002` — superseded by `1356-FR-009` (2026-10-20)
+- `043-FR-009` — superseded by `1356-FR-009` (2026-10-20)

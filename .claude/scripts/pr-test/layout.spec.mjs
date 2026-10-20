@@ -196,6 +196,32 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: sheet, at: 'desktop' }), 'overlap')).toEqual(['button#under × div#sheet']);
     });
 
+    it('passes a control its ancestor clips away from the one drawn there, and faults it when drawn', async () => {
+      const page = (overflow) => `<div style="height:100px;overflow:${overflow}"><div style="height:150px"></div><button id="cut" style="width:200px;height:48px">Cut</button></div>
+        <button id="below" style="width:200px;height:48px;margin-top:40px">Below</button>`;
+      expect(of(await measure(null, { html: page('hidden'), at: 'desktop' }), 'overlap')).toEqual([]);
+      expect(selectors(await measure(null, { html: page('visible'), at: 'desktop' }), 'overlap')).toEqual(['button#cut × button#below']);
+    });
+
+    it('faults an absolute control drawn outside a clipping box that is not its containing block', async () => {
+      const page = `<div style="height:100px;overflow:hidden"><button id="out" style="position:absolute;top:150px;left:8px;width:200px;height:48px">Out</button></div>
+        <button id="below" style="width:200px;height:48px;margin-top:50px">Below</button>`;
+      expect(selectors(await measure(null, { html: page, at: 'desktop' }), 'overlap')).toEqual(['button#out × button#below']);
+      const held = page.replace('overflow:hidden', 'overflow:hidden;position:relative');
+      expect(of(await measure(null, { html: held, at: 'desktop' }), 'overlap')).toEqual([]);
+      for (const holder of ['filter:blur(0)', 'backdrop-filter:blur(1px)', 'translate:0 1px', 'rotate:1deg', 'scale:1.01', 'contain:paint', 'will-change:transform', 'perspective:10px']) {
+        const by = page.replace('overflow:hidden', `overflow:hidden;${holder}`);
+        expect(of(await measure(null, { html: by, at: 'desktop' }), 'overlap')).toEqual([]);
+      }
+    });
+
+    it('clips a fixed control only inside a transformed ancestor', async () => {
+      const page = (extra) => `<div style="height:100px;overflow:hidden;${extra}"><button id="pinned" style="position:fixed;top:158px;left:8px;width:200px;height:48px">Pinned</button></div>
+        <button id="below" style="position:fixed;top:166px;left:8px;width:200px;height:48px">Below</button>`;
+      expect(selectors(await measure(null, { html: page(''), at: 'desktop' }), 'overlap')).toEqual(['button#pinned × button#below']);
+      expect(of(await measure(null, { html: page('transform:translateZ(0)'), at: 'desktop' }), 'overlap')).toEqual([]);
+    });
+
     it('passes a button inside a link card and two buttons side by side', async () => {
       expect(of(await measure('overlap-pass', { at: 'desktop' }), 'overlap')).toEqual([]);
     });

@@ -123,7 +123,7 @@ describe('problem answers over HTTP', () => {
     expect(second.status).toBe(200);
   });
 
-  it.each(['0', '-1', '13', '1.5', 'abc', '', '1e9', '99999999999999999999'])(
+  it.each(['0', '-1', '17', '1.5', 'abc', '', '1e9', '99999999999999999999'])(
     'answers popular brands with limit %j as 400 without a public policy',
     async (limit) => {
       const res = await get(`/api/v1/brands/popular?limit=${limit}`);

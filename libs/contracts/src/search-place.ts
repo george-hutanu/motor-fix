@@ -7,8 +7,10 @@ export const SEARCH_RADIUS_DEFAULT_KM = 25;
 export const SEARCH_RADII = [SEARCH_RADIUS_DEFAULT_KM, 50] as const;
 export type SearchRadius = (typeof SEARCH_RADII)[number];
 
-// The garages one page of results shows, and a live re-read or stream names.
-export const SEARCH_IDS_MAX = 20;
+// The garages one page of results shows.
+export const SEARCH_PAGE_SIZE = 20;
+// The garages a live re-read or stream names: one page's worth.
+export const SEARCH_IDS_MAX = SEARCH_PAGE_SIZE;
 // About 100 m: one spot gives one request, so a cached answer is shared.
 const PLACE_DECIMALS = 3;
 

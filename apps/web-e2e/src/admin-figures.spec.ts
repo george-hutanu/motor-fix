@@ -17,6 +17,7 @@ async function signInAsAdmin(page: Page) {
       .click();
   } else {
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
   }

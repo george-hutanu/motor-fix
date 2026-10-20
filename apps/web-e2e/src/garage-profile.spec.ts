@@ -127,7 +127,9 @@ test.describe('the public garage profile @seeded', () => {
       page.getByRole('button', { exact: true, name: 'Cont' }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { exact: true, name: 'Autentificare' }),
+      page
+        .getByRole('banner')
+        .getByRole('button', { exact: true, name: 'Autentificare' }),
     ).toBeHidden();
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });

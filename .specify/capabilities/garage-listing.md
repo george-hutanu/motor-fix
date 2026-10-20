@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -30,6 +30,7 @@ features:
   - 386-brand-price-range
   - 271-garage-distance
   - 1191-resilient-uploads
+  - 1359-signup-survey
 ---
 
 # Capability: Garage listing
@@ -497,17 +498,17 @@ _From 110-workshop-photos._
 ### 110-FR-019 — Tests MUST cover, in Jest on real PostgreSQL and Redis with the test store: an upload address issued only to a valid draft token (a wrong, foreign, missing token and a `submitted` draft refused, nothing issued); a disallowed type, a file above 10 MB and the 21st photo refused with stable codes; a HEIC declaration refused and a non-photo refused at confirm; the order saved by a save and restored by the read, a foreign key in a save refused; the delete removing the key, the object and its copies; a save leaving out a held key keeping it; the 21st photo refused at the upload address and at confirm; the processing removing location data from the copies (a JPEG fixture with GPS tags), making the two sizes and recording the dimensions; the gallery rows created in order by the sending call. Unit tests in the web app cover the drop area wording by kind of business, the pointer and keyboard reorder, the cover mark, the refusal messages and the offline queue. A Playwright end-to-end test MUST upload 3 photos, move the last to the first place, reload and check the order, then remove one and check it is gone, at the sweep's sizes.
 
 _From 110-workshop-photos._
-### 885-FR-001 — On restore, a stored browser draft MUST be checked by the same draft-data rule the server applies on save (`isListingDraftData` in the contracts library: the envelope `steps`, `survey`, `files` and nothing else, every step section under a known step 1–6 and passing that step's guard, `files` a list of well-formed file keys, `survey` an object), in addition to the envelope checks already made (step, language, dirty flag, optional token, draft id and e-mail). The copy fetched from the server is not checked again in the browser: the server validated it on save.
+### 1359-FR-008 — The draft's `survey` section MUST be typed and guarded in the contracts library as an object with at most the keys `mechanicsCount` ∈ `0`, `1-2`, `3-5`, `6+`; `liftsCount` ∈ `0`, `1`, `2-3`, `4+`; `wantsLiveMedia` and `wantsDaySheets` boolean; `foundVia` ∈ `google`, `client`, `garage`, `social`, `other`; every key optional (answers arrive one at a time); any other key or value MUST fail the shared draft-data rule (885-FR-001, 885-FR-004), so the server refuses the save with 400 and the browser restores nothing from such a copy.
 
-_From 885-restored-draft-check._
+_From 1359-signup-survey._
 
 ### 885-FR-002 — A stored entry whose data fails that rule MUST be treated as no browser copy at all: the page opens as it would with nothing stored (an empty form at step 1; a continue link still takes the server copy), its token is not used, and nothing is thrown to the owner.
 
 _From 885-restored-draft-check._
 
-### 885-FR-004 — The rule applied in the browser and the rule applied by the server MUST be one rule, not a browser-side copy: the same fixtures get the same verdict on both sides.
+### 1359-FR-008 — The draft's `survey` section MUST be typed and guarded in the contracts library as an object with at most the keys `mechanicsCount` ∈ `0`, `1-2`, `3-5`, `6+`; `liftsCount` ∈ `0`, `1`, `2-3`, `4+`; `wantsLiveMedia` and `wantsDaySheets` boolean; `foundVia` ∈ `google`, `client`, `garage`, `social`, `other`; every key optional (answers arrive one at a time); any other key or value MUST fail the shared draft-data rule (885-FR-001, 885-FR-004), so the server refuses the save with 400 and the browser restores nothing from such a copy.
 
-_From 885-restored-draft-check._
+_From 1359-signup-survey._
 
 ### 885-FR-005 — Tests MUST cover, in colocated Jest specs: each refused shape of FR-001 (an extra envelope key, an unknown step key, a step section failing its guard, bad `files`, a non-object `survey`) restoring nothing and throwing nothing; a passing draft, a dirty passing draft with a token and an empty `{}` data restoring as today; and the same fixtures judged alike by the browser restore and the server rule (FR-004).
 
@@ -840,9 +841,9 @@ _From 115-listing-checklist._
 
 _From 115-listing-checklist._
 
-### 115-FR-009 — With no error in the browser, the button MUST save the server copy at once, creating it first when none exists (as "Salvează ciorna" does, 114-FR-005; a failed or refused create shows the failed-call text below and calls no check), ask the server to check the draft (FR-010) and show its reply: 422 is shown exactly as the browser's own errors (FR-006–FR-008), 200 shows "Totul e complet" / "Everything is complete" in the summary's place (the same live region announces it; focus stays on the button) with the reply's warnings under their fields, and a failed call shows "Nu am putut verifica. Încearcă din nou." / "We could not check. Try again." with the draft kept. The button MUST be disabled while a check is in flight. What happens after a 200 (the survey, the account, the file) is ST-116's and this story MUST NOT change the draft's status or the page beyond that notice.
+### 1359-FR-001 — The complete notice of the List your garage page (115-FR-009's "Totul e complet") MUST carry the button "SPUNE-NE CUM LUCREZI" / "TELL US HOW YOU WORK", which opens the survey; the button MUST go with the notice when the notice goes (a change typed after the check).
 
-_From 115-listing-checklist._
+_From 1359-signup-survey._
 
 ### 115-FR-010 — The API MUST serve `POST /api/v1/listing-drafts/{id}/check` to whoever holds the draft, under the same holder rule and 409 `draft_submitted` as a save (114-FR-007); it has no rate limit of its own (a save has none either; the create counter of 114-FR-021 is for creation). It MUST run the rule set of FR-001 on the stored server copy (not on a request body), add the server-only CUI warning (FR-005) and answer 200 with `{ warnings }` or 422 `listing_incomplete` with `errors` (the same field paths and codes the browser produces) and `warnings`. It MUST write nothing: no draft field, no garage table, no audit entry, no event, no e-mail (114-FR-018). The sending story's write MUST be able to call the same rule function and refuse the same way; this story adds no other route.
 
@@ -991,6 +992,62 @@ _From 1191-resilient-uploads._
 
 _From 1191-resilient-uploads._
 
+### 1359-FR-002 — The survey MUST be a view of the List your garage page at the same address, replacing the form, with seven screens in order: the intro, four feature questions, the source question and the summary; a progress line and five segments MUST show which question of five is on screen; "Înapoi" / "Back" on every screen MUST go to the previous one, and from the intro to the form.
+
+_From 1359-signup-survey._
+
+### 1359-FR-003 — The intro MUST show the texts of scenario 2 of User Story 1 and "ÎNCEPE" / "START"; each question MUST show its eyebrow ("ECHIPĂ", "ELEVATOARE", "POZE ȘI VIDEO", "FOI DE LUCRU", "ULTIMA ÎNTREBARE"), its question text and its answers exactly as the Build brief and the mock give them, in Romanian and in English.
+
+_From 1359-signup-survey._
+
+### 1359-FR-004 — Each question MUST offer its answers as one radio group (`role="radiogroup"`, options `role="radio"` with `aria-checked`, one picked at a time, Tab reaches the group and the arrow keys move and pick); the forward button ("CONTINUĂ" / "CONTINUE", on the fifth question "VEZI REZUMATUL" / "SEE SUMMARY") MUST stay disabled until an answer is picked.
+
+_From 1359-signup-survey._
+
+### 1359-FR-005 — Each of the four feature questions MUST show a static mockup of the feature in the Cockpit style (the mock's team list, lift timeline, live photos and day sheet, as markup, no live data and no image file) and its "EXEMPLU" / "EXAMPLE" line, and a feature line that reads the feature's name with "Pornit" / "On" or "Oprit" / "Off" as soon as an answer is picked ("Alege un răspuns" / "Pick an answer" before).
+
+_From 1359-signup-survey._
+
+### 1359-FR-006 — One rule, in the contracts library, MUST map the answers to the five starting features, used by the summary and by `applySurvey` alike: `team_mechanics` off when `mechanicsCount` is `0`, else on; `lift_schedule` off when `liftsCount` is `0`, else on; `live_media` = `wantsLiveMedia`; `day_sheets` = `wantsDaySheets`; `whatsapp` always on; `foundVia` changes nothing.
+
+_From 1359-signup-survey._
+
+### 1359-FR-007 — The summary MUST list the five features of FR-006 with their state, day sheets and WhatsApp as two lines (the mock's "Foi de lucru și WhatsApp" split), the two closing lines of scenario 10 and the button "CREEAZĂ CONTUL" / "CREATE ACCOUNT".
+
+_From 1359-signup-survey._
+
+### 1359-FR-009 — Each picked answer MUST be written to the draft's `survey` section in the browser copy at once and a server save MUST be requested on the pick (the keeper's save, as "Salvează ciorna" does) without waiting for it: the next question shows at once; a save that fails MUST NOT block the next question, and the keeper's next save MUST carry the answers.
+
+_From 1359-signup-survey._
+
+### 1359-FR-010 — On restore (browser copy or continue link), the page MUST open the survey instead of the form when the draft's `survey` section holds at least one answer, at the first unanswered question in the order of FR-002, or at the summary when all five are answered; with no answer the form opens as today. No position is stored.
+
+_From 1359-signup-survey._
+
+### 1359-FR-011 — "CREEAZĂ CONTUL" MUST save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary; a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." and keep the answers; the button MUST be disabled while the save is in flight. Both notices MUST sit in a live region (`role="status"` for saved, `role="alert"` for failed) so assistive technology announces them, and neither moves focus. It MUST NOT create an account, a garage or change the draft's status: that is ST-116, which replaces this press.
+
+_From 1359-signup-survey._
+
+### 1359-FR-012 — The `garages` module MUST expose a use case `applySurvey(tx, { garageId, answers, actorId })` that, inside the transaction it is given, writes one GARAGE_SURVEY row (garage, `mechanicsCount`, `liftsCount`, `wantsLiveMedia`, `wantsDaySheets`, `foundVia`, `answeredAt` = now) and five GARAGE_FEATURE rows set by FR-006, and records one `create` audit entry per feature row (subject type `garage_feature`, subject id and garage id the garage, field the feature key, new value `true`/`false`, the actor with role `owner`); it MUST throw on answers that fail FR-008's rule or miss one of the five, and throw a conflict `survey_already_answered` when the garage already has a survey row, writing nothing in either case. It has no HTTP route of its own.
+
+_From 1359-signup-survey._
+
+### 1359-FR-013 — GARAGE_SURVEY MUST be a new table with one row per garage (the garage its key), removed with the garage; GARAGE_FEATURE stays the existing table; a migration MUST add the survey table.
+
+_From 1359-signup-survey._
+
+### 1359-FR-014 — Every text of the survey MUST follow the page's language (the frame's RO / EN switch) and switch without losing an answer; the screen stays, or, when the switch re-creates the page, is the one FR-010 derives; the Romanian and English strings MUST be the mock's.
+
+_From 1359-signup-survey._
+
+### 1359-FR-015 — Every screen of the survey MUST fit a 320 px and a 390 px phone, a tablet and a desktop without sideways scrolling, in light and dark, and MUST move focus to the new screen's heading on a forward or back press; any screen transition MUST be skipped under `prefers-reduced-motion`; the mock's phone layout (one column, the mockup above the answers, the buttons at the bottom) applies below the shared phone breakpoint.
+
+_From 1359-signup-survey._
+
+### 1359-FR-016 — Tests MUST cover, in colocated Jest specs: FR-006 with one test per answer and `whatsapp` always on; FR-008's accepted and refused shapes on the server rule and the browser restore; FR-010's opening position for no answer, two answers and five; FR-004's disabled forward button; FR-011's saved and failed notices; and `applySurvey` against PostgreSQL (the six rows, the five audit entries, the second-survey conflict, the roll-back, the refused answers). A Playwright test MUST answer "Doar eu", "Niciunul", "Da", "Nu, deocamdată" and "Căutare pe Google" from a complete listing, read the summary (team off, lifts off, media on, day sheets off, WhatsApp on), press "CREEAZĂ CONTUL" and read the saved notice; the account and the five features in the API are ST-116's end-to-end step.
+
+_From 1359-signup-survey._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -1020,3 +1077,7 @@ _From 1191-resilient-uploads._
 - `397-FR-004` — superseded by `115-FR-002` (2026-10-11)
 - `110-FR-013` — superseded by `1191-FR-001` (2026-10-18)
 - `110-FR-002` — superseded by `1191-FR-007` (2026-10-18)
+
+- `115-FR-009` — superseded by `1359-FR-001` (2026-10-20)
+- `885-FR-001` — superseded by `1359-FR-008` (2026-10-20)
+- `885-FR-004` — superseded by `1359-FR-008` (2026-10-20)

@@ -66,3 +66,100 @@ describe('a refused legal check read', () => {
     ]);
   });
 });
+
+const file = {
+  checks: [
+    { detail: null, kind: 'company', recordedAt: null, result: 'ok' },
+    { detail: null, kind: 'caen', recordedAt: null, result: 'ok' },
+    { detail: null, kind: 'rar', recordedAt: null, result: 'ok' },
+  ],
+  documents: [
+    { kind: 'onrc_certificate', status: 'valid' },
+    { kind: 'rar_authorisation', status: 'valid' },
+  ],
+};
+
+const garage = (over: Record<string, unknown> = {}) => ({
+  businessKind: 'workshop',
+  lastCheckedOn: new Date('2026-08-10T00:00:00Z'),
+  name: 'ATELIER DINAMO SRL',
+  rarActivities: [],
+  rechecks: [],
+  status: 'approved',
+  suspensions: [],
+  verificationFiles: [file],
+  ...over,
+});
+
+const failedRecheck = {
+  checkedOn: new Date('2026-09-12T00:00:00Z'),
+  detail: 'Autorizația a expirat la 31 august',
+  failure: 'expired',
+  result: 'failed',
+};
+
+// @traces 1354-FR-001 1354-FR-002
+describe('the legal check read of a suspended garage', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('answers with its status and its latest re-check', async () => {
+    const answer = await service(
+      garage({
+        rechecks: [failedRecheck],
+        status: 'suspended',
+        suspensions: [{ cause: 'admin' }],
+      }),
+    ).read(actor('garage'), garageId);
+    expect(answer).toMatchObject({
+      lastCheckedOn: '2026-08-10',
+      latestRecheck: {
+        checkedOn: '2026-09-12',
+        detail: 'Autorizația a expirat la 31 august',
+        failure: 'expired',
+        result: 'failed',
+      },
+      status: 'suspended',
+    });
+  });
+
+  it('answers an approved garage never re-checked with no re-check', async () => {
+    const answer = await service(garage()).read(actor('garage'), garageId);
+    expect(answer).toMatchObject({ latestRecheck: null, status: 'approved' });
+  });
+
+  it('is not found for a draft garage', async () => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    await expect(
+      service(garage({ status: 'draft' })).read(actor('garage'), garageId),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+// @traces 1354-FR-004
+describe('the RAR row of the legal check read', () => {
+  it('shows the failed re-check when it caused the open suspension', async () => {
+    const { rows } = await service(
+      garage({
+        rechecks: [failedRecheck],
+        status: 'suspended',
+        suspensions: [{ cause: 'recheck_failed' }],
+      }),
+    ).read(actor('garage'), garageId);
+    expect(rows[2]).toMatchObject({
+      checkedOn: '2026-09-12',
+      detail: 'Autorizația a expirat la 31 august',
+      state: 'failed',
+    });
+  });
+
+  it('is the ordinary row when an admin suspended the garage', async () => {
+    const { rows } = await service(
+      garage({
+        rechecks: [failedRecheck],
+        status: 'suspended',
+        suspensions: [{ cause: 'admin' }],
+      }),
+    ).read(actor('garage'), garageId);
+    expect(rows[2]).toMatchObject({ checkedOn: '2026-08-10', state: 'ok' });
+  });
+});

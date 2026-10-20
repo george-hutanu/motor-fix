@@ -60,6 +60,7 @@ const accept = (page: Page) =>
 
 async function signedIn(page: Page) {
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, DRIVER);

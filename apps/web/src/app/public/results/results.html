@@ -1,6 +1,7 @@
 <header class="intro">
   @if (answer(); as answer) {
-    <h1>{{ 'public.results.title' | t: { brand: answer.brand.name } }}</h1>
+    <!-- Re-created for another brand, whose name blurs in once it lands. -->
+    <h1 class="title" [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ 'public.results.title' | t: { brand: shown.name } }}</span>}</h1>
     <p class="summary">
       @if (answer.total > 0) {
         <span class="tally" [mfLiveChange]="tally()">{{ tally() }}</span>
@@ -22,6 +23,8 @@
       <span class="line skeleton" aria-hidden="true"></span>
     </h1>
   }
+  <!-- On a phone the map's own line would sit under the sheet. -->
+  <p class="unavailable" role="status" aria-live="polite">@if (phone() && mapFailed()) {{{ 'public.results.map.unavailable' | t }}}</p>
   <p class="locating" role="status">@if (state() === 'locating') {{{ 'public.results.locating' | t }}}</p>
   @if (state() === 'placeless') {
     <h1>{{ 'public.results.placeTitle' | t }}</h1>
@@ -48,71 +51,114 @@
     (picked)="picked($event)"
   />
 }
-<div class="found">
-  <!-- The location being asked loads the page as a search would. -->
-  @switch (state() === 'locating' ? 'loading' : state()) {
-    @case ('loading') {
-      <div class="cards" aria-busy="true">
-        @for (card of skeletons; track card) {
-          <div class="card skeleton" aria-hidden="true"></div>
-        }
-      </div>
-    }
-    @case ('list') {
-      @if (answer(); as answer) {
-        <ul class="cards" [attr.aria-label]="'public.results.list' | t">
-          @for (garage of answer.items; track garage.id) {
-            <li
-              [class.leaving]="leaving().has(garage.id)"
-              [mfLiveChange]="garage"
-              [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
-            >
-              <mf-result-card
-                [brand]="answer.brand"
-                [garage]="garage"
-                [selected]="selected() === garage.id"
-                (point)="point(garage.id, $event)"
-                (pick)="select(garage.id)"
-              />
-            </li>
+<mf-results-sheet [forcedFull]="mapFailed()">
+  @if (brand() && state() !== 'placeless') {
+    <div class="brands">
+      <mf-brand-chips
+        [brand]="brand()"
+        [answered]="answer()?.brand"
+        [picked]="chosenBrand()"
+        (pick)="changeBrand($event)"
+      />
+      <mf-brand-search (chosen)="chooseBrand($event)" />
+    </div>
+  }
+  <div #found class="found">
+    <!-- The location being asked loads the page as a search would. -->
+    @switch (state() === 'locating' ? 'loading' : state()) {
+      @case ('loading') {
+        <div class="cards" aria-busy="true">
+          @for (card of skeletons; track card) {
+            <div class="card skeleton" aria-hidden="true"></div>
           }
-        </ul>
+        </div>
+      }
+      @case ('list') {
+        @if (answer(); as answer) {
+          @if (swapping()) {
+            <div
+              class="progress"
+              role="progressbar"
+              [attr.aria-label]="changing()"
+            ></div>
+          }
+          <ul
+            class="cards"
+            [class.swapping]="swapping()"
+            [class.rising]="rising()"
+            [attr.inert]="swapping() ? '' : null"
+            [attr.aria-label]="'public.results.list' | t"
+          >
+            @for (garage of answer.items; track garage.id) {
+              <li
+                [class.leaving]="leaving().has(garage.id)"
+                [mfLiveChange]="garage"
+                [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
+              >
+                <mf-result-card
+                  [brand]="answer.brand"
+                  [garage]="garage"
+                  [selected]="selected() === garage.id"
+                  (point)="point(garage.id, $event)"
+                  (pick)="select(garage.id)"
+                />
+              </li>
+            }
+          </ul>
+          @if (paging() === 'loading') {
+            <div class="cards later" aria-hidden="true">
+              @for (card of pageSkeletons; track card) {
+                <div class="card skeleton"></div>
+              }
+            </div>
+          }
+          @if (canLoad()) {
+            <button type="button" class="more primary" [attr.aria-busy]="paging() === 'loading'" (click)="press()">
+              @if (paging() === 'failed') {
+                {{ 'public.results.retry' | t }}
+              } @else {
+                {{ 'public.results.more' | t }}
+              }
+            </button>
+          }
+          <p #endLine class="end" role="status" tabindex="-1">{{ ending() }}</p>
+        }
+      }
+      @case ('empty') {
+        <section class="state" aria-live="polite">
+          <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
+          <div class="actions">
+            @if (widen(); as wide) {
+              <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>
+            }
+            <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
+          </div>
+        </section>
+      }
+      @case ('failed') {
+        <section class="state" role="alert">
+          <h1>{{ 'public.results.failed' | t }}</h1>
+          <div class="actions">
+            <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
+          </div>
+        </section>
+      }
+      @case ('limited') {
+        <section class="state" role="alert">
+          <h1>{{ limited() }}</h1>
+          <div class="actions">
+            <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
+          </div>
+        </section>
+      }
+      @case ('missing') {
+        <section class="state" role="alert">
+          <h1>{{ 'public.results.failed' | t }}</h1>
+          <div class="actions">
+            <a class="primary" [routerLink]="['/', i18n.language()]">{{ 'public.results.newSearch' | t }}</a>
+          </div>
+        </section>
       }
     }
-    @case ('empty') {
-      <section class="state" aria-live="polite">
-        <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
-        <div class="actions">
-          @if (widen(); as wide) {
-            <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>
-          }
-          <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
-        </div>
-      </section>
-    }
-    @case ('failed') {
-      <section class="state" role="alert">
-        <h1>{{ 'public.results.failed' | t }}</h1>
-        <div class="actions">
-          <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
-        </div>
-      </section>
-    }
-    @case ('limited') {
-      <section class="state" role="alert">
-        <h1>{{ limited() }}</h1>
-        <div class="actions">
-          <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
-        </div>
-      </section>
-    }
-    @case ('missing') {
-      <section class="state" role="alert">
-        <h1>{{ 'public.results.failed' | t }}</h1>
-        <div class="actions">
-          <a class="primary" [routerLink]="['/', i18n.language()]">{{ 'public.results.newSearch' | t }}</a>
-        </div>
-      </section>
-    }
-  }
-</div>
+  </div>
+</mf-results-sheet>

@@ -979,6 +979,9 @@ test.describe('the brand strip @seeded', () => {
     const first = strip.getByRole('button').nth(2);
     const name = (await first.textContent())?.trim() ?? '';
 
+    // The strip moves until a brand in it holds focus, and a click waits for
+    // a still target: focus holds it, as it does for a keyboard user.
+    await first.focus();
     await first.click();
 
     await expect(tile(page, name)).toHaveAttribute('aria-checked', 'true');

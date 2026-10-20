@@ -4,7 +4,7 @@ import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
 import type { GarageSearchCache } from './garage-search.cache';
-import { GarageSearchService } from './garage-search.service';
+import { GarageSearchService, groupPageSql } from './garage-search.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { Prisma } from '../../generated/prisma/client';
 import {
@@ -948,6 +948,23 @@ describe('the list of a box on the map', () => {
       ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
     });
 
+    // @traces 1356-FR-009
+    it("makes a cursor within the query's 256 characters at the largest review count", async () => {
+      await prisma.garage.updateMany({
+        data: { rating: 4.5, reviewCount: 2_147_483_647 },
+        where: { name: { startsWith: 'Garage ' } },
+      });
+      const page = await search.forBrand(dacia, undefined, CLUJ, 25, false, {
+        east: 23.999,
+        north: 46.999,
+        south: 46.555,
+        west: 23.555,
+      });
+
+      expect(page.nextCursor?.length).toBeLessThanOrEqual(256);
+      expect(page.nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
+    });
+
     it('refuses a cursor of the circle search in a box', async () => {
       const circle = (await search.forBrand(dacia, undefined, CLUJ)).nextCursor;
 
@@ -988,5 +1005,188 @@ describe('the list of a box on the map', () => {
 
     expect(page.items.map((item) => item.id)).toEqual([near]);
     expect(page.total).toBe(2);
+  });
+});
+
+const decoded = (cursor: string | null) =>
+  JSON.parse(Buffer.from(cursor ?? '', 'base64url').toString());
+
+// 48 garages in one strict order, the takers spread through it: n-th has the
+// n-th rating from the top and fewer reviews than the one before it.
+async function ranked48() {
+  const ids: string[] = [];
+  for (let n = 0; n < 48; n += 1) {
+    ids.push(
+      await rated(
+        `Garage ${String(n).padStart(2, '0')}`,
+        Math.max(1, (50 - n) / 10),
+        (n * 7) % 48 < 31 ? 'works_on' : undefined,
+        100 - n,
+      ),
+    );
+  }
+  return ids;
+}
+
+const firstSeen = (pages: Page[]) => [
+  ...new Map(
+    pages.flatMap((page) => page.items).map((item) => [item.id, item]),
+  ).values(),
+];
+
+// @traces 1356-FR-009 1356-FR-011
+describe('paging a list that changes between pages', () => {
+  it("carries the boundary garage's rating and review count in the cursor", async () => {
+    await ranked48();
+
+    const first = await search.forBrand(dacia);
+    const last = first.items.at(-1);
+
+    expect(decoded(first.nextCursor)).toMatchObject({
+      c: last?.reviewCount,
+      r: last?.rating?.toFixed(1),
+    });
+  });
+
+  it('starts the next page where the last one ended when the boundary garage and another drop in rating', async () => {
+    await ranked48();
+    const order = firstSeen(await everyPage(dacia)).map((item) => item.id);
+    const first = await search.forBrand(dacia);
+    const boundary = first.items[19]?.id;
+    const other = first.items[5]?.id;
+    for (const [id, reviewCount] of [
+      [boundary, 1],
+      [other, 2],
+    ] as const) {
+      await prisma.garage.update({
+        data: { rating: 1, reviewCount },
+        where: { id },
+      });
+    }
+
+    const pages = [first];
+    while (pages.at(-1)?.nextCursor && pages.length < 10) {
+      pages.push(
+        await search.forBrand(dacia, pages.at(-1)?.nextCursor ?? undefined),
+      );
+    }
+    const ids = pages.flatMap((page) => page.items.map((item) => item.id));
+    const repeated = ids.filter((id, i) => ids.indexOf(id) !== i);
+
+    expect(pages[1]?.items[0]?.id).toBe(order[20]);
+    expect(new Set(ids)).toEqual(new Set(order));
+    expect(new Set(repeated)).toEqual(new Set([boundary, other]));
+  });
+
+  it('repeats and skips nothing when the boundary garage rises to the top', async () => {
+    await ranked48();
+    const order = firstSeen(await everyPage(dacia)).map((item) => item.id);
+    const first = await search.forBrand(dacia);
+    await prisma.garage.update({
+      data: { rating: 5, reviewCount: 500 },
+      where: { id: first.items[19]?.id },
+    });
+
+    const pages = [first];
+    while (pages.at(-1)?.nextCursor && pages.length < 10) {
+      pages.push(
+        await search.forBrand(dacia, pages.at(-1)?.nextCursor ?? undefined),
+      );
+    }
+    const ids = pages.flatMap((page) => page.items.map((item) => item.id));
+
+    expect(ids).toEqual(order);
+  });
+
+  it('keeps every garage that takes the brand before the others across the pages', async () => {
+    await ranked48();
+
+    const items = firstSeen(await everyPage(dacia));
+    const firstOther = items.findIndex((item) => item.stance !== 'works_on');
+
+    expect(items.length).toBe(48);
+    expect(firstOther).toBe(31);
+    expect(items.slice(firstOther).some((i) => i.stance === 'works_on')).toBe(
+      false,
+    );
+  });
+});
+
+// @traces 1356-FR-009 1356-FR-010
+describe('refuses a cursor without the order values of its boundary', () => {
+  let cursor: string;
+
+  beforeEach(async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await rated(`Garage ${String(n).padStart(2, '0')}`, 4, 'works_on', 1);
+    }
+    cursor = (await search.forBrand(dacia)).nextCursor ?? '';
+  });
+
+  it.each([
+    ['with no rating', () => tamper(cursor, { r: undefined })],
+    ['with no review count', () => tamper(cursor, { c: undefined })],
+    ['with a rating that is not one', () => tamper(cursor, { r: 'high' })],
+    ['with a rating out of range', () => tamper(cursor, { r: '9.5' })],
+    ['with a negative review count', () => tamper(cursor, { c: -1 })],
+    ['with a fractional review count', () => tamper(cursor, { c: 1.5 })],
+    [
+      'with a review count past the column',
+      () => tamper(cursor, { c: 2_147_483_648 }),
+    ],
+  ])('%s', async (_, cursorOf) => {
+    expect(await refusal(search.forBrand(dacia, cursorOf()))).toMatchObject({
+      body: { code: 'invalid_cursor' },
+      status: 400,
+    });
+  });
+});
+
+// @traces 1356-FR-010
+describe('the pages after the first', () => {
+  it('write no search log row and count no search', async () => {
+    await ranked48();
+    const results = await searches('results');
+
+    const first = await search.forBrand(
+      dacia,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    const second = await search.forBrand(dacia, first.nextCursor ?? undefined);
+    await search.forBrand(dacia, second.nextCursor ?? undefined);
+    await settled();
+
+    expect(await prisma.searchLog.count()).toBe(1);
+    expect(await searches('results')).toBe(results + 1);
+  });
+});
+
+// @traces 1356-FR-015
+describe('the order index', () => {
+  it('reads a page with no area from garage_list_order_idx', async () => {
+    const seed = await rated('Garage seed', 4, 'works_on', 3);
+    await prisma.$executeRaw`
+      INSERT INTO garage
+      SELECT (jsonb_populate_record(g, jsonb_build_object(
+        'id', gen_random_uuid(),
+        'name', 'Garage ' || n,
+        'slug', g.slug || '-' || n,
+        'rating', 1 + (n % 41) / 10.0,
+        'review_count', 1 + n % 500
+      ))).*
+      FROM garage g, generate_series(1, 10000) n
+      WHERE g.id = ${seed}::uuid`;
+    await prisma.$executeRaw`ANALYZE garage`;
+
+    const [plan] = await prisma.$queryRaw<
+      unknown[]
+    >`EXPLAIN (FORMAT JSON) ${groupPageSql(dacia, 'other', undefined, {
+      take: 21,
+    })}`;
+
+    expect(JSON.stringify(plan)).toContain('garage_list_order_idx');
   });
 });

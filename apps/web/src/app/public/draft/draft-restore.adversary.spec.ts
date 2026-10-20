@@ -151,13 +151,14 @@ describe('restoring a stored draft with hostile form data', () => {
 });
 
 describe('restoring a valid stored draft', () => {
-  it('keeps unicode and a deep survey exactly as stored', () => {
+  it('keeps unicode and the survey answers exactly as stored', () => {
     const data = {
       files: [FILE],
-      steps: { '1': { name: 'Șerban Îngrijire Auto ăâîșț' } },
+      steps: { '1': { name: 'Șerban Îngrijire Auto ăâîșț 日本語' } },
       survey: {
-        heard: ['a', { deep: { deeper: [1, 2, null] } }],
-        note: '日本語',
+        foundVia: 'other',
+        mechanicsCount: '6+',
+        wantsDaySheets: false,
       },
     };
     const { draft } = restore(data, { step: 6 });

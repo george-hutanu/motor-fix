@@ -111,8 +111,10 @@ describe('who am I, at the garages I work at', () => {
       {
         features: {},
         garageId: atelier.id,
+        lastCheckedOn: null,
         name: 'Atelier Test',
         permissions: ALL,
+        rechecked: false,
         role: 'owner',
         status: 'draft',
         suspension: null,
@@ -172,12 +174,14 @@ describe('who am I, at the garages I work at', () => {
       {
         features: {},
         garageId: atelier.id,
+        lastCheckedOn: null,
         name: 'Atelier Test',
         permissions: {
           canAnswerQuotes: true,
           canMoveBookings: false,
           canRecordFinalPrice: false,
         },
+        rechecked: false,
         role: 'mechanic',
         status: 'draft',
         suspension: null,
@@ -311,6 +315,70 @@ describe('who am I, at a suspended garage', () => {
     expect(
       await prisma.mechanic.count({ where: { garageId: atelier.id } }),
     ).toBe(1);
+  });
+});
+
+// @traces 1354-FR-005
+describe('who am I, with the garage’s last RAR check', () => {
+  const checked = async (on: string) => {
+    const staff = await garage();
+    await prisma.garage.update({
+      data: { lastCheckedOn: new Date(on), status: 'approved' },
+      where: { id: staff.atelier.id },
+    });
+    return staff;
+  };
+  const recheck = (garageId: string, on: string, result: 'ok' | 'failed') =>
+    prisma.recheck.create({
+      data: {
+        checkedOn: new Date(on),
+        detail: result === 'failed' ? 'Autorizația a expirat' : null,
+        failure: result === 'failed' ? 'expired' : null,
+        garageId,
+        // Recorded in day order; two rows written in one millisecond would tie.
+        recordedAt: new Date(`${on}T12:00:00Z`),
+        result,
+      },
+    });
+
+  it('answers the stored day, not yet re-checked, before any re-check', async () => {
+    const { owner } = await checked('2026-06-14');
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageAccess[0]).toMatchObject({
+      lastCheckedOn: '2026-06-14',
+      rechecked: false,
+    });
+  });
+
+  it('answers re-checked to the owner and the receptionist after an ok re-check', async () => {
+    const { atelier, owner, receptionist } = await checked('2026-10-01');
+    await recheck(atelier.id, '2026-10-01', 'ok');
+
+    for (const [who, role] of [
+      [owner, 'garage'],
+      [receptionist, 'receptionist'],
+    ] as const) {
+      const res = await me(who, role);
+      expect(res.body.garageAccess[0]).toMatchObject({
+        lastCheckedOn: '2026-10-01',
+        rechecked: true,
+      });
+    }
+  });
+
+  it('answers not re-checked when the latest re-check failed', async () => {
+    const { atelier, owner } = await checked('2026-08-10');
+    await recheck(atelier.id, '2026-08-10', 'ok');
+    await recheck(atelier.id, '2026-09-12', 'failed');
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageAccess[0]).toMatchObject({
+      lastCheckedOn: '2026-08-10',
+      rechecked: false,
+    });
   });
 });
 

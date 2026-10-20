@@ -84,6 +84,48 @@ const same = (a: ResponseFigures, b: ResponseFigures) =>
   a.lifetimeRequests === b.lifetimeRequests &&
   a.rate === b.rate;
 
+// Takes the garage's lock for this write. A garage deleted since the count
+// has no row left to point at, and answers false; the key-share lock keeps
+// one still there from going until the write commits.
+async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('garage_response_stats'), hashtext(${garageId}))`;
+  const kept = await tx.$queryRaw<unknown[]>`
+    SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR KEY SHARE`;
+  return kept.length > 0;
+}
+
+// One garage's write: its row when the figures moved, and an event when what
+// the profile shows moved with them.
+async function writeGarage(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+  next: ResponseFigures,
+  now: Date,
+) {
+  if (!(await lockGarage(tx, garageId))) return false;
+  const before = await tx.garageResponseStats.findUnique({
+    where: { garageId },
+  });
+  if (before && same(before, next)) return false;
+  const row = { ...next, computedAt: now };
+  await tx.garageResponseStats.upsert({
+    create: { garageId, ...row },
+    update: row,
+    where: { garageId },
+  });
+  const shown = responseRateOf(next);
+  const was = responseRateOf(before);
+  if (shown.state !== was.state || shown.rate !== was.rate) {
+    await outbox.record(tx, {
+      audience: { garageId, results: false, type: 'public_garage' },
+      kind: 'response_stats.updated',
+      payload: {},
+      subjectId: garageId,
+    });
+  }
+  return true;
+}
+
 // One transaction per garage, so a failed night keeps every garage it wrote
 // whole and the retry writes only what still differs. The advisory lock
 // makes a second run at the same moment read the first one's row.
@@ -91,30 +133,9 @@ export async function writeResponseStats(db: PrismaClient, now: Date) {
   const figures = await countResponseStats(db, now);
   let written = 0;
   for (const { garageId, ...next } of figures) {
-    const wrote = await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('garage_response_stats'), hashtext(${garageId}))`;
-      const before = await tx.garageResponseStats.findUnique({
-        where: { garageId },
-      });
-      if (before && same(before, next)) return false;
-      const row = { ...next, computedAt: now };
-      await tx.garageResponseStats.upsert({
-        create: { garageId, ...row },
-        update: row,
-        where: { garageId },
-      });
-      const shown = responseRateOf(next);
-      const was = responseRateOf(before);
-      if (shown.state !== was.state || shown.rate !== was.rate) {
-        await outbox.record(tx, {
-          audience: { garageId, results: false, type: 'public_garage' },
-          kind: 'response_stats.updated',
-          payload: {},
-          subjectId: garageId,
-        });
-      }
-      return true;
-    });
+    const wrote = await db.$transaction((tx) =>
+      writeGarage(tx, garageId, next, now),
+    );
     if (wrote) written++;
   }
   return { computed: figures.length, written };
