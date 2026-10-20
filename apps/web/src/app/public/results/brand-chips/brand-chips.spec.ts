@@ -372,6 +372,12 @@ describe('BrandChips', () => {
       Element.prototype.scrollIntoView = scrollIntoView;
     });
 
+    // A box on the page, as getBoundingClientRect reports it; jsdom lays nothing out.
+    const place = (el: Element, left: number, width: number) => {
+      el.getBoundingClientRect = () =>
+        ({ left, right: left + width, width }) as DOMRect;
+    };
+
     it('scrolls the row to bring the marked chip into view, without scrollIntoView', async () => {
       const into = jest.fn();
       Element.prototype.scrollIntoView = into;
@@ -380,7 +386,8 @@ describe('BrandChips', () => {
       const row = group() as HTMLElement;
       const chip = buttons()[7] as HTMLButtonElement;
       Object.defineProperty(row, 'clientWidth', { value: 300 });
-      Object.defineProperty(chip, 'offsetLeft', { value: 900 });
+      place(row, 0, 300);
+      place(chip, 900, 80);
       Object.defineProperty(chip, 'offsetWidth', { value: 80 });
 
       fixture.componentRef.setInput('brand', 'ford');
@@ -388,7 +395,7 @@ describe('BrandChips', () => {
       fixture.detectChanges();
       await settle();
       const ford = buttons()[6] as HTMLButtonElement;
-      Object.defineProperty(ford, 'offsetLeft', { value: 800 });
+      place(ford, 800, 70);
       Object.defineProperty(ford, 'offsetWidth', { value: 70 });
       fixture.componentRef.setInput('brand', 'tesla');
       fixture.componentRef.setInput('answered', brand('Tesla'));
@@ -398,6 +405,27 @@ describe('BrandChips', () => {
       expect(row.scrollLeft).toBeGreaterThan(0);
       expect(row.scrollLeft + 300).toBeGreaterThanOrEqual(900 + 80);
       expect(into).not.toHaveBeenCalled();
+    });
+
+    it('measures the marked chip from the row itself, not from whatever positioned ancestor offsetLeft uses', async () => {
+      await chips({ answered: brand('Volkswagen'), bar: 'volkswagen' });
+      await settle();
+      const row = group() as HTMLElement;
+      const chip = buttons()[7] as HTMLButtonElement;
+      Object.defineProperty(row, 'clientWidth', { value: 300 });
+      place(row, 120, 300);
+      // offsetLeft counts from an ancestor left of the row: it says the chip is in view.
+      Object.defineProperty(chip, 'offsetLeft', { value: 0 });
+      Object.defineProperty(chip, 'offsetWidth', { value: 80 });
+      // On the page the chip sits 900 px into the row.
+      place(chip, 120 + 900, 80);
+
+      fixture.componentRef.setInput('brand', 'tesla');
+      fixture.componentRef.setInput('answered', brand('Tesla'));
+      fixture.detectChanges();
+      await settle();
+
+      expect(row.scrollLeft + 300).toBeGreaterThanOrEqual(900 + 80);
     });
 
     it('leaves the row where it is when the marked chip is already in view', async () => {

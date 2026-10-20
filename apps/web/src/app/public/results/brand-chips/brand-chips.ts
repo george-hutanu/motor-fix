@@ -94,7 +94,12 @@ export class BrandChips {
         (button) => button.dataset['id'] === id,
       );
       if (!chip) return;
-      const start = chip.offsetLeft;
+      // Measured against the row itself: offsetLeft counts from the nearest
+      // positioned ancestor, which the row is not.
+      const start =
+        chip.getBoundingClientRect().left -
+        list.getBoundingClientRect().left +
+        list.scrollLeft;
       const end = start + chip.offsetWidth;
       const width = list.clientWidth;
       if (start < list.scrollLeft) list.scrollLeft = start;
