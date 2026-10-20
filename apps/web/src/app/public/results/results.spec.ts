@@ -3252,6 +3252,17 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule(':host')).toMatch(/overflow: hidden;/);
   });
 
+  it('lets the consent bar lie over the stage on a short phone, so the map and the half sheet keep their room', () => {
+    const short =
+      css.match(
+        /@media \(max-width: 767px\) and \(max-height: 667px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+
+    expect(short).toMatch(
+      /:host \{ height: calc\(100dvh - var\(--public-site-bar\) - var\(--tab-bar\)\); \}/,
+    );
+  });
+
   it('keeps the one column as wide as the screen, whatever the title holds', () => {
     expect(rule(':host')).toMatch(/grid-template-columns: minmax\(0, 1fr\);/);
   });

@@ -164,6 +164,15 @@ mf-brand-chips {
   }
 }
 
+/* A short phone (an iPhone SE) with the consent bar asking would leave the
+   map a strip under the summary: the bar lies over the stage instead, until
+   it is answered, and the map and the half sheet keep their room. */
+@media (max-width: 767px) and (max-height: 667px) {
+  :host {
+    height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));
+  }
+}
+
 /* On a tablet the map sits above the list at full width, under the chips.
    Kept to the tablet: on a phone the map fills the stage under the sheet. */
 @media (min-width: 768px) and (max-width: 1023px) {
