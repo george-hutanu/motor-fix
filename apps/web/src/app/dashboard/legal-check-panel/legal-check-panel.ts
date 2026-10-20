@@ -6,6 +6,7 @@ import {
   input,
   output,
 } from '@angular/core';
+import { recheckedSince } from '@motor-fix/contracts/verification-target';
 import type { LegalCheckDto } from '@motor-fix/data-access/models/legal-check-dto';
 import type { LegalCheckRowDto } from '@motor-fix/data-access/models/legal-check-row-dto';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -19,7 +20,8 @@ const LAMPS: Record<LegalCheckRowDto['state'], string> = {
 };
 
 // "Verificare legală": the four rows of the garage's legal check, each with
-// its state in words and colour, or a skeleton while it loads, or the error
+// its state in words and colour, the "Suspendat" tag and the failed re-check
+// while the garage is suspended, the note on monthly re-checks, or a skeleton while it loads, or the error
 // and a retry. It shows what it is given; its host reads and refreshes it.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,12 +37,15 @@ export class LegalCheckPanel {
   readonly failed = input(false);
   readonly retry = output<void>();
   protected readonly skeletons = [1, 2, 3, 4];
+  protected readonly suspended = computed(
+    () => this.data()?.status === 'suspended',
+  );
 
   protected readonly rows = computed(() => {
     const data = this.data();
     if (!data) return [];
     return data.rows.map((row) => ({
-      checked: this.checked(row),
+      checked: this.checked(row, data),
       detail: this.detail(row, data),
       kind: row.kind,
       label: this.i18n.t(`garage.legal.${row.kind}.label`),
@@ -53,7 +58,31 @@ export class LegalCheckPanel {
     void this.i18n.enter('garage');
   }
 
+  // The RAR row stands for the failed re-check that suspended the garage.
+  private failedRecheck(row: LegalCheckRowDto, data: LegalCheckDto) {
+    const recheck = data.latestRecheck;
+    return row.kind === 'rar' &&
+      row.state === 'failed' &&
+      data.status === 'suspended' &&
+      recheck?.result === 'failed' &&
+      recheck.failure &&
+      row.checkedOn === recheck.checkedOn
+      ? recheck
+      : null;
+  }
+
+  private day(value: string | null): string {
+    return formatDay(value, this.i18n.language());
+  }
+
   private detail(row: LegalCheckRowDto, data: LegalCheckDto): string {
+    const failed = this.failedRecheck(row, data);
+    if (failed) {
+      const said = this.i18n.t(`garage.legal.rar.failure.${failed.failure}`, {
+        day: this.day(failed.checkedOn),
+      });
+      return row.detail ? `${said} · ${row.detail}` : said;
+    }
     if (row.missing.length) {
       return row.missing
         .map((kind) => this.i18n.t(`garage.legal.documents.missing.${kind}`))
@@ -82,15 +111,21 @@ export class LegalCheckPanel {
     }
   }
 
-  private checked(row: LegalCheckRowDto): string {
+  private checked(row: LegalCheckRowDto, data: LegalCheckDto): string {
     if (row.state === 'not_run') return this.i18n.t('garage.legal.notChecked');
     if (row.kind === 'company' || row.kind === 'caen') {
       return this.i18n.t(`garage.legal.${row.kind}.checked`);
     }
-    return row.checkedOn
-      ? this.i18n.t(`garage.legal.${row.kind}.checkedOn`, {
-          day: formatDay(row.checkedOn, this.i18n.language()),
-        })
-      : this.i18n.t(`garage.legal.${row.kind}.checked`);
+    if (!row.checkedOn) return this.i18n.t(`garage.legal.${row.kind}.checked`);
+    const rechecked =
+      row.kind === 'rar' &&
+      (this.failedRecheck(row, data) !== null ||
+        recheckedSince(data.latestRecheck, data.lastCheckedOn));
+    return this.i18n.t(
+      rechecked
+        ? 'garage.legal.rar.recheckedOn'
+        : `garage.legal.${row.kind}.checkedOn`,
+      { day: this.day(row.checkedOn) },
+    );
   }
 }

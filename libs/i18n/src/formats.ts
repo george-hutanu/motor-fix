@@ -178,6 +178,16 @@ export function formatDay(value: unknown, language: Language): string {
   return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
 }
 
+// The same Bucharest day without its year: "1 oct." / "1 Oct".
+export function formatDayMonth(value: unknown, language: Language): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const { day, month } = Object.fromEntries(
+    dayParts.formatToParts(date).map((p) => [p.type, p.value]),
+  );
+  return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]}`;
+}
+
 // Fixed like the short names, so server and browser write the same month;
 // date pickers read the same list through calendarNames.
 const MONTHS_LONG: Record<Language, readonly string[]> = {

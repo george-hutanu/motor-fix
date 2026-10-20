@@ -41,6 +41,12 @@ h2 {
   border-radius: 50%;
   background: var(--mf-green);
 }
+.tag[data-suspended] {
+  color: var(--mf-red-ink);
+}
+.tag[data-suspended] .dot {
+  background: var(--mf-red);
+}
 .rows {
   display: flex;
   flex-direction: column;
@@ -101,6 +107,13 @@ h2 {
 }
 [data-lamp="grey"] .state {
   color: var(--mf-text-secondary);
+}
+.note {
+  margin: 0;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
 .skeleton {
   height: 56px;

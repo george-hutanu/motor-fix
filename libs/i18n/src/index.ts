@@ -16,6 +16,7 @@ export {
   daysUntil,
   formatClock,
   formatDay,
+  formatDayMonth,
   formatDistance,
   formatDuration,
   formatKm,

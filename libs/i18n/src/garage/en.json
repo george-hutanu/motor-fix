@@ -94,11 +94,20 @@
     },
     "error": "We could not load the check",
     "notChecked": "not checked",
+    "note": "We re-check the authorisation in the RAR register every month. If it is suspended or withdrawn, the profile comes off the map until that is fixed.",
     "pill": "Verified profile",
+    "pillCheckedOn": "RAR authorisation, checked on {day}",
+    "pillRecheckedOn": "RAR authorisation, re-checked on {day}",
     "rar": {
       "checked": "checked",
       "checkedOn": "checked on {day}",
+      "failure": {
+        "expired": "expired on {day}",
+        "suspended": "suspended on {day}",
+        "withdrawn": "withdrawn on {day}"
+      },
       "label": "RAR technical authorisation",
+      "recheckedOn": "re-checked on {day}",
       "register": "in the RAR register"
     },
     "retry": "Try again",
@@ -109,6 +118,7 @@
       "warning": "attention"
     },
     "tag": "Verified",
+    "tagSuspended": "Suspended",
     "title": "Legal check"
   },
   "prices": {

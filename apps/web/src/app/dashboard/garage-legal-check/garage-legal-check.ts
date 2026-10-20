@@ -12,8 +12,8 @@ import { Live } from '../live';
 import { garageOf, Session } from '../session';
 
 // The owner's legal check on the Panou, read again whenever the garage's
-// verification changes or an admin re-checks it; a 404 (no approved file)
-// shows nothing.
+// verification changes, an admin re-checks it or it is suspended; a 404 (no
+// file) shows nothing.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LegalCheckPanel],
@@ -35,6 +35,7 @@ export class GarageLegalCheck {
         'verification.check_recorded',
         'verification.reopened',
         'recheck.recorded',
+        'garage.suspended',
       ]),
       goneOn: [404],
       resync: this.live.resync,
