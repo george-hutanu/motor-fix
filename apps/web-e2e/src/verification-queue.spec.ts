@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The panel's h2 keeps the template's spaces around its text.
@@ -11,17 +11,7 @@ const HEADING = /^\s*Service‑uri de verificat\s·\s(\d+)\s*$/;
 
 async function signInAsAdmin(page: Page) {
   await ready(page, '/ro/garages');
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page
-      .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { exact: true, name: 'Cont' })
-      .click();
-  } else {
-    await page
-      .getByRole('banner')
-      .getByRole('button', { exact: true, name: 'Autentificare' })
-      .click();
-  }
+  await openSignIn(page);
   await signIn(page, ACCOUNTS.admin);
   await expect(page).toHaveURL('/app/admin');
 }
