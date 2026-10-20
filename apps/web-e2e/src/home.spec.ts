@@ -945,3 +945,87 @@ test('sets the preview as one panel of 64 px rows, the rating over the rate on t
   );
   expect(await radius()).toBe('7px');
 });
+
+// @traces 228-FR-007 228-FR-009
+test('the server sends the brand strip with the ranked brands, in the order the API gives', async ({
+  request,
+}) => {
+  const ranked = (await (
+    await request.get('/api/v1/brands/popular?limit=16')
+  ).json()) as { name: string }[];
+  const html = await (await request.get('/ro')).text();
+  const strip = html.slice(html.indexOf('<mf-brand-strip'));
+  const names = [
+    ...strip.matchAll(
+      /<button[^>]*translate="no"[^>]*>\s*([^<]+?)\s*<\/button>/g,
+    ),
+  ]
+    .map((m) => m[1])
+    .slice(0, ranked.length);
+
+  expect(ranked.length).toBeGreaterThan(8);
+  expect(names).toEqual(ranked.map((b) => b.name));
+});
+
+// @traces 228-FR-008
+test.describe('the brand strip @seeded', () => {
+  test('selects the brand tapped in the picker and stops the brand changing', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    const strip = page.getByRole('navigation', {
+      name: 'Mărcile căutate cel mai des',
+    });
+    const first = strip.getByRole('button').nth(2);
+    const name = (await first.textContent())?.trim() ?? '';
+
+    await first.click();
+
+    await expect(tile(page, name)).toHaveAttribute('aria-checked', 'true');
+    await page.waitForTimeout(6_000);
+    await expect(tile(page, name)).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+// @traces 228-FR-006 228-FR-010
+test.describe('the strip and the counter with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('the strip stands still and the counter shows 180 at once', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    const track = page.locator('mf-brand-strip .track');
+    const before = await track.evaluate((e) => getComputedStyle(e).transform);
+    await page.waitForTimeout(1_000);
+
+    expect(await track.evaluate((e) => getComputedStyle(e).transform)).toBe(
+      before,
+    );
+    await page.locator('#how-it-works').scrollIntoViewIfNeeded();
+    await expect(page.locator('#how-it-works .counter .figure')).toHaveText(
+      '180',
+    );
+  });
+});
+
+// @traces 228-FR-018
+test('keeps every text of the strip and the new sections at 12 px or more', async ({
+  page,
+}) => {
+  await ready(page, '/ro');
+
+  const smallest = await page
+    .locator('mf-brand-strip, mf-how-it-works, mf-garage-invite')
+    .evaluateAll((hosts) =>
+      Math.min(
+        ...hosts.flatMap((host) =>
+          [...host.querySelectorAll('*')]
+            .filter((e) => e.textContent?.trim() && e.children.length === 0)
+            .map((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
+        ),
+      ),
+    );
+
+  expect(smallest).toBeGreaterThanOrEqual(12);
+});

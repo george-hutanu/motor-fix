@@ -186,25 +186,40 @@ describe('BrandLoader', () => {
     ]);
   });
 
-  it('records a changed popularity', async () => {
+  // @traces 228-FR-015
+  it('keeps the rank of a brand it already holds, so a reload never undoes the nightly ranking', async () => {
     await loader.load(FILE);
+    await prisma.brand.update({
+      data: { popularity: 7 },
+      where: { key: 'bmw' },
+    });
 
     const result = await loader.load([
-      FILE[0],
+      { key: 'bmw', name: 'BMW', popularity: 1 },
       FILE[1],
       { key: 'dacia', name: 'Dacia', popularity: 3 },
     ]);
 
-    expect(result.changed).toBe(1);
+    expect(result.changed).toBe(0);
+    expect(
+      (await stored()).map(({ key, popularity }) => [key, popularity]),
+    ).toEqual([
+      ['bmw', 7],
+      ['dacia', null],
+      ['skoda', 2],
+    ]);
     expect(
       (await history()).filter((entry) => entry.action === 'update'),
-    ).toEqual([
-      expect.objectContaining({
-        field: 'popularity',
-        newValue: 3,
-        oldValue: null,
-      }),
-    ]);
+    ).toEqual([]);
+  });
+
+  // @traces 228-FR-015
+  it('gives a brand it inserts the rank the file holds', async () => {
+    await loader.load(FILE);
+
+    await loader.load([...FILE, { key: 'kia', name: 'Kia', popularity: 4 }]);
+
+    expect((await stored()).find((b) => b.key === 'kia')?.popularity).toBe(4);
   });
 
   it('keeps a brand missing from the file, inactive, with its garage rows', async () => {

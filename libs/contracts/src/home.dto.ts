@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -17,6 +17,7 @@ import {
 } from './garage-search.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
+import { toQueryNumber } from './verification-queue';
 
 export class HomeQueryDto extends NearQueryDto {
   @ApiProperty({
@@ -149,11 +150,11 @@ export class HomeDto {
 }
 
 export class PopularBrandsQueryDto {
-  @ApiPropertyOptional({ default: 8, maximum: 12, minimum: 1, type: 'integer' })
+  @ApiPropertyOptional({ default: 8, maximum: 16, minimum: 1, type: 'integer' })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(1)
-  @Max(12)
+  @Max(16)
   limit: number = 8;
 }

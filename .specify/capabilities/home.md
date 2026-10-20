@@ -1,6 +1,6 @@
 ---
 capability: home
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 225-brand-picker
   - 229-location-or-address
@@ -8,6 +8,7 @@ features:
   - 226-best-rated-brand-dial
   - 227-garage-cards-home
   - 271-garage-distance
+  - 228-how-it-works-list-garage
 ---
 
 # Capability: Home
@@ -26,9 +27,9 @@ _From 225-brand-picker._
 
 _From 225-brand-picker._
 
-### 225-FR-003 — The tiles MUST be the active brands by popularity rank (1 first, unranked last, then by name), `min(limit, active brands)` of them, the same for every actor. The own-cars-first order waits for the car store and is deferred (see Assumptions).
+### 228-FR-013 — One ranking MUST serve "most searched" (the strip) and "most popular" (the picker tiles and the Results chips): no second list.
 
-_From 225-brand-picker._
+_From 228-how-it-works-list-garage._
 
 ### 225-FR-004 — The hero MUST be filled through one copy slot taking the brand name: a label, a headline and a paragraph in the page's language (texts in Clarifications), re-filled whenever the selected brand changes; the hero's section order MUST leave the car section's place after the picker (an empty, named region, nothing else) for the Brand experience stories.
 
@@ -42,9 +43,9 @@ _From 225-brand-picker._
 
 _From 225-brand-picker._
 
-### 225-FR-007 — Until the first touch, the selection MUST move to the next tile every 5 s (wrapping from the eighth to the first), the hero and count following each move; the moving MUST start only after hydration, MUST pause while the document is hidden and resume when visible, MUST stop for the rest of the visit at the first pointer down, click, key press or keyboard focus on a tile, MUST never run while the device asks for reduced motion (stopping at once when the setting turns on), and MUST write nothing: no search, no event, no audit entry.
+### 228-FR-008 — Tapping a strip brand MUST select it in the picker, as the brand search does, and MUST stop the picker's automatic brand change.
 
-_From 225-brand-picker._
+_From 228-how-it-works-list-garage._
 
 ### 225-FR-008 — The main button, "Caută service-uri" / "Find garages", MUST open the results route of the current language with the selected brand's slug as the `brand` query parameter, a plain link built from the selected tile's slug (never from the Home answer) so it works before hydration and while the Home read is in flight or failed.
 
@@ -258,6 +259,30 @@ _From 227-garage-cards-home._
 
 _From 271-garage-distance._
 
+### 228-FR-005 — Home MUST show a "Cum funcționează" section with a headline and three benefits, each a short text and a small example: brand chips taken and refused; a rolling counter with one garage's hourly rate in lei; a sample review with the car, the job, a quote and the author "Andrei M.".
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-006 — The examples MUST be fixed illustrations, not live data; the counter's rolling MUST respect reduced motion (it shows the final figure at once).
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-007 — Home MUST show a strip of the 16 most searched brands, in the ranking's order, moving slowly and continuously by itself (its speed a design value from the mock); with reduced motion it MUST stand still and be scrollable by hand.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-009 — The strip's brands MUST arrive with the server-rendered page; when they cannot be read, the strip MUST be hidden and the rest of Home MUST work.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-010 — The strip MUST be reachable by keyboard: each brand a focusable control named by the brand; automatic movement pauses while a brand in the strip has focus.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-016 — Home MUST show "Ai un service? Pune-l pe hartă" with its short text and a button to the listing form, which MUST open at step 1 without asking for an account.
+
+_From 228-how-it-works-list-garage._
+
 ## Retired
 
 - `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
@@ -265,3 +290,6 @@ _From 271-garage-distance._
 - `226-FR-008` — superseded by `227-FR-010` (2026-10-10)
 
 - `229-FR-004` — superseded by `271-FR-005` (2026-10-18)
+
+- `225-FR-007` — superseded by `228-FR-008` (2026-10-20)
+- `225-FR-003` — superseded by `228-FR-013` (2026-10-20)

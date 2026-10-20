@@ -1,6 +1,20 @@
-<nav [attr.aria-label]="'consent.footer.label' | t">
-  <a [routerLink]="['/', i18n.language(), 'terms']">{{ 'consent.footer.terms' | t }}</a>
-  <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
-  <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
-  <a [routerLink]="['/', i18n.language(), 'contact']">{{ 'consent.footer.contact' | t }}</a>
-</nav>
+<footer>
+  <div class="top">
+    <a class="wordmark" [routerLink]="['/', i18n.language()]" [attr.aria-label]="'public.siteBar.home' | t">{{ 'shell.brand' | t }}</a>
+    <nav class="site" [attr.aria-label]="'public.footer.label' | t">
+      <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
+      <a [routerLink]="['/', i18n.language(), 'list-your-garage']">{{ 'public.siteBar.list' | t }}</a>
+      @if (signedIn()) {
+        <a [routerLink]="['/', i18n.language(), 'account']">{{ 'public.siteBar.account' | t }}</a>
+      } @else {
+        <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+      }
+    </nav>
+  </div>
+  <nav class="legal" [attr.aria-label]="'consent.footer.label' | t">
+    <a [routerLink]="['/', i18n.language(), 'terms']">{{ 'consent.footer.terms' | t }}</a>
+    <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
+    <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
+    <a [routerLink]="['/', i18n.language(), 'contact']">{{ 'consent.footer.contact' | t }}</a>
+  </nav>
+</footer>

@@ -27,3 +27,47 @@ button {
   white-space: nowrap;
   cursor: pointer;
 }
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-4);
+  box-sizing: border-box;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: var(--mf-space-2) var(--mf-space-4) 0;
+}
+.wordmark {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: 0.3em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.site {
+  justify-content: flex-end;
+  padding: 0;
+  color: var(--mf-text);
+  font-size: var(--mf-size-body);
+}
+.site a,
+.site button {
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  text-decoration: none;
+}
+.legal {
+  border-top: 1px solid var(--mf-line);
+}
+
+/* On a phone the wordmark is a link read like running text: 16 px. */
+@media (max-width: 767.98px) {
+  .wordmark {
+    font-size: var(--mf-size-body);
+  }
+  .site {
+    justify-content: flex-start;
+  }
+}

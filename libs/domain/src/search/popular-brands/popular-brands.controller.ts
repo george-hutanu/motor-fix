@@ -23,7 +23,7 @@ export class PopularBrandsController {
     type: [BrandDto],
   })
   @ApiBadRequestResponse({
-    description: 'validation_failed: limit is not a whole number from 1 to 12',
+    description: 'validation_failed: limit is not a whole number from 1 to 16',
   })
   tiles(@Query() query: PopularBrandsQueryDto): Promise<BrandDto[]> {
     return this.cache.read(tilesRead(this.popular, query.limit));

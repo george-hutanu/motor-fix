@@ -73,3 +73,55 @@ describe('PopularBrandsQueryDto under hostile input', () => {
     ).not.toEqual([]);
   });
 });
+
+function check(query: Record<string, unknown>) {
+  const dto = plainToInstance(PopularBrandsQueryDto, query);
+  const errors = validateSync(dto, {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  });
+  return { dto, errors: errors.map((e) => e.property) };
+}
+
+// @traces 228-FR-011
+describe('PopularBrandsQueryDto at and around its bounds', () => {
+  it('defaults to 8 when limit is absent', () => {
+    const { dto, errors } = check({});
+    expect(errors).toEqual([]);
+    expect(dto.limit).toBe(8);
+  });
+
+  it.each(['1', '8', '12', '16'])('takes %s', (limit) => {
+    const { dto, errors } = check({ limit });
+    expect(errors).toEqual([]);
+    expect(dto.limit).toBe(Number(limit));
+  });
+
+  it.each([
+    '0',
+    '17',
+    '-1',
+    '2.5',
+    'eight',
+    '',
+    ' ',
+    'NaN',
+    'Infinity',
+    '1e3',
+    '99999999999999999999',
+  ])('refuses %j', (limit) => {
+    expect(check({ limit }).errors).toContain('limit');
+  });
+
+  it('refuses limit repeated in the query string', () => {
+    expect(check({ limit: ['4', '5'] }).errors).toContain('limit');
+  });
+
+  it('refuses a boolean false', () => {
+    expect(check({ limit: false }).errors).toContain('limit');
+  });
+
+  it('refuses an unknown extra query field', () => {
+    expect(check({ limit: '4', offset: '1' }).errors).toContain('offset');
+  });
+});
