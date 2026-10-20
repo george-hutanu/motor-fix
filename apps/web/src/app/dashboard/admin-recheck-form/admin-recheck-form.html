@@ -2,7 +2,7 @@
   <div class="garage">
     <p class="name">{{ row.name }}</p>
     <p class="number">
-      <span>{{ row.rarNumber ?? '—' }}</span>
+      <span>{{ row.rarNumber ?? ('admin.rechecks.noNumber' | t) }}</span>
       <a href="{{ register }}" target="_blank" rel="noopener noreferrer" (click)="copy()">{{ 'admin.file.register.rarRegister' | t }}</a>
     </p>
   </div>
@@ -63,6 +63,8 @@
             />
             <span>{{ a.name }}</span>
           </label>
+        } @empty {
+          <p class="none">{{ 'admin.rechecks.noActivities' | t }}</p>
         }
       </fieldset>
     }
@@ -76,7 +78,7 @@
       @if (failure()) {
         <button hlmBtn type="submit" [disabled]="!detailFits() || !dated()">{{ 'admin.rechecks.suspend' | t }}</button>
       } @else {
-        <button hlmBtn type="submit" [disabled]="!chosen() || !dated() || busy()" [attr.aria-busy]="busy()">{{ 'admin.rechecks.save' | t }}</button>
+        <button hlmBtn type="submit" [disabled]="!chosen() || !dated() || busy() || activities().length === 0" [attr.aria-busy]="busy()">{{ 'admin.rechecks.save' | t }}</button>
       }
     </div>
   } @else {

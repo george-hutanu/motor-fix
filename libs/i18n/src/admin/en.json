@@ -606,6 +606,7 @@
     "heading": "RAR re-checks",
     "loading": "Loading the RAR re-checks",
     "never": "never checked",
+    "noActivities": "The garage has no authorised activities on file: correct its file first, or record a failure.",
     "noNumber": "number missing",
     "overdue": "overdue",
     "record": "Record",

@@ -639,7 +639,7 @@ _From 1351-rar-monthly-recheck._
 
 _From 1351-rar-monthly-recheck._
 
-### 1351-FR-003 — The system MUST expose an admin-only read of the due list: one row per due garage with its id, name, RAR authorisation number (the newest verification file's, or empty when the garage has none, shown "—"), date of last check, days since (whole calendar days), and whether it is overdue, ordered by date of last check ascending with empty dates first, then by name. It MUST write nothing. Non-admins get 404.
+### 1351-FR-003 — The system MUST expose an admin-only read of the due list: one row per due garage with its id, name, RAR authorisation number (the newest verification file's, or empty when the garage has none, shown "număr lipsă" / "number missing"), date of last check, days since (whole calendar days), and whether it is overdue, ordered by date of last check ascending with empty dates first, then by name. It MUST write nothing. Non-admins get 404.
 
 _From 1351-rar-monthly-recheck._
 

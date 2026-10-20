@@ -621,6 +621,7 @@
     "heading": "Reverificări RAR",
     "loading": "Se încarcă reverificările RAR",
     "never": "neverificat",
+    "noActivities": "Service‑ul nu are activități autorizate în dosar: corectează dosarul întâi sau înregistrează o neconformitate.",
     "noNumber": "număr lipsă",
     "overdue": "depășit",
     "record": "Înregistrează",

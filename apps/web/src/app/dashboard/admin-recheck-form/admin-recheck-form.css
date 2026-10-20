@@ -81,6 +81,11 @@ textarea {
   min-height: var(--mf-tap);
   overflow-wrap: anywhere;
 }
+.none {
+  margin: 0;
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
 .tick input {
   flex: none;
   width: 1.25rem;

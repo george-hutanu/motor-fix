@@ -318,6 +318,38 @@ describe('a failed re-check', () => {
     expect(text()).toContain(`8/${RECHECK_DETAIL_MAX}`);
   });
 
+  it.each([
+    ['ro', 'număr lipsă'],
+    ['en', 'number missing'],
+  ] as const)(
+    'names a missing RAR number in %s as the list does, not with a dash',
+    async (language, missing) => {
+      await open({ ...ROW, rarNumber: null }, language);
+
+      expect(text(panel().querySelector('.number span'))).toBe(missing);
+    },
+  );
+
+  it.each([
+    [
+      'ro',
+      'Valabilă',
+      'Salvează',
+      'Service‑ul nu are activități autorizate în dosar',
+    ],
+    ['en', 'Valid', 'Save', 'The garage has no authorised activities on file'],
+  ] as const)(
+    'says in %s that a garage has no activities and keeps Save off for a valid result',
+    async (language, valid, save, note) => {
+      await open({ ...ROW, activities: [], activityNames: [] }, language);
+
+      await press(valid);
+
+      expect(text()).toContain(note);
+      expect(button(save)?.disabled).toBe(true);
+    },
+  );
+
   it('takes the counter limit from the contract, not from the strings', () => {
     for (const strings of [ro, en]) {
       expect(strings.rechecks.count).toBe('{n}/{max}');

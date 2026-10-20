@@ -279,7 +279,7 @@ describe('the record dialog under hostile input', () => {
     expect(text(alert())).toBe('No');
   });
 
-  it('shows a dash for a garage without a RAR number and copies nothing', async () => {
+  it('names a missing RAR number and copies nothing', async () => {
     const writeText = jest.fn(async () => undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -289,7 +289,7 @@ describe('the record dialog under hostile input', () => {
 
     await clickRegister();
 
-    expect(text(panel().querySelector('.number'))).toContain('—');
+    expect(text(panel().querySelector('.number'))).toContain('număr lipsă');
     expect(writeText).not.toHaveBeenCalled();
   });
 
