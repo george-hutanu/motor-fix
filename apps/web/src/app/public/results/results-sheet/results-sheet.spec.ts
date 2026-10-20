@@ -114,7 +114,7 @@ beforeEach(() => {
 
 afterEach(() => jest.restoreAllMocks());
 
-// @traces 1358-FR-003 1358-FR-005
+// @traces 1358-FR-003 1358-FR-005 1358-FR-015
 describe('ResultsSheet on a phone', () => {
   beforeEach(() => render());
 

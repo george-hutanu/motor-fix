@@ -3086,7 +3086,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  // @traces 1358-FR-001
+  // @traces 1358-FR-001 1358-FR-015
   it('follows the layout across 768 px, the sheet starting again at half', async () => {
     await shown();
     sheet()?.querySelector<HTMLButtonElement>('button.handle')?.click();
@@ -3103,7 +3103,27 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
     expect(position()).toBe('half');
   });
 
-  // @traces 1358-FR-007
+  // @traces 1358-FR-013 1358-FR-016
+  it('moves the sheet with no request, no search, no storage and no new address', async () => {
+    await shown();
+    const router = TestBed.inject(Router);
+    const address = router.url;
+    const stored = localStorage.length;
+    const handle = () =>
+      sheet()?.querySelector<HTMLButtonElement>('button.handle');
+
+    for (let i = 0; i < 3; i++) {
+      handle()?.click();
+      await settle();
+    }
+
+    expect(position()).toBe('half');
+    expect(reads).toHaveLength(1);
+    expect(router.url).toBe(address);
+    expect(localStorage.length).toBe(stored);
+  });
+
+  // @traces 1358-FR-007 1358-FR-015
   it("raises the sheet before it brings a listed garage's card into view on a pin tap", async () => {
     const raise = jest.spyOn(ResultsSheet.prototype, 'raise');
     await shown();
