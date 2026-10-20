@@ -2738,6 +2738,19 @@ describe('Results changing the brand', () => {
     expect(page().querySelector('.cards.swapping')).toBeNull();
   });
 
+  it('shows skeletons again for a map move after the new brand answered', async () => {
+    await shown();
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+
+    expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
+    expect(progress()).toBeNull();
+    expect(page().querySelector('.cards.swapping')).toBeNull();
+  });
+
   it('keeps the skeletons for a widening', async () => {
     await open(`/ro/garages?brand=bmw&near=${NEAR}`);
     await reads[0]?.answer(

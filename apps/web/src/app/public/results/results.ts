@@ -180,8 +180,8 @@ export class Results {
   // The brand last picked in the search beside the chips.
   protected readonly chosenBrand = signal<BrandDto | undefined>(undefined);
 
-  // Only the brand changed in the bar: the list shown waits, dimmed, for
-  // the new brand's answer instead of turning into skeletons.
+  // Only the brand changed in the bar, and its answer has not landed yet:
+  // the list shown waits, dimmed, for it instead of turning into skeletons.
   private readonly swap = linkedSignal<
     { brand: string; near: string | undefined; radius: number | undefined },
     boolean
@@ -439,6 +439,8 @@ export class Results {
       }
       if (!this.searched() || !this.swapped) return;
       this.swapped = false;
+      // Answered: a later reload of the same bar, a map move, is no swap.
+      this.swap.set(false);
       untracked(() => this.swappedIn());
     });
     // Which garages a driver saved, for the cards' bookmarks.
