@@ -55,8 +55,16 @@ test.describe('the sign-up survey', () => {
       .locator('input[type="file"]')
       .setInputFiles([jpeg('fata.jpg')]);
     await expect(photos(page).locator('li.photo')).toHaveCount(1);
+    // The photo counts only once its upload has a key on the server.
+    await expect(photos(page).locator('li.photo').first()).toHaveAttribute(
+      'data-key',
+      /garage_photo\//,
+    );
 
     await page.getByRole('button', { name: 'Trimite spre verificare' }).click();
+    await expect(page.locator('mf-missing-summary .complete')).toHaveText(
+      'Totul e complet',
+    );
     await page.getByRole('button', { name: /SPUNE‑NE CUM LUCREZI/ }).click();
 
     await expect(survey(page).locator('h1')).toHaveText('Spune‑ne cum lucrezi');
