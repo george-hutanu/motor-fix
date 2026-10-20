@@ -95,16 +95,23 @@ mf-brand-chips {
     grid-template-areas:
       "intro"
       "stage";
+    /* A one-line title must not widen the screen's only column. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
-    height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));
+    height: calc(
+      100dvh -
+      var(--public-site-bar) -
+      var(--tab-bar) -
+      var(--consent-bar, 0px)
+    );
     overflow: hidden;
     padding: 0;
   }
 
   /* The tab bar hides while a field takes text; the sheet then reaches the
-     screen's bottom edge. */
+     screen's bottom edge. The consent bar, while it asks, stays above it. */
   :host:has(mf-results-sheet.typing) {
-    height: calc(100dvh - var(--public-site-bar));
+    height: calc(100dvh - var(--public-site-bar) - var(--consent-bar, 0px));
   }
 
   .intro {
@@ -113,7 +120,7 @@ mf-brand-chips {
     padding: var(--mf-space-2) var(--mf-space-4);
   }
 
-  h1 {
+  .intro h1 {
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -313,7 +320,7 @@ li.leaving {
   }
 
   /* A new brand's cards rise into place and its name blurs in, only after
-     a brand change (FR-006). */
+     a brand change. */
   .cards.rising > li {
     animation: mf-row-in 320ms var(--mf-motion-ease) backwards;
   }

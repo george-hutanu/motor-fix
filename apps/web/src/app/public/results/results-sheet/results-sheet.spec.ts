@@ -386,6 +386,40 @@ describe('ResultsSheet and the back button', () => {
   });
 });
 
+// @traces 1358-FR-003
+describe('ResultsSheet holding the pointer', () => {
+  it('lets the handle hold its own pointer, so a press still clicks it', async () => {
+    const holders: Element[] = [];
+    Element.prototype.setPointerCapture = function (this: Element) {
+      holders.push(this);
+    };
+    await render();
+
+    pointer(handle(), 'pointerdown', 400);
+    pointer(handle(), 'pointerup', 400);
+    pointer(header(), 'pointerdown', 400);
+    pointer(header(), 'pointerup', 400);
+    await settle();
+
+    expect(holders).toEqual([handle(), host().querySelector('.top')]);
+  });
+});
+
+describe('ResultsSheet forced full across 768 px', () => {
+  it('stays full when the map failed', async () => {
+    layout.set('tablet');
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+
+    layout.set('phone');
+    await settle();
+
+    expect(position()).toBe('full');
+    expect(push).not.toHaveBeenCalled();
+  });
+});
+
 describe('ResultsSheet after a reload on its step', () => {
   it('opens at half', async () => {
     history.replaceState({ mfSheet: true }, '');
@@ -438,6 +472,28 @@ describe('ResultsSheet from a tablet up', () => {
     expect(css).toMatch(
       /prefers-reduced-motion: no-preference[\s\S]*transition: transform 420ms var\(--mf-motion-ease\)/,
     );
+  });
+
+  it('slides up when it opens, with the theme easing, and not under reduced motion', () => {
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
+    const calm =
+      css.match(
+        /@media \(prefers-reduced-motion: no-preference\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+
+    expect(calm).toMatch(/animation: sheet-in 420ms var\(--mf-motion-ease\)/);
+    expect(css).toMatch(
+      /@keyframes sheet-in \{\s*from \{\s*transform: translateY\(100%\);/,
+    );
+  });
+
+  it('wears the theme panel corners and its top line', () => {
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
+
+    expect(css).toMatch(
+      /border-radius: var\(--mf-radius-panel\) var\(--mf-radius-panel\) 0 0;/,
+    );
+    expect(css).toMatch(/border-top: 1px solid var\(--mf-line\);/);
   });
 });
 

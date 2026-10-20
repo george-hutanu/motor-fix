@@ -73,7 +73,7 @@ export class ResultsSheet {
     effect(() => {
       const phone = this.phone();
       if (wasPhone !== undefined && phone !== wasPhone)
-        untracked(() => this.rest('half'));
+        untracked(() => this.rest(this.forcedFull() ? 'full' : 'half'));
       wasPhone = phone;
     });
     afterNextRender(() => this.measure());
@@ -100,12 +100,17 @@ export class ResultsSheet {
   // never does.
   protected grab(event: PointerEvent) {
     const target = event.target as HTMLElement;
+    const handle = target.closest('button.handle');
     const own =
-      target.closest('button.handle') ||
+      handle ||
       !target.closest('button, a, input, mf-brand-chips, mf-brand-search');
     if (event.button !== 0 || this.grabbed || !own || !untracked(this.phone))
       return;
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    // The click after a held pointer goes to the holder: the handle holds its
+    // own, so a press still reaches it.
+    (handle ?? (event.currentTarget as HTMLElement)).setPointerCapture(
+      event.pointerId,
+    );
     this.measure();
     this.dragged = false;
     this.grabbed = {

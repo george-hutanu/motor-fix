@@ -4,7 +4,8 @@
 :host {
   --rest: 50%;
   background: var(--mf-panel);
-  border-radius: 24px 24px 0 0;
+  border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
+  border-top: 1px solid var(--mf-line);
   box-shadow: 0 -8px 24px color-mix(in srgb, var(--mf-mask) 50%, transparent);
   display: flex;
   flex-direction: column;
@@ -63,11 +64,19 @@
 
 @media (prefers-reduced-motion: no-preference) {
   :host {
+    animation: sheet-in 420ms var(--mf-motion-ease) backwards;
     transition: transform 420ms var(--mf-motion-ease);
   }
 
   :host([style*="--sheet-y"]) {
     transition: none;
+  }
+}
+
+/* The sheet opens by sliding up from the screen's bottom edge. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
   }
 }
 

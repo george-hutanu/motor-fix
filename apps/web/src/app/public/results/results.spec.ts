@@ -3240,18 +3240,27 @@ describe('the phone results screen in the stylesheet', () => {
       ([, sel]) => sel.trim() === selector,
     )?.[2] ?? '';
 
-  it('makes the page one screen between the site bar and the tab bar, which does not scroll', () => {
+  it('makes the page one screen between the site bar and the tab bar, above the consent bar, which does not scroll', () => {
     expect(rule(':host')).toMatch(
-      /height: calc\(100dvh - var\(--public-site-bar\) - var\(--tab-bar\)\);/,
+      /height: calc\(\s*100dvh\s*-\s*var\(--public-site-bar\)\s*-\s*var\(--tab-bar\)\s*-\s*var\(--consent-bar, 0px\)\s*\);/,
     );
     expect(rule(':host')).toMatch(/overflow: hidden;/);
+  });
+
+  it('keeps the one column as wide as the screen, whatever the title holds', () => {
+    expect(rule(':host')).toMatch(/grid-template-columns: minmax\(0, 1fr\);/);
+  });
+
+  it('cuts only the summary title to one line, not the list states the sheet holds', () => {
+    expect(rule('.intro h1')).toMatch(/white-space: nowrap;/);
+    expect(rule('h1')).toBe('');
   });
 
   it('lays the sheet over the map, which fills the screen under the summary', () => {
     expect(rule('mf-results-map')).toMatch(/grid-area: stage;/);
     expect(rule('mf-results-sheet')).toMatch(/grid-area: stage;/);
     expect(rule(':host:has(mf-results-sheet.typing)')).toMatch(
-      /height: calc\(100dvh - var\(--public-site-bar\)\);/,
+      /height: calc\(100dvh - var\(--public-site-bar\) - var\(--consent-bar, 0px\)\);/,
     );
   });
 });
