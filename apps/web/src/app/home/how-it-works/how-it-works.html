@@ -1,0 +1,43 @@
+<section #section id="how-it-works" tabindex="-1" aria-labelledby="how-it-works-title">
+  <h2 id="how-it-works-title">{{ 'public.home.how.headline1' | t }} <span class="second">{{ 'public.home.how.headline2' | t }}</span></h2>
+  <div class="benefits">
+    <article class="wide">
+      <div class="lead">
+        <h3>{{ 'public.home.how.brands.title' | t }}</h3>
+        <p>{{ 'public.home.how.brands.text' | t }}</p>
+      </div>
+      <div class="chips">
+        <ul [attr.aria-label]="'public.home.how.brands.taken' | t">
+          @for (brand of taken; track brand) {
+            <li class="chip"><span class="lamp" aria-hidden="true"></span><span translate="no">{{ brand }}</span></li>
+          }
+        </ul>
+        <ul>
+          <li class="chip refused"><span class="lamp" aria-hidden="true"></span>{{ 'public.home.how.brands.refused1' | t }}</li>
+          <li class="chip refused"><span class="lamp" aria-hidden="true"></span>{{ 'public.home.how.brands.refused2' | t }}</li>
+        </ul>
+      </div>
+    </article>
+    <article>
+      <div class="lead">
+        <h3>{{ 'public.home.how.prices.title' | t }}</h3>
+        <p>{{ 'public.home.how.prices.text' | t }}</p>
+      </div>
+      <div class="rate">
+        <p class="counter" role="img" [attr.aria-label]="label()"><span class="figure" aria-hidden="true">{{ figure() }}</span></p>
+        <p class="at" aria-hidden="true">{{ 'public.home.how.prices.at' | t }} <span translate="no">{{ 'public.home.how.prices.garage' | t }}</span></p>
+      </div>
+    </article>
+    <article>
+      <div class="lead">
+        <h3>{{ 'public.home.how.reviews.title' | t }}</h3>
+        <p>{{ 'public.home.how.reviews.text' | t }}</p>
+      </div>
+      <figure class="review">
+        <p class="tag">{{ 'public.home.how.reviews.tag' | t }}</p>
+        <blockquote>{{ 'public.home.how.reviews.quote' | t }}</blockquote>
+        <figcaption>{{ 'public.home.how.reviews.author' | t }}</figcaption>
+      </figure>
+    </article>
+  </div>
+</section>

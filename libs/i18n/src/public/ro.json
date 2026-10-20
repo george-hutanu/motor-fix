@@ -28,6 +28,9 @@
     "heading": "Contact",
     "intro": "Scrie‑ne și îți răspunde pe e‑mail o persoană din echipa MotorFix."
   },
+  "footer": {
+    "label": "Legături MotorFix"
+  },
   "garageProfile": {
     "backBrand": "Service‑uri pentru {brand}",
     "backHome": "Acasă",
@@ -112,6 +115,35 @@
       "label": "Service‑uri pentru {brand}",
       "paragraph": "Alege marca și vezi câte service‑uri o primesc. Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă."
     },
+    "how": {
+      "brands": {
+        "refused1": "Fără Dacia",
+        "refused2": "Fără Tesla",
+        "taken": "Lucrează pe",
+        "text": "Fiecare service spune ce mărci primește și ce mărci refuză, ca să nu traversezi orașul ca să auzi „pe astea nu lucrăm”.",
+        "title": "Lucrează pe. Nu lucrează pe."
+      },
+      "headline1": "Tot ce ai întreba la telefon.",
+      "headline2": "E deja pe bord.",
+      "prices": {
+        "at": "lei pe oră la",
+        "garage": "Service Dobre",
+        "label": "{rate} lei pe oră la {garage}",
+        "text": "Manopera pe oră și lucrările obișnuite sunt pe fiecare profil.",
+        "title": "Prețuri înainte să suni."
+      },
+      "reviews": {
+        "author": "Andrei M.",
+        "quote": "„Ofertă 4.200 lei, plătit 4.200 lei.”",
+        "tag": "BMW 320d · Lanț de distribuție",
+        "text": "Fiecare comentariu arată mașina și lucrarea.",
+        "title": "Recenzii legate de o reparație."
+      }
+    },
+    "invite": {
+      "text": "Spune ce mărci primești, ce mărci nu și cât costă. Te sună doar cei cu lucrările pe care le vrei.",
+      "title": "Ai un service? Pune‑l pe hartă."
+    },
     "picker": "Marca mașinii",
     "place": {
       "all": "În toată România",
@@ -151,6 +183,9 @@
     "searchList": "Mărci găsite",
     "searchLoading": "Se încarcă mărcile…",
     "searchNone": "Nicio marcă găsită",
+    "strip": {
+      "label": "Mărcile căutate cel mai des"
+    },
     "takes": {
       "few": "primesc",
       "one": "primește",
@@ -790,6 +825,7 @@
     "account": "Cont",
     "find": "Găsește un mecanic",
     "home": "MotorFix, pagina principală",
+    "howItWorks": "Cum funcționează",
     "list": "Înscrie‑ți service‑ul",
     "nav": "Meniul site‑ului",
     "newSearch": "Căutare nouă",

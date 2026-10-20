@@ -4,6 +4,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   linkedSignal,
@@ -33,7 +34,10 @@ import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { BrandChoice } from './brand-choice/brand-choice';
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
+import { BrandStrip } from './brand-strip/brand-strip';
 import { HomeCards, type ResultsRoute } from './cards/cards';
+import { GarageInvite } from './garage-invite/garage-invite';
+import { HowItWorks } from './how-it-works/how-it-works';
 import { cityPlace, type Place, PlaceStore } from './place/place-store';
 import { HomePreview } from './preview/preview';
 import { garageWhere } from './where/where';
@@ -47,6 +51,9 @@ import { publicRead } from '../public-read';
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 
 const CYCLE_MS = 5000;
+// The strip's brands, in ranking order; the first eight are the tiles.
+const POPULAR = 16;
+const TILES = 8;
 
 // A 503 from the ready check still carries the report, so it is shown, not
 // treated as "unknown".
@@ -59,8 +66,11 @@ const report = (error: unknown) =>
   imports: [
     BrandPicker,
     BrandSearch,
+    BrandStrip,
+    GarageInvite,
     HomeCards,
     HomePreview,
+    HowItWorks,
     RatingDial,
     RouterLink,
     TranslatePipe,
@@ -86,7 +96,8 @@ export class Home {
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
-  protected readonly tiles = signal<BrandDto[]>([]);
+  protected readonly popular = signal<BrandDto[]>([]);
+  protected readonly tiles = computed(() => this.popular().slice(0, TILES));
   private readonly searched = signal<BrandDto | undefined>(undefined);
   protected readonly shown = computed(() => {
     const searched = this.searched();
@@ -199,6 +210,11 @@ export class Home {
         if (!this.place()) void this.fromCity(city);
       });
     });
+    // The site bar's "Găsește un mecanic" opens Results for the brand shown.
+    effect(() => {
+      this.choice.shown.set(this.selected()?.slug ?? null);
+    });
+    inject(DestroyRef).onDestroy(() => this.choice.shown.set(null));
     effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;
@@ -221,9 +237,9 @@ export class Home {
       });
     }
     void pending.run(async () => {
-      this.tiles.set(
+      this.popular.set(
         await brands
-          .popularBrandsControllerTiles({ limit: 8 }, publicRead())
+          .popularBrandsControllerTiles({ limit: POPULAR }, publicRead())
           .catch(() => []),
       );
     });
@@ -269,6 +285,13 @@ export class Home {
       brand: brand.slug,
       source: 'home_picker',
     });
+  }
+
+  // A brand tapped in the strip is chosen as a searched one is: a tile where
+  // it is, else the first tile; the automatic change stops.
+  protected fromStrip(brand: BrandDto) {
+    this.touched.set(true);
+    this.pick(brand);
   }
 
   private advance() {

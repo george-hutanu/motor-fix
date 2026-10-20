@@ -1,0 +1,16 @@
+<nav [class.still]="reduced()" [attr.aria-label]="'public.home.strip.label' | t">
+  <div class="track" [class.moving]="!reduced()">
+    <ul>
+      @for (brand of brands(); track brand.id) {
+        <li><button type="button" translate="no" (click)="pick.emit(brand)">{{ brand.name }}</button></li>
+      }
+    </ul>
+    @if (!reduced()) {
+      <ul aria-hidden="true">
+        @for (brand of brands(); track brand.id) {
+          <li><button type="button" translate="no" tabindex="-1" (click)="pick.emit(brand)">{{ brand.name }}</button></li>
+        }
+      </ul>
+    }
+  </div>
+</nav>

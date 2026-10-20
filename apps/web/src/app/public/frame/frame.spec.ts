@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -9,6 +9,8 @@ import { I18n } from '@motor-fix/i18n';
 
 import { PublicFrame } from './frame';
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
+import { Session } from '../../dashboard/session';
+import { BrandChoice } from '../../home/brand-choice/brand-choice';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
 @Component({ selector: 'mf-page', template: '<h1>page</h1>' })
@@ -16,9 +18,19 @@ class Page {}
 
 let signIn: { start: jest.Mock };
 let harness: RouterTestingHarness;
+const session = {
+  current: signal<{ id: string } | null>(null),
+  load: jest.fn(),
+};
 
-async function open(address: string, language: 'ro' | 'en' = 'ro') {
+async function open(
+  address: string,
+  language: 'ro' | 'en' = 'ro',
+  before: () => void = () => undefined,
+) {
   signIn = { start: jest.fn(async () => undefined) };
+  session.current.set(null);
+  session.load.mockReset();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -36,8 +48,10 @@ async function open(address: string, language: 'ro' | 'en' = 'ro') {
       provideLanguageAddresses(),
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
       { provide: SignInDialog, useValue: signIn },
+      { provide: Session, useValue: session },
     ],
   });
+  before();
   const i18n = TestBed.inject(I18n);
   await i18n.enter('public');
   await i18n.use(language);
@@ -195,5 +209,114 @@ describe('the contact link', () => {
     expect(
       footer?.querySelector(`a[href="/${language}/contact"]`),
     ).not.toBeNull();
+  });
+});
+
+// @traces 228-FR-001 228-FR-002
+describe('the "Cum funcționează" link', () => {
+  it('sits between "Găsește un mecanic" and "Autentificare", before the listing link', async () => {
+    await open('/ro');
+
+    expect(
+      [...(bar().querySelector('nav')?.children ?? [])].map((child) =>
+        child.textContent?.trim(),
+      ),
+    ).toEqual([
+      'Găsește un mecanic',
+      'Cum funcționează',
+      'Autentificare',
+      'Înscrie‑ți service‑ul',
+    ]);
+  });
+
+  it('points at the section on Home, in the page language', async () => {
+    await open('/ro/garages?brand=dacia');
+    expect(link('Cum funcționează')?.getAttribute('href')).toBe(
+      '/ro#how-it-works',
+    );
+
+    TestBed.resetTestingModule();
+    await open('/en/list-your-garage', 'en');
+    expect(link('How it works')?.getAttribute('href')).toBe('/en#how-it-works');
+  });
+
+  it('opens Home at the section from another page', async () => {
+    await open('/ro/garages/service-auto-militari');
+
+    link('Cum funcționează')?.click();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ro#how-it-works');
+  });
+
+  it('jumps to the section again on Home, even when already there', async () => {
+    await open('/ro');
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate');
+
+    link('Cum funcționează')?.click();
+    await harness.fixture.whenStable();
+    link('Cum funcționează')?.click();
+    await harness.fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenLastCalledWith(['/', 'ro'], {
+      fragment: 'how-it-works',
+      onSameUrlNavigation: 'reload',
+    });
+    expect(router.url).toBe('/ro#how-it-works');
+  });
+});
+
+// @traces 228-FR-003
+describe('"Găsește un mecanic" on Home', () => {
+  it('opens Results for the brand Home shows', async () => {
+    await open('/ro', 'ro', () => {
+      TestBed.inject(BrandChoice).shown.set('dacia');
+    });
+
+    expect(link('Găsește un mecanic')?.getAttribute('href')).toBe(
+      '/ro/garages?brand=dacia',
+    );
+  });
+
+  it('follows the brand Home moves on to', async () => {
+    await open('/ro');
+    TestBed.inject(BrandChoice).shown.set('bmw');
+    harness.fixture.detectChanges();
+
+    expect(link('Găsește un mecanic')?.getAttribute('href')).toBe(
+      '/ro/garages?brand=bmw',
+    );
+  });
+
+  it('leads home while no brand is shown', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(link('Găsește un mecanic')?.getAttribute('href')).toBe('/ro');
+  });
+});
+
+// @traces 228-FR-004
+describe('the site bar for a signed-in visitor', () => {
+  it('shows the account entry in place of "Autentificare", fetching nothing', async () => {
+    await open('/ro', 'ro', () => {
+      session.current.set({ id: 'u1' });
+    });
+
+    expect(button('Autentificare')).toBeUndefined();
+    expect(link('Cont')?.getAttribute('href')).toBe('/ro/account');
+    expect(session.load).not.toHaveBeenCalled();
+  });
+
+  it('shows "Autentificare" again once the visitor signs out', async () => {
+    await open('/ro', 'ro', () => {
+      session.current.set({ id: 'u1' });
+    });
+
+    session.current.set(null);
+    harness.fixture.detectChanges();
+
+    expect(button('Autentificare')).toBeDefined();
   });
 });

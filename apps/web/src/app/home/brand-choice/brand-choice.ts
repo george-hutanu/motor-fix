@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 // The tile a person chose on Home, kept for the visit: back from a garage
@@ -9,6 +9,9 @@ import { Router } from '@angular/router';
 export class BrandChoice {
   private readonly router = inject(Router);
   private slug: string | null = null;
+  // The brand Home shows right now, for the site bar's "Găsește un mecanic";
+  // none while Home is not on screen.
+  readonly shown = signal<string | null>(null);
 
   // Read while Home is being created, inside the navigation that opens it.
   kept(): string | null {

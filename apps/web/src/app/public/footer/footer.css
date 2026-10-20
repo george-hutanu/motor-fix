@@ -27,3 +27,35 @@ button {
   white-space: nowrap;
   cursor: pointer;
 }
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-4);
+  box-sizing: border-box;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: var(--mf-space-2) var(--mf-space-4) 0;
+}
+.wordmark {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: 0.3em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.site {
+  justify-content: flex-end;
+  padding: 0;
+  color: var(--mf-text);
+  font-size: 14px;
+}
+.site a,
+.site button {
+  min-height: 44px;
+  text-decoration: none;
+}
+.legal {
+  border-top: 1px solid var(--mf-line);
+}
