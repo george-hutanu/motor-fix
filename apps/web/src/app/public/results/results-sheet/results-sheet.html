@@ -1,0 +1,24 @@
+<div
+  #top
+  class="top"
+  (pointerdown)="grab($event)"
+  (pointermove)="pull($event)"
+  (pointerup)="release($event)"
+  (pointercancel)="letGo($event)"
+  (lostpointercapture)="letGo($event)"
+>
+  @if (phone()) {
+    <button
+      type="button"
+      class="handle"
+      [attr.aria-expanded]="position() !== 'low'"
+      [attr.aria-label]="(position() === 'full' ? 'public.results.sheet.map' : 'public.results.sheet.more') | t"
+      (click)="press($event)"
+    >
+      <span class="grip" aria-hidden="true"></span>
+    </button>
+  }
+  <div class="header"><ng-content select=".brands" /></div>
+</div>
+<!-- A card or a field taking focus in a low sheet is brought into view. -->
+<div #body class="body" (focusin)="raise()"><ng-content /></div>

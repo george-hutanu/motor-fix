@@ -708,6 +708,10 @@
     "placeTitle": "Unde cauți service?",
     "reload": "Reîncarcă",
     "retry": "Reîncearcă",
+    "sheet": {
+      "map": "Arată mai mult din hartă",
+      "more": "Arată mai mult din listă"
+    },
     "takers": {
       "few": "{count} lucrează pe {brand}",
       "one": "{count} lucrează pe {brand}",
