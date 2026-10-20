@@ -1,8 +1,10 @@
 /* On a phone the sheet shares the map's cell and slides over it: full at
    the cell's top, half halfway, low with only its handle and header showing.
    A drag writes --sheet-y; at rest the position decides. */
+/* Half is halfway, or on a short stage (a small phone with the consent bar
+   open) just under the map's zoom buttons, never past low. */
 :host {
-  --rest: 50%;
+  --rest: min(max(50%, 6.5rem), calc(100% - var(--sheet-top, 160px)));
   background: var(--mf-panel);
   border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
   border-top: 1px solid var(--mf-line);
