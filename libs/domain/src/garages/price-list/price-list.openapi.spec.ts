@@ -93,7 +93,7 @@ describe('the in-place range writes in the OpenAPI document', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-017
+// @traces 1352-FR-017
 describe('the add of a catalogue job in the OpenAPI document', () => {
   it('adds a job with its body, its answer and its refusals', () => {
     const { post } = doc.paths['/api/v1/garages/{garageId}/prices'];
@@ -125,7 +125,7 @@ describe('the add of a catalogue job in the OpenAPI document', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-017
+// @traces 1352-FR-017
 describe('the removal of a job in the OpenAPI document', () => {
   it('removes a job with no body in its answer', () => {
     const remove =
@@ -138,7 +138,7 @@ describe('the removal of a job in the OpenAPI document', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-017
+// @traces 1352-FR-017
 describe('the proposal of a job in the OpenAPI document', () => {
   it('proposes a job with its body, its answer and its refusals', () => {
     const { post } = doc.paths['/api/v1/garages/{garageId}/catalogue-jobs'];

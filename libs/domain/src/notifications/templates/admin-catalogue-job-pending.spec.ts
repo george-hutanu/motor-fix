@@ -11,7 +11,7 @@ const params = {
   job: 'Recondiționare injectoare',
 };
 
-// @traces 1352-catalogue-job-visibility-FR-015
+// @traces 1352-FR-015
 describe('the alert for a job proposed for the catalogue', () => {
   it('goes to the bell, by e-mail and by push, can be muted, and passes the template check', () => {
     expect(NOTIFICATION_TYPES[KIND].channels).toEqual(

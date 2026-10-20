@@ -380,7 +380,7 @@ describe('Prețuri: brand ranges under their job', () => {
 });
 
 // @traces 172-FR-007 172-FR-008
-// @traces 1352-catalogue-job-visibility-FR-001
+// @traces 1352-FR-001
 describe('Prețuri: live, loading, failure and an empty list', () => {
   it('shows busy skeleton rows with no text while the first read runs', async () => {
     let finish: (() => void) | undefined;
@@ -693,7 +693,7 @@ const editingOn = async (
   return view;
 };
 
-// @traces 1352-catalogue-job-visibility-FR-001
+// @traces 1352-FR-001
 describe('Prețuri: adding a job', () => {
   it('offers "Adaugă o lucrare" under the list while editing, and not before', async () => {
     const { element, settle } = await render();
@@ -804,7 +804,7 @@ const action = (row: HTMLElement, name: string) =>
     (b) => text(b) === name,
   ) as HTMLButtonElement;
 
-// @traces 1352-catalogue-job-visibility-FR-004
+// @traces 1352-FR-004
 describe('Prețuri: hiding and showing a job', () => {
   const hiddenByOwner = async () =>
     editingOn(async () => ({
@@ -943,7 +943,7 @@ describe('Prețuri: hiding and showing a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-006
+// @traces 1352-FR-006
 describe('Prețuri: removing a job', () => {
   it('offers Șterge on each job with its own row, named after the job, only while editing', async () => {
     const { element, settle } = await render();
@@ -986,7 +986,7 @@ describe('Prețuri: removing a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-009
+// @traces 1352-FR-009
 describe('Prețuri: proposing a job the catalogue lacks', () => {
   it('opens the propose form from the picker and re-reads after it is sent', async () => {
     const { element, settle } = await editingOn();

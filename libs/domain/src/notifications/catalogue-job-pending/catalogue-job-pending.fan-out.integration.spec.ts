@@ -21,7 +21,7 @@ import {
 } from '../notifications.testing';
 import { bellText } from '../templates';
 
-// @traces 1352-catalogue-job-visibility-FR-015
+// @traces 1352-FR-015
 
 const redisUrl = redisUrlFor(13);
 const { account, prisma, reset } = fixtures();

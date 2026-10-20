@@ -204,7 +204,7 @@ const expectNothingWritten = async (w: World) => {
   expect(await events(w, 'price_list.updated')).toEqual([]);
 };
 
-// @traces 1352-catalogue-job-visibility-FR-010
+// @traces 1352-FR-010
 describe('POST /garages/:garageId/catalogue-jobs', () => {
   it('creates the pending catalogue job and its price row last on the list, and answers the saved row', async () => {
     const w = await world();
@@ -318,7 +318,7 @@ describe('POST /garages/:garageId/catalogue-jobs', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-010
+// @traces 1352-FR-010
 describe('what the proposal refuses', () => {
   it.each<[string, Record<string, unknown>]>([
     ['a name of two characters after trimming', { name: '  Ab  ' }],
@@ -424,7 +424,7 @@ describe('what the proposal refuses', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-011
+// @traces 1352-FR-011
 describe('who may propose a job', () => {
   it.each(['receptionist', 'mechanic'] as const)(
     'refuses the garage %s with 403',
@@ -458,7 +458,7 @@ describe('who may propose a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-012
+// @traces 1352-FR-012
 describe('what the proposal leaves alone', () => {
   it("keeps the garage's verification status and drops the profile's cached entry", async () => {
     const w = await world();
@@ -473,7 +473,7 @@ describe('what the proposal leaves alone', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-013
+// @traces 1352-FR-013
 describe('what the proposal records', () => {
   it('writes the catalogue job and the price row create entries as the owner', async () => {
     const w = await world();
@@ -538,7 +538,7 @@ describe('what the proposal records', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-014
+// @traces 1352-FR-014
 describe('what the proposal tells the admins and the profile', () => {
   it('saves the admins’ catalogue event and one price list event', async () => {
     const w = await world();

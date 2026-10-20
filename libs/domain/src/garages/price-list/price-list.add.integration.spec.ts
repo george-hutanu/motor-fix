@@ -188,7 +188,7 @@ const expectNothingWritten = async (w: World) => {
   expect(await events(w)).toEqual([]);
 };
 
-// @traces 1352-catalogue-job-visibility-FR-002
+// @traces 1352-FR-002
 describe('POST /garages/:garageId/prices', () => {
   it('adds the job with its range and duration and answers the saved row', async () => {
     const w = await world();
@@ -274,7 +274,7 @@ describe('POST /garages/:garageId/prices', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-002
+// @traces 1352-FR-002
 describe('what the add refuses', () => {
   it.each<[string, Record<string, unknown>, string[]]>([
     [
@@ -425,7 +425,7 @@ describe('what the add refuses', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-003
+// @traces 1352-FR-003
 describe('what the add leaves to the brands write', () => {
   it('ticks the job for no brand the garage takes', async () => {
     const w = await world();
@@ -438,7 +438,7 @@ describe('what the add leaves to the brands write', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-011
+// @traces 1352-FR-011
 describe('who may add a job', () => {
   it.each(['receptionist', 'mechanic'] as const)(
     'refuses the garage %s with 403',
@@ -472,7 +472,7 @@ describe('who may add a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-012
+// @traces 1352-FR-012
 describe('what the add leaves alone', () => {
   it("keeps the garage's verification status and shows the job on the profile at once", async () => {
     const w = await world();
@@ -497,7 +497,7 @@ describe('what the add leaves alone', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-013
+// @traces 1352-FR-013
 describe('what the add records', () => {
   it('writes one create entry on the new row in the shape the listing writes', async () => {
     const w = await world();
@@ -545,7 +545,7 @@ describe('what the add records', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-014
+// @traces 1352-FR-014
 describe('what the add tells the profile', () => {
   it('saves one price list event naming the job and no brand', async () => {
     const w = await world();

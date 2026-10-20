@@ -214,7 +214,7 @@ const profilePrices = async (w: World) =>
     (price: { jobTypeId: string }) => price.jobTypeId,
   );
 
-// @traces 1352-catalogue-job-visibility-FR-005
+// @traces 1352-FR-005
 describe('PATCH /garages/:garageId/prices/:priceId with { visible }', () => {
   it('hides the job and answers the saved row with its new stamp', async () => {
     const w = await world();
@@ -359,7 +359,7 @@ describe('PATCH /garages/:garageId/prices/:priceId with { visible }', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-011
+// @traces 1352-FR-011
 describe('who may hide a job', () => {
   it.each(['receptionist', 'mechanic'] as const)(
     'refuses the garage %s with 403',
@@ -399,7 +399,7 @@ describe('who may hide a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-012
+// @traces 1352-FR-012
 describe('what a hide leaves alone', () => {
   it("keeps the garage's verification status and takes the job off the profile at once", async () => {
     const w = await world();
@@ -426,7 +426,7 @@ describe('what a hide leaves alone', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-013
+// @traces 1352-FR-013
 describe('what a hide or show records', () => {
   it('writes one update entry on the row, field visible, with the old and new flag', async () => {
     const w = await world();
@@ -472,7 +472,7 @@ describe('what a hide or show records', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-014
+// @traces 1352-FR-014
 describe('what a hide tells the profile', () => {
   it('saves one price list event naming the job and no brand', async () => {
     const w = await world();

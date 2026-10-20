@@ -172,11 +172,11 @@ async function restore(request: APIRequestContext) {
 
 // @seeded: signs in as the seeded owner against the real API; @database: the
 // restore writes the seed's place and tick back to PostgreSQL.
-// @traces 1352-catalogue-job-visibility-FR-018
-// @traces 1352-catalogue-job-visibility-FR-001
-// @traces 1352-catalogue-job-visibility-FR-004
-// @traces 1352-catalogue-job-visibility-FR-006
-// @traces 1352-catalogue-job-visibility-FR-009
+// @traces 1352-FR-018
+// @traces 1352-FR-001
+// @traces 1352-FR-004
+// @traces 1352-FR-006
+// @traces 1352-FR-009
 test.describe('the owner adds, hides, shows, proposes and removes jobs @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
 

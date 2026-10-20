@@ -300,7 +300,7 @@ const expectNothingWritten = async (
   expect(await events(w)).toEqual([]);
 };
 
-// @traces 1352-catalogue-job-visibility-FR-007
+// @traces 1352-FR-007
 describe('DELETE /garages/:garageId/prices/:priceId', () => {
   it("deletes the job's default row, its brand rows and its ticks and answers 204", async () => {
     const w = await world();
@@ -473,7 +473,7 @@ describe('a removal racing a brand range', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-011
+// @traces 1352-FR-011
 describe('who may remove a job', () => {
   it.each(['receptionist', 'mechanic'] as const)(
     'refuses the garage %s with 403',
@@ -509,7 +509,7 @@ describe('who may remove a job', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-012
+// @traces 1352-FR-012
 describe('what the removal leaves alone', () => {
   it("keeps the garage's verification status and drops the profile's entries", async () => {
     const w = await world();
@@ -534,7 +534,7 @@ describe('what the removal leaves alone', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-013
+// @traces 1352-FR-013
 describe('what the removal records', () => {
   it('writes a delete entry on the default row, one per brand row and one per tick', async () => {
     const w = await world();
@@ -612,7 +612,7 @@ describe('what the removal records', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-014
+// @traces 1352-FR-014
 describe('what the removal tells the profile', () => {
   it('saves one price list event naming the job and the brands of its rows and ticks', async () => {
     const w = await world();

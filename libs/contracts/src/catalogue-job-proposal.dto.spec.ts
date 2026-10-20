@@ -15,7 +15,7 @@ const problemsOf = async (plain: object) =>
 
 const root = join(__dirname, '..', '..', '..');
 
-// @traces 1352-catalogue-job-visibility-FR-017
+// @traces 1352-FR-017
 describe('the body of a job proposal', () => {
   const body = {
     durationMinutes: 90,

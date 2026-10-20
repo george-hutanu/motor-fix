@@ -155,7 +155,7 @@ const profile = (w: World) => http().get(`/garages/${w.nord.slug}`);
 // @traces 357-FR-001
 // @traces 357-FR-002
 // @traces 357-FR-007
-// @traces 1352-catalogue-job-visibility-FR-008
+// @traces 1352-FR-008
 describe('GET /garages/:garageId/prices', () => {
   it('gives every job its state, the first reason and its default range', async () => {
     const w = await world(['ITP']);

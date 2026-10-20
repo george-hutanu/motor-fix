@@ -274,7 +274,7 @@ describe('the price list items', () => {
     expect(item?.brandRanges).toEqual([]);
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-008
+  // @traces 1352-FR-008
   it("carries the owner's own choice from the default row, whatever reason comes first", () => {
     const [shown, hidden] = priceListJobs(
       [
@@ -291,7 +291,7 @@ describe('the price list items', () => {
     });
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-008
+  // @traces 1352-FR-008
   it('carries no choice for a job with no default row', () => {
     const [item] = priceListJobs(
       [row(job(), { brandId: 'bmw', visible: false })],

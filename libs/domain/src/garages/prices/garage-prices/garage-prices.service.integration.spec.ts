@@ -548,7 +548,7 @@ describe('a job the garage proposes', () => {
     await nothingStored(w);
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-010
+  // @traces 1352-FR-010
   it('proposes one job for a name priced with a default and a brand range', async () => {
     const w = await world();
 
@@ -574,7 +574,7 @@ describe('a job the garage proposes', () => {
     ).toBe(1);
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-010
+  // @traces 1352-FR-010
   it("still refuses an approved job's name on the entry's name", async () => {
     const w = await world();
     await prisma.jobType.create({
@@ -598,7 +598,7 @@ describe('a job the garage proposes', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-010
+// @traces 1352-FR-010
 describe('the approved names a proposal is checked against', () => {
   it('answers each approved job by its folded Romanian and English names', async () => {
     const w = await world();
@@ -629,7 +629,7 @@ describe('the approved names a proposal is checked against', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-010
+// @traces 1352-FR-010
 describe('one proposed name, as the price list proposes it', () => {
   it('creates the pending job with its entry and the admins’ event, and answers its id', async () => {
     const w = await world();

@@ -14,7 +14,7 @@ const problemsOf = async (type: new () => object, plain: unknown) =>
 
 const jobTypeId = '3f2b8c1e-5d4a-4b7e-9a60-1c2d3e4f5a6b';
 
-// @traces 1352-catalogue-job-visibility-FR-010
+// @traces 1352-FR-010
 describe('the body of a job proposal under hostile names', () => {
   const base = { fromBani: 60_000 };
 
@@ -73,7 +73,7 @@ describe('the body of a job proposal under hostile names', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-002
+// @traces 1352-FR-002
 describe('the body of a catalogue job add under hostile input', () => {
   it.each([
     ['a missing id', undefined],
@@ -118,7 +118,7 @@ describe('the body of a catalogue job add under hostile input', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-005
+// @traces 1352-FR-005
 describe('the visible flag of a hide or show', () => {
   it.each([
     ['the number 0', 0],

@@ -518,7 +518,7 @@ const NEW: PriceRangeEditorData = {
   kind: 'new',
 };
 
-// @traces 1352-catalogue-job-visibility-FR-001
+// @traces 1352-FR-001
 describe('the range editor: a job new to the list', () => {
   it('starts empty, with the duration, and adds the job with its range and duration, then closes', async () => {
     await open(NEW, { title: 'Încărcare freon climă' });
@@ -617,7 +617,7 @@ describe('the range editor: a job new to the list', () => {
 const PROPOSE: PriceRangeEditorData = { garageId: GARAGE, kind: 'propose' };
 const NAME = 'Recondiționare injectoare';
 
-// @traces 1352-catalogue-job-visibility-FR-009
+// @traces 1352-FR-009
 describe('the range editor: proposing a job the catalogue lacks', () => {
   it('asks for the name, the range and the duration, and sends with "Trimite"', async () => {
     await open(PROPOSE, { title: 'garage.prices.propose.title' });

@@ -98,7 +98,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1352-catalogue-job-visibility-FR-001
+// @traces 1352-FR-001
 describe('the job picker: searching the catalogue', () => {
   it('is titled "Adaugă o lucrare", has a labelled search field and lists the catalogue without the jobs already listed', async () => {
     await open();
@@ -193,7 +193,7 @@ describe('the job picker: searching the catalogue', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-001
+// @traces 1352-FR-001
 describe('the job picker: choosing', () => {
   it('closes with the picked job', async () => {
     await open();

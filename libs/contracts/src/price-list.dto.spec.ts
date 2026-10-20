@@ -131,7 +131,7 @@ describe('the body of a default range write', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-005
+// @traces 1352-FR-005
 describe('the body of a hide or show', () => {
   it('takes visible alone, with no stamp', async () => {
     expect(await problemsOf(PriceRangeDto, { visible: false })).toEqual([]);
@@ -184,7 +184,7 @@ describe("an owner's price list item", () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-017
+// @traces 1352-FR-017
 describe('the body of a catalogue job add', () => {
   const body = {
     durationMinutes: 45,
@@ -243,7 +243,7 @@ describe('the body of a catalogue job add', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-008
+// @traces 1352-FR-008
 describe("an owner's price list item and the owner's own choice", () => {
   it("may carry whether the owner hid the job's default row", () => {
     const item = {

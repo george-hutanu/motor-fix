@@ -67,7 +67,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1352-catalogue-job-visibility-FR-006
+// @traces 1352-FR-006
 describe('removing a job: the question', () => {
   it('asks whether to remove the job, says open requests and sent quotes stay, and offers Șterge and Renunță', async () => {
     await open();
@@ -96,7 +96,7 @@ describe('removing a job: the question', () => {
   });
 });
 
-// @traces 1352-catalogue-job-visibility-FR-006
+// @traces 1352-FR-006
 describe('removing a job: the answer', () => {
   it('removes the job on Șterge and closes', async () => {
     await open();

@@ -164,7 +164,7 @@ describe('GET /job-types', () => {
     expect(res.status).toBe(400);
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-001
+  // @traces 1352-FR-001
   it('leaves the excluded jobs out before the 20 limit, with or without a search', async () => {
     await prisma.jobType.createMany({
       data: Array.from({ length: 25 }, (_, n) => ({
@@ -204,7 +204,7 @@ describe('GET /job-types', () => {
     ]);
   });
 
-  // @traces 1352-catalogue-job-visibility-FR-001
+  // @traces 1352-FR-001
   it.each([
     ['an excluded id that is not one', { exclude: 'x' }],
     ['an empty exclude', { exclude: '' }],

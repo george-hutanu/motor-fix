@@ -8,7 +8,7 @@ import {
   fixtures,
 } from '../../notifications/notifications.testing';
 
-// @traces 1352-catalogue-job-visibility-FR-016
+// @traces 1352-FR-016
 
 const MIGRATION = join(
   __dirname,
