@@ -31,6 +31,7 @@ import {
   isMechanicsSection,
   isPricesSection,
 } from '@motor-fix/contracts/listing-sections';
+import type { SurveySection } from '@motor-fix/contracts/listing-survey';
 import {
   isValidCui,
   normaliseRarNumber,
@@ -65,6 +66,10 @@ import { PhotosStep } from '../photos-step/photos-step';
 import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
 import { PricesStep } from '../prices-step/prices-step';
+import {
+  SignupSurvey,
+  type SurveyNotice,
+} from '../signup-survey/signup-survey';
 import { completedCount, readStep6, type Step6Values } from '../step6';
 import { currentStep, jumpTarget, keepsTapped, STEPS } from '../steps';
 
@@ -116,6 +121,7 @@ const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
     PhotosStep,
     PlaceStep,
     PricesStep,
+    SignupSurvey,
     TranslatePipe,
   ],
   providers: [DraftKeeper],
@@ -258,6 +264,15 @@ export class ListYourGarage {
     );
   });
   protected readonly inFlight = signal(false);
+  // The sign-up survey shows in place of the form, once the listing is
+  // complete or when the draft comes back with an answer in it.
+  protected readonly surveyOpen = signal(false);
+  protected readonly surveyAnswers = computed<SurveySection>(
+    () => (this.keeper.draft().data as ListingDraftData).survey ?? {},
+  );
+  protected readonly finishing = signal(false);
+  protected readonly finishNotice = signal<SurveyNotice>(null);
+  private surveyTracked = false;
   private readonly outcome = signal<'complete' | 'failed' | null>(null);
   // Complete is only the server's word on the copy as it stands; once the
   // last missing thing is typed the list goes, and the button asks again.
@@ -463,6 +478,48 @@ export class ListYourGarage {
     } else this.toSummary();
   }
 
+  protected openSurvey() {
+    this.outcome.set(null);
+    this.surveyOpen.set(true);
+    this.focusAfterRender('mf-signup-survey h1');
+  }
+
+  protected closeSurvey() {
+    this.surveyOpen.set(false);
+    this.focusAfterRender('.actions .send');
+  }
+
+  protected answerSurvey(section: SurveySection) {
+    this.finishNotice.set(null);
+    this.keeper.survey(section);
+  }
+
+  // The create press: the answers go onto the server copy, where the
+  // account's creation reads them, and the page tells how that went.
+  protected async finish() {
+    if (this.finishing()) return;
+    this.finishing.set(true);
+    this.finishNotice.set(null);
+    let saved = false;
+    try {
+      saved = await this.keeper.flush();
+    } finally {
+      this.finishing.set(false);
+    }
+    this.finishNotice.set(saved ? 'saved' : 'failed');
+    if (saved && !this.surveyTracked) {
+      this.surveyTracked = true;
+      this.consent.track('survey_completed');
+    }
+  }
+
+  private focusAfterRender(selector: string) {
+    afterNextRender(
+      () => this.host.querySelector<HTMLElement>(selector)?.focus(),
+      { injector: this.injector },
+    );
+  }
+
   // The page jumps to the first step with an error, and focus goes to the
   // summary without scrolling the page again.
   private toSummary() {
@@ -551,6 +608,9 @@ export class ListYourGarage {
   private restore(step: number | null) {
     this.ticked = new Set(this.done());
     this.shown.set(this.stored());
+    const answers = Object.values(this.surveyAnswers());
+    this.surveyOpen.set(answers.some((answer) => answer !== undefined));
+    if (this.surveyOpen()) return;
     if (step && step > 1)
       afterNextRender(() => this.show(step), { injector: this.injector });
   }

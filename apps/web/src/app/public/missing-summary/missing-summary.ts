@@ -8,6 +8,7 @@ import {
 import type { FieldProblem } from '@motor-fix/contracts';
 import { stepOf } from '@motor-fix/contracts/listing-check';
 import { TranslatePipe } from '@motor-fix/i18n';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { textKey } from '../listing-check-texts';
 import { STEPS } from '../steps';
@@ -20,7 +21,7 @@ export type SummaryState = 'missing' | 'complete' | 'failed' | null;
 // grouped by step, each thing a button to its field.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   selector: 'mf-missing-summary',
   styleUrl: './missing-summary.css',
   templateUrl: './missing-summary.html',
@@ -31,6 +32,8 @@ export class MissingSummary {
   // A mobile mechanic's place reads as the registered seat.
   readonly mobile = input(false);
   readonly goTo = output<string>();
+  // Once nothing is missing, the owner is asked how they work.
+  readonly tellUs = output<void>();
 
   protected readonly groups = computed(() => {
     const mobile = this.mobile();

@@ -1,0 +1,183 @@
+<div class="survey">
+  <div class="progress">
+    <div class="top">
+      <span class="kicker">{{ 'public.listing.survey.signup' | t }}</span>
+      <span class="counter">
+        @switch (screen()) {
+          @case (0) { {{ 'public.listing.survey.q5' | t }} }
+          @case (summaryScreen) { {{ 'public.listing.survey.kSummary' | t }} }
+          @default { {{ 'public.listing.survey.question' | t: { n: screen() } }} }
+        }
+      </span>
+    </div>
+    <div class="segments" aria-hidden="true">
+      @for (done of segments(); track $index) {
+        <span [class.done]="done"></span>
+      }
+    </div>
+  </div>
+
+  @switch (screen()) {
+    @case (0) {
+      <div class="step">
+        <p class="eyebrow">{{ 'public.listing.survey.before' | t }}</p>
+        <h1 #heading id="mf-survey-title" tabindex="-1">{{ 'public.listing.survey.introTitle' | t }}</h1>
+        <p class="lead">{{ 'public.listing.survey.introText' | t }}</p>
+        <div class="card">
+          <p class="card-label">{{ 'public.listing.survey.weSet' | t }}</p>
+          <ul class="sets">
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.2.6 3.5 2.7 3.5 6" /></svg>
+              {{ 'public.listing.survey.fTeam' | t }}
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 4v16" /></svg>
+              {{ 'public.listing.survey.fLifts' | t }}
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+              {{ 'public.listing.survey.fMediaLong' | t }}
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M9 11h7M9 15h7" /></svg>
+              {{ 'public.listing.survey.fSheetsLong' | t }}
+            </li>
+          </ul>
+        </div>
+        <p class="note">{{ 'public.listing.survey.changeLater' | t }}</p>
+      </div>
+    }
+    @case (summaryScreen) {
+      <div class="step">
+        <p class="eyebrow">{{ 'public.listing.survey.kSummary' | t }}</p>
+        <h1 #heading id="mf-survey-title" tabindex="-1">{{ 'public.listing.survey.startsWith' | t }}</h1>
+        <div class="card">
+          <ul class="features">
+            @for (feature of features(); track feature.name) {
+              <li>
+                <span>{{ feature.plain ? feature.name : (feature.name | t) }}</span>&ngsp;
+                <mf-lamp
+                  [state]="feature.on ? 'green' : 'grey'"
+                  [label]="(feature.on ? 'public.listing.survey.on' : 'public.listing.survey.off') | t"
+                />
+              </li>
+            }
+          </ul>
+          <p class="always">{{ 'public.listing.survey.alwaysOn' | t }}</p>
+        </div>
+        <p class="change">{{ 'public.listing.survey.changeAny' | t }}</p>
+        <p class="saved mf-message" role="status">@if (notice() === 'saved') {{{ 'public.listing.survey.saved' | t }}}</p>
+        @if (notice() === 'failed') {
+          <p class="failed" role="alert">{{ 'public.listing.survey.failed' | t }}</p>
+        }
+      </div>
+    }
+    @default {
+      @if (question(); as q) {
+        <div class="step">
+          <p class="eyebrow">{{ q.kicker | t }}</p>
+          <h1 #heading id="mf-survey-title" tabindex="-1">{{ q.title | t }}</h1>
+          @if (q.feature) {
+            <div class="mockup card" aria-hidden="true" [attr.data-mockup]="q.feature.mockup">
+              @switch (q.feature.mockup) {
+                @case ('team') {
+                  <p class="card-label">{{ 'public.listing.survey.teamToday' | t }}</p>
+                  @for (person of sample.team; track person.name) {
+                    <div class="person">
+                      <span class="avatar">{{ person.initials }}</span>
+                      <span class="who"><b>{{ person.name }}</b><small>{{ person.job | t }}</small></span>
+                      <span class="state"><i [class]="person.dot"></i>{{ person.state | t }}</span>
+                    </div>
+                  }
+                }
+                @case ('lifts') {
+                  <p class="card-label">{{ 'public.listing.survey.liftToday' | t }}</p>
+                  <div class="hours">
+                    @for (hour of sample.hours; track hour) {
+                      <span>{{ hour }}</span>
+                    }
+                  </div>
+                  @for (lift of sample.lifts; track lift.name) {
+                    <div class="lift">
+                      <span class="lift-name">{{ lift.name }}</span>
+                      <span class="track">
+                        @for (block of lift.blocks; track $index) {
+                          <span [class]="block.kind" [style.flex]="block.span">{{ block.plain ? block.text : (block.text | t) }}</span>
+                        }
+                      </span>
+                    </div>
+                  }
+                }
+                @case ('media') {
+                  <div class="row">
+                    <p class="card-label">{{ 'public.listing.survey.inWork' | t }}</p>
+                    <span class="live"><i class="dot red pulse"></i>{{ 'public.listing.survey.live' | t }}</span>
+                  </div>
+                  <div class="tiles">
+                    <div class="tile">
+                      <span class="frame"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg></span>
+                      <small>{{ 'public.listing.survey.photo1' | t }}</small>
+                    </div>
+                    <div class="tile">
+                      <span class="frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3z" /></svg></span>
+                      <small>{{ 'public.listing.survey.photo2' | t }}</small>
+                    </div>
+                  </div>
+                  <small>{{ 'public.listing.survey.mediaNote' | t }}</small>
+                }
+                @case ('sheets') {
+                  <div class="row">
+                    <p class="card-label">{{ 'public.listing.survey.sheetHead' | t }}</p>
+                    <span class="pills">
+                      @for (pill of sample.pills; track pill) {
+                        <span>{{ pill }}</span>
+                      }
+                    </span>
+                  </div>
+                  @for (job of sample.jobs; track job.time) {
+                    <div class="job"><span class="time">{{ job.time }}</span><span class="who"><b>{{ job.car }}</b><small>{{ job.work | t }}</small></span><span class="plate">{{ job.plate }}</span></div>
+                  }
+                }
+              }
+            </div>
+            <p class="example"><span class="example-label">{{ 'public.listing.survey.example' | t }}</span> {{ q.example ?? '' | t }}</p>
+          } @else {
+            <p class="note">{{ 'public.listing.survey.sourceNote' | t }}</p>
+          }
+          <div #group role="radiogroup" aria-labelledby="mf-survey-title" class="answers" [class.column]="!q.feature">
+            @for (option of q.options; track option.label; let i = $index) {
+              <button
+                type="button"
+                role="radio"
+                class="answer"
+                [attr.aria-checked]="answer() === option.value"
+                [attr.tabindex]="tabStop(i)"
+                (click)="pick(option.value)"
+                (keydown)="move($event, i)"
+              >{{ option.label | t }}</button>
+            }
+          </div>
+          @if (q.feature; as feature) {
+            <div class="outcome">
+              <span>{{ feature.name | t }}</span>&ngsp;
+              <mf-lamp
+                [state]="answer() !== undefined && feature.on(answer()) ? 'green' : 'grey'"
+                [label]="(answer() === undefined ? 'public.listing.survey.pick' : feature.on(answer()) ? 'public.listing.survey.on' : 'public.listing.survey.off') | t"
+              />
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <div class="footer">
+    <button type="button" class="back" [attr.aria-label]="'public.listing.survey.back' | t" (click)="backward()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+    </button>
+    <button hlmBtn type="button" class="forward" [disabled]="blocked()" (click)="forward()">
+      <span>{{ forwardLabel() | t }}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+    </button>
+  </div>
+</div>
