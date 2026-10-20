@@ -506,6 +506,41 @@ describe('a result card linked with its pin', () => {
     expect(document.activeElement).toBe(focused);
   });
 
+  // @traces 1358-FR-005
+  it('scrolls only the list box that holds it, never the page, to its nearest edge', async () => {
+    const card = await linked();
+    const box = document.createElement('div');
+    box.style.overflowY = 'auto';
+    card.before(box);
+    box.append(card);
+    const page = jest.fn();
+    card.scrollIntoView = page;
+    const scrolled = jest.fn();
+    box.scrollBy = scrolled as typeof box.scrollBy;
+    box.getBoundingClientRect = () => ({ bottom: 300, top: 100 }) as DOMRect;
+    const at = (top: number, bottom: number) => {
+      card.getBoundingClientRect = () => ({ bottom, top }) as DOMRect;
+    };
+
+    at(350, 430);
+    fixture.componentInstance.reveal(true);
+    at(40, 120);
+    fixture.componentInstance.reveal(false);
+    at(150, 250);
+    fixture.componentInstance.reveal(true);
+    // Taller than the box: its top edge comes into view.
+    at(250, 600);
+    fixture.componentInstance.reveal(false);
+
+    expect(scrolled.mock.calls).toEqual([
+      [{ behavior: 'smooth', top: 130 }],
+      [{ behavior: 'auto', top: -60 }],
+      [{ behavior: 'auto', top: 150 }],
+    ]);
+    expect(page).not.toHaveBeenCalled();
+    box.remove();
+  });
+
   it('adds nothing to the tab order', async () => {
     const card = await linked();
 

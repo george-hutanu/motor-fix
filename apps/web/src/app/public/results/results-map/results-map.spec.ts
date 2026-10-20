@@ -180,8 +180,15 @@ describe('ResultsMap, the legend on a phone', () => {
 
   it('sits at the top of the map, above the results sheet', () => {
     expect(phone).toMatch(
-      /\.legend \{ bottom: auto; top: var\(--mf-space-3\); \}/,
+      /\.legend \{ bottom: auto; [^}]*top: var\(--mf-space-3\); \}/,
     );
+  });
+
+  it('leaves the zoom buttons at its right free at every phone width', () => {
+    expect(phone).toMatch(
+      /\.legend \{[^}]*max-width: calc\(100% - var\(--mf-space-3\) - var\(--zoom-room\)\);/,
+    );
+    expect(phone).toMatch(/--zoom-room: \d+px;/);
   });
 
   it('gives way to the zoom hint there', () => {

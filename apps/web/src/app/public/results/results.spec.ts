@@ -3256,6 +3256,21 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule('h1')).toBe('');
   });
 
+  it('keeps the summary to one title line and one secondary line', () => {
+    expect(rule('.intro h1')).toMatch(
+      /font-size: var\(--mf-size-subheading\);/,
+    );
+    expect(rule('.summary')).toMatch(/flex-wrap: nowrap;/);
+    expect(rule('.summary')).toMatch(/font-size: var\(--mf-size-small\);/);
+    expect(rule('.tally, .area')).toMatch(/text-overflow: ellipsis;/);
+    expect(rule('.tally, .area')).toMatch(/white-space: nowrap;/);
+    expect(rule('.change, .back')).toMatch(/flex: none;/);
+  });
+
+  it('keeps the map and its controls under the sheet', () => {
+    expect(rule('mf-results-map')).toMatch(/isolation: isolate;/);
+  });
+
   it('lays the sheet over the map, which fills the screen under the summary', () => {
     expect(rule('mf-results-map')).toMatch(/grid-area: stage;/);
     expect(rule('mf-results-sheet')).toMatch(/grid-area: stage;/);
