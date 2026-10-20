@@ -3,7 +3,11 @@
   <nav class="site" [attr.aria-label]="'public.footer.label' | t">
     <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
     <a [routerLink]="['/', i18n.language(), 'list-your-garage']">{{ 'public.siteBar.list' | t }}</a>
-    <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+    @if (signedIn()) {
+      <a [routerLink]="['/', i18n.language(), 'account']">{{ 'public.siteBar.account' | t }}</a>
+    } @else {
+      <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+    }
   </nav>
 </div>
 <nav class="legal" [attr.aria-label]="'consent.footer.label' | t">

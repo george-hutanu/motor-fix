@@ -117,8 +117,7 @@
     },
     "how": {
       "brands": {
-        "refused1": "Fără Dacia",
-        "refused2": "Fără Tesla",
+        "refused": "Fără {brand}",
         "taken": "Lucrează pe",
         "text": "Fiecare service spune ce mărci primește și ce mărci refuză, ca să nu traversezi orașul ca să auzi „pe astea nu lucrăm”.",
         "title": "Lucrează pe. Nu lucrează pe."

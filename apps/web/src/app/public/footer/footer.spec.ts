@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
@@ -8,10 +9,15 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { PublicFooter } from './footer';
 import { CookieSettings } from '../../consent/cookie-settings/cookie-settings';
+import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
 let overlays: { open: jest.Mock };
 let signIn: { start: jest.Mock };
+const session = {
+  current: signal<{ id: string } | null>(null),
+  load: jest.fn(),
+};
 
 async function render(language: 'ro' | 'en' = 'ro') {
   overlays = { open: jest.fn(async () => undefined) };
@@ -21,6 +27,7 @@ async function render(language: 'ro' | 'en' = 'ro') {
       provideRouter([]),
       { provide: Overlays, useValue: overlays },
       { provide: SignInDialog, useValue: signIn },
+      { provide: Session, useValue: session },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -148,6 +155,24 @@ describe('the MotorFix links above the legal row', () => {
       ),
     ).toEqual(['Find a mechanic', 'List your garage', 'Sign in']);
     expect(host.querySelector('a.wordmark')?.getAttribute('href')).toBe('/en');
+  });
+
+  it('shows the account entry in place of sign in once the visit knows the session, and never asks the server for it', async () => {
+    session.current.set({ id: 'u1' });
+    try {
+      const host = await render();
+
+      expect(top(host).querySelector('button')).toBeNull();
+      expect(
+        [...top(host).querySelectorAll('a')].map((a) => [
+          a.textContent?.trim(),
+          a.getAttribute('href'),
+        ]),
+      ).toContainEqual(['Cont', '/ro/account']);
+      expect(session.load).not.toHaveBeenCalled();
+    } finally {
+      session.current.set(null);
+    }
   });
 
   it('puts the MotorFix links above the legal row', async () => {

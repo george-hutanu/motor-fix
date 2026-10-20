@@ -115,8 +115,7 @@
     },
     "how": {
       "brands": {
-        "refused1": "No Dacia",
-        "refused2": "No Tesla",
+        "refused": "No {brand}",
         "taken": "Works on",
         "text": "Every garage lists the brands it takes and the ones it turns away, so you don’t drive across town to hear “we don’t do those.”",
         "title": "Works on. Doesn’t work on."

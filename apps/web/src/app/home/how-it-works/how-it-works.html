@@ -13,8 +13,9 @@
           }
         </ul>
         <ul>
-          <li class="chip refused"><span class="lamp" aria-hidden="true"></span>{{ 'public.home.how.brands.refused1' | t }}</li>
-          <li class="chip refused"><span class="lamp" aria-hidden="true"></span>{{ 'public.home.how.brands.refused2' | t }}</li>
+          @for (brand of refused; track brand) {
+            <li class="chip refused"><span class="lamp" aria-hidden="true"></span>{{ 'public.home.how.brands.refused' | t: { brand } }}</li>
+          }
         </ul>
       </div>
     </article>

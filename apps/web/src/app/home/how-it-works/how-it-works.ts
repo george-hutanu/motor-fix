@@ -21,6 +21,7 @@ const HOW_IT_WORKS = 'how-it-works';
 const RATE = 180;
 const ROLL_MS = 1200;
 const TAKEN = ['BMW', 'Mercedes-Benz', 'Volkswagen'];
+const REFUSED = ['Dacia', 'Tesla'];
 
 // Home's three promises. The hourly rate rolls up from 0 the first time the
 // section comes into view; under reduced motion, on the server and where the
@@ -40,6 +41,7 @@ export class HowItWorks {
   private readonly section =
     viewChild.required<ElementRef<HTMLElement>>('section');
   protected readonly taken = TAKEN;
+  protected readonly refused = REFUSED;
   protected readonly figure = signal(RATE);
   protected readonly label = computed(() =>
     this.i18n.t('public.home.how.prices.label', {

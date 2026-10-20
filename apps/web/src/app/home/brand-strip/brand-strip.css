@@ -28,10 +28,6 @@ nav.still {
   animation-play-state: paused;
 }
 
-.track.moving:hover {
-  animation-play-state: paused;
-}
-
 ul {
   display: flex;
   list-style: none;
