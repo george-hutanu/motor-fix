@@ -108,11 +108,7 @@ export class PricesView {
     void this.i18n.enter('garage');
   }
 
-  protected name(row: PriceListItemDto) {
-    return this.jobName(row);
-  }
-
-  private jobName({ nameEn, nameRo }: { nameEn: string; nameRo: string }) {
+  protected name({ nameEn, nameRo }: { nameEn: string; nameRo: string }) {
     return this.i18n.language() === 'en' && nameEn.trim() ? nameEn : nameRo;
   }
 
@@ -166,7 +162,7 @@ export class PricesView {
         {
           data: { garageId: this.garageId(), job: picked.job, kind: 'new' },
           shape: 'dialog',
-          title: this.jobName(picked.job),
+          title: this.name(picked.job),
         },
       );
       // Also after a refusal: the job may be on the list by now.
