@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
@@ -410,5 +413,21 @@ describe('BrandChips', () => {
 
       expect(row.scrollLeft).toBe(0);
     });
+  });
+});
+
+describe('the brand chip spacing', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(join(__dirname, 'brand-chips.css'), 'utf8').replace(
+    /\s+/g,
+    ' ',
+  );
+
+  it('sets the whole chip padding to 0 16px, leaving no browser default on the block axis', () => {
+    const chip = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(
+      ([, sel]) => sel.trim() === '.chip',
+    )?.[2];
+    expect(chip).toMatch(/(^|;) ?padding: 0 var\(--mf-space-4\);/);
+    expect(chip).not.toContain('padding-inline');
   });
 });

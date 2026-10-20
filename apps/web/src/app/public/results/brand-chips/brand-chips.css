@@ -23,7 +23,7 @@
   font-weight: 600;
   min-height: var(--mf-tap);
   overflow-wrap: anywhere;
-  padding-inline: var(--mf-space-4);
+  padding: 0 var(--mf-space-4);
 }
 
 .chip:hover {
