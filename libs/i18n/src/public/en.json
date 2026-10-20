@@ -655,6 +655,8 @@
       "worksOn": "takes {brand}"
     },
     "changePlace": "Change place",
+    "end": "You have seen all {total}",
+    "endCapped": "You have seen the first 500 · zoom in for fewer",
     "enterAddress": "Enter an address",
     "failed": "We couldn't load the results",
     "found": {
@@ -682,6 +684,7 @@
       "unavailable": "The map is not available now",
       "zoomIn": "Zoom in"
     },
+    "more": "Load more",
     "newSearch": "New search",
     "noneNear": "No garage within {km} km",
     "others": {

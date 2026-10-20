@@ -77,6 +77,23 @@
             </li>
           }
         </ul>
+        @if (paging() === 'loading') {
+          <div class="cards later" aria-hidden="true">
+            @for (card of pageSkeletons; track card) {
+              <div class="card skeleton"></div>
+            }
+          </div>
+        }
+        @if (canLoad()) {
+          <button type="button" class="more" [attr.aria-busy]="paging() === 'loading'" (click)="press()">
+            @if (paging() === 'failed') {
+              {{ 'public.results.retry' | t }}
+            } @else {
+              {{ 'public.results.more' | t }}
+            }
+          </button>
+        }
+        <p #endLine class="end" role="status" tabindex="-1">{{ ending() }}</p>
       }
     }
     @case ('empty') {

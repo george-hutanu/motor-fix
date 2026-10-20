@@ -187,6 +187,38 @@ li.leaving {
   color: var(--mf-on-amber);
 }
 
+/* The page after the loaded ones: its skeletons, its button, the end line. */
+.cards.later {
+  margin-block-start: var(--mf-space-3);
+}
+
+.more {
+  background: none;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 999px;
+  color: var(--mf-text);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  font-weight: 600;
+  margin-block-start: var(--mf-space-4);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  padding-inline: var(--mf-space-4);
+  width: 100%;
+}
+
+.end {
+  color: var(--mf-text-secondary);
+  margin: var(--mf-space-4) 0 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.end:empty {
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   li {
     transition: opacity 300ms var(--mf-motion-ease);

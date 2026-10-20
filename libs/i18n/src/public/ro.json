@@ -667,6 +667,8 @@
       "worksOn": "primește {brand}"
     },
     "changePlace": "Schimbă locul",
+    "end": "Ai văzut toate cele {total}",
+    "endCapped": "Ai văzut primele 500 · apropie harta pentru mai puține",
     "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
     "found": {
@@ -696,6 +698,7 @@
       "unavailable": "Harta nu este disponibilă acum",
       "zoomIn": "Apropie harta"
     },
+    "more": "Încarcă mai multe",
     "newSearch": "Căutare nouă",
     "noneNear": "Niciun service în {km} km",
     "others": {
