@@ -241,9 +241,26 @@ li.leaving {
     animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
   }
 
-  /* A new brand's heading and cards rise into place. */
-  li,
+  /* A new brand's cards rise into place and its name blurs in. */
+  li {
+    animation: mf-row-in 320ms var(--mf-motion-ease) backwards;
+  }
+
   .titled {
-    animation: mf-rise 240ms var(--mf-motion-ease) both;
+    animation: mf-swap-in 520ms var(--mf-motion-ease) backwards;
+  }
+}
+
+@keyframes mf-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+}
+
+@keyframes mf-swap-in {
+  from {
+    filter: blur(6px);
+    opacity: 0;
   }
 }

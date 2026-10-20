@@ -2823,6 +2823,21 @@ describe('Results changing the brand', () => {
     expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR, radius: 50 });
   });
 
+  // @traces 1355-results-brand-chips-FR-011
+  it('names the brand on the progress bar after a step back too', async () => {
+    TestBed.inject(Router).setUpLocationChangeListener();
+    await shown();
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    TestBed.inject(Location).back();
+    await new Promise((r) => setTimeout(r));
+    await settle();
+    await settle();
+
+    expect(progress()?.getAttribute('aria-label')).toBe('Se caută BMW…');
+  });
+
   it('offers the brand search after the chips, and a brand picked there changes the search and is marked', async () => {
     await shown();
 

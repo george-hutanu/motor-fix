@@ -200,12 +200,26 @@ export class Results {
   // Another brand was loading: its answer is said, and brings the list back
   // into view.
   private swapped = false;
-  // The brand asked for here, named on the progress bar while it loads.
-  private readonly asked = signal<BrandPick | undefined>(undefined);
+  // The names of the brands asked for or answered here, by slug and by id,
+  // so the progress bar names the brand loading, a step back included.
+  private readonly names = linkedSignal<
+    Page | undefined,
+    ReadonlyMap<string, string>
+  >({
+    computation: (page, previous) => {
+      const names = new Map(previous?.value);
+      if (page) {
+        names.set(page.brand.id, page.brand.name);
+        names.set(page.brand.slug, page.brand.name);
+      }
+      return names;
+    },
+    source: () => this.searched(),
+  });
   protected readonly changing = computed(() => {
-    const asked = this.asked();
-    return asked?.key === this.brand()
-      ? this.i18n.t('public.results.changing', { brand: asked.name })
+    const name = this.names().get(this.brand());
+    return name
+      ? this.i18n.t('public.results.changing', { brand: name })
       : this.i18n.t('public.results.loading');
   });
 
@@ -537,7 +551,7 @@ export class Results {
       key === answered?.slug
     )
       return;
-    this.asked.set({ key, name });
+    this.names.update((names) => new Map(names).set(key, name));
     void this.write({ brand: key }, { push: true });
   }
 
