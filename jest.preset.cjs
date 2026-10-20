@@ -19,8 +19,11 @@ if (suite && !(suite in suites))
 // slot stays small; Jest itself reads no such variable.
 const maxWorkers = process.env.JEST_MAX_WORKERS;
 
+// A worker that has grown past 1 GB after a file is replaced before the next
+// one: the web suite's workers reached a 4 GB heap on CI and crashed.
 module.exports = {
   ...nxPreset,
+  workerIdleMemoryLimit: '1GB',
   ...(suite && { ...suites[suite], passWithNoTests: true }),
   ...(maxWorkers ? { maxWorkers } : {}),
 };

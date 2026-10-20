@@ -12,6 +12,11 @@ export interface LegalCheckRowDto {
    * The check's recorded detail, only when it is not ok
    */
   detail: string | null;
+
+  /**
+   * The RAR row only: what the failed re-check that suspended the garage found
+   */
+  failure?: 'expired' | 'suspended' | 'withdrawn';
   kind: 'company' | 'caen' | 'rar' | 'documents';
 
   /**

@@ -134,6 +134,7 @@ describe('priceListJobs brand rows', () => {
       public: true,
       toBani: 200,
       updatedAt: new Date(0).toISOString(),
+      visible: true,
     });
   });
 

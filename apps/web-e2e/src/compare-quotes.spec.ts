@@ -33,6 +33,7 @@ test.describe('comparing the quotes of a request @seeded', () => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, quoted.driver, { password: quoted.password });

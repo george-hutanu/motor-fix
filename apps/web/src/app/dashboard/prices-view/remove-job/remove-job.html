@@ -1,0 +1,8 @@
+<form (submit)="$event.preventDefault(); save.submit()" novalidate>
+  <p>{{ 'garage.prices.removeDialog.line' | t }}</p>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="save.state() === 'sending'" (click)="task.close('cancelled')">{{ 'garage.prices.removeDialog.cancel' | t }}</button>
+    <button hlmBtn variant="secondary" type="submit" class="danger" [mfTaskSubmit]="save">{{ 'garage.prices.removeDialog.confirm' | t }}</button>
+  </div>
+</form>

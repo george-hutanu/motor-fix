@@ -287,6 +287,7 @@ test.describe('a garage profile and the dashboard @seeded', () => {
       .getByRole('button', { exact: true, name: 'Accept' })
       .click();
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);
@@ -346,6 +347,7 @@ test.describe('the account carries the choice @seeded', () => {
         response.request().method() === 'POST',
     );
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.otherDriver);
@@ -361,6 +363,7 @@ test.describe('the account carries the choice @seeded', () => {
     await ready(fresh, '/ro');
     await expect(bar(fresh, 'ro')).toBeVisible();
     await fresh
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(fresh, ACCOUNTS.otherDriver);

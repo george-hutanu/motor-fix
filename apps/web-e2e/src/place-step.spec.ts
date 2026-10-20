@@ -212,7 +212,9 @@ test.describe('step 5 of list your garage, the place step', () => {
       .getByRole('button', { exact: true, name: 'Mecanic mobil' })
       .click();
 
-    await expect(step(page).getByLabel('Sediul înregistrat')).toBeVisible();
+    await expect(
+      step(page).getByRole('combobox', { name: 'Sediul înregistrat' }),
+    ).toBeVisible();
     await expect(radius(page)).toHaveValue('20');
     for (const refused of ['0', '101', '12.5']) {
       await radius(page).fill(refused);
@@ -225,7 +227,9 @@ test.describe('step 5 of list your garage, the place step', () => {
 
     await page.reload();
     await settled(page);
-    await expect(step(page).getByLabel('Sediul înregistrat')).toBeVisible();
+    await expect(
+      step(page).getByRole('combobox', { name: 'Sediul înregistrat' }),
+    ).toBeVisible();
     await expect(radius(page)).toHaveValue('35');
   });
 

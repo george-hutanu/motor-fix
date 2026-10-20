@@ -94,11 +94,20 @@
     },
     "error": "We could not load the check",
     "notChecked": "not checked",
+    "note": "We re-check the authorisation in the RAR register every month. If it is suspended or withdrawn, the profile comes off the map until that is fixed.",
     "pill": "Verified profile",
+    "pillCheckedOn": "RAR authorisation, checked on {day}",
+    "pillRecheckedOn": "RAR authorisation, re-checked on {day}",
     "rar": {
       "checked": "checked",
       "checkedOn": "checked on {day}",
+      "failure": {
+        "expired": "expired on {day}",
+        "suspended": "suspended on {day}",
+        "withdrawn": "withdrawn on {day}"
+      },
       "label": "RAR technical authorisation",
+      "recheckedOn": "re-checked on {day}",
       "register": "in the RAR register"
     },
     "retry": "Try again",
@@ -109,9 +118,12 @@
       "warning": "attention"
     },
     "tag": "Verified",
+    "tagSuspended": "Suspended",
     "title": "Legal check"
   },
   "prices": {
+    "add": "Add a job",
+    "addMax": "At most 50 jobs",
     "done": "Done",
     "edit": "Edit",
     "editAll": "Edit prices",
@@ -128,8 +140,10 @@
       "from": "From",
       "minutes": "min",
       "problem": {
+        "duplicate": "The job is already on your list.",
         "not_found": "The job is no longer on the list.",
-        "stale": "The list changed in the meantime."
+        "stale": "The list changed in the meantime.",
+        "too_many": "At most 50 jobs"
       },
       "save": "Save",
       "to": "To"
@@ -137,10 +151,42 @@
     "editRow": "Edit {name}",
     "empty": "No jobs in your list yet.",
     "from": "from {amount}",
+    "hide": "Hide",
+    "hideRow": "Hide {name}",
     "labour": "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.",
     "labourTitle": "Labour, per hour",
     "labourUnset": "Labour: not set",
+    "notSaved": "Not saved. Try again.",
+    "picker": {
+      "none": "No job found",
+      "propose": "Can't find the job? Propose it",
+      "searching": "Searching…",
+      "title": "Add a job"
+    },
+    "propose": {
+      "field": {
+        "duplicate": "You have already proposed this job.",
+        "exists": "The job is already in the catalogue: pick it from the list.",
+        "long": "At most 80 characters",
+        "required": "Write the job's name.",
+        "short": "At least 3 characters"
+      },
+      "name": "Job name",
+      "note": "We check it and tell you when it is on your profile.",
+      "send": "Send",
+      "title": "Propose a job"
+    },
+    "remove": "Remove",
+    "removeDialog": {
+      "cancel": "Cancel",
+      "confirm": "Remove",
+      "line": "Open requests and sent quotes are kept. New drivers will no longer see the job.",
+      "title": "Remove the job from the list?"
+    },
+    "removeRow": "Remove {name}",
     "retry": "Try again",
+    "show": "Show",
+    "showRow": "Show {name}",
     "state": {
       "awaiting_approval": "hidden · awaiting approval",
       "hidden": "hidden",

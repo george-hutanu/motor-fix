@@ -119,9 +119,15 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     page,
   }) => {
     // Signed in first, at desktop size where the site bar shows its sign-in
-    // button, so the request goes out without the sign-in sheet.
+    // button, so the request goes out without the sign-in sheet. Results
+    // search near the driver: Militari, where the seeded Dacia garages are.
+    await page.context().grantPermissions(['geolocation']);
+    await page
+      .context()
+      .setGeolocation({ latitude: 44.435, longitude: 26.015 });
     await ready(page, '/ro');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, DRIVER);
@@ -162,7 +168,7 @@ test.describe('the core flow by keyboard alone @seeded', () => {
 
     await tabTo(page, page.getByRole('link', { name: 'Caută service‑uri' }));
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+    await expect(page).toHaveURL(/\/ro\/garages\?brand=dacia(&|$)/);
     await hydrated(page);
 
     const results = page.getByRole('list', { name: 'Service‑uri găsite' });
@@ -243,7 +249,8 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     page,
   }) => {
     await page.setViewportSize({ height: 568, width: 320 });
-    await ready(page, '/ro/garages?brand=dacia');
+    // Results search near a place: Militari, where the seeded Dacia garages are.
+    await ready(page, '/ro/garages?brand=dacia&near=44.435,26.015');
 
     const results = page.getByRole('list', { name: 'Service‑uri găsite' });
     const first = results

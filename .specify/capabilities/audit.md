@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-19
+updated: 2026-10-20
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -10,6 +10,7 @@ features:
   - 173-price-range-in-place
   - 304-request-garage-details
   - 176-price-change-activity-log
+  - 1352-catalogue-job-visibility
 ---
 
 # Capability: Audit history
@@ -209,6 +210,10 @@ _From 176-price-change-activity-log._
 ### 176-FR-012 — The tests MUST cover, before the code (Principle II): in Jest (API, real PostgreSQL) — the `range` entry's exact values for the brief's 890 – 1.400 → 950 – 1.450 lei example; `range` and `duration_minutes` as two entries of one save; clearing the top; the `labour_range` entry; the three `brand_range` entries; no entry on an unchanged save; no entry when the save fails after the row was written; `via_assistant`, the grant id and the request id for an assistant actor; the entry readable by the owner, the receptionist, a mechanic and an admin, 404 for another garage's owner, a driver refused by the audit history read; `is_key_change` and `internal` false on every entry; reading the price list, the audit history and the public profile writes no entry; in Playwright — the seeded owner changes front brakes from the seeded 890 – 1.400 lei to 950 – 1.450 lei in the price list screen, then an admin signs in and the test reads `GET /api/v1/audit-history` with the admin's session and finds the entry with the old and new range (no admin screen exists for it yet).
 
 _From 176-price-change-activity-log._
+
+### 1352-FR-013 — Each write MUST record its audit entries through the shared writer, in the same transaction, in ST-176's format (kind `price_list`, actor role `owner`, the actor's first name, grant and request id as the actor carries them, `is_key_change` and `internal` false): an add, one `create` entry on `garage_price` (the default row) in the shape the listing's prices write already records for a new row, written through the same function; a hide or show, one `update` entry on the row, field `visible`, old and new boolean; a removal, one `delete` entry on the default row, its old value the same shape as the add's, plus one `brand_range` `delete` entry per brand row (176-FR-005) and one `garage_brand_job` `delete` entry per tick (412-FR-007's shape); a proposal, the catalogue row's `create` entry on `job_type` as the listing writes it and the price row's `create` entry as the add writes it. A write that changes nothing writes no entry.
+
+_From 1352-catalogue-job-visibility._
 
 ## Retired
 

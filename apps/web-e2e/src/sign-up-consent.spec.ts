@@ -35,7 +35,10 @@ const TEXT = {
 async function openSignUp(page: Page, language: 'ro' | 'en') {
   const t = TEXT[language];
   await ready(page, `/${language}`);
-  await page.getByRole('button', { exact: true, name: t.signIn }).click();
+  await page
+    .getByRole('banner')
+    .getByRole('button', { exact: true, name: t.signIn })
+    .click();
   await page
     .getByRole('dialog', { name: t.signIn })
     .getByRole('button', { name: t.newAccount })

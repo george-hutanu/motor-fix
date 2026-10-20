@@ -8,10 +8,15 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { checkPriceRange } from '@motor-fix/contracts/price-range';
+import {
+  checkPriceRange,
+  JOB_NAME_MAX,
+  PROPOSED_JOB_NAME_MIN,
+} from '@motor-fix/contracts/price-range';
 import {
   type BrandRangeItemDto,
   GaragesService,
+  type JobTypeDto,
   type PriceListItemDto,
   type PublicLabourDto,
 } from '@motor-fix/data-access';
@@ -22,6 +27,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
@@ -36,6 +42,15 @@ export type EditableRow = PriceListItemDto & {
 export type PriceRangeEditorData =
   | { kind: 'row'; garageId: string; item: EditableRow }
   | {
+      kind: 'new';
+      garageId: string;
+      job: JobTypeDto;
+      // The job is on the list already: the opener re-reads it at once,
+      // with the editor still open on the refusal.
+      listed?: () => void;
+    }
+  | { kind: 'propose'; garageId: string }
+  | {
       kind: 'brand';
       garageId: string;
       jobTypeId: string;
@@ -46,9 +61,11 @@ export type PriceRangeEditorData =
 // Saved: the opener re-reads its list; the editor patches nothing itself.
 export type PriceRangeEditorResult = 'saved';
 
-type Field = 'fromBani' | 'toBani' | 'durationMinutes';
+type RangeField = 'fromBani' | 'toBani' | 'durationMinutes';
+type Field = RangeField | 'name';
 
 const MESSAGES = 'garage.prices.editor';
+const NAME_TEXTS = 'garage.prices.propose.field';
 const PRICE_TEXTS = 'public.listing.prices.errors';
 // The range rule's field names, and the form's field each one checks.
 const RANGE_FIELD = {
@@ -57,8 +74,25 @@ const RANGE_FIELD = {
   to: 'toBani',
 } as const;
 
+// A refusal of the job itself (already listed, the list full) is the
+// editor's own message, since no field shows the job; a full list refused
+// on a proposal's name is the same message.
+function jobRefused(failure: unknown): never {
+  const problem = toProblem(failure);
+  const job = problem.errors?.find(
+    ({ code, field }) =>
+      field === 'jobTypeId' || (field === 'name' && code === 'too_many'),
+  );
+  if (!job) throw failure;
+  throw new HttpErrorResponse({
+    error: { code: job.code },
+    status: problem.status,
+  });
+}
+
 // One job's range (and duration), a brand's range or the labour rate, changed
-// in place: the same range rule the server runs, checked as it is typed.
+// in place, or a job added or proposed with its range: the same range rule
+// the server runs, checked as it is typed.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -82,8 +116,13 @@ export class PriceRangeEditor {
     OverlayResult<PriceRangeEditorResult>
   >();
   protected readonly data = this.task.data;
-  protected readonly timed = this.data.kind === 'row';
-  protected readonly f = RANGE_FIELD;
+  protected readonly timed =
+    this.data.kind !== 'brand' && this.data.kind !== 'labour';
+  protected readonly proposing = this.data.kind === 'propose';
+  protected readonly f = { ...RANGE_FIELD, name: 'name' } as const;
+  protected readonly sendLabel = this.proposing
+    ? 'garage.prices.propose.send'
+    : 'garage.prices.editor.save';
   // The stamp the row was read with; a 409 brings the newer one.
   private readonly stamp = signal(
     this.data.kind === 'row' ? this.data.item.updatedAt : '',
@@ -92,6 +131,7 @@ export class PriceRangeEditor {
   protected readonly form = new FormGroup({
     durationMinutes: new FormControl<number | null>(null),
     fromBani: new FormControl<number | null>(null),
+    name: new FormControl('', { nonNullable: true }),
     toBani: new FormControl<number | null>(null),
   });
   private readonly changed = toSignal(this.form.events);
@@ -126,6 +166,7 @@ export class PriceRangeEditor {
       found.set(at, code);
     }
     this.missingEnds(found, fromBani, toBani);
+    if (this.proposing) this.nameProblem(found);
     const wide = checked.warnings.length > 0;
     return { found, wide };
   });
@@ -140,6 +181,14 @@ export class PriceRangeEditor {
     if (fromBani === null)
       found.set('fromBani', this.timed ? 'required' : 'both_ends');
     if (toBani === null && !this.timed) found.set('toBani', 'both_ends');
+  }
+
+  // A proposal's name, within the server's bounds once trimmed.
+  private nameProblem(found: Map<Field, string>) {
+    const { length } = this.form.controls.name.value.trim();
+    if (!length) found.set('name', 'required');
+    else if (length < PROPOSED_JOB_NAME_MIN) found.set('name', 'short');
+    else if (length > JOB_NAME_MAX) found.set('name', 'long');
   }
 
   constructor() {
@@ -205,9 +254,11 @@ export class PriceRangeEditor {
     const keys =
       code === 'both_ends'
         ? [`${MESSAGES}.bothEnds`]
-        : field === 'durationMinutes'
-          ? [`${MESSAGES}.duration.${code}`]
-          : [`${PRICE_TEXTS}.${code}`];
+        : field === 'name'
+          ? [`${NAME_TEXTS}.${code}`]
+          : field === 'durationMinutes'
+            ? [`${MESSAGES}.duration.${code}`]
+            : [`${PRICE_TEXTS}.${code}`];
     for (const key of [...keys, `shell.form.field.${code}`]) {
       const found = this.i18n.t(key);
       if (found !== key) return found;
@@ -215,15 +266,16 @@ export class PriceRangeEditor {
     return this.i18n.t('shell.form.field.invalid');
   }
 
-  private start(): Partial<Record<Field, number>> {
+  private start(): Partial<Record<RangeField, number>> {
     const { data } = this;
     if (data.kind === 'row') return data.item;
     if (data.kind === 'brand') return data.brand;
-    return data.labour ?? {};
+    if (data.kind === 'labour') return data.labour ?? {};
+    return {};
   }
 
-  private fill(range: Partial<Record<Field, number>>) {
-    this.form.setValue({
+  private fill(range: Partial<Record<RangeField, number>>) {
+    this.form.patchValue({
       durationMinutes: range.durationMinutes ?? null,
       fromBani: range.fromBani ?? null,
       toBani: range.toBani ?? null,
@@ -232,7 +284,7 @@ export class PriceRangeEditor {
 
   private send(): Promise<unknown> {
     const { data } = this;
-    const { durationMinutes, fromBani, toBani } = this.form.getRawValue();
+    const { durationMinutes, fromBani, name, toBani } = this.form.getRawValue();
     const range = { fromBani: fromBani as number, toBani: toBani as number };
     if (data.kind === 'brand')
       return this.api.priceListControllerSetBrandRange({
@@ -246,6 +298,36 @@ export class PriceRangeEditor {
         body: range,
         garageId: data.garageId,
       });
+    if (data.kind === 'propose')
+      return this.api
+        .catalogueJobsControllerPropose({
+          body: {
+            durationMinutes,
+            fromBani: range.fromBani,
+            name: name.trim(),
+            toBani,
+          },
+          garageId: data.garageId,
+        })
+        .catch(jobRefused);
+    if (data.kind === 'new')
+      return this.api
+        .priceListControllerAdd({
+          body: {
+            durationMinutes,
+            fromBani: range.fromBani,
+            jobTypeId: data.job.id,
+            toBani,
+          },
+          garageId: data.garageId,
+        })
+        .catch((failure: unknown) => {
+          const duplicate = toProblem(failure).errors?.some(
+            ({ code, field }) => field === 'jobTypeId' && code === 'duplicate',
+          );
+          if (duplicate) data.listed?.();
+          return jobRefused(failure);
+        });
     return this.api.priceListControllerSetRange({
       body: {
         durationMinutes,

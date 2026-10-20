@@ -92,3 +92,77 @@ describe('the in-place range writes in the OpenAPI document', () => {
     expect(item.required).not.toContain('updatedAt');
   });
 });
+
+// @traces 1352-FR-017
+describe('the add of a catalogue job in the OpenAPI document', () => {
+  it('adds a job with its body, its answer and its refusals', () => {
+    const { post } = doc.paths['/api/v1/garages/{garageId}/prices'];
+
+    expect(post.operationId).toBe('PriceListController_add');
+    expect(ref(post.requestBody.content['application/json'].schema)).toBe(
+      'PriceAddDto',
+    );
+    expect(ref(post.responses['201'].content['application/json'].schema)).toBe(
+      'PriceRangeSavedDto',
+    );
+    expect(Object.keys(post.responses).sort()).toEqual(
+      ['201', '400', '401', '403', '404', '415', '422'].sort(),
+    );
+  });
+
+  it('names the catalogue job by its uuid and requires it', () => {
+    const body = doc.components.schemas.PriceAddDto;
+
+    expect(body.properties.jobTypeId).toMatchObject({ format: 'uuid' });
+    expect(body.required).toEqual(['jobTypeId']);
+  });
+
+  it("may give each owner's item the default row's own choice", () => {
+    const item = doc.components.schemas.PriceListItemDto;
+
+    expect(item.properties.visible).toMatchObject({ type: 'boolean' });
+    expect(item.required).not.toContain('visible');
+  });
+});
+
+// @traces 1352-FR-017
+describe('the removal of a job in the OpenAPI document', () => {
+  it('removes a job with no body in its answer', () => {
+    const remove =
+      doc.paths['/api/v1/garages/{garageId}/prices/{priceId}'].delete;
+
+    expect(remove.operationId).toBe('PriceListController_remove');
+    expect(Object.keys(remove.responses).sort()).toEqual(
+      ['204', '400', '401', '403', '404'].sort(),
+    );
+  });
+});
+
+// @traces 1352-FR-017
+describe('the proposal of a job in the OpenAPI document', () => {
+  it('proposes a job with its body, its answer and its refusals', () => {
+    const { post } = doc.paths['/api/v1/garages/{garageId}/catalogue-jobs'];
+
+    expect(post.operationId).toBe('CatalogueJobsController_propose');
+    expect(ref(post.requestBody.content['application/json'].schema)).toBe(
+      'CatalogueJobProposalDto',
+    );
+    expect(ref(post.responses['201'].content['application/json'].schema)).toBe(
+      'PriceRangeSavedDto',
+    );
+    expect(Object.keys(post.responses).sort()).toEqual(
+      ['201', '400', '401', '403', '404', '415', '422'].sort(),
+    );
+  });
+
+  it('requires the name, 3 to 80 characters', () => {
+    const body = doc.components.schemas.CatalogueJobProposalDto;
+
+    expect(body.properties.name).toMatchObject({
+      maxLength: 80,
+      minLength: 3,
+      type: 'string',
+    });
+    expect(body.required).toEqual(['name']);
+  });
+});

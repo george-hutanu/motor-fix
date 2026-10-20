@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Allow, IsDefined, IsISO8601, IsOptional } from 'class-validator';
+import {
+  Allow,
+  IsBoolean,
+  IsDefined,
+  IsISO8601,
+  IsOptional,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 
 import { PublicLabourDto } from './garages.dto';
 import { FieldProblemDto } from './listing-check/listing-check.dto';
@@ -62,6 +70,12 @@ export class PriceListItemDto {
     format: 'date-time',
   })
   updatedAt?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The default row's own flag, whatever reason comes first; absent without a default row",
+  })
+  visible?: boolean;
 
   @ApiPropertyOptional({ minimum: 1, type: 'integer' })
   durationMinutes?: number;
@@ -137,10 +151,19 @@ export class BrandRangeSavedDto {
   warnings!: FieldProblemDto[];
 }
 
-// A job's default range as the owner changes it in place. Every value is left
-// to the one range check, so a wrong one is a field error rather than a bare
+// A job's default range as the owner changes it in place, or, with `visible`
+// and nothing else, whether drivers see the job. Every range value is left to
+// the one range check, so a wrong one is a field error rather than a bare
 // 400; null clears the top or the duration, and an omitted one is required.
 export class PriceRangeDto {
+  @ApiPropertyOptional({
+    description:
+      'Hides or shows the job; sent alone, with no stamp, and the last write wins',
+  })
+  @ValidateIf((body: PriceRangeDto) => body.visible !== undefined)
+  @IsBoolean()
+  visible?: boolean;
+
   @ApiPropertyOptional({ example: 95_000, type: 'integer' })
   @IsOptional()
   @Allow()
@@ -166,14 +189,43 @@ export class PriceRangeDto {
   @Allow()
   durationMinutes?: unknown;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      "The row's updatedAt as the owner read it; a newer save answers 409 stale",
+      "The row's updatedAt as the owner read it, required with a range; a newer save answers 409 stale",
     format: 'date-time',
   })
+  @ValidateIf((body: PriceRangeDto) => body.visible === undefined)
   @IsDefined()
   @IsISO8601({ strict: true })
-  expectedUpdatedAt!: string;
+  expectedUpdatedAt?: string;
+}
+
+// An approved catalogue job added to the list with its default range. Every
+// value is left to the one range check; an omitted top or duration is none.
+export class PriceAddDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  jobTypeId!: string;
+
+  @ApiPropertyOptional({ example: 28_000, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  fromBani?: unknown;
+
+  @ApiPropertyOptional({ example: 36_000, nullable: true, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  toBani?: unknown;
+
+  @ApiPropertyOptional({
+    description: 'Minutes in steps of 15',
+    example: 45,
+    nullable: true,
+    type: 'integer',
+  })
+  @IsOptional()
+  @Allow()
+  durationMinutes?: unknown;
 }
 
 export class PriceRangeSavedDto {

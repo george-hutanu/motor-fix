@@ -17,6 +17,7 @@ export class JobTypesService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   async search({
+    exclude,
     ids,
     keys,
     q = '',
@@ -27,6 +28,9 @@ export class JobTypesService {
       select: { id: true, key: true, nameEn: true, nameRo: true },
       where: {
         status: 'approved',
+        ...(exclude !== undefined && {
+          id: { notIn: exclude.toLowerCase().split(',') },
+        }),
         ...(named && {
           OR: [
             { id: { in: ids?.toLowerCase().split(',') ?? [] } },

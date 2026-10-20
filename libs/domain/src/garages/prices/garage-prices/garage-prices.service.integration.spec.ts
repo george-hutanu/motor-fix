@@ -6,6 +6,7 @@ import {
   type StartingPricesInput,
 } from '@motor-fix/contracts';
 
+import { approvedNames, nameOf } from './garage-prices.service';
 import {
   afterRace,
   type PricesWorld,
@@ -545,6 +546,155 @@ describe('a job the garage proposes', () => {
       { code: 'not_approved', field: 'jobs[0].jobTypeId' },
     ]);
     await nothingStored(w);
+  });
+
+  // @traces 1352-FR-010
+  it('proposes one job for a name priced with a default and a brand range', async () => {
+    const w = await world();
+
+    await save(w, {
+      jobs: [
+        { fromBani: lei(400), name: 'Schimb ambreiaj' },
+        { brandId: w.dacia, fromBani: lei(500), name: ' schimb AMBREIAJ' },
+      ],
+      labour,
+    });
+
+    const proposed = await prisma.jobType.findMany({
+      where: { proposedByGarageId: w.garage },
+    });
+    expect(proposed).toHaveLength(1);
+    expect(
+      (await rows(w)).every((row) => row.jobTypeId === proposed[0]?.id),
+    ).toBe(true);
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'catalogue_job.proposed', subjectId: proposed[0]?.id },
+      }),
+    ).toBe(1);
+  });
+
+  // @traces 1352-FR-010
+  it("still refuses an approved job's name on the entry's name", async () => {
+    const w = await world();
+    await prisma.jobType.create({
+      data: {
+        key: 'clutch',
+        nameEn: 'Clutch change',
+        nameRo: 'Schimb ambreiaj',
+        status: 'approved',
+      },
+    });
+
+    const errors = await refused(
+      save(w, {
+        jobs: [{ fromBani: lei(400), name: ' CLUTCH change' }],
+        labour,
+      }),
+    );
+
+    expect(errors).toEqual([{ code: 'duplicate', field: 'jobs[0].name' }]);
+    await nothingStored(w);
+  });
+});
+
+// @traces 1352-FR-010
+describe('the approved names a proposal is checked against', () => {
+  it('answers each approved job by its folded Romanian and English names', async () => {
+    const w = await world();
+    const clutch = await prisma.jobType.create({
+      data: {
+        key: 'clutch',
+        nameEn: 'Clutch change',
+        nameRo: 'Schimb ambreiaj',
+        status: 'approved',
+      },
+    });
+    await prisma.jobType.create({
+      data: {
+        key: 'polish',
+        nameEn: 'Polish',
+        nameRo: 'Polish',
+        status: 'rejected',
+      },
+    });
+
+    const names = await approvedNames(prisma);
+
+    expect(names.get(nameOf(' SCHIMB ambreiaj'))).toBe(clutch.id);
+    expect(names.get(nameOf('clutch CHANGE '))).toBe(clutch.id);
+    expect(names.get(nameOf('front-brakes'))).toBe(w.brakes);
+    expect(names.has(nameOf('tyre-change'))).toBe(false);
+    expect(names.has(nameOf('Polish'))).toBe(false);
+  });
+});
+
+// @traces 1352-FR-010
+describe('one proposed name, as the price list proposes it', () => {
+  it('creates the pending job with its entry and the admins’ event, and answers its id', async () => {
+    const w = await world();
+    const scope = {
+      actorId: w.mihai,
+      actorRole: 'garage' as const,
+      garageId: w.garage,
+    };
+
+    const id = await prisma.$transaction((tx) =>
+      prices.propose(tx, scope, '  Reglaj faruri ', new Error('clash')),
+    );
+
+    expect(
+      await prisma.jobType.findUniqueOrThrow({ where: { id } }),
+    ).toMatchObject({
+      key: 'reglaj-faruri',
+      nameEn: 'Reglaj faruri',
+      nameRo: 'Reglaj faruri',
+      proposedByGarageId: w.garage,
+      status: 'pending',
+    });
+    expect(await history(w)).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorRole: 'owner',
+        subjectId: id,
+        subjectType: 'job_type',
+      }),
+    ]);
+    expect(
+      await prisma.outboxEvent.findFirstOrThrow({
+        where: { kind: 'catalogue_job.proposed', subjectId: id },
+      }),
+    ).toMatchObject({ payload: { garageId: w.garage, jobTypeId: id } });
+  });
+
+  it('throws the clash it is given when another write took the key', async () => {
+    const w = await world();
+    const scope = {
+      actorId: w.mihai,
+      actorRole: 'garage' as const,
+      garageId: w.garage,
+    };
+    const clash = new Error('the name was taken');
+    const other = await prisma.garage.create({
+      data: { name: 'Service Auto Sud', slug: `sud-${randomUUID()}` },
+    });
+
+    const second = afterRace(
+      prisma,
+      (tx) =>
+        prices.propose(
+          tx,
+          { ...scope, garageId: other.id },
+          'Reglaj faruri',
+          new Error('first'),
+        ),
+      () =>
+        prisma.$transaction((tx) =>
+          prices.propose(tx, scope, 'Reglaj faruri', clash),
+        ),
+    );
+
+    await expect(second).rejects.toBe(clash);
   });
 });
 

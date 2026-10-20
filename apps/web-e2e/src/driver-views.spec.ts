@@ -25,6 +25,7 @@ async function signedInDriver(page: Page) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.driver);

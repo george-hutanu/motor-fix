@@ -86,6 +86,28 @@ const FIXTURES: Record<
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
   },
+  'POST /api/v1/admin/garages/{id}/rechecks': {
+    body: () => ({
+      checkedOn: new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Bucharest',
+      }).format(new Date()),
+      detail: 'Autorizația RAR a expirat',
+      failure: 'expired',
+      lastCheckedOn: null,
+      result: 'failed',
+    }),
+    path: async () => {
+      const garage = (
+        await db.query(
+          `INSERT INTO garage (id, name, slug, status, approved_at)
+           VALUES (gen_random_uuid(), 'Audit', $1, 'approved', now())
+           RETURNING id`,
+          [`audit-${randomUUID()}`],
+        )
+      ).rows[0].id as string;
+      return `/api/v1/admin/garages/${garage}/rechecks`;
+    },
+  },
   'POST /api/v1/admin/garages/{id}/suspend': {
     body: () => ({ cause: 'admin', reason: 'Verificare la cererea echipei' }),
     path: async () => {

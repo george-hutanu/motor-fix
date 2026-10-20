@@ -68,6 +68,14 @@ async function brand(name: string, extra: { active?: boolean } = {}) {
 
 // Service Auto Nord, approved, with its owner Mihai, a receptionist and a
 // mechanic; BMW, Mini, Tesla and Lada in the catalogue, Lada retired.
+async function jobType(key: string) {
+  return (
+    await prisma.jobType.create({
+      data: { key, nameEn: key, nameRo: key, status: 'approved' },
+    })
+  ).id;
+}
+
 async function world() {
   const garage = await prisma.garage.create({
     data: {
@@ -273,7 +281,11 @@ describe("replacing a garage's brand answer", () => {
       [w.mini, 'works_on'],
     ]);
     await prisma.garageBrandJob.create({
-      data: { brandId: w.bmw, garageId: w.garage, jobTypeId: randomUUID() },
+      data: {
+        brandId: w.bmw,
+        garageId: w.garage,
+        jobTypeId: await jobType(`oil-${randomUUID()}`),
+      },
     });
     await checkpoint();
 
@@ -368,7 +380,11 @@ describe("replacing a garage's brand answer", () => {
     const w = await world();
     await set(w, [[w.bmw, 'works_on']]);
     await prisma.garageBrandJob.create({
-      data: { brandId: w.bmw, garageId: w.garage, jobTypeId: randomUUID() },
+      data: {
+        brandId: w.bmw,
+        garageId: w.garage,
+        jobTypeId: await jobType(`oil-${randomUUID()}`),
+      },
     });
     await checkpoint();
 
@@ -634,14 +650,6 @@ describe("a taken brand's fuels in the brand answer", () => {
 });
 
 describe("a taken brand's jobs in the brand answer", () => {
-  async function jobType(key: string) {
-    return (
-      await prisma.jobType.create({
-        data: { key, nameEn: key, nameRo: key, status: 'approved' },
-      })
-    ).id;
-  }
-
   // Oil, brakes and gearbox on the price list in that order; oil also has a
   // BMW range, which lists it once.
   async function priced(w: World) {

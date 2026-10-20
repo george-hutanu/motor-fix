@@ -239,7 +239,7 @@ async function accountApi({ me = 200 } = {}) {
     req.on('data', (c) => (raw += c));
     req.on('end', () => {
       const body = raw ? JSON.parse(raw) : undefined;
-      seen.push({ method: req.method, url: req.url, auth: req.headers.authorization, body });
+      seen.push({ method: req.method, url: req.url, auth: req.headers.authorization, body, ...(req.headers['x-forwarded-for'] ? { address: req.headers['x-forwarded-for'] } : {}) });
       const send = (status, json, headers = {}) => res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(JSON.stringify(json));
       if (req.url === '/api/v1/auth/sign-in') {
         const role = Object.entries(SEEDED).find(([, email]) => email === body.email)?.[0];
@@ -272,6 +272,22 @@ describe('a seeded session for the run, the sweep and the flows check', () => {
     try {
       const session = seededSession(api.apiURL);
       assert.notEqual(await session('driver'), await session('driver'));
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  // The API counts sign-ins per address (30 in 15 minutes) and trusts a
+  // forwarded address from loopback: a sweep of two signed-in routes signs in
+  // 32 times, so each sign-in speaks from a test address of its own.
+  it('signs each session in from a test address of its own, so the per-address sign-in limit never refuses a sweep', async () => {
+    const api = await accountApi();
+    try {
+      const session = seededSession(api.apiURL);
+      for (let i = 0; i < 40; i++) await session('driver');
+      const addresses = api.seen.map((c) => c.address);
+      assert.equal(new Set(addresses).size, 40);
+      for (const a of addresses) assert.match(a, /^198\.(18|19)\.\d{1,3}\.\d{1,3}$/);
     } finally {
       await close(api.server);
     }

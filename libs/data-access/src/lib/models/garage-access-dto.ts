@@ -12,8 +12,18 @@ export interface GarageAccessDto {
 [key: string]: boolean;
 };
   garageId: string;
+
+  /**
+   * The stored day of the last RAR check; null when unset
+   */
+  lastCheckedOn: string | null;
   name: string;
   permissions: GaragePermissionsDto;
+
+  /**
+   * Whether a valid re-check is recorded on or after the last check day
+   */
+  rechecked: boolean;
 
   /**
    * The role at this garage

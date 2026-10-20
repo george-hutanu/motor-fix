@@ -75,6 +75,14 @@ const setStance = (
   );
 
 // A job row written straight, as the PUT's createMany leaves it.
+const job = async () => {
+  const key = `job-${randomUUID()}`;
+  return (
+    await prisma.jobType.create({
+      data: { key, nameEn: key, nameRo: key, status: 'approved' },
+    })
+  ).id;
+};
 const seedJob = (w: World, brandId: string, jobTypeId: string) =>
   prisma.garageBrandJob.create({
     data: { brandId, garageId: w.garage, jobTypeId },
@@ -162,8 +170,8 @@ describe('GarageBrandsService', () => {
   it('clears the fuels and the jobs of a brand the garage stops taking', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
-    await seedJob(w, w.dacia, randomUUID());
-    await seedJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.dacia, await job());
+    await seedJob(w, w.dacia, await job());
 
     await setStance(w, w.dacia, 'does_not_take');
 
@@ -246,7 +254,7 @@ describe('GarageBrandsService', () => {
 
   it('records the stances and jobs in the garage history as their author', async () => {
     const w = await world();
-    const jobType = randomUUID();
+    const jobType = await job();
 
     await setStance(w, w.dacia, 'works_on');
     await seedJob(w, w.dacia, jobType);

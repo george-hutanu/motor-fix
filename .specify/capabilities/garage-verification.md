@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-19
+updated: 2026-10-20
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -21,6 +21,7 @@ features:
   - 304-request-garage-details
   - 069-report-decision
   - 1351-rar-monthly-recheck
+  - 1354-garage-legal-checks
 ---
 
 # Capability: Garage verification
@@ -93,9 +94,9 @@ _From 204-rar-activities-check._
 
 _From 204-rar-activities-check._
 
-### 210-FR-011 — While the owner's dashboard is open, a `verification.decided`, `verification.check_recorded` or `verification.reopened` event on the garage's live channel `garage:{garageId}` MUST make the panel read again; every check record MUST therefore still emit `verification.check_recorded` with fileId and kind (no longer the result, which the garage's staff may not read) through the outbox in the same transaction (300-FR-007), now to the admins and `garage:{garageId}` only, no longer the public `system` channel.
+### 1354-FR-007 — While the owner's dashboard is open, `garage.suspended` arriving on `garage:{garageId}` MUST make the panel read again, as `recheck.recorded` and the verification events do today (210-FR-011); and the session MUST re-read on `recheck.recorded` as it does on `garage.suspended` (049-FR-012), so the strip's date follows. This story MUST add no event, sender, audience or channel: `recheck.recorded` and `garage.suspended` already reach the channel (1351-FR-013, 049-FR-007); `garage.restored` (#106) and `document.*` (ST-68) add their re-reads with their senders. Modifies 210-FR-011 (the kinds the panel re-reads on).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
 ### 300-FR-008 — The system MUST map a result to a lamp colour: `ok` green, `warning` amber, `failed` red, `not_run` grey.
 
@@ -477,25 +478,25 @@ _From 259-approval-rules._
 
 _From 210-legal-check-panel._
 
-### 210-FR-002 — The read MUST answer for a garage whose own status is `approved`, and 404 when the garage is `draft` or `suspended` or has no verification file; it reads the garage's newest verification file (by creation, whatever the file's status: an approved file reopened since is still that file), its `company`, `caen` and `rar` checks and its legal documents. Document files and their pages are never part of the answer, only each document kind and status; the admin's approval note, reason and reviewer are never part of it.
+### 1354-FR-001 — The owner's legal panel read (`GET /api/v1/garages/{garageId}/legal-check`) MUST answer for a garage whose own status is `approved` or `suspended`, and 404 when the garage is `draft` or has no verification file; the owner-only rule stays (403 to a receptionist or mechanic of the garage, 404 to anyone else, 210-FR-001). Modifies 210-FR-002 (`suspended` no longer answers 404).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
-### 210-FR-003 — The answer MUST hold four rows in the order `company`, `caen`, `rar`, `documents`, each with a state (`ok`, `warning`, `failed`, `not_run`), the day it was checked (a calendar date or null) and, for the three checks, the check's recorded detail text when the result is not `ok`; plus the garage's company name, whether it is a mobile mechanic (business kind `mobile`), the activities its RAR authorisation covers (code and Romanian and English name, from `rar_activities`) and `last_checked_on`.
+### 1354-FR-002 — The answer MUST carry, besides ST-210's fields, the garage's status (`approved` or `suspended`) and its latest re-check (by `recorded_at`) or null: the Europe/Bucharest day checked, the result (`ok` or `failed`), the failure (`expired`, `suspended`, `withdrawn`, or null) and the recorded detail (null on `ok`). The suspension's cause and reason are not repeated here; the session carries them (049-FR-012). Modifies 210-FR-003 (two fields added).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
 ### 210-FR-004 — A check row's state MUST be its check's result; the documents row's state MUST be `ok` when both document kinds (ONRC company certificate, RAR authorisation) are present with status `valid`, and `warning` otherwise, the answer naming each kind that is missing or not valid; the `documents` verification check is not read.
 
 _From 210-legal-check-panel._
 
-### 210-FR-005 — The dashboard MUST show, for the owner and the receptionist of a garage whose status is `approved`, the "Profil verificat" / "Verified profile" block with the tag "Verificat" / "Verified"; a mechanic sees no block, and a garage in any other status shows none.
+### 1354-FR-005 — The "Profil verificat" strip (owner and receptionist of an `approved` garage, 210-FR-005) MUST show under its tag the line "Autorizația RAR, reverificată pe {day}" / "RAR authorisation, re-checked on {day}" (or "verificată pe" / "checked on" by FR-003's rule), the day as day and short month without the year, "1 oct." / "1 Oct", in Europe/Bucharest; no line when the stored date is empty. The signed-in person's garage entry in the session MUST carry the stored date of last check and whether a valid re-check has been recorded since it was set, so the strip needs no second read and the receptionist sees the same line. While the garage is `suspended` the strip stays hidden and the banner of 049-FR-012 carries the reason. Modifies 210-FR-005 (the strip gains the date line).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
-### 210-FR-006 — For the owner only, the dashboard MUST show under that block the "Verificare legală" / "Legal check" panel: the four rows of FR-003 in order with their label, detail line and checked line, each row's state shown by colour and by text (green `ok` "în regulă" / "in order", amber `warning` "atenție" / "attention", red `failed` "problemă" / "problem", grey `not_run` "neverificat" / "not checked"), so colour is never the only signal; a row that is not `ok` and whose check has a recorded detail shows that detail as its detail line. Detail and checked lines: company "<company name> · CUI verificat la ANAF și ONRC" / "<company name> · tax ID checked at ANAF and ONRC", "verificat la înscriere" / "checked at sign-up"; CAEN per FR-007, "din certificatul constatator" / "from the company certificate"; RAR the covered activities' names joined by ", " (else "în registrul RAR" / "in the RAR register"), "verificată pe <day>" / "checked on <day>"; documents "certificat constatator și autorizație RAR" / "company certificate and RAR authorisation" (or the missing kinds on `warning`), "verificate pe <last_checked_on>" / "checked on <last_checked_on>"; a `not_run` check's checked line is "neverificat" / "not checked".
+### 1354-FR-004 — When the garage's status is `suspended` the panel's tag MUST read "Suspendat" / "Suspended" in red instead of "Verificat"; when, in addition, the open suspension's cause is `recheck_failed`, the RAR row MUST be red, built from the latest re-check (the one recorded last), with state "problemă" / "problem", its detail "expirată pe {day}" / "expired on {day}", "suspendată pe {day}" / "suspended on {day}" or "retrasă pe {day}" / "withdrawn on {day}" by the failure, followed by " · " and the recorded detail, and its checked line "reverificată pe {day}", {day} being that re-check's day checked in every text of this row. For any other cause the four rows are as for an approved garage. Modifies 210-FR-006 (the tag and the RAR row gain the suspended case).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
 ### 210-FR-007 — The CAEN row's detail MUST read "…, la sediul social" / "…, at the registered seat" for a mobile mechanic and "…, la punctul de lucru" / "…, at the workshop address" otherwise.
 
@@ -505,9 +506,9 @@ _From 210-legal-check-panel._
 
 _From 210-legal-check-panel._
 
-### 210-FR-009 — The panel read MUST take `last_checked_on` as stored by the approval (303-FR-005) and MUST NOT write it; the RAR row's checked day is the `rar` check's recorded day in Europe/Bucharest, else `last_checked_on`.
+### 1354-FR-003 — The RAR row's day MUST be the garage's stored date of last check (`GARAGE.last_checked_on`, set by the approval, 303-FR-005, and moved by a valid re-check, 1351-FR-006), read as stored and never computed from the checks or the re-checks, on every row but FR-004's failure row; its detail line stays the garage's recorded activities (`GARAGE.rar_activities`, rewritten by a valid re-check) in the garage's order, else "în registrul RAR"; its checked line reads "reverificată pe {day}" / "re-checked on {day}" when the latest re-check (the one recorded last) is `ok` and not older than the stored date, else "verificată pe {day}" / "checked on {day}". Modifies 210-FR-009 (the `rar` check's recorded day is no longer read).
 
-_From 210-legal-check-panel._
+_From 1354-garage-legal-checks._
 
 ### 210-FR-010 — While the panel read is in flight the panel MUST show a skeleton of four rows, busy to assistive technology; on a failure it MUST show "Nu am putut încărca verificarea" / "We could not load the check" and a "Încearcă din nou" / "Try again" button that sends the read again.
 
@@ -675,6 +676,22 @@ _From 1351-rar-monthly-recheck._
 
 _From 1351-rar-monthly-recheck._
 
+### 1354-FR-006 — Under the four rows the panel MUST show the note "Reverificăm lunar autorizația în registrul RAR. Dacă e suspendată sau retrasă, profilul iese de pe hartă până se rezolvă." / "We re-check the authorisation in the RAR register every month. If it is suspended or withdrawn, the profile comes off the map until that is fixed.", in the signed-in language, wrapping with no sideways scroll at 320 px.
+
+_From 1354-garage-legal-checks._
+
+### 1354-FR-008 — Dates MUST be shown in Europe/Bucharest: in the rows as "12 sept. 2026" / "12 Sep 2026" (210-FR-008, 019-FR-005); on the strip as "1 oct." / "1 Oct".
+
+_From 1354-garage-legal-checks._
+
+### 1354-FR-009 — The story MUST write nothing (no audit entry, no event, no field written) and add no endpoint, table, service, queue or outside call; the two answer fields (and the RAR row's optional `failure`, set only on FR-004's failure row so the panel needs no inference from the suspension's cause, which is not answered) and the session's two fields live in the contracts library's DTOs, the OpenAPI document and the generated client are regenerated with them (Principle V); the panel read's existing observability entry stands (210-FR-013).
+
+_From 1354-garage-legal-checks._
+
+### 1354-FR-010 — Tests MUST exist before the code (Principle II). Jest, unit: the RAR row's day and line for an approval-only garage and after an `ok` re-check; the suspended tag and the three failure texts; the dates in both languages; the strip's line in both languages and its absence without a date. Jest on real PostgreSQL and Redis: the read answers for a `suspended` garage with its status and the failed re-check recorded through the re-check use case, 404 for `draft` and for an outsider, 403 for the receptionist, and the session's garage entry carries the date and the re-check flag for the owner and the receptionist. Web unit: the panel re-reads on `garage.suspended` and the session on `recheck.recorded`. Playwright: with the owner's dashboard open, record a valid re-check as the seeded admin in another session and see the strip's date and the RAR row change without a reload. The four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 1354-garage-legal-checks._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -722,3 +739,10 @@ _From 1351-rar-monthly-recheck._
 - `300-FR-004` — superseded by `1351-FR-006` (2026-10-19)
 - `066-FR-004` — superseded by `1351-FR-007` (2026-10-19)
 - `066-FR-002` — superseded by `1351-FR-010` (2026-10-19)
+
+- `210-FR-002` — superseded by `1354-FR-001` (2026-10-20)
+- `210-FR-003` — superseded by `1354-FR-002` (2026-10-20)
+- `210-FR-009` — superseded by `1354-FR-003` (2026-10-20)
+- `210-FR-006` — superseded by `1354-FR-004` (2026-10-20)
+- `210-FR-005` — superseded by `1354-FR-005` (2026-10-20)
+- `210-FR-011` — superseded by `1354-FR-007` (2026-10-20)

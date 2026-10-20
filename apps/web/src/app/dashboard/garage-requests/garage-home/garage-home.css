@@ -9,6 +9,18 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--mf-space-4);
+  min-width: 0;
+}
+.strip .muted {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-body);
+  overflow-wrap: anywhere;
+}
 .verified {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,5 @@
 import { legalCheckRows } from './legal-check.dto';
+import { recheckedSince } from './verification-target';
 
 type LegalCheckSource = Parameters<typeof legalCheckRows>[0];
 
@@ -49,7 +50,7 @@ describe('the legal check rows', () => {
         state: 'ok',
       },
       {
-        checkedOn: '2026-09-30',
+        checkedOn: '2026-10-01',
         detail: null,
         kind: 'rar',
         missing: [],
@@ -111,18 +112,26 @@ describe('a check row', () => {
   });
 });
 
-// @traces 210-FR-009
+// @traces 1354-FR-003
 describe('the RAR row day', () => {
-  it('is the day the check was recorded', () => {
+  it("is the garage's stored date of last check, not the day the check was recorded", () => {
     const rar = legalCheckRows(source())[2];
-    expect(rar?.checkedOn).toBe('2026-09-30');
+    expect(rar?.checkedOn).toBe('2026-10-01');
   });
 
-  it('falls back to the last check day when the check holds no day', () => {
+  it('stays the stored date after a valid re-check moved it', () => {
     const rar = legalCheckRows(
-      source({ checks: [check('rar', 'ok', null, null)] }),
+      source({
+        lastCheckedOn: '2026-10-01',
+        latestRecheck: {
+          checkedOn: '2026-10-01',
+          detail: null,
+          failure: null,
+          result: 'ok',
+        },
+      }),
     )[2];
-    expect(rar?.checkedOn).toBe('2026-10-01');
+    expect(rar).toMatchObject({ checkedOn: '2026-10-01', state: 'ok' });
   });
 
   it('is none while the check has not run', () => {
@@ -130,6 +139,102 @@ describe('the RAR row day', () => {
       source({ checks: [check('rar', 'not_run', null, null)] }),
     )[2];
     expect(rar?.checkedOn).toBeNull();
+  });
+});
+
+const FAILED = {
+  checkedOn: '2026-09-12',
+  detail: 'Autorizația a expirat la 31 august',
+  failure: 'expired' as const,
+  result: 'failed' as const,
+};
+
+// @traces 1354-FR-004
+describe('the RAR row of a garage suspended by a failed re-check', () => {
+  it("is failed, on the re-check's day, with its recorded detail", () => {
+    const rar = legalCheckRows(
+      source({
+        lastCheckedOn: '2026-08-10',
+        latestRecheck: FAILED,
+        recheckFailed: true,
+      }),
+    )[2];
+    expect(rar).toEqual({
+      checkedOn: '2026-09-12',
+      detail: 'Autorizația a expirat la 31 august',
+      failure: 'expired',
+      kind: 'rar',
+      missing: [],
+      state: 'failed',
+    });
+  });
+
+  it('is the ordinary row when the suspension has another cause', () => {
+    const rar = legalCheckRows(
+      source({
+        lastCheckedOn: '2026-08-10',
+        latestRecheck: FAILED,
+        recheckFailed: false,
+      }),
+    )[2];
+    expect(rar).toMatchObject({
+      checkedOn: '2026-08-10',
+      detail: null,
+      state: 'ok',
+    });
+  });
+
+  it('is the ordinary row when the latest re-check is ok', () => {
+    const rar = legalCheckRows(
+      source({
+        latestRecheck: { ...FAILED, detail: null, failure: null, result: 'ok' },
+        recheckFailed: true,
+      }),
+    )[2];
+    expect(rar).toMatchObject({ checkedOn: '2026-10-01', state: 'ok' });
+  });
+
+  it('leaves the other three rows as they are', () => {
+    const rows = legalCheckRows(
+      source({ latestRecheck: FAILED, recheckFailed: true }),
+    );
+    expect(rows.filter((row) => row.kind !== 'rar')).toEqual(
+      legalCheckRows(source()).filter((row) => row.kind !== 'rar'),
+    );
+  });
+});
+
+// @traces 1354-FR-003 1354-FR-005
+describe('whether the stored date is a re-check', () => {
+  const ok = (checkedOn: string) => ({ checkedOn, result: 'ok' as const });
+
+  it('is not when the garage was never re-checked', () => {
+    expect(recheckedSince(null, '2026-06-14')).toBe(false);
+  });
+
+  it('is not when the latest re-check failed', () => {
+    expect(
+      recheckedSince(
+        { checkedOn: '2026-10-01', result: 'failed' },
+        '2026-06-14',
+      ),
+    ).toBe(false);
+  });
+
+  it('is when the latest ok re-check is the stored day', () => {
+    expect(recheckedSince(ok('2026-10-01'), '2026-10-01')).toBe(true);
+  });
+
+  it('is when the latest ok re-check is after the stored day', () => {
+    expect(recheckedSince(ok('2026-10-02'), '2026-10-01')).toBe(true);
+  });
+
+  it('is not when the garage was approved again after the re-check', () => {
+    expect(recheckedSince(ok('2026-09-01'), '2026-10-01')).toBe(false);
+  });
+
+  it('is not when no date is stored', () => {
+    expect(recheckedSince(ok('2026-10-01'), null)).toBe(false);
   });
 });
 

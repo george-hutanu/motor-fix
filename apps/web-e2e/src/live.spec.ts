@@ -31,6 +31,7 @@ async function openDashboard(
 ) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   const live = page.waitForResponse((r) => r.url().endsWith('/api/v1/live'));

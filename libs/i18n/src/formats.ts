@@ -169,13 +169,27 @@ function instant(value: unknown): Date | undefined {
   return date && !Number.isNaN(date.getTime()) ? date : undefined;
 }
 
-export function formatDay(value: unknown, language: Language): string {
+// The Bucharest day and short month of a value, and its year.
+function dayMonth(value: unknown, language: Language) {
   const date = instant(value);
-  if (!date) return MISSING;
+  if (!date) return undefined;
   const { day, month, year } = Object.fromEntries(
     dayParts.formatToParts(date).map((p) => [p.type, p.value]),
   );
-  return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
+  return {
+    dm: `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]}`,
+    year,
+  };
+}
+
+export function formatDay(value: unknown, language: Language): string {
+  const parts = dayMonth(value, language);
+  return parts ? `${parts.dm} ${parts.year}` : MISSING;
+}
+
+// The same Bucharest day without its year: "1 oct." / "1 Oct".
+export function formatDayMonth(value: unknown, language: Language): string {
+  return dayMonth(value, language)?.dm ?? MISSING;
 }
 
 // Fixed like the short names, so server and browser write the same month;

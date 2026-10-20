@@ -55,6 +55,24 @@ export const CHECK_DETAIL_MAX = 200;
 // The most characters a failed RAR re-check's detail holds.
 export const RECHECK_DETAIL_MAX = 200;
 
+export const RECHECK_RESULTS = ['ok', 'failed'] as const;
+export type RecheckResult = (typeof RECHECK_RESULTS)[number];
+export const RECHECK_FAILURES = ['expired', 'suspended', 'withdrawn'] as const;
+export type RecheckFailure = (typeof RECHECK_FAILURES)[number];
+
+// Whether the re-check recorded last is valid and not older than the stored
+// day of last check, which a valid re-check moves and a new approval resets.
+export function recheckedSince(
+  latest: { checkedOn: string; result: RecheckResult } | null | undefined,
+  lastCheckedOn: string | null,
+): boolean {
+  return (
+    latest?.result === 'ok' &&
+    !!lastCheckedOn &&
+    latest.checkedOn >= lastCheckedOn
+  );
+}
+
 const LAMPS: Record<VerificationCheckResult, Lamp> = {
   failed: 'red',
   not_run: 'grey',

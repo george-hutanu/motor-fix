@@ -289,15 +289,16 @@ model GarageBrand {
 }
 
 // A job type the garage does for a brand it works on; the row is the tick.
-// No foreign key on `jobTypeId`: the job_type table does not exist yet.
 model GarageBrandJob {
   garageId    String      @map("garage_id") @db.Uuid
   brandId     String      @map("brand_id") @db.Uuid
   jobTypeId   String      @map("job_type_id") @db.Uuid
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   garageBrand GarageBrand @relation(fields: [garageId, brandId], references: [garageId, brandId], onDelete: Cascade)
+  jobType     JobType     @relation(fields: [jobTypeId], references: [id], onDelete: Restrict)
 
   @@id([garageId, brandId, jobTypeId])
+  @@index([jobTypeId])
   @@map("garage_brand_job")
 }
 
