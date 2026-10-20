@@ -3549,6 +3549,22 @@ describe('Results loading more', () => {
     expect(said(page().querySelector('.summary .tally'))).toContain('900');
   });
 
+  // @traces 1356-FR-007
+  it('says the first 500 when the last page passes them and has no next', async () => {
+    await loaded(
+      pageOf({ items: garages(0, 495), nextCursor: 'c1', total: 505 }),
+    );
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(495, 10), nextCursor: null, total: 505 }),
+    );
+
+    expect(names()).toHaveLength(500);
+    expect(said(end())).toBe(
+      'Ai văzut primele 500 · apropie harta pentru mai puține',
+    );
+  });
+
   // @traces 1356-FR-005
   it('loads the next page from its button, keeping the focus on it, and gives the focus to the end line at the last page', async () => {
     await loaded();

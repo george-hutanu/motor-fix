@@ -4,7 +4,7 @@ import {
   type GarageSearchPageDto,
   type ListedGarageDto,
   nearOf,
-  SEARCH_IDS_MAX,
+  SEARCH_PAGE_SIZE,
   type SearchBbox,
   type SearchPoint,
 } from '@motor-fix/contracts';
@@ -26,7 +26,7 @@ import { type AreaSql, areaSql, within } from '../area/area-sql';
 import { type AreaRow, inAreaOf, placed } from '../area/search-area';
 import { SearchLogService } from '../search-log/search-log.service';
 
-const PAGE = SEARCH_IDS_MAX;
+const PAGE = SEARCH_PAGE_SIZE;
 const GROUPS = ['works_on', 'other'] as const;
 
 // Unsigned on purpose: it only says where the next page starts, and a

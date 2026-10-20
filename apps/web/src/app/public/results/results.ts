@@ -30,6 +30,7 @@ import {
   nearOf,
   parseNear,
   SEARCH_IDS_MAX,
+  SEARCH_PAGE_SIZE,
   SEARCH_PINS_MAX,
   SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
@@ -406,7 +407,7 @@ export class Results {
   });
   // More than the first page is shown, so the end of the list is told.
   private readonly pagedOn = linkedSignal<Page | undefined, boolean>({
-    computation: (page) => (page?.items.length ?? 0) > SEARCH_IDS_MAX,
+    computation: (page) => (page?.items.length ?? 0) > SEARCH_PAGE_SIZE,
     source: this.searched,
   });
   // Bumped when the list starts again, so a page asked before is dropped.
@@ -430,7 +431,11 @@ export class Results {
   protected readonly ending = computed(() => {
     const answer = this.answer();
     if (!answer) return null;
-    if (this.capped() && answer.nextCursor)
+    // Stopped at the cap with garages left, whether a cursor or the total says so.
+    if (
+      this.capped() &&
+      (answer.nextCursor || answer.total > answer.items.length)
+    )
       return this.i18n.t('public.results.endCapped', {
         max: SEARCH_PINS_MAX,
       });
