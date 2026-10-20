@@ -473,8 +473,13 @@ export class PriceListService {
     if (!row) throw notFound();
     const range = rangeOf(body, true);
     if (range.errors.length > 0) throw refuse(range.errors);
-    const read = new Date(body.expectedUpdatedAt as string).getTime();
-    if (read !== row.updatedAt.getTime()) throw stale();
+    const { expectedUpdatedAt } = rest;
+    if (
+      expectedUpdatedAt === undefined ||
+      new Date(expectedUpdatedAt).getTime() !== row.updatedAt.getTime()
+    ) {
+      throw stale();
+    }
 
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { jobTypeId } = row;
@@ -681,10 +686,7 @@ export class PriceListService {
         tx.garageBrandJob.findMany({ select: { brandId: true }, where }),
       ]);
       // A removal racing this one took the default row first.
-      const { count } = await tx.garagePrice.deleteMany({
-        where: { brandId: null, id: priceId },
-      });
-      if (count === 0) throw notFound();
+      if (!rows.some((row) => row.id === priceId)) throw notFound();
       await tx.garagePrice.deleteMany({ where });
       await tx.garageBrandJob.deleteMany({ where });
       const scope = this.scopeOf(actor, garageId, 'garage_price');
