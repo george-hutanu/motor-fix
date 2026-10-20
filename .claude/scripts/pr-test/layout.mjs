@@ -205,23 +205,21 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   };
   // The part of a control its scrolling or clipping boxes leave drawn: a control cut off by an ancestor's
   // overflow (a sheet's body scrolled past it, a stage that hides what hangs below) is not drawn over what
-  // lies there. An absolute box is clipped only from its containing block (the nearest positioned,
-  // transformed, filtered, perspective or contained ancestor) up, and a fixed box leaves its ancestors' clips behind.
+  // lies there. An absolute or fixed box is clipped only from its containing block up: for an absolute
+  // box the nearest positioned ancestor, and for either one that is transformed (translate, rotate and
+  // scale too), filtered, given perspective, contained or about to change one of those.
+  const holdsFixed = (s) =>
+    [s.transform, s.translate, s.rotate, s.scale, s.filter, s.backdropFilter, s.perspective].some((v) => v && v !== "none") ||
+    /paint|layout|strict|content/.test(s.contain) ||
+    /transform|translate|rotate|scale|filter|perspective/.test(s.willChange);
   const drawn = (el) => {
     let { left, top, right, bottom } = el.getBoundingClientRect();
-    let escaping = style(el).position === "absolute";
-    for (let e = el; e.parentElement && style(e).position !== "fixed"; ) {
-      e = e.parentElement;
+    let escaping = style(el).position;
+    for (let e = el.parentElement; e; e = e.parentElement) {
       const s = style(e);
-      const holds =
-        s.position !== "static" ||
-        s.transform !== "none" ||
-        s.filter !== "none" ||
-        s.perspective !== "none" ||
-        /paint|layout|strict|content/.test(s.contain) ||
-        /transform|filter|perspective/.test(s.willChange);
-      if (escaping && !holds) continue;
-      escaping = s.position === "absolute";
+      const holds = holdsFixed(s) || (escaping === "absolute" && s.position !== "static");
+      if ((escaping === "absolute" || escaping === "fixed") && !holds) continue;
+      escaping = s.position;
       const box = e.getBoundingClientRect();
       if (s.overflowX !== "visible") (left = Math.max(left, box.left)), (right = Math.min(right, box.right));
       if (s.overflowY !== "visible") (top = Math.max(top, box.top)), (bottom = Math.min(bottom, box.bottom));

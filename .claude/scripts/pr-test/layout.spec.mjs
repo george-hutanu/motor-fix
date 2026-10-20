@@ -209,10 +209,17 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: page, at: 'desktop' }), 'overlap')).toEqual(['button#out × button#below']);
       const held = page.replace('overflow:hidden', 'overflow:hidden;position:relative');
       expect(of(await measure(null, { html: held, at: 'desktop' }), 'overlap')).toEqual([]);
-      for (const holder of ['filter:blur(0)', 'contain:paint', 'will-change:transform', 'perspective:10px']) {
+      for (const holder of ['filter:blur(0)', 'backdrop-filter:blur(1px)', 'translate:0 1px', 'rotate:1deg', 'scale:1.01', 'contain:paint', 'will-change:transform', 'perspective:10px']) {
         const by = page.replace('overflow:hidden', `overflow:hidden;${holder}`);
         expect(of(await measure(null, { html: by, at: 'desktop' }), 'overlap')).toEqual([]);
       }
+    });
+
+    it('clips a fixed control only inside a transformed ancestor', async () => {
+      const page = (extra) => `<div style="height:100px;overflow:hidden;${extra}"><button id="pinned" style="position:fixed;top:158px;left:8px;width:200px;height:48px">Pinned</button></div>
+        <button id="below" style="position:fixed;top:166px;left:8px;width:200px;height:48px">Below</button>`;
+      expect(selectors(await measure(null, { html: page(''), at: 'desktop' }), 'overlap')).toEqual(['button#pinned × button#below']);
+      expect(of(await measure(null, { html: page('transform:translateZ(0)'), at: 'desktop' }), 'overlap')).toEqual([]);
     });
 
     it('passes a button inside a link card and two buttons side by side', async () => {
