@@ -67,6 +67,7 @@ type ProfileRow = {
   known_for: string | null;
   labour_from_bani: number | null;
   labour_to_bani: number | null;
+  last_checked_on: string | null;
   latitude: number | null;
   lifetime_requests: number | null;
   listed: boolean;
@@ -86,7 +87,6 @@ type ProfileRow = {
   service_radius_km: number | null;
   slug: string;
   status: string;
-  verified_at: Date | null;
 };
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
@@ -277,7 +277,7 @@ export class PublicGaragesService {
 
   // The whole profile in one statement: the garage, its brands with their
   // fuels and job ticks, photos, price rows, courtesy car, response figures
-  // and latest approval. Outside the scope only the status comes back.
+  // and day of last check. Outside the scope only the status comes back.
   private async read(slug: string): Promise<ProfileRow | undefined> {
     const [row] = await this.prisma.$queryRaw<ProfileRow[]>`
       SELECT g.id, g.slug, g.name, g.status::text AS status, s.listed,
@@ -292,11 +292,7 @@ export class PublicGaragesService {
           SELECT 1 FROM garage_facility f
           WHERE f.garage_id = g.id AND f.facility = 'courtesy_car'
         ) AS courtesy_car,
-        (
-          SELECT max(v.decided_at) FROM verification_file v
-          WHERE v.garage_id = g.id AND v.status = 'approved'
-            AND v.decided_at IS NOT NULL
-        ) AS verified_at,
+        g.last_checked_on::text AS last_checked_on,
         d.brands, d.photos, d.prices
       FROM garage g
       CROSS JOIN LATERAL (SELECT ${publicGaragesSql('g')} AS listed) s
@@ -359,7 +355,10 @@ export class PublicGaragesService {
       ...price,
       updatedAt: new Date(price.updatedAt),
     }));
-    const verifiedAt = row.verified_at ?? row.approved_at;
+    // A stored day parses as its UTC midnight, the same day in Bucharest.
+    const verifiedAt = row.last_checked_on
+      ? new Date(row.last_checked_on)
+      : row.approved_at;
     const inContext = wanted ? inContextOf(wanted, brands) : undefined;
     return {
       id: row.id,

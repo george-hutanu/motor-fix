@@ -240,6 +240,30 @@ describe('the garage profile', () => {
     expect(text()).toContain('Last check: 15 Jan 2026.');
   });
 
+  // @traces 1353-FR-002
+  it.each([
+    [
+      'ro',
+      'Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: 1 aug. 2027.',
+    ],
+    [
+      'en',
+      'Active company and RAR technical authorisation, checked by MotorFix. Last check: 1 Aug 2027.',
+    ],
+  ] as const)(
+    'dates the %s verification line by the stored day of last check',
+    async (language, line) => {
+      await TestBed.inject(I18n).use(language);
+      await open(`/${language}/garages/service-auto-militari`);
+      await reads[0]?.answer({
+        ...FIXED,
+        verifiedAt: '2027-08-01T00:00:00.000Z',
+      });
+
+      expect(page().querySelector('.verified')?.textContent?.trim()).toBe(line);
+    },
+  );
+
   it('leaves out the description, the place and the verification line it has no data for', async () => {
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
@@ -1020,6 +1044,49 @@ describe('the garage profile kept live', () => {
 
     expect(text()).toContain('Acest service nu mai este disponibil');
     expect(text()).not.toContain('Service Auto Militari');
+  });
+
+  // @traces 1353-FR-003
+  it('reads again with the brand kept when a re-check is recorded, and shows the new date', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[0]?.answer({
+      ...FIXED,
+      verifiedAt: '2027-06-14T00:00:00.000Z',
+    });
+
+    send('recheck.recorded');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.answer({
+      ...FIXED,
+      verifiedAt: '2027-08-01T00:00:00.000Z',
+    });
+
+    expect(reads.map((r) => r.query)).toEqual([
+      { brand: 'dacia', slug: 'service-auto-militari' },
+      { brand: 'dacia', slug: 'service-auto-militari' },
+    ]);
+    expect(text()).toContain('Ultima verificare: 1 aug. 2027.');
+    expect(text()).not.toContain('14 iun. 2027');
+  });
+
+  // @traces 1353-FR-003
+  it('switches to the no-longer-available view when the re-read after a re-check answers 410', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({
+      ...FIXED,
+      verifiedAt: '2027-06-14T00:00:00.000Z',
+    });
+
+    send('recheck.recorded');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.fail(410);
+
+    expect(text()).toContain('Acest service nu mai este disponibil');
+    expect(page().querySelector('.verified')).toBeNull();
   });
 
   it('switches to the not-found view when a re-read answers 404', async () => {
