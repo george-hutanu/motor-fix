@@ -358,7 +358,7 @@ export class GaragesService extends BaseService {
   static readonly PriceListControllerSetRangePath = '/api/v1/garages/{garageId}/prices/{priceId}';
 
   /**
-   * Changes a job's default range and duration in place, against the stamp it was read with.
+   * Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job.
    *
    *
    *
@@ -373,7 +373,7 @@ export class GaragesService extends BaseService {
   }
 
   /**
-   * Changes a job's default range and duration in place, against the stamp it was read with.
+   * Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job.
    *
    *
    *

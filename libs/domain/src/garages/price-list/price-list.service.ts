@@ -354,13 +354,26 @@ export class PriceListService {
 
   // A job's default range changed in place, judged against the stamp the
   // owner read it with: a row changed since answers 409 and keeps the newer
-  // save, whatever this one would have written.
+  // save, whatever this one would have written. A body with `visible` hides
+  // or shows the job instead.
   async setRange(
     actor: Actor,
     { garageId, priceId }: Row,
     body: PriceRangeDto,
   ): Promise<PriceRangeSavedDto> {
     assertGarageOwner(actor, garageId);
+    const { visible, ...rest } = body;
+    if (visible !== undefined) {
+      if (Object.values(rest).some((value) => value !== undefined)) {
+        throw refusal(
+          HttpStatus.BAD_REQUEST,
+          'validation_failed',
+          'visible is sent alone',
+          [{ code: 'exclusive', field: 'visible' }],
+        );
+      }
+      return this.setVisible(actor, { garageId, priceId }, visible);
+    }
     const row = await this.prisma.garagePrice.findFirst({
       select: {
         durationMinutes: true,
@@ -375,7 +388,7 @@ export class PriceListService {
     if (!row) throw notFound();
     const range = rangeOf(body, true);
     if (range.errors.length > 0) throw refuse(range.errors);
-    const read = new Date(body.expectedUpdatedAt).getTime();
+    const read = new Date(body.expectedUpdatedAt as string).getTime();
     if (read !== row.updatedAt.getTime()) throw stale();
 
     const { durationMinutes, fromBani, toBani, warnings } = range;
@@ -432,6 +445,52 @@ export class PriceListService {
     });
     await this.forget(row.garage.slug, NO_BRAND);
     return answer(updatedAt);
+  }
+
+  // Whether drivers see the job, last write wins: a flip moves the row's stamp,
+  // so a range edit read before it answers 409.
+  private async setVisible(
+    actor: Actor,
+    { garageId, priceId }: Row,
+    visible: boolean,
+  ): Promise<PriceRangeSavedDto> {
+    const where = { brandId: null, garageId, id: priceId };
+    const select = {
+      durationMinutes: true,
+      fromBani: true,
+      garage: { select: { slug: true } },
+      id: true,
+      jobTypeId: true,
+      toBani: true,
+      updatedAt: true,
+    } as const;
+    const row = await this.prisma.$transaction(async (tx) => {
+      // Only a flip writes; the same value again, or a racing write that set
+      // it first, leaves the row as stored.
+      const { count } = await tx.garagePrice.updateMany({
+        data: { updatedBy: actor.accountId, visible },
+        where: { ...where, visible: !visible },
+      });
+      const saved = await tx.garagePrice.findFirst({ select, where });
+      if (!saved) throw notFound();
+      if (count === 0) return { ...saved, flipped: false };
+      await this.audit.record(tx, {
+        ...this.scopeOf(actor, garageId, 'garage_price'),
+        action: 'update',
+        field: 'visible',
+        newValue: visible,
+        oldValue: !visible,
+        subjectId: priceId,
+      });
+      await this.changed(tx, {
+        brandIds: [],
+        garageId,
+        jobTypeIds: [saved.jobTypeId],
+      });
+      return { ...saved, flipped: true };
+    });
+    if (row.flipped) await this.forget(row.garage.slug, NO_BRAND);
+    return savedOf(row, []);
   }
 
   // The garage's labour rate, both ends always set.

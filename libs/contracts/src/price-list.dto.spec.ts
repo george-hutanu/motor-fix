@@ -123,11 +123,25 @@ describe('the body of a default range write', () => {
   it.each([
     ['a missing stamp', { expectedUpdatedAt: undefined }, 'expectedUpdatedAt'],
     ['a malformed stamp', { expectedUpdatedAt: 'ieri' }, 'expectedUpdatedAt'],
-    ['an unknown field', { visible: false }, 'visible'],
+    ['an unknown field', { position: 1 }, 'position'],
   ])('refuses %s', async (_, values, property) => {
     expect(await problemsOf(PriceRangeDto, { ...body, ...values })).toEqual([
       property,
     ]);
+  });
+});
+
+// @traces 1352-catalogue-job-visibility-FR-005
+describe('the body of a hide or show', () => {
+  it('takes visible alone, with no stamp', async () => {
+    expect(await problemsOf(PriceRangeDto, { visible: false })).toEqual([]);
+  });
+
+  it.each([
+    ['not a boolean', 'false'],
+    ['null', null],
+  ])('refuses a visible that is %s', async (_, visible) => {
+    expect(await problemsOf(PriceRangeDto, { visible })).toEqual(['visible']);
   });
 });
 

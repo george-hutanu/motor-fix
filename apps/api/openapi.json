@@ -4870,7 +4870,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: not a uuid, a missing or malformed stamp, or an unknown field"
+            "description": "validation_failed: not a uuid, a missing or malformed stamp, an unknown field, or another field beside visible (exclusive)"
           },
           "401": {
             "description": "sign_in_required"
@@ -4896,7 +4896,7 @@
             "bearer": []
           }
         ],
-        "summary": "Changes a job's default range and duration in place, against the stamp it was read with",
+        "summary": "Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job",
         "tags": [
           "garages"
         ]
@@ -13091,6 +13091,10 @@
       "PriceRangeDto": {
         "type": "object",
         "properties": {
+          "visible": {
+            "type": "boolean",
+            "description": "Hides or shows the job; sent alone, with no stamp, and the last write wins"
+          },
           "fromBani": {
             "type": "integer",
             "example": 95000
@@ -13109,13 +13113,10 @@
           },
           "expectedUpdatedAt": {
             "type": "string",
-            "description": "The row's updatedAt as the owner read it; a newer save answers 409 stale",
+            "description": "The row's updatedAt as the owner read it, required with a range; a newer save answers 409 stale",
             "format": "date-time"
           }
-        },
-        "required": [
-          "expectedUpdatedAt"
-        ]
+        }
       },
       "BrandRangeDto": {
         "type": "object",

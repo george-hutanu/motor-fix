@@ -1485,7 +1485,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the owner's in-place change of a job's range and duration and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
+      "reason": "the owner's in-place change of a job's range and duration, of whether drivers see the job (ST-174, a visible-only body) and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
       "story": "ST-173"
     },
     {

@@ -1,10 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Allow,
+  IsBoolean,
   IsDefined,
   IsISO8601,
   IsOptional,
   IsUUID,
+  ValidateIf,
 } from 'class-validator';
 
 import { PublicLabourDto } from './garages.dto';
@@ -149,10 +151,19 @@ export class BrandRangeSavedDto {
   warnings!: FieldProblemDto[];
 }
 
-// A job's default range as the owner changes it in place. Every value is left
-// to the one range check, so a wrong one is a field error rather than a bare
+// A job's default range as the owner changes it in place, or, with `visible`
+// and nothing else, whether drivers see the job. Every range value is left to
+// the one range check, so a wrong one is a field error rather than a bare
 // 400; null clears the top or the duration, and an omitted one is required.
 export class PriceRangeDto {
+  @ApiPropertyOptional({
+    description:
+      'Hides or shows the job; sent alone, with no stamp, and the last write wins',
+  })
+  @ValidateIf((body: PriceRangeDto) => body.visible !== undefined)
+  @IsBoolean()
+  visible?: boolean;
+
   @ApiPropertyOptional({ example: 95_000, type: 'integer' })
   @IsOptional()
   @Allow()
@@ -178,14 +189,15 @@ export class PriceRangeDto {
   @Allow()
   durationMinutes?: unknown;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      "The row's updatedAt as the owner read it; a newer save answers 409 stale",
+      "The row's updatedAt as the owner read it, required with a range; a newer save answers 409 stale",
     format: 'date-time',
   })
+  @ValidateIf((body: PriceRangeDto) => body.visible === undefined)
   @IsDefined()
   @IsISO8601({ strict: true })
-  expectedUpdatedAt!: string;
+  expectedUpdatedAt?: string;
 }
 
 // An approved catalogue job added to the list with its default range. Every

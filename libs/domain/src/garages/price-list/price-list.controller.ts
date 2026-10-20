@@ -97,14 +97,14 @@ export class PriceListController {
   @UseGuards(JsonOnly)
   @ApiOperation({
     summary:
-      "Changes a job's default range and duration in place, against the stamp it was read with",
+      "Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job",
   })
   @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiParam({ format: 'uuid', name: 'priceId', type: String })
   @ApiOkResponse({ type: PriceRangeSavedDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: not a uuid, a missing or malformed stamp, or an unknown field',
+      'validation_failed: not a uuid, a missing or malformed stamp, an unknown field, or another field beside visible (exclusive)',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
