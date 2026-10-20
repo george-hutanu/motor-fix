@@ -2534,17 +2534,20 @@ class Elsewhere {}
 
 // @traces 1356-FR-001 1356-FR-002 1356-FR-003 1356-FR-004 1356-FR-005 1356-FR-007
 describe('Results loading more', () => {
-  let observers: { callback: IntersectionObserverCallback; target?: Element }[];
+  let observers: {
+    callback: IntersectionObserverCallback;
+    targets: Element[];
+  }[];
   class FakeObserver {
     private readonly at: number;
     constructor(callback: IntersectionObserverCallback) {
-      this.at = observers.push({ callback }) - 1;
+      this.at = observers.push({ callback, targets: [] }) - 1;
     }
     observe(target: Element) {
-      observers[this.at].target = target;
+      observers[this.at].targets.push(target);
     }
     disconnect() {
-      observers[this.at].target = undefined;
+      observers[this.at].targets = [];
     }
     unobserve() {}
   }
@@ -2577,7 +2580,7 @@ describe('Results loading more', () => {
   const hosts = () => [...page().querySelectorAll('mf-result-card')];
   const names = () => hosts().map((card) => said(card.querySelector('h2')));
   // Results makes the first observer; each card has its own after it.
-  const watched = () => observers[0]?.target;
+  const watched = () => observers[0]?.targets[0];
   const skeletons = () =>
     page().querySelectorAll('.cards.later .card.skeleton');
   const button = () => page().querySelector<HTMLButtonElement>('button.more');
@@ -2588,16 +2591,12 @@ describe('Results loading more', () => {
     await reads[0]?.answer(answer);
   }
   // The card three from the end scrolls into view.
-  async function scrolledToEnd() {
+  async function scrolledToEnd(at = 0) {
     for (const o of observers.slice(0, 1)) {
-      if (o.target)
+      const target = o.targets[at];
+      if (target)
         o.callback(
-          [
-            {
-              isIntersecting: true,
-              target: o.target,
-            } as IntersectionObserverEntry,
-          ],
+          [{ isIntersecting: true, target } as IntersectionObserverEntry],
           o as unknown as IntersectionObserver,
         );
     }
@@ -2626,6 +2625,16 @@ describe('Results loading more', () => {
     );
     expect(skeletons()).toHaveLength(0);
     expect(watched()).toBe(hosts()[37]);
+  });
+
+  // @traces 1356-FR-001
+  it('asks for the next page when a jump to the bottom shows only the last card', async () => {
+    await loaded();
+
+    expect(observers[0]?.targets).toEqual([hosts()[17], hosts()[19]]);
+    await scrolledToEnd(1);
+
+    expect(cursors()).toEqual([{ brand: 'bmw', cursor: 'c1', near: NEAR }]);
   });
 
   // @traces 1356-FR-001

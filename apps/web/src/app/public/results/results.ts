@@ -503,7 +503,9 @@ export class Results {
     });
   }
 
-  // The card three from the end coming into view asks for the next page.
+  // The card three from the end coming into view asks for the next page; so
+  // does the last card, for a jump to the bottom that passes the first one
+  // between two frames (the End key, a dragged scrollbar).
   private watchEnd() {
     if (typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver((entries) => {
@@ -514,8 +516,9 @@ export class Results {
       const items = this.items();
       const watched = this.canLoad() && this.paging() === 'idle';
       observer.disconnect();
-      const near = items[Math.max(0, items.length - 3)];
-      if (watched && near) observer.observe(near.nativeElement);
+      if (!watched) return;
+      const ends = [items[Math.max(0, items.length - 3)], items.at(-1)];
+      for (const end of ends) if (end) observer.observe(end.nativeElement);
     });
   }
 
