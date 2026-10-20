@@ -2789,6 +2789,37 @@ describe('Results changing the brand', () => {
       near: NEAR,
       radius: 50,
     });
+
+    await reads.at(-1)?.answer(AUDI_PAGE());
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+
+    expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
+    expect(progress()).toBeNull();
+  });
+
+  it('follows the last chip tapped while the first is still loading', async () => {
+    await shown();
+
+    await tap('Audi');
+    await tap('Dacia');
+
+    expect(cardNames()).toEqual(['Atelier Unu', 'Service Doi']);
+    expect(progress()?.getAttribute('aria-label')).toBe('Se caută Dacia…');
+    expect(marked()).toEqual(['Dacia']);
+
+    await reads.at(-1)?.answer(
+      pageOf({
+        brand: DACIA,
+        counts: { doesNotTake: 0, worksOn: 1 },
+        items: [garageOf('five', 'Garaj Cinci')],
+        total: 1,
+      }),
+    );
+
+    expect(cardNames()).toEqual(['Garaj Cinci']);
+    expect(progress()).toBeNull();
+    expect(marked()).toEqual(['Dacia']);
   });
 
   it('logs one search per brand change and none for a retry after it', async () => {
