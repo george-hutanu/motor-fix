@@ -156,7 +156,7 @@ describe('SignupSurvey', () => {
       expect(text(heading(host))).toBe(question);
       expect(radios(host).map(text)).toEqual(answers);
       expect(counter(host)).toBe(`ÎNTREBAREA ${n} / 5`);
-      expect(host.querySelectorAll('.segments .done')).toHaveLength(n - 1);
+      expect(host.querySelectorAll('.segments .done')).toHaveLength(n);
       expect(host.querySelectorAll('.segments > *')).toHaveLength(5);
     },
   );

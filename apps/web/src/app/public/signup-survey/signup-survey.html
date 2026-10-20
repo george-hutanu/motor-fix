@@ -161,8 +161,8 @@
             <div class="outcome">
               <span>{{ feature.name | t }}</span>&ngsp;
               <mf-lamp
-                [state]="answer() !== undefined && feature.on(answer()) ? 'green' : 'grey'"
-                [label]="(answer() === undefined ? 'public.listing.survey.pick' : feature.on(answer()) ? 'public.listing.survey.on' : 'public.listing.survey.off') | t"
+                [state]="lit() ? 'green' : 'grey'"
+                [label]="(lit() === null ? 'public.listing.survey.pick' : lit() ? 'public.listing.survey.on' : 'public.listing.survey.off') | t"
               />
             </div>
           }

@@ -16,6 +16,7 @@ import {
   isSurveySection,
   LIFTS_COUNTS,
   MECHANICS_COUNTS,
+  type SurveyAnswers,
   type SurveySection,
   startingFeatures,
   surveyComplete,
@@ -29,6 +30,7 @@ export type SurveyNotice = 'saved' | 'failed' | null;
 type Field = keyof SurveySection;
 type Answer = SurveySection[Field];
 type Mockup = 'team' | 'lifts' | 'media' | 'sheets';
+type Feature = keyof ReturnType<typeof startingFeatures>;
 
 interface Question {
   field: Field;
@@ -37,7 +39,7 @@ interface Question {
   options: readonly { value: Answer; label: string }[];
   // The feature the answer switches, with the picture and example shown
   // above the answers; the source question sets none.
-  feature?: { name: string; on: (answer: Answer) => boolean; mockup: Mockup };
+  feature?: { name: string; key: Feature; mockup: Mockup };
   example?: string;
 }
 
@@ -51,9 +53,9 @@ const QUESTIONS: readonly Question[] = [
   {
     example: `${KEY}exTeam`,
     feature: {
+      key: 'team_mechanics',
       mockup: 'team',
       name: `${KEY}fTeam`,
-      on: (answer) => answer !== '0',
     },
     field: 'mechanicsCount',
     kicker: `${KEY}kTeam`,
@@ -66,9 +68,9 @@ const QUESTIONS: readonly Question[] = [
   {
     example: `${KEY}exLifts`,
     feature: {
+      key: 'lift_schedule',
       mockup: 'lifts',
       name: `${KEY}fLifts`,
-      on: (answer) => answer !== '0',
     },
     field: 'liftsCount',
     kicker: `${KEY}kLifts`,
@@ -81,9 +83,9 @@ const QUESTIONS: readonly Question[] = [
   {
     example: `${KEY}exMedia`,
     feature: {
+      key: 'live_media',
       mockup: 'media',
       name: `${KEY}fMedia`,
-      on: (answer) => answer === true,
     },
     field: 'wantsLiveMedia',
     kicker: `${KEY}kMedia`,
@@ -93,9 +95,9 @@ const QUESTIONS: readonly Question[] = [
   {
     example: `${KEY}exSheets`,
     feature: {
+      key: 'day_sheets',
       mockup: 'sheets',
       name: `${KEY}fSheets`,
-      on: (answer) => answer === true,
     },
     field: 'wantsDaySheets',
     kicker: `${KEY}kSheets`,
@@ -113,6 +115,15 @@ const QUESTIONS: readonly Question[] = [
   },
 ];
 const SUMMARY = QUESTIONS.length + 1;
+// Fills the questions not yet answered so the one rule can read a single
+// question's feature: each feature reads only its own answer.
+const UNANSWERED: SurveyAnswers = {
+  foundVia: 'other',
+  liftsCount: '0',
+  mechanicsCount: '0',
+  wantsDaySheets: false,
+  wantsLiveMedia: false,
+};
 
 // The made-up garage the four pictures show; names, cars and plates stay as
 // they are in either language.
@@ -235,8 +246,19 @@ export class SignupSurvey {
     return question ? this.answers()[question.field] : undefined;
   });
   protected readonly segments = computed(() =>
-    QUESTIONS.map((question) => this.answers()[question.field] !== undefined),
+    QUESTIONS.map((_, index) => index < this.screen()),
   );
+  // The line under a feature question: on or off from the answer picked, or
+  // null before one is.
+  protected readonly lit = computed(() => {
+    const question = this.question();
+    const answer = this.answer();
+    if (!question?.feature || answer === undefined) return null;
+    return startingFeatures({
+      ...UNANSWERED,
+      [question.field]: answer,
+    } as SurveyAnswers)[question.feature.key];
+  });
   protected readonly forwardLabel = computed(() => {
     const screen = this.screen();
     if (screen === 0) return `${KEY}start`;
