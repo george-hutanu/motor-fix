@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -12,6 +12,7 @@ features:
   - 172-price-list-states
   - 173-price-range-in-place
   - 405-car-model-licences
+  - 228-how-it-works-list-garage
 ---
 
 # Capability: Catalogue
@@ -24,17 +25,17 @@ The brand catalogue MotorFix keeps for the whole product: every car brand sold i
 
 _From 039-brand-catalogue._
 
-### 039-FR-002 — Each brand MUST carry a UUID id, a stable key from the data file, a name written one way, a slug unique across brands, a popularity rank and an active flag; a brand is active exactly when it is in the current data file.
+### 228-FR-012 — Every night, the searches of the 30 closed Europe/Bucharest days ending yesterday (the demand job's per-day per-brand counts) MUST be summed per active brand and written as a full popularity rank 1..N over every active brand: searched brands by their count, then the rest by their current rank (on the first night, the seed rank), then by name.
 
-_From 039-brand-catalogue._
+_From 228-how-it-works-list-garage._
 
 ### 039-FR-003 — The brand list MUST be loaded from a versioned data file kept in the repository by a loader that stores every brand of the file exactly once, and the repository MUST ship a development file holding at least the twelve brands of the mock (BMW, Mini, Mercedes-Benz, Audi, Volkswagen, Škoda, Dacia, Renault, Ford, Toyota, Hyundai, Tesla).
 
 _From 039-brand-catalogue._
 
-### 039-FR-004 — The loader MUST be idempotent: a second run with the same file changes no brand and writes no audit entry. A change is a brand created, retired or brought back, or a change to its name, slug or popularity.
+### 228-FR-015 — A catalogue reload MUST NOT undo the nightly ranking: it sets a popularity rank only on the brands it inserts.
 
-_From 039-brand-catalogue._
+_From 228-how-it-works-list-garage._
 
 ### 039-FR-005 — When a brand's name or slug is corrected in the file, the loader MUST keep the brand's id and every garage row that names it, and readers MUST see the new name.
 
@@ -184,8 +185,19 @@ _From 405-car-model-licences._
 
 _From 405-car-model-licences._
 
+### 228-FR-013 — One ranking MUST serve "most searched" (the strip) and "most popular" (the picker tiles and the Results chips): no second list.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-014 — When the nightly count fails, the previous ranking MUST stay and the failure MUST reach the structured error log and raise an alert (the system status log is release 3); a retry MUST produce the same ranking (writing it is idempotent).
+
+_From 228-how-it-works-list-garage._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
 
 - `357-FR-007` — superseded by `386-FR-011` (2026-10-17)
+
+- `039-FR-002` — superseded by `228-FR-012` (2026-10-20)
+- `039-FR-004` — superseded by `228-FR-015` (2026-10-20)
