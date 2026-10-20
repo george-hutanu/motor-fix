@@ -168,3 +168,15 @@ describe('a chosen suite', () => {
     expect(preset(undefined).passWithNoTests).toBeUndefined();
   });
 });
+
+// A Jest worker that keeps growing across a long project's files (the web
+// suite reached a 4 GB heap on CI) is replaced after a file instead of
+// crashing the run.
+describe('the shared Jest preset', () => {
+  it('recycles a worker that has grown past 1 GB', () => {
+    const preset = require(join(root, 'jest.preset.cjs')) as {
+      workerIdleMemoryLimit?: string;
+    };
+    expect(preset.workerIdleMemoryLimit).toBe('1GB');
+  });
+});
