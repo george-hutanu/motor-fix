@@ -1,11 +1,16 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { Location } from '@angular/common';
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, type Route, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  type BrandDto,
+  BrandsService,
+  CarsService,
   type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
   type GarageSearchControllerPins$Params,
@@ -23,6 +28,7 @@ import { Results } from './results';
 import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { routes } from '../../app.routes';
+import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { PublicFrame } from '../frame/frame';
@@ -156,6 +162,21 @@ const placesApi = {
   ),
 };
 
+// The brands behind the chips: the popular ones, and no driver signed in.
+const AUDI = { id: 'b-audi', name: 'Audi', slug: 'audi' };
+const DACIA = { id: 'b-dacia', name: 'Dacia', slug: 'dacia' };
+const brandsApi = {
+  brandsControllerSearch: jest.fn(async () => ({
+    items: [],
+    nextCursor: null,
+  })),
+  popularBrandsControllerTiles: jest.fn(
+    async (): Promise<BrandDto[]> =>
+      [BMW, AUDI, DACIA].map((b, i) => ({ ...b, popularity: i + 1 })),
+  ),
+};
+const carsApi = { carsControllerList: jest.fn(async () => ({ items: [] })) };
+
 let harness: RouterTestingHarness;
 
 async function settle() {
@@ -174,6 +195,8 @@ async function configure(platform = 'browser') {
       { provide: PublicLive, useValue: live },
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: RESULTS_MAP, useValue: openMap },
+      { provide: BrandsService, useValue: brandsApi },
+      { provide: CarsService, useValue: carsApi },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -2340,7 +2363,9 @@ describe('Results waiting for an address the driver types', () => {
   });
 
   const field = () =>
-    page().querySelector<HTMLInputElement>('input[role="combobox"]');
+    page().querySelector<HTMLInputElement>(
+      'mf-address-field input[role="combobox"]',
+    );
   const label = () => {
     const input = field();
     return input ? said(page().querySelector(`label[for="${input.id}"]`)) : '';
@@ -2524,5 +2549,343 @@ describe('Results waiting for an address the driver types', () => {
     expect(searches()).toEqual([
       { brand: 'bmw', log: '1', near: '44.447,26.117' },
     ]);
+  });
+});
+
+// @traces 1355-results-brand-chips-FR-004
+// @traces 1355-results-brand-chips-FR-005
+// @traces 1355-results-brand-chips-FR-006
+// @traces 1355-results-brand-chips-FR-007
+// @traces 1355-results-brand-chips-FR-008
+// @traces 1355-results-brand-chips-FR-009
+// @traces 1355-results-brand-chips-FR-010
+// @traces 1355-results-brand-chips-FR-011
+// @traces 1355-results-brand-chips-FR-014
+describe('Results changing the brand', () => {
+  beforeEach(() => {
+    brandsApi.popularBrandsControllerTiles.mockClear();
+    carsApi.carsControllerList.mockClear();
+    return configure();
+  });
+
+  const AUDI_PAGE = () =>
+    pageOf({
+      brand: AUDI,
+      counts: { doesNotTake: 2, worksOn: 5 },
+      items: [
+        garageOf('three', 'Atelier Trei'),
+        garageOf('four', 'Service Patru'),
+      ],
+      total: 7,
+    });
+  const row = () => page().querySelector('mf-brand-chips');
+  const chips = () => [
+    ...page().querySelectorAll<HTMLButtonElement>('mf-brand-chips button'),
+  ];
+  const chip = (name: string) => chips().find((b) => said(b) === name);
+  const marked = () =>
+    chips()
+      .filter((b) => b.getAttribute('aria-pressed') === 'true')
+      .map(said);
+  const tap = async (name: string) => {
+    const button = chip(name);
+    button?.focus();
+    button?.click();
+    await settle();
+    await settle();
+    return button;
+  };
+  const cardNames = () =>
+    [...page().querySelectorAll('mf-result-card h2')].map(said);
+  const progress = () => page().querySelector('[role="progressbar"]');
+  const brandSearch = () =>
+    harness.fixture.debugElement.query(By.directive(BrandSearch));
+  async function shown(url = `/ro/garages?brand=bmw&near=${NEAR}&radius=50`) {
+    await open(url);
+    await reads[0]?.answer();
+  }
+
+  it('shows the chips above the list with the current brand marked', async () => {
+    await shown();
+
+    expect(row()).not.toBeNull();
+    expect(chips().map(said)).toEqual(['BMW', 'Audi', 'Dacia']);
+    expect(marked()).toEqual(['BMW']);
+    expect(
+      (row()?.compareDocumentPosition(page().querySelector('.found') as Node) ??
+        0) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('pushes a history entry naming only the new brand, keeping the place and radius', async () => {
+    await shown();
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate');
+
+    await tap('Audi');
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: { brand: 'audi' },
+        queryParamsHandling: 'merge',
+        replaceUrl: false,
+      }),
+    );
+    expect(router.url).toBe(`/ro/garages?brand=audi&near=${NEAR}&radius=50`);
+    expect(searches().at(-1)).toEqual({
+      brand: 'audi',
+      log: '1',
+      near: NEAR,
+      radius: 50,
+    });
+  });
+
+  it('still writes a place change into the bar without a history entry', async () => {
+    await shown();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+    page().querySelector<HTMLButtonElement>('.summary .change')?.click();
+    await settle();
+    dialog(PLACE);
+    await settle();
+
+    expect(navigate).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ replaceUrl: true }),
+    );
+  });
+
+  it('changes nothing for the brand already shown, by its slug or its id', async () => {
+    await shown(`/ro/garages?brand=b-bmw&near=${NEAR}`);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+    await tap('BMW');
+    brandSearch()?.componentInstance.chosen.emit({ ...BMW, popularity: 1 });
+    await settle();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(searches()).toHaveLength(1);
+  });
+
+  it('forgets the area the map was moved to', async () => {
+    await shown();
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+    await reads.at(-1)?.answer();
+
+    await tap('Audi');
+
+    expect(searches().at(-1)).toEqual({
+      brand: 'audi',
+      log: '1',
+      near: NEAR,
+      radius: 50,
+    });
+  });
+
+  it('shows the new brand, its first card selected, and follows it live', async () => {
+    await shown();
+
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    expect(said(page().querySelector('h1'))).toBe('Service‑uri pentru Audi');
+    expect(cardNames()).toEqual(['Atelier Trei', 'Service Patru']);
+    expect(
+      page()
+        .querySelector('mf-result-card')
+        ?.querySelector('article.card.selected'),
+    ).not.toBeNull();
+    expect(marked()).toEqual(['Audi']);
+    expect(live.register).toHaveBeenLastCalledWith({
+      brand: 'b-audi',
+      garages: ['three', 'four'],
+    });
+    expect(pinsApi.mock.calls.at(-1)?.[0]).toEqual({
+      brand: 'audi',
+      near: NEAR,
+      radius: 50,
+    });
+  });
+
+  it('keeps the chip focused after the change', async () => {
+    await shown();
+
+    const button = await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    expect(document.activeElement).toBe(button);
+  });
+
+  it('keeps the previous cards, dimmed and not tappable, under a labelled progress bar while the new brand loads', async () => {
+    await shown();
+
+    await tap('Audi');
+
+    expect(page().querySelectorAll('.card.skeleton')).toHaveLength(0);
+    expect(cardNames()).toEqual(['Atelier Unu', 'Service Doi']);
+    expect(page().querySelector('.cards.swapping')).not.toBeNull();
+    expect(page().querySelector('.cards.swapping')?.hasAttribute('inert')).toBe(
+      true,
+    );
+    expect(progress()?.getAttribute('aria-label')).toBe('Se caută Audi…');
+    expect(chips().every((b) => !b.disabled)).toBe(true);
+
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    expect(progress()).toBeNull();
+    expect(page().querySelector('.cards.swapping')).toBeNull();
+  });
+
+  it('keeps the skeletons for a widening', async () => {
+    await open(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await reads[0]?.answer(
+      pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 }),
+    );
+
+    [...page().querySelectorAll<HTMLButtonElement>('.state button')]
+      .find((b) => said(b)?.startsWith('Caută'))
+      ?.click();
+    await settle();
+    await settle();
+    expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR, radius: 50 });
+
+    expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
+    expect(progress()).toBeNull();
+  });
+
+  it('shows the failure for the new brand, its chip marked, and retries the new brand unlogged', async () => {
+    await shown();
+
+    await tap('Audi');
+    await reads.at(-1)?.fail();
+
+    expect(said(page().querySelector('.state h1'))).toBe(
+      'Nu am putut încărca rezultatele',
+    );
+    expect(marked()).toEqual(['Audi']);
+
+    [...page().querySelectorAll<HTMLButtonElement>('.state button')]
+      .find((b) => said(b) === 'Reîncearcă')
+      ?.click();
+    await settle();
+
+    expect(searches().at(-1)).toEqual({
+      brand: 'audi',
+      near: NEAR,
+      radius: 50,
+    });
+  });
+
+  it('logs one search per brand change and none for a retry after it', async () => {
+    await shown();
+
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+    await tap('Dacia');
+    await reads.at(-1)?.fail();
+    [...page().querySelectorAll<HTMLButtonElement>('.state button')]
+      .find((b) => said(b) === 'Reîncearcă')
+      ?.click();
+    await settle();
+
+    expect(searches().filter((q) => q.log === '1')).toEqual([
+      { brand: 'bmw', log: '1', near: NEAR, radius: 50 },
+      { brand: 'audi', log: '1', near: NEAR, radius: 50 },
+      { brand: 'dacia', log: '1', near: NEAR, radius: 50 },
+    ]);
+  });
+
+  it('goes back to the previous brand with the back button and logs nothing for it', async () => {
+    // The app listens for the browser's back button from its first navigation.
+    TestBed.inject(Router).setUpLocationChangeListener();
+    await shown();
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+
+    TestBed.inject(Location).back();
+    await new Promise((r) => setTimeout(r));
+    await settle();
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe(
+      `/ro/garages?brand=bmw&near=${NEAR}&radius=50`,
+    );
+    expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR, radius: 50 });
+
+    await reads.at(-1)?.fail();
+    [...page().querySelectorAll<HTMLButtonElement>('.state button')]
+      .find((b) => said(b) === 'Reîncearcă')
+      ?.click();
+    await settle();
+
+    expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR, radius: 50 });
+  });
+
+  it('offers the brand search after the chips, and a brand picked there changes the search and is marked', async () => {
+    await shown();
+
+    const search = brandSearch();
+    expect(search).not.toBeNull();
+    expect(
+      (row()?.compareDocumentPosition(search.nativeElement) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    search.componentInstance.chosen.emit({
+      id: 'b-alfa',
+      name: 'Alfa Romeo',
+      popularity: null,
+      slug: 'alfa-romeo',
+    });
+    await settle();
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe(
+      `/ro/garages?brand=alfa-romeo&near=${NEAR}&radius=50`,
+    );
+    expect(searches().at(-1)).toEqual({
+      brand: 'alfa-romeo',
+      log: '1',
+      near: NEAR,
+      radius: 50,
+    });
+    expect(chips().map(said)).toEqual(['Alfa Romeo', 'BMW', 'Audi', 'Dacia']);
+    expect(marked()).toEqual(['Alfa Romeo']);
+  });
+
+  it('drops a picked brand from the row once another chip is chosen', async () => {
+    await shown();
+    brandSearch().componentInstance.chosen.emit({
+      id: 'b-alfa',
+      name: 'Alfa Romeo',
+      popularity: null,
+      slug: 'alfa-romeo',
+    });
+    await settle();
+    await settle();
+
+    await tap('Audi');
+
+    expect(chips().map(said)).toEqual(['BMW', 'Audi', 'Dacia']);
+    expect(marked()).toEqual(['Audi']);
+  });
+
+  it("announces the new brand's tally as a new search is", async () => {
+    const announce = jest
+      .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
+      .mockResolvedValue();
+    await shown();
+
+    await tap('Audi');
+    await reads.at(-1)?.answer(AUDI_PAGE());
+    await new Promise((r) => setTimeout(r, 50));
+    await settle();
+
+    expect(announce).toHaveBeenCalledWith(
+      expect.stringContaining('lucrează pe Audi'),
+      'polite',
+    );
   });
 });

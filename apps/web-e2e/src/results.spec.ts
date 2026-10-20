@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ownMap, ready } from './accounts.js';
+import { ACCOUNTS, ownMap, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -209,6 +209,125 @@ test.describe('the Results page @seeded', () => {
       { timeout: 15_000 },
     );
     expect(navigations).toBe(0);
+  });
+
+  // The brand chips above the list: a popular brand's chip changes the
+  // search in place; back returns to this file's brand.
+  // @traces 1355-results-brand-chips-FR-002 1355-results-brand-chips-FR-004 1355-results-brand-chips-FR-005
+  // @traces 1355-results-brand-chips-FR-007 1355-results-brand-chips-FR-008 1355-results-brand-chips-FR-013
+  test.describe('brand chips', () => {
+    const chips = (page: Page) =>
+      page.getByRole('group', { name: 'Marca' }).getByRole('button');
+    // Searches for a brand from this file's place since a moment: no other
+    // spec searches near Caracal.
+    const loggedHere = async (slug: string, since: Date) => {
+      const { rows } = await db.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM search_log
+         WHERE brand_id = (SELECT id FROM brand WHERE slug = $1) AND at > $2
+           AND area_cell = (SELECT area_cell FROM search_log WHERE brand_id = $3 ORDER BY at DESC LIMIT 1)`,
+        [slug, since, brandId],
+      );
+      return rows[0]?.n ?? 0;
+    };
+
+    test('a popular chip changes the search in place, logged once, and back returns to the brand unlogged', async ({
+      page,
+    }) => {
+      await ready(page, opened());
+      await expect(cards(page).nth(0)).toHaveText(garages[0].name);
+      await expect(chips(page).first()).toHaveText(brand.name);
+      await expect(chips(page).first()).toHaveAttribute('aria-pressed', 'true');
+      const before = await logged();
+      const since = new Date();
+
+      const other = chips(page).nth(1);
+      const name = (await other.textContent())?.trim() ?? '';
+      await other.click();
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        `Service‑uri pentru ${name}`,
+      );
+      await expect(other).toHaveAttribute('aria-pressed', 'true');
+      await expect(other).toBeFocused();
+      const bar = new URL(page.url());
+      expect(bar.searchParams.get('near')).toBe(near);
+      const slug = bar.searchParams.get('brand') ?? '';
+      expect(slug).not.toBe(brand.slug);
+      await expect.poll(() => loggedHere(slug, since)).toBe(1);
+
+      await page.goBack();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        `Service‑uri pentru ${brand.name}`,
+      );
+      await expect(cards(page).nth(0)).toHaveText(garages[0].name);
+      await page.waitForTimeout(1_000);
+      expect(await logged()).toBe(before);
+      expect(await loggedHere(slug, since)).toBe(1);
+    });
+
+    test('holds one row at 320 px and 390 px, the marked chip in view, with no sideways scroll', async ({
+      page,
+    }) => {
+      for (const width of [320, 390]) {
+        await page.setViewportSize({ height: 800, width });
+        await ready(page, opened());
+        const marked = page
+          .getByRole('group', { name: 'Marca' })
+          .locator('[aria-pressed="true"]');
+        await expect(marked).toBeInViewport();
+        const tops = await chips(page).evaluateAll((all) =>
+          all.map((chip) => chip.getBoundingClientRect().top),
+        );
+        expect(new Set(tops).size).toBe(1);
+        const heights = await chips(page).evaluateAll((all) =>
+          all.map((chip) => chip.getBoundingClientRect().height),
+        );
+        expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
+        expect(
+          await page.evaluate(
+            () =>
+              (document.scrollingElement?.scrollWidth ?? 0) <=
+              (document.scrollingElement?.clientWidth ?? 0),
+          ),
+        ).toBe(true);
+      }
+    });
+
+    test("a signed-in driver with a car of the brand sees that brand's chip first", async ({
+      page,
+    }) => {
+      const driver = await db.query<{ id: string }>(
+        'SELECT id FROM account WHERE email = $1',
+        [ACCOUNTS.driver],
+      );
+      const driverId = driver.rows[0]?.id ?? '';
+      const key = `e2e-cip-${stamp}`;
+      await db.query(
+        `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km, idempotency_key, created_at)
+         VALUES (gen_random_uuid(), $1, $2, 'E2E', 2018, 'petrol'::fuel, 100000, $3, now() + interval '1 hour')`,
+        [driverId, brandId, key],
+      );
+      try {
+        await ready(page, '/ro');
+        await page
+          .getByRole('button', { exact: true, name: 'Autentificare' })
+          .click();
+        await signIn(page, ACCOUNTS.driver);
+        await expect(
+          page.getByRole('dialog', { name: 'Autentificare' }),
+        ).toHaveCount(0);
+        // Another brand chosen: the driver's own brand still leads the row.
+        await page.goto(opened());
+        await chips(page).nth(1).click();
+        await expect(chips(page).first()).toHaveText(brand.name);
+        await expect(chips(page).first()).toHaveAttribute(
+          'aria-pressed',
+          'false',
+        );
+      } finally {
+        await db.query('DELETE FROM car WHERE idempotency_key = $1', [key]);
+      }
+    });
   });
 });
 
