@@ -35,6 +35,8 @@ import { priceListControllerAdd } from '../fn/garages/price-list-controller-add'
 import { PriceListControllerAdd$Params } from '../fn/garages/price-list-controller-add';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
+import { priceListControllerRemove } from '../fn/garages/price-list-controller-remove';
+import { PriceListControllerRemove$Params } from '../fn/garages/price-list-controller-remove';
 import { priceListControllerRemoveBrandRange } from '../fn/garages/price-list-controller-remove-brand-range';
 import { PriceListControllerRemoveBrandRange$Params } from '../fn/garages/price-list-controller-remove-brand-range';
 import { priceListControllerSetBrandRange } from '../fn/garages/price-list-controller-set-brand-range';
@@ -352,6 +354,39 @@ export class GaragesService extends BaseService {
   priceListControllerAdd(params: PriceListControllerAdd$Params, context?: HttpContext): Promise<PriceRangeSavedDto> {
     const resp = this.priceListControllerAdd$Response(params, context);
     return resp.then((r: StrictHttpResponse<PriceRangeSavedDto>): PriceRangeSavedDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerRemove()` */
+  static readonly PriceListControllerRemovePath = '/api/v1/garages/{garageId}/prices/{priceId}';
+
+  /**
+   * Removes a job from the price list: its default range, its brand ranges and its brand ticks.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRemove$Response(params: PriceListControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = priceListControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Removes a job from the price list: its default range, its brand ranges and its brand ticks.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRemove(params: PriceListControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.priceListControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `priceListControllerSetRange()` */

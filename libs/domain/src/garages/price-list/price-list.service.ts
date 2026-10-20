@@ -567,6 +567,94 @@ export class PriceListService {
     await this.forget(own.garage.slug, brandSlug);
   }
 
+  // Takes the job off the list: its default row, its brand rows and its brand
+  // ticks. Request lines and quotes name the catalogue job, so they stay.
+  async remove(actor: Actor, { garageId, priceId }: Row): Promise<void> {
+    assertGarageOwner(actor, garageId);
+    const job = await this.prisma.garagePrice.findFirst({
+      select: { garage: { select: { slug: true } }, jobTypeId: true },
+      where: { brandId: null, garageId, id: priceId },
+    });
+    if (!job) throw notFound();
+    const { jobTypeId } = job;
+    const where = { garageId, jobTypeId };
+    const brandIds = await this.prisma.$transaction(async (tx) => {
+      const [rows, ticks] = await Promise.all([
+        tx.garagePrice.findMany({
+          select: {
+            brandId: true,
+            durationMinutes: true,
+            fromBani: true,
+            id: true,
+            position: true,
+            toBani: true,
+            visible: true,
+          },
+          where,
+        }),
+        tx.garageBrandJob.findMany({ select: { brandId: true }, where }),
+      ]);
+      // A removal racing this one took the default row first.
+      const { count } = await tx.garagePrice.deleteMany({
+        where: { brandId: null, id: priceId },
+      });
+      if (count === 0) throw notFound();
+      await tx.garagePrice.deleteMany({ where });
+      await tx.garageBrandJob.deleteMany({ where });
+      const scope = this.scopeOf(actor, garageId, 'garage_price');
+      const brandRows = rows.filter((row) => row.brandId !== null);
+      await this.audit.recordMany(tx, [
+        ...rows
+          .filter((row) => row.id === priceId)
+          .map(({ id, ...fields }) => ({
+            ...scope,
+            action: 'delete' as const,
+            oldValue: { ...fields, jobTypeId },
+            subjectId: id,
+          })),
+        ...brandRows.map((row) => ({
+          ...scope,
+          action: 'delete' as const,
+          field: 'brand_range',
+          oldValue: brandRange(
+            { brandId: row.brandId as string, garageId, jobTypeId },
+            row.fromBani,
+            row.toBani,
+          ),
+          subjectId: row.id,
+        })),
+        ...ticks.map(({ brandId }) => ({
+          ...scope,
+          action: 'delete' as const,
+          oldValue: { brandId },
+          subjectId: jobTypeId,
+          subjectType: 'garage_brand_job',
+        })),
+      ]);
+      const touched = [
+        ...new Set([
+          ...brandRows.map((row) => row.brandId as string),
+          ...ticks.map((tick) => tick.brandId),
+        ]),
+      ];
+      await this.changed(tx, {
+        brandIds: touched,
+        garageId,
+        jobTypeIds: [jobTypeId],
+      });
+      return touched;
+    });
+    const brands = await this.prisma.brand.findMany({
+      select: { slug: true },
+      where: { id: { in: brandIds } },
+    });
+    await Promise.all(
+      [NO_BRAND, ...brands.map((b) => b.slug)].map((slug) =>
+        this.forget(job.garage.slug, slug),
+      ),
+    );
+  }
+
   private scopeOf(
     actor: Actor,
     garageId: string,

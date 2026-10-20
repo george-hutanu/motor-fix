@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 143,
+    "count": 144,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1492,13 +1492,13 @@
       "kind": "endpoint",
       "name": "garage-price-rows",
       "source": "libs/domain/src/garages/price-list/price-list.controller.ts",
-      "metric": "http.server.request.duration by http.route POST /api/v1/garages/:garageId/prices",
+      "metric": "http.server.request.duration by http.route POST /api/v1/garages/:garageId/prices, DELETE /api/v1/garages/:garageId/prices/:priceId",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the owner's add of an approved catalogue job to the price list, written to PostgreSQL with one create audit entry and a price_list.updated event in one transaction; a refused add is a 4xx the error-rate rule reads; no counter of its own: the audit holds who added what; no outside call",
+      "reason": "the owner's add of an approved catalogue job to the price list and its removal with the job's brand ranges and ticks, written to PostgreSQL with their audit entries and a price_list.updated event in one transaction; a refused add or removal is a 4xx the error-rate rule reads; no counter of its own: the audit holds who added what; no outside call",
       "story": "ST-174"
     }
   ]

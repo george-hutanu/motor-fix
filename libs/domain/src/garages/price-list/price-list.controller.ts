@@ -127,6 +127,29 @@ export class PriceListController {
     return this.priceList.setRange(actor, { garageId, priceId }, body);
   }
 
+  @Delete(':priceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Removes a job from the price list: its default range, its brand ranges and its brand ticks',
+  })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiParam({ format: 'uuid', name: 'priceId', type: String })
+  @ApiNoContentResponse({ description: 'Removed' })
+  @ApiBadRequestResponse({ description: 'validation_failed: not a uuid' })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({
+    description: "not_found: no such garage, or no such job's default row",
+  })
+  remove(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Param('priceId', new ParseUUIDPipe()) priceId: string,
+  ): Promise<void> {
+    return this.priceList.remove(actor, { garageId, priceId });
+  }
+
   @Put(':jobTypeId/brands/:brandId')
   @UseGuards(JsonOnly)
   @ApiOperation({

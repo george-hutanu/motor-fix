@@ -124,3 +124,16 @@ describe('the add of a catalogue job in the OpenAPI document', () => {
     expect(item.required).not.toContain('visible');
   });
 });
+
+// @traces 1352-catalogue-job-visibility-FR-017
+describe('the removal of a job in the OpenAPI document', () => {
+  it('removes a job with no body in its answer', () => {
+    const remove =
+      doc.paths['/api/v1/garages/{garageId}/prices/{priceId}'].delete;
+
+    expect(remove.operationId).toBe('PriceListController_remove');
+    expect(Object.keys(remove.responses).sort()).toEqual(
+      ['204', '400', '401', '403', '404'].sort(),
+    );
+  });
+});

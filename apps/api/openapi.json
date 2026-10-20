@@ -4900,6 +4900,55 @@
         "tags": [
           "garages"
         ]
+      },
+      "delete": {
+        "operationId": "PriceListController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "priceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: no such garage, or no such job's default row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Removes a job from the price list: its default range, its brand ranges and its brand ticks",
+        "tags": [
+          "garages"
+        ]
       }
     },
     "/api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}": {
