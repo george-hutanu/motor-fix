@@ -647,6 +647,7 @@
     "areaPicked": "within {km} km of the chosen place",
     "areaYou": "within {km} km of you",
     "back": "Back to {km} km",
+    "brands": "Brand",
     "card": {
       "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
@@ -655,6 +656,7 @@
       "worksOn": "takes {brand}"
     },
     "changePlace": "Change place",
+    "changing": "Searching {brand}…",
     "enterAddress": "Enter an address",
     "failed": "We couldn't load the results",
     "found": {

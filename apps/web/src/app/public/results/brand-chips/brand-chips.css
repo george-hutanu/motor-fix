@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.row {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.chip {
+  background: none;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  padding-inline: var(--mf-space-4);
+}
+
+.chip:hover {
+  border-color: var(--mf-line-strong);
+}
+
+/* The marked chip: its own border and tint, not the colour alone. */
+.chip[aria-pressed="true"] {
+  background: var(--mf-amber-tint);
+  border-color: var(--mf-amber-ink);
+  color: var(--mf-amber-ink);
+  cursor: default;
+}
+
+/* On a phone the row is one line that scrolls sideways, edge to edge. */
+@media (max-width: 767px) {
+  .row {
+    flex-wrap: nowrap;
+    margin-inline: calc(-1 * var(--mf-space-4));
+    overflow-x: auto;
+    padding-inline: var(--mf-space-4);
+    scroll-padding-inline: var(--mf-space-4);
+    scrollbar-width: none;
+  }
+
+  .row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip {
+    flex: none;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}

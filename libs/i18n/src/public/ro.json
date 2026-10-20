@@ -659,6 +659,7 @@
     "areaPicked": "în {km} km de locul ales",
     "areaYou": "în {km} km de tine",
     "back": "Înapoi la {km} km",
+    "brands": "Marca",
     "card": {
       "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
@@ -667,6 +668,7 @@
       "worksOn": "primește {brand}"
     },
     "changePlace": "Schimbă locul",
+    "changing": "Se caută {brand}…",
     "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
     "found": {
