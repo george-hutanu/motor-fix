@@ -598,6 +598,39 @@ describe('the range editor: a job new to the list', () => {
     expect(text()).not.toContain('Verifică câmpurile marcate.');
   });
 
+  it('asks the opener to reload the list on a duplicate, the editor still open', async () => {
+    const listed = jest.fn();
+    await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'duplicate', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(listed).toHaveBeenCalledTimes(1);
+    expect(panel()).not.toBeNull();
+  });
+
+  it('does not ask for a reload on another refusal', async () => {
+    const listed = jest.fn();
+    await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'too_many', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(listed).not.toHaveBeenCalled();
+  });
+
   it('says the list holds 50 jobs already', async () => {
     await open(NEW, { language: 'en', title: 'Air-con regas' });
     add.mockRejectedValueOnce(

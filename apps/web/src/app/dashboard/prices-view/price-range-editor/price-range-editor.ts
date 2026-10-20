@@ -41,7 +41,14 @@ export type EditableRow = PriceListItemDto & {
 
 export type PriceRangeEditorData =
   | { kind: 'row'; garageId: string; item: EditableRow }
-  | { kind: 'new'; garageId: string; job: JobTypeDto }
+  | {
+      kind: 'new';
+      garageId: string;
+      job: JobTypeDto;
+      // The job is on the list already: the opener re-reads it at once,
+      // with the editor still open on the refusal.
+      listed?: () => void;
+    }
   | { kind: 'propose'; garageId: string }
   | {
       kind: 'brand';
@@ -314,7 +321,13 @@ export class PriceRangeEditor {
           },
           garageId: data.garageId,
         })
-        .catch(jobRefused);
+        .catch((failure: unknown) => {
+          const duplicate = toProblem(failure).errors?.some(
+            ({ code, field }) => field === 'jobTypeId' && code === 'duplicate',
+          );
+          if (duplicate) data.listed?.();
+          return jobRefused(failure);
+        });
     return this.api.priceListControllerSetRange({
       body: {
         durationMinutes,

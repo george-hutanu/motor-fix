@@ -755,11 +755,35 @@ describe('Prețuri: adding a job', () => {
       title: 'garage.prices.picker.title',
     });
     expect(open).toHaveBeenNthCalledWith(2, PriceRangeEditor, {
-      data: { garageId: GARAGE, job: AC_JOB, kind: 'new' },
+      data: {
+        garageId: GARAGE,
+        job: AC_JOB,
+        kind: 'new',
+        listed: expect.any(Function),
+      },
       shape: 'dialog',
       title: 'Încărcare freon climă',
     });
     expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-reads the list while the editor is still open when it answers duplicate', async () => {
+    const { element, settle } = await editingOn();
+    let close: (result: string) => void = () => undefined;
+    open
+      .mockResolvedValueOnce({ job: AC_JOB })
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (close = resolve)),
+      );
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+    open.mock.calls[1][1].data.listed();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    close('cancelled');
+    await settle();
   });
 
   it('titles the editor with the English name in English', async () => {

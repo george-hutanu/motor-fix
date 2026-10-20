@@ -160,7 +160,12 @@ export class PricesView {
       await this.overlays.open<PriceRangeEditorResult, PriceRangeEditorData>(
         PriceRangeEditor,
         {
-          data: { garageId: this.garageId(), job: picked.job, kind: 'new' },
+          data: {
+            garageId: this.garageId(),
+            job: picked.job,
+            kind: 'new',
+            listed: () => this.view.reload(),
+          },
           shape: 'dialog',
           title: this.name(picked.job),
         },
