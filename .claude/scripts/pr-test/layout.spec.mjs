@@ -209,6 +209,10 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: page, at: 'desktop' }), 'overlap')).toEqual(['button#out × button#below']);
       const held = page.replace('overflow:hidden', 'overflow:hidden;position:relative');
       expect(of(await measure(null, { html: held, at: 'desktop' }), 'overlap')).toEqual([]);
+      for (const holder of ['filter:blur(0)', 'contain:paint', 'will-change:transform', 'perspective:10px']) {
+        const by = page.replace('overflow:hidden', `overflow:hidden;${holder}`);
+        expect(of(await measure(null, { html: by, at: 'desktop' }), 'overlap')).toEqual([]);
+      }
     });
 
     it('passes a button inside a link card and two buttons side by side', async () => {

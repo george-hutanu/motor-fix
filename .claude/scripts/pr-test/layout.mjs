@@ -205,15 +205,21 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   };
   // The part of a control its scrolling or clipping boxes leave drawn: a control cut off by an ancestor's
   // overflow (a sheet's body scrolled past it, a stage that hides what hangs below) is not drawn over what
-  // lies there. An absolute box is clipped only from its containing block (the nearest positioned or
-  // transformed ancestor) up, and a fixed box leaves its ancestors' clips behind.
+  // lies there. An absolute box is clipped only from its containing block (the nearest positioned,
+  // transformed, filtered, perspective or contained ancestor) up, and a fixed box leaves its ancestors' clips behind.
   const drawn = (el) => {
     let { left, top, right, bottom } = el.getBoundingClientRect();
     let escaping = style(el).position === "absolute";
     for (let e = el; e.parentElement && style(e).position !== "fixed"; ) {
       e = e.parentElement;
       const s = style(e);
-      const holds = s.position !== "static" || s.transform !== "none";
+      const holds =
+        s.position !== "static" ||
+        s.transform !== "none" ||
+        s.filter !== "none" ||
+        s.perspective !== "none" ||
+        /paint|layout|strict|content/.test(s.contain) ||
+        /transform|filter|perspective/.test(s.willChange);
       if (escaping && !holds) continue;
       escaping = s.position === "absolute";
       const box = e.getBoundingClientRect();
