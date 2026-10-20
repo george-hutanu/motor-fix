@@ -193,6 +193,7 @@ describe('the legal check, for the owner', () => {
       companyName: 'ATELIER DINAMO SRL',
       isMobile: false,
       lastCheckedOn: APPROVED_ON,
+      latestRecheck: null,
       rarActivities: [{ code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' }],
       rows: [
         {
@@ -224,6 +225,7 @@ describe('the legal check, for the owner', () => {
           state: 'ok',
         },
       ],
+      status: 'approved',
     });
   });
 
@@ -277,15 +279,13 @@ describe('which file it reads', () => {
     expect(res.body.rows[2]).toMatchObject({ state: 'failed' });
   });
 
-  it.each(['draft', 'suspended'] as const)(
-    'has no answer while the garage is %s',
-    async (status) => {
-      const w = await world({ status });
-      await file(w);
+  // @traces 1354-FR-001
+  it('has no answer while the garage is a draft', async () => {
+    const w = await world({ status: 'draft' });
+    await file(w);
 
-      expect((await read(w.dinamo.id, w.owner)).status).toBe(404);
-    },
-  );
+    expect((await read(w.dinamo.id, w.owner)).status).toBe(404);
+  });
 
   it('has no answer for an approved garage with no file', async () => {
     const w = await world();
@@ -355,5 +355,111 @@ describe('who may read it', () => {
     const w = await world();
 
     expect((await read(randomUUID(), w.owner)).status).toBe(404);
+  });
+});
+
+const FAILED_ON = '2026-10-12';
+
+async function suspendedAfterRecheck(
+  w: World,
+  cause: 'recheck_failed' | 'admin',
+) {
+  await prisma.recheck.create({
+    data: {
+      checkedOn: new Date(FAILED_ON),
+      detail: 'Autorizația a expirat la 30 septembrie',
+      failure: 'expired',
+      garageId: w.dinamo.id,
+      result: 'failed',
+    },
+  });
+  await prisma.garageSuspension.create({
+    data: {
+      cause,
+      fromTime: new Date(`${FAILED_ON}T07:00:00Z`),
+      garageId: w.dinamo.id,
+      reason: 'Autorizația RAR a expirat',
+    },
+  });
+}
+
+// @traces 1354-FR-001 1354-FR-002 1354-FR-004
+describe('the legal check of a suspended garage', () => {
+  it('answers the owner with the status, the latest re-check and the red RAR row', async () => {
+    const w = await world({ status: 'suspended' });
+    await file(w);
+    await suspendedAfterRecheck(w, 'recheck_failed');
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      lastCheckedOn: APPROVED_ON,
+      latestRecheck: {
+        checkedOn: FAILED_ON,
+        detail: 'Autorizația a expirat la 30 septembrie',
+        failure: 'expired',
+        result: 'failed',
+      },
+      status: 'suspended',
+    });
+    expect(res.body.rows[2]).toEqual({
+      checkedOn: FAILED_ON,
+      detail: 'Autorizația a expirat la 30 septembrie',
+      kind: 'rar',
+      missing: [],
+      state: 'failed',
+    });
+  });
+
+  it('keeps the ordinary RAR row when an admin suspended the garage', async () => {
+    const w = await world({ status: 'suspended' });
+    await file(w);
+    await suspendedAfterRecheck(w, 'admin');
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.status).toBe(200);
+    expect(res.body.rows[2]).toMatchObject({
+      checkedOn: APPROVED_ON,
+      state: 'ok',
+    });
+  });
+
+  it('still refuses the receptionist', async () => {
+    const w = await world({ status: 'suspended' });
+    await file(w);
+
+    expect((await read(w.dinamo.id, w.receptionist)).status).toBe(403);
+  });
+});
+
+// @traces 1354-FR-002 1354-FR-003
+describe('the RAR row day after a monthly re-check', () => {
+  it('is the stored last check day, and the answer carries the ok re-check', async () => {
+    const w = await world();
+    await file(w);
+    await prisma.recheck.create({
+      data: {
+        checkedOn: new Date('2026-11-01'),
+        garageId: w.dinamo.id,
+        result: 'ok',
+      },
+    });
+    await prisma.garage.update({
+      data: { lastCheckedOn: new Date('2026-11-01') },
+      where: { id: w.dinamo.id },
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.status).toBe('approved');
+    expect(res.body.latestRecheck).toEqual({
+      checkedOn: '2026-11-01',
+      detail: null,
+      failure: null,
+      result: 'ok',
+    });
+    expect(res.body.rows[2]).toMatchObject({ checkedOn: '2026-11-01' });
   });
 });

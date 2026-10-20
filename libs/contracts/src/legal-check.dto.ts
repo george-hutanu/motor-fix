@@ -8,6 +8,12 @@ import {
   VERIFICATION_CHECK_RESULTS,
   type VerificationCheckResult,
 } from './verification-checks';
+import {
+  RECHECK_FAILURES,
+  RECHECK_RESULTS,
+  type RecheckFailure,
+  type RecheckResult,
+} from './verification-target';
 
 const LEGAL_CHECK_ROWS = ['company', 'caen', 'rar', 'documents'] as const;
 type LegalCheckRowKind = (typeof LEGAL_CHECK_ROWS)[number];
@@ -54,6 +60,28 @@ export class RarActivityNameDto {
   nameEn!: string;
 }
 
+export class LegalCheckRecheckDto {
+  @ApiProperty({
+    description: 'The Europe/Bucharest day checked',
+    example: '2026-09-12',
+    format: 'date',
+  })
+  checkedOn!: string;
+
+  @ApiProperty({ enum: RECHECK_RESULTS })
+  result!: RecheckResult;
+
+  @ApiProperty({ enum: RECHECK_FAILURES, nullable: true })
+  failure!: RecheckFailure | null;
+
+  @ApiProperty({
+    description: 'The recorded detail; null on ok',
+    nullable: true,
+    type: String,
+  })
+  detail!: string | null;
+}
+
 export class LegalCheckDto {
   @ApiProperty({ example: 'ATELIER DINAMO SRL' })
   companyName!: string;
@@ -72,6 +100,16 @@ export class LegalCheckDto {
   })
   lastCheckedOn!: string | null;
 
+  @ApiProperty({ enum: ['approved', 'suspended'] })
+  status!: 'approved' | 'suspended';
+
+  @ApiProperty({
+    description: 'The re-check recorded last; null when none',
+    nullable: true,
+    type: LegalCheckRecheckDto,
+  })
+  latestRecheck!: LegalCheckRecheckDto | null;
+
   @ApiProperty({
     description: 'company, caen, rar and documents, in that order',
     isArray: true,
@@ -89,28 +127,58 @@ interface LegalCheckSource {
   }[];
   documents: readonly { kind: string; status: string }[];
   lastCheckedOn: string | null;
+  latestRecheck?: LegalCheckRecheckDto | null;
+  // The garage's open suspension was caused by a failed re-check.
+  recheckFailed?: boolean;
 }
 
-// The panel's four rows from a file's checks and documents: a check row is
-// its result, the documents row is in order only with both documents valid.
+// A check row is its result; the RAR row is dated by the stored day of last
+// check, which a valid re-check moves.
+function checkRow(
+  kind: 'company' | 'caen' | 'rar',
+  check: LegalCheckSource['checks'][number] | undefined,
+  lastCheckedOn: string | null,
+): LegalCheckRowDto {
+  const state = check?.result ?? 'not_run';
+  const day = kind === 'rar' ? lastCheckedOn : check?.checkedOn;
+  return {
+    checkedOn: state === 'not_run' ? null : (day ?? lastCheckedOn),
+    detail: state === 'ok' ? null : (check?.detail ?? null),
+    kind,
+    missing: [],
+    state,
+  };
+}
+
+// The RAR row of a failed re-check that suspended the garage.
+const failedRecheckRow = (recheck: LegalCheckRecheckDto): LegalCheckRowDto => ({
+  checkedOn: recheck.checkedOn,
+  detail: recheck.detail,
+  kind: 'rar',
+  missing: [],
+  state: 'failed',
+});
+
+// The panel's four rows from a file's checks and documents: the documents
+// row is in order only with both documents valid, and a failed re-check that
+// suspended the garage stands in for the RAR row.
 export function legalCheckRows({
   checks,
   documents,
   lastCheckedOn,
+  latestRecheck,
+  recheckFailed,
 }: LegalCheckSource): LegalCheckRowDto[] {
-  const rows: LegalCheckRowDto[] = (['company', 'caen', 'rar'] as const).map(
-    (kind) => {
-      const check = checks.find((c) => c.kind === kind);
-      const state = check?.result ?? 'not_run';
-      return {
-        checkedOn:
-          state === 'not_run' ? null : (check?.checkedOn ?? lastCheckedOn),
-        detail: state === 'ok' ? null : (check?.detail ?? null),
-        kind,
-        missing: [],
-        state,
-      };
-    },
+  const failed =
+    recheckFailed && latestRecheck?.result === 'failed' ? latestRecheck : null;
+  const rows = (['company', 'caen', 'rar'] as const).map((kind) =>
+    kind === 'rar' && failed
+      ? failedRecheckRow(failed)
+      : checkRow(
+          kind,
+          checks.find((c) => c.kind === kind),
+          lastCheckedOn,
+        ),
   );
   const missing = DOCUMENT_KINDS.filter(
     (kind) => !documents.some((d) => d.kind === kind && d.status === 'valid'),

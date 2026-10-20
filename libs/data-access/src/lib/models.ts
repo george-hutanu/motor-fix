@@ -108,6 +108,7 @@ export type { JobTypeListDto } from './models/job-type-list-dto';
 export type { LabourRangeDto } from './models/labour-range-dto';
 export type { LabourRangeSavedDto } from './models/labour-range-saved-dto';
 export type { LegalCheckDto } from './models/legal-check-dto';
+export type { LegalCheckRecheckDto } from './models/legal-check-recheck-dto';
 export type { LegalCheckRowDto } from './models/legal-check-row-dto';
 export type { ListedGarageDto } from './models/listed-garage-dto';
 export type { ListingCheckDto } from './models/listing-check-dto';

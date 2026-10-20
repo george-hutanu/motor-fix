@@ -4421,7 +4421,7 @@
             "description": "forbidden: staff of this garage"
           },
           "404": {
-            "description": "not_found: not this garage (a malformed id included), not approved, or no file"
+            "description": "not_found: not this garage (a malformed id included), a draft, or no file"
           }
         },
         "security": [
@@ -4429,7 +4429,7 @@
             "bearer": []
           }
         ],
-        "summary": "The approved garage's legal check: company, CAEN, RAR and documents, for its owner",
+        "summary": "The approved or suspended garage's legal check: company, CAEN, RAR and documents, with its latest re-check, for its owner",
         "tags": [
           "garages"
         ]
@@ -7072,6 +7072,17 @@
                 "$ref": "#/components/schemas/GarageSuspensionDto"
               }
             ]
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "description": "The stored day of the last RAR check; null when unset",
+            "example": "2026-10-01",
+            "format": "date",
+            "nullable": true
+          },
+          "rechecked": {
+            "type": "boolean",
+            "description": "Whether a valid re-check is recorded on or after the last check day"
           }
         },
         "required": [
@@ -7081,7 +7092,9 @@
           "role",
           "permissions",
           "features",
-          "suspension"
+          "suspension",
+          "lastCheckedOn",
+          "rechecked"
         ]
       },
       "MeDto": {
@@ -12546,6 +12559,44 @@
           "nameEn"
         ]
       },
+      "LegalCheckRecheckDto": {
+        "type": "object",
+        "properties": {
+          "checkedOn": {
+            "type": "string",
+            "description": "The Europe/Bucharest day checked",
+            "example": "2026-09-12",
+            "format": "date"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed"
+            ]
+          },
+          "failure": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ],
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "description": "The recorded detail; null on ok",
+            "nullable": true
+          }
+        },
+        "required": [
+          "checkedOn",
+          "result",
+          "failure",
+          "detail"
+        ]
+      },
       "LegalCheckRowDto": {
         "type": "object",
         "properties": {
@@ -12622,6 +12673,23 @@
             "format": "date",
             "nullable": true
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "suspended"
+            ]
+          },
+          "latestRecheck": {
+            "description": "The re-check recorded last; null when none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LegalCheckRecheckDto"
+              }
+            ]
+          },
           "rows": {
             "description": "company, caen, rar and documents, in that order",
             "type": "array",
@@ -12635,6 +12703,8 @@
           "isMobile",
           "rarActivities",
           "lastCheckedOn",
+          "status",
+          "latestRecheck",
           "rows"
         ]
       },

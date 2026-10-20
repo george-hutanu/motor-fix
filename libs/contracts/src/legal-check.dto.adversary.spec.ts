@@ -182,15 +182,15 @@ describe('legalCheckRows adversary', () => {
     expect(rows[2].checkedOn).toBe('2026-10-01');
   });
 
-  // @traces 210-FR-009
-  it('prefers the check day over lastCheckedOn', () => {
+  // @traces 1354-FR-003
+  it('takes lastCheckedOn over the check day for the RAR row', () => {
     const rows = legalCheckRows({
       checks: [chk('rar', 'ok', null, '2026-09-01')],
       documents: bothValid,
       lastCheckedOn: '2026-10-01',
     });
 
-    expect(rows[2].checkedOn).toBe('2026-09-01');
+    expect(rows[2].checkedOn).toBe('2026-10-01');
   });
 
   // @traces 210-FR-009

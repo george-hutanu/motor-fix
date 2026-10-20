@@ -20,8 +20,10 @@ const answer = (over: Partial<LegalCheckDto> = {}): LegalCheckDto => ({
   companyName: 'ATELIER DINAMO SRL',
   isMobile: false,
   lastCheckedOn: '2026-10-01',
+  latestRecheck: null,
   rarActivities: [],
   rows: [row('company'), row('caen'), row('rar'), row('documents')],
+  status: 'approved',
   ...over,
 });
 

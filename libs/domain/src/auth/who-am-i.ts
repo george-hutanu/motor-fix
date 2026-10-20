@@ -1,4 +1,8 @@
-import type { GarageAccessDto, MeDto } from '@motor-fix/contracts';
+import {
+  type GarageAccessDto,
+  type MeDto,
+  recheckedSince,
+} from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { capabilitiesOf } from './capabilities';
@@ -6,6 +10,9 @@ import { pendingEmail } from './email-change/email-change.service';
 import { type Actor, landingFor } from './policy';
 import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+
+// A calendar day as stored (a PostgreSQL date, read at UTC midnight).
+const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 
 // "Who am I": what GET /me answers, and every change of the account's own
 // details answers once saved.
@@ -60,7 +67,13 @@ export class WhoAmI {
       select: {
         features: { select: { enabled: true, key: true } },
         id: true,
+        lastCheckedOn: true,
         name: true,
+        rechecks: {
+          orderBy: { recordedAt: 'desc' },
+          select: { checkedOn: true, result: true },
+          take: 1,
+        },
         status: true,
         suspensions: {
           select: { cause: true, reason: true },
@@ -84,15 +97,29 @@ export class WhoAmI {
       at: (typeof memberships)[number]['garage'],
       role: GarageAccessDto['role'],
       permissions: GarageAccessDto['permissions'],
-    ): GarageAccessDto => ({
-      features: Object.fromEntries(at.features.map((f) => [f.key, f.enabled])),
-      garageId: at.id,
-      name: at.name,
-      permissions,
-      role,
-      status: at.status,
-      suspension: at.suspensions[0] ?? null,
-    });
+    ): GarageAccessDto => {
+      const lastCheckedOn = day(at.lastCheckedOn);
+      const latest = at.rechecks[0];
+      return {
+        features: Object.fromEntries(
+          at.features.map((f) => [f.key, f.enabled]),
+        ),
+        garageId: at.id,
+        lastCheckedOn,
+        name: at.name,
+        permissions,
+        rechecked: recheckedSince(
+          latest && {
+            checkedOn: day(latest.checkedOn) ?? '',
+            result: latest.result,
+          },
+          lastCheckedOn,
+        ),
+        role,
+        status: at.status,
+        suspension: at.suspensions[0] ?? null,
+      };
+    };
     return [
       ...memberships.map((m) =>
         entry(m.garage, m.role, {
