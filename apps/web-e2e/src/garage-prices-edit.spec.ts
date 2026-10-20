@@ -54,9 +54,6 @@ async function restore(request: APIRequestContext) {
   };
   const row = items.find((item) => item.nameRo === BRAKES);
   if (!row?.priceId) throw new Error('the seeded front brakes row is missing');
-  console.log(
-    `DIAG restore ${new Date().toISOString()} ${JSON.stringify(row).slice(0, 300)}`,
-  );
   const put = await request.patch(
     `/api/v1/garages/${garageId}/prices/${row.priceId}`,
     { data: { ...SEEDED, expectedUpdatedAt: row.updatedAt }, headers },
@@ -64,11 +61,14 @@ async function restore(request: APIRequestContext) {
   expect(put.ok()).toBe(true);
 }
 
+// Every test here saves the same front brakes row and puts it back: the whole
+// file runs in one worker, one test after the other, or a save in one reads a
+// stamp another has just replaced and is refused as stale.
+test.describe.configure({ mode: 'serial' });
+
 // @seeded: signs in as the seeded owner against the real API.
 // @traces 173-FR-001 173-FR-002 173-FR-009 173-FR-016
 test.describe('the owner changes a price range in place @seeded', () => {
-  test.describe.configure({ mode: 'serial' });
-
   test.afterEach(async ({ request }) => {
     await restore(request);
   });
@@ -82,19 +82,6 @@ test.describe('the owner changes a price range in place @seeded', () => {
       page,
     }) => {
       const visitor = await browser.newContext();
-      const seen: string[] = [];
-      page.on('response', async (r) => {
-        const u = r.url();
-        if (!/\/api\/v1\/(garages\/[^/]+\/prices|live)/.test(u)) return;
-        const body = await r.text().catch(() => '');
-        const brakes =
-          body.match(
-            /"priceId":"[^"]+","updatedAt":"[^"]+"[^}]*?frân|frână față[^}]{0,400}/,
-          )?.[0] ?? '';
-        seen.push(
-          `${new Date().toISOString()} ${r.request().method()} ${u.slice(21, 120)} ${r.status()} req=${(r.request().postData() ?? '').slice(0, 200)} res=${(brakes || body).slice(0, 400)}`,
-        );
-      });
       try {
         const profile = await visitor.newPage();
         const stream = profile.waitForResponse(
@@ -156,9 +143,6 @@ test.describe('the owner changes a price range in place @seeded', () => {
 
         await page.getByRole('button', { exact: true, name: 'Gata' }).click();
         await expect(page.locator('[data-row] button')).toHaveCount(0);
-      } catch (error) {
-        console.log(`DIAG garage-prices-edit\n${seen.join('\n')}`);
-        throw error;
       } finally {
         await visitor.close();
       }
