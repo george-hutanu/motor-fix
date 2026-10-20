@@ -315,6 +315,7 @@ describe('PATCH /garages/:garageId/prices/:priceId with { visible }', () => {
     ['a starting price', { fromBani: 95_000 }],
     ['a stamp', { expectedUpdatedAt: new Date().toISOString() }],
     ['a null top', { toBani: null }],
+    ['a top price', { toBani: 145_000 }],
     ['a duration', { durationMinutes: 120 }],
   ])(
     'refuses %s beside visible with 400 validation_failed',
