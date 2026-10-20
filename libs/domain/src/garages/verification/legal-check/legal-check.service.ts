@@ -29,7 +29,7 @@ export class LegalCheckService {
 
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  // One line per refusal (FR-013): its code and the actor's role, no account,
+  // One line per refusal: its code and the actor's role, no account,
   // garage or request detail.
   private refuse(actor: Actor, code: 'forbidden' | 'not_found') {
     this.logger.warn(`legal check refused: ${code} (role ${actor.role})`);

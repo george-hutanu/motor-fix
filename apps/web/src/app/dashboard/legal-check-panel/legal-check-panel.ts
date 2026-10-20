@@ -21,8 +21,8 @@ const LAMPS: Record<LegalCheckRowDto['state'], string> = {
 
 // "Verificare legală": the four rows of the garage's legal check, each with
 // its state in words and colour, the "Suspendat" tag and the failed re-check
-// while the garage is suspended, the note on monthly re-checks, or a skeleton while it loads, or the error
-// and a retry. It shows what it is given; its host reads and refreshes it.
+// while the garage is suspended, and the note on monthly re-checks; or a
+// skeleton while it loads, or the error and a retry. It shows what it is given; its host reads and refreshes it.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],

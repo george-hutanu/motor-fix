@@ -135,7 +135,6 @@ interface LegalCheckSource {
   documents: readonly { kind: string; status: string }[];
   lastCheckedOn: string | null;
   latestRecheck?: LegalCheckRecheckDto | null;
-  // The garage's open suspension was caused by a failed re-check.
   recheckFailed?: boolean;
 }
 
@@ -147,9 +146,10 @@ function checkRow(
   lastCheckedOn: string | null,
 ): LegalCheckRowDto {
   const state = check?.result ?? 'not_run';
-  const day = kind === 'rar' ? lastCheckedOn : check?.checkedOn;
+  const day =
+    kind === 'rar' ? lastCheckedOn : (check?.checkedOn ?? lastCheckedOn);
   return {
-    checkedOn: state === 'not_run' ? null : (day ?? lastCheckedOn),
+    checkedOn: state === 'not_run' ? null : day,
     detail: state === 'ok' ? null : (check?.detail ?? null),
     kind,
     missing: [],
