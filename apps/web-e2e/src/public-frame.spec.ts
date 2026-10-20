@@ -112,6 +112,9 @@ for (const language of ['ro', 'en'] as const) {
 test('"Găsește un mecanic" on Home opens Results for the brand shown @seeded', async ({
   page,
 }) => {
+  // Results search near the driver: Militari, where the seeded garages are.
+  await page.context().grantPermissions(['geolocation']);
+  await page.context().setGeolocation({ latitude: 44.435, longitude: 26.015 });
   await ready(page, '/ro');
   const shown = page
     .getByRole('radiogroup', { name: 'Marca mașinii' })

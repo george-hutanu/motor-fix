@@ -243,6 +243,7 @@ const PUBLIC: readonly Screen[] = [
     name: 'the sign-in sheet',
     open: (page) =>
       page
+        .getByRole('banner')
         .getByRole('button', {
           exact: true,
           name: /^(Autentificare|Sign in)$/,

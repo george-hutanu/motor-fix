@@ -392,7 +392,8 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
           name: language === 'en' ? 'Record' : 'Înregistrează',
         })
         .click();
-      await expect(dialog(page)).toBeVisible();
+      // On a phone the sheet is the panel: the dialog container has no box.
+      await expect(dialog(page).locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
   }

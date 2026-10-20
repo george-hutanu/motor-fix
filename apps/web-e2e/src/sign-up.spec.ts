@@ -222,7 +222,7 @@ test.describe('the sign-up form', () => {
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await ready(page, '/ro/garages');
-    const opener = page.getByRole('button', {
+    const opener = page.getByRole('banner').getByRole('button', {
       exact: true,
       name: 'Autentificare',
     });

@@ -317,7 +317,7 @@ test.describe('the dialog on every screen size', () => {
   test('works from the keyboard alone', async ({ page }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await ready(page, '/ro/garages');
-    const opener = page.getByRole('button', {
+    const opener = page.getByRole('banner').getByRole('button', {
       exact: true,
       name: 'Autentificare',
     });
