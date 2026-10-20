@@ -110,12 +110,12 @@ input[type="checkbox"].mf-check:checked::after {
 }
 
 /* On a phone the results list scrolls inside its sheet, a box often shorter
-   than the bars' room together: that room would scroll a focused card past
-   the box's top, under the brand chips, and a focused chip or the brand field
-   would scroll the page's title away. There a control keeps a small gap to
-   the edges only. From a tablet up the page scrolls the list again. */
+   than the bars' room together, which would scroll a focused card past the
+   box's top, under the brand chips: there a control keeps a small gap to the
+   box's edges only. From a tablet up the page scrolls the list again. */
 @media (max-width: 767px) {
   mf-results-sheet
+    > .body
     :where(a, button, input, select, textarea, summary, [tabindex]) {
     scroll-margin: var(--mf-space-2);
   }
