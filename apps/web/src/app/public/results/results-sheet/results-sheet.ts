@@ -66,6 +66,8 @@ export class ResultsSheet {
   // On a marked step this sheet did not add (reached by forward or a reload):
   // a back over it goes one further, so it leaves the page as before.
   private stale = false;
+  // Where that step sits in the session history, when the browser says.
+  private staleAt: number | undefined;
 
   constructor() {
     effect(() => {
@@ -84,7 +86,7 @@ export class ResultsSheet {
       wasPhone = phone;
     });
     afterNextRender(() => this.measure());
-    if (this.browser && history.state?.mfSheet) this.stale = true;
+    if (this.browser && history.state?.mfSheet) this.markStale();
   }
 
   raise() {
@@ -168,17 +170,27 @@ export class ResultsSheet {
     const marked = Boolean(history.state?.mfSheet);
     if (this.stepped) {
       this.stepped = false;
-      this.stale = marked;
+      this.stale = false;
+      if (marked) this.markStale();
       this.position.set('half');
       return;
     }
     if (marked) {
-      this.stale = true;
+      this.markStale();
       return;
     }
     if (!this.stale) return;
     this.stale = false;
+    // A forward off that step stays forward.
+    const now = entryIndex();
+    if (now !== undefined && this.staleAt !== undefined && now > this.staleAt)
+      return;
     history.back();
+  }
+
+  private markStale() {
+    this.stale = true;
+    this.staleAt = entryIndex();
   }
 
   // The visitor's own move: full adds one history step at this address,
@@ -210,4 +222,12 @@ export class ResultsSheet {
   private measure() {
     this.top.set(this.topBox()?.nativeElement.offsetHeight ?? null);
   }
+}
+
+// The Navigation API's place in the session history; undefined without it.
+function entryIndex(): number | undefined {
+  const at = (
+    globalThis as { navigation?: { currentEntry?: { index?: number } | null } }
+  ).navigation;
+  return at?.currentEntry?.index;
 }

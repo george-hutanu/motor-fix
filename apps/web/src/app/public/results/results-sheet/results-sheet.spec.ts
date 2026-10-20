@@ -392,6 +392,31 @@ describe('ResultsSheet and the back button', () => {
     expect(back).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 1358-FR-009
+  it('lets a forward off a step it reached again stay forward', async () => {
+    const at = { index: 1 };
+    Object.defineProperty(globalThis, 'navigation', {
+      configurable: true,
+      value: { currentEntry: at },
+    });
+    try {
+      await popped({ mfSheet: true });
+      at.index = 2;
+      await popped({ navigationId: 3 });
+
+      expect(back).not.toHaveBeenCalled();
+
+      at.index = 1;
+      await popped({ mfSheet: true });
+      at.index = 0;
+      await popped({ navigationId: 2 });
+
+      expect(back).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(globalThis, 'navigation');
+    }
+  });
+
   it("goes no further on a plain back between the page's own steps", async () => {
     await popped({ navigationId: 2 });
 
