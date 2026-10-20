@@ -270,8 +270,12 @@ test.describe('the Results page @seeded', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
         `Service‑uri pentru ${name}`,
       );
-      await expect(other).toHaveAttribute('aria-pressed', 'true');
-      await expect(other).toBeFocused();
+      // The row leads with the current brand, so the tapped chip moves first.
+      const tapped = page
+        .getByRole('group', { name: 'Marca' })
+        .getByRole('button', { exact: true, name });
+      await expect(tapped).toHaveAttribute('aria-pressed', 'true');
+      await expect(tapped).toBeFocused();
       const bar = new URL(page.url());
       expect(bar.searchParams.get('near')).toBe(near);
       const slug = bar.searchParams.get('brand') ?? '';
@@ -755,7 +759,7 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await rests(page, 'full');
-    await expect(page.locator('header.intro').getByRole('status')).toHaveText(
+    await expect(page.locator('header.intro p.unavailable')).toHaveText(
       'Harta nu este disponibilă acum',
     );
     await expect(page.locator('mf-result-card')).toHaveCount(4);

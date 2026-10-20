@@ -60,4 +60,18 @@ describe('the room a focused control keeps clear of the bars', () => {
     expect(body).toBeDefined();
     expect(body).toMatch(/scroll-margin:\s*0/);
   });
+
+  // On a phone the results list scrolls inside its sheet, a box often shorter
+  // than the bars' room together: there a focused control keeps only a small
+  // gap to the box's edges, or the sheet would scroll it past its own top,
+  // under the brand chips.
+  it("keeps only a small gap inside the phone's results sheet", () => {
+    const sheet = 'mf-results-sheet > .body';
+    const body = rule(`${sheet} ${FOCUSABLES}`);
+
+    expect(body).toMatch(/scroll-margin:\s*var\(--mf-space-2\)/);
+    expect(css).toMatch(
+      /@media \(max-width: 767px\) \{\s*mf-results-sheet\s*>\s*\.body\s*:where\(/,
+    );
+  });
 });
