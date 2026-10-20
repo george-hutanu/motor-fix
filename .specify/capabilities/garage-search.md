@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -16,6 +16,7 @@ features:
   - 290-save-garage
   - 270-card-pin-link
   - 271-garage-distance
+  - 228-how-it-works-list-garage
 ---
 
 # Capability: Garage search
@@ -72,9 +73,9 @@ _From 269-map-price-pins._
 
 _From 229-location-or-address._
 
-### 225-FR-010 — `GET /api/v1/brands/popular?limit={n}` MUST answer without a session, from the `search` module, with the tiles of FR-003 as a list of brands (id, name, slug, popularity), `limit` a whole number 1–12 defaulting to 8 (else 400 `validation_failed`); the answer carries the public cache policy of 1182-FR-009 (`public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`; was `public, max-age=60`, amended by 1182-cache-service).
+### 228-FR-011 — The popular-brands call MUST accept a limit of up to 16, refuse a larger one (400) and keep its default of 8, and answer in the ranking's order; it stays public and cacheable.
 
-_From 225-brand-picker._
+_From 228-how-it-works-list-garage._
 
 ### 225-FR-011 — Both routes MUST be marked public and listed in the public routes test, documented in the OpenAPI document with their DTOs from the contracts library, and the generated web client regenerated from it; nothing in Home calls the API by hand.
 
@@ -383,3 +384,5 @@ _From 271-garage-distance._
 
 - `267-FR-012` — superseded by `271-FR-001` (2026-10-18)
 - `229-FR-013` — superseded by `271-FR-010` (2026-10-18)
+
+- `225-FR-010` — superseded by `228-FR-011` (2026-10-20)

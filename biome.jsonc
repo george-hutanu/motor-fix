@@ -167,6 +167,7 @@
         "apps/web/src/app/dashboard/saved-garages/saved-garage-row/saved-garage-row.html",
         "apps/web/src/app/dashboard/saved-garages/saved-garages-panel/saved-garages-panel.html",
         "apps/web/src/app/home/cards/cards.html",
+        "apps/web/src/app/home/garage-invite/garage-invite.html",
         "apps/web/src/app/home/preview/preview.html",
         "apps/web/src/app/maintenance/maintenance-page/maintenance-page.html",
         "apps/web/src/app/not-found/not-found.html",

@@ -1,0 +1,27 @@
+<section aria-labelledby="garage-invite-title">
+  <div class="copy">
+    <div class="lead">
+      <h2 id="garage-invite-title">{{ 'public.home.invite.title' | t }}</h2>
+      <p>{{ 'public.home.invite.text' | t }}</p>
+    </div>
+    <a class="list" [routerLink]="['/', i18n.language(), 'list-your-garage']">
+      <span>{{ 'public.siteBar.list' | t }}</span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" /></svg>
+    </a>
+  </div>
+  <svg class="garage" viewBox="0 0 280 200" aria-hidden="true">
+    <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 190H280M20 190V50H260V190M10 50H270" />
+      <rect x="80" y="20" width="120" height="30" rx="5" />
+      <rect x="190" y="72" width="46" height="30" />
+      <path d="M213 72V102M190 87H236" />
+      <rect x="190" y="122" width="46" height="68" />
+      <path d="M228 158V160" />
+      <rect x="64" y="130" width="80" height="44" rx="10" />
+      <path d="M76 130L84 110H124L132 130M94 152H114M94 158H114" />
+      <path d="M70 174V186H82V174M126 174V186H138V174" />
+      <circle class="lamp" cx="78" cy="150" r="6" />
+      <circle class="lamp" cx="130" cy="150" r="6" />
+    </g>
+  </svg>
+</section>

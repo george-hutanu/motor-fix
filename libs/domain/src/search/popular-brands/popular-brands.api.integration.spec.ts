@@ -146,7 +146,23 @@ describe('GET /brands/popular', () => {
     expect(res.body).toEqual([]);
   });
 
-  it.each(['0', '13', '2.5', 'eight'])(
+  // @traces 228-FR-011
+  it('answers sixteen brands, most popular first, when the strip asks for sixteen', async () => {
+    const ranked = Array.from({ length: 18 }, (_, n): [string, number] => [
+      `Brand${String(n + 1).padStart(2, '0')}`,
+      n + 1,
+    ]);
+    await brands(ranked);
+
+    const res = await popular({ limit: '16' });
+
+    expect(res.status).toBe(200);
+    expect(names(res.body)).toEqual(ranked.slice(0, 16).map(([name]) => name));
+    expect((await popular()).body).toHaveLength(8);
+  });
+
+  // @traces 228-FR-011
+  it.each(['0', '17', '2.5', 'eight'])(
     'refuses with 400 the limit %s',
     async (limit) => {
       const res = await popular({ limit });

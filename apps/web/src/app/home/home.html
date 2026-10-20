@@ -117,6 +117,9 @@
       />
     }
   </section>
+  @if (popular().length > 0) {
+    <mf-brand-strip [brands]="popular()" (pick)="fromStrip($event)" />
+  }
   <section class="car" [attr.aria-label]="'public.home.car' | t"></section>
   @if (results(); as results) {
     <mf-home-cards
@@ -129,5 +132,7 @@
     />
   }
 }
+<mf-how-it-works />
+<mf-garage-invite />
 <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
 <p>{{ 'shell.health.status' | t: checks() }}</p>

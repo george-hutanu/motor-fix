@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
@@ -17,6 +20,7 @@ import { I18n, LanguageChoice } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import { BrandChoice } from './brand-choice/brand-choice';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HEALTH, Home } from './home';
 import { PlaceDialog } from './place/place-dialog/place-dialog';
@@ -547,7 +551,8 @@ describe('Home brand picker on the server', () => {
     expect(TestBed.inject(TransferState).get(HEALTH, null)).toEqual(report);
   });
 
-  it('reads eight tiles and hands them to the browser', async () => {
+  // @traces 228-FR-007 228-FR-009
+  it('reads sixteen brands once, shows the first eight as tiles and hands them to the browser', async () => {
     tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
     fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
@@ -555,12 +560,24 @@ describe('Home brand picker on the server', () => {
     fixture.detectChanges();
 
     expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith(
-      { limit: 8 },
+      { limit: 16 },
       expect.anything(),
     );
     expect(tiles()).toHaveLength(8);
     expect(homeApi.homeControllerForBrand).not.toHaveBeenCalled();
     expect(count()?.getAttribute('aria-busy')).toBe('true');
+  });
+
+  // @traces 228-FR-011
+  it('asks for no more brands than the popular-brands call accepts', () => {
+    const api = JSON.parse(
+      readFileSync(join(__dirname, '../../../../api/openapi.json'), 'utf8'),
+    );
+    const limit = api.paths['/api/v1/brands/popular'].get.parameters.find(
+      (p: { name: string }) => p.name === 'limit',
+    );
+
+    expect(limit.schema.maximum).toBe(16);
   });
 
   it('renders the brand search field, labelled and enabled', async () => {
@@ -607,12 +624,13 @@ describe('Home opened from another screen in the app', () => {
     await settle();
   }
 
-  it('reads the eight tiles in the browser and shows the place line', async () => {
+  // @traces 228-FR-009
+  it('reads the sixteen brands in the browser and shows the place line', async () => {
     tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
     await visit();
 
     expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith(
-      { limit: 8 },
+      { limit: 16 },
       expect.anything(),
     );
     expect(tiles()).toHaveLength(8);
@@ -1530,5 +1548,148 @@ describe('Home brand events', () => {
 
     expect(checked()).not.toBe('BMW');
     expect(consent.track).not.toHaveBeenCalled();
+  });
+});
+
+// Sixteen ranked brands: the eight tiles, then eight more only the strip shows.
+const SIXTEEN: BrandDto[] = [
+  ...BRANDS,
+  ...[
+    'Opel',
+    'Ford',
+    'Kia',
+    'Toyota',
+    'Peugeot',
+    'Volvo',
+    'Hyundai',
+    'Seat',
+  ].map((name, i) => ({
+    id: `s${i}`,
+    name,
+    popularity: 9 + i,
+    slug: name.toLowerCase(),
+  })),
+];
+const strip = () => page().querySelector('mf-brand-strip');
+const stripButton = (name: string) =>
+  [...(strip()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (b) => b.textContent?.trim() === name && b.tabIndex !== -1,
+  );
+
+// @traces 228-FR-007 228-FR-008 228-FR-009
+describe('Home brand strip', () => {
+  it('shows the sixteen brands under the picker, in ranking order, the tiles still eight', async () => {
+    await render(SIXTEEN);
+
+    expect(tiles()).toHaveLength(8);
+    expect(
+      [...(strip()?.querySelectorAll('button') ?? [])]
+        .filter((b) => b.tabIndex !== -1)
+        .map((b) => b.textContent?.trim()),
+    ).toEqual(SIXTEEN.map((b) => b.name));
+    const order = [
+      ...page().querySelectorAll('mf-brand-search, mf-brand-strip, .car'),
+    ].map((e) => e.tagName.toLowerCase());
+    expect(order).toEqual(['mf-brand-search', 'mf-brand-strip', 'section']);
+  });
+
+  it('shows fewer brands as they are', async () => {
+    await render(BRANDS.slice(0, 5));
+
+    expect(
+      [...(strip()?.querySelectorAll('button') ?? [])].filter(
+        (b) => b.tabIndex !== -1,
+      ),
+    ).toHaveLength(5);
+  });
+
+  it('leaves the strip out when the read fails or finds none, the rest of Home working', async () => {
+    await render(null);
+    expect(strip()).toBeNull();
+    expect(page().querySelector('mf-how-it-works')).not.toBeNull();
+
+    fixture.destroy();
+    await render([]);
+    expect(strip()).toBeNull();
+  });
+
+  it('selects a tile brand tapped in the strip where it is', async () => {
+    await render(SIXTEEN);
+
+    stripButton('Dacia')?.click();
+    await settle();
+
+    expect(checked()).toBe('Dacia');
+    expect(tiles()).toHaveLength(8);
+  });
+
+  it('puts a brand only the strip shows first among the tiles, as a search does', async () => {
+    await render(SIXTEEN);
+
+    stripButton('Volvo')?.click();
+    await settle();
+
+    expect(checked()).toBe('Volvo');
+    expect(tiles()[0].textContent?.trim()).toBe('Volvo');
+    expect(tiles()).toHaveLength(8);
+    expect(slugsRead()).toContain('volvo');
+  });
+
+  it('stops the brand changing on its own once the strip is tapped', async () => {
+    jest.useFakeTimers();
+    await render(SIXTEEN);
+
+    stripButton('Audi')?.click();
+    await settle();
+    jest.advanceTimersByTime(30000);
+    await settle();
+
+    expect(checked()).toBe('Audi');
+    expect(count()?.getAttribute('aria-live')).toBe('polite');
+  });
+});
+
+// @traces 228-FR-003
+describe('Home and the brand it shows', () => {
+  it('tells the site bar the brand shown, as it changes', async () => {
+    await render();
+    const choice = TestBed.inject(BrandChoice);
+
+    expect(choice.shown()).toBe('bmw');
+    await choose('Dacia');
+    expect(choice.shown()).toBe('dacia');
+  });
+
+  it('clears it once Home is gone', async () => {
+    await render();
+
+    fixture.destroy();
+
+    expect(TestBed.inject(BrandChoice).shown()).toBeNull();
+  });
+});
+
+// @traces 228-FR-005 228-FR-016
+describe('Home sections', () => {
+  it('ends with how MotorFix works after the cards, then the garage invitation', async () => {
+    await render();
+
+    const order = [
+      ...page().querySelectorAll(
+        'mf-home-cards, mf-how-it-works, mf-garage-invite',
+      ),
+    ].map((e) => e.tagName.toLowerCase());
+    expect(order).toEqual([
+      'mf-home-cards',
+      'mf-how-it-works',
+      'mf-garage-invite',
+    ]);
+  });
+
+  it('shows both when no brand could be read', async () => {
+    await render(null);
+
+    expect(page().querySelector('mf-how-it-works')).not.toBeNull();
+    expect(page().querySelector('mf-garage-invite')).not.toBeNull();
   });
 });

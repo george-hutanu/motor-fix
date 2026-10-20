@@ -20,6 +20,8 @@ import { placeGarages } from './place-garages';
 import { writeSnapshot } from './platform-figures';
 import { writeResponseStats } from './response-stats/response-stats';
 import { createPrisma } from '../auth/prisma';
+import { ACTIVE_BRANDS_KEY } from '../catalogue/brand-loader';
+import { rankBrands } from '../catalogue/brand-rank/brand-rank';
 import type { PrismaClient } from '../generated/prisma/client';
 import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
@@ -102,6 +104,17 @@ export class InsightsModule
                 logger.log(
                   `${DEMAND} written ${written} for ${days.join(', ') || 'no day'}`,
                 );
+                // A ranking that fails fails the attempt, which is retried;
+                // the brands keep the ranks they had.
+                const { changed, ranked } = await rankBrands(
+                  prisma,
+                  new Date(),
+                );
+                logger.log(`${DEMAND} ranked ${ranked}, changed ${changed}`);
+                // The cached list then shows the old order for at most its hour.
+                await redis.del(ACTIVE_BRANDS_KEY).catch((error: unknown) => {
+                  logger.warn(`brand cache not dropped: ${String(error)}`);
+                });
               },
               [PROFILE_VIEWS]: () =>
                 writeDailyFigures(prisma, redis, new Date()),
