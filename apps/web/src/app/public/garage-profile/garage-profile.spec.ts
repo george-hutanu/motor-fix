@@ -1032,19 +1032,24 @@ describe('the garage profile kept live', () => {
     expect(reads).toHaveLength(1);
   });
 
-  it('switches to the no-longer-available view when a re-read answers 410', async () => {
-    jest.useFakeTimers();
-    await open('/ro/garages/service-auto-militari');
-    await reads[0]?.answer(FIXED);
+  // @traces 1353-FR-003
+  it.each(['garage.suspended', 'recheck.recorded'])(
+    'switches to the no-longer-available view when the re-read after %s answers 410',
+    async (kind) => {
+      jest.useFakeTimers();
+      await open('/ro/garages/service-auto-militari');
+      await reads[0]?.answer(FIXED);
 
-    send('garage.suspended');
-    jest.advanceTimersByTime(300);
-    await settle();
-    await reads[1]?.fail(410);
+      send(kind);
+      jest.advanceTimersByTime(300);
+      await settle();
+      await reads[1]?.fail(410);
 
-    expect(text()).toContain('Acest service nu mai este disponibil');
-    expect(text()).not.toContain('Service Auto Militari');
-  });
+      expect(text()).toContain('Acest service nu mai este disponibil');
+      expect(text()).not.toContain('Service Auto Militari');
+      expect(page().querySelector('.verified')).toBeNull();
+    },
+  );
 
   // @traces 1353-FR-003
   it('reads again with the brand kept when a re-check is recorded, and shows the new date', async () => {
@@ -1069,24 +1074,6 @@ describe('the garage profile kept live', () => {
     ]);
     expect(text()).toContain('Ultima verificare: 1 aug. 2027.');
     expect(text()).not.toContain('14 iun. 2027');
-  });
-
-  // @traces 1353-FR-003
-  it('switches to the no-longer-available view when the re-read after a re-check answers 410', async () => {
-    jest.useFakeTimers();
-    await open('/ro/garages/service-auto-militari');
-    await reads[0]?.answer({
-      ...FIXED,
-      verifiedAt: '2027-06-14T00:00:00.000Z',
-    });
-
-    send('recheck.recorded');
-    jest.advanceTimersByTime(300);
-    await settle();
-    await reads[1]?.fail(410);
-
-    expect(text()).toContain('Acest service nu mai este disponibil');
-    expect(page().querySelector('.verified')).toBeNull();
   });
 
   it('switches to the not-found view when a re-read answers 404', async () => {

@@ -292,7 +292,7 @@ export class PublicGaragesService {
           SELECT 1 FROM garage_facility f
           WHERE f.garage_id = g.id AND f.facility = 'courtesy_car'
         ) AS courtesy_car,
-        g.last_checked_on::text AS last_checked_on,
+        to_char(g.last_checked_on, 'YYYY-MM-DD') AS last_checked_on,
         d.brands, d.photos, d.prices
       FROM garage g
       CROSS JOIN LATERAL (SELECT ${publicGaragesSql('g')} AS listed) s
