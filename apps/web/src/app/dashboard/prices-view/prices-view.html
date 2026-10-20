@@ -32,6 +32,9 @@
               </span>
               <span class="price" data-price>{{ price(row) }}</span>
             </span>
+            @if (waiting(row)) {
+              <span class="muted note" data-note>{{ 'garage.prices.propose.note' | t }}</span>
+            }
             @if (editing() && owner() && editable(row)) {
               <span class="actions">
                 @if (row.visible === false) {

@@ -46,9 +46,12 @@ h2 {
   gap: var(--mf-space-2) var(--mf-space-3);
   min-width: 0;
 }
+.failed,
+.note {
+  overflow-wrap: anywhere;
+}
 .failed {
   color: var(--mf-red-ink);
-  overflow-wrap: anywhere;
 }
 .edit {
   min-width: var(--mf-tap);
@@ -149,7 +152,8 @@ h2 {
   }
   .brands,
   .actions,
-  .failed {
+  .failed,
+  .note {
     grid-column: 1 / -1;
   }
   .actions {

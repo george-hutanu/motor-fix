@@ -153,6 +153,19 @@
       "searching": "Searching…",
       "title": "Add a job"
     },
+    "propose": {
+      "field": {
+        "duplicate": "You have already proposed this job.",
+        "exists": "The job is already in the catalogue: pick it from the list.",
+        "long": "At most 80 characters",
+        "required": "Write the job's name.",
+        "short": "At least 3 characters"
+      },
+      "name": "Job name",
+      "note": "We check it and tell you when it is on your profile.",
+      "send": "Send",
+      "title": "Propose a job"
+    },
     "remove": "Remove",
     "removeDialog": {
       "cancel": "Cancel",

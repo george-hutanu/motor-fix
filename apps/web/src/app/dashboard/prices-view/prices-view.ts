@@ -159,6 +159,7 @@ export class PricesView {
           title: 'garage.prices.picker.title',
         },
       );
+      if (picked === 'propose') return this.propose();
       if (typeof picked !== 'object') return;
       await this.overlays.open<PriceRangeEditorResult, PriceRangeEditorData>(
         PriceRangeEditor,
@@ -171,6 +172,25 @@ export class PricesView {
       // Also after a refusal: the job may be on the list by now.
       this.view.reload();
     });
+  }
+
+  // A job the catalogue lacks, proposed with its range: it joins the list
+  // hidden until an admin approves it.
+  private async propose() {
+    const result = await this.overlays.open<
+      PriceRangeEditorResult,
+      PriceRangeEditorData
+    >(PriceRangeEditor, {
+      data: { garageId: this.garageId(), kind: 'propose' },
+      shape: 'dialog',
+      title: 'garage.prices.propose.title',
+    });
+    if (result === 'saved') this.view.reload();
+  }
+
+  // The note under a proposed job while it waits for an admin.
+  protected waiting({ reason }: PriceListItemDto) {
+    return reason === 'awaiting_approval';
   }
 
   protected async toggle(row: EditableRow) {

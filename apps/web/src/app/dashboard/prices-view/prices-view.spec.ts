@@ -985,3 +985,53 @@ describe('Prețuri: removing a job', () => {
     expect(read).toHaveBeenCalledTimes(1);
   });
 });
+
+// @traces 1352-catalogue-job-visibility-FR-009
+describe('Prețuri: proposing a job the catalogue lacks', () => {
+  it('opens the propose form from the picker and re-reads after it is sent', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce('propose').mockResolvedValueOnce('saved');
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+
+    expect(open).toHaveBeenNthCalledWith(2, PriceRangeEditor, {
+      data: { garageId: GARAGE, kind: 'propose' },
+      shape: 'dialog',
+      title: 'garage.prices.propose.title',
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not re-read when the propose form is closed unsent', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce('propose').mockResolvedValueOnce('cancelled');
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('notes under a job waiting for approval that it is being checked', async () => {
+    const waiting = item({
+      jobTypeId: 'injectors',
+      nameRo: 'Recondiționare injectoare',
+      public: false,
+      reason: 'awaiting_approval',
+      visible: true,
+    });
+    const { element, settle } = await render(async () => ({
+      items: [SEEDED[0], waiting],
+    }));
+    await settle();
+
+    const [listed, proposed] = rows(element);
+    expect(cell(proposed, 'state')).toBe('ascuns · așteaptă aprobarea');
+    expect(cell(proposed, 'note')).toBe(
+      'O verificăm și îți spunem când e pe profil.',
+    );
+    expect(listed.querySelector('[data-note]')).toBeNull();
+  });
+});

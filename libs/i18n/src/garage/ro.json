@@ -153,6 +153,19 @@
       "searching": "Se caută…",
       "title": "Adaugă o lucrare"
     },
+    "propose": {
+      "field": {
+        "duplicate": "Ai propus deja această lucrare.",
+        "exists": "Lucrarea e deja în catalog: alege‑o din listă.",
+        "long": "Cel mult 80 de caractere",
+        "required": "Scrie numele lucrării.",
+        "short": "Cel puțin 3 caractere"
+      },
+      "name": "Numele lucrării",
+      "note": "O verificăm și îți spunem când e pe profil.",
+      "send": "Trimite",
+      "title": "Propune o lucrare"
+    },
     "remove": "Șterge",
     "removeDialog": {
       "cancel": "Renunță",
