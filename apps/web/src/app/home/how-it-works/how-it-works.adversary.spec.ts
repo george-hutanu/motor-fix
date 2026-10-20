@@ -112,6 +112,99 @@ describe('the jump to how MotorFix works under other fragments', () => {
   });
 });
 
+// @traces 228-FR-002
+describe('the jump to how MotorFix works while Home is still growing', () => {
+  let resized: ((height: number) => void)[];
+  let unobserved: number;
+
+  beforeEach(() => {
+    resized = [];
+    unobserved = 0;
+    Object.assign(window, {
+      ResizeObserver: class {
+        private off = false;
+        constructor(callback: ResizeObserverCallback) {
+          resized.push((height) => {
+            if (this.off) return;
+            callback([{ contentRect: { height } } as never], this as never);
+          });
+        }
+        observe() {}
+        disconnect() {
+          this.off = true;
+          unobserved += 1;
+        }
+        unobserve() {}
+      },
+    });
+  });
+  afterEach(() => {
+    delete (window as { ResizeObserver?: unknown }).ResizeObserver;
+  });
+
+  it('scrolls to the section again as the page grows under it', async () => {
+    await render('/ro#how-it-works');
+    expect(scroll).toHaveBeenCalledTimes(1);
+
+    resized[0](900);
+    resized[0](2700);
+
+    expect(scroll).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not scroll again for a page that did not grow', async () => {
+    await render('/ro#how-it-works');
+
+    resized[0](900);
+    resized[0](900);
+    resized[0](600);
+
+    expect(scroll).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['wheel', 'touchstart', 'keydown', 'pointerdown'])(
+    'leaves the page where the person takes it after a %s',
+    async (type) => {
+      await render('/ro#how-it-works');
+
+      window.dispatchEvent(new Event(type));
+      resized[0]?.(2700);
+
+      expect(scroll).toHaveBeenCalledTimes(1);
+      expect(unobserved).toBeGreaterThan(0);
+    },
+  );
+
+  it('stops following three seconds after the jump', async () => {
+    const timers = jest.spyOn(window, 'setTimeout');
+    await render('/ro#how-it-works');
+    const [settle] = timers.mock.calls.find(([, ms]) => ms === 3000) ?? [];
+    timers.mockRestore();
+
+    expect(settle).toBeInstanceOf(Function);
+    (settle as () => void)();
+    resized[0](2700);
+
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(unobserved).toBeGreaterThan(0);
+  });
+
+  it('stops following once the page is left', async () => {
+    await render('/ro#how-it-works');
+    fixture.destroy();
+
+    resized[0]?.(2700);
+
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not follow the page for another fragment', async () => {
+    await render('/ro#other');
+
+    expect(resized).toEqual([]);
+  });
+});
+
 // @traces 228-FR-006
 describe('the hourly rate counter under odd timing', () => {
   it('does not start rolling for an entry that is not in view', async () => {

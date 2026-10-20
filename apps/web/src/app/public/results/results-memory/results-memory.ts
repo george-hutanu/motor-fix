@@ -10,8 +10,10 @@ export type SearchKey = Pick<
 >;
 
 // What Results showed when the driver left it: its loaded pages and cursor,
-// where the page was scrolled to, and whether the search was logged.
+// where the list was scrolled to (in the phone's sheet, or the page), and
+// whether the search was logged.
 export interface KeptResults {
+  inSheet: boolean;
   logged: string | undefined;
   page: GarageSearchPageDto;
   scrollY: number;

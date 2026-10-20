@@ -1,10 +1,13 @@
 import {
   type BrandRangeDto,
   type BrandRangeSavedDto,
+  type CatalogueJobProposalDto,
   checkPriceRange,
   type FieldProblem,
+  JOBS_MAX,
   type LabourRangeDto,
   type LabourRangeSavedDto,
+  type PriceAddDto,
   type PriceListDto,
   type PriceListUpdatedPayload,
   type PriceRangeDto,
@@ -24,6 +27,12 @@ import {
   assertGarageOwner,
   notFound,
 } from '../garage-brands/garage-brands.service';
+import {
+  approvedNames,
+  GaragePricesService,
+  jobProblem,
+  nameOf,
+} from '../prices/garage-prices/garage-prices.service';
 import { NO_BRAND } from '../public-garages/public-garages';
 
 const refuse = (errors: FieldProblem[]) =>
@@ -104,7 +113,46 @@ function rangeOf(body: RangeBody, withDuration: boolean) {
   };
 }
 
+type DefaultRow = {
+  durationMinutes: number | null;
+  fromBani: number;
+  id: string;
+  jobTypeId: string;
+  toBani: number | null;
+  updatedAt: Date;
+};
+
+const savedOf = (
+  { durationMinutes, fromBani, id, jobTypeId, toBani, updatedAt }: DefaultRow,
+  warnings: FieldProblem[],
+): PriceRangeSavedDto => ({
+  fromBani,
+  jobTypeId,
+  priceId: id,
+  ...(toBani !== null && { toBani }),
+  ...(durationMinutes !== null && { durationMinutes }),
+  updatedAt: updatedAt.toISOString(),
+  warnings,
+});
+
 type Pair = { brandId: string; garageId: string; jobTypeId: string };
+
+type ListedRow = { brandId: string | null; jobTypeId: string };
+
+// A fifty-first job without a brand.
+const full = (rows: readonly ListedRow[]) =>
+  rows.filter((stored) => stored.brandId === null).length >= JOBS_MAX;
+
+// A job put last on a garage's list: what is wrong with putting it there,
+// read under the garage's lock, and the catalogue job it is, once nothing is.
+interface Appended {
+  check(
+    tx: Prisma.TransactionClient,
+    rows: readonly ListedRow[],
+  ): Promise<FieldProblem[]>;
+  job(tx: Prisma.TransactionClient): Promise<string>;
+  clash: Error;
+}
 type Row = { garageId: string; priceId: string };
 
 // The pair travels with the range so a deleted row's entry still names it.
@@ -114,6 +162,12 @@ const brandRange = (pair: Pair, from: number, to: number | null) => ({
   jobTypeId: pair.jobTypeId,
   to,
 });
+
+// Writes that add or take away a job's rows run one garage at a time, so a
+// removal and a brand range never leave a brand row without its job.
+const lockGarage = (tx: Prisma.TransactionClient, garageId: string) =>
+  tx.$queryRaw<{ slug: string }[]>`
+    SELECT slug FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
 
 const pairChange = (pair: Pair) => ({
   brandIds: [pair.brandId],
@@ -128,6 +182,7 @@ export class PriceListService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     private readonly cache: CacheService,
+    private readonly prices: GaragePricesService,
   ) {}
 
   // The owner's price list, each job with whether drivers see it and why not.
@@ -206,11 +261,13 @@ export class PriceListService {
     const own = rows.find((row) => row.brandId === brandId);
     if (own?.fromBani === fromBani && own.toBani === toBani) return saved;
     await this.prisma.$transaction(async (tx) => {
+      await lockGarage(tx, garageId);
       const scope = {
         ...this.scopeOf(actor, garageId, 'garage_price'),
         field: 'brand_range',
       };
-      // A removal racing this write took the row first: it is stored anew.
+      // A brand-range removal racing this write took the row first: it is
+      // stored anew, unless the job itself was taken off the list.
       const { count } = own
         ? await tx.garagePrice.updateMany({
             data: { fromBani, toBani, updatedBy: actor.accountId },
@@ -226,6 +283,12 @@ export class PriceListService {
           subjectId: own.id,
         });
       } else {
+        const listed = await tx.garagePrice.count({
+          where: { brandId: null, garageId, jobTypeId },
+        });
+        if (listed === 0) {
+          throw refuse([{ code: 'no_default_range', field: 'jobTypeId' }]);
+        }
         const fields = {
           brandId,
           durationMinutes: null,
@@ -255,15 +318,147 @@ export class PriceListService {
     return saved;
   }
 
+  // An approved catalogue job put last on the list with its default range,
+  // ticked for no brand.
+  async add(
+    actor: Actor,
+    garageId: string,
+    body: PriceAddDto,
+  ): Promise<PriceRangeSavedDto> {
+    assertGarageOwner(actor, garageId);
+    const jobTypeId = body.jobTypeId.toLowerCase();
+    return this.append(actor, garageId, body, {
+      check: async (tx, rows) => {
+        const job = await tx.jobType.findUnique({
+          select: { status: true },
+          where: { id: jobTypeId },
+        });
+        const listed = rows.some((stored) => stored.jobTypeId === jobTypeId);
+        const onJob = jobProblem(job?.status, listed);
+        if (onJob) return [{ code: onJob, field: 'jobTypeId' }];
+        return full(rows) ? [{ code: 'too_many', field: 'jobTypeId' }] : [];
+      },
+      clash: refuse([{ code: 'duplicate', field: 'jobTypeId' }]),
+      job: async () => jobTypeId,
+    });
+  }
+
+  // A job the catalogue lacks, proposed by the owner: a pending catalogue job
+  // of the garage, put last on the list as an add puts an approved one. A
+  // name the garage proposed and is still waiting on stays refused, listed or
+  // not; a name only ever rejected may be proposed again.
+  async propose(
+    actor: Actor,
+    garageId: string,
+    body: CatalogueJobProposalDto,
+  ): Promise<PriceRangeSavedDto> {
+    assertGarageOwner(actor, garageId);
+    const name = nameOf(body.name);
+    const scope = this.scopeOf(actor, garageId, 'garage_price');
+    return this.append(actor, garageId, body, {
+      check: async (tx, rows) => {
+        const approved = (await approvedNames(tx)).get(name);
+        if (approved) {
+          const exists = { code: 'exists', field: 'name', jobTypeId: approved };
+          return [exists];
+        }
+        const pending = await tx.jobType.findMany({
+          select: { nameRo: true },
+          where: { proposedByGarageId: garageId, status: 'pending' },
+        });
+        if (pending.some((job) => nameOf(job.nameRo) === name)) {
+          return [{ code: 'duplicate', field: 'name' }];
+        }
+        return full(rows) ? [{ code: 'too_many', field: 'name' }] : [];
+      },
+      clash: refuse([{ code: 'duplicate', field: 'name' }]),
+      job: (tx) =>
+        this.prices.propose(
+          tx,
+          scope,
+          body.name,
+          refuse([{ code: 'duplicate', field: 'name' }]),
+        ),
+    });
+  }
+
+  // Puts a job last on the list with its default range, ticked for no brand.
+  // Writes to one garage run one after the other, so the cap and the last
+  // place hold.
+  private async append(
+    actor: Actor,
+    garageId: string,
+    body: RangeBody,
+    appended: Appended,
+  ): Promise<PriceRangeSavedDto> {
+    const range = rangeOf(
+      {
+        durationMinutes: body.durationMinutes ?? null,
+        fromBani: body.fromBani,
+        toBani: body.toBani ?? null,
+      },
+      true,
+    );
+    const { durationMinutes, fromBani, toBani, warnings } = range;
+    const { row, slug } = await this.prisma.$transaction(async (tx) => {
+      const [garage] = await lockGarage(tx, garageId);
+      if (!garage) throw notFound();
+      const rows = await tx.garagePrice.findMany({
+        select: { brandId: true, jobTypeId: true, position: true },
+        where: { garageId },
+      });
+      const errors = [...range.errors, ...(await appended.check(tx, rows))];
+      if (errors.length > 0) throw refuse(errors);
+      const jobTypeId = await appended.job(tx);
+      const position =
+        Math.max(-1, ...rows.map((stored) => stored.position)) + 1;
+      const created = await this.prices.createRow(
+        tx,
+        this.scopeOf(actor, garageId, 'garage_price'),
+        {
+          brandId: null,
+          durationMinutes,
+          fromBani,
+          jobTypeId,
+          position,
+          toBani,
+          visible: true,
+        },
+        appended.clash,
+      );
+      await this.changed(tx, {
+        brandIds: [],
+        garageId,
+        jobTypeIds: [jobTypeId],
+      });
+      return { row: created, slug: garage.slug };
+    });
+    await this.forget(slug, NO_BRAND);
+    return savedOf(row, warnings);
+  }
+
   // A job's default range changed in place, judged against the stamp the
   // owner read it with: a row changed since answers 409 and keeps the newer
-  // save, whatever this one would have written.
+  // save, whatever this one would have written. A body with `visible` hides
+  // or shows the job instead.
   async setRange(
     actor: Actor,
     { garageId, priceId }: Row,
     body: PriceRangeDto,
   ): Promise<PriceRangeSavedDto> {
     assertGarageOwner(actor, garageId);
+    const { visible, ...rest } = body;
+    if (visible !== undefined) {
+      if (Object.values(rest).some((value) => value !== undefined)) {
+        throw refusal(
+          HttpStatus.BAD_REQUEST,
+          'validation_failed',
+          'visible is sent alone',
+          [{ code: 'exclusive', field: 'visible' }],
+        );
+      }
+      return this.setVisible(actor, { garageId, priceId }, visible);
+    }
     const row = await this.prisma.garagePrice.findFirst({
       select: {
         durationMinutes: true,
@@ -278,20 +473,28 @@ export class PriceListService {
     if (!row) throw notFound();
     const range = rangeOf(body, true);
     if (range.errors.length > 0) throw refuse(range.errors);
-    const read = new Date(body.expectedUpdatedAt).getTime();
-    if (read !== row.updatedAt.getTime()) throw stale();
+    const { expectedUpdatedAt } = rest;
+    if (
+      expectedUpdatedAt === undefined ||
+      new Date(expectedUpdatedAt).getTime() !== row.updatedAt.getTime()
+    ) {
+      throw stale();
+    }
 
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { jobTypeId } = row;
-    const answer = (updatedAt: Date): PriceRangeSavedDto => ({
-      fromBani,
-      jobTypeId,
-      priceId,
-      ...(toBani !== null && { toBani }),
-      ...(durationMinutes !== null && { durationMinutes }),
-      updatedAt: updatedAt.toISOString(),
-      warnings,
-    });
+    const answer = (updatedAt: Date) =>
+      savedOf(
+        {
+          durationMinutes,
+          fromBani,
+          id: priceId,
+          jobTypeId,
+          toBani,
+          updatedAt,
+        },
+        warnings,
+      );
     const unchanged =
       row.fromBani === fromBani &&
       row.toBani === toBani &&
@@ -332,6 +535,52 @@ export class PriceListService {
     });
     await this.forget(row.garage.slug, NO_BRAND);
     return answer(updatedAt);
+  }
+
+  // Whether drivers see the job, last write wins: a flip moves the row's stamp,
+  // so a range edit read before it answers 409.
+  private async setVisible(
+    actor: Actor,
+    { garageId, priceId }: Row,
+    visible: boolean,
+  ): Promise<PriceRangeSavedDto> {
+    const where = { brandId: null, garageId, id: priceId };
+    const select = {
+      durationMinutes: true,
+      fromBani: true,
+      garage: { select: { slug: true } },
+      id: true,
+      jobTypeId: true,
+      toBani: true,
+      updatedAt: true,
+    } as const;
+    const row = await this.prisma.$transaction(async (tx) => {
+      // Only a flip writes; the same value again, or a racing write that set
+      // it first, leaves the row as stored.
+      const { count } = await tx.garagePrice.updateMany({
+        data: { updatedBy: actor.accountId, visible },
+        where: { ...where, visible: !visible },
+      });
+      const saved = await tx.garagePrice.findFirst({ select, where });
+      if (!saved) throw notFound();
+      if (count === 0) return { ...saved, flipped: false };
+      await this.audit.record(tx, {
+        ...this.scopeOf(actor, garageId, 'garage_price'),
+        action: 'update',
+        field: 'visible',
+        newValue: visible,
+        oldValue: !visible,
+        subjectId: priceId,
+      });
+      await this.changed(tx, {
+        brandIds: [],
+        garageId,
+        jobTypeIds: [saved.jobTypeId],
+      });
+      return { ...saved, flipped: true };
+    });
+    if (row.flipped) await this.forget(row.garage.slug, NO_BRAND);
+    return savedOf(row, []);
   }
 
   // The garage's labour rate, both ends always set.
@@ -406,6 +655,92 @@ export class PriceListService {
       await this.changed(tx, pairChange(pair));
     });
     await this.forget(own.garage.slug, brandSlug);
+  }
+
+  // Takes the job off the list: its default row, its brand rows and its brand
+  // ticks. Request lines and quotes name the catalogue job, so they stay.
+  async remove(actor: Actor, { garageId, priceId }: Row): Promise<void> {
+    assertGarageOwner(actor, garageId);
+    const job = await this.prisma.garagePrice.findFirst({
+      select: { garage: { select: { slug: true } }, jobTypeId: true },
+      where: { brandId: null, garageId, id: priceId },
+    });
+    if (!job) throw notFound();
+    const { jobTypeId } = job;
+    const where = { garageId, jobTypeId };
+    const brandIds = await this.prisma.$transaction(async (tx) => {
+      await lockGarage(tx, garageId);
+      const [rows, ticks] = await Promise.all([
+        tx.garagePrice.findMany({
+          select: {
+            brandId: true,
+            durationMinutes: true,
+            fromBani: true,
+            id: true,
+            position: true,
+            toBani: true,
+            visible: true,
+          },
+          where,
+        }),
+        tx.garageBrandJob.findMany({ select: { brandId: true }, where }),
+      ]);
+      // A removal racing this one took the default row first.
+      if (!rows.some((row) => row.id === priceId)) throw notFound();
+      await tx.garagePrice.deleteMany({ where });
+      await tx.garageBrandJob.deleteMany({ where });
+      const scope = this.scopeOf(actor, garageId, 'garage_price');
+      const brandRows = rows.filter((row) => row.brandId !== null);
+      await this.audit.recordMany(tx, [
+        ...rows
+          .filter((row) => row.id === priceId)
+          .map(({ id, ...fields }) => ({
+            ...scope,
+            action: 'delete' as const,
+            oldValue: { ...fields, jobTypeId },
+            subjectId: id,
+          })),
+        ...brandRows.map((row) => ({
+          ...scope,
+          action: 'delete' as const,
+          field: 'brand_range',
+          oldValue: brandRange(
+            { brandId: row.brandId as string, garageId, jobTypeId },
+            row.fromBani,
+            row.toBani,
+          ),
+          subjectId: row.id,
+        })),
+        ...ticks.map(({ brandId }) => ({
+          ...scope,
+          action: 'delete' as const,
+          oldValue: { brandId },
+          subjectId: jobTypeId,
+          subjectType: 'garage_brand_job',
+        })),
+      ]);
+      const touched = [
+        ...new Set([
+          ...brandRows.map((row) => row.brandId as string),
+          ...ticks.map((tick) => tick.brandId),
+        ]),
+      ];
+      await this.changed(tx, {
+        brandIds: touched,
+        garageId,
+        jobTypeIds: [jobTypeId],
+      });
+      return touched;
+    });
+    const brands = await this.prisma.brand.findMany({
+      select: { slug: true },
+      where: { id: { in: brandIds } },
+    });
+    await Promise.all(
+      [NO_BRAND, ...brands.map((b) => b.slug)].map((slug) =>
+        this.forget(job.garage.slug, slug),
+      ),
+    );
   }
 
   private scopeOf(

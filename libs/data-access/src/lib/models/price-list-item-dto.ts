@@ -42,4 +42,9 @@ export interface PriceListItemDto {
    * When the default row last changed, sent back with a range change
    */
   updatedAt?: string;
+
+  /**
+   * The default row's own flag, whatever reason comes first; absent without a default row
+   */
+  visible?: boolean;
 }

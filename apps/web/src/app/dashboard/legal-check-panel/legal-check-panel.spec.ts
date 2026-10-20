@@ -20,11 +20,13 @@ const answer = (over: Partial<LegalCheckDto> = {}): LegalCheckDto => ({
   companyName: 'ATELIER DINAMO SRL',
   isMobile: false,
   lastCheckedOn: '2026-10-01',
+  latestRecheck: null,
   rarActivities: [
     { code: 'mechanics', nameEn: 'mechanics', nameRo: 'mecanică' },
     { code: 'brakes', nameEn: 'brakes', nameRo: 'frâne' },
   ],
   rows: [row('company'), row('caen'), row('rar'), row('documents')],
+  status: 'approved',
   ...over,
 });
 
@@ -262,6 +264,148 @@ describe('while the panel loads or fails', () => {
 
     expect(text(element.querySelector('[role="alert"]'))).toBe(
       'We could not load the check Try again',
+    );
+  });
+});
+
+const OK_RECHECK = {
+  checkedOn: '2026-10-01',
+  detail: null,
+  failure: null,
+  result: 'ok',
+} as const;
+
+// @traces 1354-FR-003
+describe('the RAR row after a monthly re-check', () => {
+  it('reads re-checked on the stored day once an ok re-check is recorded', async () => {
+    const element = (
+      await render({ data: answer({ latestRecheck: OK_RECHECK }) })
+    ).nativeElement;
+
+    expect(text(rows(element)[2])).toBe(
+      'Autorizație tehnică RAR mecanică, frâne reverificată pe 1 oct. 2026 în regulă',
+    );
+  });
+
+  it('reads the same in English', async () => {
+    const element = (
+      await render({ data: answer({ latestRecheck: OK_RECHECK }) }, 'en')
+    ).nativeElement;
+
+    expect(text(rows(element)[2])).toBe(
+      'RAR technical authorisation mechanics, brakes re-checked on 1 Oct 2026 in order',
+    );
+  });
+
+  it('reads checked on when the ok re-check predates the stored day', async () => {
+    const element = (
+      await render({
+        data: answer({
+          lastCheckedOn: '2026-10-01',
+          latestRecheck: { ...OK_RECHECK, checkedOn: '2026-06-14' },
+        }),
+      })
+    ).nativeElement;
+
+    expect(text(rows(element)[2])).toContain('verificată pe 1 oct. 2026');
+    expect(text(rows(element)[2])).not.toContain('reverificată');
+  });
+});
+
+// @traces 1354-FR-006
+describe('the note under the rows', () => {
+  it('says the authorisation is re-checked monthly', async () => {
+    const element = (await render({ data: answer() })).nativeElement;
+
+    expect(text(element.querySelector('[data-legal-note]'))).toBe(
+      'Reverificăm lunar autorizația în registrul RAR. Dacă e suspendată sau retrasă, profilul iese de pe hartă până se rezolvă.',
+    );
+  });
+
+  it('says the same in English', async () => {
+    const element = (await render({ data: answer() }, 'en')).nativeElement;
+
+    expect(text(element.querySelector('[data-legal-note]'))).toBe(
+      'We re-check the authorisation in the RAR register every month. If it is suspended or withdrawn, the profile comes off the map until that is fixed.',
+    );
+  });
+});
+
+const failedRar = (failure: 'expired' | 'suspended' | 'withdrawn') =>
+  answer({
+    lastCheckedOn: '2026-08-10',
+    latestRecheck: {
+      checkedOn: '2026-09-12',
+      detail: 'Autorizația a expirat la 31 august',
+      failure,
+      result: 'failed',
+    },
+    rows: [
+      row('company'),
+      row('caen'),
+      row('rar', {
+        checkedOn: '2026-09-12',
+        detail: 'Autorizația a expirat la 31 august',
+        failure,
+        state: 'failed',
+      }),
+      row('documents'),
+    ],
+    status: 'suspended',
+  });
+
+// @traces 1354-FR-004
+describe('the panel of a suspended garage', () => {
+  it('tags it Suspendat in red', async () => {
+    const tag = (
+      await render({ data: answer({ status: 'suspended' }) })
+    ).nativeElement.querySelector('[data-legal-tag]');
+
+    expect(text(tag)).toBe('Suspendat');
+    expect(tag.hasAttribute('data-suspended')).toBe(true);
+  });
+
+  it('tags it Suspended in English', async () => {
+    const element = (
+      await render({ data: answer({ status: 'suspended' }) }, 'en')
+    ).nativeElement;
+
+    expect(text(element.querySelector('[data-legal-tag]'))).toBe('Suspended');
+  });
+
+  it('keeps the Verificat tag, unmarked, for an approved garage', async () => {
+    const tag = (await render({ data: answer() })).nativeElement.querySelector(
+      '[data-legal-tag]',
+    );
+
+    expect(tag.hasAttribute('data-suspended')).toBe(false);
+  });
+
+  it.each([
+    ['expired', 'expirată pe 12 sept. 2026'],
+    ['suspended', 'suspendată pe 12 sept. 2026'],
+    ['withdrawn', 'retrasă pe 12 sept. 2026'],
+  ] as const)(
+    'shows the failed re-check on a red RAR row when it was %s',
+    async (failure, said) => {
+      const rar = rows(
+        (await render({ data: failedRar(failure) })).nativeElement,
+      )[2];
+
+      expect(text(rar)).toBe(
+        `Autorizație tehnică RAR ${said} · Autorizația a expirat la 31 august reverificată pe 12 sept. 2026 problemă`,
+      );
+      expect(rar.getAttribute('data-lamp')).toBe('red');
+    },
+  );
+
+  it('shows the failed re-check in English', async () => {
+    const rar = rows(
+      (await render({ data: failedRar('withdrawn') }, 'en')).nativeElement,
+    )[2];
+
+    expect(text(rar)).toBe(
+      'RAR technical authorisation withdrawn on 12 Sep 2026 · Autorizația a expirat la 31 august re-checked on 12 Sep 2026 problem',
     );
   });
 });

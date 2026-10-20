@@ -17,6 +17,10 @@
     }
     @case ('complete') {
       <p class="complete">{{ 'public.listing.check.complete' | t }}</p>
+      <button hlmBtn type="button" class="tell-us" (click)="tellUs.emit()">
+        <span>{{ 'public.listing.check.tellUs' | t }}</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
     }
     @case ('failed') {
       <p class="failed">{{ 'public.listing.check.failed' | t }}</p>

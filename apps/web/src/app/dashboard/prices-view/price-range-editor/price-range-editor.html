@@ -1,4 +1,21 @@
 <form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="sending() ? 'true' : null">
+  @if (proposing) {
+    <div class="field">
+      <label for="mf-range-name">{{ 'garage.prices.propose.name' | t }}</label>
+      <input
+        hlmInput
+        id="mf-range-name"
+        type="text"
+        autocomplete="off"
+        formControlName="name"
+        (blur)="left(f.name)"
+        [attr.disabled]="sending() ? '' : null"
+        aria-describedby="mf-range-name-said"
+        [attr.aria-invalid]="problem(f.name) ? 'true' : null"
+      />
+      <p class="said mf-message" [class.error]="problem(f.name)" id="mf-range-name-said" role="status">{{ problem(f.name) }}</p>
+    </div>
+  }
   <div class="prices">
     <div class="field">
       <label for="mf-range-from">{{ 'garage.prices.editor.from' | t }}</label>
@@ -71,6 +88,6 @@
   <mf-task-error [save]="save" />
   <div class="actions">
     <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.prices.editor.cancel' | t }}</button>
-    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="blocked()">{{ 'garage.prices.editor.save' | t }}</button>
+    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="blocked()">{{ sendLabel | t }}</button>
   </div>
 </form>

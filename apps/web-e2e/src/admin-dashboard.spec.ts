@@ -104,6 +104,7 @@ async function signInAsAdmin(page: Page) {
       .click();
   } else {
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
   }
@@ -238,6 +239,7 @@ test.describe('the admin dashboard @seeded', () => {
   }) => {
     await ready(page, '/ro/garages');
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);

@@ -94,11 +94,20 @@
     },
     "error": "Nu am putut încărca verificarea",
     "notChecked": "neverificat",
+    "note": "Reverificăm lunar autorizația în registrul RAR. Dacă e suspendată sau retrasă, profilul iese de pe hartă până se rezolvă.",
     "pill": "Profil verificat",
+    "pillCheckedOn": "Autorizația RAR, verificată pe {day}",
+    "pillRecheckedOn": "Autorizația RAR, reverificată pe {day}",
     "rar": {
       "checked": "verificată",
       "checkedOn": "verificată pe {day}",
+      "failure": {
+        "expired": "expirată pe {day}",
+        "suspended": "suspendată pe {day}",
+        "withdrawn": "retrasă pe {day}"
+      },
       "label": "Autorizație tehnică RAR",
+      "recheckedOn": "reverificată pe {day}",
       "register": "în registrul RAR"
     },
     "retry": "Încearcă din nou",
@@ -109,9 +118,12 @@
       "warning": "atenție"
     },
     "tag": "Verificat",
+    "tagSuspended": "Suspendat",
     "title": "Verificare legală"
   },
   "prices": {
+    "add": "Adaugă o lucrare",
+    "addMax": "Cel mult 50 de lucrări",
     "done": "Gata",
     "edit": "Modifică",
     "editAll": "Modifică prețurile",
@@ -128,8 +140,10 @@
       "from": "De la",
       "minutes": "min",
       "problem": {
+        "duplicate": "Lucrarea e deja în lista ta.",
         "not_found": "Lucrarea nu mai e în listă.",
-        "stale": "Lista s‑a schimbat între timp."
+        "stale": "Lista s‑a schimbat între timp.",
+        "too_many": "Cel mult 50 de lucrări"
       },
       "save": "Salvează",
       "to": "Până la"
@@ -137,10 +151,42 @@
     "editRow": "Modifică {name}",
     "empty": "Nu ai încă lucrări în listă.",
     "from": "de la {amount}",
+    "hide": "Ascunde",
+    "hideRow": "Ascunde {name}",
     "labour": "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă.",
     "labourTitle": "Manoperă, pe oră",
     "labourUnset": "Manoperă: nesetată",
+    "notSaved": "Nu s‑a salvat. Încearcă din nou.",
+    "picker": {
+      "none": "Nicio lucrare găsită",
+      "propose": "Nu găsești lucrarea? Propune‑o",
+      "searching": "Se caută…",
+      "title": "Adaugă o lucrare"
+    },
+    "propose": {
+      "field": {
+        "duplicate": "Ai propus deja această lucrare.",
+        "exists": "Lucrarea e deja în catalog: alege‑o din listă.",
+        "long": "Cel mult 80 de caractere",
+        "required": "Scrie numele lucrării.",
+        "short": "Cel puțin 3 caractere"
+      },
+      "name": "Numele lucrării",
+      "note": "O verificăm și îți spunem când e pe profil.",
+      "send": "Trimite",
+      "title": "Propune o lucrare"
+    },
+    "remove": "Șterge",
+    "removeDialog": {
+      "cancel": "Renunță",
+      "confirm": "Șterge",
+      "line": "Cererile deschise și ofertele trimise rămân. Șoferii noi nu vor mai vedea lucrarea.",
+      "title": "Ștergi lucrarea din listă?"
+    },
+    "removeRow": "Șterge {name}",
     "retry": "Încearcă din nou",
+    "show": "Arată",
+    "showRow": "Arată {name}",
     "state": {
       "awaiting_approval": "ascuns · așteaptă aprobarea",
       "hidden": "ascuns",

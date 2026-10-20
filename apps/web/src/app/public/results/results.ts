@@ -18,7 +18,12 @@ import {
   viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationStart,
+  Router,
+  RouterLink,
+} from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import { inRomania } from '@motor-fix/contracts/place-section';
 import {
@@ -30,6 +35,7 @@ import {
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
+  type BrandDto,
   type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
   type GarageSearchPageDto,
@@ -37,12 +43,16 @@ import {
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { limitText, Overlays, toProblem } from '@motor-fix/overlays';
-import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { Layout, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { filter } from 'rxjs';
 
+import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
 import { ResultsMemory } from './results-memory/results-memory';
+import { ResultsSheet } from './results-sheet/results-sheet';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
+import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
 import {
@@ -58,6 +68,8 @@ const WIDE = SEARCH_RADII[1];
 // A suspended card's fade, and the burst of events that makes one read.
 const FADE_MS = 300;
 const BURST_MS = 300;
+// The new brand's row-in: its cards' 320 ms rise and its name's 520 ms blur-in.
+const RISE_MS = 520;
 // How long the browser has to say where the driver is.
 const LOCATE_MS = 10_000;
 // A page that answers no garage but a cursor asks for the next one at once,
@@ -107,9 +119,12 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
 @Component({
   imports: [
     AddressField,
+    BrandChips,
+    BrandSearch,
     LiveChange,
     ResultCard,
     ResultsMap,
+    ResultsSheet,
     RouterLink,
     TranslatePipe,
   ],
@@ -127,6 +142,8 @@ export class Results {
   private readonly live = inject(PublicLive);
   private readonly announcer = inject(LiveAnnouncer);
   private readonly reduced = inject(REDUCED_MOTION);
+  private readonly layout = inject(Layout);
+  protected readonly phone = computed(() => this.layout.current() === 'phone');
   private readonly destroyRef = inject(DestroyRef);
   private readonly saved = inject(SavedGarages);
   private readonly memory = inject(ResultsMemory);
@@ -135,7 +152,7 @@ export class Results {
   private readonly bar = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
-  private readonly brand = computed(() => this.bar().get('brand') ?? '');
+  protected readonly brand = computed(() => this.bar().get('brand') ?? '');
   // The place in the bar, else the one the browser keeps; a string, so the
   // bar catching up with the kept place starts no second search.
   protected readonly near = computed(() => {
@@ -179,12 +196,59 @@ export class Results {
   });
 
   // Only a new search is logged: the opening one, another brand or place in
-  // the bar, and a place chosen here; never a retry, a widening, a reload or
-  // a move of the map.
+  // the bar, and a place chosen here; never a retry, a widening, a reload, a
+  // move of the map or a step back or forward through the history.
   private logNext = false;
   private logged: string | undefined;
   // Where the page was scrolled to when the kept results were shown again.
-  private scrollBack: number | undefined;
+  private scrollBack: { inSheet: boolean; y: number } | undefined;
+  private popped = false;
+
+  // The brand last picked in the search beside the chips.
+  protected readonly chosenBrand = signal<BrandDto | undefined>(undefined);
+
+  // Only the brand changed in the bar, and its answer has not landed yet:
+  // the list shown waits, dimmed, for it instead of turning into skeletons.
+  private readonly swap = linkedSignal<
+    { brand: string; near: string | undefined; radius: number | undefined },
+    boolean
+  >({
+    computation: (now, previous) =>
+      !!previous &&
+      previous.source.brand !== now.brand &&
+      previous.source.near === now.near &&
+      previous.source.radius === now.radius,
+    source: () => ({
+      brand: this.brand(),
+      near: this.near(),
+      radius: this.radius(),
+    }),
+  });
+  // Another brand was loading: its answer is said, and brings the list back
+  // into view.
+  private swapped = false;
+  // The names of the brands asked for or answered here, by slug and by id,
+  // so the progress bar names the brand loading, a step back included.
+  private readonly names = linkedSignal<
+    Page | undefined,
+    ReadonlyMap<string, string>
+  >({
+    computation: (page, previous) => {
+      const names = new Map(previous?.value);
+      if (page) {
+        names.set(page.brand.id, page.brand.name);
+        names.set(page.brand.slug, page.brand.name);
+      }
+      return names;
+    },
+    source: () => this.searched(),
+  });
+  protected readonly changing = computed(() => {
+    const name = this.names().get(this.brand());
+    return name
+      ? this.i18n.t('public.results.changing', { brand: name })
+      : this.i18n.t('public.results.loading');
+  });
 
   // Never on the server: it renders the skeletons, the browser searches.
   // The search left for a garage's profile shows again at once as it was,
@@ -195,14 +259,14 @@ export class Results {
       if (kept) {
         this.logged = kept.logged;
         this.logNext = false;
-        this.scrollBack = kept.scrollY;
+        this.scrollBack = { inSheet: kept.inSheet, y: kept.scrollY };
         this.refreshWanted = true;
         return kept.page;
       }
       if (params.bbox)
         return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
-      const log = this.logNext || searched !== this.logged;
+      const log = this.logNext || (searched !== this.logged && !this.popped);
       this.logNext = false;
       this.logged = searched;
       return this.search.garageSearchControllerForBrand(
@@ -243,17 +307,49 @@ export class Results {
     return parseNear(near);
   });
   private readonly map = viewChild(ResultsMap);
+  private readonly sheet = viewChild.required(ResultsSheet);
+  // On a phone the list takes the screen and the summary says why.
+  protected readonly mapFailed = computed(() => !!this.map()?.failed());
 
   private readonly searched = computed(() =>
     this.results.isLoading() || !this.results.hasValue()
       ? undefined
       : this.results.value(),
   );
-  // What the page shows: the search's answer, changed in place by the stream.
-  protected readonly answer = linkedSignal<Page | undefined, Page | undefined>({
-    computation: (page) => page,
-    source: this.searched,
+  private readonly keep = computed(
+    () => this.swap() && this.results.isLoading(),
+  );
+  // What the page shows: the search's answer, changed in place by the stream;
+  // while another brand loads, the previous one.
+  protected readonly answer = linkedSignal<
+    { page: Page | undefined; keep: boolean },
+    Page | undefined
+  >({
+    computation: ({ page, keep }, previous) =>
+      page ?? (keep ? previous?.value : undefined),
+    source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
+      equal: (a, b) => a.page === b.page && a.keep === b.keep,
+    }),
   });
+  // The new brand's answer has just landed: its cards rise and its name
+  // blurs in, once (RISE_MS); a first load, a map move or a live update does not.
+  protected readonly rising = linkedSignal<
+    { keep: boolean; page: Page | undefined },
+    boolean
+  >({
+    computation: (now, previous) =>
+      !!now.page &&
+      !!previous &&
+      (previous.source.keep ||
+        (previous.value && previous.source.page === now.page)),
+    source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
+      equal: (a, b) => a.page === b.page && a.keep === b.keep,
+    }),
+  });
+  // The previous brand's cards, kept under the progress bar.
+  protected readonly swapping = computed(
+    () => this.keep() && (this.answer()?.items.length ?? 0) > 0,
+  );
   // The cards fading out, and whether the search has found more since.
   protected readonly leaving = linkedSignal<unknown, ReadonlySet<string>>({
     computation: () => new Set(),
@@ -292,6 +388,7 @@ export class Results {
     computation: firstPage,
     source: this.searched,
   });
+  private readonly found = viewChild<ElementRef<HTMLElement>>('found');
   private readonly loaded = computed(
     () => {
       const shown = new Set(this.answer()?.items.map((garage) => garage.id));
@@ -318,8 +415,9 @@ export class Results {
   protected readonly capped = computed(
     () => (this.answer()?.items.length ?? 0) >= SEARCH_PINS_MAX,
   );
+  // Never while another brand loads: the cursor is the previous brand's.
   protected readonly canLoad = computed(
-    () => !!this.answer()?.nextCursor && !this.capped(),
+    () => !!this.answer()?.nextCursor && !this.capped() && !this.keep(),
   );
   protected readonly ending = computed(() => {
     const answer = this.answer();
@@ -340,7 +438,7 @@ export class Results {
     if (this.server) return 'loading';
     const waiting = this.waiting();
     if (waiting) return waiting;
-    if (this.results.isLoading()) return 'loading';
+    if (this.results.isLoading() && !this.swapping()) return 'loading';
     const answer = this.answer();
     if (answer) return answer.items.length === 0 ? 'empty' : 'list';
     // No brand, or one the catalogue does not hold: a retry would not help.
@@ -421,6 +519,28 @@ export class Results {
       if (!this.pins.hasValue() || this.pins.isLoading() || this.box()) return;
       untracked(() => this.map()?.fit());
     });
+    // A step through the history names a search already logged.
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationStart),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        this.popped = event.navigationTrigger === 'popstate';
+      });
+    // The new brand's answer is said as the summary shows it, and its list
+    // starts at its top when the driver had scrolled past it.
+    afterRenderEffect(() => {
+      if (this.keep()) {
+        this.swapped = true;
+        return;
+      }
+      if (!this.searched() || !this.swapped) return;
+      this.swapped = false;
+      // Answered: a later reload of the same bar, a map move, is no swap.
+      this.swap.set(false);
+      untracked(() => this.swappedIn());
+    });
     // Which garages a driver saved, for the cards' bookmarks.
     void this.saved.load();
     // The kept place is read before the first render; only a page without
@@ -462,9 +582,11 @@ export class Results {
     });
     afterRenderEffect(() => {
       if (this.state() !== 'list' || this.scrollBack === undefined) return;
-      const y = this.scrollBack;
+      const { inSheet, y } = this.scrollBack;
       this.scrollBack = undefined;
-      window.scrollTo({ top: y });
+      // On a phone the list scrolls inside its sheet, not the page.
+      if (inSheet) this.sheet().scrollBack(y);
+      else window.scrollTo({ top: y });
     });
   }
 
@@ -495,10 +617,12 @@ export class Results {
       if (!shown) return;
       const leaving = untracked(this.leaving);
       const items = shown.page.items.filter((g) => !leaving.has(g.id));
+      const inSheet = untracked(this.phone);
       this.memory.keep(shown.query, {
+        inSheet,
         logged: this.logged,
         page: { ...shown.page, items },
-        scrollY: window.scrollY,
+        scrollY: inSheet ? untracked(this.sheet).scrolled() : window.scrollY,
       });
     });
   }
@@ -669,6 +793,42 @@ export class Results {
     );
   }
 
+  private swappedIn() {
+    const risen = setTimeout(() => this.rising.set(false), RISE_MS);
+    this.destroyRef.onDestroy(() => clearTimeout(risen));
+    const tally = this.tally();
+    if (tally) void this.announcer.announce(tally, 'polite');
+    // On a phone the list scrolls inside its sheet, not the page.
+    if (untracked(this.phone))
+      return this.sheet().toTop(!untracked(this.reduced));
+    const top = this.found()?.nativeElement.getBoundingClientRect().top ?? 0;
+    if (top >= 0) return;
+    window.scrollTo({
+      behavior: this.reduced() ? 'auto' : 'smooth',
+      top: window.scrollY + top,
+    });
+  }
+
+  // A chip or a brand picked in the search: a new entry in the history, the
+  // place and radius kept; the brand already shown changes nothing.
+  protected changeBrand({ key, name }: BrandPick) {
+    const answered = untracked(this.searched)?.brand;
+    if (
+      key === untracked(this.brand) ||
+      key === answered?.id ||
+      key === answered?.slug
+    )
+      return;
+    this.names.update((names) => new Map(names).set(key, name));
+    void this.write({ brand: key }, { push: true });
+  }
+
+  protected chooseBrand(brand: BrandDto) {
+    const answered = untracked(this.searched)?.brand;
+    if (brand.id !== answered?.id) this.chosenBrand.set(brand);
+    this.changeBrand({ key: brand.slug, name: brand.name });
+  }
+
   protected retry() {
     this.results.reload();
     if (this.pins.error()) this.pins.reload();
@@ -710,11 +870,13 @@ export class Results {
     this.selected.set(id);
     const listed = untracked(this.cards).find((c) => c.garage().id === id);
     const pin = untracked(this.pinned)?.pins.find((p) => p.id === id);
-    if (listed || !pin) {
+    if (listed) {
       this.card.set(undefined);
-      listed?.reveal(!untracked(this.reduced));
-      return;
+      // A low sheet rises first, so the card has room to come into view.
+      this.sheet().raise();
+      return listed.reveal(!untracked(this.reduced));
     }
+    if (!pin) return this.card.set(undefined);
     const card: PinCard = { pin };
     this.card.set(card);
     const query = untracked(this.query);
@@ -917,12 +1079,15 @@ export class Results {
     if (untracked(this.pointed) === id) this.pointed.set(undefined);
   }
 
-  private write(queryParams: Record<string, string | null>) {
+  private write(
+    queryParams: Record<string, string | null>,
+    { push = false } = {},
+  ) {
     return this.router.navigate([], {
       queryParams,
       queryParamsHandling: 'merge',
       relativeTo: this.route,
-      replaceUrl: true,
+      replaceUrl: !push,
     });
   }
 }

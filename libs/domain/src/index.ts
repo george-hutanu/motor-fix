@@ -70,6 +70,7 @@ export { ListingPhotosModule } from './garages/photos/listing-photos/listing-pho
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos/listing-photos.worker';
 export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices/garage-prices.service';
+export { applySurvey } from './garages/survey/survey';
 export {
   type Decision,
   type VerificationActor,
@@ -85,6 +86,7 @@ export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
 export { Brevo } from './notifications/brevo/brevo';
+export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
 export {
   checkEmailDns,

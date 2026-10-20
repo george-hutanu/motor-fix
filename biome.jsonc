@@ -131,10 +131,11 @@
       }
     },
     {
-      // Biome reads Angular templates as plain HTML: it cannot see the brand tiles' [attr.aria-checked] (buttons in the APG radio pattern, not native radios) or the href routerLink writes on Home's main button.
+      // Biome reads Angular templates as plain HTML: it cannot see the brand tiles' and the sign-up survey's answers' [attr.aria-checked] (buttons in the APG radio pattern, not native radios) or the href routerLink writes on Home's main button.
       "includes": [
         "apps/web/src/app/home/home.html",
-        "apps/web/src/app/home/brand-picker/brand-picker.html"
+        "apps/web/src/app/home/brand-picker/brand-picker.html",
+        "apps/web/src/app/public/signup-survey/signup-survey.html"
       ],
       "linter": {
         "rules": {

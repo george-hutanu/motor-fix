@@ -157,12 +157,30 @@ describe('the public site bar', () => {
     );
   });
 
-  it('hides the links under 640 px behind a 44 px account button, and never scrolls sideways', () => {
+  it('hides the links under 768 px behind a 44 px account button, and never scrolls sideways', () => {
     const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
 
-    expect(css).toMatch(/@media \(min-width: 640px\)/);
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{\s*\.links \{\s*display: flex/,
+    );
     expect(css).toMatch(/\.account\s*\{[^}]*min-(width|height): 44px/);
     expect(css).toMatch(/overflow-x: clip/);
+  });
+
+  it('keeps a tablet bar to the two main links and the account button, so the language switch is never cut off', async () => {
+    await open('/ro');
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
+
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) and \(max-width: 1023\.98px\) \{[^@]*\.links \.wide \{\s*display: none/,
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) \{\s*\.account \{\s*display: none/,
+    );
+    const wide = [...bar().querySelectorAll('nav .wide')].map((e) =>
+      e.textContent?.trim(),
+    );
+    expect(wide).toEqual(['Cum funcționează', 'Autentificare']);
   });
 });
 

@@ -103,6 +103,7 @@ input[type="checkbox"].mf-check:checked::after {
   mf-consent-bar,
   mf-list-your-garage nav,
   mf-list-your-garage .actions,
+  mf-signup-survey .footer,
   mf-request-drawer .actions
 ) :where(a, button, input, select, textarea, summary, [tabindex]) {
   scroll-margin: 0;

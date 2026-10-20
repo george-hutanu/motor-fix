@@ -24,6 +24,22 @@ import { SaveGarageButton } from '../../saved-garages/save-garage-button/save-ga
 
 const REST_MS = 100;
 
+// The nearest box between the card and the page that scrolls its own
+// content. A box laid out as `display: contents` (the sheet's list from a
+// tablet up) has no box to scroll, whatever its overflow says.
+function scroller(from: HTMLElement): HTMLElement | undefined {
+  for (
+    let at = from.parentElement;
+    at && at !== document.body;
+    at = at.parentElement
+  ) {
+    const style = getComputedStyle(at);
+    if (style.display !== 'contents' && /auto|scroll/.test(style.overflowY))
+      return at;
+  }
+  return undefined;
+}
+
 // Whole keys, so the workspace check finds each one.
 const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
   courtesy_car: 'public.listing.hours.facility.courtesy_car',
@@ -108,12 +124,22 @@ export class ResultCard {
   }
 
   // Brings the card into the list's view at its nearest edge; the focus
-  // stays where it is.
+  // stays where it is. In a box that scrolls (the phone's sheet) only that
+  // box moves: scrollIntoView would scroll the page behind it too.
   reveal(smooth: boolean) {
-    this.host.scrollIntoView({
-      behavior: smooth ? 'smooth' : 'auto',
-      block: 'nearest',
-    });
+    const behavior = smooth ? 'smooth' : 'auto';
+    const box = scroller(this.host);
+    if (!box) {
+      this.host.scrollIntoView({ behavior, block: 'nearest' });
+      return;
+    }
+    const card = this.host.getBoundingClientRect();
+    const view = box.getBoundingClientRect();
+    let top = 0;
+    if (card.top < view.top) top = card.top - view.top;
+    else if (card.bottom > view.bottom)
+      top = Math.min(card.bottom - view.bottom, card.top - view.top);
+    if (top) box.scrollBy({ behavior, top });
   }
 
   protected picked(event: Event) {

@@ -8,7 +8,7 @@ import { test } from './fixtures.js';
 // Garages of this file's own, written due straight to PostgreSQL: recording
 // a seeded garage would move it for every spec running beside this one. The
 // @database tag keeps the file out of a deployed run, which has no database.
-// @traces 1351-FR-007 1351-FR-010 1351-FR-011 1351-FR-015
+// @traces 1351-FR-007 1351-FR-010 1351-FR-011 1351-FR-015 1354-FR-010
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -28,6 +28,7 @@ async function signInAsAdmin(page: Page) {
       .click();
   } else {
     await page
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
   }
@@ -206,6 +207,7 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
     await ownerPage.setViewportSize({ height: 800, width: 1280 });
     await ready(ownerPage, '/ro/garages');
     await ownerPage
+      .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(ownerPage, owner.email, { password: owner.password });
@@ -214,6 +216,15 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
       .getByRole('region', { name: 'Verificare legală' })
       .locator('[data-legal-row="documents"]');
     await expect(documents).toContainText(`verificate pe ${roDay(before)}`);
+    const rar = ownerPage
+      .getByRole('region', { name: 'Verificare legală' })
+      .locator('[data-legal-row="rar"]');
+    const strip = ownerPage.locator('[data-verified-line]');
+    const roDayMonth = (day: string) => roDay(day).replace(/ \d{4}$/, '');
+    await expect(rar).toContainText(`verificată pe ${roDay(before)}`);
+    await expect(strip).toHaveText(
+      `Autorizația RAR, verificată pe ${roDayMonth(before)}`,
+    );
     let ownerNavigations = 0;
     ownerPage.on('framenavigated', (frame) => {
       if (frame === ownerPage.mainFrame()) ownerNavigations++;
@@ -252,6 +263,13 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
     expect((await stored(id))?.checked).toBe(bucharestToday());
     await expect(documents).toContainText(
       `verificate pe ${roDay(bucharestToday())}`,
+      { timeout: 15_000 },
+    );
+    await expect(rar).toContainText(
+      `reverificată pe ${roDay(bucharestToday())}`,
+    );
+    await expect(strip).toHaveText(
+      `Autorizația RAR, reverificată pe ${roDayMonth(bucharestToday())}`,
       { timeout: 15_000 },
     );
     expect(ownerNavigations).toBe(0);
@@ -374,7 +392,8 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
           name: language === 'en' ? 'Record' : 'Înregistrează',
         })
         .click();
-      await expect(dialog(page)).toBeVisible();
+      // On a phone the sheet is the panel: the dialog container has no box.
+      await expect(dialog(page).locator('mf-overlay-panel')).toBeVisible();
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
   }

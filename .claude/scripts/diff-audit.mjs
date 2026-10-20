@@ -33,6 +33,10 @@ const git = (args) => {
   }
 };
 
+// Generator output is never edited by hand, so nothing in it is the branch's
+// to fix; the same paths scripts/structure-check.ts leaves out.
+const GENERATED = ["libs/data-access/", "libs/domain/src/generated/"];
+
 // origin/main first: a worktree made from it leaves the local main wherever the
 // main checkout last had it, and every file merged since would read as ours.
 const base = (git(["merge-base", "HEAD", "origin/main"]) || git(["merge-base", "HEAD", "main"])).trim();
@@ -47,7 +51,7 @@ const changed = [
       .split("\n")
       .filter(Boolean),
   ),
-].filter((f) => existsSync(join(repo, f)));
+].filter((f) => existsSync(join(repo, f)) && !GENERATED.some((dir) => f.startsWith(dir)));
 
 const isSpec = (f) => /\.(spec|test)\.[cm]?tsx?$/.test(f);
 const isSource = (f) => /^(apps|libs)\/[^/]+\/src\/.+\.tsx?$/.test(f) && !isSpec(f);

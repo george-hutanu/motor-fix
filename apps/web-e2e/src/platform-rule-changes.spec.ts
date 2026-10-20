@@ -53,6 +53,7 @@ async function restore(request: APIRequestContext) {
 async function openSettings(page: Page, email: string) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email);

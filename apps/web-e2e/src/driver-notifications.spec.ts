@@ -75,6 +75,7 @@ async function inRomanian(page: Page) {
 async function signedInSettings(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.driver);

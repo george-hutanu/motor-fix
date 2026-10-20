@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { JOBS_MAX } from '@motor-fix/contracts/price-range';
 import {
   type BrandRangeItemDto,
   GaragesService,
@@ -22,11 +23,21 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { filter, merge } from 'rxjs';
 
 import {
+  JobPicker,
+  type JobPickerData,
+  type JobPickerResult,
+} from './job-picker/job-picker';
+import {
   type EditableRow,
   PriceRangeEditor,
   type PriceRangeEditorData,
   type PriceRangeEditorResult,
 } from './price-range-editor/price-range-editor';
+import {
+  RemoveJob,
+  type RemoveJobData,
+  type RemoveJobResult,
+} from './remove-job/remove-job';
 import { liveView } from '../../live/view';
 import { Live } from '../live';
 import { garageOf, Session } from '../session';
@@ -46,8 +57,9 @@ const REASONS: Record<Reason, true> = {
 
 // "Prețuri": every job of the garage's price list in the list's order, with
 // whether drivers see it and why not, its range and its brand ranges, then the
-// hourly labour range. The owner turns editing on to change a range in place;
-// a save re-reads the list rather than patching a row.
+// hourly labour range. The owner turns editing on to change a range, hide,
+// show or remove a job in place, and to add one from the catalogue; each write
+// re-reads the list rather than patching a row.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -70,6 +82,9 @@ export class PricesView {
     () => garageOf(this.session.shown())?.role === 'owner',
   );
   protected readonly editing = signal(false);
+  // The job whose hide or show is on its way, and the one whose last failed.
+  protected readonly busy = signal<string | null>(null);
+  protected readonly failed = signal<string | null>(null);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
   // TODO: nothing emits catalogue_job.decided until the admin's catalogue
@@ -93,10 +108,8 @@ export class PricesView {
     void this.i18n.enter('garage');
   }
 
-  protected name(row: PriceListItemDto) {
-    return this.i18n.language() === 'en' && row.nameEn.trim()
-      ? row.nameEn
-      : row.nameRo;
+  protected name({ nameEn, nameRo }: { nameEn: string; nameRo: string }) {
+    return this.i18n.language() === 'en' && nameEn.trim() ? nameEn : nameRo;
   }
 
   protected duration(row: PriceListItemDto) {
@@ -125,6 +138,92 @@ export class PricesView {
   // alone comes without an id.
   protected editable(row: PriceListItemDto): row is EditableRow {
     return Boolean(row.priceId && row.updatedAt);
+  }
+
+  // The cap counts the jobs with their own row, as the server does.
+  protected full(items: readonly PriceListItemDto[]) {
+    return items.filter((row) => row.priceId).length >= JOBS_MAX;
+  }
+
+  protected add(items: readonly PriceListItemDto[]) {
+    void this.once(async () => {
+      const picked = await this.overlays.open<JobPickerResult, JobPickerData>(
+        JobPicker,
+        {
+          data: { listed: items.map((row) => row.jobTypeId) },
+          shape: 'dialog',
+          title: 'garage.prices.picker.title',
+        },
+      );
+      if (picked === 'propose') return this.propose();
+      if (typeof picked !== 'object') return;
+      await this.overlays.open<PriceRangeEditorResult, PriceRangeEditorData>(
+        PriceRangeEditor,
+        {
+          data: {
+            garageId: this.garageId(),
+            job: picked.job,
+            kind: 'new',
+            listed: () => this.view.reload(),
+          },
+          shape: 'dialog',
+          title: this.name(picked.job),
+        },
+      );
+      // Also after a refusal: the job may be on the list by now.
+      this.view.reload();
+    });
+  }
+
+  // A job the catalogue lacks, proposed with its range: it joins the list
+  // hidden until an admin approves it.
+  private async propose() {
+    const result = await this.overlays.open<
+      PriceRangeEditorResult,
+      PriceRangeEditorData
+    >(PriceRangeEditor, {
+      data: { garageId: this.garageId(), kind: 'propose' },
+      shape: 'dialog',
+      title: 'garage.prices.propose.title',
+    });
+    if (result === 'saved') this.view.reload();
+  }
+
+  // The note under a proposed job while it waits for an admin.
+  protected waiting({ reason }: PriceListItemDto) {
+    return reason === 'awaiting_approval';
+  }
+
+  protected async toggle(row: EditableRow) {
+    if (this.busy()) return;
+    this.busy.set(row.priceId);
+    this.failed.set(null);
+    try {
+      await this.api.priceListControllerSetRange({
+        body: { visible: row.visible === false },
+        garageId: this.garageId(),
+        priceId: row.priceId,
+      });
+      this.view.reload();
+    } catch {
+      this.failed.set(row.priceId);
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  protected remove(row: EditableRow) {
+    void this.once(async () => {
+      const result = await this.overlays.open<RemoveJobResult, RemoveJobData>(
+        RemoveJob,
+        {
+          data: { garageId: this.garageId(), priceId: row.priceId },
+          shape: 'dialog',
+          title: 'garage.prices.removeDialog.title',
+        },
+      );
+      if (result === 'removed') this.view.reload();
+    });
   }
 
   protected editRow(row: EditableRow) {
@@ -157,18 +256,24 @@ export class PricesView {
     );
   }
 
-  // One editor at a time: a second press while one opens is ignored.
-  private opened = false;
-
-  private async edit(data: PriceRangeEditorData, title: string) {
-    if (this.opened) return;
-    this.opened = true;
-    try {
+  private edit(data: PriceRangeEditorData, title: string) {
+    return this.once(async () => {
       const result = await this.overlays.open<
         PriceRangeEditorResult,
         PriceRangeEditorData
       >(PriceRangeEditor, { data, shape: 'dialog', title });
       if (result === 'saved') this.view.reload();
+    });
+  }
+
+  // One overlay at a time: a second press while one is open is ignored.
+  private opened = false;
+
+  private async once(run: () => Promise<void>) {
+    if (this.opened) return;
+    this.opened = true;
+    try {
+      await run();
     } finally {
       this.opened = false;
     }

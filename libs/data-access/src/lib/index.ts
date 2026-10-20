@@ -43,6 +43,7 @@ export type { CandidateGarageListDto } from './models/candidate-garage-list-dto'
 export type { CarDto } from './models/car-dto';
 export type { CarListDto } from './models/car-list-dto';
 export type { CarSnapshotDto } from './models/car-snapshot-dto';
+export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';
@@ -114,6 +115,7 @@ export type { JobTypeListDto } from './models/job-type-list-dto';
 export type { LabourRangeDto } from './models/labour-range-dto';
 export type { LabourRangeSavedDto } from './models/labour-range-saved-dto';
 export type { LegalCheckDto } from './models/legal-check-dto';
+export type { LegalCheckRecheckDto } from './models/legal-check-recheck-dto';
 export type { LegalCheckRowDto } from './models/legal-check-row-dto';
 export type { ListedGarageDto } from './models/listed-garage-dto';
 export type { ListingCheckDto } from './models/listing-check-dto';
@@ -157,6 +159,7 @@ export type { PlatformRuleChangesDto } from './models/platform-rule-changes-dto'
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { PlatformStatusDto } from './models/platform-status-dto';
+export type { PriceAddDto } from './models/price-add-dto';
 export type { PriceListDto } from './models/price-list-dto';
 export type { PriceListItemDto } from './models/price-list-item-dto';
 export type { PriceRangeDto } from './models/price-range-dto';
@@ -507,6 +510,8 @@ export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } f
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
+export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
@@ -523,6 +528,10 @@ export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params
 export { legalCheckControllerRead as legalCheckControllerRead } from './fn/garages/legal-check-controller-read';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerAdd$Params as PriceListControllerAdd$Params } from './fn/garages/price-list-controller-add';
+export { priceListControllerAdd as priceListControllerAdd } from './fn/garages/price-list-controller-add';
+export type { PriceListControllerRemove$Params as PriceListControllerRemove$Params } from './fn/garages/price-list-controller-remove';
+export { priceListControllerRemove as priceListControllerRemove } from './fn/garages/price-list-controller-remove';
 export type { PriceListControllerSetRange$Params as PriceListControllerSetRange$Params } from './fn/garages/price-list-controller-set-range';
 export { priceListControllerSetRange as priceListControllerSetRange } from './fn/garages/price-list-controller-set-range';
 export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';

@@ -69,6 +69,7 @@ async function signedIn(page: Page, email: string, landing: string) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email);

@@ -47,7 +47,10 @@ const noSideScroll = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
 const openSignIn = (page: Page) =>
-  page.getByRole('button', { exact: true, name: 'Autentificare' }).click();
+  page
+    .getByRole('banner')
+    .getByRole('button', { exact: true, name: 'Autentificare' })
+    .click();
 
 test.describe('resetting a forgotten password @seeded @mailbox', () => {
   test('from the sign-in dialog through the e-mail: the new password works and the old one does not', async ({

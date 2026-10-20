@@ -108,7 +108,9 @@ describe('MissingSummary', () => {
   // @traces 115-FR-009
   it('says the listing is complete, and that a check failed', async () => {
     const complete = await open([], 'complete');
-    expect(text(complete.summary)).toBe('Totul e complet');
+    expect(text(complete.summary.querySelector('.complete'))).toBe(
+      'Totul e complet',
+    );
 
     const failed = await open([], 'failed');
     expect(text(failed.summary)).toBe(
@@ -141,4 +143,38 @@ describe('MissingSummary', () => {
       TestBed.inject(I18n).t('public.listing.check.seatAddressNeeded'),
     );
   });
+
+  // @traces 1359-FR-001
+  it('offers the survey under the complete notice and asks for it on a press', async () => {
+    const { fixture, summary } = await open([], 'complete');
+    let asked = 0;
+    fixture.componentInstance.tellUs.subscribe(() => asked++);
+    const button = summary.querySelector<HTMLButtonElement>('button.tell-us');
+
+    expect(text(button)).toContain('SPUNE‑NE CUM LUCREZI');
+    button?.click();
+    expect(asked).toBe(1);
+  });
+
+  // @traces 1359-FR-001
+  it('names the survey button in English', async () => {
+    const { summary } = await open([], 'complete', 'en');
+
+    expect(text(summary.querySelector('button.tell-us'))).toContain(
+      'TELL US HOW YOU WORK',
+    );
+  });
+
+  // @traces 1359-FR-001
+  it.each(['missing', 'failed', null] as const)(
+    'offers no survey when the state is %s',
+    async (state) => {
+      const { summary } = await open(
+        state === 'missing' ? [problem('steps.1.phone')] : [],
+        state,
+      );
+
+      expect(summary.querySelector('button.tell-us')).toBeNull();
+    },
+  );
 });

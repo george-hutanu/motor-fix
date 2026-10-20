@@ -1,0 +1,444 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.survey {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-6);
+  max-width: 640px;
+  margin: 0 auto;
+  min-width: 0;
+}
+p,
+h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.progress {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mf-space-1) var(--mf-space-3);
+}
+/* The counter keeps its row on the right, as the mock does: the kicker wraps
+   first, and only where even its longest word leaves no room (a 320 px phone
+   in Romanian) does the counter take the next row, still on the right. */
+.kicker {
+  flex: 1 1 0;
+  min-width: min-content;
+}
+.counter {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.kicker,
+.counter,
+.eyebrow,
+.card-label,
+.example-label,
+.hours,
+.lift-name,
+.time {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: 0.12em;
+  color: var(--mf-text-secondary);
+}
+.segments {
+  display: flex;
+  gap: var(--mf-space-2);
+}
+.segments > span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--mf-line);
+}
+.segments > .done {
+  background: var(--mf-amber);
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+h1 {
+  font-size: var(--mf-size-heading);
+  line-height: 1.2;
+  font-weight: 700;
+}
+h1:focus {
+  outline: none;
+}
+h1:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+.lead {
+  font-size: var(--mf-size-body);
+  line-height: 1.45;
+  color: var(--mf-text-secondary);
+}
+.note,
+.example,
+.change,
+.always {
+  font-size: var(--mf-size-body);
+  line-height: 1.45;
+  color: var(--mf-text-secondary);
+}
+.example-label {
+  color: var(--mf-text);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: 14px;
+  background: var(--mf-panel);
+}
+ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sets {
+  gap: var(--mf-space-3);
+}
+.sets li {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+}
+svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sets svg {
+  color: var(--mf-text-secondary);
+}
+.features li,
+.outcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.features li {
+  padding: var(--mf-space-3) 0;
+  border-bottom: 1px solid var(--mf-line);
+}
+.outcome {
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-panel);
+  font-size: var(--mf-size-body);
+}
+.outcome mf-lamp,
+.features mf-lamp {
+  flex: none;
+  font-size: var(--mf-size-body);
+}
+
+/* The pictures: drawn in markup, never images. */
+.mockup small {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.person,
+.job,
+.row,
+.lift {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.row {
+  justify-content: space-between;
+}
+.job {
+  padding-top: var(--mf-space-3);
+  border-top: 1px solid var(--mf-line);
+}
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--mf-line);
+  border-radius: 50%;
+  background: var(--mf-panel-raised);
+  font-size: var(--mf-size-label);
+  font-weight: 700;
+}
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--mf-size-body);
+}
+.who b {
+  font-weight: 600;
+}
+.state,
+.live {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  font-size: var(--mf-size-small);
+}
+.live {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  color: var(--mf-red-ink);
+}
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mf-text-secondary);
+}
+.dot.green {
+  background: var(--mf-green);
+  box-shadow: 0 0 8px var(--mf-green);
+}
+.dot.amber {
+  background: var(--mf-amber);
+  box-shadow: 0 0 8px var(--mf-amber);
+}
+.dot.red {
+  background: var(--mf-red);
+  box-shadow: 0 0 8px var(--mf-red);
+}
+.hours {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 34px;
+}
+.lift-name {
+  flex: none;
+  width: 26px;
+}
+.track {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  height: 30px;
+}
+.block,
+.slot,
+.gap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  font-size: var(--mf-size-label);
+  white-space: nowrap;
+}
+.block {
+  padding: 0 6px;
+  background: var(--mf-panel-raised);
+}
+.gap {
+  border: 1px dashed var(--mf-line);
+}
+.slot {
+  justify-content: center;
+  border: 1px dashed var(--mf-green);
+  color: var(--mf-green-ink);
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mf-space-3);
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  border: 1px solid var(--mf-line);
+  border-radius: 10px;
+  background: var(--mf-panel-raised);
+  color: var(--mf-text-secondary);
+}
+.pills {
+  display: flex;
+  gap: var(--mf-space-2);
+}
+.pills span,
+.plate {
+  padding: 1px 6px;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 4px;
+  font-size: var(--mf-size-label);
+  white-space: nowrap;
+}
+.pills span {
+  border-radius: 999px;
+}
+.time {
+  flex: none;
+  min-width: 46px;
+  white-space: nowrap;
+  color: var(--mf-text);
+}
+
+.answers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mf-space-3);
+}
+.answers.column {
+  grid-template-columns: minmax(0, 1fr);
+}
+.answer {
+  min-height: 46px;
+  min-width: 0;
+  padding: var(--mf-space-2) var(--mf-space-3);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-panel);
+  color: var(--mf-text);
+  font: inherit;
+  font-size: var(--mf-size-body);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.answer[aria-checked="true"] {
+  border-color: var(--mf-amber);
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+  box-shadow: 0 0 16px var(--mf-amber-tint);
+}
+.answer:focus-visible,
+.back:focus-visible,
+.forward:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
+.saved {
+  color: var(--mf-green-ink);
+  font-weight: 600;
+}
+.failed {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+
+.footer {
+  display: flex;
+  gap: var(--mf-space-3);
+}
+.back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--mf-text);
+  cursor: pointer;
+}
+/* Amber means picked: a hover only darkens the border, and only where a pointer hovers, so a tap never leaves an answer looking chosen. */
+@media (hover: hover) {
+  .answer:not([aria-checked="true"]):hover,
+  .back:hover {
+    border-color: var(--mf-text-secondary);
+  }
+}
+.forward {
+  flex: 1;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: var(--mf-size-small);
+  white-space: nowrap;
+}
+.forward:disabled {
+  background: var(--mf-panel-raised);
+  color: var(--mf-text-secondary);
+  cursor: not-allowed;
+}
+
+/* A 320 px phone fits "CREEAZĂ CONTUL" on one line: the arrow goes, the label keeps the button. */
+@media (max-width: 359.98px) {
+  .forward {
+    justify-content: center;
+    padding-inline: var(--mf-space-3);
+    letter-spacing: 0.06em;
+  }
+  .forward > svg {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* A phone keeps back and forward in reach at the bottom of the screen,
+     above the tab bar and the consent bar, which carry the safe area. */
+  .footer {
+    position: sticky;
+    bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
+    z-index: 1;
+    margin: 0 calc(-1 * var(--mf-space-4));
+    padding: var(--mf-space-3) var(--mf-space-4);
+    border-top: 1px solid var(--mf-line);
+    background: var(--mf-bg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .step {
+    animation: mf-rise 420ms var(--mf-motion-ease) backwards;
+  }
+  .pulse {
+    animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
+  }
+  .answer {
+    transition:
+      border-color 240ms ease,
+      transform 200ms var(--mf-motion-ease);
+  }
+  .answer:active {
+    transform: scale(0.97);
+  }
+}

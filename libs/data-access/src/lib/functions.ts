@@ -223,6 +223,8 @@ export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } f
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
+export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
@@ -239,6 +241,10 @@ export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params
 export { legalCheckControllerRead as legalCheckControllerRead } from './fn/garages/legal-check-controller-read';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerAdd$Params as PriceListControllerAdd$Params } from './fn/garages/price-list-controller-add';
+export { priceListControllerAdd as priceListControllerAdd } from './fn/garages/price-list-controller-add';
+export type { PriceListControllerRemove$Params as PriceListControllerRemove$Params } from './fn/garages/price-list-controller-remove';
+export { priceListControllerRemove as priceListControllerRemove } from './fn/garages/price-list-controller-remove';
 export type { PriceListControllerSetRange$Params as PriceListControllerSetRange$Params } from './fn/garages/price-list-controller-set-range';
 export { priceListControllerSetRange as priceListControllerSetRange } from './fn/garages/price-list-controller-set-range';
 export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';

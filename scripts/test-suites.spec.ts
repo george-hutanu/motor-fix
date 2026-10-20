@@ -168,3 +168,56 @@ describe('a chosen suite', () => {
     expect(preset(undefined).passWithNoTests).toBeUndefined();
   });
 });
+
+// A Jest worker that keeps growing across a long project's files (the web
+// suite reached a 4 GB heap on CI and crashed) is replaced after a file once it
+// passes its limit: every Jest project resolves one, well under that heap.
+function jestProjects(): string[] {
+  return ['apps', 'libs'].flatMap((area) =>
+    readdirSync(join(root, area), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(area, entry.name))
+      .filter((dir) =>
+        readdirSync(join(root, dir)).some((name) =>
+          name.startsWith('jest.config.'),
+        ),
+      ),
+  );
+}
+
+function resolvedLimit(project: string): unknown {
+  const run = spawnSync(process.execPath, [jestBin, '--showConfig'], {
+    cwd: join(root, project),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      TS_NODE_COMPILER_OPTIONS: JSON.stringify({
+        customConditions: null,
+        module: 'commonjs',
+        moduleResolution: 'node10',
+      }),
+    },
+  });
+  if (run.status !== 0) return run.stderr;
+  return (
+    JSON.parse(run.stdout) as {
+      globalConfig: { workerIdleMemoryLimit?: unknown };
+    }
+  ).globalConfig.workerIdleMemoryLimit;
+}
+
+describe('the Jest worker memory limit', () => {
+  it('finds the web app among the Jest projects', () => {
+    expect(jestProjects()).toContain('apps/web');
+  });
+
+  it.each(jestProjects())(
+    '%s replaces a worker before it nears the 4 GB heap the web suite crashed at',
+    (project) => {
+      const limit = resolvedLimit(project);
+      expect(typeof limit).toBe('number');
+      expect(limit as number).toBeGreaterThan(0);
+      expect(limit as number).toBeLessThanOrEqual(2 * 1024 ** 3);
+    },
+  );
+});

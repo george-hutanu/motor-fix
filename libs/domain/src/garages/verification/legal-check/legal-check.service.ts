@@ -16,18 +16,20 @@ const forbidden = () =>
     'Only the owner sees the legal check',
   );
 
-const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
+const dayOf = (at: Date) => at.toISOString().slice(0, 10);
+const day = (at: Date | null) => (at ? dayOf(at) : null);
 
 // The owner's view of the garage's legal check: the newest verification
-// file's company, CAEN and RAR checks and its two documents, read only while
-// the garage is approved. Notes, reviewers, evidence and pages stay out.
+// file's company, CAEN and RAR checks and its two documents, with the latest
+// re-check, read only while the garage is approved or suspended. Notes,
+// reviewers, evidence and pages stay out.
 @Injectable()
 export class LegalCheckService {
   private readonly logger = new Logger('LegalCheck');
 
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  // One line per refusal (FR-013): its code and the actor's role, no account,
+  // One line per refusal: its code and the actor's role, no account,
   // garage or request detail.
   private refuse(actor: Actor, code: 'forbidden' | 'not_found') {
     this.logger.warn(`legal check refused: ${code} (role ${actor.role})`);
@@ -43,7 +45,22 @@ export class LegalCheckService {
         lastCheckedOn: true,
         name: true,
         rarActivities: true,
+        rechecks: {
+          orderBy: { recordedAt: 'desc' },
+          select: {
+            checkedOn: true,
+            detail: true,
+            failure: true,
+            result: true,
+          },
+          take: 1,
+        },
         status: true,
+        suspensions: {
+          select: { cause: true },
+          take: 1,
+          where: { untilTime: null },
+        },
         verificationFiles: {
           orderBy: { createdAt: 'desc' },
           select: {
@@ -64,7 +81,10 @@ export class LegalCheckService {
       where: { id: garageId },
     });
     const file = garage?.verificationFiles[0];
-    if (garage?.status !== 'approved' || !file) {
+    if (
+      (garage?.status !== 'approved' && garage?.status !== 'suspended') ||
+      !file
+    ) {
       throw this.refuse(actor, 'not_found');
     }
     const activities = await this.prisma.rarActivity.findMany({
@@ -72,10 +92,20 @@ export class LegalCheckService {
       where: { code: { in: garage.rarActivities } },
     });
     const lastCheckedOn = day(garage.lastCheckedOn);
+    const recheck = garage.rechecks[0];
+    const latestRecheck = recheck
+      ? {
+          checkedOn: dayOf(recheck.checkedOn),
+          detail: recheck.detail,
+          failure: recheck.failure,
+          result: recheck.result,
+        }
+      : null;
     return {
       companyName: garage.name,
       isMobile: garage.businessKind === 'mobile',
       lastCheckedOn,
+      latestRecheck,
       // In the garage's own order; a code the register no longer lists is left out.
       rarActivities: garage.rarActivities.flatMap((code) =>
         activities.filter((a) => a.code === code),
@@ -89,7 +119,12 @@ export class LegalCheckService {
         })),
         documents: file.documents,
         lastCheckedOn,
+        latestRecheck,
+        recheckFailed:
+          garage.status === 'suspended' &&
+          garage.suspensions[0]?.cause === 'recheck_failed',
       }),
+      status: garage.status,
     };
   }
 }

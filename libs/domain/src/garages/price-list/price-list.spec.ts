@@ -198,6 +198,7 @@ describe('the price list items', () => {
         public: false,
         reason: 'no_top_price',
         updatedAt: STAMP.toISOString(),
+        visible: true,
       },
     ]);
   });
@@ -271,6 +272,33 @@ describe('the price list items', () => {
     const [item] = priceListJobs([row(job())], []);
 
     expect(item?.brandRanges).toEqual([]);
+  });
+
+  // @traces 1352-FR-008
+  it("carries the owner's own choice from the default row, whatever reason comes first", () => {
+    const [shown, hidden] = priceListJobs(
+      [
+        row(job()),
+        row(job('pending'), { position: 1, toBani: null, visible: false }),
+      ],
+      [],
+    );
+
+    expect(shown?.visible).toBe(true);
+    expect(hidden).toMatchObject({
+      reason: 'awaiting_approval',
+      visible: false,
+    });
+  });
+
+  // @traces 1352-FR-008
+  it('carries no choice for a job with no default row', () => {
+    const [item] = priceListJobs(
+      [row(job(), { brandId: 'bmw', visible: false })],
+      [],
+    );
+
+    expect(item).not.toHaveProperty('visible');
   });
 });
 

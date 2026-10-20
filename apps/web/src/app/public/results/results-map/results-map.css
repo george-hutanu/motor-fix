@@ -82,11 +82,30 @@
   padding: var(--mf-space-2) var(--mf-space-3);
 }
 
-/* Read on a phone: 16 px there, the small size from a tablet up. */
+/* Read on a phone: 16 px there, the small size from a tablet up. The
+   results sheet covers the map's lower part there, so the legend sits at its
+   top, giving way to the zoom hint, which shows when no pins are drawn. */
 @media (max-width: 767.98px) {
   .legend,
   .hint {
     font-size: var(--mf-size-body);
+  }
+
+  /* The zoom buttons' column at the top right: tap-sized buttons (styles.css),
+     their border, MapLibre's 10 px inset and a gap. */
+  .map {
+    --zoom-room: calc(var(--mf-tap) + 20px);
+  }
+
+  .legend {
+    bottom: auto;
+    box-sizing: border-box;
+    max-width: calc(100% - var(--mf-space-3) - var(--zoom-room));
+    top: var(--mf-space-3);
+  }
+
+  .hint:not(:empty) ~ .legend {
+    visibility: hidden;
   }
 }
 

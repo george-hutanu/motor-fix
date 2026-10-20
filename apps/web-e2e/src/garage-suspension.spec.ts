@@ -146,6 +146,7 @@ test.describe('suspending a garage @seeded', () => {
           .click();
       } else {
         await page
+          .getByRole('banner')
           .getByRole('button', { exact: true, name: 'Autentificare' })
           .click();
       }

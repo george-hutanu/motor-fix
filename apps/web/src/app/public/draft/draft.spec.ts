@@ -225,13 +225,17 @@ const REFUSED: [string, unknown][] = [
   ['a file key of the wrong shape', { files: ['../etc/passwd'] }],
   ['files that are not a list', { files: FILE }],
   ['a survey that is not an object', { survey: 'yes' }],
+  // @traces 1359-FR-008
+  ['a survey with an unknown key', { survey: { heard: 'friend' } }],
+  ['a survey answer outside its codes', { survey: { mechanicsCount: '7' } }],
+  ['a survey yes that is text', { survey: { wantsLiveMedia: 'da' } }],
   ['data that is a list', [{ steps: {} }]],
 ];
 const PASSING: [string, unknown][] = [
   ['nothing yet', {}],
   [
     'no steps but a survey and a photo',
-    { files: [FILE], survey: { heard: 'friend' } },
+    { files: [FILE], survey: { liftsCount: '2-3', mechanicsCount: '0' } },
   ],
   [
     'a section for every step',
@@ -492,5 +496,40 @@ describe('DraftKeeper before the check', () => {
 
     expect(await kept.check()).toEqual({ kind: 'failed' });
     expect(kept.view()).toBe('sent');
+  });
+
+  // @traces 1359-FR-009
+  it('keeps survey answers beside the steps and asks the server at once', async () => {
+    const kept = keeper({ draftId: 'd1', token: 't1' });
+
+    kept.survey({ mechanicsCount: '1-2' });
+    await Promise.resolve();
+
+    expect(kept.draft().data).toEqual({
+      ...entry().data,
+      survey: { mechanicsCount: '1-2' },
+    });
+    expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(1);
+    expect(
+      api['listingDraftsControllerSave'].mock.calls[0][0].body.data.survey,
+    ).toEqual({ mechanicsCount: '1-2' });
+  });
+
+  // @traces 1359-FR-009
+  it('carries the answers on the next save after one that failed', async () => {
+    const kept = keeper({ draftId: 'd1', token: 't1' });
+    api['listingDraftsControllerSave'].mockRejectedValueOnce(refusal(0));
+
+    kept.survey({ mechanicsCount: '0' });
+    await new Promise((resolve) => setTimeout(resolve));
+    kept.survey({ liftsCount: '1', mechanicsCount: '0' });
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const calls = api['listingDraftsControllerSave'].mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1][0].body.data.survey).toEqual({
+      liftsCount: '1',
+      mechanicsCount: '0',
+    });
   });
 });

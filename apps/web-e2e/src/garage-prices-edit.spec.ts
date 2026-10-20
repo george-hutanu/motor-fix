@@ -28,6 +28,7 @@ async function signedIn(page: Page) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, OWNER);
@@ -60,11 +61,14 @@ async function restore(request: APIRequestContext) {
   expect(put.ok()).toBe(true);
 }
 
+// Every test here saves the same front brakes row and puts it back: the whole
+// file runs in one worker, one test after the other, or a save in one reads a
+// stamp another has just replaced and is refused as stale.
+test.describe.configure({ mode: 'serial' });
+
 // @seeded: signs in as the seeded owner against the real API.
 // @traces 173-FR-001 173-FR-002 173-FR-009 173-FR-016
 test.describe('the owner changes a price range in place @seeded', () => {
-  test.describe.configure({ mode: 'serial' });
-
   test.afterEach(async ({ request }) => {
     await restore(request);
   });

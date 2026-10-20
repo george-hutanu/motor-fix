@@ -1,0 +1,91 @@
+/* On a phone the sheet shares the map's cell and slides over it: full at
+   the cell's top, half halfway, low with only its handle and header showing.
+   A drag writes --sheet-y; at rest the position decides. */
+:host {
+  --rest: 50%;
+  background: var(--mf-panel);
+  border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
+  border-top: 1px solid var(--mf-line);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--mf-mask) 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transform: translateY(var(--sheet-y, var(--rest)));
+}
+
+:host([data-position="full"]) {
+  --rest: 0px;
+}
+
+:host([data-position="low"]) {
+  --rest: calc(100% - var(--sheet-top, 160px));
+}
+
+.top {
+  flex: none;
+  padding-inline: var(--mf-space-4);
+}
+
+.handle {
+  align-items: center;
+  background: none;
+  border: 0;
+  cursor: grab;
+  display: flex;
+  justify-content: center;
+  min-height: var(--mf-tap);
+  padding: 0;
+  touch-action: none;
+  width: 100%;
+}
+
+.grip {
+  background: var(--mf-line-strong);
+  border-radius: 999px;
+  height: 5px;
+  width: 36px;
+}
+
+/* A vertical move on the header drags the sheet; the chip rows still
+   scroll sideways on their own. */
+.header {
+  touch-action: pan-x;
+}
+
+/* Only the part above the screen's edge scrolls, so the list's last card
+   can always be reached. */
+.body {
+  flex: none;
+  height: calc(100% - var(--sheet-y, var(--rest)) - var(--sheet-top, 160px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--mf-space-3) var(--mf-space-4) var(--mf-space-4);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :host {
+    animation: sheet-in 420ms var(--mf-motion-ease) backwards;
+    transition: transform 420ms var(--mf-motion-ease);
+  }
+
+  :host([style*="--sheet-y"]) {
+    transition: none;
+  }
+}
+
+/* The sheet opens by sliding up from the screen's bottom edge. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* From a tablet up the sheet draws nothing: its content sits in the page. */
+@media (min-width: 768px) {
+  :host,
+  .top,
+  .header,
+  .body {
+    display: contents;
+  }
+}
