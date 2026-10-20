@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  type ElementRef,
   effect,
   inject,
   linkedSignal,
@@ -17,7 +18,12 @@ import {
   viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationStart,
+  Router,
+  RouterLink,
+} from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import { inRomania } from '@motor-fix/contracts/place-section';
 import {
@@ -27,6 +33,7 @@ import {
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
+  type BrandDto,
   type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
   type GarageSearchPageDto,
@@ -35,10 +42,13 @@ import {
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { limitText, Overlays, toProblem } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { filter } from 'rxjs';
 
+import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
+import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
 import {
@@ -54,6 +64,8 @@ const WIDE = SEARCH_RADII[1];
 // A suspended card's fade, and the burst of events that makes one read.
 const FADE_MS = 300;
 const BURST_MS = 300;
+// The new brand's row-in: its cards' 320 ms rise and its name's 520 ms blur-in.
+const RISE_MS = 520;
 // How long the browser has to say where the driver is.
 const LOCATE_MS = 10_000;
 
@@ -91,6 +103,8 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
 @Component({
   imports: [
     AddressField,
+    BrandChips,
+    BrandSearch,
     LiveChange,
     ResultCard,
     ResultsMap,
@@ -118,7 +132,7 @@ export class Results {
   private readonly bar = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
-  private readonly brand = computed(() => this.bar().get('brand') ?? '');
+  protected readonly brand = computed(() => this.bar().get('brand') ?? '');
   // The place in the bar, else the one the browser keeps; a string, so the
   // bar catching up with the kept place starts no second search.
   protected readonly near = computed(() => {
@@ -159,10 +173,57 @@ export class Results {
   });
 
   // Only a new search is logged: the opening one, another brand or place in
-  // the bar, and a place chosen here; never a retry, a widening, a reload or
-  // a move of the map.
+  // the bar, and a place chosen here; never a retry, a widening, a reload, a
+  // move of the map or a step back or forward through the history.
   private logNext = false;
   private logged: string | undefined;
+  private popped = false;
+
+  // The brand last picked in the search beside the chips.
+  protected readonly chosenBrand = signal<BrandDto | undefined>(undefined);
+
+  // Only the brand changed in the bar, and its answer has not landed yet:
+  // the list shown waits, dimmed, for it instead of turning into skeletons.
+  private readonly swap = linkedSignal<
+    { brand: string; near: string | undefined; radius: number | undefined },
+    boolean
+  >({
+    computation: (now, previous) =>
+      !!previous &&
+      previous.source.brand !== now.brand &&
+      previous.source.near === now.near &&
+      previous.source.radius === now.radius,
+    source: () => ({
+      brand: this.brand(),
+      near: this.near(),
+      radius: this.radius(),
+    }),
+  });
+  // Another brand was loading: its answer is said, and brings the list back
+  // into view.
+  private swapped = false;
+  // The names of the brands asked for or answered here, by slug and by id,
+  // so the progress bar names the brand loading, a step back included.
+  private readonly names = linkedSignal<
+    Page | undefined,
+    ReadonlyMap<string, string>
+  >({
+    computation: (page, previous) => {
+      const names = new Map(previous?.value);
+      if (page) {
+        names.set(page.brand.id, page.brand.name);
+        names.set(page.brand.slug, page.brand.name);
+      }
+      return names;
+    },
+    source: () => this.searched(),
+  });
+  protected readonly changing = computed(() => {
+    const name = this.names().get(this.brand());
+    return name
+      ? this.i18n.t('public.results.changing', { brand: name })
+      : this.i18n.t('public.results.loading');
+  });
 
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
@@ -170,7 +231,7 @@ export class Results {
       if (params.bbox)
         return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
-      const log = this.logNext || searched !== this.logged;
+      const log = this.logNext || (searched !== this.logged && !this.popped);
       this.logNext = false;
       this.logged = searched;
       return this.search.garageSearchControllerForBrand(
@@ -217,11 +278,40 @@ export class Results {
       ? undefined
       : this.results.value(),
   );
-  // What the page shows: the search's answer, changed in place by the stream.
-  protected readonly answer = linkedSignal<Page | undefined, Page | undefined>({
-    computation: (page) => page,
-    source: this.searched,
+  private readonly keep = computed(
+    () => this.swap() && this.results.isLoading(),
+  );
+  // What the page shows: the search's answer, changed in place by the stream;
+  // while another brand loads, the previous one.
+  protected readonly answer = linkedSignal<
+    { page: Page | undefined; keep: boolean },
+    Page | undefined
+  >({
+    computation: ({ page, keep }, previous) =>
+      page ?? (keep ? previous?.value : undefined),
+    source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
+      equal: (a, b) => a.page === b.page && a.keep === b.keep,
+    }),
   });
+  // The new brand's answer has just landed: its cards rise and its name
+  // blurs in, once (RISE_MS); a first load, a map move or a live update does not.
+  protected readonly rising = linkedSignal<
+    { keep: boolean; page: Page | undefined },
+    boolean
+  >({
+    computation: (now, previous) =>
+      !!now.page &&
+      !!previous &&
+      (previous.source.keep ||
+        (previous.value && previous.source.page === now.page)),
+    source: computed(() => ({ keep: this.keep(), page: this.searched() }), {
+      equal: (a, b) => a.page === b.page && a.keep === b.keep,
+    }),
+  });
+  // The previous brand's cards, kept under the progress bar.
+  protected readonly swapping = computed(
+    () => this.keep() && (this.answer()?.items.length ?? 0) > 0,
+  );
   // The cards fading out, and whether the search has found more since.
   protected readonly leaving = linkedSignal<unknown, ReadonlySet<string>>({
     computation: () => new Set(),
@@ -252,6 +342,7 @@ export class Results {
     source: this.searched,
   });
   private readonly cards = viewChildren(ResultCard);
+  private readonly found = viewChild<ElementRef<HTMLElement>>('found');
   private readonly loaded = computed(
     () => this.answer()?.items.map((garage) => garage.id) ?? [],
     { equal: sameIds },
@@ -267,7 +358,7 @@ export class Results {
     if (this.server) return 'loading';
     const waiting = this.waiting();
     if (waiting) return waiting;
-    if (this.results.isLoading()) return 'loading';
+    if (this.results.isLoading() && !this.swapping()) return 'loading';
     const answer = this.answer();
     if (answer) return answer.items.length === 0 ? 'empty' : 'list';
     // No brand, or one the catalogue does not hold: a retry would not help.
@@ -346,6 +437,28 @@ export class Results {
     afterRenderEffect(() => {
       if (!this.pins.hasValue() || this.pins.isLoading() || this.box()) return;
       untracked(() => this.map()?.fit());
+    });
+    // A step through the history names a search already logged.
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationStart),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        this.popped = event.navigationTrigger === 'popstate';
+      });
+    // The new brand's answer is said as the summary shows it, and its list
+    // starts at its top when the driver had scrolled past it.
+    afterRenderEffect(() => {
+      if (this.keep()) {
+        this.swapped = true;
+        return;
+      }
+      if (!this.searched() || !this.swapped) return;
+      this.swapped = false;
+      // Answered: a later reload of the same bar, a map move, is no swap.
+      this.swap.set(false);
+      untracked(() => this.swappedIn());
     });
     // Which garages a driver saved, for the cards' bookmarks.
     void this.saved.load();
@@ -434,6 +547,39 @@ export class Results {
       () => answer(),
       { timeout: LOCATE_MS },
     );
+  }
+
+  private swappedIn() {
+    const risen = setTimeout(() => this.rising.set(false), RISE_MS);
+    this.destroyRef.onDestroy(() => clearTimeout(risen));
+    const tally = this.tally();
+    if (tally) void this.announcer.announce(tally, 'polite');
+    const top = this.found()?.nativeElement.getBoundingClientRect().top ?? 0;
+    if (top >= 0) return;
+    window.scrollTo({
+      behavior: this.reduced() ? 'auto' : 'smooth',
+      top: window.scrollY + top,
+    });
+  }
+
+  // A chip or a brand picked in the search: a new entry in the history, the
+  // place and radius kept; the brand already shown changes nothing.
+  protected changeBrand({ key, name }: BrandPick) {
+    const answered = untracked(this.searched)?.brand;
+    if (
+      key === untracked(this.brand) ||
+      key === answered?.id ||
+      key === answered?.slug
+    )
+      return;
+    this.names.update((names) => new Map(names).set(key, name));
+    void this.write({ brand: key }, { push: true });
+  }
+
+  protected chooseBrand(brand: BrandDto) {
+    const answered = untracked(this.searched)?.brand;
+    if (brand.id !== answered?.id) this.chosenBrand.set(brand);
+    this.changeBrand({ key: brand.slug, name: brand.name });
   }
 
   protected retry() {
@@ -673,12 +819,15 @@ export class Results {
     if (untracked(this.pointed) === id) this.pointed.set(undefined);
   }
 
-  private write(queryParams: Record<string, string | null>) {
+  private write(
+    queryParams: Record<string, string | null>,
+    { push = false } = {},
+  ) {
     return this.router.navigate([], {
       queryParams,
       queryParamsHandling: 'merge',
       relativeTo: this.route,
-      replaceUrl: true,
+      replaceUrl: !push,
     });
   }
 }

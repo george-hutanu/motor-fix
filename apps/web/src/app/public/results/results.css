@@ -31,6 +31,10 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+.titled {
+  display: inline-block;
+}
+
 /* "Se caută locația…" while the browser is asked; empty, it takes no room. */
 .locating {
   color: var(--mf-text-secondary);
@@ -59,6 +63,36 @@ mf-address-field {
   font-weight: 600;
   min-height: var(--mf-tap);
   padding: 0;
+}
+
+/* The chips, then the brand search: beside them from a tablet up, under
+   them on a phone. */
+.brands {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--mf-space-3);
+  margin-block-start: var(--mf-space-3);
+}
+
+mf-brand-chips {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.brands mf-brand-search {
+  flex: 0 0 16rem;
+}
+
+@media (max-width: 767px) {
+  .brands {
+    flex-wrap: wrap;
+  }
+
+  mf-brand-chips,
+  .brands mf-brand-search {
+    flex-basis: 100%;
+  }
 }
 
 /* Below the desktop breakpoint the map sits above the list at full width. */
@@ -111,6 +145,19 @@ mf-results-map {
 li {
   border-radius: var(--mf-radius-panel);
   min-width: 0;
+}
+
+/* Another brand loading: the cards shown wait, dimmed and out of reach,
+   under a thin bar. */
+.cards.swapping {
+  opacity: 0.5;
+}
+
+.progress {
+  background: var(--mf-amber);
+  border-radius: 999px;
+  height: 4px;
+  margin-block-end: var(--mf-space-2);
 }
 
 /* A suspended garage's card fades before it leaves; reduced motion drops it at once. */
@@ -192,7 +239,32 @@ li.leaving {
     transition: opacity 300ms var(--mf-motion-ease);
   }
 
-  .skeleton {
+  .skeleton,
+  .progress {
     animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
+  }
+
+  /* A new brand's cards rise into place and its name blurs in, only after
+     a brand change (FR-006). */
+  .cards.rising > li {
+    animation: mf-row-in 320ms var(--mf-motion-ease) backwards;
+  }
+
+  h1.rising .titled {
+    animation: mf-swap-in 520ms var(--mf-motion-ease) backwards;
+  }
+}
+
+@keyframes mf-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+}
+
+@keyframes mf-swap-in {
+  from {
+    filter: blur(6px);
+    opacity: 0;
   }
 }

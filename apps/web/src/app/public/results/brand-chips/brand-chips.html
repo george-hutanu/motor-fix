@@ -1,0 +1,15 @@
+@if (row().length > 0) {
+  <fieldset #list class="row" [attr.aria-label]="'public.results.brands' | t">
+    @for (chip of row(); track chip.id) {
+      <button
+        type="button"
+        class="chip"
+        [attr.data-id]="chip.id"
+        [attr.aria-pressed]="chip.id === marked()"
+        (click)="tap(chip)"
+      >
+        {{ chip.name }}
+      </button>
+    }
+  </fieldset>
+}
