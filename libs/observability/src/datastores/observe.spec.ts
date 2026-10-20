@@ -577,12 +577,16 @@ describe('the Keycloak reading under hostile answers', () => {
 
   it('keeps no stale heap figure when the next body is bad', async () => {
     jest.spyOn(diag, 'error').mockImplementation(() => undefined);
-    let n = 0;
-    watch({ metrics: async () => (n++ === 0 ? GOOD : '<html></html>') });
-    await tick(5);
-    expect(await points('motorfix_keycloak_heap_used_bytes')).toHaveLength(1);
-    await tick(60);
-    expect(await points('motorfix_keycloak_heap_used_bytes')).toEqual([]);
+    // The body turns bad only once the good one has been seen, so a slow
+    // runner cannot skip past the good reading before the first check.
+    let bad = false;
+    watch({ metrics: async () => (bad ? '<html></html>' : GOOD) });
+    const heap = () => points('motorfix_keycloak_heap_used_bytes');
+    for (let i = 0; i < 200 && (await heap()).length === 0; i++) await tick(5);
+    expect(await heap()).toHaveLength(1);
+    bad = true;
+    for (let i = 0; i < 200 && (await heap()).length > 0; i++) await tick(5);
+    expect(await heap()).toEqual([]);
     expect(await up('keycloak')).toBe(0);
   });
 
