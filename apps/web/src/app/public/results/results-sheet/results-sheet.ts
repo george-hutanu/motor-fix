@@ -63,6 +63,9 @@ export class ResultsSheet {
   private dragged = false;
   // The history entry this sheet added when the visitor took it full.
   private stepped = false;
+  // On a marked step this sheet did not add (reached by forward or a reload):
+  // a back over it goes one further, so it leaves the page as before.
+  private stale = false;
 
   constructor() {
     effect(() => {
@@ -81,6 +84,7 @@ export class ResultsSheet {
       wasPhone = phone;
     });
     afterNextRender(() => this.measure());
+    if (this.browser && history.state?.mfSheet) this.stale = true;
   }
 
   raise() {
@@ -158,11 +162,23 @@ export class ResultsSheet {
     this.dragY.set(null);
   }
 
-  // The back button from full: the step the sheet added is gone.
+  // The back button from full: the step the sheet added is gone. A move off
+  // a marked step it did not add goes one further, over the entry under it.
   protected popped() {
-    if (!this.stepped) return;
-    this.stepped = false;
-    this.position.set('half');
+    const marked = Boolean(history.state?.mfSheet);
+    if (this.stepped) {
+      this.stepped = false;
+      this.stale = marked;
+      this.position.set('half');
+      return;
+    }
+    if (marked) {
+      this.stale = true;
+      return;
+    }
+    if (!this.stale) return;
+    this.stale = false;
+    history.back();
   }
 
   // The visitor's own move: full adds one history step at this address,

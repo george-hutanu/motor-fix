@@ -368,6 +368,36 @@ describe('ResultsSheet and the back button', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it('goes one further on a back over a step it reached by going forward, so the back leaves the page', async () => {
+    await drag(400, 180);
+    await popped();
+    await popped({ mfSheet: true });
+    expect(back).not.toHaveBeenCalled();
+
+    await popped({ navigationId: 3 });
+
+    expect(position()).toBe('half');
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes one further on a back from its own step that lands on one reached again', async () => {
+    await popped({ mfSheet: true });
+    await press();
+    await popped({ mfSheet: true });
+    expect(position()).toBe('half');
+    expect(back).not.toHaveBeenCalled();
+
+    await popped({ navigationId: 3 });
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes no further on a plain back between the page's own steps", async () => {
+    await popped({ navigationId: 2 });
+
+    expect(back).not.toHaveBeenCalled();
+  });
+
   it('rests full with no step when it is forced, and the visitor may still drag it down', async () => {
     fixture.componentInstance.forced.set(true);
     await settle();
@@ -445,6 +475,18 @@ describe('ResultsSheet after a reload on its step', () => {
 
     expect(position()).toBe('half');
     expect(push).not.toHaveBeenCalled();
+  });
+
+  // @traces 1358-FR-009
+  it('goes one further on the back over it, so the back leaves the page', async () => {
+    history.replaceState({ mfSheet: true }, '');
+    await render();
+
+    history.replaceState({ navigationId: 1 }, '');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    await settle();
+
+    expect(back).toHaveBeenCalledTimes(1);
   });
 });
 
