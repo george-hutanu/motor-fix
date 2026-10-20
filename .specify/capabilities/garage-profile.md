@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -17,6 +17,7 @@ features:
   - 271-garage-distance
   - 311-estimate-within-reach
   - 1183-garage-profile-page
+  - 1353-verified-badge-last-check
 ---
 
 # Capability: Garage profile
@@ -29,9 +30,9 @@ The public page of an approved garage, one address per language: the site bar, t
 
 _From 307-public-garage-profile._
 
-### 307-FR-002 — The answer MUST add to today's fields: `description` (the one line the garage wrote about itself, as written, in both languages; omitted when empty), `verifiedAt` (the decision time of the garage's latest approved verification file, else the garage's `approvedAt`, an ISO-8601 instant; null when neither exists), `rating` (one decimal or null) and `reviewCount` (a whole number, 0 until reviews exist), the garage's `businessKind` (`mobile` or a fixed kind) and, for a mobile mechanic, `serviceRadiusKm` with the 20 km default filled in.
+### 1353-FR-001 — The public profile read (`GET /api/v1/garages/{slug}`) MUST take its verification date `verifiedAt` from the garage's stored date of last check (`GARAGE.last_checked_on`, the day of the latest approval or of the latest valid re-check, whichever came last, as 303-FR-005 and 1351-FR-006 write it), read as stored and never computed from the verification files, as the UTC midnight of the stored day; when the stored date is empty it MUST fall back to the garage's approval instant, as today, and when both are empty it MUST be null (no line). The field's name and shape stay; its description MUST say what it now carries. Modifies 307-FR-002.
 
-_From 307-public-garage-profile._
+_From 1353-verified-badge-last-check._
 
 ### 307-FR-003 — The read MUST accept an optional `brand` query parameter, a catalogue brand's slug. When it names a catalogue brand (active or retired), the answer MUST carry `brand: { id, name, slug, stance }` where `stance` is `works_on` when the garage marked the brand so and `does_not_take` when it refused it or has no row for it; when the parameter is absent, blank, over-long, holds a control character or names no catalogue brand, the answer MUST carry no `brand` and MUST NOT fail.
 
@@ -53,9 +54,9 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
-### 307-FR-010 — The header MUST show, in this order: the back link; the lamp when a brand is in context; the badge "Verificat · autorizație RAR" / "Verified · RAR authorisation"; the garage's name; the place line; the description when there is one; the rating dial with the review count ("212 RECENZII" / "212 REVIEWS"; "—" and "Nicio recenzie încă" / "No reviews yet" with none); then, when `verifiedAt` is set, the verification line "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}." / "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}." with the date in the language's short form and the Europe/Bucharest zone (019-FR-005, 019-FR-007).
+### 1353-FR-002 — The header MUST keep showing, for every approved garage with a date, the badge "Verificat · autorizație RAR" / "Verified · RAR authorisation" and the line "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}." / "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}." with FR-001's date in the language's short form and the Europe/Bucharest zone ("1 aug. 2027" / "1 Aug 2027"; 019-FR-005, 019-FR-007), the same for a mobile mechanic, at 320 px and 390 px, tablet and desktop, light and dark, with no sideways scroll (307-FR-016). It MUST show no warning or other mark when the date is old. Modifies 307-FR-010 (the date's source).
 
-_From 307-public-garage-profile._
+_From 1353-verified-badge-last-check._
 
 ### 307-FR-011 — The lamp MUST be green with "Lucrează pe {brand}" / "Works on {brand}" for `works_on`, red with "Nu lucrează pe {brand}" / "Does not work on {brand}" for `does_not_take`, and absent without a brand in context; the brand's name comes from the answer, never from the address.
 
@@ -85,9 +86,9 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
-### 307-FR-018 — On every message of the stream and on every reopen the page MUST re-read the profile in place, with the same brand and place, merging the answer so the scroll position stays (256-FR-001, 256-FR-002); a re-read that answers 410 MUST switch the page to the "no longer available" view, and one that answers 404 to the not-found view; a failed re-read keeps the last answer and waits for the next event (419).
+### 1353-FR-003 — The open profile MUST re-read in place when `recheck.recorded` arrives on its `public:garage:{garageId}` subscription (the event already reaches the channel, 1351-FR-013), as it does for `verification.decided` and the garage's other events, keeping the brand, the place and the scroll position (307-FR-018); a re-read answering 410 MUST switch the page to the "no longer available" view as today. Modifies 307-FR-018 (`recheck.recorded` joins the kinds the profile re-reads on).
 
-_From 307-public-garage-profile._
+_From 1353-verified-badge-last-check._
 
 ### 307-FR-019 — The story MUST write nothing: no view count (another story's), no audit entry, no event, no search log.
 
@@ -440,6 +441,18 @@ _From 1183-garage-profile-page._
 
 _From 1183-garage-profile-page._
 
+### 1353-FR-004 — After a valid re-check, the next profile read MUST show the new date through the existing purge by audience (1182-FR-007, 1183-FR-005); this story MUST add no purge, relay rule or channel of its own.
+
+_From 1353-verified-badge-last-check._
+
+### 1353-FR-005 — The story MUST write nothing (no audit entry, no event, no field) and add no endpoint, service, queue or outside call; the DTO description change lives in the contracts library, the OpenAPI document and the generated client are regenerated when it changes (Principle V).
+
+_From 1353-verified-badge-last-check._
+
+### 1353-FR-006 — Tests MUST exist before the code (Principle II). Jest on real PostgreSQL and Redis: the profile's `verifiedAt` equals the stored date of last check after an approval and after a valid re-check recorded through the re-check use case, and the approval instant when the stored date is empty; `recheck.recorded`, written through the re-check use case, reaches `public:garage:{garageId}` and, the relay driven once in-process, the next profile read shows the new date (the 1183-FR-005 pattern). Web unit tests: the line in Romanian and in English for a seeded date, absent without one; the page re-reads on `recheck.recorded` and switches to the "no longer available" view when the re-read answers 410. Playwright: with Atelier Dinamo's profile open, record a valid re-check as the seeded admin in another session and see the line's date change without a reload. The four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 1353-verified-badge-last-check._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -455,3 +468,7 @@ _From 1183-garage-profile-page._
 
 - `307-FR-013` — superseded by `271-FR-015` (2026-10-18)
 - `356-FR-001` — superseded by `311-FR-009` (2026-10-18)
+
+- `307-FR-002` — superseded by `1353-FR-001` (2026-10-20)
+- `307-FR-010` — superseded by `1353-FR-002` (2026-10-20)
+- `307-FR-018` — superseded by `1353-FR-003` (2026-10-20)

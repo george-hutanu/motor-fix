@@ -89,7 +89,7 @@ export interface PublicGarageDto {
   slug: string;
 
   /**
-   * When MotorFix last verified the garage
+   * The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither
    */
   verifiedAt: string | null;
   worksOn: Array<PublicBrandDto>;

@@ -18,6 +18,7 @@ const listedRow = (over: Row = {}): Row => ({
   known_for: null,
   labour_from_bani: null,
   labour_to_bani: null,
+  last_checked_on: null,
   latitude: null,
   lifetime_requests: null,
   listed: true,
@@ -36,7 +37,6 @@ const listedRow = (over: Row = {}): Row => ({
   service_radius_km: null,
   slug: 'garage',
   status: 'approved',
-  verified_at: null,
   ...over,
 });
 

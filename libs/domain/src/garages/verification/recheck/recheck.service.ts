@@ -165,7 +165,7 @@ export class RecheckService {
         rarNumber: string | null;
       }[]
     >`
-      SELECT g.id::text, g.name, g.last_checked_on::text AS "lastCheckedOn",
+      SELECT g.id::text, g.name, to_char(g.last_checked_on, 'YYYY-MM-DD') AS "lastCheckedOn",
         g.rar_activities AS activities,
         (SELECT coalesce(jsonb_agg(jsonb_build_object('code', a.code,
             'nameRo', a.name_ro, 'nameEn', a.name_en)
@@ -211,7 +211,7 @@ export class RecheckService {
         const [garage] = await tx.$queryRaw<Locked[]>`
           SELECT status::text AS status,
             (SELECT language::text FROM account WHERE id = ${actor.accountId}::uuid) AS language,
-            last_checked_on::text AS "lastCheckedOn",
+            to_char(last_checked_on, 'YYYY-MM-DD') AS "lastCheckedOn",
             rar_activities AS activities
           FROM garage WHERE id = ${garageId}::uuid
           FOR UPDATE`;
