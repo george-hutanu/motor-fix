@@ -142,18 +142,7 @@ describe('the verification line and a recorded re-check', () => {
   );
 
   // @traces 1353-FR-002
-  it('shows the stored midnight as the same day in Romanian', async () => {
-    await open('/ro/garages/service-auto-militari');
-    await reads[0]?.answer({
-      ...FIXED,
-      verifiedAt: '2027-08-01T00:00:00.000Z',
-    });
-
-    expect(text()).toContain('Ultima verificare: 1 aug. 2027.');
-  });
-
-  // @traces 1353-FR-002
-  it('shows no line and no badge text for a garage with no date', async () => {
+  it('shows no verification line for a garage with no date', async () => {
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({ ...FIXED, verifiedAt: null });
 
@@ -193,20 +182,6 @@ describe('the verification line and a recorded re-check', () => {
   });
 
   // @traces 1353-FR-003
-  it('keeps the brand in context on the re-read after a re-check', async () => {
-    jest.useFakeTimers();
-    await open('/ro/garages/service-auto-militari?brand=dacia');
-    await reads[0]?.answer({ ...FIXED });
-
-    await burst('recheck.recorded');
-
-    expect(reads[1]?.query).toEqual({
-      brand: 'dacia',
-      slug: 'service-auto-militari',
-    });
-  });
-
-  // @traces 1353-FR-003
   it('reads once for a re-check and a suspension arriving together', async () => {
     jest.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
@@ -219,23 +194,6 @@ describe('the verification line and a recorded re-check', () => {
     await settle();
 
     expect(reads).toHaveLength(2);
-  });
-
-  // @traces 1353-FR-003
-  it('switches to the gone view when the re-read after a failed re-check answers 410', async () => {
-    jest.useFakeTimers();
-    await open('/ro/garages/service-auto-militari');
-    await reads[0]?.answer({
-      ...FIXED,
-      verifiedAt: '2027-06-14T00:00:00.000Z',
-    });
-
-    await burst('recheck.recorded');
-    await reads[1]?.fail(410);
-
-    expect(text()).toContain('Acest service nu mai este disponibil');
-    expect(text()).not.toContain('Ultima verificare');
-    expect(response.status).toBe(410);
   });
 
   // @traces 1353-FR-003

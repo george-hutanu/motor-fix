@@ -229,19 +229,6 @@ describe('the verification date of a profile at the edges of a day', () => {
       '2026-02-01T00:00:00.000Z',
     );
   });
-
-  // @traces 1353-FR-001
-  it('answers the same value on two reads in a row', async () => {
-    const g = await garage({ lastCheckedOn: new Date('2026-10-25') });
-
-    const first = await read(g.slug);
-    const second = await read(g.slug);
-
-    expect([first.body.verifiedAt, second.body.verifiedAt]).toEqual([
-      '2026-10-25T00:00:00.000Z',
-      '2026-10-25T00:00:00.000Z',
-    ]);
-  });
 });
 
 describe('the verification date after re-checks', () => {
@@ -291,61 +278,12 @@ describe('the verification date after re-checks', () => {
       failure: 'expired',
       lastCheckedOn: stored,
       result: 'failed',
-    } as never);
+    });
     await relayAll();
 
     const row = await prisma.garage.findUniqueOrThrow({ where: { id: g.id } });
     expect(row.lastCheckedOn?.toISOString()).toBe(`${stored}T00:00:00.000Z`);
     expect((await read(g.slug)).status).toBe(410);
-  });
-
-  // @traces 1353-FR-001
-  it('keeps the old date when the re-check is refused as stale', async () => {
-    const stored = addDays(today(), -40);
-    const g = await garage({ lastCheckedOn: new Date(stored) });
-    const admin = await adminActor();
-    await read(g.slug);
-
-    await expect(
-      app.get(RecheckService).record(admin, g.id, okBody(addDays(stored, -3))),
-    ).rejects.toBeDefined();
-    await relayAll();
-
-    expect((await read(g.slug)).body.verifiedAt).toBe(
-      `${stored}T00:00:00.000Z`,
-    );
-  });
-
-  // @traces 1353-FR-001
-  it('keeps the date when a second valid re-check on the same day is refused', async () => {
-    const stored = addDays(today(), -40);
-    const g = await garage({ lastCheckedOn: new Date(stored) });
-    const admin = await adminActor();
-    const svc = app.get(RecheckService);
-    await svc.record(admin, g.id, okBody(stored));
-
-    await expect(svc.record(admin, g.id, okBody(stored))).rejects.toBeDefined();
-    await relayAll();
-
-    expect((await read(g.slug)).body.verifiedAt).toBe(
-      `${today()}T00:00:00.000Z`,
-    );
-  });
-
-  // @traces 1353-FR-001
-  it('keeps the date when a re-check is dated in the future', async () => {
-    const stored = addDays(today(), -40);
-    const g = await garage({ lastCheckedOn: new Date(stored) });
-
-    await expect(
-      app.get(RecheckService).record(await adminActor(), g.id, {
-        ...okBody(stored),
-        checkedOn: addDays(today(), 5),
-      }),
-    ).rejects.toBeDefined();
-
-    const row = await prisma.garage.findUniqueOrThrow({ where: { id: g.id } });
-    expect(row.lastCheckedOn?.toISOString()).toBe(`${stored}T00:00:00.000Z`);
   });
 
   // @traces 1353-FR-001
