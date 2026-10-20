@@ -44,11 +44,11 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function open(
   answer: (q?: string) => Promise<{ items: JobTypeDto[] }> = async () => ({
-    items: [AC, OIL, BRAKES],
+    items: [AC, BRAKES],
   }),
   { language = 'ro', listed = ['oil'] } = {},
 ) {
-  search = jest.fn(({ q }: { q?: string }) => answer(q));
+  search = jest.fn(({ q }: { q?: string; exclude?: string }) => answer(q));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -103,6 +103,7 @@ describe('the job picker: searching the catalogue', () => {
   it('is titled "Adaugă o lucrare", has a labelled search field and lists the catalogue without the jobs already listed', async () => {
     await open();
 
+    expect(search).toHaveBeenCalledWith({ exclude: 'oil' });
     expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
       'Adaugă o lucrare',
     );
@@ -124,8 +125,27 @@ describe('the job picker: searching the catalogue', () => {
 
     await type('frana');
 
-    expect(search).toHaveBeenLastCalledWith({ q: 'frana' });
+    expect(search).toHaveBeenLastCalledWith({ exclude: 'oil', q: 'frana' });
     expect(results()).toEqual(['Plăcuțe și discuri de frână față']);
+  });
+
+  it('sends each listed job once as exclude and shows every job the search answers, filtering nothing itself', async () => {
+    await open(async () => ({ items: [AC, OIL, BRAKES] }), {
+      listed: ['oil', 'ac', 'oil'],
+    });
+
+    expect(search).toHaveBeenCalledWith({ exclude: 'oil,ac' });
+    expect(results()).toEqual([
+      'Încărcare freon climă',
+      'Schimb de ulei și filtre',
+      'Plăcuțe și discuri de frână față',
+    ]);
+  });
+
+  it('sends no exclude when nothing is listed yet', async () => {
+    await open(undefined, { listed: [] });
+
+    expect(search).toHaveBeenCalledWith({});
   });
 
   it('says it is searching while the search runs', async () => {
@@ -142,8 +162,8 @@ describe('the job picker: searching the catalogue', () => {
     expect(results()).toEqual(['Încărcare freon climă']);
   });
 
-  it('says no job was found, also when every match is listed, and still offers the proposal', async () => {
-    await open(async (q) => ({ items: q ? [] : [OIL] }));
+  it('says no job was found, and still offers the proposal', async () => {
+    await open(async () => ({ items: [] }));
 
     expect(text()).toContain('Nicio lucrare găsită');
     expect(button('Nu găsești lucrarea? Propune‑o')).toBeDefined();

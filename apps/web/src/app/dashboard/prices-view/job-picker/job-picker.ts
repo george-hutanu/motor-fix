@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   DestroyRef,
   inject,
   signal,
@@ -12,7 +11,7 @@ import { injectOverlayTask, type OverlayResult } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
 export interface JobPickerData {
-  // The jobs already on the list, left out of the results.
+  // The jobs already on the list, which the search leaves out.
   listed: readonly string[];
 }
 
@@ -36,15 +35,12 @@ export class JobPicker {
     JobPickerData,
     OverlayResult<JobPickerResult>
   >();
-  private readonly listed = new Set(this.task.data.listed);
+  private readonly exclude = [...new Set(this.task.data.listed)].join(',');
 
   protected readonly state = signal<'searching' | 'found' | 'down'>(
     'searching',
   );
-  private readonly found = signal<readonly JobTypeDto[]>([]);
-  protected readonly results = computed(() =>
-    this.found().filter((job) => !this.listed.has(job.id)),
-  );
+  protected readonly results = signal<readonly JobTypeDto[]>([]);
 
   private timer: ReturnType<typeof setTimeout> | undefined;
   // Only the latest search's answer is shown.
@@ -72,17 +68,22 @@ export class JobPicker {
   private search(q: string) {
     const turn = ++this.searches;
     this.state.set('searching');
-    this.catalogue.jobTypesControllerSearch(q ? { q } : {}).then(
-      ({ items }) => {
-        if (turn !== this.searches) return;
-        this.found.set(items);
-        this.state.set('found');
-      },
-      () => {
-        if (turn !== this.searches) return;
-        this.found.set([]);
-        this.state.set('down');
-      },
-    );
+    this.catalogue
+      .jobTypesControllerSearch({
+        ...(this.exclude && { exclude: this.exclude }),
+        ...(q && { q }),
+      })
+      .then(
+        ({ items }) => {
+          if (turn !== this.searches) return;
+          this.results.set(items);
+          this.state.set('found');
+        },
+        () => {
+          if (turn !== this.searches) return;
+          this.results.set([]);
+          this.state.set('down');
+        },
+      );
   }
 }

@@ -2243,6 +2243,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "exclude",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated job ids, 50 at most, left out of the answer before the 20 limit",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

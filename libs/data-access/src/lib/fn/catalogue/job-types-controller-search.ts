@@ -25,6 +25,11 @@ export interface JobTypesControllerSearch$Params {
  * Comma-separated job ids, 50 at most; answers those jobs only, past the first 20
  */
   ids?: string;
+
+/**
+ * Comma-separated job ids, 50 at most, left out of the answer before the 20 limit
+ */
+  exclude?: string;
 }
 
 export function jobTypesControllerSearch(http: HttpClient, rootUrl: string, params?: JobTypesControllerSearch$Params, context?: HttpContext): Observable<StrictHttpResponse<JobTypeListDto>> {
@@ -33,6 +38,7 @@ export function jobTypesControllerSearch(http: HttpClient, rootUrl: string, para
     rb.query('q', params.q, {});
     rb.query('keys', params.keys, {});
     rb.query('ids', params.ids, {});
+    rb.query('exclude', params.exclude, {});
   }
 
   return http.request(
