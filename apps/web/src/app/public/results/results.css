@@ -120,8 +120,8 @@ mf-brand-chips {
     padding: var(--mf-space-2) var(--mf-space-4);
   }
 
-  /* One title line, at a size that keeps the brand in it at 320 px, and one
-     secondary line whose words give way before its buttons. */
+  /* One title line, at a size that keeps the brand in it at 320 px; under it
+     the count and the place line in full, on two lines where they need it. */
   .intro h1 {
     font-size: var(--mf-size-subheading);
     margin: 0;
@@ -131,22 +131,9 @@ mf-brand-chips {
   }
 
   .summary {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     font-size: var(--mf-size-small);
-    gap: var(--mf-space-2);
-  }
-
-  .tally,
-  .area {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .change,
-  .back {
-    flex: none;
+    gap: 0 var(--mf-space-2);
   }
 
   /* MapLibre's controls stay inside the map, under the sheet. */

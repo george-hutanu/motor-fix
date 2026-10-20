@@ -3256,15 +3256,14 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule('h1')).toBe('');
   });
 
-  it('keeps the summary to one title line and one secondary line', () => {
+  it('keeps the title to one line and shows the whole count and place line under it, never cut', () => {
     expect(rule('.intro h1')).toMatch(
       /font-size: var\(--mf-size-subheading\);/,
     );
-    expect(rule('.summary')).toMatch(/flex-wrap: nowrap;/);
+    expect(rule('.summary')).toMatch(/flex-wrap: wrap;/);
     expect(rule('.summary')).toMatch(/font-size: var\(--mf-size-small\);/);
-    expect(rule('.tally, .area')).toMatch(/text-overflow: ellipsis;/);
-    expect(rule('.tally, .area')).toMatch(/white-space: nowrap;/);
-    expect(rule('.change, .back')).toMatch(/flex: none;/);
+    expect(phone).not.toMatch(/\.tally|\.area/);
+    expect(rule('.summary')).not.toMatch(/nowrap|ellipsis/);
   });
 
   it('keeps the map and its controls under the sheet', () => {

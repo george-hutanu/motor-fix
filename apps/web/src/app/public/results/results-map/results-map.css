@@ -91,14 +91,15 @@
     font-size: var(--mf-size-body);
   }
 
-  /* The zoom buttons' column at the top right: MapLibre's 29 px group, its
-     10 px inset and a gap. */
+  /* The zoom buttons' column at the top right: tap-sized buttons (styles.css),
+     their border, MapLibre's 10 px inset and a gap. */
   .map {
-    --zoom-room: 48px;
+    --zoom-room: calc(var(--mf-tap) + 20px);
   }
 
   .legend {
     bottom: auto;
+    box-sizing: border-box;
     max-width: calc(100% - var(--mf-space-3) - var(--zoom-room));
     top: var(--mf-space-3);
   }

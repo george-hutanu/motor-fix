@@ -188,7 +188,10 @@ describe('ResultsMap, the legend on a phone', () => {
     expect(phone).toMatch(
       /\.legend \{[^}]*max-width: calc\(100% - var\(--mf-space-3\) - var\(--zoom-room\)\);/,
     );
-    expect(phone).toMatch(/--zoom-room: \d+px;/);
+    // The buttons are tap-sized (styles.css), not MapLibre's 29 px.
+    expect(phone).toMatch(/--zoom-room: calc\(var\(--mf-tap\) \+ \d+px\);/);
+    // The padding counts inside the width, or the legend runs 24 px further.
+    expect(phone).toMatch(/\.legend \{[^}]*box-sizing: border-box;/);
   });
 
   it('gives way to the zoom hint there', () => {
