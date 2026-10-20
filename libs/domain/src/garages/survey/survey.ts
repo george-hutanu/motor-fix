@@ -14,6 +14,8 @@ import type { Prisma } from '../../generated/prisma/client';
 // off from the answers, inside the caller's transaction (the account's
 // creation), so a roll-back there leaves none of it. The new owner is the
 // actor of each feature's first entry in the history.
+// The answers arrive unchecked on purpose: the rule runs again here, so no
+// caller can write a survey the draft check never saw.
 export async function applySurvey(
   tx: Prisma.TransactionClient,
   {
