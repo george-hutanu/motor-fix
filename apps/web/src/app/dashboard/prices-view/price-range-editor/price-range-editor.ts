@@ -8,7 +8,11 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { checkPriceRange } from '@motor-fix/contracts/price-range';
+import {
+  checkPriceRange,
+  JOB_NAME_MAX,
+  PROPOSED_JOB_NAME_MIN,
+} from '@motor-fix/contracts/price-range';
 import {
   type BrandRangeItemDto,
   GaragesService,
@@ -55,9 +59,6 @@ type Field = RangeField | 'name';
 
 const MESSAGES = 'garage.prices.editor';
 const NAME_TEXTS = 'garage.prices.propose.field';
-// A proposed job's name, trimmed: the server's bounds.
-const NAME_MIN = 3;
-const NAME_MAX = 80;
 const PRICE_TEXTS = 'public.listing.prices.errors';
 // The range rule's field names, and the form's field each one checks.
 const RANGE_FIELD = {
@@ -175,12 +176,12 @@ export class PriceRangeEditor {
     if (toBani === null && !this.timed) found.set('toBani', 'both_ends');
   }
 
-  // A proposal's name, 3 to 80 characters once trimmed.
+  // A proposal's name, within the server's bounds once trimmed.
   private nameProblem(found: Map<Field, string>) {
     const { length } = this.form.controls.name.value.trim();
     if (!length) found.set('name', 'required');
-    else if (length < NAME_MIN) found.set('name', 'short');
-    else if (length > NAME_MAX) found.set('name', 'long');
+    else if (length < PROPOSED_JOB_NAME_MIN) found.set('name', 'short');
+    else if (length > JOB_NAME_MAX) found.set('name', 'long');
   }
 
   constructor() {

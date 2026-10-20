@@ -163,6 +163,12 @@ const brandRange = (pair: Pair, from: number, to: number | null) => ({
   to,
 });
 
+// Writes that add or take away a job's rows run one garage at a time, so a
+// removal and a brand range never leave a brand row without its job.
+const lockGarage = (tx: Prisma.TransactionClient, garageId: string) =>
+  tx.$queryRaw<{ slug: string }[]>`
+    SELECT slug FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+
 const pairChange = (pair: Pair) => ({
   brandIds: [pair.brandId],
   garageId: pair.garageId,
@@ -255,11 +261,13 @@ export class PriceListService {
     const own = rows.find((row) => row.brandId === brandId);
     if (own?.fromBani === fromBani && own.toBani === toBani) return saved;
     await this.prisma.$transaction(async (tx) => {
+      await lockGarage(tx, garageId);
       const scope = {
         ...this.scopeOf(actor, garageId, 'garage_price'),
         field: 'brand_range',
       };
-      // A removal racing this write took the row first: it is stored anew.
+      // A brand-range removal racing this write took the row first: it is
+      // stored anew, unless the job itself was taken off the list.
       const { count } = own
         ? await tx.garagePrice.updateMany({
             data: { fromBani, toBani, updatedBy: actor.accountId },
@@ -275,6 +283,12 @@ export class PriceListService {
           subjectId: own.id,
         });
       } else {
+        const listed = await tx.garagePrice.count({
+          where: { brandId: null, garageId, jobTypeId },
+        });
+        if (listed === 0) {
+          throw refuse([{ code: 'no_default_range', field: 'jobTypeId' }]);
+        }
         const fields = {
           brandId,
           durationMinutes: null,
@@ -313,12 +327,12 @@ export class PriceListService {
   ): Promise<PriceRangeSavedDto> {
     assertGarageOwner(actor, garageId);
     const jobTypeId = body.jobTypeId.toLowerCase();
-    const job = await this.prisma.jobType.findUnique({
-      select: { status: true },
-      where: { id: jobTypeId },
-    });
     return this.append(actor, garageId, body, {
-      check: async (_tx, rows) => {
+      check: async (tx, rows) => {
+        const job = await tx.jobType.findUnique({
+          select: { status: true },
+          where: { id: jobTypeId },
+        });
         const listed = rows.some((stored) => stored.jobTypeId === jobTypeId);
         const onJob = jobProblem(job?.status, listed);
         if (onJob) return [{ code: onJob, field: 'jobTypeId' }];
@@ -387,8 +401,7 @@ export class PriceListService {
     );
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { row, slug } = await this.prisma.$transaction(async (tx) => {
-      const [garage] = await tx.$queryRaw<{ slug: string }[]>`
-        SELECT slug FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+      const [garage] = await lockGarage(tx, garageId);
       if (!garage) throw notFound();
       const rows = await tx.garagePrice.findMany({
         select: { brandId: true, jobTypeId: true, position: true },
@@ -651,6 +664,7 @@ export class PriceListService {
     const { jobTypeId } = job;
     const where = { garageId, jobTypeId };
     const brandIds = await this.prisma.$transaction(async (tx) => {
+      await lockGarage(tx, garageId);
       const [rows, ticks] = await Promise.all([
         tx.garagePrice.findMany({
           select: {

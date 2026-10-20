@@ -33,7 +33,7 @@ export const CATALOGUE_JOB_PENDING_CONSUMER = {
 export interface CatalogueJobPendingEvent {
   id: string;
   // Unchecked: the relay passes the payload through as recorded.
-  payload: { garageId?: unknown; jobTypeId?: unknown };
+  payload: { jobTypeId?: unknown };
 }
 
 // Tells every active admin that a garage proposed a job for the catalogue,

@@ -72,12 +72,12 @@ export default defineConfig({
     },
     {
       dependencies: ['chromium'],
-      name: 'garage-prices-edit',
+      name: 'garage-prices',
       testMatch: /garage-prices-(edit|manage)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      dependencies: ['garage-prices-edit'],
+      dependencies: ['garage-prices'],
       name: 'garage-photos',
       testMatch: /garage-photos\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },

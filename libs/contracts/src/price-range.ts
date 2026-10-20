@@ -7,6 +7,9 @@ export const PRICE_MAX_BANI = 10_000_000;
 // A price list's jobs, and a proposed job's name; step 2 reads them too.
 export const JOB_NAME_MIN = 2;
 export const JOB_NAME_MAX = 80;
+// A name the owner proposes alone is at least three characters, a word the
+// admins can judge; the listing's proposals keep their own two.
+export const PROPOSED_JOB_NAME_MIN = 3;
 export const JOBS_MAX = 50;
 const DURATION_MIN_MINUTES = 15;
 const DURATION_MAX_MINUTES = 4_800;
