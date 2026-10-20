@@ -4,6 +4,7 @@ import type {
   DraftDocuments,
   FieldProblem,
   ListingDraftData,
+  SurveySection,
 } from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { ListingDraftsService } from '@motor-fix/data-access';
@@ -168,6 +169,16 @@ export class DraftKeeper {
     } = this.draft().data as ListingDraftData;
     this.change({ data: { ...data, ...declaration } });
     this.later();
+  }
+
+  // The survey's answers: in the browser copy at once and on their way to the
+  // server, so a pick is kept even when the page closes right after it.
+  survey(section: SurveySection) {
+    const data = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, survey: section } });
+    clearTimeout(this.browserTimer);
+    this.write();
+    void this.save();
   }
 
   leaveEmail() {

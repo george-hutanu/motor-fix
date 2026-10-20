@@ -46,6 +46,9 @@
       "@motor-fix/contracts/listing-sections": [
         "./libs/contracts/src/listing-sections.ts"
       ],
+      "@motor-fix/contracts/listing-survey": [
+        "./libs/contracts/src/listing-survey.ts"
+      ],
       "@motor-fix/contracts/listing-verification": [
         "./libs/contracts/src/listing-verification.ts"
       ],
