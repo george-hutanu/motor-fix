@@ -1,6 +1,7 @@
 import {
   BrandRangeDto,
   BrandRangeSavedDto,
+  PriceAddDto,
   PriceListDto,
   PriceRangeDto,
   PriceRangeSavedDto,
@@ -15,6 +16,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -22,6 +24,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -61,6 +64,33 @@ export class PriceListController {
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
   ): Promise<PriceListDto> {
     return this.priceList.read(actor, garageId);
+  }
+
+  @Post()
+  @UseGuards(JsonOnly)
+  @ApiOperation({
+    summary:
+      'Adds an approved catalogue job to the end of the price list with its default range',
+  })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiCreatedResponse({ type: PriceRangeSavedDto })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: not a uuid, or an unknown field',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'unsupported_media_type' })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'validation_failed: the range, a job unknown, not approved or already on the list, or a fifty-first job',
+  })
+  add(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Body() body: PriceAddDto,
+  ): Promise<PriceRangeSavedDto> {
+    return this.priceList.add(actor, garageId, body);
   }
 
   @Patch(':priceId')

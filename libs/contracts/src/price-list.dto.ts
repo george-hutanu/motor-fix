@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Allow, IsDefined, IsISO8601, IsOptional } from 'class-validator';
+import {
+  Allow,
+  IsDefined,
+  IsISO8601,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 import { PublicLabourDto } from './garages.dto';
 import { FieldProblemDto } from './listing-check/listing-check.dto';
@@ -62,6 +68,12 @@ export class PriceListItemDto {
     format: 'date-time',
   })
   updatedAt?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The default row's own flag, whatever reason comes first; absent without a default row",
+  })
+  visible?: boolean;
 
   @ApiPropertyOptional({ minimum: 1, type: 'integer' })
   durationMinutes?: number;
@@ -174,6 +186,34 @@ export class PriceRangeDto {
   @IsDefined()
   @IsISO8601({ strict: true })
   expectedUpdatedAt!: string;
+}
+
+// An approved catalogue job added to the list with its default range. Every
+// value is left to the one range check; an omitted top or duration is none.
+export class PriceAddDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  jobTypeId!: string;
+
+  @ApiPropertyOptional({ example: 28_000, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  fromBani?: unknown;
+
+  @ApiPropertyOptional({ example: 36_000, nullable: true, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  toBani?: unknown;
+
+  @ApiPropertyOptional({
+    description: 'Minutes in steps of 15',
+    example: 45,
+    nullable: true,
+    type: 'integer',
+  })
+  @IsOptional()
+  @Allow()
+  durationMinutes?: unknown;
 }
 
 export class PriceRangeSavedDto {

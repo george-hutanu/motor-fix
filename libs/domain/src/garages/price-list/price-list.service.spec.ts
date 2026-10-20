@@ -51,6 +51,7 @@ function world(rows: { brandId: string | null; id: string }[]) {
     audit as never,
     events as never,
     cache as never,
+    {} as never,
   );
   return { audit, cache, events, garagePrice, service };
 }
@@ -100,6 +101,7 @@ function reading(garage: Record<string, unknown> | null) {
     { record: jest.fn() } as never,
     { record: jest.fn() } as never,
     { take: jest.fn() } as never,
+    {} as never,
   );
   return { findUnique, service };
 }

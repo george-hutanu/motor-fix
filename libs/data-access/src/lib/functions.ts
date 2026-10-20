@@ -235,6 +235,8 @@ export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params
 export { legalCheckControllerRead as legalCheckControllerRead } from './fn/garages/legal-check-controller-read';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerAdd$Params as PriceListControllerAdd$Params } from './fn/garages/price-list-controller-add';
+export { priceListControllerAdd as priceListControllerAdd } from './fn/garages/price-list-controller-add';
 export type { PriceListControllerSetRange$Params as PriceListControllerSetRange$Params } from './fn/garages/price-list-controller-set-range';
 export { priceListControllerSetRange as priceListControllerSetRange } from './fn/garages/price-list-controller-set-range';
 export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';

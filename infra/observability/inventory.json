@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 142,
+    "count": 143,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1487,6 +1487,19 @@
       ],
       "reason": "the owner's in-place change of a job's range and duration and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
       "story": "ST-173"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-price-rows",
+      "source": "libs/domain/src/garages/price-list/price-list.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/garages/:garageId/prices",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's add of an approved catalogue job to the price list, written to PostgreSQL with one create audit entry and a price_list.updated event in one transaction; a refused add is a 4xx the error-rate rule reads; no counter of its own: the audit holds who added what; no outside call",
+      "story": "ST-174"
     }
   ]
 }

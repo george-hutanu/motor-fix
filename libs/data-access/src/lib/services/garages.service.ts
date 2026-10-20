@@ -31,6 +31,8 @@ import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
 import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckDto } from '../models/legal-check-dto';
+import { priceListControllerAdd } from '../fn/garages/price-list-controller-add';
+import { PriceListControllerAdd$Params } from '../fn/garages/price-list-controller-add';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
 import { priceListControllerRemoveBrandRange } from '../fn/garages/price-list-controller-remove-brand-range';
@@ -317,6 +319,39 @@ export class GaragesService extends BaseService {
   priceListControllerRead(params: PriceListControllerRead$Params, context?: HttpContext): Promise<PriceListDto> {
     const resp = this.priceListControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<PriceListDto>): PriceListDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerAdd()` */
+  static readonly PriceListControllerAddPath = '/api/v1/garages/{garageId}/prices';
+
+  /**
+   * Adds an approved catalogue job to the end of the price list with its default range.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerAdd()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerAdd$Response(params: PriceListControllerAdd$Params, context?: HttpContext): Promise<StrictHttpResponse<PriceRangeSavedDto>> {
+    const obs = priceListControllerAdd(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Adds an approved catalogue job to the end of the price list with its default range.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerAdd$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerAdd(params: PriceListControllerAdd$Params, context?: HttpContext): Promise<PriceRangeSavedDto> {
+    const resp = this.priceListControllerAdd$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PriceRangeSavedDto>): PriceRangeSavedDto => r.body);
   }
 
   /** Path part for operation `priceListControllerSetRange()` */

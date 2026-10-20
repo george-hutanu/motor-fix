@@ -9,6 +9,7 @@ import { validate } from 'class-validator';
 import {
   LabourRangeDto,
   PRICE_LIST_REASONS,
+  PriceAddDto,
   type PriceListItemDto,
   PriceRangeDto,
 } from './price-list.dto';
@@ -17,13 +18,12 @@ const root = join(__dirname, '..', '..', '..');
 const openapi = JSON.parse(
   readFileSync(join(root, 'apps', 'api', 'openapi.json'), 'utf8'),
 );
-const generatedRead = readFileSync(
-  join(
-    root,
-    'libs/data-access/src/lib/fn/garages/price-list-controller-read.ts',
-  ),
-  'utf8',
-);
+const generated = (operation: string) =>
+  readFileSync(
+    join(root, `libs/data-access/src/lib/fn/garages/${operation}.ts`),
+    'utf8',
+  );
+const generatedRead = generated('price-list-controller-read');
 
 // @traces 357-FR-010
 describe('the price list read in the OpenAPI document', () => {
@@ -167,5 +167,81 @@ describe("an owner's price list item", () => {
     } satisfies PriceListItemDto;
 
     expect(item.priceId).toBeDefined();
+  });
+});
+
+// @traces 1352-catalogue-job-visibility-FR-017
+describe('the body of a catalogue job add', () => {
+  const body = {
+    durationMinutes: 45,
+    fromBani: 28_000,
+    jobTypeId: randomUUID(),
+    toBani: 36_000,
+  };
+
+  it('takes the job and its three values', async () => {
+    expect(await problemsOf(PriceAddDto, body)).toEqual([]);
+  });
+
+  it('takes the job with a starting price alone, or null for the top and the duration', async () => {
+    expect(
+      await problemsOf(PriceAddDto, {
+        fromBani: 28_000,
+        jobTypeId: body.jobTypeId,
+      }),
+    ).toEqual([]);
+    expect(
+      await problemsOf(PriceAddDto, {
+        ...body,
+        durationMinutes: null,
+        toBani: null,
+      }),
+    ).toEqual([]);
+  });
+
+  it('leaves values that are not whole or missing to the one range check', async () => {
+    expect(
+      await problemsOf(PriceAddDto, {
+        ...body,
+        fromBani: undefined,
+        toBani: 2.5,
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['a missing job', { jobTypeId: undefined }, 'jobTypeId'],
+    ['a job that is not a uuid', { jobTypeId: 'frane' }, 'jobTypeId'],
+    ['an unknown field', { visible: false }, 'visible'],
+  ])('refuses %s', async (_, values, property) => {
+    expect(await problemsOf(PriceAddDto, { ...body, ...values })).toEqual([
+      property,
+    ]);
+  });
+
+  it('is carried by the generated client with the same path and answer', () => {
+    const add = generated('price-list-controller-add');
+
+    expect(add).toContain(
+      "priceListControllerAdd.PATH = '/api/v1/garages/{garageId}/prices'",
+    );
+    expect(add).toContain('StrictHttpResponse<PriceRangeSavedDto>');
+  });
+});
+
+// @traces 1352-catalogue-job-visibility-FR-008
+describe("an owner's price list item and the owner's own choice", () => {
+  it("may carry whether the owner hid the job's default row", () => {
+    const item = {
+      brandRanges: [],
+      jobTypeId: randomUUID(),
+      nameEn: 'Front brakes',
+      nameRo: 'Frâne față',
+      public: false,
+      reason: 'hidden_by_garage',
+      visible: false,
+    } satisfies PriceListItemDto;
+
+    expect(item.visible).toBe(false);
   });
 });

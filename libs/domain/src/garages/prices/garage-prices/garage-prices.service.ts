@@ -11,10 +11,14 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
+import {
+  AUDIT_PORT,
+  type AuditEntry,
+  type AuditPort,
+} from '../../../audit/audit.port';
 import { refusal, taken } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
-import type { Prisma } from '../../../generated/prisma/client';
+import type { JobTypeStatus, Prisma } from '../../../generated/prisma/client';
 import { uniqueSlug } from '../../garage-slug';
 import { isRecord, plainText } from '../../plain-text';
 
@@ -145,6 +149,29 @@ function payloadErrors({ jobs, labour }: StartingPricesInput) {
   return errors;
 }
 
+// What a price row is created with, recorded as its audit entry's new value.
+type RowFields = {
+  brandId: string | null;
+  durationMinutes: number | null;
+  fromBani: number;
+  jobTypeId: string;
+  position: number;
+  toBani: number | null;
+  visible: true;
+};
+
+type RowScope = Omit<
+  AuditEntry,
+  'action' | 'newValue' | 'subjectId' | 'subjectType'
+> & { actorId: string; garageId: string };
+
+// Why a catalogue job cannot be put on a garage's list, if it cannot.
+export function jobProblem(status: JobTypeStatus | undefined, listed: boolean) {
+  if (!status) return 'unknown_job';
+  if (status !== 'approved') return 'not_approved';
+  return listed ? 'duplicate' : undefined;
+}
+
 // Saves the prices a garage gives when it sends its listing. Runs inside the
 // caller's transaction, so the listing, its prices and the jobs it proposes
 // land together or not at all; a refusal writes nothing.
@@ -204,22 +231,12 @@ export class GaragePricesService {
         toBani: job.toBani ?? null,
         visible: true as const,
       };
-      const row = await tx.garagePrice
-        .create({ data: { ...fields, garageId, updatedBy: actorId } })
-        .catch((error: unknown) => {
-          // A concurrent save of the same garage stored the pair first.
-          if (!taken(error)) throw error;
-          throw refuse([
-            { code: 'duplicate', field: `jobs[${position}].jobTypeId` },
-          ]);
-        });
-      await this.audit.record(tx, {
-        ...scope,
-        action: 'create',
-        newValue: fields,
-        subjectId: row.id,
-        subjectType: 'garage_price',
-      });
+      const row = await this.createRow(
+        tx,
+        scope,
+        fields,
+        refuse([{ code: 'duplicate', field: `jobs[${position}].jobTypeId` }]),
+      );
       jobs.push({
         ...fields,
         id: row.id,
@@ -234,6 +251,31 @@ export class GaragePricesService {
         warnings: checkPriceRange(started(input.labour)).warnings,
       },
     };
+  }
+
+  // A price row with its audit entry; `clash` is thrown when a concurrent
+  // write stored the same job and brand first.
+  async createRow(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    fields: RowFields,
+    clash: Error,
+  ) {
+    const { actorId, garageId } = scope;
+    const row = await tx.garagePrice
+      .create({ data: { ...fields, garageId, updatedBy: actorId } })
+      .catch((error: unknown) => {
+        if (!taken(error)) throw error;
+        throw clash;
+      });
+    await this.audit.record(tx, {
+      ...scope,
+      action: 'create',
+      newValue: fields,
+      subjectId: row.id,
+      subjectType: 'garage_price',
+    });
+    return row;
   }
 
   // One pending catalogue job per proposed name, with its audit entry and
@@ -337,22 +379,20 @@ export class GaragePricesService {
         nameOf(nameEn),
       ]),
     );
-    const jobProblem = (job: Job) => {
-      if (job.jobTypeId === undefined) return undefined;
-      const jobStatus = status.get(job.jobTypeId);
-      if (!jobStatus) return 'unknown_job';
-      if (jobStatus !== 'approved') return 'not_approved';
-      return storedPairs.has(pairOf(jobOf(job), job.brandId))
-        ? 'duplicate'
-        : undefined;
-    };
+    const onCatalogue = (job: Job) =>
+      job.jobTypeId === undefined
+        ? undefined
+        : jobProblem(
+            status.get(job.jobTypeId),
+            storedPairs.has(pairOf(jobOf(job), job.brandId)),
+          );
     const brandProblem = ({ brandId }: Job) => {
       if (!brandId) return undefined;
       if (!known.has(brandId)) return 'unknown_brand';
       return worksOn.has(brandId) ? undefined : 'not_taken';
     };
     return jobs.flatMap((job, i) => {
-      const onJob = jobProblem(job);
+      const onJob = onCatalogue(job);
       const onBrand = brandProblem(job);
       const onName = isSet(job.name) && approvedNames.has(jobOf(job));
       return [

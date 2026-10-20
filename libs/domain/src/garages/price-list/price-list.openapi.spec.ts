@@ -92,3 +92,35 @@ describe('the in-place range writes in the OpenAPI document', () => {
     expect(item.required).not.toContain('updatedAt');
   });
 });
+
+// @traces 1352-catalogue-job-visibility-FR-017
+describe('the add of a catalogue job in the OpenAPI document', () => {
+  it('adds a job with its body, its answer and its refusals', () => {
+    const { post } = doc.paths['/api/v1/garages/{garageId}/prices'];
+
+    expect(post.operationId).toBe('PriceListController_add');
+    expect(ref(post.requestBody.content['application/json'].schema)).toBe(
+      'PriceAddDto',
+    );
+    expect(ref(post.responses['201'].content['application/json'].schema)).toBe(
+      'PriceRangeSavedDto',
+    );
+    expect(Object.keys(post.responses).sort()).toEqual(
+      ['201', '400', '401', '403', '404', '415', '422'].sort(),
+    );
+  });
+
+  it('names the catalogue job by its uuid and requires it', () => {
+    const body = doc.components.schemas.PriceAddDto;
+
+    expect(body.properties.jobTypeId).toMatchObject({ format: 'uuid' });
+    expect(body.required).toEqual(['jobTypeId']);
+  });
+
+  it("may give each owner's item the default row's own choice", () => {
+    const item = doc.components.schemas.PriceListItemDto;
+
+    expect(item.properties.visible).toMatchObject({ type: 'boolean' });
+    expect(item.required).not.toContain('visible');
+  });
+});

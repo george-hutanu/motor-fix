@@ -3,8 +3,10 @@ import {
   type BrandRangeSavedDto,
   checkPriceRange,
   type FieldProblem,
+  JOBS_MAX,
   type LabourRangeDto,
   type LabourRangeSavedDto,
+  type PriceAddDto,
   type PriceListDto,
   type PriceListUpdatedPayload,
   type PriceRangeDto,
@@ -24,6 +26,10 @@ import {
   assertGarageOwner,
   notFound,
 } from '../garage-brands/garage-brands.service';
+import {
+  GaragePricesService,
+  jobProblem,
+} from '../prices/garage-prices/garage-prices.service';
 import { NO_BRAND } from '../public-garages/public-garages';
 
 const refuse = (errors: FieldProblem[]) =>
@@ -104,6 +110,28 @@ function rangeOf(body: RangeBody, withDuration: boolean) {
   };
 }
 
+type DefaultRow = {
+  durationMinutes: number | null;
+  fromBani: number;
+  id: string;
+  jobTypeId: string;
+  toBani: number | null;
+  updatedAt: Date;
+};
+
+const savedOf = (
+  { durationMinutes, fromBani, id, jobTypeId, toBani, updatedAt }: DefaultRow,
+  warnings: FieldProblem[],
+): PriceRangeSavedDto => ({
+  fromBani,
+  jobTypeId,
+  priceId: id,
+  ...(toBani !== null && { toBani }),
+  ...(durationMinutes !== null && { durationMinutes }),
+  updatedAt: updatedAt.toISOString(),
+  warnings,
+});
+
 type Pair = { brandId: string; garageId: string; jobTypeId: string };
 type Row = { garageId: string; priceId: string };
 
@@ -128,6 +156,7 @@ export class PriceListService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     private readonly cache: CacheService,
+    private readonly prices: GaragePricesService,
   ) {}
 
   // The owner's price list, each job with whether drivers see it and why not.
@@ -255,6 +284,74 @@ export class PriceListService {
     return saved;
   }
 
+  // An approved catalogue job put last on the list with its default range,
+  // ticked for no brand.
+  async add(
+    actor: Actor,
+    garageId: string,
+    body: PriceAddDto,
+  ): Promise<PriceRangeSavedDto> {
+    assertGarageOwner(actor, garageId);
+    const jobTypeId = body.jobTypeId.toLowerCase();
+    const range = rangeOf(
+      {
+        durationMinutes: body.durationMinutes ?? null,
+        fromBani: body.fromBani,
+        toBani: body.toBani ?? null,
+      },
+      true,
+    );
+    const { durationMinutes, fromBani, toBani, warnings } = range;
+    const job = await this.prisma.jobType.findUnique({
+      select: { status: true },
+      where: { id: jobTypeId },
+    });
+    const { row, slug } = await this.prisma.$transaction(async (tx) => {
+      // Adds to one garage run one after the other, so the cap and the last
+      // place hold.
+      const [garage] = await tx.$queryRaw<{ slug: string }[]>`
+        SELECT slug FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+      if (!garage) throw notFound();
+      const rows = await tx.garagePrice.findMany({
+        select: { brandId: true, jobTypeId: true, position: true },
+        where: { garageId },
+      });
+      const errors = [...range.errors];
+      const listed = rows.some((stored) => stored.jobTypeId === jobTypeId);
+      const onJob = jobProblem(job?.status, listed);
+      const jobs = rows.filter((stored) => stored.brandId === null).length;
+      if (onJob) errors.push({ code: onJob, field: 'jobTypeId' });
+      else if (jobs >= JOBS_MAX) {
+        errors.push({ code: 'too_many', field: 'jobTypeId' });
+      }
+      if (errors.length > 0) throw refuse(errors);
+      const position =
+        Math.max(-1, ...rows.map((stored) => stored.position)) + 1;
+      const created = await this.prices.createRow(
+        tx,
+        this.scopeOf(actor, garageId, 'garage_price'),
+        {
+          brandId: null,
+          durationMinutes,
+          fromBani,
+          jobTypeId,
+          position,
+          toBani,
+          visible: true,
+        },
+        refuse([{ code: 'duplicate', field: 'jobTypeId' }]),
+      );
+      await this.changed(tx, {
+        brandIds: [],
+        garageId,
+        jobTypeIds: [jobTypeId],
+      });
+      return { row: created, slug: garage.slug };
+    });
+    await this.forget(slug, NO_BRAND);
+    return savedOf(row, warnings);
+  }
+
   // A job's default range changed in place, judged against the stamp the
   // owner read it with: a row changed since answers 409 and keeps the newer
   // save, whatever this one would have written.
@@ -283,15 +380,18 @@ export class PriceListService {
 
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { jobTypeId } = row;
-    const answer = (updatedAt: Date): PriceRangeSavedDto => ({
-      fromBani,
-      jobTypeId,
-      priceId,
-      ...(toBani !== null && { toBani }),
-      ...(durationMinutes !== null && { durationMinutes }),
-      updatedAt: updatedAt.toISOString(),
-      warnings,
-    });
+    const answer = (updatedAt: Date) =>
+      savedOf(
+        {
+          durationMinutes,
+          fromBani,
+          id: priceId,
+          jobTypeId,
+          toBani,
+          updatedAt,
+        },
+        warnings,
+      );
     const unchanged =
       row.fromBani === fromBani &&
       row.toBani === toBani &&

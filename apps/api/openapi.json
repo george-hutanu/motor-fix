@@ -4760,6 +4760,69 @@
         "tags": [
           "garages"
         ]
+      },
+      "post": {
+        "operationId": "PriceListController_add",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceAddDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceRangeSavedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid, or an unknown field"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          },
+          "422": {
+            "description": "validation_failed: the range, a job unknown, not approved or already on the list, or a fifty-first job"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adds an approved catalogue job to the end of the price list with its default range",
+        "tags": [
+          "garages"
+        ]
       }
     },
     "/api/v1/garages/{garageId}/prices/{priceId}": {
@@ -12885,6 +12948,10 @@
             "description": "When the default row last changed, sent back with a range change",
             "format": "date-time"
           },
+          "visible": {
+            "type": "boolean",
+            "description": "The default row's own flag, whatever reason comes first; absent without a default row"
+          },
           "durationMinutes": {
             "type": "integer",
             "minimum": 1
@@ -12951,33 +13018,31 @@
           "items"
         ]
       },
-      "PriceRangeDto": {
+      "PriceAddDto": {
         "type": "object",
         "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "fromBani": {
             "type": "integer",
-            "example": 95000
+            "example": 28000
           },
           "toBani": {
             "type": "integer",
-            "description": "null clears the top",
-            "example": 145000,
+            "example": 36000,
             "nullable": true
           },
           "durationMinutes": {
             "type": "integer",
-            "description": "Minutes in steps of 15; null clears the duration",
-            "example": 120,
+            "description": "Minutes in steps of 15",
+            "example": 45,
             "nullable": true
-          },
-          "expectedUpdatedAt": {
-            "type": "string",
-            "description": "The row's updatedAt as the owner read it; a newer save answers 409 stale",
-            "format": "date-time"
           }
         },
         "required": [
-          "expectedUpdatedAt"
+          "jobTypeId"
         ]
       },
       "PriceRangeSavedDto": {
@@ -13021,6 +13086,35 @@
           "fromBani",
           "updatedAt",
           "warnings"
+        ]
+      },
+      "PriceRangeDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer",
+            "example": 95000
+          },
+          "toBani": {
+            "type": "integer",
+            "description": "null clears the top",
+            "example": 145000,
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "description": "Minutes in steps of 15; null clears the duration",
+            "example": 120,
+            "nullable": true
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "description": "The row's updatedAt as the owner read it; a newer save answers 409 stale",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "expectedUpdatedAt"
         ]
       },
       "BrandRangeDto": {
