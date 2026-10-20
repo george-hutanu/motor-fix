@@ -118,12 +118,25 @@ mf-language-switch {
   color: var(--mf-text);
   cursor: pointer;
 }
-@media (min-width: 640px) {
+/* The links take the bar from a tablet up; below 768 px the tab bar carries them.
+   Until every link fits (Romanian needs about 980 px), a tablet keeps the two
+   main links and the account button, so the language switch is never cut off. */
+@media (min-width: 768px) {
   .links {
     display: flex;
     align-items: center;
     gap: var(--mf-space-1);
   }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .bar {
+    padding-inline: var(--mf-space-4);
+  }
+  .links .wide {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
   .account {
     display: none;
   }

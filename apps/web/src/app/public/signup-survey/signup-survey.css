@@ -22,8 +22,20 @@ h1 {
 .top {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--mf-space-3);
+  align-items: baseline;
+  gap: var(--mf-space-1) var(--mf-space-3);
+}
+/* The counter keeps its row on the right, as the mock does: the kicker wraps
+   first, and only where even its longest word leaves no room (a 320 px phone
+   in Romanian) does the counter take the next row, still on the right. */
+.kicker {
+  flex: 1 1 0;
+  min-width: min-content;
+}
+.counter {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
 }
 .kicker,
 .counter,
@@ -299,7 +311,8 @@ svg {
 }
 .time {
   flex: none;
-  width: 46px;
+  min-width: 46px;
+  white-space: nowrap;
   color: var(--mf-text);
 }
 
@@ -324,9 +337,6 @@ svg {
   font-weight: 600;
   overflow-wrap: anywhere;
   cursor: pointer;
-}
-.answer:hover {
-  border-color: var(--mf-amber);
 }
 .answer[aria-checked="true"] {
   border-color: var(--mf-amber);
@@ -368,9 +378,12 @@ svg {
   color: var(--mf-text);
   cursor: pointer;
 }
-.back:hover {
-  border-color: var(--mf-amber);
-  background: var(--mf-amber-tint);
+/* Amber means picked: a hover only darkens the border, and only where a pointer hovers, so a tap never leaves an answer looking chosen. */
+@media (hover: hover) {
+  .answer:not([aria-checked="true"]):hover,
+  .back:hover {
+    border-color: var(--mf-text-secondary);
+  }
 }
 .forward {
   flex: 1;
@@ -379,12 +392,24 @@ svg {
   min-height: 56px;
   border-radius: 14px;
   font-size: var(--mf-size-small);
-  white-space: normal;
+  white-space: nowrap;
 }
 .forward:disabled {
   background: var(--mf-panel-raised);
   color: var(--mf-text-secondary);
   cursor: not-allowed;
+}
+
+/* A 320 px phone fits "CREEAZĂ CONTUL" on one line: the arrow goes, the label keeps the button. */
+@media (max-width: 359.98px) {
+  .forward {
+    justify-content: center;
+    padding-inline: var(--mf-space-3);
+    letter-spacing: 0.06em;
+  }
+  .forward > svg {
+    display: none;
+  }
 }
 
 @media (max-width: 767.98px) {
