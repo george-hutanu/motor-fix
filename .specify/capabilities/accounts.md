@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-17
+updated: 2026-10-20
 features:
   - 079-account-model
   - 082-sign-in
@@ -36,6 +36,7 @@ features:
   - 1345-staging-observability
   - 005-data-requests
   - 1348-release-green
+  - 1359-signup-survey
 ---
 
 # Capability: Accounts
@@ -868,9 +869,9 @@ _From 250-launch-analytics-events._
 
 _From 250-launch-analytics-events._
 
-### 250-FR-006 — An event whose surface is not built (`filter_applied`, `garage_saved`, `message_sent`, `review_posted`, `survey_completed`, `quote_accepted` (no web accept surface until #61; `position` only until a sort exists), `sign_up_completed` with `role: garage`, `brand_picked` from a strip or chips, `garage_opened` from a map pin, a quote sort) is part of the contract and fires when its surface lands; it is not wired in this feature and the list (FR-009) says so.
+### 1359-FR-011 — "CREEAZĂ CONTUL" MUST save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary; a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." and keep the answers; the button MUST be disabled while the save is in flight. Both notices MUST sit in a live region (`role="status"` for saved, `role="alert"` for failed) so assistive technology announces them, and neither moves focus. It MUST NOT create an account, a garage or change the draft's status: that is ST-116, which replaces this press.
 
-_From 250-launch-analytics-events._
+_From 1359-signup-survey._
 
 ### 250-FR-009 — The repository MUST hold a list mapping each launch feature's "How to measure it" figure to an event of FR-004, a database count (the S9 figures and the nightly funnel), or "not measured at launch"; for every event, its surface and whether it is built; and the owner-side Plausible setup: one goal per event and the two funnels (driver: Home → `brand_picked` → `garage_opened` → `quote_request_started` → `quote_request_sent` → `quote_accepted` → `review_posted`; garage: `listing_started` → `listing_step_completed` step 6 → `survey_completed` → `listing_submitted`), done in Plausible's dashboard.
 
@@ -1083,3 +1084,5 @@ _From 1348-release-green._
 - `1203-FR-005` — superseded by `366-FR-003` (2026-10-17)
 
 - `1203-FR-010` — superseded by `005-FR-014` (2026-10-17)
+
+- `250-FR-006` — superseded by `1359-FR-011` (2026-10-20)
