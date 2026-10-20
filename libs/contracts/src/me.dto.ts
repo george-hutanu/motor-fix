@@ -107,6 +107,21 @@ export class GarageAccessDto {
     type: GarageSuspensionDto,
   })
   suspension!: GarageSuspensionDto | null;
+
+  @ApiProperty({
+    description: 'The stored day of the last RAR check; null when unset',
+    example: '2026-10-01',
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  lastCheckedOn!: string | null;
+
+  @ApiProperty({
+    description:
+      'Whether a valid re-check is recorded on or after the last check day',
+  })
+  rechecked!: boolean;
 }
 
 export class MeDto {

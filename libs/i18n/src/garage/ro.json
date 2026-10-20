@@ -94,11 +94,20 @@
     },
     "error": "Nu am putut încărca verificarea",
     "notChecked": "neverificat",
+    "note": "Reverificăm lunar autorizația în registrul RAR. Dacă e suspendată sau retrasă, profilul iese de pe hartă până se rezolvă.",
     "pill": "Profil verificat",
+    "pillCheckedOn": "Autorizația RAR, verificată pe {day}",
+    "pillRecheckedOn": "Autorizația RAR, reverificată pe {day}",
     "rar": {
       "checked": "verificată",
       "checkedOn": "verificată pe {day}",
+      "failure": {
+        "expired": "expirată pe {day}",
+        "suspended": "suspendată pe {day}",
+        "withdrawn": "retrasă pe {day}"
+      },
       "label": "Autorizație tehnică RAR",
+      "recheckedOn": "reverificată pe {day}",
       "register": "în registrul RAR"
     },
     "retry": "Încearcă din nou",
@@ -109,6 +118,7 @@
       "warning": "atenție"
     },
     "tag": "Verificat",
+    "tagSuspended": "Suspendat",
     "title": "Verificare legală"
   },
   "prices": {

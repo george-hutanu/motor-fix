@@ -296,7 +296,7 @@ export class GaragesService extends BaseService {
   static readonly LegalCheckControllerReadPath = '/api/v1/garages/{garageId}/legal-check';
 
   /**
-   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   * The approved or suspended garage's legal check: company, CAEN, RAR and documents, with its latest re-check, for its owner.
    *
    *
    *
@@ -311,7 +311,7 @@ export class GaragesService extends BaseService {
   }
 
   /**
-   * The approved garage's legal check: company, CAEN, RAR and documents, for its owner.
+   * The approved or suspended garage's legal check: company, CAEN, RAR and documents, with its latest re-check, for its owner.
    *
    *
    *

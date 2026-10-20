@@ -24,7 +24,7 @@ export class LegalCheckController {
   @Get()
   @ApiOperation({
     summary:
-      "The approved garage's legal check: company, CAEN, RAR and documents, for its owner",
+      "The approved or suspended garage's legal check: company, CAEN, RAR and documents, with its latest re-check, for its owner",
   })
   @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiOkResponse({ type: LegalCheckDto })
@@ -32,7 +32,7 @@ export class LegalCheckController {
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
   @ApiNotFoundResponse({
     description:
-      'not_found: not this garage (a malformed id included), not approved, or no file',
+      'not_found: not this garage (a malformed id included), a draft, or no file',
   })
   read(
     @CurrentActor() actor: Actor,

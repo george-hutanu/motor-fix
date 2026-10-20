@@ -12,17 +12,18 @@ import {
 
 import { calendarDay } from './cars.dto';
 import { RarActivityNameDto } from './legal-check.dto';
-import { RECHECK_DETAIL_MAX } from './verification-target';
+import {
+  RECHECK_DETAIL_MAX,
+  RECHECK_FAILURES,
+  RECHECK_RESULTS,
+  type RecheckFailure,
+  type RecheckResult,
+} from './verification-target';
 
 // A garage is due this many Bucharest days after its last check, and
 // overdue past the other.
 export const RECHECK_DUE_AFTER_DAYS = 28;
 export const RECHECK_MAX_AGE_DAYS = 31;
-
-export const RECHECK_RESULTS = ['ok', 'failed'] as const;
-export type RecheckResult = (typeof RECHECK_RESULTS)[number];
-const RECHECK_FAILURES = ['expired', 'suspended', 'withdrawn'] as const;
-export type RecheckFailure = (typeof RECHECK_FAILURES)[number];
 
 const NO_CONTROL = /^\P{Cc}*$/u;
 

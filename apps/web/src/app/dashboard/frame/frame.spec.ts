@@ -697,6 +697,19 @@ describe('Frame', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 1354-FR-007
+  it('reads the account again when its garage is re-checked, so the RAR line follows', async () => {
+    await render('garage', '/app/garage', []);
+
+    live.events.next({
+      at: '2026-11-01T09:00:00.000Z',
+      id: 'garage-1',
+      kind: 'recheck.recorded',
+    });
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it('asks an account with an unconfirmed e-mail to confirm it, on every dashboard', async () => {
     for (const [role, landing] of [
       ['driver', '/app/driver'],

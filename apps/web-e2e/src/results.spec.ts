@@ -868,7 +868,8 @@ test.describe('Results with the location refused @seeded', () => {
     await expect(field).toBeVisible();
     await expect(field).toBeFocused();
     await expect(page.locator('mf-result-card')).toHaveCount(0);
-    await expect(page.locator('.here')).toHaveCount(0);
+    // The "you are here" marker waits off the map, hidden, until a place is known.
+    await expect(page.locator('.here')).toBeHidden();
     expect(page.url()).not.toContain('near=');
 
     await field.fill('Cluj');

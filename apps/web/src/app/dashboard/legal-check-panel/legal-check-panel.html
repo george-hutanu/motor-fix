@@ -2,7 +2,7 @@
   <header>
     <h2 id="legal-check-title">{{ 'garage.legal.title' | t }}</h2>
     @if (data()) {
-      <span class="tag" data-legal-tag><span class="dot" aria-hidden="true"></span>{{ 'garage.legal.tag' | t }}</span>
+      <span class="tag" data-legal-tag [attr.data-suspended]="suspended() ? '' : null"><span class="dot" aria-hidden="true"></span>@if (suspended()) {{{ 'garage.legal.tagSuspended' | t }}} @else {{{ 'garage.legal.tag' | t }}}</span>
     }
   </header>
   @if (failed()) {
@@ -22,6 +22,7 @@
         </li>
       }
     </ul>
+    <p class="note" data-legal-note>{{ 'garage.legal.note' | t }}</p>
   } @else if (loading()) {
     <ul class="rows" aria-busy="true">
       @for (n of skeletons; track n) {

@@ -34,6 +34,7 @@ async function signedIn(browser: Browser) {
   const page = await context.newPage();
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email, { password: PASSWORD });

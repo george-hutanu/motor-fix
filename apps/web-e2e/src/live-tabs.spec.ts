@@ -23,6 +23,7 @@ async function accountId(request: APIRequestContext, email: string) {
 async function signedIn(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.driver);

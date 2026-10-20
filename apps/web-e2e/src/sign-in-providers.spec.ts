@@ -19,6 +19,7 @@ async function nextPerson(person: Record<string, unknown>) {
 async function continueWithGoogle(page: Page) {
   await ready(page, '/ro');
   await page
+    .getByRole('banner')
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   const dialog = page.getByRole('dialog', { name: 'Autentificare' });
