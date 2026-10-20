@@ -14,7 +14,7 @@
       [garage]="at.card.garage"
     />
   }
-  <p class="hint" role="status">@if (failed()) {{{ 'public.results.map.unavailable' | t }}}@else if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>
+  <p class="hint" role="status">@if (failed() && !phone()) {{{ 'public.results.map.unavailable' | t }}}@else if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>
   @if (legend()) {
     <ul class="legend">
       <li><span class="dot takes" aria-hidden="true"></span>@if (brand()) {{{ 'public.results.map.takes' | t: { brand: brand() } }}}@else {<span class="skeleton" aria-hidden="true"></span>}</li>

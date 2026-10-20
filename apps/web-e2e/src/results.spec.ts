@@ -551,8 +551,67 @@ test.describe('the map beside the results @seeded', () => {
     await expect(page.locator('mf-result-card')).toHaveCount(4);
   });
 
-  // @traces 269-FR-010
-  test('puts the map above the list on a phone, with no sideways scroll at 320 px or 390 px', async ({
+  // The sheet over the map on a phone: its handle, where it rests, and a
+  // drag from the handle's middle to a point on the screen.
+  const sheet = (page: Page) => page.locator('mf-results-sheet');
+  const handleOf = (page: Page) => sheet(page).locator('button.handle');
+  const rests = (page: Page, at: 'low' | 'half' | 'full') =>
+    expect(sheet(page)).toHaveAttribute('data-position', at);
+  async function dragTo(page: Page, y: number) {
+    const box = await handleOf(page).boundingBox();
+    if (!box) throw new Error('the sheet has no handle');
+    const x = box.x + box.width / 2;
+    await page.mouse.move(x, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(x, y, { steps: 10 });
+    await page.mouse.up();
+  }
+  const sideways = (page: Page) =>
+    page.evaluate(() => document.documentElement.scrollWidth);
+
+  // @traces 1358-FR-001 1358-FR-002 1358-FR-003 1358-FR-004 1358-FR-005 1358-FR-011
+  test('shows the summary, the map and the list on one phone screen, the sheet resting low, half and full', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 812, width: 375 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    const map = page.getByRole('region', { name: 'Harta service‑urilor' });
+    const first = page.locator('mf-result-card').first();
+
+    await rests(page, 'half');
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+    await expect(map).toBeInViewport();
+    await expect(first).toBeInViewport();
+    await expect(page.locator('mf-public-tab-bar')).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    const handle = await handleOf(page).boundingBox();
+    expect(handle?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await dragTo(page, 780);
+    await rests(page, 'low');
+    await expect(sheet(page).locator('mf-brand-chips')).toBeInViewport();
+
+    await dragTo(page, 80);
+    await rests(page, 'full');
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+
+    await handleOf(page).click();
+    await rests(page, 'low');
+    await handleOf(page).click();
+    await rests(page, 'half');
+
+    await sheet(page)
+      .locator('.body')
+      .evaluate((body) => {
+        body.scrollTop = 400;
+      });
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await rests(page, 'half');
+  });
+
+  // @traces 1358-FR-011 1358-FR-014
+  test('scrolls nothing sideways at 320 px, in English and dark too, and keeps the tablet and desktop layouts', async ({
     page,
   }) => {
     await ownMap(page);
@@ -563,26 +622,121 @@ test.describe('the map beside the results @seeded', () => {
       await page.setViewportSize({ height: 800, width });
       await page.emulateMedia({ colorScheme: scheme });
       await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
-      const map = page.getByRole('region', { name: region });
 
+      await expect(page.getByRole('region', { name: region })).toBeVisible();
       await expect(page.locator('mf-result-card')).toHaveCount(4);
-      await expect(map.locator('.legend')).toBeVisible();
-      const mapBox = await map.boundingBox();
-      const cardBox = await page
-        .locator('mf-result-card')
-        .first()
-        .boundingBox();
-      expect(mapBox && cardBox && mapBox.y + mapBox.height <= cardBox.y).toBe(
-        true,
+      expect(await sideways(page)).toBeLessThanOrEqual(width);
+      const small = await page.evaluate(() =>
+        [...document.querySelectorAll('mf-results-sheet *, header.intro *')]
+          .filter((el) => el.childNodes.length && el.textContent?.trim())
+          .some((el) => Number.parseFloat(getComputedStyle(el).fontSize) < 12),
       );
-      expect(
-        await page.evaluate(
-          () =>
-            document.documentElement.scrollWidth >
-            document.documentElement.clientWidth,
-        ),
-      ).toBe(false);
+      expect(small).toBe(false);
     }
+
+    await page.setViewportSize({ height: 1024, width: 820 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await expect(handleOf(page)).toHaveCount(0);
+    const mapBox = await page
+      .getByRole('region', { name: 'Harta service‑urilor' })
+      .boundingBox();
+    const cardBox = await page.locator('mf-result-card').first().boundingBox();
+    expect(mapBox && cardBox && mapBox.y + mapBox.height <= cardBox.y).toBe(
+      true,
+    );
+  });
+
+  // @traces 1358-FR-007
+  test('raises a low sheet to half and shows the card of a tapped pin, the map still in view', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 812, width: 375 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapSettled(page);
+    await dragTo(page, 780);
+    await rests(page, 'low');
+
+    await clickAt(page, placed[1].at);
+
+    await rests(page, 'half');
+    const card = named(page, 1);
+    await expect(card.locator('article.card')).toHaveClass(/selected/);
+    await expect(card).toBeInViewport();
+    await expect(
+      page.getByRole('region', { name: 'Harta service‑urilor' }),
+    ).toBeInViewport({ ratio: 0.25 });
+  });
+
+  // @traces 1358-FR-008
+  test('keeps the sheet where it rests on a brand change, the list at its top', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 812, width: 375 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await rests(page, 'half');
+    await sheet(page)
+      .locator('.body')
+      .evaluate((body) => {
+        body.scrollTop = 200;
+      });
+
+    await page
+      .getByRole('group', { name: 'Marca' })
+      .getByRole('button')
+      .nth(1)
+      .click();
+
+    await expect(page).not.toHaveURL(new RegExp(`brand=${brand.slug}`));
+    await rests(page, 'half');
+    await expect
+      .poll(() =>
+        sheet(page)
+          .locator('.body')
+          .evaluate((b) => b.scrollTop),
+      )
+      .toBe(0);
+  });
+
+  // @traces 1358-FR-009
+  test('goes back from full to half on the same address, and back again leaves the page', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 812, width: 375 });
+    await page.goto('/ro');
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    const address = page.url();
+
+    await dragTo(page, 80);
+    await rests(page, 'full');
+
+    await page.goBack();
+    await rests(page, 'half');
+    expect(page.url()).toBe(address);
+
+    await page.goBack();
+    await expect(page).not.toHaveURL(/garages/);
+  });
+
+  // @traces 1358-FR-010
+  test('rests the sheet full and says the map is not available in the summary on a phone', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+        '/map/no-such-style.json';
+    });
+    await page.setViewportSize({ height: 812, width: 375 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    await rests(page, 'full');
+    await expect(page.locator('header.intro').getByRole('status')).toHaveText(
+      'Harta nu este disponibilă acum',
+    );
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+    await expect(page.locator('mf-result-card').first()).toBeInViewport();
   });
 
   // @traces 269-FR-017

@@ -693,6 +693,10 @@
     "placeTitle": "Where should we look for a garage?",
     "reload": "Reload",
     "retry": "Try again",
+    "sheet": {
+      "map": "Show more of the map",
+      "more": "Show more of the list"
+    },
     "takers": {
       "one": "{count} works on {brand}",
       "other": "{count} work on {brand}"
