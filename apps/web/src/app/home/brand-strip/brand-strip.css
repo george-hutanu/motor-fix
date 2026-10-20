@@ -70,3 +70,10 @@ button:hover {
     transform: translateX(-50%);
   }
 }
+
+/* On a phone the brand names are running text: 16 px. */
+@media (max-width: 767.98px) {
+  button {
+    font-size: var(--mf-size-body);
+  }
+}

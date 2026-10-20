@@ -155,6 +155,25 @@ describe('how MotorFix works', () => {
     expect(sizes.length).toBeGreaterThan(0);
     expect(sizes.every((size) => size >= 12)).toBe(true);
   });
+
+  // @traces 228-FR-018
+  it('sizes its text on the Cockpit scale, 16 px for running text on a phone, and never leaves one word alone on a line of a benefit heading', () => {
+    const css = readFileSync(join(__dirname, 'how-it-works.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(css).toMatch(/h2 \{[^}]*font-size: var\(--mf-size-heading\)/);
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{\s*h2 \{[^}]*font-size: var\(--mf-size-title\)/,
+    );
+    expect(css).toMatch(/h3 \{[^}]*font-size: var\(--mf-size-heading\)/);
+    expect(css).toMatch(/h3 \{[^}]*text-wrap: balance/);
+    expect(css).toMatch(/\.at \{[^}]*font-size: var\(--mf-size-body\)/);
+    expect(css).toMatch(
+      /blockquote \{[^}]*font-size: var\(--mf-size-subheading\)/,
+    );
+    expect(phone).toMatch(/\.tag \{[^}]*font-size: var\(--mf-size-body\)/);
+  });
 });
 
 // @traces 228-FR-006

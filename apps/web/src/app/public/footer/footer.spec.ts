@@ -188,5 +188,28 @@ describe('the MotorFix links above the legal row', () => {
     const css = readFileSync(join(__dirname, 'footer.css'), 'utf8');
 
     expect(css).toMatch(/\.site[^{]*\{[^}]*min-height: 44px/);
+    expect(css).toMatch(/\.site[^{]*\{[^}]*min-width: 44px/);
+  });
+
+  // @traces 228-FR-017 228-FR-018
+  it('sets its links at 16 px and the wordmark at 16 px on a phone', () => {
+    const css = readFileSync(join(__dirname, 'footer.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(css).toMatch(/\.site \{[^}]*font-size: var\(--mf-size-body\)/);
+    expect(phone).toMatch(/\.wordmark \{[^}]*font-size: var\(--mf-size-body\)/);
+  });
+
+  // Every part of the page sits in a landmark: the wordmark too (axe region).
+  // @traces 228-FR-017
+  it('holds the wordmark and both rows in one footer landmark', async () => {
+    const host = await render();
+    const footer = host.querySelector('footer');
+
+    expect(footer).not.toBeNull();
+    expect(footer?.contains(host.querySelector('.wordmark'))).toBe(true);
+    expect(footer?.contains(top(host))).toBe(true);
+    expect(footer?.contains(legal(host))).toBe(true);
   });
 });

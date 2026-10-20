@@ -21,7 +21,7 @@ section:focus-visible {
 
 h2 {
   font-family: var(--mf-font-label);
-  font-size: clamp(22px, 2.4vw, 32px);
+  font-size: var(--mf-size-heading);
   font-weight: 400;
   line-height: 1.25;
   margin: 0;
@@ -66,10 +66,11 @@ article.wide {
 }
 
 h3 {
-  font-size: 26px;
+  font-size: var(--mf-size-heading);
   font-weight: 700;
   line-height: 1.15;
   margin: 0;
+  text-wrap: balance;
 }
 
 .lead p {
@@ -94,7 +95,7 @@ h3 {
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-control);
   display: inline-flex;
-  font-size: 16px;
+  font-size: var(--mf-size-body);
   font-weight: 600;
   gap: var(--mf-space-2);
   min-height: 42px;
@@ -132,7 +133,7 @@ h3 {
 
 .at {
   color: var(--mf-text-secondary);
-  font-size: 14px;
+  font-size: var(--mf-size-body);
 }
 
 .review {
@@ -153,7 +154,7 @@ h3 {
 }
 
 blockquote {
-  font-size: 19px;
+  font-size: var(--mf-size-subheading);
   line-height: 1.35;
   margin: 0;
   text-wrap: pretty;
@@ -161,5 +162,18 @@ blockquote {
 
 figcaption {
   color: var(--mf-text-secondary);
-  font-size: 14px;
+  font-size: var(--mf-size-small);
+}
+
+@media (min-width: 768px) {
+  h2 {
+    font-size: var(--mf-size-title);
+  }
+}
+
+/* On a phone the tag reads as running text: 16 px. */
+@media (max-width: 767.98px) {
+  .tag {
+    font-size: var(--mf-size-body);
+  }
 }

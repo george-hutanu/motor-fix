@@ -86,4 +86,17 @@ describe('the garage invitation', () => {
     expect(sizes.length).toBeGreaterThan(0);
     expect(sizes.every((size) => size >= 12)).toBe(true);
   });
+
+  // @traces 228-FR-018
+  it('heads it at 24 px, 32 px from a tablet up, and sets the button at 16 px on a phone', () => {
+    const css = readFileSync(join(__dirname, 'garage-invite.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(css).toMatch(/h2 \{[^}]*font-size: var\(--mf-size-heading\)/);
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{\s*h2 \{[^}]*font-size: var\(--mf-size-title\)/,
+    );
+    expect(phone).toMatch(/\.list \{[^}]*font-size: var\(--mf-size-body\)/);
+  });
 });

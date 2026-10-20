@@ -9,6 +9,10 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandStrip } from './brand-strip';
 
+// The phone rule block (under 768 px), where running text is held to 16 px.
+const phoneRules = (css: string) =>
+  /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
 const BRANDS: BrandDto[] = ['Dacia', 'Škoda', 'BMW'].map((name, i) => ({
   id: `b${i}`,
   name,
@@ -121,5 +125,14 @@ describe('the brand strip', () => {
     expect(css).toMatch(/:focus-within\s*\{[^}]*animation-play-state: paused/);
     expect(css).toMatch(/overflow-x: auto/);
     expect(css).toMatch(/font-size: var\(--mf-size-label\)/);
+  });
+
+  // @traces 228-FR-018
+  it('sets the brands at 16 px on a phone, where they are running text', () => {
+    const css = readFileSync(join(__dirname, 'brand-strip.css'), 'utf8');
+
+    expect(phoneRules(css)).toMatch(
+      /button \{[^}]*font-size: var\(--mf-size-body\)/,
+    );
   });
 });
