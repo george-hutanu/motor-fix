@@ -51,6 +51,12 @@ import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules
 import { platformRulesControllerList } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesDto } from '../models/platform-rules-dto';
+import { recheckControllerDue } from '../fn/admin/recheck-controller-due';
+import { RecheckControllerDue$Params } from '../fn/admin/recheck-controller-due';
+import { recheckControllerRecord } from '../fn/admin/recheck-controller-record';
+import { RecheckControllerRecord$Params } from '../fn/admin/recheck-controller-record';
+import { RecheckDueListDto } from '../models/recheck-due-list-dto';
+import { RecheckRecordedDto } from '../models/recheck-recorded-dto';
 import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
 import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
@@ -281,6 +287,72 @@ export class AdminService extends BaseService {
   adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
     const resp = this.adminOverviewControllerGrowth$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
+  }
+
+  /** Path part for operation `recheckControllerDue()` */
+  static readonly RecheckControllerDuePath = '/api/v1/admin/rechecks';
+
+  /**
+   * The published garages due for their monthly register re-check.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `recheckControllerDue()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  recheckControllerDue$Response(params?: RecheckControllerDue$Params, context?: HttpContext): Promise<StrictHttpResponse<RecheckDueListDto>> {
+    const obs = recheckControllerDue(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The published garages due for their monthly register re-check.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `recheckControllerDue$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  recheckControllerDue(params?: RecheckControllerDue$Params, context?: HttpContext): Promise<RecheckDueListDto> {
+    const resp = this.recheckControllerDue$Response(params, context);
+    return resp.then((r: StrictHttpResponse<RecheckDueListDto>): RecheckDueListDto => r.body);
+  }
+
+  /** Path part for operation `recheckControllerRecord()` */
+  static readonly RecheckControllerRecordPath = '/api/v1/admin/garages/{id}/rechecks';
+
+  /**
+   * Record a garage's monthly register re-check.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `recheckControllerRecord()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  recheckControllerRecord$Response(params: RecheckControllerRecord$Params, context?: HttpContext): Promise<StrictHttpResponse<RecheckRecordedDto>> {
+    const obs = recheckControllerRecord(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Record a garage's monthly register re-check.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `recheckControllerRecord$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  recheckControllerRecord(params: RecheckControllerRecord$Params, context?: HttpContext): Promise<RecheckRecordedDto> {
+    const resp = this.recheckControllerRecord$Response(params, context);
+    return resp.then((r: StrictHttpResponse<RecheckRecordedDto>): RecheckRecordedDto => r.body);
   }
 
   /** Path part for operation `reportDecisionControllerDecide()` */

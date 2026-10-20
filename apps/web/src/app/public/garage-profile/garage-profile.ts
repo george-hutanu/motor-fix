@@ -48,11 +48,13 @@ import { SaveGarageButton } from '../saved-garages/save-garage-button/save-garag
 import { SavedGarages } from '../saved-garages/saved-garages';
 
 // What can change on a garage's page: the garage, its reviews, its
-// verification, prices, mechanics, facilities and response figures.
+// verification and re-checks, prices, mechanics, facilities and response
+// figures.
 const KINDS = EVENT_KINDS.filter(
   (kind) =>
     /^(garage|review|price_list|mechanic|facility)\./.test(kind) ||
     kind === 'verification.decided' ||
+    kind === 'recheck.recorded' ||
     kind === 'response_stats.updated',
 );
 

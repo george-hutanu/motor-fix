@@ -2567,7 +2567,7 @@
             "in": "query",
             "schema": {
               "minimum": 1,
-              "maximum": 12,
+              "maximum": 16,
               "default": 8,
               "type": "integer"
             }
@@ -2588,7 +2588,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: limit is not a whole number from 1 to 12"
+            "description": "validation_failed: limit is not a whole number from 1 to 16"
           }
         },
         "tags": [
@@ -5287,6 +5287,100 @@
         },
         "tags": [
           "garages"
+        ]
+      }
+    },
+    "/api/v1/admin/rechecks": {
+      "get": {
+        "operationId": "RecheckController_due",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecheckDueListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The published garages due for their monthly register re-check",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/garages/{id}/rechecks": {
+      "post": {
+        "operationId": "RecheckController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordRecheckDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecheckRecordedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no garage"
+          },
+          "409": {
+            "description": "recheck_conflict or recheck_stale: the date of last check moved; recheck_not_due"
+          },
+          "422": {
+            "description": "recheck_date_invalid, recheck_detail_invalid, recheck_activities_empty, recheck_activity_unknown or recheck_activities_wider, with the field"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a garage's monthly register re-check",
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -13598,7 +13692,7 @@
           },
           "verifiedAt": {
             "type": "string",
-            "description": "When MotorFix last verified the garage",
+            "description": "The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither",
             "format": "date-time",
             "nullable": true
           },
@@ -13686,6 +13780,175 @@
           "jobTypes",
           "prices",
           "photos"
+        ]
+      },
+      "RecheckDueRowDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rarNumber": {
+            "type": "string",
+            "description": "The newest verification file's RAR number",
+            "nullable": true
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "daysSince": {
+            "type": "number",
+            "description": "Whole Bucharest days since the last check",
+            "nullable": true
+          },
+          "overdue": {
+            "type": "boolean",
+            "description": "Last checked more than 31 days ago, or never"
+          },
+          "activities": {
+            "description": "The garage's current rar_activity codes",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "activityNames": {
+            "description": "The current codes the catalogue knows, by name, for the record form",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
+          }
+        },
+        "required": [
+          "garageId",
+          "name",
+          "rarNumber",
+          "lastCheckedOn",
+          "daysSince",
+          "overdue",
+          "activities",
+          "activityNames"
+        ]
+      },
+      "RecheckDueListDto": {
+        "type": "object",
+        "properties": {
+          "today": {
+            "type": "string",
+            "description": "The Bucharest day the list was read for",
+            "format": "date"
+          },
+          "items": {
+            "description": "Every due garage, the oldest check first and never-checked ones before all",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecheckDueRowDto"
+            }
+          }
+        },
+        "required": [
+          "today",
+          "items"
+        ]
+      },
+      "RecordRecheckDto": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed"
+            ]
+          },
+          "failure": {
+            "type": "string",
+            "description": "Which way the authorisation failed; failed only",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
+          },
+          "checkedOn": {
+            "type": "string",
+            "description": "The Bucharest day of the look-up: after the last check, not after today",
+            "format": "date"
+          },
+          "activities": {
+            "description": "The rar_activity codes the authorisation covers, a non-empty part of the garage's current set; ok only",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detail": {
+            "type": "string",
+            "description": "Trimmed; 1 to 200 characters, required on a failure and refused on ok"
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "description": "The garage's date of last check the admin's row showed, or null; a moved date is refused",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "result",
+          "checkedOn",
+          "lastCheckedOn"
+        ]
+      },
+      "RecheckRecordedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed"
+            ]
+          },
+          "checkedOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "description": "The garage's date of last check after the save",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "suspended"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "garageId",
+          "result",
+          "checkedOn",
+          "lastCheckedOn",
+          "status"
         ]
       },
       "ReportDecisionDto": {

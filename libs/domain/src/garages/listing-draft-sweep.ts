@@ -1,4 +1,4 @@
-import { Logger, type Provider } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 
 import {
   continueLink,
@@ -7,12 +7,9 @@ import {
 } from './listing-drafts/listing-drafts';
 import { newToken } from '../auth/email-confirmation/email-confirmation';
 import type { PrismaClient } from '../generated/prisma/client';
-import {
-  NOTIFICATIONS_PRISMA,
-  NotificationsService,
-} from '../notifications/notifications.service';
-import { DAILY_TASKS, type DailyTask } from '../scheduler/daily';
-import { StorageService } from '../storage/storage.service';
+import type { NotificationsService } from '../notifications/notifications.service';
+import type { DailyTask } from '../scheduler/daily';
+import type { StorageService } from '../storage/storage.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysBefore = (now: Date, days: number) =>
@@ -147,14 +144,3 @@ export class ListingDraftSweep implements DailyTask {
     this.logger.error(`listing draft ${what} failed for ${id}: ${reason}`);
   }
 }
-
-// The worker's daily tasks: this sweep, on the notifications module's pool.
-export const listingDraftDaily = (webUrl: string | undefined): Provider => ({
-  inject: [NOTIFICATIONS_PRISMA, NotificationsService, StorageService],
-  provide: DAILY_TASKS,
-  useFactory: (
-    prisma: PrismaClient,
-    notifications: NotificationsService,
-    storage: StorageService,
-  ) => [new ListingDraftSweep(prisma, notifications, storage, webUrl)],
-});

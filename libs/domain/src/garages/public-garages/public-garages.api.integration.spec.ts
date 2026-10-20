@@ -7,6 +7,7 @@ import request from 'supertest';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { addDays, localDay } from '../../bucharest';
 import { purgeAudience } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
@@ -22,6 +23,7 @@ import { SearchLogService } from '../../search/search-log/search-log.service';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
+import { RecheckService } from '../verification/recheck/recheck.service';
 import { SuspensionService } from '../verification/suspension/suspension.service';
 import { VerificationService } from '../verification/verification.service';
 
@@ -540,27 +542,67 @@ describe('what the profile says about the garage', () => {
     });
   });
 
-  it('dates the verification by the latest approved file', async () => {
+  // @traces 1353-FR-001
+  it('dates the verification by the stored day of last check, never by a file', async () => {
     const approved = await garage('approved');
     await prisma.garage.update({
-      data: { approvedAt: new Date('2025-03-01T10:00:00.000Z') },
+      data: {
+        approvedAt: new Date('2025-03-01T10:00:00.000Z'),
+        lastCheckedOn: new Date('2026-01-15'),
+      },
       where: { id: approved.id },
     });
-    await approvedFile(approved.id, new Date('2026-01-15T09:30:00.000Z'));
-    await prisma.verificationFile.create({
-      data: {
-        decidedAt: new Date('2026-05-01T09:30:00.000Z'),
-        garageId: approved.id,
-        status: 'rejected',
-      },
-    });
+    await approvedFile(approved.id, new Date('2026-05-01T09:30:00.000Z'));
 
     const res = await read(approved.slug);
 
-    expect(res.body.verifiedAt).toBe('2026-01-15T09:30:00.000Z');
+    expect(res.body.verifiedAt).toBe('2026-01-15T00:00:00.000Z');
   });
 
-  it('keeps the approval date while an approved file is reopened into review', async () => {
+  // @traces 1353-FR-001 1353-FR-006
+  it('moves the verification date to the day of a valid re-check', async () => {
+    const approved = await garage('approved');
+    const today = localDay(new Date());
+    await prisma.garage.update({
+      data: {
+        approvedAt: new Date('2025-03-01T10:00:00.000Z'),
+        lastCheckedOn: new Date(addDays(today, -40)),
+        rarActivities: ['mechanics'],
+      },
+      where: { id: approved.id },
+    });
+    const admin = await account('Ana Popescu', ['admin']);
+
+    await app.get(RecheckService).record(
+      {
+        accountId: admin,
+        garageId: null,
+        permissions: {
+          canAnswerQuotes: false,
+          canMoveBookings: false,
+          canRecordFinalPrice: false,
+        },
+        role: 'admin',
+        roles: ['admin'],
+      },
+      approved.id,
+      {
+        activities: ['mechanics'],
+        checkedOn: today,
+        lastCheckedOn: addDays(today, -40),
+        result: 'ok',
+      },
+    );
+
+    const [{ day }] = await prisma.$queryRaw<{ day: string }[]>`
+      SELECT last_checked_on::text AS day FROM garage WHERE id = ${approved.id}::uuid`;
+    const res = await read(approved.slug);
+    expect(day).toBe(today);
+    expect(res.body.verifiedAt.slice(0, 10)).toBe(day);
+  });
+
+  // @traces 1353-FR-001
+  it('falls back to the approval instant when no day of last check is stored', async () => {
     const approved = await garage('approved');
     await prisma.garage.update({
       data: { approvedAt: new Date('2026-02-02T08:00:00.000Z') },

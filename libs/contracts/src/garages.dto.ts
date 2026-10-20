@@ -159,7 +159,8 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
   description?: string;
 
   @ApiProperty({
-    description: 'When MotorFix last verified the garage',
+    description:
+      "The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither",
     format: 'date-time',
     nullable: true,
     type: String,

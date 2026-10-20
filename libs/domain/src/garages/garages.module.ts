@@ -39,6 +39,8 @@ import {
 } from './verification/garage-reports/garage-reports.service';
 import { LegalCheckController } from './verification/legal-check/legal-check.controller';
 import { LegalCheckService } from './verification/legal-check/legal-check.service';
+import { RecheckController } from './verification/recheck/recheck.controller';
+import { RecheckService } from './verification/recheck/recheck.service';
 import { ReportDecisionController } from './verification/report-decision/report-decision.controller';
 import { ReportDecisionService } from './verification/report-decision/report-decision.service';
 import { SuspensionController } from './verification/suspension/suspension.controller';
@@ -87,6 +89,7 @@ export class GaragesModule {
         PriceListController,
         GarageLabourController,
         PublicGaragesController,
+        RecheckController,
         ReportDecisionController,
         SuspensionController,
         VerificationChecksController,
@@ -125,6 +128,7 @@ export class GaragesModule {
         StaffInviteService,
         PriceListService,
         PublicGaragesService,
+        RecheckService,
         ReportDecisionService,
         SuspensionService,
         VerificationService,

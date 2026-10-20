@@ -367,6 +367,61 @@ describe('a garage that cannot be suspended', () => {
   });
 });
 
+// @traces 1351-FR-007
+describe('a refusal met inside the caller’s transaction', () => {
+  const refusedIn = async (actor: Actor, cause: SuspensionCause) => {
+    try {
+      await prisma.$transaction((tx) =>
+        service().suspendIn(tx, actor, garage.id, cause, REASON),
+      );
+    } catch (error) {
+      return error;
+    }
+    throw new Error('the suspension was not refused');
+  };
+
+  it('records the refused attempt apart and answers the 409 to throw', async () => {
+    await service().suspend(admin, garage.id, 'admin', REASON);
+    const dan = person(await account('Dan Ene', ['admin']), 'admin');
+    const caught = await refusedIn(dan, 'recheck_failed');
+
+    const answer = await service().refused(
+      caught,
+      garage.id,
+      'recheck_failed',
+      dan.role,
+    );
+
+    expect(answer).toBeInstanceOf(HttpException);
+    const res = await refusal(Promise.reject(answer));
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('garage_already_suspended');
+    const entries = await history(garage.id);
+    expect(entries.map((e) => e.kind)).toEqual([
+      'garage_suspended',
+      'garage_suspension_refused',
+    ]);
+    expect(entries[1]).toMatchObject({
+      actorId: dan.accountId,
+      text: `recheck_failed: ${REASON}`,
+    });
+  });
+
+  it('hands back any other error untouched and records nothing', async () => {
+    const other = new Error('caller failed');
+
+    const answer = await service().refused(
+      other,
+      garage.id,
+      'recheck_failed',
+      admin.role,
+    );
+
+    expect(answer).toBe(other);
+    expect(await history(garage.id)).toHaveLength(0);
+  });
+});
+
 describe('two admins at once', () => {
   it('leaves exactly one suspension, one event and one refusal', async () => {
     const dan = person(await account('Dan Ene', ['admin']), 'admin');

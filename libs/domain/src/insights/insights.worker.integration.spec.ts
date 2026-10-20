@@ -2,11 +2,12 @@
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue, QueueEvents } from 'bullmq';
+import { Redis } from 'ioredis';
 
 import { INSIGHTS_QUEUE, InsightsModule } from './insights.module';
 import { writeSnapshot } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
-import { addDays, localDay } from '../bucharest';
+import { addDays, atLocal, localDay } from '../bucharest';
 import {
   databaseUrl,
   fixtures,
@@ -188,6 +189,117 @@ describe('the night job', () => {
         where: { dimension: 'total', key: 'all' },
       }),
     ).toBe(29);
+  });
+
+  // @traces 228-FR-012 228-FR-013
+  it('ranks the brands by the searches once the demand rows are written, and drops the cached brand list', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE brand, demand_daily CASCADE');
+    await prisma.brand.create({
+      data: { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+    });
+    const dacia = await prisma.brand.create({
+      data: { key: 'dacia', name: 'Dacia', popularity: 2, slug: 'dacia' },
+    });
+    // Searched three days ago: the job counts the day, then ranks by it.
+    const at = atLocal(addDays(localDay(new Date()), -3), 12);
+    await prisma.searchLog.createMany({
+      data: [1, 2, 3].map(() => ({ at, brandId: dacia.id })),
+    });
+    const cache = new Redis(redisUrl);
+    await cache.set('brands:active', '[]');
+    const info = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add('demand-daily', {});
+      await job.waitUntilFinished(events, 10_000);
+
+      expect(
+        await prisma.brand.findMany({
+          orderBy: { name: 'asc' },
+          select: { name: true, popularity: true },
+        }),
+      ).toEqual([
+        { name: 'BMW', popularity: 2 },
+        { name: 'Dacia', popularity: 1 },
+      ]);
+      expect(await cache.get('brands:active')).toBeNull();
+      expect(info).toHaveBeenCalledWith('demand-daily ranked 2, changed 2');
+    } finally {
+      info.mockRestore();
+      cache.disconnect();
+      await events.close();
+      await app.close();
+    }
+  });
+
+  // @traces 228-FR-014
+  it('fails the demand job when the ranking cannot be written, keeps the ranks and logs the final failure once', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE brand, demand_daily CASCADE');
+    await prisma.brand.create({
+      data: { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+    });
+    const dacia = await prisma.brand.create({
+      data: { key: 'dacia', name: 'Dacia', popularity: 2, slug: 'dacia' },
+    });
+    const at = atLocal(addDays(localDay(new Date()), -3), 12);
+    await prisma.searchLog.createMany({
+      data: [1, 2, 3].map(() => ({ at, brandId: dacia.id })),
+    });
+    // The ranking's write is the only brand update the job makes.
+    await prisma.$executeRawUnsafe(
+      "CREATE FUNCTION refuse_brand_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'brand writes refused'; END $$",
+    );
+    await prisma.$executeRawUnsafe(
+      'CREATE TRIGGER refuse_brand_update BEFORE UPDATE ON brand FOR EACH ROW EXECUTE FUNCTION refuse_brand_update()',
+    );
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add(
+        'demand-daily',
+        {},
+        { attempts: 2, backoff: { delay: 10, type: 'fixed' } },
+      );
+      await expect(job.waitUntilFinished(events, 20_000)).rejects.toThrow();
+
+      expect(
+        await prisma.brand.findMany({
+          orderBy: { name: 'asc' },
+          select: { name: true, popularity: true },
+        }),
+      ).toEqual([
+        { name: 'BMW', popularity: 1 },
+        { name: 'Dacia', popularity: 2 },
+      ]);
+      const lines = error.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.includes('demand-daily'));
+      expect(lines).toEqual([
+        expect.stringMatching(/^insights job demand-daily failed: /),
+      ]);
+    } finally {
+      error.mockRestore();
+      await events.close();
+      await app.close();
+      await prisma.$executeRawUnsafe(
+        'DROP TRIGGER refuse_brand_update ON brand',
+      );
+      await prisma.$executeRawUnsafe('DROP FUNCTION refuse_brand_update()');
+    }
   });
 
   // @traces 143-FR-011

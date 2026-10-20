@@ -8,9 +8,14 @@
     @if (onResults()) {
       <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.newSearch' | t }}</a>
     } @else {
-      <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
+      <a [routerLink]="find().commands" [queryParams]="find().query">{{ 'public.siteBar.find' | t }}</a>
     }
-    <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+    <a [attr.href]="'/' + i18n.language() + '#how-it-works'" (click)="howItWorks($event)">{{ 'public.siteBar.howItWorks' | t }}</a>
+    @if (signedIn()) {
+      <a [routerLink]="['/', i18n.language(), 'account']">{{ 'public.siteBar.account' | t }}</a>
+    } @else {
+      <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+    }
     <a class="list" [routerLink]="['/', i18n.language(), 'list-your-garage']">{{ 'public.siteBar.list' | t }}</a>
   </nav>
   <mf-language-switch />

@@ -4,6 +4,8 @@ import {
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
   type DocumentKind,
+  RECHECK_RESULTS,
+  type RecheckResult,
   SUSPENSION_CAUSES,
   type SuspensionCause,
   type SystemLogKind,
@@ -115,6 +117,11 @@ const verificationChecks = () =>
   counter(
     'motorfix_verification_checks_total',
     "Checks an admin recorded on a garage's file, by kind and result",
+  );
+const rechecks = () =>
+  counter(
+    'motorfix_rechecks_total',
+    'Monthly register re-checks an admin recorded on a garage, by result',
   );
 const rejections = () =>
   counter(
@@ -244,6 +251,10 @@ export function countVerificationCheck(
   result: VerificationCheckResult,
 ) {
   verificationChecks().add(1, { kind, result });
+}
+
+export function countRecheck(result: RecheckResult) {
+  rechecks().add(1, { result });
 }
 
 const DECISION_REFUSAL_REASONS = [
@@ -388,6 +399,7 @@ const STARTS: Record<
         each('result', VERIFICATION_CHECK_RESULTS),
       ),
     ],
+    [rechecks, each('result', RECHECK_RESULTS)],
     [rejections, each('reason', VERIFICATION_REASON_CODES)],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],

@@ -91,7 +91,20 @@ export class RemindersScheduler {
   async handle(job: Job<Daily>): Promise<void> {
     await this.queueNext(this.now());
     await this.reminders.run(job.data.day);
-    for (const task of this.tasks) await task.run(this.now());
+    // A task that throws does not skip the ones after it; the job still
+    // fails, so the retry runs them all again.
+    const errors: unknown[] = [];
+    for (const task of this.tasks) {
+      try {
+        await task.run(this.now());
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, `${errors.length} daily tasks failed`);
+    }
   }
 
   failed(job: Job<Daily | CarEvent>, error: Error): void {

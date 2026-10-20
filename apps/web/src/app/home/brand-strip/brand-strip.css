@@ -1,0 +1,79 @@
+:host {
+  border-block: 1px solid var(--mf-line);
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+
+nav {
+  overflow: hidden;
+}
+
+/* Still, the row scrolls by hand instead. */
+nav.still {
+  overflow-x: auto;
+}
+
+.track {
+  display: flex;
+  width: max-content;
+}
+
+.track.moving {
+  animation: strip 36s linear infinite;
+}
+
+/* A brand with keyboard focus holds still to be read and pressed. */
+.track.moving:focus-within {
+  animation-play-state: paused;
+}
+
+ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--mf-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  gap: var(--mf-space-3);
+  letter-spacing: var(--mf-label-tracking);
+  min-height: 52px;
+  padding: 0 var(--mf-space-4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+button::after {
+  background: var(--mf-amber);
+  border-radius: 50%;
+  content: "";
+  height: 6px;
+  margin-inline-start: var(--mf-space-4);
+  width: 6px;
+}
+
+button:hover {
+  color: var(--mf-text);
+}
+
+@keyframes strip {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* On a phone the brand names are running text: 16 px. */
+@media (max-width: 767.98px) {
+  button {
+    font-size: var(--mf-size-body);
+  }
+}

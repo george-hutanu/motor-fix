@@ -1,0 +1,47 @@
+<mf-panel [heading]="heading()">
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="list" aria-busy="true" [attr.aria-label]="'admin.rechecks.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.queue.failed' | t }}</p>
+        <button type="button" class="action" (click)="retry()">{{ 'admin.queue.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty">{{ 'admin.rechecks.empty' | t }}</p>
+      } @else {
+        <ul class="list">
+          @for (row of rows(); track row.id) {
+            <li class="row" [class.overdue]="row.overdue">
+              <span class="who">
+                <span class="name">{{ row.name }}</span>
+                <span class="number">{{ row.number }}</span>
+              </span>
+              <span class="when">
+                <span class="checked">{{ row.checked }}</span>
+                <span class="age">
+                  @if (row.days) {
+                    <span class="days">{{ row.days }}</span>
+                  }
+                  @if (row.overdue) {
+                    <span class="tag">{{ 'admin.rechecks.overdue' | t }}</span>
+                  }
+                </span>
+              </span>
+              <button type="button" class="action" [attr.aria-label]="row.named" (click)="record(row.source)">
+                {{ 'admin.rechecks.record' | t }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</mf-panel>

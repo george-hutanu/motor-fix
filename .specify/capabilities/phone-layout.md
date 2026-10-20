@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-18
+updated: 2026-10-20
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -16,6 +16,7 @@ features:
   - 173-price-range-in-place
   - 305-reject-garage-reason
   - 304-request-garage-details
+  - 228-how-it-works-list-garage
 ---
 
 # Capability: Phone layout and installable web app
@@ -267,6 +268,34 @@ _From 305-reject-garage-reason._
 ### 304-FR-013 — Every new text MUST live in the shared admin i18n files in Romanian and English (U+2011 in hyphenated Romanian words); the dialog, the tag and the panel MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, the ticks one per line at 320 px, the text area full width, every control and the "Cere completări" button at least 44 px tall and reachable by keyboard, the text area and the tick group labelled, every refusal and state conveyed by text as well as colour; the dialog moves focus to the text area on open, returns it to the "Cere completări" button on cancel and to the drawer's title on success; the panel is a region named by its title and is read before the checks in document order.
 
 _From 304-request-garage-details._
+
+### 228-FR-001 — The public header MUST show, in order, the logo, "Găsește un mecanic", "Cum funcționează", "Autentificare", "Înscrie-ți service-ul" and the RO / EN switch; the existing phone behaviour (links hidden under 640 px, the bottom tab bar on public pages) MUST hold.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-002 — "Cum funcționează" MUST scroll Home to the section of that name and move focus to it; from any other public page it MUST open Home at that section in the current language.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-003 — On Home, "Găsește un mecanic" MUST open Results for the brand the picker currently shows; on other public pages it keeps its current target.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-004 — When a session is already known in this visit (the in-memory session source Home already reads), the header MUST show the account entry in place of "Autentificare"; a public page MUST NOT ask the server for the session to decide this.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-017 — The footer of every public page MUST show the logo (to Home) and three links: find a mechanic (Home), list your garage (the listing form), sign in (the sign-in dialog); the existing legal, cookie-settings and contact links MUST stay.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-018 — Every new text MUST exist in Romanian and English (MF-1) and the smallest text MUST be 12 px; the brand names in the strip are shown as written in the catalogue.
+
+_From 228-how-it-works-list-garage._
+
+### 228-FR-019 — `apps/web/src/app/public/frame/frame.ts` MUST carry no ticket id in a comment: the "(ST-287)" on main is removed (tech debt #657).
+
+_From 228-how-it-works-list-garage._
 
 ## Retired
 
