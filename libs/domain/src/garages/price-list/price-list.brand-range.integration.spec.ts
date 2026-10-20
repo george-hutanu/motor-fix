@@ -506,7 +506,7 @@ describe('who may set or remove a brand range', () => {
   });
 });
 
-// @traces 386-FR-009
+// @traces 386-FR-009 176-FR-005
 describe('the audit history of a brand range', () => {
   it('records the creation, the change with old and new values, and the removal', async () => {
     const w = await world();
@@ -524,19 +524,15 @@ describe('the audit history of a brand range', () => {
     expect(entries.every((e) => e.actorId === w.mihai)).toBe(true);
     expect(entries.every((e) => e.actorRole === 'owner')).toBe(true);
     const [created, updated, deleted] = entries;
-    expect(created?.newValue).toMatchObject({
-      brandId: w.bmw.id,
-      fromBani: 110_000,
-      jobTypeId: w.brakes.id,
-      toBani: 170_000,
-    });
-    expect(updated?.oldValue).toMatchObject({ fromBani: 110_000 });
-    expect(updated?.newValue).toMatchObject({ fromBani: 120_000 });
-    expect(deleted?.oldValue).toMatchObject({
-      brandId: w.bmw.id,
-      fromBani: 120_000,
-      toBani: 170_000,
-    });
+    const pair = { brandId: w.bmw.id, jobTypeId: w.brakes.id };
+    expect(entries.every((e) => e.field === 'brand_range')).toBe(true);
+    expect(entries.every((e) => e.kind === 'price_list')).toBe(true);
+    expect(created?.oldValue).toBeNull();
+    expect(created?.newValue).toEqual({ ...pair, from: 110_000, to: 170_000 });
+    expect(updated?.oldValue).toEqual({ ...pair, from: 110_000, to: 170_000 });
+    expect(updated?.newValue).toEqual({ ...pair, from: 120_000, to: 170_000 });
+    expect(deleted?.oldValue).toEqual({ ...pair, from: 120_000, to: 170_000 });
+    expect(deleted?.newValue).toBeNull();
   });
 
   it('records nothing for a write that changes nothing', async () => {

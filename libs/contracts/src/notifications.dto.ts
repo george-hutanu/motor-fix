@@ -94,6 +94,8 @@ export class NotificationPageDto {
 }
 
 export class UnreadCountDto {
-  @ApiProperty({ description: 'Unread bell notifications of the last 90 days' })
+  @ApiProperty({
+    description: "The account's unread bell notifications, of any age",
+  })
   count!: number;
 }

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 253-live-connection
   - 254-live-audience
@@ -21,6 +21,7 @@ features:
   - 270-card-pin-link
   - 172-price-list-states
   - 173-price-range-in-place
+  - 1190-live-reconnects
 ---
 
 # Capability: Live updates
@@ -45,17 +46,17 @@ _From 253-live-connection._
 
 _From 253-live-connection._
 
-### 253-FR-005 — Every message MUST use the SSE `event:` line for its kind and one `data:` line `{"kind":"…","id":"…","at":"…"}`, carrying no personal data.
+### 1190-FR-002 — Every `notification.created` message on a signed-in stream MUST name the created row's position in the SSE `id` field, so a client's `Last-Event-ID` is a position; no other message carries an `id` line (a `notification.read` moves no cursor, so a capped replay never skips unreplayed rows).
 
-_From 253-live-connection._
+_From 1190-live-reconnects._
 
 ### 254-FR-013 — Events MUST be fanned out through one Redis pub/sub channel, each message holding the event and its audience as a list of channel keys; every API copy MUST forward an event only to its own connections whose channels meet the audience and whose role, rights and garage switches allow it (FR-003 to FR-005, FR-009), each such connection exactly once.
 
 _From 254-live-audience._
 
-### 253-FR-007 — A stream with no event for 25 seconds MUST receive a comment line.
+### 1190-FR-006 — The server MUST send `retry: 3000` when a signed-in stream opens, a comment line after 25 seconds without data (as today), and MUST end a signed-in stream it has held for 14 minutes with a final message of kind `reconnect` (a planned close, not a `bye`); the interval MUST be settable for tests. The web client MUST honour the `retry` value as the delay of its first reopen after an unplanned drop.
 
-_From 253-live-connection._
+_From 1190-live-reconnects._
 
 ### 253-FR-008 — The server MUST end a stream when its access token expires. Before it ends a stream itself, the server MUST send `bye` whose `reason` is `expired`, `evicted` or `shutdown`.
 
@@ -77,9 +78,9 @@ _From 253-live-connection._
 
 _From 256-live-in-place._
 
-### 253-FR-013 — The web app MUST open one live connection per browser tab on a signed-in dashboard, reading the stream with the access token in the `Authorization` header, and MUST close it at sign-out or when the dashboard frame is destroyed; moving between views inside the frame keeps it; no connection is opened during server rendering.
+### 1190-FR-007 — The web app MUST hold one signed-in live stream per browser and role: the tab that wins the browser lock named for the account and role opens the stream and fans every message, state change and resync out to the other tabs of that account and role over the browser channel; a tab that does not hold the lock opens no stream and exposes the same events, state, offline signal and resync as if it did. The holder releases the lock only when its tab closes or hides, it is evicted or stops, or the browser goes offline; a transient drop or a token renewal keeps the lock and fans out `reconnecting`. On release and the next tab takes it over within 3 seconds, opening from the latest position any tab saw.
 
-_From 253-live-connection._
+_From 1190-live-reconnects._
 
 ### 253-FR-014 — After `bye` with reason `expired` or `shutdown`, the web app MUST renew the access token through the normal refresh and reconnect within 3 seconds; after `evicted`, after sign-out, or when the renewal fails it MUST NOT reconnect.
 
@@ -392,6 +393,38 @@ _From 172-price-list-states._
 
 _From 173-price-range-in-place._
 
+### 1190-FR-003 — A signed-in stream opened with `Last-Event-ID: <position>` (or `?since=<position>`, the header winning when both are present) MUST, after `hello`, replay the account's in-app notifications with a position greater than it, oldest first, at most 200, each as a `notification.created` message carrying the unread count read at replay time, before any live event of any kind (every live event arriving during the replay is held and sent after it); a missing, non-numeric, non-positive or foreign position replays nothing. The rows are read from PostgreSQL (the log); Redis stays the wake-up only.
+
+_From 1190-live-reconnects._
+
+### 1190-FR-004 — A live `notification.created` whose position is not above the last replayed one MUST be dropped on that stream, and one arriving during the replay MUST be delivered after it, so the stream delivers each notification once and in order.
+
+_From 1190-live-reconnects._
+
+### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
+
+_From 1190-live-reconnects._
+
+### 1190-FR-009 — On `pagehide` the tab MUST close its stream (releasing the browser's lock when it holds it) and keep no open request, so the page is eligible for the back/forward cache; on `pageshow` it MUST want the stream again, taking the lock if free, from its latest position.
+
+_From 1190-live-reconnects._
+
+### 1190-FR-010 — Where the browser has no lock or cross-tab channel, each tab MUST open its own stream as today (253-FR-013's behaviour), with the position rules of FR-008.
+
+_From 1190-live-reconnects._
+
+### 1190-FR-012 — The signed-in and the public stream MUST answer `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`, never a `Content-Encoding`, and the live paths MUST fall under the CDN's no-cache rule for `/api/*` (`infra/cdn/bunny.json`); a test MUST assert each.
+
+_From 1190-live-reconnects._
+
+### 1190-FR-013 — In the specs repo, MF-52's Build brief MUST say one stream per browser with a leader tab and replay of notifications from the last position (Final rules 1, Edge cases "Many tabs", "A proxy buffers the stream", "The access token expires"), its "Data and events" channel list MUST name `public:search`, `public:search:{brandId}`, `public:garage:{garageId}` and `public:mechanic:{mechanicId}` matching `PublicLiveController.channels()`, the front-end architecture page MUST agree, `node scripts/docs-lint.mjs` MUST pass and `llms.txt` MUST hold every page's current summary (from #621).
+
+_From 1190-live-reconnects._
+
+### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
+
+_From 1190-live-reconnects._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -408,3 +441,7 @@ _From 173-price-range-in-place._
 
 - `419-FR-002` — superseded by `267-FR-018` (2026-10-14)
 - `419-FR-010` — superseded by `267-FR-019` (2026-10-14)
+
+- `253-FR-013` — superseded by `1190-FR-007` (2026-10-19)
+- `253-FR-007` — superseded by `1190-FR-006` (2026-10-19)
+- `253-FR-005` — superseded by `1190-FR-002` (2026-10-19)

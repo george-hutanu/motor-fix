@@ -107,6 +107,14 @@ function rangeOf(body: RangeBody, withDuration: boolean) {
 type Pair = { brandId: string; garageId: string; jobTypeId: string };
 type Row = { garageId: string; priceId: string };
 
+// The pair travels with the range so a deleted row's entry still names it.
+const brandRange = (pair: Pair, from: number, to: number | null) => ({
+  brandId: pair.brandId,
+  from,
+  jobTypeId: pair.jobTypeId,
+  to,
+});
+
 const pairChange = (pair: Pair) => ({
   brandIds: [pair.brandId],
   garageId: pair.garageId,
@@ -198,7 +206,10 @@ export class PriceListService {
     const own = rows.find((row) => row.brandId === brandId);
     if (own?.fromBani === fromBani && own.toBani === toBani) return saved;
     await this.prisma.$transaction(async (tx) => {
-      const scope = this.scopeOf(actor, garageId, 'garage_price');
+      const scope = {
+        ...this.scopeOf(actor, garageId, 'garage_price'),
+        field: 'brand_range',
+      };
       // A removal racing this write took the row first: it is stored anew.
       const { count } = own
         ? await tx.garagePrice.updateMany({
@@ -210,13 +221,8 @@ export class PriceListService {
         await this.audit.record(tx, {
           ...scope,
           action: 'update',
-          newValue: { brandId, fromBani, jobTypeId, toBani },
-          oldValue: {
-            brandId,
-            fromBani: own.fromBani,
-            jobTypeId,
-            toBani: own.toBani,
-          },
+          newValue: brandRange(pair, fromBani, toBani),
+          oldValue: brandRange(pair, own.fromBani, own.toBani),
           subjectId: own.id,
         });
       } else {
@@ -239,7 +245,7 @@ export class PriceListService {
         await this.audit.record(tx, {
           ...scope,
           action: 'create',
-          newValue: fields,
+          newValue: brandRange(pair, fromBani, toBani),
           subjectId: row.id,
         });
       }
@@ -306,13 +312,11 @@ export class PriceListService {
         },
         {
           duration_minutes: row.durationMinutes,
-          from_bani: row.fromBani,
-          to_bani: row.toBani,
+          range: { from: row.fromBani, to: row.toBani },
         },
         {
           duration_minutes: durationMinutes,
-          from_bani: fromBani,
-          to_bani: toBani,
+          range: { from: fromBani, to: toBani },
         },
       );
       await this.changed(tx, {
@@ -355,15 +359,14 @@ export class PriceListService {
         data: { labourFromBani: fromBani, labourToBani: toBani },
         where: { id: garageId },
       });
-      await this.audit.recordChanges(
-        tx,
-        { ...this.scopeOf(actor, garageId, 'garage'), subjectId: garageId },
-        {
-          labour_from_bani: garage.labourFromBani,
-          labour_to_bani: garage.labourToBani,
-        },
-        { labour_from_bani: fromBani, labour_to_bani: toBani },
-      );
+      await this.audit.record(tx, {
+        ...this.scopeOf(actor, garageId, 'garage'),
+        action: 'update',
+        field: 'labour_range',
+        newValue: { from: fromBani, to: toBani },
+        oldValue: { from: garage.labourFromBani, to: garage.labourToBani },
+        subjectId: garageId,
+      });
       await this.changed(tx, { brandIds: [], garageId, jobTypeIds: [] });
     });
     await this.forget(garage.slug, NO_BRAND);
@@ -396,12 +399,8 @@ export class PriceListService {
       await this.audit.record(tx, {
         ...this.scopeOf(actor, garageId, 'garage_price'),
         action: 'delete',
-        oldValue: {
-          brandId,
-          fromBani: own.fromBani,
-          jobTypeId,
-          toBani: own.toBani,
-        },
+        field: 'brand_range',
+        oldValue: brandRange(pair, own.fromBani, own.toBani),
         subjectId: own.id,
       });
       await this.changed(tx, pairChange(pair));
@@ -417,7 +416,10 @@ export class PriceListService {
     return {
       actorId: actor.accountId,
       actorRole: actor.role,
+      assistantGrantId: actor.assistantGrantId,
       garageId,
+      kind: 'price_list',
+      requestId: actor.requestId,
       subjectType,
     };
   }

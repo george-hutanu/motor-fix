@@ -7,7 +7,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
+
+describe('a sweep page\'s browser context', () => {
+  it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
+    const options = contextOptions({ viewport: 'tablet', scheme: 'dark', lang: 'en' });
+    assert.equal(options.reducedMotion, 'reduce');
+    assert.equal(options.colorScheme, 'dark');
+    assert.equal(options.viewport.width, VIEWPORTS.tablet.width);
+    assert.ok(options.locale.startsWith('en'));
+  });
+});
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {

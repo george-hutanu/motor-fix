@@ -9,11 +9,17 @@ import { RequestBuilder } from '../../request-builder';
 
 
 export interface LiveControllerLive$Params {
+
+/**
+ * The last position the client saw, for a client that cannot send Last-Event-ID (the header wins)
+ */
+  since?: string;
 }
 
 export function liveControllerLive(http: HttpClient, rootUrl: string, params?: LiveControllerLive$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
   const rb = new RequestBuilder(rootUrl, liveControllerLive.PATH, 'get');
   if (params) {
+    rb.query('since', params.since, {});
   }
 
   return http.request(

@@ -6040,7 +6040,17 @@
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "The last position the client saw, for a client that cannot send Last-Event-ID (the header wins)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A server-sent events stream"
@@ -7620,7 +7630,7 @@
         "properties": {
           "count": {
             "type": "number",
-            "description": "Unread bell notifications of the last 90 days"
+            "description": "The account's unread bell notifications, of any age"
           }
         },
         "required": [
@@ -14538,6 +14548,28 @@
           "rarActivities"
         ]
       },
+      "VerificationChangeJobDto": {
+        "type": "object",
+        "properties": {
+          "nameRo": {
+            "type": "string",
+            "example": "Plăcuțe și discuri de frână față"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Front brake pads and discs"
+          },
+          "brand": {
+            "type": "string",
+            "description": "A brand range's brand; absent for the job's own range",
+            "example": "BMW"
+          }
+        },
+        "required": [
+          "nameRo",
+          "nameEn"
+        ]
+      },
       "VerificationChangeDto": {
         "type": "object",
         "properties": {
@@ -14613,6 +14645,14 @@
               {
                 "items": {},
                 "type": "array"
+              }
+            ]
+          },
+          "job": {
+            "description": "A price entry's job, and the brand of a brand range; absent for any other entry, or for a price row since removed that its entry does not name",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationChangeJobDto"
               }
             ]
           },

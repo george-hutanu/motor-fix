@@ -181,5 +181,7 @@ describe('cache headers on read routes', () => {
     expect(stream.headers['content-encoding']).toBeUndefined();
     // no-transform keeps an edge from compressing or buffering the stream.
     expect(stream.headers['cache-control']).toBe('no-cache, no-transform');
+    // @traces 1190-FR-012
+    expect(stream.headers['x-accel-buffering']).toBe('no');
   });
 });

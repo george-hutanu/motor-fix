@@ -6,6 +6,8 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
+import { PriceListService } from './price-list.service';
+import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
@@ -416,7 +418,7 @@ describe('a save from a stale row', () => {
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('stale');
     expect(await stored(w)).toMatchObject(NEW_RANGE);
-    expect(await history(w)).toHaveLength(2);
+    expect(await history(w)).toHaveLength(1);
   });
 
   it('answers 409 before judging an unchanged body', async () => {
@@ -490,9 +492,9 @@ describe('who may change a range', () => {
   });
 });
 
-// @traces 173-FR-008
+// @traces 176-FR-001 176-FR-002 176-FR-004
 describe('what a range change records', () => {
-  it('writes one audit entry per changed field', async () => {
+  it('writes one range entry with both ends', async () => {
     const w = await world();
 
     await setRange(w, {
@@ -507,20 +509,15 @@ describe('what a range change records', () => {
         action: 'update',
         actorId: w.mihai,
         actorRole: 'owner',
-        field: 'from_bani',
-        newValue: 95_000,
-        oldValue: 89_000,
+        field: 'range',
+        newValue: { from: 95_000, to: 145_000 },
+        oldValue: { from: 89_000, to: 140_000 },
         subjectId: w.row.id,
-      }),
-      expect.objectContaining({
-        field: 'to_bani',
-        newValue: 145_000,
-        oldValue: 140_000,
       }),
     ]);
   });
 
-  it('records the labour change against the garage', async () => {
+  it('records the labour change against the garage as one range', async () => {
     const w = await world();
 
     await setLabour(w, { fromBani: 20_000, toBani: 24_000 });
@@ -528,12 +525,289 @@ describe('what a range change records', () => {
     expect(await history(w, 'garage')).toEqual([
       expect.objectContaining({
         action: 'update',
-        field: 'labour_from_bani',
-        newValue: 20_000,
-        oldValue: 18_000,
+        field: 'labour_range',
+        newValue: { from: 20_000, to: 24_000 },
+        oldValue: { from: 18_000, to: 24_000 },
         subjectId: w.nord.id,
       }),
     ]);
+  });
+});
+
+// @traces 176-FR-011
+describe('where a price change is kept', () => {
+  it('keeps it in the activity log alone, with nothing in the System status log', async () => {
+    const w = await world();
+    const since = new Date();
+
+    await setRange(w, {
+      durationMinutes: 120,
+      fromBani: 95_000,
+      toBani: 145_000,
+    });
+    await setLabour(w, { fromBani: 20_000, toBani: 24_000 });
+
+    const logged = await prisma.systemLogEntry.findMany({
+      where: { at: { gte: since }, message: { contains: w.nord.id } },
+    });
+    const kept = await prisma.systemLogEntry.findMany({
+      where: {
+        at: { gte: since },
+        context: { equals: w.nord.id, path: ['garageId'] },
+      },
+    });
+    expect([...logged, ...kept]).toEqual([]);
+    expect(
+      await prisma.activityLog.count({ where: { garageId: w.nord.id } }),
+    ).toBe(2);
+  });
+});
+
+// @traces 176-FR-001 176-FR-003 176-FR-006 176-FR-007 176-FR-010
+describe('the price list entry format', () => {
+  const entries = (w: World) =>
+    prisma.activityLog.findMany({
+      orderBy: { field: 'asc' },
+      where: { garageId: w.nord.id },
+    });
+
+  it('stores every column of a range entry', async () => {
+    const w = await world();
+
+    await setRange(w, NEW_RANGE);
+
+    const [entry, ...rest] = await entries(w);
+    expect(rest).toEqual([]);
+    expect(entry).toMatchObject({
+      action: 'update',
+      actorId: w.mihai,
+      actorName: 'mihai',
+      actorRole: 'owner',
+      field: 'range',
+      garageId: w.nord.id,
+      internal: false,
+      isKeyChange: false,
+      kind: 'price_list',
+      subjectId: w.row.id,
+      subjectType: 'garage_price',
+      text: null,
+      viaAssistant: false,
+    });
+  });
+
+  it('writes the range and the duration of one save as two entries', async () => {
+    const w = await world();
+
+    await setRange(w, { ...NEW_RANGE, durationMinutes: 150 });
+
+    expect(
+      (await entries(w)).map(({ field, kind, newValue, oldValue }) => ({
+        field,
+        kind,
+        newValue,
+        oldValue,
+      })),
+    ).toEqual([
+      {
+        field: 'duration_minutes',
+        kind: 'price_list',
+        newValue: 150,
+        oldValue: 120,
+      },
+      {
+        field: 'range',
+        kind: 'price_list',
+        newValue: { from: 95_000, to: 145_000 },
+        oldValue: { from: 89_000, to: 140_000 },
+      },
+    ]);
+  });
+
+  it('records a cleared top as a null end', async () => {
+    const w = await world();
+
+    await setRange(w, { durationMinutes: 120, fromBani: 89_000, toBani: null });
+
+    expect(await entries(w)).toEqual([
+      expect.objectContaining({
+        field: 'range',
+        newValue: { from: 89_000, to: null },
+        oldValue: { from: 89_000, to: 140_000 },
+      }),
+    ]);
+  });
+
+  it('marks the labour entry as part of the price list', async () => {
+    const w = await world();
+
+    await setLabour(w, { fromBani: 20_000, toBani: 26_000 });
+
+    expect(await entries(w)).toEqual([
+      expect.objectContaining({
+        field: 'labour_range',
+        kind: 'price_list',
+        subjectType: 'garage',
+      }),
+    ]);
+  });
+
+  it('writes nothing for a save of the same values', async () => {
+    const w = await world();
+
+    await setRange(w, {
+      durationMinutes: 120,
+      fromBani: 89_000,
+      toBani: 140_000,
+    });
+    await setLabour(w, { fromBani: 18_000, toBani: 24_000 });
+
+    expect(await entries(w)).toEqual([]);
+  });
+
+  it('writes nothing when a save leaves out a top that is already empty', async () => {
+    const w = await world();
+    const cleared = await setRange(w, {
+      durationMinutes: 120,
+      fromBani: 89_000,
+      toBani: null,
+    });
+
+    await patch(
+      rangePath(w),
+      {
+        durationMinutes: 120,
+        expectedUpdatedAt: cleared.body.updatedAt,
+        fromBani: 89_000,
+      },
+      w.owner,
+    );
+
+    expect(await entries(w)).toHaveLength(1);
+  });
+
+  it('keeps neither the change nor an entry when the entry cannot be written', async () => {
+    const w = await world();
+    const audit = app.get<AuditPort>(AUDIT_PORT);
+    const failing = jest
+      .spyOn(audit, 'recordChanges')
+      .mockRejectedValueOnce(new Error('the entry write failed'));
+
+    const res = await setRange(w, NEW_RANGE);
+    failing.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(await stored(w)).toMatchObject({
+      fromBani: 89_000,
+      toBani: 140_000,
+    });
+    expect(await entries(w)).toEqual([]);
+  });
+
+  it('writes nothing when the price list, its history or the profile is read', async () => {
+    const w = await world();
+    const admin = await account('ana', ['admin']);
+
+    await http()
+      .get(`/garages/${w.nord.id}/prices`)
+      .set('Authorization', w.owner);
+    await http().get('/audit-history').set('Authorization', w.owner);
+    await http()
+      .get('/audit-history')
+      .set('Authorization', bearer(admin, 'admin'));
+    await http().get(`/garages/${w.nord.slug}`);
+
+    expect(await entries(w)).toEqual([]);
+  });
+});
+
+// @traces 176-FR-008
+describe('a price change made through an AI assistant', () => {
+  it('carries the grant and the request of the call', async () => {
+    const w = await world();
+    const owner = await prisma.account.findUniqueOrThrow({
+      where: { id: w.mihai },
+    });
+    const grant = randomUUID();
+    const call = randomUUID();
+
+    await app.get(PriceListService).setRange(
+      {
+        accountId: owner.id,
+        assistantGrantId: grant,
+        garageId: w.nord.id,
+        permissions: {},
+        requestId: call,
+        role: 'garage',
+        roles: ['garage'],
+        via: 'assistant',
+      } as unknown as Parameters<PriceListService['setRange']>[0],
+      { garageId: w.nord.id, priceId: w.row.id },
+      { ...NEW_RANGE, expectedUpdatedAt: stamp(w) },
+    );
+
+    expect(
+      await prisma.activityLog.findMany({ where: { garageId: w.nord.id } }),
+    ).toEqual([
+      expect.objectContaining({
+        assistantGrantId: grant,
+        field: 'range',
+        requestId: call,
+        viaAssistant: true,
+      }),
+    ]);
+  });
+});
+
+// @traces 176-FR-009
+describe('who reads a price entry', () => {
+  const read = (as: string, query: Record<string, string> = {}) =>
+    http().get('/audit-history').query(query).set('Authorization', as);
+
+  it('shows it to the garage owner, receptionist and mechanic, and to an admin', async () => {
+    const w = await world();
+    const admin = bearer(await account('ana', ['admin']), 'admin');
+    await setRange(w, NEW_RANGE);
+
+    for (const as of [w.owner, w.receptionist, w.mechanic, admin]) {
+      const res = await read(as, { area: 'prices', garageId: w.nord.id });
+      expect(res.status).toBe(200);
+      expect(res.body.items).toEqual([
+        expect.objectContaining({
+          actor: expect.objectContaining({ id: w.mihai, role: 'owner' }),
+          field: 'range',
+          newValue: { from: 95_000, to: 145_000 },
+          oldValue: { from: 89_000, to: 140_000 },
+          subjectId: w.row.id,
+        }),
+      ]);
+    }
+  });
+
+  it('shows it to an admin reading every garage, in the prices area', async () => {
+    const w = await world();
+    const admin = bearer(await account('ana', ['admin']), 'admin');
+    const from = new Date().toISOString();
+    await setRange(w, NEW_RANGE);
+
+    const res = await read(admin, { area: 'prices', from });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toContainEqual(
+      expect.objectContaining({
+        field: 'range',
+        newValue: { from: 95_000, to: 145_000 },
+        subjectId: w.row.id,
+      }),
+    );
+  });
+
+  it("answers 404 to another garage's owner and to a driver", async () => {
+    const w = await world();
+    const driver = bearer(await account('dan', ['driver']), 'driver');
+    await setRange(w, NEW_RANGE);
+
+    expect((await read(w.other, { garageId: w.nord.id })).status).toBe(404);
+    expect((await read(driver)).status).toBe(404);
   });
 });
 

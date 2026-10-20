@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -9,6 +9,7 @@ features:
   - 220-requests-quotes-bookings
   - 173-price-range-in-place
   - 304-request-garage-details
+  - 176-price-change-activity-log
 ---
 
 # Capability: Audit history
@@ -161,14 +162,56 @@ _From 164-admin-audit-log._
 
 _From 365-mcp-oauth._
 
-### 173-FR-008 — Each successful write MUST, in one transaction, write one audit entry per changed field through the audit writer (390-FR-001, FR-003): subject type `garage_price` with the row id for `from_bani`, `to_bani`, `duration_minutes`; subject type `garage` with the garage id for `labour_from_bani`, `labour_to_bani`; action `update`, old and new value, the actor, the role `owner`, the garage id; `via_assistant` and the grant id when the actor acts through an assistant (the writer does this). A write that changes nothing writes no entry.
+### 176-FR-001 — Every successful change to a garage's price list through the existing writes (the row's range and duration, the labour range, a brand range added, changed or removed) MUST write its audit entries through the shared writer of ST-390, inside the same transaction as the change: when the change commits the entries exist, and when the transaction rolls back for any reason, the entry write included, none of them does.
 
-_From 173-price-range-in-place._
+_From 176-price-change-activity-log._
 
 ### 304-FR-010 — Every change the panel lists MUST exist as an audit entry: where a garage write of a profile field, price, brand, photo or legal document writes no audit entry today, this story MUST add that entry through the existing writer in the write's own transaction (390-FR-001, 390-FR-003), one per changed field with old and new values and one per photo or brand added or removed, and no more; the reach is the garage's own writers under `libs/domain/src/garages`, which the plan lists; a write outside them lacking an entry is a needs-confirmation question on the issue. Fields the garage never edits itself and operational fields (cache keys, counters, timestamps the system sets) are flagged internal or not written, so the panel never shows them.
 
 _From 304-request-garage-details._
 
+### 176-FR-002 — A change of a row's range MUST write exactly one entry: action `update`, subject type `garage_price`, subject id the row, field `range`, old value and new value each `{"from": <bani>, "to": <bani or null>}`. This replaces the two per-field entries (`from_bani`, `to_bani`) of 173-FR-008.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-003 — A change of a row's duration MUST write exactly one entry: action `update`, subject type `garage_price`, subject id the row, field `duration_minutes`, old and new value the minutes (or null). A save that changes both the range and the duration writes two entries.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-004 — A change of the garage's labour range MUST write exactly one entry: action `update`, subject type `garage`, subject id the garage, field `labour_range`, old and new value `{"from": <bani or null>, "to": <bani or null>}` (a null end only for a garage that never set its labour range). This replaces the two per-field entries (`labour_from_bani`, `labour_to_bani`) of 173-FR-008.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-005 — A brand range MUST be recorded as one entry per step: `create` with the new value, `update` with old and new value, `delete` with the old value; subject type `garage_price`, subject id the brand row, field `brand_range`, each value exactly `{"brandId", "jobTypeId", "from", "to"}` with the prices in bani (no other keys).
+
+_From 176-price-change-activity-log._
+
+### 176-FR-006 — A save that changes no value MUST write no entry, whatever it answers. A value is unchanged when its stored and new content are equal (an absent end and a null end are the same; key order is not content).
+
+_From 176-price-change-activity-log._
+
+### 176-FR-007 — Every price-list entry MUST carry: the garage id, the actor's account id, actor role `owner`, the actor's first name, kind `price_list`, `is_key_change` = false, `internal` = false, no text, and the time of the write; values are stored in bani, never in lei.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-008 — When the actor acts through an AI assistant, the price list writes MUST pass the actor's assistant grant id and request id to the writer, so the entry carries `via_assistant` = true, the grant id and the request id (390-FR-007, 365-FR-011); without a grant `via_assistant` is false. Both ids are passed as the actor carries them; the writer alone sets the flag.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-010 — Reading a price list, the audit history or the public profile MUST write no entry.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-011 — No price change table or log of its own MUST exist: the activity log is the only record, and the System status log receives none of these entries.
+
+_From 176-price-change-activity-log._
+
+### 176-FR-012 — The tests MUST cover, before the code (Principle II): in Jest (API, real PostgreSQL) — the `range` entry's exact values for the brief's 890 – 1.400 → 950 – 1.450 lei example; `range` and `duration_minutes` as two entries of one save; clearing the top; the `labour_range` entry; the three `brand_range` entries; no entry on an unchanged save; no entry when the save fails after the row was written; `via_assistant`, the grant id and the request id for an assistant actor; the entry readable by the owner, the receptionist, a mechanic and an admin, 404 for another garage's owner, a driver refused by the audit history read; `is_key_change` and `internal` false on every entry; reading the price list, the audit history and the public profile writes no entry; in Playwright — the seeded owner changes front brakes from the seeded 890 – 1.400 lei to 950 – 1.450 lei in the price list screen, then an admin signs in and the test reads `GET /api/v1/audit-history` with the admin's session and finds the entry with the old and new range (no admin screen exists for it yet).
+
+_From 176-price-change-activity-log._
+
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
+
+- `173-FR-008` — superseded by `176-FR-001` (2026-10-19)

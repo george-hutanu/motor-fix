@@ -1,4 +1,4 @@
-import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
+import type { LiveCloseReason, LiveMessage } from '@motor-fix/contracts';
 
 // Milliseconds between failed tries; the last one repeats.
 const BACKOFF = [1_000, 2_000, 5_000, 10_000, 30_000];
@@ -12,52 +12,94 @@ export function backoffDelay(failures: number) {
   return Math.round(base * (0.9 + 0.2 * Math.random()));
 }
 
-function parse(block: string): LiveMessage | null {
-  const data = block
-    .split('\n')
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trimStart())
-    .join('\n');
+// A block's fields: its data's message, its id line when it is a position,
+// and its retry line when it is a number of milliseconds.
+function parse(block: string): {
+  message: LiveMessage | null;
+  id?: string;
+  retry?: number;
+} {
+  const lines = block.split('\n');
+  const field = (name: string) =>
+    lines
+      .filter((line) => line.startsWith(`${name}:`))
+      .map((line) => line.slice(name.length + 1).trimStart());
+  const id = field('id').at(-1);
+  const retry = field('retry').at(-1);
+  return {
+    message: message(field('data').join('\n')),
+    ...(id !== undefined && POSITION.test(id) && { id }),
+    // Never longer than the backoff's longest wait: a timer cannot hold more
+    // than 2^31-1 ms and would fire at once.
+    ...(retry !== undefined &&
+      /^\d+$/.test(retry) && {
+        retry: Math.min(Number(retry), BACKOFF.at(-1) ?? 0),
+      }),
+  };
+}
+
+export const POSITION = /^\d{1,18}$/;
+
+// A value shaped as a message: a kind, an id and a time, all strings.
+export function isLiveMessage(value: unknown): value is LiveMessage {
+  const m = value as Partial<LiveMessage> | null;
+  return (
+    typeof m?.kind === 'string' &&
+    typeof m.id === 'string' &&
+    typeof m.at === 'string'
+  );
+}
+
+function message(data: string): LiveMessage | null {
   if (!data) return null;
   try {
-    const message = JSON.parse(data) as Partial<LiveMessage> | null;
-    return typeof message?.kind === 'string' &&
-      typeof message.id === 'string' &&
-      typeof message.at === 'string'
-      ? (message as LiveMessage)
-      : null;
+    const parsed: unknown = JSON.parse(data);
+    return isLiveMessage(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
-// Emits each message of these blocks and answers the reason of the last bye
-// among them, or `reason` when there is none.
+// What the reader reports besides the messages.
+interface StreamHooks {
+  // A frame read: its message, and its position when it carried one.
+  emit: (message: LiveMessage, id: string | undefined) => void;
+  // The wait the server asks for before a reconnect.
+  retry?: (ms: number) => void;
+}
+
+// Emits each message of these blocks and answers why the stream is ending:
+// the last bye's reason or a planned reconnect, else `reason`.
 function deliver(
   blocks: string[],
-  reason: LiveByeReason | null,
-  emit: (message: LiveMessage) => void,
+  reason: LiveCloseReason | null,
+  { emit, retry }: StreamHooks,
 ) {
-  for (const message of blocks.map(parse)) {
+  for (const block of blocks) {
+    const parsed = parse(block);
+    if (parsed.retry !== undefined) retry?.(parsed.retry);
+    const { message } = parsed;
     if (!message) continue;
     if (message.kind === 'bye') reason = message.reason ?? null;
-    emit(message);
+    if (message.kind === 'reconnect') reason = 'reconnect';
+    emit(message, parsed.id);
   }
   return reason;
 }
 
 // Server-sent events arrive in blocks that end with a blank line; a chunk may
 // end in the middle of one. Reads until the server closes the stream or an
-// abort cancels the reader, and answers the reason of the last bye heard.
+// abort cancels the reader, and answers why the server ended it, if it said.
 export async function readEvents(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   signal: AbortSignal,
   heard: () => void,
-  emit: (message: LiveMessage) => void,
-): Promise<LiveByeReason | null> {
+  emit: StreamHooks['emit'],
+  retry?: StreamHooks['retry'],
+): Promise<LiveCloseReason | null> {
   const decoder = new TextDecoder();
   let buffer = '';
-  let reason: LiveByeReason | null = null;
+  let reason: LiveCloseReason | null = null;
   for (;;) {
     const { done, value } = await reader.read();
     if (done || signal.aborted) return reason;
@@ -68,6 +110,6 @@ export async function readEvents(
     );
     const blocks = buffer.split('\n\n');
     buffer = blocks.pop() ?? '';
-    reason = deliver(blocks, reason, emit);
+    reason = deliver(blocks, reason, { emit, retry });
   }
 }

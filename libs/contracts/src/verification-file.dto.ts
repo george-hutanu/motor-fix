@@ -395,6 +395,21 @@ export class VerificationFileTimelineDto {
   total!: number;
 }
 
+// The job a price entry is about, so the line can name it.
+export class VerificationChangeJobDto {
+  @ApiProperty({ example: 'Plăcuțe și discuri de frână față' })
+  nameRo!: string;
+
+  @ApiProperty({ example: 'Front brake pads and discs' })
+  nameEn!: string;
+
+  @ApiPropertyOptional({
+    description: "A brand range's brand; absent for the job's own range",
+    example: 'BMW',
+  })
+  brand?: string;
+}
+
 // One line of the garage's history after the request for more.
 export class VerificationChangeDto {
   @ApiProperty({ enum: VERIFICATION_CHANGE_AREAS })
@@ -421,6 +436,13 @@ export class VerificationChangeDto {
 
   @ApiProperty(JSON_VALUE)
   newValue!: unknown;
+
+  @ApiPropertyOptional({
+    description:
+      "A price entry's job, and the brand of a brand range; absent for any other entry, or for a price row since removed that its entry does not name",
+    type: VerificationChangeJobDto,
+  })
+  job?: VerificationChangeJobDto;
 
   @ApiProperty({ format: 'date-time' })
   at!: string;

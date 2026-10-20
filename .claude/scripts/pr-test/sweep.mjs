@@ -249,6 +249,22 @@ export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interva
   return false;
 }
 
+// One sweep page's browser context. Reduced motion stills the charts' entry
+// animation, so a shot never catches a bar mid-flight and differs from the
+// baseline's on a page nobody changed (settleCanvases stays as the fallback).
+export const contextOptions = (run) => {
+  const vp = VIEWPORTS[run.viewport];
+  return {
+    viewport: { width: vp.width, height: vp.height },
+    isMobile: vp.isMobile,
+    hasTouch: vp.hasTouch,
+    deviceScaleFactor: vp.deviceScaleFactor,
+    colorScheme: run.scheme,
+    locale: LOCALES[run.lang],
+    reducedMotion: "reduce",
+  };
+};
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -261,14 +277,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   try {
     for (const run of matrix({ routes, schemes, langs })) {
       const vp = VIEWPORTS[run.viewport];
-      const context = await browser.newContext({
-        viewport: { width: vp.width, height: vp.height },
-        isMobile: vp.isMobile,
-        hasTouch: vp.hasTouch,
-        deviceScaleFactor: vp.deviceScaleFactor,
-        colorScheme: run.scheme,
-        locale: LOCALES[run.lang],
-      });
+      const context = await browser.newContext(contextOptions(run));
       await keepLanguage(context, run.lang);
       // Maps read the app's own empty style: no tile is fetched from outside.
       await context.addInitScript(() => {
