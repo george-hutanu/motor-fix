@@ -68,7 +68,7 @@ export function recheckedSince(
 ): boolean {
   return (
     latest?.result === 'ok' &&
-    lastCheckedOn !== null &&
+    !!lastCheckedOn &&
     latest.checkedOn >= lastCheckedOn
   );
 }

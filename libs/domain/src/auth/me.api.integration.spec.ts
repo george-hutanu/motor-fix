@@ -335,6 +335,8 @@ describe('who am I, with the garage’s last RAR check', () => {
         detail: result === 'failed' ? 'Autorizația a expirat' : null,
         failure: result === 'failed' ? 'expired' : null,
         garageId,
+        // Recorded in day order; two rows written in one millisecond would tie.
+        recordedAt: new Date(`${on}T12:00:00Z`),
         result,
       },
     });

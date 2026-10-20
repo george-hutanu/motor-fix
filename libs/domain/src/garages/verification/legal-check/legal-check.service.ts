@@ -16,7 +16,8 @@ const forbidden = () =>
     'Only the owner sees the legal check',
   );
 
-const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
+const dayOf = (at: Date) => at.toISOString().slice(0, 10);
+const day = (at: Date | null) => (at ? dayOf(at) : null);
 
 // The owner's view of the garage's legal check: the newest verification
 // file's company, CAEN and RAR checks and its two documents, with the latest
@@ -94,7 +95,7 @@ export class LegalCheckService {
     const recheck = garage.rechecks[0];
     const latestRecheck = recheck
       ? {
-          checkedOn: day(recheck.checkedOn) ?? '',
+          checkedOn: dayOf(recheck.checkedOn),
           detail: recheck.detail,
           failure: recheck.failure,
           result: recheck.result,

@@ -12640,6 +12640,15 @@
                 "rar_authorisation"
               ]
             }
+          },
+          "failure": {
+            "type": "string",
+            "description": "The RAR row only: what the failed re-check that suspended the garage found",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
           }
         },
         "required": [

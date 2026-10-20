@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
   DOCUMENT_KINDS,
@@ -47,6 +47,13 @@ export class LegalCheckRowDto {
     isArray: true,
   })
   missing!: DocumentKind[];
+
+  @ApiPropertyOptional({
+    description:
+      'The RAR row only: what the failed re-check that suspended the garage found',
+    enum: RECHECK_FAILURES,
+  })
+  failure?: RecheckFailure;
 }
 
 export class RarActivityNameDto {
@@ -154,6 +161,7 @@ function checkRow(
 const failedRecheckRow = (recheck: LegalCheckRecheckDto): LegalCheckRowDto => ({
   checkedOn: recheck.checkedOn,
   detail: recheck.detail,
+  ...(recheck.failure ? { failure: recheck.failure } : {}),
   kind: 'rar',
   missing: [],
   state: 'failed',

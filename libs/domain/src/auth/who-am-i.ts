@@ -12,7 +12,8 @@ import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
 // A calendar day as stored (a PostgreSQL date, read at UTC midnight).
-const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
+const dayOf = (at: Date) => at.toISOString().slice(0, 10);
+const day = (at: Date | null) => (at ? dayOf(at) : null);
 
 // "Who am I": what GET /me answers, and every change of the account's own
 // details answers once saved.
@@ -110,7 +111,7 @@ export class WhoAmI {
         permissions,
         rechecked: recheckedSince(
           latest && {
-            checkedOn: day(latest.checkedOn) ?? '',
+            checkedOn: dayOf(latest.checkedOn),
             result: latest.result,
           },
           lastCheckedOn,

@@ -294,7 +294,7 @@ describe('which file it reads', () => {
   });
 });
 
-// @traces 210-FR-009
+// @traces 210-FR-009 1354-FR-009
 describe('the last check day', () => {
   it('is read, never written', async () => {
     const w = await world();
@@ -406,6 +406,7 @@ describe('the legal check of a suspended garage', () => {
     expect(res.body.rows[2]).toEqual({
       checkedOn: FAILED_ON,
       detail: 'Autorizația a expirat la 30 septembrie',
+      failure: 'expired',
       kind: 'rar',
       missing: [],
       state: 'failed',

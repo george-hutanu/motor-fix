@@ -8,7 +8,7 @@ import { test } from './fixtures.js';
 // Garages and owners of this file's own, written straight to PostgreSQL so no
 // seeded garage moves under a spec running beside this one. The @database tag
 // keeps the file out of a deployed run, which has no database.
-// @traces 1354-FR-003 1354-FR-004 1354-FR-005 1354-FR-006
+// @traces 1354-FR-003 1354-FR-004 1354-FR-005 1354-FR-006 1354-FR-010
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -111,9 +111,6 @@ test.describe('the garage’s legal checks after a re-check @seeded @database', 
 
   test.afterAll(async () => {
     await db.query('DELETE FROM account WHERE email = ANY($1)', [emails]);
-    await db.query('DELETE FROM verification_file WHERE garage_id = ANY($1)', [
-      garageIds,
-    ]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
     await db.end();
   });

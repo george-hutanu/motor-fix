@@ -346,6 +346,7 @@ const failedRar = (failure: 'expired' | 'suspended' | 'withdrawn') =>
       row('rar', {
         checkedOn: '2026-09-12',
         detail: 'Autorizația a expirat la 31 august',
+        failure,
         state: 'failed',
       }),
       row('documents'),

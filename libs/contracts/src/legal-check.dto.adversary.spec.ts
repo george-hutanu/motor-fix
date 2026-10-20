@@ -277,3 +277,117 @@ describe('legalCheckRows adversary', () => {
     expect(rows[2].state).toBe('failed');
   });
 });
+
+const failedRecheck = {
+  checkedOn: '2026-09-12',
+  detail: 'Autorizația a expirat la 31 august',
+  failure: 'expired' as const,
+  result: 'failed' as const,
+};
+
+describe('legalCheckRows after approval adversary', () => {
+  // @traces 1354-FR-003
+  it('dates the RAR row by the stored day, ignoring the rar check own day', () => {
+    const rows = legalCheckRows({
+      checks: [chk('rar', 'ok', null, '2026-06-14')],
+      documents: bothValid,
+      lastCheckedOn: '2026-10-01',
+    });
+
+    expect(rows[2].checkedOn).toBe('2026-10-01');
+  });
+
+  // @traces 1354-FR-003
+  it('leaves the RAR row day empty when nothing is stored and the check passed', () => {
+    const rows = legalCheckRows({
+      checks: [chk('rar', 'ok', null, '2026-06-14')],
+      documents: bothValid,
+      lastCheckedOn: null,
+    });
+
+    expect(rows[2].checkedOn).toBeNull();
+  });
+
+  // @traces 1354-FR-004
+  it('builds the failed RAR row from the failed re-check when the suspension came from it', () => {
+    const rows = legalCheckRows({
+      checks: [chk('rar', 'ok', null, '2026-06-14')],
+      documents: bothValid,
+      lastCheckedOn: '2026-08-10',
+      latestRecheck: failedRecheck,
+      recheckFailed: true,
+    });
+
+    expect(rows[2]).toEqual({
+      checkedOn: '2026-09-12',
+      detail: 'Autorizația a expirat la 31 august',
+      failure: 'expired',
+      kind: 'rar',
+      missing: [],
+      state: 'failed',
+    });
+  });
+
+  // @traces 1354-FR-004
+  it('keeps the plain rows for a suspension of another cause', () => {
+    const rows = legalCheckRows({
+      checks: [chk('rar', 'ok', null, '2026-06-14')],
+      documents: bothValid,
+      lastCheckedOn: '2026-08-10',
+      latestRecheck: failedRecheck,
+      recheckFailed: false,
+    });
+
+    expect(rows[2]).toMatchObject({ checkedOn: '2026-08-10', state: 'ok' });
+  });
+
+  // @traces 1354-FR-004
+  it('keeps the plain rows when the cause is a failed re-check but the latest re-check is ok', () => {
+    const rows = legalCheckRows({
+      checks: [chk('rar', 'ok')],
+      documents: bothValid,
+      lastCheckedOn: '2026-10-01',
+      latestRecheck: {
+        checkedOn: '2026-10-01',
+        detail: null,
+        failure: null,
+        result: 'ok',
+      },
+      recheckFailed: true,
+    });
+
+    expect(rows[2]).toMatchObject({ checkedOn: '2026-10-01', state: 'ok' });
+  });
+
+  // @traces 1354-FR-004
+  it('keeps the plain rows when the cause is a failed re-check but no re-check is recorded', () => {
+    const rows = legalCheckRows({
+      checks: [],
+      documents: bothValid,
+      lastCheckedOn: '2026-10-01',
+      latestRecheck: null,
+      recheckFailed: true,
+    });
+
+    expect(rows[2].state).toBe('not_run');
+  });
+
+  // @traces 1354-FR-004
+  it('does not touch the other three rows when the RAR row failed', () => {
+    const rows = legalCheckRows({
+      checks: [chk('company', 'ok'), chk('caen', 'ok')],
+      documents: [],
+      lastCheckedOn: '2026-08-10',
+      latestRecheck: failedRecheck,
+      recheckFailed: true,
+    });
+
+    expect(rows.map((r) => [r.kind, r.state])).toEqual([
+      ['company', 'ok'],
+      ['caen', 'ok'],
+      ['rar', 'failed'],
+      ['documents', 'warning'],
+    ]);
+    expect(rows[3].checkedOn).toBe('2026-08-10');
+  });
+});

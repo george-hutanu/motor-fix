@@ -162,6 +162,7 @@ describe('the RAR row of a garage suspended by a failed re-check', () => {
     expect(rar).toEqual({
       checkedOn: '2026-09-12',
       detail: 'Autorizația a expirat la 31 august',
+      failure: 'expired',
       kind: 'rar',
       missing: [],
       state: 'failed',
