@@ -155,7 +155,10 @@ test.describe('loading more garages on the Results page @seeded @database', () =
     page,
   }) => {
     await ready(page, opened());
-    await scrollTo(page, 40);
+    // Every page loaded and the list ended, so no page still on its way
+    // changes the count kept for the way back.
+    await scrollTo(page, 48);
+    await expect(page.locator('.end')).toHaveText('Ai văzut toate cele 48');
     const count = await cards(page).count();
     await page
       .getByRole('list', { name: 'Service‑uri găsite' })
