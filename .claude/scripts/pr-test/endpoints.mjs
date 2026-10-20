@@ -88,10 +88,20 @@ export function firstId(json, param, depth = 0) {
   return own(param) ?? own("id") ?? null;
 }
 
+// The API counts sign-ins per address (30 in 15 minutes) and trusts a forwarded
+// address from loopback, as the end-to-end suite's fixtures rely on: a sweep of
+// two signed-in routes alone signs in 32 times, so each sign-in speaks from an
+// address of its own in 198.18.0.0/15, the range kept for benchmark tests.
+let signIns = 0;
+const nextAddress = () => {
+  const n = signIns++ % (2 * 65536);
+  return `198.${18 + (n >> 16)}.${(n >> 8) & 255}.${n & 255}`;
+};
+
 export async function signIn(apiURL, role, password) {
   const res = await fetch(`${apiURL}/api/v1/auth/sign-in`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-forwarded-for": nextAddress() },
     body: JSON.stringify({ email: SEEDED[role], password, remember: false }),
     signal: AbortSignal.timeout(15000),
   });
