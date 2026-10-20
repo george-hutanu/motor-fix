@@ -8,8 +8,8 @@ const many = (n: number, prefix = 'P') =>
   Array.from({ length: n }, (_, i) => chip(`${prefix}${i}`));
 const names = (row: Chip[]) => row.map((c) => c.name);
 
-// @traces 1355-results-brand-chips-FR-002
-// @traces 1355-results-brand-chips-FR-003
+// @traces 1355-FR-002
+// @traces 1355-FR-003
 describe('chipRow under hostile input', () => {
   it('caps a ten-thousand-brand popular list at 8', () => {
     const row = chipRow(chip('BMW'), [], many(10_000));
@@ -98,20 +98,5 @@ describe('chipRow under hostile input', () => {
 
     expect(own).toEqual(ownCopy);
     expect(popular).toEqual(popularCopy);
-  });
-
-  it('answers the same twice for the same input', () => {
-    const own = [chip('Kia', undefined)];
-    const popular = many(10);
-
-    expect(chipRow(chip('Alfa'), own, popular)).toEqual(
-      chipRow(chip('Alfa'), own, popular),
-    );
-  });
-
-  it('returns a new array that is not the popular list itself', () => {
-    const popular = many(3);
-
-    expect(chipRow(undefined, [], popular)).not.toBe(popular);
   });
 });

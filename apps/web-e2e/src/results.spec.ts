@@ -213,8 +213,8 @@ test.describe('the Results page @seeded', () => {
 
   // The brand chips above the list: a popular brand's chip changes the
   // search in place; back returns to this file's brand.
-  // @traces 1355-results-brand-chips-FR-002 1355-results-brand-chips-FR-004 1355-results-brand-chips-FR-005
-  // @traces 1355-results-brand-chips-FR-007 1355-results-brand-chips-FR-008 1355-results-brand-chips-FR-013
+  // @traces 1355-FR-002 1355-FR-004 1355-FR-005
+  // @traces 1355-FR-007 1355-FR-008 1355-FR-013
   test.describe('brand chips', () => {
     const chips = (page: Page) =>
       page.getByRole('group', { name: 'Marca' }).getByRole('button');

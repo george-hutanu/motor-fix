@@ -16,8 +16,8 @@ const POPULAR = [
 ].map((name) => chip(name));
 const names = (row: Chip[]) => row.map((c) => c.name);
 
-// @traces 1355-results-brand-chips-FR-002
-// @traces 1355-results-brand-chips-FR-003
+// @traces 1355-FR-002
+// @traces 1355-FR-003
 describe('chipRow', () => {
   it('shows a visitor the popular brands, the current one among them where it stands', () => {
     expect(names(chipRow(chip('BMW'), [], POPULAR))).toEqual([

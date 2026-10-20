@@ -2552,15 +2552,15 @@ describe('Results waiting for an address the driver types', () => {
   });
 });
 
-// @traces 1355-results-brand-chips-FR-004
-// @traces 1355-results-brand-chips-FR-005
-// @traces 1355-results-brand-chips-FR-006
-// @traces 1355-results-brand-chips-FR-007
-// @traces 1355-results-brand-chips-FR-008
-// @traces 1355-results-brand-chips-FR-009
-// @traces 1355-results-brand-chips-FR-010
-// @traces 1355-results-brand-chips-FR-011
-// @traces 1355-results-brand-chips-FR-014
+// @traces 1355-FR-004
+// @traces 1355-FR-005
+// @traces 1355-FR-006
+// @traces 1355-FR-007
+// @traces 1355-FR-008
+// @traces 1355-FR-009
+// @traces 1355-FR-010
+// @traces 1355-FR-011
+// @traces 1355-FR-014
 describe('Results changing the brand', () => {
   beforeEach(() => {
     brandsApi.popularBrandsControllerTiles.mockClear();
@@ -2867,7 +2867,7 @@ describe('Results changing the brand', () => {
     expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR, radius: 50 });
   });
 
-  // @traces 1355-results-brand-chips-FR-011
+  // @traces 1355-FR-011
   it('names the brand on the progress bar after a step back too', async () => {
     TestBed.inject(Router).setUpLocationChangeListener();
     await shown();

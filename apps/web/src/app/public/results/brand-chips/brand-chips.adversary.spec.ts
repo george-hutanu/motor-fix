@@ -91,8 +91,8 @@ const marked = () =>
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 1355-results-brand-chips-FR-012
-// @traces 1355-results-brand-chips-FR-016
+// @traces 1355-FR-012
+// @traces 1355-FR-016
 describe('BrandChips when its reads misbehave', () => {
   it('shows the current brand alone when the popular read rejects for a visitor', async () => {
     await chips({
@@ -177,7 +177,7 @@ describe('BrandChips when its reads misbehave', () => {
   });
 });
 
-// @traces 1355-results-brand-chips-FR-014
+// @traces 1355-FR-014
 describe('BrandChips marking', () => {
   it('marks nothing when the bar names a brand the catalogue does not hold', async () => {
     await chips({ answered: null as unknown as BrandDto, bar: 'nope' });
@@ -191,14 +191,15 @@ describe('BrandChips marking', () => {
     await chips({ answered: undefined, bar: 'nope' });
     await settle();
 
-    expect(marked().length).toBeLessThanOrEqual(1);
+    expect(marked()).toEqual([]);
+    expect(names().length).toBeGreaterThan(0);
   });
 
-  it('marks one chip only for a bar slug in another case', async () => {
+  it('marks nothing for a bar slug in capitals, which no catalogue slug is', async () => {
     await chips({ bar: 'BMW' });
     await settle();
 
-    expect(marked().length).toBeLessThanOrEqual(1);
+    expect(marked()).toEqual([]);
   });
 
   it('emits name and slug of a tapped chip', async () => {

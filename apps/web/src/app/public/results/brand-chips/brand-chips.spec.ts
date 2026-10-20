@@ -105,10 +105,10 @@ const tap = (name: string) => {
   return button;
 };
 
-// @traces 1355-results-brand-chips-FR-001
-// @traces 1355-results-brand-chips-FR-003
-// @traces 1355-results-brand-chips-FR-014
-// @traces 1355-results-brand-chips-FR-015
+// @traces 1355-FR-001
+// @traces 1355-FR-003
+// @traces 1355-FR-014
+// @traces 1355-FR-015
 describe('BrandChips', () => {
   describe('for a visitor', () => {
     it('is a labelled group of buttons, the current brand pressed', async () => {
@@ -189,8 +189,8 @@ describe('BrandChips', () => {
     });
   });
 
-  // @traces 1355-results-brand-chips-FR-012
-  // @traces 1355-results-brand-chips-FR-016
+  // @traces 1355-FR-012
+  // @traces 1355-FR-016
   describe('while the reads are out, or when they fail', () => {
     it('shows the current brand alone, marked, until the popular read answers', async () => {
       let answer: (list: BrandDto[]) => void = () => undefined;
@@ -235,9 +235,9 @@ describe('BrandChips', () => {
     });
   });
 
-  // @traces 1355-results-brand-chips-FR-002
-  // @traces 1355-results-brand-chips-FR-012
-  // @traces 1355-results-brand-chips-FR-015
+  // @traces 1355-FR-002
+  // @traces 1355-FR-012
+  // @traces 1355-FR-015
   describe("for a driver's own cars", () => {
     it('confirms a remembered driver before reading the cars', async () => {
       await chips({ hint: 'driver' });
@@ -335,7 +335,7 @@ describe('BrandChips', () => {
     });
   });
 
-  // @traces 1355-results-brand-chips-FR-010
+  // @traces 1355-FR-010
   describe('a brand picked in the search', () => {
     it('takes the current slot when it is the brand in the bar', async () => {
       await chips({ answered: brand('BMW'), bar: 'alfa', picked: ALFA });
@@ -362,8 +362,13 @@ describe('BrandChips', () => {
     });
   });
 
-  // @traces 1355-results-brand-chips-FR-013
+  // @traces 1355-FR-013
   describe('on a phone', () => {
+    const scrollIntoView = Element.prototype.scrollIntoView;
+    afterEach(() => {
+      Element.prototype.scrollIntoView = scrollIntoView;
+    });
+
     it('scrolls the row to bring the marked chip into view, without scrollIntoView', async () => {
       const into = jest.fn();
       Element.prototype.scrollIntoView = into;
