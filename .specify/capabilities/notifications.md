@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-19
+updated: 2026-10-20
 features:
   - 194-email-sending
   - 195-message-templates
@@ -37,6 +37,7 @@ features:
   - 069-report-decision
   - 1351-rar-monthly-recheck
   - 1190-live-reconnects
+  - 1352-catalogue-job-visibility
 ---
 
 # Capability: Notifications
@@ -763,6 +764,10 @@ _From 1351-rar-monthly-recheck._
 ### 1190-FR-001 — Every in-app notification row MUST carry an ordered position, unique per account and increasing with creation, kept with the row; the migration gives every existing row its position in creation order.
 
 _From 1190-live-reconnects._
+
+### 1352-FR-015 — On every `catalogue_job.proposed` event, whichever write saved it (this story's or the listing's), every admin MUST get ADMIN_CATALOGUE_JOB_PENDING: bell "{garage} a propus lucrarea „{job}”" / "{garage} proposed the job "{job}"", e-mail and push with the garage's name, the job's name and a link to the admin dashboard, under the admins' preference group so it can be muted (the catalogue already lists it as an event notice, e-mail and push, not always sent); the shape of ADMIN_VERIFICATION_QUEUED.
+
+_From 1352-catalogue-job-visibility._
 
 ## Retired
 

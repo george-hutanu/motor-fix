@@ -1,0 +1,36 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.field {
+  font-weight: 700;
+}
+input {
+  min-height: var(--mf-tap);
+}
+.said {
+  color: var(--mf-text-secondary);
+}
+/* The results scroll inside the dialog or sheet; the proposal stays below. */
+.results {
+  display: grid;
+  gap: var(--mf-space-2);
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.results button,
+.propose {
+  width: 100%;
+  min-height: var(--mf-tap);
+  justify-content: flex-start;
+  text-align: start;
+  white-space: normal;
+}

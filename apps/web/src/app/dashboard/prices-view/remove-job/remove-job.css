@@ -1,0 +1,30 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.danger {
+  border-color: var(--mf-red);
+  color: var(--mf-red-ink);
+}
+/* A bottom sheet below 768 px: the buttons stack, the removal nearest the thumb. */
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

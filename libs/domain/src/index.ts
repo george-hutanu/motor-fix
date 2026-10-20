@@ -85,6 +85,7 @@ export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
 export { Brevo } from './notifications/brevo/brevo';
+export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
 export {
   checkEmailDns,

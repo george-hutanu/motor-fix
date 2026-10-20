@@ -164,6 +164,64 @@ describe('GET /job-types', () => {
     expect(res.status).toBe(400);
   });
 
+  // @traces 1352-FR-001
+  it('leaves the excluded jobs out before the 20 limit, with or without a search', async () => {
+    await prisma.jobType.createMany({
+      data: Array.from({ length: 25 }, (_, n) => ({
+        key: `job-${n}`,
+        nameEn: `Job ${n}`,
+        nameRo: `A ${String(n).padStart(2, '0')}`,
+        status: 'approved' as const,
+      })),
+    });
+    const first = await search();
+    const excluded = first.body.items.map((item: { id: string }) => item.id);
+    expect(excluded).toHaveLength(20);
+
+    const rest = await search({ exclude: excluded.join(',').toUpperCase() });
+    const typed = await search({ exclude: excluded.join(','), q: 'a 2' });
+
+    expect(rest.status).toBe(200);
+    expect(keys(rest.body)).toEqual([
+      'job-20',
+      'job-21',
+      'job-22',
+      'job-23',
+      'job-24',
+      'diagnosis',
+      'ac-regas',
+      'timing-chain',
+      'front-brakes',
+      'oil-service',
+      'suspension-alignment',
+    ]);
+    expect(keys(typed.body)).toEqual([
+      'job-20',
+      'job-21',
+      'job-22',
+      'job-23',
+      'job-24',
+    ]);
+  });
+
+  // @traces 1352-FR-001
+  it.each([
+    ['an excluded id that is not one', { exclude: 'x' }],
+    ['an empty exclude', { exclude: '' }],
+    [
+      'more than 50 excluded ids',
+      {
+        exclude: Array(51)
+          .fill('00000000-0000-4000-8000-000000000000')
+          .join(','),
+      },
+    ],
+  ])('refuses %s', async (_, query) => {
+    const res = await search(query);
+
+    expect(res.status).toBe(400);
+  });
+
   it('answers an empty list when nothing matches', async () => {
     const res = await search({ q: 'zzz' });
 

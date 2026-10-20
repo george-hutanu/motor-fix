@@ -81,6 +81,14 @@ const setStance = (
   prisma.$transaction((tx) =>
     brands.setStance(tx, w.actor, garageId, brandId, stance),
   );
+const job = async () => {
+  const key = `job-${randomUUID()}`;
+  return (
+    await prisma.jobType.create({
+      data: { key, nameEn: key, nameRo: key, status: 'approved' },
+    })
+  ).id;
+};
 const seedJob = (w: World, brandId: string, jobTypeId: string) =>
   prisma.garageBrandJob.create({
     data: { brandId, garageId: w.garage, jobTypeId },
@@ -171,10 +179,10 @@ describe('GarageBrandsService under hostile calls', () => {
     await prisma.garageBrand.create({
       data: { brandId: w.dacia, garageId: w.other, stance: 'works_on' },
     });
-    await seedJob(w, w.dacia, randomUUID());
-    await seedJob(w, w.tesla, randomUUID());
+    await seedJob(w, w.dacia, await job());
+    await seedJob(w, w.tesla, await job());
     await prisma.garageBrandJob.create({
-      data: { brandId: w.dacia, garageId: w.other, jobTypeId: randomUUID() },
+      data: { brandId: w.dacia, garageId: w.other, jobTypeId: await job() },
     });
 
     await setStance(w, w.dacia, 'does_not_take');
@@ -194,7 +202,7 @@ describe('GarageBrandsService under hostile calls', () => {
   it('drops jobs after works_on, does_not_take, works_on', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
-    await seedJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.dacia, await job());
 
     await setStance(w, w.dacia, 'does_not_take');
     await setStance(w, w.dacia, 'works_on');
@@ -207,7 +215,7 @@ describe('GarageBrandsService under hostile calls', () => {
 
     await expect(
       prisma.garageBrandJob.create({
-        data: { brandId: w.tesla, garageId: w.garage, jobTypeId: randomUUID() },
+        data: { brandId: w.tesla, garageId: w.garage, jobTypeId: await job() },
       }),
     ).rejects.toThrow();
   });

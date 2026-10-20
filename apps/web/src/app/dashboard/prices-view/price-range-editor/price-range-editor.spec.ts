@@ -56,6 +56,8 @@ const LABOUR: PriceRangeEditorData = {
 let setRange: jest.Mock;
 let setBrandRange: jest.Mock;
 let setLabour: jest.Mock;
+let add: jest.Mock;
+let propose: jest.Mock;
 let read: jest.Mock;
 let result: Promise<PriceRangeEditorResult | 'cancelled'>;
 
@@ -82,6 +84,19 @@ async function open(
   }));
   setBrandRange = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
   setLabour = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  add = jest.fn(async ({ body }) => ({
+    priceId: 'price-ac',
+    updatedAt: NEWER,
+    warnings: [],
+    ...body,
+  }));
+  propose = jest.fn(async ({ body }) => ({
+    jobTypeId: 'job-new',
+    priceId: 'price-new',
+    updatedAt: NEWER,
+    warnings: [],
+    ...body,
+  }));
   read = jest.fn(
     async (): Promise<PriceListDto> => ({
       items: [
@@ -100,7 +115,9 @@ async function open(
       {
         provide: GaragesService,
         useValue: {
+          catalogueJobsControllerPropose: propose,
           garageLabourControllerSet: setLabour,
+          priceListControllerAdd: add,
           priceListControllerRead: read,
           priceListControllerSetBrandRange: setBrandRange,
           priceListControllerSetRange: setRange,
@@ -487,5 +504,273 @@ describe('the range editor: a brand range and the labour range', () => {
 
     expect(field('De la').value).toBe('');
     expect(field('Până la').value).toBe('');
+  });
+});
+
+const NEW: PriceRangeEditorData = {
+  garageId: GARAGE,
+  job: {
+    id: 'job-ac',
+    key: 'ac-regas',
+    nameEn: 'Air-con regas',
+    nameRo: 'Încărcare freon climă',
+  },
+  kind: 'new',
+};
+
+// @traces 1352-FR-001
+describe('the range editor: a job new to the list', () => {
+  it('starts empty, with the duration, and adds the job with its range and duration, then closes', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Încărcare freon climă',
+    );
+    expect(field('De la').value).toBe('');
+    expect(field('Până la').value).toBe('');
+    expect(field('Durată').value).toBe('');
+    expect(button('Salvează')?.disabled).toBe(true);
+
+    await fill('Durată', '45');
+    await fill('De la', '280');
+    await fill('Până la', '360');
+    await press();
+
+    expect(add).toHaveBeenCalledWith({
+      body: {
+        durationMinutes: 45,
+        fromBani: 28_000,
+        jobTypeId: 'job-ac',
+        toBani: 36_000,
+      },
+      garageId: GARAGE,
+    });
+    expect(setRange).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('saved');
+  });
+
+  it('adds a starting price alone, with no top and no duration', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+
+    await fill('De la', '280');
+    await press();
+
+    expect(add).toHaveBeenCalledWith({
+      body: {
+        durationMinutes: null,
+        fromBani: 28_000,
+        jobTypeId: 'job-ac',
+        toBani: null,
+      },
+      garageId: GARAGE,
+    });
+  });
+
+  it("shows the server's range errors under their fields and stays open", async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'max', field: 'fromBani' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(said('De la')).toBe('Cel mult 100.000 lei');
+    expect(panel()).not.toBeNull();
+  });
+
+  it('says the job is already on the list', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'duplicate', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(text()).toContain('Lucrarea e deja în lista ta.');
+    expect(text()).not.toContain('Verifică câmpurile marcate.');
+  });
+
+  it('asks the opener to reload the list on a duplicate, the editor still open', async () => {
+    const listed = jest.fn();
+    await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'duplicate', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(listed).toHaveBeenCalledTimes(1);
+    expect(panel()).not.toBeNull();
+  });
+
+  it('does not ask for a reload on another refusal', async () => {
+    const listed = jest.fn();
+    await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'too_many', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(listed).not.toHaveBeenCalled();
+  });
+
+  it('says the list holds 50 jobs already', async () => {
+    await open(NEW, { language: 'en', title: 'Air-con regas' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'too_many', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('From', '280');
+
+    await press('Save');
+
+    expect(text()).toContain('At most 50 jobs');
+  });
+});
+
+const PROPOSE: PriceRangeEditorData = { garageId: GARAGE, kind: 'propose' };
+const NAME = 'Recondiționare injectoare';
+
+// @traces 1352-FR-009
+describe('the range editor: proposing a job the catalogue lacks', () => {
+  it('asks for the name, the range and the duration, and sends with "Trimite"', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Propune o lucrare',
+    );
+    expect(field('Numele lucrării').value).toBe('');
+    expect(field('De la').value).toBe('');
+    expect(field('Durată').value).toBe('');
+    expect(button('Trimite')?.disabled).toBe(true);
+    expect(button('Salvează')).toBeUndefined();
+
+    await fill('Numele lucrării', `  ${NAME}  `);
+    await fill('Durată', '90');
+    await fill('De la', '600');
+    await fill('Până la', '900');
+    await press('Trimite');
+
+    expect(propose).toHaveBeenCalledWith({
+      body: {
+        durationMinutes: 90,
+        fromBani: 60_000,
+        name: NAME,
+        toBani: 90_000,
+      },
+      garageId: GARAGE,
+    });
+    expect(add).not.toHaveBeenCalled();
+    expect(setRange).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('saved');
+  });
+
+  it('refuses a name under 3 characters once trimmed, before sending', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+
+    await fill('Numele lucrării', '  ab   ');
+    await fill('De la', '600');
+
+    expect(said('Numele lucrării')).toBe('Cel puțin 3 caractere');
+    expect(field('Numele lucrării').getAttribute('aria-invalid')).toBe('true');
+    expect(button('Trimite')?.disabled).toBe(true);
+    await press('Trimite');
+    expect(propose).not.toHaveBeenCalled();
+  });
+
+  it('refuses a name over 80 characters once trimmed, and takes 80', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+    await fill('De la', '600');
+
+    await fill('Numele lucrării', 'a'.repeat(81));
+    expect(said('Numele lucrării')).toBe('Cel mult 80 de caractere');
+    expect(button('Trimite')?.disabled).toBe(true);
+
+    await fill('Numele lucrării', ` ${'a'.repeat(80)} `);
+    expect(said('Numele lucrării')).toBe('');
+    expect(button('Trimite')?.disabled).toBe(false);
+  });
+
+  it('says the name is needed once the field is left empty', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+    expect(said('Numele lucrării')).toBe('');
+
+    await fill('Numele lucrării', '   ');
+
+    expect(said('Numele lucrării')).toBe('Scrie numele lucrării.');
+  });
+
+  it('shows a pending duplicate on the name and stays open', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+    propose.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'duplicate', field: 'name' }],
+      }),
+    );
+    await fill('Numele lucrării', NAME);
+    await fill('De la', '600');
+
+    await press('Trimite');
+
+    expect(said('Numele lucrării')).toBe('Ai propus deja această lucrare.');
+    expect(panel()).not.toBeNull();
+  });
+
+  it("shows an approved job's name on the name field, in English too", async () => {
+    await open(PROPOSE, {
+      language: 'en',
+      title: 'garage.prices.propose.title',
+    });
+    propose.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'exists', field: 'name', jobTypeId: 'job-ac' }],
+      }),
+    );
+    await fill('Job name', 'Air-con regas');
+    await fill('From', '280');
+
+    await press('Send');
+
+    expect(said('Job name')).toBe(
+      'The job is already in the catalogue: pick it from the list.',
+    );
+  });
+
+  it('says the list holds 50 jobs already, on the form rather than the name', async () => {
+    await open(PROPOSE, { title: 'garage.prices.propose.title' });
+    propose.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'too_many', field: 'name' }],
+      }),
+    );
+    await fill('Numele lucrării', NAME);
+    await fill('De la', '600');
+
+    await press('Trimite');
+
+    expect(text()).toContain('Cel mult 50 de lucrări');
+    expect(said('Numele lucrării')).toBe('');
   });
 });

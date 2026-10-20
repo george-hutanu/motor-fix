@@ -155,6 +155,7 @@ const profile = (w: World) => http().get(`/garages/${w.nord.slug}`);
 // @traces 357-FR-001
 // @traces 357-FR-002
 // @traces 357-FR-007
+// @traces 1352-FR-008
 describe('GET /garages/:garageId/prices', () => {
   it('gives every job its state, the first reason and its default range', async () => {
     const w = await world(['ITP']);
@@ -195,6 +196,7 @@ describe('GET /garages/:garageId/prices', () => {
           public: true,
           toBani: 48_000,
           updatedAt: expect.any(String),
+          visible: true,
         },
         {
           brandRanges: [
@@ -214,24 +216,48 @@ describe('GET /garages/:garageId/prices', () => {
           public: false,
           reason: 'no_top_price',
           updatedAt: expect.any(String),
+          visible: true,
         },
         expect.objectContaining({
           jobTypeId: chain.id,
           public: false,
           reason: 'hidden_by_garage',
           toBani: 48_000,
+          visible: false,
         }),
         expect.objectContaining({
           jobTypeId: pending.id,
           reason: 'awaiting_approval',
         }),
-        expect.objectContaining({ jobTypeId: rejected.id, reason: 'rejected' }),
+        expect.objectContaining({
+          jobTypeId: rejected.id,
+          reason: 'rejected',
+          visible: false,
+        }),
         expect.objectContaining({
           jobTypeId: outside.id,
           reason: 'not_authorised',
         }),
       ],
     });
+  });
+
+  it('gives a job listed only with a brand range no choice of its own', async () => {
+    const w = await world();
+    const bmw = await prisma.brand.create({
+      data: {
+        key: `bmw-${randomUUID()}`,
+        name: 'BMW',
+        slug: `bmw-${randomUUID()}`,
+      },
+    });
+    const oil = await jobType('Schimb ulei');
+    await price(w, oil.id, 0, { brandId: bmw.id, visible: false });
+
+    const [item] = (await read(w)).body.items;
+
+    expect(item.jobTypeId).toBe(oil.id);
+    expect(item).not.toHaveProperty('visible');
   });
 
   it('makes a job public once its top is set, with no other write', async () => {

@@ -29,6 +29,14 @@ export class JobTypesQueryDto {
   @IsOptional()
   @Matches(new RegExp(`^${UUID}(,${UUID}){0,49}$`, 'i'))
   ids?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Comma-separated job ids, 50 at most, left out of the answer before the 20 limit',
+  })
+  @IsOptional()
+  @Matches(new RegExp(`^${UUID}(,${UUID}){0,49}$`, 'i'))
+  exclude?: string;
 }
 
 export class JobTypeDto {

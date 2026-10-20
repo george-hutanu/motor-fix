@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 144,
+    "count": 147,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -323,6 +323,19 @@
       ],
       "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
       "story": "ST-49"
+    },
+    {
+      "kind": "queue",
+      "name": "catalogue-job-pending",
+      "source": "libs/domain/src/notifications/catalogue-job-pending/catalogue-job-pending.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one ADMIN_CATALOGUE_JOB_PENDING per active admin for each catalogue_job.proposed event, keyed by the event id; one log line per event with the job id and how many admins were told, never a name; no counter of its own, as the admins' verification-queued notice has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
+      "story": "ST-174"
     },
     {
       "kind": "queue",
@@ -1508,8 +1521,21 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the owner's in-place change of a job's range and duration and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
+      "reason": "the owner's in-place change of a job's range and duration, of whether drivers see the job (ST-174, a visible-only body) and of the labour rate, written to PostgreSQL with one audit entry per changed field and a price_list.updated event; a refused or stale save is a 4xx the error-rate rule reads; no counter of its own: an edit is not a product outcome, and the audit holds who changed what; no outside call",
       "story": "ST-173"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-price-rows",
+      "source": "libs/domain/src/garages/price-list/price-list.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/garages/:garageId/prices, DELETE /api/v1/garages/:garageId/prices/:priceId, POST /api/v1/garages/:garageId/catalogue-jobs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's add of an approved catalogue job to the price list, the proposal of a job the catalogue lacks (catalogue-jobs.controller.ts: a pending job_type with its catalogue_job.proposed event) and the removal with the job's brand ranges and ticks, written to PostgreSQL with their audit entries and a price_list.updated event in one transaction; a refused add, proposal or removal is a 4xx the error-rate rule reads; no counter of its own: the audit holds who added and proposed what; no outside call",
+      "story": "ST-174"
     }
   ]
 }

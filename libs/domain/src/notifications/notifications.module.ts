@@ -19,6 +19,11 @@ import { BellController } from './bell/bell.controller';
 import { BellService } from './bell/bell.service';
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
+import {
+  CATALOGUE_JOB_PENDING_QUEUE,
+  type CatalogueJobPendingEvent,
+  CatalogueJobPendingFanOut,
+} from './catalogue-job-pending/catalogue-job-pending.fan-out';
 import type { EmailConfig } from './email-config';
 import {
   GARAGE_REPORT_DECIDED_QUEUE,
@@ -103,6 +108,7 @@ const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
+const CATALOGUE_JOB_PENDING_WORKER = Symbol('CATALOGUE_JOB_PENDING_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -154,6 +160,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(GARAGE_REPORT_DECIDED_WORKER)
     private readonly garageReportDecidedWorker?: Worker | null,
+    @Optional()
+    @Inject(CATALOGUE_JOB_PENDING_WORKER)
+    private readonly catalogueJobPendingWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -463,6 +472,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        CatalogueJobPendingFanOut,
+        {
+          inject: [CatalogueJobPendingFanOut],
+          provide: CATALOGUE_JOB_PENDING_WORKER,
+          useFactory: (fanOut: CatalogueJobPendingFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('CatalogueJobs').error(
+                'PUBLIC_WEB_URL missing; proposed jobs wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<CatalogueJobPendingEvent>(
+              CATALOGUE_JOB_PENDING_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('CatalogueJobs'));
+            return worker;
+          },
+        },
       ],
     };
   }
@@ -475,6 +511,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.verificationResultWorker?.close();
     await this.garageSuspendedWorker?.close();
     await this.garageReportDecidedWorker?.close();
+    await this.catalogueJobPendingWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     await returnStore(this.publisher);

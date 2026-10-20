@@ -122,6 +122,21 @@ describe('diff-audit dead-export', () => {
   });
 });
 
+// Generator output is never edited by hand, so nothing in it is this
+// branch's to fix: the same paths structure-check.ts leaves out.
+describe('diff-audit generated code', () => {
+  it('judges nothing in the generated client or Prisma output', () => {
+    write('libs/data-access/src/lib/fn/find.ts', '/* eslint-disable */\nexport const lost = 1;\n');
+    write('libs/domain/src/generated/client.ts', '// @ts-ignore\nexport const gone = 1;\n');
+    assert.deepEqual(run().filter((l) => /data-access|generated/.test(l)), []);
+  });
+
+  it('still flags the same suppression in hand-written code', () => {
+    write('libs/domain/src/a.ts', '/* eslint-disable */\nexport const a = 1;\n');
+    assert.equal(run().filter((l) => l.includes('[suppression]')).length, 1);
+  });
+});
+
 // The base is origin/main's merge-base: a worktree made from origin/main
 // leaves the local main where the main checkout last had it, and diffing
 // against that reports every file merged since as this branch's.

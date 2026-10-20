@@ -123,6 +123,7 @@ export function priceListJobs(
         nameRo,
         public: reason === undefined,
         ...(reason && { reason }),
+        ...(defaultRow && { visible: defaultRow.visible }),
         ...(defaultRow?.durationMinutes != null && {
           durationMinutes: defaultRow.durationMinutes,
         }),

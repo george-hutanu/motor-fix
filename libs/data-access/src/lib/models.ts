@@ -37,6 +37,7 @@ export type { CandidateGarageListDto } from './models/candidate-garage-list-dto'
 export type { CarDto } from './models/car-dto';
 export type { CarListDto } from './models/car-list-dto';
 export type { CarSnapshotDto } from './models/car-snapshot-dto';
+export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';
@@ -151,6 +152,7 @@ export type { PlatformRuleChangesDto } from './models/platform-rule-changes-dto'
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { PlatformStatusDto } from './models/platform-status-dto';
+export type { PriceAddDto } from './models/price-add-dto';
 export type { PriceListDto } from './models/price-list-dto';
 export type { PriceListItemDto } from './models/price-list-item-dto';
 export type { PriceRangeDto } from './models/price-range-dto';

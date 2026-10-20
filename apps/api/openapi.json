@@ -2243,6 +2243,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "exclude",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated job ids, 50 at most, left out of the answer before the 20 limit",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3989,6 +3998,71 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/catalogue-jobs": {
+      "post": {
+        "operationId": "CatalogueJobsController_propose",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueJobProposalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceRangeSavedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid, a name under 3 or over 80 characters, or an unknown field"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          },
+          "422": {
+            "description": "validation_failed: the range; on name, duplicate (this garage's proposal still waiting), exists (an approved job's name; the entry carries its jobTypeId) or too_many (a fifty-first job)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Proposes a job the catalogue lacks and adds it to the end of the price list with its default range, waiting for approval",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/brands": {
       "put": {
         "operationId": "GarageBrandsController_replace",
@@ -4760,6 +4834,69 @@
         "tags": [
           "garages"
         ]
+      },
+      "post": {
+        "operationId": "PriceListController_add",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceAddDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceRangeSavedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid, or an unknown field"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          },
+          "422": {
+            "description": "validation_failed: the range, a job unknown, not approved or already on the list, or a fifty-first job"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adds an approved catalogue job to the end of the price list with its default range",
+        "tags": [
+          "garages"
+        ]
       }
     },
     "/api/v1/garages/{garageId}/prices/{priceId}": {
@@ -4807,7 +4944,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: not a uuid, a missing or malformed stamp, or an unknown field"
+            "description": "validation_failed: not a uuid, a missing or malformed stamp, an unknown field, or another field beside visible (exclusive)"
           },
           "401": {
             "description": "sign_in_required"
@@ -4833,7 +4970,56 @@
             "bearer": []
           }
         ],
-        "summary": "Changes a job's default range and duration in place, against the stamp it was read with",
+        "summary": "Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "PriceListController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "priceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: no such garage, or no such job's default row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Removes a job from the price list: its default range, its brand ranges and its brand ticks",
         "tags": [
           "garages"
         ]
@@ -12183,6 +12369,96 @@
           "months"
         ]
       },
+      "CatalogueJobProposalDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer",
+            "example": 28000
+          },
+          "toBani": {
+            "type": "integer",
+            "example": 36000,
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "description": "Minutes in steps of 15",
+            "example": 45,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "example": "Recondiționare injectoare",
+            "maxLength": 80,
+            "minLength": 3
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "FieldProblemDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "cui_in_use"
+          },
+          "field": {
+            "type": "string",
+            "description": "The draft path of the value",
+            "example": "steps.6.cui"
+          }
+        },
+        "required": [
+          "code",
+          "field"
+        ]
+      },
+      "PriceRangeSavedDto": {
+        "type": "object",
+        "properties": {
+          "priceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer",
+            "description": "Absent when not set"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "description": "Absent when not set"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "The stamp the next write of this row sends back",
+            "format": "date-time"
+          },
+          "warnings": {
+            "description": "Notes that do not stop the range from being saved",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldProblemDto"
+            }
+          }
+        },
+        "required": [
+          "priceId",
+          "jobTypeId",
+          "fromBani",
+          "updatedAt",
+          "warnings"
+        ]
+      },
       "GarageBrandStanceDto": {
         "type": "object",
         "properties": {
@@ -12881,24 +13157,6 @@
           "sentAt"
         ]
       },
-      "FieldProblemDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "cui_in_use"
-          },
-          "field": {
-            "type": "string",
-            "description": "The draft path of the value",
-            "example": "steps.6.cui"
-          }
-        },
-        "required": [
-          "code",
-          "field"
-        ]
-      },
       "ListingCheckDto": {
         "type": "object",
         "properties": {
@@ -12979,6 +13237,10 @@
             "description": "When the default row last changed, sent back with a range change",
             "format": "date-time"
           },
+          "visible": {
+            "type": "boolean",
+            "description": "The default row's own flag, whatever reason comes first; absent without a default row"
+          },
           "durationMinutes": {
             "type": "integer",
             "minimum": 1
@@ -13045,9 +13307,40 @@
           "items"
         ]
       },
+      "PriceAddDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromBani": {
+            "type": "integer",
+            "example": 28000
+          },
+          "toBani": {
+            "type": "integer",
+            "example": 36000,
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "description": "Minutes in steps of 15",
+            "example": 45,
+            "nullable": true
+          }
+        },
+        "required": [
+          "jobTypeId"
+        ]
+      },
       "PriceRangeDto": {
         "type": "object",
         "properties": {
+          "visible": {
+            "type": "boolean",
+            "description": "Hides or shows the job; sent alone, with no stamp, and the last write wins"
+          },
           "fromBani": {
             "type": "integer",
             "example": 95000
@@ -13066,56 +13359,10 @@
           },
           "expectedUpdatedAt": {
             "type": "string",
-            "description": "The row's updatedAt as the owner read it; a newer save answers 409 stale",
+            "description": "The row's updatedAt as the owner read it, required with a range; a newer save answers 409 stale",
             "format": "date-time"
           }
-        },
-        "required": [
-          "expectedUpdatedAt"
-        ]
-      },
-      "PriceRangeSavedDto": {
-        "type": "object",
-        "properties": {
-          "priceId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "jobTypeId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fromBani": {
-            "type": "integer"
-          },
-          "toBani": {
-            "type": "integer",
-            "description": "Absent when not set"
-          },
-          "durationMinutes": {
-            "type": "integer",
-            "description": "Absent when not set"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "The stamp the next write of this row sends back",
-            "format": "date-time"
-          },
-          "warnings": {
-            "description": "Notes that do not stop the range from being saved",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FieldProblemDto"
-            }
-          }
-        },
-        "required": [
-          "priceId",
-          "jobTypeId",
-          "fromBani",
-          "updatedAt",
-          "warnings"
-        ]
+        }
       },
       "BrandRangeDto": {
         "type": "object",

@@ -1,6 +1,7 @@
 import {
   BrandRangeDto,
   BrandRangeSavedDto,
+  PriceAddDto,
   PriceListDto,
   PriceRangeDto,
   PriceRangeSavedDto,
@@ -15,6 +16,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -22,6 +24,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -63,18 +66,45 @@ export class PriceListController {
     return this.priceList.read(actor, garageId);
   }
 
+  @Post()
+  @UseGuards(JsonOnly)
+  @ApiOperation({
+    summary:
+      'Adds an approved catalogue job to the end of the price list with its default range',
+  })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiCreatedResponse({ type: PriceRangeSavedDto })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: not a uuid, or an unknown field',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'unsupported_media_type' })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'validation_failed: the range, a job unknown, not approved or already on the list, or a fifty-first job',
+  })
+  add(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Body() body: PriceAddDto,
+  ): Promise<PriceRangeSavedDto> {
+    return this.priceList.add(actor, garageId, body);
+  }
+
   @Patch(':priceId')
   @UseGuards(JsonOnly)
   @ApiOperation({
     summary:
-      "Changes a job's default range and duration in place, against the stamp it was read with",
+      "Changes a job's default range and duration in place, against the stamp it was read with; or, with visible alone, hides or shows the job",
   })
   @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiParam({ format: 'uuid', name: 'priceId', type: String })
   @ApiOkResponse({ type: PriceRangeSavedDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: not a uuid, a missing or malformed stamp, or an unknown field',
+      'validation_failed: not a uuid, a missing or malformed stamp, an unknown field, or another field beside visible (exclusive)',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
@@ -95,6 +125,29 @@ export class PriceListController {
     @Body() body: PriceRangeDto,
   ): Promise<PriceRangeSavedDto> {
     return this.priceList.setRange(actor, { garageId, priceId }, body);
+  }
+
+  @Delete(':priceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Removes a job from the price list: its default range, its brand ranges and its brand ticks',
+  })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
+  @ApiParam({ format: 'uuid', name: 'priceId', type: String })
+  @ApiNoContentResponse({ description: 'Removed' })
+  @ApiBadRequestResponse({ description: 'validation_failed: not a uuid' })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({
+    description: "not_found: no such garage, or no such job's default row",
+  })
+  remove(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Param('priceId', new ParseUUIDPipe()) priceId: string,
+  ): Promise<void> {
+    return this.priceList.remove(actor, { garageId, priceId });
   }
 
   @Put(':jobTypeId/brands/:brandId')

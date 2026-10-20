@@ -9,13 +9,18 @@ export interface PriceRangeDto {
   durationMinutes?: number | null;
 
   /**
-   * The row's updatedAt as the owner read it; a newer save answers 409 stale
+   * The row's updatedAt as the owner read it, required with a range; a newer save answers 409 stale
    */
-  expectedUpdatedAt: string;
+  expectedUpdatedAt?: string;
   fromBani?: number;
 
   /**
    * null clears the top
    */
   toBani?: number | null;
+
+  /**
+   * Hides or shows the job; sent alone, with no stamp, and the last write wins
+   */
+  visible?: boolean;
 }
