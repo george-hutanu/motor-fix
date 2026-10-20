@@ -201,6 +201,17 @@ describe('the MotorFix links above the legal row', () => {
     expect(phone).toMatch(/\.wordmark \{[^}]*font-size: var\(--mf-size-body\)/);
   });
 
+  // On a phone the row wraps: its links start under the wordmark, never
+  // flushed right with one left alone on the second line.
+  // @traces 228-FR-017
+  it('lines its links up with the wordmark on a phone', () => {
+    const css = readFileSync(join(__dirname, 'footer.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(phone).toMatch(/\.site \{[^}]*justify-content: flex-start/);
+  });
+
   // Every part of the page sits in a landmark: the wordmark too (axe region).
   // @traces 228-FR-017
   it('holds the wordmark and both rows in one footer landmark', async () => {

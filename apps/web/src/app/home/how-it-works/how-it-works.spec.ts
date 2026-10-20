@@ -174,6 +174,15 @@ describe('how MotorFix works', () => {
     );
     expect(phone).toMatch(/\.tag \{[^}]*font-size: var\(--mf-size-body\)/);
   });
+
+  // The mock sets the headline in two lines, one sentence each, so no word of
+  // the second sentence trails at the end of the first.
+  // @traces 228-FR-005
+  it('puts each sentence of the headline on its own line', () => {
+    const css = readFileSync(join(__dirname, 'how-it-works.css'), 'utf8');
+
+    expect(css).toMatch(/\.second \{[^}]*display: block/);
+  });
 });
 
 // @traces 228-FR-006

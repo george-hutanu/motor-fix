@@ -67,4 +67,7 @@ button {
   .wordmark {
     font-size: var(--mf-size-body);
   }
+  .site {
+    justify-content: flex-start;
+  }
 }
