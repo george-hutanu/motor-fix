@@ -162,7 +162,7 @@
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
-      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile; profile-views has its own final-failure alert, since its counters expire two days after their day",
+      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {

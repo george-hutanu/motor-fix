@@ -49,6 +49,24 @@ describe('screen stylesheets', () => {
     expect(literal).toEqual([]);
   });
 
+  // A size off the scale (26 px, a clamp() between two) is one the sweep
+  // measures as off the Cockpit type scale on every page that shows it.
+  // @traces 228-FR-018
+  it('take every type size from the theme scale', () => {
+    const off = sheets.flatMap(({ css, path }) =>
+      [...css.matchAll(/font-size:\s*([^;]+);/g)]
+        .map((m) => m[1].trim())
+        .filter(
+          (value) =>
+            value !== 'inherit' &&
+            !/^(max\(12px, )?var\(--mf-size-[a-z]+\)\)?$/.test(value),
+        )
+        .map((value) => `${path}: ${value}`),
+    );
+
+    expect(off).toEqual([]);
+  });
+
   // The light theme's --mf-red (#d93a30) is 4.1:1 on its page (#f4f4f1),
   // under the 4.5:1 text needs; --mf-red-ink is the red for words (WCAG 1.4.3).
   it('write red text in the ink shade', () => {
