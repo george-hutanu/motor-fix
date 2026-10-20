@@ -7,7 +7,7 @@ import { JOB_NAME_MAX } from './price-range';
 
 // A name the owner proposes alone is at least three characters, a word the
 // admins can judge; the listing's proposals keep their own two.
-export const PROPOSED_JOB_NAME_MIN = 3;
+const PROPOSED_JOB_NAME_MIN = 3;
 
 // A job the catalogue lacks, proposed by the owner with its default range;
 // the range is left to the one range check, as an add's is.

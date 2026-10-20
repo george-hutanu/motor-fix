@@ -160,7 +160,7 @@ type RowFields = {
   visible: true;
 };
 
-export type RowScope = Omit<
+type RowScope = Omit<
   AuditEntry,
   'action' | 'newValue' | 'subjectId' | 'subjectType'
 > & { actorId: string; garageId: string };
