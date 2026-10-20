@@ -1,11 +1,12 @@
 ---
 capability: garage-brands
-updated: 2026-10-10
+updated: 2026-10-20
 features:
   - 039-brand-catalogue
   - 040-garage-brand-stance
   - 397-listing-ticks
   - 412-brand-job-ticks
+  - 1352-catalogue-job-visibility
 ---
 
 # Capability: Garage brands
@@ -22,9 +23,9 @@ _From 039-brand-catalogue._
 
 _From 039-brand-catalogue._
 
-### 039-FR-015 — A garage MUST be able to hold one row per job type (a `job_type_id`, no foreign key until the job catalogue exists) it does for a brand, only for a brand with a `works_on` row; a job row for any other brand MUST be refused.
+### 1352-FR-016 — `garage_brand_job.job_type_id` MUST have a foreign key to `job_type(id)` with `ON DELETE RESTRICT` (catalogue rows are never deleted; the ticks go with the price rows, FR-007): the migration first deletes the ticks whose job id has no catalogue row (a comment in the migration says so), then adds the constraint; the schema holds the relation on both sides and the comment "the job_type table does not exist yet" is gone (modifies 039-FR-015's "no foreign key until the job catalogue exists").
 
-_From 039-brand-catalogue._
+_From 1352-catalogue-job-visibility._
 
 ### 039-FR-016 — A garage MUST be able to hold an optional brand note of up to 140 characters and an optional refusal phrase of up to 60 characters; longer text MUST be refused.
 
@@ -74,6 +75,11 @@ _From 412-brand-job-ticks._
 
 _From 412-brand-job-ticks._
 
-### 412-FR-010 — Changing ticks MUST never change the garage's status or send it back to review, and MUST never withdraw a request already received; the routing rule (221-FR-007) and the quote's `included` marks read the rows as they stand when a request is sent or a quote written. A job added later to a live garage's price list starts ticked for its taken brands [R1]; the write that adds it (MF-57's editor) owns those rows, not this story.
+### 1352-FR-003 — The add MUST write no brand tick: the job starts unticked for every brand the garage takes, and the owner ticks it through the brands write (OD-33, #1123; modifies 412-FR-010's "[R1]" clause).
 
-_From 412-brand-job-ticks._
+_From 1352-catalogue-job-visibility._
+
+## Retired
+
+- `412-FR-010` — superseded by `1352-FR-003` (2026-10-20)
+- `039-FR-015` — superseded by `1352-FR-016` (2026-10-20)
