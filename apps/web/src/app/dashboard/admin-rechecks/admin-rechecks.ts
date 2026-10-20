@@ -11,7 +11,6 @@ import {
 import { liveResource } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
-const DASH = '—';
 
 // "Reverificări RAR": the published garages due their monthly look-up in the
 // RAR register, the oldest check first, each recorded from its row. Another
@@ -72,10 +71,10 @@ export class AdminRechecks {
     return {
       checked: row.lastCheckedOn
         ? formatDay(row.lastCheckedOn, language)
-        : DASH,
+        : this.i18n.t('admin.rechecks.never'),
       days:
         days === null
-          ? DASH
+          ? null
           : this.i18n.t('admin.rechecks.days', {
               count: days,
               n: formatNum(days, language),
@@ -83,7 +82,7 @@ export class AdminRechecks {
       id: row.garageId,
       name: row.name,
       named: this.i18n.t('admin.rechecks.recordNamed', { name: row.name }),
-      number: row.rarNumber ?? DASH,
+      number: row.rarNumber ?? this.i18n.t('admin.rechecks.noNumber'),
       overdue: row.overdue,
       source: row,
     };

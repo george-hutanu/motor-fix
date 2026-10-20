@@ -1,12 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { RECHECK_DETAIL_MAX } from '@motor-fix/contracts/verification-target';
 import { AdminService, type RecheckDueRowDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
 import { AdminRecheckForm } from './admin-recheck-form';
+import en from '../../../../../../libs/i18n/src/admin/en.json';
+import ro from '../../../../../../libs/i18n/src/admin/ro.json';
 
 // @traces 1351-FR-011
 
@@ -312,7 +315,13 @@ describe('a failed re-check', () => {
     type(detail() as HTMLTextAreaElement, 'expirată');
     await settle();
 
-    expect(text()).toContain('8/200');
+    expect(text()).toContain(`8/${RECHECK_DETAIL_MAX}`);
+  });
+
+  it('takes the counter limit from the contract, not from the strings', () => {
+    for (const strings of [ro, en]) {
+      expect(strings.rechecks.count).toBe('{n}/{max}');
+    }
   });
 
   it('asks to confirm before it sends anything', async () => {

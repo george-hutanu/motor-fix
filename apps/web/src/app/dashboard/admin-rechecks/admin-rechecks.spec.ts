@@ -134,23 +134,30 @@ describe('a due row', () => {
     expect(text(first.querySelector('.days'))).toBe('28 days');
   });
 
-  it('shows a dash for a missing RAR number and a missing date', async () => {
-    answer = async () =>
-      listOf(
-        row(1, {
-          daysSince: null,
-          lastCheckedOn: null,
-          overdue: true,
-          rarNumber: null,
-        }),
-      );
-    const el = await show();
+  it.each([
+    ['ro', 'număr lipsă', 'neverificat'],
+    ['en', 'number missing', 'never checked'],
+  ] as const)(
+    'names a missing RAR number and a missing date in %s instead of bare dashes',
+    async (language, noNumber, never) => {
+      answer = async () =>
+        listOf(
+          row(1, {
+            daysSince: null,
+            lastCheckedOn: null,
+            overdue: true,
+            rarNumber: null,
+          }),
+        );
+      const el = await show(language);
 
-    const [first] = rows(el);
-    expect(text(first.querySelector('.number'))).toBe('—');
-    expect(text(first.querySelector('.checked'))).toBe('—');
-    expect(text(first.querySelector('.days'))).toBe('—');
-  });
+      const [first] = rows(el);
+      expect(text(first.querySelector('.number'))).toBe(noNumber);
+      expect(text(first.querySelector('.checked'))).toBe(never);
+      expect(first.querySelector('.days')).toBeNull();
+      expect(first.textContent).not.toContain('—');
+    },
+  );
 
   it.each([
     ['ro', 'depășit'],

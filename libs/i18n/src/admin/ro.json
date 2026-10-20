@@ -607,7 +607,7 @@
     "activities": "Activități autorizate",
     "cancel": "Renunță",
     "confirm": "Confirmă suspendarea",
-    "count": "{n}/200",
+    "count": "{n}/{max}",
     "date": "Data verificării",
     "days": {
       "few": "{n} zile",
@@ -620,6 +620,8 @@
     "failed": "Reverificarea nu a putut fi salvată. Încearcă din nou.",
     "heading": "Reverificări RAR",
     "loading": "Se încarcă reverificările RAR",
+    "never": "neverificat",
+    "noNumber": "număr lipsă",
     "overdue": "depășit",
     "record": "Înregistrează",
     "recordNamed": "Înregistrează reverificarea pentru {name}",

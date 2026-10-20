@@ -46,7 +46,7 @@
           [attr.aria-describedby]="'mf-recheck-count' + (faulty('detail') ? ' mf-recheck-error' : '')"
           (input)="typedDetail($event)"
         ></textarea>
-        <p class="count" id="mf-recheck-count">{{ 'admin.rechecks.count' | t: { n: count() } }}</p>
+        <p class="count" id="mf-recheck-count">{{ 'admin.rechecks.count' | t: { n: count(), max: detailMax } }}</p>
       </div>
     } @else {
       <fieldset class="ticks">

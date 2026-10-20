@@ -27,7 +27,9 @@
               <span class="when">
                 <span class="checked">{{ row.checked }}</span>
                 <span class="age">
-                  <span class="days">{{ row.days }}</span>
+                  @if (row.days) {
+                    <span class="days">{{ row.days }}</span>
+                  }
                   @if (row.overdue) {
                     <span class="tag">{{ 'admin.rechecks.overdue' | t }}</span>
                   }
