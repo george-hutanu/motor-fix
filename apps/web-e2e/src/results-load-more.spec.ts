@@ -9,7 +9,7 @@ import { test } from './fixtures.js';
 // (20, 20, 8). They stand together near Iași, where no seeded garage does and
 // no other spec writes one, and the page opens there. A deployed address has
 // no database to write to, and leaves @database flows out.
-// @traces 1356-FR-001 1356-FR-003 1356-FR-004 1356-FR-005 1356-FR-006 1356-FR-007 1356-FR-008
+// @traces 1356-FR-001 1356-FR-003 1356-FR-004 1356-FR-005 1356-FR-006 1356-FR-007 1356-FR-008 1356-FR-016
 test.describe('loading more garages on the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
 

@@ -1130,6 +1130,10 @@ describe('refuses a cursor without the order values of its boundary', () => {
     ['with a rating out of range', () => tamper(cursor, { r: '9.5' })],
     ['with a negative review count', () => tamper(cursor, { c: -1 })],
     ['with a fractional review count', () => tamper(cursor, { c: 1.5 })],
+    [
+      'with a review count past the column',
+      () => tamper(cursor, { c: 2_147_483_648 }),
+    ],
   ])('%s', async (_, cursorOf) => {
     expect(await refusal(search.forBrand(dacia, cursorOf()))).toMatchObject({
       body: { code: 'invalid_cursor' },

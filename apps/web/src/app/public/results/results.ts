@@ -431,7 +431,9 @@ export class Results {
     const answer = this.answer();
     if (!answer) return null;
     if (this.capped() && answer.nextCursor)
-      return this.i18n.t('public.results.endCapped');
+      return this.i18n.t('public.results.endCapped', {
+        max: SEARCH_PINS_MAX,
+      });
     if (answer.nextCursor || !this.pagedOn()) return null;
     return this.i18n.t('public.results.end', { total: answer.total });
   });
@@ -977,7 +979,8 @@ export class Results {
         this.first();
       }
       this.turn += 1;
-      this.restarting.set(false);
+      // A second start-again asked meanwhile holds the paging until it lands.
+      if (!this.pageWanted) this.restarting.set(false);
     } else if (this.refreshWanted) {
       this.refreshWanted = false;
       await this.read(undefined, (page, now) =>

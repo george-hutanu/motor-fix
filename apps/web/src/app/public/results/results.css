@@ -136,7 +136,6 @@ mf-brand-chips {
 
   .summary {
     flex-wrap: wrap;
-    font-size: var(--mf-size-small);
     gap: 0 var(--mf-space-2);
   }
 
@@ -301,7 +300,8 @@ li.leaving {
   justify-content: center;
 }
 
-.actions > * {
+.actions > *,
+.more {
   align-items: center;
   background: none;
   border: 1px solid var(--mf-line-strong);
@@ -316,7 +316,8 @@ li.leaving {
   text-decoration: none;
 }
 
-.actions > .primary {
+.actions > .primary,
+.more.primary {
   background: var(--mf-amber);
   border-color: var(--mf-amber);
   color: var(--mf-on-amber);
@@ -327,20 +328,11 @@ li.leaving {
   margin-block-start: var(--mf-space-3);
 }
 
-/* The look of the states' primary "Reîncearcă". */
-.more.primary {
-  background: var(--mf-amber);
-  border: 1px solid var(--mf-amber);
-  border-radius: 999px;
-  color: var(--mf-on-amber);
-  cursor: pointer;
+/* The states' primary "Reîncearcă" (above), the width of the list. */
+.more {
   display: block;
-  font: inherit;
-  font-weight: 600;
   margin-block-start: var(--mf-space-4);
-  min-height: var(--mf-tap);
   overflow-wrap: anywhere;
-  padding-inline: var(--mf-space-4);
   width: 100%;
 }
 

@@ -3270,7 +3270,8 @@ describe('the phone results screen in the stylesheet', () => {
       /font-size: var\(--mf-size-subheading\);/,
     );
     expect(rule('.summary')).toMatch(/flex-wrap: wrap;/);
-    expect(rule('.summary')).toMatch(/font-size: var\(--mf-size-small\);/);
+    // A phone's running text stays at body size: the summary is read, not a caption.
+    expect(rule('.summary')).not.toMatch(/font-size/);
     expect(phone).not.toMatch(/\.tally|\.area/);
     expect(rule('.summary')).not.toMatch(/nowrap|ellipsis/);
   });
@@ -3881,6 +3882,34 @@ describe('Results loading more', () => {
     await scrolledToEnd();
 
     expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'c2', 'n1']);
+  });
+
+  // @traces 1356-FR-002 1356-FR-010
+  it('asks for no page while a second start-again waits behind the first', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.fail(400, undefined, {
+      code: 'invalid_cursor',
+      message: 'cursor is not a page of this search',
+    });
+    const results = harness.routeDebugElement?.componentInstance as
+      | { reload(): void }
+      | undefined;
+    results?.reload();
+    await settle();
+    await reads[2]?.answer(
+      first({ items: garages(100, 20), nextCursor: 'n1' }),
+    );
+    await scrolledToEnd();
+    await scrolledToEnd(1);
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1']);
+    await reads[3]?.answer(
+      first({ items: garages(200, 20), nextCursor: 'n2' }),
+    );
+    await scrolledToEnd();
+
+    expect(cursors().map((q) => q.cursor)).toEqual(['c1', 'n2']);
   });
 
   // @traces 1356-FR-008

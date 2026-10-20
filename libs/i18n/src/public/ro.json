@@ -758,7 +758,7 @@
     "changePlace": "Schimbă locul",
     "changing": "Se caută {brand}…",
     "end": "Ai văzut toate cele {total}",
-    "endCapped": "Ai văzut primele 500 · apropie harta pentru mai puține",
+    "endCapped": "Ai văzut primele {max} · apropie harta pentru mai puține",
     "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
     "found": {

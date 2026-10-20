@@ -145,7 +145,7 @@ describe('GarageSearchQueryDto under hostile input', () => {
     expect(search({ brand: 'bmw', cursor: ['a', 'b'] })).toContain('cursor');
   });
 
-  it('takes an empty cursor string as no cursor', () => {
+  it('takes an empty cursor string', () => {
     expect(search({ brand: 'bmw', cursor: '' })).toEqual([]);
   });
 

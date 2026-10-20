@@ -63,6 +63,8 @@ function beyond({ c, i, name, r }: After): Prisma.Sql {
 
 // A rating as the garage table holds it: 1.0 to 5.0, one decimal.
 const RATING = /^(?:[1-4]\.\d|5\.0)$/;
+// review_count is a PostgreSQL integer.
+const INT4_MAX = 2_147_483_647;
 
 const invalidCursor = () =>
   refusal(
@@ -86,7 +88,8 @@ function decode(cursor: string, brandId: string, box?: string): Cursor {
     x !== box ||
     !(r === null || (typeof r === 'string' && RATING.test(r))) ||
     !Number.isSafeInteger(c) ||
-    (c as number) < 0
+    (c as number) < 0 ||
+    (c as number) > INT4_MAX
   ) {
     throw invalidCursor();
   }
