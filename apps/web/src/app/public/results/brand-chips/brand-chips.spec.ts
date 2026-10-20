@@ -441,6 +441,58 @@ describe('BrandChips', () => {
 
       expect(row.scrollLeft).toBe(0);
     });
+
+    // Chrome scrolls a focused chip only when none of it shows: the last
+    // chip, half past the screen's edge, would keep its ring cut off.
+    it('brings a chip that takes the focus wholly inside the row, clear of its padding', async () => {
+      await chips();
+      await settle();
+      const row = group() as HTMLElement;
+      row.style.padding = '0 16px';
+      Object.defineProperty(row, 'clientWidth', { value: 320 });
+      place(row, 0, 320);
+      row.scrollLeft = 404;
+      const last = buttons()[7] as HTMLButtonElement;
+      place(last, 290, 88);
+      Object.defineProperty(last, 'offsetWidth', { value: 88 });
+
+      last.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(row.scrollLeft).toBe(404 + 290 + 88 - (320 - 16));
+    });
+
+    it("brings a focused chip cut off at the row's start back past its padding", async () => {
+      await chips();
+      await settle();
+      const row = group() as HTMLElement;
+      row.style.padding = '0 16px';
+      Object.defineProperty(row, 'clientWidth', { value: 320 });
+      place(row, 0, 320);
+      row.scrollLeft = 200;
+      const first = buttons()[1] as HTMLButtonElement;
+      place(first, -30, 70);
+      Object.defineProperty(first, 'offsetWidth', { value: 70 });
+
+      first.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(row.scrollLeft).toBe(200 - 30 - 16);
+    });
+
+    it('leaves the row where it is when the focused chip shows whole', async () => {
+      await chips();
+      await settle();
+      const row = group() as HTMLElement;
+      Object.defineProperty(row, 'clientWidth', { value: 320 });
+      place(row, 0, 320);
+      row.scrollLeft = 100;
+      const chip = buttons()[3] as HTMLButtonElement;
+      place(chip, 120, 70);
+      Object.defineProperty(chip, 'offsetWidth', { value: 70 });
+
+      chip.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(row.scrollLeft).toBe(100);
+    });
   });
 });
 

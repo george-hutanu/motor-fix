@@ -107,6 +107,23 @@ export class BrandChips {
     });
   }
 
+  // Chrome scrolls a focused chip only when none of it shows, so the last
+  // chip, half past the screen's edge, would keep its ring cut off: a chip
+  // taking the focus is brought wholly inside the row, clear of its inset.
+  protected bringIn(event: FocusEvent) {
+    const list = this.list()?.nativeElement;
+    const chip = event.target;
+    if (!list || !(chip instanceof HTMLElement)) return;
+    // The row's own inset, which its scroll padding repeats.
+    const pad = Number.parseFloat(getComputedStyle(list).paddingLeft) || 0;
+    const left =
+      chip.getBoundingClientRect().left - list.getBoundingClientRect().left;
+    const right = left + chip.offsetWidth;
+    if (left < pad) list.scrollLeft += left - pad;
+    else if (right > list.clientWidth - pad)
+      list.scrollLeft += right - (list.clientWidth - pad);
+  }
+
   protected tap(chip: Chip) {
     if (chip.id === untracked(this.marked)) return;
     this.pick.emit({ key: chip.slug ?? chip.id, name: chip.name });

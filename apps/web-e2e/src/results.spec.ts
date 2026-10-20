@@ -209,6 +209,29 @@ test.describe('the Results page @seeded', () => {
       { timeout: 15_000 },
     );
     expect(navigations).toBe(0);
+    // The describe runs in order and the brand chips below expect the top
+    // garage first: it is restored as an admin's restore would write it, so
+    // the cached searches are dropped too.
+    await db.query('BEGIN');
+    await db.query(`UPDATE garage SET status = 'approved' WHERE id = $1`, [id]);
+    const restored = await db.query<{ id: string }>(
+      `INSERT INTO outbox_event (kind, subject_id, audience)
+       VALUES ('garage.restored', $1, $2) RETURNING id`,
+      [id, [`garage:${id}`, `public:garage:${id}`, 'public:search']],
+    );
+    await db.query('COMMIT');
+    await expect
+      .poll(
+        async () =>
+          (
+            await db.query(
+              'SELECT 1 FROM outbox_event WHERE id = $1 AND relayed_at IS NOT NULL',
+              [restored.rows[0]?.id],
+            )
+          ).rowCount,
+        { timeout: 15_000 },
+      )
+      .toBe(1);
   });
 
   // The brand chips above the list: a popular brand's chip changes the
@@ -602,7 +625,7 @@ test.describe('the map beside the results @seeded', () => {
     await rests(page, 'half');
 
     await sheet(page)
-      .locator('.body')
+      .locator(':scope > .body')
       .evaluate((body) => {
         body.scrollTop = 400;
       });
@@ -677,7 +700,7 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await rests(page, 'half');
     await sheet(page)
-      .locator('.body')
+      .locator(':scope > .body')
       .evaluate((body) => {
         body.scrollTop = 200;
       });
@@ -693,7 +716,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect
       .poll(() =>
         sheet(page)
-          .locator('.body')
+          .locator(':scope > .body')
           .evaluate((b) => b.scrollTop),
       )
       .toBe(0);

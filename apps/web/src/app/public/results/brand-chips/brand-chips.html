@@ -1,5 +1,5 @@
 @if (row().length > 0) {
-  <fieldset #list class="row" [attr.aria-label]="'public.results.brands' | t">
+  <fieldset #list class="row" [attr.aria-label]="'public.results.brands' | t" (focusin)="bringIn($event)">
     @for (chip of row(); track chip.id) {
       <button
         type="button"

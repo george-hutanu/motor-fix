@@ -309,8 +309,13 @@ test.describe('axe on the core screens @seeded', () => {
   }) => {
     const found: string[] = [];
     await page.setViewportSize({ height: 800, width: 320 });
+    // With a place, as a search sends it: with none the page asks for one and
+    // shows no list or brand chips.
     for (const language of LANGUAGES) {
-      await hydrated(page, inLanguage('/ro/garages?brand=dacia', language));
+      await hydrated(
+        page,
+        inLanguage('/ro/garages?brand=dacia&near=44.435,26.015', language),
+      );
       found.push(...(await scan(page, `the results at 320 px ${language}`)));
       if (!(await noSidewaysScroll(page)))
         found.push(`the results ${language}: scrolls sideways at 320 px`);
