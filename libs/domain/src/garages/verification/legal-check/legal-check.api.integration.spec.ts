@@ -9,6 +9,7 @@ import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import type { Role } from '../../../auth/capabilities';
 import { serialDatabase } from '../../../auth/serial-db.testing';
+import { addDays, localDay } from '../../../bucharest';
 import { NotificationsModule } from '../../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -82,6 +83,7 @@ async function world(
   garage: Partial<{
     status: 'draft' | 'approved' | 'suspended';
     businessKind: 'company' | 'mobile';
+    lastCheckedOn: string;
   }> = {},
 ) {
   // The catalogue's own row, as its migration seeds it.
@@ -94,7 +96,7 @@ async function world(
     data: {
       approvedAt: new Date(`${APPROVED_ON}T09:00:00Z`),
       businessKind: garage.businessKind ?? 'company',
-      lastCheckedOn: new Date(APPROVED_ON),
+      lastCheckedOn: new Date(garage.lastCheckedOn ?? APPROVED_ON),
       name: 'ATELIER DINAMO SRL',
       rarActivities: ['brakes'],
       slug: `dinamo-${randomUUID()}`,
@@ -359,15 +361,15 @@ describe('who may read it', () => {
 });
 
 const FAILED_ON = '2026-10-12';
+const FAILED_DETAIL = 'Autorizația a expirat la 30 septembrie';
 
-async function suspendedAfterRecheck(
-  w: World,
-  cause: 'recheck_failed' | 'admin',
-) {
+// An admin suspension written as its own rows: the use case under test here
+// is the read, and an admin suspension never comes from a re-check.
+async function suspendedByAdmin(w: World) {
   await prisma.recheck.create({
     data: {
       checkedOn: new Date(FAILED_ON),
-      detail: 'Autorizația a expirat la 30 septembrie',
+      detail: FAILED_DETAIL,
       failure: 'expired',
       garageId: w.dinamo.id,
       result: 'failed',
@@ -375,7 +377,7 @@ async function suspendedAfterRecheck(
   });
   await prisma.garageSuspension.create({
     data: {
-      cause,
+      cause: 'admin',
       fromTime: new Date(`${FAILED_ON}T07:00:00Z`),
       garageId: w.dinamo.id,
       reason: 'Autorizația RAR a expirat',
@@ -383,29 +385,43 @@ async function suspendedAfterRecheck(
   });
 }
 
-// @traces 1354-FR-001 1354-FR-002 1354-FR-004
+// @traces 1354-FR-001 1354-FR-002 1354-FR-004 1354-FR-010
 describe('the legal check of a suspended garage', () => {
-  it('answers the owner with the status, the latest re-check and the red RAR row', async () => {
-    const w = await world({ status: 'suspended' });
+  it('answers the owner with the status, the latest re-check and the red RAR row after a failed re-check is recorded', async () => {
+    const today = localDay(new Date());
+    const lastCheckedOn = addDays(today, -30);
+    const w = await world({ lastCheckedOn });
     await file(w);
-    await suspendedAfterRecheck(w, 'recheck_failed');
+
+    // The monthly re-check use case records the failure and suspends.
+    const recorded = await request(app.getHttpServer())
+      .post(`/admin/garages/${w.dinamo.id}/rechecks`)
+      .set('Authorization', w.admin)
+      .send({
+        checkedOn: today,
+        detail: FAILED_DETAIL,
+        failure: 'expired',
+        lastCheckedOn,
+        result: 'failed',
+      });
+    expect(recorded.status).toBe(200);
 
     const res = await read(w.dinamo.id, w.owner);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
-      lastCheckedOn: APPROVED_ON,
+      lastCheckedOn,
       latestRecheck: {
-        checkedOn: FAILED_ON,
-        detail: 'Autorizația a expirat la 30 septembrie',
+        checkedOn: today,
+        detail: FAILED_DETAIL,
         failure: 'expired',
         result: 'failed',
       },
       status: 'suspended',
     });
     expect(res.body.rows[2]).toEqual({
-      checkedOn: FAILED_ON,
-      detail: 'Autorizația a expirat la 30 septembrie',
+      checkedOn: today,
+      detail: FAILED_DETAIL,
       failure: 'expired',
       kind: 'rar',
       missing: [],
@@ -416,7 +432,7 @@ describe('the legal check of a suspended garage', () => {
   it('keeps the ordinary RAR row when an admin suspended the garage', async () => {
     const w = await world({ status: 'suspended' });
     await file(w);
-    await suspendedAfterRecheck(w, 'admin');
+    await suspendedByAdmin(w);
 
     const res = await read(w.dinamo.id, w.owner);
 
