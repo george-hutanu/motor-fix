@@ -18,6 +18,7 @@ features:
   - 271-garage-distance
   - 228-how-it-works-list-garage
   - 1355-results-brand-chips
+  - 1358-results-phone-map-list
 ---
 
 # Capability: Garage search
@@ -214,9 +215,9 @@ _From 269-map-price-pins._
 
 _From 269-map-price-pins._
 
-### 269-FR-010 — Results MUST show an interactive MapLibre map beside the list on desktop (the list and the map side by side from 1024 px), and above the list at full width and a fixed height below that; the phone layout of #51 (summary, map, list sheet) is not built here, and the page never scrolls sideways at 320 px (267-FR-016). The map uses MapLibre's cooperative gestures (one finger scrolls the page, two move the map; Ctrl or ⌘ with the wheel zooms), so it never traps a page scroll.
+### 1358-FR-001 — Below 768 px (the shared `phone` layout, 286-FR-008) Results MUST lay out as: a summary bar at the top, the map under it filling the screen down to the public tab bar, and a sheet over the lower part of the map holding the list; from 768 px the layout built today is unchanged (the map above the list on a tablet, beside it from 1024 px). The decision uses the same breakpoint as the stylesheet, so the two never disagree.
 
-_From 269-map-price-pins._
+_From 1358-results-phone-map-list._
 
 ### 269-FR-011 — The map MUST use the tile styles and the dark-scheme choice of the place-step map (A17's provider, openfreemap `liberty` and `dark`), honouring the same test override that points it at the app's empty style, so the neighbourhood names come from the style and no test fetches a tile from outside.
 
@@ -242,9 +243,9 @@ _From 269-map-price-pins._
 
 _From 269-map-price-pins._
 
-### 269-FR-017 — While the search runs the map area MUST show a grey map with the legend; pins appear when the pins request answers. When the map's style fails to load (a map `error` before `load`, or no `load` within 10 s; a single tile error is ignored) the map area MUST read "Harta nu este disponibilă acum" ("The map is not available now") and the list is unchanged; when the pins request fails the map stays without pins, with no message over the list. The map is browser-only: the server renders the placeholder and the legend.
+### 1358-FR-010 — When the map's style failed to load (269-FR-017's condition), the sheet MUST rest at full and the summary bar MUST carry the existing text "Harta nu este disponibilă acum" / "The map is not available now" in a polite live region; the list is unchanged, and the visitor may still drag the sheet down.
 
-_From 269-map-price-pins._
+_From 1358-results-phone-map-list._
 
 ### 269-FR-018 — The pins MUST be re-read (one pins request for the current parameters) within 2 seconds when a live message of the kinds the list follows about a public garage arrives (`garage.updated`, `garage.suspended`, `garage.restored`, `verification.decided`), through the same stream as the list (267-FR-019), bursts folded as the list folds them; a review event re-reads nothing (a pin shows no rating).
 
@@ -276,9 +277,9 @@ _From 270-card-pin-link._
 
 _From 270-card-pin-link._
 
-### 270-FR-004 — A tap on a pin (its dot or its rate label) or on a mobile mechanic's rate label MUST select its garage and, when its card is in the list, scroll that card into view (the nearest edge, smooth unless reduced motion), without moving the keyboard focus; a tap on a circle's fill, on the map away from any pin, or on the cluster selects nothing. A tap on a cluster MUST zoom the map to the zoom at which it splits, as the page's own move (no list reload, no selection change). Selecting a card MUST NOT move the map.
+### 1358-FR-007 — A tap on a pin whose garage is in the list MUST, besides selecting it (270-FR-004), raise the sheet from low to half (keeping half or full where it already is) and scroll the list inside the sheet so the card is in view (the nearest edge, smooth unless reduced motion); a tap on a pin whose garage is not in the list opens the small card on the map (270-FR-010) and moves the sheet nowhere.
 
-_From 270-card-pin-link._
+_From 1358-results-phone-map-list._
 
 ### 1355-FR-006 — When the list shown is replaced by a fresh answer (a new brand, place or radius, a visible-area load, "Înapoi la 25 km", the "Reîncarcă" chip, and any later sort or filter change) the first card's garage MUST become selected and the pointed state cleared; with an empty list nothing is selected. An in-place card change and a pins re-read MUST keep the selection. Only after a brand change MUST the list also go back to the top, its cards re-ordered with a short animation (a 16 px rise lasting at most 520 ms, as the mock's row-in; none under reduced motion); any other replacement does not scroll the list.
 
@@ -420,6 +421,70 @@ _From 1355-results-brand-chips._
 
 _From 1355-results-brand-chips._
 
+### 1358-FR-001 — Below 768 px (the shared `phone` layout, 286-FR-008) Results MUST lay out as: a summary bar at the top, the map under it filling the screen down to the public tab bar, and a sheet over the lower part of the map holding the list; from 768 px the layout built today is unchanged (the map above the list on a tablet, beside it from 1024 px). The decision uses the same breakpoint as the stylesheet, so the two never disagree.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-002 — The summary bar MUST show the brand (the page's title), the place line (the area, or the "în zona hărții" counts in visible-area mode) and the total found, plus the actions the summary carries today ("Schimbă locul", "Înapoi la 25 km", the "Reîncarcă" chip when a newer answer exists), in both languages with the texts that exist; the title stays the page's one heading. While the place is unknown it holds the address field, and while locating, the status line, as the header does today.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-003 — The sheet MUST rest in exactly one of three positions: **low** (its handle and its header visible, the map large), **half** (about half the screen, the map visible above it), and **full** (the list fills the screen below the summary bar; the map may be covered). It opens at half. The handle is a drag target at least 44 px tall; a drag released rests the sheet at the position nearest to where it was let go, a drag shorter than 10 % of the screen height returns it to where it started, one long drag may skip a position, and there is no velocity rule; the move uses the theme's motion and none under reduced motion.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-004 — The map MUST stay visible, and usable (drag, zoom, pin taps, the visible-area search), in the low and half positions; the public tab bar MUST stay visible at every position, the sheet ending above it, except while a field is focused, when the bar hides by its existing rule and the sheet rests on the screen's bottom edge; the sheet's full position ends under the summary bar, which stays visible.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-005 — The list MUST scroll inside the sheet at half and full; the page behind the sheet MUST NOT scroll on a phone, and scrolling the list MUST NOT move the sheet. Only the handle and the header's free space drag the sheet; the chip rows scroll sideways on their own. The results screen is exactly one screen tall, so scrolling the list never scrolls the page; the site footer stays below that screen.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-006 — The sheet's header, under the handle, MUST hold the brand chip row and the brand search of ST-268 (1355-FR-010, 1355-FR-013), and nothing else: the sort and the facility chips of ST-328 and ST-329 join the header when those stories land, and this story adds no placeholder or code for them; every control in the header is at least 44 px tall and reachable with one thumb at every position (the header is the sheet's top in all three).
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-007 — A tap on a pin whose garage is in the list MUST, besides selecting it (270-FR-004), raise the sheet from low to half (keeping half or full where it already is) and scroll the list inside the sheet so the card is in view (the nearest edge, smooth unless reduced motion); a tap on a pin whose garage is not in the list opens the small card on the map (270-FR-010) and moves the sheet nowhere.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-008 — A brand, place, sort or filter change MUST keep the sheet's position; the list goes to its top inside the sheet with the first card selected (1355-FR-006); the brand-change loading state (1355-FR-011: the dimmed cards and the progress bar) shows inside the sheet. A live update, a pins re-read and a map move MUST keep the sheet's position and the list's scroll.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-009 — Reaching the full position by the visitor's own act (a drag or the handle's button) MUST add one step to the browser's history at the same address, carrying a sheet marker the page recognises, never a router navigation; a full forced by a failed map (FR-010) adds no step; the back gesture or button from full returns the sheet to half without leaving the page and without recording a search (the page already treats a history step as no new search); leaving full by hand MUST consume that step, so a later back leaves the page as before. The sheet adds no step for low or half. A history step carrying the marker that the visitor reaches again by going forward, or after a reload, leaves the sheet at half (the position is never restored from history), and a back over it then leaves the page as before.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-010 — When the map's style failed to load (269-FR-017's condition), the sheet MUST rest at full and the summary bar MUST carry the existing text "Harta nu este disponibilă acum" / "The map is not available now" in a polite live region; the list is unchanged, and the visitor may still drag the sheet down.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-011 — At 320 px wide nothing on the phone results screen MUST scroll sideways except the chip rows inside the sheet's header (`document.documentElement.scrollWidth` ≤ 320, 286-FR-002); no text is smaller than 12 px (286-FR-004); the handle, every chip, button, field and link is at least 44 px tall (286-FR-003); the sheet respects the bottom safe-area inset through the tab bar it rests on.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-012 — The sheet MUST be reachable without the map: the summary bar, the handle (a button whose accessible name says what it does next, "Arată mai mult din listă" / "Show more of the list" at low and half and "Arată mai mult din hartă" / "Show more of the map" at full, with the sheet's position exposed as expanded or collapsed), the header controls and the cards keep that reading order at every position; no card is hidden from assistive technology or removed from the keyboard order by the sheet's position; moving the sheet never moves keyboard focus away from the control that moved it, and a field or card taking focus while the sheet is low raises it to half so the focused control is in view; the map keeps 269-FR-016 and 270-FR-011 (not the accessible path).
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-013 — The sheet's position, the drag and the pin reaction MUST live in the page only: no address-bar entry other than the history step of FR-009, no storage, no request, no new API, no write; the story reads what the list and the map already hold.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-014 — Every new text (the handle's names, the summary bar's labels) MUST exist in Romanian and English in the shared i18n files; the screen MUST hold at 320 px, 390 px, tablet and desktop, light and dark, both languages, in the PR QA sweep.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-015 — Tests: web unit tests (Jest) MUST cover the sheet's position state (open at half; drag to each of the three positions; the nearest position in the drag direction; kept on a brand change, a live update and a map move; full when the map failed; the history step added at full and consumed by a hand drag), its reaction to a pin tap (low → half with the card revealed; half kept; not in the list → no move), and the breakpoint rule (phone below 768 px, unchanged above). End to end (Playwright) at 375 × 812 and at 320 px: open Results, drag the sheet through its positions, tap a pin and see its card in the sheet; no sideways scroll at 320 px.
+
+_From 1358-results-phone-map-list._
+
+### 1358-FR-016 — Observability: the story adds no service, endpoint, queue, outside call or product action; the PR's Observability section states this and the inventory is unchanged.
+
+_From 1358-results-phone-map-list._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -446,3 +511,7 @@ _From 1355-results-brand-chips._
 
 - `270-FR-005` — superseded by `1355-FR-006` (2026-10-20)
 - `267-FR-016` — superseded by `1355-FR-011` (2026-10-20)
+
+- `269-FR-010` — superseded by `1358-FR-001` (2026-10-20)
+- `269-FR-017` — superseded by `1358-FR-010` (2026-10-20)
+- `270-FR-004` — superseded by `1358-FR-007` (2026-10-20)
