@@ -66,6 +66,29 @@ const visible = () =>
     {} as never,
   );
 
+// Every font-size in the sheet in px: a theme size token read from the
+// Cockpit theme, a literal, or the smallest end of a clamp().
+function fontSizes(): number[] {
+  const css = readFileSync(join(__dirname, 'how-it-works.css'), 'utf8');
+  const theme = readFileSync(
+    join(__dirname, '../../../../../../libs/ui-cockpit/src/styles/cockpit.css'),
+    'utf8',
+  );
+  const tokens = new Map(
+    [...theme.matchAll(/(--mf-size-[a-z]+):\s*(\d+)px/g)].map((m) => [
+      m[1],
+      Number(m[2]),
+    ]),
+  );
+  return [...css.matchAll(/font-size:\s*([^;]+);/g)].map(([, value]) => {
+    const token = /var\((--mf-size-[a-z]+)\)/.exec(value);
+    if (token) return tokens.get(token[1]) ?? Number.NaN;
+    return Math.min(
+      ...[...value.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])),
+    );
+  });
+}
+
 // @traces 228-FR-005 228-FR-018
 describe('how MotorFix works', () => {
   it('heads the section with the two lines and gives the three benefits, in Romanian', async () => {
@@ -127,12 +150,10 @@ describe('how MotorFix works', () => {
   });
 
   it('keeps every text at 12 px or more', () => {
-    const css = readFileSync(join(__dirname, 'how-it-works.css'), 'utf8');
-    const sizes = [...css.matchAll(/font-size: (\d+)px/g)].map((m) =>
-      Number(m[1]),
-    );
+    const sizes = fontSizes();
 
-    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(12);
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(sizes.every((size) => size >= 12)).toBe(true);
   });
 });
 

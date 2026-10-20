@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
@@ -563,6 +566,18 @@ describe('Home brand picker on the server', () => {
     expect(tiles()).toHaveLength(8);
     expect(homeApi.homeControllerForBrand).not.toHaveBeenCalled();
     expect(count()?.getAttribute('aria-busy')).toBe('true');
+  });
+
+  // @traces 228-FR-011
+  it('asks for no more brands than the popular-brands call accepts', () => {
+    const api = JSON.parse(
+      readFileSync(join(__dirname, '../../../../api/openapi.json'), 'utf8'),
+    );
+    const limit = api.paths['/api/v1/brands/popular'].get.parameters.find(
+      (p: { name: string }) => p.name === 'limit',
+    );
+
+    expect(limit.schema.maximum).toBe(16);
   });
 
   it('renders the brand search field, labelled and enabled', async () => {

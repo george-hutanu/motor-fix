@@ -8,7 +8,7 @@ const WINDOW_DAYS = 30;
 
 type Db = Pick<PrismaClient, '$transaction' | 'brand' | 'demandDaily'>;
 
-export interface BrandRanking {
+interface BrandRanking {
   // Active brands given a rank.
   ranked: number;
   // Brands whose rank the run changed.

@@ -123,9 +123,9 @@ h3 {
 }
 
 .counter {
-  color: var(--mf-amber);
+  color: var(--mf-amber-ink);
   font-family: var(--mf-font-label);
-  font-size: 40px;
+  font-size: var(--mf-size-display);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }

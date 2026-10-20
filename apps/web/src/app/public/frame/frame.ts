@@ -14,7 +14,6 @@ import { filter } from 'rxjs';
 import { ConsentBar } from '../../consent/consent-bar/consent-bar';
 import { Session } from '../../dashboard/session';
 import { BrandChoice } from '../../home/brand-choice/brand-choice';
-import { HOW_IT_WORKS } from '../../home/how-it-works/how-it-works';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { PublicFooter } from '../footer/footer';
 import { PublicTabBar } from '../tab-bar/tab-bar';
@@ -91,7 +90,7 @@ export class PublicFrame {
       return;
     event.preventDefault();
     void this.router.navigate(['/', this.i18n.language()], {
-      fragment: HOW_IT_WORKS,
+      fragment: 'how-it-works',
       onSameUrlNavigation: 'reload',
     });
   }

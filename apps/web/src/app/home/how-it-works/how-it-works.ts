@@ -15,7 +15,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
-export const HOW_IT_WORKS = 'how-it-works';
+const HOW_IT_WORKS = 'how-it-works';
 
 // A fixed illustration, not a garage's figure.
 const RATE = 180;

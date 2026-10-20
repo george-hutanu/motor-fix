@@ -52,7 +52,7 @@ p {
 
 .list {
   align-items: center;
-  background: var(--mf-bg);
+  background: var(--mf-on-amber);
   border-radius: var(--mf-radius-control);
   box-sizing: border-box;
   color: var(--mf-amber);
@@ -60,7 +60,7 @@ p {
   font-family: var(--mf-font-label);
   font-size: var(--mf-size-small);
   gap: var(--mf-space-3);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--mf-label-tracking);
   min-height: 56px;
   padding: var(--mf-space-2) var(--mf-space-6);
   text-decoration: none;
