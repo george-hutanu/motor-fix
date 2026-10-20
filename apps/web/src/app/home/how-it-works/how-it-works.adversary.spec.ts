@@ -175,6 +175,20 @@ describe('the jump to how MotorFix works while Home is still growing', () => {
     },
   );
 
+  it('stops following three seconds after the jump', async () => {
+    const timers = jest.spyOn(window, 'setTimeout');
+    await render('/ro#how-it-works');
+    const [settle] = timers.mock.calls.find(([, ms]) => ms === 3000) ?? [];
+    timers.mockRestore();
+
+    expect(settle).toBeInstanceOf(Function);
+    (settle as () => void)();
+    resized[0](2700);
+
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(unobserved).toBeGreaterThan(0);
+  });
+
   it('stops following once the page is left', async () => {
     await render('/ro#how-it-works');
     fixture.destroy();
