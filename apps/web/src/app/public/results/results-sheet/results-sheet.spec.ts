@@ -418,6 +418,23 @@ describe('ResultsSheet forced full across 768 px', () => {
     expect(position()).toBe('full');
     expect(push).not.toHaveBeenCalled();
   });
+
+  // @traces 1358-FR-009
+  it('goes back to full with no step after the visitor dragged it down', async () => {
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+    await drag(100, 500);
+    expect(position()).not.toBe('full');
+
+    layout.set('tablet');
+    await settle();
+    layout.set('phone');
+    await settle();
+
+    expect(position()).toBe('full');
+    expect(push).not.toHaveBeenCalled();
+  });
 });
 
 describe('ResultsSheet after a reload on its step', () => {

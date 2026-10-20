@@ -73,7 +73,11 @@ export class ResultsSheet {
     effect(() => {
       const phone = this.phone();
       if (wasPhone !== undefined && phone !== wasPhone)
-        untracked(() => this.rest(this.forcedFull() ? 'full' : 'half'));
+        untracked(() => {
+          // A forced full is the page's, so it adds no step.
+          if (this.forcedFull()) this.position.set('full');
+          else this.rest('half');
+        });
       wasPhone = phone;
     });
     afterNextRender(() => this.measure());
