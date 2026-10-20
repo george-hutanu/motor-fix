@@ -1277,9 +1277,11 @@ describe('Results', () => {
       keep(PLACE);
       await open('/ro/garages?brand=bmw');
 
+      // The page renders as a phone here: no legend or sheet cover in jsdom.
       expect(mapView.fit).toHaveBeenCalledWith(
         { lat: PLACE.lat, lng: PLACE.lng },
         pinsOf(48),
+        0,
         0,
       );
     });
@@ -1525,9 +1527,11 @@ describe('Results', () => {
 
       expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
       expect(pinsAsked().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+      // The page renders as a phone here: no legend or sheet cover in jsdom.
       expect(mapView.fit).toHaveBeenCalledWith(
         { lat: PLACE.lat, lng: PLACE.lng },
         pinsOf(48),
+        0,
         0,
       );
       expect(back()).toBeNull();
@@ -3264,6 +3268,18 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule('.summary')).toMatch(/font-size: var\(--mf-size-small\);/);
     expect(phone).not.toMatch(/\.tally|\.area/);
     expect(rule('.summary')).not.toMatch(/nowrap|ellipsis/);
+  });
+
+  it('lets the map fill the stage down to the tab bar: its tablet height stays on the tablet', () => {
+    expect(rule('mf-results-map')).toMatch(/height: auto;/);
+    const outside = css.replace(
+      /@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g,
+      '',
+    );
+    expect(outside).not.toMatch(/mf-results-map \{/);
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) and \(max-width: 1023px\) \{(?:[^{}]*\{[^}]*\})*?\s*mf-results-map \{[^}]*height: 40vh;/,
+    );
   });
 
   it('keeps the map and its controls under the sheet', () => {

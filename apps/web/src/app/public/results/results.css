@@ -161,12 +161,8 @@ mf-brand-chips {
   }
 }
 
-/* On a tablet the map sits above the list at full width, under the chips. */
-mf-results-map {
-  height: 40vh;
-  margin-block-end: var(--mf-space-4);
-}
-
+/* On a tablet the map sits above the list at full width, under the chips.
+   Kept to the tablet: on a phone the map fills the stage under the sheet. */
 @media (min-width: 768px) and (max-width: 1023px) {
   :host {
     display: flex;
@@ -174,6 +170,8 @@ mf-results-map {
   }
 
   mf-results-map {
+    height: 40vh;
+    margin-block-end: var(--mf-space-4);
     order: 1;
   }
 

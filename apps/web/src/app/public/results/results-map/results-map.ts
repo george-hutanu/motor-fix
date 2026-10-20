@@ -38,6 +38,9 @@ import {
 // The small card keeps 8 px below the map's top and 14 px above its pin;
 // results-map.css keeps the same 8 px at its sides.
 const EDGE = 8;
+// What a phone's fit keeps of the map between its covers: the pins' 40 px
+// padding on both sides and 40 px to frame them in.
+const ROOM = 120;
 const GAP = 14;
 
 export interface ResultsMapView {
@@ -46,6 +49,7 @@ export interface ResultsMapView {
     place: LatLng | undefined,
     answer: GaragePinsDto | undefined,
     covered?: number,
+    coveredTop?: number,
   ): void;
   show(answer: GaragePinsDto | undefined): void;
   light(id: string | undefined): void;
@@ -123,6 +127,7 @@ export class ResultsMap {
   // on a phone the page's summary says it instead.
   private readonly failure = signal(false);
   private readonly layout = inject(Layout);
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly failed = this.failure.asReadonly();
   protected readonly phone = computed(() => this.layout.current() === 'phone');
   protected readonly hasArea = computed(() =>
@@ -205,7 +210,12 @@ export class ResultsMap {
     const view = untracked(this.view);
     this.fitWanted = !view;
     this.tooWide.set(false);
-    view?.fit(untracked(this.place), untracked(this.pins), this.covered());
+    const place = untracked(this.place);
+    const pins = untracked(this.pins);
+    if (untracked(this.phone)) {
+      const { bottom, top } = this.phoneCovers();
+      view?.fit(place, pins, bottom, top);
+    } else view?.fit(place, pins, this.covered());
   }
 
   // How far up the map's bottom edge the legend reaches, in pixels.
@@ -217,5 +227,28 @@ export class ResultsMap {
       0,
       map.getBoundingClientRect().bottom - key.getBoundingClientRect().top,
     );
+  }
+
+  // On a phone the legend sits at the map's top and the results sheet, the
+  // map's sibling, over its lower part; the pins are framed between them.
+  private phoneCovers() {
+    const map = this.host().nativeElement.parentElement;
+    const key = map?.querySelector('.legend');
+    const sheet = this.element.nativeElement.parentElement?.querySelector(
+      ':scope > mf-results-sheet',
+    );
+    if (!map) return { bottom: 0, top: 0 };
+    const box = map.getBoundingClientRect();
+    const top = key
+      ? Math.max(0, key.getBoundingClientRect().bottom - box.top)
+      : 0;
+    const under = sheet
+      ? Math.max(0, box.bottom - sheet.getBoundingClientRect().top)
+      : 0;
+    const bottom = Math.max(
+      0,
+      Math.min(under, box.bottom - box.top - top - ROOM),
+    );
+    return { bottom, top };
   }
 }

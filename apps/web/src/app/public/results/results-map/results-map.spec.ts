@@ -411,6 +411,36 @@ describe('ResultsMap, the pins it is given', () => {
     expect(view.fit).toHaveBeenCalledWith(PLACE, PINS, 70);
   });
 
+  // @traces 1358-FR-004
+  it('on a phone fits the place and the pins between the legend at the top and the results sheet over the bottom', async () => {
+    await render({ on: 'phone' });
+    await ready();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    const rect = (top: number, bottom: number) => ({ bottom, top }) as DOMRect;
+    const section = element().querySelector<HTMLElement>('section.map');
+    const key = element().querySelector<HTMLElement>('.legend');
+    if (!section || !key) throw new Error('no map or legend');
+    const stage = document.createElement('div');
+    const sheet = document.createElement('mf-results-sheet');
+    element().before(stage);
+    stage.append(element(), sheet);
+    section.getBoundingClientRect = () => rect(180, 720);
+    key.getBoundingClientRect = () => rect(192, 258);
+    sheet.getBoundingClientRect = () => rect(450, 1000);
+
+    fixture.componentInstance.fit();
+    // A sheet over nearly all of the map leaves the pins room to be framed.
+    sheet.getBoundingClientRect = () => rect(200, 1000);
+    fixture.componentInstance.fit();
+
+    expect(view.fit.mock.calls).toEqual([
+      [PLACE, PINS, 270, 78],
+      [PLACE, PINS, 342, 78],
+    ]);
+    stage.remove();
+  });
+
   it('closes the map with the page', async () => {
     await render();
     await ready();

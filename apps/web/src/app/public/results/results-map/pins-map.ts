@@ -43,12 +43,15 @@ export interface MapEvents {
 
 interface PinsMap {
   show(answer: GaragePinsDto | undefined): void;
-  // `covered` is how far up the map's bottom edge the legend lies, kept
-  // clear so no pin or "you are here" marker lands under it.
+  // `covered` is how far up the map's bottom edge something lies (the legend,
+  // or on a phone the results sheet), and `coveredTop` how far down its top
+  // edge (the legend on a phone), kept clear so no pin or "you are here"
+  // marker lands under them.
   fit(
     place: LatLng | undefined,
     answer: GaragePinsDto | undefined,
     covered?: number,
+    coveredTop?: number,
   ): void;
   // Lights one garage's pin or circle amber, or none.
   light(id: string | undefined): void;
@@ -301,7 +304,7 @@ export function drawPins(
   let marked = false;
 
   return {
-    fit(place, answer, covered = 0) {
+    fit(place, answer, covered = 0, coveredTop = 0) {
       const points = [
         ...(place ? [place] : []),
         ...fixedOf(answer).map(({ lat, lng }) => ({ lat, lng })),
@@ -320,12 +323,12 @@ export function drawPins(
         {
           ...FIT,
           padding:
-            covered > 0
+            covered > 0 || coveredTop > 0
               ? {
                   bottom: PADDING + covered,
                   left: PADDING,
                   right: PADDING,
-                  top: PADDING,
+                  top: PADDING + coveredTop,
                 }
               : PADDING,
         },
