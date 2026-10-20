@@ -320,3 +320,12 @@ describe('the site bar for a signed-in visitor', () => {
     expect(button('Autentificare')).toBeDefined();
   });
 });
+
+// @traces 228-FR-019
+describe('the public frame source', () => {
+  it('names no ticket in its comments', () => {
+    const source = readFileSync(join(__dirname, 'frame.ts'), 'utf8');
+
+    expect(source).not.toMatch(/\b(?:ST|EP)-\d+/);
+  });
+});
