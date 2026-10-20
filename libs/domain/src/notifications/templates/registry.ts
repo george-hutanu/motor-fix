@@ -4,6 +4,7 @@ import {
   PASSWORD_CHANGED,
   PASSWORD_RESET,
 } from './account-email';
+import { ADMIN_CATALOGUE_JOB_PENDING } from './admin-catalogue-job-pending';
 import { ADMIN_GARAGE_REPORTED } from './admin-garage-reported';
 import {
   ADMIN_OUTAGE_ALERT_BACK,
@@ -48,6 +49,7 @@ export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
+  ADMIN_CATALOGUE_JOB_PENDING,
   ADMIN_GARAGE_REPORTED,
   'ADMIN_OUTAGE_ALERT.back': ADMIN_OUTAGE_ALERT_BACK,
   'ADMIN_OUTAGE_ALERT.down': ADMIN_OUTAGE_ALERT_DOWN,

@@ -1,6 +1,7 @@
 import {
   type BrandRangeDto,
   type BrandRangeSavedDto,
+  type CatalogueJobProposalDto,
   checkPriceRange,
   type FieldProblem,
   JOBS_MAX,
@@ -27,8 +28,10 @@ import {
   notFound,
 } from '../garage-brands/garage-brands.service';
 import {
+  approvedNames,
   GaragePricesService,
   jobProblem,
+  nameOf,
 } from '../prices/garage-prices/garage-prices.service';
 import { NO_BRAND } from '../public-garages/public-garages';
 
@@ -133,6 +136,23 @@ const savedOf = (
 });
 
 type Pair = { brandId: string; garageId: string; jobTypeId: string };
+
+type ListedRow = { brandId: string | null; jobTypeId: string };
+
+// A fifty-first job without a brand.
+const full = (rows: readonly ListedRow[]) =>
+  rows.filter((stored) => stored.brandId === null).length >= JOBS_MAX;
+
+// A job put last on a garage's list: what is wrong with putting it there,
+// read under the garage's lock, and the catalogue job it is, once nothing is.
+interface Appended {
+  check(
+    tx: Prisma.TransactionClient,
+    rows: readonly ListedRow[],
+  ): Promise<FieldProblem[]>;
+  job(tx: Prisma.TransactionClient): Promise<string>;
+  clash: Error;
+}
 type Row = { garageId: string; priceId: string };
 
 // The pair travels with the range so a deleted row's entry still names it.
@@ -293,6 +313,70 @@ export class PriceListService {
   ): Promise<PriceRangeSavedDto> {
     assertGarageOwner(actor, garageId);
     const jobTypeId = body.jobTypeId.toLowerCase();
+    const job = await this.prisma.jobType.findUnique({
+      select: { status: true },
+      where: { id: jobTypeId },
+    });
+    return this.append(actor, garageId, body, {
+      check: async (_tx, rows) => {
+        const listed = rows.some((stored) => stored.jobTypeId === jobTypeId);
+        const onJob = jobProblem(job?.status, listed);
+        if (onJob) return [{ code: onJob, field: 'jobTypeId' }];
+        return full(rows) ? [{ code: 'too_many', field: 'jobTypeId' }] : [];
+      },
+      clash: refuse([{ code: 'duplicate', field: 'jobTypeId' }]),
+      job: async () => jobTypeId,
+    });
+  }
+
+  // A job the catalogue lacks, proposed by the owner: a pending catalogue job
+  // of the garage, put last on the list as an add puts an approved one. A
+  // name the garage proposed and is still waiting on stays refused, listed or
+  // not; a name only ever rejected may be proposed again.
+  async propose(
+    actor: Actor,
+    garageId: string,
+    body: CatalogueJobProposalDto,
+  ): Promise<PriceRangeSavedDto> {
+    assertGarageOwner(actor, garageId);
+    const name = nameOf(body.name);
+    const scope = this.scopeOf(actor, garageId, 'garage_price');
+    return this.append(actor, garageId, body, {
+      check: async (tx, rows) => {
+        const approved = (await approvedNames(tx)).get(name);
+        if (approved) {
+          const exists = { code: 'exists', field: 'name', jobTypeId: approved };
+          return [exists];
+        }
+        const pending = await tx.jobType.findMany({
+          select: { nameRo: true },
+          where: { proposedByGarageId: garageId, status: 'pending' },
+        });
+        if (pending.some((job) => nameOf(job.nameRo) === name)) {
+          return [{ code: 'duplicate', field: 'name' }];
+        }
+        return full(rows) ? [{ code: 'too_many', field: 'name' }] : [];
+      },
+      clash: refuse([{ code: 'duplicate', field: 'name' }]),
+      job: (tx) =>
+        this.prices.propose(
+          tx,
+          scope,
+          body.name,
+          refuse([{ code: 'duplicate', field: 'name' }]),
+        ),
+    });
+  }
+
+  // Puts a job last on the list with its default range, ticked for no brand.
+  // Writes to one garage run one after the other, so the cap and the last
+  // place hold.
+  private async append(
+    actor: Actor,
+    garageId: string,
+    body: RangeBody,
+    appended: Appended,
+  ): Promise<PriceRangeSavedDto> {
     const range = rangeOf(
       {
         durationMinutes: body.durationMinutes ?? null,
@@ -302,13 +386,7 @@ export class PriceListService {
       true,
     );
     const { durationMinutes, fromBani, toBani, warnings } = range;
-    const job = await this.prisma.jobType.findUnique({
-      select: { status: true },
-      where: { id: jobTypeId },
-    });
     const { row, slug } = await this.prisma.$transaction(async (tx) => {
-      // Adds to one garage run one after the other, so the cap and the last
-      // place hold.
       const [garage] = await tx.$queryRaw<{ slug: string }[]>`
         SELECT slug FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
       if (!garage) throw notFound();
@@ -316,15 +394,9 @@ export class PriceListService {
         select: { brandId: true, jobTypeId: true, position: true },
         where: { garageId },
       });
-      const errors = [...range.errors];
-      const listed = rows.some((stored) => stored.jobTypeId === jobTypeId);
-      const onJob = jobProblem(job?.status, listed);
-      const jobs = rows.filter((stored) => stored.brandId === null).length;
-      if (onJob) errors.push({ code: onJob, field: 'jobTypeId' });
-      else if (jobs >= JOBS_MAX) {
-        errors.push({ code: 'too_many', field: 'jobTypeId' });
-      }
+      const errors = [...range.errors, ...(await appended.check(tx, rows))];
       if (errors.length > 0) throw refuse(errors);
+      const jobTypeId = await appended.job(tx);
       const position =
         Math.max(-1, ...rows.map((stored) => stored.position)) + 1;
       const created = await this.prices.createRow(
@@ -339,7 +411,7 @@ export class PriceListService {
           toBani,
           visible: true,
         },
-        refuse([{ code: 'duplicate', field: 'jobTypeId' }]),
+        appended.clash,
       );
       await this.changed(tx, {
         brandIds: [],

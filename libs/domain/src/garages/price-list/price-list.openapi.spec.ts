@@ -137,3 +137,32 @@ describe('the removal of a job in the OpenAPI document', () => {
     );
   });
 });
+
+// @traces 1352-catalogue-job-visibility-FR-017
+describe('the proposal of a job in the OpenAPI document', () => {
+  it('proposes a job with its body, its answer and its refusals', () => {
+    const { post } = doc.paths['/api/v1/garages/{garageId}/catalogue-jobs'];
+
+    expect(post.operationId).toBe('CatalogueJobsController_propose');
+    expect(ref(post.requestBody.content['application/json'].schema)).toBe(
+      'CatalogueJobProposalDto',
+    );
+    expect(ref(post.responses['201'].content['application/json'].schema)).toBe(
+      'PriceRangeSavedDto',
+    );
+    expect(Object.keys(post.responses).sort()).toEqual(
+      ['201', '400', '401', '403', '404', '415', '422'].sort(),
+    );
+  });
+
+  it('requires the name, 3 to 80 characters', () => {
+    const body = doc.components.schemas.CatalogueJobProposalDto;
+
+    expect(body.properties.name).toMatchObject({
+      maxLength: 80,
+      minLength: 3,
+      type: 'string',
+    });
+    expect(body.required).toEqual(['name']);
+  });
+});

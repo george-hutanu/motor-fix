@@ -43,6 +43,7 @@ export type { CandidateGarageListDto } from './models/candidate-garage-list-dto'
 export type { CarDto } from './models/car-dto';
 export type { CarListDto } from './models/car-list-dto';
 export type { CarSnapshotDto } from './models/car-snapshot-dto';
+export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';
@@ -500,6 +501,8 @@ export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } f
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
+export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';

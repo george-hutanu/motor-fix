@@ -6,6 +6,7 @@ export * from './audit-history.dto';
 export * from './auth.dto';
 export * from './brands.dto';
 export * from './cars.dto';
+export * from './catalogue-job-proposal.dto';
 export * from './consent';
 export * from './consents.dto';
 export * from './demand-order';

@@ -31,7 +31,7 @@ const isSet = <T>(value: T | null | undefined): value is T =>
 
 // A job name folded so that accents, case and surrounding spaces do not make
 // two jobs of one.
-const nameOf = (name: string) => `name:${fold(name.trim())}`;
+export const nameOf = (name: string) => `name:${fold(name.trim())}`;
 
 // The job an entry names: a catalogue id, or a proposed name.
 const jobOf = (job: Job) =>
@@ -160,10 +160,25 @@ type RowFields = {
   visible: true;
 };
 
-type RowScope = Omit<
+export type RowScope = Omit<
   AuditEntry,
   'action' | 'newValue' | 'subjectId' | 'subjectType'
 > & { actorId: string; garageId: string };
+
+// The approved catalogue jobs by each of their names, folded. The catalogue
+// holds tens of jobs, so one read and a match in memory.
+export async function approvedNames(tx: Prisma.TransactionClient) {
+  const approved = await tx.jobType.findMany({
+    select: { id: true, nameEn: true, nameRo: true },
+    where: { status: 'approved' },
+  });
+  return new Map(
+    approved.flatMap(({ id, nameEn, nameRo }) => [
+      [nameOf(nameRo), id],
+      [nameOf(nameEn), id],
+    ]),
+  );
+}
 
 // Why a catalogue job cannot be put on a garage's list, if it cannot.
 export function jobProblem(status: JobTypeStatus | undefined, listed: boolean) {
@@ -219,7 +234,7 @@ export class GaragePricesService {
       },
       { labour_from_bani: fromBani, labour_to_bani: toBani },
     );
-    const proposed = await this.propose(tx, scope, input.jobs);
+    const proposed = await this.proposeAll(tx, scope, input.jobs);
     const jobs: StartingPricesResult['jobs'] = [];
     for (const [position, job] of input.jobs.entries()) {
       const fields = {
@@ -278,58 +293,70 @@ export class GaragePricesService {
     return row;
   }
 
-  // One pending catalogue job per proposed name, with its audit entry and
-  // the admins' event; answers the new id by the entry's job.
-  private async propose(
+  // One pending catalogue job per proposed name; answers the new id by the
+  // entry's job.
+  private async proposeAll(
     tx: Prisma.TransactionClient,
-    scope: { actorId: string; actorRole: 'garage'; garageId: string },
+    scope: RowScope,
     jobs: readonly Job[],
   ) {
     const ids = new Map<string, string>();
     for (const [i, job] of jobs.entries()) {
       if (!isSet(job.name) || ids.has(jobOf(job))) continue;
-      const name = job.name.trim();
       // Another garage proposing the same name at once took the key first.
       const clash = refuse([{ code: 'duplicate', field: `jobs[${i}].name` }]);
-      const key = await uniqueSlug(name, (candidates) =>
-        tx.jobType
-          .findMany({
-            select: { key: true },
-            where: { key: { in: candidates } },
-          })
-          .then((rows) => rows.map((row) => row.key)),
-      );
-      if (!key) throw clash;
-      const created = await tx.jobType
-        .create({
-          data: {
-            key,
-            nameEn: name,
-            nameRo: name,
-            proposedByGarageId: scope.garageId,
-            status: 'pending',
-          },
-        })
-        .catch((error: unknown) => {
-          if (!taken(error)) throw error;
-          throw clash;
-        });
-      await this.audit.record(tx, {
-        ...scope,
-        action: 'create',
-        newValue: { key, name_en: name, name_ro: name, status: 'pending' },
-        subjectId: created.id,
-        subjectType: 'job_type',
-      });
-      await this.events.record(tx, {
-        audience: { adminOnly: true, type: 'platform' },
-        kind: 'catalogue_job.proposed',
-        payload: { garageId: scope.garageId, jobTypeId: created.id },
-        subjectId: created.id,
-      });
-      ids.set(jobOf(job), created.id);
+      ids.set(jobOf(job), await this.propose(tx, scope, job.name, clash));
     }
     return ids;
+  }
+
+  // A pending catalogue job of the garage under the trimmed name, with its
+  // audit entry and the admins' event; answers its id. `clash` is thrown
+  // when a concurrent proposal took the key first.
+  async propose(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    given: string,
+    clash: Error,
+  ): Promise<string> {
+    const name = given.trim();
+    const key = await uniqueSlug(name, (candidates) =>
+      tx.jobType
+        .findMany({
+          select: { key: true },
+          where: { key: { in: candidates } },
+        })
+        .then((rows) => rows.map((row) => row.key)),
+    );
+    if (!key) throw clash;
+    const created = await tx.jobType
+      .create({
+        data: {
+          key,
+          nameEn: name,
+          nameRo: name,
+          proposedByGarageId: scope.garageId,
+          status: 'pending',
+        },
+      })
+      .catch((error: unknown) => {
+        if (!taken(error)) throw error;
+        throw clash;
+      });
+    await this.audit.record(tx, {
+      ...scope,
+      action: 'create',
+      newValue: { key, name_en: name, name_ro: name, status: 'pending' },
+      subjectId: created.id,
+      subjectType: 'job_type',
+    });
+    await this.events.record(tx, {
+      audience: { adminOnly: true, type: 'platform' },
+      kind: 'catalogue_job.proposed',
+      payload: { garageId: scope.garageId, jobTypeId: created.id },
+      subjectId: created.id,
+    });
+    return created.id;
   }
 
   // Jobs and brands the catalogue does not hold, brands the garage does not
@@ -362,22 +389,12 @@ export class GaragePricesService {
       select: { brandId: true, jobTypeId: true },
       where: { garageId },
     });
-    // The catalogue holds tens of jobs, so one read and a match in memory.
-    const approved = await tx.jobType.findMany({
-      select: { nameEn: true, nameRo: true },
-      where: { status: 'approved' },
-    });
+    const approved = await approvedNames(tx);
     const status = new Map(jobTypes.map((job) => [job.id, job.status]));
     const known = new Set(brands.map((brand) => brand.id));
     const worksOn = new Set(takenBrands.map((row) => row.brandId));
     const storedPairs = new Set(
       stored.map((row) => pairOf(`id:${row.jobTypeId}`, row.brandId)),
-    );
-    const approvedNames = new Set(
-      approved.flatMap(({ nameEn, nameRo }) => [
-        nameOf(nameRo),
-        nameOf(nameEn),
-      ]),
     );
     const onCatalogue = (job: Job) =>
       job.jobTypeId === undefined
@@ -394,7 +411,7 @@ export class GaragePricesService {
     return jobs.flatMap((job, i) => {
       const onJob = onCatalogue(job);
       const onBrand = brandProblem(job);
-      const onName = isSet(job.name) && approvedNames.has(jobOf(job));
+      const onName = isSet(job.name) && approved.has(jobOf(job));
       return [
         ...(onJob ? [{ code: onJob, field: `jobs[${i}].jobTypeId` }] : []),
         ...(onName ? [{ code: 'duplicate', field: `jobs[${i}].name` }] : []),

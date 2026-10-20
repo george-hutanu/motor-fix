@@ -37,6 +37,7 @@ export type { CandidateGarageListDto } from './models/candidate-garage-list-dto'
 export type { CarDto } from './models/car-dto';
 export type { CarListDto } from './models/car-list-dto';
 export type { CarSnapshotDto } from './models/car-snapshot-dto';
+export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';

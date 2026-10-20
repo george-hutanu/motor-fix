@@ -10,6 +10,8 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { BrandRangeSavedDto } from '../models/brand-range-saved-dto';
+import { catalogueJobsControllerPropose } from '../fn/garages/catalogue-jobs-controller-propose';
+import { CatalogueJobsControllerPropose$Params } from '../fn/garages/catalogue-jobs-controller-propose';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
@@ -81,6 +83,39 @@ export class GaragesService extends BaseService {
   profileViewsControllerRecord(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<void> {
     const resp = this.profileViewsControllerRecord$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `catalogueJobsControllerPropose()` */
+  static readonly CatalogueJobsControllerProposePath = '/api/v1/garages/{garageId}/catalogue-jobs';
+
+  /**
+   * Proposes a job the catalogue lacks and adds it to the end of the price list with its default range, waiting for approval.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `catalogueJobsControllerPropose()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  catalogueJobsControllerPropose$Response(params: CatalogueJobsControllerPropose$Params, context?: HttpContext): Promise<StrictHttpResponse<PriceRangeSavedDto>> {
+    const obs = catalogueJobsControllerPropose(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Proposes a job the catalogue lacks and adds it to the end of the price list with its default range, waiting for approval.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `catalogueJobsControllerPropose$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  catalogueJobsControllerPropose(params: CatalogueJobsControllerPropose$Params, context?: HttpContext): Promise<PriceRangeSavedDto> {
+    const resp = this.catalogueJobsControllerPropose$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PriceRangeSavedDto>): PriceRangeSavedDto => r.body);
   }
 
   /** Path part for operation `garageBrandsControllerReplace()` */

@@ -1,6 +1,7 @@
 import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   CAR_REMINDERS_CONSUMER,
+  CATALOGUE_JOB_PENDING_CONSUMER,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
@@ -75,6 +76,7 @@ export function workerModule(
         cdn: bunnyConfig(process.env),
         consumers: [
           CAR_REMINDERS_CONSUMER,
+          CATALOGUE_JOB_PENDING_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
