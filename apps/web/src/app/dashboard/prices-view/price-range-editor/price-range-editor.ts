@@ -12,6 +12,7 @@ import { checkPriceRange } from '@motor-fix/contracts/price-range';
 import {
   type BrandRangeItemDto,
   GaragesService,
+  type JobTypeDto,
   type PriceListItemDto,
   type PublicLabourDto,
 } from '@motor-fix/data-access';
@@ -22,6 +23,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
@@ -35,6 +37,7 @@ export type EditableRow = PriceListItemDto & {
 
 export type PriceRangeEditorData =
   | { kind: 'row'; garageId: string; item: EditableRow }
+  | { kind: 'new'; garageId: string; job: JobTypeDto }
   | {
       kind: 'brand';
       garageId: string;
@@ -56,6 +59,18 @@ const RANGE_FIELD = {
   from: 'fromBani',
   to: 'toBani',
 } as const;
+
+// A refusal of the job itself (already listed, the list full) is the
+// editor's own message, since no field shows the job.
+function jobRefused(failure: unknown): never {
+  const problem = toProblem(failure);
+  const job = problem.errors?.find(({ field }) => field === 'jobTypeId');
+  if (!job) throw failure;
+  throw new HttpErrorResponse({
+    error: { code: job.code },
+    status: problem.status,
+  });
+}
 
 // One job's range (and duration), a brand's range or the labour rate, changed
 // in place: the same range rule the server runs, checked as it is typed.
@@ -82,7 +97,8 @@ export class PriceRangeEditor {
     OverlayResult<PriceRangeEditorResult>
   >();
   protected readonly data = this.task.data;
-  protected readonly timed = this.data.kind === 'row';
+  protected readonly timed =
+    this.data.kind === 'row' || this.data.kind === 'new';
   protected readonly f = RANGE_FIELD;
   // The stamp the row was read with; a 409 brings the newer one.
   private readonly stamp = signal(
@@ -219,7 +235,8 @@ export class PriceRangeEditor {
     const { data } = this;
     if (data.kind === 'row') return data.item;
     if (data.kind === 'brand') return data.brand;
-    return data.labour ?? {};
+    if (data.kind === 'labour') return data.labour ?? {};
+    return {};
   }
 
   private fill(range: Partial<Record<Field, number>>) {
@@ -246,6 +263,18 @@ export class PriceRangeEditor {
         body: range,
         garageId: data.garageId,
       });
+    if (data.kind === 'new')
+      return this.api
+        .priceListControllerAdd({
+          body: {
+            durationMinutes,
+            fromBani: range.fromBani,
+            jobTypeId: data.job.id,
+            toBani,
+          },
+          garageId: data.garageId,
+        })
+        .catch(jobRefused);
     return this.api.priceListControllerSetRange({
       body: {
         durationMinutes,

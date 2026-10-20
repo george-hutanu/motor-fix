@@ -1,0 +1,25 @@
+<label hlmLabel class="field" for="mf-job-search">{{ 'public.listing.prices.search' | t }}</label>
+<input hlmInput id="mf-job-search" type="search" autocomplete="off" maxlength="80" aria-describedby="mf-job-said" (input)="find($event)" />
+<p class="said" id="mf-job-said" role="status">
+  @switch (state()) {
+    @case ('searching') {
+      {{ 'garage.prices.picker.searching' | t }}
+    }
+    @case ('down') {
+      {{ 'public.listing.prices.searchDown' | t }}
+    }
+    @default {
+      @if (!results().length) {
+        {{ 'garage.prices.picker.none' | t }}
+      }
+    }
+  }
+</p>
+@if (results().length) {
+  <ul class="results" data-results [attr.aria-label]="'public.listing.prices.results' | t">
+    @for (job of results(); track job.id) {
+      <li><button hlmBtn variant="secondary" type="button" data-result (click)="task.close({ job })">{{ name(job) }}</button></li>
+    }
+  </ul>
+}
+<button hlmBtn variant="ghost" type="button" class="propose" (click)="task.close('propose')">{{ 'garage.prices.picker.propose' | t }}</button>

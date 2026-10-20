@@ -31,9 +31,24 @@ h2 {
   min-width: 0;
 }
 .toggle,
-.edit {
+.edit,
+.actions button,
+.add button {
   min-height: var(--mf-tap);
   white-space: normal;
+}
+/* Under the range on a phone, wrapping as the cells do. */
+.actions,
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.failed {
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
 }
 .edit {
   min-width: var(--mf-tap);
@@ -132,8 +147,13 @@ h2 {
     align-items: center;
     column-gap: var(--mf-space-3);
   }
-  .brands {
+  .brands,
+  .actions,
+  .failed {
     grid-column: 1 / -1;
+  }
+  .actions {
+    justify-content: flex-end;
   }
   .meta {
     flex-direction: row;

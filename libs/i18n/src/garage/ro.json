@@ -112,6 +112,8 @@
     "title": "Verificare legală"
   },
   "prices": {
+    "add": "Adaugă o lucrare",
+    "addMax": "Cel mult 50 de lucrări",
     "done": "Gata",
     "edit": "Modifică",
     "editAll": "Modifică prețurile",
@@ -128,8 +130,10 @@
       "from": "De la",
       "minutes": "min",
       "problem": {
+        "duplicate": "Lucrarea e deja în lista ta.",
         "not_found": "Lucrarea nu mai e în listă.",
-        "stale": "Lista s‑a schimbat între timp."
+        "stale": "Lista s‑a schimbat între timp.",
+        "too_many": "Cel mult 50 de lucrări"
       },
       "save": "Salvează",
       "to": "Până la"
@@ -137,10 +141,29 @@
     "editRow": "Modifică {name}",
     "empty": "Nu ai încă lucrări în listă.",
     "from": "de la {amount}",
+    "hide": "Ascunde",
+    "hideRow": "Ascunde {name}",
     "labour": "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă.",
     "labourTitle": "Manoperă, pe oră",
     "labourUnset": "Manoperă: nesetată",
+    "notSaved": "Nu s‑a salvat. Încearcă din nou.",
+    "picker": {
+      "none": "Nicio lucrare găsită",
+      "propose": "Nu găsești lucrarea? Propune‑o",
+      "searching": "Se caută…",
+      "title": "Adaugă o lucrare"
+    },
+    "remove": "Șterge",
+    "removeDialog": {
+      "cancel": "Renunță",
+      "confirm": "Șterge",
+      "line": "Cererile deschise și ofertele trimise rămân. Șoferii noi nu vor mai vedea lucrarea.",
+      "title": "Ștergi lucrarea din listă?"
+    },
+    "removeRow": "Șterge {name}",
     "retry": "Încearcă din nou",
+    "show": "Arată",
+    "showRow": "Arată {name}",
     "state": {
       "awaiting_approval": "ascuns · așteaptă aprobarea",
       "hidden": "ascuns",

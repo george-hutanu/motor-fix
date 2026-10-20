@@ -56,6 +56,7 @@ const LABOUR: PriceRangeEditorData = {
 let setRange: jest.Mock;
 let setBrandRange: jest.Mock;
 let setLabour: jest.Mock;
+let add: jest.Mock;
 let read: jest.Mock;
 let result: Promise<PriceRangeEditorResult | 'cancelled'>;
 
@@ -82,6 +83,12 @@ async function open(
   }));
   setBrandRange = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
   setLabour = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  add = jest.fn(async ({ body }) => ({
+    priceId: 'price-ac',
+    updatedAt: NEWER,
+    warnings: [],
+    ...body,
+  }));
   read = jest.fn(
     async (): Promise<PriceListDto> => ({
       items: [
@@ -101,6 +108,7 @@ async function open(
         provide: GaragesService,
         useValue: {
           garageLabourControllerSet: setLabour,
+          priceListControllerAdd: add,
           priceListControllerRead: read,
           priceListControllerSetBrandRange: setBrandRange,
           priceListControllerSetRange: setRange,
@@ -487,5 +495,112 @@ describe('the range editor: a brand range and the labour range', () => {
 
     expect(field('De la').value).toBe('');
     expect(field('Până la').value).toBe('');
+  });
+});
+
+const NEW: PriceRangeEditorData = {
+  garageId: GARAGE,
+  job: {
+    id: 'job-ac',
+    key: 'ac-regas',
+    nameEn: 'Air-con regas',
+    nameRo: 'Încărcare freon climă',
+  },
+  kind: 'new',
+};
+
+// @traces 1352-catalogue-job-visibility-FR-001
+describe('the range editor: a job new to the list', () => {
+  it('starts empty, with the duration, and adds the job with its range and duration, then closes', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Încărcare freon climă',
+    );
+    expect(field('De la').value).toBe('');
+    expect(field('Până la').value).toBe('');
+    expect(field('Durată').value).toBe('');
+    expect(button('Salvează')?.disabled).toBe(true);
+
+    await fill('Durată', '45');
+    await fill('De la', '280');
+    await fill('Până la', '360');
+    await press();
+
+    expect(add).toHaveBeenCalledWith({
+      body: {
+        durationMinutes: 45,
+        fromBani: 28_000,
+        jobTypeId: 'job-ac',
+        toBani: 36_000,
+      },
+      garageId: GARAGE,
+    });
+    expect(setRange).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('saved');
+  });
+
+  it('adds a starting price alone, with no top and no duration', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+
+    await fill('De la', '280');
+    await press();
+
+    expect(add).toHaveBeenCalledWith({
+      body: {
+        durationMinutes: null,
+        fromBani: 28_000,
+        jobTypeId: 'job-ac',
+        toBani: null,
+      },
+      garageId: GARAGE,
+    });
+  });
+
+  it("shows the server's range errors under their fields and stays open", async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'max', field: 'fromBani' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(said('De la')).toBe('Cel mult 100.000 lei');
+    expect(panel()).not.toBeNull();
+  });
+
+  it('says the job is already on the list', async () => {
+    await open(NEW, { title: 'Încărcare freon climă' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'duplicate', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('De la', '280');
+
+    await press();
+
+    expect(text()).toContain('Lucrarea e deja în lista ta.');
+    expect(text()).not.toContain('Verifică câmpurile marcate.');
+  });
+
+  it('says the list holds 50 jobs already', async () => {
+    await open(NEW, { language: 'en', title: 'Air-con regas' });
+    add.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'too_many', field: 'jobTypeId' }],
+      }),
+    );
+    await fill('From', '280');
+
+    await press('Save');
+
+    expect(text()).toContain('At most 50 jobs');
   });
 });

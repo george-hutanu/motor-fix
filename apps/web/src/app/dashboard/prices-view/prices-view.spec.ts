@@ -12,8 +12,10 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
+import { JobPicker } from './job-picker/job-picker';
 import { PriceRangeEditor } from './price-range-editor/price-range-editor';
 import { PricesView } from './prices-view';
+import { RemoveJob } from './remove-job/remove-job';
 import { Live } from '../live';
 import { Session } from '../session';
 
@@ -94,6 +96,7 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let read: jest.Mock;
 let open: jest.Mock;
+let setRange: jest.Mock;
 
 async function render(
   answer: () => Promise<PriceListDto> = async () => ({
@@ -107,9 +110,16 @@ async function render(
   resync = new Subject();
   read = jest.fn(answer);
   open = jest.fn(async () => 'saved');
+  setRange = jest.fn(async () => ({}));
   TestBed.configureTestingModule({
     providers: [
-      { provide: GaragesService, useValue: { priceListControllerRead: read } },
+      {
+        provide: GaragesService,
+        useValue: {
+          priceListControllerRead: read,
+          priceListControllerSetRange: setRange,
+        },
+      },
       { provide: Session, useValue: { shown: signal(session) } },
       { provide: Overlays, useValue: { open } },
       {
@@ -370,6 +380,7 @@ describe('Prețuri: brand ranges under their job', () => {
 });
 
 // @traces 172-FR-007 172-FR-008
+// @traces 1352-catalogue-job-visibility-FR-001
 describe('Prețuri: live, loading, failure and an empty list', () => {
   it('shows busy skeleton rows with no text while the first read runs', async () => {
     let finish: (() => void) | undefined;
@@ -418,7 +429,7 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
   });
 
-  it('says the list is empty, with no row, note or action', async () => {
+  it('says the list is empty, with no row or note, and offers only the switch and the add', async () => {
     const { element, settle } = await render(async () => ({
       items: [],
       labour: LABOUR,
@@ -430,11 +441,12 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     expect(text(panel?.querySelector('p') ?? null)).toBe(
       'Nu ai încă lucrări în listă.',
     );
-    expect(panel?.children).toHaveLength(2);
+    expect(panel?.children).toHaveLength(3);
     expect(rows(element)).toHaveLength(0);
     expect(element.querySelector('[data-labour]')).toBeNull();
     expect([...element.querySelectorAll('button')].map(text)).toEqual([
       'Modifică prețurile',
+      'Adaugă o lucrare',
     ]);
   });
 
@@ -657,5 +669,319 @@ describe('Prețuri: opening an editor', () => {
       shape: 'dialog',
       title: 'garage.prices.labourTitle',
     });
+  });
+});
+
+const AC_JOB = {
+  id: 'ac-new',
+  key: 'ac-regas',
+  nameEn: 'Air-con regas',
+  nameRo: 'Încărcare freon climă',
+};
+
+const editingOn = async (
+  answer?: () => Promise<PriceListDto>,
+  language: 'ro' | 'en' = 'ro',
+) => {
+  const view = await render(answer, language);
+  await view.settle();
+  named(
+    view.element,
+    language === 'en' ? 'Edit prices' : 'Modifică prețurile',
+  ).click();
+  await view.settle();
+  return view;
+};
+
+// @traces 1352-catalogue-job-visibility-FR-001
+describe('Prețuri: adding a job', () => {
+  it('offers "Adaugă o lucrare" under the list while editing, and not before', async () => {
+    const { element, settle } = await render();
+    await settle();
+    expect(named(element, 'Adaugă o lucrare')).toBeUndefined();
+
+    named(element, 'Modifică prețurile').click();
+    await settle();
+
+    const add = named(element, 'Adaugă o lucrare');
+    expect(add.disabled).toBe(false);
+    expect(add.classList).toContain('spartan-button-variant-secondary');
+    // Under the list, not inside a row.
+    expect(add.closest('[data-row]')).toBeNull();
+    const list = element.querySelector('ul.rows') as HTMLElement;
+    expect(
+      list.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('offers it to no one but the owner, an empty list included', async () => {
+    const { element, settle } = await render(
+      async () => ({ items: [] }),
+      'ro',
+      {
+        garageAccess: [{ garageId: GARAGE, role: 'mechanic' }],
+        garageId: GARAGE,
+      } as unknown as MeDto,
+    );
+    await settle();
+
+    expect(buttons(element)).toHaveLength(0);
+  });
+
+  it('is disabled at 50 jobs, saying so', async () => {
+    const fifty = Array.from({ length: 50 }, (_, n) =>
+      item({ jobTypeId: `job-${n}`, nameRo: `Lucrarea ${n}` }),
+    );
+    const { element } = await editingOn(async () => ({ items: fifty }));
+
+    const add = named(element, 'Adaugă o lucrare');
+    expect(add.disabled).toBe(true);
+    const hint = document.getElementById(
+      add.getAttribute('aria-describedby') ?? '',
+    );
+    expect(text(hint)).toBe('Cel mult 50 de lucrări');
+  });
+
+  it('opens the picker without the listed jobs, then the editor for the picked job, and re-reads after the save', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce({ job: AC_JOB }).mockResolvedValueOnce('saved');
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+
+    expect(open).toHaveBeenNthCalledWith(1, JobPicker, {
+      data: { listed: SEEDED.map((row) => row.jobTypeId) },
+      shape: 'dialog',
+      title: 'garage.prices.picker.title',
+    });
+    expect(open).toHaveBeenNthCalledWith(2, PriceRangeEditor, {
+      data: { garageId: GARAGE, job: AC_JOB, kind: 'new' },
+      shape: 'dialog',
+      title: 'Încărcare freon climă',
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('titles the editor with the English name in English', async () => {
+    const { element, settle } = await editingOn(undefined, 'en');
+    open.mockResolvedValueOnce({ job: AC_JOB }).mockResolvedValueOnce('saved');
+
+    named(element, 'Add a job').click();
+    await settle();
+
+    expect(open.mock.calls[1][1].title).toBe('Air-con regas');
+  });
+
+  it('opens no editor when the picker is closed', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce('cancelled');
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers it on an empty list without editing, and opens the picker from there', async () => {
+    const { element, settle } = await render(async () => ({ items: [] }));
+    await settle();
+    open.mockResolvedValueOnce('cancelled');
+
+    named(element, 'Adaugă o lucrare').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(JobPicker, {
+      data: { listed: [] },
+      shape: 'dialog',
+      title: 'garage.prices.picker.title',
+    });
+  });
+});
+
+const action = (row: HTMLElement, name: string) =>
+  [...row.querySelectorAll('button')].find(
+    (b) => text(b) === name,
+  ) as HTMLButtonElement;
+
+// @traces 1352-catalogue-job-visibility-FR-004
+describe('Prețuri: hiding and showing a job', () => {
+  const hiddenByOwner = async () =>
+    editingOn(async () => ({
+      items: [
+        ...SEEDED.slice(0, 3),
+        item({
+          ...SEEDED[3],
+          public: false,
+          reason: 'hidden_by_garage',
+          visible: false,
+        }),
+        ...SEEDED.slice(4),
+      ],
+    }));
+
+  it('offers Ascunde on a job the owner did not hide and Arată on one they did, named after the job, only while editing', async () => {
+    const { element } = await hiddenByOwner();
+    const [diagnosis, , , chain, , suspension] = rows(element);
+
+    expect(action(diagnosis, 'Ascunde').getAttribute('aria-label')).toBe(
+      'Ascunde Diagnoză și citire coduri de eroare',
+    );
+    expect(action(diagnosis, 'Ascunde').classList).toContain(
+      'spartan-button-variant-ghost',
+    );
+    expect(action(chain, 'Arată').getAttribute('aria-label')).toBe(
+      'Arată Kit lanț de distribuție',
+    );
+    expect(cell(chain, 'state')).toBe('ascuns de tine');
+    // Hidden for a missing top price, not by the owner.
+    expect(action(suspension, 'Ascunde')).toBeDefined();
+  });
+
+  it('offers Arată on a job the owner hid whose first reason is another', async () => {
+    const { element } = await editingOn(async () => ({
+      items: [
+        item({ public: false, reason: 'awaiting_approval', visible: false }),
+      ],
+    }));
+    const [row] = rows(element);
+
+    expect(cell(row, 'state')).toBe('ascuns · așteaptă aprobarea');
+    expect(action(row, 'Arată')).toBeDefined();
+    expect(action(row, 'Ascunde')).toBeUndefined();
+  });
+
+  it('offers no action on a job priced by brand alone', async () => {
+    const { element } = await editingOn(async () => ({
+      items: [
+        item({
+          brandRanges: [
+            { brandId: 'bmw', fromBani: 1000, name: 'BMW', toBani: 2000 },
+          ],
+          priceId: undefined,
+          updatedAt: undefined,
+        }),
+      ],
+    }));
+    const [row] = rows(element);
+
+    expect(action(row, 'Ascunde')).toBeUndefined();
+    expect(action(row, 'Șterge')).toBeUndefined();
+  });
+
+  it('hides the job on Ascunde, the row busy and its buttons locked while it saves, then re-reads', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const { element, settle } = await editingOn();
+    setRange.mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const row = rows(element)[0];
+
+    action(row, 'Ascunde').click();
+    await settle();
+
+    expect(setRange).toHaveBeenCalledWith({
+      body: { visible: false },
+      garageId: GARAGE,
+      priceId: 'price-diagnosis',
+    });
+    expect(row.getAttribute('aria-busy')).toBe('true');
+    for (const b of row.querySelectorAll('button'))
+      expect(b.disabled).toBe(true);
+    expect(rows(element)[1].getAttribute('aria-busy')).toBeNull();
+
+    answer({});
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(rows(element)[0].getAttribute('aria-busy')).toBeNull();
+    expect(action(rows(element)[0], 'Ascunde').disabled).toBe(false);
+  });
+
+  it('shows the job on Arată', async () => {
+    const { element, settle } = await hiddenByOwner();
+
+    action(rows(element)[3], 'Arată').click();
+    await settle();
+
+    expect(setRange).toHaveBeenCalledWith({
+      body: { visible: true },
+      garageId: GARAGE,
+      priceId: 'price-chain',
+    });
+  });
+
+  it('says on the row that it was not saved when the save fails, unlocked and as it was', async () => {
+    const { element, settle } = await editingOn();
+    setRange.mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+    const row = rows(element)[0];
+
+    action(row, 'Ascunde').click();
+    await settle();
+
+    const failed = rows(element)[0];
+    expect(text(failed.querySelector('[role="alert"]'))).toBe(
+      'Nu s‑a salvat. Încearcă din nou.',
+    );
+    expect(failed.getAttribute('aria-busy')).toBeNull();
+    expect(action(failed, 'Ascunde').disabled).toBe(false);
+    expect(cell(failed, 'state')).toBe('pe profil');
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(rows(element)[1].querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('speaks English in English', async () => {
+    const { element } = await editingOn(undefined, 'en');
+    const [row] = rows(element);
+
+    expect(action(row, 'Hide').getAttribute('aria-label')).toBe(
+      'Hide Diagnosis and fault-code read',
+    );
+    expect(action(row, 'Remove').getAttribute('aria-label')).toBe(
+      'Remove Diagnosis and fault-code read',
+    );
+  });
+});
+
+// @traces 1352-catalogue-job-visibility-FR-006
+describe('Prețuri: removing a job', () => {
+  it('offers Șterge on each job with its own row, named after the job, only while editing', async () => {
+    const { element, settle } = await render();
+    await settle();
+    expect(action(rows(element)[0], 'Șterge')).toBeUndefined();
+
+    named(element, 'Modifică prețurile').click();
+    await settle();
+
+    expect(
+      rows(element).map((row) =>
+        action(row, 'Șterge')?.getAttribute('aria-label'),
+      ),
+    ).toEqual(SEEDED.map((row) => `Șterge ${row.nameRo}`));
+  });
+
+  it('asks first, then re-reads once the job is removed', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce('removed');
+
+    action(rows(element)[2], 'Șterge').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(RemoveJob, {
+      data: { garageId: GARAGE, priceId: 'price-brakes' },
+      shape: 'dialog',
+      title: 'garage.prices.removeDialog.title',
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads nothing again when the question is cancelled', async () => {
+    const { element, settle } = await editingOn();
+    open.mockResolvedValueOnce('cancelled');
+
+    action(rows(element)[2], 'Șterge').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
   });
 });
