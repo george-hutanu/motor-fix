@@ -54,7 +54,7 @@ describe('the room a focused control keeps clear of the bars', () => {
 
   it('keeps no room around a control inside a bar, which never scrolls away', () => {
     const body = rule(
-      `:where(mf-public-frame > .bar, mf-public-tab-bar, mf-dashboard-tab-bar, mf-consent-bar, mf-list-your-garage nav, mf-list-your-garage .actions, mf-request-drawer .actions) ${FOCUSABLES}`,
+      `:where(mf-public-frame > .bar, mf-public-tab-bar, mf-dashboard-tab-bar, mf-consent-bar, mf-list-your-garage nav, mf-list-your-garage .actions, mf-signup-survey .footer, mf-request-drawer .actions) ${FOCUSABLES}`,
     );
 
     expect(body).toBeDefined();

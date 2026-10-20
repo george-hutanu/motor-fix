@@ -609,7 +609,7 @@ test.describe('axe on the listing steps', () => {
     await expect(photos.locator('li.photo')).toHaveCount(1);
     await expect(summary.getByRole('button')).toHaveCount(0);
     await send.click();
-    await expect(summary).toHaveText('Totul e complet');
+    await expect(summary.locator('.complete')).toHaveText('Totul e complet');
     found.push(...(await listingScan(page, 'the listing, complete')));
 
     // At 320 px the steps fold into a bar; open, its list scrolls nothing.
@@ -619,6 +619,25 @@ test.describe('axe on the listing steps', () => {
     await page.locator('nav > button[aria-expanded]').click();
     if (!(await noSidewaysScroll(page)))
       found.push('the listing, steps open: scrolls sideways at 320 px');
+    await page.locator('nav > button[aria-expanded]').click();
+
+    // The sign-up survey the complete listing offers: its intro, a question
+    // answered, and its summary.
+    await page.getByRole('button', { name: /SPUNE‑NE CUM LUCREZI/ }).click();
+    const survey = page.locator('mf-signup-survey');
+    const forward = survey.locator('button.forward');
+    found.push(...(await listingScan(page, 'the survey, intro')));
+    await forward.click();
+    await survey.getByRole('radio').first().click();
+    found.push(...(await listingScan(page, 'the survey, a question')));
+    for (let question = 1; question <= 5; question++) {
+      await survey.getByRole('radio').first().click();
+      await forward.click();
+    }
+    await expect(survey.locator('.features li')).toHaveCount(5);
+    found.push(...(await listingScan(page, 'the survey, summary')));
+    if (!(await noSidewaysScroll(page)))
+      found.push('the survey: scrolls sideways at 320 px');
     expect(found).toEqual([]);
   });
 

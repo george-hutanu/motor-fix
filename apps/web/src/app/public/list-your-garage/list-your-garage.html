@@ -17,198 +17,210 @@
     </div>
   }
   @default {
-    <p class="label">{{ 'public.listing.label' | t }}</p>
-    <h1>{{ 'public.listing.heading' | t }}</h1>
-    <p class="intro">{{ 'public.listing.intro' | t }}</p>
-    <div class="page">
-      <nav
-        #nav
-        [attr.aria-label]="'public.listing.steps' | t"
-        [class.open]="open()"
-        (keydown.escape)="close()"
-      >
-        <button #bar type="button" class="bar" [attr.aria-expanded]="open()" (click)="open.set(!open())">
-          {{ barText() }}
-          @if (done().has(current())) {
-            <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
-          } @else if (dots().has(current())) {
-            <span class="dot" role="img" [attr.aria-label]="'public.listing.check.incomplete' | t"></span>
-          }
-        </button>
-        <ol>
-          @for (step of steps; track step.n) {
-            <li>
-              <button
-                type="button"
-                [attr.aria-current]="current() === step.n ? 'step' : null"
-                (click)="jump(step.n)"
-              >
-                {{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}
-              </button>
-              @if (done().has(step.n)) {
-                <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
-              } @else if (dots().has(step.n)) {
-                <span class="dot" role="img" [attr.aria-label]="'public.listing.check.incomplete' | t"></span>
-              }
-            </li>
-          }
-        </ol>
-      </nav>
-      <div class="sections">
-        @for (step of steps; track step.n) {
-          <section [id]="prefix() + step.n">
-            <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}</h2>
-            @if (step.n === 1) {
-              <div class="field">
-                <label for="listing-email">{{ 'public.listing.email' | t }}</label>
-                <input
-                  #email
-                  hlmInput
-                  id="listing-email"
-                  data-field="email"
-                  type="email"
-                  autocomplete="email"
-                  [value]="keeper.draft().email ?? ''"
-                  [aria-describedby]="fieldErrors().email ? 'listing-email-error' : 'listing-email-hint'"
-                  [attr.aria-invalid]="fieldErrors().email ? 'true' : null"
-                  (input)="typeEmail(email.value)"
-                  (blur)="leaveEmail()"
-                />
-                <p id="listing-email-hint" class="hint">{{ 'public.listing.emailHint' | t }}</p>
-                <p id="listing-email-error" class="error mf-message" role="status" aria-live="polite">{{ fieldErrors().email ? (fieldErrors().email!.key | t) : '' }}</p>
-              </div>
-              <mf-details-step
-                [value]="details()"
-                [problems]="stepProblems()[0]"
-                [showAll]="asked()"
-                (shown)="mark('details', $event)"
-                (valueChange)="keeper.section('1', $event)"
-              />
-            } @else if (step.n === 6) {
-              <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
-              <div class="field">
-                <!-- maxlength 40 mirrors the draft section's cap in listing-verification -->
-                <label for="listing-cui">{{ 'public.listing.cui' | t }}</label>
-                <input
-                  #cui
-                  hlmInput
-                  id="listing-cui"
-                  data-field="steps.6.cui"
-                  type="text"
-                  inputmode="numeric"
-                  autocomplete="off"
-                  maxlength="40"
-                  [value]="shown().cui"
-                  [aria-describedby]="fieldErrors().cui ? 'listing-cui-error' : null"
-                  [attr.aria-invalid]="fieldErrors().cui?.warning === false ? 'true' : null"
-                  (input)="fillCui(cui.value)"
-                  (blur)="leave(cui, 'cui')"
-                />
-                <p
-                  id="listing-cui-error"
-                  role="status"
-                  aria-live="polite"
-                  [class.error]="!fieldErrors().cui?.warning"
-                  [class.warning]="fieldErrors().cui?.warning"
-                >{{ fieldErrors().cui ? (fieldErrors().cui!.key | t) : '' }}</p>
-              </div>
-              <div class="field">
-                <label for="listing-rar">{{ 'public.listing.rarNumber' | t }}</label>
-                <input
-                  #rar
-                  hlmInput
-                  id="listing-rar"
-                  data-field="steps.6.rarNumber"
-                  type="text"
-                  autocomplete="off"
-                  maxlength="40"
-                  [value]="shown().rarNumber"
-                  [aria-describedby]="fieldErrors().rarNumber ? 'listing-rar-error' : 'listing-rar-hint'"
-                  [attr.aria-invalid]="fieldErrors().rarNumber ? 'true' : null"
-                  (input)="fillRar(rar.value)"
-                  (blur)="leave(rar, 'rarNumber')"
-                />
-                <p id="listing-rar-hint" class="hint">{{ 'public.listing.rarHint' | t }}</p>
-                <p id="listing-rar-error" class="error mf-message" role="status" aria-live="polite">{{ fieldErrors().rarNumber ? (fieldErrors().rarNumber!.key | t) : '' }}</p>
-              </div>
-              <mf-documents-step
-                [draftId]="keeper.draft().draftId"
-                [token]="keeper.draft().token"
-                [kind]="details().businessKind"
-                [documents]="documents()"
-                (documentsChange)="keeper.documents($event)"
-                [declaration]="declaration()"
-                (declarationChange)="keeper.declaration($event)"
-                [problems]="stepProblems()[5]"
-                [showAll]="asked()"
-                (shown)="mark('documents', $event)"
-              />
-              <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
-              <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
+    @if (surveyOpen()) {
+      <mf-signup-survey
+        [value]="surveyAnswers()"
+        [busy]="finishing()"
+        [notice]="finishNotice()"
+        (valueChange)="answerSurvey($event)"
+        (back)="closeSurvey()"
+        (finish)="finish()"
+      />
+    } @else {
+      <p class="label">{{ 'public.listing.label' | t }}</p>
+      <h1>{{ 'public.listing.heading' | t }}</h1>
+      <p class="intro">{{ 'public.listing.intro' | t }}</p>
+      <div class="page">
+        <nav
+          #nav
+          [attr.aria-label]="'public.listing.steps' | t"
+          [class.open]="open()"
+          (keydown.escape)="close()"
+        >
+          <button #bar type="button" class="bar" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+            {{ barText() }}
+            @if (done().has(current())) {
+              <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
+            } @else if (dots().has(current())) {
+              <span class="dot" role="img" [attr.aria-label]="'public.listing.check.incomplete' | t"></span>
             }
-            @if (step.n === 2) {
-              <mf-brands-step [value]="brands()" [problems]="stepProblems()[1]" [showAll]="asked()" (shown)="mark('brands', $event)" (valueChange)="keeper.section('2', $event)" (order)="brandOrder.set($event)" [jobs]="prices()?.jobs ?? []" [jobNames]="knownJobs()" (goTo)="jump($event)" />
-            }
-            @if (step.n === 3) {
-              <mf-prices-step [value]="prices()" [problems]="stepProblems()[2]" [showAll]="asked()" (shown)="mark('prices', $event)" [takenBrands]="takenBrands()" [current]="current() === 3" (valueChange)="keeper.section('3', $event ?? {})" (known)="knownJobs.set($event)" />
-            }
-            @if (step.n === 4) {
-              <mf-mechanics-step [value]="mechanics()" [problems]="stepProblems()[3]" [showAll]="asked()" (shown)="mark('mechanics', $event)" (valueChange)="keeper.section('4', $event)" />
-            }
-            @if (step.n === 5) {
-              <mf-photos-step
-                [draftId]="keeper.draft().draftId"
-                [token]="keeper.draft().token"
-                [kind]="details().businessKind"
-                [files]="photos()"
-                (filesChange)="keeper.files($event)"
-                [problems]="stepProblems()[4]"
-                [showAll]="asked()"
-                (shown)="mark('photos', $event)"
-              />
-              <mf-place-step
-                [value]="place()"
-                [businessKind]="details().businessKind"
-                (valueChange)="keepPlace($event)"
-                [problems]="stepProblems()[4]"
-                [showAll]="asked()"
-                (shown)="mark('place', $event)"
-              />
-              <mf-hours-step
-                [value]="hours()"
-                (valueChange)="keepHours($event)"
-                [problems]="stepProblems()[4]"
-                [showAll]="asked()"
-                (shown)="mark('hours', $event)"
-              />
-            }
-          </section>
-        }
-        <aside>
-          <mf-garage-preview
-            [details]="details()"
-            [brands]="brands()"
-            [prices]="prices()"
-            [mechanics]="mechanics()"
-            [order]="brandOrder()"
-            [place]="place()"
-          />
-        </aside>
-        <mf-missing-summary
-          [errors]="problems().errors"
-          [state]="summaryState()"
-          [mobile]="mobile()"
-          (goTo)="goTo($event)"
-        />
-        <div class="actions">
-          <button hlmBtn type="button" class="send" [attr.aria-disabled]="inFlight() || null" [attr.aria-busy]="inFlight() || null" (click)="send()">
-            <span class="send-label">{{ 'public.listing.check.send' | t }}</span>
-            <span class="arrow" aria-hidden="true">→</span>
           </button>
-          <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>
+          <ol>
+            @for (step of steps; track step.n) {
+              <li>
+                <button
+                  type="button"
+                  [attr.aria-current]="current() === step.n ? 'step' : null"
+                  (click)="jump(step.n)"
+                >
+                  {{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}
+                </button>
+                @if (done().has(step.n)) {
+                  <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
+                } @else if (dots().has(step.n)) {
+                  <span class="dot" role="img" [attr.aria-label]="'public.listing.check.incomplete' | t"></span>
+                }
+              </li>
+            }
+          </ol>
+        </nav>
+        <div class="sections">
+          @for (step of steps; track step.n) {
+            <section [id]="prefix() + step.n">
+              <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}</h2>
+              @if (step.n === 1) {
+                <div class="field">
+                  <label for="listing-email">{{ 'public.listing.email' | t }}</label>
+                  <input
+                    #email
+                    hlmInput
+                    id="listing-email"
+                    data-field="email"
+                    type="email"
+                    autocomplete="email"
+                    [value]="keeper.draft().email ?? ''"
+                    [aria-describedby]="fieldErrors().email ? 'listing-email-error' : 'listing-email-hint'"
+                    [attr.aria-invalid]="fieldErrors().email ? 'true' : null"
+                    (input)="typeEmail(email.value)"
+                    (blur)="leaveEmail()"
+                  />
+                  <p id="listing-email-hint" class="hint">{{ 'public.listing.emailHint' | t }}</p>
+                  <p id="listing-email-error" class="error mf-message" role="status" aria-live="polite">{{ fieldErrors().email ? (fieldErrors().email!.key | t) : '' }}</p>
+                </div>
+                <mf-details-step
+                  [value]="details()"
+                  [problems]="stepProblems()[0]"
+                  [showAll]="asked()"
+                  (shown)="mark('details', $event)"
+                  (valueChange)="keeper.section('1', $event)"
+                />
+              } @else if (step.n === 6) {
+                <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
+                <div class="field">
+                  <!-- maxlength 40 mirrors the draft section's cap in listing-verification -->
+                  <label for="listing-cui">{{ 'public.listing.cui' | t }}</label>
+                  <input
+                    #cui
+                    hlmInput
+                    id="listing-cui"
+                    data-field="steps.6.cui"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    maxlength="40"
+                    [value]="shown().cui"
+                    [aria-describedby]="fieldErrors().cui ? 'listing-cui-error' : null"
+                    [attr.aria-invalid]="fieldErrors().cui?.warning === false ? 'true' : null"
+                    (input)="fillCui(cui.value)"
+                    (blur)="leave(cui, 'cui')"
+                  />
+                  <p
+                    id="listing-cui-error"
+                    role="status"
+                    aria-live="polite"
+                    [class.error]="!fieldErrors().cui?.warning"
+                    [class.warning]="fieldErrors().cui?.warning"
+                  >{{ fieldErrors().cui ? (fieldErrors().cui!.key | t) : '' }}</p>
+                </div>
+                <div class="field">
+                  <label for="listing-rar">{{ 'public.listing.rarNumber' | t }}</label>
+                  <input
+                    #rar
+                    hlmInput
+                    id="listing-rar"
+                    data-field="steps.6.rarNumber"
+                    type="text"
+                    autocomplete="off"
+                    maxlength="40"
+                    [value]="shown().rarNumber"
+                    [aria-describedby]="fieldErrors().rarNumber ? 'listing-rar-error' : 'listing-rar-hint'"
+                    [attr.aria-invalid]="fieldErrors().rarNumber ? 'true' : null"
+                    (input)="fillRar(rar.value)"
+                    (blur)="leave(rar, 'rarNumber')"
+                  />
+                  <p id="listing-rar-hint" class="hint">{{ 'public.listing.rarHint' | t }}</p>
+                  <p id="listing-rar-error" class="error mf-message" role="status" aria-live="polite">{{ fieldErrors().rarNumber ? (fieldErrors().rarNumber!.key | t) : '' }}</p>
+                </div>
+                <mf-documents-step
+                  [draftId]="keeper.draft().draftId"
+                  [token]="keeper.draft().token"
+                  [kind]="details().businessKind"
+                  [documents]="documents()"
+                  (documentsChange)="keeper.documents($event)"
+                  [declaration]="declaration()"
+                  (declarationChange)="keeper.declaration($event)"
+                  [problems]="stepProblems()[5]"
+                  [showAll]="asked()"
+                  (shown)="mark('documents', $event)"
+                />
+                <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
+                <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
+              }
+              @if (step.n === 2) {
+                <mf-brands-step [value]="brands()" [problems]="stepProblems()[1]" [showAll]="asked()" (shown)="mark('brands', $event)" (valueChange)="keeper.section('2', $event)" (order)="brandOrder.set($event)" [jobs]="prices()?.jobs ?? []" [jobNames]="knownJobs()" (goTo)="jump($event)" />
+              }
+              @if (step.n === 3) {
+                <mf-prices-step [value]="prices()" [problems]="stepProblems()[2]" [showAll]="asked()" (shown)="mark('prices', $event)" [takenBrands]="takenBrands()" [current]="current() === 3" (valueChange)="keeper.section('3', $event ?? {})" (known)="knownJobs.set($event)" />
+              }
+              @if (step.n === 4) {
+                <mf-mechanics-step [value]="mechanics()" [problems]="stepProblems()[3]" [showAll]="asked()" (shown)="mark('mechanics', $event)" (valueChange)="keeper.section('4', $event)" />
+              }
+              @if (step.n === 5) {
+                <mf-photos-step
+                  [draftId]="keeper.draft().draftId"
+                  [token]="keeper.draft().token"
+                  [kind]="details().businessKind"
+                  [files]="photos()"
+                  (filesChange)="keeper.files($event)"
+                  [problems]="stepProblems()[4]"
+                  [showAll]="asked()"
+                  (shown)="mark('photos', $event)"
+                />
+                <mf-place-step
+                  [value]="place()"
+                  [businessKind]="details().businessKind"
+                  (valueChange)="keepPlace($event)"
+                  [problems]="stepProblems()[4]"
+                  [showAll]="asked()"
+                  (shown)="mark('place', $event)"
+                />
+                <mf-hours-step
+                  [value]="hours()"
+                  (valueChange)="keepHours($event)"
+                  [problems]="stepProblems()[4]"
+                  [showAll]="asked()"
+                  (shown)="mark('hours', $event)"
+                />
+              }
+            </section>
+          }
+          <aside>
+            <mf-garage-preview
+              [details]="details()"
+              [brands]="brands()"
+              [prices]="prices()"
+              [mechanics]="mechanics()"
+              [order]="brandOrder()"
+              [place]="place()"
+            />
+          </aside>
+          <mf-missing-summary
+            [errors]="problems().errors"
+            [state]="summaryState()"
+            [mobile]="mobile()"
+            (goTo)="goTo($event)"
+            (tellUs)="openSurvey()"
+          />
+          <div class="actions">
+            <button hlmBtn type="button" class="send" [attr.aria-disabled]="inFlight() || null" [attr.aria-busy]="inFlight() || null" (click)="send()">
+              <span class="send-label">{{ 'public.listing.check.send' | t }}</span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </button>
+            <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>
+          </div>
+          <p class="note" role="status" aria-live="polite">{{ noteText() }}</p>
         </div>
-        <p class="note" role="status" aria-live="polite">{{ noteText() }}</p>
       </div>
-    </div>
+    }
   }
 }

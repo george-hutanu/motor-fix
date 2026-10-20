@@ -2204,7 +2204,9 @@ describe('sending for verification', () => {
     await answered(harness, check, { warnings: [] });
 
     expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
-    expect(text(summary(page))).toBe('Totul e complet');
+    expect(text(summary(page).querySelector('.complete'))).toBe(
+      'Totul e complet',
+    );
     expect(document.activeElement).toBe(sendButton(page));
     expect(dotted(page)).toEqual([]);
   });
@@ -2218,7 +2220,9 @@ describe('sending for verification', () => {
       warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
     });
 
-    expect(text(summary(page))).toBe('Totul e complet');
+    expect(text(summary(page).querySelector('.complete'))).toBe(
+      'Totul e complet',
+    );
     const note = page.querySelector('#listing-cui-error') as HTMLElement;
     expect(text(note)).toBe(
       'Acest CUI apare deja într-o altă cerere. Îl verificăm când trimiți.',
@@ -2396,5 +2400,216 @@ describe('sending for verification', () => {
 
     expect(closed.open).toBe(true);
     expect(document.activeElement).toBe(name);
+  });
+
+  describe('the sign-up survey', () => {
+    const { files: _photos, ...LISTING } = COMPLETE;
+    const FOUR = {
+      liftsCount: '0',
+      mechanicsCount: '0',
+      wantsDaySheets: false,
+      wantsLiveMedia: true,
+    };
+    const ALL = { ...FOUR, foundVia: 'google' };
+    const survey = (page: HTMLElement) =>
+      page.querySelector('mf-signup-survey') as HTMLElement | null;
+    const title = (page: HTMLElement) =>
+      text(survey(page)?.querySelector('h1'));
+    const forward = (page: HTMLElement) =>
+      survey(page)?.querySelector<HTMLButtonElement>(
+        'button.forward',
+      ) as HTMLButtonElement;
+    const form = (page: HTMLElement) => page.querySelector('mf-details-step');
+
+    async function click(harness: RouterTestingHarness, button: Element) {
+      (button as HTMLElement).click();
+      for (let i = 0; i < 3; i++) await pause();
+      await settle(harness);
+    }
+
+    async function pick(
+      harness: RouterTestingHarness,
+      page: HTMLElement,
+      label: string,
+    ) {
+      const radio = [
+        ...(survey(page)?.querySelectorAll('[role="radio"]') ?? []),
+      ].find((item) => text(item) === label);
+      if (!radio) throw new Error(`no answer ${label}`);
+      await click(harness, radio);
+    }
+
+    // A server copy with nothing missing and no photo to read back.
+    async function surveyCopy(answers: object) {
+      seed({ draftId: 'd1', email: 'ion@service.test', token: 't1' });
+      const opened = await open('/ro/list-your-garage');
+      await answered(opened.harness, await request(), {
+        data: { ...LISTING, survey: answers },
+        email: 'ion@service.test',
+        id: 'd1',
+        language: 'ro',
+        status: 'open',
+        step: 1,
+        updatedAt: '2026-10-11T11:00:00.000Z',
+      });
+      return opened;
+    }
+
+    // @traces 1359-FR-001 1359-FR-002
+    it('opens from the complete notice in place of the form, and its intro goes back to the form', async () => {
+      const { harness, page } = await completeCopy();
+      await press(harness, page);
+      await answered(harness, await request(), { warnings: [] });
+
+      await click(
+        harness,
+        summary(page).querySelector('button.tell-us') as Element,
+      );
+
+      expect(title(page)).toBe('Spune-ne cum lucrezi');
+      expect(form(page)).toBeNull();
+      expect(page.querySelector('mf-missing-summary')).toBeNull();
+
+      await click(
+        harness,
+        survey(page)?.querySelector('button.back') as Element,
+      );
+
+      expect(survey(page)).toBeNull();
+      expect(
+        page.querySelector<HTMLInputElement>('mf-details-step [name="name"]')
+          ?.value,
+      ).toBe('Service Popescu');
+      expect(page.querySelector('mf-missing-summary .complete')).toBeNull();
+    });
+
+    // @traces 1359-FR-009
+    it('writes a pick to the browser copy at once and shows the next question while the save is on its way', async () => {
+      const { harness, page } = await surveyCopy({ mechanicsCount: '0' });
+      expect(title(page)).toBe('Câte elevatoare ai?');
+
+      await pick(harness, page, 'Niciunul');
+      expect(stored()?.data).toMatchObject({
+        survey: { liftsCount: '0', mechanicsCount: '0' },
+      });
+      await click(harness, forward(page));
+
+      expect(title(page)).toBe(
+        'Vrei să le trimiți clienților poze și video live din atelier?',
+      );
+      const save = await request();
+      expect(save.request.method).toBe('PATCH');
+      expect(save.request.body.data.survey).toEqual({
+        liftsCount: '0',
+        mechanicsCount: '0',
+      });
+      await answered(harness, save, null, 0);
+
+      await pick(harness, page, 'Da');
+      expect(forward(page).disabled).toBe(false);
+      const again = await request();
+      expect(again.request.body.data.survey).toEqual({
+        liftsCount: '0',
+        mechanicsCount: '0',
+        wantsLiveMedia: true,
+      });
+    });
+
+    // @traces 1359-FR-010
+    it.each([
+      ['no answer', {}, null],
+      [
+        'two answers',
+        { liftsCount: '1', mechanicsCount: '3-5' },
+        'Vrei să le trimiți clienților poze și video live din atelier?',
+      ],
+      ['all five answers', ALL, 'Pornim service-ul tău cu:'],
+    ])(
+      'restores a browser copy with %s where the owner stopped',
+      async (_, answers, expected) => {
+        seed({ data: { survey: answers } });
+        const { page } = await open('/ro/list-your-garage');
+
+        if (expected === null) {
+          expect(survey(page)).toBeNull();
+          expect(form(page)).not.toBeNull();
+        } else {
+          expect(title(page)).toBe(expected);
+          expect(form(page)).toBeNull();
+        }
+      },
+    );
+
+    // @traces 1359-FR-010
+    it('opens the survey at the first unanswered question from the continue link', async () => {
+      const { harness, page } = await open(
+        '/ro/list-your-garage?draft=link-key',
+      );
+      await answered(harness, await request(), {
+        data: {
+          ...LISTING,
+          survey: { liftsCount: '4+', mechanicsCount: '1-2' },
+        },
+        email: 'ion@service.test',
+        id: 'd9',
+        language: 'ro',
+        status: 'open',
+        step: 1,
+        updatedAt: '2026-10-11T11:00:00.000Z',
+      });
+
+      expect(title(page)).toBe(
+        'Vrei să le trimiți clienților poze și video live din atelier?',
+      );
+    });
+
+    // @traces 1359-FR-011
+    it('saves the answers on the create press, tells them saved and records the survey once', async () => {
+      const { harness, page } = await surveyCopy(FOUR);
+      await pick(harness, page, 'Căutare pe Google');
+      const save = await request();
+      await click(harness, forward(page));
+      expect(title(page)).toBe('Pornim service-ul tău cu:');
+
+      await click(harness, forward(page));
+      expect(forward(page).disabled).toBe(true);
+      expect(consent.track).not.toHaveBeenCalledWith('survey_completed');
+
+      await answered(harness, save, { id: 'd1' });
+
+      expect(text(survey(page)?.querySelector('[role="status"]'))).toBe(
+        'Răspunsurile tale sunt salvate.',
+      );
+      expect(forward(page).disabled).toBe(false);
+      await click(harness, forward(page));
+      expect(TestBed.inject(HttpTestingController).match(() => true)).toEqual(
+        [],
+      );
+      expect(
+        consent.track.mock.calls.filter(
+          ([name]) => name === 'survey_completed',
+        ),
+      ).toEqual([['survey_completed']]);
+      expect(stored()?.data).toMatchObject({ survey: ALL });
+    });
+
+    // @traces 1359-FR-011
+    it('tells a failed save on the create press and keeps the answers', async () => {
+      const { harness, page } = await surveyCopy(FOUR);
+      await pick(harness, page, 'Căutare pe Google');
+      const save = await request();
+      await click(harness, forward(page));
+      await click(harness, forward(page));
+
+      await answered(harness, save, null, 500);
+
+      expect(text(survey(page)?.querySelector('[role="alert"]'))).toBe(
+        'Nu am putut salva. Încearcă din nou.',
+      );
+      expect(text(survey(page)?.querySelector('[role="status"]'))).toBe('');
+      expect(forward(page).disabled).toBe(false);
+      expect(consent.track).not.toHaveBeenCalledWith('survey_completed');
+      expect(stored()?.data).toMatchObject({ survey: ALL });
+    });
   });
 });

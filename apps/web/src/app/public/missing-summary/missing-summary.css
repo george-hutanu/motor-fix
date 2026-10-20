@@ -38,7 +38,7 @@ ul {
   padding: 0;
   list-style: none;
 }
-button {
+li button {
   width: 100%;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-2);
@@ -52,8 +52,18 @@ button {
   overflow-wrap: anywhere;
   cursor: pointer;
 }
-button:focus-visible {
+li button:focus-visible {
   outline: 2px solid var(--mf-focus);
+}
+.tell-us {
+  justify-self: start;
+  max-width: 100%;
+  min-height: 56px;
+  white-space: normal;
+}
+.tell-us:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
 }
 .complete {
   font-weight: 600;

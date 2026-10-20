@@ -35,6 +35,7 @@ export * from './listing-drafts.dto';
 export * from './listing-photos/listing-photos';
 export * from './listing-photos/listing-photos.dto';
 export * from './listing-sections';
+export * from './listing-survey';
 export * from './listing-verification';
 export * from './live.dto';
 export * from './marked-brands';
