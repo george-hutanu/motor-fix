@@ -24,12 +24,13 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
-import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { Results } from './results';
 import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
+import { ResultsSheet } from './results-sheet/results-sheet';
 import { routes } from '../../app.routes';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
@@ -156,6 +157,8 @@ const live = {
   resync,
 };
 const reduced = signal(false);
+// jsdom matches no media query, so the page is laid out as on a phone.
+const layout = signal<LayoutName>('phone');
 // The address look-up of the field Results shows when it has no place.
 const placesApi = {
   placesControllerSearch: jest.fn(
@@ -198,6 +201,7 @@ async function configure(platform = 'browser') {
       { provide: PublicLive, useValue: live },
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: RESULTS_MAP, useValue: openMap },
+      { provide: Layout, useValue: { current: layout } },
       { provide: BrandsService, useValue: brandsApi },
       { provide: CarsService, useValue: carsApi },
     ],
@@ -220,6 +224,7 @@ beforeEach(() => {
   overlays.open.mockClear();
   live.register.mockClear();
   reduced.set(false);
+  layout.set('phone');
 });
 
 afterEach(() => jest.useRealTimers());
@@ -3016,7 +3021,217 @@ describe('the brand chips and the brand search from a tablet up', () => {
       css.match(
         /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
       )?.[1] ?? '';
-    expect(phone).toMatch(/\.brands \{ flex-wrap: wrap; \}/);
+    expect(phone).toMatch(/\.brands \{ flex-wrap: wrap;/);
     expect(phone).toMatch(/flex-basis: 100%;/);
+  });
+});
+
+// @traces 1358-FR-001 1358-FR-002 1358-FR-006 1358-FR-007 1358-FR-008 1358-FR-010
+describe('Results on a phone, with the list in a sheet over the map', () => {
+  let scroll: jest.Mock;
+
+  beforeEach(async () => {
+    brandsApi.popularBrandsControllerTiles.mockClear();
+    await configure();
+    scroll = jest.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scroll,
+    });
+    Element.prototype.scrollTo = jest.fn();
+    window.scrollTo = jest.fn();
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const sheet = () => page().querySelector<HTMLElement>('mf-results-sheet');
+  const position = () => sheet()?.getAttribute('data-position');
+  const intro = () => page().querySelector('header.intro');
+  async function shown(url = `/ro/garages?brand=bmw&near=${NEAR}`) {
+    await open(url);
+    await reads[0]?.answer();
+  }
+
+  // @traces 1358-FR-001 1358-FR-006
+  it("puts the brand chips in the sheet's header and the list in its body", async () => {
+    await shown();
+
+    expect(
+      sheet()?.querySelector('.header .brands mf-brand-chips'),
+    ).not.toBeNull();
+    expect(
+      sheet()?.querySelector('.header .brands mf-brand-search'),
+    ).not.toBeNull();
+    expect(
+      sheet()?.querySelectorAll('.body .found mf-result-card'),
+    ).toHaveLength(2);
+    expect(position()).toBe('half');
+  });
+
+  // @traces 1358-FR-002
+  it("keeps the summary above the map with the page's one heading and its actions", async () => {
+    await shown();
+
+    expect(page().querySelectorAll('h1')).toHaveLength(1);
+    expect(intro()?.querySelector('h1')).not.toBeNull();
+    expect(sheet()?.contains(intro())).toBe(false);
+    expect(intro()?.querySelector('.summary .tally')).not.toBeNull();
+    expect([...(intro()?.querySelectorAll('button') ?? [])].map(said)).toEqual(
+      expect.arrayContaining(['Schimbă locul']),
+    );
+    expect(
+      intro()?.compareDocumentPosition(
+        page().querySelector('mf-results-map') as Node,
+      ),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  // @traces 1358-FR-001
+  it('follows the layout across 768 px, the sheet starting again at half', async () => {
+    await shown();
+    sheet()?.querySelector<HTMLButtonElement>('button.handle')?.click();
+    await settle();
+    expect(position()).toBe('full');
+
+    layout.set('tablet');
+    await settle();
+    expect(sheet()?.querySelector('button.handle')).toBeNull();
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+
+    layout.set('phone');
+    await settle();
+    expect(position()).toBe('half');
+  });
+
+  // @traces 1358-FR-007
+  it("raises the sheet before it brings a listed garage's card into view on a pin tap", async () => {
+    const raise = jest.spyOn(ResultsSheet.prototype, 'raise');
+    await shown();
+
+    mapPicked('two');
+    await settle();
+
+    expect(raise).toHaveBeenCalledTimes(1);
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(raise.mock.invocationCallOrder[0]).toBeLessThan(
+      scroll.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  // @traces 1358-FR-007
+  it('moves the sheet nowhere for a pin whose garage is not in the list', async () => {
+    const raise = jest.spyOn(ResultsSheet.prototype, 'raise');
+    await shown();
+
+    mapPicked('pin-5');
+    await settle();
+
+    expect(raise).not.toHaveBeenCalled();
+    expect(position()).toBe('half');
+  });
+
+  // @traces 1358-FR-008
+  it("keeps the position on a brand change and sends the list to the sheet's top", async () => {
+    const top = jest.spyOn(ResultsSheet.prototype, 'toTop');
+    await shown();
+
+    page()
+      .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
+      ?.click();
+    await settle();
+    await settle();
+    await reads
+      .at(-1)
+      ?.answer(pageOf({ brand: { id: 'b-audi', name: 'Audi', slug: 'audi' } }));
+
+    expect(top).toHaveBeenCalledWith(true);
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(position()).toBe('half');
+    expect(
+      sheet()?.querySelector('mf-result-card article.card.selected'),
+    ).not.toBeNull();
+  });
+
+  // @traces 1358-FR-008
+  it('keeps the position and the list where it is on a map move', async () => {
+    const top = jest.spyOn(ResultsSheet.prototype, 'toTop');
+    await shown();
+
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+    await reads.at(-1)?.answer();
+
+    expect(top).not.toHaveBeenCalled();
+    expect(position()).toBe('half');
+  });
+
+  // @traces 1358-FR-010
+  it('rests the sheet at full with no history step and says so in the summary when the map fails', async () => {
+    const push = jest.spyOn(history, 'pushState');
+    openMap.mockImplementationOnce(() => Promise.reject(new Error('style')));
+    await shown();
+    await settle();
+
+    expect(position()).toBe('full');
+    expect(push).not.toHaveBeenCalledWith(
+      expect.objectContaining({ mfSheet: true }),
+      '',
+    );
+    const status = intro()?.querySelector(
+      '[role="status"][aria-live="polite"]',
+    );
+    expect(said(status)).toBe('Harta nu este disponibilă acum');
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+  });
+
+  // @traces 1358-FR-010 1358-FR-014
+  it('says the map is not available in English', async () => {
+    openMap.mockImplementationOnce(() => Promise.reject(new Error('style')));
+    await open(`/en/garages?brand=bmw&near=${NEAR}`, { language: 'en' });
+    await reads[0]?.answer();
+    await settle();
+
+    expect(
+      said(intro()?.querySelector('[role="status"][aria-live="polite"]')),
+    ).toBe('The map is not available now');
+  });
+
+  // @traces 1358-FR-010
+  it('says nothing in the summary while the map works', async () => {
+    await shown();
+
+    expect(
+      said(intro()?.querySelector('[role="status"][aria-live="polite"]')) ?? '',
+    ).toBe('');
+  });
+});
+
+// @traces 1358-FR-001 1358-FR-005 1358-FR-011
+describe('the phone results screen in the stylesheet', () => {
+  const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+  const phone =
+    css.match(
+      /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1] ?? '';
+  const rule = (selector: string) =>
+    [...phone.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(
+      ([, sel]) => sel.trim() === selector,
+    )?.[2] ?? '';
+
+  it('makes the page one screen between the site bar and the tab bar, which does not scroll', () => {
+    expect(rule(':host')).toMatch(
+      /height: calc\(100dvh - var\(--public-site-bar\) - var\(--tab-bar\)\);/,
+    );
+    expect(rule(':host')).toMatch(/overflow: hidden;/);
+  });
+
+  it('lays the sheet over the map, which fills the screen under the summary', () => {
+    expect(rule('mf-results-map')).toMatch(/grid-area: stage;/);
+    expect(rule('mf-results-sheet')).toMatch(/grid-area: stage;/);
+    expect(rule(':host:has(mf-results-sheet.typing)')).toMatch(
+      /height: calc\(100dvh - var\(--public-site-bar\)\);/,
+    );
   });
 });

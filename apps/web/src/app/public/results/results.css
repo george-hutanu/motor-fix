@@ -35,7 +35,9 @@ h1 {
   display: inline-block;
 }
 
-/* "Se caută locația…" while the browser is asked; empty, it takes no room. */
+/* "Se caută locația…" while the browser is asked, and on a phone the map's
+   failure; empty, they take no room. */
+.unavailable,
 .locating {
   color: var(--mf-text-secondary);
   margin: 0;
@@ -66,13 +68,13 @@ mf-address-field {
 }
 
 /* The chips, then the brand search: beside them from a tablet up, under
-   them on a phone. */
+   them on a phone, in the sheet's header. */
 .brands {
   align-items: flex-start;
   display: flex;
   flex-wrap: nowrap;
   gap: var(--mf-space-3);
-  margin-block-start: var(--mf-space-3);
+  margin-block-end: var(--mf-space-4);
 }
 
 mf-brand-chips {
@@ -84,9 +86,55 @@ mf-brand-chips {
   flex: 0 0 16rem;
 }
 
+/* On a phone the page is one screen between the site bar and the tab bar:
+   the summary, then the map with the list's sheet over it. Scrolling the
+   list never scrolls the page; the footer stays below the screen. */
 @media (max-width: 767px) {
+  :host {
+    display: grid;
+    grid-template-areas:
+      "intro"
+      "stage";
+    grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));
+    overflow: hidden;
+    padding: 0;
+  }
+
+  /* The tab bar hides while a field takes text; the sheet then reaches the
+     screen's bottom edge. */
+  :host:has(mf-results-sheet.typing) {
+    height: calc(100dvh - var(--public-site-bar));
+  }
+
+  .intro {
+    grid-area: intro;
+    margin: 0;
+    padding: var(--mf-space-2) var(--mf-space-4);
+  }
+
+  h1 {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  mf-results-map {
+    grid-area: stage;
+    height: auto;
+    margin: 0;
+    min-height: 0;
+  }
+
+  mf-results-sheet {
+    grid-area: stage;
+    z-index: 1;
+  }
+
   .brands {
     flex-wrap: wrap;
+    margin: 0;
   }
 
   mf-brand-chips,
@@ -95,10 +143,25 @@ mf-brand-chips {
   }
 }
 
-/* Below the desktop breakpoint the map sits above the list at full width. */
+/* On a tablet the map sits above the list at full width, under the chips. */
 mf-results-map {
   height: 40vh;
   margin-block-end: var(--mf-space-4);
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :host {
+    display: flex;
+    flex-direction: column;
+  }
+
+  mf-results-map {
+    order: 1;
+  }
+
+  .found {
+    order: 2;
+  }
 }
 
 /* From the desktop breakpoint the map stands beside the list and stays in view. */
@@ -108,13 +171,18 @@ mf-results-map {
     display: grid;
     grid-template-areas:
       "intro map"
+      "brands map"
       "found map";
     grid-template-columns: minmax(0, 1fr) minmax(360px, 42%);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
   }
 
   .intro {
     grid-area: intro;
+  }
+
+  .brands {
+    grid-area: brands;
   }
 
   .found {

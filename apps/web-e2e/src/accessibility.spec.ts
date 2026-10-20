@@ -303,6 +303,44 @@ test.describe('axe on the core screens @seeded', () => {
       expect(await walk(page, [screen])).toEqual([]);
     });
 
+  // @traces 1358-FR-011 1358-FR-012 1358-FR-014
+  test('the results on a phone, with the list in its sheet', async ({
+    page,
+  }) => {
+    const found: string[] = [];
+    await page.setViewportSize({ height: 800, width: 320 });
+    for (const language of LANGUAGES) {
+      await hydrated(page, inLanguage('/ro/garages?brand=dacia', language));
+      found.push(...(await scan(page, `the results at 320 px ${language}`)));
+      if (!(await noSidewaysScroll(page)))
+        found.push(`the results ${language}: scrolls sideways at 320 px`);
+    }
+    expect(found).toEqual([]);
+
+    const handle = page.locator('mf-results-sheet button.handle');
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    await expect(handle).toHaveAccessibleName('Show more of the list');
+    const order = await page.evaluate(() => {
+      const at = (selector: string) => document.querySelector(selector);
+      const follows = (a: Element | null, b: Element | null) =>
+        !!a &&
+        !!b &&
+        !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return [
+        follows(at('h1'), at('mf-results-sheet button.handle')),
+        follows(
+          at('mf-results-sheet button.handle'),
+          at('mf-results-sheet mf-brand-chips'),
+        ),
+        follows(
+          at('mf-results-sheet mf-brand-chips'),
+          at('mf-results-sheet .found'),
+        ),
+      ];
+    });
+    expect(order).toEqual([true, true, true]);
+  });
+
   test("the driver's quote request dialog and my requests", async ({
     page,
   }) => {

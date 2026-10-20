@@ -23,6 +23,7 @@ import type {
   ListedGarageDto,
 } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
+import { Layout } from '@motor-fix/ui-cockpit';
 
 import { MapCard } from './map-card/map-card';
 import { drawPins, type MapEvents, type MapMove } from './pins-map';
@@ -118,8 +119,12 @@ export class ResultsMap {
   // The garage of a tapped pin, or none for a tap away from every pin.
   readonly picked = output<string | undefined>();
   protected readonly tooWide = signal(false);
-  // The style failed or never loaded; the grey map stays and says so.
-  protected readonly failed = signal(false);
+  // The style failed or never loaded; the grey map stays and says so, and
+  // on a phone the page's summary says it instead.
+  private readonly failure = signal(false);
+  private readonly layout = inject(Layout);
+  readonly failed = this.failure.asReadonly();
+  protected readonly phone = computed(() => this.layout.current() === 'phone');
   protected readonly hasArea = computed(() =>
     this.pins()?.pins.some((pin) => pin.serviceRadiusKm !== undefined),
   );
@@ -174,7 +179,7 @@ export class ResultsMap {
           this.view.set(view);
           if (this.fitWanted) this.fit();
         },
-        () => this.failed.set(true),
+        () => this.failure.set(true),
       );
     });
     effect(() => this.view()?.show(this.pins()));

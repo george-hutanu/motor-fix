@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
@@ -40,16 +41,22 @@ const open = jest.fn(
 );
 
 let fixture: ComponentFixture<ResultsMap>;
+// On a phone the summary above the map says it is unavailable, so most of
+// these tests look at the map from a tablet up.
+const layout = signal<LayoutName>('tablet');
 
 async function render({
   language = 'ro' as 'ro' | 'en',
   platform = 'browser',
   loading = false,
+  on = 'tablet' as LayoutName,
 } = {}) {
+  layout.set(on);
   TestBed.configureTestingModule({
     providers: [
       { provide: RESULTS_MAP, useValue: open },
       { provide: PLATFORM_ID, useValue: platform },
+      { provide: Layout, useValue: { current: layout } },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -269,6 +276,16 @@ describe('ResultsMap, when the map cannot open', () => {
 
     expect(said(status())).toBe('Harta nu este disponibilă acum');
     expect(status()?.closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  // @traces 1358-FR-010
+  it('leaves the text to the summary on a phone', async () => {
+    await render({ on: 'phone' });
+    failed(new Error('style 500'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(said(status())).toBe('');
   });
 
   it('reads "The map is not available now" in English', async () => {

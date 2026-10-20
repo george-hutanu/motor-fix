@@ -41,12 +41,13 @@ import {
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { limitText, Overlays, toProblem } from '@motor-fix/overlays';
-import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { Layout, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
 import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
+import { ResultsSheet } from './results-sheet/results-sheet';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
@@ -108,6 +109,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
     LiveChange,
     ResultCard,
     ResultsMap,
+    ResultsSheet,
     RouterLink,
     TranslatePipe,
   ],
@@ -125,6 +127,8 @@ export class Results {
   private readonly live = inject(PublicLive);
   private readonly announcer = inject(LiveAnnouncer);
   private readonly reduced = inject(REDUCED_MOTION);
+  private readonly layout = inject(Layout);
+  protected readonly phone = computed(() => this.layout.current() === 'phone');
   private readonly destroyRef = inject(DestroyRef);
   private readonly saved = inject(SavedGarages);
   protected readonly i18n = inject(I18n);
@@ -272,6 +276,9 @@ export class Results {
     return parseNear(near);
   });
   private readonly map = viewChild(ResultsMap);
+  private readonly sheet = viewChild.required(ResultsSheet);
+  // On a phone the list takes the screen and the summary says why.
+  protected readonly mapFailed = computed(() => !!this.map()?.failed());
 
   private readonly searched = computed(() =>
     this.results.isLoading() || !this.results.hasValue()
@@ -554,6 +561,9 @@ export class Results {
     this.destroyRef.onDestroy(() => clearTimeout(risen));
     const tally = this.tally();
     if (tally) void this.announcer.announce(tally, 'polite');
+    // On a phone the list scrolls inside its sheet, not the page.
+    if (untracked(this.phone))
+      return this.sheet().toTop(!untracked(this.reduced));
     const top = this.found()?.nativeElement.getBoundingClientRect().top ?? 0;
     if (top >= 0) return;
     window.scrollTo({
@@ -623,11 +633,13 @@ export class Results {
     this.selected.set(id);
     const listed = untracked(this.cards).find((c) => c.garage().id === id);
     const pin = untracked(this.pinned)?.pins.find((p) => p.id === id);
-    if (listed || !pin) {
+    if (listed) {
       this.card.set(undefined);
-      listed?.reveal(!untracked(this.reduced));
-      return;
+      // A low sheet rises first, so the card has room to come into view.
+      this.sheet().raise();
+      return listed.reveal(!untracked(this.reduced));
     }
+    if (!pin) return this.card.set(undefined);
     const card: PinCard = { pin };
     this.card.set(card);
     const query = untracked(this.query);
