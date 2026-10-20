@@ -208,15 +208,17 @@ describe('the profile aggregates with ties and gaps', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('takes the approved decision and ignores later and earlier refusals', async () => {
+  // @traces 1353-FR-001
+  it('takes the stored day of last check and ignores every file decision', async () => {
     const garage = await approved({
       approvedAt: new Date('2026-01-01T00:00:00.000Z'),
+      lastCheckedOn: new Date('2026-03-01'),
     });
     const at = (iso: string) => new Date(iso);
     // Only one file per garage is live (submitted, in review or approved).
     for (const [decidedAt, status] of [
       ['2026-02-01T00:00:00.000Z', 'rejected'],
-      ['2026-03-01T00:00:00.000Z', 'approved'],
+      ['2026-04-01T00:00:00.000Z', 'approved'],
       ['2026-06-01T00:00:00.000Z', 'rejected'],
     ] as const) {
       await prisma.verificationFile.create({

@@ -259,6 +259,50 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
     await ownerContext.close();
   });
 
+  // @traces 1353-FR-002 1353-FR-003 1353-FR-006
+  test('moves the date under an open profile’s verified badge when a valid re-check is recorded', async ({
+    browser,
+    page,
+  }) => {
+    const name = `Atelier Datat ${stamp}`;
+    const slug = `e2e-datat-${stamp}`;
+    const id = await due(name, slug);
+    const before = (await stored(id))?.checked ?? '';
+    const visitorContext = await browser.newContext();
+    const visitor = await visitorContext.newPage();
+    const stream = visitor.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/live/public?') &&
+        r.url().includes('garages=') &&
+        r.ok(),
+    );
+    await visitor.goto(`/ro/garages/${slug}`);
+    const line = visitor.locator('.verified');
+    await expect(line).toContainText(`Ultima verificare: ${roDay(before)}.`);
+    await stream;
+    let navigations = 0;
+    visitor.on('framenavigated', (frame) => {
+      if (frame === visitor.mainFrame()) navigations++;
+    });
+    await page.setViewportSize({ height: 800, width: 1280 });
+    await signInAsAdmin(page);
+    await page.goto('/app/admin/garages');
+
+    await rowOf(page, name)
+      .getByRole('button', { name: 'Înregistrează' })
+      .click();
+    await dialog(page).getByRole('button', { name: 'Valabilă' }).click();
+    await dialog(page).getByRole('button', { name: 'Salvează' }).click();
+    await expect(rowOf(page, name)).toHaveCount(0);
+
+    await expect(line).toContainText(
+      `Ultima verificare: ${roDay(bucharestToday())}.`,
+      { timeout: 15_000 },
+    );
+    expect(navigations).toBe(0);
+    await visitorContext.close();
+  });
+
   test('records a failed re-check after confirming, suspending the garage and taking it off open results', async ({
     browser,
     page,

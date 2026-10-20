@@ -10,6 +10,7 @@ import { AuthModule } from '../../auth/auth.module';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { addDays, localDay } from '../../bucharest';
 import { OutboxRelay } from '../../events/outbox-relay/outbox-relay';
 import { PrismaClient } from '../../generated/prisma/client';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -25,6 +26,7 @@ import { GarageBrandsService } from '../garage-brands/garage-brands.service';
 import { GarageSettingsService } from '../garage-settings/garage-settings.service';
 import { GaragesModule } from '../garages.module';
 import { PriceListService } from '../price-list/price-list.service';
+import { RecheckService } from '../verification/recheck/recheck.service';
 import { VerificationService } from '../verification/verification.service';
 
 const redisUrl = redisUrlFor(2);
@@ -144,6 +146,7 @@ async function militari() {
       knownFor: 'Frâne și distribuție, „rapid”.',
       labourFromBani: 15_000,
       labourToBani: 20_000,
+      lastCheckedOn: new Date('2026-09-15'),
       latitude: 44.4301,
       longitude: 26.0145,
       name: 'Service Auto Militari',
@@ -336,7 +339,7 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
     responseRate: { rate: 83, state: 'rate' },
     reviewCount: 12,
     slug: w.garage.slug,
-    verifiedAt: '2026-09-15T10:00:00.000Z',
+    verifiedAt: '2026-09-15T00:00:00.000Z',
     worksOn: [{ ...ref(w.dacia), fuels: ['petrol', 'diesel'] }],
   };
 }
@@ -603,7 +606,49 @@ describe('the next read after a change the garage makes', () => {
     await relayed(since);
 
     expect((await read(garage.slug)).body.verifiedAt).toBe(
-      decided.decidedAt?.toISOString(),
+      `${localDay(decided.decidedAt as Date)}T00:00:00.000Z`,
+    );
+  });
+
+  // @traces 1353-FR-004
+  it('shows the new date of last check after recheck.recorded', async () => {
+    const today = localDay(new Date());
+    const garage = await prisma.garage.create({
+      data: {
+        approvedAt: new Date('2026-01-10T08:00:00.000Z'),
+        lastCheckedOn: new Date(addDays(today, -40)),
+        name: 'Service Auto Titan',
+        rarActivities: ['mechanics'],
+        slug: `titan-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    const admin = await account(`Ioana ${randomUUID()}`, ['admin']);
+    expect((await read(garage.slug)).body.verifiedAt).toBe(
+      `${addDays(today, -40)}T00:00:00.000Z`,
+    );
+    const since = await now();
+
+    await app.get(RecheckService).record(
+      {
+        accountId: admin,
+        garageId: null,
+        permissions: none,
+        role: 'admin',
+        roles: ['admin'],
+      },
+      garage.id,
+      {
+        activities: ['mechanics'],
+        checkedOn: today,
+        lastCheckedOn: addDays(today, -40),
+        result: 'ok',
+      },
+    );
+    await relayed(since);
+
+    expect((await read(garage.slug)).body.verifiedAt).toBe(
+      `${today}T00:00:00.000Z`,
     );
   });
 });

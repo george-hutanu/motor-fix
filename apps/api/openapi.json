@@ -13445,7 +13445,7 @@
           },
           "verifiedAt": {
             "type": "string",
-            "description": "When MotorFix last verified the garage",
+            "description": "The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither",
             "format": "date-time",
             "nullable": true
           },
