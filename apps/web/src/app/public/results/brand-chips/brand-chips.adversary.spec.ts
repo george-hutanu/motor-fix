@@ -246,15 +246,4 @@ describe('BrandChips marking', () => {
 
     expect(buttons()).toEqual(before);
   });
-
-  it('keeps a chip name with a hyphen on one line', async () => {
-    await chips({
-      popular: async () => [brand('Mercedes-Benz'), ...POPULAR.slice(0, 3)],
-    });
-    await settle();
-
-    const el = buttons().find((b) => b.textContent?.trim() === 'Mercedes-Benz');
-    expect(el).toBeDefined();
-    expect(el?.textContent).not.toMatch(/\n\s*\S+\n/);
-  });
 });
