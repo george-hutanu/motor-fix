@@ -203,7 +203,22 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     const hit = document.elementFromPoint(x, y);
     return hit !== null && page.contains(hit);
   };
-  const rects = controls.map((el) => [el, el.getBoundingClientRect(), pinned(el)]);
+  // The part of a control its scrolling or clipping boxes leave drawn: a control cut off by an ancestor's
+  // overflow (a sheet's body scrolled past it, a stage that hides what hangs below) is not drawn over what
+  // lies there. A fixed box leaves its ancestors' clips behind.
+  const drawn = (el) => {
+    const r = el.getBoundingClientRect();
+    let { left, top, right, bottom } = r;
+    for (let e = el; e.parentElement && style(e).position !== "fixed"; ) {
+      e = e.parentElement;
+      const s = style(e);
+      const box = e.getBoundingClientRect();
+      if (s.overflowX !== "visible") (left = Math.max(left, box.left)), (right = Math.min(right, box.right));
+      if (s.overflowY !== "visible") (top = Math.max(top, box.top)), (bottom = Math.min(bottom, box.bottom));
+    }
+    return { left, top, right, bottom };
+  };
+  const rects = controls.map((el) => [el, drawn(el), pinned(el)]);
   for (let i = 0; i < rects.length; i++)
     for (let j = i + 1; j < rects.length; j++) {
       const [a, ra, pa] = rects[i];

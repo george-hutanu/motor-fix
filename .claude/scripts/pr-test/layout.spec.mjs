@@ -196,6 +196,13 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: sheet, at: 'desktop' }), 'overlap')).toEqual(['button#under × div#sheet']);
     });
 
+    it('passes a control its ancestor clips away from the one drawn there, and faults it when drawn', async () => {
+      const page = (overflow) => `<div style="height:100px;overflow:${overflow}"><div style="height:150px"></div><button id="cut" style="width:200px;height:48px">Cut</button></div>
+        <button id="below" style="width:200px;height:48px;margin-top:40px">Below</button>`;
+      expect(of(await measure(null, { html: page('hidden'), at: 'desktop' }), 'overlap')).toEqual([]);
+      expect(selectors(await measure(null, { html: page('visible'), at: 'desktop' }), 'overlap')).toEqual(['button#cut × button#below']);
+    });
+
     it('passes a button inside a link card and two buttons side by side', async () => {
       expect(of(await measure('overlap-pass', { at: 'desktop' }), 'overlap')).toEqual([]);
     });
