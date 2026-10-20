@@ -75,6 +75,14 @@ describe('PopularBrandsQueryDto', () => {
   it.each(['0', '17', '2.5', 'eight', ''])('refuses the limit %s', (value) => {
     expect(errors(PopularBrandsQueryDto, { limit: value })).not.toEqual([]);
   });
+
+  // @traces 228-FR-011
+  it.each(['0x10', '0b1', '0o7', '1e1', ' 4', '4 ', '+4', 'true'])(
+    'reads the limit as decimal digits only, so it refuses %j',
+    (value) => {
+      expect(errors(PopularBrandsQueryDto, { limit: value })).not.toEqual([]);
+    },
+  );
 });
 
 // The OpenAPI document is built from these; the generated client reads it.
