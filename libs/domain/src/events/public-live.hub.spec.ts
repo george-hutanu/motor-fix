@@ -65,6 +65,8 @@ const ALLOWED: Record<string, string[]> = {
     'garage.slots_changed',
     // @traces 384-FR-009
     'response_stats.updated',
+    // @traces 1351-FR-013
+    'recheck.recorded',
   ],
   [`public:mechanic:${MECHANIC}`]: ['mechanic.updated', ...REVIEW_KINDS],
   'public:search': [

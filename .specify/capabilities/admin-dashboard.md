@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -20,6 +20,7 @@ features:
   - 298-system-log-today
   - 404-demand-searches
   - 299-system-log-search
+  - 1351-rar-monthly-recheck
 ---
 
 # Capability: Admin dashboard
@@ -754,6 +755,10 @@ _From 299-system-log-search._
 ### 299-FR-018 — Tests MUST exist before the implementation and MUST cover, in Jest on real PostgreSQL and Redis: each filter alone (`to`, each `kind`, `severity`, `source`) and combined with the others and with `q`; `q` ignoring case and diacritics on both sides and taking `%`, `_` and `\` literally; `q` of 1 and of 101 characters refused, 2 and 100 accepted; cursor paging over 120 entries in pages of 50 with no gap and no repeat, with two entries at one instant, and with an entry inserted between pages; `from` older than 90 days clamped, the picker's widest range (90 days ago to tomorrow 00:00) accepted, `to` not after `from` refused, a missing `from` refused, a `q` of spaces around one letter refused; a cursor that cannot be decoded refused; `limit` 50 accepted and 51 refused; Jurnal's call unchanged (no `to`, limit 20); 404 for every non-admin role, 401 for a visitor. Web unit tests cover the address round trip (write, read, unknown values dropped, default range not written), the date limits and the "to before from" message, the type-to-kinds mapping ("Backup" sends both kinds), the 2-character minimum, the 300 ms wait and the dropped older read, the day headers across a Bucharest midnight, the empty state with and without the clear button, the failed first read and the failed further page, the new-entries bar (shown, counted, hidden on a range ending before today and on an event whose kind, severity or source a filter excludes, re-read on tap), the lone-date default and the Jurnal link. One Playwright end-to-end test: as the seeded admin, open the full log from Jurnal, filter the type Backup and a date range, search a word, and read only the matching entries, on a phone (through the sheet) and a desktop, in both languages.
 
 _From 299-system-log-search._
+
+### 1351-FR-013 — On `recheck.recorded` the live hub MUST publish to `admin`, `garage:{garageId}` (the owner's legal panel re-reads its date, #96) and `public:garage:{garageId}` (the badge, when #95 ships); the public profile cache for the garage MUST be dropped as for `garage.updated` (1183-FR-005).
+
+_From 1351-rar-monthly-recheck._
 
 ## Retired
 

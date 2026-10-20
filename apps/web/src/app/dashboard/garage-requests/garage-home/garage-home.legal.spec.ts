@@ -205,6 +205,17 @@ describe('the legal check, live', () => {
     expect(read).toHaveBeenCalledTimes(2);
   });
 
+  // @traces 1351-FR-013
+  it('reads again when an admin records a re-check of the garage', async () => {
+    const fixture = await render('owner');
+
+    live.emit('recheck.recorded', 'garage-1');
+    await wait(350);
+    await settle(fixture);
+
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
   it('does not read again on an unrelated event', async () => {
     const fixture = await render('owner');
 

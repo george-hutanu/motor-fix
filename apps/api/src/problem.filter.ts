@@ -33,6 +33,7 @@ export function sendProblem(
     | 'rule'
     | 'warnings'
   > & {
+    field?: string;
     inviteId?: string;
     garageId?: string;
     garageName?: string;
@@ -101,8 +102,9 @@ export class ProblemFilter implements ExceptionFilter {
       // The members beyond the problem shape a refusal carries: the open
       // invite a refused send names, the tries a wrong code has left, and
       // the wait before a limit lifts, what a refused move was about, and
-      // the garage a refused quote request names, and the notes a refused
-      // listing check keeps beside its errors. Nothing else an exception
+      // the garage a refused quote request names, the one field a refused
+      // re-check marks, and the notes a refused listing check keeps beside
+      // its errors. Nothing else an exception
       // holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
@@ -170,6 +172,7 @@ function detail(message: unknown): string | undefined {
 // request (`garage_cannot_receive`).
 const STRING_MEMBERS = [
   'entity',
+  'field',
   'currentStatus',
   'to',
   'rule',

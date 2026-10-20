@@ -117,6 +117,10 @@ export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGa
 export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { RecheckControllerDue$Params as RecheckControllerDue$Params } from './fn/admin/recheck-controller-due';
+export { recheckControllerDue as recheckControllerDue } from './fn/admin/recheck-controller-due';
+export type { RecheckControllerRecord$Params as RecheckControllerRecord$Params } from './fn/admin/recheck-controller-record';
+export { recheckControllerRecord as recheckControllerRecord } from './fn/admin/recheck-controller-record';
 export type { ReportDecisionControllerDecide$Params as ReportDecisionControllerDecide$Params } from './fn/admin/report-decision-controller-decide';
 export { reportDecisionControllerDecide as reportDecisionControllerDecide } from './fn/admin/report-decision-controller-decide';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';

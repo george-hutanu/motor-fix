@@ -4,13 +4,14 @@ import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { GARAGES_KINDS } from './kinds';
 import { AdminQueue } from '../admin-queue/admin-queue';
+import { AdminRechecks } from '../admin-rechecks/admin-rechecks';
 import { AdminSuspended } from '../admin-suspended/admin-suspended';
 import { liveResource } from '../live';
 
 // The admin's "Service-uri" view: the counts line, the files waiting for
-// verification, then the suspended garages.
+// verification, the garages due their RAR re-check, then the suspended ones.
 @Component({
-  imports: [AdminQueue, AdminSuspended, TranslatePipe],
+  imports: [AdminQueue, AdminRechecks, AdminSuspended, TranslatePipe],
   selector: 'mf-admin-garages',
   styleUrl: './admin-garages.css',
   templateUrl: './admin-garages.html',

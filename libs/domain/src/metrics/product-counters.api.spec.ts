@@ -2,6 +2,7 @@ import {
   CONSENT_DECISIONS,
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
+  RECHECK_RESULTS,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_CHECK_RESULTS,
 } from '@motor-fix/contracts';
@@ -50,10 +51,12 @@ async function series() {
 // Every series the API starts: its own 90 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
 // no_open_report; the rejections one per reason; the requests for more and
-// the files sent again one each; the report decisions one per outcome) and
-// one per check kind and result.
+// the files sent again one each; the report decisions one per outcome),
+// one per check kind and result, and one per re-check result.
 const API_SERIES =
-  90 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+  90 +
+  VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length +
+  RECHECK_RESULTS.length;
 
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
@@ -79,6 +82,10 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_verification_checks_total')).toHaveLength(
       VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length,
     );
+    // @traces 1351-FR-014
+    expect(
+      named(all, 'motorfix_rechecks_total').map((one) => one.labels),
+    ).toEqual([{ result: 'ok' }, { result: 'failed' }]);
     // @traces 303-FR-010
     expect(
       named(all, 'motorfix_verification_decision_refusals_total').map(

@@ -54,6 +54,10 @@ async function open(language: 'ro' | 'en' = 'ro') {
             return summary();
           },
           adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
+          recheckControllerDue: async () => ({
+            items: [],
+            today: '2026-10-01',
+          }),
         },
       },
     ],
@@ -156,13 +160,21 @@ describe('the counts line', () => {
     expect(text(counts(el))).not.toContain('214');
   });
 
-  it('heads the view, before the queue and then the suspended garages', async () => {
+  // @traces 1351-FR-010
+  it('heads the view, before the queue, the re-checks and then the suspended garages', async () => {
     const el = await open();
 
     const order = [
-      ...el.querySelectorAll('.counts, mf-admin-queue, mf-admin-suspended'),
+      ...el.querySelectorAll(
+        '.counts, mf-admin-queue, mf-admin-rechecks, mf-admin-suspended',
+      ),
     ].map((node) => node.tagName.toLowerCase());
-    expect(order).toEqual(['p', 'mf-admin-queue', 'mf-admin-suspended']);
+    expect(order).toEqual([
+      'p',
+      'mf-admin-queue',
+      'mf-admin-rechecks',
+      'mf-admin-suspended',
+    ]);
   });
 });
 

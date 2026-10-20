@@ -589,6 +589,39 @@
       "other": "waiting {n} working days"
     }
   },
+  "rechecks": {
+    "activities": "Authorised activities",
+    "cancel": "Cancel",
+    "confirm": "Confirm the suspension",
+    "count": "{n}/{max}",
+    "date": "Date checked",
+    "days": {
+      "one": "{n} day",
+      "other": "{n} days"
+    },
+    "detail": "What the register shows",
+    "dialog": "RAR re-check",
+    "empty": "No re-checks to do today",
+    "failed": "The re-check could not be saved. Try again.",
+    "heading": "RAR re-checks",
+    "loading": "Loading the RAR re-checks",
+    "never": "never checked",
+    "noActivities": "The garage has no authorised activities on file: correct its file first, or record a failure.",
+    "noNumber": "number missing",
+    "overdue": "overdue",
+    "record": "Record",
+    "recordNamed": "Record the re-check of {name}",
+    "result": "Result",
+    "results": {
+      "expired": "Expired",
+      "ok": "Valid",
+      "suspended": "Suspended",
+      "withdrawn": "Withdrawn"
+    },
+    "save": "Save",
+    "suspend": "Suspend the garage",
+    "suspends": "The garage will be suspended and taken off the map. Future bookings are cancelled and the drivers are told."
+  },
   "suspended": {
     "alone": "suspended",
     "cancelled": {

@@ -73,6 +73,9 @@ const REGISTER: readonly CheckKind[] = ['company', 'caen', 'rar', 'activities'];
 // What a look-up copies to the clipboard as it opens.
 type Copied = 'cui' | 'rar';
 type Lookup = { name: string; url: string; copy: Copied };
+// The RAR register, opened from the file drawer and the re-check dialog.
+export const RAR_REGISTER = 'https://portal.rarom.ro/';
+
 const ONRC: Lookup = {
   copy: 'cui',
   name: 'onrc',
@@ -91,7 +94,7 @@ const LOOKUPS: Partial<Record<CheckKind, Lookup[]>> = {
     },
     ONRC,
   ],
-  rar: [{ copy: 'rar', name: 'rarRegister', url: 'https://portal.rarom.ro/' }],
+  rar: [{ copy: 'rar', name: 'rarRegister', url: RAR_REGISTER }],
 };
 type FormKind = 'company' | 'caen' | 'rar' | 'activities';
 const MANUAL: readonly CheckKind[] = [

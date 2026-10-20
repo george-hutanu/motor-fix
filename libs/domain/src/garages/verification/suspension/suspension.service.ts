@@ -72,21 +72,32 @@ export class SuspensionService {
       this.committed(garageId, cause, actor.role);
       return suspension;
     } catch (error) {
-      if (!(error instanceof Refused)) throw error;
-      // The attempt is history even though nothing else changed; a history
-      // write that fails is logged, and the caller still learns the refusal.
-      await this.prisma
-        .$transaction((tx) => this.audit.record(tx, error.attempt))
-        .catch((auditError: unknown) =>
-          this.logger.error(
-            `refusal not audited garage=${garageId} code=${ALREADY}: ${String(auditError)}`,
-          ),
-        );
-      this.logger.log(
-        `refused garage=${garageId} cause=${cause} actor=${actor.role} code=${ALREADY}`,
-      );
-      throw error.refusal;
+      throw await this.refused(error, garageId, cause, actor.role);
     }
+  }
+
+  // What a failed transaction that ran suspendIn() throws: a refusal is
+  // recorded apart and answered as its 409; any other error goes on as it is.
+  async refused(
+    error: unknown,
+    garageId: string,
+    cause: SuspensionCause,
+    role: VerificationActor['role'],
+  ): Promise<unknown> {
+    if (!(error instanceof Refused)) return error;
+    // The attempt is history even though nothing else changed; a history
+    // write that fails is logged, and the caller still learns the refusal.
+    await this.prisma
+      .$transaction((tx) => this.audit.record(tx, error.attempt))
+      .catch((auditError: unknown) =>
+        this.logger.error(
+          `refusal not audited garage=${garageId} code=${ALREADY}: ${String(auditError)}`,
+        ),
+      );
+    this.logger.log(
+      `refused garage=${garageId} cause=${cause} actor=${role} code=${ALREADY}`,
+    );
+    return error.refusal;
   }
 
   // A suspension that committed, counted and logged once: suspend()'s own,

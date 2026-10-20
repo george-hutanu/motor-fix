@@ -35,15 +35,17 @@ enum MobileLegalForm {
 }
 
 model Garage {
-  id                         String                   @id @default(uuid()) @db.Uuid
+  id                         String                                 @id @default(uuid()) @db.Uuid
   name                       String
-  slug                       String                   @unique
-  status                     GarageStatus             @default(draft)
-  approvedAt                 DateTime?                @map("approved_at") @db.Timestamptz(3)
-  // The Bucharest day of the latest approval; written by every approval only.
-  lastCheckedOn              DateTime?                @map("last_checked_on") @db.Date
-  createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  slug                       String                                 @unique
+  status                     GarageStatus                           @default(draft)
+  approvedAt                 DateTime?                              @map("approved_at") @db.Timestamptz(3)
+  // The Bucharest day of the latest check: written by every approval and by
+  // every valid re-check.
+  lastCheckedOn              DateTime?                              @map("last_checked_on") @db.Date
+  createdAt                  DateTime                               @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
+  rechecks                   Recheck[]
   reports                    GarageReport[]
   savedBy                    SavedGarage[]
   members                    GarageMember[]
@@ -52,37 +54,37 @@ model Garage {
   features                   GarageFeature[]
   invites                    StaffInvite[]
   // CHECKs in the migration: at most 140 and 60 characters, never blank.
-  brandNote                  String?                  @map("brand_note")
-  refusalPhrase              String?                  @map("refusal_phrase")
+  brandNote                  String?                                @map("brand_note")
+  refusalPhrase              String?                                @map("refusal_phrase")
   brands                     GarageBrand[]
   // rar_activity codes the RAR authorisation covers; the activities check
   // writes them.
-  rarActivities              String[]                 @default([]) @map("rar_activities")
+  rarActivities              String[]                               @default([]) @map("rar_activities")
   // The hourly labour range, in bani; both set when the listing is sent.
-  labourFromBani             Int?                     @map("labour_from_bani")
-  labourToBani               Int?                     @map("labour_to_bani")
+  labourFromBani             Int?                                   @map("labour_from_bani")
+  labourToBani               Int?                                   @map("labour_to_bani")
   // Written by the reviews; until then null and 0. CHECKs in the migration:
   // 1.0 to 5.0, a count of 0 or more, and a rating exactly when reviewed.
-  rating                     Decimal?                 @db.Decimal(2, 1)
-  reviewCount                Int                      @default(0) @map("review_count")
+  rating                     Decimal?                               @db.Decimal(2, 1)
+  reviewCount                Int                                    @default(0) @map("review_count")
   prices                     GaragePrice[]
   // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
-  hours                      Json                     @default("{}")
+  hours                      Json                                   @default("{}")
   closedDays                 GarageClosedDay[]
   facilities                 GarageFacility[]
   // CHECKs in the migration: +40 and nine digits; 1 to 160 characters; a
   // legal form only for a mobile service. Never in a public read.
   phone                      String?
-  knownFor                   String?                  @map("known_for")
-  businessKind               BusinessKind?            @map("business_kind")
+  knownFor                   String?                                @map("known_for")
+  businessKind               BusinessKind?                          @map("business_kind")
   // The fiscal code, 2 to 10 digits (a CHECK in the migration); the admin
   // reads it in the verification file. Never in a public read.
-  cui                        String?                  @db.VarChar(10)
-  mobileLegalForm            MobileLegalForm?         @map("mobile_legal_form")
+  cui                        String?                                @db.VarChar(10)
+  mobileLegalForm            MobileLegalForm?                       @map("mobile_legal_form")
   proposedJobs               JobType[]
-  address                    String?                  @db.VarChar(200)
+  address                    String?                                @db.VarChar(200)
   // A mobile mechanic's registered seat: checked by the admin, never public.
-  seatAddress                String?                  @map("seat_address") @db.VarChar(200)
+  seatAddress                String?                                @map("seat_address") @db.VarChar(200)
   latitude                   Float?
   longitude                  Float?
   // latitude and longitude as a geography for the area reads, kept by a
@@ -90,21 +92,21 @@ model Garage {
   position                   Unsupported("geography(Point, 4326)")?
   // The town of the address or seat, for the admin's figures by city; admin
   // only, as the seat is. CHECKs in the migration: a slug key, both or neither.
-  cityKey                    String?                  @map("city_key") @db.VarChar(80)
-  cityName                   String?                  @map("city_name") @db.VarChar(80)
+  cityKey                    String?                                @map("city_key") @db.VarChar(80)
+  cityName                   String?                                @map("city_name") @db.VarChar(80)
   // When the nightly placing last asked the look-up for this garage's city.
-  cityLookedUpAt             DateTime?                @map("city_looked_up_at") @db.Timestamptz(3)
-  serviceRadiusKm            Int?                     @map("service_radius_km") @db.SmallInt
+  cityLookedUpAt             DateTime?                              @map("city_looked_up_at") @db.Timestamptz(3)
+  serviceRadiusKm            Int?                                   @map("service_radius_km") @db.SmallInt
   photos                     GaragePhoto[]
   // The payment methods step 5 ticks; at least one is the step's rule, not
   // the row's: an unsent garage has none.
-  paymentCash                Boolean                  @default(false) @map("payment_cash")
-  paymentCard                Boolean                  @default(false) @map("payment_card")
-  paymentTransfer            Boolean                  @default(false) @map("payment_transfer")
+  paymentCash                Boolean                                @default(false) @map("payment_cash")
+  paymentCard                Boolean                                @default(false) @map("payment_card")
+  paymentTransfer            Boolean                                @default(false) @map("payment_transfer")
   // CHECKs in the migration: a price exactly when paid, whole lei from 1 to
   // 2,000. Meaningful only while the garage lists the courtesy car.
-  courtesyCarPaid            Boolean                  @default(false) @map("courtesy_car_paid")
-  courtesyCarPricePerDayBani Int?                     @map("courtesy_car_price_per_day_bani")
+  courtesyCarPaid            Boolean                                @default(false) @map("courtesy_car_paid")
+  courtesyCarPricePerDayBani Int?                                   @map("courtesy_car_price_per_day_bani")
   requestRecipients          RequestRecipient[]
   quotes                     Quote[]
   bookings                   Booking[]
@@ -548,6 +550,50 @@ model VerificationCheck {
 
   @@unique([fileId, kind])
   @@map("verification_check")
+}
+
+enum RecheckKind {
+  rar
+
+  @@map("recheck_kind")
+}
+
+enum RecheckResult {
+  ok
+  failed
+
+  @@map("recheck_result")
+}
+
+enum RecheckFailure {
+  expired
+  suspended
+  withdrawn
+
+  @@map("recheck_failure")
+}
+
+// An admin's monthly look-up of an approved garage in a register, by hand
+// (`automatic` stays false). CHECKs in the migration: `failure` and `detail`
+// are set exactly when the result is failed, the detail 1 to 200 characters.
+model Recheck {
+  id            String          @id @default(uuid()) @db.Uuid
+  garageId      String          @map("garage_id") @db.Uuid
+  kind          RecheckKind     @default(rar)
+  // The Bucharest day of the look-up.
+  checkedOn     DateTime        @map("checked_on") @db.Date
+  result        RecheckResult
+  failure       RecheckFailure?
+  detail        String?
+  // The activities recorded on a valid result; empty on a failure.
+  rarActivities String[]        @default([]) @map("rar_activities")
+  automatic     Boolean         @default(false)
+  recordedBy    String?         @map("recorded_by") @db.Uuid
+  recordedAt    DateTime        @default(now()) @map("recorded_at") @db.Timestamptz(3)
+  garage        Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@index([garageId, recordedAt])
+  @@map("recheck")
 }
 
 // The activities a RAR authorisation can list; the migration seeds them.
