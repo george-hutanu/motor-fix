@@ -523,7 +523,7 @@ describe('the stamp the write compares', () => {
     expect(again.status).toBe(200);
     expect(again.body.updatedAt).toBe(first.body.updatedAt);
     expect((await owned(w)).updatedAt).toBe(first.body.updatedAt);
-    expect(await history(w)).toHaveLength(2);
+    expect(await history(w)).toHaveLength(1);
     expect(await events(w)).toHaveLength(1);
   });
 
@@ -547,7 +547,7 @@ describe('the stamp the write compares', () => {
 
     const codes = results.map((r) => r.status).sort();
     expect(codes).toEqual([200, 409, 409, 409, 409]);
-    expect(await history(w)).toHaveLength(2);
+    expect(await history(w)).toHaveLength(1);
     expect(await events(w)).toHaveLength(1);
   });
 
@@ -630,7 +630,7 @@ describe('who a row write belongs to', () => {
   });
 });
 
-// @traces 173-FR-008
+// @traces 173-FR-008 176-FR-002
 describe('what a row change records exactly', () => {
   it('records a cleared duration as a change to nothing', async () => {
     const w = await world();
@@ -662,11 +662,17 @@ describe('what a row change records exactly', () => {
       toBani: 150_000,
     });
 
-    expect((await history(w)).map((e) => e.field)).toEqual(['to_bani']);
+    expect(await history(w)).toEqual([
+      expect.objectContaining({
+        field: 'range',
+        newValue: { from: 89_000, to: 150_000 },
+        oldValue: { from: 89_000, to: 140_000 },
+      }),
+    ]);
   });
 });
 
-// @traces 173-FR-005
+// @traces 173-FR-005 176-FR-004
 describe('PATCH /garages/:garageId/labour on hostile input', () => {
   it.each<[string, unknown, string[]]>([
     ['an omitted top', { fromBani: 20_000 }, ['toBani:required']],
@@ -733,7 +739,7 @@ describe('PATCH /garages/:garageId/labour on hostile input', () => {
     ]);
   });
 
-  it('sets a labour range on a garage that had none, one entry per end', async () => {
+  it('sets a labour range on a garage that had none as one entry', async () => {
     const w = await world();
     await prisma.garage.update({
       data: { labourFromBani: null, labourToBani: null },
@@ -743,9 +749,12 @@ describe('PATCH /garages/:garageId/labour on hostile input', () => {
     const res = await setLabour(w, { fromBani: 20_000, toBani: 26_000 });
 
     expect(res.status).toBe(200);
-    expect((await history(w, 'garage')).map((e) => e.field)).toEqual([
-      'labour_from_bani',
-      'labour_to_bani',
+    expect(await history(w, 'garage')).toEqual([
+      expect.objectContaining({
+        field: 'labour_range',
+        newValue: { from: 20_000, to: 26_000 },
+        oldValue: { from: null, to: null },
+      }),
     ]);
   });
 
@@ -754,12 +763,15 @@ describe('PATCH /garages/:garageId/labour on hostile input', () => {
 
     await setLabour(w, { fromBani: 18_000, toBani: 30_000 });
 
-    const entries = await history(w, 'garage');
-    expect(entries.map((e) => e.field)).toEqual(['labour_to_bani']);
-    expect(entries[0]).toMatchObject({
-      actorRole: 'owner',
-      subjectId: w.nord.id,
-    });
+    expect(await history(w, 'garage')).toEqual([
+      expect.objectContaining({
+        actorRole: 'owner',
+        field: 'labour_range',
+        newValue: { from: 18_000, to: 30_000 },
+        oldValue: { from: 18_000, to: 24_000 },
+        subjectId: w.nord.id,
+      }),
+    ]);
   });
 
   it('warns of a wide labour range and still stores it', async () => {

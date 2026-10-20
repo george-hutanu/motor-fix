@@ -58,6 +58,7 @@
       "failed": "Nu am putut încărca modificările",
       "fields": {
         "address": "Adresa",
+        "brand_range": "Preț pentru o marcă",
         "brandNote": "Nota despre mărci",
         "courtesy_car_paid": "Mașină de schimb cu plată",
         "courtesy_car_price_per_day_bani": "Mașină de schimb, preț pe zi",
@@ -65,6 +66,7 @@
         "from_bani": "Preț de la",
         "hours": "Programul",
         "labour_from_bani": "Manoperă de la",
+        "labour_range": "Manoperă",
         "labour_to_bani": "Manoperă până la",
         "location": "Locația pe hartă",
         "name": "Numele",
@@ -72,6 +74,7 @@
         "payment_cash": "Plată în numerar",
         "payment_transfer": "Plată prin transfer",
         "phone": "Telefonul",
+        "range": "Preț",
         "refusalPhrase": "Fraza de refuz",
         "seatAddress": "Sediul",
         "serviceRadiusKm": "Raza de deplasare",
@@ -85,6 +88,9 @@
         "other": "și încă {n} de modificări"
       },
       "no": "Nu",
+      "ofJob": "{label}, {job}",
+      "ofJobBrand": "{label}, {job}, {brand}",
+      "rangeFrom": "de la {from}",
       "retry": "Reîncearcă",
       "since": "de la cererea din {date}",
       "subjects": {
@@ -596,6 +602,40 @@
       "one": "așteaptă de {n} zi lucrătoare",
       "other": "așteaptă de {n} de zile lucrătoare"
     }
+  },
+  "rechecks": {
+    "activities": "Activități autorizate",
+    "cancel": "Renunță",
+    "confirm": "Confirmă suspendarea",
+    "count": "{n}/{max}",
+    "date": "Data verificării",
+    "days": {
+      "few": "{n} zile",
+      "one": "{n} zi",
+      "other": "{n} de zile"
+    },
+    "detail": "Ce arată registrul",
+    "dialog": "Reverificare RAR",
+    "empty": "Nicio reverificare de făcut azi",
+    "failed": "Reverificarea nu a putut fi salvată. Încearcă din nou.",
+    "heading": "Reverificări RAR",
+    "loading": "Se încarcă reverificările RAR",
+    "never": "neverificat",
+    "noActivities": "Service‑ul nu are activități autorizate în dosar: corectează dosarul întâi sau înregistrează o neconformitate.",
+    "noNumber": "număr lipsă",
+    "overdue": "depășit",
+    "record": "Înregistrează",
+    "recordNamed": "Înregistrează reverificarea pentru {name}",
+    "result": "Rezultat",
+    "results": {
+      "expired": "Expirată",
+      "ok": "Valabilă",
+      "suspended": "Suspendată",
+      "withdrawn": "Retrasă"
+    },
+    "save": "Salvează",
+    "suspend": "Suspendă service‑ul",
+    "suspends": "Service‑ul va fi suspendat și scos de pe hartă. Programările viitoare se anulează și șoferii sunt anunțați."
   },
   "suspended": {
     "alone": "suspendat",

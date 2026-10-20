@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-18
+updated: 2026-10-19
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -20,6 +20,7 @@ features:
   - 305-reject-garage-reason
   - 304-request-garage-details
   - 069-report-decision
+  - 1351-rar-monthly-recheck
 ---
 
 # Capability: Garage verification
@@ -28,9 +29,9 @@ How MotorFix keeps a garage hidden from drivers until an admin approves it: the 
 
 ## Requirements
 
-### 303-FR-005 — The garage MUST carry `last_checked_on`, a nullable calendar date, set at every approval (an admin's and the system's, a reopened file's included) to the decision time's day in Europe/Bucharest, in the same update that sets `status` and `approved_at`, and included in the garage's audit entry of that approval; nothing else in this story writes it (#248 reads it; the monthly re-check of MF-59 may write it later). Modifies 207-FR-001 (one more column) and 207-FR-003 (the approval sets it beside `approved_at`).
+### 1351-FR-006 — An `ok` record MUST, in one transaction: store the re-check; set the garage's date of last check to the date checked; set the garage's authorised activities to the recorded set; write one audit entry on the garage by the admin with the result, the date, the activities before and after, and the detail; write one `recheck.recorded` outbox row (garageId, result); and, when the set narrowed, one `price_list.updated` outbox row for the garage. It MUST NOT itself hide, show or touch any price-list job: the hiding is #242's rule, owned by #228 on this trigger.
 
-_From 303-approve-publish-garage._
+_From 1351-rar-monthly-recheck._
 
 ### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
 
@@ -80,9 +81,9 @@ _From 300-verification-checks._
 
 _From 203-company-caen-check._
 
-### 300-FR-004 — Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation — required (possibly empty) when the result is `ok`, optional otherwise, an omitted list leaving the garage's list unchanged — validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
+### 1351-FR-006 — An `ok` record MUST, in one transaction: store the re-check; set the garage's date of last check to the date checked; set the garage's authorised activities to the recorded set; write one audit entry on the garage by the admin with the result, the date, the activities before and after, and the detail; write one `recheck.recorded` outbox row (garageId, result); and, when the set narrowed, one `price_list.updated` outbox row for the garage. It MUST NOT itself hide, show or touch any price-list job: the hiding is #242's rule, owned by #228 on this trigger.
 
-_From 300-verification-checks._
+_From 1351-rar-monthly-recheck._
 
 ### 204-FR-013 — The five seeded RAR activity codes (mechanics, brakes, steering, suspension, air_con) stand until the lawyer's later review (owner, 2026-10-16, under the 2026-10-11 rule; a follow-up, not a gate, #578). The capability spec records that a migration replacing them must map or report every stored `GARAGE.rar_activities` value, and a migration test proves, after the migrations run, that the catalogue holds exactly those five codes and that every stored value is one of them. The seed migration's `TODO` comment stays: that migration is applied, and editing it would change its checksum on every deployed database.
 
@@ -251,17 +252,17 @@ _From 301-verification-queue._
 
 _From 066-suspended-garages._
 
-### 066-FR-002 — The system MUST expose an admin-only list read of the garages by status, `GET /api/v1/admin/garages?status=suspended`, with `offset` 0 to 10000 and `limit` 1 to 200 (default 20; a live re-read asks for every loaded row), answering the rows and `total` (every suspended garage); `status` is required and `suspended` is the one value this story accepts, every other value, a missing status, or an offset or limit out of range answering 400 `validation_failed`. One row per suspended garage, its open suspension (empty `until_time`) when it has one, ordered by the suspension's start, most recent first, then by the garage id ascending (a garage with no open suspension last, by its name, then its id).
+### 1351-FR-010 — The admin view "Service-uri" MUST show the list "Reverificări RAR" / "RAR re-checks" between the verification queue and the suspended garages: each row the garage's name, its RAR number, the date of last check in the language's format and the days since ("28 de zile" / "28 days"); overdue rows show the days in red with "depășit" / "overdue"; an empty list shows "Nicio reverificare de făcut azi" / "No re-checks to do today". The list MUST re-read on `recheck.recorded`, `garage.suspended` and `garage.restored` over the `admin` channel so a recorded row leaves every admin's open list without a reload.
 
-_From 066-suspended-garages._
+_From 1351-rar-monthly-recheck._
 
 ### 066-FR-003 — Each row MUST carry the garage id and name, the id of the garage's newest verification file (absent when it has none; the "Deschide dosarul" link opens it, as the queue's rows link a file), its area (the town recorded for the garage, or for a mobile mechanic its service radius in km; absent when none, as 301-FR-002), and, from the open suspension: the cause, the reason as stored, `fromTime` (UTC), and `cancelledBookings`, the number of the garage's bookings cancelled with the reason `garage_suspended` at or after `fromTime` (0 until #204 cancels them); a garage with no open suspension carries none of these four.
 
 _From 066-suspended-garages._
 
-### 066-FR-004 — For a `recheck_failed` suspension the row MUST carry `rarVerdict` ∈ `expired`, `suspended`, `withdrawn`, decided once on the server: from the failed re-check's recorded verdict when the re-check story (#9) stores one, and until then from the reason, the one of "expirat", "suspendat", "retras" that comes first in the reason's text (any case, any ending); absent when neither names one. The state text per cause is the web's, in Romanian and English: `recheck_failed` "autorizație RAR expirată" / "autorizație RAR suspendată" / "autorizație RAR retrasă" by the verdict and "autorizație RAR nevalidă" without one ("RAR authorisation expired / suspended / withdrawn / invalid"); `documents_overdue` "documente anuale neîncărcate" ("yearly documents not uploaded"); `report_confirmed` "sesizare confirmată" ("report confirmed"); `admin` "decizia unui administrator" ("an admin's decision"); each shown as "suspendat · {text}" ("suspended · {text}").
+### 1351-FR-007 — A `failed` record MUST, in one transaction: store the re-check and suspend the garage through the existing suspension use case (049-FR-002) with cause `recheck_failed` and the reason "Autorizație RAR expirată · {detail}" (or "suspendată", "retrasă"), trimmed to 200 characters, so its SUSPENSION, status change, audit entry, `garage.suspended` row and everything downstream (#97, #204) happen as defined there; write the re-check's own audit entry and `recheck.recorded` row. It MUST NOT move the date of last check or the activities. A refusal by the suspension (409) MUST roll back the re-check, while the suspension's own refused-attempt audit entry is still written, as #97 defines.
 
-_From 066-suspended-garages._
+_From 1351-rar-monthly-recheck._
 
 ### 066-FR-005 — Both reads MUST keep the `admin/*` access policy: an admin reads them, any other role answers 404 `not_found` with no garage data, a missing token 401 `sign_in_required`; reading MUST write no audit entry and change nothing; neither read is refused by maintenance mode (160-FR-003).
 
@@ -630,6 +631,50 @@ _From 069-report-decision._
 
 _From 069-report-decision._
 
+### 1351-FR-001 — A garage MUST be due for a RAR re-check exactly when its status is `approved` and its date of last check is 28 or more calendar days (Europe/Bucharest) before today, or empty; it MUST be overdue when that date is more than 31 days before today, or empty. A suspended, draft or waiting garage is never due. The approval's date (303-FR-005) counts as the first check.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-002 — The system MUST store one re-check per record with: the garage, kind `rar`, the date checked, the result (`ok` or `failed`), for a failure which of `expired`, `suspended`, `withdrawn`, the detail (1 to 200 characters, required for a failure and refused for `ok`), the activities recorded (for `ok`), whether it was automatic (always no at launch, as the verification checks of 300-FR-003), who recorded it and when.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-003 — The system MUST expose an admin-only read of the due list: one row per due garage with its id, name, RAR authorisation number (the newest verification file's, or empty when the garage has none, shown "număr lipsă" / "number missing"), date of last check, days since (whole calendar days), and whether it is overdue, ordered by date of last check ascending with empty dates first, then by name. It MUST write nothing. Non-admins get 404.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-004 — The system MUST expose an admin-only record call per garage taking: the result, the date checked, the activities (for `ok`), the detail, and the date of last check the admin's row showed. Validated at the edge (Principle V): the date checked is a calendar date not after today in Europe/Bucharest and strictly after the garage's date of last check (any date up to today when that is empty), else 422 naming the field; the detail follows FR-002 (a detail with `ok` is 422); the activities MUST be a subset of the garage's current authorised activities (a wider set is 422 with the message of US1 scenario 6) and each a known RAR activity code. Non-admins get 404.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-005 — The record MUST be refused with 409, nothing written, checking in this order (the garage row locked for the whole check): first a carried date of last check that differs from the garage's (`recheck_conflict` or `recheck_stale`, so a second admin learns who recorded), then a garage not approved or not due (FR-001, `recheck_not_due`). When a valid (`ok`) re-check newer than the carried date exists, the 409 (code `recheck_conflict`) MUST name its recorder (first name and initial, as the audit does) and its time in Europe/Bucharest, with the date added when it was not today, so the client shows "Deja reverificat de {name} la {time}" or "… pe {date} la {time}"; when none exists (the date moved some other way), a plain 409 with code `recheck_stale` and "Datele service-ului s-au schimbat. Reîncarcă lista." / "The garage's details changed. Reload the list.".
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-006 — An `ok` record MUST, in one transaction: store the re-check; set the garage's date of last check to the date checked; set the garage's authorised activities to the recorded set; write one audit entry on the garage by the admin with the result, the date, the activities before and after, and the detail; write one `recheck.recorded` outbox row (garageId, result); and, when the set narrowed, one `price_list.updated` outbox row for the garage. It MUST NOT itself hide, show or touch any price-list job: the hiding is #242's rule, owned by #228 on this trigger.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-007 — A `failed` record MUST, in one transaction: store the re-check and suspend the garage through the existing suspension use case (049-FR-002) with cause `recheck_failed` and the reason "Autorizație RAR expirată · {detail}" (or "suspendată", "retrasă"), trimmed to 200 characters, so its SUSPENSION, status change, audit entry, `garage.suspended` row and everything downstream (#97, #204) happen as defined there; write the re-check's own audit entry and `recheck.recorded` row. It MUST NOT move the date of last check or the activities. A refusal by the suspension (409) MUST roll back the re-check, while the suspension's own refused-attempt audit entry is still written, as #97 defines.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-011 — Each row MUST open a record dialog reusing the file drawer's RAR record form (the register link, the number on the clipboard; 204-FR-007) and its activities list (300-FR-004's picker): the result choice (Valabilă, Expirată, Suspendată, Retrasă), the date checked filled with today, the activities pre-ticked from the garage's current set, and, on a failure, the required detail field with its 200-character counter; a failure MUST ask the confirmation of US2 scenario 2 before saving. The 409 of FR-005 and the 422s of FR-004 MUST be shown in the dialog with the server's message, the dialog staying open with the admin's input kept (a 409 also makes the list re-read).
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-012 — Every re-check MUST leave one audit entry on the garage (FR-006, FR-007) so the garage's timeline shows each re-check with its result, activities before and after, and detail, by the admin who recorded it.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-014 — The two endpoints MUST be REST with OpenAPI, their DTOs in the contracts library validated at the edge, the generated client regenerated; the re-check, the due rule and the record use case live in the domain's verification module beside the suspension; the new endpoints and the morning task are listed in the observability inventory with their dashboard and alerts.
+
+_From 1351-rar-monthly-recheck._
+
+### 1351-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the due list at 27, 28 and 32 days, with an empty date, and excluding suspended and unapproved garages; an `ok` record moving the date and the activities with its audit entry and outbox rows, `price_list.updated` only on a narrowing; a wider set refused 422; a failure storing the re-check and the suspension in one transaction and rolling both back on the suspension's 409; the 409 of a second admin naming the first; 404 for a non-admin; the date rules; ADMIN_RECHECK_DUE once per day only when the count is above zero, and not to an admin who muted it. End to end (Playwright): seed a garage checked 29 days ago, record it as valid as an admin and see the owner's legal panel date change; record another as expired and see it leave the search results.
+
+_From 1351-rar-monthly-recheck._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -672,3 +717,8 @@ _From 069-report-decision._
 
 - `305-FR-001` — superseded by `304-FR-001` (2026-10-18)
 - `305-FR-006` — superseded by `304-FR-006` (2026-10-18)
+
+- `303-FR-005` — superseded by `1351-FR-006` (2026-10-19)
+- `300-FR-004` — superseded by `1351-FR-006` (2026-10-19)
+- `066-FR-004` — superseded by `1351-FR-007` (2026-10-19)
+- `066-FR-002` — superseded by `1351-FR-010` (2026-10-19)

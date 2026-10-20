@@ -13,6 +13,7 @@ features:
   - 173-price-range-in-place
   - 405-car-model-licences
   - 228-how-it-works-list-garage
+  - 176-price-change-activity-log
 ---
 
 # Capability: Catalogue
@@ -192,6 +193,10 @@ _From 228-how-it-works-list-garage._
 ### 228-FR-014 — When the nightly count fails, the previous ranking MUST stay and the failure MUST reach the structured error log and raise an alert (the system status log is release 3); a retry MUST produce the same ranking (writing it is idempotent).
 
 _From 228-how-it-works-list-garage._
+
+### 176-FR-009 — The entries MUST be readable through the existing audit history read (ST-391) by the garage's owner, its receptionist and its mechanics, and by every admin, under the `prices` area for the `garage_price` entries; another garage's staff MUST get 404; a driver MUST never receive them in the audit history, and each entry's `is_key_change` and `internal` are false so no driver short history can include it. No new read is added.
+
+_From 176-price-change-activity-log._
 
 ## Retired
 

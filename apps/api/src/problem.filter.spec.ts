@@ -342,6 +342,29 @@ describe('a garage that cannot receive a request', () => {
   });
 });
 
+// @traces 1351-FR-011
+describe('a refusal that names the one field at fault', () => {
+  it('carries the field beside the code and the detail', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'recheck_date_invalid',
+          field: 'checkedOn',
+          message: 'The date checked must be after the last check',
+        },
+        422,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'recheck_date_invalid',
+      detail: 'The date checked must be after the last check',
+      field: 'checkedOn',
+      status: 422,
+    });
+  });
+});
+
 // @traces 297-FR-009
 describe('an unexpected error in the system log', () => {
   let write: jest.SpyInstance;

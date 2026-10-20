@@ -48,7 +48,7 @@ const ENTRIES: Record<string, Entry> = {
   ADMIN_FACILITY_REQUEST: ['event', EPW, null],
   ADMIN_GARAGE_REPORTED: ['event', ['email', 'push'], null],
   ADMIN_OUTAGE_ALERT: ['direct', ['email', 'push'], null, 'always'],
-  ADMIN_RECHECK_DUE: ['timer', EPW, null],
+  ADMIN_RECHECK_DUE: ['timer', ['email', 'push'], null],
   ADMIN_REVIEW_REPORTED: ['event', EPW, null],
   ADMIN_RULE_APPROVAL_NEEDED: ['event', ['email', 'push'], null],
   ADMIN_STATUS_ALERT: ['event', ['email', 'push'], null, 'always'],

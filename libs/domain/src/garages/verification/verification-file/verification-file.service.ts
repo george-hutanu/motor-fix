@@ -7,6 +7,7 @@ import {
   type VerificationActorDto,
   type VerificationChangeArea,
   type VerificationChangeDto,
+  type VerificationChangeJobDto,
   type VerificationCheckEvidenceDto,
   type VerificationFileChangesDto,
   type VerificationFileDto,
@@ -26,6 +27,29 @@ import { pricedJobs } from '../priced-jobs';
 import { resubmission } from '../verification.service';
 
 const SYSTEM_NAME = 'MotorFix';
+
+type Pair = { brandId?: string | null; jobTypeId: string };
+type PriceEntry = {
+  id: string;
+  newValue: unknown;
+  oldValue: unknown;
+  subjectId: string;
+  subjectType: string;
+};
+
+// The distinct ids that can name a row; a malformed one names none.
+const uuids = (ids: Iterable<string | null | undefined>) => [
+  ...new Set([...ids].filter((id): id is string => !!id && isUUID(id))),
+];
+
+// The brand and job a brand range's value names, or undefined for any other.
+function pairOf(value: unknown): Pair | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const { brandId, jobTypeId } = value as Record<string, unknown>;
+  return typeof brandId === 'string' && typeof jobTypeId === 'string'
+    ? { brandId, jobTypeId }
+    : undefined;
+}
 
 const calendarDay = (at: Date) => at.toISOString().slice(0, 10);
 
@@ -374,9 +398,11 @@ export class VerificationFileService {
       }),
       this.prisma.activityLog.count({ where }),
     ]);
+    const jobs = await this.jobsOf(rows);
     return {
       changes: rows.map((row): VerificationChangeDto => {
         const entry = auditEntryOf(row, true);
+        const job = jobs.get(row.id);
         return {
           action: entry.action as VerificationChangeDto['action'],
           area: CHANGE_AREAS[entry.subjectType],
@@ -386,12 +412,66 @@ export class VerificationFileService {
           newValue: entry.newValue,
           oldValue: entry.oldValue,
           subjectType: entry.subjectType,
+          ...(job && { job }),
         };
       }),
       requestedAt: requestedAt.toISOString(),
       resubmitted: true,
       total,
     };
+  }
+
+  // The job, and a brand range's brand, of each price entry by entry id. A
+  // brand range's value names its pair, so it outlives the row; any other
+  // price entry is named through its row while that still exists.
+  private async jobsOf(rows: PriceEntry[]) {
+    const priced = rows.filter((row) => row.subjectType === 'garage_price');
+    const pairs = new Map<string, Pair>();
+    const wanted = new Map<string, string>();
+    for (const row of priced) {
+      const pair = pairOf(row.newValue) ?? pairOf(row.oldValue);
+      if (pair) pairs.set(row.id, pair);
+      else wanted.set(row.id, row.subjectId);
+    }
+    const prices = await this.prisma.garagePrice.findMany({
+      select: { brandId: true, id: true, jobTypeId: true },
+      where: { id: { in: uuids(wanted.values()) } },
+    });
+    const byRow = new Map(prices.map((price) => [price.id, price]));
+    for (const [entryId, rowId] of wanted) {
+      const price = byRow.get(rowId);
+      if (price) pairs.set(entryId, price);
+    }
+    return this.named(pairs);
+  }
+
+  private async named(pairs: Map<string, Pair>) {
+    const all = [...pairs.values()];
+    const [jobTypes, brands] = await Promise.all([
+      this.prisma.jobType.findMany({
+        select: { id: true, nameEn: true, nameRo: true },
+        where: { id: { in: uuids(all.map((pair) => pair.jobTypeId)) } },
+      }),
+      this.prisma.brand.findMany({
+        select: { id: true, name: true },
+        where: { id: { in: uuids(all.map((pair) => pair.brandId)) } },
+      }),
+    ]);
+    const jobById = new Map(jobTypes.map((job) => [job.id, job]));
+    const brandById = new Map(brands.map((brand) => [brand.id, brand.name]));
+    const named = new Map<string, VerificationChangeJobDto>();
+    for (const [entryId, pair] of pairs) {
+      const job = jobById.get(pair.jobTypeId);
+      const brand = pair.brandId ? brandById.get(pair.brandId) : undefined;
+      if (job) {
+        named.set(entryId, {
+          nameEn: job.nameEn,
+          nameRo: job.nameRo,
+          ...(brand && { brand }),
+        });
+      }
+    }
+    return named;
   }
 
   // First names by account; the system, which has none, is MotorFix.
