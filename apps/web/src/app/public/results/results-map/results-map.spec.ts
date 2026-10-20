@@ -171,6 +171,26 @@ describe('ResultsMap, the legend', () => {
 });
 
 // @traces 269-FR-015
+// @traces 1358-FR-004
+describe('ResultsMap, the legend on a phone', () => {
+  const phone =
+    readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+      .replace(/\s+/g, ' ')
+      .match(/@media \(max-width: 767\.98px\) \{(.*?\}) \}/)?.[1] ?? '';
+
+  it('sits at the top of the map, above the results sheet', () => {
+    expect(phone).toMatch(
+      /\.legend \{ bottom: auto; top: var\(--mf-space-3\); \}/,
+    );
+  });
+
+  it('gives way to the zoom hint there', () => {
+    expect(phone).toMatch(
+      /\.hint:not\(:empty\) ~ \.legend \{ visibility: hidden; \}/,
+    );
+  });
+});
+
 describe('ResultsMap, the legend with a mobile mechanic', () => {
   const WITH_AREA: GaragePinsDto = {
     pins: [

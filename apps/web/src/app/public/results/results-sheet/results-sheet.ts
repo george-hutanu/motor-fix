@@ -17,7 +17,7 @@ import { Layout } from '@motor-fix/ui-cockpit';
 
 import { takesText } from '../../tab-bar/tab-bar';
 
-export type SheetPosition = 'low' | 'half' | 'full';
+type SheetPosition = 'low' | 'half' | 'full';
 
 const NEXT: Record<SheetPosition, SheetPosition> = {
   full: 'low',
@@ -96,13 +96,15 @@ export class ResultsSheet {
     this.rest(NEXT[untracked(this.position)]);
   }
 
-  // The handle and the header's own space drag; a control in it never does.
+  // On a phone the handle and the header's own space drag; a control in it
+  // never does.
   protected grab(event: PointerEvent) {
     const target = event.target as HTMLElement;
     const own =
       target.closest('button.handle') ||
       !target.closest('button, a, input, mf-brand-chips, mf-brand-search');
-    if (event.button !== 0 || this.grabbed || !own) return;
+    if (event.button !== 0 || this.grabbed || !own || !untracked(this.phone))
+      return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     this.measure();
     this.dragged = false;
@@ -166,7 +168,8 @@ export class ResultsSheet {
       this.stepped = true;
     } else if (this.stepped) {
       this.stepped = false;
-      history.back();
+      // An address the page pushed since sits on top of the step: leave it.
+      if (history.state?.mfSheet) history.back();
     }
   }
 

@@ -343,6 +343,16 @@ describe('ResultsSheet and the back button', () => {
     expect(back).toHaveBeenCalledTimes(1);
   });
 
+  it('goes back over nothing when the page pushed an address over its step', async () => {
+    await press();
+    history.pushState({ navigationId: 7 }, '', '?brand=audi');
+
+    await press();
+
+    expect(position()).toBe('low');
+    expect(back).not.toHaveBeenCalled();
+  });
+
   it('goes back over its step when the handle leaves full', async () => {
     await press();
     await press();
@@ -395,6 +405,17 @@ describe('ResultsSheet from a tablet up', () => {
 
     expect(handle()).toBeNull();
     expect(host().querySelector('.found .card')).not.toBeNull();
+  });
+
+  it('takes no drag and adds no step there', async () => {
+    layout.set('tablet');
+    await render();
+
+    await drag(400, 100, header());
+    await drag(100, 700, header());
+
+    expect(host().getAttribute('data-position')).toBe('half');
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('sets its boxes aside in the stylesheet from 768 px', () => {
