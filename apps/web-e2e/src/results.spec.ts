@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ownMap, ready, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -336,9 +336,7 @@ test.describe('the Results page @seeded', () => {
       );
       try {
         await ready(page, '/ro');
-        await page
-          .getByRole('button', { exact: true, name: 'Autentificare' })
-          .click();
+        await openSignIn(page);
         await signIn(page, ACCOUNTS.driver);
         await expect(
           page.getByRole('dialog', { name: 'Autentificare' }),
