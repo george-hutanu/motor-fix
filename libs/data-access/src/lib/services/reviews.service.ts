@@ -11,6 +11,9 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { JobReviewContextDto } from '../models/job-review-context-dto';
 import { ReviewDto } from '../models/review-dto';
+import { ReviewEligibilityDto } from '../models/review-eligibility-dto';
+import { reviewsControllerEligibility } from '../fn/reviews/reviews-controller-eligibility';
+import { ReviewsControllerEligibility$Params } from '../fn/reviews/reviews-controller-eligibility';
 import { reviewsControllerForJob } from '../fn/reviews/reviews-controller-for-job';
 import { ReviewsControllerForJob$Params } from '../fn/reviews/reviews-controller-for-job';
 import { reviewsControllerPublish } from '../fn/reviews/reviews-controller-publish';
@@ -20,6 +23,39 @@ import { ReviewsControllerPublish$Params } from '../fn/reviews/reviews-controlle
 export class ReviewsService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `reviewsControllerEligibility()` */
+  static readonly ReviewsControllerEligibilityPath = '/api/v1/reviews/eligibility';
+
+  /**
+   * Whether the caller may review each of their jobs, and why not.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewsControllerEligibility()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reviewsControllerEligibility$Response(params: ReviewsControllerEligibility$Params, context?: HttpContext): Promise<StrictHttpResponse<Array<ReviewEligibilityDto>>> {
+    const obs = reviewsControllerEligibility(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Whether the caller may review each of their jobs, and why not.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewsControllerEligibility$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reviewsControllerEligibility(params: ReviewsControllerEligibility$Params, context?: HttpContext): Promise<Array<ReviewEligibilityDto>> {
+    const resp = this.reviewsControllerEligibility$Response(params, context);
+    return resp.then((r: StrictHttpResponse<Array<ReviewEligibilityDto>>): Array<ReviewEligibilityDto> => r.body);
   }
 
   /** Path part for operation `reviewsControllerForJob()` */

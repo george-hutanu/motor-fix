@@ -2,6 +2,8 @@ import {
   JobReviewContextDto,
   PublishReviewDto,
   ReviewDto,
+  ReviewEligibilityDto,
+  ReviewEligibilityQueryDto,
 } from '@motor-fix/contracts';
 import {
   Body,
@@ -12,6 +14,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,6 +22,7 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -37,6 +41,24 @@ import type { Actor } from '../auth/policy';
 @Controller('reviews')
 export class ReviewsController {
   constructor(private readonly service: ReviewsService) {}
+
+  @Get('eligibility')
+  @Requires('driver.reviews')
+  @ApiOperation({
+    summary: 'Whether the caller may review each of their jobs, and why not',
+  })
+  @ApiOkResponse({ type: [ReviewEligibilityDto] })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: no id, more than 50, or one not a UUID',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiNotFoundResponse({ description: 'not_found: the caller is not a driver' })
+  eligibility(
+    @CurrentActor() actor: Actor,
+    @Query() query: ReviewEligibilityQueryDto,
+  ): Promise<ReviewEligibilityDto[]> {
+    return this.service.eligibility(actor, query.jobIds);
+  }
 
   @Get('job/:jobId')
   @Requires('driver.reviews')
@@ -65,8 +87,12 @@ export class ReviewsController {
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'not_found: not the caller’s job' })
+  @ApiForbiddenResponse({
+    description: 'own_garage: staff of the job’s garage',
+  })
   @ApiConflictResponse({
-    description: 'job_not_done; email_not_confirmed; review_exists',
+    description:
+      'job_not_done; already_reviewed; review_removed; email_not_confirmed',
   })
   @ApiUnprocessableEntityResponse({
     description:

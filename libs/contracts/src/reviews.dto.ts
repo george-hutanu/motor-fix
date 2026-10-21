@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 import { PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
 import {
@@ -80,6 +88,50 @@ export class ReviewJobDto {
   status!: JobStatus;
 }
 
+// Why a driver may not review a job, in the order the publish checks them.
+export const REVIEW_REFUSALS = [
+  'not_found',
+  'job_not_done',
+  'own_garage',
+  'already_reviewed',
+  'review_removed',
+  'email_not_confirmed',
+] as const;
+export type ReviewRefusal = (typeof REVIEW_REFUSALS)[number];
+
+export const REVIEW_ELIGIBILITY_IDS_MAX = 50;
+
+export class ReviewEligibilityQueryDto {
+  @ApiProperty({
+    description: `1 to ${REVIEW_ELIGIBILITY_IDS_MAX} job ids, comma-separated`,
+    type: String,
+  })
+  // A repeated key arrives as a list and is refused with the rest.
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value.split(',').map((id) => id.toLowerCase())
+      : null,
+  )
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(REVIEW_ELIGIBILITY_IDS_MAX)
+  @IsUUID('all', { each: true })
+  jobIds!: string[];
+}
+
+export class ReviewEligibilityDto {
+  @ApiProperty({ format: 'uuid' })
+  jobId!: string;
+
+  // Whether a screen shows "Scrie recenzia": an unconfirmed e-mail still
+  // shows it, and the drawer asks for the confirmation.
+  @ApiProperty()
+  offer!: boolean;
+
+  @ApiProperty({ enum: REVIEW_REFUSALS, nullable: true, type: String })
+  reason!: ReviewRefusal | null;
+}
+
 export class JobReviewContextDto {
   // The name the published review will show, for the privacy line.
   @ApiProperty({ type: DriverNameDto })
@@ -106,4 +158,7 @@ export class JobReviewContextDto {
 
   @ApiProperty({ nullable: true, type: ReviewDto })
   existing!: ReviewDto | null;
+
+  @ApiProperty({ type: ReviewEligibilityDto })
+  eligibility!: ReviewEligibilityDto;
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { ReviewEligibility } from './eligibility/eligibility';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 import { AUDIT_PORT } from '../audit/audit.port';
@@ -9,6 +10,10 @@ import { AuditService } from '../audit/audit.service';
 // the global AuthModule.
 @Module({
   controllers: [ReviewsController],
-  providers: [ReviewsService, { provide: AUDIT_PORT, useClass: AuditService }],
+  providers: [
+    ReviewEligibility,
+    ReviewsService,
+    { provide: AUDIT_PORT, useClass: AuditService },
+  ],
 })
 export class ReviewsModule {}

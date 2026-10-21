@@ -3,8 +3,10 @@ import { metrics } from '@opentelemetry/api';
 export const REVIEW_POSTED_OUTCOMES = [
   'published',
   'job_not_done',
+  'own_garage',
+  'already_reviewed',
+  'review_removed',
   'email_not_confirmed',
-  'review_exists',
 ] as const;
 type ReviewPostedOutcome = (typeof REVIEW_POSTED_OUTCOMES)[number];
 
