@@ -51,19 +51,12 @@ p {
 .stages {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Equal columns while they fit; below that a column keeps its longest word
+     ("Programată" on a 320 px phone) and the others give way. */
+  grid-template-columns: repeat(5, minmax(min-content, 1fr));
   margin: var(--mf-space-5) 0 0;
   padding: 0;
   list-style: none;
-}
-.stages::before {
-  content: "";
-  position: absolute;
-  top: 7px;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: var(--mf-line);
 }
 .stages li {
   position: relative;
@@ -78,14 +71,40 @@ p {
   /* A label wraps between its words, never inside one ("Program / ată"). */
   overflow-wrap: normal;
 }
-/* The amber rail runs from each done stage to the next. */
-.stages li[data-state="done"]::after {
-  content: "";
+/* The rail is drawn in halves, each column from its edges to its dot, so it
+   meets every dot whatever the column widths. */
+.stages li::before,
+.stages li::after {
   position: absolute;
   top: 7px;
-  left: 50%;
-  width: 100%;
   height: 2px;
+}
+.stages li::before {
+  content: "";
+  left: 0;
+  right: 0;
+  background: var(--mf-line);
+}
+.stages li:first-child::before {
+  left: 50%;
+}
+.stages li:last-child::before {
+  right: 50%;
+}
+/* The amber rail runs from each done stage to the next one's dot. */
+.stages li[data-state="done"]::after {
+  content: "";
+  left: 0;
+  right: 0;
+  background: var(--mf-amber);
+}
+.stages li[data-state="done"]:first-child::after {
+  left: 50%;
+}
+.stages li[data-state="done"] + li:not([data-state="done"])::after {
+  content: "";
+  left: 0;
+  right: 50%;
   background: var(--mf-amber);
 }
 .dot {
@@ -188,8 +207,8 @@ p {
   color: var(--mf-amber-ink);
   text-underline-offset: 0.2em;
 }
-/* Below 400 px the stage line takes the panel's padding too, so each column
-   is wide enough for "Programată", the longest label, on a 320 px phone. */
+/* Below 400 px the stage line takes the panel's padding too, so the columns
+   stay near equal on a 320 px phone. */
 @media (max-width: 399px) {
   .stages {
     margin-inline: calc(-1 * var(--mf-space-5));

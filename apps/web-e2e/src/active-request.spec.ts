@@ -131,6 +131,21 @@ test.describe('Cererea activă @seeded', () => {
       ),
     ).toBe(true);
 
+    // On a 320 px phone every stage label stays inside its own column.
+    await page.setViewportSize({ height: 640, width: 320 });
+    const spill = await stages.evaluateAll((items) =>
+      items.flatMap((item) => {
+        const range = document.createRange();
+        range.selectNodeContents(item);
+        const text = range.getBoundingClientRect();
+        const box = item.getBoundingClientRect();
+        return text.left < box.left - 0.5 || text.right > box.right + 0.5
+          ? [item.textContent?.trim() ?? '']
+          : [];
+      }),
+    );
+    expect(spill).toEqual([]);
+
     await panel.getByRole('link', { exact: true, name: 'Cerere nouă' }).click();
     await expect(page).toHaveURL('/ro');
   });

@@ -105,7 +105,7 @@ export class RequestsView {
 
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
   // The default request: the newest still open, picked once and kept while
-  // it is listed, so a live re-read never moves the panel (313-FR-010).
+  // it is listed, so a live re-read never moves the panel.
   private readonly fallback = linkedSignal<
     readonly RequestSummaryDto[],
     string | undefined

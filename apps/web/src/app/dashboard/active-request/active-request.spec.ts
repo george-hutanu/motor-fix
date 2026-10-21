@@ -313,6 +313,28 @@ describe('the panel stylesheet on a 320 px phone', () => {
     );
   });
 
+  // @traces 274-FR-010
+  it('gives each stage column at least its longest word, so Programată never runs into În lucru', () => {
+    expect(rule('.stages')).toMatch(
+      /grid-template-columns:\s*repeat\(5, minmax\(min-content, 1fr\)\)/,
+    );
+  });
+
+  // @traces 274-FR-010
+  it('draws the rail in halves from each dot, so it meets the next dot whatever the column widths', () => {
+    expect(css).not.toMatch(/\.stages::before/);
+    expect(rule('.stages li::before')).toMatch(/left:\s*0;[\s\S]*right:\s*0;/);
+    expect(rule('.stages li[data-state="done"]::after')).toMatch(/right:\s*0;/);
+    expect(rule('.stages li[data-state="done"]::after')).not.toMatch(
+      /width:\s*100%/,
+    );
+    expect(
+      rule(
+        '.stages li[data-state="done"] + li:not([data-state="done"])::after',
+      ),
+    ).toMatch(/right:\s*50%;/);
+  });
+
   // @traces 274-FR-011
   it('sets the title at the heading size, the nearest step to the board’s 22 px', () => {
     expect(rule('.what')).toMatch(/font-size:\s*var\(--mf-size-heading\)/);
