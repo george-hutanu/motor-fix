@@ -79,7 +79,7 @@ test.describe('list your garage, what is missing before sending', () => {
   }) => {
     await ready(page, '/en/list-your-garage');
     await page
-      .getByRole('button', { exact: true, name: 'Send for review' })
+      .getByRole('button', { exact: true, name: 'Submit for verification' })
       .click();
 
     await expect(title(page)).toHaveText(/^Still missing: \d+ things$/);
@@ -172,9 +172,9 @@ test.describe('list your garage, what is missing before sending', () => {
     expect(warnings.map((w) => w.code)).toContain('document_missing');
 
     await expect(summary(page).locator('.complete')).toHaveText(
-      'Totul e complet',
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
     );
-    await expect(send(page)).toBeFocused();
+    await expect(summary(page).locator('.complete')).toBeFocused();
     expect(await sideways(page)).toBe(false);
   });
 });

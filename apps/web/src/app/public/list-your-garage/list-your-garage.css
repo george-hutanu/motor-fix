@@ -236,3 +236,31 @@ ol li {
     font-size: var(--mf-size-small);
   }
 }
+.status-view h1:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.status-page {
+  display: grid;
+  gap: var(--mf-space-4);
+  margin-top: var(--mf-space-4);
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .status-page {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.send-result {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-2);
+  margin-top: var(--mf-space-4);
+  min-width: 0;
+}
+.send-result [hlmBtn] {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  white-space: normal;
+}

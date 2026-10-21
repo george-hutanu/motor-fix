@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
 
 describe('a sweep page\'s browser context', () => {
   it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
@@ -307,8 +307,31 @@ describe('signing in from a QA flow', () => {
     const ro = fakeContext();
     await signIn(en, 'driver', 'en');
     await signIn(ro, 'driver');
-    assert.deepEqual(storedBy(en), { 'mf.lang': 'en' });
-    assert.deepEqual(storedBy(ro), { 'mf.lang': 'ro' });
+    assert.deepEqual(storedBy(en), { 'mf.lang': 'en', 'mf-role': 'driver' });
+    assert.deepEqual(storedBy(ro), { 'mf.lang': 'ro', 'mf-role': 'driver' });
+  });
+
+  // A browser that signed in through the app holds the role it last saw: the public pages ask the session only then.
+  it('leaves the role hint a signed-in browser holds, and none for a visitor', async () => {
+    const owner = fakeContext();
+    const visitor = fakeContext();
+    await keepBrowser(owner, { lang: 'en', role: 'garage' });
+    await keepBrowser(visitor, { lang: 'ro' });
+    assert.deepEqual(storedBy(owner), { 'mf.lang': 'en', 'mf-role': 'garage' });
+    assert.deepEqual(storedBy(visitor), { 'mf.lang': 'ro' });
+  });
+
+  it("opens every swept context in its run's language, with its role hint when signed in", async () => {
+    const opened = [];
+    const browser = { newContext: async (options) => (opened.push(options), fakeContext()) };
+    const [owner] = matrix({ routes: ['/:lang/list-your-garage@garage'], schemes: ['light'], langs: ['en'] });
+    const [visitor] = matrix({ routes: ['/:lang/list-your-garage'], schemes: ['light'], langs: ['ro'] });
+    const ownerContext = await openContext(browser, owner);
+    const visitorContext = await openContext(browser, visitor);
+    assert.deepEqual(opened, [contextOptions(owner), contextOptions(visitor)]);
+    assert.equal(storedBy(ownerContext)['mf-role'], 'garage');
+    assert.equal(storedBy(ownerContext)['mf.lang'], 'en');
+    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro' });
   });
 
   it('refuses a call with no role, and a run with no session', async () => {

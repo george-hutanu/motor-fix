@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { UNNAMED_LISTING } from '@motor-fix/contracts/listing-verification';
 import {
   AdminService,
   type AuditEntryDto,
@@ -161,6 +162,7 @@ function fileOf(
       businessKind: 'company',
       cui: '12345678',
       cuiAlsoUsedBy: [],
+      cuiWarning: null,
       id: 'garage-1',
       name: 'Atelier Dinamo',
       phone: '+40722111222',
@@ -2780,6 +2782,53 @@ describe('a CUI held by another garage', () => {
       ...(section(host, 'footer')?.querySelectorAll('button') ?? []),
     ].find((b) => text(b) === 'Aprobă și publică');
     expect(button?.disabled).toBe(false);
+  });
+});
+
+// @traces 116-FR-012
+describe('the CUI warning the send stored', () => {
+  const warning = (host: HTMLElement) =>
+    section(host, 'header')?.querySelector<HTMLElement>(
+      '[data-part="cui-warning"]',
+    ) ?? null;
+  const withWarning = (cuiWarning: string | null) =>
+    fileOf({
+      checks: KINDS.map((kind) => check(kind, { result: 'ok' })),
+      garage: { cuiWarning } as Partial<VerificationFileDto['garage']>,
+    });
+
+  it.each([
+    [
+      'ro',
+      'Auto Ion, Service Dobre',
+      'CUI folosit deja de: Auto Ion, Service Dobre',
+    ],
+    ['en', 'Service Dobre', 'CUI already used by: Service Dobre'],
+  ] as const)(
+    'is named in the header in %s: %j',
+    async (language, names, line) => {
+      const host = await open(withWarning(names), language);
+
+      expect(text(warning(host))).toBe(line);
+    },
+  );
+
+  it('shows nothing when the send found no other listing', async () => {
+    const host = await open(withWarning(null));
+
+    expect(warning(host)).toBeNull();
+  });
+
+  it.each([
+    ['ro', 'CUI folosit deja de: o ciornă fără nume, Service Dobre'],
+    ['en', 'CUI already used by: an unnamed draft, Service Dobre'],
+  ] as const)('labels an unnamed draft in %s', async (language, line) => {
+    const host = await open(
+      withWarning(`${UNNAMED_LISTING}, Service Dobre`),
+      language,
+    );
+
+    expect(text(warning(host))).toBe(line);
   });
 });
 

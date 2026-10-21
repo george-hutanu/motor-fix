@@ -8,6 +8,7 @@ import {
   UrlSegment,
 } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { UNNAMED_LISTING } from '@motor-fix/contracts/listing-verification';
 import {
   AdminService,
   type VerificationQueueDto,
@@ -242,6 +243,42 @@ describe('a queue row', () => {
       'waiting 3 working days',
     );
     expect(text(first.querySelector('a.open'))).toBe('Open the file');
+  });
+});
+
+// @traces 116-FR-012
+describe("a row's CUI warning", () => {
+  it.each([
+    ['ro', 'CUI folosit deja de: Auto Ion, Service Dobre'],
+    ['en', 'CUI already used by: Auto Ion, Service Dobre'],
+  ] as const)('names the other listings in %s', async (language, line) => {
+    answer = async () => ({
+      items: [row(1, { cuiWarning: 'Auto Ion, Service Dobre' })],
+      total: 1,
+    });
+    const el = await open({}, language);
+
+    expect(text(rows(el)[0].querySelector('.cui'))).toBe(line);
+  });
+
+  it('shows nothing when the send found no other listing', async () => {
+    const el = await open();
+
+    expect(rows(el)[0].querySelector('.cui')).toBeNull();
+  });
+
+  // A draft with no name yet is labelled in the admin's language.
+  it.each([
+    ['ro', 'CUI folosit deja de: Auto Ion, o ciornă fără nume'],
+    ['en', 'CUI already used by: Auto Ion, an unnamed draft'],
+  ] as const)('labels an unnamed draft in %s', async (language, line) => {
+    answer = async () => ({
+      items: [row(1, { cuiWarning: `Auto Ion, ${UNNAMED_LISTING}` })],
+      total: 1,
+    });
+    const el = await open({}, language);
+
+    expect(text(rows(el)[0].querySelector('.cui'))).toBe(line);
   });
 });
 

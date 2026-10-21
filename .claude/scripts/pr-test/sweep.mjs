@@ -39,6 +39,8 @@ export const shotOptions = (page, path) => ({ ...SHOT_OPTIONS, path, mask: [page
 const LOCALES = { ro: "ro-RO", en: "en-GB" };
 // Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
 const LANG_KEY = "mf.lang";
+// The role this browser last saw signed in (the web app's Session, `mf-role`).
+const ROLE_KEY = "mf-role";
 
 // A path of letters, digits, '-' and '/' slugs as itself; anything else (a query, `/:lang`, an escape) or a
 // long one also gets a short hash of the whole, so two routes that differ only there never share a file.
@@ -135,15 +137,18 @@ export async function contextCookies(run, { session, baseURL }) {
   return [sessionCookie({ refresh: await session(run.role, run.lang), baseURL })];
 }
 
-/** Every page of the context starts in `lang`, as if the language switch had chosen it. */
-const keepLanguage = (context, lang) =>
+/**
+ * Every page of the context starts in `lang`, as if the language switch had chosen it, and, signed in, with the
+ * role hint a browser that signed in through the app holds (the public pages ask the session only then).
+ */
+export const keepBrowser = (context, { lang, role }) =>
   context.addInitScript(
-    ([key, value]) => {
+    (entries) => {
       try {
-        localStorage.setItem(key, value);
+        for (const [key, value] of entries) localStorage.setItem(key, value);
       } catch {}
     },
-    [LANG_KEY, lang],
+    [[LANG_KEY, lang], ...(role ? [[ROLE_KEY, role]] : [])],
   );
 
 // The QA flows' `signIn(context, role[, lang])`: the cookie a `path@role` route gets, for a browser context
@@ -155,7 +160,7 @@ export const flowSignIn =
   async (context, role, lang = "ro") => {
     if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
     await context.addCookies(await contextCookies({ role, lang }, { session, baseURL }));
-    await keepLanguage(context, lang);
+    await keepBrowser(context, { lang, role });
   };
 
 /** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
@@ -265,6 +270,17 @@ export const contextOptions = (run) => {
   };
 };
 
+// One run's browser context: its viewport, scheme and language, the role hint when it is signed in, and maps
+// reading the app's own empty style, so no tile is fetched from outside.
+export async function openContext(browser, run) {
+  const context = await browser.newContext(contextOptions(run));
+  await keepBrowser(context, run);
+  await context.addInitScript(() => {
+    globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
+  });
+  return context;
+}
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -277,12 +293,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   try {
     for (const run of matrix({ routes, schemes, langs })) {
       const vp = VIEWPORTS[run.viewport];
-      const context = await browser.newContext(contextOptions(run));
-      await keepLanguage(context, run.lang);
-      // Maps read the app's own empty style: no tile is fetched from outside.
-      await context.addInitScript(() => {
-        globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
-      });
+      const context = await openContext(browser, run);
       const page = await context.newPage();
       const screenshot = join(outDir, run.shot);
       const seen = (o) => observations.push({ ...run, screenshot, ...o });

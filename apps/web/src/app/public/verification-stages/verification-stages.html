@@ -1,0 +1,24 @@
+<ol class="stages" [attr.aria-label]="'public.verificationStatus.label' | t">
+  @for (stage of stages(); track $index) {
+    <li [class.lit]="stage.lit" [attr.aria-current]="stage.current ? 'step' : null">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="name">{{ stage.name | t }}</span>
+      @if ($index === 1) {
+        @if (items().length) {
+          <ul class="items">
+            @for (item of items(); track item) {
+              <li>{{ item | t }}</li>
+            }
+          </ul>
+        }
+        @if (rejection(); as rejection) {
+          <p class="reason">{{ rejection.name | t }}</p>
+          <p class="note">{{ rejection.note }}</p>
+        }
+      }
+    </li>
+  }
+</ol>
+@if (offMap()) {
+  <p class="off-map">{{ 'public.verificationStatus.offMap' | t }}</p>
+}

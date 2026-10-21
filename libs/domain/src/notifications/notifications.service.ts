@@ -94,6 +94,8 @@ interface NextJob {
   delay: number;
 }
 
+type DraftJob = NextJob & { data: { id: string } };
+
 // A param that opens something by itself (an account e-mail's link carries
 // its token): only the message in flight holds it, never the bell, and not
 // once the message is sent or has failed.
@@ -196,27 +198,105 @@ export class NotificationsService {
     draftId: string,
     link: string,
   ): Promise<void> {
+    const job = await this.prisma.$transaction((tx) =>
+      this.writeToDraft(tx, kind, draftId),
+    );
+    if (job) await this.queueToDraft(job, link);
+  }
+
+  // The draft's e-mail row, in the caller's transaction; answers the send job
+  // to queue once that transaction commits, or null when none goes.
+  async writeToDraft(
+    tx: Prisma.TransactionClient,
+    kind: DraftKind,
+    draftId: string,
+  ): Promise<DraftJob | null> {
     if (!DRAFT_KINDS.includes(kind)) {
       throw new Error(`${kind} is not sent to a listing draft`);
     }
     const at = this.now();
-    const next = await this.prisma.$transaction(async (tx) => {
-      const draft = await tx.listingDraft.findUniqueOrThrow({
-        select: { email: true },
-        where: { id: draftId },
-      });
-      const base = {
-        createdAt: at,
-        eventId: randomUUID(),
-        kind,
-        listingDraftId: draftId,
-        params: {},
-        subjectId: draftId,
-      };
-      return this.emailRow(tx, notificationType(kind), base, draft.email, at);
+    if (kind === 'LISTING_REMINDER') {
+      const unsent = await this.unsentReminder(tx, draftId, at);
+      if (unsent) return unsent;
+    }
+    const draft = await tx.listingDraft.findUniqueOrThrow({
+      select: { email: true },
+      where: { id: draftId },
     });
-    if (next && 'id' in next.data) {
-      await this.queue({ ...next, data: { id: next.data.id, link } });
+    const base = {
+      createdAt: at,
+      eventId: randomUUID(),
+      kind,
+      listingDraftId: draftId,
+      params: {},
+      subjectId: draftId,
+    };
+    const next = await this.emailRow(
+      tx,
+      notificationType(kind),
+      base,
+      draft.email,
+      at,
+    );
+    return next && 'id' in next.data ? { ...next, data: next.data } : null;
+  }
+
+  // A draft has one reminder: the row a refused queue left unsent is the one
+  // queued again, never a second.
+  private async unsentReminder(
+    tx: Prisma.TransactionClient,
+    draftId: string,
+    at: Date,
+  ): Promise<DraftJob | null> {
+    const row = await tx.notification.findFirst({
+      orderBy: { createdAt: 'asc' },
+      where: {
+        channel: 'email',
+        kind: 'LISTING_REMINDER',
+        listingDraftId: draftId,
+        status: { in: ['queued', 'held'] },
+      },
+    });
+    if (!row) return null;
+    const delay = row.sendAfter ? row.sendAfter.getTime() - at.getTime() : 0;
+    return { ...send(row.id), data: { id: row.id }, delay: Math.max(0, delay) };
+  }
+
+  // A sent draft is never reminded: its reminder row still waiting for the
+  // queue is failed, in the transaction that sends the draft.
+  async settleDraftReminder(
+    tx: Prisma.TransactionClient,
+    draftId: string,
+  ): Promise<void> {
+    await tx.notification.updateMany({
+      data: { failure: 'draft_sent', status: 'failed' },
+      where: {
+        kind: 'LISTING_REMINDER',
+        listingDraftId: draftId,
+        status: { in: ['queued', 'held'] },
+      },
+    });
+  }
+
+  // A row the queue refuses is failed, since no job could carry its link
+  // again, unless the caller keeps it to queue that same row later (the
+  // reminder); the error goes on to the caller either way.
+  async queueToDraft(
+    job: DraftJob,
+    link: string,
+    refused: 'fail' | 'keep' = 'fail',
+  ): Promise<void> {
+    const { id } = job.data;
+    try {
+      await this.queue({ ...job, data: { id, link } });
+    } catch (error) {
+      if (refused === 'fail') {
+        await this.prisma.notification.update({
+          data: { failure: 'queue_unavailable', status: 'failed' },
+          where: { id },
+        });
+      }
+      throw error;
     }
   }
 

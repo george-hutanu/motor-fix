@@ -14,10 +14,14 @@ const NOW = new Date('2026-10-07T06:00:00Z');
 const ago = (ms: number) => new Date(NOW.getTime() - ms);
 
 const sent: string[] = [];
+// The job a written row would queue names the draft, so the fake can tell.
 const notifications = {
-  sendToDraft: async (_kind: string, draftId: string) => {
-    sent.push(draftId);
+  queueToDraft: async (job: { data: { id: string } }) => {
+    sent.push(job.data.id);
   },
+  writeToDraft: async (_tx: unknown, _kind: string, draftId: string) => ({
+    data: { id: draftId },
+  }),
 } as unknown as NotificationsService;
 
 const deleted: unknown[] = [];
@@ -124,9 +128,10 @@ describe('the reminder at its boundary', () => {
     const failing = new ListingDraftSweep(
       prisma,
       {
-        sendToDraft: async () => {
+        queueToDraft: async () => {
           throw new Error('mail down for owner@example.test');
         },
+        writeToDraft: notifications.writeToDraft,
       } as unknown as NotificationsService,
       storage,
       'https://motorfix.test',
@@ -204,7 +209,8 @@ describe('the clean-up at its boundary', () => {
     expect(await exists(old.id)).toBe(false);
   });
 
-  it('removes the notification rows of a deleted draft', async () => {
+  // @traces 116-FR-035
+  it('removes the key rows of a deleted draft', async () => {
     const old = await draft(ago(100 * DAY_MS));
     await prisma.listingDraftToken.create({
       data: {

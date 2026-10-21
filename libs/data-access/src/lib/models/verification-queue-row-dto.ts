@@ -16,6 +16,11 @@ export interface VerificationQueueRowDto {
   brands: number;
 
   /**
+   * The names of the other listings that held the same CUI when it was sent, joined by ", "; a draft with no name yet is U+FFFC, which a client replaces with its own label; absent when none
+   */
+  cuiWarning?: string;
+
+  /**
    * Waited more than the 2 working days
    */
   flagged: boolean;

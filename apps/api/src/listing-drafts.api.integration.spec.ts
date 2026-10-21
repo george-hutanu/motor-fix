@@ -246,6 +246,16 @@ describe('the listing draft routes', () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
+  // @traces 116-FR-032
+  it('counts no refused draft against the address', async () => {
+    const address = freshAddress();
+    for (let i = 0; i < 10; i++) {
+      await create(body({ email: 'not-an-email' }), address).expect(400);
+    }
+
+    await create(body(), address).expect(201);
+  });
+
   it('documents exactly the draft, photo and document operations, and none that finds a draft by address', () => {
     const operations = Object.entries(openApiDocument(app).paths).flatMap(
       ([path, item]) =>
@@ -267,6 +277,7 @@ describe('the listing draft routes', () => {
       'POST /api/v1/listing-drafts/{id}/documents/{kind}/upload-url',
       'POST /api/v1/listing-drafts/{id}/photos',
       'POST /api/v1/listing-drafts/{id}/photos/upload-url',
+      'POST /api/v1/listing-drafts/{id}/submit',
     ]);
   });
 

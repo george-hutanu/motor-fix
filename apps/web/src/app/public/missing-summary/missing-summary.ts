@@ -12,16 +12,17 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { textKey } from '../listing-check-texts';
 import { STEPS } from '../steps';
+import { VerificationStages } from '../verification-stages/verification-stages';
 
-// What the summary tells: what is missing, that all is there, that the check
-// could not be made, or nothing before sending is asked for.
+// What the summary tells: what is missing, that the request is received, that
+// the check could not be made, or nothing before sending is asked for.
 export type SummaryState = 'missing' | 'complete' | 'failed' | null;
 
 // Above the send button: what still stops the listing from going out,
 // grouped by step, each thing a button to its field.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, TranslatePipe, VerificationStages],
   selector: 'mf-missing-summary',
   styleUrl: './missing-summary.css',
   templateUrl: './missing-summary.html',

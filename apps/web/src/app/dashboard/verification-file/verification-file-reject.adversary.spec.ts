@@ -137,6 +137,7 @@ function fileOf(
       businessKind: 'company',
       cui: '12345678',
       cuiAlsoUsedBy: [],
+      cuiWarning: null,
       id: 'garage-1',
       name: 'Atelier Dinamo',
       phone: '+40722111222',

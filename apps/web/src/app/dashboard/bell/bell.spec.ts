@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { LiveMessage } from '@motor-fix/contracts';
@@ -89,6 +92,22 @@ beforeEach(() => {
 afterEach(() => jest.useRealTimers());
 
 describe('Bell', () => {
+  // A count over the icon is a caption: a <small> keeps it out of the phone
+  // body size, and its padding stays on the 4 px grid.
+  it('draws the count as a caption on the 4 px grid', async () => {
+    const { element } = await render(3);
+    expect(element.querySelector('.badge')?.tagName).toBe('SMALL');
+    const css = readFileSync(join(__dirname, 'bell.css'), 'utf8');
+    const rule = /\.badge \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const padding = /padding:([^;]*);/.exec(rule)?.[1] ?? '';
+    const sizes = padding
+      .trim()
+      .split(/\s+/)
+      .map((v) => Number.parseFloat(v));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size % 4).toBe(0);
+  });
+
   it('shows the unread count, 9+ above 9 and nothing at 0', async () => {
     const three = await render(3);
     expect(three.element.querySelector('.badge')?.textContent?.trim()).toBe(

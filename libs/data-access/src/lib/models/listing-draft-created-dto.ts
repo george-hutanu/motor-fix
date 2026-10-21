@@ -9,7 +9,7 @@ export interface ListingDraftCreatedDto {
   /**
    * Whether a link e-mail was queued
    */
-  linkSent?: boolean;
+  linkSent: boolean;
 
   /**
    * When no link was sent: seconds until one can be
@@ -21,6 +21,6 @@ export interface ListingDraftCreatedDto {
   /**
    * This browser's key to the draft
    */
-  token?: string;
+  token: string;
   updatedAt: string;
 }

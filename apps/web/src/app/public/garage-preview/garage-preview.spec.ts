@@ -34,6 +34,7 @@ type Inputs = {
   order?: string[];
   place?: PlaceSection;
   prices?: PricesSection;
+  sent?: boolean;
 };
 
 async function settle(fixture: {
@@ -91,6 +92,21 @@ describe('the garage preview', () => {
       'Ciornă · se publică după verificare',
     );
   });
+
+  // @traces 116-FR-005
+  it.each([
+    ['ro', 'În verificare · nepublicat'],
+    ['en', 'Under review · not published'],
+  ] as const)(
+    'reads %s under review once the listing is sent',
+    async (language, line) => {
+      const { host, set } = await render({}, language);
+
+      await set({ sent: true });
+
+      expect(text(host.querySelector('.state'))).toBe(line);
+    },
+  );
 
   it('follows the name and the labour range as they change, and returns to the placeholder when the name is cleared', async () => {
     const { host, set } = await render();

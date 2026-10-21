@@ -1,3 +1,13 @@
+import 'reflect-metadata';
+
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+
+import {
+  CreateListingDraftDto,
+  ListingDraftCreatedDto,
+  SaveListingDraftDto,
+} from './listing-drafts.dto';
 import { isListingDraftData } from './listing-sections';
 
 const JOB = '0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10';
@@ -114,5 +124,37 @@ describe('the file keys of a draft', () => {
     ['a short owner', `garage_photo/abc/${ID}`],
   ])('refuses %s', (_, key) => {
     expect(isListingDraftData({ files: [key] })).toBe(false);
+  });
+});
+
+const emailOf = (length: number) =>
+  `${'a'.repeat(length - '@example.test'.length)}@example.test`;
+
+const emailErrors = (dto: new () => object, email: string) =>
+  validateSync(
+    plainToInstance(dto, { data: {}, email, language: 'ro', step: 1 }),
+  ).filter((error) => error.property === 'email');
+
+// @traces 116-FR-031
+describe('the e-mail of a listing draft', () => {
+  it.each([
+    ['created', CreateListingDraftDto],
+    ['saved', SaveListingDraftDto],
+  ])('is refused past 254 characters when a draft is %s', (_, dto) => {
+    expect(emailErrors(dto, emailOf(254))).toEqual([]);
+    expect(emailErrors(dto, emailOf(255))).not.toEqual([]);
+  });
+});
+
+// @traces 116-FR-034
+describe('a created listing draft', () => {
+  it.each(['token', 'linkSent'])('always carries %s', (name) => {
+    const documented = Reflect.getMetadata(
+      'swagger/apiModelProperties',
+      ListingDraftCreatedDto.prototype,
+      name,
+    ) as { required?: boolean } | undefined;
+
+    expect(documented?.required).toBe(true);
   });
 });

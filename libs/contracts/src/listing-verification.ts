@@ -2,6 +2,11 @@
 // two values by the same rules.
 
 export const RAR_NUMBER_MIN = 3;
+
+// Stands in a stored CUI warning for another listing whose step 1 has no name
+// yet; each reader puts the label in its own language in its place. U+FFFC is
+// the object replacement character: no garage name holds it.
+export const UNNAMED_LISTING = '\uFFFC';
 const STEP6_VALUE_MAX = 40;
 
 export interface Step6Section {

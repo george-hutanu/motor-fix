@@ -95,3 +95,8 @@ export function previewCard(input: PreviewCardInput): PreviewCard {
     sample: first ? { id: first.brandId, name: first.name } : null,
   };
 }
+
+// The card's last line: what becomes of the garage, never a driver's field.
+export function previewState(sent: boolean): string {
+  return sent ? 'public.listing.preview.sent' : 'public.listing.preview.draft';
+}

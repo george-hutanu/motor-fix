@@ -164,6 +164,7 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          cuiWarning: true,
           decidedAt: true,
           documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
@@ -840,6 +841,7 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    cuiWarning: true;
     decidedAt: true;
     documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
@@ -868,8 +870,16 @@ function queueRow(
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
-  const { checks, decidedAt, documents, garage, id, status, submittedAt } =
-    file;
+  const {
+    checks,
+    cuiWarning,
+    decidedAt,
+    documents,
+    garage,
+    id,
+    status,
+    submittedAt,
+  } = file;
   const resubmitted = resubmission(file);
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
@@ -879,6 +889,7 @@ function queueRow(
   return {
     ...(area && { area }),
     brands: garage._count.brands,
+    ...(cuiWarning && { cuiWarning }),
     flagged,
     garageId: garage.id,
     garageName: garage.name,

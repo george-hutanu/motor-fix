@@ -35,6 +35,9 @@
                   @if (row.waiting) {
                     <span class="waiting">{{ row.waiting }}</span>
                   }
+                  @if (row.cui) {
+                    <span class="cui">{{ row.cui }}</span>
+                  }
                 }
               </span>
               @if (!row.decided) {

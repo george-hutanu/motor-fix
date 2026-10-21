@@ -16,7 +16,8 @@
       }
     }
     @case ('complete') {
-      <p class="complete">{{ 'public.listing.check.complete' | t }}</p>
+      <h2 class="complete" tabindex="-1"><span class="lamp" aria-hidden="true"></span>{{ 'public.listing.sent.heading' | t }}</h2>
+      <mf-verification-stages status="submitted" />
       <button hlmBtn type="button" class="tell-us" (click)="tellUs.emit()">
         <span>{{ 'public.listing.check.tellUs' | t }}</span>
         <span class="arrow" aria-hidden="true">→</span>

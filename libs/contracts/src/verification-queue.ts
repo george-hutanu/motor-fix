@@ -96,6 +96,12 @@ export class VerificationQueueRowDto {
   @ApiProperty({ type: CheckSummaryDto })
   summary!: CheckSummaryDto;
 
+  @ApiPropertyOptional({
+    description:
+      'The names of the other listings that held the same CUI when it was sent, joined by ", "; a draft with no name yet is U+FFFC, which a client replaces with its own label; absent when none',
+  })
+  cuiWarning?: string;
+
   @ApiProperty({
     description: 'Red on a failed check, amber when flagged or on a warning',
     enum: ['green', 'amber', 'red', 'grey'],

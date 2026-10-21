@@ -319,6 +319,7 @@ export class VerificationFileService {
         businessKind: garage.businessKind,
         cui: garage.cui,
         cuiAlsoUsedBy: shared,
+        cuiWarning: file.cuiWarning,
         id: garage.id,
         name: garage.name,
         phone: garage.phone,

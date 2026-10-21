@@ -255,6 +255,8 @@ export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Para
 export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
+export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
+export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';
@@ -289,6 +291,8 @@ export type { ListingDocumentsControllerConfirm$Params as ListingDocumentsContro
 export { listingDocumentsControllerConfirm as listingDocumentsControllerConfirm } from './fn/listing-drafts/listing-documents-controller-confirm';
 export type { ListingDocumentsControllerRemove$Params as ListingDocumentsControllerRemove$Params } from './fn/listing-drafts/listing-documents-controller-remove';
 export { listingDocumentsControllerRemove as listingDocumentsControllerRemove } from './fn/listing-drafts/listing-documents-controller-remove';
+export type { ListingSubmitControllerSubmit$Params as ListingSubmitControllerSubmit$Params } from './fn/listing-drafts/listing-submit-controller-submit';
+export { listingSubmitControllerSubmit as listingSubmitControllerSubmit } from './fn/listing-drafts/listing-submit-controller-submit';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

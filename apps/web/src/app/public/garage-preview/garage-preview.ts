@@ -14,7 +14,7 @@ import type { PlaceSection } from '@motor-fix/contracts/place-section';
 import { AsWritten, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
-import { previewCard } from './preview-card';
+import { previewCard, previewState } from './preview-card';
 import { BrandVerdict } from '../brand-verdict/brand-verdict';
 import type { BrandsSection } from '../brands-section';
 
@@ -38,6 +38,8 @@ export class GaragePreview {
   readonly mechanics = input.required<MechanicsSection>();
   readonly order = input.required<string[]>();
   readonly place = input<PlaceSection | undefined>(undefined);
+  // The listing has gone for verification.
+  readonly sent = input(false);
 
   protected readonly id = `garage-preview-${++panels}`;
   protected readonly open = signal(false);
@@ -52,6 +54,8 @@ export class GaragePreview {
       prices: this.prices(),
     }),
   );
+
+  protected readonly state = computed(() => previewState(this.sent()));
 
   protected readonly range = computed(() => {
     const range = this.card().range;

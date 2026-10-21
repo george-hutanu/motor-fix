@@ -5831,6 +5831,52 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/verification": {
+      "get": {
+        "operationId": "VerificationStatusController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, a malformed id included"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Where the garage's listing stands in its verification, for its owner or an admin",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/photos/upload-url": {
       "post": {
         "operationId": "ListingPhotosController_uploadAddress",
@@ -6219,6 +6265,77 @@
             "description": "document_kind_unknown"
           }
         },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/submit": {
+      "post": {
+        "operationId": "ListingSubmitController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per send the person means; a repeat answers the first",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingSubmittedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "draft_not_found"
+          },
+          "409": {
+            "description": "draft_already_submitted; garage_already_exists"
+          },
+          "413": {
+            "description": "payload_too_large past 320 KB"
+          },
+          "422": {
+            "description": "validation_failed, with errors and warnings"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send the draft: its garage and verification file are created",
         "tags": [
           "listing-drafts"
         ]
@@ -12170,6 +12287,10 @@
           "summary": {
             "$ref": "#/components/schemas/CheckSummaryDto"
           },
+          "cuiWarning": {
+            "type": "string",
+            "description": "The names of the other listings that held the same CUI when it was sent, joined by \", \"; a draft with no name yet is U+FFFC, which a client replaces with its own label; absent when none"
+          },
           "lamp": {
             "type": "string",
             "description": "Red on a failed check, amber when flagged or on a warning",
@@ -13093,7 +13214,9 @@
           "step",
           "language",
           "email",
-          "updatedAt"
+          "updatedAt",
+          "token",
+          "linkSent"
         ]
       },
       "ListingDraftDto": {
@@ -14238,6 +14361,11 @@
               "type": "string"
             }
           },
+          "cuiWarning": {
+            "type": "string",
+            "description": "The names of the other listings that held the same CUI when the file was sent, joined by \", \"; a draft with no name yet is U+FFFC, which a client replaces with its own label; null when none",
+            "nullable": true
+          },
           "address": {
             "type": "string",
             "description": "The workshop; null for a mobile mechanic",
@@ -14276,6 +14404,7 @@
           "businessKind",
           "cui",
           "cuiAlsoUsedBy",
+          "cuiWarning",
           "address",
           "seatAddress",
           "serviceRadiusKm",
@@ -15088,6 +15217,67 @@
           "rarNumber"
         ]
       },
+      "VerificationRejectionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "note"
+        ]
+      },
+      "VerificationStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "A suspended garage reads approved",
+            "enum": [
+              "draft",
+              "submitted",
+              "in_review",
+              "more_requested",
+              "rejected",
+              "approved"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "The latest sending; null for a draft",
+            "format": "date-time",
+            "nullable": true
+          },
+          "requestedItems": {
+            "description": "What a request for more asks for; empty otherwise",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "description": "Only for a rejection",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationRejectionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "submittedAt",
+          "requestedItems",
+          "reason"
+        ]
+      },
       "PhotoUploadRequestDto": {
         "type": "object",
         "properties": {
@@ -15291,6 +15481,40 @@
         "required": [
           "kind",
           "pages"
+        ]
+      },
+      "ListingSubmittedDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "approved only where files are approved on arrival",
+            "enum": [
+              "submitted",
+              "approved"
+            ]
+          },
+          "warnings": {
+            "description": "Notes that did not stop the send",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldProblemDto"
+            }
+          }
+        },
+        "required": [
+          "garageId",
+          "fileId",
+          "status",
+          "warnings"
         ]
       },
       "LiveTestDto": {

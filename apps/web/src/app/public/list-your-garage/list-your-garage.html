@@ -1,4 +1,4 @@
-@switch (keeper.view()) {
+@switch (statusView() ? 'status' : keeper.view()) {
   @case ('loading') {
     <p class="intro" role="status">{{ 'public.listing.loading' | t }}</p>
   }
@@ -16,6 +16,29 @@
       <button hlmBtn type="button" (click)="signIn.start()">{{ 'public.listing.signIn' | t }}</button>
     </div>
   }
+  @case ('status') {
+    @let shown = statusView()!;
+    <div class="status-view">
+      <p class="label">{{ 'public.listing.label' | t }}</p>
+      <h1 tabindex="-1">{{ 'public.listing.sent.statusTitle' | t }}</h1>
+      <div class="status-page">
+        <mf-listing-status [sent]="shown.sent" />
+        @if (shown.sent !== null) {
+          <aside>
+            <mf-garage-preview
+              [details]="details()"
+              [brands]="brands()"
+              [prices]="prices()"
+              [mechanics]="mechanics()"
+              [order]="brandOrder()"
+              [place]="place()"
+              [sent]="true"
+            />
+          </aside>
+        }
+      </div>
+    </div>
+  }
   @default {
     @if (surveyOpen()) {
       <mf-signup-survey
@@ -26,6 +49,21 @@
         (back)="closeSurvey()"
         (finish)="finish()"
       />
+      @if (sendState(); as state) {
+        <div class="send-result" role="alert">
+          @if (state === 'owner') {
+            <p>{{ 'public.listing.sent.owner' | t }}</p>
+            <a hlmBtn variant="secondary" routerLink="/app/garage">{{ 'public.listing.sent.toDashboard' | t }}</a>
+          } @else {
+            @if (state === 'incomplete') {
+              <p>{{ 'public.listing.sent.incomplete' | t }}</p>
+            } @else {
+              <p>{{ 'public.listing.sent.failed' | t }}</p>
+            }
+            <button hlmBtn type="button" [attr.aria-busy]="finishing() || null" (click)="submit()">{{ 'public.listing.sent.again' | t }}</button>
+          }
+        </div>
+      }
     } @else {
       <p class="label">{{ 'public.listing.label' | t }}</p>
       <h1>{{ 'public.listing.heading' | t }}</h1>

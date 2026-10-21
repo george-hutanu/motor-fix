@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { ListingDraftsService } from './listing-drafts.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
@@ -110,5 +112,39 @@ describe('an e-mail to a draft', () => {
       }),
     ).rejects.toThrow();
     await expect(prisma.notification.create({ data: row })).rejects.toThrow();
+  });
+});
+
+// @traces 116-FR-037
+describe('the CUI lookup over open drafts', () => {
+  it('reads listing_draft_cui_idx for the query the check runs', async () => {
+    await draft({ data: { steps: { '6': { cui: 'RO 18547290' } } } });
+    const asked: Prisma.Sql[] = [];
+    const recording = new Proxy(prisma, {
+      get(target, name, receiver) {
+        if (name !== '$queryRaw') return Reflect.get(target, name, receiver);
+        return (strings: TemplateStringsArray, ...values: unknown[]) => {
+          asked.push(Prisma.sql(strings, ...values));
+          return target.$queryRaw(strings, ...values);
+        };
+      },
+    });
+    const service = new ListingDraftsService(
+      recording,
+      {} as never,
+      {} as never,
+    );
+
+    await service.cuiHeldElsewhere(randomUUID(), '18547290');
+
+    const [lookup] = asked;
+    if (!lookup) throw new Error('the check ran no query');
+    const plan = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL enable_seqscan = off`;
+      return tx.$queryRaw<{ 'QUERY PLAN': string }[]>`EXPLAIN ${lookup}`;
+    });
+    expect(plan.map((row) => row['QUERY PLAN']).join('\n')).toMatch(
+      /Index Scan using listing_draft_cui_idx|Bitmap Index Scan on listing_draft_cui_idx/,
+    );
   });
 });

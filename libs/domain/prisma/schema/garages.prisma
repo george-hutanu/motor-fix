@@ -380,6 +380,9 @@ model VerificationFile {
   declaredByName String?                   @map("declared_by_name")
   // The garage's RAR authorisation number, normalised; an admin corrects it.
   rarNumber      String?                   @map("rar_number") @db.VarChar(40)
+  // The other listings holding the same CUI at the send, their names
+  // joined by ", "; a fact for the admin, never a refusal.
+  cuiWarning     String?                   @map("cui_warning")
   createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
   // The latest sending: set at submitting, reset at a resending or a
   // reopening. The admins' queue waits from it.
@@ -497,6 +500,11 @@ model ListingDraft {
   language      Language
   status        ListingDraftStatus  @default(open)
   remindedAt    DateTime?           @map("reminded_at") @db.Timestamptz(3)
+  // The send that turned the draft into a garage: set together with
+  // status submitted, its 201 body answered again to the same key.
+  submittedAt   DateTime?           @map("submitted_at") @db.Timestamptz(3)
+  submitKey     String?             @map("submit_key") @db.VarChar(64)
+  submitResult  Json?               @map("submit_result")
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   // Set by every save, never by Prisma on its own.
   updatedAt     DateTime            @map("updated_at") @db.Timestamptz(3)

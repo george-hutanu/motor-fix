@@ -17,11 +17,15 @@ import {
   PlacesService,
   PublicHolidaysService,
 } from '@motor-fix/data-access';
+import { GaragesService } from '@motor-fix/data-access/services/garages.service';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { Subject } from 'rxjs';
 
 import { ListYourGarage } from './list-your-garage';
 import { Consent } from '../../consent/consent';
+import { Live } from '../../dashboard/live';
+import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
 import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
@@ -30,8 +34,23 @@ import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 // enough not to sit at its end, and scrolling is recorded, not done.
 let tops = [1000, 2000, 3000, 4000, 5000, 6000];
 const scrolls: ScrollIntoViewOptions[] = [];
-const signIn = { start: jest.fn() };
+const signIn = { join: jest.fn(), start: jest.fn() };
+// The account behind the page: none until the dialog makes one.
+const session = {
+  current: signal<object | null>(null),
+  load: jest.fn(),
+  roleHint: signal<string | null>(null),
+  switchRole: jest.fn(),
+};
 const consent = { track: jest.fn() };
+// The status view's read and its live stream, which these cases never drive.
+const garages = { verificationStatusControllerRead: jest.fn() };
+const live = {
+  close: jest.fn(),
+  on: () => new Subject(),
+  open: jest.fn(),
+  resync: new Subject<void>(),
+};
 // The catalogue behind step 2's chips, read through its own client.
 const DACIA = {
   id: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
@@ -74,7 +93,15 @@ const placeMap = jest.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
 beforeEach(() => {
   localStorage.clear();
   signIn.start.mockReset();
+  signIn.join.mockReset().mockResolvedValue(null);
+  session.current.set(null);
+  session.roleHint.set(null);
+  session.load.mockReset().mockResolvedValue(null);
+  session.switchRole.mockReset().mockResolvedValue({ role: 'garage' });
   consent.track.mockReset();
+  garages.verificationStatusControllerRead
+    .mockReset()
+    .mockReturnValue(new Promise(() => undefined));
   tops = [1000, 2000, 3000, 4000, 5000, 6000];
   scrolls.length = 0;
   jest
@@ -106,7 +133,10 @@ async function open(path: string, reduced = false) {
       provideHttpClientTesting(),
       { provide: REDUCED_MOTION, useValue: signal(reduced) },
       { provide: SignInDialog, useValue: signIn },
+      { provide: Session, useValue: session },
       { provide: Consent, useValue: consent },
+      { provide: GaragesService, useValue: garages },
+      { provide: Live, useValue: live },
       { provide: BrandsService, useValue: catalogue },
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
@@ -2101,6 +2131,15 @@ describe('sending for verification', () => {
     expect(sendButton(page).type).toBe('button');
   });
 
+  // The ListGarage board's English label (k118), never "publish" (116-FR-002).
+  it("reads the board's English label on the button", async () => {
+    const { page } = await open('/en/list-your-garage');
+
+    expect(text(sendButton(page).querySelector('.send-label'))).toBe(
+      'Submit for verification',
+    );
+  });
+
   // @traces 115-FR-008
   it('puts the summary right above the buttons, after the preview card that ends the form below 1024 px', async () => {
     const { page } = await open('/ro/list-your-garage');
@@ -2205,9 +2244,12 @@ describe('sending for verification', () => {
 
     expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
     expect(text(summary(page).querySelector('.complete'))).toBe(
-      'Totul e complet',
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
     );
-    expect(document.activeElement).toBe(sendButton(page));
+    // The confirmation's heading takes the focus from the button.
+    expect(document.activeElement).toBe(
+      summary(page).querySelector('.complete'),
+    );
     expect(dotted(page)).toEqual([]);
   });
 
@@ -2221,7 +2263,7 @@ describe('sending for verification', () => {
     });
 
     expect(text(summary(page).querySelector('.complete'))).toBe(
-      'Totul e complet',
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
     );
     const note = page.querySelector('#listing-cui-error') as HTMLElement;
     expect(text(note)).toBe(
@@ -2328,6 +2370,28 @@ describe('sending for verification', () => {
     expect(
       consent.track.mock.calls.filter(([name]) => name === 'listing_submitted'),
     ).toEqual([['listing_submitted']]);
+  });
+
+  // @traces 116-FR-001 116-FR-019
+  it('confirms the request in place of the complete notice and moves focus to its heading', async () => {
+    const { harness, page } = await completeCopy();
+
+    await press(harness, page);
+    await answered(harness, await request(), { warnings: [] });
+
+    const heading = summary(page).querySelector('h2');
+    expect(text(heading)).toBe(
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
+    );
+    expect(document.activeElement).toBe(heading);
+    const stages = [...summary(page).querySelectorAll('ol.stages > li')];
+    expect(stages).toHaveLength(3);
+    expect(stages[0]?.getAttribute('aria-current')).toBe('step');
+    expect(text(summary(page).querySelector('button.tell-us'))).toContain(
+      'SPUNE-NE CUM LUCREZI',
+    );
+    expect(text(page).toLowerCase()).not.toContain('totul e complet');
+    expect(text(summary(page)).toLowerCase()).not.toContain('publică');
   });
 
   // @traces 250-FR-005
@@ -2611,5 +2675,317 @@ describe('sending for verification', () => {
       expect(consent.track).not.toHaveBeenCalledWith('survey_completed');
       expect(stored()?.data).toMatchObject({ survey: ALL });
     });
+
+    describe('creating the account and sending', () => {
+      const SUBMIT = `${API}/d1/submit`;
+      const SENT = {
+        fileId: 'f1',
+        garageId: 'g1',
+        status: 'submitted',
+        warnings: [],
+      };
+      const http = () => TestBed.inject(HttpTestingController);
+      const sends = () => http().match((r) => r.url === SUBMIT);
+      const sendNote = (page: HTMLElement) =>
+        page.querySelector('.send-result');
+
+      // The survey's summary, its last answer saved by the create press.
+      async function created() {
+        const opened = await surveyCopy(FOUR);
+        const { harness, page } = opened;
+        await pick(harness, page, 'Căutare pe Google');
+        const save = await request();
+        await click(harness, forward(page));
+        await click(harness, forward(page));
+        expect(signIn.join).not.toHaveBeenCalled();
+        await answered(harness, save, { id: 'd1' });
+        return opened;
+      }
+
+      async function sent(
+        harness: RouterTestingHarness,
+        body: object,
+        status = 201,
+      ) {
+        const [send] = sends();
+        if (!send) throw new Error('nothing sent');
+        await answered(harness, send, body, status);
+        return send;
+      }
+
+      // @traces 116-FR-003
+      it('opens the sign-up dialog with the e-mail once the answers are saved', async () => {
+        await created();
+
+        expect(signIn.join).toHaveBeenCalledTimes(1);
+        expect(signIn.join).toHaveBeenCalledWith({
+          email: 'ion@service.test',
+          name: 'Ion Popescu',
+        });
+      });
+
+      // @traces 116-FR-003
+      it('opens no dialog when the save fails', async () => {
+        const { harness, page } = await surveyCopy(FOUR);
+        await pick(harness, page, 'Căutare pe Google');
+        const save = await request();
+        await click(harness, forward(page));
+        await click(harness, forward(page));
+
+        await answered(harness, save, null, 500);
+
+        expect(signIn.join).not.toHaveBeenCalled();
+      });
+
+      // @traces 116-FR-004
+      it('sends nothing when the dialog closes without a session, and keeps the answers', async () => {
+        const { page } = await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        expect(sends()).toEqual([]);
+        expect(title(page)).toBe('Pornim service-ul tău cu:');
+        expect(stored()?.data).toMatchObject({ survey: ALL });
+      });
+
+      // @traces 116-FR-004 116-FR-006
+      it('sends at once when the dialog ends with a session, under a fresh key and the draft key', async () => {
+        signIn.join.mockResolvedValue('signed-up');
+        await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        const [send] = sends();
+        expect(send?.request.method).toBe('POST');
+        expect(send?.request.headers.get('x-listing-token')).toBe('t1');
+        expect(send?.request.headers.get('Idempotency-Key')).toMatch(
+          /^[0-9a-f-]{36}$/,
+        );
+      });
+
+      // @traces 116-FR-004
+      it('opens the dialog for a visitor without asking the session first', async () => {
+        await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        expect(signIn.join).toHaveBeenCalled();
+        expect(session.load).not.toHaveBeenCalled();
+      });
+
+      // @traces 116-FR-004
+      it('sends without the dialog for an account already signed in', async () => {
+        session.roleHint.set('driver');
+        session.load.mockResolvedValue({ role: 'driver' });
+        await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        expect(signIn.join).not.toHaveBeenCalled();
+        expect(sends()).toHaveLength(1);
+      });
+
+      // @traces 116-FR-005 116-FR-019 116-FR-002
+      it('switches to the garage role and shows the status view after the send', async () => {
+        signIn.join.mockResolvedValue('signed-up');
+        const { harness, page } = await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        await sent(harness, SENT);
+
+        expect(session.switchRole).toHaveBeenCalledWith('garage');
+        expect(survey(page)).toBeNull();
+        expect(form(page)).toBeNull();
+        expect(page.querySelector('.actions')).toBeNull();
+        const view = page.querySelector('.status-view') as HTMLElement;
+        const heading = view.querySelector('h1');
+        expect(document.activeElement).toBe(heading);
+        const stages = [...view.querySelectorAll('ol.stages > li')];
+        expect(stages[0]?.getAttribute('aria-current')).toBe('step');
+        expect(text(view.querySelector('.state'))).toBe(
+          'În verificare · nepublicat',
+        );
+        expect(text(view).toLowerCase()).not.toContain('publică');
+      });
+
+      // @traces 116-FR-009
+      it('tells an account that already owns a garage, with a way to its dashboard, and stays on the summary', async () => {
+        signIn.join.mockResolvedValue('signed-in');
+        const { harness, page } = await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        await sent(harness, { code: 'garage_already_exists' }, 409);
+
+        expect(text(sendNote(page))).toContain(
+          'Contul tău are deja un service.',
+        );
+        expect(sendNote(page)?.querySelector('a')?.getAttribute('href')).toBe(
+          '/app/garage',
+        );
+        expect(title(page)).toBe('Pornim service-ul tău cu:');
+        expect(session.switchRole).not.toHaveBeenCalled();
+      });
+
+      // @traces 116-FR-006
+      it('takes the owner back to the form with what the server found missing', async () => {
+        signIn.join.mockResolvedValue('signed-up');
+        const { harness, page } = await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        await sent(
+          harness,
+          {
+            code: 'validation_failed',
+            errors: [{ code: 'required', field: 'steps.1.phone' }],
+          },
+          422,
+        );
+
+        expect(survey(page)).toBeNull();
+        // The phone the server found missing, beside the photo this copy lacks.
+        expect(text(summary(page).querySelector('h2'))).toBe(
+          'Mai lipsesc: 2 lucruri',
+        );
+        expect(
+          summary(page).querySelector('[data-step="1"] button'),
+        ).not.toBeNull();
+      });
+
+      // @traces 116-FR-006
+      it('offers to send again after a failure, under the same key, and needs no second dialog', async () => {
+        signIn.join.mockResolvedValue('signed-up');
+        const { harness, page } = await created();
+        for (let i = 0; i < 5; i++) await pause();
+        const first = await sent(harness, null as unknown as object, 500);
+
+        expect(text(sendNote(page))).toContain('Nu am putut trimite cererea.');
+        const again = sendNote(page)?.querySelector(
+          'button',
+        ) as HTMLButtonElement;
+        expect(text(again)).toBe('Trimite din nou');
+        session.roleHint.set('driver');
+        session.load.mockResolvedValue({ role: 'driver' });
+        await click(harness, again);
+        for (let i = 0; i < 5; i++) await pause();
+        const second = await sent(harness, SENT);
+
+        expect(signIn.join).toHaveBeenCalledTimes(1);
+        expect(second.request.headers.get('Idempotency-Key')).toBe(
+          first.request.headers.get('Idempotency-Key'),
+        );
+        expect(page.querySelector('.status-view')).not.toBeNull();
+      });
+    });
+  });
+});
+
+// @traces 116-FR-017
+describe('a signed-in account that owns a garage', () => {
+  const OWNER = {
+    garageAccess: [{ garageId: 'g1', role: 'owner' }],
+    garageId: 'g1',
+    role: 'garage',
+  };
+  const IN_REVIEW = {
+    reason: null,
+    requestedItems: [],
+    status: 'in_review',
+    submittedAt: '2026-10-20T08:30:00.000Z',
+  };
+  const statusView = (page: HTMLElement) =>
+    page.querySelector<HTMLElement>('.status-view');
+  const formShown = (page: HTMLElement) =>
+    page.querySelector('mf-details-step') !== null;
+  const lit = (page: HTMLElement) =>
+    [...page.querySelectorAll('.status-view ol.stages > li')].map((li) =>
+      li.classList.contains('lit'),
+    );
+
+  beforeEach(() => {
+    garages.verificationStatusControllerRead.mockResolvedValue(IN_REVIEW);
+  });
+
+  it('sees the status view of that garage instead of the form, read once', async () => {
+    session.current.set(OWNER);
+
+    const { harness, page } = await open('/ro/list-your-garage');
+    await settle(harness);
+
+    expect(formShown(page)).toBe(false);
+    expect(page.querySelector('mf-signup-survey')).toBeNull();
+    expect(page.querySelector('.actions')).toBeNull();
+    expect(text(statusView(page)?.querySelector('h1'))).not.toBe('');
+    expect(garages.verificationStatusControllerRead).toHaveBeenCalledTimes(1);
+    expect(garages.verificationStatusControllerRead).toHaveBeenCalledWith({
+      garageId: 'g1',
+    });
+    expect(lit(page)).toEqual([true, true, false]);
+    expect(session.switchRole).not.toHaveBeenCalled();
+  });
+
+  it('asks whether the browser holds a session when it last saw one signed in', async () => {
+    session.roleHint.set('driver');
+    await open('/ro/list-your-garage');
+
+    expect(session.load).toHaveBeenCalled();
+  });
+
+  // A public page asks a visitor's browser nothing: each ask renews the cookie
+  // and a visitor's answers 401.
+  it('asks nothing of the session for a visitor with no role hint', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(session.load).not.toHaveBeenCalled();
+  });
+
+  it('takes a session in another role to the garage before reading', async () => {
+    session.current.set({ ...OWNER, garageId: null, role: 'driver' });
+
+    const { harness, page } = await open('/ro/list-your-garage');
+    await settle(harness);
+
+    expect(session.switchRole).toHaveBeenCalledWith('garage');
+    expect(statusView(page)).not.toBeNull();
+    expect(formShown(page)).toBe(false);
+  });
+
+  it('sees the status view after signing in later on the page', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(formShown(page)).toBe(true);
+
+    session.current.set(OWNER);
+    for (let i = 0; i < 5; i++) await pause();
+    await settle(harness);
+
+    expect(formShown(page)).toBe(false);
+    expect(statusView(page)).not.toBeNull();
+    expect(lit(page)).toEqual([true, true, false]);
+  });
+
+  it('sees the status view through a continue link', async () => {
+    session.current.set(OWNER);
+
+    const { harness, page } = await open('/ro/list-your-garage?draft=link-key');
+    await settle(harness);
+
+    expect(statusView(page)).not.toBeNull();
+    expect(formShown(page)).toBe(false);
+    expect(page.querySelector('.ended')).toBeNull();
+  });
+
+  it.each([
+    ['no garage', { garageAccess: [], garageId: null, role: 'driver' }],
+    [
+      'a place on a staff only',
+      {
+        garageAccess: [{ garageId: 'g1', role: 'receptionist' }],
+        garageId: 'g1',
+        role: 'receptionist',
+      },
+    ],
+  ])('leaves an account with %s on the form', async (_, account) => {
+    session.current.set(account);
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(formShown(page)).toBe(true);
+    expect(statusView(page)).toBeNull();
+    expect(garages.verificationStatusControllerRead).not.toHaveBeenCalled();
   });
 });

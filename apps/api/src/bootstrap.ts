@@ -6,7 +6,7 @@ import { routeLabel } from '@motor-fix/observability';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import type { NextFunction, Request, Response } from 'express';
+import { json, type NextFunction, type Request, type Response } from 'express';
 
 import { ProblemFilter, sendProblem } from './problem.filter';
 
@@ -22,9 +22,11 @@ export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
     .getHttpAdapter()
     .getInstance()
     .set('trust proxy', 'loopback, linklocal, uniquelocal');
-  // A listing draft holds up to 256 KB of form data, past Express's 100 KB;
-  // the draft's own limit answers above that with draft_too_large.
-  (app as NestExpressApplication).useBodyParser('json', { limit: '320kb' });
+  // A listing draft holds up to 256 KB of form data, past the 100 KB every
+  // other route reads; the draft's own limit answers above that with
+  // draft_too_large. A body read here is not read again by Nest's parser.
+  app.use('/api/v1/listing-drafts', json({ limit: '320kb' }));
+  (app as NestExpressApplication).useBodyParser('json', { limit: '100kb' });
   app.use(routeLabel());
   app.use((req: Request, res: Response, next: NextFunction) => {
     const given = req.header('x-request-id');

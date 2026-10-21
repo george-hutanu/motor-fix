@@ -84,7 +84,8 @@ export class ListingDraftsController {
     @Req() req: Request,
     @Body() body: CreateListingDraftDto,
   ): Promise<ListingDraftCreatedDto> {
-    const wait = await this.throttle.take(req.ip ?? '');
+    const ip = req.ip ?? '';
+    const wait = await this.throttle.take(ip);
     if (wait !== null) {
       throw new HttpException(
         {
@@ -95,7 +96,12 @@ export class ListingDraftsController {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    return this.drafts.create(body);
+    try {
+      return await this.drafts.create(body);
+    } catch (error) {
+      await this.throttle.give(ip);
+      throw error;
+    }
   }
 
   @Public()

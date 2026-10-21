@@ -181,6 +181,7 @@
         "apps/web/src/app/public/garage-profile/request-quote/request-quote.html",
         "apps/web/src/app/public/garage-profile/request-quote-button/request-quote-button.html",
         "apps/web/src/app/public/invite/invite.html",
+        "apps/web/src/app/public/list-your-garage/list-your-garage.html",
         "apps/web/src/app/public/results/result-card/result-card.html",
         "apps/web/src/app/public/results/results-map/map-card/map-card.html",
         "apps/web/src/app/public/results/results.html",

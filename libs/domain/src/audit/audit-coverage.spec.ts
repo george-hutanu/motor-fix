@@ -135,7 +135,9 @@ const NOT_CHANGES = new Set([
   'NotificationsService.fallBack',
   'NotificationsService.forget',
   'NotificationsService.phoneRow',
+  'NotificationsService.queueToDraft',
   'NotificationsService.release',
+  'NotificationsService.settleDraftReminder',
   // A browser's push address is delivery data, not a change to anyone's data.
   'PushSubscriptionsService.save',
   'PushSubscriptionsService.remove',

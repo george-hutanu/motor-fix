@@ -48,13 +48,13 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 90 (the decision refusals include
+// Every series the API starts: its own 91 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
-// no_open_report; the rejections one per reason; the requests for more and
-// the files sent again one each; the report decisions one per outcome),
+// no_open_report; the rejections one per reason; the listings sent, the
+// requests for more and the files sent again one each; the report decisions one per outcome),
 // one per check kind and result, and one per re-check result.
 const API_SERIES =
-  90 +
+  91 +
   VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length +
   RECHECK_RESULTS.length;
 

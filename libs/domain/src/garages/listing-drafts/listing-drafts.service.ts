@@ -14,6 +14,7 @@ import {
   type ListingDraftDto,
   type ListingDraftSavedDto,
   stripCui,
+  UNNAMED_LISTING,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -308,11 +309,11 @@ export class ListingDraftsService {
       body.email === undefined ? draft.email : checkedEmail(body.email);
     const moved = email !== draft.email;
     const webUrl = moved ? this.webUrl() : '';
-    const browser = newToken();
+    const browser = moved ? newToken() : undefined;
     const at = this.now();
     let signed = false;
     const next = await this.prisma.$transaction(async (tx) => {
-      if (moved) {
+      if (browser) {
         // The hour's links stay counted, under hashes no key matches, so a
         // new address never buys more e-mails.
         const counted = {
@@ -353,7 +354,7 @@ export class ListingDraftsService {
       });
     });
     if (signed) countDeclarationSigned();
-    if (!moved) return saved(next);
+    if (!browser) return saved(next);
     const send = await this.issueSaved(next, webUrl);
     return { ...saved(next), token: browser.token, ...linkResult(send) };
   }
@@ -430,13 +431,13 @@ export class ListingDraftsService {
   }
 
   // The same judgement the form makes, on the stored copy, plus the CUI
-  // another draft already holds. Reads only: a check never saves.
+  // another listing already holds. Reads only: a check never saves.
   async check(id: string, token: string | undefined): Promise<ListingCheckDto> {
     const draft = await this.open(id, token);
     const data = isListingDraftData(draft.data) ? draft.data : {};
     const { errors, warnings } = checkListing({ data, email: draft.email });
     const cui = stripCui(data.steps?.['6']?.cui ?? '');
-    if (cui && (await this.cuiHeldElsewhere(id, cui)))
+    if (cui && (await this.cuiHeldElsewhere(id, cui)).length)
       warnings.push({ code: 'cui_in_use', field: 'steps.6.cui' });
     if (errors.length) {
       throw new HttpException(
@@ -452,18 +453,29 @@ export class ListingDraftsService {
     return { warnings };
   }
 
-  // Step 6 keeps the CUI as typed, so the stored one is stripped as stripCui
-  // strips it: no spaces, no leading RO.
-  private async cuiHeldElsewhere(id: string, cui: string): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM listing_draft
-      WHERE id <> ${id}::uuid
-        AND regexp_replace(
-              regexp_replace(data #>> '{steps,6,cui}', '[[:space:]]+', '', 'g'),
-              '^ro', '', 'i'
-            ) = ${cui}
-      LIMIT 1`;
-    return rows.length > 0;
+  // The names of the other listings holding the CUI: garages of any status
+  // and the other open drafts (their step 1 name), in Romanian order. Step 6
+  // keeps the CUI as typed, so the stored one is stripped as stripCui strips
+  // it; the expression is listing_draft_cui_idx's, character for character.
+  async cuiHeldElsewhere(id: string, cui: string): Promise<string[]> {
+    const [garages, drafts] = await Promise.all([
+      this.prisma.garage.findMany({ select: { name: true }, where: { cui } }),
+      this.prisma.$queryRaw<{ name: string | null }[]>`
+        SELECT data #>> '{steps,1,name}' AS name FROM listing_draft
+        WHERE id <> ${id}::uuid
+          AND status = 'open'
+          AND regexp_replace(
+                regexp_replace(data #>> '{steps,6,cui}', '[[:space:]]+', '', 'g'),
+                '^ro', '', 'i'
+              ) = ${cui}`,
+    ]);
+    // The names are stored on the file as text, so a draft with no name yet
+    // is the marker each admin reads in their own language, after the names.
+    const names = [...garages, ...drafts].map((row) => row.name?.trim() ?? '');
+    return [
+      ...names.filter(Boolean).sort((a, b) => a.localeCompare(b, 'ro')),
+      ...names.filter((name) => !name).map(() => UNNAMED_LISTING),
+    ];
   }
 
   // The draft a key opens, which must be the one named and still open.

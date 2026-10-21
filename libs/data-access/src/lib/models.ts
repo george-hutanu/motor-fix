@@ -118,6 +118,7 @@ export type { ListingDraftDto } from './models/listing-draft-dto';
 export type { ListingDraftSavedDto } from './models/listing-draft-saved-dto';
 export type { ListingPhotoDto } from './models/listing-photo-dto';
 export type { ListingPhotosDto } from './models/listing-photos-dto';
+export type { ListingSubmittedDto } from './models/listing-submitted-dto';
 export type { LiveTestDto } from './models/live-test-dto';
 export type { MeDto } from './models/me-dto';
 export type { MyConsentsDto } from './models/my-consents-dto';
@@ -252,4 +253,6 @@ export type { VerificationFileTimelineDto } from './models/verification-file-tim
 export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
 export type { VerificationQueueDto } from './models/verification-queue-dto';
 export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
+export type { VerificationRejectionDto } from './models/verification-rejection-dto';
+export type { VerificationStatusDto } from './models/verification-status-dto';
 export type { WithdrawnQuoteDto } from './models/withdrawn-quote-dto';

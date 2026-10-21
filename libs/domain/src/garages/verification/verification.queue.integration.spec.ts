@@ -297,6 +297,29 @@ describe('a row', () => {
   });
 });
 
+// @traces 116-FR-012
+describe("the send's CUI warning", () => {
+  it('rides on the row when the file carries one', async () => {
+    const file = await waiting(MONDAY);
+    await prisma.verificationFile.update({
+      data: { cuiWarning: 'Auto Ion, Service Dobre' },
+      where: { id: file.id },
+    });
+
+    const [row] = (await service().queue(prisma, page(), NOW)).items;
+
+    expect(row.cuiWarning).toBe('Auto Ion, Service Dobre');
+  });
+
+  it('is absent when the send found no other listing', async () => {
+    await waiting(MONDAY);
+
+    const [row] = (await service().queue(prisma, page(), NOW)).items;
+
+    expect(row).not.toHaveProperty('cuiWarning');
+  });
+});
+
 describe('the time of the latest sending', () => {
   it('is set at submitting, kept at opening and deciding', async () => {
     const { id: garageId } = await garage();

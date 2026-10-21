@@ -12,8 +12,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import type { FieldProblem, ListingDraftData } from '@motor-fix/contracts';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import type {
+  FieldProblem,
+  ListingDraftData,
+  VerificationStageStatus,
+} from '@motor-fix/contracts';
 import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import {
   declarationDone,
@@ -47,6 +51,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { Consent } from '../../consent/consent';
+import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf, dropUnlisted, jobsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
@@ -57,6 +62,7 @@ import { type FieldMessage, FieldWatch, forStep } from '../field-watch';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
+import { ListingStatus, ownedGarage } from '../listing-status/listing-status';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
 import {
   MissingSummary,
@@ -104,7 +110,8 @@ const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
 ];
 
 // The page the owner fills in to list a garage: six steps on one long page,
-// with the list of steps beside them, or in a bar on a phone.
+// with the list of steps beside them, or in a bar on a phone. Once sent, the
+// listing's verification stages take the place of the form.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'outside($event)' },
@@ -116,11 +123,13 @@ const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
     HlmButton,
     HlmInput,
     HoursStep,
+    ListingStatus,
     MechanicsStep,
     MissingSummary,
     PhotosStep,
     PlaceStep,
     PricesStep,
+    RouterLink,
     SignupSurvey,
     TranslatePipe,
   ],
@@ -154,6 +163,7 @@ export class ListYourGarage {
   // The steps ticked since the copy was restored, those it came with included.
   private ticked: Set<number> | null = null;
   protected readonly signIn = inject(SignInDialog);
+  private readonly session = inject(Session);
   protected readonly steps = STEPS;
   // The draft's steps['5'], kept and restored with the rest of the form.
   protected readonly hours = computed(() => hoursOf(this.keeper.draft().data));
@@ -273,6 +283,23 @@ export class ListYourGarage {
   protected readonly finishing = signal(false);
   protected readonly finishNotice = signal<SurveyNotice>(null);
   private surveyTracked = false;
+  // What became of the send pressed on the survey's summary, while there.
+  protected readonly sendState = signal<
+    'owner' | 'failed' | 'incomplete' | null
+  >(null);
+  // The owner's listing on its way to the map, with what the send answered
+  // when it was sent from this page; the form is done with.
+  protected readonly statusView = signal<{
+    sent: VerificationStageStatus | null;
+  } | null>(null);
+  // Set from the press that sends, and kept once sent: the page then shows
+  // its own send's answer, never the status view the session's garage would
+  // open. A dialog closed without a session clears it.
+  private sentFromHere = false;
+  private ownerShown = false;
+  // One key for the page's send: a send again after a failure is the same
+  // send, and answers what the first made if it did get through.
+  private submitKey: string | null = null;
   private readonly outcome = signal<'complete' | 'failed' | null>(null);
   // Complete is only the server's word on the copy as it stands; once the
   // last missing thing is typed the list goes, and the button asks again.
@@ -341,6 +368,13 @@ export class ListYourGarage {
       this.mark('email', shows(email));
       this.mark('step6', shows(cui) || shows(rarNumber));
     });
+    // An account that already owns a garage has nothing to fill in here.
+    effect(() => {
+      const me = this.session.current();
+      if (!ownedGarage(me) || this.sentFromHere || this.ownerShown) return;
+      this.ownerShown = true;
+      untracked(() => void this.showOwned(me?.role));
+    });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const onScroll = () => {
@@ -366,7 +400,20 @@ export class ListYourGarage {
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
       void this.keeper.open(link).then((step) => this.restore(step));
+      // A visitor's browser is asked nothing: each ask renews the cookie.
+      if (this.knownAccount()) void this.session.load({ keepLanguage: true });
     });
+  }
+
+  // A session this tab holds, or one this browser last saw signed in.
+  private knownAccount(): boolean {
+    return !!(this.session.current() ?? this.session.roleHint());
+  }
+
+  private async showOwned(role: string | undefined) {
+    if (role !== 'garage')
+      await this.session.switchRole('garage').catch(() => undefined);
+    this.statusView.set({ sent: null });
   }
 
   // The fields show what was typed until they are left; the values below
@@ -475,6 +522,7 @@ export class ListYourGarage {
     if (errors.length === 0) {
       this.outcome.set('complete');
       this.consent.track('listing_submitted');
+      this.focusAfterRender('mf-missing-summary .complete');
     } else this.toSummary();
   }
 
@@ -494,12 +542,13 @@ export class ListYourGarage {
     this.keeper.survey(section);
   }
 
-  // The create press: the answers go onto the server copy, where the
-  // account's creation reads them, and the page tells how that went.
+  // The create press: the answers go onto the server copy, the account is
+  // made or signed in to, and the listing is sent under it.
   protected async finish() {
     if (this.finishing()) return;
     this.finishing.set(true);
     this.finishNotice.set(null);
+    this.sendState.set(null);
     let saved = false;
     try {
       saved = await this.keeper.flush();
@@ -507,10 +556,72 @@ export class ListYourGarage {
       this.finishing.set(false);
     }
     this.finishNotice.set(saved ? 'saved' : 'failed');
-    if (saved && !this.surveyTracked) {
+    if (!saved) return;
+    if (!this.surveyTracked) {
       this.surveyTracked = true;
       this.consent.track('survey_completed');
     }
+    this.sentFromHere = true;
+    if (await this.signedIn()) await this.submit();
+    else this.sentFromHere = false;
+  }
+
+  // A session, from before or from the sign-up dialog with the step 1
+  // address; a closed dialog leaves the owner on the summary.
+  private async signedIn(): Promise<boolean> {
+    if (this.session.current()) return true;
+    if (
+      this.session.roleHint() &&
+      (await this.session.load({ keepLanguage: true }))
+    )
+      return true;
+    const { data, email } = this.keeper.draft();
+    const joined = await this.signIn.join({
+      email: email ?? '',
+      name: (data as ListingDraftData).declaredByName ?? '',
+    });
+    return joined !== null;
+  }
+
+  protected async submit() {
+    if (this.finishing()) return;
+    this.finishing.set(true);
+    this.sendState.set(null);
+    this.submitKey ??= crypto.randomUUID();
+    let outcome: Awaited<ReturnType<DraftKeeper['submit']>>;
+    try {
+      outcome = await this.keeper.submit(this.submitKey);
+    } finally {
+      this.finishing.set(false);
+    }
+    if (outcome.kind === 'sent') await this.sent(outcome.result.status);
+    else if (outcome.kind === 'incomplete') this.refusedSend(outcome);
+    else this.sendState.set(outcome.kind);
+  }
+
+  // The listing is sent whatever the switch does; the next sign-in in the
+  // garage role finds it either way.
+  private async sent(status: VerificationStageStatus) {
+    await this.session.switchRole('garage').catch(() => undefined);
+    this.statusView.set({ sent: status });
+    this.focusAfterRender('.status-view h1');
+  }
+
+  // What the server found missing: a field of the form takes the owner back
+  // to it with the list; an answer of the survey keeps them on it.
+  private refusedSend(found: {
+    errors: FieldProblem[];
+    warnings: FieldProblem[];
+  }) {
+    if (!found.errors.some((problem) => stepOf(problem.field))) {
+      this.sendState.set('incomplete');
+      return;
+    }
+    this.serverCheck.set({ check: found, of: this.judged() });
+    this.asked.set(true);
+    this.outcome.set(null);
+    this.surveyOpen.set(false);
+    this.toSummary();
   }
 
   private focusAfterRender(selector: string) {
