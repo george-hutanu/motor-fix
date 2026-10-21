@@ -94,7 +94,7 @@ describe('the sweep', () => {
   });
 
   // @traces 389-FR-012
-  it('goes on past an object whose run fails, and runs it again next time', async () => {
+  it('goes on past an object whose run fails, then fails naming it', async () => {
     const poison = randomUUID();
     const good = randomUUID();
     overdue = [poison, good];
@@ -108,7 +108,9 @@ describe('the sweep', () => {
       },
     ]);
 
-    expect(await failing.sweep(NOW)).toBe(1);
+    await expect(failing.sweep(NOW)).rejects.toThrow(
+      `failed 1: request-expiry ${poison}`,
+    );
     expect(fired).toEqual([good]);
   });
 

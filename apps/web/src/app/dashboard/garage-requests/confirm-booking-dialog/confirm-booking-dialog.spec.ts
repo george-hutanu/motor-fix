@@ -16,6 +16,7 @@ import {
   ConfirmBookingDialog,
   type ConfirmBookingResult,
 } from './confirm-booking-dialog';
+import { Session } from '../../session';
 import { quotedRow } from '../garage-requests.testing';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -81,9 +82,11 @@ async function settle() {
 }
 
 async function open({
+  capabilities = ['garage.requests', 'garage.team'],
   language = 'ro',
   offered = TEAM,
 }: {
+  capabilities?: string[];
   language?: 'ro' | 'en';
   offered?: ConfirmOptionsDto;
 } = {}) {
@@ -92,6 +95,7 @@ async function open({
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ children: [], path: '**' }]),
+      { provide: Session, useValue: { shown: () => ({ capabilities }) } },
       {
         provide: BookingsService,
         useValue: {
@@ -310,6 +314,16 @@ describe('the confirm panel: a team with no mechanic yet', () => {
     await settle();
 
     await expect(result).resolves.toBe('cancelled');
+  });
+
+  it('gives a receptionist, who cannot open the team page, the text without the link', async () => {
+    await open({ capabilities: ['garage.requests'], offered: EMPTY });
+
+    expect(messageOf(select('Mecanic'))?.textContent).toContain(
+      'Adaugă mai întâi un mecanic în echipă.',
+    );
+    expect(text()).not.toContain('Deschide echipa');
+    expect(panel().querySelector('#mf-confirm-mechanic-none a')).toBeNull();
   });
 
   it('keeps Confirm off, so nothing is sent', async () => {

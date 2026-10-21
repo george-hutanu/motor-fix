@@ -56,21 +56,29 @@ export class ObjectTimers {
     );
   }
 
-  // Answers how many objects it ran. One that fails is logged and left for
-  // the next sweep, so it never holds back the ones behind it.
+  // Answers how many objects it ran. One that fails is logged and does not
+  // hold back the ones behind it; the sweep then fails naming them, so the
+  // job counts as failed, and the next sweep tries them again.
   async sweep(now = new Date()): Promise<number> {
     let ran = 0;
+    const failed: string[] = [];
     for (const kind of this.kinds.values()) {
       for (const id of await kind.overdue(now)) {
         try {
           await kind.fire(id, true);
           ran += 1;
         } catch (error) {
+          failed.push(`${kind.name} ${id}`);
           this.logger.warn(
             `sweep ${kind.name} ${id} failed: ${(error as Error).message}`,
           );
         }
       }
+    }
+    if (failed.length) {
+      throw new Error(
+        `sweep ran ${ran}, failed ${failed.length}: ${failed.join(', ')}`,
+      );
     }
     return ran;
   }

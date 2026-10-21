@@ -33,7 +33,9 @@
         @if (noMechanics()) {
           <p class="none" id="mf-confirm-mechanic-none">
             {{ 'garage.quotes.confirm.noMechanics' | t }}
-            <a href="/app/garage/team" routerLink="/app/garage/team" (click)="task.close('cancelled')">{{ 'garage.quotes.confirm.openTeam' | t }}</a>
+            @if (teamLink()) {
+              <a routerLink="/app/garage/team" (click)="task.close('cancelled')">{{ 'garage.quotes.confirm.openTeam' | t }}</a>
+            }
           </p>
         }
         <p class="error mf-message" id="mf-confirm-mechanic-error" role="alert">{{ mechanicMessage() }}</p>

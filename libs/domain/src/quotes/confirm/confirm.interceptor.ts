@@ -21,7 +21,7 @@ const OUTCOMES = new Set<string>(
   ),
 );
 
-export function outcomeOf(error: unknown): BookingConfirmOutcome | null {
+function outcomeOf(error: unknown): BookingConfirmOutcome | null {
   if (!(error instanceof HttpException)) return null;
   const { code } = (error.getResponse() ?? {}) as { code?: string };
   if (code && OUTCOMES.has(code)) return code as BookingConfirmOutcome;

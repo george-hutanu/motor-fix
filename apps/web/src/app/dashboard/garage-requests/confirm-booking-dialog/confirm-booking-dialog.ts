@@ -21,6 +21,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
+import { Session } from '../../session';
+
 export interface ConfirmBookingData {
   row: GarageRequestSummaryDto;
 }
@@ -50,6 +52,7 @@ const FIELD_OF: Record<string, Field> = {
 export class ConfirmBookingDialog {
   private readonly bookings = inject(BookingsService);
   private readonly i18n = inject(I18n);
+  private readonly session = inject(Session);
   protected readonly task = injectOverlayTask<
     ConfirmBookingData,
     OverlayResult<ConfirmBookingResult>
@@ -69,6 +72,10 @@ export class ConfirmBookingDialog {
     const offered = this.offered();
     return !!offered?.mechanicRequired && !offered.mechanics.length;
   });
+  // Only who may open the team page is sent there.
+  protected readonly teamLink = computed(
+    () => !!this.session.shown()?.capabilities.includes('garage.team'),
+  );
   protected readonly mechanic = signal('');
   protected readonly lift = signal('');
   protected readonly sending = signal(false);
