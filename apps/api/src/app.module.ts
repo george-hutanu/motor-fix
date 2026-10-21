@@ -59,7 +59,7 @@ export class AppModule {
         env.APP_ENV,
         process.env,
         (m) => new Logger('AuthModule').warn(m),
-      ).skipAttemptsLimit,
+      ),
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });
     const email = emailConfig(env.APP_ENV, process.env);

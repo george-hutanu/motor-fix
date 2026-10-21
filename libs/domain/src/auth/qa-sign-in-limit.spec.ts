@@ -3,24 +3,21 @@ import { signInLimitConfig } from './qa-sign-in-limit';
 // @traces 1361-FR-008
 
 describe('signInLimitConfig', () => {
-  it.each(['1', 'true'])(
-    'lifts the sign-in route limit for %s under APP_ENV=test',
-    (value) => {
-      const warn = jest.fn();
-      expect(
-        signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: value }, warn),
-      ).toEqual({ skipAttemptsLimit: true });
-      expect(warn).not.toHaveBeenCalled();
-    },
-  );
+  it('lifts the sign-in route limit for 1 under APP_ENV=test', () => {
+    const warn = jest.fn();
+    expect(
+      signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: '1' }, warn),
+    ).toBe(true);
+    expect(warn).not.toHaveBeenCalled();
+  });
 
-  it.each([['0'], ['false'], ['yes'], [''], [undefined]])(
+  it.each([['0'], ['true'], ['false'], ['yes'], [''], [undefined]])(
     'keeps the limit for %s, with no warning',
     (value) => {
       const warn = jest.fn();
       expect(
         signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: value }, warn),
-      ).toEqual({ skipAttemptsLimit: false });
+      ).toBe(false);
       expect(warn).not.toHaveBeenCalled();
     },
   );
@@ -31,7 +28,7 @@ describe('signInLimitConfig', () => {
       const warn = jest.fn();
       expect(
         signInLimitConfig(appEnv, { PR_QA_SIGN_IN_UNLIMITED: '1' }, warn),
-      ).toEqual({ skipAttemptsLimit: false });
+      ).toBe(false);
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0][0]).toMatch(/PR_QA_SIGN_IN_UNLIMITED/);
     },
@@ -41,9 +38,7 @@ describe('signInLimitConfig', () => {
     'says nothing under %s when the flag is not set',
     (appEnv) => {
       const warn = jest.fn();
-      expect(signInLimitConfig(appEnv, {}, warn)).toEqual({
-        skipAttemptsLimit: false,
-      });
+      expect(signInLimitConfig(appEnv, {}, warn)).toBe(false);
       expect(warn).not.toHaveBeenCalled();
     },
   );

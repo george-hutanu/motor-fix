@@ -69,7 +69,7 @@ describe('AuthController sign-in route limit', () => {
   });
 
   it('lets the 31st sign-in from one address through when the PR QA flag is set under APP_ENV=test', async () => {
-    const { skipAttemptsLimit } = signInLimitConfig(
+    const skipAttemptsLimit = signInLimitConfig(
       'test',
       { PR_QA_SIGN_IN_UNLIMITED: '1' },
       () => undefined,
@@ -85,7 +85,7 @@ describe('AuthController sign-in route limit', () => {
   it.each(['development', 'staging', 'production'])(
     'refuses the 31st sign-in from one address under %s, the flag set or not',
     async (appEnv) => {
-      const { skipAttemptsLimit } = signInLimitConfig(
+      const skipAttemptsLimit = signInLimitConfig(
         appEnv,
         { PR_QA_SIGN_IN_UNLIMITED: '1' },
         () => undefined,
