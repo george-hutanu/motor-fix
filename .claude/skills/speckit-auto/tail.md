@@ -78,9 +78,9 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    hook registry and contract conflicts itself (exit 1 lists the paths left
    for you: resolve them, `git add`, run it again; a name under `bless` is a
    gate script both sides changed: read its diff, then
-   `node .claude/scripts/doctor.mjs --bless-hooks`). Re-run `typecheck`,
-   `lint` and the tests, and push: the new head needs a new run (step 3's
-   "no run" case).
+   `node .claude/scripts/doctor.mjs --bless-hooks`). Run
+   `node .claude/scripts/lifecycle.mjs check` and push: the new head needs a
+   new run (step 3's "no run" case).
 2. Read CI: `gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
    lists what did not pass (`agent-review` aside). A pending check
    does not hold the review: the tail goes on to step 3 on the finished run, never
@@ -108,7 +108,9 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    - **A failing lap** (blocking findings, a failing check, or any medium or
      low finding: fix every verified finding in this PR; an owner decision is
      a `needs-confirmation` question, `speckit-tracker-sync blocked
-     <question>`): fix every one, tests first, commit
+     <question>`): fix every one, tests first, run
+     `node .claude/scripts/lifecycle.mjs check` (the CI-only checks and the
+     affected typecheck and unit tests; a refusal is fixed first), commit
      and push the fix, then the lap's report and any new `tracker-sync.md`
      lines through the specs repo
      (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then

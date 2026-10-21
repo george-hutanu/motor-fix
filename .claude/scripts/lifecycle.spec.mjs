@@ -236,7 +236,7 @@ describe('ready', () => {
 
   // @traces 815-FR-004
   it('commits the records and the qa line to the specs repository, checks and publishes the body, marks ready, runs qa, writes handoff.md and, off the cloud, posts nothing', () => {
-    const h = harness({ answers: [staged([1, 1])] });
+    const h = harness({ answers: [staged([1, 1]), MERGE_BASE] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
@@ -244,6 +244,7 @@ describe('ready', () => {
       `${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`,
       `${REST}pulls/141 -X GET`,
       'node .claude/scripts/level.mjs check --ready --json',
+      ...LOCAL,
       `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 feature records -- ${FEATURE}`,
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
       `gh pr edit 141 --body-file ${body}`,
@@ -351,6 +352,81 @@ describe('ready', () => {
 });
 
 // @traces 749-FR-002 749-FR-003
+const LOCAL = [
+  'node scripts/observability-inventory.ts',
+  'node scripts/structure-check.ts --base origin/main',
+  'npm run lint',
+  'git merge-base HEAD origin/main',
+  'sh scripts/heavy.sh sh -c JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=b45e0000',
+];
+const MERGE_BASE = ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }];
+const ofLocal = (calls) => calls.filter((c) => /^(node scripts\/|npm run lint|sh scripts\/heavy\.sh|git merge-base)/.test(c));
+
+describe('check: the CI-only checks and the affected tests before a push', () => {
+  beforeEach(() => fixture());
+
+  // @traces 1355-FR-001
+  // @traces 1355-FR-002
+  it('runs the draft body check, the inventory, the folder rules, lint, then the affected typecheck and unit tests', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    const result = step(['check'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const local = ofLocal(h.calls);
+    assert.match(local[0], new RegExp(`^node scripts/pr-body-check\\.ts --body-file \\S+ --title ${TITLE.replace(/[()]/g, '\\$&')} --draft$`));
+    assert.deepEqual(local.slice(1), LOCAL);
+  });
+
+  // @traces 1355-FR-001
+  it('checks every section, not only the headings, once the PR is ready', () => {
+    const h = harness({ answers: [MERGE_BASE, ...pullAt({ draft: false })] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const body = h.calls.find((c) => c.startsWith('node scripts/pr-body-check.ts'));
+    assert.doesNotMatch(body, /--draft/);
+  });
+
+  // @traces 1355-FR-001
+  it('skips the body check, saying so, when the branch has no PR yet', () => {
+    const h = harness({ answers: [MERGE_BASE, NO_PR] });
+    const result = step(['check'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => c.startsWith('node scripts/pr-body-check.ts')));
+    assert.ok(result.did.some((d) => /pr-body-check skipped/.test(d)), JSON.stringify(result.did));
+  });
+
+  // @traces 1355-FR-001
+  // @traces 1355-FR-002
+  for (const [prefix, name, output] of [
+    ['node scripts/pr-body-check.ts', 'pr-body-check', 'Missing heading: ## Why'],
+    ['node scripts/observability-inventory.ts', 'observability-inventory', 'inventory: no entry for queue mail'],
+    ['node scripts/structure-check.ts', 'structure-check', 'apps/web/src/x.ts: inline template'],
+    ['npm run lint', 'lint', 'lint/style/useTemplate'],
+    ['sh scripts/heavy.sh', 'affected typecheck and unit tests', 'FAIL apps/api/src/a.spec.ts'],
+  ]) {
+    it(`stops at a failing ${name} with its output and runs nothing after it`, () => {
+      const h = harness({ answers: [MERGE_BASE, [prefix, { code: 1, stdout: `${output}\n` }]] });
+      const result = step(['check'], h.io);
+      assert.equal(result.ok, false);
+      assert.equal(result.stopped, name);
+      assert.match(result.fix, new RegExp(output.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(result.fix, /lifecycle\.mjs check/);
+      const local = ofLocal(h.calls);
+      assert.ok(local.at(-1).startsWith(prefix), local.join('\n'));
+    });
+  }
+
+  // @traces 1355-FR-001
+  it('ready runs the local checks after the level check and before the records commit; a failing one leaves the PR a draft', () => {
+    const body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n\nfilled\n');
+    const h = harness({ answers: [MERGE_BASE, ['node scripts/observability-inventory.ts', { code: 1, stdout: 'inventory: no entry for queue mail\n' }]] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'observability-inventory');
+    assert.ok(h.calls.includes('node .claude/scripts/level.mjs check --ready --json'));
+    assert.ok(!h.calls.some((c) => c.includes('specs-repo.mjs commit') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
+  });
+});
+
 describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const MARK = '<!-- speckit-handoff -->';
   const note = () => join(featureDir, 'handoff.md');
@@ -893,7 +969,7 @@ describe('gates, main and identity', () => {
     const h = harness();
     const result = step(['deploy'], h.io);
     assert.equal(result.ok, false);
-    assert.match(result.fix, /open \| ready \| merge \| handoff/);
+    assert.match(result.fix, /open \| check \| ready \| merge \| handoff/);
   });
 
   it.each([
