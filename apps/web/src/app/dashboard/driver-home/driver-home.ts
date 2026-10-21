@@ -78,7 +78,9 @@ export class DriverHome {
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
   protected readonly requests = signal<Read<RequestSummaryDto>>(undefined);
-  protected readonly active = signal<ActiveRequestAnswerDto | 'failed'>();
+  protected readonly active = signal<
+    ActiveRequestAnswerDto | 'failed' | undefined
+  >(undefined);
   // The active request's panel, or the invitations once the read says no
   // request is open.
   protected readonly firstRow = computed(() => {
