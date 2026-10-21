@@ -111,6 +111,13 @@ export async function routedContext(
   await context.route('https://plausible.io/**', (route) =>
     route.fulfill({ status: 204 }),
   );
+  // Every page in a test speaks copy voice 1, the one its texts are written
+  // in; the rotation itself is copy-voice.spec.ts's, in contexts of its own.
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem('mf-copy-deck', '1');
+    } catch {}
+  });
   await use(context);
   // Handlers still answering when the test ends must not outlive it.
   await context.unrouteAll({ behavior: 'ignoreErrors' });

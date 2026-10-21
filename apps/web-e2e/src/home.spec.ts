@@ -109,7 +109,7 @@ test.describe('the brand picker @seeded', () => {
     await tile(page, 'Dacia').click();
 
     await daciaLine(page);
-    await expect(page.getByText('Service‑uri pentru Dacia')).toBeVisible();
+    await expect(page.getByText('Cine se pricepe la Dacia?')).toBeVisible();
     expect(reads).toEqual(['dacia']);
 
     await page.getByRole('button', { exact: true, name: 'EN' }).click();

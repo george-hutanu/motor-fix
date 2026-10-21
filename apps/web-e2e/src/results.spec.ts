@@ -106,7 +106,7 @@ test.describe('the Results page @seeded', () => {
     await ready(page, opened());
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      `Service‑uri pentru ${brand.name}`,
+      `Cine primește ${brand.name}`,
     );
     await expect(cards(page).nth(0)).toHaveText(garages[0].name);
     await expect(cards(page).nth(1)).toHaveText(garages[1].name);
@@ -268,7 +268,7 @@ test.describe('the Results page @seeded', () => {
       await other.click();
 
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        `Service‑uri pentru ${name}`,
+        `Cine primește ${name}`,
       );
       // The row leads with the current brand, so the tapped chip moves first.
       const tapped = page
@@ -284,7 +284,7 @@ test.describe('the Results page @seeded', () => {
 
       await page.goBack();
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        `Service‑uri pentru ${brand.name}`,
+        `Cine primește ${brand.name}`,
       );
       await expect(cards(page).nth(0)).toHaveText(garages[0].name);
       await page.waitForTimeout(1_000);
