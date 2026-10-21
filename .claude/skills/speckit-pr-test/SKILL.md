@@ -74,7 +74,8 @@ without a status, so the test runs again.
    and the API calls (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release), and uploads the
    report and screenshots as an artifact. The
    agent downloads it into its `--out` (through a fresh folder of its own, so
-   re-running a lap into the same `--out` is never refused), reviews the diff against the spec and the constitution
+   re-running a lap into the same `--out` is never refused), reviews the run's evidence and the diff's conformance to the spec and
+   the constitution (no durability or style read: that is `code-reviewer`'s, once, in the review)
    here from the packet `.claude/scripts/pr-test/packet.mjs` writes into
    `--out` as `packet.md` (changed files, requirements touched, the run's
    findings and readiness, the previous lap's marked new, persisting or

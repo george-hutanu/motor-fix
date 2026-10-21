@@ -241,16 +241,17 @@ When "Changed files" is unavailable or ends in "… N more files", take the
 paths from `git diff --name-only origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities'`
 instead, so no file goes unread.
 
-Review those diffs against the requirements (every FR implemented and tested,
-nothing beyond scope), its `tasks.md` (every `[X]` true) and
-`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
-and colocated, III–VII), in full on every lap. Do not diff a file again or
+Review those diffs for conformance only, in full on every lap: every FR
+reached and tested, nothing beyond scope (Principle I), tests first and
+colocated (II), every `[X]` in `tasks.md` true, the lifecycle kept (VII).
+Durability and style are not yours: `code-reviewer` reads the diff once, in
+the review, so raise no smell of your own. Do not diff a file again or
 read the repository around it to understand it; open another file only to
 confirm one specific claim before you raise it, in one call. Add a finding
 per real problem, quoting the line. A previous-lap finding the packet marks
 resolved is checked against the fix, not taken on trust. Severity: a
-requirement not met or a principle broken is `high`; a smell is `medium` or
-`low`. Open only the screenshots the packet names under "Look at only these"
+requirement not met or a principle broken is `high`; a gap that loses no
+requirement (an untested edge, a stale `[X]`) is `medium` or `low`. Open only the screenshots the packet names under "Look at only these"
 (`<out>/shots/`): the others are identical to the baseline's, already
 reviewed. When the run diffed its shots against main's (`visual.json`), each
 changed one comes with its regions outlined in `<out>/diff/<shot>.png`:

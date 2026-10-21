@@ -32,7 +32,7 @@ rebases on a newer `trunk` and pushes); never `git add specs/` on the branch.
 | 12 | `refactor(<scope>): …` / `test(<scope>): …` for the hardening pass — never `feat` |
 | 15 | `docs: …` only if a *tracked* file genuinely changed |
 | 16 | no commit — the phase is read-only; it writes no artifact at all |
-| 17 | `docs(specs): ST-<n> …`: the archive status line in the specs repository, the merged Spec Delta in `.specify/capabilities/` on the branch |
+| 17 | `docs(specs): ST-<n> …`: the archive status line in the specs repository; the merged Spec Delta in `.specify/capabilities/` rides the last slice (or the next fix commit), never a commit of its own |
 
 Three gates shape this and are not negotiable:
 

@@ -66,12 +66,14 @@ describe('the tester starts from the packet', () => {
     assert.doesNotMatch(change, /^gh pr diff <PR>$/m);
   });
 
-  it('keeps Opus, the full constitution review, the verdict rules and post.mjs', () => {
+  // @traces 1355-FR-006
+  it('keeps Opus, the conformance review, the verdict rules and post.mjs', () => {
     assert.match(agent.split('---')[1], /^model: opus$/m);
     const review = section(agent, /Review/);
     assert.match(review, /\.specify\/memory\/constitution\.md/);
     assert.match(review, /Principle I/);
-    assert.match(review, /III–VII/);
+    assert.match(review, /for conformance only/);
+    assert.doesNotMatch(review, /a smell is/);
     assert.match(review, /`high`/);
     assert.ok(agent.includes('node .claude/scripts/pr-test/post.mjs --report <out>/report.json'));
     assert.match(agent, /^VERDICT: success \| failure$/m);

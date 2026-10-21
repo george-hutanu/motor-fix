@@ -40,7 +40,8 @@ Invoke the `spec-reviewer` and `code-reviewer` subagents **in one message**
 (Agent tool, `subagent_type: spec-reviewer` and `code-reviewer`), each with the
 feature directory and the diff range `<start-commit>..HEAD`. They answer
 different questions — conformance to the spec, and durability of the code —
-and run in parallel. Merge both tables. Fix every CRITICAL and HIGH finding,
+and run in parallel. This is the only `code-reviewer` run on the change (phase
+12 has none); log it in `auto-run.md` with its range and verdict. Merge both tables. Fix every CRITICAL and HIGH finding,
 then re-run whichever reviewer raised them, once. CRITICAL/HIGH findings that survive the re-review block completion —
 report them as a Hard Stop. MEDIUM/LOW findings are fixed on the branch too,
 pre-existing or adjacent ones included, before ready: fix every verified
@@ -91,6 +92,8 @@ lane was unavailable, say that — an absent suggestion is not an endorsement.
 ### 17. Archive
 
 Invoke `speckit-archive` for its Phase 4 steps 1–3 only, before the hand-off:
-the status line goes to the specs repository and the Spec Delta merge into
-`.specify/capabilities/` rides in this PR (`commit-protocol.md`). The tail
+the status line goes to the specs repository, and the Spec Delta merge into
+`.specify/capabilities/` (with any `infra/observability/inventory.json`
+change) rides the last slice's commit, or the next fix commit when that slice
+is already pushed: no archive commit of its own (`commit-protocol.md`). The tail
 runs its `finish` with the merge (`tail.md`, step 4).
