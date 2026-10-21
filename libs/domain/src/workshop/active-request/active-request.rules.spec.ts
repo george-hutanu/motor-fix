@@ -292,6 +292,15 @@ describe('the quoted range', () => {
     expect(rangeOf(r)).toBeNull();
   });
 
+  it('counts only the waiting quotes before booking', () => {
+    const r = row({
+      quotes: [quote(12_000, 18_000), quote(1_000, 90_000, 'accepted')],
+      status: 'quoted',
+    });
+
+    expect(rangeOf(r)).toEqual({ fromBani: 12_000, toBani: 18_000 });
+  });
+
   it('is the accepted quote’s once booked', () => {
     const r = row({
       bookings: [booking({ quote: { fromBani: 89_000, toBani: 140_000 } })],

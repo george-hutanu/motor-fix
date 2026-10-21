@@ -70,7 +70,7 @@ export const LIVE_BOOKINGS = [
   'completed',
 ] as const satisfies readonly BookingStatus[];
 
-const OPEN_QUOTES = new Set<QuoteStatus>(['waiting', 'accepted']);
+const OPEN_QUOTES = new Set<QuoteStatus>(['waiting']);
 const WAITING = new Set<RequestStatus>(['sent', 'quoted']);
 const FIVE_MINUTES = 5 * 60_000;
 
