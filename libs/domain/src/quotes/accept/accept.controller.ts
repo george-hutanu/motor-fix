@@ -30,10 +30,12 @@ import {
 import type { Response } from 'express';
 
 import { AcceptService } from './accept.service';
+import { type AcceptOwner, acceptKey } from './accept.warm';
 import { CurrentActor } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 import { refusal } from '../../auth/sign-up.service';
+import { CacheService } from '../../cache/cache.service';
 import { recordQuoteAccept } from '../quotes/quotes.metrics';
 
 const KEY = 'Idempotency-Key';
@@ -44,7 +46,10 @@ const KEY = 'Idempotency-Key';
 export class AcceptController {
   private readonly logger = new Logger('QuoteAccept');
 
-  constructor(private readonly service: AcceptService) {}
+  constructor(
+    private readonly service: AcceptService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Post(':id/accept')
   @UseGuards(JsonOnly)
@@ -67,7 +72,7 @@ export class AcceptController {
   @ApiNotFoundResponse({ description: 'not_found: not the driver’s quote' })
   @ApiConflictResponse({
     description:
-      'invalid_transition: the quote is not waiting, has expired or its garage is suspended, or the request is not quoted; booking_pending: the request already has a booking; slot_passed: the proposed time has passed',
+      'invalid_transition: the quote is not waiting, has expired or its garage is suspended, or the request is not quoted; booking_pending: the request already has a booking; slot_passed: the proposed time has passed. Each with a message in the caller’s language',
   })
   async accept(
     @CurrentActor() actor: Actor,
@@ -86,11 +91,15 @@ export class AcceptController {
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }
+    const owner = await this.cache.take<AcceptOwner>(
+      acceptKey(actor.accountId, id),
+    );
     const { booking, created } = await this.service.accept(
       actor,
       id,
       key,
       body,
+      owner,
     );
     if (!created) res.status(HttpStatus.OK);
     return booking;

@@ -247,19 +247,50 @@
   },
   "quotes": {
     "accept": "Acceptă",
+    "acceptDialog": {
+      "cancel": "Renunță",
+      "confirm": "Confirmă",
+      "share": "Le arăt istoricul mașinii",
+      "title": "Accepți oferta {name}?"
+    },
     "changed": "Modificată {when}",
     "count": {
       "few": "{count} oferte",
       "one": "{count} ofertă",
       "other": "{count} de oferte"
     },
+    "decline": "Refuză",
+    "declineDialog": {
+      "cancel": "Renunță",
+      "confirm": "Confirmă",
+      "title": "Refuzi oferta {name}?"
+    },
     "declined": "Refuzat: {name} · {why}",
     "duration": "aprox. {duration}",
     "failed": "Nu am putut încărca ofertele.",
     "free": "liber {when}",
+    "line": {
+      "booked": "Programată: {slot}",
+      "bookedWith": "Programată: {slot} · {mechanic}",
+      "waiting": "Așteaptă confirmarea service‑ului · {left}"
+    },
     "loading": "Se încarcă ofertele",
     "missing": "Nu face: {jobs}",
     "mobile": "Mecanic mobil",
+    "problem": {
+      "booking_pending": "Ai deja o programare în așteptare",
+      "error": "Nu a mers. Încearcă din nou.",
+      "network": "Nu am putut trimite. Verifică conexiunea și încearcă din nou.",
+      "not_found": "Oferta nu mai există",
+      "slot_passed": "Ora propusă a trecut",
+      "state": {
+        "accepted": "Oferta a fost deja acceptată",
+        "declined_by_driver": "Ai refuzat deja această ofertă",
+        "expired": "Oferta a expirat",
+        "lost": "Oferta nu mai este disponibilă",
+        "withdrawn": "Service‑ul a retras oferta"
+      }
+    },
     "retry": "Reîncearcă",
     "sort": {
       "earliest": "Cel mai devreme",
@@ -273,6 +304,7 @@
       "closed": "Închisă",
       "declined": "Refuzată de tine",
       "expired": "Expirată",
+      "lapsed": "Service‑ul nu a confirmat",
       "on_hold": "În așteptare"
     },
     "unrated": "fără recenzii",

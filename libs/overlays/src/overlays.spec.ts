@@ -153,6 +153,25 @@ describe('Overlays: open and close', () => {
     expect(dialog.querySelector('#name')).not.toBeNull();
   });
 
+  // @traces 314-accept-quote-FR-002
+  it('fills the title’s parameters', async () => {
+    await openTask((host) => {
+      host.options = {
+        shape: 'dialog',
+        title: 'shell.bell.minutes',
+        titleParams: { n: '5' },
+      };
+    });
+
+    const title = document.getElementById(
+      top().getAttribute('aria-labelledby') ?? '',
+    );
+    expect(title?.textContent?.trim()).toBe(
+      TestBed.inject(I18n).t('shell.bell.minutes', { n: '5' }),
+    );
+    expect(title?.textContent).toContain('5');
+  });
+
   it('names its close button Închide / Close', async () => {
     await openTask();
 

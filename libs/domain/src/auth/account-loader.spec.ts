@@ -76,12 +76,17 @@ describe('AccountLoader.activeAccount', () => {
 });
 
 describe('actorOf', () => {
-  it('builds a driver with every role the account holds and no garage', () => {
-    const found = account({ roles: [{ role: 'driver' }, { role: 'admin' }] });
+  // @traces 314-accept-quote-FR-016
+  it('builds a driver with every role the account holds, its language and no garage', () => {
+    const found = account({
+      language: 'en',
+      roles: [{ role: 'driver' }, { role: 'admin' }],
+    });
 
     expect(actorOf(found, 'driver')).toEqual({
       accountId: found.id,
       garageId: null,
+      language: 'en',
       permissions: {
         canAnswerQuotes: false,
         canMoveBookings: false,

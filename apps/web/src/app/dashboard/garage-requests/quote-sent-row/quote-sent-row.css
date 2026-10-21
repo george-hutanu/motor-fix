@@ -49,6 +49,9 @@ p {
 :host(.accepted) .status {
   color: inherit;
 }
+:host(.declined) .lamp {
+  background: var(--mf-text-secondary);
+}
 :host(.accepted) .lamp {
   background: var(--mf-green);
 }

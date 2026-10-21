@@ -466,3 +466,31 @@ describe('type scale on a phone', () => {
     );
   });
 });
+
+// @traces 314-accept-quote-FR-015
+describe('a row whose quote the driver declined', () => {
+  const declined = () => {
+    const base = sample('2026-10-10T06:00:00Z');
+    return {
+      ...base,
+      quote: base.quote && {
+        ...base.quote,
+        status: 'declined_by_driver' as const,
+      },
+    };
+  };
+
+  it('says the customer declined it, with no phone and no button', async () => {
+    const row = await render(declined());
+
+    expect(text(row.querySelector('.status'))).toBe('Refuzată de client');
+    expect(row.querySelector('button')).toBeNull();
+    expect(row.querySelector('a.phone')).toBeNull();
+  });
+
+  it('says it in English', async () => {
+    const row = await render(declined(), 'en');
+
+    expect(text(row.querySelector('.status'))).toBe('Declined by the customer');
+  });
+});

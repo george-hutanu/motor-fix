@@ -1,6 +1,7 @@
 import { metrics } from '@opentelemetry/api';
 
 export type CacheKind =
+  | 'accept'
   | 'profile'
   | 'home'
   | 'popular-brands'

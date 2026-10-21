@@ -116,6 +116,8 @@ describe('GET /quote-requests/:id/quotes, odd requests', () => {
 
     expect(res.body.request.booking).toEqual({
       confirmBy: newest.confirmBy.toISOString(),
+      mechanicName: null,
+      quoteId: newest.quoteId,
       startsAt: newest.startsAt.toISOString(),
       status: 'awaiting_confirmation',
     });

@@ -1,4 +1,5 @@
 import type {
+  CompareBookingDto,
   CompareQuoteDto,
   CompareRequestDto,
   RequestBookingDto,
@@ -10,6 +11,8 @@ export type RowState =
   | 'open'
   | 'on_hold'
   | 'accepted'
+  | 'booked'
+  | 'lapsed'
   | 'expired'
   | 'declined'
   | 'closed';
@@ -20,7 +23,10 @@ export type Sort = (typeof SORTS)[number];
 // The tab's sort, in sessionStorage: a new tab starts on the fastest.
 export const SORT_KEY = 'mf.quotes.sort';
 
-type Booking = Pick<RequestBookingDto, 'status' | 'confirmBy'> | null;
+type Booking =
+  | (Pick<RequestBookingDto, 'status' | 'confirmBy'> &
+      Partial<Pick<CompareBookingDto, 'quoteId'>>)
+  | null;
 
 // Every row counts but the ones the driver declined.
 export const headerCount = (quotes: readonly CompareQuoteDto[]) =>
@@ -49,15 +55,31 @@ const STATE_OF: Record<
   lost: 'closed',
 };
 
-// A waiting quote is held while the newest booking waits for its garage.
+const HELD: Partial<Record<RequestBookingDto['status'], RowState>> = {
+  awaiting_confirmation: 'on_hold',
+  confirmed: 'closed',
+};
+
+// The accepted quote follows its booking; a waiting quote is held while the
+// newest booking waits for its garage, closed once it is confirmed, and open
+// again after a lapse, while its own time and slot are still ahead.
 export function rowState(
-  quote: Pick<CompareQuoteDto, 'status' | 'expiresAt'>,
+  quote: Pick<CompareQuoteDto, 'id' | 'status' | 'expiresAt' | 'slot'>,
   booking: Booking,
   now: Date,
 ): RowState {
+  if (quote.status === 'accepted') {
+    return booking?.status === 'confirmed' ? 'booked' : 'accepted';
+  }
+  if (booking?.status === 'lapsed' && booking.quoteId === quote.id) {
+    return 'lapsed';
+  }
   if (quote.status !== 'waiting') return STATE_OF[quote.status];
-  if (Date.parse(quote.expiresAt) <= now.getTime()) return 'expired';
-  return booking?.status === 'awaiting_confirmation' ? 'on_hold' : 'open';
+  const at = now.getTime();
+  if (Date.parse(quote.expiresAt) <= at || Date.parse(quote.slot) <= at) {
+    return 'expired';
+  }
+  return (booking && HELD[booking.status]) ?? 'open';
 }
 
 const showsQuotes = (request: RequestSummaryDto) =>

@@ -217,6 +217,53 @@ describe('Cererile mele once a quote is accepted', () => {
   });
 });
 
+// @traces 314-accept-quote-FR-019
+describe('Cererile mele’s clock after an acceptance', () => {
+  const HOUR = 3_600_000;
+
+  it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+    try {
+      const loaded = Date.now();
+      // Accepted 29 s after the page loaded, re-read a second later.
+      const confirmBy = new Date(loaded + 29_000 + 24 * HOUR).toISOString();
+      const { element, settle } = await render([
+        [row({ quotesCount: 2, status: 'quoted' })],
+        [
+          row({
+            booking: {
+              confirmBy,
+              startsAt: '2026-10-20T06:00:00.000Z',
+              status: 'awaiting_confirmation',
+            },
+            quotesCount: 2,
+            status: 'booked',
+          }),
+        ],
+      ]);
+      jest.setSystemTime(loaded + 30_000);
+
+      events.next({
+        at: new Date().toISOString(),
+        id: 'quote-1',
+        kind: 'quote.accepted',
+      });
+      await wait(400);
+      await settle();
+
+      const line = element.querySelector('[data-request] .waiting');
+      expect(line && text(line)).toBe(
+        'Așteaptă confirmarea service‑ului · încă 23 h',
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 // @traces 389-FR-016
 // @traces 389-FR-017
 describe('Cererile mele once the garage confirms or lets the booking lapse', () => {

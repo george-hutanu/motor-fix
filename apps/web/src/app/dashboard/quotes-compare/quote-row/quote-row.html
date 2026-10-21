@@ -31,17 +31,18 @@
 }
 <div class="action" data-part="action">
   @if (state() === 'open') {
-    <button
-      hlmBtn
-      type="button"
-      [disabled]="busy() || locked()"
-      [attr.aria-busy]="busy() ? 'true' : null"
-      (click)="send()"
-    >{{ 'driver.quotes.accept' | t }}</button>
+    <button hlmBtn type="button" data-act="accept" [disabled]="locked()" (click)="take()">{{ 'driver.quotes.accept' | t }}</button>
   } @else {
-    <span class="state">{{ stateText() | t }}</span>
+    @if (lit()) {
+      <mf-lamp class="state" state="green" [label]="stateText() | t" />
+    } @else {
+      <span class="state">{{ stateText() | t }}</span>
+    }
+  }
+  @if (declinable()) {
+    <button hlmBtn variant="ghost" type="button" data-act="decline" [disabled]="locked()" (click)="refuse()">{{ 'driver.quotes.decline' | t }}</button>
   }
 </div>
-@if (problem(); as text) {
-  <p class="problem" data-part="problem" role="alert">{{ text }}</p>
+@if (bookingLine(); as line) {
+  <p class="booking" data-part="booking">{{ line.key | t: line.params }}</p>
 }

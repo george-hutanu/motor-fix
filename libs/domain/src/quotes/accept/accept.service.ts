@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import type { AcceptOwner } from './accept.warm';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -19,13 +20,14 @@ import {
   type PrismaClient,
   type Quote,
 } from '../../generated/prisma/client';
-import { invalidTransition, uniqueConflict } from '../../transitions';
+import { uniqueConflict } from '../../transitions';
 import {
   type QuoteAcceptOutcome,
   recordQuoteAccept,
 } from '../quotes/quotes.metrics';
 import { BOOKING_CONFIRM_LAPSE_HOURS } from '../quotes-config';
 import { bookingOf } from '../reads';
+import { quoteRefused, requestRefused, SUSPENDED, said } from '../refusals';
 import { moveQuote, moveRequest } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
@@ -39,40 +41,42 @@ export interface Accepted {
 const HOUR = 3_600_000;
 const HELD = ['awaiting_confirmation', 'confirmed'] as const;
 
-const bookingPending = () =>
-  refusal(
-    HttpStatus.CONFLICT,
-    'booking_pending',
-    'Ai deja o programare în așteptare',
-  );
+const BOOKING_PENDING = {
+  en: 'You already have a booking waiting',
+  ro: 'Ai deja o programare în așteptare',
+};
+const SLOT_PASSED = {
+  en: 'The proposed time has passed',
+  ro: 'Ora propusă a trecut',
+};
 
-const slotPassed = () =>
-  refusal(HttpStatus.CONFLICT, 'slot_passed', 'Ora propusă a trecut');
-
-const quoteIs = (currentStatus: string) =>
-  invalidTransition({ currentStatus, entity: 'quote', to: 'accepted' });
-
-// The refusals in the order the driver is told them: the quote's own state,
-// a booking the request already holds, the request, then the quote's time
-// and its garage.
+// The refusals in the order the driver is told them, in the driver's
+// language: the quote's own state, a booking the request already holds, the
+// request, then the quote's time and its garage.
 function judge(
+  actor: Actor,
   quote: Quote & { garage: Garage },
   requestStatus: string,
   held: boolean,
   now: Date,
 ) {
+  const quoteIs = (status: string, words?: typeof SUSPENDED) =>
+    quoteRefused(actor, status, 'accepted', words);
   if (quote.status !== 'waiting') throw quoteIs(quote.status);
-  if (held) throw bookingPending();
-  if (requestStatus !== 'quoted') {
-    throw invalidTransition({
-      currentStatus: requestStatus,
-      entity: 'quote_request',
-      to: 'booked',
-    });
+  if (held) {
+    throw refusal(
+      HttpStatus.CONFLICT,
+      'booking_pending',
+      said(BOOKING_PENDING, actor),
+    );
   }
+  if (requestStatus !== 'quoted') throw requestRefused(actor, requestStatus);
   if (quote.expiresAt <= now) throw quoteIs('expired');
-  if (quote.slot <= now) throw slotPassed();
-  if (quote.garage.status === 'suspended') throw quoteIs('withdrawn');
+  if (quote.slot <= now) {
+    throw refusal(HttpStatus.CONFLICT, 'slot_passed', said(SLOT_PASSED, actor));
+  }
+  if (quote.garage.status === 'suspended')
+    throw quoteIs('withdrawn', SUSPENDED);
 }
 
 const OUTCOMES = new Set([
@@ -111,9 +115,10 @@ export class AcceptService {
     quoteId: string,
     key: string,
     dto: AcceptQuoteDto,
+    owner?: AcceptOwner,
   ): Promise<Accepted> {
     try {
-      const accepted = await this.persist(actor, quoteId, key, dto);
+      const accepted = await this.persist(actor, quoteId, key, dto, owner);
       const outcome = accepted.created ? 'accepted' : 'replayed';
       recordQuoteAccept(outcome);
       this.logger.log(
@@ -135,11 +140,12 @@ export class AcceptService {
     quoteId: string,
     key: string,
     dto: AcceptQuoteDto,
+    owner?: AcceptOwner,
   ): Promise<Accepted> {
     requireCapability(actor, 'driver.requests');
     try {
       return await this.prisma.$transaction((tx) =>
-        this.store(tx, actor, quoteId, key, dto),
+        this.store(tx, actor, quoteId, key, dto, owner),
       );
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
@@ -165,17 +171,11 @@ export class AcceptService {
     quoteId: string,
     key: string,
     dto: AcceptQuoteDto,
+    owner?: AcceptOwner,
   ): Promise<Accepted> {
     const replay = await this.replayOf(tx, actor.accountId, key);
     if (replay) return { booking: replay, created: false };
-    const owned = await tx.quote.findUnique({
-      select: { request: { select: { driverId: true } }, requestId: true },
-      where: { id: quoteId },
-    });
-    if (owned?.request.driverId !== actor.accountId) {
-      throw new NotFoundException();
-    }
-    const { requestId } = owned;
+    const { requestId } = owner ?? (await this.ownerOf(tx, actor, quoteId));
     // Every acceptance of the request waits here for the one before it, and
     // is judged on what that one left.
     const [request] = await tx.$queryRaw<{ status: string }[]>`
@@ -191,11 +191,24 @@ export class AcceptService {
       where: { requestId, status: { in: [...HELD] } },
     });
     const now = new Date();
-    judge(quote, request.status, held > 0, now);
+    judge(actor, quote, request.status, held > 0, now);
     const historyShared = dto.historyShared ?? false;
     const booking = await this.book(tx, actor, quote, key, historyShared, now);
     await this.move(tx, actor, quote, booking.id, historyShared, now);
     return { booking: bookingOf(booking), created: true };
+  }
+
+  // The quote's request, when it is the driver's; the comparison may have
+  // read it already (AcceptOwner).
+  private async ownerOf(tx: Tx, actor: Actor, quoteId: string) {
+    const owned = await tx.quote.findUnique({
+      select: { request: { select: { driverId: true } }, requestId: true },
+      where: { id: quoteId },
+    });
+    if (owned?.request.driverId !== actor.accountId) {
+      throw new NotFoundException();
+    }
+    return owned;
   }
 
   // The booking first, so the event can name it; the garage has a day to

@@ -70,6 +70,7 @@ const summary = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 const ids = (quotes: CompareQuoteDto[]) => quotes.map((q) => q.id);
 
 // @traces 313-FR-005
+// @traces 314-accept-quote-FR-021
 describe('the header', () => {
   it('counts every row but the ones the driver declined', () => {
     const quotes = [
@@ -169,6 +170,72 @@ describe('a row’s state', () => {
 });
 
 // @traces 313-FR-012
+// @traces 314-accept-quote-FR-001
+// @traces 314-accept-quote-FR-005
+// @traces 314-accept-quote-FR-006
+// @traces 314-accept-quote-FR-007
+// @traces 314-accept-quote-FR-008
+// @traces 314-accept-quote-FR-013
+describe('a row’s state as the booking moves', () => {
+  const booking = (
+    status: 'awaiting_confirmation' | 'confirmed' | 'lapsed',
+    quoteId = 'q-1',
+  ) => ({
+    confirmBy: '2026-10-18T10:00:00.000Z',
+    mechanicName: status === 'confirmed' ? 'Mihai Dumitru' : null,
+    quoteId,
+    startsAt: '2026-10-19T09:00:00.000Z',
+    status,
+  });
+
+  it('offers Acceptă only while the slot is still ahead', () => {
+    const passed = quote({ slot: '2026-10-17T09:59:00.000Z' });
+
+    expect(rowState(passed, null, NOW)).toBe('expired');
+    expect(rowState(quote(), null, NOW)).toBe('open');
+  });
+
+  it('reads the accepted quote as accepted while its booking waits', () => {
+    const accepted = quote({ status: 'accepted' });
+
+    expect(rowState(accepted, booking('awaiting_confirmation'), NOW)).toBe(
+      'accepted',
+    );
+  });
+
+  it('reads the accepted quote as booked once the garage confirmed', () => {
+    const accepted = quote({ status: 'accepted' });
+
+    expect(rowState(accepted, booking('confirmed'), NOW)).toBe('booked');
+  });
+
+  it('closes the other quotes once the booking is confirmed', () => {
+    const other = quote({ id: 'q-2' });
+
+    expect(rowState(other, booking('confirmed'), NOW)).toBe('closed');
+    expect(
+      rowState(quote({ id: 'q-2', status: 'lost' }), booking('confirmed'), NOW),
+    ).toBe('closed');
+  });
+
+  it('reads the lapsed booking’s own quote as lapsed, and reopens the others', () => {
+    const own = quote({ status: 'expired' });
+    const other = quote({ id: 'q-2' });
+
+    expect(rowState(own, booking('lapsed'), NOW)).toBe('lapsed');
+    expect(rowState(other, booking('lapsed'), NOW)).toBe('open');
+  });
+
+  it('never offers a declined quote again, even after a lapse', () => {
+    const declined = quote({ id: 'q-2', status: 'declined_by_driver' });
+
+    expect(rowState(declined, booking('lapsed'), NOW)).toBe('declined');
+    expect(rowState(declined, booking('awaiting_confirmation'), NOW)).toBe(
+      'declined',
+    );
+  });
+});
+
 describe('the request the overview shows', () => {
   it('picks the most recent quoted request with quotes', () => {
     const items = [

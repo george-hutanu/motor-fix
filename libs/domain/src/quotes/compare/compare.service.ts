@@ -1,4 +1,5 @@
 import type {
+  CompareBookingDto,
   CompareQuoteDto,
   QuoteComparisonDto,
   WithdrawnQuoteDto,
@@ -8,6 +9,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type {
+  Booking,
   Garage,
   JobType,
   PrismaClient,
@@ -60,6 +62,16 @@ const rowOf = (quote: QuoteRow): CompareQuoteDto => ({
   toBani: quote.toBani,
 });
 
+// The booking as the rows read it: which quote holds it, and who does the
+// job once the garage named someone.
+const compareBookingOf = (
+  booking: Booking & { mechanic: { name: string } | null },
+): CompareBookingDto => ({
+  ...rowBookingOf(booking),
+  mechanicName: booking.mechanic?.name ?? null,
+  quoteId: booking.quoteId,
+});
+
 // The driver's side-by-side read of one request's quotes. A withdrawn quote,
 // or a waiting one of a suspended garage, is a line rather than a row; a
 // decline shows once the garage's undo window has closed. The first read of
@@ -72,7 +84,11 @@ export class CompareService {
     requireCapability(actor, 'driver.requests');
     const row = await this.prisma.quoteRequest.findFirst({
       include: {
-        bookings: { orderBy: NEWEST_FIRST, take: 1 },
+        bookings: {
+          include: { mechanic: { select: { name: true } } },
+          orderBy: NEWEST_FIRST,
+          take: 1,
+        },
         jobs: {
           include: { jobType: true },
           orderBy: { position: 'asc' },
@@ -122,7 +138,7 @@ export class CompareService {
       ),
       quotes,
       request: {
-        booking: booking ? rowBookingOf(booking) : null,
+        booking: booking ? compareBookingOf(booking) : null,
         car: snapshotOf(row),
         description: firstLine(row.description),
         id: row.id,

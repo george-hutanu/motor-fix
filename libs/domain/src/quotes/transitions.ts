@@ -177,6 +177,7 @@ export function moveRecipient(
 
 const QUOTE_STAMPS: Partial<Record<QuoteStatus, string>> = {
   accepted: 'acceptedAt',
+  declined_by_driver: 'declinedAt',
   withdrawn: 'withdrawnAt',
 };
 
