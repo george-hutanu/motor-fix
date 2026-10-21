@@ -51,6 +51,10 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route(/\/api\/v1\/(cars|requests)(\?.*)?$/, (route) =>
     route.fulfill({ json: { items: [] } }),
   );
+  // Panou follows the driver's active request on load: none open.
+  await page.route('**/api/v1/quote-requests/active', (route) =>
+    route.fulfill({ json: { openCount: 0, request: null } }),
+  );
   // Panou reads the saved garages on load: none saved.
   await page.route(/\/api\/v1\/me\/saved-garages(\?.*)?$/, (route) =>
     route.fulfill({

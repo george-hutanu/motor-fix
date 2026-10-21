@@ -826,6 +826,9 @@ export class VerificationFile {
           id: this.fileId,
         }),
       );
+      // A re-read sent before the correction may answer after it: one more
+      // read, queued behind it, has the last word.
+      this.file.reload();
       this.toggleCorrect();
     } catch (error) {
       this.correctFailed(error);

@@ -201,9 +201,10 @@ test.describe('the admin dashboard @seeded', () => {
 
     await expect(tiles(page)).toHaveCount(6);
     await expect(
+      // Nine seeded, and the specs beside this one list garages of their own
+      // this month.
       panel(page).getByRole('group', {
-        exact: true,
-        name: 'Garages listed, 9, +0 this month',
+        name: /^Garages listed, \d+, \+\d+ this month$/,
       }),
     ).toBeVisible();
     await expect(
