@@ -5,8 +5,8 @@ import { ghRun } from '../lib/gh-rest.mjs';
 import { waitForCi } from './ci-wait.mjs';
 
 // The wait as its entry point wires it: every `gh pr …` read goes over REST
-// (lib/gh-rest.mjs), here against a fake GitHub holding PR #466's head, whose
-// 'PR title' attempt 1 stayed in_progress after attempt 2 completed (ST-1356).
+// (lib/gh-rest.mjs), here against a fake GitHub whose head's 'PR title'
+// attempt 1 stayed in_progress after attempt 2 completed.
 const RUN = 39618505833;
 const pull = { number: 466, title: 't', body: '', html_url: 'u', state: 'open', draft: false, merged_at: null, mergeable: true, head: { ref: 'b', sha: 'head1' }, base: { ref: 'main' }, user: { login: 'x' }, labels: [], merge_commit_sha: null };
 const job = (name, status, conclusion, started_at, id, run = RUN, suite = 7) => ({

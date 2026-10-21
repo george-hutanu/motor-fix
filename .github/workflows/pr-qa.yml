@@ -124,7 +124,7 @@ jobs:
       # The tester comes from the ref this run was dispatched on (main), or
       # the PR's base branch on pull_request, so a PR branched before a tester
       # change is tested by today's tester and never by its own. Its scripts
-      # import scripts/docs-only.ts (dispatch.mjs), so scripts/ comes too;
+      # import scripts/docs-only.ts (dispatch.mjs, carry.mjs), so scripts/ comes too;
       # pr-qa-sparse.spec.mjs fails on any import outside these paths.
       - uses: actions/checkout@v7
         with:

@@ -7,14 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 // The PR QA workflow checks the tester out sparsely (`path: tester`) and runs
 // its scripts with node. A relative import that reaches outside the sparse
-// paths fails at module load, before the app boots: ST-1356, where
+// paths fails at module load, before the app boots, as when
 // dispatch.mjs's `../../../scripts/docs-only.ts` failed every run.
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const WORKFLOW = join(ROOT, '.github/workflows/pr-qa.yml');
 
 /** The tester checkout's sparse paths, read from the checkout step whose path is `tester`. */
-export function testerSparsePaths(text) {
+function testerSparsePaths(text) {
   const steps = text.split(/\n(?=\s*- (?:uses|name|run):)/);
   const step = steps.find((s) => /^\s*path:\s*tester\s*$/m.test(s));
   assert.ok(step, 'pr-qa.yml has no checkout with path: tester');
@@ -34,14 +34,14 @@ export function testerSparsePaths(text) {
 }
 
 /** The scripts the workflow runs out of the tester checkout, relative to the repository. */
-export function testerEntries(text) {
+function testerEntries(text) {
   return [...new Set([...text.matchAll(/\bnode\s+tester\/(\S+?\.(?:mjs|js|ts|mts))\b/g)].map((m) => m[1]))];
 }
 
 const SPECIFIERS = [/\b(?:import|export)\s[^'"`;]*?\bfrom\s*['"]([^'"]+)['"]/g, /\bimport\s*['"]([^'"]+)['"]/g, /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g];
 
 /** Every file reached from `entries` by relative imports, transitively: { files, missing }. */
-export function relativeImports(root, entries) {
+function relativeImports(root, entries) {
   const files = new Set();
   const missing = [];
   const queue = entries.map((e) => resolve(root, e));
@@ -64,10 +64,10 @@ export function relativeImports(root, entries) {
 }
 
 /** Whether a repository path is in a cone-mode sparse checkout of `paths` (root files always are). */
-export const inSparse = (file, paths) => !file.includes('/') || paths.some((p) => file === p || file.startsWith(`${p.replace(/\/+$/, '')}/`));
+const inSparse = (file, paths) => !file.includes('/') || paths.some((p) => file === p || file.startsWith(`${p.replace(/\/+$/, '')}/`));
 
 /** The files reached from the entries that the sparse checkout would not hold. */
-export function outsideSparse(root, entries, paths) {
+function outsideSparse(root, entries, paths) {
   return relativeImports(root, entries).files.filter((f) => !inSparse(f, paths));
 }
 

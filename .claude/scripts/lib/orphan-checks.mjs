@@ -1,7 +1,7 @@
-// An orphaned check attempt (ST-1356). Re-running a workflow keeps its run id
+// An orphaned check attempt. Re-running a workflow keeps its run id
 // and check suite and adds an attempt; GitHub can leave an earlier attempt's
-// check run `in_progress` for good after the newer attempt completed (PR #466,
-// check run 119285437128). Ranked as the newest because it never finished, it
+// check run `in_progress` for good after the newer attempt completed (check
+// run 119285437128). Ranked as the newest because it never finished, it
 // held the merge gate and the CI wait with every check green.
 //
 // An unfinished check run is an orphan when another check run of the same name

@@ -389,7 +389,7 @@ describe('pr checks', () => {
     assert.equal(r.code, 1);
   });
 
-  // PR #466 (ST-1356): attempt 1 of run 39618505833 stayed in_progress after attempt 2 completed.
+  // Attempt 1 of run 39618505833 stayed in_progress after attempt 2 completed.
   describe('an orphaned earlier attempt', () => {
     const RUN = 39618505833;
     const attempt = (status, conclusion, started_at, job) => ({
@@ -428,6 +428,15 @@ describe('pr checks', () => {
       const rerun = attempt('in_progress', null, '2026-10-21T14:50:00Z', 119290000000);
       const going = fake({ ...routes([retried, rerun]), 'GET actions/runs?head_sha=head1&per_page=100': runs('in_progress') });
       assert.equal(gh(['pr', 'checks', '160'], going).code, 8);
+    });
+
+    // @traces 1362-FR-005
+    it('keeps a newer attempt queued with no start date pending, whatever order GitHub lists them in', () => {
+      const queued = attempt('queued', null, null, 119290000001);
+      for (const order of [[retried, queued], [queued, retried]]) {
+        const f = fake({ ...routes(order), 'GET actions/runs?head_sha=head1&per_page=100': runs('queued') });
+        assert.deepEqual(JSON.parse(gh(['pr', 'checks', '160', '--json', 'name,bucket'], f).stdout), [{ name: 'PR title', bucket: 'pending' }]);
+      }
     });
   });
 

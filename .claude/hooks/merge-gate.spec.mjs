@@ -754,7 +754,7 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
   });
 });
 
-// PR #466 (ST-1356): attempt 1 of the 'PR title' run 39618505833 stayed in_progress after
+// Attempt 1 of the 'PR title' run 39618505833 stayed in_progress after
 // attempt 2 of the same run completed success, and the gate refused with every check green.
 describe('merge gate — an orphaned earlier attempt of a check', () => {
   const HEAD = 'aa04cfd0eec3201ad509c2fa527b092500ec2fea';

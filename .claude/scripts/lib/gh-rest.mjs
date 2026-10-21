@@ -112,15 +112,17 @@ function workflowNames(run, sha) {
  * name, every run of that check stays (never a false green). The latest is
  * the one started last, so an orphaned earlier attempt (lib/orphan-checks.mjs:
  * left unfinished after a newer attempt of the same run, in the same suite,
- * completed) never outranks that newer attempt.
+ * completed) never outranks that newer attempt. A run not yet started (no
+ * start date) and unfinished ranks newest, so a queued re-run stays pending.
  */
 function latestRuns(runs, workflow) {
   if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
   const key = (c) => `${c.name}\0${workflow[c.check_suite?.id] ?? `suite ${c.check_suite?.id}`}`;
+  const when = (c) => c.started_at ?? (c.status && c.status !== "completed" ? "\uffff" : "");
   const latest = new Map();
   for (const c of runs) {
     const kept = latest.get(key(c));
-    if (!kept || String(c.started_at ?? "") > String(kept.started_at ?? "")) latest.set(key(c), c);
+    if (!kept || when(c) > when(kept)) latest.set(key(c), c);
   }
   const keep = new Set(latest.values());
   return runs.filter((c) => keep.has(c));
@@ -129,7 +131,7 @@ function latestRuns(runs, workflow) {
 /**
  * The head commit's check runs (the latest of each, with its workflow's name) and commit statuses.
  * Every run is read (`filter=all`): GitHub's `latest` ranks by completion, so an orphaned earlier
- * attempt can be all it returns (ST-1356); latestRuns keeps the newer attempt instead.
+ * attempt can be all it returns; latestRuns keeps the newer attempt instead.
  */
 function headChecks(run, sha) {
   const all = pages(run, `commits/${sha}/check-runs?per_page=100&filter=all`).flatMap((page) => page.check_runs ?? []);
