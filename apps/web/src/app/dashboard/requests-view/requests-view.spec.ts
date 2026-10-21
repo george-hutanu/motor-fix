@@ -9,7 +9,7 @@ import {
   type RequestSummaryDto,
   RequestsService,
 } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { formatSlot, I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { RequestsView } from './requests-view';
@@ -123,6 +123,7 @@ describe('Cererile mele once a quote is accepted', () => {
     row({
       booking: {
         confirmBy: new Date(Date.now() + confirmIn).toISOString(),
+        startsAt: '2026-10-20T06:00:00.000Z',
         status: status as 'awaiting_confirmation',
       },
       quotesCount: 2,
@@ -214,6 +215,105 @@ describe('Cererile mele once a quote is accepted', () => {
     expect(list).toHaveBeenCalledTimes(2);
     expect(waiting(element)).not.toBeNull();
   });
+});
+
+// @traces 389-FR-016
+// @traces 389-FR-017
+describe('Cererile mele once the garage confirms or lets the booking lapse', () => {
+  const HOUR = 3_600_000;
+  const STARTS = new Date(Date.now() + 3 * 24 * HOUR).toISOString();
+  const withBooking = (
+    status: 'confirmed' | 'lapsed',
+    request: RequestSummaryDto['status'],
+  ) =>
+    row({
+      booking: {
+        confirmBy: new Date(Date.now() + HOUR).toISOString(),
+        startsAt: STARTS,
+        status,
+      },
+      quotesCount: 2,
+      status: request,
+    });
+  const line = (element: HTMLElement, name: string) =>
+    element.querySelector(`[data-request] .${name}`);
+
+  it('replaces the waiting line with Programată and the day and time', async () => {
+    const { element } = await render([[withBooking('confirmed', 'booked')]]);
+
+    expect(line(element, 'waiting')).toBeNull();
+    const booked = line(element, 'booked');
+    expect(booked && text(booked)).toBe(
+      `Programată · ${formatSlot(STARTS, 'ro', new Date())}`,
+    );
+    expect(booked?.querySelector('time')?.getAttribute('datetime')).toBe(
+      STARTS,
+    );
+  });
+
+  it('writes Booked in English', async () => {
+    const { element } = await render(
+      [[withBooking('confirmed', 'booked')]],
+      'en',
+    );
+
+    const booked = line(element, 'booked');
+    expect(booked && text(booked)).toBe(
+      `Booked · ${formatSlot(STARTS, 'en', new Date())}`,
+    );
+  });
+
+  it('asks the driver to choose another quote after a lapse while one is open', async () => {
+    const { element } = await render([[withBooking('lapsed', 'quoted')]]);
+
+    const lapsed = line(element, 'lapsed');
+    expect(lapsed && text(lapsed)).toBe(
+      'Service‑ul nu a confirmat. Alege altă ofertă.',
+    );
+    expect(line(element, 'booked')).toBeNull();
+  });
+
+  it('writes the lapse line in English', async () => {
+    const { element } = await render([[withBooking('lapsed', 'quoted')]], 'en');
+
+    const lapsed = line(element, 'lapsed');
+    expect(lapsed && text(lapsed)).toBe(
+      'The garage did not confirm. Choose another quote.',
+    );
+  });
+
+  it('shows no lapse line once the request has closed', async () => {
+    const { element } = await render([[withBooking('lapsed', 'closed')]]);
+
+    expect(line(element, 'lapsed')).toBeNull();
+  });
+
+  it.each<EventKind>(['booking.confirmed', 'booking.lapsed'])(
+    'reads the list again on %s',
+    async (kind) => {
+      const { element, settle } = await render([
+        [
+          row({
+            booking: {
+              confirmBy: new Date(Date.now() + HOUR).toISOString(),
+              startsAt: STARTS,
+              status: 'awaiting_confirmation',
+            },
+            quotesCount: 2,
+            status: 'booked',
+          }),
+        ],
+        [withBooking('confirmed', 'booked')],
+      ]);
+
+      events.next({ at: new Date().toISOString(), id: 'booking-1', kind });
+      await wait(400);
+      await settle();
+
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(line(element, 'booked')).not.toBeNull();
+    },
+  );
 });
 
 // @traces 221-FR-014, 221-SC-002

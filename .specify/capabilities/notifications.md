@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 194-email-sending
   - 195-message-templates
@@ -38,6 +38,7 @@ features:
   - 1351-rar-monthly-recheck
   - 1190-live-reconnects
   - 1352-catalogue-job-visibility
+  - 389-confirm-booking-lift-mechanic
 ---
 
 # Capability: Notifications
@@ -768,6 +769,14 @@ _From 1190-live-reconnects._
 ### 1352-FR-015 — On every `catalogue_job.proposed` event, whichever write saved it (this story's or the listing's), every admin MUST get ADMIN_CATALOGUE_JOB_PENDING: bell "{garage} a propus lucrarea „{job}”" / "{garage} proposed the job "{job}"", e-mail and push with the garage's name, the job's name and a link to the admin dashboard, under the admins' preference group so it can be muted (the catalogue already lists it as an event notice, e-mail and push, not always sent); the shape of ADMIN_VERIFICATION_QUEUED.
 
 _From 1352-catalogue-job-visibility._
+
+### 389-FR-011 — A reminder kind MUST build one BOOKING_CONFIRM_REMINDER per owner and receptionist of the garage (the catalogue's staff list, never a mechanic) through the notification service, on the catalogue's channels (e-mail, push, WhatsApp), never held by quiet hours and not mutable, at most once per booking, kind and recipient (a repeated fire builds none); the templates MUST exist in Romanian and English: bell and push "Confirmă programarea lui <driver> · <car> · <slot> · mai ai <time left>" / "Confirm <driver>'s booking · <car> · <slot> · <time left> left", e-mail subject "Confirmă programarea: <car>" / "Confirm the booking: <car>" with the body naming the driver, the car, the slot and when the booking lapses; opening one lands on Oferte trimise.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-013 — `booking.confirmed` and `booking.lapsed` MUST each have one registered consumer in the notifications worker: for `booking.confirmed`, one BOOKING_CONFIRMED to the driver (the catalogue's `bookings` group, always sent) with the templates bell and push "Programare confirmată · <garage> · <slot>" / "Booking confirmed · <garage> · <slot>", e-mail subject "Programare confirmată: <garage>, <slot>" / "Booking confirmed: <garage>, <slot>", opening on Cererile mele; for `booking.lapsed`, one BOOKING_LAPSED to the driver, "Service‑ul nu a confirmat. Alege altă ofertă." / "The garage did not confirm. Choose another quote." (bell, push, e-mail subject "Programarea nu a fost confirmată" / "The booking was not confirmed"), opening on Cererile mele, and one per owner and receptionist of the garage, "Programarea lui <driver> a expirat neconfirmată" / "<driver>'s booking lapsed unconfirmed", opening on Oferte trimise; each built at most once per booking and recipient when the event is delivered again. QUOTE_LOST for the losing garages is #147's and is not built here.
+
+_From 389-confirm-booking-lift-mechanic._
 
 ## Retired
 

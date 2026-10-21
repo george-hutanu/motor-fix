@@ -22,6 +22,7 @@ import {
   iso,
   jobsOf,
   NEWEST_FIRST,
+  rowBookingOf,
   shownStatus,
   snapshotOf,
 } from '../reads';
@@ -121,12 +122,7 @@ export class CompareService {
       ),
       quotes,
       request: {
-        booking: booking
-          ? {
-              confirmBy: booking.confirmBy.toISOString(),
-              status: booking.status,
-            }
-          : null,
+        booking: booking ? rowBookingOf(booking) : null,
         car: snapshotOf(row),
         description: firstLine(row.description),
         id: row.id,

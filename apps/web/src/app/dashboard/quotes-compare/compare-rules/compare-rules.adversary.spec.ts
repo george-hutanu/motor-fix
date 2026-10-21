@@ -265,6 +265,7 @@ describe('the header, the edges', () => {
 describe('a row’s state, the edges', () => {
   const awaiting = {
     confirmBy: '2026-10-18T10:00:00.000Z',
+    startsAt: '2026-10-20T06:00:00.000Z',
     status: 'awaiting_confirmation' as const,
   };
 
@@ -292,7 +293,11 @@ describe('a row’s state, the edges', () => {
   it.each(['confirmed', 'cancelled', 'no_show', 'completed'] as const)(
     'leaves a waiting quote open when the newest booking is %s',
     (status) => {
-      const booking = { confirmBy: '2026-10-18T10:00:00.000Z', status };
+      const booking = {
+        confirmBy: '2026-10-18T10:00:00.000Z',
+        startsAt: '2026-10-20T06:00:00.000Z',
+        status,
+      };
 
       expect(rowState(quote(), booking, NOW)).toBe('open');
     },
@@ -332,7 +337,11 @@ describe('the request the overview shows, the edges', () => {
     const items = (['lapsed', 'cancelled', 'completed'] as const).map(
       (status) =>
         summary({
-          booking: { confirmBy: '2026-10-18T10:00:00.000Z', status },
+          booking: {
+            confirmBy: '2026-10-18T10:00:00.000Z',
+            startsAt: '2026-10-20T06:00:00.000Z',
+            status,
+          },
           id: status,
           status: 'booked',
         }),
@@ -473,6 +482,7 @@ describe('a row’s state, more edges', () => {
   it('holds an open waiting quote while a booking awaits confirmation', () => {
     const booking = {
       confirmBy: '2026-10-18T10:00:00.000Z',
+      startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
     };
 
@@ -487,6 +497,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           confirmBy: '2026-10-18T10:00:00.000Z',
+          startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
         id: 'held',
@@ -502,6 +513,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           confirmBy: '2026-10-18T10:00:00.000Z',
+          startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
         quotesCount: 0,
@@ -525,6 +537,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           confirmBy: '2026-10-18T10:00:00.000Z',
+          startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
         createdAt: '2026-10-01T09:00:00.000Z',

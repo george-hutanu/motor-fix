@@ -218,6 +218,7 @@ describe('GET /quote-requests/:id/quotes', () => {
 
     expect(res.body.request.booking).toEqual({
       confirmBy: booking.confirmBy.toISOString(),
+      startsAt: booking.startsAt.toISOString(),
       status: 'awaiting_confirmation',
     });
   });

@@ -195,7 +195,28 @@ describe('GET /requests once a quote is accepted', () => {
 
     expect(res.body.items[0].booking).toEqual({
       confirmBy: newest.confirmBy.toISOString(),
+      startsAt: newest.startsAt.toISOString(),
       status: 'confirmed',
+    });
+  });
+
+  // @traces 389-FR-016
+  it('carries the booking’s start, and a lapse as lapsed with the request quoted again', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await team('Atelier Dinamo');
+    const request = await world.request(andrei, { status: 'quoted' });
+    const quote = await world.quote(request.id, dinamo.garage.id, 'expired');
+    const lapsed = await world.booking(quote.id, 'lapsed');
+
+    const res = await get('/requests', bearer(andrei, 'driver'));
+
+    expect(res.body.items[0]).toMatchObject({
+      booking: {
+        confirmBy: lapsed.confirmBy.toISOString(),
+        startsAt: lapsed.startsAt.toISOString(),
+        status: 'lapsed',
+      },
+      status: 'quoted',
     });
   });
 

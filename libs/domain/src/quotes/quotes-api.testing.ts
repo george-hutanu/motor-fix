@@ -121,5 +121,8 @@ export function quotesApp() {
   // The client the app reads with, to see the statements it runs.
   const client = () => app.get<PrismaClient>(PRISMA, { strict: false });
 
-  return { bearer, client, get, post, send, team, world };
+  // A provider of the running app, to call a service as a given actor.
+  const provider = <T>(token: new (...args: never[]) => T) => app.get(token);
+
+  return { bearer, client, get, post, provider, send, team, world };
 }

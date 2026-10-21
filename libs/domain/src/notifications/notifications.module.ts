@@ -17,6 +17,16 @@ import type { Redis } from 'ioredis';
 
 import { BellController } from './bell/bell.controller';
 import { BellService } from './bell/bell.service';
+import {
+  BOOKING_CONFIRMED_QUEUE,
+  type BookingConfirmedEvent,
+  BookingConfirmedFanOut,
+} from './booking-confirmed/booking-confirmed.fan-out';
+import {
+  BOOKING_LAPSED_QUEUE,
+  type BookingLapsedEvent,
+  BookingLapsedFanOut,
+} from './booking-lapsed/booking-lapsed.fan-out';
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import {
@@ -105,6 +115,8 @@ const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
+const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
+const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
@@ -151,6 +163,12 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(QUOTE_ACCEPTED_WORKER)
     private readonly quoteAcceptedWorker?: Worker | null,
+    @Optional()
+    @Inject(BOOKING_CONFIRMED_WORKER)
+    private readonly bookingConfirmedWorker?: Worker | null,
+    @Optional()
+    @Inject(BOOKING_LAPSED_WORKER)
+    private readonly bookingLapsedWorker?: Worker | null,
     @Optional()
     @Inject(VERIFICATION_RESULT_WORKER)
     private readonly verificationResultWorker?: Worker | null,
@@ -391,6 +409,60 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        BookingConfirmedFanOut,
+        {
+          inject: [BookingConfirmedFanOut],
+          provide: BOOKING_CONFIRMED_WORKER,
+          useFactory: (fanOut: BookingConfirmedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('BookingConfirmed').error(
+                'PUBLIC_WEB_URL missing; confirmed booking messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<BookingConfirmedEvent>(
+              BOOKING_CONFIRMED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('BookingConfirmed'));
+            return worker;
+          },
+        },
+        BookingLapsedFanOut,
+        {
+          inject: [BookingLapsedFanOut],
+          provide: BOOKING_LAPSED_WORKER,
+          useFactory: (fanOut: BookingLapsedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('BookingLapsed').error(
+                'PUBLIC_WEB_URL missing; lapsed booking messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<BookingLapsedEvent>(
+              BOOKING_LAPSED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('BookingLapsed'));
+            return worker;
+          },
+        },
         VerificationResultFanOut,
         {
           inject: [VerificationResultFanOut],
@@ -508,6 +580,8 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.requestReceivedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
+    await this.bookingConfirmedWorker?.close();
+    await this.bookingLapsedWorker?.close();
     await this.verificationResultWorker?.close();
     await this.garageSuspendedWorker?.close();
     await this.garageReportDecidedWorker?.close();

@@ -1,0 +1,69 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.problem,
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.left {
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--mf-space-2);
+}
+.name {
+  font-weight: 700;
+}
+.car,
+.when {
+  color: var(--mf-text-secondary);
+}
+.when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--mf-space-2);
+}
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  margin-top: var(--mf-space-2);
+  min-width: 0;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+.field select {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.none {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.none a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}

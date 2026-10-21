@@ -21,6 +21,10 @@ import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 import type { Outcome } from '../admin/system-log/system-log';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
+  BOOKING_CONFIRM_OUTCOMES,
+  BOOKING_LAPSE_REQUESTS,
+  bookingConfirms,
+  bookingLapses,
   DECLINE_WINDOW_OUTCOMES,
   declineWindows,
   QUOTE_ACCEPT_OUTCOMES,
@@ -433,6 +437,7 @@ const STARTS: Record<
       ),
     ],
     [quoteAccepts, each('outcome', QUOTE_ACCEPT_OUTCOMES)],
+    [bookingConfirms, each('outcome', BOOKING_CONFIRM_OUTCOMES)],
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
     [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
@@ -456,6 +461,13 @@ const STARTS: Record<
       declineWindows,
       across(
         each('outcome', DECLINE_WINDOW_OUTCOMES),
+        each('sweep', ['true', 'false']),
+      ),
+    ],
+    [
+      bookingLapses,
+      across(
+        each('request', BOOKING_LAPSE_REQUESTS),
         each('sweep', ['true', 'false']),
       ),
     ],

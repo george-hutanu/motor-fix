@@ -3,5 +3,6 @@
 
 export interface RequestBookingDto {
   confirmBy: string;
+  startsAt: string;
   status: 'awaiting_confirmation' | 'confirmed' | 'lapsed' | 'cancelled' | 'no_show' | 'completed';
 }

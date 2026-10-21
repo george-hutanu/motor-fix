@@ -278,7 +278,9 @@
     }
   },
   "requests": {
+    "booked": "Booked",
     "compare": "Compare the quotes",
+    "lapsed": "The garage did not confirm. Choose another quote.",
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
   },

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Job, Queue } from 'bullmq';
 
 // A timer on one object, such as a request's expiry. `fire` checks the
@@ -11,6 +12,13 @@ export interface TimerKind {
 }
 
 const SWEEP_EVERY = 5 * 60_000;
+// SCHEDULER_SWEEP_FAILS_KEPT: how many failed sweep jobs Redis keeps, a
+// positive whole number; unset or anything else keeps 288, a day of runs.
+const keptFails = Number(process.env['SCHEDULER_SWEEP_FAILS_KEPT']);
+const SWEEP_FAILS_KEPT =
+  Number.isInteger(keptFails) && keptFails > 0 ? keptFails : 288;
+// A failed sweep's error names this many of its objects.
+const SWEEP_FAILS_NAMED = 5;
 
 // BullMQ refuses ':' in a job id.
 const timerId = (kind: string, objectId: string) => `${kind}-${objectId}`;
@@ -19,6 +27,7 @@ const timerId = (kind: string, objectId: string) => `${kind}-${objectId}`;
 // clearing it removes it, and the sweep runs what a lost timer missed.
 export class ObjectTimers {
   private readonly kinds: ReadonlyMap<string, TimerKind>;
+  private readonly logger = new Logger('ObjectTimers');
 
   constructor(
     private readonly queue: Queue,
@@ -50,18 +59,39 @@ export class ObjectTimers {
     return this.queue.upsertJobScheduler(
       'sweep',
       { every: SWEEP_EVERY },
-      { name: 'sweep' },
+      {
+        name: 'sweep',
+        opts: { removeOnComplete: true, removeOnFail: SWEEP_FAILS_KEPT },
+      },
     );
   }
 
-  // Answers how many objects it ran.
+  // Answers how many objects it ran. One that fails is logged and does not
+  // hold back the ones behind it; the sweep then fails naming them, so the
+  // job counts as failed, and the next sweep tries them again.
   async sweep(now = new Date()): Promise<number> {
     let ran = 0;
+    const failed: string[] = [];
     for (const kind of this.kinds.values()) {
       for (const id of await kind.overdue(now)) {
-        await kind.fire(id, true);
-        ran += 1;
+        try {
+          await kind.fire(id, true);
+          ran += 1;
+        } catch (error) {
+          failed.push(`${kind.name} ${id}`);
+          this.logger.warn(
+            `sweep ${kind.name} ${id} failed: ${(error as Error).message}`,
+          );
+        }
       }
+    }
+    if (failed.length) {
+      const more = failed.length - SWEEP_FAILS_NAMED;
+      throw new Error(
+        `sweep ran ${ran}, failed ${failed.length}: ${failed
+          .slice(0, SWEEP_FAILS_NAMED)
+          .join(', ')}${more > 0 ? ` and ${more} more` : ''}`,
+      );
     }
     return ran;
   }

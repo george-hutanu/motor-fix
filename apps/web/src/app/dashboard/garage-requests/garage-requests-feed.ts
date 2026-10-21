@@ -22,6 +22,8 @@ const CHANGES: readonly EventKind[] = [
   'request.cancelled',
   'request.expired',
   'quote.accepted',
+  'booking.confirmed',
+  'booking.lapsed',
 ];
 
 // A toast's job: the first one, else the description's first line, shortened.

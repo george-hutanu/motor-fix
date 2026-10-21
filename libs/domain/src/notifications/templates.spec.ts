@@ -212,20 +212,20 @@ describe('grouped e-mails', () => {
 
 describe('a type with no template yet', () => {
   it('sends the generic e-mail and bell text in the person language', () => {
-    expect(
-      render('BOOKING_CONFIRMED', 'email', 'en', { app: APP }).subject,
-    ).toBe('You have a new notification');
-    expect(render('BOOKING_CONFIRMED', 'bell', 'ro', {})).toBe(
+    expect(render('BOOKING_MOVED', 'email', 'en', { app: APP }).subject).toBe(
+      'You have a new notification',
+    );
+    expect(render('BOOKING_MOVED', 'bell', 'ro', {})).toBe(
       'Ai o notificare nouă',
     );
   });
 
   it('has no generic push, SMS or WhatsApp text', () => {
-    const error = failure(() => render('BOOKING_CONFIRMED', 'push', 'en', {}));
+    const error = failure(() => render('BOOKING_MOVED', 'push', 'en', {}));
     expect(error).toBeInstanceOf(TemplateError);
     expect(error).toMatchObject({
       channel: 'push',
-      template: 'BOOKING_CONFIRMED',
+      template: 'BOOKING_MOVED',
     });
   });
 });

@@ -99,3 +99,43 @@ export const quoteAccepts = () =>
 export function recordQuoteAccept(outcome: QuoteAcceptOutcome) {
   quoteAccepts().add(1, { outcome });
 }
+
+export const BOOKING_CONFIRM_OUTCOMES = [
+  'confirmed',
+  'mechanic_busy',
+  'lift_busy',
+  'outside_hours',
+  'mechanic_unavailable',
+  'invalid_transition',
+  'refused',
+] as const;
+export type BookingConfirmOutcome = (typeof BOOKING_CONFIRM_OUTCOMES)[number];
+
+export const bookingConfirms = () =>
+  meter().createCounter('motorfix_booking_confirms_total', {
+    description: 'Bookings garages tried to confirm, by outcome',
+  });
+
+// One count per confirmation a garage tries, by outcome; never who or which.
+export function recordBookingConfirm(outcome: BookingConfirmOutcome) {
+  bookingConfirms().add(1, { outcome });
+}
+
+// Whether the request went back to `quoted` or closed with no quote left.
+export const BOOKING_LAPSE_REQUESTS = ['quoted', 'closed'] as const;
+export type BookingLapseRequest = (typeof BOOKING_LAPSE_REQUESTS)[number];
+
+export const bookingLapses = () =>
+  meter().createCounter('motorfix_booking_lapses_total', {
+    description:
+      'Bookings that lapsed unconfirmed, by where the request went and whether the sweep ran them',
+  });
+
+// One count per lapse, by its request's next state and whether the sweep ran
+// it, a lost timer's sign; never which booking.
+export function recordBookingLapse(
+  request: BookingLapseRequest,
+  sweep: boolean,
+) {
+  bookingLapses().add(1, { request, sweep: String(sweep) });
+}

@@ -510,6 +510,17 @@ describe('seed of the listed garages', () => {
     expect(ticked('dacia')).toEqual(['oil-service']);
   });
 
+  // @traces 389-FR-020
+  it('gives Service Auto Militari two lifts, so a booking there can be confirmed on one', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const militari = await prisma.garage.findUniqueOrThrow({
+      select: { liftCount: true },
+      where: { slug: 'service-auto-militari' },
+    });
+    expect(militari.liftCount).toBe(2);
+  });
+
   // @traces 163-FR-005
   it('places six listed garages in București and two in Cluj-Napoca, for the figures by city', async () => {
     expect(seed('test').status).toBe(0);

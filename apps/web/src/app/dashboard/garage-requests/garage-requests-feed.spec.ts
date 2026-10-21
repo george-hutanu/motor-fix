@@ -138,6 +138,8 @@ describe('GarageRequestsFeed: the waiting list', () => {
     'request.cancelled',
     'request.expired',
     'quote.accepted',
+    'booking.confirmed',
+    'booking.lapsed',
   ])('reads the list again on %s', async (kind) => {
     const feed = await start({
       waiting: [listOf([]), listOf([requestRow()])],
@@ -155,7 +157,7 @@ describe('GarageRequestsFeed: the waiting list', () => {
   it('reads the list again when the stream resyncs, and not on other kinds', async () => {
     await start();
 
-    live.emit('booking.confirmed' as EventKind);
+    live.emit('booking.moved' as EventKind);
     await wait(400);
     await settle();
     expect(reads('waiting')).toHaveLength(1);
@@ -400,6 +402,11 @@ describe('GarageRequestsFeed: the quotes sent', () => {
       {
         booking: {
           confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
+          durationMinutes: 90,
+          id: 'booking-1',
+          lift: null,
+          mechanic: null,
+          startsAt: new Date(Date.now() + 86_400_000).toISOString(),
           status: 'awaiting_confirmation',
         },
         id: 'req-q1',
@@ -421,6 +428,38 @@ describe('GarageRequestsFeed: the quotes sent', () => {
       quote: { status: 'accepted' },
     });
   });
+
+  // @traces 389-FR-015
+  it.each<EventKind>(['booking.confirmed', 'booking.lapsed'])(
+    'reads the quoted rows again on %s, so the row turns booked or leaves',
+    async (kind) => {
+      const awaiting = quotedRow(
+        {
+          booking: {
+            confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
+            durationMinutes: 90,
+            id: 'booking-1',
+            lift: null,
+            mechanic: null,
+            startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+            status: 'awaiting_confirmation',
+          },
+          id: 'req-q1',
+        },
+        { status: 'accepted' },
+      );
+      const feed = await start({
+        quoted: [listOf([awaiting]), listOf([])],
+      });
+
+      live.emit(kind, 'booking-1');
+      await wait(400);
+      await settle();
+
+      expect(reads('quoted')).toHaveLength(2);
+      expect(feed.quoted()).toEqual([]);
+    },
+  );
 
   it('says it is loading until the first quoted read answers', async () => {
     const feed = await start({

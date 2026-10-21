@@ -21,6 +21,12 @@
           @if (row.waiting; as left) {
             <p class="waiting">{{ 'driver.requests.waitingGarage' | t: { left } }}</p>
           }
+          @if (row.booked; as booked) {
+            <p class="booked">{{ 'driver.requests.booked' | t }} · <time [attr.datetime]="booked.at">{{ booked.slot }}</time></p>
+          }
+          @if (row.lapsed) {
+            <p class="lapsed">{{ 'driver.requests.lapsed' | t }}</p>
+          }
         </li>
       }
     </ul>

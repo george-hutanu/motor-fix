@@ -1,5 +1,4 @@
 import type {
-  GarageBookingDto,
   GarageCloseReason,
   GarageRequestDto,
   GarageRequestJobPriceDto,
@@ -34,22 +33,33 @@ import { ANSWERING } from '../answers';
 import { PAGE_SIZE } from '../quotes-config';
 import {
   assertCursor,
+  bookingMechanicInclude,
   closeReasonOf,
   firstLine,
+  garageBookingOf,
   iso,
   jobsOf,
+  type MechanicRow,
+  mechanicOf,
   NEWEST_FIRST,
   PAGE_TAKE,
   page,
   plateOf,
   quoteOf,
+  rowBookingOf,
   shortName,
   snapshotOf,
 } from '../reads';
 
 // Only this garage's own recipient row, quote and booking ride along.
 const summaryInclude = (garageId: string) => ({
-  bookings: { orderBy: NEWEST_FIRST, take: 1, where: { garageId } },
+  bookings: {
+    include: bookingMechanicInclude,
+    orderBy: NEWEST_FIRST,
+    take: 1,
+    where: { garageId },
+  },
+  car: { select: { plate: true } },
   driver: true,
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
   quotes: { include: { jobs: true }, where: { garageId } },
@@ -57,22 +67,29 @@ const summaryInclude = (garageId: string) => ({
 });
 
 type SummaryRow = QuoteRequest & {
-  bookings: Booking[];
+  bookings: (Booking & MechanicRow)[];
+  car: { plate: string | null };
   driver: Account;
   jobs: (RequestJob & { jobType: JobType })[];
   quotes: (Quote & { jobs: QuoteJob[] })[];
   recipients: RequestRecipient[];
 };
 
-// From acceptance until the garage confirms, the owner and the desk may call
-// the driver about the booking; a mechanic never reads the phone in a list.
-const listPhoneOf = (row: SummaryRow, actor: Actor) =>
-  actor.role !== 'mechanic' &&
-  row.quotes[0]?.status === 'accepted' &&
-  row.bookings[0]?.status === 'awaiting_confirmation' &&
-  row.driver.phone
-    ? { phone: row.driver.phone }
-    : {};
+// From acceptance on, the owner and the desk may call the driver about the
+// booking, and read the plate once it is confirmed; a mechanic reads neither
+// in a list.
+function listContactOf(row: SummaryRow, actor: Actor) {
+  const booking = row.bookings[0];
+  const shown =
+    actor.role !== 'mechanic' &&
+    row.quotes[0]?.status === 'accepted' &&
+    (booking?.status === 'awaiting_confirmation' ||
+      booking?.status === 'confirmed');
+  return {
+    phone: shown && row.driver.phone ? { phone: row.driver.phone } : {},
+    plate: plateOf(row.car.plate, shown && booking?.status === 'confirmed'),
+  };
+}
 
 // What the garage ticked, as "brand job" keys for the rows' car brands.
 type Offered = Set<string>;
@@ -124,7 +141,13 @@ function summaryOf(
   const [booking] = row.bookings;
   return {
     booking: booking
-      ? { confirmBy: booking.confirmBy.toISOString(), status: booking.status }
+      ? {
+          ...rowBookingOf(booking),
+          durationMinutes: booking.durationMinutes,
+          id: booking.id,
+          lift: booking.lift,
+          mechanic: mechanicOf(booking),
+        }
       : null,
     car: snapshotOf(row),
     closedAt: closed?.closedAt ?? null,
@@ -149,29 +172,6 @@ function summaryOf(
     status: row.status,
   };
 }
-
-const bookingOf = (booking: Booking): GarageBookingDto => ({
-  cancelledAt: iso(booking.cancelledAt),
-  cancelledBySide: booking.cancelledBySide,
-  cancelNote: booking.cancelNote,
-  cancelReason: booking.cancelReason,
-  completedAt: iso(booking.completedAt),
-  confirmBy: booking.confirmBy.toISOString(),
-  confirmedAt: iso(booking.confirmedAt),
-  confirmedBy: booking.confirmedBy,
-  createdAt: booking.createdAt.toISOString(),
-  durationMinutes: booking.durationMinutes,
-  historyShared: booking.historyShared,
-  id: booking.id,
-  lateCancellation: booking.lateCancellation,
-  lift: booking.lift,
-  mechanicId: booking.mechanicId,
-  moveCount: booking.moveCount,
-  noShowAt: iso(booking.noShowAt),
-  quoteId: booking.quoteId,
-  startsAt: booking.startsAt.toISOString(),
-  status: booking.status,
-});
 
 type InboxStatus = 'waiting' | 'quoted' | 'declined' | 'accepted';
 
@@ -338,7 +338,8 @@ export class GarageRequestsService {
   }
 
   // The rows this garage quoted whose quote still waits, or was accepted and
-  // waits for the garage to confirm the booking, newest quote first.
+  // its booking waits for the garage or is confirmed with its slot still
+  // ahead, newest quote first.
   private async quoted(
     actor: Actor,
     garageId: string,
@@ -350,6 +351,10 @@ export class GarageRequestsService {
         { status: 'waiting' },
         {
           booking: { status: 'awaiting_confirmation' },
+          status: 'accepted',
+        },
+        {
+          booking: { id: { in: await this.slotsAhead(garageId) } },
           status: 'accepted',
         },
       ],
@@ -382,11 +387,22 @@ export class GarageRequestsService {
     const offered = await this.offered(garageId, rows);
     return page(rows, total, (row) => {
       const summary = summaryOf(row, offered);
+      const contact = listContactOf(row, actor);
       return {
         ...summary,
-        driver: { ...summary.driver, ...listPhoneOf(row, actor) },
+        car: { ...summary.car, ...contact.plate },
+        driver: { ...summary.driver, ...contact.phone },
       };
     });
+  }
+
+  // The garage's confirmed bookings whose slot has not ended yet.
+  private async slotsAhead(garageId: string): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM booking
+      WHERE garage_id = ${garageId}::uuid AND status = 'confirmed'
+        AND starts_at + duration_minutes * interval '1 minute' > now()`;
+    return rows.map((row) => row.id);
   }
 
   // The garage's price-list row for each asked job: the row for the car's
@@ -451,13 +467,6 @@ export class GarageRequestsService {
     const row = await this.prisma.quoteRequest.findFirst({
       include: {
         ...summaryInclude(garageId),
-        bookings: {
-          include: { mechanic: { select: { accountId: true } } },
-          orderBy: NEWEST_FIRST,
-          take: 1,
-          where: { garageId },
-        },
-        car: { select: { plate: true } },
         recipients: {
           include: { garage: { select: { status: true } } },
           where: { garageId },
@@ -495,7 +504,7 @@ export class GarageRequestsService {
       row.driver.phone;
     return {
       ...summary,
-      booking: booking ? bookingOf(booking) : null,
+      booking: booking ? garageBookingOf(booking) : null,
       car: {
         ...summary.car,
         ...plateOf(row.car.plate, plateShown),

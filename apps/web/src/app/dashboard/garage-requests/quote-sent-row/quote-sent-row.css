@@ -14,7 +14,7 @@
 p {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--mf-space-1);
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -33,7 +33,7 @@ p {
 }
 .status {
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--mf-space-2);
   color: var(--mf-amber-ink);
 }
@@ -41,6 +41,8 @@ p {
   flex: none;
   width: 8px;
   height: 8px;
+  /* Centred on the first line, however many the status wraps to. */
+  margin-top: calc((1lh - 8px) / 2);
   border-radius: 50%;
   background: var(--mf-amber);
 }
@@ -50,12 +52,34 @@ p {
 :host(.accepted) .lamp {
   background: var(--mf-green);
 }
-/* Under the status, in its column. */
+/* The status, then the booking, the phone and the button under it, on one
+   step: the status column never stretches to the cells beside it. */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.booking {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-2);
+}
+.mechanic {
+  font-weight: 600;
+}
+.plate {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.confirm {
+  min-height: 44px;
+  white-space: normal;
+}
 .phone {
-  grid-column: -2;
   display: inline-flex;
-  align-items: center;
-  justify-self: start;
+  align-items: flex-start;
   min-height: 44px;
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -68,6 +92,7 @@ p {
 
 /* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
+  .booking,
   .car,
   .slot,
   .status {

@@ -55,6 +55,13 @@ p {
 .waiting {
   color: var(--mf-text-secondary);
 }
+.booked {
+  font-weight: 600;
+}
+.lapsed {
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}
 .compare {
   align-self: flex-start;
   min-height: var(--mf-tap);

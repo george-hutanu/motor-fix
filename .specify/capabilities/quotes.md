@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-17
+updated: 2026-10-21
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -15,6 +15,7 @@ features:
   - 1169-prefetch-intent
   - 049-garage-suspension
   - 313-compare-quotes
+  - 389-confirm-booking-lift-mechanic
 ---
 
 # Capability: Quotes
@@ -63,9 +64,9 @@ _From 221-quote-request._
 
 _From 220-requests-quotes-bookings._
 
-### 222-FR-005 — The garage's requests list read (`GET /api/v1/garage/requests?status=quoted`, 344-FR-008) MUST also return the garage's recipients whose quote is `accepted` and whose booking is `awaiting_confirmation`, in the same order, shape, paging and total; each such row MUST carry the booking's `status` and `confirmBy` and, for the owner and a receptionist only, the driver's `phone` (absent when the account has none; never for a mechanic; never on any other row). The driver's phone MUST never appear in a list response before acceptance, and the plate never before confirmation (347-FR-005 unchanged).
+### 389-FR-009 — The garage's Oferte trimise list and detail reads (222-FR-005 lineage) MUST also return rows whose booking is `confirmed` while `starts_at` + `duration_minutes` is ahead (the job board owns the booking afterwards), each carrying the booking's `status`, `startsAt`, `mechanic` (id and name; the owner's row with `team_mechanics` off) and `lift`, and for the owner and a receptionist the driver's phone and, from confirmation only, the car's plate (347-FR-005 unchanged); the dialog's data (driver short name, car, jobs, slot, duration, `confirmBy`) MUST come from the row the garage already holds, with no extra read.
 
-_From 222-booking-from-quote._
+_From 389-confirm-booking-lift-mechanic._
 
 ### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
@@ -435,9 +436,9 @@ _From 222-booking-from-quote._
 
 _From 222-booking-from-quote._
 
-### 222-FR-006 — The driver's requests list read (`GET /api/v1/requests`, 220-FR-012 lineage) MUST carry, per request, its newest booking's `status` and `confirmBy` when one exists (null otherwise), so the row can show the waiting line without a detail read; the detail is unchanged.
+### 389-FR-016 — The driver's Cererile mele row of a `booked` request whose booking is `confirmed` MUST replace the waiting line with "Programată · <day>, <time>" / "Booked · <day>, <time>" (the status label unchanged); after a lapse the row MUST read the request's new status (Ofertă / Quote received, or Încheiată / Closed) with, while a quote is still open, the line "Service‑ul nu a confirmat. Alege altă ofertă." / "The garage did not confirm. Choose another quote."; the view and the driver home MUST re-read within 5 seconds on `booking.confirmed` and `booking.lapsed` (added to the kinds they listen to). The driver's list and detail reads MUST carry the booking's `startsAt` and `status` for this (222-FR-006's field set extended).
 
-_From 222-booking-from-quote._
+_From 389-confirm-booking-lift-mechanic._
 
 ### 222-FR-007 — The driver's Cererile mele row of a `booked` request whose booking is `awaiting_confirmation` MUST show, under the existing status label Programată / Booked, the line "Așteaptă confirmarea service‑ului · încă N h" / "Waiting for the garage · N h left", N the whole hours left until `confirmBy` (rounded down), "încă N min" / "N min left" under one hour, "încă câteva secunde" / "moments left" under one minute or past; the line re-renders at least every minute while shown and shows for no other booking status.
 
@@ -555,6 +556,62 @@ _From 313-compare-quotes._
 
 _From 313-compare-quotes._
 
+### 389-FR-001 — The API MUST offer `POST /api/v1/bookings/:id/confirm` to the owner and a receptionist of the booking's garage, with the body `{ mechanicId?: uuid, lift?: integer }` (anything else 400 `validation_failed` naming the field); it MUST answer 200 with the booking as the garage reads it (the existing garage booking DTO, now with the mechanic and the lift), 403 to a mechanic of that garage, 404 `not_found` to any other account (another garage's staff, the driver, an admin) and 401 `sign_in_required` to a visitor, writing nothing in each refusal.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-002 — The confirm MUST lock the booking row (`SELECT … FOR UPDATE`), then, in that one transaction, check in this order: the booking is `awaiting_confirmation` (else 409 `invalid_transition` with the entity `booking` and its state), `confirm_by` is after now (else 409 `invalid_transition` with the state `lapsed`, the row left to the lapse timer), the switches and the fields agree (FR-004, FR-005), the mechanic is one of the garage's (FR-004), the lift is within 1 … the garage's lift count (FR-006), the slot lies inside the opening hours (FR-008), and the mechanic and the lift are free (FR-007); then set `status` `confirmed`, `confirmed_at`, `confirmed_by` (the actor), `mechanic_id`, `lift`; create one JOB `to_do` for the booking (garage, the request's car, the driver, the mechanic of FR-005) with its first JOB_STAGE_ENTRY (no from-status, to `to_do`, the actor); move every other `waiting` quote of the request to `lost` and every `waiting` recipient to `closed` through the transition service; record the audit entries: the booking's `stage` (`awaiting_confirmation` → `confirmed`), `mechanic_id` and `lift` (old null), the job's creation; write the outbox events `booking.confirmed` `{ bookingId, requestId, quoteId, startsAt, durationMinutes, mechanicId, lift }` to the audiences `account:{driverId}`, `garage:{garageId}` and, when the platform routes one, `mechanic:{mechanicId}`, and one `quote.closed` `{ quoteIds, requestId }` to the driver's account and each losing garage; and clear the booking's three timers (FR-010) after the commit. The request stays `booked`. Nothing is written when any check fails.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-003 — The refusals MUST use the platform's problem details (220-FR-015): 409 `invalid_transition` as FR-002 says, carrying the booking's current state so the web can word it (`confirmed` "Programarea e deja confirmată", `lapsed` "Programarea a expirat", `cancelled` "Programarea a fost anulată"); 409 `mechanic_busy` with the message "<mechanic name> e ocupat la ora asta" / "<mechanic name> is busy at this time"; 409 `lift_busy` "Elevatorul <n> e ocupat la ora asta" / "Lift <n> is busy at this time"; 409 `outside_hours` "În afara programului" / "Outside opening hours"; 409 `mechanic_unavailable` "Mecanicul nu e disponibil" / "The mechanic is not available"; two concurrent confirmations of one booking MUST end with exactly one `confirmed` and the other refused as `invalid_transition` `confirmed`.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-004 — With the garage's `team_mechanics` on (a missing row is on), `mechanicId` MUST be required and MUST name a MECHANIC row of this garage (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, in the garage's own order (name), through one read the plan names (the team's existing list where it has one). The predicate "offered mechanics" is one place, so the team stories can narrow it (a pending move, [X13]) without touching the confirm.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-006 — GARAGE MUST gain `lift_count` (integer, 0 or more, default 0), backfilled once by the migration from the garage's survey answer (`1` → 1, `2-3` → 2, `4+` → 4, `0` or no survey → 0); with `lift_schedule` on (a missing row is on) `lift` MUST be optional and, when given, an integer from 1 to `lift_count` (else 400 `validation_failed` naming `lift`); with `lift_schedule` off `lift` MUST be refused (400) and stay empty. The schedule read's `lifts` flag is unchanged.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-007 — The database MUST refuse an overlap with two exclusion constraints on BOOKING over the half-open range [`starts_at`, `starts_at` + `duration_minutes`): one on (`mechanic_id`, range) where `status` = `confirmed` and `mechanic_id` is set, one on (`garage_id`, `lift`, range) where `status` = `confirmed` and `lift` is set (the `btree_gist` extension, added by the migration); the confirm MUST read the same overlaps first so the 409 names the mechanic or the lift, and MUST answer a constraint violation that slips past the read as the same 409, never 500. A range ending exactly where another starts is no overlap. The same transaction's own checks are the only mechanic check; nothing pauses or refuses a booking because the owner's jobs overlap (`team_mechanics` off).
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-008 — The confirm MUST refuse a slot whose [start, end) does not lie inside one interval of the garage's `hours` for the slot's Bucharest weekday, or whose Bucharest day is a GARAGE_CLOSED_DAY of the garage or a PUBLIC_HOLIDAY (409 `outside_hours`); a garage whose `hours` is `{}` passes the hours part. One pure function, in the domain next to the garage hours, MUST answer whether a span is inside the hours, so the plan and the tests share it.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-010 — Three timers per booking MUST exist as object-timer kinds (`scheduler/timers.ts`: a stable job id per kind and object, replaced when set again): `booking-confirm-reminder-12h` at `accepted_at` + 12 h, `booking-confirm-reminder-2h` at `confirm_by` − 2 h, `booking-lapse` at `confirm_by`, set by the worker's consumer of `quote.accepted` when the booking is created (a repeated delivery replaces them); a reminder is set only when its time is after now and before `confirm_by` (so a slot under 12 h away gets no 12 h reminder), the lapse always, cleared by the confirm (no booking cancellation exists in the code yet; #203 and the driver's cancel clear them when they are built, and a timer that fires on a cancelled booking does nothing), and run by the 5-minute sweep when their own job was lost; each kind's `fire` MUST re-read the booking and do nothing unless it is still `awaiting_confirmation` (and, for a reminder, `confirm_by` is still ahead), so a late or repeated timer is harmless.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-012 — The lapse kind MUST, in one transaction: move the booking `awaiting_confirmation` → `lapsed` (actor `system`); move the accepted quote to `expired` with the reason `booking_lapsed` on its audit entry and its `quote.expired` event `{ quoteId, requestId, bookingId, reason: 'booking_lapsed' }`; move every other `waiting` quote of the request whose `expires_at` is past to `expired` (reason `held_past_validity`, the same event kind); then move the request `booked` → `quoted` when a `waiting` quote remains, else `booked` → `closed` with `closed_reason` `booking_lapsed` and `closed_at`; write `booking.lapsed` `{ bookingId, requestId, quoteId }` to the driver's account and the garage; and record the audit entries. REQUEST_RECIPIENT rows are untouched by the lapse: with the request `quoted` again, a garage still inside its window may still quote. A `waiting` quote inside its 7 days MUST stay `waiting` and be acceptable again (the existing accept, 222-FR-004 unchanged: one that expired answers 409 `invalid_transition` `expired`). The quote-expiry sweep MUST leave a `waiting` quote alone while its request is `booked` (verified or added by the plan) and MUST never touch an `accepted` quote.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-014 — The garage's Oferte trimise row of an accepted quote MUST show, to the owner and a receptionist only, the button "Confirmă programarea" / "Confirm the booking", opening the shared overlay panel (a drawer from 768 px, a sheet under it) titled "Confirmă programarea" with: the time left at the top in 222-FR-007's wording; the driver's short name, the car, the jobs, the slot (day and time, Romania's time zone) and the duration; the select "Mecanic" / "Mechanic" (only with `team_mechanics` on; required; the garage's mechanics by name); the select "Elevator" / "Lift" (only with `lift_schedule` on; "Fără elevator" / "No lift" first, then "Elevator 1" … "Elevator N"); the buttons "Confirmă" / "Confirm" and "Renunță" / "Cancel". A missing mechanic is shown before sending; the API's message is shown under the matching select (`mechanic_busy`, `mechanic_unavailable` → Mecanic; `lift_busy` → Elevator) or at the top (`outside_hours`, `invalid_transition`), the other choices kept; on 200 the panel closes and the row re-renders. The dialog MUST show nothing of the car's history.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-015 — The garage's confirmed row MUST read "Acceptată · programată <day>, <time>" / "Accepted · booked <day>, <time>" (the mock's text; `azi`/`mâine`/the weekday or date as the platform writes relative days) with the lamp's accepted colour, no button, the mechanic's name and "Elevator n" when set, the phone link and the plate; the garage feed MUST re-read on `booking.confirmed` and `booking.lapsed`, and a lapsed or cancelled row leaves the list (222 edge case kept).
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-017 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the dialog, the drawer, the sheet and both rows MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every control at least 44 px tall; a new web component is a folder (`<name>.ts`, `<name>.html`, `<name>.css`), and the selects are native `<select>` elements styled with `hlmInput` (no helm select exists in `libs/ui-cockpit`; plan, Constitution III). Each select has a visible label tied to it, an API message under a select is announced to assistive technology (`aria-describedby`, `role=alert`), the panel traps focus and returns it to the row's button on close, and Esc closes it as `Renunță` does.
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-019 — The OpenAPI document and the generated client MUST carry the new operation, the body DTO, the new 409 codes and the DTOs' new fields (`npx nx run data-access:generate`, never edited by hand).
+
+_From 389-confirm-booking-lift-mechanic._
+
+### 389-FR-020 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL and Redis: scenario US1-1 in one transaction (booking, job with its stage entry, the other quotes `lost`, the recipients `closed`, the request still `booked`, the audit entries, both events, the timers cleared); US1-6 (receptionist 200, mechanic 403, another garage, the driver and an admin 404, a visitor 401); the switches (US2-1 to US2-4: the 400s, the owner's row created once and reused, no mechanic stored with the team off, the overlap allowed); the overlaps (US3-1 to US3-3: mechanic, lift, touching ranges allowed, the race on one mechanic and on one lift ending with one confirmed, the constraint answered as 409); the hours (US3-4: an interval, a split day, a closed day, a holiday, `{}` passing); the two 409s for the same booking twice, `lapsed`, `cancelled` and a passed `confirm_by`; the plate present only from confirmation and the history never in a garage read; the timers set on `quote.accepted` at the right moments for the Monday–Thursday and Monday–Monday examples, the 12 h one skipped, replaced on a repeated delivery, cleared on confirm, harmless when fired late; the reminders built once per recipient, never for a mechanic, not held by quiet hours; the lapse (US4-3) with a remaining open quote and with none, the recipients untouched, the held quote expiring, the accept of the open quote after the lapse and the 409 for the expired one; the sweep lapsing a missed booking once; the consumers building BOOKING_CONFIRMED and BOOKING_LAPSED once per recipient. In Jest, web: the dialog's fields per switch, the required mechanic, the messages per code, the confirmed and the lapsed rows in both languages, the re-reads. In Playwright, one end-to-end test: a driver accepts a quote; the garage owner, in a second browser, confirms it with a mechanic and a lift; the driver's Cererile mele shows "Programată · <day>, <time>" without a reload. The lapse is proven in Jest with an injected clock, not in Playwright.
+
+_From 389-confirm-booking-lift-mechanic._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -576,3 +633,5 @@ _From 313-compare-quotes._
 - `343-FR-005` — superseded by `347-FR-008` (2026-10-11)
 - `344-FR-008` — superseded by `222-FR-005` (2026-10-15)
 - `221-FR-007` — superseded by `049-FR-008` (2026-10-17)
+- `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
+- `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
