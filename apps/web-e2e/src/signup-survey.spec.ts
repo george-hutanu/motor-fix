@@ -63,7 +63,7 @@ test.describe('the sign-up survey', () => {
 
     await page.getByRole('button', { name: 'Trimite spre verificare' }).click();
     await expect(page.locator('mf-missing-summary .complete')).toHaveText(
-      'Totul e complet',
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
     );
     await page.getByRole('button', { name: /SPUNE‑NE CUM LUCREZI/ }).click();
 

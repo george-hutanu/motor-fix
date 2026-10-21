@@ -7,7 +7,10 @@ import type {
   SurveySection,
 } from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
-import { ListingDraftsService } from '@motor-fix/data-access';
+import {
+  ListingDraftsService,
+  type ListingSubmittedDto,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 
@@ -32,6 +35,12 @@ type StepKey = keyof NonNullable<ListingDraftData['steps']>;
 // What the server said of the whole listing, after the flush.
 type CheckOutcome =
   | { kind: 'complete'; warnings: FieldProblem[] }
+  | { kind: 'incomplete'; errors: FieldProblem[]; warnings: FieldProblem[] }
+  | { kind: 'failed' };
+// What came of sending the listing for verification.
+type SubmitOutcome =
+  | { kind: 'sent'; result: ListingSubmittedDto }
+  | { kind: 'owner' }
   | { kind: 'incomplete'; errors: FieldProblem[]; warnings: FieldProblem[] }
   | { kind: 'failed' };
 interface DraftNote {
@@ -274,6 +283,38 @@ export class DraftKeeper {
       this.refused(error);
       return { kind: 'failed' };
     }
+  }
+
+  // The listing sent for verification once everything typed is on the
+  // server copy. A key sent again answers what its first send made.
+  async submit(idempotencyKey: string): Promise<SubmitOutcome> {
+    if (!(await this.flush())) return { kind: 'failed' };
+    const { draftId, token } = this.draft();
+    try {
+      const result = await this.api.listingSubmitControllerSubmit({
+        'Idempotency-Key': idempotencyKey,
+        id: draftId as string,
+        [TOKEN]: token as string,
+      });
+      return { kind: 'sent', result };
+    } catch (error) {
+      return this.notSent(error);
+    }
+  }
+
+  private notSent(error: unknown): SubmitOutcome {
+    const problem = toProblem(error);
+    if (problem.status === 409 && problem.code === 'garage_already_exists')
+      return { kind: 'owner' };
+    if (problem.status === 422 && problem.errors)
+      return {
+        errors: problem.errors,
+        kind: 'incomplete',
+        warnings: problem.warnings ?? [],
+      };
+    // A draft gone or sent under another key ends the form, as on a save.
+    if (VIEW_FOR[problem.status]) this.refused(error);
+    return { kind: 'failed' };
   }
 
   // An empty form, no longer tied to the server copy the link lost.

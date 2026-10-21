@@ -250,7 +250,6 @@
     "check": {
       "addressNeeded": "Alege adresa service‑ului",
       "brandsNeeded": "Alege cel puțin o marcă pe care lucrezi",
-      "complete": "Totul e complet",
       "cuiInUse": "Acest CUI apare deja într‑o altă cerere. Îl verificăm când trimiți.",
       "cuiNeeded": "Scrie CUI‑ul firmei",
       "declarationNeeded": "Bifează declarația și scrie‑ți numele",
@@ -484,6 +483,7 @@
       "noBrand": "Nicio marcă aleasă",
       "range": "{from}–{to} lei/oră",
       "rangePlaceholder": "Manopera: — lei/oră",
+      "sent": "În verificare · nepublicat",
       "title": "Cum îl vor vedea șoferii",
       "toggle": "Previzualizare"
     },
@@ -519,6 +519,15 @@
     "required": "obligatoriu",
     "save": "Salvează ciorna",
     "saved": "Ciorna e salvată",
+    "sent": {
+      "again": "Trimite din nou",
+      "failed": "Nu am putut trimite cererea.",
+      "heading": "Am primit cererea. O verificăm în 1–2 zile lucrătoare.",
+      "incomplete": "Mai lipsesc răspunsuri. Răspunde la toate întrebările și trimite din nou.",
+      "owner": "Contul tău are deja un service.",
+      "statusTitle": "Cererea ta de înscriere",
+      "toDashboard": "Deschide panoul service‑ului"
+    },
     "sentLine": "Intră în cont ca să vezi service‑ul.",
     "sentTitle": "Înscrierea a fost trimisă",
     "signIn": "Intră în cont",
@@ -950,5 +959,21 @@
     "refusedList": "Nu primește: ",
     "worksOn": "Lucrează pe {brand}",
     "worksOnList": "Lucrează pe: "
+  },
+  "verificationStatus": {
+    "approved": "Aprobat, pe hartă",
+    "inReview": "În verificare",
+    "items": {
+      "address": "Adresa",
+      "documents": "Documentele",
+      "other": "Altceva",
+      "photos": "Fotografiile",
+      "rar": "Autorizația RAR"
+    },
+    "label": "Stadiul verificării",
+    "moreRequested": "Cerute completări",
+    "offMap": "Profilul nu apare pe hartă până la aprobare. Dacă lipsește ceva, îți scriem ce anume și poți completa fără să o iei de la capăt.",
+    "rejected": "Respins",
+    "submitted": "Trimis"
   }
 }

@@ -242,7 +242,6 @@
     "check": {
       "addressNeeded": "Choose the garage's address",
       "brandsNeeded": "Choose at least one brand you work on",
-      "complete": "Everything is complete",
       "cuiInUse": "This CUI is already on another listing. We check it when you send.",
       "cuiNeeded": "Write the company's CUI",
       "declarationNeeded": "Tick the declaration and write your name",
@@ -473,6 +472,7 @@
       "noBrand": "No brand chosen",
       "range": "{from}–{to} lei/hour",
       "rangePlaceholder": "Labour: — lei/hour",
+      "sent": "Under review · not published",
       "title": "How drivers will see it",
       "toggle": "Preview"
     },
@@ -508,6 +508,15 @@
     "required": "required",
     "save": "Save draft",
     "saved": "Draft saved",
+    "sent": {
+      "again": "Send again",
+      "failed": "We could not send the listing.",
+      "heading": "Request received. We check it within 1–2 working days.",
+      "incomplete": "Some answers are missing. Answer every question and send again.",
+      "owner": "Your account already has a garage.",
+      "statusTitle": "Your listing request",
+      "toDashboard": "Open your garage's dashboard"
+    },
     "sentLine": "Sign in to see your garage.",
     "sentTitle": "The listing was sent",
     "signIn": "Sign in",
@@ -933,5 +942,21 @@
     "refusedList": "Does not take: ",
     "worksOn": "Works on {brand}",
     "worksOnList": "Works on: "
+  },
+  "verificationStatus": {
+    "approved": "Approved, on the map",
+    "inReview": "Under review",
+    "items": {
+      "address": "The address",
+      "documents": "The documents",
+      "other": "Something else",
+      "photos": "The photos",
+      "rar": "The RAR authorisation"
+    },
+    "label": "Verification stages",
+    "moreRequested": "More details requested",
+    "offMap": "The profile stays off the map until it is approved. If something is missing we tell you what, and you can add it without starting over.",
+    "rejected": "Rejected",
+    "submitted": "Submitted"
   }
 }

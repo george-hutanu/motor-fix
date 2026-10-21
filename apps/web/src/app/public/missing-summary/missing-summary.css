@@ -66,7 +66,21 @@ li button:focus-visible {
   outline-offset: var(--mf-focus-offset);
 }
 .complete {
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  color: var(--mf-text);
+}
+.complete:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+.lamp {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mf-green);
 }
 .failed {
   color: var(--mf-red-ink);

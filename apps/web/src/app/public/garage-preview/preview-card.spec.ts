@@ -1,4 +1,4 @@
-import { previewCard } from './preview-card';
+import { previewCard, previewState } from './preview-card';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
 const BMW = 'b-bmw';
@@ -217,5 +217,13 @@ describe('the preview card', () => {
     ]) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe('the preview state line', () => {
+  // @traces 116-FR-005
+  it('reads draft while the listing is open and under review once sent', () => {
+    expect(previewState(false)).toBe('public.listing.preview.draft');
+    expect(previewState(true)).toBe('public.listing.preview.sent');
   });
 });

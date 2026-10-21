@@ -313,6 +313,12 @@ describe('a stored copy whose form data the server would refuse', () => {
 });
 
 describe('DraftKeeper before the check', () => {
+  const SENT = {
+    fileId: 'f1',
+    garageId: 'g1',
+    status: 'submitted',
+    warnings: [],
+  };
   const missing = [{ code: 'required', field: 'steps.1.phone' }];
   const told = [{ code: 'document_missing', field: 'documents.x' }];
   let api: Record<string, jest.Mock>;
@@ -331,6 +337,7 @@ describe('DraftKeeper before the check', () => {
       }),
       listingDraftsControllerSave: jest.fn().mockResolvedValue({ id: 'd1' }),
       listingDraftsControllerSendLink: jest.fn().mockResolvedValue({}),
+      listingSubmitControllerSubmit: jest.fn().mockResolvedValue(SENT),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -530,6 +537,84 @@ describe('DraftKeeper before the check', () => {
     expect(calls[1][0].body.data.survey).toEqual({
       liftsCount: '1',
       mechanicsCount: '0',
+    });
+  });
+
+  describe('sending the listing', () => {
+    // @traces 116-FR-006
+    it('sends the draft under its key once the flush is done, and answers what was made', async () => {
+      const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+
+      expect(await kept.submit('k-1')).toEqual({ kind: 'sent', result: SENT });
+      expect(api['listingSubmitControllerSubmit']).toHaveBeenCalledWith({
+        'Idempotency-Key': 'k-1',
+        id: 'd1',
+        'x-listing-token': 't1',
+      });
+      const [saved] =
+        api['listingDraftsControllerSave'].mock.invocationCallOrder;
+      const [sent] =
+        api['listingSubmitControllerSubmit'].mock.invocationCallOrder;
+      expect(saved).toBeLessThan(sent as number);
+    });
+
+    // @traces 116-FR-006
+    it('sends nothing when the flush fails', async () => {
+      const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+      api['listingDraftsControllerSave'].mockRejectedValue(refusal(500));
+
+      expect(await kept.submit('k-1')).toEqual({ kind: 'failed' });
+      expect(api['listingSubmitControllerSubmit']).not.toHaveBeenCalled();
+    });
+
+    // @traces 116-FR-009
+    it('tells an account that already owns a garage apart, keeping the form', async () => {
+      const kept = keeper({ draftId: 'd1', token: 't1' });
+      api['listingSubmitControllerSubmit'].mockRejectedValue(
+        refusal(409, { code: 'garage_already_exists' }),
+      );
+
+      expect(await kept.submit('k-1')).toEqual({ kind: 'owner' });
+      expect(kept.view()).toBe('form');
+    });
+
+    // @traces 116-FR-006
+    it('ends the form when the draft was already sent under another key', async () => {
+      const kept = keeper({ draftId: 'd1', token: 't1' });
+      api['listingSubmitControllerSubmit'].mockRejectedValue(
+        refusal(409, { code: 'draft_already_submitted' }),
+      );
+
+      expect(await kept.submit('k-1')).toEqual({ kind: 'failed' });
+      expect(kept.view()).toBe('sent');
+    });
+
+    // @traces 116-FR-006
+    it('answers the server list on a 422', async () => {
+      const kept = keeper({ draftId: 'd1', token: 't1' });
+      api['listingSubmitControllerSubmit'].mockRejectedValue(
+        refusal(422, {
+          code: 'validation_failed',
+          errors: [{ code: 'required', field: 'survey' }],
+          warnings: told,
+        }),
+      );
+
+      expect(await kept.submit('k-1')).toEqual({
+        errors: [{ code: 'required', field: 'survey' }],
+        kind: 'incomplete',
+        warnings: told,
+      });
+    });
+
+    // @traces 116-FR-006
+    it('fails on any other answer without a draft note, so the page can offer it again', async () => {
+      const kept = keeper({ draftId: 'd1', token: 't1' });
+      api['listingSubmitControllerSubmit'].mockRejectedValue(refusal(500));
+
+      expect(await kept.submit('k-1')).toEqual({ kind: 'failed' });
+      expect(kept.note()).toBeNull();
+      expect(kept.view()).toBe('form');
     });
   });
 });

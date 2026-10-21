@@ -61,5 +61,5 @@
   @if (shown.mobileKm; as km) {
     <p class="mobile">{{ 'public.listing.preview.mobile' | t: { km: km } }}</p>
   }
-  <p class="state">{{ 'public.listing.preview.draft' | t }}</p>
+  <p class="state">{{ state() | t }}</p>
 </div>

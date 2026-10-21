@@ -17,7 +17,26 @@
     </div>
   }
   @default {
-    @if (surveyOpen()) {
+    @if (sentStatus(); as status) {
+      <div class="status-view">
+        <p class="label">{{ 'public.listing.label' | t }}</p>
+        <h1 tabindex="-1">{{ 'public.listing.sent.statusTitle' | t }}</h1>
+        <div class="status-page">
+          <mf-verification-stages [status]="status" />
+          <aside>
+            <mf-garage-preview
+              [details]="details()"
+              [brands]="brands()"
+              [prices]="prices()"
+              [mechanics]="mechanics()"
+              [order]="brandOrder()"
+              [place]="place()"
+              [sent]="true"
+            />
+          </aside>
+        </div>
+      </div>
+    } @else if (surveyOpen()) {
       <mf-signup-survey
         [value]="surveyAnswers()"
         [busy]="finishing()"
@@ -26,6 +45,21 @@
         (back)="closeSurvey()"
         (finish)="finish()"
       />
+      @if (sendState(); as state) {
+        <div class="send-result" role="alert">
+          @if (state === 'owner') {
+            <p>{{ 'public.listing.sent.owner' | t }}</p>
+            <a hlmBtn variant="secondary" routerLink="/app/garage">{{ 'public.listing.sent.toDashboard' | t }}</a>
+          } @else {
+            @if (state === 'incomplete') {
+              <p>{{ 'public.listing.sent.incomplete' | t }}</p>
+            } @else {
+              <p>{{ 'public.listing.sent.failed' | t }}</p>
+            }
+            <button hlmBtn type="button" [attr.aria-busy]="finishing() || null" (click)="submit()">{{ 'public.listing.sent.again' | t }}</button>
+          }
+        </div>
+      }
     } @else {
       <p class="label">{{ 'public.listing.label' | t }}</p>
       <h1>{{ 'public.listing.heading' | t }}</h1>

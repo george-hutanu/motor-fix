@@ -105,12 +105,25 @@ describe('MissingSummary', () => {
     expect(asked).toEqual(['files']);
   });
 
-  // @traces 115-FR-009
-  it('says the listing is complete, and that a check failed', async () => {
+  // @traces 115-FR-009 116-FR-001
+  it('confirms a complete listing with the stages, Trimis lit, and says when a check failed', async () => {
     const complete = await open([], 'complete');
-    expect(text(complete.summary.querySelector('.complete'))).toBe(
-      'Totul e complet',
+    expect(text(complete.summary.querySelector('h2.complete'))).toBe(
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
     );
+    const stages = [
+      ...complete.summary.querySelectorAll('mf-verification-stages ol > li'),
+    ];
+    expect(stages.map((li) => text(li.querySelector('.name')))).toEqual([
+      'Trimis',
+      'În verificare',
+      'Aprobat, pe hartă',
+    ]);
+    expect(stages[0]?.getAttribute('aria-current')).toBe('step');
+    expect(text(complete.summary.querySelector('.off-map'))).toMatch(
+      /^Profilul nu apare pe hartă până la aprobare\./,
+    );
+    expect(text(complete.summary).toLowerCase()).not.toContain('publică');
 
     const failed = await open([], 'failed');
     expect(text(failed.summary)).toBe(
@@ -156,9 +169,14 @@ describe('MissingSummary', () => {
     expect(asked).toBe(1);
   });
 
-  // @traces 1359-FR-001
+  // @traces 1359-FR-001 116-FR-001
   it('names the survey button in English', async () => {
     const { summary } = await open([], 'complete', 'en');
+
+    expect(text(summary.querySelector('h2.complete'))).toBe(
+      'Request received. We check it within 1–2 working days.',
+    );
+    expect(text(summary).toLowerCase()).not.toContain('publish');
 
     expect(text(summary.querySelector('button.tell-us'))).toContain(
       'TELL US HOW YOU WORK',

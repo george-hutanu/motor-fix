@@ -614,7 +614,9 @@ test.describe('axe on the listing steps', () => {
     await expect(photos.locator('li.photo')).toHaveCount(1);
     await expect(summary.getByRole('button')).toHaveCount(0);
     await send.click();
-    await expect(summary.locator('.complete')).toHaveText('Totul e complet');
+    await expect(summary.locator('.complete')).toHaveText(
+      'Am primit cererea. O verificăm în 1–2 zile lucrătoare.',
+    );
     found.push(...(await listingScan(page, 'the listing, complete')));
 
     // At 320 px the steps fold into a bar; open, its list scrolls nothing.
