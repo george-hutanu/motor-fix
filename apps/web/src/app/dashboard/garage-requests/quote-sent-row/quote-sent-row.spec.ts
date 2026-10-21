@@ -493,4 +493,15 @@ describe('a row whose quote the driver declined', () => {
 
     expect(text(row.querySelector('.status'))).toBe('Declined by the customer');
   });
+
+  it('greys the status text with its lamp, not the amber of a waiting quote', () => {
+    const css = readFileSync(join(__dirname, 'quote-sent-row.css'), 'utf8');
+
+    expect(css).toMatch(
+      /:host\(\.declined\) \.status \{[^}]*color: var\(--mf-text-secondary\)/,
+    );
+    expect(css).toMatch(
+      /:host\(\.declined\) \.lamp \{[^}]*background: var\(--mf-text-secondary\)/,
+    );
+  });
 });
