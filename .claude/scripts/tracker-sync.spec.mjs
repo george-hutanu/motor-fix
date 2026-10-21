@@ -553,6 +553,15 @@ describe("an event for another story, run from this feature's worktree", () => {
     assert.equal(gh.itemValues(62).Status, "Planning");
   });
 
+  it("a prior that is not a status unblock may return to is ignored, and the next source is read", async () => {
+    const gh = world({ story: "Implementing" });
+    gh.state.comments.set(62, [{ id: "IC_1", body: "Blocked: y\n\n<!-- tracker-sync prior: Implementing -->" }, { id: "IC_2", body: "Blocked: z\n\n<!-- tracker-sync prior: Done -->" }, { id: "IC_3", body: "Blocked: w\n\n<!-- tracker-sync prior: Shipped -->" }]);
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo: worktree("# x\n\n- 2026-10-05 · blocked · ST-290 · Done → Blocked — y\n") });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "Implementing");
+    assert.equal(issueOf(gh, 62).state ?? "open", "open", "never closed by a Done read back");
+  });
+
   it("unblock with no recorded prior returns the dependent to To do, not this worktree's status", async () => {
     const gh = world({ story: "Implementing" });
     const repo = worktree();
@@ -580,6 +589,16 @@ describe("an event for another story, run from this feature's worktree", () => {
     const gh = world();
     const r = await run(["unblock", "--story", "ST-290", "--pr", "335"], { gh, repo: worktree() });
     assert.equal(r.code, 0, r.err.join("\n"));
+    assert.ok(prEdits(r).some((a) => a.includes("335")));
+  });
+
+  it("a story this feature's log linked a PR for is its own too", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = repoWith();
+    writeFileSync(join(repo, FEATURE, "tracker-sync.md"), "# Tracker sync — 1036-github-tracker-lifecycle\n\n- 2026-10-01 · pr · ST-290 · PR #335 https://github.com/george-hutanu/motor-fix/pull/335\n");
+    writeFileSync(join(repo, ".specify", "run-state.json"), JSON.stringify({ prior_status: "QA" }));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "QA", r.err.join("\n"));
     assert.ok(prEdits(r).some((a) => a.includes("335")));
   });
 

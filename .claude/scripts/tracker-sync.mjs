@@ -33,7 +33,7 @@ import { GitHubError, githubClient } from "./tracker/github.mjs";
 import { epicLabel, isContainer, statusOf, tracker } from "./tracker/issues.mjs";
 import { nextTasks } from "./tracker/next.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
-import { decide, recordPrior } from "./tracker/status.mjs";
+import { decide, LADDER, recordPrior } from "./tracker/status.mjs";
 import { assertProjectScope, ghEnv, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
@@ -57,6 +57,8 @@ const PENDING = /^- \[TRACKER-SYNC PENDING: (.+)\] retry: (\[.*\])$/;
 /** The marker a Blocked comment carries, so `unblock` run from any worktree can read the status it left. */
 const priorMarker = (status) => `<!-- tracker-sync prior: ${status} -->`;
 const PRIOR_MARKER = /<!-- tracker-sync prior: ([^<>]+?) -->/;
+/** A status `unblock` may return to: on the ladder (or a legacy name for a rung), never Done. Anything else read back is ignored. */
+const returnable = (status) => status !== "Done" && (LADDER.includes(status) || status === "In progress" || status === "In review");
 const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 function parseArgs(argv) {
@@ -374,7 +376,7 @@ async function dependentPrior(ctx) {
   const comments = await ctx.github.pages(`issues/${ctx.story.number}/comments?per_page=100`);
   for (const c of [...comments].reverse()) {
     const m = String(c.body ?? "").match(PRIOR_MARKER);
-    if (m) return m[1];
+    if (m && returnable(m[1])) return m[1];
   }
   const specs = dirname(ctx.feature.dir);
   const line = new RegExp(`^- (\\d{4}-\\d{2}-\\d{2}) · blocked · ${ctx.st} · (.+?) → Blocked(?: — |$)`);
@@ -384,7 +386,7 @@ async function dependentPrior(ctx) {
     if (!existsSync(file)) continue;
     for (const text of readFileSync(file, "utf8").split("\n")) {
       const m = text.match(line);
-      if (m && (!best || m[1] >= best.date)) best = { date: m[1], status: m[2] };
+      if (m && returnable(m[2]) && (!best || m[1] >= best.date)) best = { date: m[1], status: m[2] };
     }
   }
   return best?.status ?? null;
