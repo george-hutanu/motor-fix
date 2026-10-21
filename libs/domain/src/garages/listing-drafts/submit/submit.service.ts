@@ -30,6 +30,7 @@ import type {
   PrismaClient,
 } from '../../../generated/prisma/client';
 import { countListingSubmission } from '../../../metrics/product-counters';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import { GarageDetailsService } from '../../details/garage-details.service';
 import { LegalDocumentsService } from '../../documents/legal-documents/legal-documents.service';
 import { writeGarageBrands } from '../../garage-brands/write-garage-brands';
@@ -144,6 +145,7 @@ export class ListingSubmitService {
     private readonly listingPhotos: ListingPhotosService,
     private readonly verification: VerificationService,
     private readonly documents: LegalDocumentsService,
+    private readonly notifications: NotificationsService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
@@ -246,6 +248,7 @@ export class ListingSubmitService {
       },
       where: { id },
     });
+    await this.notifications.settleDraftReminder(tx, id);
     await this.audit.record(tx, {
       action: 'update',
       actorId: actor.accountId,

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { ListingDraftData, SurveySection } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 
@@ -8,9 +10,11 @@ import { newToken } from '../../../auth/email-confirmation/email-confirmation';
 import type { Actor } from '../../../auth/policy';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { outbox } from '../../../events/event.port';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
+  testConfig,
 } from '../../../notifications/notifications.testing';
 import { GarageDetailsService } from '../../details/garage-details.service';
 import { LegalDocumentsService } from '../../documents/legal-documents/legal-documents.service';
@@ -43,6 +47,14 @@ const service = new ListingSubmitService(
   photos,
   new VerificationService(audit, outbox, { skipManualApproval: false }),
   legal,
+  new NotificationsService(
+    prisma,
+    {} as never,
+    { publish: async () => 0 } as never,
+    testConfig('http://localhost:9'),
+    null,
+    audit,
+  ),
   audit,
   outbox,
 );
@@ -337,6 +349,59 @@ describe('sending a complete draft', () => {
         (e) => e.actorId === actor.accountId && e.actorRole === 'owner',
       ),
     ).toBe(true);
+  });
+});
+
+// @traces 116-FR-036
+describe('a draft whose reminder the queue refused', () => {
+  it('settles the unsent reminder row when the draft is sent, so none stays queued', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    const reminder = await prisma.notification.create({
+      data: {
+        channel: 'email',
+        eventId: randomUUID(),
+        kind: 'LISTING_REMINDER',
+        listingDraftId: id,
+        status: 'queued',
+        subjectId: id,
+      },
+    });
+
+    await service.submit(actor, id, token, 'key-1');
+
+    expect(
+      await prisma.notification.findUniqueOrThrow({
+        where: { id: reminder.id },
+      }),
+    ).toMatchObject({ failure: 'draft_sent', status: 'failed' });
+  });
+
+  it('leaves the reminder row queued when the send fails part-way', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    const reminder = await prisma.notification.create({
+      data: {
+        channel: 'email',
+        eventId: randomUUID(),
+        kind: 'LISTING_REMINDER',
+        listingDraftId: id,
+        status: 'queued',
+        subjectId: id,
+      },
+    });
+    const attach = jest
+      .spyOn(legal, 'attach')
+      .mockRejectedValueOnce(new Error('connection lost'));
+
+    await service.submit(actor, id, token, 'key-1').catch(() => undefined);
+
+    attach.mockRestore();
+    expect(
+      await prisma.notification.findUniqueOrThrow({
+        where: { id: reminder.id },
+      }),
+    ).toMatchObject({ status: 'queued' });
   });
 });
 

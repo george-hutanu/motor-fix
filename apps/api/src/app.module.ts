@@ -111,7 +111,7 @@ export class AppModule {
         garages,
         photos,
         ListingDocumentsModule.register(garages),
-        ListingSubmitModule.register(garages, photos),
+        ListingSubmitModule.register(garages, photos, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
         SystemLogModule.register({
           databaseUrl: env.DATABASE_URL,

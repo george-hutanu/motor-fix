@@ -262,6 +262,22 @@ export class NotificationsService {
     return { ...send(row.id), data: { id: row.id }, delay: Math.max(0, delay) };
   }
 
+  // A sent draft is never reminded: its reminder row still waiting for the
+  // queue is failed, in the transaction that sends the draft.
+  async settleDraftReminder(
+    tx: Prisma.TransactionClient,
+    draftId: string,
+  ): Promise<void> {
+    await tx.notification.updateMany({
+      data: { failure: 'draft_sent', status: 'failed' },
+      where: {
+        kind: 'LISTING_REMINDER',
+        listingDraftId: draftId,
+        status: { in: ['queued', 'held'] },
+      },
+    });
+  }
+
   // A row the queue refuses is failed, since no job could carry its link
   // again, unless the caller keeps it to queue that same row later (the
   // reminder); the error goes on to the caller either way.
