@@ -43,9 +43,13 @@ describe('PR QA workflow: trigger', () => {
     assert.deepEqual(block('pull_request', 2, block('on')).map((l) => l.trim()).filter(Boolean), ['types: [ready_for_review, synchronize, reopened]']);
   });
 
-  it('skips a draft and a PR from a fork, but never a dispatched run', () => {
+  // @traces 1361-FR-006
+  it('runs on pull_request only for a ready same-repository PR labelled qa: on-push, and never skips a dispatched run', () => {
     const cond = job.find((l) => l.startsWith('    if: '))?.slice('    if: '.length) ?? '';
-    assert.equal(cond, "github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)");
+    assert.equal(
+      cond,
+      "github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push')))",
+    );
   });
 
   it('falls back to the pull_request event for every input the run reads', () => {
@@ -69,11 +73,18 @@ describe('PR QA workflow: trigger', () => {
     assert.ok(title.includes('${{ inputs.sha || github.event.pull_request.head.sha }}'), title);
   });
 
-  it('keeps one run per PR: a newer one cancels the older', () => {
+  // @traces 1361-FR-006
+  it('keeps one run per PR, and a pull_request event that will not run takes a group of its own, so it never cancels a dispatched lap', () => {
     assert.deepEqual(block('concurrency').map((l) => l.trim()).filter(Boolean), [
-      'group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}',
+      "group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push'))) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}",
       'cancel-in-progress: true',
     ]);
+  });
+
+  // @traces 1361-FR-008
+  it('lifts the sign-in route limit for the API it boots, and nowhere else', () => {
+    assert.match(block('env', 4, job).join('\n'), /^ {6}PR_QA_SIGN_IN_UNLIMITED: '1'$/m);
+    assert.equal(code.split('PR_QA_SIGN_IN_UNLIMITED').length, 2, 'set once, in the job env');
   });
 
   it('reads the repository and earlier runs\' artifacts, and writes commit statuses, nothing else', () => {

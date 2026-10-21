@@ -8,9 +8,10 @@
 // user, moves what they approve to .specify/_gc_trash/, and logs it.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { loadInstincts } from "./instincts.mjs";
 import { loadRecords, unused } from "./telemetry.mjs";
+import { ledgerDir } from "./lib/telemetry.mjs";
 import { loadRegistry } from "./lib/hooks.mjs";
 
 const DAY = 86400000;
@@ -74,12 +75,13 @@ export function instinctCandidates(repo) {
 }
 
 export function telemetryCandidates(repo, { now = Date.now(), days = 90 } = {}) {
-  const dir = join(repo, ".specify", "telemetry");
+  // The main checkout's ledgers, so from a worktree the path climbs out of it.
+  const dir = ledgerDir(repo);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .filter((f) => now - statSync(join(dir, f)).mtimeMs > days * DAY)
-    .map((f) => candidate("telemetry", `.specify/telemetry/${f}`, `ledger untouched for over ${days} days`, "delete"));
+    .map((f) => candidate("telemetry", relative(repo, join(dir, f)), `ledger untouched for over ${days} days`, "delete"));
 }
 
 export function worktreeCandidates(repo) {

@@ -84,10 +84,12 @@ which uses the same scan, so a pass started by it always has something to do.
    oldest-first order), claim it, then dispatch it:
 
    ```bash
-   node .claude/scripts/watch.mjs claim <path> <fix>
+   node .claude/scripts/watch.mjs claim <path> <fix> [--stale <stage>=<min>,… as the pass ran]
    ```
 
-   Then one `Agent` call per entry, `subagent_type: task-runner`,
+   A claim that exits 1 with `claim refused: <fix> claimed <m> min ago` is
+   live already (the schedule or another session dispatched it): skip that
+   entry. Then one `Agent` call per entry, `subagent_type: task-runner`,
    `run_in_background: true`, all in one message. An entry whose work only
    moves state (labels, the tracker, a finish log, a merge) and writes or judges no
    code also gets `model: "sonnet"`; today that is `merge`: it merges
@@ -175,6 +177,20 @@ isolated in a worktree never arms the wait.
 
 A pass with nothing to do writes nothing and dispatches nothing; under the
 wait it never starts, since the gate stays silent.
+
+With no session open, a launchd agent keeps the watch instead:
+`sh scripts/watch-schedule.sh install` (from the main checkout) loads
+`com.motorfix.watch`, which every 15 minutes runs `watch.mjs --gate` there and,
+on exit 2, `watch.mjs --dispatch`: this pass's `--fix` fixes and sweep, then
+each plan entry claimed and started as a detached `claude -p --agent
+task-runner` in its worktree (`--model sonnet` for `merge`), its prompt this
+step 4's opening with a pointer to the fix's row of the table. `status` shows
+whether it is loaded and the last line of `.work/watch-schedule/passes.log`
+(`<time> gate <exit> [dispatch <exit>]`); each agent's output is in
+`.work/watch-dispatch/`; `uninstall` removes it. It shares the claim with the
+wait: `claim` refuses a worktree whose claim is still live, whichever side
+wrote it, so the two never dispatch one worktree twice, and the caps count
+both sides' claims. The script and `--dispatch` refuse in a cloud session.
 
 ## Limits
 

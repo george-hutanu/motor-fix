@@ -24,10 +24,14 @@
 // and unhandled rejection, exit 1 on any; an address that does not answer is
 // one line and exit 1, and the flows are not run; flows still running after
 // ten minutes are one line too. It starts no server and dispatches nothing.
+// A clean --check leaves a proof, an empty file named by the checkout's head
+// and the flows file's hash under PROOF_DIR (`proof: <path>` on stderr), and
+// dispatch.mjs --flows dispatches only flows proven for the PR head.
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isEntryPoint } from "../lib/entry.mjs";
 import { seededSession } from "./endpoints.mjs";
@@ -37,6 +41,14 @@ import { HEALTH } from "./services.mjs";
 export const CHECK_DEFAULTS = { baseURL: "http://localhost:4200", apiURL: "http://localhost:3000" };
 // A flow awaiting what never settles would hold the check for ever; a lap's own bound is the job's 60 minutes.
 const CHECK_MS = 10 * 60_000;
+
+export const PROOF_DIR = join(".specify", ".cache", "flows-proven");
+
+/** The flows file's content hash: the first 16 hex of the sha256 of its bytes. */
+export const flowsHash = (file) => createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 16);
+
+/** Where the proof that flows of this hash passed --check at this commit lives in a checkout. */
+export const proofPath = (root, sha, hash) => join(root, PROOF_DIR, `${sha}-${hash}`);
 
 /** `US<k> scenario <m>` for every numbered acceptance scenario of every user story. */
 export function scenarios(specText) {
@@ -85,7 +97,7 @@ export function precheck({ flowsText, specText, loaded, name = "flows" }) {
 // and again only after the file changed.
 const modules = new Map();
 const importFlows = (file) => {
-  const key = `${pathToFileURL(resolve(file)).href}?precheck=${createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 16)}`;
+  const key = `${pathToFileURL(resolve(file)).href}?precheck=${flowsHash(file)}`;
   if (!modules.has(key)) modules.set(key, import(key));
   return modules.get(key);
 };
@@ -165,8 +177,20 @@ if (isEntryPoint(import.meta.url)) {
     process.exit(64);
   }
   const problems = await checkFlows({ flows, spec: flag("spec"), specRequired: true });
-  if (argv.includes("--check") && !problems.some((p) => p.startsWith(`${flows} does not load`) || p.includes("default export")))
+  const live = argv.includes("--check");
+  if (live && !problems.some((p) => p.startsWith(`${flows} does not load`) || p.includes("default export")))
     problems.push(...(await checkLive({ flows, baseURL: flag("base-url"), apiURL: flag("api-url") })));
   for (const p of problems) console.log(p);
+  if (live && !problems.length) {
+    try {
+      const git = (...args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+      const proof = proofPath(git("rev-parse", "--show-toplevel"), git("rev-parse", "HEAD"), flowsHash(flows));
+      mkdirSync(dirname(proof), { recursive: true });
+      writeFileSync(proof, "");
+      console.error(`proof: ${proof}`);
+    } catch (error) {
+      console.error(`no proof written, so dispatch.mjs will refuse these flows: ${String(error.stderr || error.message).trim().split("\n")[0]}`);
+    }
+  }
   process.exit(problems.length ? 1 : 0);
 }

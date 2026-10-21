@@ -9,10 +9,13 @@ name: PR QA
 # suites are CI's (ci.yml runs them on the merge result), not run again here.
 # It is .claude/scripts/pr-test/run.mjs in --tree mode, not a copy of it.
 #
-# It starts by itself when a same-repository PR is marked ready, pushed to or
-# reopened (pull_request), and by hand from .claude/scripts/pr-test/dispatch.mjs
-# (workflow_dispatch, which carries the agent's flows). A cloud session cannot
-# dispatch, so it finds the pull_request run for its head over REST instead.
+# A head gets one run. On the laptop it is the one
+# .claude/scripts/pr-test/dispatch.mjs dispatches (workflow_dispatch, which
+# carries the agent's flows). A cloud session cannot dispatch, so its
+# `lifecycle.mjs ready` labels the PR `qa: on-push`, and the run starts by
+# itself when such a same-repository PR is marked ready, pushed to or reopened
+# (pull_request); dispatch.mjs finds it over REST, and removes the label on the
+# laptop. A pull_request event for a PR without the label runs nothing.
 # The run sets the agent-review status on the head it tested, with its own
 # GITHUB_TOKEN: pending at the start, success only when the run passed with no
 # blocking findings, failure otherwise. The pr-tester agent still reads the
@@ -68,9 +71,14 @@ permissions:
 # One run per PR: a newer head, or a lap dispatched after the run the push
 # started, cancels the older one. A cancelled run writes no success or
 # failure: it replaces its own pending status with error, and leaves alone
-# one a newer run has set since.
+# one a newer run has set since. A pull_request event the job skips (no
+# `qa: on-push` label) is evaluated here before the job's `if`, so it takes a
+# group of its own and never cancels a dispatched lap.
+# The label is spelt format('{0} {1}', 'qa:', 'on-push') here and in the job's
+# `if`: these are plain (unquoted) YAML scalars, which cannot carry `: `; a
+# quoted scalar could, but the expression is kept bare.
 concurrency:
-  group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}
+  group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push'))) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
@@ -78,8 +86,9 @@ jobs:
     name: PR QA
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # A draft is not ready for QA, and a fork's PR gets no write token.
-    if: github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
+    # A draft is not ready for QA, a fork's PR gets no write token, and a PR
+    # without `qa: on-push` gets its one run from dispatch.mjs.
+    if: github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push')))
     env:
       PR: ${{ inputs.pr || github.event.pull_request.number }}
       SHA: ${{ inputs.sha || github.event.pull_request.head.sha }}
@@ -88,6 +97,9 @@ jobs:
       FLOWS: ${{ inputs.flows }}
       # The runner is the slot: run.mjs does not queue on scripts/heavy.sh here.
       HEAVY_HELD: '1'
+      # The sweep signs in at every size, scheme and language from one address:
+      # the API it boots (APP_ENV=test only) skips the sign-in route limit.
+      PR_QA_SIGN_IN_UNLIMITED: '1'
       TZ: UTC
     steps:
       - name: The inputs are a PR number, a full commit SHA, a lap and plain routes

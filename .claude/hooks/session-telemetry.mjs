@@ -1,24 +1,34 @@
 // Claude Code Stop hook — record what this session used. Adapted from ECC's
 // stop:cost-tracker and post:skill:track.
 //
-// One JSON file per session under .specify/telemetry/ (git-ignored), rewritten
+// One JSON file per session under the main checkout's .specify/telemetry/
+// (git-ignored), whichever worktree the session works in, rewritten
 // in place rather than appended to, so a long session costs one small write per
 // turn instead of an ever-growing log. The transcript is read incrementally
 // from the byte offset the last write recorded, and so is every subagent
 // transcript beside it (`<session>/subagents/agent-*.jsonl`), each from its own
 // offset. Tokens are bucketed under the active feature's level and the run's
-// phase at the time of the write. A `too heavy` mark left by
-// `level.mjs check --ready` in `pending.json` is moved into this ledger.
+// phase at the time of the write, both read from the checkout the payload's
+// `cwd` is in. A `too heavy` mark left by `level.mjs check --ready` in that
+// checkout's `pending.json` is moved into this ledger.
 //
 // Never blocks: every failure path exits 0. A usage ledger is not worth
 // interrupting a session for.
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { emptyRecord, mergeTranscript } from "../scripts/lib/telemetry.mjs";
+import { emptyRecord, ledgerDir, mergeTranscript } from "../scripts/lib/telemetry.mjs";
 import { activeFeature, featureKey, featureLevel } from "../scripts/lib/feature.mjs";
 
-const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+const started = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+
+const git = (args, cwd) => {
+  try {
+    return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || null;
+  } catch {
+    return null;
+  }
+};
 
 /** Read a file from `offset` to EOF without pulling the whole thing into memory. */
 function readFrom(file, offset) {
@@ -73,7 +83,10 @@ process.stdin.on("end", () => {
     const transcript = payload.transcript_path;
     if (!sessionId || !transcript || !existsSync(transcript)) process.exit(0);
 
-    const dir = join(repo, ".specify", "telemetry");
+    // The checkout the session works in now, which may be a worktree it moved into.
+    const cwd = payload.cwd ?? started;
+    const repo = git(["rev-parse", "--show-toplevel"], cwd) ?? cwd;
+    const dir = ledgerDir(repo);
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${sessionId.replace(/[^A-Za-z0-9_-]/g, "")}.json`);
 
@@ -104,19 +117,12 @@ process.stdin.on("end", () => {
     merged.bytes_read = (record.bytes_read ?? 0) + consumed;
     foldSubagents(merged, transcript, bucket);
 
-    const pending = join(dir, "pending.json");
+    const pending = join(repo, ".specify", "telemetry", "pending.json");
     const marks = readJson(pending)?.too_heavy;
     if (Array.isArray(marks)) merged.too_heavy.push(...marks);
-    try {
-      merged.branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-        cwd: repo,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      }).trim();
-    } catch {
-      merged.branch = null;
-    }
+    merged.branch = git(["rev-parse", "--abbrev-ref", "HEAD"], repo);
     merged.feature = active?.name ?? null;
+    merged.worktree = repo;
 
     writeFileSync(file, `${JSON.stringify(merged, null, 2)}\n`);
     if (existsSync(pending)) rmSync(pending, { force: true });
