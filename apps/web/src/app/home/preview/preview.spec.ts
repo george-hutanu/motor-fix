@@ -125,7 +125,7 @@ describe('HomePreview', () => {
     expect(said(first)).toContain('Works on Dacia');
     expect(said(first)).toContain('4.9');
     expect(said(first)).toContain('from 180 lei/hour');
-    expect(said(second)).toContain("Doesn't take Dacia");
+    expect(said(second)).toContain('Doesn’t take Dacia');
     expect(said(second)).toContain('No reviews yet');
   });
 
@@ -177,4 +177,75 @@ describe('HomePreview', () => {
       [...(right?.children ?? [])].map((child) => child.className),
     ).toEqual(['rating', 'rate']);
   });
+});
+
+// @traces 006-FR-007
+describe('HomePreview in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('labels the red lamp of a garage that refuses the brand in voice 4', async () => {
+    document.documentElement.dataset['voice'] = '4';
+    const page = await render([garageOf({ stance: 'does_not_take' })]);
+
+    expect(said(page.querySelector('mf-lamp') ?? undefined)).toBe(
+      'La Dacia zice „pas”',
+    );
+  });
+});
+
+// @traces 006-FR-007
+// @traces 227-FR-010
+describe('HomePreview at 320 px in every voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const BMW = { ...DACIA, name: 'BMW', slug: 'bmw' };
+  const status = async (voice: number, language: 'ro' | 'en') => {
+    document.documentElement.dataset['voice'] = String(voice);
+    await TestBed.inject(I18n).use(language);
+    fixture = TestBed.createComponent(HomePreview);
+    fixture.componentRef.setInput('brand', BMW);
+    fixture.componentRef.setInput('garages', [
+      garageOf({ stance: 'does_not_take' }),
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return (
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('mf-lamp')
+        ?.textContent?.trim() ?? ''
+    );
+  };
+
+  it.each(['en', 'ro'] as const)(
+    'lets voice 3’s red lamp break after its colon in %s, so it fits a 320 px row',
+    async (language) => {
+      const shown = await status(3, language);
+
+      expect(shown).toBe(
+        language === 'en' ? 'Not compatible: BMW' : 'Incompatibil: BMW',
+      );
+    },
+  );
+
+  // The status column holds about 122 px of 16 px text at 320 px: thirteen
+  // characters is the longest run that may not break.
+  it.each(
+    [1, 2, 3, 4, 5].flatMap((v) => [
+      [v, 'en'],
+      [v, 'ro'],
+    ]) as [number, 'ro' | 'en'][],
+  )(
+    'never joins voice %s’s red lamp into a run too wide for the row (%s)',
+    async (voice, language) => {
+      const runs = (await status(voice, language)).split(/[ \t\n]+/);
+
+      expect(Math.max(...runs.map((run) => run.length))).toBeLessThanOrEqual(
+        13,
+      );
+    },
+  );
 });

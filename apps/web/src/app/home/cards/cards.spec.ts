@@ -290,10 +290,10 @@ describe('HomeCards', () => {
       '/en/garages/service-auto-militari?brand=bmw',
     );
     expect(said(first.querySelector('mf-lamp'))).toBe('Works on BMW');
-    expect(lists(first)).toEqual(['Works on BMW, Dacia', "Doesn't take Tesla"]);
+    expect(lists(first)).toEqual(['Works on BMW, Dacia', 'Doesn’t take Tesla']);
     expect(said(first.querySelector('.rate'))).toBe('from 180 lei/hour');
     expect(said(first.querySelector('.reviews'))).toBe('1 review');
-    expect(said(second.querySelector('mf-lamp'))).toBe("Doesn't take BMW");
+    expect(said(second.querySelector('mf-lamp'))).toBe('Doesn’t take BMW');
     expect(said(second.querySelector('.where'))).toBe(
       'Mobile mechanic · comes to you · 20 km area',
     );
@@ -421,5 +421,39 @@ describe('the garage cards on a phone', () => {
       /mf-rating-dial \{ --mf-size-small: var\(--mf-size-body\); \}/,
     );
     expect(topLevel).not.toContain('mf-rating-dial');
+  });
+});
+
+// @traces 006-FR-007
+describe('HomeCards in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('titles the section, labels the refused brands and lights the red lamp in voice 2', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    const page = await render([
+      garageOf({ stance: 'does_not_take', worksOn: ['Dacia'] }),
+    ]);
+    const [card] = cards(page);
+
+    expect(said(page.querySelector('section h2'))).toBe(
+      'Recomandați pentru BMW',
+    );
+    expect(said(card.querySelector('mf-lamp'))).toBe('Nu lucrează pe BMW');
+    expect(lists(card)[1]).toBe('Nu lucrează pe Tesla');
+  });
+
+  it('speaks voice 3 in English', async () => {
+    document.documentElement.dataset['voice'] = '3';
+    const page = await render(
+      [garageOf({ stance: 'does_not_take', worksOn: ['Dacia'] })],
+      { language: 'en' },
+    );
+    const [card] = cards(page);
+
+    expect(said(page.querySelector('section h2'))).toBe('Compatible with BMW');
+    expect(said(card.querySelector('mf-lamp'))).toBe('Not compatible: BMW');
+    expect(lists(card)[1]).toBe('Not compatible with Tesla');
   });
 });

@@ -1,6 +1,6 @@
 ---
 capability: home
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 225-brand-picker
   - 229-location-or-address
@@ -9,6 +9,7 @@ features:
   - 227-garage-cards-home
   - 271-garage-distance
   - 228-how-it-works-list-garage
+  - 006-copy-voice-rotation
 ---
 
 # Capability: Home
@@ -282,6 +283,50 @@ _From 228-how-it-works-list-garage._
 ### 228-FR-016 — Home MUST show "Ai un service? Pune-l pe hartă" with its short text and a button to the listing form, which MUST open at step 1 without asking for an account.
 
 _From 228-how-it-works-list-garage._
+
+### 006-FR-001 — The site MUST hold five complete copy voices, each in Romanian and English, with these texts per voice: the small label above the headline, the headline, the paragraph under it, the main button, the 3D car section title, the garage list title, the benefits headline (one or two lines), the call to garages, the review drawer title, the red-lamp label and its short form. The texts are the mock's (boards Copy1–Copy5).
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-002 — A visit that starts with a full page load of Home MUST take the next voice from the stored round, before the first paint, and store it as the visit's voice, with the time it was taken and the rest of the round; with no round left, a new shuffled round of the enabled voices is started first. The voice is taken once per page load, in one place.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-003 — A round MUST hold each enabled voice exactly once, and a new round MUST NOT start with the voice that ended the previous one (that voice moves to the end of the new round).
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-004 — Two Home loads less than 2.5 seconds apart MUST advance the voice only once; an elapsed time of 2500 ms or more advances.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-005 — A visit that starts on any page other than Home MUST keep the stored voice without advancing; with no voice stored it MUST start a round and take its first voice.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-006 — One voice source MUST serve every voice text of the visit; the voice is fixed in memory when the page loads and is not re-read from storage, so another tab taking a new voice does not change this one. Moving between screens inside the app and switching the language MUST keep the voice.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-007 — On Home the visit's voice MUST set the label above the headline, the headline, the paragraph, the main button, the 3D car section title, the garage list title, the benefits headline, the call to garages and the red-lamp label of a refusing garage: the full label with the brand ("Nu lucrează pe BMW") on the preview rows' lamp, the short form ("Nu lucrează pe") before the list of refused brands on the cards.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-008 — On Results the visit's voice MUST set the page title and the red-lamp label of a refusing garage (the full label on the card's and the map card's lamp, the short form before the list of refused brands); in the review drawer it MUST set the title.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-009 — When local storage cannot be read or written, a random enabled voice MUST be picked and kept in memory for the visit, and every screen of the visit MUST use it.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-010 — The server-rendered Home's hero (label, headline, paragraph, main button) MUST show the visit's voice from the first paint, with no other voice visible before it; the page sent by the server is the same for every visitor (it is cached), and without the browser's script it shows voice 1. The texts below the hero follow the voice once the app starts.
+
+_From 006-copy-voice-rotation._
+
+### 006-FR-011 — Voices that are switched off MUST be skipped by the round; until the admin settings exist, all five voices are on.
+
+_From 006-copy-voice-rotation._
 
 ## Retired
 

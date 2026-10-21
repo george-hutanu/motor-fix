@@ -24,7 +24,9 @@ test.describe('the brand search @seeded', () => {
     await expect(tiles(page)).toHaveCount(8);
     await expect(tiles(page).first()).toHaveText('Alfa Romeo');
     await expect(tiles(page).first()).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByText('Service‑uri pentru Alfa Romeo')).toBeVisible();
+    await expect(
+      page.getByText('Cine se pricepe la Alfa Romeo?'),
+    ).toBeVisible();
     await expect(page.locator('mf-home .tally')).toHaveText(
       /primesc Alfa Romeo|primește Alfa Romeo/,
     );

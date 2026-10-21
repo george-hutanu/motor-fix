@@ -248,3 +248,33 @@ describe('the jump to how MotorFix works', () => {
     );
   });
 });
+
+// @traces 006-FR-007
+describe('how MotorFix works, in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('heads the benefits with both lines of voice 2', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    const root = await render();
+
+    expect(text(root.querySelector('h2'))).toBe(
+      'Ca atunci când întrebi un prieten. Doar că răspunde tot orașul.',
+    );
+    expect(text(root.querySelector('h2 .second'))).toBe(
+      'Doar că răspunde tot orașul.',
+    );
+  });
+
+  it.each([
+    ['3', 'Date, nu promisiuni.'],
+    ['5', 'Fără surprize la factură.'],
+  ])('heads them with the one line of voice %s', async (voice, line) => {
+    document.documentElement.dataset['voice'] = voice;
+    const root = await render();
+
+    expect(text(root.querySelector('h2'))).toBe(line);
+    expect(root.querySelector('h2 .second')).toBeNull();
+  });
+});

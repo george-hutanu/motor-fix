@@ -384,7 +384,13 @@
     "resend": "Send the link again",
     "resent": "We sent the link again.",
     "retry": "Try again",
-    "title": "How did the repair go?",
+    "voices": {
+      "v1": "How did the repair go?",
+      "v2": "How was it at the garage?",
+      "v3": "Post-repair report",
+      "v4": "Tell us how it went. For real.",
+      "v5": "Was the price what they promised?"
+    },
     "works": "What was done"
   },
   "saved": {

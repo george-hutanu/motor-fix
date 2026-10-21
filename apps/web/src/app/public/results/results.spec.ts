@@ -353,7 +353,7 @@ describe('Results', () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
 
-      expect(said(page().querySelector('h1'))).toBe('Service‑uri pentru BMW');
+      expect(said(page().querySelector('h1'))).toBe('Cine primește BMW');
       expect(said(page().querySelector('.summary .tally'))).toBe(
         '48 de service‑uri găsite · 31 lucrează pe BMW · 17 nu o primesc',
       );
@@ -439,7 +439,7 @@ describe('Results', () => {
         pageOf({ counts: { doesNotTake: 1, worksOn: 31 }, total: 32 }),
       );
 
-      expect(said(page().querySelector('h1'))).toBe('Garages for BMW');
+      expect(said(page().querySelector('h1'))).toBe('Who takes your BMW');
       expect(said(page().querySelector('.summary .tally'))).toBe(
         "32 garages found · 31 work on BMW · 1 doesn't take it",
       );
@@ -2703,7 +2703,7 @@ describe('Results changing the brand', () => {
     await tap('Audi');
     await reads.at(-1)?.answer(AUDI_PAGE());
 
-    expect(said(page().querySelector('h1'))).toBe('Service‑uri pentru Audi');
+    expect(said(page().querySelector('h1'))).toBe('Cine primește Audi');
     expect(cardNames()).toEqual(['Atelier Trei', 'Service Patru']);
     expect(
       page()
@@ -3965,5 +3965,31 @@ describe('Results loading more', () => {
     expect(css).toMatch(
       /\.more\.primary \{[^}]*background: var\(--mf-amber\);[^}]*color: var\(--mf-on-amber\);/,
     );
+  });
+});
+
+// @traces 006-FR-008
+describe('Results in the visit’s voice', () => {
+  beforeEach(() => configure());
+
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('titles the page with the voice’s list and the brand', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    await open('/ro/garages?brand=bmw');
+    await reads[0]?.answer();
+
+    expect(said(page().querySelector('h1'))).toBe('Recomandați pentru BMW');
+  });
+
+  // @traces 006-FR-006
+  it('keeps the voice in English', async () => {
+    document.documentElement.dataset['voice'] = '4';
+    await open('/en/garages?brand=bmw', { language: 'en' });
+    await reads[0]?.answer();
+
+    expect(said(page().querySelector('h1'))).toBe('They don’t frown at a BMW');
   });
 });

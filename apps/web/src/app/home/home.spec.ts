@@ -286,18 +286,19 @@ describe('Home brand picker', () => {
     await render();
     await choose('Dacia');
 
-    expect(text()).toContain('Service‑uri pentru Dacia');
-    expect(text()).toContain('Cine lucrează pe Dacia, aproape de tine');
-    expect(text()).toContain('Alege marca și vezi câte service‑uri o primesc.');
+    expect(text()).toContain('Cine se pricepe la Dacia?');
+    expect(text()).toContain('Găsește un mecanic');
     expect(text()).toContain(
-      'Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă.',
+      'Alege marca. Acul se duce la cel mai bine cotat service care o primește',
     );
   });
 
   it('keeps an empty, named place for the car after the picker', async () => {
     await render();
 
-    const car = page().querySelector('section[aria-label="Mașina ta"]');
+    const car = page().querySelector(
+      'section[aria-label="Ce trebuie reparat?"]',
+    );
     expect(car).not.toBeNull();
     expect(car?.textContent?.trim()).toBe('');
     const picker = page().querySelector('[role="radiogroup"]') as Node;
@@ -381,7 +382,9 @@ describe('Home brand picker', () => {
     await TestBed.inject(I18n).use('en');
     await settle();
 
-    expect(search()?.textContent?.trim()).toBe('Find garages');
+    expect(
+      search()?.querySelector('[data-voice-of="1"]')?.textContent?.trim(),
+    ).toBe('Find garages');
     expect(search()?.getAttribute('href')).toBe('/en/garages?brand=bmw');
   });
 
@@ -393,7 +396,7 @@ describe('Home brand picker', () => {
     await settle();
 
     expect(checked()).toBe('Dacia');
-    expect(text()).toContain('Garages for Dacia');
+    expect(text()).toContain('Who’s tuned for your Dacia?');
   });
 
   it.each([
@@ -404,7 +407,7 @@ describe('Home brand picker', () => {
 
     expect(page().querySelector('[role="radiogroup"]')).toBeNull();
     expect(count()).toBeNull();
-    expect(text()).not.toContain('Service‑uri pentru');
+    expect(text()).not.toContain('Cine se pricepe la');
     expect(text()).not.toContain('Nu am putut');
     expect(homeApi.homeControllerForBrand).not.toHaveBeenCalled();
     expect(text()).toContain('MotorFix');
@@ -441,7 +444,7 @@ describe('Home brand search', () => {
 
     expect(names()).toEqual(['Alfa Romeo', ...NAMES.slice(0, 7)]);
     expect(checked()).toBe('Alfa Romeo');
-    expect(text()).toContain('Service‑uri pentru Alfa Romeo');
+    expect(text()).toContain('Cine se pricepe la Alfa Romeo?');
     expect(slugsRead()).toEqual(['bmw', 'alfa-romeo']);
     await reads[1].answer(2, 6);
     expect(count()?.textContent).toContain('Alfa Romeo');
@@ -680,7 +683,7 @@ describe('Home brand cycling', () => {
 
     expect(checked()).toBe('BMW');
     expect(slugsRead()).toEqual([...BRANDS.map((b) => b.slug), 'bmw']);
-    expect(text()).toContain('Service‑uri pentru BMW');
+    expect(text()).toContain('Cine se pricepe la BMW?');
   });
 
   it('keeps the count silent while it moves on its own', async () => {
@@ -902,7 +905,7 @@ describe('Home count that fails', () => {
     await choose('Audi');
 
     expect(checked()).toBe('Audi');
-    expect(text()).toContain('Service‑uri pentru Audi');
+    expect(text()).toContain('Cine se pricepe la Audi?');
     expect(count()?.textContent).not.toContain('Nu am putut');
     expect(retry()).toBeUndefined();
   });
@@ -1691,5 +1694,94 @@ describe('Home sections', () => {
 
     expect(page().querySelector('mf-how-it-works')).not.toBeNull();
     expect(page().querySelector('mf-garage-invite')).not.toBeNull();
+  });
+});
+
+describe('Home in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const words = (element: Element | null | undefined) =>
+    element?.textContent?.replace(/\s+/g, ' ').trim();
+  const hero = (n: number) =>
+    page().querySelector(`.hero [data-voice-of="${n}"]`);
+
+  // @traces 006-FR-010
+  it('carries every voice’s hero, each in its own group, whatever the visit’s voice', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    await render();
+    await reads[0].answer(2, 3);
+
+    expect(
+      [1, 2, 3, 4, 5].map((n) => words(hero(n)?.querySelector('h2'))),
+    ).toEqual([
+      'Cine se pricepe la BMW?',
+      'Știm un mecanic bun pentru BMW.',
+      'BMW. 3 service‑uri. Nota maximă: 4,9.',
+      'BMW merită mai mult decât „merge și așa”.',
+      'Știi cât costă înainte să lași cheile.',
+    ]);
+    expect(page().querySelectorAll('.hero h2')).toHaveLength(5);
+    expect(
+      [1, 2, 3, 4, 5].map((n) =>
+        words(search()?.querySelector(`[data-voice-of="${n}"]`)),
+      ),
+    ).toEqual([
+      'Caută service‑uri',
+      'Arată‑mi mecanicii',
+      'Pornește căutarea',
+      'Găsește‑l acum',
+      'Vezi prețuri și service‑uri',
+    ]);
+  });
+
+  // @traces 006-FR-007
+  it('fills the hero group of voice 4 with its eyebrow and its line', async () => {
+    await render();
+    await reads[0].answer(2, 3);
+
+    expect(words(hero(4)?.querySelector('.label'))).toBe(
+      'Fără „las‑o la noi și vedem”',
+    );
+    expect(words(hero(4)?.querySelector('p:not(.label)'))).toBe(
+      'Găsește mecanicul care chiar lucrează pe marca ta. Cu prețul spus dinainte, nu ghicit la final.',
+    );
+  });
+
+  // @traces 006-FR-007
+  it('speaks in voice 4 below the hero: the car, the garages, the benefits and the call to garages', async () => {
+    document.documentElement.dataset['voice'] = '4';
+    await render();
+    await reads[0].answer(2, 3);
+
+    expect(
+      page().querySelector('section.car')?.getAttribute('aria-label'),
+    ).toBe('Ce face figuri?');
+    expect(words(page().querySelector('mf-home-cards h2'))).toBe(
+      'Ei nu strâmbă din nas la BMW',
+    );
+    expect(words(page().querySelector('mf-how-it-works h2'))).toBe(
+      'Fără „vedem noi”. Vezi tu, de acum.',
+    );
+    expect(words(page().querySelector('mf-garage-invite h2'))).toBe(
+      'Ai mâini bune? Să afle tot orașul.',
+    );
+  });
+
+  // @traces 006-FR-006
+  it('keeps the voice when the language changes in the app', async () => {
+    document.documentElement.dataset['voice'] = '4';
+    await render();
+    await reads[0].answer(2, 3);
+    await TestBed.inject(LanguageChoice).choose('en');
+    await settle();
+
+    expect(words(page().querySelector('mf-home-cards h2'))).toBe(
+      'They don’t frown at a BMW',
+    );
+    expect(words(hero(4)?.querySelector('h2'))).toBe(
+      'Your BMW deserves better than “it’ll do”.',
+    );
   });
 });

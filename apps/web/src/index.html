@@ -3,6 +3,59 @@
   <head>
     <meta charset="utf-8" />
     <title>MotorFix</title>
+    <script id="mf-voice">
+      // The visit's copy voice, taken before the first paint: the next one of
+      // a shuffled round on each full load of Home, kept on any other page.
+      (() => {
+        const on = [1, 2, 3, 4, 5];
+        // A new round: the enabled voices shuffled, never opening with the
+        // voice just shown.
+        const round = (last) => {
+          const deck = on.slice();
+          for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+          }
+          if (deck.length > 1 && deck[0] === last) deck.push(deck.shift());
+          return deck;
+        };
+        // What is left of the round, without garbage, repeats, voices off or
+        // the voice just shown.
+        const left = (last) =>
+          (localStorage.getItem('mf-copy-deck') || '')
+            .split(',')
+            .map(Number)
+            .filter(
+              (v, i, all) =>
+                on.includes(v) && v !== last && all.indexOf(v) === i,
+            );
+        const next = (last) => {
+          const found = left(last);
+          const deck = found.length ? found : round(last);
+          const voice = deck.shift();
+          localStorage.setItem('mf-copy', voice);
+          localStorage.setItem('mf-copy-deck', deck.join(','));
+          return voice;
+        };
+        const pick = () => {
+          const stored = Number(localStorage.getItem('mf-copy'));
+          const last = on.includes(stored) ? stored : 0;
+          const home = /^\/(ro|en)?\/?$/.test(location.pathname);
+          const gap = Date.now() - localStorage.getItem('mf-copy-at');
+          if (last && (!home || (gap >= 0 && gap < 2500))) return last;
+          const voice = next(last);
+          localStorage.setItem('mf-copy-at', Date.now());
+          return voice;
+        };
+        let voice;
+        try {
+          voice = pick();
+        } catch {
+          voice = on[Math.floor(Math.random() * on.length)];
+        }
+        document.documentElement.setAttribute('data-voice', voice);
+      })();
+    </script>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />

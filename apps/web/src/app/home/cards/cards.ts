@@ -4,6 +4,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { formatLei, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
+import { Voice } from '../../voice/voice';
 import { garageWhere } from '../where/where';
 
 // Where the main button of Home goes, so the section's link goes there too.
@@ -23,6 +24,7 @@ const NAMES_SHOWN = 6;
 })
 export class HomeCards {
   protected readonly i18n = inject(I18n);
+  protected readonly voice = inject(Voice);
 
   readonly brand = input.required<BrandDto>();
   readonly garages = input.required<HomeGarageDto[]>();
@@ -37,7 +39,7 @@ export class HomeCards {
     return this.i18n.t(
       garage.stance === 'works_on'
         ? 'public.home.preview.worksOn'
-        : 'public.home.preview.doesNotTake',
+        : this.voice.key('no'),
       { brand: this.brand().name },
     );
   }

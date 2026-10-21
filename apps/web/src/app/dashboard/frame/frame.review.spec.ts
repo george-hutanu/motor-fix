@@ -128,7 +128,7 @@ describe('the review drawer on the driver dashboard', () => {
       confirmDiscard: false,
       data: { jobId: JOB },
       shape: 'drawer',
-      title: 'driver.review.title',
+      title: 'driver.review.voices.v1',
     });
     expect(await source()).toBe(ReviewTask);
   });
@@ -226,5 +226,23 @@ describe('the review drawer on the driver dashboard', () => {
       expect.any(Function),
       expect.objectContaining({ data: { jobId: undefined } }),
     );
+  });
+});
+
+// @traces 006-FR-008
+describe('the review drawer in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('is titled in voice 5', async () => {
+    document.documentElement.dataset['voice'] = '5';
+    const { overlays } = await render(`/app/driver/reviews?review=${JOB}`);
+
+    const [, options] = overlays.open.mock.calls[0] as unknown as [
+      unknown,
+      { title: string },
+    ];
+    expect(options.title).toBe('driver.review.voices.v5');
   });
 });

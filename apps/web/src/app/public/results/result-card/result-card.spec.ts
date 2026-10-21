@@ -126,7 +126,7 @@ describe('ResultCard', () => {
 
     const lamp = card.querySelector('mf-lamp');
     expect(lamp?.getAttribute('data-state')).toBe('green');
-    expect(said(lamp)).toBe('primește BMW');
+    expect(said(lamp)).toBe('Primește BMW');
   });
 
   // @traces 267-FR-014
@@ -137,7 +137,7 @@ describe('ResultCard', () => {
 
       const lamp = card.querySelector('mf-lamp');
       expect(lamp?.getAttribute('data-state')).toBe('red');
-      expect(said(lamp)).toBe('nu primește BMW');
+      expect(said(lamp)).toBe('Nu primește BMW');
     },
   );
 
@@ -210,12 +210,12 @@ describe('ResultCard', () => {
       { language: 'en' },
     );
 
-    expect(said(card.querySelector('mf-lamp'))).toBe("doesn't take BMW");
+    expect(said(card.querySelector('mf-lamp'))).toBe('Doesn’t take BMW');
     expect(said(card.querySelector('.rate'))).toBe('from 180 lei/hour');
     expect(said(card.querySelector('.reviews'))).toBe('1 review');
     expect([...card.querySelectorAll('.list')].map(said)).toEqual([
       'Works on BMW, Dacia',
-      "Doesn't take Tesla",
+      'Doesn’t take Tesla',
     ]);
     const link = card.querySelector<HTMLAnchorElement>('a.view');
     expect(said(link)).toBe('View garage');
@@ -566,5 +566,38 @@ describe('a result card linked with its pin', () => {
 
     expect(card.getAttribute('tabindex')).toBeNull();
     expect(card.querySelector('article')?.getAttribute('tabindex')).toBeNull();
+  });
+});
+
+// @traces 006-FR-008
+describe('ResultCard in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('lights the red lamp and labels the refused brands in voice 2', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    const card = await render(garageOf({ stance: 'does_not_take' }));
+
+    expect(said(card.querySelector('mf-lamp'))).toBe('Nu lucrează pe BMW');
+    expect([...card.querySelectorAll('.list')].map(said)[1]).toBe(
+      'Nu lucrează pe Tesla',
+    );
+  });
+
+  it('writes the green lamp in the same form', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    const card = await render(garageOf());
+
+    expect(said(card.querySelector('mf-lamp'))).toBe('Primește BMW');
+  });
+
+  it('speaks voice 5 in English', async () => {
+    document.documentElement.dataset['voice'] = '5';
+    const card = await render(garageOf({ stance: 'does_not_take' }), {
+      language: 'en',
+    });
+
+    expect(said(card.querySelector('mf-lamp'))).toBe('Doesn’t work on BMW');
   });
 });

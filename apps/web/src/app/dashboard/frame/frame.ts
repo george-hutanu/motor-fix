@@ -39,6 +39,7 @@ import { filter, map } from 'rxjs';
 
 import { segmentsOf } from '../../addresses';
 import { ConsentBar } from '../../consent/consent-bar/consent-bar';
+import { Voice } from '../../voice/voice';
 import { AddCar } from '../add-car/add-car';
 import { AdminFilters } from '../admin-filters/admin-filters';
 import type { FiltersChoice } from '../admin-filters-sheet/admin-filters-sheet';
@@ -128,6 +129,7 @@ export class Frame implements OnInit {
   private readonly errors = inject(ErrorHandler);
   private readonly push = inject(PushDevice);
   private readonly i18n = inject(I18n);
+  private readonly voice = inject(Voice);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly base = computed(
     () => this.session.shown()?.landing ?? '/app/driver',
@@ -285,7 +287,7 @@ export class Frame implements OnInit {
           confirmDiscard: false,
           data: { jobId: UUID.test(job) ? job : undefined },
           shape: 'drawer',
-          title: 'driver.review.title',
+          title: this.voice.key('review'),
         },
       );
     } finally {

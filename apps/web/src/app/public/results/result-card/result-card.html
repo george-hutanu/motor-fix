@@ -24,7 +24,7 @@
     </div>
     <mf-lamp [state]="takes() ? 'green' : 'red'" [label]="stance()" />
     <p class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage().worksOn) }}</p>
-    <p class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage().doesNotTake) }}</p>
+    <p class="list"><span class="key">{{ voice.copy.noLabel | t }}</span> {{ names(garage().doesNotTake) }}</p>
     @if (garage().facilities.length > 0) {
       <ul class="tags">
         @for (facility of garage().facilities; track facility) {

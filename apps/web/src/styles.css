@@ -7,6 +7,17 @@
   height: var(--mf-tap);
 }
 
+/* While a field on Results takes text on a phone, the keyboard is up and the
+   map is not in use: on a short stage the sheet's low position rises over the
+   zoom buttons, so they hide rather than sit under its handle. */
+@media (max-width: 767px) {
+  mf-results:has(mf-results-sheet.typing)
+    mf-results-map
+    .maplibregl-ctrl-top-right {
+    visibility: hidden;
+  }
+}
+
 /* The one action an empty state holds is projected into it, so its own
    stylesheet cannot reach it. Until the driver's texts load the label is its
    key, one unbreakable word. Its tracking narrows with the viewport and, on a
@@ -129,4 +140,18 @@ input[type="checkbox"].mf-check:checked::after {
     :where(a, button, input, select, textarea, summary, [tabindex]) {
     scroll-margin: var(--mf-space-2);
   }
+}
+
+/* The hero carries every copy voice; the one the page head picked shows. */
+[data-voice-of] {
+  display: none;
+}
+
+html:not([data-voice]) [data-voice-of="1"],
+html[data-voice="1"] [data-voice-of="1"],
+html[data-voice="2"] [data-voice-of="2"],
+html[data-voice="3"] [data-voice-of="3"],
+html[data-voice="4"] [data-voice-of="4"],
+html[data-voice="5"] [data-voice-of="5"] {
+  display: contents;
 }

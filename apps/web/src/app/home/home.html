@@ -1,9 +1,13 @@
 <header><h1>{{ 'shell.brand' | t }}</h1></header>
 @if (selected(); as brand) {
   <section class="hero">
-    <p class="label">{{ 'public.home.hero.label' | t: { brand: brand.name } }}</p>
-    <h2>{{ 'public.home.hero.headline' | t: { brand: brand.name } }}</h2>
-    <p>{{ 'public.home.hero.paragraph' | t: { brand: brand.name } }}</p>
+    @for (v of voices; track v.n) {
+      <div [attr.data-voice-of]="v.n">
+        <p class="label">{{ v.copy.eyebrow | t }}</p>
+        <h2>{{ v.copy.headline | t: { brand: brand.name } }}</h2>
+        <p>{{ v.copy.sub | t: { brand: brand.name } }}</p>
+      </div>
+    }
   </section>
   <p class="place">
     <span class="where">
@@ -39,7 +43,9 @@
       [routerLink]="results.commands"
       [queryParams]="results.queryParams"
     >
-      {{ 'public.home.search' | t }}
+      @for (v of voices; track v.n) {
+        <span [attr.data-voice-of]="v.n">{{ v.copy.cta | t }}</span>
+      }
     </a>
   }
   <div
@@ -120,7 +126,7 @@
   @if (popular().length > 0) {
     <mf-brand-strip [brands]="popular()" (pick)="fromStrip($event)" />
   }
-  <section class="car" [attr.aria-label]="'public.home.car' | t"></section>
+  <section class="car" [attr.aria-label]="voice.copy.parts | t"></section>
   @if (results(); as results) {
     <mf-home-cards
       [brand]="brand"
