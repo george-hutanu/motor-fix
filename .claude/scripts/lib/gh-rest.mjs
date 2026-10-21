@@ -109,23 +109,32 @@ function workflowNames(run, sha) {
 /**
  * The latest run of each check per workflow, as gh keeps it: a re-triggered
  * workflow leaves its cancelled run on the commit too. Without a workflow
- * name, every run of that check stays (never a false green).
+ * name, every run of that check stays (never a false green). The latest is
+ * the one started last, so an orphaned earlier attempt (hooks/merge-gate.mjs:
+ * left unfinished after a newer attempt of the same run, in the same suite,
+ * completed) never outranks that newer attempt. A run not yet started (no
+ * start date) and unfinished ranks newest, so a queued re-run stays pending.
  */
 function latestRuns(runs, workflow) {
   if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
   const key = (c) => `${c.name}\0${workflow[c.check_suite?.id] ?? `suite ${c.check_suite?.id}`}`;
+  const when = (c) => c.started_at ?? (c.status && c.status !== "completed" ? "\uffff" : "");
   const latest = new Map();
   for (const c of runs) {
     const kept = latest.get(key(c));
-    if (!kept || String(c.started_at ?? "") > String(kept.started_at ?? "")) latest.set(key(c), c);
+    if (!kept || when(c) > when(kept)) latest.set(key(c), c);
   }
   const keep = new Set(latest.values());
   return runs.filter((c) => keep.has(c));
 }
 
-/** The head commit's check runs (the latest of each, with its workflow's name) and commit statuses. */
+/**
+ * The head commit's check runs (the latest of each, with its workflow's name) and commit statuses.
+ * Every run is read (`filter=all`): GitHub's `latest` ranks by completion, so an orphaned earlier
+ * attempt can be all it returns; latestRuns keeps the newer attempt instead.
+ */
 function headChecks(run, sha) {
-  const all = pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []);
+  const all = pages(run, `commits/${sha}/check-runs?per_page=100&filter=all`).flatMap((page) => page.check_runs ?? []);
   const workflow = all.length ? workflowNames(run, sha) : {};
   const runs = latestRuns(all, workflow).map((c) => ({ ...c, workflow: workflow[c.check_suite?.id] ?? "" }));
   const statuses = rest(run, "GET", `commits/${sha}/status`)?.statuses ?? [];

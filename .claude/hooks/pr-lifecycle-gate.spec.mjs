@@ -528,7 +528,7 @@ describe('PR lifecycle gate — reading the PR', () => {
       [`pulls?head={owner}:${BRANCH}&state=all&per_page=100`]: [[{ number: 160 }]],
       'pulls/160': { number: 160, title: 'chore(harness): ST-766 x', state: 'open', draft: false, merged_at: null, mergeable: true, head: { ref: BRANCH, sha: 'h1' }, user: { login: 'george-hutanu' }, labels: [{ name: 'QA' }, { name: 'tooling' }] },
       'pulls/160/commits?per_page=100': [[{ sha: 'h1', author: { login: 'george-hutanu' }, commit: { author: { name: 'g', email: 'e' } } }]],
-      'commits/h1/check-runs?per_page=100': [{ check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] }],
+      'commits/h1/check-runs?per_page=100&filter=all': [{ check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] }],
       'commits/h1/status': { statuses: [] },
     };
     const calls = [];

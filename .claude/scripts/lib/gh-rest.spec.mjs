@@ -79,7 +79,7 @@ describe('outside the cloud', () => {
     const f = graphqlDown({
       ...byBranch([pull()]),
       'GET pulls/160': pull(),
-      'GET commits/head1/check-runs?per_page=100': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] },
+      'GET commits/head1/check-runs?per_page=100&filter=all': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] },
       'GET commits/head1/status': { statuses: [] },
       [`GET pulls?head={owner}:${BRANCH}&state=open&per_page=100`]: [pull()],
     });
@@ -218,7 +218,7 @@ describe('pr view', () => {
   it('builds statusCheckRollup from the head commit check runs and statuses', () => {
     const f = fake({
       'GET pulls/160': pull(),
-      'GET commits/head1/check-runs?per_page=100': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }, { name: 'Unit tests', status: 'in_progress', conclusion: null }] },
+      'GET commits/head1/check-runs?per_page=100&filter=all': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }, { name: 'Unit tests', status: 'in_progress', conclusion: null }] },
       'GET commits/head1/status': { statuses: [{ context: 'agent-review', state: 'success' }] },
     });
     assert.deepEqual(JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup, [
@@ -233,7 +233,7 @@ describe('pr view', () => {
     const checks = { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success', check_suite: { id: 4 } }, { name: 'scripts', status: 'queued', conclusion: null, check_suite: { id: 9 } }] };
     const f = fake({
       'GET pulls/160': pull(),
-      'GET commits/head1/check-runs?per_page=100': checks,
+      'GET commits/head1/check-runs?per_page=100&filter=all': checks,
       'GET commits/head1/status': { statuses: [] },
       'GET actions/runs?head_sha=head1&per_page=100': { workflow_runs: [{ check_suite_id: 4, name: 'CI' }, { check_suite_id: 9, name: 'Mutation' }] },
     });
@@ -241,7 +241,7 @@ describe('pr view', () => {
       JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup.map((c) => c.workflowName),
       ['CI', 'Mutation'],
     );
-    const down = fake({ 'GET pulls/160': pull(), 'GET commits/head1/check-runs?per_page=100': checks, 'GET commits/head1/status': { statuses: [] } });
+    const down = fake({ 'GET pulls/160': pull(), 'GET commits/head1/check-runs?per_page=100&filter=all': checks, 'GET commits/head1/status': { statuses: [] } });
     assert.deepEqual(
       JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], down).stdout).statusCheckRollup.map((c) => c.workflowName),
       ['', ''],
@@ -335,7 +335,7 @@ describe('pr create, edit, ready, comment', () => {
 describe('pr checks', () => {
   const routes = (runs, statuses = []) => ({
     'GET pulls/160': pull(),
-    'GET commits/head1/check-runs?per_page=100': { check_runs: runs },
+    'GET commits/head1/check-runs?per_page=100&filter=all': { check_runs: runs },
     'GET commits/head1/status': { statuses },
   });
   const run = (name, status, conclusion = null) => ({ name, status, conclusion, html_url: `https://x/${name}` });
@@ -387,6 +387,57 @@ describe('pr checks', () => {
       { name: 'Biome', bucket: 'pass' },
     ]);
     assert.equal(r.code, 1);
+  });
+
+  // Attempt 1 of run 39618505833 stayed in_progress after attempt 2 completed.
+  describe('an orphaned earlier attempt', () => {
+    const RUN = 39618505833;
+    const attempt = (status, conclusion, started_at, job) => ({
+      ...run('PR title', status, conclusion),
+      id: job,
+      check_suite: { id: 107366297378 },
+      started_at,
+      details_url: `https://github.com/george-hutanu/motor-fix/actions/runs/${RUN}/job/${job}`,
+    });
+    const orphan = attempt('in_progress', null, '2026-10-21T14:37:49Z', 119285437128);
+    const retried = attempt('completed', 'success', '2026-10-21T14:43:56Z', 119288507053);
+    const runs = (status) => ({ workflow_runs: [{ id: RUN, check_suite_id: 107366297378, name: 'PR title', status }] });
+    // GitHub's filter=latest ranks by completion and may return the orphan alone.
+    const latestOnly = { 'GET commits/head1/check-runs?per_page=100': { check_runs: [orphan] } };
+
+    // @traces 1362-FR-005
+    it('reads every check run of the head and judges the check by the newer completed attempt', () => {
+      const f = fake({ ...routes([orphan, retried]), ...latestOnly, 'GET actions/runs?head_sha=head1&per_page=100': runs('completed') });
+      const r = gh(['pr', 'checks', '160', '--json', 'name,bucket'], f);
+      assert.deepEqual(JSON.parse(r.stdout), [{ name: 'PR title', bucket: 'pass' }]);
+      assert.equal(r.code, 0);
+      const rollup = JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup;
+      assert.deepEqual(rollup.map((c) => c.status), ['COMPLETED']);
+    });
+
+    // @traces 1362-FR-005
+    it('keeps the newer attempt whatever order GitHub lists them in, and with the workflows unread', () => {
+      assert.equal(gh(['pr', 'checks', '160'], fake({ ...routes([retried, orphan]), 'GET actions/runs?head_sha=head1&per_page=100': runs('completed') })).code, 0);
+      assert.equal(gh(['pr', 'checks', '160'], fake(routes([orphan, retried]))).code, 0);
+    });
+
+    // @traces 1362-FR-005
+    it('keeps a genuinely pending check: no newer completed attempt, or a newer attempt still running', () => {
+      const alone = fake({ ...routes([orphan]), 'GET actions/runs?head_sha=head1&per_page=100': runs('completed') });
+      assert.deepEqual(JSON.parse(gh(['pr', 'checks', '160', '--json', 'name,bucket'], alone).stdout), [{ name: 'PR title', bucket: 'pending' }]);
+      const rerun = attempt('in_progress', null, '2026-10-21T14:50:00Z', 119290000000);
+      const going = fake({ ...routes([retried, rerun]), 'GET actions/runs?head_sha=head1&per_page=100': runs('in_progress') });
+      assert.equal(gh(['pr', 'checks', '160'], going).code, 8);
+    });
+
+    // @traces 1362-FR-005
+    it('keeps a newer attempt queued with no start date pending, whatever order GitHub lists them in', () => {
+      const queued = attempt('queued', null, null, 119290000001);
+      for (const order of [[retried, queued], [queued, retried]]) {
+        const f = fake({ ...routes(order), 'GET actions/runs?head_sha=head1&per_page=100': runs('queued') });
+        assert.deepEqual(JSON.parse(gh(['pr', 'checks', '160', '--json', 'name,bucket'], f).stdout), [{ name: 'PR title', bucket: 'pending' }]);
+      }
+    });
   });
 
   it('keeps every run when the workflows cannot be read', () => {
@@ -466,7 +517,7 @@ describe('pr checks', () => {
     const sleeps = [];
     const f = fake({
       'GET pulls/160': pull(),
-      'GET commits/head1/check-runs?per_page=100': () => ({ check_runs: [lap++ < 2 ? run('E2E', 'in_progress') : run('E2E', 'completed', 'success')] }),
+      'GET commits/head1/check-runs?per_page=100&filter=all': () => ({ check_runs: [lap++ < 2 ? run('E2E', 'in_progress') : run('E2E', 'completed', 'success')] }),
       'GET commits/head1/status': { statuses: [] },
     });
     const r = gh(['pr', 'checks', '160', '--watch'], f, CLOUD, { sleep: (ms) => sleeps.push(ms) });
@@ -506,7 +557,7 @@ describe('gh.mjs', () => {
 describe('ciOkOn', () => {
   const on = (runs) =>
     fake({
-      'GET commits/sha1/check-runs?per_page=100': { check_runs: runs },
+      'GET commits/sha1/check-runs?per_page=100&filter=all': { check_runs: runs },
       'GET actions/runs?head_sha=sha1&per_page=100': { workflow_runs: [] },
       'GET commits/sha1/status': { statuses: [] },
     }).run;

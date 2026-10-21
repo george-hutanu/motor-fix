@@ -42,6 +42,12 @@
 // SPECKIT_PROVENANCE_STATE (one judgeProvenance input, used for every commit)
 // replaces those reads for the eval cases.
 //
+// An earlier attempt GitHub left unfinished after a newer attempt of the same
+// run completed (orphanedChecks below) is no pending check: the newer attempt
+// decides it, and the gate names each one it ignored, on stdout when it
+// approves and at the end of a refusal. Only the REST read carries the run
+// state the rule needs; the branch read through `gh pr view` judges as before.
+//
 // The PR QA workflow's own check run is left out of the CI rule: its verdict
 // is agent-review, which the workflow sets, and a run a newer lap cancelled is
 // history, not a red check.
@@ -66,6 +72,39 @@ import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
 import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
 import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
+
+// An orphaned check attempt: an unfinished check run for which another check
+// run of the same name in the same Actions run (the run id in its details URL)
+// completed and started after it, while that run, whose status is its latest
+// attempt's, has completed. Re-running a workflow keeps its run id and adds an
+// attempt, and GitHub can leave the earlier attempt's check run in_progress
+// for good. Anything less stays pending: no run id or start date (a third-party
+// check), the run still going, or no newer completed attempt. Each check is
+// { name, status, startedAt, runId, runStatus }, statuses in either case.
+const completed = (status) => String(status ?? "").toLowerCase() === "completed";
+const started = (c) => Date.parse(c.startedAt ?? "");
+
+/** The Actions run id in a check run's details URL, or null. */
+export const runIdOf = (url) => /\/actions\/runs\/(\d+)/.exec(String(url ?? ""))?.[1] ?? null;
+
+/** The orphaned attempts among `checks`. */
+export function orphanedChecks(checks = []) {
+  return (checks ?? []).filter(
+    (c) =>
+      !completed(c.status) &&
+      c.runId != null &&
+      completed(c.runStatus) &&
+      Number.isFinite(started(c)) &&
+      checks.some((d) => d !== c && d.name === c.name && String(d.runId) === String(c.runId) && completed(d.status) && started(d) > started(c)),
+  );
+}
+
+/** One line naming the orphans a reader ignored on `sha`, or null for none. */
+export function orphanLine(orphans, sha) {
+  if (!orphans.length) return null;
+  const each = orphans.map((c) => `${c.workflowName ? `${c.workflowName} / ` : ""}${c.name} (check run ${c.checkRunId ?? "?"}, run ${c.runId}, started ${c.startedAt})`);
+  return `ignored ${orphans.length === 1 ? "an orphaned check attempt" : `${orphans.length} orphaned check attempts`} on ${String(sha ?? "").slice(0, 7)}, left unfinished after a newer attempt of the same run completed: ${each.join("; ")}`;
+}
 
 /** How long the gate may spend reading GitHub before it refuses: well inside run-hook.mjs's limit for it. */
 export const DEADLINE_MS = 30000;
@@ -181,11 +220,13 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
     if (cur.conclusion === "SKIPPED" && ran(c)) return true;
     return when(c) >= when(cur);
   };
-  // Neither the PR QA run (judged through agent-review) nor a Mutation run (never part of a task) is CI.
+  // Neither the PR QA run (judged through agent-review) nor a Mutation run (never part of a task) is CI,
+  // and an orphaned earlier attempt is decided by its newer completed one.
+  const orphans = new Set(orphanedChecks(checks));
   const latest = new Map();
   for (const c of checks) {
     const k = key(c);
-    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && !isMutationCheck(c) && (!latest.has(k) || outranks(c, latest.get(k)))) latest.set(k, c);
+    if (!orphans.has(c) && checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && !isMutationCheck(c) && (!latest.has(k) || outranks(c, latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
@@ -198,6 +239,11 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
   if (!ci.some((c) => checkName(c) === "CI OK")) return `PR #${pr.number} cannot merge: there is no CI OK check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;
   return null;
+}
+
+/** The line naming the orphaned check attempts the CI rule ignored on the PR's head, or null. */
+export function orphanNote(pr) {
+  return orphanLine(orphanedChecks(pr.statusCheckRollup ?? []), pr.headRefOid);
 }
 
 /** gh as a promise of { code, stdout, stderr }, every call stopped when `signal` aborts. */
@@ -253,8 +299,8 @@ async function readPrRest(target, gh) {
   const [commits, status, checkRuns, runs, workflows] = await Promise.all([
     api(gh, ["--paginate", `repos/{owner}/{repo}/pulls/${number}/commits?per_page=100`, "--jq", ".[] | {sha, author: .author.login, login: .committer.login, verified: .commit.verification.verified}"]),
     api(gh, [`repos/{owner}/{repo}/commits/${sha}/status?per_page=100`]),
-    api(gh, ["--paginate", `repos/{owner}/{repo}/commits/${sha}/check-runs?per_page=100&filter=all`, "--jq", ".check_runs[] | {name, status, conclusion, started_at, suite: .check_suite.id, url: .details_url}"]),
-    api(gh, ["--paginate", `repos/{owner}/{repo}/actions/runs?head_sha=${sha}&per_page=100`, "--jq", ".workflow_runs[] | {id, suite: .check_suite_id, workflow: .workflow_id}"]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/commits/${sha}/check-runs?per_page=100&filter=all`, "--jq", ".check_runs[] | {id, name, status, conclusion, started_at, suite: .check_suite.id, url: .details_url}"]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/actions/runs?head_sha=${sha}&per_page=100`, "--jq", ".workflow_runs[] | {id, suite: .check_suite_id, workflow: .workflow_id, status}"]),
     api(gh, ["--paginate", "repos/{owner}/{repo}/actions/workflows?per_page=100", "--jq", ".workflows[] | {id, name}"]),
   ]);
   // A run's REST `name` is its run-name (pr-qa.yml names each lap), so the workflow's name comes from the
@@ -263,7 +309,13 @@ async function readPrRest(target, gh) {
   const nameOf = new Map(workflows.map((w) => [w.id, w.name]));
   const byRun = new Map(runs.map((r) => [String(r.id), r.workflow]));
   const bySuite = new Map(runs.map((r) => [r.suite, r.workflow]));
-  const workflowOf = (c) => nameOf.get(byRun.get(/\/actions\/runs\/(\d+)/.exec(String(c.url ?? ""))?.[1]) ?? bySuite.get(c.suite)) ?? "";
+  const workflowOf = (c) => nameOf.get(byRun.get(runIdOf(c.url)) ?? bySuite.get(c.suite)) ?? "";
+  // The run's status is its latest attempt's: what tells an orphaned earlier attempt (orphanedChecks).
+  const runStatus = new Map(runs.map((r) => [String(r.id), r.status]));
+  const attempt = (c) => {
+    const runId = runIdOf(c.url);
+    return { ...(c.id != null ? { checkRunId: c.id } : {}), ...(runId ? { runId, runStatus: upper(runStatus.get(runId)) } : {}) };
+  };
   return {
     number: p.number,
     state: upper(p.state),
@@ -272,7 +324,7 @@ async function readPrRest(target, gh) {
     commits: commits.map((c) => ({ oid: c.sha, authors: c.author ? [{ login: c.author }] : [], committer: { login: c.login }, verified: c.verified === true })),
     statusCheckRollup: [
       ...(status.statuses ?? []).map((s) => ({ __typename: "StatusContext", context: s.context, state: upper(s.state), description: s.description ?? null })),
-      ...checkRuns.map((c) => ({ __typename: "CheckRun", name: c.name, workflowName: workflowOf(c), status: upper(c.status), conclusion: upper(c.conclusion), startedAt: c.started_at })),
+      ...checkRuns.map((c) => ({ __typename: "CheckRun", name: c.name, workflowName: workflowOf(c), status: upper(c.status), conclusion: upper(c.conclusion), startedAt: c.started_at, ...attempt(c) })),
     ],
   };
 }
@@ -418,8 +470,14 @@ if (isEntryPoint(import.meta.url)) {
         // decideMerge refuses the unread description itself.
       }
       const why = decideMerge(pr, carry, await prefetchProvenance(pr, provenanceReader(gh, pr), from));
-      if (!why) process.exit(0);
-      refuse(why);
+      const note = orphanNote(pr);
+      if (!why) {
+        // A pipe on macOS is written asynchronously: exit once the line is out.
+        if (note) process.stdout.write(`Merge gate (Constitution VII): ${note}.\n`, () => process.exit(0));
+        else process.exit(0);
+        return;
+      }
+      refuse(note ? `${why} (Also ${note}.)` : why);
     } catch (e) {
       refuse(`the gate failed (${e.message}), so the merge is not approved. Try again; report it if it repeats.`);
     }
