@@ -1,8 +1,9 @@
 import type { Overlays } from '@motor-fix/overlays';
 
+import { ConfirmBookingDialog } from './confirm-booking-dialog/confirm-booking-dialog';
 import { DeclineRequestDialog } from './decline-request-dialog/decline-request-dialog';
-import { requestRow } from './garage-requests.testing';
-import { declineRequest, sendQuote } from './request-actions';
+import { quotedRow, requestRow } from './garage-requests.testing';
+import { confirmBooking, declineRequest, sendQuote } from './request-actions';
 import { SendQuoteDialog } from './send-quote-dialog/send-quote-dialog';
 
 let open: jest.Mock;
@@ -75,4 +76,41 @@ describe('declineRequest', () => {
       expect(feed.reload).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+// @traces 389-FR-014
+// @traces 389-FR-015
+describe('confirmBooking', () => {
+  const row = quotedRow(
+    {
+      booking: {
+        confirmBy: '2026-10-16T18:00:00.000Z',
+        durationMinutes: 90,
+        id: 'booking-1',
+        lift: null,
+        mechanic: null,
+        startsAt: '2026-10-17T06:00:00.000Z',
+        status: 'awaiting_confirmation',
+      },
+    },
+    { status: 'accepted' },
+  );
+
+  it('opens the confirm panel for the row', async () => {
+    await confirmBooking(overlays(), feed, row);
+
+    expect(open).toHaveBeenCalledWith(ConfirmBookingDialog, {
+      data: { row },
+      shape: 'drawer',
+      title: 'garage.quotes.confirm.title',
+    });
+    expect(feed.reload).not.toHaveBeenCalled();
+  });
+
+  it('re-reads the lists once the booking is confirmed', async () => {
+    open.mockResolvedValueOnce('confirmed');
+
+    expect(await confirmBooking(overlays(), feed, row)).toBe('confirmed');
+    expect(feed.reload).toHaveBeenCalledTimes(1);
+  });
 });

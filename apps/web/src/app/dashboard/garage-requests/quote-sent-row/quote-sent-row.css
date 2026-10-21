@@ -51,8 +51,29 @@ p {
   background: var(--mf-green);
 }
 /* Under the status, in its column. */
-.phone {
+.booking,
+.phone,
+.confirm {
   grid-column: -2;
+}
+.booking {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 2px var(--mf-space-2);
+}
+.mechanic {
+  font-weight: 600;
+}
+.plate {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.confirm {
+  justify-self: start;
+  min-height: 44px;
+  white-space: normal;
+}
+.phone {
   display: inline-flex;
   align-items: center;
   justify-self: start;
@@ -68,6 +89,7 @@ p {
 
 /* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
+  .booking,
   .car,
   .slot,
   .status {

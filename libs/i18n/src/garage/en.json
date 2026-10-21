@@ -199,6 +199,30 @@
     "title": "Price list"
   },
   "quotes": {
+    "confirm": {
+      "cancel": "Cancel",
+      "done": "Booking confirmed",
+      "duration": "{minutes} min",
+      "lift": "Lift",
+      "liftNumber": "Lift {n}",
+      "mechanic": "Mechanic",
+      "mechanicRequired": "Choose a mechanic.",
+      "noLift": "No lift",
+      "pickMechanic": "Choose the mechanic",
+      "problem": {
+        "invalid_transition": {
+          "cancelled": "The booking was cancelled",
+          "confirmed": "The booking is already confirmed",
+          "lapsed": "The booking has lapsed"
+        },
+        "lift_busy": "Lift {lift} is busy at this time",
+        "mechanic_busy": "{name} is busy at this time",
+        "mechanic_unavailable": "The mechanic is not available",
+        "outside_hours": "Outside opening hours"
+      },
+      "submit": "Confirm",
+      "title": "Confirm the booking"
+    },
     "send": {
       "cancel": "Cancel",
       "day": "Day",
@@ -241,8 +265,11 @@
     },
     "sentList": {
       "accepted": "Accepted · waiting for your confirmation",
+      "booked": "Accepted · booked",
+      "confirm": "Confirm the booking",
       "empty": "No quotes sent yet.",
       "heading": "Quotes sent",
+      "lift": "Lift {n}",
       "loading": "Loading the quotes sent",
       "phone": "Call the customer: {phone}",
       "waiting": "Waiting for the customer"

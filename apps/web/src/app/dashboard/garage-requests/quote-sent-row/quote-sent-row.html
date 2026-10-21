@@ -16,12 +16,30 @@
 </p>
 <p class="status">
   <span class="lamp" aria-hidden="true"></span>
-  @if (accepted()) {
+  @if (booked()) {
+    <span>{{ 'garage.quotes.sentList.booked' | t }} <time [attr.datetime]="request.booking?.startsAt">{{ bookedSlot() }}</time></span>
+  } @else if (accepted()) {
     <span>{{ 'garage.quotes.sentList.accepted' | t }} · <time [attr.datetime]="request.booking?.confirmBy">{{ left() }}</time></span>
   } @else {
     <span>{{ 'garage.quotes.sentList.waiting' | t }}</span>
   }
 </p>
-@if (accepted() && request.driver.phone; as phone) {
+@if (booked() && request.booking; as booking) {
+  <p class="booking">
+    @if (booking.mechanic; as mechanic) {
+      <span class="mechanic">{{ mechanic.name }}</span>
+    }
+    @if (booking.lift; as n) {
+      <span class="lift">{{ 'garage.quotes.sentList.lift' | t: { n } }}</span>
+    }
+    @if (request.car.plate; as plate) {
+      <span class="plate">{{ plate }}</span>
+    }
+  </p>
+}
+@if ((accepted() || booked()) && request.driver.phone; as phone) {
   <a class="phone" href="tel:{{ phone }}" [attr.aria-label]="'garage.quotes.sentList.phone' | t: { phone }">{{ phone }}</a>
+}
+@if (canConfirm()) {
+  <button hlmBtn type="button" class="confirm" (click)="confirm()">{{ 'garage.quotes.sentList.confirm' | t }}</button>
 }

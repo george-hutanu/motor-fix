@@ -143,9 +143,10 @@ export class DriverHome {
   constructor() {
     void this.i18n.enter('driver');
     this.load();
-    // An accepted quote books the request: its panels read it again.
+    // An accepted quote books the request, and the garage's confirmation or
+    // the lapse moves it on: its panels read it again.
     inject(Live)
-      .on(['quote.accepted'])
+      .on(['quote.accepted', 'booking.confirmed', 'booking.lapsed'])
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.loadRequests());
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;

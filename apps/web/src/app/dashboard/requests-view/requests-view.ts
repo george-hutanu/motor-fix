@@ -16,7 +16,13 @@ import {
   type RequestSummaryDto,
   RequestsService,
 } from '@motor-fix/data-access';
-import { I18n, relativeTime, TranslatePipe, timeLeft } from '@motor-fix/i18n';
+import {
+  formatSlot,
+  I18n,
+  relativeTime,
+  TranslatePipe,
+  timeLeft,
+} from '@motor-fix/i18n';
 import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
@@ -33,6 +39,10 @@ interface Row {
   when: string;
   // Set while the booking waits for the garage: the time it has left.
   waiting?: string;
+  // Set once the garage confirmed: the slot, with its instant.
+  booked?: { at: string; slot: string };
+  // The garage let the booking lapse and another quote is still open.
+  lapsed?: true;
   quoted: boolean;
 }
 
@@ -40,7 +50,9 @@ const TICK_MS = 60_000;
 
 // "Cererile mele": the driver's requests, newest first, kept current by the
 // request events so one sent in another tab shows up without a reload. A
-// booked request waiting for the garage counts down its time to confirm.
+// booked request waiting for the garage counts down its time to confirm,
+// then names its slot once confirmed, or asks for another quote after a
+// lapse.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -61,7 +73,14 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    ['request.created', 'quote.sent', 'request.declined', 'quote.accepted'],
+    [
+      'request.created',
+      'quote.sent',
+      'request.declined',
+      'quote.accepted',
+      'booking.confirmed',
+      'booking.lapsed',
+    ],
   );
   private readonly now = signal(new Date());
   protected readonly rows = computed(() => {
@@ -106,6 +125,7 @@ export class RequestsView {
 
   private row(item: RequestSummaryDto, language: 'ro' | 'en', now: Date): Row {
     const { brand, model, year } = item.car;
+    const booking = item.booking;
     const jobs = item.jobs.map((job) =>
       language === 'en' ? job.nameEn : job.nameRo,
     );
@@ -119,9 +139,18 @@ export class RequestsView {
         : (item.description ?? '').split('\n')[0],
       when: relativeTime(item.createdAt, language, now),
       ...(item.status === 'booked' &&
-        item.booking?.status === 'awaiting_confirmation' && {
-          waiting: timeLeft(item.booking.confirmBy, language, now),
+        booking?.status === 'awaiting_confirmation' && {
+          waiting: timeLeft(booking.confirmBy, language, now),
         }),
+      ...(item.status === 'booked' &&
+        booking?.status === 'confirmed' && {
+          booked: {
+            at: booking.startsAt,
+            slot: formatSlot(booking.startsAt, language, now),
+          },
+        }),
+      ...(item.status === 'quoted' &&
+        booking?.status === 'lapsed' && { lapsed: true as const }),
     };
   }
 }

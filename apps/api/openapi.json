@@ -3163,6 +3163,115 @@
         ]
       }
     },
+    "/api/v1/bookings/{id}/confirm-options": {
+      "get": {
+        "operationId": "ConfirmController_options",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOptionsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic"
+          },
+          "404": {
+            "description": "not_found: not this garage’s booking"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What a confirm may choose: mechanics and lifts",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/confirm": {
+      "post": {
+        "operationId": "ConfirmController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id or body, a mechanic or lift the garage does not take, a lift past its count"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic"
+          },
+          "404": {
+            "description": "not_found: not this garage’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: the booking is not awaiting confirmation, or has lapsed; mechanic_unavailable; outside_hours; mechanic_busy; lift_busy"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm an accepted booking, with its mechanic and lift",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -9847,11 +9956,16 @@
           "confirmBy": {
             "type": "string",
             "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "status",
-          "confirmBy"
+          "confirmBy",
+          "startsAt"
         ]
       },
       "RequestSummaryDto": {
@@ -10343,6 +10457,43 @@
           "quotes"
         ]
       },
+      "GarageCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "nullable": true
+          },
+          "plate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year",
+          "fuel",
+          "engine"
+        ]
+      },
       "GarageRequestJobDto": {
         "type": "object",
         "properties": {
@@ -10530,6 +10681,75 @@
           "jobs"
         ]
       },
+      "BookingMechanicDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "GarageRowBookingDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "mechanic": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingMechanicDto"
+              }
+            ]
+          },
+          "lift": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "confirmBy",
+          "startsAt",
+          "id",
+          "durationMinutes",
+          "mechanic",
+          "lift"
+        ]
+      },
       "GarageRequestSummaryDto": {
         "type": "object",
         "properties": {
@@ -10548,9 +10768,6 @@
               "closed"
             ]
           },
-          "car": {
-            "$ref": "#/components/schemas/CarSnapshotDto"
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -10558,6 +10775,14 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "car": {
+            "description": "The plate shows to the owner and the desk once the booking is confirmed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageCarDto"
+              }
+            ]
           },
           "jobs": {
             "type": "array",
@@ -10590,7 +10815,7 @@
             "description": "Set with closedReason on list rows only; null on the detail"
           },
           "driver": {
-            "description": "The phone shows to the owner and the desk on a row whose quote the driver accepted while it waits for confirmation",
+            "description": "The phone shows to the owner and the desk on a row whose quote the driver accepted, while the booking waits for confirmation or is confirmed",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GarageDriverDto"
@@ -10615,7 +10840,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/RequestBookingDto"
+                "$ref": "#/components/schemas/GarageRowBookingDto"
               }
             ]
           }
@@ -10623,9 +10848,9 @@
         "required": [
           "id",
           "status",
-          "car",
           "createdAt",
           "expiresAt",
+          "car",
           "jobs",
           "descriptionLine",
           "closedReason",
@@ -10819,6 +11044,16 @@
             "format": "uuid",
             "nullable": true
           },
+          "mechanic": {
+            "description": "Who does the job: the booking's mechanic, or the owner's own row when the garage works without a team",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingMechanicDto"
+              }
+            ]
+          },
           "lift": {
             "type": "number",
             "nullable": true
@@ -10853,48 +11088,12 @@
           "createdAt",
           "confirmedBy",
           "mechanicId",
+          "mechanic",
           "lift",
           "moveCount",
           "historyShared",
           "cancelNote",
           "lateCancellation"
-        ]
-      },
-      "GarageCarDto": {
-        "type": "object",
-        "properties": {
-          "brand": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string"
-          },
-          "year": {
-            "type": "number"
-          },
-          "fuel": {
-            "type": "string",
-            "enum": [
-              "petrol",
-              "diesel",
-              "hybrid",
-              "electric"
-            ]
-          },
-          "engine": {
-            "type": "string",
-            "nullable": true
-          },
-          "plate": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "brand",
-          "model",
-          "year",
-          "fuel",
-          "engine"
         ]
       },
       "GarageRequestDto": {
@@ -11443,6 +11642,42 @@
           "declined",
           "waiting"
         ]
+      },
+      "ConfirmOptionsDto": {
+        "type": "object",
+        "properties": {
+          "liftCount": {
+            "type": "number",
+            "description": "0 while the garage schedules without lifts"
+          },
+          "mechanics": {
+            "description": "Empty while the garage works without a team",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingMechanicDto"
+            }
+          }
+        },
+        "required": [
+          "liftCount",
+          "mechanics"
+        ]
+      },
+      "ConfirmBookingDto": {
+        "type": "object",
+        "properties": {
+          "mechanicId": {
+            "type": "string",
+            "description": "Required while the garage's team is on; refused while it is off",
+            "format": "uuid"
+          },
+          "lift": {
+            "type": "number",
+            "description": "1 to the garage's lift count; refused while it schedules without lifts",
+            "maximum": 99,
+            "minimum": 1
+          }
+        }
       },
       "DriverNameDto": {
         "type": "object",

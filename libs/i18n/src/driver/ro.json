@@ -282,7 +282,9 @@
     }
   },
   "requests": {
+    "booked": "Programată",
     "compare": "Compară ofertele",
+    "lapsed": "Service‑ul nu a confirmat. Alege altă ofertă.",
     "retry": "Încearcă din nou",
     "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
   },

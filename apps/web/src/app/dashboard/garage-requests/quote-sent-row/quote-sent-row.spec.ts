@@ -1,13 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { Component, input } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
+import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { QuoteSentRow } from './quote-sent-row';
+import { Session } from '../../session';
+import { ConfirmBookingDialog } from '../confirm-booking-dialog/confirm-booking-dialog';
 import { quotedRow, requestRow } from '../garage-requests.testing';
+import { GarageRequestsFeed } from '../garage-requests-feed';
 
 @Component({
   imports: [QuoteSentRow],
@@ -21,11 +25,45 @@ class Host {
 // 13:00 in Bucharest, a Friday.
 const NOW = new Date('2026-10-09T10:00:00Z');
 
+type Role = 'owner' | 'receptionist' | 'mechanic';
+const me = (role: Role, canAnswerQuotes = false) =>
+  ({
+    capabilities: ['garage.requests'],
+    garageAccess: [
+      {
+        features: {},
+        garageId: 'garage-1',
+        name: 'Service Auto',
+        permissions: {
+          canAnswerQuotes,
+          canMoveBookings: false,
+          canRecordFinalPrice: false,
+        },
+        role,
+        status: 'approved',
+      },
+    ],
+    garageId: 'garage-1',
+  }) as unknown as MeDto;
+
+let open: jest.Mock;
+let reload: jest.Mock;
+
 async function render(
   row: GarageRequestSummaryDto,
   language: 'ro' | 'en' = 'ro',
+  account: MeDto = me('owner'),
 ) {
-  TestBed.configureTestingModule({});
+  const shown = signal(account);
+  open = jest.fn(async () => 'cancelled');
+  reload = jest.fn();
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: Session, useValue: { current: shown, shown } },
+      { provide: Overlays, useValue: { open } },
+      { provide: GarageRequestsFeed, useValue: { reload, sent: jest.fn() } },
+    ],
+  });
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const fixture = TestBed.createComponent(Host);
@@ -171,6 +209,11 @@ describe('a row whose quote the driver accepted', () => {
     const base = sample('2026-10-10T06:00:00Z', {
       booking: {
         confirmBy: new Date(NOW.getTime() + confirmIn).toISOString(),
+        durationMinutes: 90,
+        id: 'booking-1',
+        lift: null,
+        mechanic: null,
+        startsAt: '2026-10-10T06:00:00Z',
         status: 'awaiting_confirmation',
       },
       driver,
@@ -230,17 +273,6 @@ describe('a row whose quote the driver accepted', () => {
     expect(row.querySelector('a')).toBeNull();
   });
 
-  it('reads as waiting when the booking no longer waits for the garage', async () => {
-    const base = accepted(5 * HOUR);
-    const row = await render({
-      ...base,
-      booking: base.booking && { ...base.booking, status: 'confirmed' },
-    });
-
-    expect(text(row.querySelector('.status'))).not.toContain('Acceptată');
-    expect(row.classList).not.toContain('accepted');
-  });
-
   it('gives the phone link a 44 px target and a green lamp', () => {
     const css = readFileSync(join(__dirname, 'quote-sent-row.css'), 'utf8');
 
@@ -248,6 +280,150 @@ describe('a row whose quote the driver accepted', () => {
     expect(css).toMatch(
       /:host\(\.accepted\) \.lamp \{[^}]*background: var\(--mf-green\)/,
     );
+  });
+});
+
+const confirmButton = (row: HTMLElement, name = 'Confirmă programarea') =>
+  [...row.querySelectorAll('button')].find(
+    (b) => b.textContent?.replace(/\s+/g, ' ').trim() === name,
+  );
+
+const awaiting = () => {
+  const base = sample('2026-10-10T06:00:00Z', {
+    booking: {
+      confirmBy: new Date(NOW.getTime() + 5 * 3_600_000).toISOString(),
+      durationMinutes: 90,
+      id: 'booking-1',
+      lift: null,
+      mechanic: null,
+      startsAt: '2026-10-10T06:00:00Z',
+      status: 'awaiting_confirmation',
+    },
+    driver: { phone: '+40722111222', shortName: 'Irina S.' },
+  });
+  return {
+    ...base,
+    quote: base.quote && { ...base.quote, status: 'accepted' as const },
+  };
+};
+
+const booked = (
+  booking: Partial<NonNullable<GarageRequestSummaryDto['booking']>> = {},
+): GarageRequestSummaryDto => {
+  const base = awaiting();
+  return {
+    ...base,
+    booking: {
+      ...(base.booking as NonNullable<GarageRequestSummaryDto['booking']>),
+      lift: 2,
+      mechanic: { id: 'mech-1', name: 'Ion Popescu' },
+      status: 'confirmed',
+      ...booking,
+    },
+    car: { ...base.car, plate: 'B123ABC' },
+  };
+};
+
+// @traces 389-FR-014
+describe('the confirm button on an accepted row', () => {
+  it.each(['owner', 'receptionist'] as const)(
+    'shows Confirmă programarea to a %s',
+    async (role) => {
+      const row = await render(awaiting(), 'ro', me(role));
+
+      expect(confirmButton(row)).toBeDefined();
+    },
+  );
+
+  it('says Confirm the booking in English', async () => {
+    const row = await render(awaiting(), 'en');
+
+    expect(confirmButton(row, 'Confirm the booking')).toBeDefined();
+  });
+
+  it.each([true, false])(
+    'is absent for a mechanic (can answer quotes: %s)',
+    async (can) => {
+      const row = await render(awaiting(), 'ro', me('mechanic', can));
+
+      expect(row.querySelector('button')).toBeNull();
+    },
+  );
+
+  it('is absent while the quote waits for the driver', async () => {
+    const row = await render(sample('2026-10-10T06:00:00Z'));
+
+    expect(row.querySelector('button')).toBeNull();
+  });
+
+  it('opens the confirm panel for the row and re-reads the lists once confirmed', async () => {
+    const data = awaiting();
+    const row = await render(data);
+    open.mockResolvedValueOnce('confirmed');
+
+    confirmButton(row)?.click();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(open).toHaveBeenCalledWith(ConfirmBookingDialog, {
+      data: { row: data },
+      shape: 'drawer',
+      title: 'garage.quotes.confirm.title',
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 389-FR-015
+// @traces 389-FR-017
+describe('a confirmed row', () => {
+  it('reads Acceptată · programată with the day and time, in the accepted colour', async () => {
+    const row = await render(booked());
+
+    expect(text(row.querySelector('.status'))).toBe(
+      'Acceptată · programată mâine, 09:00',
+    );
+    expect(row.classList).toContain('accepted');
+    expect(row.querySelector('.status time')?.getAttribute('datetime')).toBe(
+      '2026-10-10T06:00:00Z',
+    );
+  });
+
+  it('reads Accepted · booked in English', async () => {
+    const row = await render(booked(), 'en');
+
+    expect(text(row.querySelector('.status'))).toBe(
+      'Accepted · booked tomorrow, 09:00',
+    );
+    expect(text(row.querySelector('.lift'))).toBe('Lift 2');
+  });
+
+  it('names the weekday and date of a later slot', async () => {
+    const row = await render(booked({ startsAt: '2026-10-15T11:00:00Z' }));
+
+    expect(text(row.querySelector('.status'))).toBe(
+      'Acceptată · programată joi, 15 oct., 14:00',
+    );
+  });
+
+  it('shows the mechanic, the lift, the phone and the plate, and no button', async () => {
+    const row = await render(booked());
+
+    expect(text(row.querySelector('.mechanic'))).toBe('Ion Popescu');
+    expect(text(row.querySelector('.lift'))).toBe('Elevator 2');
+    expect(row.querySelector('a.phone')?.getAttribute('href')).toBe(
+      'tel:+40722111222',
+    );
+    expect(text(row.querySelector('.plate'))).toBe('B123ABC');
+    expect(row.querySelector('button')).toBeNull();
+    expect(text(row)).not.toContain('așteaptă confirmarea');
+  });
+
+  it('leaves out the mechanic and the lift when none was set', async () => {
+    const row = await render(booked({ lift: null, mechanic: null }));
+
+    expect(row.querySelector('.mechanic')).toBeNull();
+    expect(row.querySelector('.lift')).toBeNull();
+    expect(text(row.querySelector('.plate'))).toBe('B123ABC');
   });
 });
 
