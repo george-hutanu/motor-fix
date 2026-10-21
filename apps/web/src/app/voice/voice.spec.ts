@@ -93,11 +93,11 @@ describe('the texts of each voice', () => {
   });
 
   it('has a second benefits line for voices 1, 2 and 4 only', () => {
-    expect(voiceOf('1').key('feat2')).toBe('public.voice.v1.feat2');
-    expect(voiceOf('2').key('feat2')).toBe('public.voice.v2.feat2');
-    expect(voiceOf('3').key('feat2')).toBeNull();
-    expect(voiceOf('4').key('feat2')).toBe('public.voice.v4.feat2');
-    expect(voiceOf('5').key('feat2')).toBeNull();
+    expect(voiceOf('1').feat2).toBe('public.voice.v1.feat2');
+    expect(voiceOf('2').feat2).toBe('public.voice.v2.feat2');
+    expect(voiceOf('3').feat2).toBeNull();
+    expect(voiceOf('4').feat2).toBe('public.voice.v4.feat2');
+    expect(voiceOf('5').feat2).toBeNull();
   });
 
   it('has a second benefits line exactly where the translations carry one', () => {
@@ -112,7 +112,7 @@ describe('the texts of each voice', () => {
         ),
       );
       for (const n of [1, 2, 3, 4, 5])
-        expect(voiceOf(String(n)).key('feat2') !== null).toBe(
+        expect(voiceOf(String(n)).feat2 !== null).toBe(
           'feat2' in texts.voice[`v${n}`],
         );
     }
@@ -122,7 +122,7 @@ describe('the texts of each voice', () => {
     for (const language of ['ro', 'en'] as const)
       for (const n of ['1', '2', '3', '4', '5']) {
         const { i18n, voice } = await texts(language, n);
-        const keys = [...SLOTS.map((s) => voice.key(s)), voice.key('feat2')];
+        const keys = [...SLOTS.map((s) => voice.key(s)), voice.feat2];
         for (const key of keys.filter((k) => k !== null)) {
           const text = i18n.t(key, { brand: 'BMW' });
           expect(text).not.toBe(key);

@@ -16,7 +16,7 @@ export type Slot =
 
 // Voices whose benefits headline has no second line; the translation files
 // carry no feat2 for them (voice.spec.ts holds the two together). Voice 3's
-// headline shows sample figures until the live counts of ST-7 replace them.
+// headline shows sample figures until the live counts replace them.
 const ONE_LINE = new Set([3, 5]);
 
 const SLOTS: readonly Slot[] = [
@@ -68,9 +68,7 @@ export class Voice {
       : `public.voice.v${this.voice}.feat2`;
   }
 
-  key(slot: Slot): string;
-  key(slot: 'feat2'): string | null;
-  key(slot: Slot | 'feat2'): string | null {
-    return slot === 'feat2' ? this.feat2 : this.copy[slot];
+  key(slot: Slot): string {
+    return this.copy[slot];
   }
 }
