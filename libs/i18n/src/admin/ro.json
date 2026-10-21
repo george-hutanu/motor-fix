@@ -118,6 +118,7 @@
     },
     "cui": "CUI {cui}",
     "cuiShared": "CUI folosit și de alt service: {names}",
+    "cuiWarning": "CUI folosit deja de: {names}",
     "documents": {
       "ago": {
         "few": "emis acum {n} zile",
@@ -579,6 +580,7 @@
       "one": "{n} marcă",
       "other": "{n} de mărci"
     },
+    "cuiWarning": "CUI folosit deja de: {names}",
     "empty": "Niciun service nu așteaptă verificarea",
     "failed": "Lista nu a putut fi citită",
     "heading": "Service‑uri de verificat",

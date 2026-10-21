@@ -2784,6 +2784,41 @@ describe('a CUI held by another garage', () => {
   });
 });
 
+// @traces 116-FR-012
+describe('the CUI warning the send stored', () => {
+  const warning = (host: HTMLElement) =>
+    section(host, 'header')?.querySelector<HTMLElement>(
+      '[data-part="cui-warning"]',
+    ) ?? null;
+  const withWarning = (cuiWarning: string | null) =>
+    fileOf({
+      checks: KINDS.map((kind) => check(kind, { result: 'ok' })),
+      garage: { cuiWarning } as Partial<VerificationFileDto['garage']>,
+    });
+
+  it.each([
+    [
+      'ro',
+      'Auto Ion, Service Dobre',
+      'CUI folosit deja de: Auto Ion, Service Dobre',
+    ],
+    ['en', 'Service Dobre', 'CUI already used by: Service Dobre'],
+  ] as const)(
+    'is named in the header in %s: %j',
+    async (language, names, line) => {
+      const host = await open(withWarning(names), language);
+
+      expect(text(warning(host))).toBe(line);
+    },
+  );
+
+  it('shows nothing when the send found no other listing', async () => {
+    const host = await open(withWarning(null));
+
+    expect(warning(host)).toBeNull();
+  });
+});
+
 // @traces 069-FR-006 069-FR-008 069-FR-009 069-FR-010
 describe('the reports part', () => {
   const EARLIER = new Date(NOW.getTime() - 2 * 3_600_000).toISOString();

@@ -61,7 +61,8 @@
 }
 .area,
 .applied,
-.waiting {
+.waiting,
+.cui {
   font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
@@ -78,6 +79,7 @@ mf-lamp {
   .area,
   .applied,
   .waiting,
+  .cui,
   mf-lamp {
     font-size: var(--mf-size-small);
   }

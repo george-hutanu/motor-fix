@@ -191,6 +191,9 @@ export class AdminQueue {
       ]
         .filter(Boolean)
         .join(' · '),
+      cui: row.cuiWarning
+        ? this.t('cuiWarning', { names: row.cuiWarning })
+        : undefined,
       decided: undefined as { line: string; status: KeptStatus } | undefined,
       id: row.id,
       lamp: row.lamp,

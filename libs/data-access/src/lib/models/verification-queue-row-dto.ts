@@ -16,6 +16,11 @@ export interface VerificationQueueRowDto {
   brands: number;
 
   /**
+   * The other listings that held the same CUI when it was sent; absent when none
+   */
+  cuiWarning?: string;
+
+  /**
    * Waited more than the 2 working days
    */
   flagged: boolean;

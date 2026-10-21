@@ -117,6 +117,7 @@
     },
     "cui": "CUI {cui}",
     "cuiShared": "CUI also used by another garage: {names}",
+    "cuiWarning": "CUI already used by: {names}",
     "documents": {
       "ago": {
         "one": "issued {n} day ago",
@@ -567,6 +568,7 @@
       "one": "{n} brand",
       "other": "{n} brands"
     },
+    "cuiWarning": "CUI already used by: {names}",
     "empty": "No garage is waiting for verification",
     "failed": "The list could not be read",
     "heading": "Garages to verify",

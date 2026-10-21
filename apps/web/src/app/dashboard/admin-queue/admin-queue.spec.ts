@@ -245,6 +245,28 @@ describe('a queue row', () => {
   });
 });
 
+// @traces 116-FR-012
+describe("a row's CUI warning", () => {
+  it.each([
+    ['ro', 'CUI folosit deja de: Auto Ion, Service Dobre'],
+    ['en', 'CUI already used by: Auto Ion, Service Dobre'],
+  ] as const)('names the other listings in %s', async (language, line) => {
+    answer = async () => ({
+      items: [row(1, { cuiWarning: 'Auto Ion, Service Dobre' })],
+      total: 1,
+    });
+    const el = await open({}, language);
+
+    expect(text(rows(el)[0].querySelector('.cui'))).toBe(line);
+  });
+
+  it('shows nothing when the send found no other listing', async () => {
+    const el = await open();
+
+    expect(rows(el)[0].querySelector('.cui')).toBeNull();
+  });
+});
+
 describe('the panel', () => {
   it('heads the list with its name and the count', async () => {
     const el = await open();

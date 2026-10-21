@@ -12284,6 +12284,10 @@
           "summary": {
             "$ref": "#/components/schemas/CheckSummaryDto"
           },
+          "cuiWarning": {
+            "type": "string",
+            "description": "The other listings that held the same CUI when it was sent; absent when none"
+          },
           "lamp": {
             "type": "string",
             "description": "Red on a failed check, amber when flagged or on a warning",

@@ -238,6 +238,9 @@ export class VerificationFile {
       cuiShared: garage.cuiAlsoUsedBy.length
         ? this.t('cuiShared', { names: garage.cuiAlsoUsedBy.join(', ') })
         : null,
+      cuiWarning: garage.cuiWarning
+        ? this.t('cuiWarning', { names: garage.cuiWarning })
+        : null,
       kind: garage.businessKind ? this.t(`kinds.${garage.businessKind}`) : null,
       name: garage.name,
       phone: garage.phone,
