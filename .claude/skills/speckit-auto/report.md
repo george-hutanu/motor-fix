@@ -7,13 +7,10 @@ Read at the hand-off, before the reply. The envelope and where the report goes a
 The report's sections:
 
 - Branch, feature directory, commit range (`<start>..HEAD`), commit count.
-- Phases run, as a table: phase, first, last, minutes, the skills each
-  subagent ran, and the outcome. Read it from the session's ledger:
-  `node .claude/scripts/telemetry.mjs --json` lists the ledgers' totals; the
-  ledger itself (`<main checkout>/.specify/telemetry/<session>.json`, the one
-  whose `worktree` is this checkout) holds `buckets["<level>/<phase>"].first`,
-  `.last` and `.hook_ms`, and `subagent_skills` per agent type. A phase with
-  no bucket (an older ledger) shows `–`.
+- Phases run, with each one's outcome in a line. Under them, the table
+  `node .claude/scripts/telemetry.mjs --phases <feature>` prints from the
+  ledgers: each `<level>/<phase>` with its first and last time, minutes, hook
+  minutes, and the skills each subagent ran (`–` where an older ledger has none).
 - Autonomous decisions: every gate you answered and what you answered
   (pointer to `specs/<feature>/auto-run.md` for the full log).
 - Verification: the exact commands run and their result lines, quoted; and the
