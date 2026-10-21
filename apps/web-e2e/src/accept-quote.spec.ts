@@ -173,7 +173,8 @@ test.describe('accepting a quote @seeded', () => {
     await expect(tick).not.toBeChecked();
     await tick.check();
     await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
-    await expect(dialog).toBeHidden();
+    // On a phone the dialog container around the sheet has no box.
+    await expect(dialog.locator('mf-overlay-panel')).toBeHidden();
 
     await expect(row).toContainText('Acceptată');
     await expect(row.locator('[data-part="booking"]')).toHaveText(
