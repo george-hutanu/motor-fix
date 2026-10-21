@@ -1,4 +1,9 @@
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  type DynamicModule,
+  type INestApplication,
+  type Type,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -12,9 +17,9 @@ import { serialDatabase } from '../auth/serial-db.testing';
 import type { PrismaClient } from '../generated/prisma/client';
 import { WorkshopModule } from '../workshop/workshop.module';
 
-// Boots the auth, quotes and workshop modules over HTTP for a whole spec
-// file, with an empty database before each case.
-export function quotesApp() {
+// Boots the auth, quotes and workshop modules, and any module a spec adds,
+// over HTTP for a whole spec file, with an empty database before each case.
+export function quotesApp(modules: (Type | DynamicModule)[] = []) {
   const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const tokenSecret = 'test-secret';
   const world = quotesWorld();
@@ -29,6 +34,7 @@ export function quotesApp() {
         AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
         QuotesModule,
         WorkshopModule,
+        ...modules,
       ],
     }).compile();
     app = moduleRef.createNestApplication();

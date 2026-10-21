@@ -12,6 +12,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import { countSignIn, initProductCounters } from './product-counters';
 import { BOOKING_CONFIRM_OUTCOMES } from '../quotes/quotes/quotes.metrics';
+import { REVIEW_POSTED_OUTCOMES } from '../reviews/reviews.metrics';
 
 // A file of its own: the worker's series are read in another, each with a
 // meter that has counted nothing before the series start.
@@ -53,11 +54,12 @@ async function series() {
 // note_required, reason_required, note_too_short and the report decision's
 // no_open_report; the rejections one per reason; the listings sent, the
 // requests for more and the files sent again one each; the report decisions one per outcome),
-// one per check kind and result, one per re-check result, and one per
-// booking confirmation outcome.
+// one per check kind and result, one per re-check result, one per booking
+// confirmation outcome and one per review outcome.
 const API_SERIES =
   91 +
   BOOKING_CONFIRM_OUTCOMES.length +
+  REVIEW_POSTED_OUTCOMES.length +
   VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length +
   RECHECK_RESULTS.length;
 
