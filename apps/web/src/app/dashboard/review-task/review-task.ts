@@ -123,6 +123,19 @@ export class ReviewTask {
     }
   }
 
+  // Keys built from a value, which the template key check cannot follow.
+  protected words(rating: number) {
+    return `${KEY}.rating.${rating}`;
+  }
+
+  protected statusNote(status: string) {
+    return `${KEY}.existing.${status}`;
+  }
+
+  protected fieldError(why: string) {
+    return `${KEY}.field.${why}`;
+  }
+
   protected typePaid(event: Event) {
     this.paid.set((event.target as HTMLInputElement).value);
     this.paidError.set(null);

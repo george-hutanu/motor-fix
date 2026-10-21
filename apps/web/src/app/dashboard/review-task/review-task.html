@@ -21,7 +21,7 @@
     @if (existing(); as review) {
       <section class="existing" aria-labelledby="mf-review-existing">
         <h3 id="mf-review-existing">{{ 'driver.review.existing.title' | t }}</h3>
-        <p class="score"><span class="digit">{{ review.rating }}</span> {{ 'driver.review.rating.' + review.rating | t }}</p>
+        <p class="score"><span class="digit">{{ review.rating }}</span> {{ words(review.rating) | t }}</p>
         @if (review.paidBani !== null) {
           <p>{{ review.paidBani | lei }}</p>
         }
@@ -30,7 +30,7 @@
         }
         <p class="note">{{ 'driver.review.existing.postedAt' | t: { date: postedOn() } }}</p>
         @if (review.status === 'reported' || review.status === 'removed') {
-          <p class="note">{{ 'driver.review.existing.' + review.status | t }}</p>
+          <p class="note">{{ statusNote(review.status) | t }}</p>
         }
       </section>
     }
@@ -58,7 +58,7 @@
             </label>
           }
         </div>
-        <p class="words" aria-live="polite">{{ 'driver.review.rating.' + rating() | t }}</p>
+        <p class="words" aria-live="polite">{{ words(rating()) | t }}</p>
       </fieldset>
       <div class="field">
         <label for="mf-review-car">{{ 'driver.review.car' | t }}</label>
@@ -79,7 +79,7 @@
           (input)="typePaid($event)"
         />
         @if (paidError(); as why) {
-          <p class="error" id="mf-review-paid-error" role="alert">{{ 'driver.review.field.' + why | t }}</p>
+          <p class="error" id="mf-review-paid-error" role="alert">{{ fieldError(why) | t }}</p>
         }
       </div>
       <div class="field">
@@ -104,7 +104,7 @@
         ></textarea>
         <p class="count" id="mf-review-comment-count" [class.over]="count() > max">{{ count() | num }} / {{ max | num }}</p>
         @if (commentError(); as why) {
-          <p class="error" role="alert">{{ 'driver.review.field.' + why | t }}</p>
+          <p class="error" role="alert">{{ fieldError(why) | t }}</p>
         }
       </div>
       <p class="privacy">{{ 'driver.review.privacy' | t }}</p>
