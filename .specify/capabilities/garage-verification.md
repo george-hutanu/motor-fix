@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -22,6 +22,7 @@ features:
   - 069-report-decision
   - 1351-rar-monthly-recheck
   - 1354-garage-legal-checks
+  - 1357-rar-covered-jobs
 ---
 
 # Capability: Garage verification
@@ -691,6 +692,14 @@ _From 1354-garage-legal-checks._
 ### 1354-FR-010 — Tests MUST exist before the code (Principle II). Jest, unit: the RAR row's day and line for an approval-only garage and after an `ok` re-check; the suspended tag and the three failure texts; the dates in both languages; the strip's line in both languages and its absence without a date. Jest on real PostgreSQL and Redis: the read answers for a `suspended` garage with its status and the failed re-check recorded through the re-check use case, 404 for `draft` and for an outsider, 403 for the receptionist, and the session's garage entry carries the date and the re-check flag for the owner and the receptionist. Web unit: the panel re-reads on `garage.suspended` and the session on `recheck.recorded`. Playwright: with the owner's dashboard open, record a valid re-check as the seeded admin in another session and see the strip's date and the RAR row change without a reload. The four sizes, light and dark, Romanian and English are the PR QA sweep's.
 
 _From 1354-garage-legal-checks._
+
+### 1357-FR-003 — The admin's verification file MUST show, in its register section, the line "Activitățile autorizate acoperă lista de prețuri" / "Authorised activities cover the price list" with the recorded result's lamp and, when the record left jobs uncovered, "Neacoperite: {jobs}" / "Not covered: {jobs}" naming each by its catalogue name in the admin's language, as the shipped `activities` row does (verification-file.ts:300-316, 905-917); the server keeps computing the uncovered set at the save (204-FR-004). The story adds the test that pins it and changes no screen.
+
+_From 1357-rar-covered-jobs._
+
+### 1357-FR-004 — An `activities` record of any result that carries a list MUST keep writing the garage's list and saving one `price_list.updated` event for the garage's public audience in the same transaction (verification-checks.service.ts:406-420), and an `ok` re-check that narrows the list MUST keep doing the same (recheck.service.ts:394-401); no second path, column or event is added. The open profile and the owner's Prețuri re-read in place on that event, as they do for every `price_list.*` event today.
+
+_From 1357-rar-covered-jobs._
 
 ## Retired
 

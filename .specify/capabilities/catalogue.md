@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -15,6 +15,7 @@ features:
   - 228-how-it-works-list-garage
   - 176-price-change-activity-log
   - 1352-catalogue-job-visibility
+  - 1357-rar-covered-jobs
 ---
 
 # Capability: Catalogue
@@ -250,6 +251,26 @@ _From 1352-catalogue-job-visibility._
 ### 1352-FR-018 — The tests MUST cover, before the code (Principle II): in Jest (API, real PostgreSQL and Valkey) — add with both ends and with a start only, the row's place at the end, `duplicate` on a listed job, `unknown_job` on an unknown id and `not_approved` on a pending one, the range check's 422 and the wide-range warning, no tick written; hide, show, the same value again writing nothing, a body mixing `visible` and a range field refused; removal deleting the default row, the brand rows and the ticks while an open request and its quote stay, 404 for a brand row or another garage's row; a proposal creating the pending catalogue row and the hidden price row, a repeat proposal refused, an approved job's name refused, a rejected name proposed again, two garages proposing one name; 403 for the receptionist and the mechanic and 404 for another owner on every write; the audit entries and the events of each write in the same transaction (none when the transaction fails); every admin notified once per proposal and a muted admin not; `visible` on the read; the migration's orphan removal and the constraint; in Playwright (the serial price-list project) — as the owner, remove air-con regas, add it back from the picker with 45 min and 280 – 360 lei and see it on the profile; hide the timing chain kit and see it gone from the profile, show it again; propose a name unique to the run and see it waiting, then remove it.
 
 _From 1352-catalogue-job-visibility._
+
+### 1357-FR-001 — Each shipped catalogue job MUST carry the kind of work it falls under, as seed data the loader reconciles by key on boot like the job's names (every record carries its kind explicitly, `none` as null; a stored job whose kind differs from the list's, null included, gets the list's; a job missing from the list keeps what it has). The mapping, drafted from the five seeded RAR codes (OD-33, row #242) and signed off by the owner under the 2026-10-11 rule: `oil-service` → `mechanics`, `timing-chain` → `mechanics`, `front-brakes` → `brakes`, `suspension-alignment` → `suspension`, `ac-regas` → `air_con`, `diagnosis` → none. Every mapped code MUST be one the RAR catalogue holds, checked by a test (no foreign key and no boot-time check), so no job is ever hidden by a code no admin can tick.
+
+_From 1357-rar-covered-jobs._
+
+### 1357-FR-002 — The owner's Prețuri row of a job whose reason is `not_authorised` MUST read "ascuns · nu e în autorizația RAR" / "hidden · not in your RAR authorisation" with an amber lamp and amber text, as every non-public row reads today (prices-view.css:129-134, garage i18n `prices.state.not_authorised`); the story changes no text, colour or layout of the view and adds the test that pins it.
+
+_From 1357-rar-covered-jobs._
+
+### 1357-FR-005 — The public profile and the owner's price-list read MUST keep judging each job by the garage's stored list alone (`garage.rar_activities`): a job with no kind, or a garage with an empty list, is covered; a job whose kind is not in a non-empty list is hidden with reason `not_authorised`, third in the reason order after `rejected` and `awaiting_approval` (357-FR-001, 357-FR-002). While a change of kinds of work waits for an admin (#127), nothing else is consulted, since nothing else is stored.
+
+_From 1357-rar-covered-jobs._
+
+### 1357-FR-006 — The story MUST add no endpoint, service, queue, outside call, product action, screen or text, and no metric, log, trace, panel or alert beyond those shipped; the observability section of the PR says so. The one source change is the mapping of FR-001 and the loader's reconciliation of it.
+
+_From 1357-rar-covered-jobs._
+
+### 1357-FR-007 — Tests MUST exist before the code (Principle II), tagged with this feature's ids. In Jest: the loader writes each job's kind on create and reconciles a stored job's differing kind on update (null to a code, a code to another, a code to null for a job the list maps to none), records the change in the audit as it does for a name, and leaves an unchanged job untouched (job-type-loader integration spec); every mapped code is in `rar_activity` after the migrations and the load; the owner's read gives `not_authorised` to a listed, both-ends-set `ac-regas` of a garage whose list lacks `air_con`, and the public profile omits it, while a garage with an empty list and a job with no kind are both covered (price-list API integration spec); recording the activities with `air_con` makes it public on the next read and saves `price_list.updated` in the same transaction, and an `ok` re-check without it hides it and saves the event (verification-checks and recheck integration specs); Prețuri renders the `not_authorised` label with an amber lamp, and re-reads when a `price_list.*` event arrives, the row turning to "pe profil" once the job is covered (prices-view spec), as does the open public profile (garage-profile spec, tagged 1353-FR-003 where it already exists); the verification file renders the activities row ok, and as a warning naming the uncovered job from its evidence (verification-file spec). In Playwright, one flow on an approved garage of the flow's own whose recorded activities lack `brakes` (the admin's recording is pinned by the verification-checks spec and the verification-file flow, and recording on the seeded Atelier Dinamo would move it under every flow beside this one): signed in as its owner, Prețuri shows "Plăcuțe și discuri de frână față" as "ascuns · nu e în autorizația RAR" and the public profile does not list it.
+
+_From 1357-rar-covered-jobs._
 
 ## Retired
 
