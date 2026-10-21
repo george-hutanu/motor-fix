@@ -11,7 +11,7 @@ import { ciOkOn, spawnRun } from "./gh-rest.mjs";
 
 export function canSkipSuite({ porcelain, head, mergeBase, ciOk }) {
   if (porcelain.trim()) return { skip: false, reason: "the tree has uncommitted changes" };
-  if (head !== mergeBase) return { skip: false, reason: "HEAD is not its merge base with origin/main" };
+  if (!head || head !== mergeBase) return { skip: false, reason: "HEAD is not its merge base with origin/main" };
   if (!ciOk) return { skip: false, reason: `${head.slice(0, 7)} has no successful CI OK check` };
   return { skip: true };
 }

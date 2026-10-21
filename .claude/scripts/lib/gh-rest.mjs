@@ -138,8 +138,12 @@ function headChecks(run, sha) {
  * succeeded.
  */
 export function ciOkOn(run, sha) {
-  const ok = headChecks(run, sha).runs.filter((c) => /CI OK$/.test(c.name));
-  return ok.length > 0 && ok.every((c) => c.conclusion === "success");
+  try {
+    const ok = headChecks(run, sha).runs.filter((c) => /CI OK$/.test(c.name));
+    return ok.length > 0 && ok.every((c) => c.conclusion === "success");
+  } catch {
+    return false; // a failed read counts as no CI OK
+  }
 }
 
 /** headChecks as GraphQL's CheckRun and StatusContext. */

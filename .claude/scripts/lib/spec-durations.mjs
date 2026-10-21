@@ -16,17 +16,21 @@ export const STORE = ".specify/.cache/spec-durations.json";
 const SLOW_MS = 5000;
 const FRESH_MS = 7 * 24 * 60 * 60 * 1000;
 
+const isStore = (s) => s !== null && typeof s === "object" && !Array.isArray(s);
+
 const load = (file) => {
   try {
-    return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+    const store = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+    return isStore(store) ? store : {};
   } catch {
     return {};
   }
 };
 
+/** A record with no usable duration or timestamp counts as absent, so the spec runs. */
 export function shouldRunSpec(spec, store, now = Date.now()) {
-  const r = store[spec];
-  return !r || !(r.ms >= SLOW_MS) || now - Date.parse(r.at) > FRESH_MS;
+  const r = isStore(store) ? store[spec] : undefined;
+  return !(r?.ms >= SLOW_MS) || !(now - Date.parse(r?.at) <= FRESH_MS);
 }
 
 export function recordDuration(file, spec, ms, now = new Date()) {

@@ -58,6 +58,7 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
   const base = [
     ['git rev-parse --abbrev-ref HEAD', { stdout: `${branch}\n` }],
     ['git rev-parse HEAD', { stdout: 'abcdef1234567890\n' }],
+    ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }],
     ['gh auth token -u george-hutanu', { stdout: 'tok-from-gh\n' }],
     ['gh pr create', { stdout: `${PR_URL}\n` }],
     ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),

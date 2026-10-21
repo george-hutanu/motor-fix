@@ -340,6 +340,7 @@ function localChecks(ctx) {
   runCheck(ctx, "structure-check", "node", ["scripts/structure-check.ts", "--base", "origin/main"]);
   runCheck(ctx, "lint", "npm", ["run", "lint"]);
   const base = ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
+  if (!base) throw new Stop("affected typecheck and unit tests", `no merge base with origin/main: git fetch origin, then rerun ${SELF} check`);
   runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`]);
 }
 
