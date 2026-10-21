@@ -14,8 +14,10 @@ const dirs = [];
 
 export const IMAGES = ['ghcr.io/george-hutanu/motor-fix-postgres:18', 'valkey/valkey:9'];
 
+// A backgrounded stub (dockerd) can still write into a VM while it is removed, so the
+// removal retries on ENOTEMPTY rather than failing the case it follows.
 export function cleanup() {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 }
 
 export const stub = (bin, name, body) => {
