@@ -11,7 +11,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
-  type ActiveRequestAnswerDto,
   type CarDto,
   CarsService,
   type RequestSummaryDto,
@@ -27,7 +26,7 @@ import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
-import { Live } from '../live';
+import { Live, liveResource } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
@@ -78,9 +77,17 @@ export class DriverHome {
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
   protected readonly requests = signal<Read<RequestSummaryDto>>(undefined);
-  protected readonly active = signal<
-    ActiveRequestAnswerDto | 'failed' | undefined
-  >(undefined);
+  // The active request, re-read when a quote is sent, accepted, confirmed or
+  // lapses, and after a resync; the last read wins.
+  private readonly activeRead = liveResource(
+    () => this.requestsApi.activeRequestControllerGet(),
+    ['quote.sent', 'quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+  );
+  protected readonly active = computed(() =>
+    this.activeRead.failed() && !this.activeRead.value()
+      ? 'failed'
+      : this.activeRead.value(),
+  );
   // The active request's panel, or the invitations once the read says no
   // request is open.
   protected readonly firstRow = computed(() => {
@@ -148,22 +155,12 @@ export class DriverHome {
     void this.i18n.enter('driver');
     this.load();
     // An accepted quote books the request, and the garage's confirmation or
-    // the lapse moves it on: its panels read it again. A quote sent moves
-    // the active request too.
+    // the lapse moves it on: its panels read it again.
     const live = inject(Live);
     live
       .on(['quote.accepted', 'booking.confirmed', 'booking.lapsed'])
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.loadRequests());
-    live
-      .on([
-        'quote.accepted',
-        'booking.confirmed',
-        'booking.lapsed',
-        'quote.sent',
-      ])
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.loadActive());
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -178,8 +175,7 @@ export class DriverHome {
   }
 
   protected retryActive() {
-    this.active.set(undefined);
-    this.loadActive();
+    this.activeRead.reload();
   }
 
   protected retryCars() {
@@ -191,14 +187,6 @@ export class DriverHome {
   private load() {
     this.loadCars();
     this.loadRequests();
-    this.loadActive();
-  }
-
-  private loadActive() {
-    this.requestsApi.activeRequestControllerGet().then(
-      (answer) => this.active.set(answer),
-      () => this.active.set('failed'),
-    );
   }
 
   private loadCars() {

@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import type { EventKind } from '@motor-fix/contracts';
 import { REQUEST_STATUS_LABELS } from '@motor-fix/contracts/request-status';
 import {
   type RequestSummaryDto,
@@ -53,6 +54,15 @@ const TICK_MS = 60_000;
 // booked request waiting for the garage counts down its time to confirm,
 // then names its slot once confirmed, or asks for another quote after a
 // lapse. The active request's panel heads a list with rows.
+const LIST_EVENTS: readonly EventKind[] = [
+  'request.created',
+  'quote.sent',
+  'request.declined',
+  'quote.accepted',
+  'booking.confirmed',
+  'booking.lapsed',
+];
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -74,19 +84,12 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    [
-      'request.created',
-      'quote.sent',
-      'request.declined',
-      'quote.accepted',
-      'booking.confirmed',
-      'booking.lapsed',
-    ],
+    LIST_EVENTS,
   );
   // The active request's panel above the list, moved by the same events.
   private readonly activeRead = liveResource(
     () => this.api.activeRequestControllerGet(),
-    ['quote.sent', 'quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+    LIST_EVENTS,
   );
   protected readonly active = computed(() =>
     this.activeRead.failed() && !this.activeRead.value()

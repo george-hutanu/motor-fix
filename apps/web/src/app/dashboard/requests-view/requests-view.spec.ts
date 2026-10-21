@@ -841,6 +841,8 @@ describe('Cererea activă at the top of Cererile mele', () => {
   });
 
   it.each([
+    'request.created',
+    'request.declined',
     'quote.accepted',
     'booking.confirmed',
     'booking.lapsed',
