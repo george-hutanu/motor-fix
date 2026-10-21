@@ -1336,6 +1336,21 @@ describe('checking a draft', () => {
       ).resolves.toEqual([]);
     });
 
+    it('labels an open draft with no name, or a blank one, rather than naming it empty', async () => {
+      await garage('Atelier Dinamo', 'approved');
+      await named('');
+      await named('   ');
+      const draft = await named('Service Popescu');
+
+      await expect(
+        service.cuiHeldElsewhere(draft.id, '18547290'),
+      ).resolves.toEqual([
+        'Atelier Dinamo',
+        'o ciornă fără nume',
+        'o ciornă fără nume',
+      ]);
+    });
+
     it('names nobody for another CUI', async () => {
       await garage('Atelier Dinamo', 'approved');
       await named('Service Dobre', '1234567');

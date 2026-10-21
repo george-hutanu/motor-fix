@@ -48,6 +48,9 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { INVITE_EMAIL } from '../staff-invite/staff-invite.service';
 
 const HOUR_MS = 60 * 60 * 1000;
+// What the admins read for another listing holding the CUI whose step 1 has
+// no name yet.
+const UNNAMED_DRAFT = 'o ciornă fără nume';
 
 interface DraftBody {
   email?: string;
@@ -468,8 +471,10 @@ export class ListingDraftsService {
                 '^ro', '', 'i'
               ) = ${cui}`,
     ]);
+    // The names are stored on the file as text, so a draft with no name yet
+    // gets one fixed label rather than an empty one.
     return [...garages, ...drafts]
-      .map((row) => row.name ?? '')
+      .map((row) => row.name?.trim() || UNNAMED_DRAFT)
       .sort((a, b) => a.localeCompare(b, 'ro'));
   }
 
