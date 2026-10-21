@@ -1,0 +1,41 @@
+// reviews module models: a driver's review of a garage. Only the reviews
+// module writes them.
+
+enum ReviewSource {
+  job
+  profile
+
+  @@map("review_source")
+}
+
+enum ReviewStatus {
+  published
+  reported
+  removed
+  deleted_by_author
+
+  @@map("review_status")
+}
+
+// One live review (published, reported or removed) per job: the migration's
+// partial unique index review_one_live, which Prisma cannot declare.
+model Review {
+  id         String       @id @default(uuid()) @db.Uuid
+  source     ReviewSource @default(job)
+  jobId      String       @map("job_id") @db.Uuid
+  driverId   String       @map("driver_id") @db.Uuid
+  garageId   String       @map("garage_id") @db.Uuid
+  mechanicId String?      @map("mechanic_id") @db.Uuid
+  rating     Int
+  text       String?
+  paidBani   Int?         @map("paid_bani")
+  status     ReviewStatus @default(published)
+  postedAt   DateTime     @default(now()) @map("posted_at") @db.Timestamptz(3)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  driver     Account      @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  garage     Garage       @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic   Mechanic?    @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+
+  @@map("review")
+}

@@ -125,6 +125,7 @@ export { QuotesModule } from './quotes/quotes.module';
 export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
+export { ReviewsModule } from './reviews/reviews.module';
 export { dailyTasks } from './scheduler/tasks';
 export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
