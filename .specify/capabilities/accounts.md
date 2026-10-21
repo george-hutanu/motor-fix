@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 079-account-model
   - 082-sign-in
@@ -37,6 +37,7 @@ features:
   - 005-data-requests
   - 1348-release-green
   - 1359-signup-survey
+  - 116-listing-verification-status
 ---
 
 # Capability: Accounts
@@ -869,9 +870,9 @@ _From 250-launch-analytics-events._
 
 _From 250-launch-analytics-events._
 
-### 1359-FR-011 — "CREEAZĂ CONTUL" MUST save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary; a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." and keep the answers; the button MUST be disabled while the save is in flight. Both notices MUST sit in a live region (`role="status"` for saved, `role="alert"` for failed) so assistive technology announces them, and neither moves focus. It MUST NOT create an account, a garage or change the draft's status: that is ST-116, which replaces this press.
+### 116-FR-003 — "CREEAZĂ CONTUL" on the survey summary MUST first save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary in a `role="status"` live region; the button MUST be disabled while the save is in flight, and a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." in a `role="alert"` live region, keep the answers and keep the owner on the summary. After the save it MUST open the sign-in dialog in its sign-up task with the step 1 e-mail filled in, offering e-mail and password, Google, Apple and the phone number with a WhatsApp code (the dialog's existing ways, 083-FR-001, 393-FR-012), and the switch to signing in to an existing account. Modifies 1359-FR-011 (the press now also opens the dialog and leads to the send).
 
-_From 1359-signup-survey._
+_From 116-listing-verification-status._
 
 ### 250-FR-009 — The repository MUST hold a list mapping each launch feature's "How to measure it" figure to an event of FR-004, a database count (the S9 figures and the nightly funnel), or "not measured at launch"; for every event, its surface and whether it is built; and the owner-side Plausible setup: one goal per event and the two funnels (driver: Home → `brand_picked` → `garage_opened` → `quote_request_started` → `quote_request_sent` → `quote_accepted` → `review_posted`; garage: `listing_started` → `listing_step_completed` step 6 → `survey_completed` → `listing_submitted`), done in Plausible's dashboard.
 
@@ -1073,3 +1074,4 @@ _From 1348-release-green._
 - `1203-FR-005` — superseded by `366-FR-003` (2026-10-17)
 - `1203-FR-010` — superseded by `005-FR-014` (2026-10-17)
 - `250-FR-006` — superseded by `1359-FR-011` (2026-10-20)
+- `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)

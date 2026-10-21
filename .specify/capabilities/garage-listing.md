@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -31,6 +31,7 @@ features:
   - 271-garage-distance
   - 1191-resilient-uploads
   - 1359-signup-survey
+  - 116-listing-verification-status
 ---
 
 # Capability: Garage listing
@@ -1024,9 +1025,9 @@ _From 1359-signup-survey._
 
 _From 1359-signup-survey._
 
-### 1359-FR-011 — "CREEAZĂ CONTUL" MUST save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary; a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." and keep the answers; the button MUST be disabled while the save is in flight. Both notices MUST sit in a live region (`role="status"` for saved, `role="alert"` for failed) so assistive technology announces them, and neither moves focus. It MUST NOT create an account, a garage or change the draft's status: that is ST-116, which replaces this press.
+### 116-FR-003 — "CREEAZĂ CONTUL" on the survey summary MUST first save the server copy with the five answers and, after its 2xx, fire the `survey_completed` event (250-FR-004, 250-FR-006) once per page load through the consent-gated tracker, and show "Răspunsurile tale sunt salvate." / "Your answers are saved." under the summary in a `role="status"` live region; the button MUST be disabled while the save is in flight, and a failed save MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." in a `role="alert"` live region, keep the answers and keep the owner on the summary. After the save it MUST open the sign-in dialog in its sign-up task with the step 1 e-mail filled in, offering e-mail and password, Google, Apple and the phone number with a WhatsApp code (the dialog's existing ways, 083-FR-001, 393-FR-012), and the switch to signing in to an existing account. Modifies 1359-FR-011 (the press now also opens the dialog and leads to the send).
 
-_From 1359-signup-survey._
+_From 116-listing-verification-status._
 
 ### 1359-FR-012 — The `garages` module MUST expose a use case `applySurvey(tx, { garageId, answers, actorId })` that, inside the transaction it is given, writes one GARAGE_SURVEY row (garage, `mechanicsCount`, `liftsCount`, `wantsLiveMedia`, `wantsDaySheets`, `foundVia`, `answeredAt` = now) and five GARAGE_FEATURE rows set by FR-006, and records one `create` audit entry per feature row (subject type `garage_feature`, subject id and garage id the garage, field the feature key, new value `true`/`false`, the actor with role `owner`); it MUST throw on answers that fail FR-008's rule or miss one of the five, and throw a conflict `survey_already_answered` when the garage already has a survey row, writing nothing in either case. It has no HTTP route of its own.
 
@@ -1047,6 +1048,102 @@ _From 1359-signup-survey._
 ### 1359-FR-016 — Tests MUST cover, in colocated Jest specs: FR-006 with one test per answer and `whatsapp` always on; FR-008's accepted and refused shapes on the server rule and the browser restore; FR-010's opening position for no answer, two answers and five; FR-004's disabled forward button; FR-011's saved and failed notices; and `applySurvey` against PostgreSQL (the six rows, the five audit entries, the second-survey conflict, the roll-back, the refused answers). A Playwright test MUST answer "Doar eu", "Niciunul", "Da", "Nu, deocamdată" and "Căutare pe Google" from a complete listing, read the summary (team off, lifts off, media on, day sheets off, WhatsApp on), press "CREEAZĂ CONTUL" and read the saved notice; the account and the five features in the API are ST-116's end-to-end step.
 
 _From 1359-signup-survey._
+
+### 116-FR-001 — When the page's send succeeds (the server check answers no error, 115-FR-009's complete state), the notice MUST read, in the current language, "Am primit cererea. O verificăm în 1–2 zile lucrătoare." / "Request received. We check it within 1–2 working days.", show the three stages "Trimis" / "Submitted", "În verificare" / "Under review", "Aprobat, pe hartă" / "Approved, on the map" with "Trimis" lit and the two others unlit (each stage named for assistive technology, the lit one marked `aria-current="step"`, never by colour alone), the line "Profilul nu apare pe hartă până la aprobare. Dacă lipsește ceva, îți scriem ce anume și poți completa fără să o iei de la capăt." / "The profile stays off the map until it is approved. If something is missing we tell you what, and you can add it without starting over.", and the button "SPUNE-NE CUM LUCREZI" / "TELL US HOW YOU WORK" (1359-FR-001 unchanged). The notice goes when a change is typed after the check, as today. Modifies 115-FR-009's "Totul e complet" text.
+
+_From 116-listing-verification-status._
+
+### 116-FR-002 — No button on the form, the confirmation or the status view MUST say "publică" / "publish" (the issue's rule); the mock's own lines that say the profile is published after verification ("Ciornă · se publică după verificare", the step 6 intro "Publicăm doar service‑uri…") stay. The garage stays hidden until an admin approves it.
+
+_From 116-listing-verification-status._
+
+### 116-FR-004 — When the dialog ends with a session (a new account, or an existing one signed in, by any way), the page MUST send the listing (FR-006) at once, without another press; when it ends without one (closed, cancelled, a refused sign-in, a closed Google or Apple window), nothing is sent and the owner stays on the survey summary with the answers kept.
+
+_From 116-listing-verification-status._
+
+### 116-FR-005 — After a successful send the page MUST switch the session to the `garage` role (the existing role switch, which reopens the live stream on the garage's channel, 254-FR-011) and show the status view (FR-014) in place of the form and the survey, with the preview card reading "În verificare · nepublicat" / "Under review · not published" (modifies 113-FR-003: the draft state text applies only while the draft is open). The survey, the step list and "Salvează ciorna" are not shown once the listing is sent.
+
+_From 116-listing-verification-status._
+
+### 116-FR-006 — The system MUST expose `POST /api/v1/listing-drafts/{id}/submit`, needing a session (no `@Public()`), the draft's key in `X-Listing-Token` as the other draft routes take it, and an `Idempotency-Key` header (1–64 characters, the web sends a UUID; 400 `validation_failed` without one). The draft must be the one the key opens and still `open` (404 `draft_not_found` otherwise, as today's routes answer). The checks run in this order: session, key, draft, idempotent replay (FR-008), one garage per account (FR-009), the re-check (FR-007).
+
+_From 116-listing-verification-status._
+
+### 116-FR-007 — The send MUST re-check the whole draft with the rules of ST-115 (the same rule set `POST …/check` runs, the survey's five answers included); any error answers 422 `validation_failed` with the field list in the check's shape, and nothing is created. The `cui_in_use` warning never refuses.
+
+_From 116-listing-verification-status._
+
+### 116-FR-008 — Two sends of one draft with the same `Idempotency-Key` MUST end with one garage and one file: the second answers the first's result (the same status and body). Only a 201 is recorded under the key, on the draft with the garage it became; a repeat after a failed send runs the send again. A send of a draft already `submitted` under a different key MUST answer 409 `draft_already_submitted`. Two concurrent sends of one draft MUST end with one garage and one file, the loser getting the first's result or the 409.
+
+_From 116-listing-verification-status._
+
+### 116-FR-009 — An account holding a GARAGE_MEMBER row with role `owner` MUST be refused with 409 `garage_already_exists` before anything is written; the draft stays `open` and the page shows "Contul tău are deja un service." / "Your account already has a garage." with a link to the garage dashboard. One garage per account at launch [X20b].
+
+_From 116-listing-verification-status._
+
+### 116-FR-010 — The send MUST, in one transaction that rolls back whole if any write fails: grant the `garage` role to the account when it lacks it (079-FR-007, with its audit entry; a held role changes nothing); create the GARAGE with status `draft`, its name, slug and the step 1 details; create the GARAGE_MEMBER `owner`; write every step's rows from the draft's data (the brands and stances, the labour range and the price entries with a `catalogue_job.proposed` event and its proposal row per job outside the catalogue, the mechanics, the photos moved from the draft's keys, the address or seat, the opening hours and facilities, the business kind and legal form, the CUI and RAR number), each through the existing write use case of its step where one exists; apply the survey (`applySurvey`, 1359-FR-012); create the VERIFICATION_FILE `submitted` through the verification module's existing `submit` (207-FR-004, with its audit entry, its checks and its `verification.submitted` event) and attach the documents through the documents module's existing `attach` (206-FR-012); set the LISTING_DRAFT `submitted` with `submitted_at`; and write one audit entry per created record group with the owner as actor, role `garage`, as the starting values. The answer is 201 `{ garageId, fileId, status, warnings }`.
+
+_From 116-listing-verification-status._
+
+### 116-FR-011 — The send MUST hand the outbox `account.created` (for a new account only, written by the sign-up itself), `garage.created`, `verification.submitted` and one `catalogue_job.proposed` per new job in the same transaction as the rows; the admins' ADMIN_VERIFICATION_QUEUED and ADMIN_CATALOGUE_JOB_PENDING notifications come from the existing fan-outs of those events (301-FR-010), so a rolled-back send tells nobody. The receipt e-mail and the e-mails at each status change are #145's and are not sent by this story.
+
+_From 116-listing-verification-status._
+
+### 116-FR-013 — The sent garage MUST stay out of every public read until approved: search, pins, brand pages, home counts and the public profile (043-FR-002, 269-FR-001, 307-FR-001 unchanged), proven by a test that sends a listing and reads each.
+
+_From 116-listing-verification-status._
+
+### 116-FR-017 — When a signed-in account that owns a garage opens "List your garage" (fresh load, later sign-in or a continue link), the page MUST show the status view for that garage instead of the form, reading the status once; a signed-in account without a garage sees the form as today.
+
+_From 116-listing-verification-status._
+
+### 116-FR-018 — The submit and status DTOs and the error codes live in the contracts library, both routes are REST with OpenAPI, and the generated client is regenerated (Principle V). Every new text exists in the shared i18n files in Romanian and English; Romanian words joined by a hyphen use U+2011.
+
+_From 116-listing-verification-status._
+
+### 116-FR-019 — The confirmation, the status view and the dialog step MUST hold at 320 px and 390 px phones, tablet and desktop, light and dark, with no sideways scroll; the stages are conveyed by text as well as colour; the buttons are at least 44 px tall and reachable by keyboard; focus moves to the confirmation's heading when it appears and to the status view's heading after the send.
+
+_From 116-listing-verification-status._
+
+### 116-FR-020 — The two routes are listed in `infra/observability/inventory.json` with the API's request metrics by route and their dashboard panel; the send logs one line per success (draft id, garage id, account id, no e-mail, no token) and the product action `listing_submitted` is counted (the existing consent-gated tracker event keeps firing from the page); the reason no alert of its own is needed is recorded.
+
+_From 116-listing-verification-status._
+
+### 116-FR-030 — (from #586) Only the `/api/v1/listing-drafts` routes accept JSON bodies up to 320 KB; every other JSON route answers 413 `payload_too_large` above 100 KB, with an integration test on one other route.
+
+_From 116-listing-verification-status._
+
+### 116-FR-031 — (from #587) The listing-draft DTOs cap `email` with `@MaxLength(254)`, matching `apps/api/openapi.json` and 114-FR-001; the contract check passes.
+
+_From 116-listing-verification-status._
+
+### 116-FR-032 — (from #589) A create that throws gives its take back to the per-address throttle: after 10 failing creates within the hour, a valid create from the same address succeeds (test).
+
+_From 116-listing-verification-status._
+
+### 116-FR-033 — (from #590) The draft service calls `newToken()` for the browser key only in the branch where the address changed.
+
+_From 116-listing-verification-status._
+
+### 116-FR-034 — (from #600) `ListingDraftCreatedDto` marks `token` and `linkSent` required; `apps/api/openapi.json` lists them under `required`; data-access is regenerated and the contract check passes.
+
+_From 116-listing-verification-status._
+
+### 116-FR-035 — (from #601) The test "removes the notification rows of a deleted draft" asserts those rows are gone, or is retitled to the token count it checks.
+
+_From 116-listing-verification-status._
+
+### 116-FR-036 — (from #577) If queueing fails after `sendToDraft` commits, no notification row stays `queued` unsent: the job is enqueued on commit, or a sweep requeues `queued` rows older than a set age; and the reminder's `reminded_at` and its notification row are written in one transaction, so the next day's sweep never writes a second row for the same reminder: a reminder whose job the queue refuses keeps its one row `queued` (unsent) and its claim is given back, and the next sweep requeues that same row (one row per reminder, sent or requeued; integration test with the queue failing once).
+
+_From 116-listing-verification-status._
+
+### 116-FR-037 — (from #1172) An expression index (or a stored generated column) on the normalised `data #>> '{steps,6,cui}'` backs the `cui_in_use` check; EXPLAIN shows an index scan, and the check's p95 on a 50,000-draft table is recorded in the PR.
+
+_From 116-listing-verification-status._
+
+### 116-FR-040 — Tests MUST cover, in colocated Jest specs on real PostgreSQL and Redis: the send creating every record or none (one write failed); a signed-in driver gaining `garage` with no second account; 422 with the field list; the same `Idempotency-Key` giving one garage and the same body, a different key on a submitted draft giving 409, two concurrent sends giving one garage; the outbox rows and audit entries in the same transaction; a duplicate CUI (garage and draft) giving the warning, never a refusal; 409 `garage_already_exists` creating nothing; 403 and 404 on the status read per role; the public reads excluding the sent garage; the live re-read on each verification kind and on reconnect; FR-030 to FR-037 as named. A Playwright test MUST fill the form, send it, answer the survey, sign up with e-mail and password and check "Trimis" lit, then as an admin open the file and check the owner's view moves to "În verificare" without a reload.
+
+_From 116-listing-verification-status._
 
 ## Retired
 
@@ -1072,3 +1169,4 @@ _From 1359-signup-survey._
 - `115-FR-009` — superseded by `1359-FR-001` (2026-10-20)
 - `885-FR-001` — superseded by `1359-FR-008` (2026-10-20)
 - `885-FR-004` — superseded by `1359-FR-008` (2026-10-20)
+- `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)

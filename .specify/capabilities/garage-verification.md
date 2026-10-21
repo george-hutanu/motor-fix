@@ -23,6 +23,7 @@ features:
   - 1351-rar-monthly-recheck
   - 1354-garage-legal-checks
   - 1357-rar-covered-jobs
+  - 116-listing-verification-status
 ---
 
 # Capability: Garage verification
@@ -700,6 +701,26 @@ _From 1357-rar-covered-jobs._
 ### 1357-FR-004 — An `activities` record of any result that carries a list MUST keep writing the garage's list and saving one `price_list.updated` event for the garage's public audience in the same transaction (verification-checks.service.ts:406-420), and an `ok` re-check that narrows the list MUST keep doing the same (recheck.service.ts:394-401); no second path, column or event is added. The open profile and the owner's Prețuri re-read in place on that event, as they do for every `price_list.*` event today.
 
 _From 1357-rar-covered-jobs._
+
+### 116-FR-012 — When the normalised step-6 CUI equals the CUI of any garage (whatever its status or its file's) or of another open draft, the send MUST go through and the file MUST carry a warning "CUI folosit deja de: {name}" naming the other listing (the garage's name, or the other draft's step 1 name), stored on the file and shown to admins in the file's drawer header (302) and the queue line ("CUI {detail}", 300-FR-009 style); never a refusal.
+
+_From 116-listing-verification-status._
+
+### 116-FR-014 — The system MUST expose `GET /api/v1/garages/{garageId}/verification` for the garage's `owner` and for an admin: the derived status of 207-FR-006 (`draft`, `submitted`, `in_review`, `more_requested`, `rejected`, `approved`), `submittedAt`, and for `more_requested` the requested items, for `rejected` the reason code and note; 403 `forbidden` to a `receptionist` or `mechanic` of that garage; a `suspended` garage reads `approved` here (suspension is the dashboard's, #121); 404 `not_found` with no garage data to anyone else (another garage's staff, a driver, an unknown id); 401 without a session.
+
+_From 116-listing-verification-status._
+
+### 116-FR-015 — The status view MUST show the three stages with the lit one from the status: "Trimis" for `submitted`; "În verificare" for `in_review`; "Aprobat, pe hartă" for `approved` (all three lit); for `more_requested` the second stage reads "Cerute completări" / "More details requested" and the requested items are listed under it (adding them is #32, not built here); for `rejected` the second stage reads "Respins" / "Rejected" with the reason's text and the note; for `draft` (a garage with no file) no stage is lit and the off-map line shows, with no button. Each change is announced in a live region.
+
+_From 116-listing-verification-status._
+
+### 116-FR-016 — While the status view is open, `verification.opened`, `verification.decided` and `verification.reopened` arriving on the owner's stream for the garage MUST make the view read the status again (no reload); on every reconnect the view reads it again (255-FR-004). No event, audience or channel is added: the verification events already reach the garage's channel.
+
+_From 116-listing-verification-status._
+
+### 116-FR-021 — When the status read fails (network, 5xx), the view keeps the stage it shows, says in one line that it could not refresh, and offers "Reîncearcă" / "Retry"; the next event or reconnect reads again. On first load with no stage yet, it shows that line and the retry only.
+
+_From 116-listing-verification-status._
 
 ## Retired
 
