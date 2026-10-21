@@ -215,6 +215,10 @@ export class NotificationsService {
       throw new Error(`${kind} is not sent to a listing draft`);
     }
     const at = this.now();
+    if (kind === 'LISTING_REMINDER') {
+      const unsent = await this.unsentReminder(tx, draftId, at);
+      if (unsent) return unsent;
+    }
     const draft = await tx.listingDraft.findUniqueOrThrow({
       select: { email: true },
       where: { id: draftId },
@@ -237,17 +241,45 @@ export class NotificationsService {
     return next && 'id' in next.data ? { ...next, data: next.data } : null;
   }
 
-  // No job could carry the link again, so a row the queue refuses is failed
-  // rather than left queued; the error goes on to the caller.
-  async queueToDraft(job: DraftJob, link: string): Promise<void> {
+  // A draft has one reminder: the row a refused queue left unsent is the one
+  // queued again, never a second.
+  private async unsentReminder(
+    tx: Prisma.TransactionClient,
+    draftId: string,
+    at: Date,
+  ): Promise<DraftJob | null> {
+    const row = await tx.notification.findFirst({
+      orderBy: { createdAt: 'asc' },
+      where: {
+        channel: 'email',
+        kind: 'LISTING_REMINDER',
+        listingDraftId: draftId,
+        status: { in: ['queued', 'held'] },
+      },
+    });
+    if (!row) return null;
+    const delay = row.sendAfter ? row.sendAfter.getTime() - at.getTime() : 0;
+    return { ...send(row.id), data: { id: row.id }, delay: Math.max(0, delay) };
+  }
+
+  // A row the queue refuses is failed, since no job could carry its link
+  // again, unless the caller keeps it to queue that same row later (the
+  // reminder); the error goes on to the caller either way.
+  async queueToDraft(
+    job: DraftJob,
+    link: string,
+    refused: 'fail' | 'keep' = 'fail',
+  ): Promise<void> {
     const { id } = job.data;
     try {
       await this.queue({ ...job, data: { id, link } });
     } catch (error) {
-      await this.prisma.notification.update({
-        data: { failure: 'queue_unavailable', status: 'failed' },
-        where: { id },
-      });
+      if (refused === 'fail') {
+        await this.prisma.notification.update({
+          data: { failure: 'queue_unavailable', status: 'failed' },
+          where: { id },
+        });
+      }
       throw error;
     }
   }

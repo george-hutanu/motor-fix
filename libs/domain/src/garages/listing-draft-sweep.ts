@@ -84,8 +84,8 @@ export class ListingDraftSweep implements DailyTask {
 
   // The claim, its key and the e-mail row are written together, so a second
   // worker or a second run never writes the same reminder again. The job goes
-  // after the commit; one the queue refuses gives the claim back, so
-  // tomorrow's run tries again.
+  // after the commit; one the queue refuses gives the claim back and keeps
+  // its row unsent, so tomorrow's run queues that same row again.
   private async remindOne(draft: { id: string; language: string }, now: Date) {
     if (!this.webUrl) throw new Error('PUBLIC_WEB_URL is not set');
     const issued = newToken();
@@ -111,6 +111,7 @@ export class ListingDraftSweep implements DailyTask {
       await this.notifications.queueToDraft(
         job,
         continueLink(this.webUrl, language, issued.token),
+        'keep',
       );
     } catch (error) {
       await this.prisma.$transaction([

@@ -276,14 +276,15 @@ describe('the reminder e-mail and its queue', () => {
     queued.length = 0;
   });
 
-  it('leaves no e-mail queued unsent when the queue fails, and reminds once on the next run', async () => {
+  it('keeps the refused e-mail row unsent and requeues that same row on the next run', async () => {
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const due = await draft(daysAgo(3));
     refusals = 1;
 
     await queueing.remind(NOW);
 
-    expect((await rows(due.id)).map((row) => row.status)).toEqual(['failed']);
+    const refused = await rows(due.id);
+    expect(refused.map((row) => row.status)).toEqual(['queued']);
     const after = await prisma.listingDraft.findUniqueOrThrow({
       where: { id: due.id },
     });
@@ -295,13 +296,18 @@ describe('the reminder e-mail and its queue', () => {
     await queueing.remind(NOW);
 
     const written = await rows(due.id);
-    expect(written.map((row) => row.status)).toEqual(['failed', 'queued']);
+    expect(written.map((row) => [row.id, row.status])).toEqual([
+      [refused[0]?.id, 'queued'],
+    ]);
     expect(queued).toEqual([
       {
-        id: written[1]?.id,
+        id: refused[0]?.id,
         link: expect.stringMatching(/list-your-garage\?draft=[\w-]{43}$/),
       },
     ]);
+    expect(
+      await prisma.listingDraftToken.count({ where: { draftId: due.id } }),
+    ).toBe(1);
     error.mockRestore();
   });
 
