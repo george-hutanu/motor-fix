@@ -1,0 +1,17 @@
+<p class="subject">{{ subject }}</p>
+<label class="share">
+  <input type="checkbox" [checked]="shared()" [disabled]="sending()" (change)="shared.set($any($event.target).checked)" />
+  <span>{{ 'driver.quotes.acceptDialog.share' | t }}</span>
+</label>
+@if (problem(); as text) {
+  <p class="error" role="alert">{{ text }}</p>
+}
+<div class="actions">
+  <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'driver.quotes.acceptDialog.cancel' | t }}</button>
+  <button hlmBtn type="button" [disabled]="blocked()" [attr.aria-busy]="sending() ? 'true' : null" (click)="confirm()">
+    @if (sending()) {
+      <span class="spinner" aria-hidden="true"></span>
+    }
+    {{ 'driver.quotes.acceptDialog.confirm' | t }}
+  </button>
+</div>

@@ -78,6 +78,11 @@ import {
   QuoteAcceptedFanOut,
 } from './quote-accepted/quote-accepted.fan-out';
 import {
+  QUOTE_DECLINED_QUEUE,
+  type QuoteDeclinedEvent,
+  QuoteDeclinedFanOut,
+} from './quote-declined/quote-declined.fan-out';
+import {
   QUOTE_RECEIVED_QUEUE,
   QuoteReceivedFanOut,
   type QuoteSentEvent,
@@ -115,6 +120,7 @@ const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
+const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
@@ -163,6 +169,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(QUOTE_ACCEPTED_WORKER)
     private readonly quoteAcceptedWorker?: Worker | null,
+    @Optional()
+    @Inject(QUOTE_DECLINED_WORKER)
+    private readonly quoteDeclinedWorker?: Worker | null,
     @Optional()
     @Inject(BOOKING_CONFIRMED_WORKER)
     private readonly bookingConfirmedWorker?: Worker | null,
@@ -409,6 +418,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        QuoteDeclinedFanOut,
+        {
+          inject: [QuoteDeclinedFanOut],
+          provide: QUOTE_DECLINED_WORKER,
+          useFactory: (fanOut: QuoteDeclinedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('QuoteDeclined').error(
+                'PUBLIC_WEB_URL missing; declined quote messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<QuoteDeclinedEvent>(
+              QUOTE_DECLINED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('QuoteDeclined'));
+            return worker;
+          },
+        },
         BookingConfirmedFanOut,
         {
           inject: [BookingConfirmedFanOut],
@@ -580,6 +616,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.requestReceivedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
+    await this.quoteDeclinedWorker?.close();
     await this.bookingConfirmedWorker?.close();
     await this.bookingLapsedWorker?.close();
     await this.verificationResultWorker?.close();

@@ -210,7 +210,7 @@ function nextEntry(window: Window | null) {
     }
     <header class="mf-overlay-header">
       <h2 class="mf-label mf-overlay-title" [id]="context.titleId">
-        {{ context.title | t }}
+        {{ context.title | t: context.titleParams }}
       </h2>
       <button
         type="button"

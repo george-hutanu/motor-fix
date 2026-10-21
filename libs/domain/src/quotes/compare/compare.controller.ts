@@ -11,21 +11,28 @@ import {
 import { CompareService } from './compare.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
+import { CacheService } from '../../cache/cache.service';
+import { warmAccept } from '../accept/accept.warm';
 
 @ApiTags('quote-requests')
 @ApiBearerAuth()
 @Controller('quote-requests')
 export class CompareController {
-  constructor(private readonly compare: CompareService) {}
+  constructor(
+    private readonly compare: CompareService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get(':id/quotes')
   @ApiOkResponse({ type: QuoteComparisonDto })
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiNotFoundResponse({ description: 'not_found: not the driver’s request' })
-  get(
+  async get(
     @CurrentActor() actor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<QuoteComparisonDto> {
-    return this.compare.get(actor, id);
+    const comparison = await this.compare.get(actor, id);
+    await warmAccept(this.cache, actor, comparison);
+    return comparison;
   }
 }

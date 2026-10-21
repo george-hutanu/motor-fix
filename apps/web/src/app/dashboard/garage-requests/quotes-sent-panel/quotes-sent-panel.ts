@@ -8,7 +8,6 @@ import {
   inject,
   linkedSignal,
   PLATFORM_ID,
-  signal,
   viewChild,
 } from '@angular/core';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
@@ -44,7 +43,12 @@ interface Arrivals {
 export class QuotesSentPanel {
   protected readonly feed = inject(GarageRequestsFeed);
   private readonly window = inject(DOCUMENT).defaultView;
-  protected readonly now = signal(new Date());
+  // Sampled again on every read of the rows, so a line read right after an
+  // acceptance measures from then; the tick moves it between reads.
+  protected readonly now = linkedSignal({
+    computation: () => new Date(),
+    source: this.feed.quoted,
+  });
   private readonly end = viewChild<ElementRef<HTMLElement>>('end');
   private readonly more = moreRows(
     this.feed.quoted,

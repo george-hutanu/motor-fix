@@ -1,0 +1,24 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.error {
+  margin: 0;
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column;
+  }
+}

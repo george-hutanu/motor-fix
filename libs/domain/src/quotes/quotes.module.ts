@@ -7,6 +7,8 @@ import { CompareService } from './compare/compare.service';
 import { ConfirmController } from './confirm/confirm.controller';
 import { ConfirmService } from './confirm/confirm.service';
 import { DeclineService } from './decline/decline.service';
+import { DeclineQuoteController } from './decline-quote/decline-quote.controller';
+import { DeclineQuoteService } from './decline-quote/decline-quote.service';
 import { GarageRequestsController } from './garage-requests/garage-requests.controller';
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
 import { QuoteRequestsController } from './quote-requests/quote-requests.controller';
@@ -30,6 +32,7 @@ import { CacheModule } from '../cache/cache.module';
     AcceptController,
     CompareController,
     ConfirmController,
+    DeclineQuoteController,
   ],
   exports: [DeclineService, GarageRequestsService, RequestsService],
   imports: [CacheModule],
@@ -42,6 +45,7 @@ import { CacheModule } from '../cache/cache.module';
     AcceptService,
     CompareService,
     ConfirmService,
+    DeclineQuoteService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

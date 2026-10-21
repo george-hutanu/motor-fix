@@ -1,6 +1,9 @@
 import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { CompareQuoteDto } from '@motor-fix/data-access';
+import type {
+  CompareBookingDto,
+  CompareQuoteDto,
+} from '@motor-fix/data-access';
 import { I18n, relativeTime } from '@motor-fix/i18n';
 
 import { QuoteRow } from './quote-row';
@@ -13,21 +16,21 @@ import type { RowState } from '../compare-rules/compare-rules';
       [mfQuoteRow]="quote()"
       [state]="state()"
       [now]="now"
-      [busy]="busy()"
+      [booking]="booking()"
       [locked]="locked()"
-      [problem]="problem()"
       (accept)="accepted.push($event)"
+      (decline)="declined.push($event)"
     ></li>
   </ul>`,
 })
 class Host {
   readonly quote = input.required<CompareQuoteDto>();
   readonly state = input<RowState>('open');
-  readonly busy = input(false);
+  readonly booking = input<CompareBookingDto | null>(null);
   readonly locked = input(false);
-  readonly problem = input<string | null>(null);
   readonly now = NOW;
   readonly accepted: string[] = [];
+  readonly declined: string[] = [];
 }
 
 // 13:00 in Bucharest, a Friday.
@@ -73,9 +76,8 @@ const quote = (over: Partial<CompareQuoteDto> = {}): CompareQuoteDto => ({
 
 interface Setup {
   state?: RowState;
-  busy?: boolean;
+  booking?: CompareBookingDto | null;
   locked?: boolean;
-  problem?: string | null;
   language?: 'ro' | 'en';
 }
 
@@ -104,7 +106,10 @@ const text = (el: Element | null | undefined) =>
   (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const part = (row: HTMLElement, name: string) =>
   row.querySelector<HTMLElement>(`[data-part="${name}"]`);
-const button = (row: HTMLElement) => row.querySelector('button');
+const button = (row: HTMLElement) =>
+  row.querySelector<HTMLButtonElement>('button[data-act="accept"]');
+const declineButton = (row: HTMLElement) =>
+  row.querySelector<HTMLButtonElement>('button[data-act="decline"]');
 
 afterEach(() => TestBed.resetTestingModule());
 
@@ -308,13 +313,12 @@ describe('a quote row’s status', () => {
     ['declined', 'Refuzată de tine', 'Declined by you', true],
     ['closed', 'Închisă', 'Closed', true],
     ['accepted', 'Acceptată', 'Accepted', false],
-    ['on_hold', 'În așteptare', 'On hold', false],
   ] as const)(
     'reads %s as "%s" with no action',
     async (state, ro, en, greyed) => {
       const { row } = await render(quote(), { state });
 
-      expect(button(row)).toBeNull();
+      expect(row.querySelector('button')).toBeNull();
       expect(text(part(row, 'action'))).toBe(ro);
       expect(row.classList.contains('greyed')).toBe(greyed);
       TestBed.resetTestingModule();
@@ -340,26 +344,162 @@ describe('accepting from a row', () => {
     expect(host.accepted).toEqual(['q-7']);
   });
 
-  it('shows the busy button while the accept is in flight', async () => {
-    const { host, row } = await render(quote(), { busy: true });
+  // @traces 314-FR-022
+  it('disables Acceptă and Refuză while the driver is offline', async () => {
+    const { host, row } = await render(quote(), { locked: true });
 
-    expect(button(row)?.getAttribute('aria-busy')).toBe('true');
     expect(button(row)?.disabled).toBe(true);
+    expect(declineButton(row)?.disabled).toBe(true);
     button(row)?.click();
+    declineButton(row)?.click();
+    expect(host.accepted).toEqual([]);
+    expect(host.declined).toEqual([]);
+  });
+});
+
+const waitingFor = (
+  confirmBy: string,
+  over: Partial<CompareBookingDto> = {},
+): CompareBookingDto => ({
+  confirmBy,
+  mechanicName: null,
+  quoteId: 'q-1',
+  startsAt: '2026-10-10T06:00:00.000Z',
+  status: 'awaiting_confirmation',
+  ...over,
+});
+
+// @traces 314-FR-005
+describe('an accepted quote waiting for the garage', () => {
+  it('shows Acceptată with a green lamp and the hours left, rounded down', async () => {
+    const booking = waitingFor('2026-10-10T09:59:00.000Z');
+    const { row } = await render(quote({ status: 'accepted' }), {
+      booking,
+      state: 'accepted',
+    });
+
+    expect(text(part(row, 'action'))).toContain('Acceptată');
+    expect(
+      row.querySelector('[data-part="action"] mf-lamp[data-state="green"]'),
+    ).not.toBeNull();
+    expect(text(part(row, 'booking'))).toBe(
+      'Așteaptă confirmarea service‑ului · încă 23 h',
+    );
+  });
+
+  it('counts minutes in the last hour, then seconds until the lapse arrives', async () => {
+    const soon = await render(quote({ status: 'accepted' }), {
+      booking: waitingFor('2026-10-09T10:42:30.000Z'),
+      state: 'accepted',
+    });
+    expect(text(part(soon.row, 'booking'))).toBe(
+      'Așteaptă confirmarea service‑ului · încă 42 min',
+    );
+    TestBed.resetTestingModule();
+
+    const past = await render(quote({ status: 'accepted' }), {
+      booking: waitingFor('2026-10-09T09:00:00.000Z'),
+      state: 'accepted',
+    });
+    expect(text(part(past.row, 'booking'))).toBe(
+      'Așteaptă confirmarea service‑ului · încă câteva secunde',
+    );
+  });
+
+  it('says it in English for an English reader', async () => {
+    const { row } = await render(quote({ status: 'accepted' }), {
+      booking: waitingFor('2026-10-10T09:59:00.000Z'),
+      language: 'en',
+      state: 'accepted',
+    });
+
+    expect(text(part(row, 'booking'))).toBe(
+      'Waiting for the garage to confirm · 23 h left',
+    );
+  });
+});
+
+// @traces 314-FR-007
+describe('a booked quote', () => {
+  it('names the day, the hour and the mechanic', async () => {
+    const booking = waitingFor('2026-10-10T09:59:00.000Z', {
+      mechanicName: 'Mihai Dumitru',
+      status: 'confirmed',
+    });
+    const { row } = await render(quote({ status: 'accepted' }), {
+      booking,
+      state: 'booked',
+    });
+
+    expect(text(part(row, 'booking'))).toBe(
+      'Programată: mâine, 09:00 · Mihai Dumitru',
+    );
+    expect(
+      row.querySelector('[data-part="action"] mf-lamp[data-state="green"]'),
+    ).not.toBeNull();
+    expect(row.querySelector('button')).toBeNull();
+  });
+
+  it('leaves the mechanic out when none was named', async () => {
+    const booking = waitingFor('2026-10-10T09:59:00.000Z', {
+      status: 'confirmed',
+    });
+    const { row } = await render(quote({ status: 'accepted' }), {
+      booking,
+      language: 'en',
+      state: 'booked',
+    });
+
+    expect(text(part(row, 'booking'))).toBe('Booked: tomorrow, 09:00');
+  });
+});
+
+// @traces 314-FR-008
+describe('a lapsed booking’s quote', () => {
+  it('says the garage did not confirm, with no action', async () => {
+    const booking = waitingFor('2026-10-09T09:00:00.000Z', {
+      status: 'lapsed',
+    });
+    const { row } = await render(quote({ status: 'expired' }), {
+      booking,
+      state: 'lapsed',
+    });
+
+    expect(text(part(row, 'action'))).toBe('Service‑ul nu a confirmat');
+    expect(row.querySelector('button')).toBeNull();
+    expect(row.classList).toContain('greyed');
+  });
+});
+
+// @traces 314-FR-006
+// @traces 314-FR-010
+// @traces 314-FR-013
+describe('declining from a row', () => {
+  it('offers Refuză beside Acceptă on an open quote', async () => {
+    const { host, row } = await render(quote({ id: 'q-9' }));
+
+    expect(text(declineButton(row))).toBe('Refuză');
+    declineButton(row)?.click();
+
+    expect(host.declined).toEqual(['q-9']);
     expect(host.accepted).toEqual([]);
   });
 
-  it('disables Acceptă while another accept is in flight or the driver is offline', async () => {
-    const { row } = await render(quote(), { locked: true });
+  it('holds a quote on hold without Acceptă, but lets it be declined', async () => {
+    const { row } = await render(quote(), { state: 'on_hold' });
 
-    expect(button(row)?.disabled).toBe(true);
-    expect(button(row)?.getAttribute('aria-busy')).not.toBe('true');
+    expect(button(row)).toBeNull();
+    expect(text(part(row, 'action'))).toContain('În așteptare');
+    expect(declineButton(row)).not.toBeNull();
   });
 
-  it('shows the server’s refusal under the row and keeps Acceptă', async () => {
-    const { row } = await render(quote(), { problem: 'Oferta a expirat.' });
+  it('greys out a declined quote as declined by you, with no action', async () => {
+    const { row } = await render(quote({ status: 'declined_by_driver' }), {
+      state: 'declined',
+    });
 
-    expect(text(part(row, 'problem'))).toBe('Oferta a expirat.');
-    expect(text(button(row))).toBe('Acceptă');
+    expect(row.querySelector('button')).toBeNull();
+    expect(text(part(row, 'action'))).toBe('Refuzată de tine');
+    expect(row.classList).toContain('greyed');
   });
 });

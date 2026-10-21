@@ -82,7 +82,7 @@ export class QuoteAcceptedFanOut {
           kind: 'QUOTE_ACCEPTED',
           params: {
             car: `${booking.request.carBrand} ${booking.request.carModel}`,
-            driver: shortName(booking.driver.name),
+            driverShortName: shortName(booking.driver.name),
             link: `${this.config.webUrl}/app/garage/requests`,
             slot: booking.startsAt.toISOString(),
           },

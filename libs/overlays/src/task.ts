@@ -9,8 +9,9 @@ export type OverlaySource = Type<unknown> | (() => Promise<Type<unknown>>);
 
 export interface OverlayOptions<D = undefined> {
   shape: OverlayShape;
-  // An i18n key.
+  // An i18n key, and the values it names.
   title: string;
+  titleParams?: Record<string, string>;
   data?: D;
   // Ask before closing a task whose fields changed. On unless set to false.
   confirmDiscard?: boolean;

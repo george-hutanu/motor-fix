@@ -163,7 +163,7 @@ describe('GarageSearchQueryDto under hostile input', () => {
   });
 
   it('takes a base64url cursor of 256 characters', () => {
-    expect(search({ brand: 'bmw', cursor: 'aZ0_-'.repeat(51) + 'x' })).toEqual(
+    expect(search({ brand: 'bmw', cursor: `${'aZ0_-'.repeat(51)}x` })).toEqual(
       [],
     );
   });

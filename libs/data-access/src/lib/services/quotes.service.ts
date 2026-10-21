@@ -12,6 +12,9 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { acceptControllerAccept } from '../fn/quotes/accept-controller-accept';
 import { AcceptControllerAccept$Params } from '../fn/quotes/accept-controller-accept';
 import { BookingDto } from '../models/booking-dto';
+import { DeclinedQuoteDto } from '../models/declined-quote-dto';
+import { declineQuoteControllerDecline } from '../fn/quotes/decline-quote-controller-decline';
+import { DeclineQuoteControllerDecline$Params } from '../fn/quotes/decline-quote-controller-decline';
 import { GarageQuoteDto } from '../models/garage-quote-dto';
 import { quotesControllerSend } from '../fn/quotes/quotes-controller-send';
 import { QuotesControllerSend$Params } from '../fn/quotes/quotes-controller-send';
@@ -86,6 +89,39 @@ export class QuotesService extends BaseService {
   acceptControllerAccept(params: AcceptControllerAccept$Params, context?: HttpContext): Promise<BookingDto> {
     const resp = this.acceptControllerAccept$Response(params, context);
     return resp.then((r: StrictHttpResponse<BookingDto>): BookingDto => r.body);
+  }
+
+  /** Path part for operation `declineQuoteControllerDecline()` */
+  static readonly DeclineQuoteControllerDeclinePath = '/api/v1/quotes/{id}/decline';
+
+  /**
+   * Decline one waiting quote; the garage is told.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `declineQuoteControllerDecline()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  declineQuoteControllerDecline$Response(params: DeclineQuoteControllerDecline$Params, context?: HttpContext): Promise<StrictHttpResponse<DeclinedQuoteDto>> {
+    const obs = declineQuoteControllerDecline(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Decline one waiting quote; the garage is told.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `declineQuoteControllerDecline$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  declineQuoteControllerDecline(params: DeclineQuoteControllerDecline$Params, context?: HttpContext): Promise<DeclinedQuoteDto> {
+    const resp = this.declineQuoteControllerDecline$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DeclinedQuoteDto>): DeclinedQuoteDto => r.body);
   }
 
 }

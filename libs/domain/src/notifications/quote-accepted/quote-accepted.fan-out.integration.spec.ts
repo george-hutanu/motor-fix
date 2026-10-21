@@ -157,6 +157,7 @@ describe('telling the garage its quote was accepted', () => {
     }
   });
 
+  // @traces 314-FR-017
   it('names the driver, the car and the slot in Romania’s time, in each reader’s language', async () => {
     const { booking, desk, job, owner } = await acceptedQuote();
     await prisma.booking.update({
@@ -171,10 +172,13 @@ describe('telling the garage its quote was accepted', () => {
       (await messages(accountId)).find((m) => m.channel === 'in_app');
     expect((await bell(owner))?.params).toMatchObject({
       car: 'Mini Cooper S',
-      driver: 'Andrei M.',
+      driverShortName: 'Andrei M.',
       slot: '2026-10-16T06:00:00.000Z',
     });
-    expect((await bell(desk))?.params).toMatchObject({ driver: 'Andrei M.' });
+    expect((await bell(desk))?.params).toMatchObject({
+      driverShortName: 'Andrei M.',
+    });
+    expect((await bell(owner))?.params).not.toHaveProperty('driver');
   });
 
   it('tells no mechanic, even one who may answer quotes', async () => {
