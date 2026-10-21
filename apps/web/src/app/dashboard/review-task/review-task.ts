@@ -31,6 +31,8 @@ const STEPS = [1, 2, 3, 4, 5] as const;
 const SHOWN: Record<string, View> = {
   job_not_done: 'notDone',
   not_found: 'notFound',
+  own_garage: 'ownGarage',
+  review_removed: 'removed',
 };
 
 type View =
@@ -38,6 +40,8 @@ type View =
   | 'loadFailed'
   | 'notFound'
   | 'notDone'
+  | 'ownGarage'
+  | 'removed'
   | 'form'
   | 'existing'
   | 'done';
@@ -105,12 +109,13 @@ export class ReviewTask {
       const context = await this.reviews.reviewsControllerForJob({ jobId });
       this.context.set(context);
       this.emailConfirmed.set(context.emailConfirmed);
+      const { reason } = context.eligibility;
       this.view.set(
-        context.existing
-          ? 'existing'
-          : context.job.status === 'done'
-            ? 'form'
-            : 'notDone',
+        reason && reason in SHOWN
+          ? SHOWN[reason]
+          : context.existing
+            ? 'existing'
+            : 'form',
       );
     } catch (error) {
       this.view.set(
@@ -122,10 +127,6 @@ export class ReviewTask {
   // Keys built from a value, which the template key check cannot follow.
   protected words(rating: number) {
     return `${KEY}.rating.${rating}`;
-  }
-
-  protected statusNote(status: string) {
-    return `${KEY}.existing.${status}`;
   }
 
   protected fieldError(why: string) {
@@ -182,7 +183,7 @@ export class ReviewTask {
     if (status === 0 || status >= 500) toast(this.i18n.t(`${KEY}.failed`));
     else if (code in SHOWN) this.view.set(SHOWN[code]);
     else if (code === 'email_not_confirmed') this.emailConfirmed.set(false);
-    else if (code === 'review_exists') await this.load();
+    else if (code === 'already_reviewed') await this.load();
     else this.atFields(problem);
   }
 

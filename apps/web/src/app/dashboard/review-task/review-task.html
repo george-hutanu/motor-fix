@@ -17,6 +17,12 @@
   @case ('notDone') {
     <p class="status" role="status">{{ 'driver.review.notDone' | t }}</p>
   }
+  @case ('ownGarage') {
+    <p class="status" role="status">{{ 'driver.review.ownGarage' | t }}</p>
+  }
+  @case ('removed') {
+    <p class="status" role="status">{{ 'driver.review.removed' | t }}</p>
+  }
   @case ('existing') {
     @if (existing(); as review) {
       <section class="existing" aria-labelledby="mf-review-existing">
@@ -29,8 +35,8 @@
           <p class="text">{{ review.text }}</p>
         }
         <p class="note">{{ 'driver.review.existing.postedAt' | t: { date: review.postedAt | day } }}</p>
-        @if (review.status === 'reported' || review.status === 'removed') {
-          <p class="note">{{ statusNote(review.status) | t }}</p>
+        @if (review.status === 'reported') {
+          <p class="note">{{ 'driver.review.existing.reported' | t }}</p>
         }
       </section>
     }
