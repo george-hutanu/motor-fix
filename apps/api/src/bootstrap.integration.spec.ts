@@ -50,6 +50,15 @@ class ProbeController {
   }
 }
 
+@Controller('listing-drafts/probe')
+@Public()
+class DraftProbeController {
+  @Post()
+  echo(@Body() body: EchoDto) {
+    return { length: body.name.length };
+  }
+}
+
 const env = {
   APP_ENV: 'test',
   AUTH_TOKEN_SECRET: 'test-secret',
@@ -73,7 +82,7 @@ async function start(appEnv: string = env.APP_ENV) {
     },
   );
   const moduleRef = await Test.createTestingModule({
-    controllers: [ProbeController],
+    controllers: [ProbeController, DraftProbeController],
     imports: [AppModule.register(config)],
   }).compile();
   const app = moduleRef.createNestApplication({ bufferLogs: true });
@@ -248,6 +257,30 @@ describe('api conventions', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ code: 'validation_failed', status: 400 });
+  });
+
+  // @traces 116-FR-030
+  it('reads 100 KB of JSON outside the listing drafts and 320 KB under them', async () => {
+    app = await start();
+    const http = request(app.getHttpServer());
+    const name = 'x'.repeat(150 * 1024);
+
+    const outside = await http.post('/api/v1/probe').send({ name });
+    const under = await http
+      .post('/api/v1/listing-drafts/probe')
+      .send({ name: 'x'.repeat(300 * 1024) });
+
+    expect(outside.status).toBe(413);
+    expect(outside.body).toMatchObject({
+      code: 'payload_too_large',
+      status: 413,
+    });
+    expect(under.status).toBe(201);
+    expect(under.body).toEqual({ length: 300 * 1024 });
+    await http
+      .post('/api/v1/probe')
+      .send({ name: 'x'.repeat(90 * 1024) })
+      .expect(201);
   });
 
   it('hides the cause of an unknown error', async () => {

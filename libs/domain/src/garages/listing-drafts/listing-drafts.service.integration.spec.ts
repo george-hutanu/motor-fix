@@ -6,13 +6,23 @@ import { HttpException, Logger } from '@nestjs/common';
 
 import { DRAFT_MAX_BYTES } from './listing-drafts';
 import { ListingDraftsService } from './listing-drafts.service';
-import { hashToken } from '../../auth/email-confirmation/email-confirmation';
+import {
+  hashToken,
+  newToken,
+} from '../../auth/email-confirmation/email-confirmation';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { NotificationsService } from '../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+
+jest.mock('../../auth/email-confirmation/email-confirmation', () => {
+  const actual = jest.requireActual(
+    '../../auth/email-confirmation/email-confirmation',
+  );
+  return { ...actual, newToken: jest.fn(actual.newToken) };
+});
 
 const reader = countedMetrics();
 const signUps = () => counterTotal(reader, 'motorfix_garage_sign_ups_total');
@@ -321,6 +331,17 @@ describe('saving a draft', () => {
     expect(saved.token).toBeUndefined();
     expect(sent).toHaveLength(1);
     await expect(service.current(created.token)).resolves.toBeDefined();
+  });
+
+  // @traces 116-FR-033
+  it('makes no new key when the address is the same', async () => {
+    const created = await service.create(body());
+    const made = jest.mocked(newToken);
+    made.mockClear();
+
+    await service.save(created.id, created.token, body({ step: 2 }));
+
+    expect(made).not.toHaveBeenCalled();
   });
 
   it('lets the later of two saves win', async () => {

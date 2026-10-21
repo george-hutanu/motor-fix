@@ -42,7 +42,7 @@ export class CreateListingDraftDto extends DraftFields {
   @ApiProperty({ description: 'Trimmed and lower-cased', maxLength: 254 })
   @Transform(lowerTrimmed)
   @IsString()
-  @MaxLength(1024)
+  @MaxLength(254)
   email!: string;
 }
 
@@ -54,7 +54,7 @@ export class SaveListingDraftDto extends DraftFields {
   @IsOptional()
   @Transform(lowerTrimmed)
   @IsString()
-  @MaxLength(1024)
+  @MaxLength(254)
   email?: string;
 }
 
@@ -91,11 +91,16 @@ export class ListingDraftSavedDto {
   retryAfterSeconds?: number;
 }
 
+// The parent's optional token and linkSent stay optional in its metadata
+// unless they are said to be required here.
 export class ListingDraftCreatedDto extends ListingDraftSavedDto {
-  @ApiProperty({ description: "This browser's key to the draft" })
+  @ApiProperty({
+    description: "This browser's key to the draft",
+    required: true,
+  })
   declare token: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: true })
   declare linkSent: boolean;
 }
 

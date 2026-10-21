@@ -308,11 +308,11 @@ export class ListingDraftsService {
       body.email === undefined ? draft.email : checkedEmail(body.email);
     const moved = email !== draft.email;
     const webUrl = moved ? this.webUrl() : '';
-    const browser = newToken();
+    const browser = moved ? newToken() : undefined;
     const at = this.now();
     let signed = false;
     const next = await this.prisma.$transaction(async (tx) => {
-      if (moved) {
+      if (browser) {
         // The hour's links stay counted, under hashes no key matches, so a
         // new address never buys more e-mails.
         const counted = {
@@ -353,7 +353,7 @@ export class ListingDraftsService {
       });
     });
     if (signed) countDeclarationSigned();
-    if (!moved) return saved(next);
+    if (!browser) return saved(next);
     const send = await this.issueSaved(next, webUrl);
     return { ...saved(next), token: browser.token, ...linkResult(send) };
   }

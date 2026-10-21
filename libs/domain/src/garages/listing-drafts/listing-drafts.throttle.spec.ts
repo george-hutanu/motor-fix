@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import { Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
+import type { Request } from 'express';
 import type { Redis } from 'ioredis';
 
 import { CREATE_PER_HOUR } from './listing-drafts';
+import { ListingDraftsController } from './listing-drafts.controller';
+import type { ListingDraftsService } from './listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts.throttle';
 
 // Counts as Redis would, with every key living an hour from its first count.
@@ -12,6 +15,12 @@ function countingRedis() {
   const keys: string[] = [];
   const expiries: unknown[][] = [];
   const redis = {
+    // The give-back script: one less, never below nothing.
+    async eval(_script: string, _keys: number, key: string) {
+      const count = Math.max(0, (counts.get(key) ?? 0) - 1);
+      counts.set(key, count);
+      return count;
+    },
     multi() {
       const replies: [null, number][] = [];
       const chain = {
@@ -94,5 +103,52 @@ describe('the create limit per address', () => {
 
     expect(await new ListingDraftThrottle(redis).take('')).toBeNull();
     expect(keys).toEqual([]);
+  });
+});
+
+// @traces 116-FR-032
+describe('a create that fails', () => {
+  beforeEach(() =>
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+  );
+  afterEach(() => jest.restoreAllMocks());
+
+  const caller = { ip: '198.51.100.7' } as Request;
+  const refused = new HttpException('invalid', HttpStatus.BAD_REQUEST);
+
+  it('gives its take back, so a valid create still goes through after ten failed ones', async () => {
+    let failing = true;
+    const drafts = {
+      create: async () => {
+        if (failing) throw refused;
+        return { id: 'created' };
+      },
+    } as unknown as ListingDraftsService;
+    const controller = new ListingDraftsController(
+      drafts,
+      new ListingDraftThrottle(countingRedis().redis),
+    );
+
+    for (let i = 0; i < CREATE_PER_HOUR; i++) {
+      await expect(controller.create(caller, {} as never)).rejects.toBe(
+        refused,
+      );
+    }
+    failing = false;
+
+    await expect(controller.create(caller, {} as never)).resolves.toEqual({
+      id: 'created',
+    });
+  });
+
+  it('never gives back more than it took', async () => {
+    const throttle = new ListingDraftThrottle(countingRedis().redis);
+
+    await throttle.give('198.51.100.7');
+    for (let i = 0; i < CREATE_PER_HOUR; i++) {
+      expect(await throttle.take('198.51.100.7')).toBeNull();
+    }
+
+    expect(await throttle.take('198.51.100.7')).toBe(1800);
   });
 });

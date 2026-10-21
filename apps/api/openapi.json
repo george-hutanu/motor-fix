@@ -13207,7 +13207,9 @@
           "step",
           "language",
           "email",
-          "updatedAt"
+          "updatedAt",
+          "token",
+          "linkSent"
         ]
       },
       "ListingDraftDto": {

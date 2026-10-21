@@ -94,6 +94,8 @@ interface NextJob {
   delay: number;
 }
 
+export type DraftJob = NextJob & { data: { id: string } };
+
 // A param that opens something by itself (an account e-mail's link carries
 // its token): only the message in flight holds it, never the bell, and not
 // once the message is sent or has failed.
@@ -196,27 +198,57 @@ export class NotificationsService {
     draftId: string,
     link: string,
   ): Promise<void> {
+    const job = await this.prisma.$transaction((tx) =>
+      this.writeToDraft(tx, kind, draftId),
+    );
+    if (job) await this.queueToDraft(job, link);
+  }
+
+  // The draft's e-mail row, in the caller's transaction; answers the send job
+  // to queue once that transaction commits, or null when none goes.
+  async writeToDraft(
+    tx: Prisma.TransactionClient,
+    kind: DraftKind,
+    draftId: string,
+  ): Promise<DraftJob | null> {
     if (!DRAFT_KINDS.includes(kind)) {
       throw new Error(`${kind} is not sent to a listing draft`);
     }
     const at = this.now();
-    const next = await this.prisma.$transaction(async (tx) => {
-      const draft = await tx.listingDraft.findUniqueOrThrow({
-        select: { email: true },
-        where: { id: draftId },
-      });
-      const base = {
-        createdAt: at,
-        eventId: randomUUID(),
-        kind,
-        listingDraftId: draftId,
-        params: {},
-        subjectId: draftId,
-      };
-      return this.emailRow(tx, notificationType(kind), base, draft.email, at);
+    const draft = await tx.listingDraft.findUniqueOrThrow({
+      select: { email: true },
+      where: { id: draftId },
     });
-    if (next && 'id' in next.data) {
-      await this.queue({ ...next, data: { id: next.data.id, link } });
+    const base = {
+      createdAt: at,
+      eventId: randomUUID(),
+      kind,
+      listingDraftId: draftId,
+      params: {},
+      subjectId: draftId,
+    };
+    const next = await this.emailRow(
+      tx,
+      notificationType(kind),
+      base,
+      draft.email,
+      at,
+    );
+    return next && 'id' in next.data ? { ...next, data: next.data } : null;
+  }
+
+  // No job could carry the link again, so a row the queue refuses is failed
+  // rather than left queued; the error goes on to the caller.
+  async queueToDraft(job: DraftJob, link: string): Promise<void> {
+    const { id } = job.data;
+    try {
+      await this.queue({ ...job, data: { id, link } });
+    } catch (error) {
+      await this.prisma.notification.update({
+        data: { failure: 'queue_unavailable', status: 'failed' },
+        where: { id },
+      });
+      throw error;
     }
   }
 

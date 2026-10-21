@@ -1,9 +1,14 @@
 import { Logger } from '@nestjs/common';
 
 import { ListingDraftSweep } from './listing-draft-sweep';
+import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
-import type { NotificationsService } from '../notifications/notifications.service';
-import { databaseUrl, fixtures } from '../notifications/notifications.testing';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  databaseUrl,
+  fixtures,
+  testConfig,
+} from '../notifications/notifications.testing';
 import type { StorageService } from '../storage/storage.service';
 
 const { prisma, reset } = fixtures();
@@ -15,11 +20,19 @@ const daysAgo = (days: number) => new Date(NOW.getTime() - days * DAY_MS);
 
 const sent: { kind: string; draftId: string; link: string }[] = [];
 let failFor: string | undefined;
+// The job a written row would queue names the draft and the kind, so the
+// fake can tell.
+type FakeJob = { data: { id: string }; kind: string };
 const notifications = {
-  sendToDraft: async (kind: string, draftId: string, link: string) => {
-    if (draftId === failFor) throw new Error('mail down');
-    sent.push({ draftId, kind, link });
+  queueToDraft: async ({ data, kind }: FakeJob, link: string) => {
+    if (data.id === failFor) throw new Error('mail down');
+    sent.push({ draftId: data.id, kind, link });
   },
+  writeToDraft: async (
+    _tx: unknown,
+    kind: string,
+    draftId: string,
+  ): Promise<FakeJob> => ({ data: { id: draftId }, kind }),
 } as unknown as NotificationsService;
 
 const deleted: string[] = [];
@@ -221,5 +234,90 @@ describe('the daily run', () => {
     await expect(
       prisma.listingDraft.findUnique({ where: { id: old.id } }),
     ).resolves.toBeNull();
+  });
+});
+
+// @traces 116-FR-036
+describe('the reminder e-mail and its queue', () => {
+  let refusals = 0;
+  const queued: unknown[] = [];
+  const jobs = {
+    add: async (_name: string, data: unknown) => {
+      if (refusals > 0) {
+        refusals -= 1;
+        throw new Error('queue down');
+      }
+      queued.push(data);
+    },
+  };
+  const real = new NotificationsService(
+    prisma,
+    jobs as never,
+    { publish: async () => 0 } as never,
+    testConfig('http://localhost:9'),
+    null,
+    new AuditService(),
+  );
+  real.now = () => NOW;
+  const queueing = new ListingDraftSweep(
+    prisma,
+    real,
+    storage,
+    'https://motorfix.test',
+  );
+  const rows = (draftId: string) =>
+    prisma.notification.findMany({
+      orderBy: { createdAt: 'asc' },
+      where: { listingDraftId: draftId },
+    });
+
+  beforeEach(() => {
+    refusals = 0;
+    queued.length = 0;
+  });
+
+  it('leaves no e-mail queued unsent when the queue fails, and reminds once on the next run', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const due = await draft(daysAgo(3));
+    refusals = 1;
+
+    await queueing.remind(NOW);
+
+    expect((await rows(due.id)).map((row) => row.status)).toEqual(['failed']);
+    const after = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: due.id },
+    });
+    expect(after.remindedAt).toBeNull();
+    expect(
+      await prisma.listingDraftToken.count({ where: { draftId: due.id } }),
+    ).toBe(0);
+
+    await queueing.remind(NOW);
+
+    const written = await rows(due.id);
+    expect(written.map((row) => row.status)).toEqual(['failed', 'queued']);
+    expect(queued).toEqual([
+      {
+        id: written[1]?.id,
+        link: expect.stringMatching(/list-your-garage\?draft=[\w-]{43}$/),
+      },
+    ]);
+    error.mockRestore();
+  });
+
+  it('writes the claim, the key and the e-mail row in one transaction', async () => {
+    const due = await draft(daysAgo(3));
+    const transactions = jest.spyOn(prisma, '$transaction');
+
+    await queueing.remind(NOW);
+
+    expect(transactions).toHaveBeenCalledTimes(1);
+    transactions.mockRestore();
+    expect((await rows(due.id)).map((row) => row.status)).toEqual(['queued']);
+    expect(
+      await prisma.listingDraftToken.count({
+        where: { draftId: due.id, kind: 'reminder' },
+      }),
+    ).toBe(1);
   });
 });
