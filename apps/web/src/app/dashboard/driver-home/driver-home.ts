@@ -11,6 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
+  type ActiveRequestAnswerDto,
   type CarDto,
   CarsService,
   type RequestSummaryDto,
@@ -20,6 +21,7 @@ import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
+import { ActiveRequest } from '../active-request/active-request';
 import { openAddCar } from '../add-car/open-add-car';
 import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
@@ -38,8 +40,6 @@ import { allowedViews } from '../views';
 // A list as a panel reads it: loading (undefined), failed, or its items.
 type Read<T> = T[] | 'failed' | undefined;
 
-const ENDED: readonly RequestSummaryDto['status'][] = ['done', 'closed'];
-
 // The cars the panel shows; the rest are a link away.
 const CARS_SHOWN = 3;
 // How often a page left open reads the clock again, so the cars rank by the
@@ -52,6 +52,7 @@ const TICK_MS = 60_000;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ActiveRequest,
     DueDateLine,
     EmptyState,
     HlmButton,
@@ -77,13 +78,14 @@ export class DriverHome {
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
   protected readonly requests = signal<Read<RequestSummaryDto>>(undefined);
+  protected readonly active = signal<ActiveRequestAnswerDto | 'failed'>();
+  // The active request's panel, or the invitations once the read says no
+  // request is open.
   protected readonly firstRow = computed(() => {
-    const requests = this.requests();
-    if (requests === undefined || requests === 'failed')
-      return requests ?? 'loading';
-    return requests.some((r) => !ENDED.includes(r.status))
-      ? 'active'
-      : 'invite';
+    const active = this.active();
+    return active !== undefined && active !== 'failed' && !active.request
+      ? 'invite'
+      : 'active';
   });
   protected readonly hasCar = computed(() => this.carCount() > 0);
   // Only a list read and empty asks for a first car.
@@ -144,11 +146,22 @@ export class DriverHome {
     void this.i18n.enter('driver');
     this.load();
     // An accepted quote books the request, and the garage's confirmation or
-    // the lapse moves it on: its panels read it again.
-    inject(Live)
+    // the lapse moves it on: its panels read it again. A quote sent moves
+    // the active request too.
+    const live = inject(Live);
+    live
       .on(['quote.accepted', 'booking.confirmed', 'booking.lapsed'])
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.loadRequests());
+    live
+      .on([
+        'quote.accepted',
+        'booking.confirmed',
+        'booking.lapsed',
+        'quote.sent',
+      ])
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.loadActive());
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -162,15 +175,28 @@ export class DriverHome {
     this.cars.update((list) => [car, ...(Array.isArray(list) ? list : [])]);
   }
 
+  protected retryActive() {
+    this.active.set(undefined);
+    this.loadActive();
+  }
+
   protected retryCars() {
     this.cars.set(undefined);
     this.loadCars();
   }
 
-  // Each list settles its own panels; the first row follows the requests.
+  // Each read settles its own panels; the first row follows the active one.
   private load() {
     this.loadCars();
     this.loadRequests();
+    this.loadActive();
+  }
+
+  private loadActive() {
+    this.requestsApi.activeRequestControllerGet().then(
+      (answer) => this.active.set(answer),
+      () => this.active.set('failed'),
+    );
   }
 
   private loadCars() {

@@ -2,21 +2,8 @@
   @switch (key) {
     @case ('active_request') {
       @switch (firstRow()) {
-        @case ('loading') {
-          <div class="skeleton" [class.wide]="wide.has(key)" aria-busy="true"></div>
-        }
-        @case ('failed') {
-          <mf-panel [class.wide]="wide.has(key)" data-panel="activeRequest" [heading]="'driver.panel.activeRequest' | t">
-            <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
-          </mf-panel>
-        }
         @case ('active') {
-          <mf-panel
-            [class.wide]="wide.has(key)"
-            data-panel="activeRequest"
-            [heading]="'driver.panel.activeRequest' | t"
-            [link]="['/app', 'driver', 'requests']"
-          />
+          <mf-active-request data-panel="activeRequest" [class.wide]="wide.has(key)" [answer]="active()" [more]="true" (retry)="retryActive()" />
         }
         @case ('invite') {
           <div class="invitations" [class.wide]="wide.has(key)">

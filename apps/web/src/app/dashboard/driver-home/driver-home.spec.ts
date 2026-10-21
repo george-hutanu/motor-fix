@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  type ActiveRequestAnswerDto,
   type CarDto,
   CarsService,
   type MeDto,
@@ -84,6 +85,7 @@ type Answer<T> = T[] | Error | Promise<never>;
 interface Setup {
   cars?: Answer<CarDto>;
   requests?: Answer<RequestSummaryDto>;
+  active?: ActiveRequestAnswerDto | Error | Promise<never>;
   saved?: SavedGaragesPageDto | Error | Promise<never>;
   // null: no session shown, as for a moment after signing out.
   capabilities?: string[] | null;
@@ -92,6 +94,7 @@ interface Setup {
 
 let carsList: jest.Mock;
 let requestsList: jest.Mock;
+let activeRead: jest.Mock;
 let savedList: jest.Mock;
 let open: jest.Mock;
 let compare: jest.Mock;
@@ -108,15 +111,55 @@ const answer = <T>(value: Answer<T>) =>
           total: value.length,
         });
 
+// The active read as the server would answer the requests given: an open one
+// is the panel's, none leaves the invitations.
+const activeOf = (
+  requests: Answer<RequestSummaryDto>,
+): ActiveRequestAnswerDto | Error | Promise<never> => {
+  if (!Array.isArray(requests)) return requests;
+  const open = requests.filter((r) => !['done', 'closed'].includes(r.status));
+  return {
+    openCount: open.length,
+    request: open[0]
+      ? {
+          booking: null,
+          car: {
+            brand: open[0].car.brand,
+            model: open[0].car.model,
+            year: open[0].car.year,
+          },
+          description: open[0].description,
+          id: open[0].id,
+          job: null,
+          jobs: open[0].jobs,
+          mechanicName: null,
+          range: null,
+          stage: 'sent',
+        }
+      : null,
+  };
+};
+
+const activeAnswer = (
+  value: ActiveRequestAnswerDto | Error | Promise<never>,
+) =>
+  value instanceof Error
+    ? Promise.reject(value)
+    : value instanceof Promise
+      ? value
+      : Promise.resolve(value);
+
 async function render({
   cars = [],
   requests = [],
+  active,
   saved = pageOf([]),
   capabilities = DRIVER,
   language = 'ro',
 }: Setup = {}) {
   carsList = jest.fn(() => answer(cars));
   requestsList = jest.fn(() => answer(requests));
+  activeRead = jest.fn(() => activeAnswer(active ?? activeOf(requests)));
   savedList = jest.fn(() =>
     saved instanceof Error ? Promise.reject(saved) : Promise.resolve(saved),
   );
@@ -134,7 +177,10 @@ async function render({
       { provide: CarsService, useValue: { carsControllerList: carsList } },
       {
         provide: RequestsService,
-        useValue: { requestsControllerList: requestsList },
+        useValue: {
+          activeRequestControllerGet: activeRead,
+          requestsControllerList: requestsList,
+        },
       },
       { provide: Overlays, useValue: { open } },
       {
@@ -1145,5 +1191,101 @@ describe('Mașinile mele on a page left open', () => {
 
     expect(kinds()).toEqual(['mf-due-date-line', 'mf-oil-line']);
     expect(carsList).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 274-request-stages-FR-018
+// @traces 274-request-stages-FR-016
+describe('Cererea activă on Panou', () => {
+  const answer: ActiveRequestAnswerDto = {
+    openCount: 3,
+    request: {
+      booking: null,
+      car: { brand: 'BMW', model: '320d', year: 2016 },
+      description: null,
+      id: 'req-9',
+      job: null,
+      jobs: [],
+      mechanicName: null,
+      range: null,
+      stage: 'sent',
+    },
+  };
+
+  it('reads the active request once and draws it first and wide', async () => {
+    const { element } = await render({ active: answer, requests: [request()] });
+
+    expect(activeRead).toHaveBeenCalledTimes(1);
+    const first = element.querySelector('mf-active-request');
+    expect(first).not.toBeNull();
+    expect(first?.classList.contains('wide')).toBe(true);
+    expect(text(first)).toContain('BMW 320d');
+    expect(invitation(element, 'search')).toBeNull();
+  });
+
+  it('links the other open requests to Cererile mele', async () => {
+    const { element } = await render({ active: answer, requests: [request()] });
+
+    expect(
+      control(element, 'Încă 2 cereri deschise')?.getAttribute('href'),
+    ).toBe('/app/driver/requests');
+  });
+
+  it('keeps the invitations when no request is open', async () => {
+    const { element } = await render({
+      active: { openCount: 0, request: null },
+      requests: [request({ status: 'closed' })],
+    });
+
+    expect(element.querySelector('mf-active-request')).toBeNull();
+    expect(invitation(element, 'search')).not.toBeNull();
+  });
+
+  it('draws the panel’s skeleton while reading and its error after a failed read', async () => {
+    const loading = await render({
+      active: new Promise<never>(() => undefined),
+    });
+    expect(
+      loading.element.querySelector('mf-active-request [aria-busy="true"]'),
+    ).not.toBeNull();
+    TestBed.resetTestingModule();
+
+    const failed = await render({ active: new Error('down') });
+    expect(text(failed.element.querySelector('mf-active-request'))).toContain(
+      'Nu am putut încărca cererea.',
+    );
+    expect(invitation(failed.element, 'search')).toBeNull();
+  });
+
+  it('reads it again from Reîncearcă', async () => {
+    const { element, settle } = await render({ active: new Error('down') });
+    activeRead.mockImplementation(() => Promise.resolve(answer));
+
+    control(element.querySelector('mf-active-request'), 'Reîncearcă')?.click();
+    await settle();
+
+    expect(activeRead).toHaveBeenCalledTimes(2);
+    expect(text(element.querySelector('mf-active-request'))).toContain(
+      'BMW 320d',
+    );
+  });
+});
+
+// @traces 274-request-stages-FR-020
+describe('Cererea activă as the request moves', () => {
+  it.each([
+    'quote.accepted',
+    'booking.confirmed',
+    'booking.lapsed',
+    'quote.sent',
+  ] as const)('reads it again on %s', async (kind) => {
+    const { settle } = await render({ requests: [request()] });
+    expect(activeRead).toHaveBeenCalledTimes(1);
+
+    events.next({ at: new Date().toISOString(), id: 'x-1', kind });
+    await new Promise((r) => setTimeout(r, 400));
+    await settle();
+
+    expect(activeRead).toHaveBeenCalledTimes(2);
   });
 });

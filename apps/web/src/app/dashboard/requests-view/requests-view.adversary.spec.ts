@@ -18,7 +18,10 @@ async function mount(
       provideRouter([]),
       {
         provide: RequestsService,
-        useValue: { requestsControllerList: jest.fn(answer) },
+        useValue: {
+          activeRequestControllerGet: () => new Promise<never>(() => undefined),
+          requestsControllerList: jest.fn(answer),
+        },
       },
       {
         provide: Live,

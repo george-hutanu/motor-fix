@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  type ActiveRequestAnswerDto,
   QuoteRequestsService,
   QuotesService,
   type RequestSummaryDto,
@@ -49,6 +50,11 @@ const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 let events: Subject<LiveMessage>;
 let list: jest.Mock;
 let compare: jest.Mock;
+let active: jest.Mock;
+let activeAnswer: ActiveRequestAnswerDto = { openCount: 0, request: null };
+
+// The active read left pending, for the specs about the list alone.
+const idle = () => new Promise<never>(() => undefined);
 
 // The comparison panel's own reads; its behaviour is quotes-compare's spec.
 const comparing = () => {
@@ -67,6 +73,7 @@ async function render(
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
+  active = jest.fn(async () => activeAnswer);
   let call = 0;
   list = jest.fn(async () => {
     const items = answers[Math.min(call++, answers.length - 1)];
@@ -77,7 +84,13 @@ async function render(
     providers: [
       provideRouter([]),
       ...comparing(),
-      { provide: RequestsService, useValue: { requestsControllerList: list } },
+      {
+        provide: RequestsService,
+        useValue: {
+          activeRequestControllerGet: active,
+          requestsControllerList: list,
+        },
+      },
       {
         provide: Live,
         useValue: {
@@ -524,7 +537,10 @@ describe('Cererile mele opened at a request', () => {
         ...comparing(),
         {
           provide: RequestsService,
-          useValue: { requestsControllerList: list },
+          useValue: {
+            activeRequestControllerGet: idle,
+            requestsControllerList: list,
+          },
         },
         {
           provide: Live,
@@ -633,7 +649,10 @@ describe('Cererile mele comparing a request’s quotes', () => {
         ...comparing(),
         {
           provide: RequestsService,
-          useValue: { requestsControllerList: list },
+          useValue: {
+            activeRequestControllerGet: idle,
+            requestsControllerList: list,
+          },
         },
         {
           provide: Live,
@@ -776,5 +795,64 @@ describe('Cererile mele comparing a request’s quotes', () => {
     expect(linkOf('req-new')).toBe('/app/driver/requests?request=req-new');
     expect(linkOf('req-old')).toBe('/app/driver/requests?request=req-old');
     expect(linkOf('req-none')).toBeUndefined();
+  });
+});
+
+// @traces 274-request-stages-FR-016
+// @traces 274-request-stages-FR-020
+describe('Cererea activă at the top of Cererile mele', () => {
+  const open: ActiveRequestAnswerDto = {
+    openCount: 2,
+    request: {
+      booking: null,
+      car: { brand: 'Dacia', model: 'Logan', year: 2017 },
+      description: null,
+      id: 'req-1',
+      job: null,
+      jobs: [],
+      mechanicName: null,
+      range: null,
+      stage: 'sent',
+    },
+  };
+
+  afterEach(() => {
+    activeAnswer = { openCount: 0, request: null };
+  });
+
+  it('draws the panel above the list, without the link to the list itself', async () => {
+    activeAnswer = open;
+    const { element } = await render([[row(), row({ id: 'req-2' })]]);
+
+    const panel = element.querySelector('mf-active-request');
+    expect(panel).not.toBeNull();
+    expect(
+      panel!.compareDocumentPosition(rows(element)[0]) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(text(panel!)).toContain('Dacia Logan');
+    expect(text(panel!)).not.toContain('Încă');
+  });
+
+  it('draws no panel over an empty list', async () => {
+    const { element } = await render([[]]);
+
+    expect(element.querySelector('mf-active-request')).toBeNull();
+  });
+
+  it.each([
+    'quote.accepted',
+    'booking.confirmed',
+    'booking.lapsed',
+    'quote.sent',
+  ] as const)('reads the panel again on %s', async (kind) => {
+    activeAnswer = open;
+    await render([[row()], [row()]]);
+    expect(active).toHaveBeenCalledTimes(1);
+
+    events.next({ at: new Date().toISOString(), id: 'x-1', kind });
+    await wait(400);
+
+    expect(active).toHaveBeenCalledTimes(2);
   });
 });
