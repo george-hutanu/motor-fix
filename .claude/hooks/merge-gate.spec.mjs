@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, prefetchProvenance, readPr } from './merge-gate.mjs';
+import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, orphanNote, prefetchCarry, prefetchProvenance, readPr } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
@@ -751,5 +751,123 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
   it('reads a PR URL as its number', async () => {
     const got = await readPr('https://github.com/george-hutanu/motor-fix/pull/21', restGh().gh, { cloud: true });
     assert.equal(got.number, 21);
+  });
+});
+
+// PR #466 (ST-1356): attempt 1 of the 'PR title' run 39618505833 stayed in_progress after
+// attempt 2 of the same run completed success, and the gate refused with every check green.
+describe('merge gate — an orphaned earlier attempt of a check', () => {
+  const HEAD = 'aa04cfd0eec3201ad509c2fa527b092500ec2fea';
+  const RUN = '39618505833';
+  const attempt = (status, conclusion, startedAt, checkRunId, runStatus = 'COMPLETED') => ({
+    __typename: 'CheckRun',
+    name: 'PR title',
+    workflowName: 'PR title',
+    status,
+    conclusion,
+    startedAt,
+    checkRunId,
+    runId: RUN,
+    runStatus,
+  });
+  const orphan = attempt('IN_PROGRESS', null, '2026-10-21T14:37:49Z', 119285437128);
+  const retried = attempt('COMPLETED', 'SUCCESS', '2026-10-21T14:43:56Z', 119288507053);
+  const pr466 = (rollup) => ({ number: 466, state: 'OPEN', headRefOid: HEAD, statusCheckRollup: rollup });
+
+  // @traces 1362-FR-003
+  it('judges the check by the newer completed attempt and names the orphan it ignored', () => {
+    const got = pr466([...green, orphan, retried, review('SUCCESS')]);
+    assert.equal(decideMerge(got), null);
+    const note = orphanNote(got);
+    assert.match(note, /119285437128/);
+    assert.match(note, new RegExp(RUN));
+    assert.match(note, /PR title/);
+  });
+
+  // @traces 1362-FR-003
+  it('still refuses a newer attempt that failed, ignoring only the orphan', () => {
+    const failed = attempt('COMPLETED', 'FAILURE', '2026-10-21T14:43:56Z', 119288507053);
+    assert.match(decideMerge(pr466([...green, orphan, failed, review('SUCCESS')])), /CI failed on aa04cfd \(PR title \/ PR title\)/);
+  });
+
+  // @traces 1362-FR-004
+  it('refuses a genuinely pending check: no newer completed attempt', () => {
+    const got = pr466([...green, orphan, review('SUCCESS')]);
+    assert.match(decideMerge(got), /CI is still running on aa04cfd \(PR title \/ PR title\)/);
+    assert.equal(orphanNote(got), null);
+  });
+
+  // @traces 1362-FR-004
+  it('refuses while the workflow run itself has not completed, or its state was not read', () => {
+    for (const runStatus of ['IN_PROGRESS', 'QUEUED', undefined]) {
+      const early = { ...orphan, runStatus };
+      assert.match(decideMerge(pr466([...green, early, { ...retried, runStatus }, review('SUCCESS')])), /CI is still running/, String(runStatus));
+    }
+  });
+
+  // @traces 1362-FR-004
+  it('refuses a newer unfinished attempt beside an older completed one: a real re-run', () => {
+    const rerun = attempt('IN_PROGRESS', null, '2026-10-21T14:50:00Z', 119290000000);
+    assert.match(decideMerge(pr466([...green, retried, rerun, review('SUCCESS')])), /CI is still running/);
+  });
+
+  // @traces 1362-FR-003
+  it('reads the run id, the check run id and the run state over REST', async () => {
+    const answers = {
+      'repos/{owner}/{repo}/pulls/466': { number: 466, state: 'open', head: { sha: HEAD }, user: { login: 'george-hutanu' } },
+      'repos/{owner}/{repo}/pulls/466/commits?per_page=100': [{ sha: HEAD, author: 'george-hutanu', login: 'web-flow', verified: true }],
+      [`repos/{owner}/{repo}/commits/${HEAD}/status?per_page=100`]: { statuses: [{ context: 'agent-review', state: 'success', description: 'PR QA lap 9 passed' }] },
+      [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: [
+        { id: 1, name: 'CI OK', status: 'completed', conclusion: 'success', started_at: '2026-10-21T14:20:00Z', suite: 11, url: 'https://github.com/o/r/actions/runs/101/job/1' },
+        { id: 119285437128, name: 'PR title', status: 'in_progress', conclusion: null, started_at: '2026-10-21T14:37:49Z', suite: 107366297378, url: `https://github.com/o/r/actions/runs/${RUN}/job/119285437128` },
+        { id: 119288507053, name: 'PR title', status: 'completed', conclusion: 'success', started_at: '2026-10-21T14:43:56Z', suite: 107366297378, url: `https://github.com/o/r/actions/runs/${RUN}/job/119288507053` },
+      ],
+      [`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`]: [
+        { id: 101, suite: 11, workflow: 1, status: 'completed' },
+        { id: Number(RUN), suite: 107366297378, workflow: 3, status: 'completed' },
+      ],
+      'repos/{owner}/{repo}/actions/workflows?per_page=100': [
+        { id: 1, name: 'CI' },
+        { id: 3, name: 'PR title' },
+      ],
+    };
+    const gh = async (args) => {
+      const path = args.find((a) => a.startsWith('repos/'));
+      const v = answers[path];
+      if (v === undefined) return { code: 1, stdout: '', stderr: `unexpected ${args.join(' ')}` };
+      return { code: 0, stdout: args.includes('--jq') ? v.map((x) => JSON.stringify(x)).join('\n') : JSON.stringify(v), stderr: '' };
+    };
+    const got = await readPr('466', gh, { cloud: false });
+    const read = got.statusCheckRollup.find((c) => c.checkRunId === 119285437128);
+    assert.deepEqual({ runId: read.runId, runStatus: read.runStatus, status: read.status }, { runId: RUN, runStatus: 'COMPLETED', status: 'IN_PROGRESS' });
+    assert.equal(decideMerge(got), null);
+    assert.match(orphanNote(got), /119285437128/);
+    // The same read with the run still going refuses.
+    answers[`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`][1].status = 'in_progress';
+    assert.match(decideMerge(await readPr('466', gh, { cloud: false })), /CI is still running/);
+  });
+
+  // @traces 1362-FR-003
+  it('names the ignored orphan at the entry point, on approval and inside a refusal', () => {
+    const hooks = fileURLToPath(new URL('.', import.meta.url));
+    const gate = (rollup) =>
+      spawnSync(process.execPath, [join(hooks, 'merge-gate.mjs')], {
+        input: JSON.stringify({ tool_input: { command: 'gh pr merge 466 --merge' } }),
+        encoding: 'utf8',
+        timeout: 20000,
+        env: {
+          ...process.env,
+          SPECKIT_PR_STATE: JSON.stringify(pr466(rollup)),
+          SPECKIT_CARRY_STATE: '',
+          SPECKIT_PROVENANCE_STATE: JSON.stringify({ status: { creator: { login: 'george-hutanu', type: 'User' } } }),
+        },
+      });
+    const ok = gate([...green, orphan, retried, review('SUCCESS')]);
+    assert.equal(ok.status, 0, ok.stderr);
+    assert.match(ok.stdout, /119285437128/);
+    const red = gate([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), orphan, retried, review('SUCCESS')]);
+    assert.equal(red.status, 2);
+    assert.match(red.stderr, /CI failed/);
+    assert.match(red.stderr, /119285437128/);
   });
 });

@@ -18,7 +18,7 @@ function fake(routes) {
 }
 const base = (runs, workflowRuns) => ({
   'GET pulls/160': pull,
-  'GET commits/head1/check-runs?per_page=100': { check_runs: runs },
+  'GET commits/head1/check-runs?per_page=100&filter=all': { check_runs: runs },
   'GET commits/head1/status': { statuses: [] },
   ...(workflowRuns === undefined ? {} : { 'GET actions/runs?head_sha=head1&per_page=100': workflowRuns }),
 });

@@ -109,7 +109,10 @@ function workflowNames(run, sha) {
 /**
  * The latest run of each check per workflow, as gh keeps it: a re-triggered
  * workflow leaves its cancelled run on the commit too. Without a workflow
- * name, every run of that check stays (never a false green).
+ * name, every run of that check stays (never a false green). The latest is
+ * the one started last, so an orphaned earlier attempt (lib/orphan-checks.mjs:
+ * left unfinished after a newer attempt of the same run, in the same suite,
+ * completed) never outranks that newer attempt.
  */
 function latestRuns(runs, workflow) {
   if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
@@ -123,9 +126,13 @@ function latestRuns(runs, workflow) {
   return runs.filter((c) => keep.has(c));
 }
 
-/** The head commit's check runs (the latest of each, with its workflow's name) and commit statuses. */
+/**
+ * The head commit's check runs (the latest of each, with its workflow's name) and commit statuses.
+ * Every run is read (`filter=all`): GitHub's `latest` ranks by completion, so an orphaned earlier
+ * attempt can be all it returns (ST-1356); latestRuns keeps the newer attempt instead.
+ */
 function headChecks(run, sha) {
-  const all = pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []);
+  const all = pages(run, `commits/${sha}/check-runs?per_page=100&filter=all`).flatMap((page) => page.check_runs ?? []);
   const workflow = all.length ? workflowNames(run, sha) : {};
   const runs = latestRuns(all, workflow).map((c) => ({ ...c, workflow: workflow[c.check_suite?.id] ?? "" }));
   const statuses = rest(run, "GET", `commits/${sha}/status`)?.statuses ?? [];
