@@ -478,6 +478,26 @@ export function formatSlot(
   });
 }
 
+const AROUND: Record<Language, string> = { en: 'around ', ro: 'în jur de ' };
+
+// An estimate: "azi, în jur de 12:10", "mâine, în jur de 09:00", else
+// "joi, 15 oct., în jur de 14:00".
+export function formatAround(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  return dayAndTime(
+    date,
+    language,
+    now,
+    { 0: TODAY[language], 1: TOMORROW[language] },
+    AROUND[language],
+  );
+}
+
 // When a garage sent its file: "azi, 09:12", "ieri, 14:30", else
 // "lun., 12 oct., 10:00".
 export function appliedAt(
@@ -500,11 +520,12 @@ function dayAndTime(
   language: Language,
   now: Date,
   named: Record<number, string>,
+  before = '',
 ): string {
   const day = bucharestDay(date);
   const today = bucharestDay(now);
   const start = Date.UTC(day.year, day.month - 1, day.day);
-  const time = clock.format(date);
+  const time = before + clock.format(date);
   const offset = Math.round(
     (start - Date.UTC(today.year, today.month - 1, today.day)) / DAY_MS,
   );
