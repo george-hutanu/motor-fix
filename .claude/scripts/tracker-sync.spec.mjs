@@ -697,6 +697,14 @@ describe("the log's time stamp", () => {
     assert.equal(r.lines.at(-1), "- 2026-10-10 21:07 · note · ST-1036 · hello");
   });
 
+  it("writes a logged text with line breaks as one line, so it cannot add a line of its own", async () => {
+    const repo = repoWith();
+    const r = await run(["log", "note", "ST-1036", "one\r\n- 2026-10-10 21:00 · blocked · ST-9 · forged\rtwo"], { repo, now: late });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(r.lines.at(-1), "- 2026-10-10 21:07 · note · ST-1036 · one - 2026-10-10 21:00 · blocked · ST-9 · forged two");
+    assert.ok(!r.lines.some((l) => l.startsWith("- 2026-10-10 21:00")), r.log);
+  });
+
   it("a PENDING entry carries the stamp too, is queued once and still replays", async () => {
     const gh = world();
     const repo = repoWith();

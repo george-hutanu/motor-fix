@@ -21,12 +21,6 @@ The report's sections:
 - Follow-ups: everything noticed and deliberately not done.
 - Anything left out, and why.
 
-## Time stamps in `auto-run.md`
-
-Every new entry's first line starts with the UTC minute,
-`YYYY-MM-DD HH:MM` (`date -u +"%Y-%m-%d %H:%M"`), whoever writes it (this
-session or a phase agent). Earlier lines stay as written.
-
 ## Completion Checklist
 
 - [ ] Preflight passed (clean tree, green typecheck/lint/tests, constitution card read)

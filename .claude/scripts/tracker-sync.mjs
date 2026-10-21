@@ -51,8 +51,10 @@ const USAGE =
   "usage: tracker-sync.mjs <start|implement|qa|review|unblock | blocked <reason> | finish --body-file <f>|--no-comment | pr <n> | file --type <t> --title <t> --body-file <f> [--epic EP-n] [--priority p] | log [--pending] <event> <item> <text> | check | next [--epic EP-n]> [--story ST-<n>] [--pr <n>]";
 
 export const LOG_FILE = "tracker-sync.md";
-const logLine = ({ date, event, item, text }) => `- ${date} · ${event} · ${item} · ${text}`;
-const pendingLine = (stamp, desc, argv) => `- ${stamp} [TRACKER-SYNC PENDING: ${desc}]${argv ? ` retry: ${JSON.stringify(argv)}` : ""}`;
+/** A logged field on one line: a line break in it would otherwise write a line of its own, which a later read takes for an event. */
+const oneLine = (field) => String(field ?? "").replace(/[\r\n]+/g, " ");
+const logLine = ({ date, event, item, text }) => `- ${[date, event, item, text].map(oneLine).join(" · ")}`;
+const pendingLine = (stamp, desc, argv) => `- ${stamp} [TRACKER-SYNC PENDING: ${oneLine(desc)}]${argv ? ` retry: ${JSON.stringify(argv)}` : ""}`;
 const PENDING = /^- (?:\d{4}-\d{2}-\d{2} \d{2}:\d{2} )?\[TRACKER-SYNC PENDING: (.+)\] retry: (\[.*\])$/;
 /** The marker a Blocked comment carries, so `unblock` run from any worktree can read the status it left. */
 const priorMarker = (status) => `<!-- tracker-sync prior: ${status} -->`;
