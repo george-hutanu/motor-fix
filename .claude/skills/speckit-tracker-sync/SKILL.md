@@ -90,9 +90,9 @@ log.
 The ladder is `tracker/status.mjs`'s: To do → Planning →
 Implementing → QA → Done, never backwards; only `unblock` leaves Blocked,
 returning to the status recorded in run-state (for another story's
-`--story`: the newest `blocked` line for it in any `specs/*/tracker-sync.md`,
-else the `<!-- tracker-sync prior: … -->` marker its Blocked comment carries,
-else To do). Only the Project's Status,
+`--story`: the `<!-- tracker-sync prior: … -->` marker its newest Blocked
+comment carries, else the newest `blocked` line for it in any
+`specs/*/tracker-sync.md`, else To do). Only the Project's Status,
 dates and PR fields, the issue's state, labels and comments are written,
 never its title or text.
 

@@ -236,7 +236,7 @@ export async function main(argv, io = {}) {
       return done({ check: "ok", login, project: number });
     }
     if (event === "file") return done({ event, ...(await fileIssue(ctx)) });
-    if (io.replay !== false) await replayPending(logFile, date, io, stderr);
+    if (io.replay !== false) await replayPending(logFile, date, { ...io, gh }, stderr);
     ctx.story = await t.find(st);
     if (!ctx.story) return done({ event, story: st, skipped: `no issue titled ${st} in the issue repository` });
     const handler = event === "pr" ? linkPr : statusEvent;
@@ -366,10 +366,16 @@ function startedHere(logFile, st) {
 }
 
 /**
- * The status a dependent story left when it was blocked: the newest `blocked` line for it in any feature's
- * tracker log in this specs clone, else the marker in its newest Blocked comment; null when neither has it.
+ * The status a dependent story left when it was blocked: the marker in its newest Blocked comment (the issue is
+ * the record every worktree shares), else the newest `blocked` line for it in any feature's tracker log in this
+ * specs clone (a block from before the marker existed); null when neither has it.
  */
 async function dependentPrior(ctx) {
+  const comments = await ctx.github.pages(`issues/${ctx.story.number}/comments?per_page=100`);
+  for (const c of [...comments].reverse()) {
+    const m = String(c.body ?? "").match(PRIOR_MARKER);
+    if (m) return m[1];
+  }
   const specs = dirname(ctx.feature.dir);
   const line = new RegExp(`^- (\\d{4}-\\d{2}-\\d{2}) · blocked · ${ctx.st} · (.+?) → Blocked(?: — |$)`);
   let best = null;
@@ -381,13 +387,7 @@ async function dependentPrior(ctx) {
       if (m && (!best || m[1] >= best.date)) best = { date: m[1], status: m[2] };
     }
   }
-  if (best) return best.status;
-  const comments = await ctx.github.pages(`issues/${ctx.story.number}/comments?per_page=100`);
-  for (const c of [...comments].reverse()) {
-    const m = String(c.body ?? "").match(PRIOR_MARKER);
-    if (m) return m[1];
-  }
-  return null;
+  return best?.status ?? null;
 }
 
 function prCommentLogged(ctx, pr, reason) {

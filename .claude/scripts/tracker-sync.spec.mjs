@@ -187,7 +187,7 @@ describe("status events move the story's issue in Project #11", () => {
   });
 });
 
-// @traces 1036-FR-004
+// @traces 1036-FR-004 1360-FR-003
 describe("blocked and unblock", () => {
   it("posts the reason once on the issue and the PR, and unblock returns to the status it left", async () => {
     const gh = world({ story: "QA" });
@@ -509,7 +509,7 @@ describe("GitHub only", () => {
   });
 });
 
-// @traces 1352-FR-001 1352-FR-002 1352-FR-003 1352-FR-005
+// @traces 1360-FR-001 1360-FR-002 1360-FR-003 1360-FR-005
 describe("an event for another story, run from this feature's worktree", () => {
   // This worktree runs ST-1036 (#60), Implementing, with its own prior recorded; ST-290 (#62) is the Blocked dependent.
   const worktree = (log) => {
@@ -542,6 +542,15 @@ describe("an event for another story, run from this feature's worktree", () => {
     assert.equal(r.code, 0, r.err.join("\n"));
     assert.equal(gh.itemValues(62).Status, "QA", "the newest Blocked comment wins");
     assert.deepEqual(prCalls(r), []);
+  });
+
+  it("the Blocked comment's marker wins over an older block cycle in a stale log", async () => {
+    const gh = world({ story: "Implementing" });
+    gh.state.comments.set(62, [{ id: "IC_1", body: "Blocked: y\n\n<!-- tracker-sync prior: Planning -->" }]);
+    const repo = worktree("# Tracker sync — 1290-garage-hours\n\n- 2026-10-01 · blocked · ST-290 · To do → Blocked — waits on ST-12\n");
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "Planning");
   });
 
   it("unblock with no recorded prior returns the dependent to To do, not this worktree's status", async () => {
@@ -586,7 +595,7 @@ describe("an event for another story, run from this feature's worktree", () => {
   });
 });
 
-// @traces 1352-FR-004
+// @traces 1360-FR-004
 describe("every gh call carries george-hutanu's token", () => {
   const spawner = ({ login }) => {
     const calls = [];
