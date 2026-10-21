@@ -467,6 +467,17 @@ export class Live {
   }
 }
 
+// The events that move a driver's requests: the list and the active request
+// read again on each.
+export const REQUEST_EVENTS: readonly EventKind[] = [
+  'request.created',
+  'quote.sent',
+  'request.declined',
+  'quote.accepted',
+  'booking.confirmed',
+  'booking.lapsed',
+];
+
 // A view's data, read through the API and read again when an event of these
 // kinds arrives about the object it shows (without `id`, about any object); a
 // burst of 300 ms is one re-read.

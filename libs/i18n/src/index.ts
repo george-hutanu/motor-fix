@@ -14,6 +14,7 @@ export {
   bucharestDayStart,
   calendarNames,
   daysUntil,
+  formatAround,
   formatClock,
   formatDay,
   formatDayMonth,

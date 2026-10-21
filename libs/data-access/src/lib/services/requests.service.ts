@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { ActiveRequestAnswerDto } from '../models/active-request-answer-dto';
+import { activeRequestControllerGet } from '../fn/requests/active-request-controller-get';
+import { ActiveRequestControllerGet$Params } from '../fn/requests/active-request-controller-get';
 import { RequestDto } from '../models/request-dto';
 import { RequestListDto } from '../models/request-list-dto';
 import { requestsControllerGet } from '../fn/requests/requests-controller-get';
@@ -70,6 +73,31 @@ export class RequestsService extends BaseService {
   requestsControllerGet(params: RequestsControllerGet$Params, context?: HttpContext): Promise<RequestDto> {
     const resp = this.requestsControllerGet$Response(params, context);
     return resp.then((r: StrictHttpResponse<RequestDto>): RequestDto => r.body);
+  }
+
+  /** Path part for operation `activeRequestControllerGet()` */
+  static readonly ActiveRequestControllerGetPath = '/api/v1/quote-requests/active';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `activeRequestControllerGet()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  activeRequestControllerGet$Response(params?: ActiveRequestControllerGet$Params, context?: HttpContext): Promise<StrictHttpResponse<ActiveRequestAnswerDto>> {
+    const obs = activeRequestControllerGet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `activeRequestControllerGet$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  activeRequestControllerGet(params?: ActiveRequestControllerGet$Params, context?: HttpContext): Promise<ActiveRequestAnswerDto> {
+    const resp = this.activeRequestControllerGet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ActiveRequestAnswerDto>): ActiveRequestAnswerDto => r.body);
   }
 
 }

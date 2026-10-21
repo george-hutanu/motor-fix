@@ -1,4 +1,39 @@
 {
+  "active": {
+    "awaiting": "Așteaptă confirmarea service‑ului · {left}",
+    "empty": "Nicio cerere deschisă",
+    "fact": {
+      "booked": "Programată",
+      "eta": "Gata, estimat",
+      "finalPrice": "Preț final",
+      "quote": "Ofertă",
+      "started": "Început"
+    },
+    "failed": "Nu am putut încărca cererea.",
+    "mechanic": "mecanic {name}",
+    "more": {
+      "few": "Încă {count} cereri deschise",
+      "one": "Încă o cerere deschisă",
+      "other": "Încă {count} de cereri deschise"
+    },
+    "new": "Cerere nouă",
+    "paused": "În pauză",
+    "ready": "Mașina e gata. Poți veni după ea.",
+    "retry": "Reîncearcă",
+    "stage": {
+      "booked": "Programată",
+      "done": "Gata",
+      "in_work": "În lucru",
+      "quoted": "Ofertă",
+      "sent": "Trimisă"
+    },
+    "stages": "Etapele cererii",
+    "step": {
+      "done": "gata",
+      "now": "acum"
+    },
+    "steps": "Pașii lucrării · {done} din {total} gata"
+  },
   "cars": {
     "add": {
       "brand": "Marcă",

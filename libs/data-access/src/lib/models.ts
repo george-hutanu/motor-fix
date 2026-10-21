@@ -3,6 +3,13 @@
 
 export type { AcceptedTextDto } from './models/accepted-text-dto';
 export type { AcceptQuoteDto } from './models/accept-quote-dto';
+export type { ActiveRequestAnswerDto } from './models/active-request-answer-dto';
+export type { ActiveRequestBookingDto } from './models/active-request-booking-dto';
+export type { ActiveRequestCarDto } from './models/active-request-car-dto';
+export type { ActiveRequestDto } from './models/active-request-dto';
+export type { ActiveRequestJobDto } from './models/active-request-job-dto';
+export type { ActiveRequestRangeDto } from './models/active-request-range-dto';
+export type { ActiveRequestStepDto } from './models/active-request-step-dto';
 export type { AdminAccountCountDto } from './models/admin-account-count-dto';
 export type { AdminAccountDto } from './models/admin-account-dto';
 export type { AdminAccountsPageDto } from './models/admin-accounts-page-dto';

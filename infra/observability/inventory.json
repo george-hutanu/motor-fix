@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 154,
+    "count": 155,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -819,6 +819,19 @@
       ],
       "reason": "the driver's comparison of one request's quotes, read from PostgreSQL and writing quote.first_seen_at once; no counter or alert of its own: a read of the driver's own data, covered by the API's error-rate and latency alerts; no outside call",
       "story": "ST-313"
+    },
+    {
+      "kind": "endpoint",
+      "name": "quote-requests-active",
+      "source": "libs/domain/src/workshop/active-request/active-request.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/active",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver's own open request and its stage, read from PostgreSQL for the dashboard panel; no counter or alert of its own: a read of the driver's own data, covered by the API's error-rate and latency alerts; no outside call",
+      "story": "ST-274"
     },
     {
       "kind": "endpoint",
