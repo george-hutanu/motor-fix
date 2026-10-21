@@ -19,7 +19,7 @@ import {
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { AccountsService } from '../../../auth/accounts.service';
 import { hashToken } from '../../../auth/email-confirmation/email-confirmation';
-import { type Actor, assertGarage } from '../../../auth/policy';
+import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
 import { refusal, taken } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
@@ -97,6 +97,23 @@ function earlierAnswer(
   return draft.submitResult;
 }
 
+const SUBMIT_TIMEOUT_MS = 30_000;
+
+// How long the send's transaction may run: LISTING_SUBMIT_TX_TIMEOUT_MS, in
+// milliseconds, or 30 seconds when it is not set.
+export function submitTimeoutMs(
+  source: Record<string, string | undefined> = process.env,
+): number {
+  const value = source['LISTING_SUBMIT_TX_TIMEOUT_MS'];
+  if (!value) return SUBMIT_TIMEOUT_MS;
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(
+      'LISTING_SUBMIT_TX_TIMEOUT_MS must be a positive whole number',
+    );
+  }
+  return Number(value);
+}
+
 interface Extras {
   holders: string[];
   sizes: PhotoSize[];
@@ -112,6 +129,7 @@ const dataOf = (draft: ListingDraft): ListingDraftData =>
 @Injectable()
 export class ListingSubmitService {
   now = () => new Date();
+  readonly timeout = submitTimeoutMs();
   private readonly logger = new Logger('ListingSubmitService');
 
   constructor(
@@ -170,7 +188,7 @@ export class ListingSubmitService {
         await this.markSent(tx, actor, id, key, sent);
         return { sent };
       },
-      { timeout: 30_000 },
+      { timeout: this.timeout },
     );
     if (outcome.replay) return outcome.replay;
     this.logger.log(
@@ -278,7 +296,6 @@ export class ListingSubmitService {
     { holders, sizes, warnings }: Extras,
   ): Promise<ListingSubmittedDto> {
     const { accountId } = owner;
-    assertGarage(owner, garageId);
     const steps = data.steps ?? {};
     const cui = stripCui(steps['6']?.cui ?? '');
     await tx.garage.update({ data: { cui }, where: { id: garageId } });

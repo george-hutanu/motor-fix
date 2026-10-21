@@ -27,6 +27,11 @@ const SCOPED_SQL = /^publicGaragesSql\(/;
 const STAFF_GATE =
   /\b(assertGarage|assertGarageOwner)\(|\brequireCapability\([^,]+,\s*'(garage|admin)\.|ANSWERING\.has\(actor\.role\)|actor\.role !== '(garage|admin)'/;
 
+// A listing's send writes each step through the use case a garage's staff
+// uses, without that staff check: the garage is the one it just made.
+const OWN_NEW_GARAGE =
+  "the send reads only the garage it just created in its own transaction, as the account it makes that garage's owner; the garage stays a draft no public read shows";
+
 // Reads a non-staff entry point reaches that may skip the scope, each with
 // why it must see a garage the public listing hides.
 const EXCEPTIONS: Record<string, string> = {
@@ -34,12 +39,21 @@ const EXCEPTIONS: Record<string, string> = {
     'a driver keeps the garages they saved after one is hidden, marked unavailable by the scope as a column',
   'garages/details/garage-details.service.ts#create':
     'a new garage takes a slug no garage holds, hidden or not; it reads only the slugs it might take, and returns none',
+  'garages/garage-brands/write-garage-brands.ts#writeGarageBrands':
+    OWN_NEW_GARAGE,
+  'garages/garage-hours.ts#writeGarageHours': OWN_NEW_GARAGE,
+  'garages/garage-settings/write-garage-payments.ts#writeGaragePayments':
+    OWN_NEW_GARAGE,
   'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
     'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
+  'garages/place/garage-place.service.ts#write': OWN_NEW_GARAGE,
+  'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':
+    OWN_NEW_GARAGE,
   'garages/staff-invite/staff-invite.service.ts#check':
     'an invite names the garage that sent it, approved or not, to the person holding its secret',
   'garages/staff-invite/staff-invite.service.ts#joined':
     'the owners of the garage a new member joined hear its name, approved or not',
+  'garages/verification/verification.service.ts#autoApprove': OWN_NEW_GARAGE,
   'quotes/quote-requests/quote-requests.service.ts#assertRouted':
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
   'search/garage-search/garage-search.service.ts#after':
