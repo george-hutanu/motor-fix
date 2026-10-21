@@ -49,11 +49,7 @@ interface Row {
 
 const TICK_MS = 60_000;
 
-// "Cererile mele": the driver's requests, newest first, kept current by the
-// request events so one sent in another tab shows up without a reload. A
-// booked request waiting for the garage counts down its time to confirm,
-// then names its slot once confirmed, or asks for another quote after a
-// lapse. The active request's panel heads a list with rows.
+// The events the list and the active request's panel follow.
 const LIST_EVENTS: readonly EventKind[] = [
   'request.created',
   'quote.sent',
@@ -63,6 +59,11 @@ const LIST_EVENTS: readonly EventKind[] = [
   'booking.lapsed',
 ];
 
+// "Cererile mele": the driver's requests, newest first, kept current by the
+// request events so one sent in another tab shows up without a reload. A
+// booked request waiting for the garage counts down its time to confirm,
+// then names its slot once confirmed, or asks for another quote after a
+// lapse. The active request's panel heads a list with rows.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
