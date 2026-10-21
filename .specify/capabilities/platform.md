@@ -95,6 +95,7 @@ features:
   - 1181-rate-limits
   - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
+  - 1362-pr-qa-boot-orphan-checks
 ---
 
 # Capability: Platform
@@ -2419,6 +2420,26 @@ _From 1355-cheaper-gates-lighter-context._
 ### 1355-FR-008 — (H) AGENTS.md MUST be under 15,000 bytes, keeping the rules and the pointers (a lifecycle step keeps one sentence naming the rule, its gate and the skill with the how-to; every `gh`/`node` invocation moves; identity, the tracker and lifecycle rules in one list, the hard limits, the folder structure, product and stack) and moving each lifecycle how-to paragraph it drops into the skill that runs it (`speckit-auto`, `speckit-watch`, `speckit-pr-test`, `speckit-tracker-sync`); its "Parallel work is watched" paragraph MUST be unchanged; `context-audit.mjs` MUST be green and CLAUDE.local.md MUST NOT grow.
 
 _From 1355-cheaper-gates-lighter-context._
+
+### 1362-FR-001 — The PR QA workflow's tester checkout MUST contain every file the scripts it runs import, transitively, by relative path.
+
+_From 1362-pr-qa-boot-orphan-checks._
+
+### 1362-FR-002 — A harness spec MUST fail, naming the file, when a script run from the tester's sparse checkout imports a path outside it.
+
+_From 1362-pr-qa-boot-orphan-checks._
+
+### 1362-FR-003 — The merge gate MUST ignore an orphaned check run (as defined in Clarifications) and judge that check by its newer completed attempt, naming each ignored check run in its output.
+
+_From 1362-pr-qa-boot-orphan-checks._
+
+### 1362-FR-004 — The merge gate MUST still refuse an unfinished check that has no newer completed attempt in a completed workflow run.
+
+_From 1362-pr-qa-boot-orphan-checks._
+
+### 1362-FR-005 — `gh-rest`'s check reads (`pr checks`, `pr view statusCheckRollup`, `ciOkOn`), and so `ci-wait.mjs`, MUST read every check run of the head (`filter=all`) and keep the one started last of each check, so an orphan never outranks its newer completed attempt and a newer attempt still running stays pending.
+
+_From 1362-pr-qa-boot-orphan-checks._
 
 ## Retired
 
