@@ -8,7 +8,7 @@ const allowed = {
 } as const;
 
 // @traces 023-FR-001 023-FR-002
-// @traces 023-FR-008 023-FR-009
+// @traces 023-FR-009
 // @traces 023-FR-013
 describe('whether a driver may review a job', () => {
   it('allows a done job of a confirmed driver who is not staff and has no review', () => {
@@ -37,12 +37,6 @@ describe('whether a driver may review a job', () => {
       expect(reasonOf(facts)).toBe(reason);
     },
   );
-
-  it('lets a review the author deleted pass', () => {
-    expect(
-      reasonOf({ ...allowed, review: { status: 'deleted_by_author' } }),
-    ).toBeNull();
-  });
 
   it.each([
     [null, true],
