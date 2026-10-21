@@ -5,8 +5,8 @@ import { Client } from 'pg';
 import { ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
-// An approved garage and its owner of this file's own: the seed leaves the
-// shared owner's garage a draft, and another spec gives it a live file of
+// An approved garage and its owner of this file's own: the seed's shared
+// owner's garage has no file, and another spec gives it a live file of
 // its own, so the test builds its garage with an approved file, every check
 // in order, both legal documents valid and its last check day, and removes
 // them afterwards. A deployed address, whose run has no DATABASE_URL, skips

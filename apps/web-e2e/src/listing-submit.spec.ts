@@ -88,10 +88,18 @@ async function holds(page: Page, scope: Locator) {
   await page.emulateMedia({ colorScheme: 'light' });
 }
 
-const stagesRead = (scope: Locator, language: Language) =>
-  expect(scope.locator('mf-verification-stages li .name')).toHaveText([
-    ...TEXT[language].stages,
+// The status view names the sending day beside the first stage; the
+// confirmation, shown before the server answers, does not.
+const sentOn = (stage: string) =>
+  new RegExp(`^${stage} · \\d{1,2} \\S+ \\d{4}$`);
+
+const stagesRead = (scope: Locator, language: Language, dated = false) => {
+  const [first = '', ...rest] = TEXT[language].stages;
+  return expect(scope.locator('mf-verification-stages li .name')).toHaveText([
+    dated ? sentOn(first) : first,
+    ...rest,
   ]);
+};
 
 test.describe('sending a listing for verification @seeded', () => {
   // @traces 116-FR-040
@@ -112,7 +120,7 @@ test.describe('sending a listing for verification @seeded', () => {
     await answerSurvey(page);
     await signUp(page, email);
 
-    await expect(current(statusView(page))).toHaveText('Trimis');
+    await expect(current(statusView(page))).toHaveText(sentOn('Trimis'));
     await expect(statusView(page).locator('mf-garage-preview')).toContainText(
       TEXT.ro.preview,
     );
@@ -183,9 +191,9 @@ test.describe('the confirmation, the sign-up step and the status view on every s
       await holds(page, panel(page));
 
       await signUp(page, email);
-      await stagesRead(statusView(page), language);
+      await stagesRead(statusView(page), language, true);
       await expect(current(statusView(page))).toHaveText(
-        TEXT[language].stages[0],
+        sentOn(TEXT[language].stages[0]),
       );
       await holds(page, statusView(page));
     });

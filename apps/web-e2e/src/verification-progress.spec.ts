@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ownAddress, ownMap, signIn } from './accounts.js';
+import { ownAddress, ownMap, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
 import {
   answerSurvey,
@@ -36,9 +36,12 @@ test.describe('the owner follows the verification on the dashboard @seeded @data
   test.afterEach(async () => {
     if (!garageId) return;
     await db.query(
-      'DELETE FROM outbox_event WHERE subject_id IN (SELECT id FROM verification_file WHERE garage_id = $1)',
+      'DELETE FROM outbox_event WHERE subject_id IN (SELECT id::text FROM verification_file WHERE garage_id = $1)',
       [garageId],
     );
+    // A file left waiting would push the queue's own test row off the
+    // overview's few.
+    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
     garageId = undefined;
   });
 
@@ -86,12 +89,8 @@ test.describe('the owner follows the verification on the dashboard @seeded @data
     const admin = await browser.newContext();
     try {
       const desk = await admin.newPage();
-      await desk.goto('/ro/garages');
-      await desk
-        .getByRole('banner')
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
-      await signIn(desk, ACCOUNTS.admin);
+      // Signed in once the admin's dashboard opens, then the file's drawer.
+      await signInAsAdmin2(desk);
       await desk.goto(`/app/admin/garages/${fileId}`);
       await expect(drawer(desk).locator('h3')).toHaveText(name);
 

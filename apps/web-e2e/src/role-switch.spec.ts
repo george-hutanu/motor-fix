@@ -51,7 +51,9 @@ test.describe('switching between the driver and garage roles @seeded', () => {
     await chip(page, 'Service').click();
 
     await expect(page).toHaveURL('/app/garage');
-    await expect(menuLink(page, 'Mecanici')).toBeVisible();
+    // Its garage, Atelier Dinamo, still waits for approval: the dashboard
+    // shows where its file stands.
+    await expect(page.locator('mf-verification-progress')).toBeVisible();
   });
 
   test('an account with one role shows no role chips', async ({ page }) => {

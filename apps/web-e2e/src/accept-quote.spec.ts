@@ -7,8 +7,8 @@ import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // The seeded driver with a Dacia Logan and a phone, and the owner of
-// Service Auto Militari, the one approved seeded garage with staff (the test
-// workshop is a draft, which no request reaches).
+// Service Auto Militari, the approved seeded garage a request reaches (the
+// staff's workshop has no place on the map, so no request finds it).
 const DRIVER = 'cerere@example.test';
 const DRIVER_PHONE = '+40700000102';
 const MILITARI = 'militari@example.test';

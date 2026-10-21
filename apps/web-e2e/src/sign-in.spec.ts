@@ -17,11 +17,13 @@ test.describe('signing in for real @seeded', () => {
     ['a receptionist', ACCOUNTS.receptionist, '/app/garage', 'Programări'],
     ['a mechanic', ACCOUNTS.mechanic, '/app/garage', 'Panou'],
     ['an admin', ACCOUNTS.admin, '/app/admin', 'Setări'],
+    // Its garage, Service Dobre, still waits for approval: the dashboard
+    // shows where its file stands, with no view in the menu.
     [
       'a driver and garage who used the garage last',
       ACCOUNTS.twoRoles,
       '/app/garage',
-      'Mecanici',
+      null,
     ],
   ] as const) {
     test(`${who} signs in from the garages screen and lands on ${landing}`, async ({
@@ -34,6 +36,10 @@ test.describe('signing in for real @seeded', () => {
       await signIn(page, email);
 
       await expect(page).toHaveURL(landing);
+      if (!menu) {
+        await expect(page.locator('mf-verification-progress')).toBeVisible();
+        return;
+      }
       await expect(
         page.getByRole('navigation', { name: 'Meniu' }).getByRole('link', {
           exact: true,

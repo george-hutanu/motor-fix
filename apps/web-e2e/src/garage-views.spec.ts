@@ -90,7 +90,7 @@ const line = (page: Page) => page.locator('header .line');
 const language = (page: Page) =>
   page.getByRole('group', { name: /^(Limba|Language)$/ });
 
-async function signedIn(page: Page, email: string) {
+async function signedIn(page: Page, email: string, heading = 'Panou service') {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
@@ -101,7 +101,7 @@ async function signedIn(page: Page, email: string) {
   await expect(page).toHaveURL('/app/garage');
   // Romanian whatever an earlier run left saved on the shared account.
   await language(page).getByRole('button', { exact: true, name: 'RO' }).click();
-  await expect(title(page)).toHaveText('Panou service');
+  await expect(title(page)).toHaveText(heading);
 }
 
 // A marker that a reload would lose.
@@ -237,11 +237,11 @@ test.describe('garage views @seeded', () => {
     page,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    await signedIn(page, ACCOUNTS.garage);
+    await signedIn(page, ACCOUNTS.draftOwner, 'Profilul tău e în verificare');
 
     await expect(page.locator('mf-verification-progress')).toBeVisible();
     await expect(title(page)).toHaveText('Profilul tău e în verificare');
-    await expect(line(page)).toHaveText('Atelier Test');
+    await expect(line(page)).toHaveText('Atelier Nou');
     await expect(
       page.getByRole('navigation', { name: 'Meniu' }).getByRole('link'),
     ).toHaveCount(0);

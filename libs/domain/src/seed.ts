@@ -44,6 +44,9 @@ const GARAGES = [
   { name: 'Atelier Test', slug: 'atelier-test' },
   { name: 'Service Dobre', slug: 'service-dobre' },
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
+  // A garage still waiting for approval, whose owner sees only where its
+  // file stands.
+  { name: 'Atelier Nou', slug: 'atelier-nou' },
 ];
 
 // The catalogue's own rows: the brands the listed garages name, and
@@ -215,6 +218,13 @@ const PEOPLE: Person[] = [
     email: 'service@example.test',
     lastRole: 'garage',
     name: 'Mihai Ionescu',
+    roles: ['garage'],
+  },
+  {
+    at: { as: 'owner', garage: 'atelier-nou' },
+    email: 'nou@example.test',
+    lastRole: 'garage',
+    name: 'Radu Nou',
     roles: ['garage'],
   },
   {
@@ -778,6 +788,12 @@ async function seed(db: Client, secret: string) {
       [garage.name, garage.slug],
     );
   }
+  // The staff's garage works as an approved one, its menu whole; an update,
+  // not part of the insert, so a database seeded before is approved too.
+  await db.query(
+    `UPDATE garage SET status = 'approved', approved_at = '2026-01-15T09:00:00Z'
+     WHERE slug = 'atelier-test' AND status = 'draft'`,
+  );
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
     await db.query(

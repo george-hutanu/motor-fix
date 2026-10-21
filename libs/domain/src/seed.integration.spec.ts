@@ -145,6 +145,11 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'nou@example.test': {
+        lastRole: 'garage',
+        roles: ['garage'],
+        status: 'active',
+      },
       'receptie-militari@example.test': {
         lastRole: 'receptionist',
         roles: ['receptionist'],
