@@ -37,6 +37,7 @@
       "@motor-fix/contracts/legal-documents": [
         "./libs/contracts/src/legal-documents/legal-documents.ts"
       ],
+      "@motor-fix/contracts/lei-text": ["./libs/contracts/src/lei-text.ts"],
       "@motor-fix/contracts/listing-check": [
         "./libs/contracts/src/listing-check/listing-check.ts"
       ],
