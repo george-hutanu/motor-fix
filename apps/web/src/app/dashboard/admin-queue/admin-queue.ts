@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { UNNAMED_LISTING } from '@motor-fix/contracts/listing-verification';
 import {
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
@@ -192,7 +193,12 @@ export class AdminQueue {
         .filter(Boolean)
         .join(' · '),
       cui: row.cuiWarning
-        ? this.t('cuiWarning', { names: row.cuiWarning })
+        ? this.t('cuiWarning', {
+            names: row.cuiWarning.replaceAll(
+              UNNAMED_LISTING,
+              this.t('unnamedDraft'),
+            ),
+          })
         : undefined,
       decided: undefined as { line: string; status: KeptStatus } | undefined,
       id: row.id,

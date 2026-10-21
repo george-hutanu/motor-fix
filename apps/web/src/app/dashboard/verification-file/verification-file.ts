@@ -12,7 +12,10 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
+import {
+  rarNumberRefused,
+  UNNAMED_LISTING,
+} from '@motor-fix/contracts/listing-verification';
 import {
   type ApprovalGap,
   approvalGaps,
@@ -239,7 +242,12 @@ export class VerificationFile {
         ? this.t('cuiShared', { names: garage.cuiAlsoUsedBy.join(', ') })
         : null,
       cuiWarning: garage.cuiWarning
-        ? this.t('cuiWarning', { names: garage.cuiWarning })
+        ? this.t('cuiWarning', {
+            names: garage.cuiWarning.replaceAll(
+              UNNAMED_LISTING,
+              this.t('unnamedDraft'),
+            ),
+          })
         : null,
       kind: garage.businessKind ? this.t(`kinds.${garage.businessKind}`) : null,
       name: garage.name,

@@ -385,7 +385,8 @@
     },
     "retry": "Reîncearcă",
     "seat": "Sediu social: {seat} · rază {km} km",
-    "title": "Dosar de verificare"
+    "title": "Dosar de verificare",
+    "unnamedDraft": "o ciornă fără nume"
   },
   "garages": {
     "listed": {
@@ -598,6 +599,7 @@
     "rejected": "Respins",
     "retry": "Reîncearcă",
     "stale": "(neactualizat)",
+    "unnamedDraft": "o ciornă fără nume",
     "updated": "Actualizat",
     "waiting": {
       "few": "așteaptă de {n} zile lucrătoare",

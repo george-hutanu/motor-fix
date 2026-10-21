@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { UNNAMED_LISTING } from '@motor-fix/contracts/listing-verification';
 import {
   AdminService,
   type AuditEntryDto,
@@ -2816,6 +2817,18 @@ describe('the CUI warning the send stored', () => {
     const host = await open(withWarning(null));
 
     expect(warning(host)).toBeNull();
+  });
+
+  it.each([
+    ['ro', 'CUI folosit deja de: o ciornă fără nume, Service Dobre'],
+    ['en', 'CUI already used by: an unnamed draft, Service Dobre'],
+  ] as const)('labels an unnamed draft in %s', async (language, line) => {
+    const host = await open(
+      withWarning(`${UNNAMED_LISTING}, Service Dobre`),
+      language,
+    );
+
+    expect(text(warning(host))).toBe(line);
   });
 });
 

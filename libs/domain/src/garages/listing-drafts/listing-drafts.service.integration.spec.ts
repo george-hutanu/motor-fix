@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { checkListing, type ListingDraftData } from '@motor-fix/contracts';
+import {
+  checkListing,
+  type ListingDraftData,
+  UNNAMED_LISTING,
+} from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 
@@ -1344,11 +1348,7 @@ describe('checking a draft', () => {
 
       await expect(
         service.cuiHeldElsewhere(draft.id, '18547290'),
-      ).resolves.toEqual([
-        'Atelier Dinamo',
-        'o ciornă fără nume',
-        'o ciornă fără nume',
-      ]);
+      ).resolves.toEqual(['Atelier Dinamo', UNNAMED_LISTING, UNNAMED_LISTING]);
     });
 
     it('names nobody for another CUI', async () => {

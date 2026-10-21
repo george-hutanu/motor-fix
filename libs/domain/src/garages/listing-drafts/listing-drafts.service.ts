@@ -14,6 +14,7 @@ import {
   type ListingDraftDto,
   type ListingDraftSavedDto,
   stripCui,
+  UNNAMED_LISTING,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -48,9 +49,6 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { INVITE_EMAIL } from '../staff-invite/staff-invite.service';
 
 const HOUR_MS = 60 * 60 * 1000;
-// What the admins read for another listing holding the CUI whose step 1 has
-// no name yet.
-const UNNAMED_DRAFT = 'o ciornă fără nume';
 
 interface DraftBody {
   email?: string;
@@ -472,10 +470,12 @@ export class ListingDraftsService {
               ) = ${cui}`,
     ]);
     // The names are stored on the file as text, so a draft with no name yet
-    // gets one fixed label rather than an empty one.
-    return [...garages, ...drafts]
-      .map((row) => row.name?.trim() || UNNAMED_DRAFT)
-      .sort((a, b) => a.localeCompare(b, 'ro'));
+    // is the marker each admin reads in their own language, after the names.
+    const names = [...garages, ...drafts].map((row) => row.name?.trim() ?? '');
+    return [
+      ...names.filter(Boolean).sort((a, b) => a.localeCompare(b, 'ro')),
+      ...names.filter((name) => !name).map(() => UNNAMED_LISTING),
+    ];
   }
 
   // The draft a key opens, which must be the one named and still open.

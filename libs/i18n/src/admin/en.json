@@ -380,7 +380,8 @@
     },
     "retry": "Retry",
     "seat": "Registered seat: {seat} · {km} km radius",
-    "title": "Verification file"
+    "title": "Verification file",
+    "unnamedDraft": "an unnamed draft"
   },
   "garages": {
     "listed": {
@@ -585,6 +586,7 @@
     "rejected": "Rejected",
     "retry": "Try again",
     "stale": "(not updated)",
+    "unnamedDraft": "an unnamed draft",
     "updated": "Updated",
     "waiting": {
       "one": "waiting {n} working day",
