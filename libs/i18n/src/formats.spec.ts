@@ -6,6 +6,7 @@ import {
   bucharestDayStart,
   calendarNames,
   daysUntil,
+  formatAround,
   formatClock,
   formatDay,
   formatDayMonth,
@@ -765,5 +766,36 @@ describe('bucharestDayStart', () => {
       { encoding: 'utf8', env: { ...process.env, TZ: 'Pacific/Kiritimati' } },
     );
     expect(out.trim()).toBe('2026-10-16T21:00:00.000Z');
+  });
+});
+
+// @traces 274-FR-014
+describe('formatAround', () => {
+  // 13:00 in Bucharest, a Friday.
+  const now = new Date('2026-10-09T10:00:00Z');
+
+  it('says today or tomorrow, then around the Bucharest time', () => {
+    expect(formatAround('2026-10-09T09:10:00Z', 'ro', now)).toBe(
+      'azi, în jur de 12:10',
+    );
+    expect(formatAround('2026-10-09T09:10:00Z', 'en', now)).toBe(
+      'today, around 12:10',
+    );
+    expect(formatAround('2026-10-10T06:00:00Z', 'ro', now)).toBe(
+      'mâine, în jur de 09:00',
+    );
+  });
+
+  it('names the weekday and the day further on', () => {
+    expect(formatAround('2026-10-15T11:00:00Z', 'ro', now)).toBe(
+      'joi, 15 oct., în jur de 14:00',
+    );
+    expect(formatAround('2026-10-15T11:00:00Z', 'en', now)).toBe(
+      'Thu, 15 Oct, around 14:00',
+    );
+  });
+
+  it.each(notNumbers)('shows a dash for %p', (value) => {
+    expect(formatAround(value, 'ro', now)).toBe(MISSING);
   });
 });

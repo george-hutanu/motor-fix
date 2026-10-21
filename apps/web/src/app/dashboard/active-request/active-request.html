@@ -1,0 +1,81 @@
+@if (answer() === undefined) {
+  <div class="skeleton" aria-busy="true"></div>
+} @else {
+<mf-panel>
+  <div class="head">
+    <h2 class="mf-label" [id]="headingId">
+      @if (view() && more()) {
+        <a [routerLink]="['/app', 'driver', 'requests']">{{ 'driver.panel.activeRequest' | t }}</a>
+      } @else {
+        {{ 'driver.panel.activeRequest' | t }}
+      }
+    </h2>
+    @if (view() !== undefined) {
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.active.new' | t }}</a>
+    }
+  </div>
+  @switch (answer()) {
+    @case ('failed') {
+      <p role="alert">{{ 'driver.active.failed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="retry.emit()">{{ 'driver.active.retry' | t }}</button>
+    }
+    @default {
+      @if (view(); as v) {
+        <div class="title">
+          <p class="what">{{ v.title }}</p>
+          @if (v.who; as who) {
+            <p class="who">
+              {{ who.garage }}@if (who.mechanic) {
+                · {{ 'driver.active.mechanic' | t: { name: who.mechanic } }}
+              }
+            </p>
+          }
+        </div>
+        <ol class="stages" [attr.aria-label]="'driver.active.stages' | t">
+          @for (s of v.stages; track s.stage) {
+            <li [attr.data-state]="s.state" [attr.aria-current]="s.state === 'current' ? 'step' : null">
+              <span class="dot" aria-hidden="true"></span>{{ s.label | t }}
+            </li>
+          }
+        </ol>
+        @if (v.facts.length) {
+          <dl class="facts">
+            @for (fact of v.facts; track fact.label) {
+              <div>
+                <dt class="mf-label">{{ fact.label | t }}</dt>
+                <dd>{{ fact.value }}</dd>
+              </div>
+            }
+          </dl>
+        }
+        @if (v.line; as line) {
+          <p class="line" [attr.data-line]="line.key">{{ line.key | t: line.params }}</p>
+        }
+        @if (v.summary; as summary) {
+          <section class="steps" [attr.aria-labelledby]="headingId + '-steps'">
+            <h3 class="mf-label" [id]="headingId + '-steps'">{{ 'driver.active.steps' | t: { done: summary.done, total: summary.total } }}</h3>
+            <ul>
+              @for (step of v.steps; track step.id) {
+                <li data-step [attr.data-state]="step.state">
+                  <span class="box" aria-hidden="true"></span>
+                  <span class="text">{{ step.text }}</span>
+                  @if (step.mark) {
+                    <span class="mark"> {{ step.mark | t }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (v.more) {
+          <a class="more" [routerLink]="['/app', 'driver', 'requests']">
+            {{ 'driver.active.more' | t: { count: v.more } }}
+          </a>
+        }
+      } @else {
+        <p class="empty">{{ 'driver.active.empty' | t }}</p>
+      }
+    }
+  }
+</mf-panel>
+}

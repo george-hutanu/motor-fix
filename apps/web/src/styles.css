@@ -9,12 +9,22 @@
 
 /* The one action an empty state holds is projected into it, so its own
    stylesheet cannot reach it. Until the driver's texts load the label is its
-   key, one unbreakable word. */
+   key, one unbreakable word. Its tracking narrows with the viewport and, on a
+   phone narrower than 390 px, its padding takes the 12 px step (whole 4 px
+   steps, never a share of the viewport), so on a 320 px phone "Caută un
+   service" breaks only between its words, never inside one. */
 mf-empty-state a[hlmBtn] {
   min-height: var(--mf-tap);
   max-width: 100%;
+  letter-spacing: min(var(--mf-label-tracking), 0.5vw);
   text-decoration: none;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 389px) {
+  mf-empty-state a[hlmBtn] {
+    padding-inline: var(--mf-space-3);
+  }
 }
 
 /* A checkbox drawn at 20 px inside a 44 px tap target, for every step that

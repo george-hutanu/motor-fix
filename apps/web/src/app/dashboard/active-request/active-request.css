@@ -1,0 +1,223 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+  margin-bottom: var(--mf-space-4);
+}
+.head h2 {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+[hlmBtn] {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  white-space: normal;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.skeleton {
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-line);
+  min-height: 112px;
+}
+[role="alert"] {
+  margin-bottom: var(--mf-space-3);
+}
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-4);
+}
+.what {
+  font-size: var(--mf-size-heading);
+  font-weight: 700;
+  color: var(--mf-text);
+}
+.who {
+  color: var(--mf-text-secondary);
+}
+.stages {
+  position: relative;
+  display: grid;
+  /* Equal columns while they fit; below that a column keeps its longest word
+     ("Programată" on a 320 px phone) and the others give way. */
+  grid-template-columns: repeat(5, minmax(min-content, 1fr));
+  margin: var(--mf-space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.stages li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  text-align: center;
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+  color: var(--mf-text-secondary);
+  /* A label wraps between its words, never inside one ("Program / ată"). */
+  overflow-wrap: normal;
+}
+/* The rail is drawn in halves, each column from its edges to its dot, so it
+   meets every dot whatever the column widths. */
+.stages li::before,
+.stages li::after {
+  position: absolute;
+  top: 7px;
+  height: 2px;
+}
+.stages li::before {
+  content: "";
+  left: 0;
+  right: 0;
+  background: var(--mf-line);
+}
+.stages li:first-child::before {
+  left: 50%;
+}
+.stages li:last-child::before {
+  right: 50%;
+}
+/* The amber rail runs from each done stage to the next one's dot. */
+.stages li[data-state="done"]::after {
+  content: "";
+  left: 0;
+  right: 0;
+  background: var(--mf-amber);
+}
+.stages li[data-state="done"]:first-child::after {
+  left: 50%;
+}
+.stages li[data-state="done"] + li:not([data-state="done"])::after {
+  content: "";
+  left: 0;
+  right: 50%;
+  background: var(--mf-amber);
+}
+.dot {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--mf-line-strong);
+  background: var(--mf-panel);
+}
+.stages li[data-state="done"] {
+  color: var(--mf-text);
+}
+.stages li[data-state="done"] .dot {
+  border-color: var(--mf-amber);
+  background: var(--mf-amber);
+}
+.stages li[data-state="current"] {
+  color: var(--mf-amber-ink);
+}
+.stages li[data-state="current"] .dot {
+  border-color: var(--mf-amber);
+  box-shadow: 0 0 12px var(--mf-amber);
+}
+/* Gata is the last stage: once reached it is filled as well as lit. */
+.stages li[data-state="current"]:last-child .dot {
+  background: var(--mf-amber);
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--mf-space-3) var(--mf-space-4);
+  margin: var(--mf-space-5) 0 0;
+  padding-top: var(--mf-space-4);
+  border-top: 1px solid var(--mf-line);
+}
+.facts div {
+  min-width: 0;
+}
+.facts dt {
+  color: var(--mf-text-secondary);
+}
+.facts dd {
+  margin: var(--mf-space-1) 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.line {
+  margin-top: var(--mf-space-4);
+  color: var(--mf-text-secondary);
+}
+.steps {
+  margin-top: var(--mf-space-5);
+  padding-top: var(--mf-space-4);
+  border-top: 1px solid var(--mf-line);
+}
+.steps h3 {
+  margin: 0 0 var(--mf-space-2);
+  color: var(--mf-text-secondary);
+}
+.steps ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: 36px;
+}
+.box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--mf-line-strong);
+}
+.steps li[data-state="done"] .box {
+  border-color: var(--mf-amber);
+  background: var(--mf-amber);
+}
+.steps li[data-state="now"] .box {
+  border-color: var(--mf-amber);
+}
+.text {
+  overflow-wrap: anywhere;
+}
+.steps li[data-state="done"] .text {
+  color: var(--mf-text-secondary);
+}
+.mark {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.more {
+  display: inline-block;
+  margin-top: var(--mf-space-4);
+  color: var(--mf-amber-ink);
+  text-underline-offset: 0.2em;
+}
+/* Below 400 px the stage line takes the panel's padding too, so the columns
+   stay near equal on a 320 px phone. */
+@media (max-width: 399px) {
+  .stages {
+    margin-inline: calc(-1 * var(--mf-space-5));
+  }
+  .stages li {
+    font-size: var(--mf-size-label);
+  }
+}
+.head h2 a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}

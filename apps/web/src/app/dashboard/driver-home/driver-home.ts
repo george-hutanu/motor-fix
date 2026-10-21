@@ -8,7 +8,6 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   type CarDto,
@@ -20,12 +19,13 @@ import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
+import { ActiveRequest } from '../active-request/active-request';
 import { openAddCar } from '../add-car/open-add-car';
 import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
-import { Live } from '../live';
+import { liveResource, REQUEST_EVENTS } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
@@ -37,8 +37,6 @@ import { allowedViews } from '../views';
 
 // A list as a panel reads it: loading (undefined), failed, or its items.
 type Read<T> = T[] | 'failed' | undefined;
-
-const ENDED: readonly RequestSummaryDto['status'][] = ['done', 'closed'];
 
 // The cars the panel shows; the rest are a link away.
 const CARS_SHOWN = 3;
@@ -52,6 +50,7 @@ const TICK_MS = 60_000;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ActiveRequest,
     DueDateLine,
     EmptyState,
     HlmButton,
@@ -76,14 +75,36 @@ export class DriverHome {
   private readonly session = inject(Session);
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
-  protected readonly requests = signal<Read<RequestSummaryDto>>(undefined);
+  // The requests, re-read when a quote is accepted, confirmed or lapses, and
+  // after a resync; the last read wins.
+  private readonly requestsRead = liveResource(
+    () => this.requestsApi.requestsControllerList(),
+    ['quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+  );
+  protected readonly requests = computed(
+    (): Read<RequestSummaryDto> =>
+      this.requestsRead.failed() && !this.requestsRead.value()
+        ? 'failed'
+        : this.requestsRead.value()?.items,
+  );
+  // The active request, re-read on the events that move any request, and
+  // after a resync; the last read wins.
+  private readonly activeRead = liveResource(
+    () => this.requestsApi.activeRequestControllerGet(),
+    REQUEST_EVENTS,
+  );
+  protected readonly active = computed(() =>
+    this.activeRead.failed() && !this.activeRead.value()
+      ? 'failed'
+      : this.activeRead.value(),
+  );
+  // The active request's panel, or the invitations once the read says no
+  // request is open.
   protected readonly firstRow = computed(() => {
-    const requests = this.requests();
-    if (requests === undefined || requests === 'failed')
-      return requests ?? 'loading';
-    return requests.some((r) => !ENDED.includes(r.status))
-      ? 'active'
-      : 'invite';
+    const active = this.active();
+    return active !== undefined && active !== 'failed' && !active.request
+      ? 'invite'
+      : 'active';
   });
   protected readonly hasCar = computed(() => this.carCount() > 0);
   // Only a list read and empty asks for a first car.
@@ -142,13 +163,7 @@ export class DriverHome {
 
   constructor() {
     void this.i18n.enter('driver');
-    this.load();
-    // An accepted quote books the request, and the garage's confirmation or
-    // the lapse moves it on: its panels read it again.
-    inject(Live)
-      .on(['quote.accepted', 'booking.confirmed', 'booking.lapsed'])
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.loadRequests());
+    this.loadCars();
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -162,28 +177,19 @@ export class DriverHome {
     this.cars.update((list) => [car, ...(Array.isArray(list) ? list : [])]);
   }
 
+  protected retryActive() {
+    this.activeRead.reload();
+  }
+
   protected retryCars() {
     this.cars.set(undefined);
     this.loadCars();
-  }
-
-  // Each list settles its own panels; the first row follows the requests.
-  private load() {
-    this.loadCars();
-    this.loadRequests();
   }
 
   private loadCars() {
     this.carsApi.carsControllerList().then(
       ({ items }) => this.cars.set(items),
       () => this.cars.set('failed'),
-    );
-  }
-
-  private loadRequests() {
-    this.requestsApi.requestsControllerList().then(
-      ({ items }) => this.requests.set(items),
-      () => this.requests.set('failed'),
     );
   }
 

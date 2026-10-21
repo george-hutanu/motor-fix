@@ -1,5 +1,6 @@
 @if (rows(); as list) {
   @if (list.length) {
+    <mf-active-request [answer]="active()" (retry)="retryActive()" />
     @for (id of compared(); track id) {
       <mf-panel data-panel="quotes" [heading]="'driver.panel.quotes' | t">
         <mf-quotes-compare [requestId]="id" />

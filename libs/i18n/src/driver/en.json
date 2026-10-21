@@ -1,4 +1,38 @@
 {
+  "active": {
+    "awaiting": "Waiting for the garage to confirm · {left}",
+    "empty": "No open request",
+    "fact": {
+      "booked": "Booked for",
+      "eta": "Done, estimated",
+      "finalPrice": "Final price",
+      "quote": "Quote",
+      "started": "Started"
+    },
+    "failed": "We could not load the request.",
+    "mechanic": "mechanic {name}",
+    "more": {
+      "one": "1 more open request",
+      "other": "{count} more open requests"
+    },
+    "new": "New request",
+    "paused": "Paused",
+    "ready": "Your car is ready. You can come and pick it up.",
+    "retry": "Try again",
+    "stage": {
+      "booked": "Booked",
+      "done": "Done",
+      "in_work": "In work",
+      "quoted": "Quoted",
+      "sent": "Sent"
+    },
+    "stages": "Request stages",
+    "step": {
+      "done": "done",
+      "now": "now"
+    },
+    "steps": "Job steps · {done} of {total} done"
+  },
   "cars": {
     "add": {
       "brand": "Brand",

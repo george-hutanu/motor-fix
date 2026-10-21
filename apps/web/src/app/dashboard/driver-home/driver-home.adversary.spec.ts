@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
+  type ActiveRequestAnswerDto,
   type CarDto,
   CarsService,
   type MeDto,
@@ -74,12 +75,14 @@ type Answer<T> = T[] | Error | Promise<never>;
 interface Setup {
   cars?: Answer<CarDto>;
   requests?: Answer<RequestSummaryDto>;
+  active?: ActiveRequestAnswerDto | Error | Promise<never>;
   capabilities?: string[];
   language?: 'ro' | 'en';
 }
 
 let carsList: jest.Mock;
 let requestsList: jest.Mock;
+let activeRead: jest.Mock;
 let open: jest.Mock;
 
 const answer = <T>(value: Answer<T>) =>
@@ -93,14 +96,54 @@ const answer = <T>(value: Answer<T>) =>
           total: value.length,
         });
 
+// The active read as the server would answer the requests given: an open one
+// is the panel's, none leaves the invitations.
+const activeOf = (
+  requests: Answer<RequestSummaryDto>,
+): ActiveRequestAnswerDto | Error | Promise<never> => {
+  if (!Array.isArray(requests)) return requests;
+  const open = requests.filter((r) => !['done', 'closed'].includes(r.status));
+  return {
+    openCount: open.length,
+    request: open[0]
+      ? {
+          booking: null,
+          car: {
+            brand: open[0].car.brand,
+            model: open[0].car.model,
+            year: open[0].car.year,
+          },
+          description: open[0].description,
+          id: open[0].id,
+          job: null,
+          jobs: open[0].jobs,
+          mechanicName: null,
+          range: null,
+          stage: 'sent',
+        }
+      : null,
+  };
+};
+
+const activeAnswer = (
+  value: ActiveRequestAnswerDto | Error | Promise<never>,
+) =>
+  value instanceof Error
+    ? Promise.reject(value)
+    : value instanceof Promise
+      ? value
+      : Promise.resolve(value);
+
 async function render({
   cars = [],
   requests = [],
+  active,
   capabilities = DRIVER,
   language = 'ro',
 }: Setup = {}) {
   carsList = jest.fn(() => answer(cars));
   requestsList = jest.fn(() => answer(requests));
+  activeRead = jest.fn(() => activeAnswer(active ?? activeOf(requests)));
   open = jest.fn(async () => 'cancelled');
   const current = signal({ capabilities, role: 'driver' } as unknown as MeDto);
   TestBed.configureTestingModule({
@@ -109,7 +152,10 @@ async function render({
       { provide: CarsService, useValue: { carsControllerList: carsList } },
       {
         provide: RequestsService,
-        useValue: { requestsControllerList: requestsList },
+        useValue: {
+          activeRequestControllerGet: activeRead,
+          requestsControllerList: requestsList,
+        },
       },
       { provide: Overlays, useValue: { open } },
       { provide: Session, useValue: { current, shown: current } },

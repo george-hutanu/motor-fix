@@ -48,7 +48,10 @@ async function open(url: string, answer: () => Promise<unknown>) {
       ]),
       {
         provide: RequestsService,
-        useValue: { requestsControllerList: jest.fn(answer) },
+        useValue: {
+          activeRequestControllerGet: () => new Promise<never>(() => undefined),
+          requestsControllerList: jest.fn(answer),
+        },
       },
       {
         provide: Live,

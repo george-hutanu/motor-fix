@@ -24,9 +24,10 @@ import {
 } from '@motor-fix/i18n';
 import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
+import { ActiveRequest } from '../active-request/active-request';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
-import { liveResource } from '../live';
+import { liveResource, REQUEST_EVENTS } from '../live';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
 
@@ -51,10 +52,11 @@ const TICK_MS = 60_000;
 // request events so one sent in another tab shows up without a reload. A
 // booked request waiting for the garage counts down its time to confirm,
 // then names its slot once confirmed, or asks for another quote after a
-// lapse.
+// lapse. The active request's panel heads a list with rows.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ActiveRequest,
     EmptyState,
     HlmButton,
     Panel,
@@ -72,15 +74,21 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    [
-      'request.created',
-      'quote.sent',
-      'request.declined',
-      'quote.accepted',
-      'booking.confirmed',
-      'booking.lapsed',
-    ],
+    REQUEST_EVENTS,
   );
+  // The active request's panel above the list, moved by the same events.
+  private readonly activeRead = liveResource(
+    () => this.api.activeRequestControllerGet(),
+    REQUEST_EVENTS,
+  );
+  protected readonly active = computed(() =>
+    this.activeRead.failed() && !this.activeRead.value()
+      ? 'failed'
+      : this.activeRead.value(),
+  );
+  protected retryActive() {
+    this.activeRead.reload();
+  }
   // Sampled again on every read of the list, so a line read right after an
   // acceptance measures from then; the tick moves it between reads.
   private readonly now = linkedSignal({
@@ -97,7 +105,7 @@ export class RequestsView {
 
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
   // The default request: the newest still open, picked once and kept while
-  // it is listed, so a live re-read never moves the panel (313-FR-010).
+  // it is listed, so a live re-read never moves the panel.
   private readonly fallback = linkedSignal<
     readonly RequestSummaryDto[],
     string | undefined
