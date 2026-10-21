@@ -39,6 +39,7 @@ const signIn = { join: jest.fn(), start: jest.fn() };
 const session = {
   current: signal<object | null>(null),
   load: jest.fn(),
+  roleHint: signal<string | null>(null),
   switchRole: jest.fn(),
 };
 const consent = { track: jest.fn() };
@@ -94,6 +95,7 @@ beforeEach(() => {
   signIn.start.mockReset();
   signIn.join.mockReset().mockResolvedValue(null);
   session.current.set(null);
+  session.roleHint.set(null);
   session.load.mockReset().mockResolvedValue(null);
   session.switchRole.mockReset().mockResolvedValue({ role: 'garage' });
   consent.track.mockReset();
@@ -2751,7 +2753,17 @@ describe('sending for verification', () => {
       });
 
       // @traces 116-FR-004
+      it('opens the dialog for a visitor without asking the session first', async () => {
+        await created();
+        for (let i = 0; i < 5; i++) await pause();
+
+        expect(signIn.join).toHaveBeenCalled();
+        expect(session.load).not.toHaveBeenCalled();
+      });
+
+      // @traces 116-FR-004
       it('sends without the dialog for an account already signed in', async () => {
+        session.roleHint.set('driver');
         session.load.mockResolvedValue({ role: 'driver' });
         await created();
         for (let i = 0; i < 5; i++) await pause();
@@ -2838,6 +2850,7 @@ describe('sending for verification', () => {
           'button',
         ) as HTMLButtonElement;
         expect(text(again)).toBe('Trimite din nou');
+        session.roleHint.set('driver');
         session.load.mockResolvedValue({ role: 'driver' });
         await click(harness, again);
         for (let i = 0; i < 5; i++) await pause();
@@ -2897,10 +2910,19 @@ describe('a signed-in account that owns a garage', () => {
     expect(session.switchRole).not.toHaveBeenCalled();
   });
 
-  it('asks whether the browser holds a session when the page opens', async () => {
+  it('asks whether the browser holds a session when it last saw one signed in', async () => {
+    session.roleHint.set('driver');
     await open('/ro/list-your-garage');
 
     expect(session.load).toHaveBeenCalled();
+  });
+
+  // A public page asks a visitor's browser nothing: each ask renews the cookie
+  // and a visitor's answers 401.
+  it('asks nothing of the session for a visitor with no role hint', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(session.load).not.toHaveBeenCalled();
   });
 
   it('takes a session in another role to the garage before reading', async () => {

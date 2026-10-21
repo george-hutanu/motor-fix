@@ -27,7 +27,7 @@ button:hover {
   right: -6px;
   min-width: 20px;
   height: 20px;
-  padding: 0 5px;
+  padding: 0 4px;
   border-radius: 10px;
   background: var(--mf-amber);
   color: var(--mf-on-amber);

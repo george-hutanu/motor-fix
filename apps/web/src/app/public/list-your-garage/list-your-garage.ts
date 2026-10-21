@@ -400,8 +400,14 @@ export class ListYourGarage {
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
       void this.keeper.open(link).then((step) => this.restore(step));
-      void this.session.load({ keepLanguage: true });
+      // A visitor's browser is asked nothing: each ask renews the cookie.
+      if (this.knownAccount()) void this.session.load({ keepLanguage: true });
     });
+  }
+
+  // A session this tab holds, or one this browser last saw signed in.
+  private knownAccount(): boolean {
+    return !!(this.session.current() ?? this.session.roleHint());
   }
 
   private async showOwned(role: string | undefined) {
@@ -563,7 +569,12 @@ export class ListYourGarage {
   // A session, from before or from the sign-up dialog with the step 1
   // address; a closed dialog leaves the owner on the summary.
   private async signedIn(): Promise<boolean> {
-    if (await this.session.load({ keepLanguage: true })) return true;
+    if (this.session.current()) return true;
+    if (
+      this.session.roleHint() &&
+      (await this.session.load({ keepLanguage: true }))
+    )
+      return true;
     const { data, email } = this.keeper.draft();
     const joined = await this.signIn.join({
       email: email ?? '',
