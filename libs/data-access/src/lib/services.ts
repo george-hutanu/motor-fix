@@ -20,6 +20,7 @@ export { GarageRequestsService } from './services/garage-requests.service';
 export { QuoteRequestsService } from './services/quote-requests.service';
 export { QuotesService } from './services/quotes.service';
 export { BookingsService } from './services/bookings.service';
+export { ReviewsService } from './services/reviews.service';
 export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
 export { GaragesService } from './services/garages.service';

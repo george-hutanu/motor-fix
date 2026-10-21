@@ -34,6 +34,7 @@ model Job {
   mechanic       Mechanic?       @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   steps          JobStep[]
   stages         JobStageEntry[]
+  reviews        Review[]
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])

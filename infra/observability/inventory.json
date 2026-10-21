@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 152,
+    "count": 154,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1692,6 +1692,15 @@
       ],
       "reason": "a read of the mechanics and lifts a confirmation may pick; it writes nothing, so its failures and latency are the route metric alone",
       "story": "ST-389"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_reviews_posted_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each publish a driver tries by outcome (published, job_not_done, email_not_confirmed, review_exists) with no identifiers, with the review's create audit entry and the review.posted event naming the job; a refusal is the driver's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-22"
     }
   ]
 }

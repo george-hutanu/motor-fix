@@ -114,6 +114,7 @@ model Garage {
   quotes                     Quote[]
   bookings                   Booking[]
   jobs                       Job[]
+  reviews                    Review[]
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]
   suspensions                GarageSuspension[]
@@ -213,6 +214,7 @@ model Mechanic {
   account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
   jobs                Job[]
+  reviews             Review[]
 
   @@index([garageId])
   @@map("mechanic")
