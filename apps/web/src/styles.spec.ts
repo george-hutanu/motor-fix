@@ -75,3 +75,17 @@ describe('the room a focused control keeps clear of the bars', () => {
     );
   });
 });
+
+// @traces 274-FR-018
+describe('the one action of an empty state on a 320 px phone', () => {
+  it('narrows its padding and tracking with the viewport so the label keeps one line', () => {
+    const body = rule('mf-empty-state a[hlmBtn]') ?? '';
+
+    expect(body).toMatch(
+      /padding-inline:\s*clamp\(var\(--mf-space-3\),[^;]*vw,\s*var\(--mf-space-5\)\)/,
+    );
+    expect(body).toMatch(
+      /letter-spacing:\s*min\(var\(--mf-label-tracking\),[^;]*vw\)/,
+    );
+  });
+});

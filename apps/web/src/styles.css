@@ -9,10 +9,13 @@
 
 /* The one action an empty state holds is projected into it, so its own
    stylesheet cannot reach it. Until the driver's texts load the label is its
-   key, one unbreakable word. */
+   key, one unbreakable word. Its padding and tracking narrow with the
+   viewport, so "Caută un service" keeps one line on a 320 px phone. */
 mf-empty-state a[hlmBtn] {
   min-height: var(--mf-tap);
   max-width: 100%;
+  padding-inline: clamp(var(--mf-space-3), 4vw, var(--mf-space-5));
+  letter-spacing: min(var(--mf-label-tracking), 0.5vw);
   text-decoration: none;
   overflow-wrap: anywhere;
 }
