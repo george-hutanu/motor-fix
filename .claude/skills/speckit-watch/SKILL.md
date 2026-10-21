@@ -84,7 +84,7 @@ which uses the same scan, so a pass started by it always has something to do.
    oldest-first order), claim it, then dispatch it:
 
    ```bash
-   node .claude/scripts/watch.mjs claim <path> <fix>
+   node .claude/scripts/watch.mjs claim <path> <fix> [--stale <stage>=<min>,… as the pass ran]
    ```
 
    A claim that exits 1 with `claim refused: <fix> claimed <m> min ago` is

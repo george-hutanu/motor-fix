@@ -460,18 +460,24 @@ describe('dispatch --flows: the flows must have been proven against the head', (
     assert.deepEqual(proofFor({ root: t.repo, sha: t.c2, hash: t.hash }), { proof: proofPath(t.repo, t.c1, t.hash) });
   });
 
-  it('removes the stamps that are neither for the head nor for a commit in the gap once a proof holds, and none on a refusal', () => {
+  it('removes the stamps off the head history once a proof holds, keeps the head and its ancestors, and removes none on a refusal', () => {
     const t = provenRepo();
     const dir = dirname(proofPath(t.repo, t.c1, t.hash));
     const names = () => readdirSync(dir).sort();
     const other = '0123456789abcdef';
-    // Proven at c3 (the head): every older stamp goes, whatever its flows; the head's own stay.
+    // Proven at c3 (the head): the head's and its ancestors' stamps stay, whatever their flows; a stamp for a
+    // commit off its history goes.
+    const gone = 'f'.repeat(40);
     for (const sha of [t.c1, t.c2, t.c3]) t.stamp(sha);
     t.stamp(t.c1, other);
     t.stamp(t.c3, other);
+    t.stamp(gone);
     writeFileSync(join(dir, 'not-a-stamp'), '');
     assert.deepEqual(proofFor({ root: t.repo, sha: t.c3, hash: t.hash }), { proof: proofPath(t.repo, t.c3, t.hash) });
-    assert.deepEqual(names(), [`${t.c3}-${other}`, `${t.c3}-${t.hash}`, 'not-a-stamp'].sort());
+    assert.deepEqual(
+      names(),
+      [`${t.c1}-${t.hash}`, `${t.c1}-${other}`, `${t.c2}-${t.hash}`, `${t.c3}-${other}`, `${t.c3}-${t.hash}`, 'not-a-stamp'].sort(),
+    );
     // Proven at c1 for head c2 (documentation since): c1 and c2 stay, the stamp at c3 (no ancestor of c2) goes.
     rmSync(dir, { recursive: true, force: true });
     t.stamp(t.c1);

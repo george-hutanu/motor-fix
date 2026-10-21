@@ -209,7 +209,7 @@ export function fixOf(row, { now, thresholds }) {
   // one is still pending.
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.agentReview === "success") {
-    if (pr.checks === "pass" && atPrHead) return { verdict: "stale", fix: "merge", reason: "agent-review success and every check green" };
+    if (pr.checks === "pass" && atPrHead) return { verdict: "stale", fix: "merge", reason: "holder dead: agent-review success and every check green" };
     if (pr.checks === "pending") return { verdict: "waiting", fix: null, reason: "waiting on CI: agent-review success, CI pending before the merge" };
   }
   // A handed-off PR whose QA run tests its head needs nobody until that run
@@ -218,7 +218,7 @@ export function fixOf(row, { now, thresholds }) {
   // waits only until the quiet threshold, then gets a tail like any other.
   if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(row.qaRunState == null && quiet > limit)) {
     const status = row.qaRunState?.status;
-    if (status === "completed") return { verdict: "stale", fix: "tail", reason: `QA run ${row.qaRun.id} completed (CI ${pr.checks})` };
+    if (status === "completed") return { verdict: "stale", fix: "tail", reason: `holder dead: QA run ${row.qaRun.id} completed (CI ${pr.checks})` };
     return { verdict: "waiting", fix: null, reason: `waiting on a QA run: QA run ${row.qaRun.id} (${status ?? "state unreadable"})` };
   }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };

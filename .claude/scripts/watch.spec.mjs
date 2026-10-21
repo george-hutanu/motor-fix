@@ -1930,7 +1930,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     const dead = fixOf(row({ holder: 'dead' }), opts);
     assert.equal(dead.verdict, 'stale');
     assert.match(dead.reason, /^holder dead: no live agent/);
-    // FR-004: every stale row with no live holder names it, a missing or quiet lock as much as a dead pid.
+    // Every stale row with no live holder names it, a missing or quiet lock as much as a dead pid.
     assert.match(fixOf(row(), opts).reason, /^holder dead: no live agent/);
     const handed = (rollup, qaRunState) =>
       row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, pr: summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: rollup })), qaRunState });
@@ -1940,6 +1940,13 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     const qa = fixOf(handed([check('SUCCESS')], { status: 'in_progress' }), opts);
     assert.equal(qa.verdict, 'waiting');
     assert.match(qa.reason, /^waiting on a QA run: .*QA run 77/);
+    // The tail after a finished QA run and the merge on green are stale rows nobody holds either.
+    const tail = fixOf(handed([check('SUCCESS')], { status: 'completed' }), opts);
+    assert.equal(tail.fix, 'tail');
+    assert.match(tail.reason, /^holder dead: QA run 77 completed/);
+    const merge = fixOf(row({ activity: { at: NOW - 120 * MIN, source: 'commit' }, phase: 'merging', pr: summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] })) }), opts);
+    assert.equal(merge.fix, 'merge');
+    assert.match(merge.reason, /^holder dead: agent-review success and every check green/);
   });
 
   const fakeSpawn = (onSpawn = () => {}) => {

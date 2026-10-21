@@ -113,20 +113,21 @@ const PROOF_NAME = /^([0-9a-f]{40})-([0-9a-f]{16})$/;
 /**
  * The proof that flows of `hash` passed --check at `sha` in the checkout at `root`: `{ proof }` with its
  * path, or `{ refused }` naming what is missing. A proof for an ancestor holds while the commits since it
- * change documentation only, or no file at all (an empty commit). Once a proof holds, the stamps that are
- * neither for the head nor for a commit from the proven one to the head are removed, so they do not pile
- * up; a refusal removes nothing.
+ * change documentation only, or no file at all (an empty commit). Once a proof holds, the stamps for
+ * commits off the head's history (an abandoned or rewritten branch) are removed, so they do not pile up;
+ * a stamp for the head or an ancestor stays, whatever its flows. A refusal removes nothing.
  */
 export function proofFor({ root, sha, hash }) {
   const git = (...args) => spawnSync("git", ["-C", root, "-c", "core.quotePath=off", ...args], { encoding: "utf8" });
   const dir = join(root, PROOF_DIR);
   const stamps = (existsSync(dir) ? readdirSync(dir) : []).map((n) => PROOF_NAME.exec(n)).filter(Boolean).map(([, at, h]) => ({ name: `${at}-${h}`, at, h }));
-  const prune = (keep) => {
-    for (const s of stamps) if (!keep.has(s.at)) rmSync(join(dir, s.name), { force: true });
+  const prune = () => {
+    for (const s of stamps)
+      if (s.at !== sha && git("merge-base", "--is-ancestor", s.at, sha).status !== 0) rmSync(join(dir, s.name), { force: true });
   };
   const exact = proofPath(root, sha, hash);
   if (existsSync(exact)) {
-    prune(new Set([sha]));
+    prune();
     return { proof: exact };
   }
   const behind = stamps
@@ -139,8 +140,7 @@ export function proofFor({ root, sha, hash }) {
   for (const s of behind) {
     const paths = git("diff", "--name-only", "--no-renames", `${s.at}..${sha}`).stdout.split("\n").filter((p) => p.trim());
     if (paths.length === 0 || isDocsOnly(paths)) {
-      const gap = git("rev-list", `${s.at}..${sha}`).stdout.split("\n").filter(Boolean);
-      prune(new Set([s.at, sha, ...gap]));
+      prune();
       return { proof: proofPath(root, s.at, hash) };
     }
     code ??= { at: s.at, files: paths.filter((p) => !isDocumentation(p)) };
