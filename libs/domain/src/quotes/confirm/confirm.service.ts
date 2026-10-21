@@ -3,19 +3,14 @@ import type {
   ConfirmOptionsDto,
   GarageBookingDto,
 } from '@motor-fix/contracts';
-import {
-  HttpStatus,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import {
   AUDIT_PORT,
   type AuditPort,
   recordedRole,
 } from '../../audit/audit.port';
-import { type Actor, requireCapability } from '../../auth/policy';
+import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
@@ -136,14 +131,13 @@ export class ConfirmService {
   // Anyone outside the booking's garage learns nothing of it; a mechanic of
   // the garage is told no.
   private async garageOf(client: Tx, actor: Actor, bookingId: string) {
-    if (actor.role !== 'mechanic') requireCapability(actor, 'garage.requests');
     const booking = await client.booking.findUnique({
       select: { garageId: true },
       where: { id: bookingId },
     });
-    if (!booking || booking.garageId !== actor.garageId) {
-      throw new NotFoundException();
-    }
+    // A booking of another garage, or none, is not found, for a mechanic too.
+    const garageId = booking?.garageId ?? '';
+    assertGarage(actor, garageId);
     if (actor.role === 'mechanic') {
       throw refusal(
         HttpStatus.FORBIDDEN,
@@ -153,7 +147,8 @@ export class ConfirmService {
           : 'Doar proprietarul sau recepția confirmă programările',
       );
     }
-    return booking.garageId;
+    requireCapability(actor, 'garage.requests');
+    return garageId;
   }
 
   private async switches(client: Tx, garageId: string): Promise<Switches> {

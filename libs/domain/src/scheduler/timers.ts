@@ -12,6 +12,9 @@ export interface TimerKind {
 }
 
 const SWEEP_EVERY = 5 * 60_000;
+// A failed sweep keeps its job for a day of runs, and its error names a few.
+const SWEEP_FAILS_KEPT = 288;
+const SWEEP_FAILS_NAMED = 5;
 
 // BullMQ refuses ':' in a job id.
 const timerId = (kind: string, objectId: string) => `${kind}-${objectId}`;
@@ -52,7 +55,10 @@ export class ObjectTimers {
     return this.queue.upsertJobScheduler(
       'sweep',
       { every: SWEEP_EVERY },
-      { name: 'sweep' },
+      {
+        name: 'sweep',
+        opts: { removeOnComplete: true, removeOnFail: SWEEP_FAILS_KEPT },
+      },
     );
   }
 
@@ -76,8 +82,11 @@ export class ObjectTimers {
       }
     }
     if (failed.length) {
+      const more = failed.length - SWEEP_FAILS_NAMED;
       throw new Error(
-        `sweep ran ${ran}, failed ${failed.length}: ${failed.join(', ')}`,
+        `sweep ran ${ran}, failed ${failed.length}: ${failed
+          .slice(0, SWEEP_FAILS_NAMED)
+          .join(', ')}${more > 0 ? ` and ${more} more` : ''}`,
       );
     }
     return ran;

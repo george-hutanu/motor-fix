@@ -114,10 +114,42 @@ describe('the sweep', () => {
     expect(fired).toEqual([good]);
   });
 
+  it('names only the first few objects that failed', async () => {
+    overdue = Array.from({ length: 7 }, () => randomUUID());
+    const failing = new ObjectTimers(queue, [
+      {
+        ...expiry,
+        fire: async () => {
+          throw new Error('stuck');
+        },
+      },
+    ]);
+
+    const error = await failing.sweep(NOW).then(
+      () => undefined,
+      (caught: Error) => caught,
+    );
+    expect(error?.message).toBe(
+      `sweep ran 0, failed 7: ${overdue
+        .slice(0, 5)
+        .map((id) => `request-expiry ${id}`)
+        .join(', ')} and 2 more`,
+    );
+  });
+
   it('runs every 5 minutes', async () => {
     await timers.startSweep();
     const [scheduler] = await queue.getJobSchedulers();
     expect(scheduler).toMatchObject({ every: 5 * 60_000, name: 'sweep' });
+  });
+
+  it('does not keep its runs in Redis without bound', async () => {
+    await timers.startSweep();
+    const scheduler = await queue.getJobScheduler('sweep');
+    expect(scheduler?.template?.opts).toMatchObject({
+      removeOnComplete: true,
+      removeOnFail: 288,
+    });
   });
 
   it('is run by the same handler as the timers', async () => {
