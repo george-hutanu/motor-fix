@@ -180,6 +180,17 @@ describe('the verification page, for the owner', () => {
     expect(text(host)).toContain(TEXT.ro.offMap);
   });
 
+  // @traces 101-FR-001
+  it('puts the check-in line before the off-map line, once each', async () => {
+    const { host } = await render();
+    const all = text(host);
+
+    expect(all.indexOf(TEXT.ro.checkIn)).toBeLessThan(
+      all.indexOf(TEXT.ro.offMap),
+    );
+    expect(all.split(TEXT.ro.offMap)).toHaveLength(2);
+  });
+
   // @traces 101-FR-001 101-FR-002
   it('speaks English', async () => {
     const { host } = await render({ language: 'en' });

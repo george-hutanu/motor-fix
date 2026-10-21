@@ -5,8 +5,12 @@
       [requestedItems]="file.requestedItems"
       [reason]="file.reason"
       [submittedAt]="file.submittedAt"
+      [showOffMap]="false"
     />
     <p>{{ 'garage.verification.checkIn' | t }}</p>
+    @if (file.status !== 'approved') {
+      <p class="off-map">{{ 'public.verificationStatus.offMap' | t }}</p>
+    }
     @if (file.status === 'rejected') {
       <button hlmBtn type="button" (click)="contact()">{{ 'garage.verification.contact' | t }}</button>
     }

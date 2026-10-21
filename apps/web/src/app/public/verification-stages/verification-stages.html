@@ -2,7 +2,7 @@
   @for (stage of stages(); track $index) {
     <li [class.lit]="stage.lit" [attr.aria-current]="stage.current ? 'step' : null">
       <span class="dot" aria-hidden="true"></span>
-      <span class="name">{{ stage.name | t }}@if (stage.date) { · {{ stage.date }}}</span>
+      <span class="name">{{ stage.name | t }}@if (stage.date) { · <span class="date">{{ stage.date }}</span>}</span>
       @if ($index === 1) {
         @if (items().length) {
           <ul class="items">

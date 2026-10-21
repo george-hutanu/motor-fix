@@ -35,6 +35,9 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+.date {
+  white-space: nowrap;
+}
 .lit {
   color: var(--mf-text);
 }

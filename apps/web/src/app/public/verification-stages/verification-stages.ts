@@ -47,6 +47,8 @@ export class VerificationStages {
   readonly reason = input<{ code: string; note: string } | null>(null);
   // When the listing was sent: the first stage carries its day.
   readonly submittedAt = input<string | null>(null);
+  // A page that writes its own off-map line, after its own text, turns this one off.
+  readonly showOffMap = input(true);
 
   protected readonly stages = computed(() => {
     const status = this.status();
@@ -76,5 +78,7 @@ export class VerificationStages {
       ? { name: itemName(reason.code), note: reason.note }
       : null;
   });
-  protected readonly offMap = computed(() => this.status() !== 'approved');
+  protected readonly offMap = computed(
+    () => this.showOffMap() && this.status() !== 'approved',
+  );
 }

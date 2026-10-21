@@ -243,3 +243,20 @@ describe('the verification stages', () => {
     );
   });
 });
+
+// @traces 101-FR-002
+describe('the sending date', () => {
+  it('keeps the date on one line', () => {
+    const css = readFileSync(
+      join(__dirname, 'verification-stages.css'),
+      'utf8',
+    );
+    const html = readFileSync(
+      join(__dirname, 'verification-stages.html'),
+      'utf8',
+    );
+
+    expect(html).toContain('<span class="date">{{ stage.date }}</span>');
+    expect(css).toMatch(/\.date \{[^}]*white-space: nowrap;/);
+  });
+});
