@@ -11,7 +11,7 @@ import {
 import { JOB_STATUSES, type JobStatus } from './request-status';
 
 export const REVIEW_TEXT_MAX = 2000;
-export const REVIEW_STATUSES = [
+const REVIEW_STATUSES = [
   'published',
   'reported',
   'removed',
@@ -32,8 +32,11 @@ export class PublishReviewDto {
 
   @ApiPropertyOptional({ maxLength: REVIEW_TEXT_MAX })
   @IsOptional()
+  // PostgreSQL cannot store a NUL character, so it goes before the trim.
   @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim() || undefined : value,
+    typeof value === 'string'
+      ? value.replaceAll('\u0000', '').trim() || undefined
+      : value,
   )
   @IsString()
   text?: string;

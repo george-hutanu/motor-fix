@@ -198,11 +198,11 @@ function judge(dto: PublishReviewDto) {
     ...(dto.rating < 1 || dto.rating > 5
       ? [{ code: 'range', field: 'rating' }]
       : []),
-    ...(dto.paidBani !== undefined &&
+    ...(dto.paidBani != null &&
     (dto.paidBani < 1 || dto.paidBani > PAID_BANI_MAX)
       ? [{ code: 'range', field: 'paidBani' }]
       : []),
-    ...(dto.text !== undefined && [...dto.text].length > REVIEW_TEXT_MAX
+    ...(dto.text != null && [...dto.text].length > REVIEW_TEXT_MAX
       ? [{ code: 'length', field: 'text' }]
       : []),
   ];

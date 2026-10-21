@@ -2,7 +2,7 @@
 // browser imports this file and not the validators.
 export const PAID_BANI_MAX = 100_000_000;
 
-export type LeiText =
+type LeiText =
   | { bani: number }
   | { error: 'decimals' | 'format' | 'max' | 'min' };
 
