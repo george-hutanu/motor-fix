@@ -1,0 +1,7 @@
+@if (problem(); as text) {
+  <p class="error" role="alert">{{ text }}</p>
+}
+<div class="actions">
+  <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'driver.quotes.declineDialog.cancel' | t }}</button>
+  <button hlmBtn type="button" [disabled]="blocked()" [attr.aria-busy]="sending() ? 'true' : null" (click)="confirm()">{{ 'driver.quotes.declineDialog.confirm' | t }}</button>
+</div>

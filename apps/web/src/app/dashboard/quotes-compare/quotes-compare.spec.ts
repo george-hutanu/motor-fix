@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -7,11 +6,13 @@ import {
   type CompareQuoteDto,
   type QuoteComparisonDto,
   QuoteRequestsService,
-  QuotesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
+import { AcceptQuoteDialog } from './accept-quote-dialog/accept-quote-dialog';
+import { DeclineQuoteDialog } from './decline-quote-dialog/decline-quote-dialog';
 import { QuotesCompare } from './quotes-compare';
 import { Live } from '../live';
 
@@ -103,16 +104,16 @@ type Answer = QuoteComparisonDto | Error | Promise<never>;
 let events: Subject<LiveMessage>;
 let offline: ReturnType<typeof signal<boolean>>;
 let read: jest.Mock;
-let accept: jest.Mock;
+let open: jest.Mock;
 
 async function render(
   answers: Answer[],
   {
     language = 'ro',
-    accepts = [],
+    results = [],
   }: {
     language?: 'ro' | 'en';
-    accepts?: (Promise<unknown> | Error | HttpErrorResponse)[];
+    results?: unknown[];
   } = {},
 ) {
   events = new Subject();
@@ -124,14 +125,10 @@ async function render(
       ? Promise.reject(answer)
       : Promise.resolve(answer);
   });
-  let click = 0;
-  accept = jest.fn(() => {
-    const answer =
-      accepts[Math.min(click++, accepts.length - 1)] ?? Promise.resolve({});
-    // The client rejects with an HttpErrorResponse, which is not an Error.
-    return answer instanceof Error || answer instanceof HttpErrorResponse
-      ? Promise.reject(answer)
-      : answer;
+  let opened = 0;
+  open = jest.fn(() => {
+    const result = results[Math.min(opened++, results.length - 1)];
+    return result instanceof Promise ? result : Promise.resolve(result);
   });
   TestBed.configureTestingModule({
     providers: [
@@ -140,7 +137,7 @@ async function render(
         provide: QuoteRequestsService,
         useValue: { compareControllerGet: read },
       },
-      { provide: QuotesService, useValue: { acceptControllerAccept: accept } },
+      { provide: Overlays, useValue: { open } },
       {
         provide: Live,
         useValue: {
@@ -186,7 +183,9 @@ const order = (element: HTMLElement) =>
 const lines = (element: HTMLElement) =>
   [...element.querySelectorAll('[data-line]')].map((l) => text(l));
 const acceptOf = (row: HTMLElement | undefined) =>
-  row?.querySelector<HTMLButtonElement>('button') ?? null;
+  row?.querySelector<HTMLButtonElement>('button[data-act="accept"]') ?? null;
+const declineOf = (row: HTMLElement | undefined) =>
+  row?.querySelector<HTMLButtonElement>('button[data-act="decline"]') ?? null;
 const radio = (element: HTMLElement, name: string) =>
   [...element.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find(
     (r) => text(r.closest('label')) === name,
@@ -464,6 +463,7 @@ describe('sorting the comparison', () => {
 
 // @traces 313-FR-010
 // @traces 313-FR-015
+// @traces 314-FR-009
 describe('the comparison kept current', () => {
   it.each([
     'quote.sent',
@@ -552,6 +552,8 @@ describe('the comparison kept current', () => {
         ...comparison().request,
         booking: {
           confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
+          mechanicName: null,
+          quoteId: 'q-cheap',
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
@@ -564,6 +566,8 @@ describe('the comparison kept current', () => {
         ...comparison().request,
         booking: {
           confirmBy: new Date(Date.now() - 3_600_000).toISOString(),
+          mechanicName: null,
+          quoteId: 'q-cheap',
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'lapsed',
         },
@@ -615,92 +619,125 @@ describe('the comparison’s clock', () => {
     expect(rows(element)[0]?.classList).toContain('greyed');
     expect(acceptOf(rows(element)[1])).not.toBeNull();
   });
+
+  // @traces 314-FR-005
+  it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+      ],
+      now: Date.parse('2026-10-17T10:00:00.000Z'),
+    });
+    const loaded = Date.now();
+    const accepted = comparison({
+      quotes: [FAST, { ...CHEAP, status: 'accepted' }],
+      request: {
+        ...comparison().request,
+        booking: {
+          // Accepted 29 s after the panel opened, read a second later.
+          confirmBy: new Date(loaded + 29_000 + 24 * 3_600_000).toISOString(),
+          mechanicName: null,
+          quoteId: 'q-cheap',
+          startsAt: '2026-10-20T06:00:00.000Z',
+          status: 'awaiting_confirmation',
+        },
+        status: 'booked',
+      },
+    });
+    const { element, settle } = await render([comparison(), accepted]);
+    jest.setSystemTime(loaded + 30_000);
+
+    emit('quote.accepted');
+    jest.advanceTimersByTime(500);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    const row = rows(element).find((r) => r.dataset['quote'] === 'q-cheap');
+    expect(text(row?.querySelector('[data-part="booking"]'))).toBe(
+      'Așteaptă confirmarea service‑ului · încă 23 h',
+    );
+  });
 });
 
 // @traces 313-FR-008
+// @traces 314-FR-002
+// @traces 314-FR-004
 describe('accepting a quote from the comparison', () => {
-  const keyOf = (call: number) =>
-    (accept.mock.calls[call][0] as { 'Idempotency-Key': string })[
-      'Idempotency-Key'
-    ];
-
-  it('accepts with history not shared and a fresh key, then reads again', async () => {
+  it('opens the confirmation naming the garage, its range and its slot', async () => {
     const { element, settle } = await render([comparison()]);
 
     acceptOf(rows(element)[1])?.click();
     await settle();
 
-    expect(accept).toHaveBeenCalledWith({
-      body: { historyShared: false },
-      'Idempotency-Key': expect.stringMatching(/^[0-9a-f-]{36}$/),
-      id: 'q-cheap',
+    expect(open).toHaveBeenCalledWith(
+      AcceptQuoteDialog,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          garage: 'Volt Service',
+          quoteId: 'q-cheap',
+          range: '100–220 lei',
+        }),
+        shape: 'dialog',
+        title: 'driver.quotes.acceptDialog.title',
+        titleParams: { name: 'Volt Service' },
+      }),
+    );
+  });
+
+  it('reads again once the quote was accepted, not when the driver gave up', async () => {
+    const { element, settle } = await render([comparison()], {
+      results: ['accepted', 'cancelled'],
     });
+
+    for (let i = 0; i < 2; i++) {
+      acceptOf(rows(element)[0])?.click();
+      await settle();
+    }
+
     expect(read).toHaveBeenCalledTimes(2);
   });
 
-  it('makes a new key for each click', async () => {
-    const { element, settle } = await render([comparison()]);
-
-    acceptOf(rows(element)[0])?.click();
-    await settle();
-    acceptOf(rows(element)[0])?.click();
-    await settle();
-
-    expect(keyOf(0)).not.toBe(keyOf(1));
-  });
-
-  it('repeats the key when the same click is retried after no answer', async () => {
+  it('lets the dialog read the panel again after a refusal', async () => {
     const { element, settle } = await render([comparison()], {
-      accepts: [new HttpErrorResponse({ status: 0 }), Promise.resolve({})],
+      results: [new Promise(() => undefined)],
     });
 
     acceptOf(rows(element)[0])?.click();
     await settle();
-    acceptOf(rows(element)[0])?.click();
+    (open.mock.calls[0][1] as { data: { reread(): void } }).data.reread();
+    await wait(400);
     await settle();
 
-    expect(accept).toHaveBeenCalledTimes(2);
-    expect(keyOf(1)).toBe(keyOf(0));
+    expect(read).toHaveBeenCalledTimes(2);
   });
+});
 
-  it('shows the busy button and disables the other rows while in flight', async () => {
+// @traces 314-FR-010
+describe('declining a quote from the comparison', () => {
+  it('asks to decline the garage’s quote, then reads again', async () => {
     const { element, settle } = await render([comparison()], {
-      accepts: [new Promise(() => undefined)],
+      results: ['declined'],
     });
 
-    acceptOf(rows(element)[0])?.click();
+    declineOf(rows(element)[1])?.click();
     await settle();
 
-    expect(acceptOf(rows(element)[0])?.getAttribute('aria-busy')).toBe('true');
-    expect(acceptOf(rows(element)[1])?.disabled).toBe(true);
-    acceptOf(rows(element)[1])?.click();
-    expect(accept).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows a refusal under its row and changes nothing', async () => {
-    const refusal = new HttpErrorResponse({
-      error: {
-        code: 'quote_not_waiting',
-        detail: 'Oferta nu mai poate fi acceptată.',
-        status: 409,
-        title: 'Conflict',
-      },
-      status: 409,
-    });
-    const { element, settle } = await render([comparison()], {
-      accepts: [refusal],
-    });
-
-    acceptOf(rows(element)[1])?.click();
-    await settle();
-
-    expect(text(rows(element)[1])).toContain(
-      'Oferta nu mai poate fi acceptată.',
+    expect(open).toHaveBeenCalledWith(
+      DeclineQuoteDialog,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          garage: 'Volt Service',
+          quoteId: 'q-cheap',
+        }),
+        title: 'driver.quotes.declineDialog.title',
+        titleParams: { name: 'Volt Service' },
+      }),
     );
-    expect(text(rows(element)[0])).not.toContain(
-      'Oferta nu mai poate fi acceptată.',
-    );
-    expect(text(acceptOf(rows(element)[1]))).toBe('Acceptă');
-    expect(read).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(2);
   });
 });

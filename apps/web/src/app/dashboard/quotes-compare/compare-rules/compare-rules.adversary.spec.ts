@@ -290,7 +290,8 @@ describe('a row’s state, the edges', () => {
     expect(rowState(quote({ status }), awaiting, NOW)).toBe(state);
   });
 
-  it.each(['confirmed', 'cancelled', 'no_show', 'completed'] as const)(
+  // A confirmed booking closes the other quotes instead.
+  it.each(['cancelled', 'no_show', 'completed'] as const)(
     'leaves a waiting quote open when the newest booking is %s',
     (status) => {
       const booking = {

@@ -1055,6 +1055,32 @@ describe('GET /garage/requests?status=quoted', () => {
     }
   });
 
+  // @traces 314-FR-015
+  it('keeps a quote the driver declined until the quote’s own expiry', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const declined = await world.request(andrei, { status: 'quoted' });
+    await world.quote(declined.id, dinamo.garage.id, 'declined_by_driver');
+    const lapsed = await world.request(andrei, { status: 'quoted' });
+    const old = await world.quote(
+      lapsed.id,
+      dinamo.garage.id,
+      'declined_by_driver',
+    );
+    await prisma.quote.update({
+      data: { expiresAt: ago(HOUR) },
+      where: { id: old.id },
+    });
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(ids(res)).toEqual([declined.id]);
+    expect(res.body.items[0].quote.status).toBe('declined_by_driver');
+  });
+
   it('breaks a tie on the quote’s time by id, newest id first', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');

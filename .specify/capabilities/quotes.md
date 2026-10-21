@@ -16,6 +16,7 @@ features:
   - 049-garage-suspension
   - 313-compare-quotes
   - 389-confirm-booking-lift-mechanic
+  - 314-accept-quote
 ---
 
 # Capability: Quotes
@@ -611,6 +612,98 @@ _From 389-confirm-booking-lift-mechanic._
 ### 389-FR-020 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL and Redis: scenario US1-1 in one transaction (booking, job with its stage entry, the other quotes `lost`, the recipients `closed`, the request still `booked`, the audit entries, both events, the timers cleared); US1-6 (receptionist 200, mechanic 403, another garage, the driver and an admin 404, a visitor 401); the switches (US2-1 to US2-4: the 400s, the owner's row created once and reused, no mechanic stored with the team off, the overlap allowed); the overlaps (US3-1 to US3-3: mechanic, lift, touching ranges allowed, the race on one mechanic and on one lift ending with one confirmed, the constraint answered as 409); the hours (US3-4: an interval, a split day, a closed day, a holiday, `{}` passing); the two 409s for the same booking twice, `lapsed`, `cancelled` and a passed `confirm_by`; the plate present only from confirmation and the history never in a garage read; the timers set on `quote.accepted` at the right moments for the Monday–Thursday and Monday–Monday examples, the 12 h one skipped, replaced on a repeated delivery, cleared on confirm, harmless when fired late; the reminders built once per recipient, never for a mechanic, not held by quiet hours; the lapse (US4-3) with a remaining open quote and with none, the recipients untouched, the held quote expiring, the accept of the open quote after the lapse and the 409 for the expired one; the sweep lapsing a missed booking once; the consumers building BOOKING_CONFIRMED and BOOKING_LAPSED once per recipient. In Jest, web: the dialog's fields per switch, the required mechanic, the messages per code, the confirmed and the lapsed rows in both languages, the re-reads. In Playwright, one end-to-end test: a driver accepts a quote; the garage owner, in a second browser, confirms it with a mechanic and a lift; the driver's Cererile mele shows "Programată · <day>, <time>" without a reload. The lapse is proven in Jest with an injected clock, not in Playwright.
 
 _From 389-confirm-booking-lift-mechanic._
+
+### 314-FR-001 — The panel MUST show Acceptă only on a quote that is waiting, not expired, with a slot not yet past, while no booking of the request waits for or holds a confirmation.
+
+_From 314-accept-quote._
+
+### 314-FR-002 — Acceptă MUST open a confirmation dialog naming the garage, the price range and the slot, with one box "Le arăt istoricul mașinii" / "Share this car's history with the garage", unticked each time it opens, and the buttons Confirmă and Renunță.
+
+_From 314-accept-quote._
+
+### 314-FR-003 — Confirming MUST send the accept call with the box's value as the history-sharing consent and an idempotency key that is reused when the previous call got no answer; while it runs, Confirmă shows a spinner and both buttons are disabled.
+
+_From 314-accept-quote._
+
+### 314-FR-004 — On a refused accept, the dialog MUST stay open and show the refusal in the driver's language for each state: expired, withdrawn, already accepted, lost, slot passed, declined, booking pending, garage suspended, and not found; the panel re-reads the quotes.
+
+_From 314-accept-quote._
+
+### 314-FR-005 — The accepted row MUST show Acceptată with a green lamp and, while the booking waits, "Așteaptă confirmarea service-ului · încă N h" (in hours rounded down, then in minutes in the last hour, then "încă câteva secunde" in the last minute and until the lapse arrives, as the request list says it) to the booking's confirm-by moment.
+
+_From 314-accept-quote._
+
+### 314-FR-006 — While a booking waits, the other waiting quotes MUST show "În așteptare" without Acceptă; once it is confirmed they show "Închisă".
+
+_From 314-accept-quote._
+
+### 314-FR-007 — A confirmed booking MUST show on its row as "Programată: <day>, <hour> · <mechanic name>"; the comparison read MUST carry the booking's mechanic name.
+
+_From 314-accept-quote._
+
+### 314-FR-008 — A lapsed booking MUST show "Service-ul nu a confirmat" on its quote's row, with no actions, and the other quotes still waiting and valid show Acceptă again.
+
+_From 314-accept-quote._
+
+### 314-FR-009 — The panel MUST follow `booking.confirmed`, `booking.lapsed`, `quote.accepted` and `quote.declined_by_driver` without a reload.
+
+_From 314-accept-quote._
+
+### 314-FR-010 — The driver MUST be able to decline one waiting quote of his own request: a Refuză text button next to Acceptă opens a dialog "Refuzi oferta <garage>?" with Confirmă and Renunță; no reason is asked.
+
+_From 314-accept-quote._
+
+### 314-FR-011 — The decline call MUST move the quote from waiting to declined by the driver with its decline time, write an audit entry with the old and new status, and emit `quote.declined_by_driver` (quote, request, garage) in the same transaction; the request's own status does not change.
+
+_From 314-accept-quote._
+
+### 314-FR-012 — The decline call MUST refuse a quote that is not waiting with a 409 naming its current state, in the caller's language, and answer 404 for a quote of another driver's request.
+
+_From 314-accept-quote._
+
+### 314-FR-013 — A declined quote's row MUST grey out as "Refuzată de tine" without actions, and it is never offered again, also after a lapse.
+
+_From 314-accept-quote._
+
+### 314-FR-014 — The garage's owner, receptionists and mechanics who can answer quotes MUST be told once with QUOTE_DECLINED_BY_DRIVER: "<driver short name> a refuzat oferta ta.", on their usual channels (never SMS), mutable like the other quote notifications.
+
+_From 314-accept-quote._
+
+### 314-FR-015 — The garage's Oferte trimise MUST show a declined quote as "Refuzată de client", live, until the quote's own expiry moment, like its other closed quotes.
+
+_From 314-accept-quote._
+
+### 314-FR-016 — The accept call's refusals MUST be worded in the caller's language (Romanian and English).
+
+_From 314-accept-quote._
+
+### 314-FR-017 — The QUOTE_ACCEPTED notification parameter naming the driver MUST be `driverShortName`, in the fan-out and its templates.
+
+_From 314-accept-quote._
+
+### 314-FR-018 — Opening a request's comparison MUST warm, in the shared cache, the read the accept call makes before its transaction for each open quote; the accept call takes that entry once, and an entry is not used after the quote changes. The booking judgement stays on PostgreSQL in the transaction.
+
+_From 314-accept-quote._
+
+### 314-FR-019 — The driver's request list and the garage's sent-quote row MUST refresh their clock on `quote.accepted` and on every list re-read before computing the time left, so right after an acceptance both read the hours rounded down ("încă 23 h").
+
+_From 314-accept-quote._
+
+### 314-FR-020 — The decline call MUST accept the assistant actor the accept call accepts and audit it the same way.
+
+_From 314-accept-quote._
+
+### 314-FR-021 — A quote the driver declined MUST NOT count in the panel's header count. (The request list shows no price range today; that range belongs to the story that builds it.)
+
+_From 314-accept-quote._
+
+### 314-FR-022 — Acceptă, Refuză and Confirmă MUST be disabled while the live channel reports offline, and enabled again when it reports online.
+
+_From 314-accept-quote._
+
+### 314-FR-023 — Both dialogs MUST trap focus, close on Escape exactly as Renunță (nothing sent), label the history box for assistive technology, and return focus to the row's button that opened them; states are never conveyed by colour alone (the green lamp always comes with its text line).
+
+_From 314-accept-quote._
 
 ## Retired
 

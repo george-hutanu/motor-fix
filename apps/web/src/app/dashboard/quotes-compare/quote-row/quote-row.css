@@ -35,13 +35,17 @@ p {
 }
 .action {
   grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 .state {
   font-weight: 600;
 }
-.problem {
+.booking {
   grid-column: 1 / -1;
-  color: var(--mf-red-ink);
+  font-weight: 600;
 }
 /* Name over area, the dial, the action; the range and its lines stay under the name. */
 @container quotes (min-width: 400px) {

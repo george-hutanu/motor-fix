@@ -22,6 +22,7 @@ const CHANGES: readonly EventKind[] = [
   'request.cancelled',
   'request.expired',
   'quote.accepted',
+  'quote.declined_by_driver',
   'booking.confirmed',
   'booking.lapsed',
 ];

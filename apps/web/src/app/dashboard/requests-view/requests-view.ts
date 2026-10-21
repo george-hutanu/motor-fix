@@ -7,7 +7,6 @@ import {
   inject,
   linkedSignal,
   PLATFORM_ID,
-  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -82,7 +81,12 @@ export class RequestsView {
       'booking.lapsed',
     ],
   );
-  private readonly now = signal(new Date());
+  // Sampled again on every read of the list, so a line read right after an
+  // acceptance measures from then; the tick moves it between reads.
+  private readonly now = linkedSignal({
+    computation: () => new Date(),
+    source: () => this.list.value(),
+  });
   protected readonly rows = computed(() => {
     const items = this.list.value()?.items;
     if (!items) return undefined;

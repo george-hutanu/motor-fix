@@ -177,6 +177,7 @@ export function moveRecipient(
 
 const QUOTE_STAMPS: Partial<Record<QuoteStatus, string>> = {
   accepted: 'acceptedAt',
+  declined_by_driver: 'declinedAt',
   withdrawn: 'withdrawnAt',
 };
 
@@ -197,7 +198,7 @@ export function moveQuote(
   });
 }
 
-export interface Cancellation {
+interface Cancellation {
   side: CancelledBySide;
   reason: BookingCancelReason;
   note?: string;

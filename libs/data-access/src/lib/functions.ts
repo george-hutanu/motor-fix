@@ -205,6 +205,8 @@ export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from 
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
 export { acceptControllerAccept as acceptControllerAccept } from './fn/quotes/accept-controller-accept';
+export type { DeclineQuoteControllerDecline$Params as DeclineQuoteControllerDecline$Params } from './fn/quotes/decline-quote-controller-decline';
+export { declineQuoteControllerDecline as declineQuoteControllerDecline } from './fn/quotes/decline-quote-controller-decline';
 export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params } from './fn/bookings/confirm-controller-options';
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';

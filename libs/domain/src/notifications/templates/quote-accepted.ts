@@ -6,14 +6,14 @@ import type { Template } from '../templates';
 export const QUOTE_ACCEPTED: Template = {
   audience: 'garage',
   bell: {
-    en: '{driver} accepted your quote · {car} · {slot}',
-    ro: '{driver} a acceptat oferta ta · {car} · {slot}',
+    en: '{driverShortName} accepted your quote · {car} · {slot}',
+    ro: '{driverShortName} a acceptat oferta ta · {car} · {slot}',
   },
   email: {
     en: {
       button: { label: 'Open the quotes sent', link: 'link' },
       lines: [
-        '{driver} accepted your quote for the {car}, on {slot}.',
+        '{driverShortName} accepted your quote for the {car}, on {slot}.',
         'The booking waits for your confirmation.',
       ],
       reason:
@@ -23,7 +23,7 @@ export const QUOTE_ACCEPTED: Template = {
     ro: {
       button: { label: 'Deschide ofertele trimise', link: 'link' },
       lines: [
-        '{driver} a acceptat oferta ta pentru {car}, pe {slot}.',
+        '{driverShortName} a acceptat oferta ta pentru {car}, pe {slot}.',
         'Programarea așteaptă confirmarea ta.',
       ],
       reason:
@@ -33,31 +33,31 @@ export const QUOTE_ACCEPTED: Template = {
   },
   example: {
     car: 'Dacia Logan',
-    driver: 'Andrei M.',
+    driverShortName: 'Andrei M.',
     link: 'https://motorfix.example/app/garage/requests',
     slot: '2026-10-16T06:00:00.000Z',
   },
   push: {
     en: {
-      body: '{driver} · {car} · {slot}',
+      body: '{driverShortName} · {car} · {slot}',
       link: 'link',
       title: 'Quote accepted',
     },
     ro: {
-      body: '{driver} · {car} · {slot}',
+      body: '{driverShortName} · {car} · {slot}',
       link: 'link',
       title: 'Ofertă acceptată',
     },
   },
-  values: { car: 'text', driver: 'text', link: 'link', slot: 'when' },
+  values: { car: 'text', driverShortName: 'text', link: 'link', slot: 'when' },
   whatsapp: {
     en: {
       name: 'motorfix_quote_accepted_en',
-      slots: ['{driver}', '{car}', '{slot}'],
+      slots: ['{driverShortName}', '{car}', '{slot}'],
     },
     ro: {
       name: 'motorfix_quote_accepted_ro',
-      slots: ['{driver}', '{car}', '{slot}'],
+      slots: ['{driverShortName}', '{car}', '{slot}'],
     },
   },
 };
