@@ -66,9 +66,9 @@
         "standard",
         "strict"
       ],
-      "description": "Gate `git commit` on message policy and spec-drift — not traceability (retired) and not the test suite (.husky/pre-commit runs it)",
+      "description": "Gate `git commit` on message policy and spec-drift — not traceability (retired) and not the test suite (lifecycle.mjs check runs it before a push)",
       "fail_closed": true,
-      "fingerprint": "467bd3867be2"
+      "fingerprint": "9a52aeb3883a"
     },
     {
       "id": "pre:bash:merge-gate",
@@ -145,7 +145,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "4286e5c23df2"
+      "fingerprint": "c8cee0ad3c27"
     },
     {
       "id": "stop:test-gate",
@@ -158,7 +158,7 @@
       ],
       "description": "Refuse to end a session whose uncommitted code changes leave npm test + lint red",
       "fail_closed": true,
-      "fingerprint": "dbddc15a3c5c"
+      "fingerprint": "e8aef49220f9"
     },
     {
       "id": "stop:pr-lifecycle",

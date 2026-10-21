@@ -10,6 +10,9 @@ const read = (rel) => readFileSync(fileURLToPath(new URL(`../../../${rel}`, impo
 const agent = read('.claude/agents/pr-tester.md');
 const skill = read('.claude/skills/speckit-pr-test/SKILL.md');
 const agents = read('AGENTS.md');
+// AGENTS.md keeps the rules; the how-to moved to these.
+const lifecycle = read('.claude/skills/speckit-auto/lifecycle.md');
+const cloudDoc = read('.claude/skills/speckit-auto/cloud.md');
 const watchSkill = read('.claude/skills/speckit-watch/SKILL.md');
 
 /** `## ` sections of a Markdown file: [{ heading, body }]. */
@@ -85,13 +88,13 @@ describe('AGENTS.md and the watcher', () => {
   });
 
   it('keeps the four sizes, both schemes and both languages, now swept in CI', () => {
-    const screens = sections(agents).find((s) => s.heading.startsWith('Reviewing a change that has screens'));
+    const screens = sections(skill).find((s) => s.heading.startsWith('Reviewing a change that has screens'));
     assert.ok(screens);
     for (const word of ['320 px', '390 px', 'tablet', 'desktop', 'light', 'dark', 'Romanian', 'English', 'pr-qa.yml']) assert.ok(screens.body.includes(word), word);
   });
 
   it('makes walking the screens in the built-in browser optional: the artifact screenshots are the evidence', () => {
-    const screens = sections(agents).find((s) => s.heading.startsWith('Reviewing a change that has screens'));
+    const screens = sections(skill).find((s) => s.heading.startsWith('Reviewing a change that has screens'));
     assert.match(screens.body, /built-in browser[^.]*optional|optional[^.]*built-in browser/i);
     assert.match(screens.body, /artifact/);
   });
@@ -142,12 +145,12 @@ describe('the tester reads a finished run instead of waiting on one', () => {
   it('the watcher waits on a handed-off PR until CI and its QA run have finished', () => {
     assert.match(watchSkill, /`waiting`/);
     assert.match(agents, /--no-wait/);
-    assert.match(agents, /`waiting`/);
+    assert.match(lifecycle, /`waiting`/);
   });
 });
 
 describe('a cloud session tests and merges with no laptop', () => {
-  const cloud = sections(agents).find((s) => s.heading === 'Cloud sessions')?.body ?? '';
+  const cloud = sections(cloudDoc).find((s) => s.heading === 'Cloud sessions')?.body ?? '';
 
   it('AGENTS.md says QA starts by itself on ready or a push and sets agent-review', () => {
     assert.match(cloud, /QA starts by itself/);

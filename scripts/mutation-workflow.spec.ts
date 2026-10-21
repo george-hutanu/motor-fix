@@ -129,8 +129,8 @@ describe('the docs that describe a mutation run', () => {
   const doc = (path: string) =>
     readFileSync(join(__dirname, '..', path), 'utf8');
 
-  it('says AGENTS.md runs mutation every 3 days, sharded, never on a laptop', () => {
-    const agents = doc('AGENTS.md');
+  it('says the lifecycle doc runs mutation every 3 days, sharded, never on a laptop', () => {
+    const agents = doc('.claude/skills/speckit-auto/lifecycle.md');
 
     expect(agents).toMatch(/mutation\.yml` runs it every 3 days/);
     expect(agents).toMatch(/scripts\/mutation-shards\.json/);
@@ -180,8 +180,11 @@ describe('the docs that describe a mutation run', () => {
   });
 
   // @traces 1344-FR-006
-  it('says in AGENTS.md that mutation is never part of a task and runs only on its schedule and by hand', () => {
-    const agents = doc('AGENTS.md').replace(/\s+/g, ' ');
+  it('says in the lifecycle doc that mutation is never part of a task and runs only on its schedule and by hand', () => {
+    const agents = doc('.claude/skills/speckit-auto/lifecycle.md').replace(
+      /\s+/g,
+      ' ',
+    );
 
     expect(agents).toMatch(/Mutation is never part of a task's lifecycle/);
     expect(agents).toMatch(

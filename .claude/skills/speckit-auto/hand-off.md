@@ -26,8 +26,9 @@ and QA lap is where most of a story's cost went.
    `// not a flow: US<k> scenario <m> — <reason>` line); fix each until it
    exits 0. These were most of the failed first laps measured.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
-   commits and pushes the feature records (phase 17's status line and Spec
-   Delta merge, `tracker-sync.md`), runs
+   runs `lifecycle.mjs check`'s CI-only checks, lint and the affected
+   typecheck and unit tests, commits and pushes the feature records (phase
+   17's status line and Spec Delta merge, `tracker-sync.md`), runs
    `pr-body-check.ts`, publishes the body, marks the PR ready, runs the tracker's
    `qa` (story and PR label → QA), commits and pushes the `qa` line, and
    writes the note below; in a cloud session it also posts it on the PR as

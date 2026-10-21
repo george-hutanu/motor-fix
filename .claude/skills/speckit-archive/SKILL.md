@@ -126,8 +126,9 @@ tail agent), and commit nothing.
 1. Mark the feature's `spec.md` status line `Archived (<date>)`.
 2. Run `/speckit-retro` if it has not run — the acceptance verdict belongs with
    the feature, and archiving without one loses the reason it was accepted.
-3. Commit `.specify/capabilities/` on the branch as
-   `chore: archive <feature> into the <capability> capability` and push; commit
+3. Stage `.specify/capabilities/` with the branch's last slice commit (or the
+   next fix commit when that slice is already pushed), never a commit of its
+   own, and push; commit
    the feature folder (status line, `tracker-sync.md` as it stands) to the specs
    repository: `node .claude/scripts/specs-repo.mjs commit "chore(specs): ST-<n> archive" -- <feature>`.
 4. Invoke `speckit-tracker-sync finish` (from QA, after the PR tester passed and

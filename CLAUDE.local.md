@@ -44,7 +44,7 @@ check; its Enforcement section is the authority. In short:
 | --- | --- | --- |
 | `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the work account; reports git identity drift or a missing gh login |
 | `red-first-gate.mjs`, `main-checkout-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first; refuses an edit to a file git tracks in the main checkout — every change rides a PR from a worktree (`SPECKIT_ALLOW_MAIN_EDIT=1` overrides) |
-| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
+| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest if under 5 s |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
 | `pr-lifecycle-gate.mjs`, `merge-gate.mjs` | before finishing; before `gh pr merge` | Constitution VII: nothing unpushed, no branch without a PR, no story PR unlinked on its tracker issue, no open PR without its stage and type labels, no green ready PR untested (unless handed off to a tail agent) or unmerged; no merge without `agent-review` success and every CI check green |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
@@ -53,7 +53,7 @@ check; its Enforcement section is the authority. In short:
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
 | `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
-| `.husky/pre-commit` | every real commit | identity check, then affected `typecheck` + unit `test` and `lint` in a `scripts/heavy.sh` slot |
+| `.husky/pre-commit` | every real commit | identity, structure, staged Biome; typecheck + tests in `lifecycle.mjs check` |
 
 The edit-time gates watch `apps/*`, `libs/*`, `e2e/` and skip Biome or Jest
 until that tool is installed. The harness's own specs run on vitest, apart.

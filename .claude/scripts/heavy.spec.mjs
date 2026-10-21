@@ -200,70 +200,40 @@ describe('heavy.sh environment', () => {
 });
 
 describe('the pre-commit hook', () => {
-  // The worktree guard refuses a wrapper around the commit command, so the
-  // slot is taken inside the hook, around the checks themselves.
-  it('runs typecheck, lint and test inside one heavy.sh slot', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
-    assert.ok(line, 'pre-commit does not call scripts/heavy.sh');
-    assert.match(line, /nx affected -t typecheck test --base=\$base\b/);
-    assert.match(line, /npm run lint\b/);
+  const hook = () => readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+  const code = () => hook().split('\n').filter((l) => !l.startsWith('#')).join('\n');
+
+  // @traces 1355-FR-002
+  it('keeps the fast checks only: identity, the folder rules and Biome on the staged files', () => {
+    const lines = code().split('\n');
+    assert.ok(lines.includes('sh .husky/identity.sh check'));
+    assert.ok(lines.includes('node scripts/structure-check.ts --base origin/main'));
+    assert.ok(lines.includes('npx biome check --staged --no-errors-on-unmatched'));
   });
 
-  // Same scope as PR CI: the projects the branch affects since its merge base
-  // with origin/main, uncommitted changes included (no --head).
-  it('takes the affected base from the merge base with origin/main', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    assert.match(hook, /^base=\$\(git merge-base origin\/main HEAD/m);
-    assert.doesNotMatch(hook, /--head=/);
+  // @traces 1355-FR-002
+  it('takes no heavy slot and runs no typecheck, test or full lint: lifecycle.mjs check does, per slice and at ready', () => {
+    assert.doesNotMatch(code(), /scripts\/heavy\.sh|nx affected|npm run lint|npm test|jest/);
+    assert.match(hook(), /lifecycle\.mjs\s*(#\s*)?check/);
   });
 
-  // Without origin/main the merge base is unknown, and Nx would fail later
-  // with an opaque git error: the hook stops first and says how to fix it.
-  it('stops with a clear message when origin/main is missing, before taking a slot', () => {
+  // Without origin/main the folder rules cannot compare their baseline: the
+  // hook stops first and says how to fix it.
+  it('stops with a clear message when origin/main is missing, before the folder rules', () => {
     const repo = scratch();
     spawnSync('git', ['init', '-q'], { cwd: repo });
     for (const dir of ['.husky', 'scripts']) mkdirSync(join(repo, dir), { recursive: true });
-    writeFileSync(join(repo, '.husky/pre-commit'), readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8'));
+    writeFileSync(join(repo, '.husky/pre-commit'), hook());
     writeFileSync(join(repo, '.husky/identity.sh'), 'exit 0\n');
-    writeFileSync(join(repo, 'scripts/heavy.sh'), 'touch heavy-ran\n');
+    writeFileSync(join(repo, 'scripts/structure-check.ts'), 'require("node:fs").writeFileSync("structure-ran", "")\n');
     const res = spawnSync('sh', ['.husky/pre-commit'], { cwd: repo, encoding: 'utf8' });
     assert.equal(res.status, 1);
     assert.match(res.stderr, /origin\/main is missing/);
     assert.match(res.stderr, /git fetch origin main/);
-    assert.equal(existsSync(join(repo, 'heavy-ran')), false);
+    assert.equal(existsSync(join(repo, 'structure-ran')), false);
   });
 
-  // The integration suite runs on demand and at release: a commit
-  // runs the unit suite whatever the shell exports, and starts no Docker.
-  it('runs the unit suite only, set by the hook itself', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
-    assert.match(line, /sh -c "JEST_SUITE=unit TZ=UTC npx nx affected -t typecheck test --base=\$base && npm run lint"/);
-  });
-
-  it('starts no test services and no longer refuses JEST_SUITE', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    const code = hook.split('\n').filter((l) => !l.startsWith('#')).join('\n');
-    assert.doesNotMatch(code, /test-services|docker/);
-    assert.doesNotMatch(code, /\$\{?JEST_SUITE/);
-  });
-
-  // The check reads only git's listing, so it needs no slot, and a flat
-  // submodule fails the commit before the slow checks start.
-  it('runs the structure check against origin/main before taking a slot', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    const lines = hook.split('\n');
-    const check = lines.findIndex((l) => /^node scripts\/structure-check\.ts --base origin\/main$/.test(l));
-    assert.ok(check !== -1, 'pre-commit does not run node scripts/structure-check.ts --base origin/main');
-    assert.ok(check < lines.findIndex((l) => l.includes('scripts/heavy.sh')));
-  });
-
-  it('turns the Nx daemon off before anything runs, slot or not', () => {
-    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
-    const lines = hook.split('\n');
-    const off = lines.findIndex((l) => /^export NX_DAEMON=false\b/.test(l));
-    assert.ok(off !== -1, 'pre-commit does not export NX_DAEMON=false');
-    assert.ok(off < lines.findIndex((l) => l.includes('scripts/heavy.sh')));
+  it('starts no test services', () => {
+    assert.doesNotMatch(code(), /test-services|docker/);
   });
 });

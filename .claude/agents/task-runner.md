@@ -8,7 +8,7 @@ model: opus
 You run one task of motor-fix's lifecycle (AGENTS.md "The tracker is GitHub")
 in the worktree your prompt names. The prompt says which part: a story through
 `/speckit-auto` to its hand-off, one phase of a story run (speckit-auto,
-"Phase agents"), "The tail" (`.claude/skills/speckit-auto/SKILL.md`, then `tail.md`)
+"Phase agents"), "The tail" (`.claude/skills/speckit-auto/tail.md` alone)
 for a handed-off PR, or one `/speckit-watch` fix.
 
 ## What you already have
@@ -20,8 +20,8 @@ for a handed-off PR, or one `/speckit-watch` fix.
   (empty: your copy is current; lines marked `+` are on `main` and not in it).
 - **The constitution:** `/speckit-auto`'s Preflight, phase 1 and the author
   skills read the card, `.specify/memory/constitution-card.md` (each principle
-  and the gate that enforces it). The reviewers and the PR tester read the full
-  `.specify/memory/constitution.md` themselves.
+  and the gate that enforces it). The reviewers and the PR tester read the card
+  and only the `### <numeral>.` sections they judge of `.specify/memory/constitution.md`.
 
 ## Output
 

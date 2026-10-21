@@ -11,7 +11,7 @@
 #   - `biome check` on the changed TS files
 # Each half is skipped while its tool is not installed yet (before the Nx
 # scaffold lands).
-# The full typecheck + lint + test triple still runs in .husky/pre-commit, so
+# The full typecheck + lint + test triple runs in lifecycle.mjs check before a push, so
 # nothing lands unverified; this hook exists to catch "done" claims earlier.
 #
 # Loop protection: stop_hook_active means we already blocked once this turn —
