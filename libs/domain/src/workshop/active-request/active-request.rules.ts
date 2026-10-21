@@ -108,7 +108,7 @@ export function stageOf(row: RequestRow): ActiveRequestStage {
     if (job?.status === 'in_work' || job?.status === 'paused') return 'in_work';
     return 'booked';
   }
-  return row.quotes.length > 0 || row.status !== 'sent' ? 'quoted' : 'sent';
+  return row.status === 'sent' ? 'sent' : 'quoted';
 }
 
 // Waiting for quotes, or booked with a live booking whose car is not yet

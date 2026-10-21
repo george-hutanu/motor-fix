@@ -71,6 +71,12 @@ describe('the stage of a request', () => {
     ).toBe('quoted');
   });
 
+  it('stays sent while the request is sent, whatever quotes have ended', () => {
+    expect(
+      stageOf(row({ quotes: [quote(1, 2, 'withdrawn')], status: 'sent' })),
+    ).toBe('sent');
+  });
+
   it.each(['awaiting_confirmation', 'confirmed'] as const)(
     'is booked with a booking %s and no job started',
     (status) => {
