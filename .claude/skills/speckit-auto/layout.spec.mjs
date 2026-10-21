@@ -96,7 +96,7 @@ const RULES = [
   // commit-protocol.md
   ['One Conventional Commit per implementation slice', 'commit-protocol.md'],
   ['Never merge mid-run', 'commit-protocol.md'],
-  ['A red suite cannot be committed.', 'commit-protocol.md'],
+  ['A red suite is not committed.', 'commit-protocol.md'],
   ['Behavior commits must move the spec.', 'commit-protocol.md'],
   ['Traceability is read from `// @traces` lines, never a commit gate.', 'commit-protocol.md'],
   ['are never forced in', 'commit-protocol.md'],

@@ -26,4 +26,9 @@ describe('the skills name one lifecycle.mjs call per step', () => {
     assert.match(auto, /node \.claude\/scripts\/lifecycle\.mjs merge/);
     assert.doesNotMatch(auto, /git checkout -- specs\/<feature>\/tracker-sync\.md/);
   });
+
+  // @traces 1355-FR-001
+  it('the commit protocol and the tail run lifecycle.mjs check before a push', () => {
+    for (const f of ['commit-protocol.md', 'tail.md']) assert.match(read(`.claude/skills/speckit-auto/${f}`), /node \.claude\/scripts\/lifecycle\.mjs check/, f);
+  });
 });

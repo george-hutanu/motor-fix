@@ -185,8 +185,9 @@ describe('main checkout gate — wiring', () => {
   it('is described where the lifecycle and the watch are', () => {
     const agents = readFileSync(join(root, 'AGENTS.md'), 'utf8');
     const seventh = agents.slice(agents.indexOf('  7. Merge on'), agents.indexOf('  Every verified review'));
-    assert.match(seventh, /git -C <main> merge --ff-only origin\/main/);
     assert.match(seventh, /ff-main/);
+    const howTo = readFileSync(join(claude, 'skills', 'speckit-auto', 'lifecycle.md'), 'utf8');
+    assert.match(howTo.slice(howTo.indexOf('  7. Merge on')), /git -C <main> merge --ff-only origin\/main/);
     const watch = readFileSync(join(claude, 'skills', 'speckit-watch', 'SKILL.md'), 'utf8');
     assert.doesNotMatch(watch, /shown, never fixed/);
     assert.match(watch, /`behind` \(fix `ff-main`/);

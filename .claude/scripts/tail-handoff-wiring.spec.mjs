@@ -162,8 +162,8 @@ describe('the hand-off survives a cloud session resumed on a fresh VM', () => {
 });
 
 // @traces 749-FR-005
-describe('AGENTS.md says how to run in a cloud session', () => {
-  const cloudSection = () => section(read('AGENTS.md'), '## Cloud sessions');
+describe('the cloud how-to (moved from AGENTS.md to speckit-auto/cloud.md) says how to run in a cloud session', () => {
+  const cloudSection = () => section(read('.claude/skills/speckit-auto/cloud.md'), '## Cloud sessions');
 
   it('names the setup script, the environment and the network it needs', () => {
     const cloud = cloudSection();

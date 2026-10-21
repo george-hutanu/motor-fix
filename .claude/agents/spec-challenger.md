@@ -17,7 +17,8 @@ The invoking prompt names a feature directory. Read:
 - `specs/<feature>/spec.md` — the whole thing, twice
 - `specs/<feature>/context.md` when present — the documentation's recorded
   decisions and constraints; a spec that contradicts one is your first finding
-- `.specify/memory/constitution.md`, Principle I
+- `.specify/memory/constitution-card.md`, then `### I.` of `.specify/memory/constitution.md`
+  (`grep -n '^###'` for its lines, then Read that range)
 
 Do not read `plan.md` or `tasks.md`. You are judging whether the spec can be
 built from, not whether it was.

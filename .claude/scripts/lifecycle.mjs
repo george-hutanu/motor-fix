@@ -4,6 +4,7 @@
 // stopped it and the fix.
 //
 //   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--story ST-<n>] [--tracker-done]
+//   node .claude/scripts/lifecycle.mjs check                         the CI-only checks and the affected typecheck and unit tests, before a push
 //   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--story ST-<n>] [--tracker-done]
 //   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--story ST-<n>] [--tracker-done]
 //   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment (cloud only)
@@ -43,7 +44,7 @@ import { pointFeature } from "./level.mjs";
 import { featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
-const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --tracker-done; handoff [--restore] [--pr <n>])";
+const USAGE = "usage: lifecycle.mjs open | check | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --tracker-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";
 const SELF = "node .claude/scripts/lifecycle.mjs";
 const LEVEL = ".claude/scripts/level.mjs";
@@ -104,6 +105,7 @@ function realIo() {
 const SWITCHES = new Set(["tracker-done", "restore"]);
 const FLAGS = {
   open: ["title", "body-file", "story", "tracker-done"],
+  check: [],
   ready: ["body-file", "decisions", "story", "tracker-done"],
   merge: ["pr", "story", "tracker-done"],
   handoff: ["pr", "restore", "tracker-done"],
@@ -139,7 +141,7 @@ export function step(argv, io) {
     const { name, flags, help } = parse(argv);
     if (help) return Object.assign(result, { help: true, usage: USAGE });
     const ctx = context(io, flags, did);
-    Object.assign(result, { open, ready, merge, handoff }[name](ctx, flags));
+    Object.assign(result, { open, check, ready, merge, handoff }[name](ctx, flags));
   } catch (err) {
     if (!(err instanceof Stop)) throw err;
     Object.assign(result, { ok: false, stopped: err.stopped, fix: err.fix, ...err.extra });
@@ -316,6 +318,38 @@ function withTemp(name, text, fn) {
   }
 }
 
+/**
+ * What CI would refuse, run here before a push: the PR body (a draft's
+ * headings, a ready PR's every section), then localChecks.
+ */
+function check(ctx) {
+  const view = ctx.ghTry("pr", "view", ctx.branch, "--json", "title,isDraft,body");
+  if (view.code === 0) {
+    const pr = JSON.parse(view.stdout);
+    withTemp("body.md", pr.body ?? "", (file) =>
+      runCheck(ctx, "pr-body-check", "node", ["scripts/pr-body-check.ts", "--body-file", file, "--title", pr.title, ...(pr.isDraft ? ["--draft"] : [])]),
+    );
+  } else ctx.did.push("pr-body-check skipped: the branch has no PR");
+  localChecks(ctx);
+  return {};
+}
+
+/** The CI-only checks and the affected typecheck and unit tests, which the commit hook no longer runs. */
+function localChecks(ctx) {
+  runCheck(ctx, "observability-inventory", "node", ["scripts/observability-inventory.ts"]);
+  runCheck(ctx, "structure-check", "node", ["scripts/structure-check.ts", "--base", "origin/main"]);
+  runCheck(ctx, "lint", "npm", ["run", "lint"]);
+  const base = ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
+  if (!base) throw new Stop("affected typecheck and unit tests", `no merge base with origin/main: git fetch origin, then rerun ${SELF} check`);
+  runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`]);
+}
+
+function runCheck(ctx, name, file, args) {
+  const r = ctx.io.run(file, args, { env: ctx.env });
+  if (r.code !== 0) throw new Stop(name, `${`${r.stdout}${r.stderr}`.trim().slice(-1500)}\nfix it, then rerun ${SELF} check`);
+  ctx.did.push(name);
+}
+
 function ready(ctx, flags) {
   const bodyFile = flags["body-file"];
   if (!bodyFile) throw new Stop("usage", "pass --body-file <the filled PR body>");
@@ -329,6 +363,7 @@ function ready(ctx, flags) {
   const level = ctx.node([LEVEL, "check", "--ready", "--json"], [0, 1, 2]);
   if (level.code === 2) throw new Stop("level check", `${level.stderr}`.trim() || "the level owes phases that have not run");
   const qa = ["qa", "--pr", String(pr.number)];
+  localChecks(ctx);
 
   ctx.commitSpecs([ctx.specsRel], `chore(specs): ${ctx.story} feature records`);
   if (existsSync(join(ctx.repo, ".specify", "capabilities")) && ctx.commitStaged([".specify/capabilities"], `chore(specs): ${ctx.story} capability records`)) ctx.push();

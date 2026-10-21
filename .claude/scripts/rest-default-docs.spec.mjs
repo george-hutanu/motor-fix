@@ -21,7 +21,7 @@ describe('REST is the default for PR and check reads', () => {
   });
 
   it('says so in the cloud section, the laptop included', () => {
-    const cloud = section(read('AGENTS.md'), '- **GitHub.** `GH_TOKEN`', '- **QA and merge.**');
+    const cloud = section(read('.claude/skills/speckit-auto/cloud.md'), '- **GitHub.** `GH_TOKEN`', '- **QA and merge.**');
     assert.match(cloud, /REST is the default for PR and check reads everywhere, the laptop included/);
     assert.doesNotMatch(cloud, /fall back to REST on their own/);
   });

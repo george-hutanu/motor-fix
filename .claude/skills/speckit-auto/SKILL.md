@@ -222,7 +222,8 @@ Stop the run, report what is done and what is not, and hand back. This list is
 exhaustive — nothing else interrupts the pipeline:
 
 1. Empty feature description.
-2. Dirty working tree, or red `typecheck`/`lint`/tests at preflight.
+2. Dirty working tree, or red `typecheck`/`lint`/tests at preflight (a base
+   `preflight-skip.mjs` skips, with CI OK, counts as green).
 3. CRITICAL analyze findings surviving 2 remediation rounds (phase 8).
 4. CRITICAL/HIGH `spec-reviewer` findings surviving the re-review (phase 14).
 5. The same test failing after 3 distinct fix attempts in phase 10.

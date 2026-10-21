@@ -139,7 +139,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(scheduling, /watch\.mjs --dispatch/);
     assert.match(scheduling, /shares the claim/);
     assert.match(skill, /`claim refused: <fix> claimed <m> min ago`[^.]*skip that entry/);
-    const bullet = read('AGENTS.md').match(/ - Parallel work is watched:.*?(?= - A worktree goes once)/)[0];
+    const bullet = read('AGENTS.md').match(/ - Parallel work is watched:.*?(?= - [A-Z])/)[0];
     assert.match(bullet, /scripts\/watch-schedule\.sh install/);
     assert.match(bullet, /share the claim/);
   });

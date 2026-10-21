@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { main } from '../gh.mjs';
-import { ghRun, ghSync, isCloud } from './gh-rest.mjs';
+import { ciOkOn, ghRun, ghSync, isCloud } from './gh-rest.mjs';
 
 const CLOUD = { CLAUDE_CODE_REMOTE: 'true' };
 const BRANCH = '766-cloud-rest-fallback';
@@ -499,5 +499,28 @@ describe('gh.mjs', () => {
     const ok = { ...io, run: fake({ 'GET pulls/160': pull() }).run };
     assert.equal(main(['pr', 'view', '160', '--json', 'number', '-q', '.number'], ok), 0);
     assert.deepEqual(out, ['160\n']);
+  });
+});
+
+// @traces 1355-FR-003
+describe('ciOkOn', () => {
+  const on = (runs) =>
+    fake({
+      'GET commits/sha1/check-runs?per_page=100': { check_runs: runs },
+      'GET actions/runs?head_sha=sha1&per_page=100': { workflow_runs: [] },
+      'GET commits/sha1/status': { statuses: [] },
+    }).run;
+  const check = (name, conclusion, status = 'completed') => ({ name, status, conclusion });
+
+  it('is true for a check named "... CI OK" that succeeded', () => {
+    assert.equal(ciOkOn(on([check('checks / CI OK', 'success'), check('Biome', 'failure')]), 'sha1'), true);
+    assert.equal(ciOkOn(on([check('CI OK', 'success')]), 'sha1'), true);
+  });
+
+  it('is false while it is pending, after a failure, or with no CI OK at all', () => {
+    assert.equal(ciOkOn(on([check('checks / CI OK', null, 'in_progress')]), 'sha1'), false);
+    assert.equal(ciOkOn(on([check('checks / CI OK', 'failure')]), 'sha1'), false);
+    assert.equal(ciOkOn(on([check('Unit tests', 'success')]), 'sha1'), false);
+    assert.equal(ciOkOn(on([check('CI OK later', 'success')]), 'sha1'), false);
   });
 });
