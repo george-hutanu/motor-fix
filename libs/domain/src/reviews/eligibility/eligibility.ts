@@ -15,7 +15,7 @@ import type { Job, PrismaClient } from '../../generated/prisma/client';
 // index lists the same three.
 export const LIVE = ['published', 'reported', 'removed'] as const;
 
-export type EligibilityFacts = {
+type EligibilityFacts = {
   job: { status: string } | null;
   staff: boolean;
   review: { status: string } | null;

@@ -674,3 +674,104 @@ describe('a failure', () => {
     expect(task().querySelector('form')).not.toBeNull();
   });
 });
+
+const closeControl = () =>
+  [...panel().querySelectorAll('button')].find((b) =>
+    /^(Închide|Close)$/.test(
+      (b.getAttribute('aria-label') ?? b.textContent ?? '').trim(),
+    ),
+  );
+
+// @traces 023-FR-014 023-FR-015 023-FR-016
+describe('the drawer for a refused job, from the eligibility field', () => {
+  it.each([
+    ['own_garage', OWN_GARAGE],
+    ['review_removed', REMOVED],
+  ] as const)(
+    'keeps a close control beside the %s message',
+    async (reason, message) => {
+      await open({
+        answer: async () =>
+          context({ eligibility: { jobId: JOB, offer: false, reason } }),
+      });
+
+      expect(text()).toContain(message);
+      expect(task().querySelector('form')).toBeNull();
+      expect(closeControl()).toBeDefined();
+    },
+  );
+
+  it('shows the own garage message, not the review written earlier, when both apply', async () => {
+    await open({
+      answer: async () =>
+        context({
+          eligibility: { jobId: JOB, offer: false, reason: 'own_garage' },
+          existing: review({ text: 'Merge bine.' }),
+        }),
+    });
+
+    expect(text()).toContain(OWN_GARAGE);
+    expect(text()).not.toContain('Merge bine.');
+    expect(task().querySelector('section.existing')).toBeNull();
+  });
+
+  it('still shows the form and the confirmation request for email_not_confirmed', async () => {
+    await open({
+      answer: async () =>
+        context({
+          eligibility: {
+            jobId: JOB,
+            offer: true,
+            reason: 'email_not_confirmed',
+          },
+          emailConfirmed: false,
+        }),
+    });
+
+    expect(task().querySelector('form')).not.toBeNull();
+    expect(button('Publică recenzia')).toBeUndefined();
+    expect(text()).toContain(
+      'Confirmă‑ți adresa de e‑mail ca să publici recenzia.',
+    );
+    expect(text()).not.toContain(OWN_GARAGE);
+    expect(text()).not.toContain(REMOVED);
+  });
+
+  it.each([
+    ['an unknown reason', 'brand_new_reason'],
+    ['an empty reason', ''],
+    ['a prototype key', 'constructor'],
+    ['a prototype key toString', 'toString'],
+  ])('falls back to the form for %s', async (_, reason) => {
+    await open({
+      answer: async () =>
+        context({
+          eligibility: {
+            jobId: JOB,
+            offer: false,
+            reason: reason as never,
+          },
+        }),
+    });
+
+    expect(task().querySelector('form')).not.toBeNull();
+    expect(button('Publică recenzia')).toBeDefined();
+  });
+
+  it('falls back to the review already written for an unknown reason', async () => {
+    await open({
+      answer: async () =>
+        context({
+          eligibility: {
+            jobId: JOB,
+            offer: false,
+            reason: 'brand_new_reason' as never,
+          },
+          existing: review({ text: 'Merge bine.' }),
+        }),
+    });
+
+    expect(text()).toContain('Merge bine.');
+    expect(task().querySelector('form')).toBeNull();
+  });
+});

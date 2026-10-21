@@ -317,6 +317,7 @@ describe('what a review may hold', () => {
 
 // @traces 022-FR-012 022-FR-019
 // @traces 022-FR-020 022-FR-021 022-FR-026
+// @traces 023-FR-004 023-FR-010
 describe('who may review a job, and when', () => {
   it('answers 404 for a job that does not exist', async () => {
     const s = await setting();

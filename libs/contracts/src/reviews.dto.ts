@@ -89,7 +89,7 @@ export class ReviewJobDto {
 }
 
 // Why a driver may not review a job, in the order the publish checks them.
-export const REVIEW_REFUSALS = [
+const REVIEW_REFUSALS = [
   'not_found',
   'job_not_done',
   'own_garage',
@@ -99,7 +99,7 @@ export const REVIEW_REFUSALS = [
 ] as const;
 export type ReviewRefusal = (typeof REVIEW_REFUSALS)[number];
 
-export const REVIEW_ELIGIBILITY_IDS_MAX = 50;
+const REVIEW_ELIGIBILITY_IDS_MAX = 50;
 
 export class ReviewEligibilityQueryDto {
   @ApiProperty({

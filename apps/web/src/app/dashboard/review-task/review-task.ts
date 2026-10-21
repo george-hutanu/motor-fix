@@ -111,7 +111,7 @@ export class ReviewTask {
       this.emailConfirmed.set(context.emailConfirmed);
       const { reason } = context.eligibility;
       this.view.set(
-        reason && reason in SHOWN
+        reason && Object.hasOwn(SHOWN, reason)
           ? SHOWN[reason]
           : context.existing
             ? 'existing'
@@ -181,7 +181,7 @@ export class ReviewTask {
     const problem = toProblem(error);
     const { code, status } = problem;
     if (status === 0 || status >= 500) toast(this.i18n.t(`${KEY}.failed`));
-    else if (code in SHOWN) this.view.set(SHOWN[code]);
+    else if (Object.hasOwn(SHOWN, code)) this.view.set(SHOWN[code]);
     else if (code === 'email_not_confirmed') this.emailConfirmed.set(false);
     else if (code === 'already_reviewed') await this.load();
     else this.atFields(problem);
