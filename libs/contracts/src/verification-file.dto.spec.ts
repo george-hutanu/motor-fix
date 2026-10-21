@@ -2,7 +2,11 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
-import { ReportDecisionDto } from './verification-file.dto';
+import {
+  ReportDecisionDto,
+  VerificationFileGarageDto,
+} from './verification-file.dto';
+import { VerificationQueueRowDto } from './verification-queue';
 
 // @traces 069-FR-001 069-FR-008
 
@@ -83,5 +87,22 @@ describe('ReportDecisionDto', () => {
     ],
   ])('refuses %s', async (_, body, field) => {
     expect(await errorsFor(body)).toContain(field);
+  });
+});
+
+// @traces 116-FR-018
+describe('the stored CUI warning in the contract', () => {
+  const description = (dto: object, name: string) =>
+    (
+      Reflect.getMetadata('swagger/apiModelProperties', dto, name) as {
+        description: string;
+      }
+    ).description;
+
+  it.each([
+    ['the file', VerificationFileGarageDto.prototype],
+    ['the queue row', VerificationQueueRowDto.prototype],
+  ])('names the marker a client replaces on %s', (_, dto) => {
+    expect(description(dto, 'cuiWarning')).toContain('U+FFFC');
   });
 });

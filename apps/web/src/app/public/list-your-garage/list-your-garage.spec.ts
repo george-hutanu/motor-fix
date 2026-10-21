@@ -2131,6 +2131,15 @@ describe('sending for verification', () => {
     expect(sendButton(page).type).toBe('button');
   });
 
+  // The ListGarage board's English label (k118), never "publish" (116-FR-002).
+  it("reads the board's English label on the button", async () => {
+    const { page } = await open('/en/list-your-garage');
+
+    expect(text(sendButton(page).querySelector('.send-label'))).toBe(
+      'Submit for verification',
+    );
+  });
+
   // @traces 115-FR-008
   it('puts the summary right above the buttons, after the preview card that ends the form below 1024 px', async () => {
     const { page } = await open('/ro/list-your-garage');

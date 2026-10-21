@@ -266,7 +266,7 @@
       "required": "Fill this in",
       "seatAddressNeeded": "Choose the registered seat's address",
       "seatPositionNeeded": "Pick the seat on the map",
-      "send": "Send for review",
+      "send": "Submit for verification",
       "tellUs": "TELL US HOW YOU WORK"
     },
     "cui": "Company tax ID",

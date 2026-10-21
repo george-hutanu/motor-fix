@@ -79,7 +79,7 @@ test.describe('list your garage, what is missing before sending', () => {
   }) => {
     await ready(page, '/en/list-your-garage');
     await page
-      .getByRole('button', { exact: true, name: 'Send for review' })
+      .getByRole('button', { exact: true, name: 'Submit for verification' })
       .click();
 
     await expect(title(page)).toHaveText(/^Still missing: \d+ things$/);

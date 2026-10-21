@@ -26,7 +26,7 @@ export interface VerificationFileGarageDto {
   cuiAlsoUsedBy: Array<string>;
 
   /**
-   * The names of the other listings that held the same CUI when the file was sent, joined by ", "; null when none
+   * The names of the other listings that held the same CUI when the file was sent, joined by ", "; a draft with no name yet is U+FFFC, which a client replaces with its own label; null when none
    */
   cuiWarning: string | null;
   id: string;

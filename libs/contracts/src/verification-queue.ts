@@ -98,7 +98,7 @@ export class VerificationQueueRowDto {
 
   @ApiPropertyOptional({
     description:
-      'The other listings that held the same CUI when it was sent; absent when none',
+      'The names of the other listings that held the same CUI when it was sent, joined by ", "; a draft with no name yet is U+FFFC, which a client replaces with its own label; absent when none',
   })
   cuiWarning?: string;
 
