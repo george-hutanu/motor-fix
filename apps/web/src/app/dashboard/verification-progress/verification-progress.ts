@@ -71,9 +71,8 @@ export class VerificationProgress {
 
   constructor() {
     void this.i18n.enter('public');
-    // Each read: a new stage is announced, and an approval reaches the
-    // session only when it is read again; the dashboard opens once it says
-    // approved.
+    // Each read announces a new stage; the frame reads the session again on
+    // the same decision and on every resync, which opens the dashboard.
     let shown: string | undefined;
     effect(() => {
       this.view.reads();
@@ -82,8 +81,6 @@ export class VerificationProgress {
         if (shown !== undefined && status !== shown)
           this.moved.set(status ?? null);
         shown = status;
-        if (status === 'approved' && this.garage()?.status === 'draft')
-          void this.session.reload();
       });
     });
   }

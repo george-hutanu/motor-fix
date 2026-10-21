@@ -71,7 +71,7 @@ const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
 
 describe('the dashboard view lists', () => {
-  // @traces 030-FR-009, 030-FR-011
+  // @traces 030-FR-009 030-FR-011
   it('gives the driver reviews and saved garages their own empty state', () => {
     const byPath = (path: string) =>
       DASHBOARDS.driver.views.find((view) => view.path === path);

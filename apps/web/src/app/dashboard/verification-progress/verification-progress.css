@@ -3,7 +3,6 @@
   gap: var(--mf-space-3);
   min-width: 0;
 }
-h1,
 p {
   margin: 0;
   overflow-wrap: anywhere;

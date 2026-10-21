@@ -417,33 +417,11 @@ describe('the verification page, following the file', () => {
 
     expect(button(host, TEXT.en.contact)).toBeNull();
   });
-
   // @traces 101-FR-006
-  it('reads the session again once for each approved answer while the session still says draft', async () => {
+  it('leaves the session re-read on an approval to the frame', async () => {
     const { fixture } = await render();
-    expect(reload).not.toHaveBeenCalled();
     api.verificationStatusControllerRead.mockResolvedValue(answer('approved'));
 
-    await emit(fixture, 'verification.decided');
-    expect(reload).toHaveBeenCalledTimes(1);
-
-    resyncs.next();
-    await settle(fixture);
-    expect(reload).toHaveBeenCalledTimes(2);
-
-    await settle(fixture);
-    expect(reload).toHaveBeenCalledTimes(2);
-  });
-
-  // @traces 101-FR-006
-  it('leaves the session alone for an answer that is not approved, or once the session says approved', async () => {
-    const { fixture } = await render();
-    api.verificationStatusControllerRead.mockResolvedValue(answer('rejected'));
-    await emit(fixture, 'verification.decided');
-    expect(reload).not.toHaveBeenCalled();
-
-    me.set(account('owner', 'approved'));
-    api.verificationStatusControllerRead.mockResolvedValue(answer('approved'));
     await emit(fixture, 'verification.decided');
 
     expect(reload).not.toHaveBeenCalled();

@@ -304,55 +304,6 @@ describe('the announcement of a stage', () => {
   });
 });
 
-describe('the session re-read on an approval', () => {
-  // @traces 101-FR-006
-  it('reads the session once when the very first read is already approved', async () => {
-    api.verificationStatusControllerRead.mockResolvedValue(answer('approved'));
-
-    await render();
-
-    expect(reload).toHaveBeenCalledTimes(1);
-  });
-
-  // @traces 101-FR-006
-  it('reads the session once for a burst of events that ends in one approved answer', async () => {
-    const { fixture } = await render();
-    api.verificationStatusControllerRead.mockResolvedValue(answer('approved'));
-
-    await emit(fixture, ...Array(10).fill('verification.decided'));
-
-    expect(reload).toHaveBeenCalledTimes(1);
-  });
-
-  // @traces 101-FR-006
-  it('does not read the session when a failed refresh follows an approved answer', async () => {
-    const { fixture } = await render();
-    api.verificationStatusControllerRead.mockResolvedValueOnce(
-      answer('approved'),
-    );
-    await emit(fixture, 'verification.decided');
-    expect(reload).toHaveBeenCalledTimes(1);
-
-    api.verificationStatusControllerRead.mockRejectedValueOnce(failure());
-    resyncs.next();
-    await settle(fixture);
-
-    expect(reload).toHaveBeenCalledTimes(1);
-  });
-
-  // @traces 101-FR-006
-  it.each(['receptionist', 'mechanic'] as const)(
-    'never reads the session for a %s of a draft garage',
-    async (role) => {
-      const { fixture } = await render({ role });
-
-      await emit(fixture, 'verification.decided');
-
-      expect(reload).not.toHaveBeenCalled();
-    },
-  );
-});
-
 describe('what the page never shows', () => {
   // @traces 101-FR-004
   it.each(['approved', 'in_review', 'rejected', 'more_requested'] as const)(
