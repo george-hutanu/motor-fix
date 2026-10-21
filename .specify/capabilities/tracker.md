@@ -1,6 +1,6 @@
 ---
 capability: tracker
-updated: 2026-10-16
+updated: 2026-10-21
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
@@ -9,6 +9,7 @@ features:
   - 1132-hold-reason-commas
   - 1323-rest-not-graphql
   - 1324-retire-debt-and-ready
+  - 1360-tracker-unblock-dependent
 ---
 
 # Capability: Tracker
@@ -29,9 +30,9 @@ _From 1036-github-tracker-lifecycle._
 
 _From 1036-github-tracker-lifecycle._
 
-### 1036-FR-004 — `blocked <reason>` MUST post the reason on the issue and the PR once per reason; `unblock` returns to the recorded prior status.
+### 1360-FR-003 — `blocked <reason>` MUST post the reason on the issue and the PR once per reason, the issue comment carrying `<!-- tracker-sync prior: <status> -->` with the status it left, so a later `unblock` from any worktree can read it; `unblock` returns to the recorded prior status (1360-FR-001 for another story, 1360-FR-005 for the own one).
 
-_From 1036-github-tracker-lifecycle._
+_From 1360-tracker-unblock-dependent._
 
 ### 1036-FR-005 — `pr <n>` MUST write the PR's URL to the item's PR field (a different existing one is kept and a "Follow-up PR" comment posted), add the `Closes george-hutanu/motor-fix-specs#<issue>` line to the PR body once, and add the epic's label to the PR.
 
@@ -109,6 +110,22 @@ _From 1324-retire-debt-and-ready._
 
 _From 1324-retire-debt-and-ready._
 
+### 1360-FR-001 — `unblock --story ST-<n>` for another story MUST return it to the status it held before it was blocked (its Blocked comment's marker, then the tracker logs), or To do when that is unknown, and remove its `blocked` state.
+
+_From 1360-tracker-unblock-dependent._
+
+### 1360-FR-002 — An event for another story MUST NOT read or write the current worktree's `prior_status`, and MUST NOT edit the labels of, or comment on, the current branch's PR unless `--pr` names one.
+
+_From 1360-tracker-unblock-dependent._
+
+### 1360-FR-004 — Every `gh` call tracker-sync makes MUST carry a george-hutanu token: the session's `GH_TOKEN`, else `gh auth token -u george-hutanu`; when neither exists, the call is refused (a write is logged PENDING) and never runs as gh's active account. A cloud session keeps its proxy's `GH_TOKEN`.
+
+_From 1360-tracker-unblock-dependent._
+
+### 1360-FR-005 — The feature's own story behaves as before: `unblock` returns to its run-state prior.
+
+_From 1360-tracker-unblock-dependent._
+
 ## Retired
 
 - `1036-FR-013` — superseded by `1037-FR-003` (2026-10-10)
@@ -121,3 +138,5 @@ _From 1324-retire-debt-and-ready._
 - `1132-FR-002` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1132-FR-005` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1037-FR-002` — superseded by `1324-FR-013` (2026-10-16)
+
+- `1036-FR-004` — superseded by `1360-FR-003` (2026-10-21)
