@@ -1,4 +1,7 @@
-import { ListingSubmittedDto } from '@motor-fix/contracts';
+import {
+  LISTING_SUBMIT_CONFLICTS,
+  ListingSubmittedDto,
+} from '@motor-fix/contracts';
 import {
   Controller,
   Headers,
@@ -50,7 +53,7 @@ export class ListingSubmitController {
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'draft_not_found' })
   @ApiConflictResponse({
-    description: 'draft_already_submitted; garage_already_exists',
+    description: LISTING_SUBMIT_CONFLICTS.join('; '),
   })
   @ApiUnprocessableEntityResponse({
     description: 'validation_failed, with errors and warnings',

@@ -94,7 +94,7 @@ interface NextJob {
   delay: number;
 }
 
-export type DraftJob = NextJob & { data: { id: string } };
+type DraftJob = NextJob & { data: { id: string } };
 
 // A param that opens something by itself (an account e-mail's link carries
 // its token): only the message in flight holds it, never the bell, and not

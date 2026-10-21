@@ -8,7 +8,7 @@ export const LISTING_SUBMIT_CONFLICTS = [
   'garage_already_exists',
 ] as const;
 
-export const LISTING_SUBMITTED_STATUSES = ['submitted', 'approved'] as const;
+const LISTING_SUBMITTED_STATUSES = ['submitted', 'approved'] as const;
 
 export class ListingSubmittedDto {
   @ApiProperty({ format: 'uuid' })

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export const VERIFICATION_STAGE_STATUSES = [
+const VERIFICATION_STAGE_STATUSES = [
   'draft',
   'submitted',
   'in_review',
