@@ -1,21 +1,20 @@
 // `node scripts/telemetry.mjs` — what this harness actually gets used for.
 //
-// Reads the per-session ledgers the Stop hook writes under .specify/telemetry/
-// and answers the two questions that decide whether a skill, agent or gate
+// Reads the per-session ledgers the Stop hook writes under the main checkout's
+// .specify/telemetry/ (from any worktree) and answers the two questions that decide whether a skill, agent or gate
 // earns its place: how often did it fire, and what did the sessions cost.
 //
 //   node scripts/telemetry.mjs           ranked report
 //   node scripts/telemetry.mjs --unused  skills and agents never invoked
 //   node scripts/telemetry.mjs --json    machine form, for /speckit-config-gc
 //   node scripts/telemetry.mjs --by-level  tokens per level, per phase and per feature
+//   node scripts/telemetry.mjs --phases <feature> [--json]  its phases' times and its subagents' skills
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { ranked, summarize, tokenTotal } from "./lib/telemetry.mjs";
-
-export const telemetryDir = (repo) => join(repo, ".specify", "telemetry");
+import { ledgerDir, ranked, summarize, tokenTotal } from "./lib/telemetry.mjs";
 
 export function loadRecords(repo) {
-  const dir = telemetryDir(repo);
+  const dir = ledgerDir(repo);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
@@ -65,6 +64,33 @@ export function byLevel(records) {
   return { levels, features, too_heavy };
 }
 
+/**
+ * A feature's phases across its sessions and levels, in the order they began:
+ * first and last write, the minutes between them, the hook milliseconds; and
+ * the skills each subagent type ran. A bucket from before bucket times has none.
+ */
+export function phases(records, feature) {
+  const rows = {};
+  const subagent_skills = {};
+  for (const r of records.filter((x) => x.feature === feature)) {
+    for (const [key, b] of Object.entries(r.buckets ?? {})) {
+      const phase = key.split("/").slice(1).join("/") || "none";
+      const row = (rows[phase] ??= { phase, first: null, last: null, hook_ms: 0 });
+      if (b?.first && (!row.first || b.first < row.first)) row.first = b.first;
+      if (b?.last && (!row.last || b.last > row.last)) row.last = b.last;
+      row.hook_ms += b?.hook_ms ?? 0;
+    }
+    for (const [agent, skills] of Object.entries(r.subagent_skills ?? {})) {
+      const into = (subagent_skills[agent] ??= {});
+      for (const [skill, n] of Object.entries(skills ?? {})) into[skill] = (into[skill] ?? 0) + n;
+    }
+  }
+  const list = Object.values(rows)
+    .map(({ phase, first, last, hook_ms }) => ({ phase, first, last, minutes: first && last ? Math.round((Date.parse(last) - Date.parse(first)) / 60000) : null, hook_ms }))
+    .sort((a, b) => (a.first ?? "~").localeCompare(b.first ?? "~"));
+  return { phases: list, subagent_skills };
+}
+
 const declared = (repo, kind) => {
   const dir = join(repo, ".claude", kind);
   if (!existsSync(dir)) return [];
@@ -89,6 +115,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const records = loadRecords(repo);
   const total = summarize(records);
+
+  const feature = process.argv.includes("--phases") ? process.argv[process.argv.indexOf("--phases") + 1] : null;
+  if (feature) {
+    const report = phases(records, feature);
+    if (process.argv.includes("--json")) {
+      console.log(JSON.stringify(report));
+      process.exit(0);
+    }
+    if (!report.phases.length) console.log(`No ledger records a phase of ${feature}.`);
+    const at = (iso) => (iso ? iso.slice(0, 16).replace("T", " ") : "–");
+    for (const p of report.phases)
+      console.log(`${p.phase.padEnd(14)} ${at(p.first)}  ${at(p.last)}  ${String(p.minutes ?? "–").padStart(5)} min  hooks ${(p.hook_ms / 60000).toFixed(1)} min`);
+    for (const [agent, skills] of Object.entries(report.subagent_skills))
+      console.log(`${agent}: ${ranked(skills).map(([name, n]) => `${name}${n > 1 ? ` ×${n}` : ""}`).join(", ") || "no skills"}`);
+    process.exit(0);
+  }
 
   if (process.argv.includes("--by-level")) {
     const report = byLevel(records);

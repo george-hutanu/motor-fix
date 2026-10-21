@@ -1,8 +1,9 @@
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   gcScan,
   hookCandidates,
@@ -13,6 +14,7 @@ import {
   trashCandidates,
 } from './gc-scan.mjs';
 import { saveInstinct } from './instincts.mjs';
+import { emptyRecord, mergeTranscript } from './lib/telemetry.mjs';
 
 // GC proposes; it never deletes. The property worth pinning hardest is the
 // silence rule: with no telemetry recorded, "never invoked" is not a claim this
@@ -180,5 +182,46 @@ describe('rankCandidates', () => {
     const result = await rankCandidates([], { repo: '/nonexistent', fetchImpl: async () => { called = true; } });
     assert.equal(called, false);
     assert.deepEqual(result.candidates, []);
+  });
+});
+
+// @traces 1361-watch-schedule-qa-telemetry-FR-010
+describe('gc-scan — run from a worktree', () => {
+  let scratch;
+  let main;
+  let linked;
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
+  const git = (cwd, ...args) =>
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, stdio: 'pipe', encoding: 'utf8', env });
+  beforeEach(() => {
+    scratch = realpathSync(mkdtempSync(join(tmpdir(), 'gc-wt-')));
+    main = join(scratch, 'main');
+    linked = join(scratch, 'wt');
+    mkdirSync(main);
+    git(main, 'init', '-q', '-b', 'main');
+    git(main, 'commit', '-q', '--allow-empty', '-m', 'init');
+    git(main, 'worktree', 'add', '-q', '-b', 'feature', linked);
+  });
+  afterEach(() => rmSync(scratch, { recursive: true, force: true }));
+
+  it('proposes the main checkout\'s stale ledgers', () => {
+    mkdirSync(join(main, '.specify/telemetry'), { recursive: true });
+    const old = join(main, '.specify/telemetry/old.json');
+    writeFileSync(old, JSON.stringify({ session_id: 'old' }));
+    const when = new Date(Date.now() - 200 * 86400000);
+    utimesSync(old, when, when);
+    assert.deepEqual(telemetryCandidates(linked).map((c) => resolve(linked, c.path)), [old]);
+  });
+
+  it('does not propose a skill or agent that only a subagent invoked', () => {
+    for (const name of ['speckit-plan', 'never-run']) mkdirSync(join(linked, '.claude/skills', name), { recursive: true });
+    mkdirSync(join(linked, '.claude/agents'), { recursive: true });
+    writeFileSync(join(linked, '.claude/agents/code-reviewer.md'), '---\nname: code-reviewer\n---\n');
+    const record = emptyRecord('s1');
+    const line = `${JSON.stringify({ type: 'assistant', message: { id: 'a1', usage: {}, content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'speckit-plan' } }, { type: 'tool_use', name: 'Agent', input: { subagent_type: 'code-reviewer' } }] } })}\n`;
+    mergeTranscript(record, line, { bucket: '2/plan', agentType: 'task-runner', cursor: { last_message_id: null, last_usage: null } });
+    mkdirSync(join(main, '.specify/telemetry'), { recursive: true });
+    writeFileSync(join(main, '.specify/telemetry/s1.json'), JSON.stringify(record));
+    assert.deepEqual(paths(skillAndAgentCandidates(linked)), ['.claude/skills/never-run']);
   });
 });

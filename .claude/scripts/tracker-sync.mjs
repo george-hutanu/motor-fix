@@ -52,14 +52,15 @@ const USAGE =
 
 export const LOG_FILE = "tracker-sync.md";
 const logLine = ({ date, event, item, text }) => `- ${date} · ${event} · ${item} · ${text}`;
-const pendingLine = (desc, argv) => `- [TRACKER-SYNC PENDING: ${desc}]${argv ? ` retry: ${JSON.stringify(argv)}` : ""}`;
-const PENDING = /^- \[TRACKER-SYNC PENDING: (.+)\] retry: (\[.*\])$/;
+const pendingLine = (stamp, desc, argv) => `- ${stamp} [TRACKER-SYNC PENDING: ${desc}]${argv ? ` retry: ${JSON.stringify(argv)}` : ""}`;
+const PENDING = /^- (?:\d{4}-\d{2}-\d{2} \d{2}:\d{2} )?\[TRACKER-SYNC PENDING: (.+)\] retry: (\[.*\])$/;
 /** The marker a Blocked comment carries, so `unblock` run from any worktree can read the status it left. */
 const priorMarker = (status) => `<!-- tracker-sync prior: ${status} -->`;
 const PRIOR_MARKER = /<!-- tracker-sync prior: ([^<>]+?) -->/;
 /** A status `unblock` may return to: on the ladder (or a legacy name for a rung), never Done. Anything else read back is ignored. */
 const returnable = (status) => status !== "Done" && (LADDER.includes(status) || status === "In progress" || status === "In review");
-const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** `YYYY-MM-DD HH:MM` in UTC: a log line's stamp. Its first ten characters are the Project's date fields' value. */
+const minuteStamp = (d) => d.toISOString().slice(0, 16).replace("T", " ");
 
 function parseArgs(argv) {
   const positional = [];
@@ -147,7 +148,8 @@ export async function main(argv, io = {}) {
     return 64;
   }
   const [event, ...rest] = parsed.positional;
-  const date = isoDate(now());
+  const stamp = minuteStamp(now());
+  const date = stamp.slice(0, 10);
   const feature = activeFeature(repo);
   if (event !== "check" && event !== "file" && event !== "next" && !feature) {
     stderr("tracker-sync: no active feature (.specify/feature.json, or specs/<branch>/spec.md)");
@@ -167,7 +169,7 @@ export async function main(argv, io = {}) {
     appendFileSync(logFile, `${scrub(line)}\n`);
     lines.push(line);
   };
-  const log = (ev, item, text) => append(logLine({ date, event: ev, item, text }));
+  const log = (ev, item, text) => append(logLine({ date: stamp, event: ev, item, text }));
   const done = (result, code = 0) => {
     stdout(scrub(JSON.stringify(result)));
     return code;
@@ -180,13 +182,13 @@ export async function main(argv, io = {}) {
   const step = { name: event, item: st };
   const pending = (why) => {
     const desc = `${step.name} ${step.item} — ${why}`;
-    if (io.replay !== false && logFile && !queued(logFile, argv)) append(pendingLine(desc, argv));
+    if (io.replay !== false && logFile && !queued(logFile, argv)) append(pendingLine(stamp, desc, argv));
     return done({ event, story: st, pending: desc }, event === "check" ? 1 : 0);
   };
 
   if (event === "log") {
     const [ev, item, ...text] = rest;
-    if (parsed.flags.pending) append(pendingLine(`${ev} ${item} — ${text.join(" ")}`));
+    if (parsed.flags.pending) append(pendingLine(stamp, `${ev} ${item} — ${text.join(" ")}`));
     else log(ev, item, text.join(" "));
     return done({ event, line: lines[0] });
   }
@@ -210,7 +212,7 @@ export async function main(argv, io = {}) {
     } catch (error) {
       const why = scrub(String(error?.message ?? error).split("\n")[0]);
       ctx.pending ??= `${what} — ${why}`;
-      if (io.replay !== false && logFile && !queued(logFile, argv)) append(pendingLine(ctx.pending, argv));
+      if (io.replay !== false && logFile && !queued(logFile, argv)) append(pendingLine(stamp, ctx.pending, argv));
       return false;
     }
   };
@@ -282,7 +284,7 @@ async function replayPending(logFile, date, io, stderr) {
       if (code === 64) {
         const why = String(err[0] ?? "usage error").replace(/^tracker-sync: /, "").split("\n")[0];
         stderr(`tracker-sync: replay can never succeed, ended: ${why}`);
-        rewrite(argv, (desc) => `- [TRACKER-SYNC FAILED ${date}: ${desc} — ${why}]`);
+        rewrite(argv, (desc, line) => line.replace(/\[TRACKER-SYNC PENDING: .*$/, `[TRACKER-SYNC FAILED ${date}: ${desc} — ${why}]`));
         continue;
       }
       const last = out.at(-1) ?? "";
@@ -379,12 +381,13 @@ async function dependentPrior(ctx) {
     if (m && returnable(m[1])) return m[1];
   }
   const specs = dirname(ctx.feature.dir);
-  const line = new RegExp(`^- (\\d{4}-\\d{2}-\\d{2}) · blocked · ${ctx.st} · (.+?) → Blocked(?: — |$)`);
+  // A line carries a date (older logs) or a date and UTC minute; the later one wins as a string.
+  const line = new RegExp(`^- (\\d{4}-\\d{2}-\\d{2}(?: \\d{2}:\\d{2})?) · blocked · ${ctx.st} · (.+?) → Blocked(?: — |$)`);
   let best = null;
   for (const name of existsSync(specs) ? readdirSync(specs) : []) {
     const file = join(specs, name, LOG_FILE);
     if (!existsSync(file)) continue;
-    // Log lines carry a date only: on the same day the log written last wins, and within one log the later line.
+    // Two lines with the same stamp: the log written last wins, and within one log the later line.
     const mtime = statSync(file).mtimeMs;
     for (const text of readFileSync(file, "utf8").split("\n")) {
       const m = text.match(line);

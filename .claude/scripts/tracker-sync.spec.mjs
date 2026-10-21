@@ -14,6 +14,8 @@ const FEATURE = "specs/1036-github-tracker-lifecycle";
 const PR_URL = "https://github.com/george-hutanu/motor-fix/pull/335";
 const ISSUES = "https://github.com/george-hutanu/motor-fix-specs/issues/";
 const TODAY = "2026-10-10";
+/** The minute the default clock below stands at, in UTC as the log writes it. */
+const NOW_STAMP = new Date(2026, 9, 10, 12).toISOString().slice(0, 16).replace("T", " ");
 const STATUS = ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"];
 const TEMPLATE_BODY = [
   "## Why",
@@ -88,7 +90,7 @@ function repoWith({ deferred, comment } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, realGh = false } = {}) {
+async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, realGh = false, now = () => new Date(2026, 9, 10, 12) } = {}) {
   const out = [];
   const err = [];
   const ghCalls = [];
@@ -108,7 +110,7 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
       if (args[0] === "pr" && args[1] === "view") return args.includes(".url") ? `${PR_URL}\n` : "335\n";
       return "";
     },
-    now: () => new Date(2026, 9, 10, 12),
+    now,
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
   });
@@ -141,7 +143,7 @@ describe("status events move the story's issue in Project #11", () => {
     assert.equal(gh.itemValues(60).Status, "Planning");
     assert.equal(gh.itemValues(60).Started, TODAY);
     assert.ok(prEdits(r).some((a) => a.includes("335") && a.join(" ").includes("--add-label planning")));
-    assert.ok(r.lines.includes(`- ${TODAY} · start · ST-1036 · To do → Planning`), r.log);
+    assert.ok(r.lines.includes(`- ${NOW_STAMP} · start · ST-1036 · To do → Planning`), r.log);
     assert.equal(r.json.status, "Planning");
     assert.equal(r.json.issue, 60);
   });
@@ -668,5 +670,91 @@ describe("every gh call carries george-hutanu's token", () => {
     assert.deepEqual(s.gh(), [], "gh never ran without the token");
     assert.ok(r.log.includes("[TRACKER-SYNC PENDING: labels PR #335"), r.log);
     assert.match(r.log, /george-hutanu/);
+  });
+});
+
+// @traces 1361-watch-schedule-qa-telemetry-FR-011
+describe("the log's time stamp", () => {
+  const late = () => new Date(Date.UTC(2026, 9, 10, 21, 7, 42));
+
+  it("starts every new line with the UTC minute, while the Project's date fields stay a UTC date", async () => {
+    const gh = world();
+    const r = await run(["start", "--pr", "335"], { gh, now: late });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.ok(r.lines.length > 0, r.log);
+    for (const line of r.lines) assert.match(line, /^- \d{4}-\d{2}-\d{2} \d{2}:\d{2} · /, line);
+    assert.ok(r.lines.includes("- 2026-10-10 21:07 · start · ST-1036 · To do → Planning"), r.log);
+    assert.equal(gh.itemValues(60).Started, "2026-10-10");
+  });
+
+  it("an appended log line leaves the older date-only lines as they were", async () => {
+    const repo = repoWith();
+    const old = "- 2026-10-01 · start · ST-1036 · To do → Planning";
+    writeFileSync(join(repo, FEATURE, "tracker-sync.md"), `# Tracker sync — 1036-github-tracker-lifecycle\n\n${old}\n`);
+    const r = await run(["log", "note", "ST-1036", "hello"], { repo, now: late });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(r.lines[0], old);
+    assert.equal(r.lines.at(-1), "- 2026-10-10 21:07 · note · ST-1036 · hello");
+  });
+
+  it("a PENDING entry carries the stamp too, is queued once and still replays", async () => {
+    const gh = world();
+    const repo = repoWith();
+    const offline = async () => { throw new TypeError("fetch failed"); };
+    await run(["start", "--pr", "335"], { gh, repo, now: late, fetchImpl: offline });
+    const down = await run(["start", "--pr", "335"], { gh, repo, now: late, fetchImpl: offline });
+    const queued = down.lines.filter((l) => l.includes("[TRACKER-SYNC PENDING: start ST-1036"));
+    assert.equal(queued.length, 1, down.log);
+    assert.match(queued[0], /^- 2026-10-10 21:07 \[TRACKER-SYNC PENDING: /);
+    const next = await run(["implement", "--pr", "335"], { gh, repo });
+    assert.ok(next.log.includes("- 2026-10-10 21:07 [TRACKER-SYNC RETRIED "), next.log);
+    assert.equal(gh.itemValues(60).Status, "Implementing");
+  });
+
+  it("a PENDING line written before the stamp still replays", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, FEATURE, "tracker-sync.md"), '# x\n\n- [TRACKER-SYNC PENDING: start ST-1036 — network error] retry: ["start","--pr","335"]\n');
+    const next = await run(["implement", "--pr", "335"], { gh, repo });
+    assert.ok(next.log.includes("- [TRACKER-SYNC RETRIED "), next.log);
+    assert.equal(gh.itemValues(60).Status, "Implementing");
+  });
+
+  const blockedIn = (repo, folder, line, when) => {
+    mkdirSync(join(repo, "specs", folder), { recursive: true });
+    const file = join(repo, "specs", folder, "tracker-sync.md");
+    writeFileSync(file, `# x\n\n${line}\n`);
+    utimesSync(file, when, when);
+  };
+  const dependent = () => {
+    const repo = repoWith();
+    writeFileSync(join(repo, ".specify", "run-state.json"), JSON.stringify({ status: "in-progress", prior_status: "Planning" }));
+    return repo;
+  };
+
+  it("unblock reads a stamped Blocked line", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = dependent();
+    blockedIn(repo, "1290-garage-hours", "- 2026-10-05 14:30 · blocked · ST-290 · QA → Blocked — waits on ST-1036", new Date(2026, 9, 5, 15));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "QA");
+  });
+
+  it("two stamped Blocked lines on one day: the later minute wins, whichever log was written last", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = dependent();
+    blockedIn(repo, "1100-a", "- 2026-10-05 16:45 · blocked · ST-290 · QA → Blocked — y", new Date(2026, 9, 5, 9));
+    blockedIn(repo, "1200-b", "- 2026-10-05 08:10 · blocked · ST-290 · Planning → Blocked — y", new Date(2026, 9, 5, 18));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "QA", r.err.join("\n"));
+  });
+
+  it("a date-only Blocked line from an older log is still read", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = dependent();
+    blockedIn(repo, "1100-a", "- 2026-10-04 · blocked · ST-290 · Implementing → Blocked — y", new Date(2026, 9, 4, 9));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "Implementing", r.err.join("\n"));
   });
 });

@@ -9,6 +9,18 @@
 // user typed. Counts and token totals only — the file is a usage ledger, not a
 // transcript copy. Token counts come from the model's own usage blocks; no
 // pricing table lives here, because a stale price is worse than no price.
+//
+// The ledgers live in the main checkout (the parent of the git common dir), so
+// a session that worked in a worktree lands where every reader looks.
+import { basename, dirname, join } from "node:path";
+import { commonDir } from "./watch-wait.mjs";
+
+/** `<main checkout>/.specify/telemetry` for any checkout of the repository; `cwd`'s own outside git. */
+export function ledgerDir(cwd) {
+  const common = commonDir(cwd);
+  return join(common && basename(common) === ".git" ? dirname(common) : cwd, ".specify", "telemetry");
+}
+
 const zero = () => ({ input: 0, output: 0, cache_read: 0, cache_creation: 0 });
 const TOKEN_FIELDS = [
   ["input", "input_tokens"],
@@ -22,6 +34,7 @@ const add = (into, delta) => {
 
 export const emptyRecord = (sessionId) => ({
   session_id: sessionId,
+  worktree: null,
   started: null,
   updated: null,
   branch: null,
@@ -30,11 +43,16 @@ export const emptyRecord = (sessionId) => ({
   tools: {},
   skills: {},
   agents: {},
+  // Skills each subagent type invoked; they are in `skills` too.
+  subagent_skills: {},
   tokens: zero(),
+  // Hook milliseconds the transcripts recorded.
+  hook_ms: 0,
   bytes_read: 0,
   // The level and phase of the last write; `buckets` holds the tokens folded
   // in while each "<level>/<phase>" pair was current, so a promotion splits a
-  // run's cost instead of rewriting it.
+  // run's cost instead of rewriting it. Each bucket also keeps its first and
+  // last write time and the hook milliseconds spent while it was current.
   level: null,
   phase: null,
   buckets: {},
@@ -61,8 +79,9 @@ const bump = (map, key) => {
  * last usage: a repeat adds only the difference. `cursor` holds the id last
  * counted (the record itself for the session transcript, the subagent's entry
  * for a subagent transcript). `bucket` names the "<level>/<phase>" pair the
- * new tokens belong to; `agentType` marks a subagent transcript, whose tokens
- * are counted but whose tool calls are not the session's.
+ * new tokens and hook time belong to; `agentType` marks a subagent transcript,
+ * whose tokens, skills and subagents are counted but whose other tool calls
+ * are not the session's.
  *
  * Returns { record, consumed } — consumed is the byte length actually folded in.
  */
@@ -71,6 +90,7 @@ export function mergeTranscript(record, text, { bucket, agentType, cursor = reco
   const usable = lastNewline === -1 ? "" : text.slice(0, lastNewline + 1);
   record.buckets ??= {};
   record.subagent_tokens ??= {};
+  record.subagent_skills ??= {};
 
   for (const line of usable.split("\n")) {
     if (!line.trim()) continue;
@@ -86,7 +106,19 @@ export function mergeTranscript(record, text, { bucket, agentType, cursor = reco
       record.started ??= stamp;
       record.updated = stamp;
     }
-    if (entry.type !== "assistant") continue;
+    const hookMs = hookDuration(entry);
+    if (!hookMs && entry.type !== "assistant") continue;
+    // The bucket is made by the first line that brings it tokens or hook time.
+    const into = bucket ? (record.buckets[bucket] ??= { tokens: zero(), subagent_tokens: zero() }) : null;
+    if (into && stamp) {
+      if (!into.first || stamp < into.first) into.first = stamp;
+      if (!into.last || stamp > into.last) into.last = stamp;
+    }
+    if (hookMs) {
+      record.hook_ms = (record.hook_ms ?? 0) + hookMs;
+      if (into) into.hook_ms = (into.hook_ms ?? 0) + hookMs;
+      continue;
+    }
 
     const usage = entry.message?.usage ?? {};
     const now = Object.fromEntries(TOKEN_FIELDS.map(([k, field]) => [k, usage[field] ?? 0]));
@@ -98,27 +130,36 @@ export function mergeTranscript(record, text, { bucket, agentType, cursor = reco
     cursor.last_usage = Object.fromEntries(TOKEN_FIELDS.map(([k]) => [k, Math.max(now[k], before[k])]));
 
     add(record.tokens, delta);
-    if (bucket) {
-      record.buckets[bucket] ??= { tokens: zero(), subagent_tokens: zero() };
-      add(record.buckets[bucket].tokens, delta);
-      if (agentType) add(record.buckets[bucket].subagent_tokens, delta);
+    if (into) {
+      add(into.tokens, delta);
+      if (agentType) add(into.subagent_tokens, delta);
     }
     if (agentType) {
       record.subagent_tokens[agentType] ??= zero();
       add(record.subagent_tokens[agentType], delta);
-      continue;
-    }
+    } else if (!repeat) record.turns += 1;
 
-    if (!repeat) record.turns += 1;
+    // A subagent's skills and subagents count as used; its other tool calls are not the session's.
     for (const block of entry.message?.content ?? []) {
       if (block?.type !== "tool_use") continue;
-      bump(record.tools, block.name);
-      if (block.name === "Skill") bump(record.skills, block.input?.skill);
+      if (!agentType) bump(record.tools, block.name);
+      if (block.name === "Skill") {
+        bump(record.skills, block.input?.skill);
+        if (agentType && block.input?.skill) bump((record.subagent_skills[agentType] ??= {}), block.input.skill);
+      }
       if (block.name === "Agent" || block.name === "Task") bump(record.agents, block.input?.subagent_type);
     }
   }
 
   return { record, consumed: Buffer.byteLength(usable, "utf8") };
+}
+
+/** The milliseconds a transcript line says hooks ran: a hook_success attachment, or a Stop's hook summary. */
+function hookDuration(entry) {
+  if (entry.attachment?.type === "hook_success") return Number(entry.attachment.durationMs) || 0;
+  if (entry.type === "system" && entry.subtype === "stop_hook_summary")
+    return (entry.hookInfos ?? []).reduce((sum, h) => sum + (Number(h?.durationMs) || 0), 0);
+  return 0;
 }
 
 /** Roll a set of session records into one report. */
