@@ -14,7 +14,7 @@
 p {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--mf-space-1);
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -59,7 +59,7 @@ p {
 .booking {
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 2px var(--mf-space-2);
+  gap: var(--mf-space-1) var(--mf-space-2);
 }
 .mechanic {
   font-weight: 600;

@@ -65,7 +65,11 @@ export async function confirmBooking(
 ) {
   const result = await overlays.open<ConfirmBookingResult, ConfirmBookingData>(
     ConfirmBookingDialog,
-    { data: { row }, shape: 'drawer', title: 'garage.quotes.confirm.title' },
+    {
+      data: { reread: () => lists?.reload(), row },
+      shape: 'drawer',
+      title: 'garage.quotes.confirm.title',
+    },
   );
   if (result === 'confirmed') lists?.reload();
   return result;

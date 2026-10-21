@@ -61,6 +61,7 @@ export class BookingLapsedFanOut {
         garage: { select: { name: true } },
         garageId: true,
         request: { select: { carBrand: true, carModel: true } },
+        requestId: true,
         status: true,
       },
       where: { id: payload.bookingId },
@@ -76,7 +77,7 @@ export class BookingLapsedFanOut {
       kind: 'BOOKING_LAPSED',
       params: {
         garage: booking.garage.name,
-        link: `${this.config.webUrl}/app/requests`,
+        link: `${this.config.webUrl}/app/driver/requests/${booking.requestId}`,
         side: 'driver',
       },
       recipients: [booking.driverId],

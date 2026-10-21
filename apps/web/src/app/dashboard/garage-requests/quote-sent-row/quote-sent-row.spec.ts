@@ -365,7 +365,7 @@ describe('the confirm button on an accepted row', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(open).toHaveBeenCalledWith(ConfirmBookingDialog, {
-      data: { row: data },
+      data: { reread: expect.any(Function), row: data },
       shape: 'drawer',
       title: 'garage.quotes.confirm.title',
     });

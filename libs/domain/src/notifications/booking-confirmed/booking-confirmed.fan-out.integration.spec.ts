@@ -56,7 +56,11 @@ async function start() {
   }).compile();
   await app.init();
   app.get(NotificationsService).now = () => NOON;
-  return { fanOut: app.get(BookingConfirmedFanOut) };
+  const notifications = app.get(NotificationsService);
+  return {
+    fanOut: app.get(BookingConfirmedFanOut),
+    notify: jest.spyOn(notifications, 'notify'),
+  };
 }
 
 // Andrei's booking at Atelier Dinamo, confirmed, and the event the confirm
@@ -100,7 +104,7 @@ async function confirmed() {
       subjectId: booking.id,
     },
   };
-  return { booking, driverId, job, owner };
+  return { booking, driverId, job, owner, request };
 }
 
 const built = () =>
@@ -116,8 +120,8 @@ describe('telling the driver the garage confirmed the booking', () => {
   });
 
   it('builds BOOKING_CONFIRMED for the driver only, naming the garage and the slot', async () => {
-    const { booking, driverId, job } = await confirmed();
-    const { fanOut } = await start();
+    const { booking, driverId, job, request } = await confirmed();
+    const { fanOut, notify } = await start();
 
     await fanOut.handle(job);
 
@@ -131,6 +135,10 @@ describe('telling the driver the garage confirmed the booking', () => {
     expect(bell?.params).toMatchObject({
       garage: 'Atelier Dinamo',
       slot: '2026-10-16T06:00:00.000Z',
+    });
+    // The bell keeps no link; the message in flight opens the driver's request.
+    expect(notify.mock.calls[0][0].params).toMatchObject({
+      link: `https://motorfix.test/app/driver/requests/${request.id}`,
     });
   });
 

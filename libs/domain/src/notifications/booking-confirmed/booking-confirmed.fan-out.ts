@@ -53,6 +53,7 @@ export class BookingConfirmedFanOut {
       select: {
         driverId: true,
         garage: { select: { name: true } },
+        requestId: true,
         startsAt: true,
         status: true,
       },
@@ -70,7 +71,7 @@ export class BookingConfirmedFanOut {
       kind: 'BOOKING_CONFIRMED',
       params: {
         garage: booking.garage.name,
-        link: `${this.config.webUrl}/app/requests`,
+        link: `${this.config.webUrl}/app/driver/requests/${booking.requestId}`,
         slot: booking.startsAt.toISOString(),
       },
       recipients: [booking.driverId],

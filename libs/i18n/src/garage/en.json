@@ -215,7 +215,7 @@
         "invalid_transition": {
           "cancelled": "The booking was cancelled",
           "confirmed": "The booking is already confirmed",
-          "lapsed": "The booking has lapsed"
+          "lapsed": "The booking has expired"
         },
         "lift_busy": "Lift {lift} is busy at this time",
         "mechanic_busy": "{name} is busy at this time",

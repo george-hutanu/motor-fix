@@ -32,7 +32,7 @@ export const BOOKING_LAPSED_DRIVER: Template = {
   },
   example: {
     garage: 'Atelier Dinamo',
-    link: 'https://motorfix.example/app/requests',
+    link: 'https://motorfix.example/app/driver/requests',
   },
   push: {
     en: {

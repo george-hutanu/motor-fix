@@ -31,7 +31,7 @@ export const BOOKING_CONFIRMED: Template = {
   },
   example: {
     garage: 'Atelier Dinamo',
-    link: 'https://motorfix.example/app/requests',
+    link: 'https://motorfix.example/app/driver/requests',
     slot: '2026-10-16T06:00:00.000Z',
   },
   push: {

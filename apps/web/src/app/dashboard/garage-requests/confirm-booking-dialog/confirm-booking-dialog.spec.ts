@@ -72,6 +72,7 @@ const TEAM: ConfirmOptionsDto = {
 
 let confirm: jest.Mock;
 let options: jest.Mock;
+let reread: jest.Mock;
 let result: Promise<ConfirmBookingResult | 'cancelled'>;
 
 async function settle() {
@@ -92,6 +93,7 @@ async function open({
 } = {}) {
   confirm = jest.fn(async () => ({ id: 'booking-1', status: 'confirmed' }));
   options = jest.fn(async () => offered);
+  reread = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ children: [], path: '**' }]),
@@ -116,7 +118,7 @@ async function open({
     ConfirmBookingResult,
     ConfirmBookingData
   >(ConfirmBookingDialog, {
-    data: { row: row() },
+    data: { reread, row: row() },
     shape: 'drawer',
     title: 'garage.quotes.confirm.title',
   });
@@ -407,6 +409,7 @@ describe('the confirm panel: confirming', () => {
 
       await press();
 
+      expect(reread).not.toHaveBeenCalled();
       const said = messageOf(select(label));
       expect(said?.textContent?.trim()).toBe(message);
       expect(
@@ -465,6 +468,9 @@ describe('the confirm panel: confirming', () => {
       'Ion Popescu',
     );
     expect(button('Confirmă')).toBeDefined();
+    expect(reread).toHaveBeenCalledTimes(
+      body.code === 'invalid_transition' ? 1 : 0,
+    );
   });
 
   it('says outside opening hours in English', async () => {

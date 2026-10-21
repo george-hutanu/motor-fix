@@ -24,6 +24,8 @@ import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 import { Session } from '../../session';
 
 export interface ConfirmBookingData {
+  // Re-reads the lists once the booking turns out to have moved on.
+  reread?: () => void;
   row: GarageRequestSummaryDto;
 }
 
@@ -169,6 +171,8 @@ export class ConfirmBookingDialog {
       return;
     }
     this.problem.set(this.topText(failure));
+    // Confirmed, lapsed or cancelled meanwhile: the row behind is stale.
+    if (code === 'invalid_transition') this.task.data.reread?.();
   }
 
   private fieldText(code: string) {

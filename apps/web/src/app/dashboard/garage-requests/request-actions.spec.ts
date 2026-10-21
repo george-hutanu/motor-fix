@@ -100,7 +100,7 @@ describe('confirmBooking', () => {
     await confirmBooking(overlays(), feed, row);
 
     expect(open).toHaveBeenCalledWith(ConfirmBookingDialog, {
-      data: { row },
+      data: { reread: expect.any(Function), row },
       shape: 'drawer',
       title: 'garage.quotes.confirm.title',
     });
@@ -111,6 +111,17 @@ describe('confirmBooking', () => {
     open.mockResolvedValueOnce('confirmed');
 
     expect(await confirmBooking(overlays(), feed, row)).toBe('confirmed');
+    expect(feed.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-reads the lists when the panel finds the booking moved on', async () => {
+    open.mockImplementationOnce(async (_dialog, config) => {
+      config.data.reread();
+      return 'cancelled';
+    });
+
+    await confirmBooking(overlays(), feed, row);
+
     expect(feed.reload).toHaveBeenCalledTimes(1);
   });
 });

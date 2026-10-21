@@ -3,7 +3,7 @@ import { checkTemplates } from '../template-check';
 import { render } from '../templates';
 
 const KIND = 'BOOKING_CONFIRMED';
-const link = 'https://motorfix.test/app/requests';
+const link = 'https://motorfix.test/app/driver/requests/r-1';
 // 09:00 in Bucharest.
 const params = {
   app: 'https://motorfix.test',

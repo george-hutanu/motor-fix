@@ -35,7 +35,7 @@ describe('the lapsed booking messages', () => {
     const params = {
       app,
       garage: 'Atelier Dinamo',
-      link: `${app}/app/requests`,
+      link: `${app}/app/driver/requests/r-1`,
     };
 
     expect(render('BOOKING_LAPSED.driver', 'bell', 'ro', params)).toBe(
@@ -51,7 +51,7 @@ describe('the lapsed booking messages', () => {
       'The booking was not confirmed',
     );
     expect(render('BOOKING_LAPSED.driver', 'push', 'en', params).link).toBe(
-      `${app}/app/requests`,
+      `${app}/app/driver/requests/r-1`,
     );
   });
 

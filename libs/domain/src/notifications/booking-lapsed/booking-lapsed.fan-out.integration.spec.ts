@@ -55,7 +55,11 @@ async function start() {
   }).compile();
   await app.init();
   app.get(NotificationsService).now = () => NOON;
-  return { fanOut: app.get(BookingLapsedFanOut) };
+  const notifications = app.get(NotificationsService);
+  return {
+    fanOut: app.get(BookingLapsedFanOut),
+    notify: jest.spyOn(notifications, 'notify'),
+  };
 }
 
 // Andrei's booking at Atelier Dinamo, lapsed unconfirmed, and its event. The
@@ -106,7 +110,7 @@ async function lapsed() {
       subjectId: booking.id,
     },
   };
-  return { booking, desk, driverId, fixer, job, owner };
+  return { booking, desk, driverId, fixer, job, owner, request };
 }
 
 const bells = async (accountId: string) =>
@@ -127,8 +131,8 @@ describe('telling both sides a booking lapsed unconfirmed', () => {
   });
 
   it('tells the driver to choose again and each owner and receptionist whose booking it was', async () => {
-    const { desk, driverId, job, owner } = await lapsed();
-    const { fanOut } = await start();
+    const { desk, driverId, job, owner, request } = await lapsed();
+    const { fanOut, notify } = await start();
 
     await fanOut.handle(job);
 
@@ -136,6 +140,17 @@ describe('telling both sides a booking lapsed unconfirmed', () => {
     expect(driver.params).toMatchObject({
       garage: 'Atelier Dinamo',
       side: 'driver',
+    });
+    // The bell keeps no link; the message in flight opens each side's list.
+    const links = Object.fromEntries(
+      notify.mock.calls.map(([input]) => [
+        input.params?.['side'],
+        input.params?.['link'],
+      ]),
+    );
+    expect(links).toEqual({
+      driver: `https://motorfix.test/app/driver/requests/${request.id}`,
+      garage: 'https://motorfix.test/app/garage/requests',
     });
     for (const person of [owner, desk]) {
       const [bell] = await bells(person);
