@@ -365,7 +365,7 @@ describe('the confirm button on an accepted row', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(open).toHaveBeenCalledWith(ConfirmBookingDialog, {
-      data: { reread: expect.any(Function), row: data },
+      data: { row: data },
       shape: 'drawer',
       title: 'garage.quotes.confirm.title',
     });
@@ -416,6 +416,21 @@ describe('a confirmed row', () => {
     expect(text(row.querySelector('.plate'))).toBe('B123ABC');
     expect(row.querySelector('button')).toBeNull();
     expect(text(row)).not.toContain('așteaptă confirmarea');
+  });
+
+  it('stacks the status, the booking and the phone in one column, on the 8 px step', async () => {
+    const row = await render(booked());
+    const css = readFileSync(join(__dirname, 'quote-sent-row.css'), 'utf8');
+
+    const state = row.querySelector('.state');
+    expect(
+      [...(state?.children ?? [])].map((child) => child.classList[0]),
+    ).toEqual(['status', 'booking', 'phone']);
+    expect(css).toMatch(
+      /\.state \{[^}]*flex-direction: column;[^}]*gap: var\(--mf-space-2\)/,
+    );
+    // The 44 px target reaches below the number, never above it.
+    expect(css).toMatch(/\.phone \{[^}]*align-items: flex-start/);
   });
 
   it('leaves out the mechanic and the lift when none was set', async () => {

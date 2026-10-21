@@ -24,12 +24,11 @@ import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 import { Session } from '../../session';
 
 export interface ConfirmBookingData {
-  // Re-reads the lists once the booking turns out to have moved on.
-  reread?: () => void;
   row: GarageRequestSummaryDto;
 }
 
-export type ConfirmBookingResult = 'confirmed';
+// Refused: the booking was confirmed, lapsed or cancelled meanwhile.
+export type ConfirmBookingResult = 'confirmed' | 'refused';
 
 type Field = 'mechanic' | 'lift';
 
@@ -170,9 +169,15 @@ export class ConfirmBookingDialog {
       document.getElementById(`mf-confirm-${field}`)?.focus();
       return;
     }
+    // Confirmed, lapsed or cancelled meanwhile: the message is the toast and
+    // the panel closes for the lists to re-read.
+    if (code === 'invalid_transition') {
+      this.task.markUnchanged();
+      toast(this.topText(failure));
+      this.task.close('refused');
+      return;
+    }
     this.problem.set(this.topText(failure));
-    // Confirmed, lapsed or cancelled meanwhile: the row behind is stale.
-    if (code === 'invalid_transition') this.task.data.reread?.();
   }
 
   private fieldText(code: string) {

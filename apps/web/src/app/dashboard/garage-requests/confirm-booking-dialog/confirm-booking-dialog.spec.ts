@@ -72,7 +72,6 @@ const TEAM: ConfirmOptionsDto = {
 
 let confirm: jest.Mock;
 let options: jest.Mock;
-let reread: jest.Mock;
 let result: Promise<ConfirmBookingResult | 'cancelled'>;
 
 async function settle() {
@@ -93,7 +92,6 @@ async function open({
 } = {}) {
   confirm = jest.fn(async () => ({ id: 'booking-1', status: 'confirmed' }));
   options = jest.fn(async () => offered);
-  reread = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ children: [], path: '**' }]),
@@ -118,7 +116,7 @@ async function open({
     ConfirmBookingResult,
     ConfirmBookingData
   >(ConfirmBookingDialog, {
-    data: { reread, row: row() },
+    data: { row: row() },
     shape: 'drawer',
     title: 'garage.quotes.confirm.title',
   });
@@ -409,7 +407,6 @@ describe('the confirm panel: confirming', () => {
 
       await press();
 
-      expect(reread).not.toHaveBeenCalled();
       const said = messageOf(select(label));
       expect(said?.textContent?.trim()).toBe(message);
       expect(
@@ -440,37 +437,64 @@ describe('the confirm panel: confirming', () => {
     );
   });
 
-  it.each([
-    [{ code: 'outside_hours' }, 'În afara programului'],
-    [
-      { code: 'invalid_transition', currentStatus: 'confirmed' },
-      'Programarea e deja confirmată',
-    ],
-    [
-      { code: 'invalid_transition', currentStatus: 'lapsed' },
-      'Programarea a expirat',
-    ],
-    [
-      { code: 'invalid_transition', currentStatus: 'cancelled' },
-      'Programarea a fost anulată',
-    ],
-  ])('shows a 409 %o at the top, the panel open', async (body, message) => {
+  it('shows a 409 outside_hours at the top, the panel open', async () => {
     await open();
     await choose('Mecanic', 'Ion Popescu');
-    confirm.mockRejectedValueOnce(refusal(409, { ...body, status: 409 }));
+    confirm.mockRejectedValueOnce(
+      refusal(409, { code: 'outside_hours', status: 409 }),
+    );
 
     await press();
 
     const alert = panel().querySelector('[role="alert"]');
-    expect(alert?.textContent?.trim()).toBe(message);
-    expect(text().indexOf(message)).toBeLessThan(text().indexOf('Irina S.'));
+    expect(alert?.textContent?.trim()).toBe('În afara programului');
+    expect(text().indexOf('În afara programului')).toBeLessThan(
+      text().indexOf('Irina S.'),
+    );
     expect(select('Mecanic')?.selectedOptions[0]?.textContent?.trim()).toBe(
       'Ion Popescu',
     );
     expect(button('Confirmă')).toBeDefined();
-    expect(reread).toHaveBeenCalledTimes(
-      body.code === 'invalid_transition' ? 1 : 0,
+  });
+
+  it.each([
+    ['confirmed', 'Programarea e deja confirmată'],
+    ['lapsed', 'Programarea a expirat'],
+    ['cancelled', 'Programarea a fost anulată'],
+  ])(
+    'says a booking already %s and closes for the lists to re-read',
+    async (currentStatus, message) => {
+      await open();
+      await choose('Mecanic', 'Ion Popescu');
+      confirm.mockRejectedValueOnce(
+        refusal(409, {
+          code: 'invalid_transition',
+          currentStatus,
+          status: 409,
+        }),
+      );
+
+      await press();
+
+      expect(toast).toHaveBeenCalledWith(message);
+      await expect(result).resolves.toBe('refused');
+    },
+  );
+
+  it('says the booking expired in English', async () => {
+    await open({ language: 'en' });
+    await choose('Mechanic', 'Ion Popescu');
+    confirm.mockRejectedValueOnce(
+      refusal(409, {
+        code: 'invalid_transition',
+        currentStatus: 'lapsed',
+        status: 409,
+      }),
     );
+
+    await press('Confirm');
+
+    expect(toast).toHaveBeenCalledWith('The booking has expired');
   });
 
   it('says outside opening hours in English', async () => {
