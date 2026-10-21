@@ -2,13 +2,14 @@
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFile, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CHECK_DEFAULTS, checkFlows, precheck, scenarios } from './precheck.mjs';
+import { CHECK_DEFAULTS, PROOF_DIR, checkFlows, flowsHash, precheck, proofPath, scenarios } from './precheck.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./precheck.mjs', import.meta.url));
 
@@ -201,5 +202,69 @@ describe('precheck --check: the flows against the app and API already serving', 
 
   it('defaults to the dev server and the local API', () => {
     assert.deepEqual(CHECK_DEFAULTS, { baseURL: 'http://localhost:4200', apiURL: 'http://localhost:3000' });
+  });
+});
+
+// @traces 1361-watch-schedule-qa-telemetry-FR-007
+describe('precheck --check: a clean check leaves a proof that dispatch.mjs reads', () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'precheck-proof-')));
+  const repo = join(dir, 'repo');
+  const git = (...args) => spawnSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@example.test', '-c', 'core.hooksPath=/dev/null', ...args], { encoding: 'utf8' });
+  spawnSync('git', ['init', '-q', repo]);
+  writeFileSync(join(repo, 'a.txt'), 'a\n');
+  git('add', '.');
+  git('commit', '-qm', 'a');
+  const head = git('rev-parse', 'HEAD').stdout.trim();
+  const server = createServer((req, res) => res.writeHead(req.url === '/' || req.url === '/health/live' ? 200 : 404).end('ok'));
+  const listening = new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)));
+  afterAll(() => {
+    server.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const flows = (name, body) => {
+    const file = join(dir, `${name}.mjs`);
+    writeFileSync(file, body);
+    return file;
+  };
+  const proofs = () => (existsSync(join(repo, PROOF_DIR)) ? readdirSync(join(repo, PROOF_DIR)) : []);
+  // Async, so this process's server can answer the child; run from the checkout whose head is proven.
+  const check = (file, ...args) =>
+    new Promise((resolve) => {
+      execFile(process.execPath, [SCRIPT, '--flows', file, ...args], { cwd: repo, encoding: 'utf8', timeout: 20_000 }, (error, stdout, stderr) =>
+        resolve({ code: error ? error.code : 0, stdout, stderr }),
+      );
+    });
+
+  it('hashes the flows file by its bytes, the first 16 hex of their sha256', () => {
+    const file = flows('hashed', 'export default async () => [];\n');
+    assert.equal(flowsHash(file), createHash('sha256').update('export default async () => [];\n').digest('hex').slice(0, 16));
+    assert.notEqual(flowsHash(flows('other', 'export default async () => [1];\n')), flowsHash(file));
+  });
+
+  it('names the proof by head sha and flows hash, under the checkout\'s .specify/.cache', () => {
+    assert.equal(PROOF_DIR, join('.specify', '.cache', 'flows-proven'));
+    assert.equal(proofPath('/r', 'b'.repeat(40), '0123456789abcdef'), join('/r', '.specify', '.cache', 'flows-proven', `${'b'.repeat(40)}-0123456789abcdef`));
+  });
+
+  it('writes the proof for the checkout\'s head after a clean --check, prints its path and keeps stdout to problems', async () => {
+    const url = await listening;
+    const file = flows('clean', 'export default async () => [];\n');
+    const r = await check(file, '--check', '--base-url', url, '--api-url', url);
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.equal(r.stdout, '');
+    const proof = proofPath(repo, head, flowsHash(file));
+    assert.equal(existsSync(proof), true, proofs().join(','));
+    assert.ok(r.stderr.includes(`proof: ${proof}`), r.stderr);
+  });
+
+  it('writes no proof when --check finds a problem, and none for the static check alone', async () => {
+    const url = await listening;
+    const before = proofs();
+    const found = await check(flows('found', "export default async () => [{ severity: 'high', title: 'broken' }];\n"), '--check', '--base-url', url, '--api-url', url);
+    assert.equal(found.code, 1);
+    const statik = await check(flows('static', 'export default async () => [];\n// static only\n'));
+    assert.equal(statik.code, 0, statik.stdout + statik.stderr);
+    assert.deepEqual(proofs(), before);
+    assert.doesNotMatch(found.stderr + statik.stderr, /proof: /);
   });
 });

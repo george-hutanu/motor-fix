@@ -337,6 +337,12 @@ function ready(ctx, flags) {
   if (check.code !== 0) throw new Stop("pr-body-check", `${check.stderr}${check.stdout}`.trim().slice(-600));
   ctx.gh("pr", "edit", String(pr.number), "--body-file", bodyFile);
   ctx.did.push("body published");
+  // A cloud session cannot dispatch the QA run: the label lets the pull_request run that ready and each push start be the head's one run (pr-qa.yml).
+  if (ctx.env.CLAUDE_CODE_REMOTE === "true") {
+    ctx.gh("label", "create", "qa: on-push", "--force", "--description", "PR QA runs on push: a cloud session's PR, which cannot dispatch");
+    ctx.gh("pr", "edit", String(pr.number), "--add-label", "qa: on-push");
+    ctx.did.push("labelled qa: on-push");
+  }
   if (pr.isDraft) {
     ctx.gh("pr", "ready", String(pr.number));
     ctx.did.push("ready");

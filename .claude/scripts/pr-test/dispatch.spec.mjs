@@ -2,9 +2,9 @@ import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import {
@@ -22,8 +22,12 @@ import {
   parseArgs,
   placeDownload,
   pollTries,
+  proofFor,
   stagingDir,
 } from './dispatch.mjs';
+import { decideMerge } from '../../hooks/merge-gate.mjs';
+import { waitForCi } from './ci-wait.mjs';
+import { flowsHash, proofPath } from './precheck.mjs';
 
 const SHA = 'a'.repeat(40);
 
@@ -182,7 +186,10 @@ const args = process.argv.slice(2);
 appendFileSync(join(dir, 'calls.log'), args.join(' ') + '\\n');
 const say = (v) => process.stdout.write(typeof v === 'string' ? v : JSON.stringify(v));
 const [a, b] = args;
-if (a === 'pr' && b === 'view') say({ state: 'OPEN', headRefOid: process.env.FAKE_HEAD });
+if (a === 'api' && b === '-X' && args[2] === 'DELETE') {
+  if (process.env.FAKE_LABEL_FAIL) { process.stderr.write('HTTP 404: Label does not exist'); process.exit(1); }
+}
+else if (a === 'pr' && b === 'view') say({ state: 'OPEN', headRefOid: process.env.FAKE_HEAD });
 else if (a === 'api' && b === 'repos/{owner}/{repo}/pulls/62') say({ state: 'open', head: { sha: process.env.FAKE_HEAD } });
 else if (a === 'api' && b.startsWith('repos/{owner}/{repo}/actions/workflows/pr-qa.yml/runs?')) {
   const q = new URLSearchParams(b.split('?')[1]);
@@ -213,7 +220,7 @@ afterAll(() => {
   for (const dir of fakeDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-function fakeGh(env = {}) {
+function fakeGh(env = {}, { cwd } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'dispatch-gh-'));
   fakeDirs.push(dir);
   const bin = join(dir, 'bin');
@@ -225,6 +232,7 @@ function fakeGh(env = {}) {
     const r = spawnSync(process.execPath, [SCRIPT, '62', '--out', out, ...args], {
       encoding: 'utf8',
       timeout: 15_000,
+      cwd,
       env: { ...process.env, CLAUDE_CODE_REMOTE: '', PATH: `${bin}:${process.env.PATH}`, FAKE_GH_DIR: dir, FAKE_HEAD: SHA, PR_QA_POLL_MS: '1', ...env },
     });
     const calls = existsSync(join(dir, 'calls.log')) ? readFileSync(join(dir, 'calls.log'), 'utf8').trim().split('\n') : [];
@@ -371,10 +379,15 @@ describe('dispatch --flows: the flows are pre-checked before anything is dispatc
     assert.deepEqual(called(r.calls, 'workflow run'), []);
   });
 
-  it('dispatches flows that pass the pre-check', () => {
+  it('dispatches flows that pass the pre-check and were proven against the head', () => {
+    const repo = realpathSync(mkdtempSync(join(tmpdir(), 'dispatch-proven-')));
+    spawnSync('git', ['init', '-q', repo]);
     const flows = join(dir, 'good.mjs');
     writeFileSync(flows, "// US1 scenario 1\nexport default async () => [];\n");
-    const r = fakeGh()('--no-wait', '--flows', flows, '--spec', spec);
+    mkdirSync(dirname(proofPath(repo, SHA, flowsHash(flows))), { recursive: true });
+    writeFileSync(proofPath(repo, SHA, flowsHash(flows)), '');
+    const r = fakeGh({}, { cwd: repo })('--no-wait', '--flows', flows, '--spec', spec);
+    rmSync(repo, { recursive: true, force: true });
     assert.equal(r.code, 0, r.stderr);
     assert.equal(called(r.calls, 'workflow run').length, 1);
   });
@@ -403,5 +416,136 @@ describe('dispatch --routes: a route the run cannot sweep is refused before anyt
     const r = fakeGh()('--no-wait', '--routes', '/results?brand=dacia,/:lang/list-your-garage,/app/driver@driver');
     assert.equal(r.code, 0, r.stderr);
     assert.equal(called(r.calls, 'workflow run').length, 1);
+  });
+});
+
+// A checkout whose history the proof is checked against: c1 changes code, c2 documentation only, c3 code again.
+function provenRepo() {
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'dispatch-proof-')));
+  fakeDirs.push(repo);
+  const git = (...args) => spawnSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@example.test', '-c', 'core.hooksPath=/dev/null', ...args], { encoding: 'utf8' }).stdout.trim();
+  spawnSync('git', ['init', '-q', repo]);
+  const commit = (path, text) => {
+    mkdirSync(dirname(join(repo, path)), { recursive: true });
+    writeFileSync(join(repo, path), text);
+    git('add', '.');
+    git('commit', '-qm', path);
+    return git('rev-parse', 'HEAD');
+  };
+  const c1 = commit('apps/api/src/a.ts', 'export const a = 1;\n');
+  const c2 = commit('docs/guide.md', '# Guide\n');
+  const c3 = commit('apps/api/src/b.ts', 'export const b = 2;\n');
+  const flows = join(repo, 'flows.mjs');
+  writeFileSync(flows, 'export default async () => [];\n');
+  const spec = join(repo, 'spec.md');
+  writeFileSync(spec, '# A spec with no scenarios\n');
+  const stamp = (sha, hash = flowsHash(flows)) => {
+    mkdirSync(dirname(proofPath(repo, sha, hash)), { recursive: true });
+    writeFileSync(proofPath(repo, sha, hash), '');
+  };
+  return { repo, c1, c2, c3, flows, spec, hash: flowsHash(flows), stamp };
+}
+
+// @traces 1361-watch-schedule-qa-telemetry-FR-007
+describe('dispatch --flows: the flows must have been proven against the head', () => {
+  it('accepts the proof for the head and these flows', () => {
+    const t = provenRepo();
+    t.stamp(t.c3);
+    assert.deepEqual(proofFor({ root: t.repo, sha: t.c3, hash: t.hash }), { proof: proofPath(t.repo, t.c3, t.hash) });
+  });
+
+  it('accepts a proof for an earlier commit when every commit since changes documentation only', () => {
+    const t = provenRepo();
+    t.stamp(t.c1);
+    assert.deepEqual(proofFor({ root: t.repo, sha: t.c2, hash: t.hash }), { proof: proofPath(t.repo, t.c1, t.hash) });
+  });
+
+  it('refuses a proof for an earlier commit when the commits since change code, naming the commit and a file', () => {
+    const t = provenRepo();
+    t.stamp(t.c1);
+    const { refused } = proofFor({ root: t.repo, sha: t.c3, hash: t.hash });
+    assert.ok(refused, 'refused');
+    assert.match(refused, new RegExp(t.c1.slice(0, 7)));
+    assert.match(refused, /apps\/api\/src\/b\.ts/);
+    assert.match(refused, /--check/);
+  });
+
+  it('refuses a proof of other flows content for the head', () => {
+    const t = provenRepo();
+    t.stamp(t.c3, '0123456789abcdef');
+    const { refused } = proofFor({ root: t.repo, sha: t.c3, hash: t.hash });
+    assert.match(refused, /other flows content/);
+  });
+
+  it('refuses when there is no proof at all, naming the head', () => {
+    const t = provenRepo();
+    const { refused } = proofFor({ root: t.repo, sha: t.c3, hash: t.hash });
+    assert.match(refused, new RegExp(`no flows proof for ${t.c3.slice(0, 7)}`));
+  });
+
+  it('dispatches nothing and exits 64 on an unproven flows file, then dispatches once the head is proven', () => {
+    const t = provenRepo();
+    const run = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo });
+    const refused = run('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    assert.equal(refused.code, 64, refused.stderr);
+    assert.match(refused.stderr, new RegExp(`no flows proof for ${t.c3.slice(0, 7)}`));
+    assert.deepEqual(called(refused.calls, 'workflow run'), []);
+    t.stamp(t.c3);
+    const r = run('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+  });
+
+  it('needs no proof without --flows, nor to read a finished run', () => {
+    const t = provenRepo();
+    assert.equal(fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo })('--no-wait').code, 0);
+    assert.equal(fakeGh({ FAKE_HEAD: t.c3, FAKE_REPORT_SHA: t.c3 }, { cwd: t.repo })('--run', '77', '--flows', t.flows, '--spec', t.spec).code, 0);
+  });
+});
+
+// @traces 1361-watch-schedule-qa-telemetry-FR-006
+describe('dispatch on the laptop: the dispatched run is the head\'s one run', () => {
+  const REMOVE = 'api -X DELETE repos/{owner}/{repo}/issues/62/labels/qa%3A%20on-push';
+
+  it('takes the qa: on-push label off the PR before it dispatches, so no pull_request run starts beside it', () => {
+    const r = fakeGh()('--no-wait');
+    assert.equal(r.code, 0, r.stderr);
+    const remove = r.calls.indexOf(REMOVE);
+    assert.notEqual(remove, -1, r.calls.join('\n'));
+    assert.ok(remove < r.calls.findIndex((c) => c.startsWith('workflow run')));
+  });
+
+  it('dispatches anyway when the PR has no such label to remove', () => {
+    const r = fakeGh({ FAKE_LABEL_FAIL: '1' })('--no-wait');
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+  });
+
+  it('removes nothing in a cloud session, whose run is the labelled pull_request one', () => {
+    const r = fakeGh({ CLAUDE_CODE_REMOTE: 'true' })('--no-wait');
+    assert.equal(r.code, 0, r.stderr);
+    assert.ok(!r.calls.includes(REMOVE));
+  });
+
+  it('a skipped pull_request run neither holds nor fails the CI wait', async () => {
+    let t = 0;
+    const checks = [{ name: 'CI OK', bucket: 'pass' }, { name: 'PR QA', bucket: 'skipping', workflow: 'PR QA' }, { name: 'agent-review', bucket: 'pass' }];
+    const gh = async (args) => (args[1] === 'view' ? { code: 0, stdout: '{"mergeable":"MERGEABLE"}', stderr: '' } : { code: 0, stdout: JSON.stringify(checks), stderr: '' });
+    const out = await waitForCi({ pr: 62, gh, sleep: async (ms) => (t += ms), now: () => t });
+    assert.deepEqual(out, { code: 0, lines: [] });
+  });
+
+  it('the merge gate counts a skipped pull_request run as no red check', () => {
+    const pr = {
+      number: 62,
+      state: 'OPEN',
+      headRefOid: SHA,
+      statusCheckRollup: [
+        { context: 'agent-review', state: 'SUCCESS', description: 'PR QA lap 1 passed' },
+        { name: 'CI OK', workflowName: 'CI', status: 'COMPLETED', conclusion: 'SUCCESS' },
+        { name: 'PR QA', workflowName: 'PR QA', status: 'COMPLETED', conclusion: 'SKIPPED' },
+      ],
+    };
+    assert.equal(decideMerge(pr), null);
   });
 });

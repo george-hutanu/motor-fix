@@ -1,11 +1,12 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from './dispatch.mjs';
+import { flowsHash, proofPath } from './precheck.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'dispatch.mjs');
 const dirs = [];
@@ -65,11 +66,17 @@ describe('dispatch --flows pre-check', () => {
     assert.doesNotMatch(sb.calls(), /workflow/);
   });
 
-  it('goes on to dispatch once a clean flows file passes the pre-check', () => {
+  // @traces 1361-watch-schedule-qa-telemetry-FR-007
+  it('goes on to dispatch once a clean flows file passes the pre-check and was proven against the head', () => {
     const sb = sandbox();
     const f = join(sb.d, 'flows.mjs');
     writeFileSync(f, 'export default async () => {};\n');
-    cli(sb, '12', '--flows', f, '--spec', join(sb.d, 'none.md'), '--no-wait');
+    const repo = join(sb.d, 'repo');
+    spawnSync('git', ['init', '-q', repo]);
+    const proof = proofPath(realpathSync(repo), 'a'.repeat(40), flowsHash(f));
+    mkdirSync(dirname(proof), { recursive: true });
+    writeFileSync(proof, '');
+    spawnSync(process.execPath, [SCRIPT, '12', '--flows', f, '--spec', join(sb.d, 'none.md'), '--no-wait'], { cwd: repo, encoding: 'utf8', timeout: 4_000, env: { ...process.env, CLAUDE_CODE_REMOTE: '', PATH: `${sb.d}:${process.env.PATH}` } });
     assert.match(sb.calls(), /workflow run/);
   }, 15_000);
 

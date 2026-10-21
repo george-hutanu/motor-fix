@@ -36,12 +36,13 @@ import {
   StorageModule,
   SupportModule,
   SystemLogModule,
+  signInLimitConfig,
   supportConfig,
   verificationConfig,
   WarmModule,
   WorkshopModule,
 } from '@motor-fix/domain';
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Logger, Module } from '@nestjs/common';
 
 type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
   StorageEnv;
@@ -54,6 +55,11 @@ export class AppModule {
       databaseUrl: env.DATABASE_URL,
       oauth: oauthSettings(env.APP_ENV, process.env),
       redisUrl: env.REDIS_URL,
+      skipSignInAttemptsLimit: signInLimitConfig(
+        env.APP_ENV,
+        process.env,
+        (m) => new Logger('AuthModule').warn(m),
+      ).skipAttemptsLimit,
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });
     const email = emailConfig(env.APP_ENV, process.env);

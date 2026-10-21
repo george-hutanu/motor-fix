@@ -1091,6 +1091,43 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
     assert.ok(existsSync(join(featureDir, 'handoff.md')));
   });
 
+  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  it('ready labels the PR qa: on-push before marking it ready, so its pull_request run is the head\'s one QA run', () => {
+    let i = 0;
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        ['git diff --cached --quiet', () => ({ code: [1, 1][i++] ?? 0 })],
+        [`${API}pulls?head={owner}:${BRANCH}&state=all`, json([[pull]])],
+        [`${API}pulls/141 -X GET`, json(pull)],
+        [`${API}pulls/141 -X PATCH`, json(pull)],
+        [`${API}pulls/141/ccr/ready_for_review -X POST`, json({})],
+        [`${API}labels -X POST`, json({})],
+        [`${API}issues/141/labels -X POST`, json([])],
+        [`${API}issues/141/comments -X POST`, json({})],
+      ],
+    });
+    writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
+    const result = step(['ready', '--body-file', join(repo, 'body.md'), '--decisions', 'none'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const at = (prefix) => h.gated.findIndex((c) => c.startsWith(prefix));
+    const create = at('gh label create "qa: on-push" --force');
+    const add = at('gh pr edit 141 --add-label "qa: on-push"');
+    assert.notEqual(create, -1, h.gated.join('\n'));
+    assert.ok(create < add && add < at('gh pr ready 141'), h.gated.join('\n'));
+    assert.ok(h.calls.some((c) => c.startsWith(`${API}issues/141/labels -X POST`)), h.calls.join('\n'));
+    assert.deepEqual(graphql(h.calls), []);
+  });
+
+  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  it('ready on the laptop adds no qa: on-push label: the dispatched run is the head\'s one run there', () => {
+    const h = harness({ answers: [['git diff --cached --quiet', { code: 1 }]] });
+    writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
+    const result = step(['ready', '--body-file', join(repo, 'body.md')], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => c.includes('qa: on-push')), h.calls.join('\n'));
+  });
+
   it('handoff --restore reads the comments through REST', () => {
     const MARK = '<!-- speckit-handoff -->';
     const h = harness({

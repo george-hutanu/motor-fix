@@ -32,6 +32,8 @@ export interface AuthOptions {
   oauth?: OAuthSettings;
   // Sign-in for AI assistants through the identity server; off when unset.
   assistant?: AssistantBroker;
+  // The PR QA boot only (signInLimitConfig): no signInAttempts route limit.
+  skipSignInAttemptsLimit?: boolean;
 }
 
 const REQUIRES = 'auth:requires';
