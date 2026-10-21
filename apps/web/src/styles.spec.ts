@@ -118,3 +118,17 @@ describe('the voice texts the page carries for every voice', () => {
     expect(rule(shown)).toMatch(/display:\s*contents/);
   });
 });
+
+// A field on Results takes text: the tab bar hides, the consent bar may ask,
+// and on a 320 px phone the sheet's low position rises over the map's zoom
+// buttons, whose zoom-out would sit under the sheet's handle.
+describe('the map’s zoom buttons while Results takes text on a phone', () => {
+  it('hides them, out of reach and out of the way of the sheet', () => {
+    const body = rule(
+      'mf-results:has(mf-results-sheet.typing) mf-results-map .maplibregl-ctrl-top-right',
+    );
+
+    expect(body).toBeDefined();
+    expect(body).toMatch(/visibility:\s*hidden/);
+  });
+});
