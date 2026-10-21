@@ -25,7 +25,9 @@ export class HomePreview {
   protected readonly skeletons = [0, 1, 2];
 
   // The last two words are joined by a no-break space, so a narrow phone
-  // never leaves the brand (or its last word) alone on the status's last line.
+  // never leaves the brand (or its last word) alone on the status's last line,
+  // unless the first of them ends a clause ("Not compatible: BMW"): the line
+  // breaks there, and the pair would be too wide for a 320 px row.
   protected status(garage: HomeGarageDto) {
     const text = this.i18n.t(
       garage.stance === 'works_on'
@@ -33,7 +35,7 @@ export class HomePreview {
         : this.voice.key('no'),
       { brand: this.brand().name },
     );
-    return text.replace(/\s+(\S+)\s*$/, '\u00a0$1');
+    return text.replace(/(?<![:;,.])\s+(\S+)\s*$/, '\u00a0$1');
   }
 
   protected rating(garage: HomeGarageDto) {
