@@ -11886,6 +11886,9 @@
           "emailConfirmed": {
             "type": "boolean"
           },
+          "hasEmail": {
+            "type": "boolean"
+          },
           "existing": {
             "nullable": true,
             "type": "object",
@@ -11903,6 +11906,7 @@
           "car",
           "jobs",
           "emailConfirmed",
+          "hasEmail",
           "existing"
         ]
       },

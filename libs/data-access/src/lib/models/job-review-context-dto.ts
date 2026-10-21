@@ -14,6 +14,7 @@ export interface JobReviewContextDto {
   existing: (ReviewDto & {
 }) | null;
   garage: GarageRefDto;
+  hasEmail: boolean;
   job: ReviewJobDto;
   jobs: Array<RequestJobDto>;
 }

@@ -14,7 +14,13 @@ import {
   type ReviewDto,
   ReviewsService,
 } from '@motor-fix/data-access';
-import { I18n, LeiPipe, NumPipe, TranslatePipe } from '@motor-fix/i18n';
+import {
+  DayPipe,
+  I18n,
+  LeiPipe,
+  NumPipe,
+  TranslatePipe,
+} from '@motor-fix/i18n';
 import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
@@ -43,7 +49,7 @@ type View =
 // instead; closes with the review just published.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, HlmInput, LeiPipe, NumPipe, TranslatePipe],
+  imports: [HlmButton, HlmInput, DayPipe, LeiPipe, NumPipe, TranslatePipe],
   selector: 'mf-review-task',
   styleUrl: './review-task.css',
   templateUrl: './review-task.html',
@@ -85,15 +91,6 @@ export class ReviewTask {
   protected readonly existing = computed(
     () => this.context()?.existing ?? null,
   );
-  protected readonly postedOn = computed(() => {
-    const review = this.existing();
-    if (!review) return '';
-    return new Intl.DateTimeFormat(
-      this.i18n.language() === 'en' ? 'en-GB' : 'ro-RO',
-      { dateStyle: 'long', timeZone: 'Europe/Bucharest' },
-    ).format(new Date(review.postedAt));
-  });
-
   constructor() {
     void this.load();
   }
@@ -164,7 +161,8 @@ export class ReviewTask {
   }
 
   private body(): PublishReviewDto | null {
-    const jobId = this.task.data?.jobId as string;
+    const jobId = this.task.data?.jobId;
+    if (!jobId) return null;
     const body: PublishReviewDto = { jobId, rating: this.rating() };
     if (this.paid().trim()) {
       const amount = parseLeiText(this.paid());

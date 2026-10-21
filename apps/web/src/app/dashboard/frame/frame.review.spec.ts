@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { ErrorHandler, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -46,6 +46,7 @@ async function render(url: string, role = 'driver') {
         }),
     ),
   };
+  const errors = { handleError: jest.fn() };
   const account = signal<MeDto | null>(
     me(role, role === 'driver' ? ['driver.reviews'] : ['garage.own_jobs']),
   );
@@ -95,12 +96,13 @@ async function render(url: string, role = 'driver') {
         useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
       },
       { provide: Overlays, useValue: overlays },
+      { provide: ErrorHandler, useValue: errors },
     ],
   });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
   await settle(harness);
-  return { harness, overlays, router: TestBed.inject(Router) };
+  return { errors, harness, overlays, router: TestBed.inject(Router) };
 }
 
 async function settle(harness: RouterTestingHarness) {
@@ -112,7 +114,7 @@ async function settle(harness: RouterTestingHarness) {
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 022-review-drawer-FR-001 022-review-drawer-FR-009
+// @traces 022-FR-001 022-FR-009
 describe('the review drawer on the driver dashboard', () => {
   it('opens for the job the address names, as a drawer', async () => {
     const { overlays } = await render(`/app/driver/reviews?review=${JOB}`);
@@ -197,6 +199,24 @@ describe('the review drawer on the driver dashboard', () => {
     await settle(harness);
 
     expect(overlays.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens again after the task failed to load', async () => {
+    const { errors, harness, overlays, router } = await render(
+      '/app/driver/reviews',
+    );
+    const failure = new Error('chunk failed');
+    overlays.open.mockRejectedValueOnce(failure);
+
+    await router.navigateByUrl(`/app/driver/reviews?review=${JOB}`);
+    await settle(harness);
+    await router.navigateByUrl('/app/driver/reviews');
+    await settle(harness);
+    await router.navigateByUrl(`/app/driver/reviews?review=${JOB}`);
+    await settle(harness);
+
+    expect(errors.handleError).toHaveBeenCalledWith(failure);
+    expect(overlays.open).toHaveBeenCalledTimes(2);
   });
 
   it('opens the task with no job for an id that is not a UUID', async () => {

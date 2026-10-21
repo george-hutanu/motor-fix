@@ -1,6 +1,6 @@
 import { PAID_BANI_MAX, parseLeiText } from './lei-text';
 
-// @traces 022-review-drawer-FR-005 022-review-drawer-FR-017
+// @traces 022-FR-005 022-FR-017
 describe('parseLeiText on hostile amounts', () => {
   it.each([
     ['007', 700],

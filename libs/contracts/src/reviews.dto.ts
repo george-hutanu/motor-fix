@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 
+import { PAID_BANI_MAX } from './lei-text';
 import {
   CarSnapshotDto,
   DriverNameDto,
@@ -41,7 +42,7 @@ export class PublishReviewDto {
   @IsString()
   text?: string;
 
-  @ApiPropertyOptional({ maximum: 100_000_000, minimum: 1 })
+  @ApiPropertyOptional({ maximum: PAID_BANI_MAX, minimum: 1 })
   @IsOptional()
   @IsInt()
   paidBani?: number;
@@ -97,6 +98,10 @@ export class JobReviewContextDto {
 
   @ApiProperty()
   emailConfirmed!: boolean;
+
+  // An account signed up by phone has no address to send the link to.
+  @ApiProperty()
+  hasEmail!: boolean;
 
   @ApiProperty({ nullable: true, type: ReviewDto })
   existing!: ReviewDto | null;

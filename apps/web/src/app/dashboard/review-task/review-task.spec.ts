@@ -39,6 +39,7 @@ const context = (
   emailConfirmed: true,
   existing: null,
   garage: { id: 'garage-1', name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
+  hasEmail: true,
   job: { id: JOB, status: 'done' },
   jobs: [
     {
@@ -182,8 +183,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 022-review-drawer-FR-002 022-review-drawer-FR-003
-// @traces 022-review-drawer-FR-004 022-review-drawer-FR-006 022-review-drawer-FR-007
+// @traces 022-FR-002 022-FR-003
+// @traces 022-FR-004 022-FR-006 022-FR-007
 describe('the review drawer', () => {
   it('asks how the repair went at the job’s garage', async () => {
     await open();
@@ -243,7 +244,7 @@ describe('the review drawer', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-008 022-review-drawer-FR-010
+// @traces 022-FR-008 022-FR-010
 describe('publishing from the drawer', () => {
   it('posts the job and the rating alone, then confirms on the garage’s profile', async () => {
     await open();
@@ -280,9 +281,7 @@ describe('publishing from the drawer', () => {
     await publishNow();
     await publishNow();
 
-    expect(button('Publică recenzia')?.getAttribute('aria-disabled')).toBe(
-      'true',
-    );
+    expect(button('Publică recenzia')?.hasAttribute('disabled')).toBe(true);
     expect(publish).toHaveBeenCalledTimes(1);
     answer(review());
     await settle();
@@ -310,7 +309,7 @@ describe('publishing from the drawer', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-005 022-review-drawer-FR-006 022-review-drawer-FR-013
+// @traces 022-FR-005 022-FR-006 022-FR-013
 describe('the amount and the comment', () => {
   it.each([
     ['4.200,50', 420_050],
@@ -386,8 +385,8 @@ describe('the amount and the comment', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-012 022-review-drawer-FR-012a
-// @traces 022-review-drawer-FR-013 022-review-drawer-FR-023
+// @traces 022-FR-012
+// @traces 022-FR-013 022-FR-023
 describe('a job that cannot be reviewed', () => {
   it.each([
     ['a job that is not found', JOB],
@@ -446,7 +445,7 @@ describe('a job that cannot be reviewed', () => {
     expect(text()).toContain('Și‑au făcut treaba');
     expect(text()).toContain('4.200,50 lei');
     expect(text()).toContain('Au întârziat o zi.');
-    expect(text()).toContain('21 octombrie 2026');
+    expect(text()).toContain('21 oct. 2026');
   });
 
   it.each([
@@ -493,7 +492,7 @@ describe('a job that cannot be reviewed', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-011
+// @traces 022-FR-011
 describe('an e-mail not confirmed', () => {
   it('asks for the confirmation in place of publishing, and sends the link again', async () => {
     await open({
@@ -511,6 +510,18 @@ describe('an e-mail not confirmed', () => {
     expect(toast).toHaveBeenCalledWith('Ți‑am trimis din nou linkul.');
   });
 
+  it('asks for the confirmation without the link for an account with no e-mail', async () => {
+    await open({
+      answer: async () => context({ emailConfirmed: false, hasEmail: false }),
+    });
+
+    expect(button('Publică recenzia')).toBeUndefined();
+    expect(text()).toContain(
+      'Confirmă‑ți adresa de e‑mail ca să publici recenzia.',
+    );
+    expect(button('Trimite din nou linkul')).toBeUndefined();
+  });
+
   it('asks for the confirmation after a refusal on publishing', async () => {
     await open();
     publish.mockRejectedValueOnce(
@@ -526,7 +537,7 @@ describe('an e-mail not confirmed', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-013 022-review-drawer-FR-013a
+// @traces 022-FR-013
 describe('a failure', () => {
   it.each([
     ['the network', new HttpErrorResponse({ status: 0 })],

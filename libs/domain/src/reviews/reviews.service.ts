@@ -81,6 +81,7 @@ export class ReviewsService {
       emailConfirmed: Boolean(job.driver.email && job.driver.emailVerifiedAt),
       existing: existing && reviewOf(existing),
       garage: garageRef(job.garage),
+      hasEmail: Boolean(job.driver.email),
       job: { id: job.id, status: job.status },
       jobs: jobsOf(job.booking.quote.jobs.map((one) => one.requestJob)),
     };

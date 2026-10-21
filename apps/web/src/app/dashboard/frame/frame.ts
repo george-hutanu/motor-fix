@@ -2,6 +2,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  ErrorHandler,
   effect,
   inject,
   type OnInit,
@@ -124,6 +125,7 @@ export class Frame implements OnInit {
   private readonly live = inject(Live);
   protected readonly offline = this.live.offline;
   private readonly overlays = inject(Overlays);
+  private readonly errors = inject(ErrorHandler);
   private readonly push = inject(PushDevice);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
@@ -267,23 +269,29 @@ export class Frame implements OnInit {
     effect(() => {
       const job = this.address().queryParams['review'];
       if (this.area() !== 'driver' || typeof job !== 'string') return;
-      untracked(() => void this.review(job));
+      untracked(() =>
+        this.review(job).catch((e: unknown) => this.errors.handleError(e)),
+      );
     });
   }
 
   private async review(job: string) {
     if (this.reviewing) return;
     this.reviewing = true;
-    await this.overlays.open<ReviewDto, { jobId?: string }>(
-      () => import('../review-task/review-task').then((m) => m.ReviewTask),
-      {
-        confirmDiscard: false,
-        data: { jobId: UUID.test(job) ? job : undefined },
-        shape: 'drawer',
-        title: 'driver.review.title',
-      },
-    );
-    this.reviewing = false;
+    try {
+      await this.overlays.open<ReviewDto, { jobId?: string }>(
+        () => import('../review-task/review-task').then((m) => m.ReviewTask),
+        {
+          confirmDiscard: false,
+          data: { jobId: UUID.test(job) ? job : undefined },
+          shape: 'drawer',
+          title: 'driver.review.title',
+        },
+      );
+    } finally {
+      // A task that failed to load lets the next address open it again.
+      this.reviewing = false;
+    }
     // Closed: the address no longer names the job, unless it already left.
     const here = this.router.parseUrl(this.router.url);
     if (!('review' in here.queryParams)) return;

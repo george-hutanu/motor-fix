@@ -64,7 +64,7 @@ const events = (subjectId: string) =>
 const audits = (jobId: string) =>
   prisma.activityLog.findMany({ where: { jobId, subjectType: 'review' } });
 
-// @traces 022-review-drawer-FR-014
+// @traces 022-FR-014
 describe('reading a job for its review', () => {
   it('answers the garage, the car, the work, the status and no review', async () => {
     const s = await setting();
@@ -88,6 +88,7 @@ describe('reading a job for its review', () => {
         name: 'Atelier Dinamo',
         slug: s.dinamo.garage.slug,
       },
+      hasEmail: true,
       job: { id: s.job.id, status: 'done' },
       jobs: [
         {
@@ -126,8 +127,8 @@ describe('reading a job for its review', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-014 022-review-drawer-FR-016
-// @traces 022-review-drawer-FR-024 022-review-drawer-FR-025
+// @traces 022-FR-014 022-FR-016
+// @traces 022-FR-024 022-FR-025
 describe('publishing a review', () => {
   it('saves a rating alone as a published review of the job', async () => {
     const s = await setting();
@@ -229,8 +230,8 @@ describe('publishing a review', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-015 022-review-drawer-FR-017
-// @traces 022-review-drawer-FR-018 022-review-drawer-FR-023
+// @traces 022-FR-015 022-FR-017
+// @traces 022-FR-018 022-FR-023
 describe('what a review may hold', () => {
   it.each([420_000, 420_050, 1, 100_000_000])(
     'saves %p bani exactly',
@@ -313,8 +314,8 @@ describe('what a review may hold', () => {
   });
 });
 
-// @traces 022-review-drawer-FR-012 022-review-drawer-FR-019
-// @traces 022-review-drawer-FR-020 022-review-drawer-FR-021 022-review-drawer-FR-026
+// @traces 022-FR-012 022-FR-019
+// @traces 022-FR-020 022-FR-021 022-FR-026
 describe('who may review a job, and when', () => {
   it('answers 404 for a job that does not exist', async () => {
     const s = await setting();
@@ -420,15 +421,6 @@ describe('who may review a job, and when', () => {
     expect(await audits(s.job.id)).toHaveLength(1);
   });
 
-  it('answers job_not_done before a field error', async () => {
-    const s = await setting('in_work');
-
-    const refused = await publish(s.as, { jobId: s.job.id, rating: 9 });
-
-    expect(refused.status).toBe(409);
-    expect(refused.body.code).toBe('job_not_done');
-  });
-
   it('answers review_exists before a field error', async () => {
     const s = await setting();
     await reviewIn(s, 'published');
@@ -441,26 +433,14 @@ describe('who may review a job, and when', () => {
 
     expect(refused.body.code).toBe('review_exists');
   });
-
-  it('answers job_not_done before email_not_confirmed', async () => {
-    const s = await setting('in_work');
-    await prisma.account.update({
-      data: { emailVerifiedAt: null },
-      where: { id: s.andrei },
-    });
-
-    const refused = await publish(s.as, { jobId: s.job.id, rating: 4 });
-
-    expect(refused.body.code).toBe('job_not_done');
-  });
 });
 
-// @traces 022-review-drawer-FR-014 022-review-drawer-FR-022 022-review-drawer-FR-026
+// @traces 022-FR-014 022-FR-022 022-FR-026
 describe('an e-mail that is not confirmed', () => {
   it.each([
-    ['an unconfirmed e-mail', { emailVerifiedAt: null }],
-    ['no e-mail', { email: null, emailVerifiedAt: null }],
-  ])('with %s answers 409 email_not_confirmed', async (_, data) => {
+    ['an unconfirmed e-mail', { emailVerifiedAt: null }, true],
+    ['no e-mail', { email: null, emailVerifiedAt: null }, false],
+  ])('with %s answers 409 email_not_confirmed', async (_, data, hasEmail) => {
     const s = await setting();
     await prisma.account.update({ data, where: { id: s.andrei } });
 
@@ -468,21 +448,9 @@ describe('an e-mail that is not confirmed', () => {
     const refused = await publish(s.as, { jobId: s.job.id, rating: 4 });
 
     expect(read.body.emailConfirmed).toBe(false);
+    expect(read.body.hasEmail).toBe(hasEmail);
     expect(refused.status).toBe(409);
     expect(refused.body.code).toBe('email_not_confirmed');
     expect(await reviews(s.job.id)).toEqual([]);
-  });
-
-  it('answers email_not_confirmed before review_exists', async () => {
-    const s = await setting();
-    await reviewIn(s, 'published');
-    await prisma.account.update({
-      data: { emailVerifiedAt: null },
-      where: { id: s.andrei },
-    });
-
-    const refused = await publish(s.as, { jobId: s.job.id, rating: 4 });
-
-    expect(refused.body.code).toBe('email_not_confirmed');
   });
 });

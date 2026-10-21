@@ -28,7 +28,7 @@
         @if (review.text) {
           <p class="text">{{ review.text }}</p>
         }
-        <p class="note">{{ 'driver.review.existing.postedAt' | t: { date: postedOn() } }}</p>
+        <p class="note">{{ 'driver.review.existing.postedAt' | t: { date: review.postedAt | day } }}</p>
         @if (review.status === 'reported' || review.status === 'removed') {
           <p class="note">{{ statusNote(review.status) | t }}</p>
         }
@@ -116,8 +116,7 @@
           hlmBtn
           class="publish"
           type="submit"
-          [disabled]="count() > max"
-          [attr.aria-disabled]="sending() || null"
+          [disabled]="count() > max || sending()"
           [attr.aria-busy]="sending() || null"
         >
           {{ 'driver.review.publish' | t }}
@@ -125,7 +124,9 @@
       } @else {
         <div class="email" role="status">
           <p>{{ 'driver.review.email' | t }}</p>
-          <button hlmBtn variant="secondary" type="button" (click)="resend()">{{ 'driver.review.resend' | t }}</button>
+          @if (context()?.hasEmail) {
+            <button hlmBtn variant="secondary" type="button" (click)="resend()">{{ 'driver.review.resend' | t }}</button>
+          }
         </div>
       }
     </form>

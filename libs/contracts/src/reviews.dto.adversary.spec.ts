@@ -11,7 +11,7 @@ const problems = (dto: object) =>
     (e) => e.property,
   );
 
-// @traces 022-review-drawer-FR-015 022-review-drawer-FR-017 022-review-drawer-FR-018
+// @traces 022-FR-015 022-FR-017 022-FR-018
 describe('PublishReviewDto on hostile bodies', () => {
   it.each([
     ['rating', 2.5],
