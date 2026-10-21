@@ -6,6 +6,7 @@ import {
   type ListingDraftData,
   type ListingSubmittedDto,
   stripCui,
+  submitTimeoutMs,
   surveyComplete,
 } from '@motor-fix/contracts';
 import {
@@ -96,23 +97,6 @@ function earlierAnswer(
     throw sentAlready();
   }
   return draft.submitResult;
-}
-
-const SUBMIT_TIMEOUT_MS = 30_000;
-
-// How long the send's transaction may run: LISTING_SUBMIT_TX_TIMEOUT_MS, in
-// milliseconds, or 30 seconds when it is not set.
-export function submitTimeoutMs(
-  source: Record<string, string | undefined> = process.env,
-): number {
-  const value = source['LISTING_SUBMIT_TX_TIMEOUT_MS'];
-  if (!value) return SUBMIT_TIMEOUT_MS;
-  if (!/^[1-9]\d*$/.test(value)) {
-    throw new Error(
-      'LISTING_SUBMIT_TX_TIMEOUT_MS must be a positive whole number',
-    );
-  }
-  return Number(value);
 }
 
 interface Extras {
