@@ -140,9 +140,11 @@ test.describe('sending a listing for verification @seeded', () => {
       await signIn(desk, ACCOUNTS.admin);
       await expect(desk).toHaveURL('/app/admin');
       await desk.goto('/app/admin/garages');
+      // The link names its file: a row filter can catch a neighbour's link
+      // while the list re-renders.
       await desk
-        .locator('mf-admin-queue li.row', { hasText: name })
-        .locator('a.open')
+        .locator('mf-admin-queue')
+        .getByRole('link', { exact: true, name: `Deschide dosarul ${name}` })
         .click();
       await expect(desk.locator('mf-verification-file h3')).toHaveText(name);
     } finally {
