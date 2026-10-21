@@ -18,6 +18,7 @@ import {
   ApiHeader,
   ApiNotFoundResponse,
   ApiOperation,
+  ApiPayloadTooLargeResponse,
   ApiTags,
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
@@ -55,6 +56,7 @@ export class ListingSubmitController {
   @ApiConflictResponse({
     description: LISTING_SUBMIT_CONFLICTS.join('; '),
   })
+  @ApiPayloadTooLargeResponse({ description: 'payload_too_large past 320 KB' })
   @ApiUnprocessableEntityResponse({
     description: 'validation_failed, with errors and warnings',
   })

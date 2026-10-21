@@ -6323,6 +6323,9 @@
           "409": {
             "description": "draft_already_submitted; garage_already_exists"
           },
+          "413": {
+            "description": "payload_too_large past 320 KB"
+          },
           "422": {
             "description": "validation_failed, with errors and warnings"
           }
