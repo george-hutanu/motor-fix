@@ -24,7 +24,7 @@ import {
   type Period,
 } from '@motor-fix/contracts/figure-choices';
 import { LOCALITY_MAX } from '@motor-fix/contracts/place-section';
-import type { CarDto, MeDto } from '@motor-fix/data-access';
+import type { CarDto, MeDto, ReviewDto } from '@motor-fix/data-access';
 import {
   AsWritten,
   ClockPipe,
@@ -63,6 +63,8 @@ import {
 } from '../views';
 
 type Role = MeDto['role'];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // The Panou address's choice; anything else in it is the default.
 const choiceOf = (query: Params): FiltersChoice => {
@@ -187,6 +189,8 @@ export class Frame implements OnInit {
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
+  // The review task is open: the address naming a job opens it once.
+  private reviewing = false;
   // Signing out can wait up to 3 s for a language save in flight.
   protected readonly signingOut = signal(false);
   protected readonly letters = computed(() =>
@@ -259,6 +263,33 @@ export class Frame implements OnInit {
       if (off) untracked(() => void this.router.navigateByUrl(this.base()));
     });
     if (this.adminOverview) this.followAddress(this.adminOverview);
+    // `?review=<job>` on any driver view opens the review of that job.
+    effect(() => {
+      const job = this.address().queryParams['review'];
+      if (this.area() !== 'driver' || typeof job !== 'string') return;
+      untracked(() => void this.review(job));
+    });
+  }
+
+  private async review(job: string) {
+    if (this.reviewing) return;
+    this.reviewing = true;
+    await this.overlays.open<ReviewDto, { jobId?: string }>(
+      () => import('../review-task/review-task').then((m) => m.ReviewTask),
+      {
+        confirmDiscard: false,
+        data: { jobId: UUID.test(job) ? job : undefined },
+        shape: 'drawer',
+        title: 'driver.review.title',
+      },
+    );
+    this.reviewing = false;
+    // Closed: the address no longer names the job, unless it already left.
+    const here = this.router.parseUrl(this.router.url);
+    if (!('review' in here.queryParams)) return;
+    const { review: _, ...rest } = here.queryParams;
+    here.queryParams = rest;
+    await this.router.navigateByUrl(here, { replaceUrl: true });
   }
 
   // Panou's address holds the choice; an unknown one is corrected in place,

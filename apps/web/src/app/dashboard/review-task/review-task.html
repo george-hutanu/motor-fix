@@ -1,0 +1,133 @@
+@if (context(); as job) {
+  <p class="garage">{{ job.garage.name }}</p>
+}
+@switch (view()) {
+  @case ('loading') {
+    <p class="status" role="status">{{ 'driver.review.loading' | t }}</p>
+  }
+  @case ('loadFailed') {
+    <div class="status" role="alert">
+      <p>{{ 'driver.review.loadFailed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="load()">{{ 'driver.review.retry' | t }}</button>
+    </div>
+  }
+  @case ('notFound') {
+    <p class="status" role="status">{{ 'driver.review.notFound' | t }}</p>
+  }
+  @case ('notDone') {
+    <p class="status" role="status">{{ 'driver.review.notDone' | t }}</p>
+  }
+  @case ('existing') {
+    @if (existing(); as review) {
+      <section class="existing" aria-labelledby="mf-review-existing">
+        <h3 id="mf-review-existing">{{ 'driver.review.existing.title' | t }}</h3>
+        <p class="score"><span class="digit">{{ review.rating }}</span> {{ 'driver.review.rating.' + review.rating | t }}</p>
+        @if (review.paidBani !== null) {
+          <p>{{ review.paidBani | lei }}</p>
+        }
+        @if (review.text) {
+          <p class="text">{{ review.text }}</p>
+        }
+        <p class="note">{{ 'driver.review.existing.postedAt' | t: { date: postedOn() } }}</p>
+        @if (review.status === 'reported' || review.status === 'removed') {
+          <p class="note">{{ 'driver.review.existing.' + review.status | t }}</p>
+        }
+      </section>
+    }
+  }
+  @case ('done') {
+    <div class="done">
+      <span class="check">
+        <svg aria-hidden="true" fill="none" height="26" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" viewBox="0 0 24 24" width="26">
+          <path d="m5 12.5 4.5 4.5L19 7.5" />
+        </svg>
+      </span>
+      <p role="status">{{ 'driver.review.published' | t: { garage: context()?.garage?.name ?? '' } }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="finish()">{{ 'driver.review.close' | t }}</button>
+    </div>
+  }
+  @case ('form') {
+    <form (submit)="publish($event)" novalidate>
+      <fieldset class="rating" [attr.aria-label]="'driver.review.rating.group' | t">
+        <legend>{{ 'driver.review.rating.label' | t }}</legend>
+        <div class="steps">
+          @for (step of steps; track step) {
+            <label class="step">
+              <input type="radio" name="mf-review-rating" [value]="step" [checked]="rating() === step" (change)="rating.set(step)" />
+              <span>{{ step }}</span>
+            </label>
+          }
+        </div>
+        <p class="words" aria-live="polite">{{ 'driver.review.rating.' + rating() | t }}</p>
+      </fieldset>
+      <div class="field">
+        <label for="mf-review-car">{{ 'driver.review.car' | t }}</label>
+        <input hlmInput id="mf-review-car" type="text" readonly [value]="car()" />
+      </div>
+      <div class="field">
+        <label for="mf-review-paid">{{ 'driver.review.paid' | t }} <span class="optional">({{ 'driver.review.optional' | t }})</span></label>
+        <input
+          hlmInput
+          id="mf-review-paid"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [placeholder]="'driver.review.paidHint' | t"
+          [value]="paid()"
+          [attr.aria-invalid]="paidError() ? 'true' : null"
+          [attr.aria-describedby]="paidError() ? 'mf-review-paid-error' : null"
+          (input)="typePaid($event)"
+        />
+        @if (paidError(); as why) {
+          <p class="error" id="mf-review-paid-error" role="alert">{{ 'driver.review.field.' + why | t }}</p>
+        }
+      </div>
+      <div class="field">
+        <p class="label" id="mf-review-works">{{ 'driver.review.works' | t }}</p>
+        <ul class="works" aria-labelledby="mf-review-works">
+          @for (work of works(); track $index) {
+            <li>{{ work }}</li>
+          }
+        </ul>
+      </div>
+      <div class="field">
+        <label for="mf-review-comment">{{ 'driver.review.comment' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-review-comment"
+          rows="4"
+          [placeholder]="'driver.review.commentHint' | t"
+          [value]="comment()"
+          [attr.aria-invalid]="count() > max || commentError() ? 'true' : null"
+          aria-describedby="mf-review-comment-count"
+          (input)="typeComment($event)"
+        ></textarea>
+        <p class="count" id="mf-review-comment-count" [class.over]="count() > max">{{ count() | num }} / {{ max | num }}</p>
+        @if (commentError(); as why) {
+          <p class="error" role="alert">{{ 'driver.review.field.' + why | t }}</p>
+        }
+      </div>
+      <p class="privacy">{{ 'driver.review.privacy' | t }}</p>
+      @if (problem(); as code) {
+        <p class="error" role="alert">{{ code }}</p>
+      }
+      @if (emailConfirmed()) {
+        <button
+          hlmBtn
+          class="publish"
+          type="submit"
+          [disabled]="count() > max"
+          [attr.aria-disabled]="sending() || null"
+          [attr.aria-busy]="sending() || null"
+        >
+          {{ 'driver.review.publish' | t }}
+        </button>
+      } @else {
+        <div class="email" role="status">
+          <p>{{ 'driver.review.email' | t }}</p>
+          <button hlmBtn variant="secondary" type="button" (click)="resend()">{{ 'driver.review.resend' | t }}</button>
+        </div>
+      }
+    </form>
+  }
+}

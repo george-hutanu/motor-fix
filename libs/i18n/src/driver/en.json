@@ -284,6 +284,52 @@
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
   },
+  "review": {
+    "car": "Your car",
+    "close": "Close",
+    "comment": "Your comment",
+    "commentHint": "Was the price what they quoted? Was it ready when they said? Would you go back?",
+    "email": "Confirm your e-mail address to post the review.",
+    "existing": {
+      "postedAt": "Posted on {date}",
+      "removed": "The review was taken off the profile.",
+      "reported": "The review was reported and is being checked.",
+      "title": "Your review"
+    },
+    "failed": "We couldn't post the review. Try again.",
+    "field": {
+      "decimals": "Two decimals at most.",
+      "format": "Write the amount in lei, for example 4.200 or 4.200,50.",
+      "length": "2,000 characters at most.",
+      "max": "1,000,000 lei at most.",
+      "min": "The amount must be more than 0.",
+      "range": "The amount must be between 0.01 and 1,000,000 lei."
+    },
+    "loadFailed": "We couldn't load the job.",
+    "loading": "Loading the job…",
+    "notDone": "You can write a review once the job is done.",
+    "notFound": "We couldn't find the job.",
+    "optional": "optional",
+    "paid": "What you paid",
+    "paidHint": "890 lei",
+    "privacy": "Shows your first name, your car and the job. Never your plate or phone number.",
+    "publish": "Post review",
+    "published": "Posted. It's on the {garage} profile now.",
+    "rating": {
+      "1": "Would not go back",
+      "2": "Had problems",
+      "3": "Did the job",
+      "4": "Good work",
+      "5": "Would send a friend",
+      "group": "Rating from 1 to 5",
+      "label": "Your rating"
+    },
+    "resend": "Send the link again",
+    "resent": "We sent the link again.",
+    "retry": "Try again",
+    "title": "How did the repair go?",
+    "works": "What was done"
+  },
   "saved": {
     "comesToYou": "comes to you",
     "failed": "We could not load your saved garages.",
