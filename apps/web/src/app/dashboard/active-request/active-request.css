@@ -41,7 +41,7 @@ p {
   gap: var(--mf-space-2) var(--mf-space-4);
 }
 .what {
-  font-size: var(--mf-size-title);
+  font-size: var(--mf-size-heading);
   font-weight: 700;
   color: var(--mf-text);
 }
@@ -75,7 +75,8 @@ p {
   font-size: var(--mf-size-small);
   font-weight: 600;
   color: var(--mf-text-secondary);
-  overflow-wrap: anywhere;
+  /* A label wraps between its words, never inside one ("Program / ată"). */
+  overflow-wrap: normal;
 }
 /* The amber rail runs from each done stage to the next. */
 .stages li[data-state="done"]::after {
@@ -187,7 +188,12 @@ p {
   color: var(--mf-amber-ink);
   text-underline-offset: 0.2em;
 }
+/* Below 400 px the stage line takes the panel's padding too, so each column
+   is wide enough for "Programată", the longest label, on a 320 px phone. */
 @media (max-width: 399px) {
+  .stages {
+    margin-inline: calc(-1 * var(--mf-space-5));
+  }
   .stages li {
     font-size: var(--mf-size-label);
   }

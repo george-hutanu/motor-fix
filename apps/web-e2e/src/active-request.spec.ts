@@ -11,6 +11,25 @@ import { keepSeededLanguage } from './seeded-language.js';
 const DRIVER = 'cerere@example.test';
 const MILITARI = 'militari@example.test';
 
+const STAGE = {
+  booked: 'Programată',
+  done: 'Gata',
+  in_work: 'În lucru',
+  quoted: 'Ofertă',
+  sent: 'Trimisă',
+} as const;
+
+// The part of the active request read this spec checks the panel against.
+interface ActiveRead {
+  request: {
+    stage: keyof typeof STAGE;
+    job: {
+      startedAt: string | null;
+      steps: { state: 'done' | 'now' | 'todo' }[];
+    } | null;
+  } | null;
+}
+
 async function bearer(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {
     data: { email, password: PASSWORD, remember: false },
@@ -82,6 +101,30 @@ test.describe('Cererea activă @seeded', () => {
       'Gata',
     ]);
     await expect(panel.locator('ol > li[aria-current="step"]')).toHaveCount(1);
+
+    // The panel shows the request the read puts first: for the seed's job in
+    // work, În lucru current, Început and the steps count.
+    const read = await request.get('/api/v1/quote-requests/active', {
+      headers: await bearer(request, DRIVER),
+    });
+    expect(read.ok()).toBe(true);
+    const { request: shown } = (await read.json()) as ActiveRead;
+    expect(shown).not.toBeNull();
+    await expect(panel.locator('ol > li[aria-current="step"]')).toHaveText(
+      STAGE[shown?.stage ?? 'sent'],
+    );
+    if (shown?.job?.startedAt) {
+      await expect(panel.locator('dt', { hasText: 'Început' })).toBeVisible();
+    }
+    const steps = shown?.job?.steps ?? [];
+    if (steps.length) {
+      const done = steps.filter((step) => step.state === 'done').length;
+      await expect(
+        panel.getByRole('heading', {
+          name: `Pașii lucrării · ${done} din ${steps.length} gata`,
+        }),
+      ).toBeVisible();
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

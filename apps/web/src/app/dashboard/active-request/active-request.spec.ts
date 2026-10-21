@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type {
@@ -281,5 +284,37 @@ describe('the other open requests', () => {
 
     const below = await render({ openCount: 3, request: inWork });
     expect(text(below.element)).not.toContain('Încă');
+  });
+});
+
+// The Jest transform drops stylesheets, so the panel's rules are read from the
+// source.
+describe('the panel stylesheet on a 320 px phone', () => {
+  const css = readFileSync(join(__dirname, 'active-request.css'), 'utf8');
+  const rule = (selector: string, within = css) => {
+    const at = within.indexOf(`${selector} {`);
+    return at < 0 ? '' : within.slice(at, within.indexOf('}', at));
+  };
+  const narrow = css.slice(css.indexOf('@media (max-width: 399px)'));
+
+  // @traces 274-FR-010
+  it('wraps a stage label only between its words, never inside one', () => {
+    const label = rule('.stages li');
+
+    expect(label).toMatch(/overflow-wrap:\s*normal/);
+    expect(label).not.toMatch(/overflow-wrap:\s*(anywhere|break-word)/);
+    expect(label).not.toMatch(/word-break/);
+  });
+
+  // @traces 274-FR-010
+  it('widens the stage line into the panel padding below 400 px, so Programată fits its column', () => {
+    expect(rule('.stages', narrow)).toMatch(
+      /margin-inline:\s*calc\(-1 \* var\(--mf-space-5\)\)/,
+    );
+  });
+
+  // @traces 274-FR-011
+  it('sets the title at the heading size, the nearest step to the board’s 22 px', () => {
+    expect(rule('.what')).toMatch(/font-size:\s*var\(--mf-size-heading\)/);
   });
 });

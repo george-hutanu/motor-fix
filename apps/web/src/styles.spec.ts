@@ -78,7 +78,7 @@ describe('the room a focused control keeps clear of the bars', () => {
 
 // @traces 274-FR-018
 describe('the one action of an empty state on a 320 px phone', () => {
-  it('narrows its tracking with the viewport so the label keeps one line', () => {
+  it('narrows its tracking with the viewport so the label breaks only between words', () => {
     const body = rule('mf-empty-state a[hlmBtn]') ?? '';
 
     expect(body).toMatch(
