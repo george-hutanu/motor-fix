@@ -130,7 +130,6 @@ _From 1360-tracker-unblock-dependent._
 
 - `1036-FR-013` — superseded by `1037-FR-003` (2026-10-10)
 - `1036-FR-015` — superseded by `1037-FR-002` (2026-10-10)
-
 - `1036-FR-008` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1036-FR-009` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1037-FR-007` — removed by 1324-retire-debt-and-ready (2026-10-16)
@@ -138,5 +137,4 @@ _From 1360-tracker-unblock-dependent._
 - `1132-FR-002` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1132-FR-005` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1037-FR-002` — superseded by `1324-FR-013` (2026-10-16)
-
 - `1036-FR-004` — superseded by `1360-FR-003` (2026-10-21)

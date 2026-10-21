@@ -22,7 +22,7 @@
 // (tracker/token.mjs ghEnv), never gh's active account. `--story` for a story not this feature's
 // own (a dependent being unblocked) writes only that story: no run-state prior, no PR unless `--pr`.
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { isEntryPoint } from "./lib/entry.mjs";
@@ -384,9 +384,12 @@ async function dependentPrior(ctx) {
   for (const name of existsSync(specs) ? readdirSync(specs) : []) {
     const file = join(specs, name, LOG_FILE);
     if (!existsSync(file)) continue;
+    // Log lines carry a date only: on the same day the log written last wins, and within one log the later line.
+    const mtime = statSync(file).mtimeMs;
     for (const text of readFileSync(file, "utf8").split("\n")) {
       const m = text.match(line);
-      if (m && returnable(m[2]) && (!best || m[1] >= best.date)) best = { date: m[1], status: m[2] };
+      if (!m || !returnable(m[2])) continue;
+      if (!best || m[1] > best.date || (m[1] === best.date && mtime >= best.mtime)) best = { date: m[1], mtime, status: m[2] };
     }
   }
   return best?.status ?? null;

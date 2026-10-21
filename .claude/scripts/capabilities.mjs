@@ -337,7 +337,7 @@ export function planMerge(repo, feature) {
       ...removed.map(({ base, why }) => `- \`${base}\` — removed by ${feature.name} (${today()})${why ? `: ${why}` : ""}`),
       ...modified.map(({ base, token }) => `- \`${base}\` — superseded by \`${token}\` (${today()})`),
     ];
-    if (tombstones.length) text = insertUnder(text, "Retired", `${tombstones.join("\n")}\n`);
+    if (tombstones.length) text = insertUnder(text, "Retired", `${tombstones.join("\n")}\n`, { list: true });
 
     text = text.replace(/^updated:.*$/m, `updated: ${today()}`);
     if (!cap.features.includes(feature.name)) {
@@ -352,7 +352,7 @@ export function planMerge(repo, feature) {
 }
 
 /** Append a block at the end of a `## <heading>` section, creating it if absent. */
-function insertUnder(text, heading, block) {
+function insertUnder(text, heading, block, { list = false } = {}) {
   const lines = text.split("\n");
   const start = lines.findIndex((l) => new RegExp(`^##\\s+${heading}\\s*$`, "i").test(l));
   if (start === -1) return `${text.replace(/\n+$/, "")}\n\n## ${heading}\n\n${block}`;
@@ -364,7 +364,9 @@ function insertUnder(text, heading, block) {
     }
   }
   const body = lines.slice(start + 1, end).join("\n").replace(/\n+$/, "");
-  return [...lines.slice(0, start + 1), body ? `${body}\n` : "", block.replace(/\n+$/, ""), "", ...lines.slice(end)]
+  // A list section's new entries join its list; a block of requirements is set off by a blank line.
+  const before = list ? body || "" : body ? `${body}\n` : "";
+  return [...lines.slice(0, start + 1), before, block.replace(/\n+$/, ""), "", ...lines.slice(end)]
     .join("\n")
     .replace(/\n{3,}/g, "\n\n");
 }

@@ -456,19 +456,13 @@ _From 1353-verified-badge-last-check._
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
-
 - `307-FR-014` — superseded by `310-FR-004` (2026-10-09)
-
 - `307-FR-007` — removed by 1182-cache-service (2026-10-15)
 - `307-FR-006` — superseded by `1182-FR-007` (2026-10-15)
-
 - `355-FR-002` — superseded by `386-FR-002` (2026-10-17)
-
 - `355-FR-011` — superseded by `356-FR-009` (2026-10-17)
-
 - `307-FR-013` — superseded by `271-FR-015` (2026-10-18)
 - `356-FR-001` — superseded by `311-FR-009` (2026-10-18)
-
 - `307-FR-002` — superseded by `1353-FR-001` (2026-10-20)
 - `307-FR-010` — superseded by `1353-FR-002` (2026-10-20)
 - `307-FR-018` — superseded by `1353-FR-003` (2026-10-20)

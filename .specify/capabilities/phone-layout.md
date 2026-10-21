@@ -300,14 +300,9 @@ _From 228-how-it-works-list-garage._
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
-
 - `286-FR-007` — superseded by `461-FR-002` (2026-10-06)
-
 - `288-FR-013` — superseded by `028-FR-002` (2026-10-07)
-
 - `028-FR-002` — superseded by `097-FR-003` (2026-10-08)
-
 - `097-FR-001` — superseded by `343-FR-007` (2026-10-09)
 - `097-FR-004` — superseded by `343-FR-006` (2026-10-09)
-
 - `343-FR-007` — superseded by `344-FR-014` (2026-10-09)

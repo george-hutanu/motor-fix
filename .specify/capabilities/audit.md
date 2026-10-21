@@ -218,5 +218,4 @@ _From 1352-catalogue-job-visibility._
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
-
 - `173-FR-008` — superseded by `176-FR-001` (2026-10-19)

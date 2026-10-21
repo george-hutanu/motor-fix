@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -560,6 +560,21 @@ describe("an event for another story, run from this feature's worktree", () => {
     assert.equal(r.code, 0, r.err.join("\n"));
     assert.equal(gh.itemValues(62).Status, "Implementing");
     assert.equal(issueOf(gh, 62).state ?? "open", "open", "never closed by a Done read back");
+  });
+
+  it("two features' logs blocking it on the same day: the log written last wins, not the folder listed last", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = worktree();
+    const write = (folder, status, when) => {
+      mkdirSync(join(repo, "specs", folder), { recursive: true });
+      const file = join(repo, "specs", folder, "tracker-sync.md");
+      writeFileSync(file, `# x\n\n- 2026-10-05 · blocked · ST-290 · ${status} → Blocked — y\n`);
+      utimesSync(file, when, when);
+    };
+    write("1100-a", "QA", new Date(2026, 9, 5, 18));
+    write("1200-b", "Planning", new Date(2026, 9, 5, 9));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "QA", r.err.join("\n"));
   });
 
   it("unblock with no recorded prior returns the dependent to To do, not this worktree's status", async () => {

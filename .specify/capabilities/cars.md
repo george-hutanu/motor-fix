@@ -215,8 +215,6 @@ _From 291-saved-garages._
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
-
 - `090-FR-006` — superseded by `092-FR-009` (2026-10-11)
-
 - `089-FR-002` — superseded by `029-FR-006` (2026-10-17)
 - `092-FR-009` — superseded by `029-FR-007` (2026-10-17)

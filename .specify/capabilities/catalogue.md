@@ -275,10 +275,7 @@ _From 1357-rar-covered-jobs._
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
-
 - `357-FR-007` — superseded by `386-FR-011` (2026-10-17)
-
 - `039-FR-002` — superseded by `228-FR-012` (2026-10-20)
 - `039-FR-004` — superseded by `228-FR-015` (2026-10-20)
-
 - `173-FR-007` — superseded by `1352-FR-008` (2026-10-20)
