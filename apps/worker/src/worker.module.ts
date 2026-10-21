@@ -1,5 +1,7 @@
 import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
+  BOOKING_CONFIRMED_CONSUMER,
+  BOOKING_LAPSED_CONSUMER,
   CAR_REMINDERS_CONSUMER,
   CATALOGUE_JOB_PENDING_CONSUMER,
   DataStoreMetricsModule,
@@ -75,6 +77,8 @@ export function workerModule(
       OutboxRelayModule.register({
         cdn: bunnyConfig(process.env),
         consumers: [
+          BOOKING_CONFIRMED_CONSUMER,
+          BOOKING_LAPSED_CONSUMER,
           CAR_REMINDERS_CONSUMER,
           CATALOGUE_JOB_PENDING_CONSUMER,
           DECLINE_WINDOW_CONSUMER,

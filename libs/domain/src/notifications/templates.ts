@@ -270,9 +270,20 @@ const BY_DECISION: Record<string, ReadonlySet<unknown>> = {
   VERIFICATION_RESULT: DECISIONS,
 };
 
+// A type with two texts: the param's one value picks the first, any other
+// value the second.
+const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
+  [
+    ['ADMIN_OUTAGE_ALERT', ['state', 'back', 'down']],
+    ['BOOKING_LAPSED', ['side', 'garage', 'driver']],
+  ],
+);
+
 export function templateName(kind: string, params: Params): string {
-  if (kind === 'ADMIN_OUTAGE_ALERT') {
-    return params['state'] === 'back' ? `${kind}.back` : `${kind}.down`;
+  const twoWay = TWO_WAY.get(kind);
+  if (twoWay) {
+    const [param, first, second] = twoWay;
+    return `${kind}.${params[param] === first ? first : second}`;
   }
   const decisions = BY_DECISION[kind];
   if (decisions) {

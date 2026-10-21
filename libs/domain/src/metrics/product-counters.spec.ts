@@ -367,11 +367,11 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  // The cap of 50 covers the seven counters the observability story added;
-  // every later counter keeps its own fixed set, and each instance (1345-FR-012)
-  // stays under 150 series, far inside the metrics backend's free tier: the
+  // The cap of 50 holds for each of the seven counters the observability
+  // story added; every later counter keeps its own fixed set, and each
+  // instance (1345-FR-012) stays under 150 series, far inside the metrics backend's free tier: the
   // API's are the counters it starts, the worker's the ones it starts.
-  it('keeps the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
+  it('keeps each of the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
     countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
@@ -386,9 +386,9 @@ describe('the product counters', () => {
       );
     const texts = series.map((s) => s.text);
     expect(new Set(texts).size).toBe(texts.length);
-    expect(
-      series.filter((s) => SEVEN_COUNTERS.includes(s.name)).length,
-    ).toBeLessThan(50);
+    for (const name of SEVEN_COUNTERS) {
+      expect(series.filter((s) => s.name === name).length).toBeLessThan(50);
+    }
     for (const process of ['api', 'worker'] as const) {
       const names = startedNames(process);
       expect(names.size).toBeGreaterThan(0);

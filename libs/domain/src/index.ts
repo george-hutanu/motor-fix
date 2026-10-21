@@ -86,6 +86,8 @@ export { ProfileViewsModule } from './insights/profile-views/profile-views.modul
 export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
+export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
+export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
