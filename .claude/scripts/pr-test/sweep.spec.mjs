@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
 
 describe('a sweep page\'s browser context', () => {
   it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
@@ -321,10 +321,17 @@ describe('signing in from a QA flow', () => {
     assert.deepEqual(storedBy(visitor), { 'mf.lang': 'ro' });
   });
 
-  it("gives every swept context its run's language and role", async () => {
-    const source = await readFile(fileURLToPath(new URL('./sweep.mjs', import.meta.url)), 'utf8');
-    const body = source.slice(source.indexOf('export async function runSweep'));
-    assert.ok(body.includes('await keepBrowser(context, run)'));
+  it("opens every swept context in its run's language, with its role hint when signed in", async () => {
+    const opened = [];
+    const browser = { newContext: async (options) => (opened.push(options), fakeContext()) };
+    const [owner] = matrix({ routes: ['/:lang/list-your-garage@garage'], schemes: ['light'], langs: ['en'] });
+    const [visitor] = matrix({ routes: ['/:lang/list-your-garage'], schemes: ['light'], langs: ['ro'] });
+    const ownerContext = await openContext(browser, owner);
+    const visitorContext = await openContext(browser, visitor);
+    assert.deepEqual(opened, [contextOptions(owner), contextOptions(visitor)]);
+    assert.equal(storedBy(ownerContext)['mf-role'], 'garage');
+    assert.equal(storedBy(ownerContext)['mf.lang'], 'en');
+    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro' });
   });
 
   it('refuses a call with no role, and a run with no session', async () => {

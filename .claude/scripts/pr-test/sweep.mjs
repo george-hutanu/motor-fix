@@ -270,6 +270,17 @@ export const contextOptions = (run) => {
   };
 };
 
+// One run's browser context: its viewport, scheme and language, the role hint when it is signed in, and maps
+// reading the app's own empty style, so no tile is fetched from outside.
+export async function openContext(browser, run) {
+  const context = await browser.newContext(contextOptions(run));
+  await keepBrowser(context, run);
+  await context.addInitScript(() => {
+    globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
+  });
+  return context;
+}
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -282,12 +293,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   try {
     for (const run of matrix({ routes, schemes, langs })) {
       const vp = VIEWPORTS[run.viewport];
-      const context = await browser.newContext(contextOptions(run));
-      await keepBrowser(context, run);
-      // Maps read the app's own empty style: no tile is fetched from outside.
-      await context.addInitScript(() => {
-        globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
-      });
+      const context = await openContext(browser, run);
       const page = await context.newPage();
       const screenshot = join(outDir, run.shot);
       const seen = (o) => observations.push({ ...run, screenshot, ...o });
