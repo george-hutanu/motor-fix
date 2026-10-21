@@ -7,6 +7,7 @@ import {
   Injector,
   inject,
   input,
+  linkedSignal,
   type OnInit,
   PLATFORM_ID,
   runInInjectionContext,
@@ -18,12 +19,21 @@ import { DECLINE_REASON_TEXTS } from '@motor-fix/contracts/request-status';
 import {
   type QuoteComparisonDto,
   QuoteRequestsService,
-  QuotesService,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { toProblem } from '@motor-fix/overlays';
+import {
+  formatLeiRange,
+  formatSlot,
+  I18n,
+  TranslatePipe,
+} from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import {
+  type AcceptQuoteData,
+  AcceptQuoteDialog,
+  type AcceptQuoteResult,
+} from './accept-quote-dialog/accept-quote-dialog';
 import {
   headerCount,
   headerWhat,
@@ -34,6 +44,11 @@ import {
   sortQuotes,
   storedSort,
 } from './compare-rules/compare-rules';
+import {
+  type DeclineQuoteData,
+  DeclineQuoteDialog,
+  type DeclineQuoteResult,
+} from './decline-quote-dialog/decline-quote-dialog';
 import { QuoteRow } from './quote-row/quote-row';
 import type { LiveView } from '../../live/view';
 import { EmptyState } from '../empty-state/empty-state';
@@ -66,8 +81,9 @@ const SORT_LABELS: Record<Sort, string> = {
 };
 
 // The quotes one request received, side by side: the same facts in every
-// row, a sort kept for the tab, and Acceptă on each quote still open. The
-// rows follow the quote events, so a new answer shows up without a reload.
+// row, a sort kept for the tab, and Acceptă and Refuză on each quote still
+// open, each behind its confirmation. The rows follow the quote and booking
+// events, so an answer or the garage's confirmation shows without a reload.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -86,7 +102,7 @@ export class QuotesCompare implements OnInit {
   readonly requestId = input.required<string>();
 
   private readonly api = inject(QuoteRequestsService);
-  private readonly quotesApi = inject(QuotesService);
+  private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
   private readonly injector = inject(Injector);
   protected readonly offline = inject(Live).offline;
@@ -100,12 +116,12 @@ export class QuotesCompare implements OnInit {
   // constructor, and a parent makes a new panel for another request.
   protected view!: LiveView<QuoteComparisonDto>;
 
-  protected readonly busy = signal<string | null>(null);
-  protected readonly problems = signal<Record<string, string>>({});
-  // A click that got no answer is sent again with the same key, so the
-  // server answers it once.
-  private unanswered: { id: string; key: string } | null = null;
-  protected readonly now = signal(new Date());
+  // Sampled again on every read, so a line read right after an acceptance
+  // measures from then; the tick moves it between reads.
+  protected readonly now = linkedSignal({
+    computation: () => new Date(),
+    source: () => this.view?.value(),
+  });
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
@@ -125,6 +141,9 @@ export class QuotesCompare implements OnInit {
       .filter(Boolean)
       .join(' · ');
   });
+  protected readonly booking = computed(
+    () => this.view.value()?.request.booking ?? null,
+  );
   protected readonly rows = computed(() => {
     const data = this.view.value();
     if (!data) return undefined;
@@ -172,33 +191,47 @@ export class QuotesCompare implements OnInit {
   }
 
   protected async accept(id: string) {
-    if (this.busy() || this.offline()) return;
-    const key =
-      this.unanswered?.id === id ? this.unanswered.key : crypto.randomUUID();
-    this.unanswered = { id, key };
-    this.busy.set(id);
-    this.problems.update(({ [id]: _, ...rest }) => rest);
-    try {
-      await this.quotesApi.acceptControllerAccept({
-        body: { historyShared: false },
-        'Idempotency-Key': key,
-        id,
-      });
-      this.unanswered = null;
-      this.view.reload();
-    } catch (error) {
-      const problem = toProblem(error);
-      if (problem.status !== 0) this.unanswered = null;
-      this.problems.update((all) => ({ ...all, [id]: this.wording(problem) }));
-    } finally {
-      this.busy.set(null);
-    }
+    const quote = this.quoteOf(id);
+    if (!quote || this.offline()) return;
+    const language = this.language();
+    const result = await this.overlays.open<AcceptQuoteResult, AcceptQuoteData>(
+      AcceptQuoteDialog,
+      {
+        data: {
+          garage: quote.garage.name,
+          quoteId: id,
+          range: formatLeiRange(quote.fromBani, quote.toBani, language),
+          reread: () => this.view.reload(),
+          slot: formatSlot(quote.slot, language, this.now()),
+        },
+        shape: 'dialog',
+        title: 'driver.quotes.acceptDialog.title',
+        titleParams: { name: quote.garage.name },
+      },
+    );
+    if (result === 'accepted') this.view.reload();
   }
 
-  private wording({ code, detail }: { code: string; detail?: string }) {
-    if (detail) return detail;
-    const key = `shell.form.problem.${code}`;
-    const text = this.i18n.t(key);
-    return text === key ? this.i18n.t('shell.form.problem.error') : text;
+  protected async decline(id: string) {
+    const quote = this.quoteOf(id);
+    if (!quote || this.offline()) return;
+    const result = await this.overlays.open<
+      DeclineQuoteResult,
+      DeclineQuoteData
+    >(DeclineQuoteDialog, {
+      data: {
+        garage: quote.garage.name,
+        quoteId: id,
+        reread: () => this.view.reload(),
+      },
+      shape: 'dialog',
+      title: 'driver.quotes.declineDialog.title',
+      titleParams: { name: quote.garage.name },
+    });
+    if (result === 'declined') this.view.reload();
+  }
+
+  private quoteOf(id: string) {
+    return this.view.value()?.quotes.find((quote) => quote.id === id);
   }
 }

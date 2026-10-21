@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+import Redis from 'ioredis';
+
 import { CompareService } from './compare.service';
 import type { Actor } from '../../auth/policy';
+import { cacheKey } from '../../cache/cache.service';
+import { purgeAudience } from '../../cache/purge';
 import { quotesApp } from '../quotes-api.testing';
 
-const { bearer, get, team, world } = quotesApp();
+const { bearer, get, post, team, world } = quotesApp();
 const { prisma } = world;
 
 const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000);
@@ -218,8 +222,29 @@ describe('GET /quote-requests/:id/quotes', () => {
 
     expect(res.body.request.booking).toEqual({
       confirmBy: booking.confirmBy.toISOString(),
+      mechanicName: null,
+      quoteId: quote.id,
       startsAt: booking.startsAt.toISOString(),
       status: 'awaiting_confirmation',
+    });
+  });
+
+  // @traces 314-FR-007
+  // @traces 314-FR-008
+  it('names the booking’s quote and, once confirmed, its mechanic', async () => {
+    const { andrei, dinamo, quote, request } = await quoted();
+    const booking = await world.booking(quote.id, 'confirmed');
+    await prisma.booking.update({
+      data: { mechanicId: dinamo.answeringMechanic.id },
+      where: { id: booking.id },
+    });
+
+    const res = await compare(request.id, asDriver(andrei));
+
+    expect(res.body.request.booking).toMatchObject({
+      mechanicName: 'Fixer',
+      quoteId: quote.id,
+      status: 'confirmed',
     });
   });
 
@@ -529,5 +554,74 @@ describe('GET /quote-requests/:id/quotes first seen', () => {
     await compare(request.id, asDriver(andrei));
     expect(await prisma.activityLog.count()).toBe(logged);
     expect(await prisma.outboxEvent.count()).toBe(events);
+  });
+});
+
+// @traces 314-FR-018
+describe('warming the accept call from the comparison', () => {
+  const redis = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
+  afterAll(() => redis.disconnect());
+
+  const accept = (quoteId: string, auth: string) =>
+    post(`/quotes/${quoteId}/accept`, {}, auth, randomUUID());
+
+  it('warms each waiting quote’s ownership read for the driver, and no other', async () => {
+    const { andrei, dinamo, quote, request } = await quoted();
+    const lost = await world.quote(
+      request.id,
+      (await team('Service Militari')).garage.id,
+      'lost',
+    );
+
+    await compare(request.id, asDriver(andrei));
+
+    const entry = await redis.get(cacheKey('accept', andrei, quote.id));
+    expect(entry && JSON.parse(entry).v).toEqual({ requestId: request.id });
+    expect(await redis.get(cacheKey('accept', andrei, lost.id))).toBeNull();
+    expect(
+      await redis.zscore(
+        `v1:tag:warm:account:${andrei}`,
+        cacheKey('accept', andrei, quote.id),
+      ),
+    ).not.toBeNull();
+    expect(
+      await redis.zscore(
+        `v1:tag:warm:garage:${dinamo.garage.id}`,
+        cacheKey('accept', andrei, quote.id),
+      ),
+    ).not.toBeNull();
+  });
+
+  it('lets the accept take the entry once', async () => {
+    const { andrei, quote, request } = await quoted();
+    await compare(request.id, asDriver(andrei));
+
+    const res = await accept(quote.id, asDriver(andrei));
+
+    expect(res.status).toBe(201);
+    expect(await redis.get(cacheKey('accept', andrei, quote.id))).toBeNull();
+  });
+
+  it('drops the entry on any event to the driver or the garage, and accepts all the same', async () => {
+    const { andrei, dinamo, quote, request } = await quoted();
+    await compare(request.id, asDriver(andrei));
+
+    await purgeAudience(redis, [`garage:${dinamo.garage.id}`]);
+
+    expect(await redis.get(cacheKey('accept', andrei, quote.id))).toBeNull();
+    expect((await accept(quote.id, asDriver(andrei))).status).toBe(201);
+  });
+
+  it('never lets an entry stand in for the driver’s ownership', async () => {
+    const { andrei, quote, request } = await quoted();
+    const other = await world.account('Vlad Popescu');
+    await compare(request.id, asDriver(andrei));
+
+    const res = await accept(quote.id, asDriver(other));
+
+    expect(res.status).toBe(404);
+    expect(
+      await redis.get(cacheKey('accept', andrei, quote.id)),
+    ).not.toBeNull();
   });
 });

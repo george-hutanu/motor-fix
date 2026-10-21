@@ -47,6 +47,7 @@ export function actorOf(account: LoadedAccount, role: Role): Actor {
   return {
     accountId: account.id,
     garageId: membership?.garageId ?? mechanic?.garageId ?? null,
+    language: account.language,
     permissions: {
       canAnswerQuotes: mechanic?.canAnswerQuotes ?? false,
       canMoveBookings: mechanic?.canMoveBookings ?? false,

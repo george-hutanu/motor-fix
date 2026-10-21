@@ -28,12 +28,18 @@ import {
   DECLINE_WINDOW_OUTCOMES,
   declineWindows,
   QUOTE_ACCEPT_OUTCOMES,
+  QUOTE_DECLINE_OUTCOMES,
   QUOTE_SEND_OUTCOMES,
   quoteAccepts,
+  quoteDeclines,
   quotesSent,
   REQUEST_DECLINE_OUTCOMES,
   requestDeclines,
 } from '../quotes/quotes/quotes.metrics';
+import {
+  REVIEW_POSTED_OUTCOMES,
+  reviewsPosted,
+} from '../reviews/reviews.metrics';
 import {
   SEARCH_CACHE_OUTCOMES,
   SEARCH_LOG_OUTCOMES,
@@ -437,7 +443,9 @@ const STARTS: Record<
       ),
     ],
     [quoteAccepts, each('outcome', QUOTE_ACCEPT_OUTCOMES)],
+    [quoteDeclines, each('outcome', QUOTE_DECLINE_OUTCOMES)],
     [bookingConfirms, each('outcome', BOOKING_CONFIRM_OUTCOMES)],
+    [reviewsPosted, each('outcome', REVIEW_POSTED_OUTCOMES)],
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
     [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],

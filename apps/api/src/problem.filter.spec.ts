@@ -188,6 +188,30 @@ describe('ProblemFilter', () => {
     });
   });
 
+  // @traces 314-FR-004
+  // @traces 314-FR-016
+  it('sends a refused move’s words as its detail, beside its current status', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'invalid_transition',
+          currentStatus: 'withdrawn',
+          entity: 'quote',
+          message: 'This garage no longer takes requests',
+          to: 'accepted',
+        },
+        409,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'invalid_transition',
+      currentStatus: 'withdrawn',
+      detail: 'This garage no longer takes requests',
+    });
+    expect(res.body).not.toHaveProperty('message');
+  });
+
   it('drops a refused move member that is not a string', () => {
     const res = send(
       new HttpException(

@@ -652,6 +652,18 @@ export class AcceptQuoteDto {
   historyShared?: boolean;
 }
 
+// The driver's decline of one waiting quote.
+export class DeclinedQuoteDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: ['declined_by_driver'] })
+  status!: 'declined_by_driver';
+
+  @ApiProperty({ format: 'date-time' })
+  declinedAt!: string;
+}
+
 // A garage as the driver's comparison shows it: no phone, address or e-mail.
 export class CompareGarageDto extends GarageRefDto {
   @ApiProperty({
@@ -726,13 +738,29 @@ export class DeclinedGarageDto {
   declineReason!: DeclineReasonCode;
 }
 
+// The comparison's booking: which quote it holds and, once confirmed, who
+// does the job.
+export class CompareBookingDto extends RequestBookingDto {
+  @ApiProperty({ format: 'uuid' })
+  quoteId!: string;
+
+  @ApiProperty({
+    description: 'The confirmed booking’s mechanic; null until one is named',
+    nullable: true,
+    type: String,
+  })
+  mechanicName!: string | null;
+}
+
 export class CompareRequestDto extends PickType(RequestSummaryDto, [
   'id',
   'status',
   'jobs',
   'car',
-  'booking',
 ] as const) {
+  @ApiProperty({ nullable: true, type: CompareBookingDto })
+  booking!: CompareBookingDto | null;
+
   @ApiProperty({
     description: 'The description’s first line',
     nullable: true,

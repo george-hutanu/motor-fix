@@ -1,0 +1,65 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.subject {
+  color: var(--mf-text-secondary);
+}
+.share {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.share input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+/* Confirmă while the accept is on its way. */
+.spinner {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: mf-accept-spin 800ms linear infinite;
+}
+@keyframes mf-accept-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+/* A phone: both buttons the full width, the confirmation last. */
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column;
+  }
+}

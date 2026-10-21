@@ -337,9 +337,10 @@ export class GarageRequestsService {
     };
   }
 
-  // The rows this garage quoted whose quote still waits, or was accepted and
-  // its booking waits for the garage or is confirmed with its slot still
-  // ahead, newest quote first.
+  // The rows this garage quoted whose quote still waits, was declined by the
+  // driver and has not reached its own expiry, or was accepted and its
+  // booking waits for the garage or is confirmed with its slot still ahead,
+  // newest quote first.
   private async quoted(
     actor: Actor,
     garageId: string,
@@ -349,6 +350,7 @@ export class GarageRequestsService {
       garageId,
       OR: [
         { status: 'waiting' },
+        { expiresAt: { gt: new Date() }, status: 'declined_by_driver' },
         {
           booking: { status: 'awaiting_confirmation' },
           status: 'accepted',

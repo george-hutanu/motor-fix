@@ -244,18 +244,40 @@
   },
   "quotes": {
     "accept": "Accept",
+    "acceptDialog": {
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "share": "Share this car’s history with the garage",
+      "title": "Accept the {name} quote?"
+    },
     "changed": "Changed {when}",
     "count": {
       "one": "{count} quote",
       "other": "{count} quotes"
     },
+    "decline": "Decline",
+    "declineDialog": {
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "title": "Decline the {name} quote?"
+    },
     "declined": "Declined: {name} · {why}",
     "duration": "about {duration}",
     "failed": "We could not load the quotes.",
     "free": "free {when}",
+    "line": {
+      "booked": "Booked: {slot}",
+      "bookedWith": "Booked: {slot} · {mechanic}",
+      "waiting": "Waiting for the garage to confirm · {left}"
+    },
     "loading": "Loading the quotes",
     "missing": "Does not do: {jobs}",
     "mobile": "Mobile mechanic",
+    "problem": {
+      "error": "That did not work. Try again.",
+      "network": "We could not send it. Check the connection and try again.",
+      "not_found": "The quote no longer exists"
+    },
     "retry": "Retry",
     "sort": {
       "earliest": "Earliest",
@@ -269,6 +291,7 @@
       "closed": "Closed",
       "declined": "Declined by you",
       "expired": "Expired",
+      "lapsed": "The garage did not confirm",
       "on_hold": "On hold"
     },
     "unrated": "no reviews yet",
@@ -283,6 +306,52 @@
     "lapsed": "The garage did not confirm. Choose another quote.",
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
+  },
+  "review": {
+    "car": "Your car",
+    "close": "Close",
+    "comment": "Your comment",
+    "commentHint": "Was the price what they quoted? Was it ready when they said? Would you go back?",
+    "email": "Confirm your e-mail address to post the review.",
+    "existing": {
+      "postedAt": "Posted on {date}",
+      "removed": "The review was taken off the profile.",
+      "reported": "The review was reported and is being checked.",
+      "title": "Your review"
+    },
+    "failed": "We couldn't post the review. Try again.",
+    "field": {
+      "decimals": "Two decimals at most.",
+      "format": "Write the amount in lei, for example 4.200 or 4.200,50.",
+      "length": "2,000 characters at most.",
+      "max": "1,000,000 lei at most.",
+      "min": "The amount must be more than 0.",
+      "range": "The amount must be between 0.01 and 1,000,000 lei."
+    },
+    "loadFailed": "We couldn't load the job.",
+    "loading": "Loading the job…",
+    "notDone": "You can write a review once the job is done.",
+    "notFound": "We couldn't find the job.",
+    "optional": "optional",
+    "paid": "What you paid",
+    "paidHint": "890 lei",
+    "privacy": "Only {name}, your car and the job are shown. Never your plate or phone number.",
+    "publish": "Post review",
+    "published": "Posted. It's on the {garage} profile now.",
+    "rating": {
+      "1": "Would not go back",
+      "2": "Had problems",
+      "3": "Did the job",
+      "4": "Good work",
+      "5": "Would send a friend",
+      "group": "Rating from 1 to 5",
+      "label": "Your rating"
+    },
+    "resend": "Send the link again",
+    "resent": "We sent the link again.",
+    "retry": "Try again",
+    "title": "How did the repair go?",
+    "works": "What was done"
   },
   "saved": {
     "comesToYou": "comes to you",

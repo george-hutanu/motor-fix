@@ -811,3 +811,102 @@ describe('two acceptances at once', () => {
     ).toBe(1);
   });
 });
+
+// @traces 314-FR-004
+// @traces 314-FR-016
+describe('POST /quotes/:id/accept refusals in the driver’s language', () => {
+  const english = (accountId: string) =>
+    prisma.account.update({
+      data: { language: 'en' },
+      where: { id: accountId },
+    });
+
+  async function pending(language: 'ro' | 'en') {
+    const { andrei, other, quote } = await quoted();
+    if (language === 'en') await english(andrei);
+    await accept(other.id, asDriver(andrei));
+    return accept(quote.id, asDriver(andrei));
+  }
+
+  async function slotPassed(language: 'ro' | 'en') {
+    const { andrei, quote } = await quoted();
+    if (language === 'en') await english(andrei);
+    await prisma.quote.update({
+      data: { slot: new Date(Date.now() - 60_000) },
+      where: { id: quote.id },
+    });
+    return accept(quote.id, asDriver(andrei));
+  }
+
+  async function suspended(language: 'ro' | 'en') {
+    const { andrei, dinamo, quote } = await quoted();
+    if (language === 'en') await english(andrei);
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: dinamo.garage.id },
+    });
+    return accept(quote.id, asDriver(andrei));
+  }
+
+  async function expired(language: 'ro' | 'en') {
+    const { andrei, quote } = await quoted();
+    if (language === 'en') await english(andrei);
+    await prisma.quote.update({
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+      where: { id: quote.id },
+    });
+    return accept(quote.id, asDriver(andrei));
+  }
+
+  it.each([
+    [
+      'a booking already waiting',
+      pending,
+      'booking_pending',
+      'Ai deja o programare în așteptare',
+      'You already have a booking waiting',
+    ],
+    [
+      'a slot that has passed',
+      slotPassed,
+      'slot_passed',
+      'Ora propusă a trecut',
+      'The proposed time has passed',
+    ],
+    [
+      'a suspended garage',
+      suspended,
+      'invalid_transition',
+      'Service‑ul nu mai primește cereri',
+      'This garage no longer takes requests',
+    ],
+    [
+      'an expired quote',
+      expired,
+      'invalid_transition',
+      'Oferta a expirat',
+      'The quote has expired',
+    ],
+  ] as const)(
+    'words %s in Romanian and in English',
+    async (_, refuse, code, ro, en) => {
+      const romanian = await refuse('ro');
+      expect(romanian.status).toBe(409);
+      expect(romanian.body).toMatchObject({ code, message: ro });
+
+      await world.reset();
+      const englishAnswer = await refuse('en');
+      expect(englishAnswer.status).toBe(409);
+      expect(englishAnswer.body).toMatchObject({ code, message: en });
+    },
+  );
+
+  it('keeps naming a suspended garage’s quote withdrawn for the client', async () => {
+    const res = await suspended('ro');
+
+    expect(res.body).toMatchObject({
+      code: 'invalid_transition',
+      currentStatus: 'withdrawn',
+    });
+  });
+});

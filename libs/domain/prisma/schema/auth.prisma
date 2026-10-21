@@ -78,6 +78,7 @@ model Account {
   jobs                    Job[]                    @relation("JobDriver")
   jobStageEntries         JobStageEntry[]          @relation("JobStageActor")
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
+  reviews                 Review[]                 @relation("ReviewDriver")
   supportMessages         SupportMessage[]
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])

@@ -269,6 +269,7 @@
       "accepted": "Accepted · waiting for your confirmation",
       "booked": "Accepted · booked",
       "confirm": "Confirm the booking",
+      "declined": "Declined by the customer",
       "empty": "No quotes sent yet.",
       "heading": "Quotes sent",
       "lift": "Lift {n}",

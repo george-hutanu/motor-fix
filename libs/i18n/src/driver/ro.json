@@ -247,19 +247,41 @@
   },
   "quotes": {
     "accept": "Acceptă",
+    "acceptDialog": {
+      "cancel": "Renunță",
+      "confirm": "Confirmă",
+      "share": "Le arăt istoricul mașinii",
+      "title": "Accepți oferta {name}?"
+    },
     "changed": "Modificată {when}",
     "count": {
       "few": "{count} oferte",
       "one": "{count} ofertă",
       "other": "{count} de oferte"
     },
+    "decline": "Refuză",
+    "declineDialog": {
+      "cancel": "Renunță",
+      "confirm": "Confirmă",
+      "title": "Refuzi oferta {name}?"
+    },
     "declined": "Refuzat: {name} · {why}",
     "duration": "aprox. {duration}",
     "failed": "Nu am putut încărca ofertele.",
     "free": "liber {when}",
+    "line": {
+      "booked": "Programată: {slot}",
+      "bookedWith": "Programată: {slot} · {mechanic}",
+      "waiting": "Așteaptă confirmarea service‑ului · {left}"
+    },
     "loading": "Se încarcă ofertele",
     "missing": "Nu face: {jobs}",
     "mobile": "Mecanic mobil",
+    "problem": {
+      "error": "Nu a mers. Încearcă din nou.",
+      "network": "Nu am putut trimite. Verifică conexiunea și încearcă din nou.",
+      "not_found": "Oferta nu mai există"
+    },
     "retry": "Reîncearcă",
     "sort": {
       "earliest": "Cel mai devreme",
@@ -273,6 +295,7 @@
       "closed": "Închisă",
       "declined": "Refuzată de tine",
       "expired": "Expirată",
+      "lapsed": "Service‑ul nu a confirmat",
       "on_hold": "În așteptare"
     },
     "unrated": "fără recenzii",
@@ -287,6 +310,52 @@
     "lapsed": "Service‑ul nu a confirmat. Alege altă ofertă.",
     "retry": "Încearcă din nou",
     "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
+  },
+  "review": {
+    "car": "Mașina ta",
+    "close": "Închide",
+    "comment": "Comentariul tău",
+    "commentHint": "Prețul a fost cel din ofertă? A fost gata la timp? Te‑ai mai duce?",
+    "email": "Confirmă‑ți adresa de e‑mail ca să publici recenzia.",
+    "existing": {
+      "postedAt": "Publicată pe {date}",
+      "removed": "Recenzia a fost scoasă de pe profil.",
+      "reported": "Recenzia a fost raportată și e în verificare.",
+      "title": "Recenzia ta"
+    },
+    "failed": "Nu am putut publica recenzia. Încearcă din nou.",
+    "field": {
+      "decimals": "Cel mult două zecimale.",
+      "format": "Scrie suma în lei, de exemplu 4.200 sau 4.200,50.",
+      "length": "Cel mult 2.000 de caractere.",
+      "max": "Cel mult 1.000.000 lei.",
+      "min": "Suma trebuie să fie mai mare de 0.",
+      "range": "Suma trebuie să fie între 0,01 și 1.000.000 lei."
+    },
+    "loadFailed": "Nu am putut încărca lucrarea.",
+    "loading": "Se încarcă lucrarea…",
+    "notDone": "Poți scrie o recenzie după ce lucrarea e gata.",
+    "notFound": "Nu am găsit lucrarea.",
+    "optional": "opțional",
+    "paid": "Cât ai plătit",
+    "paidHint": "890 lei",
+    "privacy": "Apar doar {name}, mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.",
+    "publish": "Publică recenzia",
+    "published": "Publicată. E acum pe profilul {garage}.",
+    "rating": {
+      "1": "Nu m‑aș întoarce",
+      "2": "Au fost probleme",
+      "3": "Și‑au făcut treaba",
+      "4": "Lucru bine făcut",
+      "5": "Aș trimite un prieten",
+      "group": "Notă de la 1 la 5",
+      "label": "Nota ta"
+    },
+    "resend": "Trimite din nou linkul",
+    "resent": "Ți‑am trimis din nou linkul.",
+    "retry": "Încearcă din nou",
+    "title": "Cum a mers reparația?",
+    "works": "Ce s‑a lucrat"
   },
   "saved": {
     "comesToYou": "vine la tine",

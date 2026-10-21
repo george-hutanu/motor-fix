@@ -269,6 +269,7 @@
       "accepted": "Acceptată · așteaptă confirmarea ta",
       "booked": "Acceptată · programată",
       "confirm": "Confirmă programarea",
+      "declined": "Refuzată de client",
       "empty": "Nicio ofertă trimisă încă.",
       "heading": "Oferte trimise",
       "lift": "Elevator {n}",

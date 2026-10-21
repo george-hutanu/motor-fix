@@ -25,10 +25,14 @@ import { confirmBooking } from '../request-actions';
 // Once the driver accepts, the row waits for the garage's confirmation, with
 // the time left, the driver's phone when the reader may call and, for an
 // owner or a receptionist, the button that confirms it. A confirmed row
-// names its slot, mechanic, lift, the phone and the car's plate.
+// names its slot, mechanic, lift, the phone and the car's plate; a quote the
+// driver declined says so until it would have expired.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.accepted]': 'accepted() || booked()' },
+  host: {
+    '[class.accepted]': 'accepted() || booked()',
+    '[class.declined]': 'declined()',
+  },
   imports: [HlmButton, TranslatePipe],
   selector: 'li[mfQuoteSentRow]',
   styleUrl: './quote-sent-row.css',
@@ -52,6 +56,9 @@ export class QuoteSentRow {
       booking?.status === 'awaiting_confirmation'
     );
   });
+  protected readonly declined = computed(
+    () => this.row().quote?.status === 'declined_by_driver',
+  );
   protected readonly booked = computed(
     () => this.row().booking?.status === 'confirmed',
   );

@@ -205,10 +205,16 @@ export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from 
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
 export { acceptControllerAccept as acceptControllerAccept } from './fn/quotes/accept-controller-accept';
+export type { DeclineQuoteControllerDecline$Params as DeclineQuoteControllerDecline$Params } from './fn/quotes/decline-quote-controller-decline';
+export { declineQuoteControllerDecline as declineQuoteControllerDecline } from './fn/quotes/decline-quote-controller-decline';
 export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params } from './fn/bookings/confirm-controller-options';
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
+export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
+export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
+export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';
+export { reviewsControllerPublish as reviewsControllerPublish } from './fn/reviews/reviews-controller-publish';
 export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params } from './fn/garage-jobs/garage-jobs-controller-list';
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';

@@ -9,13 +9,14 @@ const link = 'https://motorfix.test/app/garage/requests';
 const params = {
   app: 'https://motorfix.test',
   car: 'Dacia Logan',
-  driver: 'Andrei M.',
+  driverShortName: 'Andrei M.',
   link,
   slot: '2026-10-16T06:00:00.000Z',
 };
 
 // @traces 222-FR-010
 // @traces 222-FR-013
+// @traces 314-FR-017
 describe('the accepted quote message to garage staff', () => {
   it('is registered for the garage and passes the template check', () => {
     expect(TEMPLATES[KIND]?.audience).toBe('garage');

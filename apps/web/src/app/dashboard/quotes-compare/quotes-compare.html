@@ -16,10 +16,10 @@
           [attr.data-quote]="row.quote.id"
           [state]="row.state"
           [now]="now()"
-          [busy]="busy() === row.quote.id"
-          [locked]="offline() || (busy() !== null && busy() !== row.quote.id)"
-          [problem]="problems()[row.quote.id] ?? null"
+          [booking]="booking()"
+          [locked]="offline()"
           (accept)="accept($event)"
+          (decline)="decline($event)"
         ></li>
       }
     </ul>

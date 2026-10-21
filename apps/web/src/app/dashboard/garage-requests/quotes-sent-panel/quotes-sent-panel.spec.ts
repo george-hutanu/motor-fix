@@ -264,3 +264,61 @@ describe('the quotes-sent-panel stylesheet', () => {
       expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);
   });
 });
+
+// @traces 314-FR-015
+// @traces 314-FR-019
+describe('Oferte trimise after the driver answers', () => {
+  const HOUR = 3_600_000;
+
+  it('reads again when the driver declines a quote', async () => {
+    const { settle } = await render([listOf(sentRows(1, 1))]);
+
+    live.emit('quote.declined_by_driver');
+    await wait(400);
+    await settle();
+
+    expect(
+      list.mock.calls.filter(([p]) => p.status === 'quoted' && !p.cursor),
+    ).toHaveLength(2);
+  });
+
+  it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+    try {
+      const loaded = Date.now();
+      const [waiting] = sentRows(1, 1);
+      const accepted = {
+        ...waiting,
+        booking: {
+          confirmBy: new Date(loaded + 29_000 + 24 * HOUR).toISOString(),
+          durationMinutes: 90,
+          id: 'booking-1',
+          lift: null,
+          mechanic: null,
+          startsAt: '2026-10-20T06:00:00Z',
+          status: 'awaiting_confirmation' as const,
+        },
+        quote: waiting.quote && {
+          ...waiting.quote,
+          status: 'accepted' as const,
+        },
+      } as typeof waiting;
+      const { element, settle } = await render([
+        listOf([waiting]),
+        listOf([accepted]),
+      ]);
+      jest.setSystemTime(loaded + 30_000);
+
+      live.emit('quote.accepted');
+      await wait(400);
+      await settle();
+
+      expect(text(rows(element)[0])).toContain('încă 23 h');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

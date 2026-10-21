@@ -3108,7 +3108,7 @@
             "description": "not_found: not the driver’s quote"
           },
           "409": {
-            "description": "invalid_transition: the quote is not waiting, has expired or its garage is suspended, or the request is not quoted; booking_pending: the request already has a booking; slot_passed: the proposed time has passed"
+            "description": "invalid_transition: the quote is not waiting, has expired or its garage is suspended, or the request is not quoted; booking_pending: the request already has a booking; slot_passed: the proposed time has passed. Each with a message in the caller’s language"
           }
         },
         "security": [
@@ -3269,6 +3269,151 @@
         "summary": "Confirm an accepted booking, with its mechanic and lift",
         "tags": [
           "bookings"
+        ]
+      }
+    },
+    "/api/v1/quotes/{id}/decline": {
+      "post": {
+        "operationId": "DeclineQuoteController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclinedQuoteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s quote"
+          },
+          "409": {
+            "description": "invalid_transition: the quote is not waiting (its currentStatus named; a suspended garage’s reads withdrawn), with a message in the caller’s language"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decline one waiting quote; the garage is told",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/reviews/job/{jobId}": {
+      "get": {
+        "operationId": "ReviewsController_forJob",
+        "parameters": [
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobReviewContextDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the caller’s job"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A finished job as its review shows it, with the review if any",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews": {
+      "post": {
+        "operationId": "ReviewsController_publish",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, type or member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the caller’s job"
+          },
+          "409": {
+            "description": "job_not_done; email_not_confirmed; review_exists"
+          },
+          "422": {
+            "description": "validation_failed: rating, paidBani or text out of range, named in errors"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a review of the caller’s finished job",
+        "tags": [
+          "reviews"
         ]
       }
     },
@@ -11369,6 +11514,46 @@
           }
         }
       },
+      "CompareBookingDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mechanicName": {
+            "type": "string",
+            "description": "The confirmed booking’s mechanic; null until one is named",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "confirmBy",
+          "startsAt",
+          "quoteId",
+          "mechanicName"
+        ]
+      },
       "CompareRequestDto": {
         "type": "object",
         "properties": {
@@ -11397,12 +11582,11 @@
             }
           },
           "booking": {
-            "description": "The request’s newest booking",
             "nullable": true,
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/RequestBookingDto"
+                "$ref": "#/components/schemas/CompareBookingDto"
               }
             ]
           },
@@ -11684,6 +11868,30 @@
           }
         }
       },
+      "DeclinedQuoteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "declined_by_driver"
+            ]
+          },
+          "declinedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "declinedAt"
+        ]
+      },
       "DriverNameDto": {
         "type": "object",
         "properties": {
@@ -11694,6 +11902,150 @@
         },
         "required": [
           "shortName"
+        ]
+      },
+      "ReviewJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "ReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "paidBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported",
+              "removed",
+              "deleted_by_author"
+            ]
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jobId",
+          "rating",
+          "text",
+          "paidBani",
+          "status",
+          "postedAt"
+        ]
+      },
+      "JobReviewContextDto": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "job": {
+            "$ref": "#/components/schemas/ReviewJobDto"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "emailConfirmed": {
+            "type": "boolean"
+          },
+          "hasEmail": {
+            "type": "boolean"
+          },
+          "existing": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "author",
+          "job",
+          "garage",
+          "car",
+          "jobs",
+          "emailConfirmed",
+          "hasEmail",
+          "existing"
+        ]
+      },
+      "PublishReviewDto": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "paidBani": {
+            "type": "number",
+            "maximum": 100000000,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "jobId",
+          "rating"
         ]
       },
       "JobSummaryDto": {

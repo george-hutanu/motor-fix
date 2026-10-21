@@ -120,7 +120,7 @@ test.describe('accepting a quote @seeded', () => {
     // The live re-read, with no reload, within the brief's 5 seconds.
     await expect(row).toContainText('Programată', { timeout: 5_000 });
     await expect(row.locator('.waiting')).toHaveText(
-      /^Așteaptă confirmarea service‑ului · încă 2[34] h$/,
+      /^Așteaptă confirmarea service‑ului · încă 23 h$/,
     );
     // The driver's other quote is untouched by this acceptance.
     const other = page.locator(`li[data-request="${otherId}"]`);
@@ -137,9 +137,80 @@ test.describe('accepting a quote @seeded', () => {
         .locator('mf-quotes-sent-panel')
         .locator(`[data-live-id="${requestId}"]`);
       await expect(sent).toContainText('Acceptată · așteaptă confirmarea ta');
-      await expect(sent).toContainText(/încă 2[34] h/);
+      await expect(sent).toContainText(/încă 23 h/);
       await expect(sent.locator(`a[href="tel:${DRIVER_PHONE}"]`)).toHaveText(
         DRIVER_PHONE,
+      );
+    } finally {
+      await context.close();
+    }
+  });
+
+  // @traces 314-FR-002
+  // @traces 314-FR-003
+  // @traces 314-FR-005
+  // @traces 314-FR-007
+  // @traces 314-FR-009
+  test('the driver accepts in the comparison with the history ticked, sees it wait, and sees it booked with the mechanic once the owner confirms', async ({
+    browser,
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    const { quoteIds, requestIds } = await twoQuotes(request);
+    const [requestId] = requestIds;
+    await signedIn(page, DRIVER, '/app/driver');
+    await page.goto(`/app/driver/requests?request=${requestId}`);
+    const row = page
+      .locator('mf-quotes-compare')
+      .locator(`li[data-quote="${quoteIds[0]}"]`);
+    await row.getByRole('button', { exact: true, name: 'Acceptă' }).click();
+
+    const dialog = page.getByRole('dialog', {
+      name: /^Accepți oferta Service Auto Militari\?$/,
+    });
+    const tick = dialog.getByLabel('Le arăt istoricul mașinii');
+    await expect(tick).not.toBeChecked();
+    await tick.check();
+    await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
+    // On a phone the dialog container around the sheet has no box.
+    await expect(dialog.locator('mf-overlay-panel')).toBeHidden();
+
+    await expect(row).toContainText('Acceptată');
+    await expect(row.locator('[data-part="booking"]')).toHaveText(
+      /^Așteaptă confirmarea service‑ului · încă 23 h$/,
+    );
+    const width = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(width).toBeLessThanOrEqual(390);
+
+    const context = await browser.newContext();
+    try {
+      const owner = await context.newPage();
+      await owner.setViewportSize({ height: 900, width: 1440 });
+      await signedIn(owner, MILITARI, '/app/garage');
+      await owner.goto('/app/garage/requests');
+      const sent = owner
+        .locator('mf-quotes-sent-panel')
+        .locator(`[data-live-id="${requestId}"]`);
+      await sent.getByRole('button', { name: 'Confirmă programarea' }).click();
+      const confirm = owner.getByRole('dialog', {
+        name: 'Confirmă programarea',
+      });
+      const mechanic = confirm.getByLabel('Mecanic');
+      await expect(mechanic).toBeVisible();
+      const [, first] = await mechanic.locator('option').allTextContents();
+      await mechanic.selectOption({ label: first });
+      await confirm
+        .getByRole('button', { exact: true, name: 'Confirmă' })
+        .click();
+      await expect(confirm).toBeHidden();
+
+      // The driver's panel follows without a reload.
+      await expect(row.locator('[data-part="booking"]')).toHaveText(
+        new RegExp(`^Programată: .+ · ${first}$`),
+        { timeout: 5_000 },
       );
     } finally {
       await context.close();

@@ -19,6 +19,8 @@
     <span class="lamp" aria-hidden="true"></span>
     @if (booked()) {
       <span>{{ 'garage.quotes.sentList.booked' | t }} <time [attr.datetime]="request.booking?.startsAt">{{ bookedSlot() }}</time></span>
+    } @else if (declined()) {
+      <span>{{ 'garage.quotes.sentList.declined' | t }}</span>
     } @else if (accepted()) {
       <span>{{ 'garage.quotes.sentList.accepted' | t }} · <time [attr.datetime]="request.booking?.confirmBy">{{ left() }}</time></span>
     } @else {

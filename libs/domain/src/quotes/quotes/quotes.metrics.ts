@@ -100,6 +100,23 @@ export function recordQuoteAccept(outcome: QuoteAcceptOutcome) {
   quoteAccepts().add(1, { outcome });
 }
 
+export const QUOTE_DECLINE_OUTCOMES = [
+  'declined',
+  'invalid_transition',
+  'refused',
+] as const;
+export type QuoteDeclineOutcome = (typeof QUOTE_DECLINE_OUTCOMES)[number];
+
+export const quoteDeclines = () =>
+  meter().createCounter('motorfix_quote_declines_total', {
+    description: 'Quotes drivers declined, by outcome',
+  });
+
+// One count per decline a driver tries, by outcome; never who or which.
+export function recordQuoteDecline(outcome: QuoteDeclineOutcome) {
+  quoteDeclines().add(1, { outcome });
+}
+
 export const BOOKING_CONFIRM_OUTCOMES = [
   'confirmed',
   'mechanic_busy',
