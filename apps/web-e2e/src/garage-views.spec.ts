@@ -232,26 +232,30 @@ test.describe('garage views @seeded', () => {
     await expect(title(page)).toHaveText('Istoric modificări');
   });
 
-  // @traces 097-FR-008
-  test('the owner of a garage not yet approved reads that its profile is being checked @core', async ({
+  // @traces 097-FR-008 101-FR-007 101-FR-013
+  test('the owner of a garage not yet approved reads that its profile is being checked, with no view open @core', async ({
     page,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await signedIn(page, ACCOUNTS.garage);
 
-    await expect(page.locator('main')).toContainText(
-      'Profilul tău e în verificare.',
+    const checking = page.locator('mf-verification-progress');
+    await expect(checking.locator('h1')).toHaveText(
+      'Profilul tău e în verificare',
     );
     await expect(line(page)).toHaveText('Atelier Test');
     await expect(
       page.getByRole('navigation', { name: 'Meniu' }).getByRole('link'),
-    ).toHaveCount(VIEWS.length);
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('navigation', { name: 'Meniu' }).getByRole('button'),
+    ).toHaveText(['Ajutor și contact']);
 
     await language(page)
       .getByRole('button', { exact: true, name: 'EN' })
       .click();
-    await expect(page.locator('main')).toContainText(
-      'Your profile is being checked.',
+    await expect(checking.locator('h1')).toHaveText(
+      'Your profile is being checked',
     );
     await language(page)
       .getByRole('button', { exact: true, name: 'RO' })
