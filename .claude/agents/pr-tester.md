@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and the object store, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and the object store, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the run's evidence and the diff's conformance to the feature's spec, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -228,8 +228,9 @@ read. Read the diff per changed file (or a group of related ones), with the
 paths drawn from the packet's "Changed files", never as one whole-PR diff
 file: leave out `specs/` and `.specify/capabilities/`, which the packet
 already sums up. Fetch once, then in one turn run the batched `git diff`
-calls as parallel Bash calls, alongside the constitution Read
-(`.specify/memory/constitution.md`) and `tasks.md`:
+calls as parallel Bash calls, alongside `.specify/memory/constitution-card.md`,
+`tasks.md` and, of `.specify/memory/constitution.md`, only `### I.`, `### II.` and `### VII.`
+(`grep -n '^##' .specify/memory/constitution.md` gives each section's lines; Read those ranges):
 
 ```bash
 git fetch -q origin <base> <headRefName>
@@ -241,16 +242,17 @@ When "Changed files" is unavailable or ends in "… N more files", take the
 paths from `git diff --name-only origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities'`
 instead, so no file goes unread.
 
-Review those diffs against the requirements (every FR implemented and tested,
-nothing beyond scope), its `tasks.md` (every `[X]` true) and
-`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
-and colocated, III–VII), in full on every lap. Do not diff a file again or
+Review those diffs for conformance only, in full on every lap: every FR
+reached and tested, nothing beyond scope (Principle I), tests first and
+colocated (II), every `[X]` in `tasks.md` true, the lifecycle kept (VII).
+Durability and style are not yours: `code-reviewer` reads the diff once, in
+the review, so raise no smell of your own. Do not diff a file again or
 read the repository around it to understand it; open another file only to
 confirm one specific claim before you raise it, in one call. Add a finding
 per real problem, quoting the line. A previous-lap finding the packet marks
 resolved is checked against the fix, not taken on trust. Severity: a
-requirement not met or a principle broken is `high`; a smell is `medium` or
-`low`. Open only the screenshots the packet names under "Look at only these"
+requirement not met or a principle broken is `high`; a gap that loses no
+requirement (an untested edge, a stale `[X]`) is `medium` or `low`. Open only the screenshots the packet names under "Look at only these"
 (`<out>/shots/`): the others are identical to the baseline's, already
 reviewed. When the run diffed its shots against main's (`visual.json`), each
 changed one comes with its regions outlined in `<out>/diff/<shot>.png`:
@@ -298,7 +300,8 @@ on a route the change does not explain is `medium`, citing that diff.
 
 Write your findings and post them in one call. `agent-findings.json` is a
 JSON array, `[]` when you found nothing; each finding is `{ "severity":
-"blocker" | "high" | "medium" | "low", "kind": "review", "title", "steps":
+"blocker" | "high" | "medium" | "low", "kind": "evidence" | "conformance",
+"title", "steps":
 ["…"], "evidence": "<path>:<line>: <the quoted line>" }` (a screen finding
 adds `"route"`, which the review shows as Where, and cites
 `shots/<name>.png` in its evidence):

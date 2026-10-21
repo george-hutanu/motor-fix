@@ -108,11 +108,13 @@ describe('the constitution', () => {
     assert.match(phase1, /constitution-card\.md/);
   });
 
-  it('reaches the reviewers and the PR tester in full', () => {
+  // @traces 1355-FR-009
+  it('reaches the reviewers and the PR tester as the card and their sections', () => {
     for (const name of ['spec-reviewer', 'code-reviewer', 'pr-tester']) {
       const text = read(`.claude/agents/${name}.md`);
       assert.match(text, /\.specify\/memory\/constitution\.md/, name);
-      assert.doesNotMatch(text, /constitution-card/, name);
+      assert.match(text, /constitution-card/, name);
+      assert.match(text, /`### I\.`/, name);
     }
   });
 });

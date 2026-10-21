@@ -35,7 +35,7 @@ if ! commit_msg="$(node "$repo/.claude/hooks/commit-msg-policy.js" <<<"$payload"
   exit 2
 fi
 
-echo "▶ spec-kit gates: spec-drift (tests+lint+typecheck run in .husky/pre-commit)" >&2
+echo "▶ spec-kit gates: spec-drift (tests+lint+typecheck run in lifecycle.mjs check)" >&2
 
 # The traceability gate stays retired: a whole-line `// @traces NNN-FR-XXX`
 # comment in a test file is the one id form Constitution II allows, and

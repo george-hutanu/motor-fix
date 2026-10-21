@@ -26,7 +26,8 @@ handed:
 - every source and test file the diff touches, in full, plus its callers
 - the repo's known traps and the stack in AGENTS.md, already in your context
   (never Read it again)
-- `.specify/memory/constitution.md`, Principle I first
+- `.specify/memory/constitution-card.md`, then only `### I.`, `### II.` and `### IV.` of `.specify/memory/constitution.md`
+  (`grep -n '^##'` it for the lines, then Read those ranges), Principle I first
 
 Run `node .claude/scripts/diff-audit.mjs` and fold its ERRORs in; do not
 re-derive what it already proved. Its dead-export rule is a word-boundary grep

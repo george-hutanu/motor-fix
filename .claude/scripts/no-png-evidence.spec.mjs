@@ -48,8 +48,8 @@ describe('QA evidence keeps screenshots out of the repo', () => {
   });
 });
 
-describe('the screen-review rules in AGENTS.md', () => {
-  const section = () => readFileSync(join(root, 'AGENTS.md'), 'utf8').split('## Reviewing a change that has screens')[1].split('\n## ')[0];
+describe('the screen-review rules, moved from AGENTS.md to the pr-test skill', () => {
+  const section = () => readFileSync(join(root, '.claude', 'skills', 'speckit-pr-test', 'SKILL.md'), 'utf8').split('## Reviewing a change that has screens')[1].split('\n## ')[0];
 
   // A pushed branch can only be rebased by a forced push, which Constitution
   // VII and bash-guard forbid; lifecycle step 5 merges origin/main instead.

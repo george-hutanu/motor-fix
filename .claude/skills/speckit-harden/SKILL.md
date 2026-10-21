@@ -1,6 +1,6 @@
 ---
 name: "speckit-harden"
-description: "Quality gate for the code a feature produced: runs the mechanical audits, judges durability and bloat against a fixed rubric, fixes what it finds, and re-verifies. Runs between /speckit-implement and the spec review."
+description: "Quality gate for the code a feature produced: runs the mechanical audits and adversarial tests, fixes what they find, and re-verifies. Runs between /speckit-implement and the spec review."
 argument-hint: "Optional scope, e.g. a package name"
 compatibility: "Requires spec-kit project structure, the scripts in .claude/scripts, and a green suite"
 metadata:
@@ -115,34 +115,14 @@ leaves is either a defect or a spec gap — you decide which, and a defect is
 fixed here while a spec gap goes to "Needs you". Its report is not shown to the
 user; relay the failing rows.
 
-### 3. Durability read
+### 3. No durability read here
 
-Invoke the `code-reviewer` subagent (Agent tool, `subagent_type:
-code-reviewer`) with the diff range. It applies the rubric below with no memory
-of why the code was written that way — which is the bias this step exists to
-remove; the context that made a decision is the worst judge of whether it was
-necessary. Its report is not shown to the user; every CRITICAL and HIGH is
-fixed in step 4, and so is every MEDIUM/LOW, pre-existing or adjacent
-included: fix every verified finding in this PR; an owner decision is a
-`needs-confirmation` question (`speckit-tracker-sync blocked <question>`). An
-adversary defect is routed the same way.
-
-The rubric it applies, so you can judge its findings:
-
-- **Boundaries**: does every value crossing a process boundary — HTTP, the
-  database, the filesystem, an env var — get validated where it enters, against
-  the shared contract rather than a local cast? A type assertion at a boundary
-  is a lie the compiler cannot catch.
-- **Failure**: what happens when the dependency is down, the file is missing,
-  the input is empty, the number is zero, the array is huge? Each answer is
-  either in a test or it is a guess.
-- **Resource discipline**: is every handle, transaction and temp directory
-  closed on the failure path as well as the happy one?
-- **Concurrency and order**: does anything assume an order it does not enforce,
-  or mutate shared state a second caller could see?
-- **Bloat**: an abstraction with one implementation, a parameter every caller
-  passes the same value for, a wrapper that only forwards, a config knob nothing
-  sets, a comment restating its own code. Each is a deletion.
+The `code-reviewer` subagent runs once per change, in the review
+(`/speckit-review`, or `/speckit-auto` phase 14), over the whole diff: a read
+here would judge the same lines twice. Every adversary defect is fixed in
+step 4, pre-existing or adjacent included: fix every verified finding in this
+PR; an owner decision is a `needs-confirmation` question
+(`speckit-tracker-sync blocked <question>`).
 
 ### 4. Fix, verify, repeat
 
@@ -177,7 +157,6 @@ Needs you: <finding this command must not decide>
 ## Done When
 
 - [ ] `diff-audit.mjs` and `artifact-lint.mjs` report zero ERRORs, or each survivor is explained in the report
-- [ ] Durability read done, with each of its five questions answered for the diff
 - [ ] `jest --onlyChanged`, `lint` and `typecheck` green after the last edit
 - [ ] Every fix is a refactor, deletion, or added test — no behavior changed, no test weakened
 - [ ] Report delivered with before/after numbers, not adjectives

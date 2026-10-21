@@ -305,8 +305,11 @@ describe('release workflow calling CI', () => {
   });
 });
 
-describe('AGENTS.md', () => {
-  const agents = readFileSync(join(__dirname, '..', 'AGENTS.md'), 'utf8');
+describe('the lifecycle doc', () => {
+  const agents = readFileSync(
+    join(__dirname, '..', '.claude/skills/speckit-auto/lifecycle.md'),
+    'utf8',
+  );
 
   it('names the title workflow and no longer lists the title as a CI job', () => {
     expect(agents).toContain('.github/workflows/pr-title.yml');

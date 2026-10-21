@@ -449,8 +449,8 @@ describe('the docs name the one removal', () => {
   const root = join(import.meta.dirname, '..', '..');
   const read = (p) => readFileSync(join(root, p), 'utf8');
 
-  it('AGENTS.md states the rule, and the tail and the watch skill run the shared command', () => {
-    const agents = read('AGENTS.md');
+  it('the watch skill states the rule (moved from AGENTS.md), and the tail and the watch skill run the shared command', () => {
+    const agents = read('.claude/skills/speckit-watch/SKILL.md');
     assert.match(agents, /A worktree goes once its PR merges or closes, or after 7 idle days with no\s+PR/);
     assert.match(agents, /\.claude\/scripts\/worktree-remove\.mjs/);
     assert.match(read('.claude/skills/speckit-auto/tail.md'), /`ExitWorktree` \(keep\) and run\s+`node <worktree>\/\.claude\/scripts\/worktree-remove\.mjs <worktree>` from the\s+main checkout/);

@@ -1,10 +1,11 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Authors read the card, not the 26 KB constitution; reviewers read the full
-// file. The card is only safe while it names the same principles and version.
+// Authors read the card, not the 26 KB constitution; reviewers read the card
+// and only their principles' sections. The card is only safe while it names the
+// same principles and version.
 
 const memory = join(import.meta.dirname, '..', '..', '.specify', 'memory');
 const CARD = join(memory, 'constitution-card.md');
@@ -135,5 +136,32 @@ describe('the author skills', () => {
       assert.match(card.split('\n').find((line) => line.startsWith(`- **${n}.`)), /Valkey/);
     }
     assert.ok(atLeast(full, 3, 3));
+  });
+});
+
+// @traces 1355-FR-009
+describe('the agent definitions', () => {
+  const agents = join(import.meta.dirname, '..', 'agents');
+  // A line that names the full constitution must name the sections it reads.
+  const sectioned = (line) => !line.includes('constitution.md') || /### (?:[IVX]+|<numeral>)\.|grep -n '\^##/.test(line);
+
+  it('refuses a line that names the whole constitution', () => {
+    assert.equal(sectioned('- `.specify/memory/constitution.md`, Principle I first'), false);
+    assert.equal(sectioned('- the card, then `### I.` of `.specify/memory/constitution.md`'), true);
+    assert.equal(sectioned("(`grep -n '^##' .specify/memory/constitution.md` for the lines)"), true);
+  });
+
+  it.each(readdirSync(agents).filter((name) => name.endsWith('.md')))('%s reads the constitution by section only', (name) => {
+    const text = readFileSync(join(agents, name), 'utf8');
+    const whole = text
+      .split('\n')
+      .map((line, i) => ({ line, at: i + 1 }))
+      .filter(({ line }) => !sectioned(line))
+      .map(({ line, at }) => `${name}:${at}: ${line.trim()}`);
+    assert.deepEqual(whole, []);
+  });
+
+  it.each(['spec-reviewer', 'code-reviewer', 'pr-tester', 'spec-challenger'])('%s reads the card', (name) => {
+    assert.match(readFileSync(join(agents, `${name}.md`), 'utf8'), /\.specify\/memory\/constitution-card\.md/);
   });
 });
