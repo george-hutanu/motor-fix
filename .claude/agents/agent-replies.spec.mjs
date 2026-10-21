@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Every agent reply is re-read by its caller on each later turn, so its shape
@@ -83,5 +83,33 @@ describe('the agent reply envelope', () => {
     assert.match(report, /auto-run\.md/);
     assert.match(report, /envelope/i);
     assert.match(report, /at most 10 lines/);
+  });
+});
+
+// @traces 1355-FR-008, 1355-FR-010
+describe('the tail reads tail.md alone, and AGENTS.md stays small', () => {
+  const tail = join(claudeDir, 'skills', 'speckit-auto', 'tail.md');
+  const DISPATCHES = [
+    [tail, /^> [\s\S]*?(?=\n\n)/m],
+    [join(claudeDir, 'agents', 'task-runner.md'), /"The tail" \([^)]*\)/],
+    [join(claudeDir, 'skills', 'speckit-watch', 'SKILL.md'), /^ *\| `tail` \|.*$/m],
+  ];
+
+  it.each(DISPATCHES)('%s: the tail dispatch names tail.md, not speckit-auto/SKILL.md', (file, pattern) => {
+    const text = read(file).match(pattern)?.[0] ?? '';
+    assert.match(text, /tail\.md/);
+    assert.doesNotMatch(text, /speckit-auto\/SKILL\.md/);
+  });
+
+  it('keeps what the tail reads under 30,000 bytes, with 2 KB for the note', () => {
+    const bytes = [tail, join(claudeDir, 'agents', 'task-runner.md'), join(repoRoot, '.github', 'pull_request_template.md')]
+      .map((file) => statSync(file).size)
+      .reduce((a, b) => a + b, 2048);
+    assert.ok(bytes < 30000, `${bytes} bytes`);
+  });
+
+  it('keeps AGENTS.md under 15,000 bytes', () => {
+    const bytes = statSync(join(repoRoot, 'AGENTS.md')).size;
+    assert.ok(bytes < 15000, `${bytes} bytes`);
   });
 });

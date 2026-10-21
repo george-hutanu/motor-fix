@@ -649,6 +649,7 @@ describe('the product dashboard', () => {
       'motorfix_verification_resubmissions_total',
       'motorfix_report_decisions_total',
       'motorfix_rechecks_total',
+      'motorfix_listing_submissions_total',
     ]);
   });
 

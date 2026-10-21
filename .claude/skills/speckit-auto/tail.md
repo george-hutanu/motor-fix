@@ -1,6 +1,6 @@
 # speckit-auto: the wait and the tail
 
-Read by the session that receives `NEXT: tail #<n>`, and by the tail agent, after `SKILL.md`.
+Read by the session that receives `NEXT: tail #<n>`, and by the tail agent, which reads no `SKILL.md`: what it needs of it is under "What the tail needs of SKILL.md" below.
 
 The tracker is the story's GitHub issue (`speckit-tracker-sync`, log
 `tracker-sync.md`), for every feature: one whose folder still holds an older
@@ -60,9 +60,19 @@ holding only the PR number, the worktree and the note's path:
 
 > Switch into the existing worktree with `EnterWorktree` and `path: <worktree>`
 > and work only there. You are the tail agent for PR #<n>: read
-> `<worktree>/specs/<feature>/handoff.md` and
-> `.claude/skills/speckit-auto/SKILL.md`, then run "The tail" in `tail.md`
-> beside it.
+> `<worktree>/specs/<feature>/handoff.md`, then run "The tail" in
+> `.claude/skills/speckit-auto/tail.md`. Reply with the envelope (`STATUS:`,
+> `PR:`, `NEXT:`, `FILES:`), at most 10 lines.
+
+### What the tail needs of SKILL.md
+
+- Hard Stops: a check it cannot make green (2), CRITICAL/HIGH findings that
+  survive the re-review (4), the same test failing after 3 distinct fixes (5).
+- Run state: `run-state.mjs set --status in-progress --phase pr-test|merge`;
+  each fix lap is `run-state.mjs repair` (`repair_iterations`), which exits 1
+  at `SPECKIT_MAX_REPAIR_ITERATIONS` (10).
+- Blocked: `run-state.mjs set --status blocked --blocking <condition>`, then
+  `speckit-tracker-sync blocked <reason>`, and stop.
 
 The tail reads the note and the PR, not the story's transcript,
 and runs lifecycle steps 5–7. It first runs

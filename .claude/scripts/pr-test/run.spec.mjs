@@ -249,7 +249,7 @@ describe('how to write a route and a flow, where the tester and its callers read
   const docs = {
     skill: read('../../skills/speckit-pr-test/SKILL.md'),
     agent: read('../../agents/pr-tester.md'),
-    agents: read('../../../AGENTS.md'),
+    lifecycle: read('../../skills/speckit-auto/lifecycle.md'),
   };
 
   for (const [name, doc] of Object.entries(docs))

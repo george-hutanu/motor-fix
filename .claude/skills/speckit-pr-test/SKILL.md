@@ -156,3 +156,31 @@ days); the report names them and gives the run's URL. The specs repository's
   who wrote it (`provenance.mjs`): a PR that changes `pr-qa.yml` needs a lap
   dispatched on `main` from the laptop.
 - Never merge with `agent-review` missing or failing on the head commit.
+
+## Reviewing a change that has screens
+
+- **Phones first.** Every review of a screen covers a 320 px phone, a 390 px
+  phone, a tablet and a desktop, in light and dark, Romanian and English. The
+  PR tester's sweep (`.claude/scripts/pr-test/sweep.mjs`) runs all four, in
+  CI: the PR QA workflow (`.github/workflows/pr-qa.yml`) boots the PR head on
+  a GitHub runner. A reviewer or agent checking by hand does the same, and a
+  screen that scrolls sideways at 320 px is a finding.
+- **The artifact's screenshots are the evidence.** The PR QA run uploads
+  `report.md`, `report.json` and a screenshot per route, size, scheme and
+  language as its `pr-qa-<n>` artifact, and the tester reads them before it
+  posts. Walking the changed screens in the built-in browser pane (the
+  `mcp__Claude_Browser__*` tools) is optional: do it when the owner wants to
+  watch, serving the PR head under `scripts/heavy.sh` and stopping the server
+  after.
+- **QA runs in CI, not on the laptop.** A QA run holds no heavy slot, so ready
+  PRs are not queued behind the 16 GB laptop; only a `--local` run (Actions
+  unavailable) waits for a `scripts/heavy.sh` slot. After a merge, a PR
+  waiting in QA merges `origin/main` and is tested again only if it now
+  conflicts with `main` or shares changed files with what merged (never a
+  rebase, which would need a forced push); its CI already runs on the merge
+  result.
+- **No images in the repo.** Screenshots are evidence for a chat, a review
+  or a PR comment, never a commit: QA copies only `report.md` and
+  `report.json` into `pr-review/`, and `specs/.gitignore` refuses images there. Real
+  app assets, such as the web app's icons, are the only images git holds.
+

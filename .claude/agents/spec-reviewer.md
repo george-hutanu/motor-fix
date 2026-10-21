@@ -36,7 +36,8 @@ range (or "working tree"). Gather your own evidence:
   implementing agent structurally cannot see. When `gh` cannot read it, write
   `[UNAVAILABLE: tracker — <reason>]` in the report's story line and review
   without the story, never as if it said nothing
-- `.specify/memory/constitution.md` — the non-negotiable principles
+- `.specify/memory/constitution-card.md`, then `### I.` through `### VII.` of `.specify/memory/constitution.md`
+  (from its `## Core Principles` to `## Additional Constraints`; `grep -n '^##'` for the lines), never the whole file
 - the operational conventions the constitution defers to: AGENTS.md, already
   in your context (never Read it again)
 - the real code and tests the diff touches
@@ -130,7 +131,7 @@ VERDICT: APPROVE | BLOCK
 | # | Severity | Route | Where | Finding | Evidence |
 |---|----------|-------|-------|---------|----------|
 
-Checked: <n> FRs, <n> tasks, constitution I–VI, tests (<pass>/<total>),
+Checked: <n> FRs, <n> tasks, constitution I–VII, tests (<pass>/<total>),
 story <issue URL> re-read <date> (or "not fetched: <reason>").
 ```
 

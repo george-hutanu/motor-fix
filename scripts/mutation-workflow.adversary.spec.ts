@@ -187,7 +187,10 @@ describe('the plan and summary jobs', () => {
 
 describe('the docs', () => {
   const docs = {
-    agents: readFileSync(join(root, 'AGENTS.md'), 'utf8'),
+    agents: readFileSync(
+      join(root, '.claude/skills/speckit-auto/lifecycle.md'),
+      'utf8',
+    ),
     runner: readFileSync(
       join(root, '.claude/agents/mutation-runner.md'),
       'utf8',

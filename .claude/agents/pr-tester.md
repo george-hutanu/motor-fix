@@ -228,8 +228,9 @@ read. Read the diff per changed file (or a group of related ones), with the
 paths drawn from the packet's "Changed files", never as one whole-PR diff
 file: leave out `specs/` and `.specify/capabilities/`, which the packet
 already sums up. Fetch once, then in one turn run the batched `git diff`
-calls as parallel Bash calls, alongside the constitution Read
-(`.specify/memory/constitution.md`) and `tasks.md`:
+calls as parallel Bash calls, alongside `.specify/memory/constitution-card.md`,
+`tasks.md` and, of `.specify/memory/constitution.md`, only `### I.`, `### II.` and `### VII.`
+(`grep -n '^##' .specify/memory/constitution.md` gives each section's lines; Read those ranges):
 
 ```bash
 git fetch -q origin <base> <headRefName>
