@@ -145,7 +145,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "4286e5c23df2"
+      "fingerprint": "58e23b339445"
     },
     {
       "id": "stop:test-gate",

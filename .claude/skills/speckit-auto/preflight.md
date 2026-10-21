@@ -19,7 +19,12 @@ Run these before phase 1, in one batch:
 - Read the card, `.specify/memory/constitution-card.md` (each
   principle and the gate that will fire at you), not the full constitution;
   the reviewers and the PR tester read that.
-- `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
+- `node .claude/scripts/lib/preflight-skip.mjs` first: `skip <sha7>` (a clean
+  tree at its merge base with `origin/main`, whose commit has a successful
+  `CI OK`) means CI already ran the suite on this base; log `Preflight suite
+  skipped: base <sha7> has CI OK` in `auto-run.md` and count the start green.
+  On `run <reason>`:
+  `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
   — the repo MUST start green (on a failure, `grep -nE '✕|●|FAIL|Error'` the log
   rather than reading all of it). Through Nx, whose cache every worktree shares
   (`~/.nx/<workspace hash>`), a project unchanged since another worktree

@@ -11,15 +11,17 @@
 #   2. the AFFECTED colocated test, not the suite:
 #        foo.spec.ts  -> itself
 #        foo.ts       -> foo.spec.ts when it exists, else nothing
-#      run through the root jest config, which spans every Nx project
+#      run through the root jest config, which spans every Nx project, unless
+#      Jest took 5 s or more on it in the last 7 days (spec-durations.mjs keeps
+#      Jest's own time per spec); a slow spec is left to the Stop gate
 #
 # A tool that is not installed yet (before the Nx scaffold lands) is skipped,
 # not failed: the gate exists to catch broken edits, not a missing toolchain.
 #
 # Typecheck is deliberately NOT here: a whole-workspace typecheck is too slow
-# to run per edit. .husky/pre-commit still runs it (with
-# lint and the full suite) on every real commit, and the Stop hook re-checks
-# what changed before the agent may finish.
+# to run per edit. `lifecycle.mjs check` runs it with the affected unit tests
+# at each slice's end and at ready, and the Stop hook re-checks what changed
+# before the agent may finish.
 #
 # Exit 2 = feed stderr back to the model as something to fix now. Anything
 # outside apps/libs/e2e source (docs, specs, hooks) passes through silently.
@@ -61,14 +63,25 @@ case "$rel" in
     ;;
 esac
 [ -n "$test_file" ] || exit 0
+
+durations=".claude/scripts/lib/spec-durations.mjs"
+if [ -f "$durations" ] && ! node "$durations" should "$test_file"; then
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: Jest took 5 s or more on it in the last 7 days. The Stop gate runs it (jest --onlyChanged) before the turn ends.\"}}"
+  exit 0
+fi
 [ -x node_modules/.bin/jest ] || exit 0
 
 # In a heavy-command slot with two workers, waiting at most 60 s for one; no
 # slot in time skips the run and says so rather than stalling every edit.
 heavy=""
 [ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
-HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install jest "$test_file" --maxWorkers=2 >&2 2>&1
+report="$(mktemp)"
+HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install jest "$test_file" --maxWorkers=2 --json --outputFile="$report" >&2 2>&1
 code=$?
+# Jest's own time for the file, never the wait for the slot.
+ms="$(node -e 'try{const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).testResults?.[0];if(r)process.stdout.write(String(r.endTime-r.startTime))}catch{}' "$report")"
+[ -n "$ms" ] && [ -f "$durations" ] && node "$durations" record "$test_file" "$ms"
+rm -f "$report"
 if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
   echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Affected tests for $rel were not run: every shared heavy-command slot stayed busy for 60 s. Run $test_file before relying on it.\"}}"
   exit 0

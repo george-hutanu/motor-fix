@@ -132,6 +132,16 @@ function headChecks(run, sha) {
   return { runs, statuses };
 }
 
+/**
+ * Whether the commit has a check whose name ends in "CI OK" (ci.yml's own job,
+ * or `checks / CI OK` when release.yml calls it on main) and every such check
+ * succeeded.
+ */
+export function ciOkOn(run, sha) {
+  const ok = headChecks(run, sha).runs.filter((c) => /CI OK$/.test(c.name));
+  return ok.length > 0 && ok.every((c) => c.conclusion === "success");
+}
+
 /** headChecks as GraphQL's CheckRun and StatusContext. */
 function rollup(run, sha) {
   const { runs, statuses } = headChecks(run, sha);

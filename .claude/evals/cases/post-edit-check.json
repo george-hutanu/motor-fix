@@ -1,0 +1,19 @@
+[
+  {
+    "id": "leaves-a-slow-spec-to-the-stop-gate",
+    "hook": "post:edit:affected-tests",
+    "why": "Jest's last time on the edited spec was 5 s or more (a record dated ahead, so it never ages past 7 days), so the edit does not wait for it; the hook says which spec it left to the Stop gate instead of passing silently",
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/demo/src/demo.spec.ts": "it('holds', () => {});\n",
+            ".specify/.cache/spec-durations.json": "{\"libs/demo/src/demo.spec.ts\":{\"ms\":9000,\"at\":\"2099-01-01T00:00:00.000Z\"}}\n"
+          }
+        }
+      ]
+    },
+    "payload": { "tool_name": "Edit", "tool_input": { "file_path": "libs/demo/src/demo.spec.ts" } },
+    "expect": { "exit": 0, "stdout": "additionalContext.*libs/demo/src/demo\\.spec\\.ts was not run" }
+  }
+]
