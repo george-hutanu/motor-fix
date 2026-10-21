@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import type { EventKind } from '@motor-fix/contracts';
 import { REQUEST_STATUS_LABELS } from '@motor-fix/contracts/request-status';
 import {
   type RequestSummaryDto,
@@ -28,7 +27,7 @@ import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 import { ActiveRequest } from '../active-request/active-request';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
-import { liveResource } from '../live';
+import { liveResource, REQUEST_EVENTS } from '../live';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
 
@@ -48,16 +47,6 @@ interface Row {
 }
 
 const TICK_MS = 60_000;
-
-// The events the list and the active request's panel follow.
-const LIST_EVENTS: readonly EventKind[] = [
-  'request.created',
-  'quote.sent',
-  'request.declined',
-  'quote.accepted',
-  'booking.confirmed',
-  'booking.lapsed',
-];
 
 // "Cererile mele": the driver's requests, newest first, kept current by the
 // request events so one sent in another tab shows up without a reload. A
@@ -85,12 +74,12 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    LIST_EVENTS,
+    REQUEST_EVENTS,
   );
   // The active request's panel above the list, moved by the same events.
   private readonly activeRead = liveResource(
     () => this.api.activeRequestControllerGet(),
-    LIST_EVENTS,
+    REQUEST_EVENTS,
   );
   protected readonly active = computed(() =>
     this.activeRead.failed() && !this.activeRead.value()

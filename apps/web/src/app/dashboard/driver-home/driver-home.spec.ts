@@ -99,6 +99,7 @@ let savedList: jest.Mock;
 let open: jest.Mock;
 let compare: jest.Mock;
 let events: Subject<LiveMessage>;
+let resync: Subject<void>;
 
 const answer = <T>(value: Answer<T>) =>
   value instanceof Error
@@ -166,6 +167,7 @@ async function render({
   open = jest.fn(async () => 'cancelled');
   compare = jest.fn(() => new Promise<never>(() => undefined));
   events = new Subject();
+  resync = new Subject();
   const current = signal(
     capabilities === null
       ? null
@@ -210,7 +212,7 @@ async function render({
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
             ),
-          resync: new Subject<void>(),
+          resync,
         },
       },
     ],
@@ -1274,6 +1276,8 @@ describe('Cererea activă on Panou', () => {
 // @traces 274-FR-020
 describe('Cererea activă as the request moves', () => {
   it.each([
+    'request.created',
+    'request.declined',
     'quote.accepted',
     'booking.confirmed',
     'booking.lapsed',
@@ -1287,5 +1291,46 @@ describe('Cererea activă as the request moves', () => {
     await settle();
 
     expect(activeRead).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads it and the requests again after the live stream resyncs', async () => {
+    const { settle } = await render({ requests: [request()] });
+
+    resync.next();
+    await new Promise((r) => setTimeout(r, 400));
+    await settle();
+
+    expect(activeRead).toHaveBeenCalledTimes(2);
+    expect(requestsList).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the newest answer when an older read lands last', async () => {
+    let slow: (value: unknown) => void = () => {};
+    const { element, settle } = await render({ requests: [request()] });
+    activeRead.mockImplementationOnce(
+      () => new Promise((resolve) => (slow = resolve)),
+    );
+    activeRead.mockImplementationOnce(async () => ({
+      openCount: 0,
+      request: null,
+    }));
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'x-1',
+      kind: 'quote.sent',
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    events.next({
+      at: new Date().toISOString(),
+      id: 'x-2',
+      kind: 'quote.sent',
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    await settle();
+    slow(activeOf([request()]));
+    await settle();
+
+    expect(panel(element, 'activeRequest')).toBeNull();
   });
 });

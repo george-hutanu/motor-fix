@@ -8,7 +8,6 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   type CarDto,
@@ -26,7 +25,7 @@ import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
-import { Live, liveResource } from '../live';
+import { liveResource, REQUEST_EVENTS } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
@@ -76,12 +75,23 @@ export class DriverHome {
   private readonly session = inject(Session);
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
-  protected readonly requests = signal<Read<RequestSummaryDto>>(undefined);
-  // The active request, re-read when a quote is sent, accepted, confirmed or
-  // lapses, and after a resync; the last read wins.
+  // The requests, re-read when a quote is accepted, confirmed or lapses, and
+  // after a resync; the last read wins.
+  private readonly requestsRead = liveResource(
+    () => this.requestsApi.requestsControllerList(),
+    ['quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+  );
+  protected readonly requests = computed(
+    (): Read<RequestSummaryDto> =>
+      this.requestsRead.failed() && !this.requestsRead.value()
+        ? 'failed'
+        : this.requestsRead.value()?.items,
+  );
+  // The active request, re-read on the events that move any request, and
+  // after a resync; the last read wins.
   private readonly activeRead = liveResource(
     () => this.requestsApi.activeRequestControllerGet(),
-    ['quote.sent', 'quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+    REQUEST_EVENTS,
   );
   protected readonly active = computed(() =>
     this.activeRead.failed() && !this.activeRead.value()
@@ -153,14 +163,7 @@ export class DriverHome {
 
   constructor() {
     void this.i18n.enter('driver');
-    this.load();
-    // An accepted quote books the request, and the garage's confirmation or
-    // the lapse moves it on: its panels read it again.
-    const live = inject(Live);
-    live
-      .on(['quote.accepted', 'booking.confirmed', 'booking.lapsed'])
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.loadRequests());
+    this.loadCars();
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -183,23 +186,10 @@ export class DriverHome {
     this.loadCars();
   }
 
-  // Each read settles its own panels; the first row follows the active one.
-  private load() {
-    this.loadCars();
-    this.loadRequests();
-  }
-
   private loadCars() {
     this.carsApi.carsControllerList().then(
       ({ items }) => this.cars.set(items),
       () => this.cars.set('failed'),
-    );
-  }
-
-  private loadRequests() {
-    this.requestsApi.requestsControllerList().then(
-      ({ items }) => this.requests.set(items),
-      () => this.requests.set('failed'),
     );
   }
 
