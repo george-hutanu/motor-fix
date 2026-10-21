@@ -189,7 +189,9 @@ describe('slow statements on a real PostgreSQL', () => {
       // The first reading only takes the baseline: the slow statement must
       // come after it to count.
       await until('the baseline reading', () => baselineTaken);
-      await admin.query('SELECT pg_sleep(0.6)');
+      // A statement of its own: pg_stat_statements folds every bare
+      // `SELECT pg_sleep($1)` into one mean, and other suites sleep briefly.
+      await admin.query('SELECT 1 AS slow_probe, pg_sleep(0.6)');
 
       const record = await until('the slow statement log', async () => {
         await started?.flush();

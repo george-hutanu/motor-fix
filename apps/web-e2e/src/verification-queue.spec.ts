@@ -122,9 +122,12 @@ test.describe('the verification queue @seeded @database', () => {
         "INSERT INTO garage (id, name, slug, city_key, city_name) VALUES ($1, $2, $3, 'bucuresti', 'București')",
         [garageId, name, `coada-${garageId}`],
       );
+      // Sent a month ago, the oldest waiting: the overview's panel shows only
+      // the oldest few, and files other spec files send meanwhile are newer.
       const { rows } = await db.query<{ id: string }>(
-        `INSERT INTO verification_file (id, garage_id, status)
-         VALUES (gen_random_uuid(), $1, 'submitted') RETURNING id::text`,
+        `INSERT INTO verification_file (id, garage_id, status, submitted_at)
+         VALUES (gen_random_uuid(), $1, 'submitted', now() - interval '30 days')
+         RETURNING id::text`,
         [garageId],
       );
       const fileId = rows[0]?.id ?? '';

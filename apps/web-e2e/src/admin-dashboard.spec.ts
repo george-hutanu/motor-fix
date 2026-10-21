@@ -161,7 +161,7 @@ test.describe('the admin dashboard @seeded', () => {
       await expect(
         panel(page).getByRole('group', {
           exact: true,
-          name: `${LISTED}, 8, +0 luna asta`,
+          name: `${LISTED}, 9, +0 luna asta`,
         }),
       ).toBeVisible();
       await expect(
@@ -202,7 +202,7 @@ test.describe('the admin dashboard @seeded', () => {
     await expect(
       panel(page).getByRole('group', {
         exact: true,
-        name: 'Garages listed, 8, +0 this month',
+        name: 'Garages listed, 9, +0 this month',
       }),
     ).toBeVisible();
     await expect(
