@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import {
   BookingsService,
   type ConfirmOptionsDto,
@@ -61,6 +62,7 @@ const row = (): GarageRequestSummaryDto => {
 
 const TEAM: ConfirmOptionsDto = {
   liftCount: 2,
+  mechanicRequired: true,
   mechanics: [
     { id: 'mech-1', name: 'Ion Popescu' },
     { id: 'mech-2', name: 'Maria Ionescu' },
@@ -89,6 +91,7 @@ async function open({
   options = jest.fn(async () => offered);
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([{ children: [], path: '**' }]),
       {
         provide: BookingsService,
         useValue: {
@@ -244,22 +247,26 @@ describe('the confirm panel: what it shows', () => {
 
 // @traces 389-FR-014
 describe('the confirm panel: which choices it offers', () => {
-  it('has no mechanic select when the garage offers no mechanics', async () => {
-    await open({ offered: { liftCount: 2, mechanics: [] } });
+  it('has no mechanic select when the garage works without a team', async () => {
+    await open({
+      offered: { liftCount: 2, mechanicRequired: false, mechanics: [] },
+    });
 
     expect(select('Mecanic')).toBeNull();
     expect(select('Elevator')).not.toBeNull();
   });
 
   it('has no lift select when the garage schedules no lifts', async () => {
-    await open({ offered: { liftCount: 0, mechanics: TEAM.mechanics } });
+    await open({ offered: { ...TEAM, liftCount: 0 } });
 
     expect(select('Elevator')).toBeNull();
     expect(select('Mecanic')).not.toBeNull();
   });
 
   it('confirms with nothing to choose when both are off', async () => {
-    await open({ offered: { liftCount: 0, mechanics: [] } });
+    await open({
+      offered: { liftCount: 0, mechanicRequired: false, mechanics: [] },
+    });
 
     expect(panel().querySelector('select')).toBeNull();
 
@@ -267,6 +274,60 @@ describe('the confirm panel: which choices it offers', () => {
 
     expect(confirm).toHaveBeenCalledWith({ body: {}, id: 'booking-1' });
     await expect(result).resolves.toBe('confirmed');
+  });
+});
+
+// @traces 389-FR-004
+// @traces 389-FR-014
+describe('the confirm panel: a team with no mechanic yet', () => {
+  const EMPTY: ConfirmOptionsDto = {
+    liftCount: 2,
+    mechanicRequired: true,
+    mechanics: [],
+  };
+
+  it('shows the required mechanic select with nothing to pick and says to add one first', async () => {
+    await open({ offered: EMPTY });
+
+    const el = select('Mecanic');
+    expect(el).not.toBeNull();
+    expect(el?.required).toBe(true);
+    expect(choices(el)).toEqual(['Alege mecanicul']);
+    expect(messageOf(el)?.textContent).toContain(
+      'Adaugă mai întâi un mecanic în echipă.',
+    );
+  });
+
+  it('links to the team page, closing the panel', async () => {
+    await open({ offered: EMPTY });
+
+    const link = [...panel().querySelectorAll('a')].find(
+      (a) => a.textContent?.trim() === 'Deschide echipa',
+    );
+    expect(link?.getAttribute('href')).toBe('/app/garage/team');
+
+    link?.click();
+    await settle();
+
+    await expect(result).resolves.toBe('cancelled');
+  });
+
+  it('keeps Confirm off, so nothing is sent', async () => {
+    await open({ offered: EMPTY });
+
+    expect(button('Confirmă')?.disabled).toBe(true);
+    await press();
+
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('says it in English', async () => {
+    await open({ language: 'en', offered: EMPTY });
+
+    expect(messageOf(select('Mechanic'))?.textContent).toContain(
+      'Add a mechanic to your team first.',
+    );
+    expect(text()).toContain('Open the team');
   });
 });
 

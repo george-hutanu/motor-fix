@@ -13,6 +13,7 @@ import {
   ParseUUIDPipe,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -26,6 +27,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { ConfirmOutcomes } from './confirm.interceptor';
 import { ConfirmService } from './confirm.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
@@ -42,7 +44,7 @@ export class ConfirmController {
   @ApiOkResponse({ type: ConfirmOptionsDto })
   @ApiBadRequestResponse({ description: 'validation_failed: a bad id' })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
-  @ApiForbiddenResponse({ description: 'forbidden: a mechanic' })
+  @ApiForbiddenResponse({ description: 'forbidden: a mechanic of the garage' })
   @ApiNotFoundResponse({ description: 'not_found: not this garage’s booking' })
   options(
     @CurrentActor() actor: Actor,
@@ -53,6 +55,7 @@ export class ConfirmController {
 
   @Post(':id/confirm')
   @UseGuards(JsonOnly)
+  @UseInterceptors(ConfirmOutcomes)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Confirm an accepted booking, with its mechanic and lift',
@@ -63,7 +66,7 @@ export class ConfirmController {
       'validation_failed: a bad id or body, a mechanic or lift the garage does not take, a lift past its count',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
-  @ApiForbiddenResponse({ description: 'forbidden: a mechanic' })
+  @ApiForbiddenResponse({ description: 'forbidden: a mechanic of the garage' })
   @ApiNotFoundResponse({ description: 'not_found: not this garage’s booking' })
   @ApiConflictResponse({
     description:

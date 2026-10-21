@@ -93,6 +93,25 @@ describe('the sweep', () => {
     expect(bySweep).toEqual([true]);
   });
 
+  // @traces 389-FR-012
+  it('goes on past an object whose run fails, and runs it again next time', async () => {
+    const poison = randomUUID();
+    const good = randomUUID();
+    overdue = [poison, good];
+    const failing = new ObjectTimers(queue, [
+      {
+        ...expiry,
+        fire: async (id, sweep) => {
+          if (id === poison) throw new Error('stuck');
+          await expiry.fire(id, sweep);
+        },
+      },
+    ]);
+
+    expect(await failing.sweep(NOW)).toBe(1);
+    expect(fired).toEqual([good]);
+  });
+
   it('runs every 5 minutes', async () => {
     await timers.startSweep();
     const [scheduler] = await queue.getJobSchedulers();

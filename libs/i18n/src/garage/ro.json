@@ -208,6 +208,8 @@
       "mechanic": "Mecanic",
       "mechanicRequired": "Alege un mecanic.",
       "noLift": "Fără elevator",
+      "noMechanics": "Adaugă mai întâi un mecanic în echipă.",
+      "openTeam": "Deschide echipa",
       "pickMechanic": "Alege mecanicul",
       "problem": {
         "invalid_transition": {

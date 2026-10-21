@@ -4,11 +4,9 @@ import type {
   GarageBookingDto,
 } from '@motor-fix/contracts';
 import {
-  HttpException,
   HttpStatus,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -29,10 +27,6 @@ import type {
   PrismaClient,
 } from '../../generated/prisma/client';
 import { invalidTransition } from '../../transitions';
-import {
-  type BookingConfirmOutcome,
-  recordBookingConfirm,
-} from '../quotes/quotes.metrics';
 import { bookingMechanicInclude, garageBookingOf } from '../reads';
 import { moveBooking, moveQuote, moveRecipient } from '../transitions';
 
@@ -48,8 +42,17 @@ const invalidField = (field: 'mechanicId' | 'lift', message: string) =>
 const conflict = (code: string, message: string) =>
   refusal(HttpStatus.CONFLICT, code, message);
 
-const mechanicUnavailable = () =>
-  conflict('mechanic_unavailable', 'Mecanicul nu e disponibil');
+const mechanicUnavailable = (en: boolean) =>
+  conflict(
+    'mechanic_unavailable',
+    en ? 'The mechanic is not available' : 'Mecanicul nu e disponibil',
+  );
+
+const outsideHours = (en: boolean) =>
+  conflict(
+    'outside_hours',
+    en ? 'Outside opening hours' : 'În afara programului',
+  );
 
 const mechanicBusy = (name: string, en: boolean) =>
   conflict(
@@ -64,22 +67,6 @@ const liftBusy = (lift: number, en: boolean) =>
       ? `Lift ${lift} is busy at this time`
       : `Elevatorul ${lift} e ocupat la ora asta`,
   );
-
-const OUTCOMES = new Set<string>([
-  'mechanic_busy',
-  'lift_busy',
-  'outside_hours',
-  'mechanic_unavailable',
-  'invalid_transition',
-]);
-
-function outcomeOf(error: unknown): BookingConfirmOutcome | null {
-  if (!(error instanceof HttpException)) return null;
-  const { code } = error.getResponse() as { code?: string };
-  if (code && OUTCOMES.has(code)) return code as BookingConfirmOutcome;
-  const status = error.getStatus();
-  return status >= 400 && status < 500 ? 'refused' : null;
-}
 
 // The overlap the database refused although the read before it found none:
 // a confirm of another booking committed in between.
@@ -101,8 +88,6 @@ interface Switches {
 // together or not at all.
 @Injectable()
 export class ConfirmService {
-  private readonly logger = new Logger('Confirm');
-
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
@@ -120,31 +105,12 @@ export class ConfirmService {
       : [];
     return {
       liftCount: switches.lifts ? garage.liftCount : 0,
+      mechanicRequired: switches.team,
       mechanics: mechanics.map(({ id, name }) => ({ id, name })),
     };
   }
 
   async confirm(
-    actor: Actor,
-    bookingId: string,
-    dto: ConfirmBookingDto,
-  ): Promise<GarageBookingDto> {
-    try {
-      const booking = await this.persist(actor, bookingId, dto);
-      recordBookingConfirm('confirmed');
-      this.logger.log(`booking ${bookingId}: confirmed`);
-      return booking;
-    } catch (error) {
-      const outcome = outcomeOf(error);
-      if (outcome) {
-        recordBookingConfirm(outcome);
-        this.logger.warn(`booking ${bookingId}: ${outcome}`);
-      }
-      throw error;
-    }
-  }
-
-  private async persist(
     actor: Actor,
     bookingId: string,
     dto: ConfirmBookingDto,
@@ -167,23 +133,25 @@ export class ConfirmService {
     }
   }
 
-  // A mechanic is told no; anyone outside the booking's garage learns
-  // nothing of it.
+  // Anyone outside the booking's garage learns nothing of it; a mechanic of
+  // the garage is told no.
   private async garageOf(client: Tx, actor: Actor, bookingId: string) {
-    if (actor.role === 'mechanic') {
-      throw refusal(
-        HttpStatus.FORBIDDEN,
-        'forbidden',
-        'Doar proprietarul sau recepția confirmă programările',
-      );
-    }
-    requireCapability(actor, 'garage.requests');
+    if (actor.role !== 'mechanic') requireCapability(actor, 'garage.requests');
     const booking = await client.booking.findUnique({
       select: { garageId: true },
       where: { id: bookingId },
     });
     if (!booking || booking.garageId !== actor.garageId) {
       throw new NotFoundException();
+    }
+    if (actor.role === 'mechanic') {
+      throw refusal(
+        HttpStatus.FORBIDDEN,
+        'forbidden',
+        actor.language === 'en'
+          ? 'Only the owner or the front desk confirms bookings'
+          : 'Doar proprietarul sau recepția confirmă programările',
+      );
     }
     return booking.garageId;
   }
@@ -237,7 +205,8 @@ export class ConfirmService {
     }
     const switches = await this.switches(tx, garageId);
     this.judgeFields(dto, switches);
-    const mechanic = await this.mechanicOf(tx, garageId, dto.mechanicId);
+    const en = actor.language === 'en';
+    const mechanic = await this.mechanicOf(tx, garageId, en, dto.mechanicId);
     if (dto.lift !== undefined && dto.lift > booking.garage.liftCount) {
       throw invalidField(
         'lift',
@@ -250,7 +219,7 @@ export class ConfirmService {
       booking.startsAt,
       booking.durationMinutes,
     );
-    if (!inside) throw conflict('outside_hours', 'În afara programului');
+    if (!inside) throw outsideHours(en);
     await this.judgeOverlaps(tx, actor, booking, mechanic, dto.lift);
     const worker =
       mechanic ?? (await this.ownerMechanic(tx, actor, booking.garage));
@@ -282,12 +251,17 @@ export class ConfirmService {
     }
   }
 
-  private async mechanicOf(tx: Tx, garageId: string, mechanicId?: string) {
+  private async mechanicOf(
+    tx: Tx,
+    garageId: string,
+    en: boolean,
+    mechanicId?: string,
+  ) {
     if (mechanicId === undefined) return null;
     const mechanic = await tx.mechanic.findFirst({
       where: { garageId, id: mechanicId },
     });
-    if (!mechanic) throw mechanicUnavailable();
+    if (!mechanic) throw mechanicUnavailable(en);
     return mechanic;
   }
 
@@ -339,11 +313,20 @@ export class ConfirmService {
       include: { account: true },
       where: { garageId: garage.id, role: 'owner' },
     });
-    const own = await tx.mechanic.findUnique({
-      where: { accountId: member.accountId },
-    });
+    const ownRow = () =>
+      tx.mechanic.findUnique({ where: { accountId: member.accountId } });
+    let own = await ownRow();
+    if (!own) {
+      // Two first confirms of the garage's bookings make the row once: the
+      // second waits here for the first and then reads its row.
+      await tx.$queryRaw`
+        SELECT id FROM garage WHERE id = ${garage.id}::uuid FOR NO KEY UPDATE`;
+      own = await ownRow();
+    }
     if (own) {
-      if (own.garageId !== garage.id) throw mechanicUnavailable();
+      if (own.garageId !== garage.id) {
+        throw mechanicUnavailable(actor.language === 'en');
+      }
       return own;
     }
     const created = await tx.mechanic.create({

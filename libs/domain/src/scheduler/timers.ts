@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Job, Queue } from 'bullmq';
 
 // A timer on one object, such as a request's expiry. `fire` checks the
@@ -19,6 +20,7 @@ const timerId = (kind: string, objectId: string) => `${kind}-${objectId}`;
 // clearing it removes it, and the sweep runs what a lost timer missed.
 export class ObjectTimers {
   private readonly kinds: ReadonlyMap<string, TimerKind>;
+  private readonly logger = new Logger('ObjectTimers');
 
   constructor(
     private readonly queue: Queue,
@@ -54,13 +56,20 @@ export class ObjectTimers {
     );
   }
 
-  // Answers how many objects it ran.
+  // Answers how many objects it ran. One that fails is logged and left for
+  // the next sweep, so it never holds back the ones behind it.
   async sweep(now = new Date()): Promise<number> {
     let ran = 0;
     for (const kind of this.kinds.values()) {
       for (const id of await kind.overdue(now)) {
-        await kind.fire(id, true);
-        ran += 1;
+        try {
+          await kind.fire(id, true);
+          ran += 1;
+        } catch (error) {
+          this.logger.warn(
+            `sweep ${kind.name} ${id} failed: ${(error as Error).message}`,
+          );
+        }
       }
     }
     return ran;

@@ -58,3 +58,12 @@ form {
   min-height: var(--mf-tap);
   white-space: normal;
 }
+.none {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.none a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}

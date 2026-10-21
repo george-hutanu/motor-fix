@@ -3,14 +3,17 @@ import { randomUUID } from 'node:crypto';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { type Job, Queue } from 'bullmq';
+import { type Job, Queue, Worker } from 'bullmq';
 
 import {
   BOOKING_TIMERS_CONSUMER,
   BOOKING_TIMERS_QUEUE,
   BookingTimers,
 } from './booking-timers';
-import { BookingTimersModule } from './booking-timers.module';
+import {
+  BOOKING_TIMERS_WORKER,
+  BookingTimersModule,
+} from './booking-timers.module';
 import { AuditService } from '../../audit/audit.service';
 import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -67,7 +70,7 @@ beforeEach(async () => {
 
 // Compiled, never started: no worker takes the queue's jobs and no sweep is
 // scheduled, so each case runs the timers itself at `now`.
-async function start(now: Date) {
+async function start(now: Date, webUrl: string | undefined = WEB) {
   app = await Test.createTestingModule({
     imports: [
       BookingTimersModule.registerWorker({
@@ -78,7 +81,7 @@ async function start(now: Date) {
           redisUrl,
         }),
         redisUrl,
-        webUrl: WEB,
+        webUrl,
       }),
     ],
   }).compile();
@@ -337,6 +340,32 @@ describe('reminding the garage to confirm', () => {
     ).toEqual([12, 2]);
   });
 
+  it('says the time really left when confirm-by comes before a day has passed', async () => {
+    const soon = {
+      acceptedAt,
+      confirmBy: new Date(acceptedAt.getTime() + 13 * HOUR),
+      startsAt: new Date(acceptedAt.getTime() + 13 * HOUR),
+    };
+    const { booking, owner } = await awaiting(soon);
+    const timers = await start(TWELVE);
+
+    await fire(timers, 'booking-confirm-reminder-12h', booking.id);
+
+    const [bell] = (await reminders(owner)).filter(
+      (m) => m.channel === 'in_app',
+    );
+    expect(bell.params).toMatchObject({ left: 1 });
+  });
+
+  it('sends no reminder without the web address for its link', async () => {
+    const { booking } = await awaiting(times);
+    const timers = await start(TWELVE, '');
+
+    await fire(timers, 'booking-confirm-reminder-12h', booking.id);
+
+    expect(await reminders()).toEqual([]);
+  });
+
   it.each(['confirmed', 'cancelled'] as const)(
     'tells nobody once the booking is %s',
     async (status) => {
@@ -552,6 +581,19 @@ describe('lapsing an unconfirmed booking', () => {
       (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
         .status,
     ).toBe('awaiting_confirmation');
+  });
+
+  it('still lapses, with a worker on its queue, when the web address is missing', async () => {
+    const { booking, now } = await overdue(null);
+    const timers = await start(now, '');
+
+    expect(app?.get(BOOKING_TIMERS_WORKER)).toBeInstanceOf(Worker);
+    await fire(timers, 'booking-lapse', booking.id);
+
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
+        .status,
+    ).toBe('lapsed');
   });
 
   it('lapses a booking whose timer was lost once, from the sweep', async () => {

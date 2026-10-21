@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   BookingsService,
   type ConfirmBookingDto,
@@ -41,7 +42,7 @@ const FIELD_OF: Record<string, Field> = {
 // keeps the choices and says what to change, under the select it concerns.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, HlmInput, TranslatePipe],
+  imports: [HlmButton, HlmInput, RouterLink, TranslatePipe],
   selector: 'mf-confirm-booking-dialog',
   styleUrl: './confirm-booking-dialog.css',
   templateUrl: './confirm-booking-dialog.html',
@@ -62,6 +63,12 @@ export class ConfirmBookingDialog {
   protected readonly lifts = computed(() =>
     Array.from({ length: this.offered()?.liftCount ?? 0 }, (_, i) => i + 1),
   );
+  // The team is on but has no mechanic yet: nothing can be confirmed until
+  // one is added on the team page.
+  protected readonly noMechanics = computed(() => {
+    const offered = this.offered();
+    return !!offered?.mechanicRequired && !offered.mechanics.length;
+  });
   protected readonly mechanic = signal('');
   protected readonly lift = signal('');
   protected readonly sending = signal(false);
@@ -107,20 +114,12 @@ export class ConfirmBookingDialog {
   );
   protected readonly liftMessage = computed(() => this.messageFor('lift'));
 
-  protected pickMechanic(value: string) {
-    this.pick('mechanic', value);
-  }
-
-  protected pickLift(value: string) {
-    this.pick('lift', value);
-  }
-
   private messageFor(field: Field) {
     const said = this.fieldProblem();
     return said?.field === field ? said.text : '';
   }
 
-  private pick(field: Field, value: string) {
+  protected pick(field: Field, value: string) {
     (field === 'mechanic' ? this.mechanic : this.lift).set(value);
     if (this.fieldProblem()?.field === field) this.fieldProblem.set(null);
   }
@@ -128,8 +127,8 @@ export class ConfirmBookingDialog {
   protected submit(event: Event) {
     event.preventDefault();
     const offered = this.offered();
-    if (!offered || this.sending()) return;
-    if (offered.mechanics.length && !this.mechanic()) {
+    if (!offered || this.sending() || this.noMechanics()) return;
+    if (offered.mechanicRequired && !this.mechanic()) {
       this.fieldProblem.set({
         field: 'mechanic',
         text: this.i18n.t(`${MESSAGES}.mechanicRequired`),

@@ -3194,7 +3194,7 @@
             "description": "sign_in_required"
           },
           "403": {
-            "description": "forbidden: a mechanic"
+            "description": "forbidden: a mechanic of the garage"
           },
           "404": {
             "description": "not_found: not this garage’s booking"
@@ -3252,7 +3252,7 @@
             "description": "sign_in_required"
           },
           "403": {
-            "description": "forbidden: a mechanic"
+            "description": "forbidden: a mechanic of the garage"
           },
           "404": {
             "description": "not_found: not this garage’s booking"
@@ -11656,11 +11656,16 @@
             "items": {
               "$ref": "#/components/schemas/BookingMechanicDto"
             }
+          },
+          "mechanicRequired": {
+            "type": "boolean",
+            "description": "Whether a confirm must name a mechanic: true while the garage works with a team, even before it has one"
           }
         },
         "required": [
           "liftCount",
-          "mechanics"
+          "mechanics",
+          "mechanicRequired"
         ]
       },
       "ConfirmBookingDto": {

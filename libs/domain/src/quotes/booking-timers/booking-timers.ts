@@ -155,12 +155,19 @@ export class BookingTimers {
       },
       where: { id },
     });
+    const now = this.now();
     if (
+      !this.webUrl ||
       booking?.status !== 'awaiting_confirmation' ||
-      booking.confirmBy <= this.now()
+      booking.confirmBy <= now
     ) {
       return;
     }
+    // The time really left: confirm-by may come before the first reminder's
+    // nominal hours, and a timer may fire late.
+    const left = Math.ceil(
+      (booking.confirmBy.getTime() - now.getTime()) / HOUR,
+    );
     const { owners, receptionists } = await this.access(booking.garageId);
     const staff = [...new Set([...owners, ...receptionists])];
     const queued = staff.length
@@ -171,7 +178,7 @@ export class BookingTimers {
           params: {
             car: `${booking.request.carBrand} ${booking.request.carModel}`,
             driver: shortName(booking.driver.name),
-            left: hours,
+            left,
             link: `${this.webUrl}/app/garage/requests`,
             slot: booking.startsAt.toISOString(),
             until: booking.confirmBy.toISOString(),

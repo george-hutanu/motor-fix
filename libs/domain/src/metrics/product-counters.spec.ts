@@ -367,10 +367,10 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  // The cap of 50 holds for each of the seven counters the observability
-  // story added; every later counter keeps its own fixed set, and each
-  // instance (1345-FR-012) stays under 150 series, far inside the metrics backend's free tier: the
-  // API's are the counters it starts, the worker's the ones it starts.
+  // Each counter stays under 50 series and each instance under 150, far
+  // inside the metrics backend's free tier: the API's are the counters it
+  // starts, the worker's the ones it starts. The seven counters the
+  // observability story added are checked one by one.
   it('keeps each of the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
     countEverySeries();
 

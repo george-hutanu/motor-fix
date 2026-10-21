@@ -208,6 +208,8 @@
       "mechanic": "Mechanic",
       "mechanicRequired": "Choose a mechanic.",
       "noLift": "No lift",
+      "noMechanics": "Add a mechanic to your team first.",
+      "openTeam": "Open the team",
       "pickMechanic": "Choose the mechanic",
       "problem": {
         "invalid_transition": {

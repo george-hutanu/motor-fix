@@ -14,7 +14,8 @@ export const REQUEST_VALIDITY_DAYS = 7;
 export const QUOTE_VALIDITY_DAYS = 7;
 export const REQUEST_REMINDER_DAYS: readonly number[] = [2, 5];
 export const BOOKING_CONFIRM_LAPSE_HOURS = 24;
-// Hours before confirm_by at which the staff are reminded to confirm.
+// The reminders to confirm: the first this many hours after the acceptance,
+// the last this many hours before confirm_by.
 export const BOOKING_CONFIRM_REMINDER_HOURS: readonly number[] = [12, 2];
 export const FREE_CANCEL_CUTOFF_HOURS = 2;
 export const BOOKING_MAX_MOVES = 2;

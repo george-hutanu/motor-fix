@@ -635,6 +635,12 @@ export class ConfirmOptionsDto {
     type: [BookingMechanicDto],
   })
   mechanics!: BookingMechanicDto[];
+
+  @ApiProperty({
+    description:
+      'Whether a confirm must name a mechanic: true while the garage works with a team, even before it has one',
+  })
+  mechanicRequired!: boolean;
 }
 
 // The driver's acceptance of a quote: whether the garage may read the car's

@@ -25,7 +25,7 @@ import { AuditService } from '../../audit/audit.service';
 import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 
-const BOOKING_TIMERS_WORKER = Symbol('BOOKING_TIMERS_WORKER');
+export const BOOKING_TIMERS_WORKER = Symbol('BOOKING_TIMERS_WORKER');
 
 interface BookingTimersOptions {
   redisUrl: string;
@@ -47,7 +47,7 @@ export class BookingTimersModule
   constructor(
     private readonly booking: BookingTimers,
     @Inject(BOOKING_TIMERS_JOBS) private readonly jobs: Queue,
-    @Inject(BOOKING_TIMERS_WORKER) private readonly worker: Worker | null,
+    @Inject(BOOKING_TIMERS_WORKER) private readonly worker: Worker,
   ) {}
 
   static registerWorker(options: BookingTimersOptions): DynamicModule {
@@ -73,11 +73,12 @@ export class BookingTimersModule
           inject: [BookingTimers],
           provide: BOOKING_TIMERS_WORKER,
           useFactory: (booking: BookingTimers) => {
+            // Without the address only the reminders stop; a booking still
+            // lapses.
             if (!options.webUrl) {
               new Logger('BookingTimers').error(
-                'PUBLIC_WEB_URL missing; booking reminders and lapses wait in their queue',
+                'PUBLIC_WEB_URL missing; booking reminders are not sent',
               );
-              return null;
             }
             const worker = new Worker(
               BOOKING_TIMERS_QUEUE,
@@ -108,13 +109,12 @@ export class BookingTimersModule
   // Started with the application, not when compiled, so a test can run the
   // timers itself.
   async onApplicationBootstrap() {
-    if (!this.worker) return;
     await this.booking.timers.startSweep();
     void this.worker.run();
   }
 
   async onApplicationShutdown() {
-    await this.worker?.close();
+    await this.worker.close();
     await this.jobs.close();
   }
 }

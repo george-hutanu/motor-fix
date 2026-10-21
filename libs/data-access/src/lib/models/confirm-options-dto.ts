@@ -10,6 +10,11 @@ export interface ConfirmOptionsDto {
   liftCount: number;
 
   /**
+   * Whether a confirm must name a mechanic: true while the garage works with a team, even before it has one
+   */
+  mechanicRequired: boolean;
+
+  /**
    * Empty while the garage works without a team
    */
   mechanics: Array<BookingMechanicDto>;

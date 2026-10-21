@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
+
+import { ConfirmService } from './confirm.service';
+import type { Actor } from '../../auth/policy';
 import { addDays, atLocal, localDay } from '../../bucharest';
 import { quotesApp } from '../quotes-api.testing';
 
-const { bearer, get, post, team, world } = quotesApp();
+const { bearer, get, post, provider, team, world } = quotesApp();
 const { prisma } = world;
 
 const MINUTE = 60_000;
@@ -393,6 +397,22 @@ describe('who may confirm', () => {
     expect(await snapshot(booking.id)).toEqual(before);
   });
 
+  it('answers 404, not 403, to a mechanic of another garage', async () => {
+    const t = await team('Atelier Dinamo');
+    const rival = await team('Service Militari');
+    const { booking } = await accepted(t);
+    const before = await snapshot(booking.id);
+
+    for (const mechanic of [rival.answering, rival.plain]) {
+      const auth = bearer(mechanic, 'mechanic');
+      expect((await confirm(booking.id, auth, {})).status).toBe(404);
+      expect(
+        (await get(`/bookings/${booking.id}/confirm-options`, auth)).status,
+      ).toBe(404);
+    }
+    expect(await snapshot(booking.id)).toEqual(before);
+  });
+
   it('asks a visitor to sign in, writing nothing', async () => {
     const t = await team('Atelier Dinamo');
     const { booking } = await accepted(t);
@@ -423,6 +443,7 @@ describe('GET /bookings/:id/confirm-options', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       liftCount: 3,
+      mechanicRequired: true,
       mechanics: [
         { id: t.answeringMechanic.id, name: 'Fixer' },
         { id: t.plainMechanic.id, name: 'Hand' },
@@ -442,7 +463,26 @@ describe('GET /bookings/:id/confirm-options', () => {
       bearer(t.receptionist, 'receptionist'),
     );
 
-    expect(res.body).toEqual({ liftCount: 0, mechanics: [] });
+    expect(res.body).toEqual({
+      liftCount: 0,
+      mechanicRequired: false,
+      mechanics: [],
+    });
+  });
+
+  it('still asks for a mechanic when the team is on but has none yet', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    await prisma.mechanic.deleteMany({ where: { garageId: t.garage.id } });
+
+    const res = await get(`/bookings/${booking.id}/confirm-options`, owner(t));
+
+    expect(res.body).toEqual({
+      liftCount: 0,
+      mechanicRequired: true,
+      mechanics: [],
+    });
+    expect((await confirm(booking.id, owner(t), {})).status).toBe(400);
   });
 
   it('answers 403 to a mechanic, 404 to another garage and 401 to a visitor', async () => {
@@ -509,6 +549,28 @@ describe('the switches', () => {
         where: { subjectId: own[0].id, subjectType: 'mechanic' },
       }),
     ).toBe(1);
+  });
+
+  it('makes the owner’s mechanic row once when two first confirms run together', async () => {
+    const t = await team('Atelier Dinamo');
+    await switched(t.garage.id, 'team_mechanics', false);
+    const first = await accepted(t);
+    const second = await accepted(t, new Date(TEN.getTime() + 3 * HOUR));
+
+    const answers = await Promise.all([
+      confirm(first.booking.id, owner(t), {}),
+      confirm(second.booking.id, owner(t), {}),
+    ]);
+
+    expect(answers.map((res) => res.status)).toEqual([200, 200]);
+    const own = await prisma.mechanic.findMany({
+      where: { accountId: t.owner },
+    });
+    expect(own).toHaveLength(1);
+    const jobs = await prisma.job.findMany({
+      where: { garageId: t.garage.id },
+    });
+    expect(jobs.map((j) => j.mechanicId)).toEqual([own[0].id, own[0].id]);
   });
 
   it('lets two bookings overlap when the team is off', async () => {
@@ -805,5 +867,105 @@ describe('the garage’s hours', () => {
     });
 
     expect(res.status).toBe(200);
+  });
+});
+
+// @traces 389-FR-003
+describe('the refusals in English', () => {
+  const englishOwner = (t: Team): Actor => ({
+    accountId: t.owner,
+    garageId: t.garage.id,
+    language: 'en',
+    permissions: {
+      canAnswerQuotes: true,
+      canMoveBookings: true,
+      canRecordFinalPrice: true,
+    },
+    role: 'garage',
+    roles: ['garage'],
+  });
+
+  const refusal = async (promise: Promise<unknown>) => {
+    const error = await promise.then(
+      () => null,
+      (e: { getResponse: () => unknown }) => e,
+    );
+    return error?.getResponse();
+  };
+
+  it('says the mechanic is not available', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    const away = await prisma.mechanic.create({
+      data: { garageId: (await world.garage('Elsewhere')).id, name: 'Away' },
+    });
+
+    const said = await refusal(
+      provider(ConfirmService).confirm(englishOwner(t), booking.id, {
+        mechanicId: away.id,
+      }),
+    );
+
+    expect(said).toMatchObject({
+      code: 'mechanic_unavailable',
+      message: 'The mechanic is not available',
+    });
+  });
+
+  it('says the slot is outside opening hours', async () => {
+    const t = await team('Atelier Dinamo');
+    const hours = Object.fromEntries(
+      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => [
+        d,
+        [['08:00', '09:00']],
+      ]),
+    );
+    await prisma.garage.update({ data: { hours }, where: { id: t.garage.id } });
+    const { booking } = await accepted(t);
+
+    const said = await refusal(
+      provider(ConfirmService).confirm(englishOwner(t), booking.id, {
+        mechanicId: t.plainMechanic.id,
+      }),
+    );
+
+    expect(said).toMatchObject({
+      code: 'outside_hours',
+      message: 'Outside opening hours',
+    });
+  });
+});
+
+// @traces 389-FR-018
+describe('counting confirms the pipes refuse', () => {
+  const reader = countedMetrics();
+  const refused = () =>
+    counterTotal(reader, 'motorfix_booking_confirms_total', {
+      outcome: 'refused',
+    });
+
+  it.each([
+    ['a lift that is not a whole number', { lift: 1.5 }],
+    ['a mechanic id that is not one', { mechanicId: 'not-an-id' }],
+  ])('counts %s as refused', async (_, body) => {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    const { booking } = await accepted(t);
+    const before = await refused();
+
+    const res = await confirm(booking.id, owner(t), body);
+
+    expect(res.status).toBe(400);
+    expect(await refused()).toBe(before + 1);
+  });
+
+  it('counts a booking id that is not one as refused', async () => {
+    const t = await team('Atelier Dinamo');
+    const before = await refused();
+
+    const res = await confirm('not-an-id', owner(t), {});
+
+    expect(res.status).toBe(400);
+    expect(await refused()).toBe(before + 1);
   });
 });

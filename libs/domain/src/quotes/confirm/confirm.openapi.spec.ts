@@ -46,6 +46,7 @@ describe('the confirm in the OpenAPI document', () => {
     expect(doc.components.schemas.ConfirmOptionsDto.required).toEqual([
       'liftCount',
       'mechanics',
+      'mechanicRequired',
     ]);
   });
 });
