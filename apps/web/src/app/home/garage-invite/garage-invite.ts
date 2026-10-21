@@ -2,6 +2,8 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
+import { Voice } from '../../voice/voice';
+
 // Home's last section: a garage is asked to list itself, and the button opens
 // the listing form, which needs no account.
 @Component({
@@ -12,4 +14,5 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 })
 export class GarageInvite {
   protected readonly i18n = inject(I18n);
+  protected readonly voice = inject(Voice);
 }

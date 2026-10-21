@@ -4,6 +4,8 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { formatLei, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
+import { Voice } from '../../voice/voice';
+
 // Three rows under Home's dial: the two best garages that take the brand,
 // then the best one that does not. Each row opens the garage's profile.
 @Component({
@@ -14,6 +16,7 @@ import { Lamp } from '@motor-fix/ui-cockpit';
 })
 export class HomePreview {
   protected readonly i18n = inject(I18n);
+  private readonly voice = inject(Voice);
 
   readonly brand = input.required<BrandDto>();
   readonly garages = input.required<HomeGarageDto[]>();
@@ -27,7 +30,7 @@ export class HomePreview {
     const text = this.i18n.t(
       garage.stance === 'works_on'
         ? 'public.home.preview.worksOn'
-        : 'public.home.preview.doesNotTake',
+        : this.voice.key('no'),
       { brand: this.brand().name },
     );
     return text.replace(/\s+(\S+)\s*$/, '\u00a0$1');

@@ -100,3 +100,23 @@ describe('the garage invitation', () => {
     expect(phone).toMatch(/\.list \{[^}]*font-size: var\(--mf-size-body\)/);
   });
 });
+
+// @traces 006-FR-007
+describe('the garage invitation in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it.each([
+    ['3', 'ro', 'Service nelistat? Adaugă datele.'],
+    ['5', 'en', 'Customers who already know the price.'],
+  ] as const)(
+    'calls garages in voice %s (%s)',
+    async (voice, language, title) => {
+      document.documentElement.dataset['voice'] = voice;
+      const root = await render(language);
+
+      expect(text(root.querySelector('h2'))).toBe(title);
+    },
+  );
+});

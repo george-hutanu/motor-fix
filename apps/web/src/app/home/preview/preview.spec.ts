@@ -125,7 +125,7 @@ describe('HomePreview', () => {
     expect(said(first)).toContain('Works on Dacia');
     expect(said(first)).toContain('4.9');
     expect(said(first)).toContain('from 180 lei/hour');
-    expect(said(second)).toContain("Doesn't take Dacia");
+    expect(said(second)).toContain('Doesn’t take Dacia');
     expect(said(second)).toContain('No reviews yet');
   });
 
@@ -176,5 +176,21 @@ describe('HomePreview', () => {
     expect(
       [...(right?.children ?? [])].map((child) => child.className),
     ).toEqual(['rating', 'rate']);
+  });
+});
+
+// @traces 006-FR-007
+describe('HomePreview in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('labels the red lamp of a garage that refuses the brand in voice 4', async () => {
+    document.documentElement.dataset['voice'] = '4';
+    const page = await render([garageOf({ stance: 'does_not_take' })]);
+
+    expect(said(page.querySelector('mf-lamp') ?? undefined)).toBe(
+      'La Dacia zice „pas”',
+    );
   });
 });

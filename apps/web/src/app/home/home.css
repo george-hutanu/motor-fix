@@ -13,6 +13,7 @@
 
 .label {
   margin: 0;
+  text-transform: uppercase;
 }
 
 .place {
@@ -37,6 +38,7 @@
 }
 
 .search {
+  text-transform: uppercase;
   align-self: flex-start;
   min-height: 44px;
 }

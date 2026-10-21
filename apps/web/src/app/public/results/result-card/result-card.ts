@@ -19,6 +19,7 @@ import {
 } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
+import { Voice } from '../../../voice/voice';
 import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
 import { SaveGarageButton } from '../../saved-garages/save-garage-button/save-garage-button';
 
@@ -62,6 +63,7 @@ const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
 })
 export class ResultCard {
   protected readonly i18n = inject(I18n);
+  protected readonly voice = inject(Voice);
 
   readonly brand = input.required<BrandRefDto>();
   readonly garage = input.required<ListedGarageDto>();
@@ -177,9 +179,7 @@ export class ResultCard {
 
   protected readonly stance = computed(() =>
     this.i18n.t(
-      this.takes()
-        ? 'public.results.card.worksOn'
-        : 'public.results.card.doesNotTake',
+      this.takes() ? 'public.results.card.worksOn' : this.voice.key('no'),
       { brand: this.brand().name },
     ),
   );

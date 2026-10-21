@@ -130,3 +130,17 @@ input[type="checkbox"].mf-check:checked::after {
     scroll-margin: var(--mf-space-2);
   }
 }
+
+/* The hero carries every copy voice; the one the page head picked shows. */
+[data-voice-of] {
+  display: none;
+}
+
+html:not([data-voice]) [data-voice-of="1"],
+html[data-voice="1"] [data-voice-of="1"],
+html[data-voice="2"] [data-voice-of="2"],
+html[data-voice="3"] [data-voice-of="3"],
+html[data-voice="4"] [data-voice-of="4"],
+html[data-voice="5"] [data-voice-of="5"] {
+  display: contents;
+}

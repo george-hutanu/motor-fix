@@ -85,11 +85,8 @@
     "title": "This garage is no longer available"
   },
   "home": {
-    "car": "Your car",
     "cards": {
       "area": "{km} km area",
-      "doesNotTake": "Doesn't take",
-      "heading": "Who takes your {brand}",
       "link": "See all on the map",
       "more": "+{n}",
       "none": "—",
@@ -108,11 +105,6 @@
       "noTaker": "No garage nearby takes {brand}"
     },
     "failed": "We could not load the garages",
-    "hero": {
-      "headline": "Who works on {brand}, near you",
-      "label": "Garages for {brand}",
-      "paragraph": "Pick the brand and see how many garages take it. The search is by brand; the model, year and fuel go into the quote request."
-    },
     "how": {
       "brands": {
         "refused": "No {brand}",
@@ -120,8 +112,6 @@
         "text": "Every garage lists the brands it takes and the ones it turns away, so you don’t drive across town to hear “we don’t do those.”",
         "title": "Works on. Doesn’t work on."
       },
-      "headline1": "Everything you’d ask on the phone.",
-      "headline2": "Already on the dash.",
       "prices": {
         "at": "lei per hour at",
         "garage": "Service Dobre",
@@ -138,8 +128,7 @@
       }
     },
     "invite": {
-      "text": "List the brands you take, the ones you don’t, and your rates. The calls you get are the jobs you want.",
-      "title": "Run a garage? Put it on the map."
+      "text": "List the brands you take, the ones you don’t, and your rates. The calls you get are the jobs you want."
     },
     "picker": "Car brand",
     "place": {
@@ -162,13 +151,11 @@
       "useLocation": "Use my location"
     },
     "preview": {
-      "doesNotTake": "Doesn't take {brand}",
       "noReviews": "No reviews yet",
       "rate": "from {rate}/hour",
       "worksOn": "Works on {brand}"
     },
     "retry": "Try again",
-    "search": "Find garages",
     "searchFailed": "The brand list did not load",
     "searchFound": {
       "one": "{count} brand found",
@@ -746,11 +733,10 @@
     "back": "Back to {km} km",
     "brands": "Brand",
     "card": {
-      "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
       "rate": "from {rate}/hour",
       "view": "View garage",
-      "worksOn": "takes {brand}"
+      "worksOn": "Takes {brand}"
     },
     "changePlace": "Change place",
     "changing": "Searching {brand}…",
@@ -801,7 +787,6 @@
       "one": "{count} works on {brand}",
       "other": "{count} work on {brand}"
     },
-    "title": "Garages for {brand}",
     "widen": "Search within {km} km"
   },
   "saveGarage": {
@@ -962,5 +947,70 @@
     "rejected": "Rejected",
     "retry": "Retry",
     "submitted": "Submitted"
+  },
+  "voice": {
+    "v1": {
+      "cta": "Find garages",
+      "eyebrow": "Find a mechanic",
+      "feat": "Everything you’d ask on the phone.",
+      "feat2": "Already on the dash.",
+      "garage": "Run a garage? Put it on the map.",
+      "headline": "Who’s tuned for your {brand}?",
+      "list": "Who takes your {brand}",
+      "no": "Doesn’t take {brand}",
+      "noLabel": "Doesn’t take",
+      "parts": "What needs fixing?",
+      "sub": "Select your brand. The dial swings to the best-rated garage that takes it, and the lamps show who turns it away."
+    },
+    "v2": {
+      "cta": "Show me the mechanics",
+      "eyebrow": "The right mechanic",
+      "feat": "Like asking a friend.",
+      "feat2": "Except the whole city answers.",
+      "garage": "Are you a mechanic? Get on the map.",
+      "headline": "We know a good mechanic for your {brand}.",
+      "list": "Recommended for your {brand}",
+      "no": "Doesn’t work on {brand}",
+      "noLabel": "Doesn’t work on",
+      "parts": "What’s bothering it?",
+      "sub": "Tell us what you drive and we’ll show you the garages other drivers like you recommend."
+    },
+    "v3": {
+      "cta": "Start search",
+      "eyebrow": "Diagnostic: mechanic",
+      "feat": "Data, not promises.",
+      "garage": "Garage not listed? Add its data.",
+      "headline": "{brand}. 3 garages. Top rating: 4.9.",
+      "list": "Compatible with {brand}",
+      "no": "Not compatible: {brand}",
+      "noLabel": "Not compatible with",
+      "parts": "Select the system",
+      "sub": "Brand, job, distance, hourly rate. Four inputs and you have the right garage."
+    },
+    "v4": {
+      "cta": "Find them now",
+      "eyebrow": "No more “leave it with us, we’ll see”",
+      "feat": "No more “we’ll see”.",
+      "feat2": "You see, right now.",
+      "garage": "Good hands? Let the whole city know.",
+      "headline": "Your {brand} deserves better than “it’ll do”.",
+      "list": "They don’t frown at a {brand}",
+      "no": "Says “pass” on {brand}",
+      "noLabel": "Says “pass” on",
+      "parts": "What’s acting up?",
+      "sub": "Find the mechanic who actually works on your brand. With the price said up front, not guessed at the end."
+    },
+    "v5": {
+      "cta": "See prices and garages",
+      "eyebrow": "Prices and reviews in the open",
+      "feat": "No surprises on the bill.",
+      "garage": "Customers who already know the price.",
+      "headline": "Know what it costs before you hand over the keys.",
+      "list": "Garages that work on {brand}",
+      "no": "Doesn’t work on {brand}",
+      "noLabel": "Doesn’t work on",
+      "parts": "What repair do you need?",
+      "sub": "Garages that work on {brand}, with price ranges shown and reviews tied to real repairs."
+    }
   }
 }

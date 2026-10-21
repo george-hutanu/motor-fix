@@ -86,11 +86,8 @@
     "title": "Acest service nu mai este disponibil"
   },
   "home": {
-    "car": "Mașina ta",
     "cards": {
       "area": "zonă de {km} km",
-      "doesNotTake": "Nu primește",
-      "heading": "Cine primește {brand}",
       "link": "Vezi toate pe hartă",
       "more": "+{n}",
       "none": "—",
@@ -110,11 +107,6 @@
       "noTaker": "Niciun service din zonă nu primește {brand}"
     },
     "failed": "Nu am putut încărca service‑urile",
-    "hero": {
-      "headline": "Cine lucrează pe {brand}, aproape de tine",
-      "label": "Service‑uri pentru {brand}",
-      "paragraph": "Alege marca și vezi câte service‑uri o primesc. Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă."
-    },
     "how": {
       "brands": {
         "refused": "Fără {brand}",
@@ -122,8 +114,6 @@
         "text": "Fiecare service spune ce mărci primește și ce mărci refuză, ca să nu traversezi orașul ca să auzi „pe astea nu lucrăm”.",
         "title": "Lucrează pe. Nu lucrează pe."
       },
-      "headline1": "Tot ce ai întreba la telefon.",
-      "headline2": "E deja pe bord.",
       "prices": {
         "at": "lei pe oră la",
         "garage": "Service Dobre",
@@ -140,8 +130,7 @@
       }
     },
     "invite": {
-      "text": "Spune ce mărci primești, ce mărci nu și cât costă. Te sună doar cei cu lucrările pe care le vrei.",
-      "title": "Ai un service? Pune‑l pe hartă."
+      "text": "Spune ce mărci primești, ce mărci nu și cât costă. Te sună doar cei cu lucrările pe care le vrei."
     },
     "picker": "Marca mașinii",
     "place": {
@@ -165,13 +154,11 @@
       "useLocation": "Folosește locația mea"
     },
     "preview": {
-      "doesNotTake": "Nu primește {brand}",
       "noReviews": "Fără recenzii",
       "rate": "de la {rate}/oră",
       "worksOn": "Lucrează pe {brand}"
     },
     "retry": "Reîncearcă",
-    "search": "Caută service‑uri",
     "searchFailed": "Lista de mărci nu s‑a încărcat",
     "searchFound": {
       "few": "{count} mărci găsite",
@@ -758,11 +745,10 @@
     "back": "Înapoi la {km} km",
     "brands": "Marca",
     "card": {
-      "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
       "rate": "de la {rate}/oră",
       "view": "Vezi service‑ul",
-      "worksOn": "primește {brand}"
+      "worksOn": "Primește {brand}"
     },
     "changePlace": "Schimbă locul",
     "changing": "Se caută {brand}…",
@@ -817,7 +803,6 @@
       "one": "{count} lucrează pe {brand}",
       "other": "{count} lucrează pe {brand}"
     },
-    "title": "Service‑uri pentru {brand}",
     "widen": "Caută în {km} km"
   },
   "saveGarage": {
@@ -979,5 +964,70 @@
     "rejected": "Respins",
     "retry": "Reîncearcă",
     "submitted": "Trimis"
+  },
+  "voice": {
+    "v1": {
+      "cta": "Caută service‑uri",
+      "eyebrow": "Găsește un mecanic",
+      "feat": "Tot ce ai întreba la telefon.",
+      "feat2": "E deja pe bord.",
+      "garage": "Ai un service? Pune‑l pe hartă.",
+      "headline": "Cine se pricepe la {brand}?",
+      "list": "Cine primește {brand}",
+      "no": "Nu primește {brand}",
+      "noLabel": "Nu primește",
+      "parts": "Ce trebuie reparat?",
+      "sub": "Alege marca. Acul se duce la cel mai bine cotat service care o primește, iar ledurile îți arată cine o refuză."
+    },
+    "v2": {
+      "cta": "Arată‑mi mecanicii",
+      "eyebrow": "Mecanicul potrivit",
+      "feat": "Ca atunci când întrebi un prieten.",
+      "feat2": "Doar că răspunde tot orașul.",
+      "garage": "Ești mecanic? Hai pe hartă.",
+      "headline": "Știm un mecanic bun pentru {brand}.",
+      "list": "Recomandați pentru {brand}",
+      "no": "Nu lucrează pe {brand}",
+      "noLabel": "Nu lucrează pe",
+      "parts": "Ce o supără?",
+      "sub": "Spune‑ne ce mașină ai și îți arătăm service‑urile pe care le recomandă alți șoferi ca tine."
+    },
+    "v3": {
+      "cta": "Pornește căutarea",
+      "eyebrow": "Diagnoză: mecanic",
+      "feat": "Date, nu promisiuni.",
+      "garage": "Service nelistat? Adaugă datele.",
+      "headline": "{brand}. 3 service‑uri. Nota maximă: 4,9.",
+      "list": "Compatibile cu {brand}",
+      "no": "Incompatibil: {brand}",
+      "noLabel": "Incompatibil cu",
+      "parts": "Selectează sistemul",
+      "sub": "Marcă, lucrare, distanță, tarif pe oră. Patru date și ai service‑ul potrivit."
+    },
+    "v4": {
+      "cta": "Găsește‑l acum",
+      "eyebrow": "Fără „las‑o la noi și vedem”",
+      "feat": "Fără „vedem noi”.",
+      "feat2": "Vezi tu, de acum.",
+      "garage": "Ai mâini bune? Să afle tot orașul.",
+      "headline": "{brand} merită mai mult decât „merge și așa”.",
+      "list": "Ei nu strâmbă din nas la {brand}",
+      "no": "La {brand} zice „pas”",
+      "noLabel": "Zice „pas” la",
+      "parts": "Ce face figuri?",
+      "sub": "Găsește mecanicul care chiar lucrează pe marca ta. Cu prețul spus dinainte, nu ghicit la final."
+    },
+    "v5": {
+      "cta": "Vezi prețuri și service‑uri",
+      "eyebrow": "Prețuri și recenzii la vedere",
+      "feat": "Fără surprize la factură.",
+      "garage": "Clienți care știu deja prețul.",
+      "headline": "Știi cât costă înainte să lași cheile.",
+      "list": "Service‑uri care lucrează pe {brand}",
+      "no": "Nu lucrează pe {brand}",
+      "noLabel": "Nu lucrează pe",
+      "parts": "Ce reparație ai de făcut?",
+      "sub": "Service‑uri care lucrează pe {brand}, cu intervale de preț afișate și recenzii legate de reparații reale."
+    }
   }
 }

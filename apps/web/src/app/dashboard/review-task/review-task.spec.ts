@@ -117,7 +117,7 @@ async function open(
       confirmDiscard: false,
       data: { jobId: 'jobId' in options ? options.jobId : JOB },
       shape: 'drawer',
-      title: 'driver.review.title',
+      title: 'driver.review.voices.v1',
     },
   );
   await settle();

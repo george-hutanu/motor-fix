@@ -15,6 +15,8 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
+import { Voice } from '../../voice/voice';
+
 const HOW_IT_WORKS = 'how-it-works';
 
 // A fixed illustration, not a garage's figure.
@@ -38,6 +40,7 @@ const REFUSED = ['Dacia', 'Tesla'];
 })
 export class HowItWorks {
   private readonly i18n = inject(I18n);
+  protected readonly voice = inject(Voice);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly reduced = inject(REDUCED_MOTION);

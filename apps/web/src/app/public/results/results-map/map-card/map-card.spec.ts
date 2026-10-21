@@ -66,7 +66,7 @@ describe('the small card on the map', () => {
   it('shows the green lamp and the rate of the pin at once, and a placeholder for the name', async () => {
     const card = await render(PIN);
 
-    expect(said(card.querySelector('mf-lamp'))).toBe('primește BMW');
+    expect(said(card.querySelector('mf-lamp'))).toBe('Primește BMW');
     expect(card.querySelector('mf-lamp[data-state="green"]')).not.toBeNull();
     expect(said(card.querySelector('.rate'))).toBe('de la 180 lei/oră');
     expect(card.querySelector('.name.skeleton')).not.toBeNull();
@@ -80,7 +80,7 @@ describe('the small card on the map', () => {
       stance: 'does_not_take',
     });
 
-    expect(said(card.querySelector('mf-lamp'))).toBe('nu primește BMW');
+    expect(said(card.querySelector('mf-lamp'))).toBe('Nu primește BMW');
     expect(card.querySelector('mf-lamp[data-state="red"]')).not.toBeNull();
     expect(card.querySelector('.rate')).toBeNull();
   });
@@ -123,5 +123,22 @@ describe('the small card on the map', () => {
     expect(card.contains(document.activeElement)).toBe(false);
     expect(card.querySelector('[role="dialog"]')).toBeNull();
     expect(card.querySelectorAll('a, button, [tabindex]')).toHaveLength(1);
+  });
+});
+
+// @traces 006-FR-008
+describe('the small card on the map in the visit’s voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  it('labels the red lamp in voice 2, and the green one alike in form', async () => {
+    document.documentElement.dataset['voice'] = '2';
+    const red = await render({ ...PIN, stance: 'does_not_take' });
+
+    expect(said(red.querySelector('mf-lamp'))).toBe('Nu lucrează pe BMW');
+    expect(said((await render(PIN)).querySelector('mf-lamp'))).toBe(
+      'Primește BMW',
+    );
   });
 });

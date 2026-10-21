@@ -44,6 +44,7 @@ import { garageWhere } from './where/where';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
 import { publicRead } from '../public-read';
+import { keysOf, Voice } from '../voice/voice';
 
 // The server's ready answer, kept for every Home of the visit: the browser
 // cannot ask the API's ready check, since the web server answers its own on
@@ -95,6 +96,14 @@ export class Home {
   private chosen = 0;
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
+  protected readonly voice = inject(Voice);
+  // Every voice the hero carries; the page head's mark shows one.
+  // Every voice's hero, so the page carries all five before the first paint
+  // and the style shows the one the head script picked.
+  protected readonly voices = [1, 2, 3, 4, 5].map((n) => ({
+    copy: keysOf(n),
+    n,
+  }));
   protected readonly health = signal(this.state.get(HEALTH, null));
   protected readonly popular = signal<BrandDto[]>([]);
   protected readonly tiles = computed(() => this.popular().slice(0, TILES));

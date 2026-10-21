@@ -6,11 +6,14 @@ import { join } from 'node:path';
 const css = readFileSync(join(__dirname, 'styles.css'), 'utf8');
 
 // The declarations of the rule whose selector list is exactly `selector`
-// (whitespace ignored), or undefined when there is none.
+// (whitespace and quote style ignored), or undefined when there is none.
 function rule(selector: string): string | undefined {
-  const wanted = selector.replace(/\s+/g, '');
+  const wanted = selector.replace(/\s+/g, '').replace(/'/g, '"');
   for (const [, head, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const name = head.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '');
+    const name = head
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, '')
+      .replace(/'/g, '"');
     if (name === wanted) return body;
   }
   return undefined;
@@ -95,5 +98,23 @@ describe('the one action of an empty state on a 320 px phone', () => {
     expect(css).toMatch(
       /@media \(max-width: 389px\) \{\s*mf-empty-state a\[hlmBtn\] \{\s*padding-inline:\s*var\(--mf-space-3\);\s*\}/,
     );
+  });
+});
+
+// @traces 006-FR-010
+describe('the voice texts the page carries for every voice', () => {
+  const shown = [
+    "html:not([data-voice]) [data-voice-of='1']",
+    ...[1, 2, 3, 4, 5].map(
+      (n) => `html[data-voice='${n}'] [data-voice-of='${n}']`,
+    ),
+  ].join(',');
+
+  it('hides each voice’s texts from sight and from screen readers', () => {
+    expect(rule('[data-voice-of]')).toMatch(/display:\s*none/);
+  });
+
+  it('shows only the texts of the voice the page is marked with, voice 1 without a mark', () => {
+    expect(rule(shown)).toMatch(/display:\s*contents/);
   });
 });

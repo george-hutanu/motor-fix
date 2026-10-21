@@ -389,7 +389,13 @@
     "resend": "Trimite din nou linkul",
     "resent": "Ți‑am trimis din nou linkul.",
     "retry": "Încearcă din nou",
-    "title": "Cum a mers reparația?",
+    "voices": {
+      "v1": "Cum a mers reparația?",
+      "v2": "Cum a fost la service?",
+      "v3": "Raport după reparație",
+      "v4": "Zi‑ne cum a fost. Pe bune.",
+      "v5": "Prețul a fost cel promis?"
+    },
     "works": "Ce s‑a lucrat"
   },
   "saved": {

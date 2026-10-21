@@ -8,6 +8,8 @@ import type {
 import { formatLei, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
+import { Voice } from '../../../../voice/voice';
+
 // A tapped pin whose garage the list does not show: what the pin knows at
 // once, then the garage's name, rating and way to its page once read.
 @Component({
@@ -18,6 +20,7 @@ import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 })
 export class MapCard {
   protected readonly i18n = inject(I18n);
+  private readonly voice = inject(Voice);
 
   readonly pin = input.required<GaragePinDto>();
   readonly brand = input.required<BrandRefDto>();
@@ -27,9 +30,7 @@ export class MapCard {
 
   protected readonly stance = computed(() =>
     this.i18n.t(
-      this.takes()
-        ? 'public.results.card.worksOn'
-        : 'public.results.card.doesNotTake',
+      this.takes() ? 'public.results.card.worksOn' : this.voice.key('no'),
       { brand: this.brand().name },
     ),
   );
