@@ -13,6 +13,11 @@ commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
 `main`. Never merge mid-run: the tail agent merges, on green CI only.
 
+A PR carries at most one commit per slice, plus the start commit: the empty
+`chore(<scope>): ST-<n> start …` commit is made only when the draft PR needs a
+commit before slice 1. Merges of `origin/main` and QA-lap fixes are not slices
+and are not counted.
+
 `.specify/` and `.claude/` are tracked here; `specs/` is not. It links into
 `.motor-fix-specs/`, a clone of the private george-hutanu/motor-fix-specs
 (branch `trunk`), so the artifact

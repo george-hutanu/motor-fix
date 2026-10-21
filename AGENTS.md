@@ -21,6 +21,9 @@ that way for `~/code`.
   terminal, prefix: `GH_TOKEN=$(gh auth token -u george-hutanu) gh …`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
   this repo — both would change every work repo under `~/code` too.
+- In a cloud session (`CLAUDE_CODE_REMOTE=true`) a proxy carries GitHub's
+  credentials: the hook exports nothing, `apply` sets the author only, and
+  `check` skips credential pinning.
 
 ## The tracker is GitHub, and design comes first
 
@@ -43,8 +46,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      `.github/pull_request_template.md` (`--body-file`, never `--body` or
      `--fill`), and link it on the issue (`speckit-tracker-sync pr <n>`).
   3. Do the work, pushing every commit to that branch: never forced, never
-     `main`. Before each push, `node .claude/scripts/lifecycle.mjs check` runs
-     the CI-only checks and the affected typecheck and unit tests.
+     `main`, and only once the CI-only checks and the affected typecheck and
+     unit tests pass locally (`lifecycle.mjs`).
   4. When done (green, no CRITICAL/HIGH review finding left), fill every
      section of the template, mark the PR ready and set QA
      (`lifecycle.mjs ready`); there is no In review stage. The story's agent
@@ -54,9 +57,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      a fresh **tail agent**. The story's agent, the tail and every
      `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
      `general-purpose`.
-  5. Get CI green: merge `origin/main` when behind
-     (`node .claude/scripts/merge-main.mjs`, never a rebase); checks are
-     waited for in the background, never in a foreground `sleep`.
+  5. Get CI green: merge `origin/main` when behind, never a rebase; checks
+     are waited for in the background, never in a foreground `sleep`.
   6. QA, beside step 5: the PR tester (`/speckit-pr-test <n>`) reviews the
      finished run; fix every blocking finding tests first, push, dispatch the
      new head's run and end. Each lap counts toward
@@ -64,9 +66,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
   7. Merge on `agent-review` success with every other check green, at once;
      a failing, pending or missing check is never merged. Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session
-     fast-forwards the main checkout
-     (`git -C <main> merge --ff-only origin/main`, or `/speckit-watch`'s `ff-main`). Dependabot's own PRs
-     skip step 6.
+     fast-forwards the main checkout (or `/speckit-watch`'s `ff-main`).
+     Dependabot's own PRs skip step 6.
 
   Every verified review, QA or harden finding is fixed in the current task's
   PR before ready or merge; one needing an owner decision becomes a
@@ -143,8 +144,7 @@ motor-fix is public and does not track the specs. Every checkout holds its own
 clone of the private `george-hutanu/motor-fix-specs` at `.motor-fix-specs/`
 (branch `trunk`, never a submodule), `specs/` links to its feature folders and
 its `docs/` holds the product documentation (start at its `llms.txt`). Commit
-there with `node .claude/scripts/specs-repo.mjs commit "<message>" --
-<feature>`; never `git add specs/`. Details:
+there through `specs-repo.mjs`, never `git add specs/`; the how-to is in
 `.claude/skills/speckit-auto/lifecycle.md`.
 
 ## Cloud sessions
@@ -187,7 +187,9 @@ the axe checks in the QA sweep (`.claude/scripts/pr-test/sweep.mjs`) and
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
 product and architecture documentation lives in the specs repo's
-`.motor-fix-specs/docs/` (start at its `llms.txt`).
+`.motor-fix-specs/docs/` (start at its `llms.txt`; the backlog stays in the
+tracker) — `docs/reference/stack.md` and `docs/explanation/decisions/` are the
+source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm
   components copied into `libs/ui-cockpit`, Angular CDK) with the Cockpit

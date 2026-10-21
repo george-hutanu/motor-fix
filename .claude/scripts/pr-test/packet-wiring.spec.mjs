@@ -57,7 +57,8 @@ describe('the tester starts from the packet', () => {
 
   it('gives the findings file its shape, so the tester never reads post.mjs for it', () => {
     const post = section(agent, /Post/);
-    assert.match(post, /"kind": "review"/);
+    assert.match(post, /"kind": "evidence" \| "conformance"/);
+    assert.doesNotMatch(post, /"kind": "review"/);
     assert.match(post, /"severity":\s+"blocker" \| "high" \| "medium" \| "low"/);
   });
 

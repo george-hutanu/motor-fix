@@ -2344,7 +2344,7 @@ _From 1181-rate-limits._
 
 _From 1181-rate-limits._
 
-### 1355-FR-002 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red; `stop-test-gate.sh` is unchanged.
+### 1355-FR-002 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red; `stop-test-gate.sh` checks the same things as before (only its comment naming where the full typecheck, lint and test run changes).
 
 _From 1355-cheaper-gates-lighter-context._
 

@@ -1,6 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
 // Every agent reply is re-read by its caller on each later turn, so its shape
@@ -111,5 +112,12 @@ describe('the tail reads tail.md alone, and AGENTS.md stays small', () => {
   it('keeps AGENTS.md under 15,000 bytes', () => {
     const bytes = statSync(join(repoRoot, 'AGENTS.md')).size;
     assert.ok(bytes < 15000, `${bytes} bytes`);
+  });
+
+  // The bullet as it stood on main at 24ecff8, before AGENTS.md was cut down.
+  it('keeps the "Parallel work is watched" bullet word for word', () => {
+    const bullet = read(join(repoRoot, 'AGENTS.md')).match(/^- Parallel work is watched[\s\S]*?(?=\n- )/m)?.[0] ?? '';
+    const sha = createHash('sha256').update(bullet).digest('hex');
+    assert.equal(sha, '0d1d4f093879fec07424860afd825afe3bf65aa0edd9fe4e886fd00e720a9515');
   });
 });

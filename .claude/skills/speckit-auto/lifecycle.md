@@ -34,6 +34,9 @@ to `tracker-sync.md` at its next event.
      Then write the PR's link onto the issue's `PR` field and the PR's
      `Closes` line (`speckit-tracker-sync pr <n>`): every task links its own PR.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
+     Before each push, `node .claude/scripts/lifecycle.mjs check` runs the
+     CI-only checks (observability inventory, PR template, folder rules),
+     lint and the affected typecheck and unit tests; a refusal is fixed first.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
@@ -66,7 +69,7 @@ to `tracker-sync.md` at its next event.
      when the task is Done. The story's agent, the tail agent and every
      `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
      `general-purpose`: it denies the heavy tools those runs never use, and
-     its prompt names no re-read of this file or CLAUDE.local.md, which are
+     its prompt names no re-read of AGENTS.md or CLAUDE.local.md, which are
      already in its context.
   5. Get CI green: merge `origin/main` into the branch if it is behind
      (`node .claude/scripts/merge-main.mjs`, which resolves the capability

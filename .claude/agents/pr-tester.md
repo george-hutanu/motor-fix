@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and the object store, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and the object store, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the run's evidence and the diff's conformance to the feature's spec, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -300,7 +300,8 @@ on a route the change does not explain is `medium`, citing that diff.
 
 Write your findings and post them in one call. `agent-findings.json` is a
 JSON array, `[]` when you found nothing; each finding is `{ "severity":
-"blocker" | "high" | "medium" | "low", "kind": "review", "title", "steps":
+"blocker" | "high" | "medium" | "low", "kind": "evidence" | "conformance",
+"title", "steps":
 ["…"], "evidence": "<path>:<line>: <the quoted line>" }` (a screen finding
 adds `"route"`, which the review shows as Where, and cites
 `shots/<name>.png` in its evidence):

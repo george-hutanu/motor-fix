@@ -352,7 +352,6 @@ describe('ready', () => {
   });
 });
 
-// @traces 749-FR-002 749-FR-003
 const LOCAL = [
   'node scripts/observability-inventory.ts',
   'node scripts/structure-check.ts --base origin/main',
@@ -433,6 +432,7 @@ describe('check: the CI-only checks and the affected tests before a push', () =>
   });
 });
 
+// @traces 749-FR-002 749-FR-003
 describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const MARK = '<!-- speckit-handoff -->';
   const note = () => join(featureDir, 'handoff.md');

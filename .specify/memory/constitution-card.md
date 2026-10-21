@@ -1,8 +1,8 @@
 # Constitution card — v4.1.0
 
 For authors: each principle of `.specify/memory/constitution.md` in one line,
-with the gate that enforces it. The full text governs, and the reviewers and
-the PR tester read it. `.claude/scripts/constitution-card.spec.mjs` fails when
+with the gate that enforces it. The full text governs; reviewers read the
+sections they judge. `.claude/scripts/constitution-card.spec.mjs` fails when
 the principles or the version drift.
 
 - **I. No Bloated Code (NON-NEGOTIABLE)** — the smallest change that fully solves it; no speculative layer, knob, dead code, or dependency where ~20 lines do. Gate: review (`code-reviewer`, `spec-reviewer`).
