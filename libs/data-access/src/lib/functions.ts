@@ -255,6 +255,8 @@ export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Para
 export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
+export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
+export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';

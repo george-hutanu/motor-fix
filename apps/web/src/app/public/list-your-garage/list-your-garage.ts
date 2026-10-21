@@ -62,6 +62,7 @@ import { type FieldMessage, FieldWatch, forStep } from '../field-watch';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
+import { ListingStatus, ownedGarage } from '../listing-status/listing-status';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
 import {
   MissingSummary,
@@ -77,7 +78,6 @@ import {
 } from '../signup-survey/signup-survey';
 import { completedCount, readStep6, type Step6Values } from '../step6';
 import { currentStep, jumpTarget, keepsTapped, STEPS } from '../steps';
-import { VerificationStages } from '../verification-stages/verification-stages';
 
 // Where the browser never says a scroll has ended: how long the page must be
 // still, after its last movement, before a jump's scroll counts as over.
@@ -123,6 +123,7 @@ const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
     HlmButton,
     HlmInput,
     HoursStep,
+    ListingStatus,
     MechanicsStep,
     MissingSummary,
     PhotosStep,
@@ -131,7 +132,6 @@ const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
     RouterLink,
     SignupSurvey,
     TranslatePipe,
-    VerificationStages,
   ],
   providers: [DraftKeeper],
   selector: 'mf-list-your-garage',
@@ -287,8 +287,14 @@ export class ListYourGarage {
   protected readonly sendState = signal<
     'owner' | 'failed' | 'incomplete' | null
   >(null);
-  // The sent listing's verification status; the form is done with.
-  protected readonly sentStatus = signal<VerificationStageStatus | null>(null);
+  // The owner's listing on its way to the map, with what the send answered
+  // when it was sent from this page; the form is done with.
+  protected readonly statusView = signal<{
+    sent: VerificationStageStatus | null;
+  } | null>(null);
+  // A send in progress shows its own answer, not the one the session finds.
+  private sending = false;
+  private ownerShown = false;
   // One key for the page's send: a send again after a failure is the same
   // send, and answers what the first made if it did get through.
   private submitKey: string | null = null;
@@ -360,6 +366,13 @@ export class ListYourGarage {
       this.mark('email', shows(email));
       this.mark('step6', shows(cui) || shows(rarNumber));
     });
+    // An account that already owns a garage has nothing to fill in here.
+    effect(() => {
+      const me = this.session.current();
+      if (!ownedGarage(me) || this.sending || this.ownerShown) return;
+      this.ownerShown = true;
+      untracked(() => void this.showOwned(me?.role));
+    });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const onScroll = () => {
@@ -385,7 +398,14 @@ export class ListYourGarage {
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
       void this.keeper.open(link).then((step) => this.restore(step));
+      void this.session.load({ keepLanguage: true });
     });
+  }
+
+  private async showOwned(role: string | undefined) {
+    if (role !== 'garage')
+      await this.session.switchRole('garage').catch(() => undefined);
+    this.statusView.set({ sent: null });
   }
 
   // The fields show what was typed until they are left; the values below
@@ -533,7 +553,9 @@ export class ListYourGarage {
       this.surveyTracked = true;
       this.consent.track('survey_completed');
     }
+    this.sending = true;
     if (await this.signedIn()) await this.submit();
+    else this.sending = false;
   }
 
   // A session, from before or from the sign-up dialog with the step 1
@@ -559,17 +581,17 @@ export class ListYourGarage {
     } finally {
       this.finishing.set(false);
     }
-    if (outcome.kind === 'sent') this.sent(outcome.result.status);
+    if (outcome.kind === 'sent') await this.sent(outcome.result.status);
     else if (outcome.kind === 'incomplete') this.refusedSend(outcome);
     else this.sendState.set(outcome.kind);
   }
 
-  private sent(status: VerificationStageStatus) {
-    this.sentStatus.set(status);
+  // The listing is sent whatever the switch does; the next sign-in in the
+  // garage role finds it either way.
+  private async sent(status: VerificationStageStatus) {
+    await this.session.switchRole('garage').catch(() => undefined);
+    this.statusView.set({ sent: status });
     this.focusAfterRender('.status-view h1');
-    // The listing is sent whatever the switch does; the next sign-in in the
-    // garage role finds it either way.
-    this.session.switchRole('garage').catch(() => undefined);
   }
 
   // What the server found missing: a field of the form takes the owner back

@@ -1,0 +1,14 @@
+@if (status(); as status) {
+  <mf-verification-stages
+    [status]="status"
+    [requestedItems]="view.value()?.requestedItems ?? []"
+    [reason]="view.value()?.reason ?? null"
+  />
+}
+@if (view.failed()) {
+  <div class="refresh-failed">
+    <p>{{ 'public.verificationStatus.refreshFailed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'public.verificationStatus.retry' | t }}</button>
+  </div>
+}
+<p class="sr-only" role="status">{{ announcement() }}</p>

@@ -5831,6 +5831,52 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/verification": {
+      "get": {
+        "operationId": "VerificationStatusController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, a malformed id included"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Where the garage's listing stands in its verification, for its owner or an admin",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/photos/upload-url": {
       "post": {
         "operationId": "ListingPhotosController_uploadAddress",
@@ -15160,6 +15206,67 @@
         },
         "required": [
           "rarNumber"
+        ]
+      },
+      "VerificationRejectionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "note"
+        ]
+      },
+      "VerificationStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "A suspended garage reads approved",
+            "enum": [
+              "draft",
+              "submitted",
+              "in_review",
+              "more_requested",
+              "rejected",
+              "approved"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "The latest sending; null for a draft",
+            "format": "date-time",
+            "nullable": true
+          },
+          "requestedItems": {
+            "description": "What a request for more asks for; empty otherwise",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "description": "Only for a rejection",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationRejectionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "submittedAt",
+          "requestedItems",
+          "reason"
         ]
       },
       "PhotoUploadRequestDto": {

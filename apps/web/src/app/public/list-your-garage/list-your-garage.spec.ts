@@ -17,11 +17,14 @@ import {
   PlacesService,
   PublicHolidaysService,
 } from '@motor-fix/data-access';
+import { GaragesService } from '@motor-fix/data-access/services/garages.service';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { Subject } from 'rxjs';
 
 import { ListYourGarage } from './list-your-garage';
 import { Consent } from '../../consent/consent';
+import { Live } from '../../dashboard/live';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
@@ -39,6 +42,14 @@ const session = {
   switchRole: jest.fn(),
 };
 const consent = { track: jest.fn() };
+// The status view's read and its live stream, which these cases never drive.
+const garages = { verificationStatusControllerRead: jest.fn() };
+const live = {
+  close: jest.fn(),
+  on: () => new Subject(),
+  open: jest.fn(),
+  resync: new Subject<void>(),
+};
 // The catalogue behind step 2's chips, read through its own client.
 const DACIA = {
   id: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
@@ -86,6 +97,9 @@ beforeEach(() => {
   session.load.mockReset().mockResolvedValue(null);
   session.switchRole.mockReset().mockResolvedValue({ role: 'garage' });
   consent.track.mockReset();
+  garages.verificationStatusControllerRead
+    .mockReset()
+    .mockReturnValue(new Promise(() => undefined));
   tops = [1000, 2000, 3000, 4000, 5000, 6000];
   scrolls.length = 0;
   jest
@@ -119,6 +133,8 @@ async function open(path: string, reduced = false) {
       { provide: SignInDialog, useValue: signIn },
       { provide: Session, useValue: session },
       { provide: Consent, useValue: consent },
+      { provide: GaragesService, useValue: garages },
+      { provide: Live, useValue: live },
       { provide: BrandsService, useValue: catalogue },
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
@@ -2834,5 +2850,111 @@ describe('sending for verification', () => {
         expect(page.querySelector('.status-view')).not.toBeNull();
       });
     });
+  });
+});
+
+// @traces 116-FR-017
+describe('a signed-in account that owns a garage', () => {
+  const OWNER = {
+    garageAccess: [{ garageId: 'g1', role: 'owner' }],
+    garageId: 'g1',
+    role: 'garage',
+  };
+  const IN_REVIEW = {
+    reason: null,
+    requestedItems: [],
+    status: 'in_review',
+    submittedAt: '2026-10-20T08:30:00.000Z',
+  };
+  const statusView = (page: HTMLElement) =>
+    page.querySelector<HTMLElement>('.status-view');
+  const formShown = (page: HTMLElement) =>
+    page.querySelector('mf-details-step') !== null;
+  const lit = (page: HTMLElement) =>
+    [...page.querySelectorAll('.status-view ol.stages > li')].map((li) =>
+      li.classList.contains('lit'),
+    );
+
+  beforeEach(() => {
+    garages.verificationStatusControllerRead.mockResolvedValue(IN_REVIEW);
+  });
+
+  it('sees the status view of that garage instead of the form, read once', async () => {
+    session.current.set(OWNER);
+
+    const { harness, page } = await open('/ro/list-your-garage');
+    await settle(harness);
+
+    expect(formShown(page)).toBe(false);
+    expect(page.querySelector('mf-signup-survey')).toBeNull();
+    expect(page.querySelector('.actions')).toBeNull();
+    expect(text(statusView(page)?.querySelector('h1'))).not.toBe('');
+    expect(garages.verificationStatusControllerRead).toHaveBeenCalledTimes(1);
+    expect(garages.verificationStatusControllerRead).toHaveBeenCalledWith({
+      garageId: 'g1',
+    });
+    expect(lit(page)).toEqual([true, true, false]);
+    expect(session.switchRole).not.toHaveBeenCalled();
+  });
+
+  it('asks whether the browser holds a session when the page opens', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(session.load).toHaveBeenCalled();
+  });
+
+  it('takes a session in another role to the garage before reading', async () => {
+    session.current.set({ ...OWNER, garageId: null, role: 'driver' });
+
+    const { harness, page } = await open('/ro/list-your-garage');
+    await settle(harness);
+
+    expect(session.switchRole).toHaveBeenCalledWith('garage');
+    expect(statusView(page)).not.toBeNull();
+    expect(formShown(page)).toBe(false);
+  });
+
+  it('sees the status view after signing in later on the page', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(formShown(page)).toBe(true);
+
+    session.current.set(OWNER);
+    for (let i = 0; i < 5; i++) await pause();
+    await settle(harness);
+
+    expect(formShown(page)).toBe(false);
+    expect(statusView(page)).not.toBeNull();
+    expect(lit(page)).toEqual([true, true, false]);
+  });
+
+  it('sees the status view through a continue link', async () => {
+    session.current.set(OWNER);
+
+    const { harness, page } = await open('/ro/list-your-garage?draft=link-key');
+    await settle(harness);
+
+    expect(statusView(page)).not.toBeNull();
+    expect(formShown(page)).toBe(false);
+    expect(page.querySelector('.ended')).toBeNull();
+  });
+
+  it.each([
+    ['no garage', { garageAccess: [], garageId: null, role: 'driver' }],
+    [
+      'a place on a staff only',
+      {
+        garageAccess: [{ garageId: 'g1', role: 'receptionist' }],
+        garageId: 'g1',
+        role: 'receptionist',
+      },
+    ],
+  ])('leaves an account with %s on the form', async (_, account) => {
+    session.current.set(account);
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(formShown(page)).toBe(true);
+    expect(statusView(page)).toBeNull();
+    expect(garages.verificationStatusControllerRead).not.toHaveBeenCalled();
   });
 });

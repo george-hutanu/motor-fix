@@ -972,8 +972,12 @@
     },
     "label": "Stadiul verificării",
     "moreRequested": "Cerute completări",
+    "notSent": "Netrimis",
+    "now": "Stadiul verificării: {stage}",
     "offMap": "Profilul nu apare pe hartă până la aprobare. Dacă lipsește ceva, îți scriem ce anume și poți completa fără să o iei de la capăt.",
+    "refreshFailed": "Nu am putut actualiza stadiul.",
     "rejected": "Respins",
+    "retry": "Reîncearcă",
     "submitted": "Trimis"
   }
 }

@@ -259,6 +259,8 @@ export type { VerificationFileTimelineDto } from './models/verification-file-tim
 export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
 export type { VerificationQueueDto } from './models/verification-queue-dto';
 export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
+export type { VerificationRejectionDto } from './models/verification-rejection-dto';
+export type { VerificationStatusDto } from './models/verification-status-dto';
 export type { WithdrawnQuoteDto } from './models/withdrawn-quote-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
@@ -543,6 +545,8 @@ export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Para
 export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
+export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
+export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';

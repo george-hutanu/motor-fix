@@ -955,8 +955,12 @@
     },
     "label": "Verification stages",
     "moreRequested": "More details requested",
+    "notSent": "Not sent",
+    "now": "Verification stage: {stage}",
     "offMap": "The profile stays off the map until it is approved. If something is missing we tell you what, and you can add it without starting over.",
+    "refreshFailed": "Could not refresh the status.",
     "rejected": "Rejected",
+    "retry": "Retry",
     "submitted": "Submitted"
   }
 }

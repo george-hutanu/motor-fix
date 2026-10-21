@@ -54,6 +54,8 @@ import {
 } from './verification/verification-config';
 import { VerificationFileController } from './verification/verification-file/verification-file.controller';
 import { VerificationFileService } from './verification/verification-file/verification-file.service';
+import { VerificationStatusController } from './verification/verification-status/verification-status.controller';
+import { VerificationStatusService } from './verification/verification-status/verification-status.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_REDIS } from '../auth/attempts';
@@ -94,6 +96,7 @@ export class GaragesModule {
         SuspensionController,
         VerificationChecksController,
         VerificationFileController,
+        VerificationStatusController,
       ],
       exports: [
         ListingDraftsService,
@@ -121,6 +124,7 @@ export class GaragesModule {
         LegalCheckService,
         LegalDocumentsService,
         ListingDraftsService,
+        VerificationStatusService,
         {
           inject: [AUTH_REDIS],
           provide: ListingDraftThrottle,

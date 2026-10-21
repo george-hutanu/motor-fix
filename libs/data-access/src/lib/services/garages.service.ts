@@ -53,6 +53,9 @@ import { PublicGarageDto } from '../models/public-garage-dto';
 import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
 import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
+import { verificationStatusControllerRead } from '../fn/garages/verification-status-controller-read';
+import { VerificationStatusControllerRead$Params } from '../fn/garages/verification-status-controller-read';
+import { VerificationStatusDto } from '../models/verification-status-dto';
 
 @Injectable({ providedIn: 'root' })
 export class GaragesService extends BaseService {
@@ -579,6 +582,39 @@ export class GaragesService extends BaseService {
   publicGaragesControllerBySlug(params: PublicGaragesControllerBySlug$Params, context?: HttpContext): Promise<PublicGarageDto> {
     const resp = this.publicGaragesControllerBySlug$Response(params, context);
     return resp.then((r: StrictHttpResponse<PublicGarageDto>): PublicGarageDto => r.body);
+  }
+
+  /** Path part for operation `verificationStatusControllerRead()` */
+  static readonly VerificationStatusControllerReadPath = '/api/v1/garages/{garageId}/verification';
+
+  /**
+   * Where the garage's listing stands in its verification, for its owner or an admin.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationStatusControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationStatusControllerRead$Response(params: VerificationStatusControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationStatusDto>> {
+    const obs = verificationStatusControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Where the garage's listing stands in its verification, for its owner or an admin.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationStatusControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationStatusControllerRead(params: VerificationStatusControllerRead$Params, context?: HttpContext): Promise<VerificationStatusDto> {
+    const resp = this.verificationStatusControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationStatusDto>): VerificationStatusDto => r.body);
   }
 
 }

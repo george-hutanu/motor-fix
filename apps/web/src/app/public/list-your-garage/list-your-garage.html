@@ -1,4 +1,4 @@
-@switch (keeper.view()) {
+@switch (statusView() ? 'status' : keeper.view()) {
   @case ('loading') {
     <p class="intro" role="status">{{ 'public.listing.loading' | t }}</p>
   }
@@ -16,13 +16,14 @@
       <button hlmBtn type="button" (click)="signIn.start()">{{ 'public.listing.signIn' | t }}</button>
     </div>
   }
-  @default {
-    @if (sentStatus(); as status) {
-      <div class="status-view">
-        <p class="label">{{ 'public.listing.label' | t }}</p>
-        <h1 tabindex="-1">{{ 'public.listing.sent.statusTitle' | t }}</h1>
-        <div class="status-page">
-          <mf-verification-stages [status]="status" />
+  @case ('status') {
+    @let shown = statusView()!;
+    <div class="status-view">
+      <p class="label">{{ 'public.listing.label' | t }}</p>
+      <h1 tabindex="-1">{{ 'public.listing.sent.statusTitle' | t }}</h1>
+      <div class="status-page">
+        <mf-listing-status [sent]="shown.sent" />
+        @if (shown.sent !== null) {
           <aside>
             <mf-garage-preview
               [details]="details()"
@@ -34,9 +35,12 @@
               [sent]="true"
             />
           </aside>
-        </div>
+        }
       </div>
-    } @else if (surveyOpen()) {
+    </div>
+  }
+  @default {
+    @if (surveyOpen()) {
       <mf-signup-survey
         [value]="surveyAnswers()"
         [busy]="finishing()"
