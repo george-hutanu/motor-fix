@@ -21,7 +21,7 @@ import { AccountsService } from '../../../auth/accounts.service';
 import { hashToken } from '../../../auth/email-confirmation/email-confirmation';
 import { type Actor, assertGarage } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
+import { refusal, taken } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
@@ -57,17 +57,44 @@ const sentAlready = () =>
     'This listing was already sent',
   );
 
+const ownsOne = () =>
+  refusal(
+    HttpStatus.CONFLICT,
+    'garage_already_exists',
+    'This account already has a garage',
+  );
+
 const OWNER_PERMISSIONS = {
   canAnswerQuotes: true,
   canMoveBookings: true,
   canRecordFinalPrice: true,
 };
 
-// The answer a sent draft keeps for its key; another key is refused.
-function earlierAnswer(draft: ListingDraft, key: string) {
+const SENT_STATUSES: readonly unknown[] = ['approved', 'submitted'];
+
+const isSent = (value: unknown): value is ListingSubmittedDto => {
+  const sent = value as Record<string, unknown> | null;
+  return (
+    typeof sent === 'object' &&
+    sent !== null &&
+    typeof sent['fileId'] === 'string' &&
+    typeof sent['garageId'] === 'string' &&
+    SENT_STATUSES.includes(sent['status']) &&
+    Array.isArray(sent['warnings'])
+  );
+};
+
+// The answer a sent draft keeps for its key; another key, or a stored answer
+// that is not one, is refused.
+function earlierAnswer(
+  draft: ListingDraft,
+  key: string,
+): ListingSubmittedDto | undefined {
   if (draft.status !== 'submitted') return undefined;
-  if (draft.submitKey !== key) throw sentAlready();
-  return draft.submitResult as unknown as ListingSubmittedDto;
+  if (draft.submitKey !== key || !isSent(draft.submitResult)) {
+    throw sentAlready();
+  }
+  return draft.submitResult;
 }
 
 interface Extras {
@@ -132,13 +159,7 @@ export class ListingSubmitService {
         const owned = await tx.garageMember.findFirst({
           where: { accountId: actor.accountId, role: 'owner' },
         });
-        if (owned) {
-          throw refusal(
-            HttpStatus.CONFLICT,
-            'garage_already_exists',
-            'This account already has a garage',
-          );
-        }
+        if (owned) throw ownsOne();
         const fresh = dataOf(locked);
         const warnings = this.recheck(fresh, locked.email, holders.length > 0);
         const sent = await this.write(tx, actor, fresh, {
@@ -261,9 +282,13 @@ export class ListingSubmitService {
     const steps = data.steps ?? {};
     const cui = stripCui(steps['6']?.cui ?? '');
     await tx.garage.update({ data: { cui }, where: { id: garageId } });
-    await tx.garageMember.create({
-      data: { accountId, garageId, role: 'owner' },
-    });
+    // Another draft of the account, sent at the same moment, made its owner
+    // first.
+    await tx.garageMember
+      .create({ data: { accountId, garageId, role: 'owner' } })
+      .catch((error: unknown) => {
+        throw taken(error) ? ownsOne() : error;
+      });
     await this.audit.recordMany(tx, [
       {
         action: 'update',

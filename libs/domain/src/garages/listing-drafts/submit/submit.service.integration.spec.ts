@@ -427,27 +427,68 @@ describe('sending twice', () => {
     expect(await prisma.garage.count()).toBe(1);
   });
 
-  it('ends two concurrent sends with one garage and one file', async () => {
+  it('answers two concurrent sends with the same key the same body', async () => {
     const actor = await driver();
     const { id, token } = await draft();
 
-    const results = await Promise.allSettled([
+    const [first, second] = await Promise.all([
       service.submit(actor, id, token, 'key-1'),
       service.submit(actor, id, token, 'key-1'),
-      service.submit(actor, id, token, 'key-2'),
     ]);
+
+    expect(second).toEqual(first);
+    expect(await prisma.garage.count()).toBe(1);
+    expect(await prisma.verificationFile.count()).toBe(1);
+  });
+
+  it('ends concurrent sends under two keys with one garage, the winning key answered alike and the other refused 409', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    const keys = ['key-1', 'key-1', 'key-2'];
+
+    const results = await Promise.allSettled(
+      keys.map((key) => service.submit(actor, id, token, key)),
+    );
 
     expect(await prisma.garage.count()).toBe(1);
     expect(await prisma.verificationFile.count()).toBe(1);
-    const sent = results.filter((r) => r.status === 'fulfilled');
-    expect(sent.length).toBeGreaterThanOrEqual(1);
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        expect((r.reason as HttpException).getResponse()).toMatchObject({
-          code: 'draft_already_submitted',
-        });
-      }
+    const { submitKey } = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id },
+    });
+    const bodies = results.flatMap((r, i) =>
+      keys[i] === submitKey && r.status === 'fulfilled' ? [r.value] : [],
+    );
+    expect(bodies).toHaveLength(keys.filter((k) => k === submitKey).length);
+    for (const body of bodies) expect(body).toEqual(bodies[0]);
+    const losers = results.filter((_, i) => keys[i] !== submitKey);
+    expect(losers.length).toBeGreaterThan(0);
+    for (const r of losers) {
+      expect(r.status).toBe('rejected');
+      const reason = (r as PromiseRejectedResult).reason as HttpException;
+      expect(reason.getStatus()).toBe(409);
+      expect(reason.getResponse()).toMatchObject({
+        code: 'draft_already_submitted',
+      });
     }
+  });
+
+  it('refuses a replay whose stored answer is not a send result with 409 draft_already_submitted', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    await prisma.listingDraft.update({
+      data: {
+        status: 'submitted',
+        submitKey: 'key-1',
+        submitResult: { garageId: 42 },
+        submittedAt: new Date(),
+      },
+      where: { id },
+    });
+
+    const refused = await refusalOf(service.submit(actor, id, token, 'key-1'));
+
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'draft_already_submitted' });
   });
 });
 
@@ -471,6 +512,38 @@ describe('an account that already owns a garage', () => {
     expect(
       await prisma.listingDraft.findUniqueOrThrow({ where: { id } }),
     ).toMatchObject({ status: 'open', submitKey: null });
+  });
+
+  it('refuses the second of two drafts sent at once with 409 garage_already_exists', async () => {
+    const actor = await driver();
+    const one = await draft();
+    const other = await draft();
+
+    const results = await Promise.allSettled([
+      service.submit(actor, one.id, one.token, 'key-1'),
+      service.submit(actor, other.id, other.token, 'key-2'),
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual([
+      'fulfilled',
+      'rejected',
+    ]);
+    const lost = results.find((r) => r.status === 'rejected');
+    const reason = (lost as PromiseRejectedResult).reason as HttpException;
+    expect(reason).toBeInstanceOf(HttpException);
+    expect(reason.getStatus()).toBe(409);
+    expect(reason.getResponse()).toMatchObject({
+      code: 'garage_already_exists',
+    });
+    expect(await prisma.garage.count()).toBe(1);
+    expect(
+      await prisma.garageMember.count({
+        where: { accountId: actor.accountId, role: 'owner' },
+      }),
+    ).toBe(1);
+    expect(await prisma.listingDraft.count({ where: { status: 'open' } })).toBe(
+      1,
+    );
   });
 });
 
