@@ -49,11 +49,14 @@ export class ListingStatus {
   // What the send answered, shown until the first read does.
   readonly sent = input<VerificationStageStatus | null>(null);
 
+  // A session that owns no garage has no status to read.
   protected readonly view = liveView(
-    () =>
-      this.api.verificationStatusControllerRead({
-        garageId: ownedGarage(this.session.current()) ?? '',
-      }),
+    async () => {
+      const garageId = ownedGarage(this.session.current());
+      return garageId
+        ? this.api.verificationStatusControllerRead({ garageId })
+        : null;
+    },
     {
       changes: this.live.on([
         'verification.opened',
@@ -67,9 +70,10 @@ export class ListingStatus {
   protected readonly status = computed(
     () => this.view.value()?.status ?? this.sent(),
   );
+  // A status this page does not know is announced as no stage.
   protected readonly announcement = computed(() => {
     const status = this.status();
-    return status
+    return status && Object.hasOwn(STAGE_NAME, status)
       ? this.i18n.t(`${KEY}now`, { stage: this.i18n.t(STAGE_NAME[status]) })
       : '';
   });

@@ -5,6 +5,7 @@ import {
   input,
 } from '@angular/core';
 import type { VerificationStageStatus } from '@motor-fix/contracts';
+import { VERIFICATION_REASON_CODES } from '@motor-fix/contracts/verification-target';
 import { TranslatePipe } from '@motor-fix/i18n';
 
 const KEY = 'public.verificationStatus.';
@@ -18,6 +19,10 @@ const REACHED: Record<VerificationStageStatus, number> = {
   rejected: 2,
   submitted: 1,
 };
+
+// An item or reason this page has no text for reads as the generic one.
+const itemName = (code: string) =>
+  `${KEY}items.${(VERIFICATION_REASON_CODES as readonly string[]).includes(code) ? code : 'other'}`;
 
 const SECOND: Partial<Record<VerificationStageStatus, string>> = {
   more_requested: `${KEY}moreRequested`,
@@ -41,10 +46,11 @@ export class VerificationStages {
 
   protected readonly stages = computed(() => {
     const status = this.status();
-    const reached = REACHED[status];
+    // A status this page does not know lights no stage.
+    const reached = Object.hasOwn(REACHED, status) ? REACHED[status] : 0;
     return [
       `${KEY}submitted`,
-      SECOND[status] ?? `${KEY}inReview`,
+      (Object.hasOwn(SECOND, status) && SECOND[status]) || `${KEY}inReview`,
       `${KEY}approved`,
     ].map((name, i) => ({
       current: i === reached - 1,
@@ -54,13 +60,13 @@ export class VerificationStages {
   });
   protected readonly items = computed(() =>
     this.status() === 'more_requested'
-      ? this.requestedItems().map((code) => `${KEY}items.${code}`)
+      ? this.requestedItems().map(itemName)
       : [],
   );
   protected readonly rejection = computed(() => {
     const reason = this.reason();
     return this.status() === 'rejected' && reason
-      ? { name: `${KEY}items.${reason.code}`, note: reason.note }
+      ? { name: itemName(reason.code), note: reason.note }
       : null;
   });
   protected readonly offMap = computed(() => this.status() !== 'approved');
