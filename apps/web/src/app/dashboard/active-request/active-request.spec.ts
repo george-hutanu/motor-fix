@@ -90,7 +90,7 @@ const link = (element: Element, name: string) =>
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 274-request-stages-FR-019
+// @traces 274-FR-019
 describe('the panel while reading and after a failed read', () => {
   it('shows a busy skeleton and no Cerere nouă while reading', async () => {
     const { element } = await render(undefined);
@@ -113,8 +113,8 @@ describe('the panel while reading and after a failed read', () => {
   });
 });
 
-// @traces 274-request-stages-FR-017
-// @traces 274-request-stages-FR-018
+// @traces 274-FR-017
+// @traces 274-FR-018
 describe('the panel with no open request', () => {
   it('says so, with Cerere nouă to Home', async () => {
     const { element } = await render({ openCount: 0, request: null });
@@ -134,8 +134,8 @@ describe('the panel with no open request', () => {
   });
 });
 
-// @traces 274-request-stages-FR-010
-// @traces 274-request-stages-FR-011
+// @traces 274-FR-010
+// @traces 274-FR-011
 describe('the panel for a request in work', () => {
   it('heads the panel and offers Cerere nouă', async () => {
     const { element } = await render({ openCount: 1, request: inWork });
@@ -203,8 +203,8 @@ describe('the panel for a request in work', () => {
   });
 });
 
-// @traces 274-request-stages-FR-013
-// @traces 274-request-stages-FR-014
+// @traces 274-FR-013
+// @traces 274-FR-014
 describe('the panel’s lines', () => {
   it('says the garage has yet to confirm', async () => {
     const request = activeRequest({
@@ -236,7 +236,7 @@ describe('the panel’s lines', () => {
   });
 });
 
-// @traces 274-request-stages-FR-015
+// @traces 274-FR-015
 describe('the job’s steps', () => {
   it('counts them and marks each gata, acum or nothing', async () => {
     const { element } = await render({ openCount: 1, request: inWork });
@@ -261,7 +261,7 @@ describe('the job’s steps', () => {
   });
 });
 
-// @traces 274-request-stages-FR-016
+// @traces 274-FR-016
 describe('the other open requests', () => {
   it('links the rest to Cererile mele when asked to', async () => {
     const { element } = await render(

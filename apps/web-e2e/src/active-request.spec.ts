@@ -57,10 +57,10 @@ async function signedIn(page: Page) {
 
 // @seeded: the seeded driver has at least one open request.
 test.describe('Cererea activă @seeded', () => {
-  // @traces 274-request-stages-FR-010
-  // @traces 274-request-stages-FR-017
-  // @traces 274-request-stages-FR-018
-  // @traces 274-request-stages-FR-021
+  // @traces 274-FR-010
+  // @traces 274-FR-017
+  // @traces 274-FR-018
+  // @traces 274-FR-021
   test('Panou shows the driver’s open request on its five stages at 390 px, with Cerere nouă to Home', async ({
     page,
     request,

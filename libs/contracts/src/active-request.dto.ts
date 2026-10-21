@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 import { GarageRefDto, RequestJobDto } from './quotes.dto';
 
-export const ACTIVE_REQUEST_STAGES = [
+const ACTIVE_REQUEST_STAGES = [
   'sent',
   'quoted',
   'booked',
@@ -11,20 +11,15 @@ export const ACTIVE_REQUEST_STAGES = [
 ] as const;
 export type ActiveRequestStage = (typeof ACTIVE_REQUEST_STAGES)[number];
 
-export const ACTIVE_BOOKING_STATUSES = [
+const ACTIVE_BOOKING_STATUSES = [
   'awaiting_confirmation',
   'confirmed',
   'completed',
 ] as const;
 
-export const ACTIVE_JOB_STATUSES = [
-  'to_do',
-  'in_work',
-  'paused',
-  'done',
-] as const;
+const ACTIVE_JOB_STATUSES = ['to_do', 'in_work', 'paused', 'done'] as const;
 
-export const ACTIVE_STEP_STATES = ['done', 'now', 'todo'] as const;
+const ACTIVE_STEP_STATES = ['done', 'now', 'todo'] as const;
 
 const TIME = { format: 'date-time', type: String };
 const NULLABLE_TIME = { ...TIME, nullable: true };

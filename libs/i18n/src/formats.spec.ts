@@ -769,7 +769,7 @@ describe('bucharestDayStart', () => {
   });
 });
 
-// @traces 274-request-stages-FR-014
+// @traces 274-FR-014
 describe('formatAround', () => {
   // 13:00 in Bucharest, a Friday.
   const now = new Date('2026-10-09T10:00:00Z');

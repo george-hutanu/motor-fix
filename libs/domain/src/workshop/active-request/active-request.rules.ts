@@ -30,7 +30,7 @@ interface Named {
   name: string;
 }
 
-export interface JobRow {
+interface JobRow {
   status: JobStatus;
   startedAt: Date | null;
   pausedAt: Date | null;
@@ -40,7 +40,7 @@ export interface JobRow {
   mechanic: Named | null;
 }
 
-export interface BookingRow {
+interface BookingRow {
   status: BookingStatus;
   createdAt: Date;
   confirmedAt: Date | null;
@@ -50,7 +50,7 @@ export interface BookingRow {
   job: JobRow | null;
 }
 
-export interface RequestRow {
+interface RequestRow {
   id: string;
   status: RequestStatus;
   createdAt: Date;

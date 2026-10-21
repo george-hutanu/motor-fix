@@ -54,7 +54,7 @@ const row = (over: Partial<Row> = {}): Row => ({
   ...over,
 });
 
-// @traces 274-request-stages-FR-003
+// @traces 274-FR-003
 describe('the stage of a request', () => {
   it('is sent while no quote arrived', () => {
     expect(stageOf(row())).toBe('sent');
@@ -127,7 +127,7 @@ describe('the stage of a request', () => {
   });
 });
 
-// @traces 274-request-stages-FR-001
+// @traces 274-FR-001
 describe('whether a request is open', () => {
   it.each(['sent', 'quoted'] as const)('a %s request is open', (status) => {
     expect(isOpen(row({ status }))).toBe(true);
@@ -161,7 +161,7 @@ describe('whether a request is open', () => {
   });
 });
 
-// @traces 274-request-stages-FR-002
+// @traces 274-FR-002
 describe('the open request closest to the workshop', () => {
   const sent = row({ id: 'a1', status: 'sent' });
   const quoted = row({ id: 'a2', quotes: [quote(1, 2)], status: 'quoted' });
@@ -217,7 +217,7 @@ describe('the open request closest to the workshop', () => {
   });
 });
 
-// @traces 274-request-stages-FR-002
+// @traces 274-FR-002
 describe('when a request last changed', () => {
   it('is its creation when nothing else happened', () => {
     expect(lastChangeOf(row())).toBe(at('07:00').getTime());
@@ -250,7 +250,7 @@ describe('when a request last changed', () => {
   });
 });
 
-// @traces 274-request-stages-FR-005
+// @traces 274-FR-005
 describe('the quoted range', () => {
   it('is none while there is no quote', () => {
     expect(rangeOf(row())).toBeNull();
@@ -289,7 +289,7 @@ describe('the quoted range', () => {
   });
 });
 
-// @traces 274-request-stages-FR-007
+// @traces 274-FR-007
 describe('the mechanic named', () => {
   const hand = { name: 'Mihai Dumitru' };
   const costel = { name: 'Costel Radu' };
@@ -332,7 +332,7 @@ describe('the mechanic named', () => {
   });
 });
 
-// @traces 274-request-stages-FR-008
+// @traces 274-FR-008
 describe('the estimated finish', () => {
   it('is none before the job starts', () => {
     expect(etaOf(job(), 90)).toBeNull();
@@ -375,7 +375,7 @@ describe('the estimated finish', () => {
   });
 });
 
-// @traces 274-request-stages-FR-009
+// @traces 274-FR-009
 describe('the job’s steps', () => {
   const step = (
     position: number,

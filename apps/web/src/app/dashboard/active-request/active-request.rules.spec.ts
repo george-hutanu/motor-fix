@@ -58,7 +58,7 @@ const job = (
   ...over,
 });
 
-// @traces 274-request-stages-FR-010
+// @traces 274-FR-010
 describe('the five stages', () => {
   it('are sent, quoted, booked, in work and done, in that order', () => {
     expect(STAGES).toEqual(['sent', 'quoted', 'booked', 'in_work', 'done']);
@@ -75,7 +75,7 @@ describe('the five stages', () => {
   });
 });
 
-// @traces 274-request-stages-FR-004
+// @traces 274-FR-004
 describe('the title', () => {
   it('names the jobs and the car in the reader’s language', () => {
     const request = activeRequest({
@@ -100,7 +100,7 @@ describe('the title', () => {
   });
 });
 
-// @traces 274-request-stages-FR-011
+// @traces 274-FR-011
 describe('who does the job', () => {
   it('is nobody before booking', () => {
     expect(whoOf(activeRequest())).toBeNull();
@@ -125,9 +125,9 @@ describe('who does the job', () => {
   });
 });
 
-// @traces 274-request-stages-FR-012
-// @traces 274-request-stages-FR-013
-// @traces 274-request-stages-FR-014
+// @traces 274-FR-012
+// @traces 274-FR-013
+// @traces 274-FR-014
 describe('the facts', () => {
   it('shows nothing for a sent request', () => {
     expect(factsOf(activeRequest(), 'ro', NOW)).toEqual([]);
@@ -201,8 +201,8 @@ describe('the facts', () => {
   });
 });
 
-// @traces 274-request-stages-FR-013
-// @traces 274-request-stages-FR-014
+// @traces 274-FR-013
+// @traces 274-FR-014
 describe('the line under the facts', () => {
   it('is none while waiting for quotes', () => {
     expect(lineOf(activeRequest(), 'ro', NOW)).toBeNull();
@@ -258,7 +258,7 @@ describe('the line under the facts', () => {
   });
 });
 
-// @traces 274-request-stages-FR-015
+// @traces 274-FR-015
 describe('the steps’ count', () => {
   const step = (state: 'done' | 'now' | 'todo', id: string) => ({
     id,
@@ -291,7 +291,7 @@ describe('the steps’ count', () => {
   });
 });
 
-// @traces 274-request-stages-FR-016
+// @traces 274-FR-016
 describe('the other open requests', () => {
   it.each([
     [0, 0],

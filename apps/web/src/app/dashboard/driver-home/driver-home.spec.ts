@@ -1194,8 +1194,8 @@ describe('Mașinile mele on a page left open', () => {
   });
 });
 
-// @traces 274-request-stages-FR-018
-// @traces 274-request-stages-FR-016
+// @traces 274-FR-018
+// @traces 274-FR-016
 describe('Cererea activă on Panou', () => {
   const answer: ActiveRequestAnswerDto = {
     openCount: 3,
@@ -1271,7 +1271,7 @@ describe('Cererea activă on Panou', () => {
   });
 });
 
-// @traces 274-request-stages-FR-020
+// @traces 274-FR-020
 describe('Cererea activă as the request moves', () => {
   it.each([
     'quote.accepted',

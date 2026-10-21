@@ -37,7 +37,7 @@ async function working(
   return { ...chain, job };
 }
 
-// @traces 274-request-stages-FR-001
+// @traces 274-FR-001
 describe('GET /quote-requests/active for a driver with nothing open', () => {
   it('answers no request and a count of 0', async () => {
     const andrei = await world.account('Andrei Marin');
@@ -53,7 +53,7 @@ describe('GET /quote-requests/active for a driver with nothing open', () => {
   });
 });
 
-// @traces 274-request-stages-FR-001
+// @traces 274-FR-001
 describe('who may read it', () => {
   it.each([
     ['owner', 'garage'],
@@ -78,9 +78,9 @@ describe('who may read it', () => {
   });
 });
 
-// @traces 274-request-stages-FR-003
-// @traces 274-request-stages-FR-004
-// @traces 274-request-stages-FR-005
+// @traces 274-FR-003
+// @traces 274-FR-004
+// @traces 274-FR-005
 describe('a request waiting for quotes', () => {
   it('is sent, with its car, jobs and description and no range, garage or job', async () => {
     const andrei = await world.account('Andrei Marin');
@@ -146,8 +146,8 @@ describe('a request waiting for quotes', () => {
   });
 });
 
-// @traces 274-request-stages-FR-006
-// @traces 274-request-stages-FR-007
+// @traces 274-FR-006
+// @traces 274-FR-007
 describe('a booked request', () => {
   it('awaiting the garage: booked, its garage, start and confirm-by, no mechanic', async () => {
     const andrei = await world.account('Andrei Marin');
@@ -243,9 +243,9 @@ describe('a booked request', () => {
   });
 });
 
-// @traces 274-request-stages-FR-003
-// @traces 274-request-stages-FR-008
-// @traces 274-request-stages-FR-009
+// @traces 274-FR-003
+// @traces 274-FR-008
+// @traces 274-FR-009
 describe('a request in the workshop', () => {
   it('in work: the job’s start, estimate, mechanic and steps', async () => {
     const andrei = await world.account('Andrei Marin');
@@ -345,8 +345,8 @@ describe('a request in the workshop', () => {
   });
 });
 
-// @traces 274-request-stages-FR-002
-// @traces 274-request-stages-FR-016
+// @traces 274-FR-002
+// @traces 274-FR-016
 describe('several open requests', () => {
   it('answers the one in work first and counts them all', async () => {
     const andrei = await world.account('Andrei Marin');
@@ -373,7 +373,7 @@ describe('several open requests', () => {
   });
 });
 
-// @traces 274-request-stages-FR-001
+// @traces 274-FR-001
 describe('the cost of the read', () => {
   it('runs the same statements for 1 and for 10 open requests', async () => {
     const andrei = await world.account('Andrei Marin');

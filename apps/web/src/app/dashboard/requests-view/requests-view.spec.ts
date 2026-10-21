@@ -798,8 +798,8 @@ describe('Cererile mele comparing a request’s quotes', () => {
   });
 });
 
-// @traces 274-request-stages-FR-016
-// @traces 274-request-stages-FR-020
+// @traces 274-FR-016
+// @traces 274-FR-020
 describe('Cererea activă at the top of Cererile mele', () => {
   const open: ActiveRequestAnswerDto = {
     openCount: 2,
