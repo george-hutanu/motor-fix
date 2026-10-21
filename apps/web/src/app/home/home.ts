@@ -97,7 +97,6 @@ export class Home {
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
   protected readonly voice = inject(Voice);
-  // Every voice the hero carries; the page head's mark shows one.
   // Every voice's hero, so the page carries all five before the first paint
   // and the style shows the one the head script picked.
   protected readonly voices = [1, 2, 3, 4, 5].map((n) => ({

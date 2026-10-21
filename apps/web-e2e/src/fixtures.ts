@@ -112,10 +112,12 @@ export async function routedContext(
     route.fulfill({ status: 204 }),
   );
   // Every page in a test speaks copy voice 1, the one its texts are written
-  // in; the rotation itself is copy-voice.spec.ts's, in contexts of its own.
+  // in: voice 1 taken just now, which every load keeps (the 2.5 s rule). The
+  // rotation itself is copy-voice.spec.ts's, in contexts of its own.
   await context.addInitScript(() => {
     try {
-      localStorage.setItem('mf-copy-deck', '1');
+      localStorage.setItem('mf-copy', '1');
+      localStorage.setItem('mf-copy-at', String(Date.now()));
     } catch {}
   });
   await use(context);

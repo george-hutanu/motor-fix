@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 
@@ -46,6 +50,27 @@ describe('the visit voice', () => {
     expect(voice.voice).toBe(4);
     expect(voice.key('headline')).toBe('public.voice.v4.headline');
   });
+
+  // The server's document (domino) has attributes but no dataset.
+  it.each([
+    [null, 1],
+    ['3', 3],
+  ])(
+    'reads the mark %p on a document without dataset as voice %p',
+    (mark, n) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: DOCUMENT,
+            useValue: { documentElement: { getAttribute: () => mark } },
+          },
+        ],
+      });
+
+      expect(TestBed.inject(Voice).voice).toBe(n);
+    },
+  );
 });
 
 // @traces 006-FR-001
@@ -73,6 +98,24 @@ describe('the texts of each voice', () => {
     expect(voiceOf('3').key('feat2')).toBeNull();
     expect(voiceOf('4').key('feat2')).toBe('public.voice.v4.feat2');
     expect(voiceOf('5').key('feat2')).toBeNull();
+  });
+
+  it('has a second benefits line exactly where the translations carry one', () => {
+    for (const language of ['ro', 'en']) {
+      const texts = JSON.parse(
+        readFileSync(
+          join(
+            __dirname,
+            `../../../../../libs/i18n/src/public/${language}.json`,
+          ),
+          'utf8',
+        ),
+      );
+      for (const n of [1, 2, 3, 4, 5])
+        expect(voiceOf(String(n)).key('feat2') !== null).toBe(
+          'feat2' in texts.voice[`v${n}`],
+        );
+    }
   });
 
   it('has a text in Romanian and in English for every slot of every voice', async () => {

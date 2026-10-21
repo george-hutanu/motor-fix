@@ -14,7 +14,9 @@ export type Slot =
   | 'review'
   | 'sub';
 
-// Voices whose benefits headline has no second line.
+// Voices whose benefits headline has no second line; the translation files
+// carry no feat2 for them (voice.spec.ts holds the two together). Voice 3's
+// headline shows sample figures until the live counts of ST-7 replace them.
 const ONE_LINE = new Set([3, 5]);
 
 const SLOTS: readonly Slot[] = [
@@ -56,17 +58,19 @@ export class Voice {
   readonly feat2: string | null;
 
   constructor() {
-    const mark = inject(DOCUMENT).documentElement.dataset['voice'] ?? '';
+    // getAttribute, not dataset: the server's document has no dataset.
+    const mark =
+      inject(DOCUMENT).documentElement.getAttribute('data-voice') ?? '';
     this.voice = /^[1-5]$/.test(mark) ? Number(mark) : 1;
     this.copy = keysOf(this.voice);
-    this.feat2 = this.key('feat2');
+    this.feat2 = ONE_LINE.has(this.voice)
+      ? null
+      : `public.voice.v${this.voice}.feat2`;
   }
 
   key(slot: Slot): string;
   key(slot: 'feat2'): string | null;
   key(slot: Slot | 'feat2'): string | null {
-    if (slot === 'review') return `driver.review.voices.v${this.voice}`;
-    if (slot === 'feat2' && ONE_LINE.has(this.voice)) return null;
-    return `public.voice.v${this.voice}.${slot}`;
+    return slot === 'feat2' ? this.feat2 : this.copy[slot];
   }
 }
