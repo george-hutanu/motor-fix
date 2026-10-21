@@ -93,6 +93,7 @@ features:
   - 1178-keycloak-sizing
   - 1348-release-green
   - 1181-rate-limits
+  - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
 ---
 
@@ -464,9 +465,9 @@ _From 1355-cheaper-gates-lighter-context._
 
 _From 673-story-tail-agents._
 
-### 688-FR-001 — `dispatch.mjs <pr> --no-wait` MUST dispatch the PR QA workflow for the PR's head, find the run by its nonce, print one hand-off line (`- QA run: <id> · head <sha> · lap <n> · <url>`) and exit 0 without watching the run or downloading anything; exit 2 when no run appears.
+### 1361-FR-006 — A pushed head of a ready PR MUST get exactly one PR QA run: the workflow's `pull_request` run executes only for a PR carrying the label `qa: on-push`, which `lifecycle.mjs ready` adds in a cloud session before marking it ready and a laptop `dispatch.mjs` removes, and a skipped `pull_request` event never cancels a dispatched run, and a laptop head gets its one run from `dispatch.mjs`; `ci-wait.mjs`, `carry.mjs` and the merge gate read that run.
 
-_From 688-qa-wait-handoff._
+_From 1361-watch-schedule-qa-telemetry._
 
 ### 688-FR-002 — `dispatch.mjs <pr> --run <id>` MUST dispatch nothing, read that run's conclusion, download its artifact into `--out` and judge the report exactly as a dispatched lap does (exit 0 success, 1 failure, 2 unusable, including a report about another head than the PR's).
 
@@ -2344,6 +2345,53 @@ _From 1181-rate-limits._
 
 _From 1181-rate-limits._
 
+### 1361-FR-001 — A machine-level schedule MUST run from the main checkout with no Claude session open: every 15 minutes it runs `watch.mjs --gate` and, when the gate reports work, a full pass whose dispatch plan it carries out, one `task-runner` per item with that fix's `/speckit-watch` instructions, each claimed through `watch.mjs claim <worktree> <fix>` before it starts; the QA cap and the "at most 2 other agents" rule of the dispatch plan hold.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-002 — The schedule and a live `--wait` MUST never dispatch the same worktree twice: a dispatch onto a live claim is refused, whichever side made the claim.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-003 — The schedule MUST be installable and removable by one script under `scripts/` (install, uninstall, status), its definition versioned beside it; it MUST refuse to install or run in a cloud session, and its passes and each dispatched agent's output MUST be logged under `.work/`.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-004 — The watch board MUST name the idle reason of every row that is `waiting` or `stale`: holder dead, waiting on CI, or waiting on a QA run.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-005 — The `speckit-watch` skill and the "Parallel work is watched" paragraph of AGENTS.md MUST say how the schedule starts a dispatch with no session open and how it shares the claims with a session's `--wait`.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-007 — `dispatch.mjs <n> --flows <f>` MUST refuse to dispatch a flows file that `precheck.mjs --flows <f> --check` has not passed for that head: the passing check writes a proof under `.specify/.cache` keyed by head sha and flows content hash, the dispatch reads it, and a missing, stale or mismatched proof is named in the refusal; a proof for an earlier sha holds when the commits since change documentation only (`scripts/docs-only.ts`); a dispatch without `--flows` needs none.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-008 — The API's `signInAttempts` route limit MUST be skipped when `PR_QA_SIGN_IN_UNLIMITED=1` and `APP_ENV=test`, a flag set only by the PR QA workflow; under any other `APP_ENV` the flag MUST be ignored and a warning logged; the failure limits are unchanged; a unit test covers the flag honoured, absent and ignored.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-009 — The telemetry ledger MUST record worktree sessions (session, worktree, feature, start and last write) and every skill invocation of every subagent transcript, bucketed under the `<level>/<phase>` of `run-state.json` at the time of the write with the bucket's first and last timestamp, and the hook milliseconds the transcript records.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-010 — `telemetry.mjs --unused` and `gc-scan.mjs` MUST count a skill or agent used by a subagent as used.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-011 — Every new entry (its first line) appended to `auto-run.md` by `speckit-auto` and to the tracker log MUST carry a timestamp (UTC, to the minute); earlier lines stay as written and readers accept both forms.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-012 — A cycle report (`node .claude/scripts/cycle.mjs`) MUST print, per merged PR, open to ready, ready to merge, the number of laps, the harness-caused laps, the idle gaps over 60 minutes and the hook minutes, from the ledger, the PR's GitHub timeline and the feature's logs; what a source lacks is printed as missing, never a failure.
+
+_From 1361-watch-schedule-qa-telemetry._
+
+### 1361-FR-013 — `speckit-auto`'s report MUST show the story's phases with their durations and the skills each subagent ran.
+
+_From 1361-watch-schedule-qa-telemetry._
 ### 1355-FR-002 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red; `stop-test-gate.sh` checks the same things as before (only its comment naming where the full typecheck, lint and test run changes).
 
 _From 1355-cheaper-gates-lighter-context._
@@ -2447,6 +2495,7 @@ _From 1355-cheaper-gates-lighter-context._
 - `000-FR-001` — superseded by `1348-FR-001` (2026-10-17)
 - `000-FR-014` — superseded by `1348-FR-002` (2026-10-17)
 - `251-FR-012` — superseded by `1348-FR-003` (2026-10-17)
+- `688-FR-001` — superseded by `1361-FR-006` (2026-10-21)
 - `691-FR-006` — removed by 1355-cheaper-gates-lighter-context (2026-10-21)
 - `1324-FR-012` — superseded by `1355-FR-001` (2026-10-21)
 - `691-FR-005` — superseded by `1355-FR-009` (2026-10-21)

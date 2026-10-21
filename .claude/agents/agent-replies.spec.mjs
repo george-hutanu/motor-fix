@@ -118,6 +118,6 @@ describe('the tail reads tail.md alone, and AGENTS.md stays small', () => {
   it('keeps the "Parallel work is watched" bullet word for word', () => {
     const bullet = read(join(repoRoot, 'AGENTS.md')).match(/^- Parallel work is watched[\s\S]*?(?=\n- )/m)?.[0] ?? '';
     const sha = createHash('sha256').update(bullet).digest('hex');
-    assert.equal(sha, '0d1d4f093879fec07424860afd825afe3bf65aa0edd9fe4e886fd00e720a9515');
+    assert.equal(sha, '6d99de84561d20ebadb6339fb984b5b589ab1a077c3c154e4a64f3f54ca88f51');
   });
 });

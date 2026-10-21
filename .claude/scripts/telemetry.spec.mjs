@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { emptyRecord, mergeTranscript, ranked, summarize } from './lib/telemetry.mjs';
-import { byLevel, loadRecords, unused } from './telemetry.mjs';
+import { byLevel, loadRecords, phases, unused } from './telemetry.mjs';
 
 // The usage ledger. Two things matter beyond the counting: it must fold a
 // transcript incrementally (a session's transcript is re-read every turn), and
@@ -389,6 +389,206 @@ describe('telemetry — by level', () => {
       assert.equal(run.status, 0);
     } finally {
       rmSync(empty, { recursive: true, force: true });
+    }
+  });
+});
+
+// A main checkout and one linked worktree, in a scratch directory.
+const gitWorld = () => {
+  const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'telemetry-git-')));
+  const main = join(scratch, 'main');
+  const linked = join(scratch, 'wt');
+  mkdirSync(main);
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
+  const git = (cwd, ...args) =>
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, stdio: 'pipe', encoding: 'utf8', env });
+  git(main, 'init', '-q', '-b', 'main');
+  git(main, 'commit', '-q', '--allow-empty', '-m', 'init');
+  git(main, 'worktree', 'add', '-q', '-b', 'feature', linked);
+  return { scratch, main, linked };
+};
+
+const hookLine = (durationMs, timestamp = '2026-10-21T10:00:30Z') =>
+  `${JSON.stringify({ type: 'attachment', timestamp, attachment: { type: 'hook_success', hookName: 'PreToolUse:Bash', exitCode: 0, durationMs } })}\n`;
+const stopSummary = (durations, timestamp = '2026-10-21T10:05:00Z') =>
+  `${JSON.stringify({ type: 'system', subtype: 'stop_hook_summary', timestamp, hookInfos: [...durations.map((durationMs) => ({ command: 'x', durationMs })), { command: 'callback' }] })}\n`;
+
+// @traces 1361-FR-009
+describe('telemetry — subagent skills, bucket times and hook time', () => {
+  it('counts the skills and subagents a subagent transcript invokes, per agent type, without its other tool calls', () => {
+    const record = emptyRecord('s1');
+    const text =
+      assistant([toolUse('Skill', { skill: 'speckit-plan' }), toolUse('Read')], used(1, 1), undefined, 'p1') +
+      assistant([toolUse('Skill', { skill: 'speckit-tasks' }), toolUse('Agent', { subagent_type: 'spec-reviewer' })], used(1, 1), undefined, 'p2') +
+      assistant([toolUse('Task', { subagent_type: 'code-reviewer' })], used(1, 1), undefined, 'p3');
+    mergeTranscript(record, text, { bucket: '2/plan', agentType: 'task-runner', cursor: { last_message_id: null, last_usage: null } });
+    assert.deepEqual(record.skills, { 'speckit-plan': 1, 'speckit-tasks': 1 });
+    assert.deepEqual(record.agents, { 'spec-reviewer': 1, 'code-reviewer': 1 });
+    assert.deepEqual(record.subagent_skills, { 'task-runner': { 'speckit-plan': 1, 'speckit-tasks': 1 } });
+    assert.deepEqual(record.tools, {}, 'a subagent tool call is still not a session tool call');
+    assert.equal(record.turns, 0);
+  });
+
+  it('keeps a session skill out of subagent_skills', () => {
+    const { record } = mergeTranscript(emptyRecord('s1'), assistant([toolUse('Skill', { skill: 'speckit-auto' })]), { bucket: '2/plan' });
+    assert.deepEqual(record.skills, { 'speckit-auto': 1 });
+    assert.deepEqual(record.subagent_skills, {});
+    assert.equal(record.buckets['2/plan'].subagent_skills, undefined);
+  });
+
+  it('buckets each subagent skill invocation under the <level>/<phase> current at the write, per agent type', () => {
+    const record = emptyRecord('s1');
+    const cursor = { last_message_id: null, last_usage: null };
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-plan' })], used(1, 1), undefined, 'b1'), { bucket: '2/plan', agentType: 'task-runner', cursor });
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-tasks' }), toolUse('Skill', { skill: 'speckit-tasks' })], used(1, 1), undefined, 'b2'), {
+      bucket: '2/tasks',
+      agentType: 'task-runner',
+      cursor,
+    });
+    assert.deepEqual(record.buckets['2/plan'].subagent_skills, { 'task-runner': { 'speckit-plan': 1 } });
+    assert.deepEqual(record.buckets['2/tasks'].subagent_skills, { 'task-runner': { 'speckit-tasks': 2 } });
+    assert.deepEqual(record.subagent_skills, { 'task-runner': { 'speckit-plan': 1, 'speckit-tasks': 2 } });
+  });
+
+  it('stamps each bucket with the first and last time it was written, from session and subagent lines', () => {
+    const record = emptyRecord('s1');
+    mergeTranscript(record, assistant([], used(1, 1), '2026-10-21T10:00:00Z', 'm1') + assistant([], used(1, 1), '2026-10-21T10:20:00Z', 'm2'), {
+      bucket: '2/plan',
+    });
+    mergeTranscript(record, assistant([], used(1, 1), '2026-10-21T09:58:00Z', 'a1') + assistant([], used(1, 1), '2026-10-21T10:30:00Z', 'a2'), {
+      bucket: '2/plan',
+      agentType: 'task-runner',
+      cursor: { last_message_id: null, last_usage: null },
+    });
+    mergeTranscript(record, assistant([], used(1, 1), '2026-10-21T11:00:00Z', 'm3'), { bucket: '2/tasks' });
+    assert.equal(record.buckets['2/plan'].first, '2026-10-21T09:58:00Z');
+    assert.equal(record.buckets['2/plan'].last, '2026-10-21T10:30:00Z');
+    assert.equal(record.buckets['2/tasks'].first, '2026-10-21T11:00:00Z');
+    assert.equal(record.buckets['2/tasks'].last, '2026-10-21T11:00:00Z');
+  });
+
+  it('sums hook milliseconds from hook_success attachments and stop_hook_summary entries, per bucket and in all', () => {
+    const record = emptyRecord('s1');
+    mergeTranscript(record, hookLine(120) + assistant([], used(1, 1), undefined, 'm1') + stopSummary([100, 250]), { bucket: '2/plan' });
+    mergeTranscript(record, hookLine(30), { bucket: '2/tasks' });
+    assert.equal(record.buckets['2/plan'].hook_ms, 470);
+    assert.equal(record.buckets['2/tasks'].hook_ms, 30);
+    assert.equal(record.hook_ms, 500);
+  });
+
+  it('counts the hook time a subagent transcript records', () => {
+    const record = emptyRecord('s1');
+    mergeTranscript(record, hookLine(40), { bucket: '2/plan', agentType: 'task-runner', cursor: { last_message_id: null, last_usage: null } });
+    assert.equal(record.hook_ms, 40);
+    assert.equal(record.buckets['2/plan'].hook_ms, 40);
+  });
+
+  it('folds into a ledger written before these fields without throwing, and leaves it readable', () => {
+    const old = { session_id: 'old', turns: 1, tools: {}, skills: { a: 1 }, agents: {}, tokens: tokens(1, 1), buckets: { '2/plan': { tokens: tokens(1, 1), subagent_tokens: tokens(0, 0) } } };
+    mergeTranscript(old, hookLine(10) + assistant([toolUse('Skill', { skill: 'b' })], used(1, 1), '2026-10-21T10:00:00Z', 'm1'), {
+      bucket: '2/plan',
+      agentType: 'task-runner',
+      cursor: { last_message_id: null, last_usage: null },
+    });
+    assert.equal(old.hook_ms, 10);
+    assert.equal(old.buckets['2/plan'].hook_ms, 10);
+    assert.equal(old.buckets['2/plan'].first, '2026-10-21T10:00:00Z');
+    assert.equal(old.buckets['2/plan'].last, '2026-10-21T10:00:30Z');
+    assert.deepEqual(old.subagent_skills, { 'task-runner': { b: 1 } });
+    assert.equal(summarize([old, { session_id: 'older', turns: 2 }]).turns, 3, 'a ledger lacking every new field still sums');
+  });
+});
+
+// @traces 1361-FR-010
+describe('telemetry — the ledgers of the whole machine, read from a worktree', () => {
+  let world;
+  beforeEach(() => {
+    world = gitWorld();
+    for (const name of ['speckit-plan', 'speckit-tasks', 'never-run']) mkdirSync(join(world.linked, '.claude/skills', name), { recursive: true });
+    mkdirSync(join(world.linked, '.claude/agents'), { recursive: true });
+    writeFileSync(join(world.linked, '.claude/agents/spec-reviewer.md'), '---\nname: spec-reviewer\n---\n');
+    const record = emptyRecord('s-main');
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-plan' }), toolUse('Agent', { subagent_type: 'spec-reviewer' })], used(1, 1), undefined, 'a1'), {
+      bucket: '2/plan',
+      agentType: 'task-runner',
+      cursor: { last_message_id: null, last_usage: null },
+    });
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-tasks' })], used(1, 1), undefined, 'm1'), { bucket: '2/tasks' });
+    mkdirSync(join(world.main, '.specify/telemetry'), { recursive: true });
+    writeFileSync(join(world.main, '.specify/telemetry/s-main.json'), JSON.stringify(record));
+  });
+  afterEach(() => rmSync(world.scratch, { recursive: true, force: true }));
+
+  it('loadRecords reads the main checkout\'s ledgers from a worktree', () => {
+    assert.deepEqual(loadRecords(world.linked).map((r) => r.session_id), ['s-main']);
+  });
+
+  it('counts a skill and an agent only a subagent invoked as used', () => {
+    const gaps = unused(world.linked);
+    assert.deepEqual(gaps.skills, ['never-run']);
+    assert.deepEqual(gaps.agents, []);
+  });
+
+  it('--unused run from a worktree lists only what nobody ran', () => {
+    const run = spawnSync(process.execPath, [new URL('./telemetry.mjs', import.meta.url).pathname, '--unused'], {
+      cwd: world.linked,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: world.linked },
+    });
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(run.stdout, /skills never invoked \(1\): never-run/);
+    assert.doesNotMatch(run.stdout, /speckit-plan|speckit-tasks/);
+  });
+});
+
+// @traces 1361-FR-013
+describe('telemetry — a feature\'s phases', () => {
+  const ledger = (feature, buckets, subagent_skills = {}) => ({ session_id: `s-${Math.random()}`, feature, buckets, subagent_skills, tokens: tokens(0, 0) });
+  const span = (first, last, hook_ms) => ({ tokens: tokens(1, 1), subagent_tokens: tokens(0, 0), first, last, ...(hook_ms === undefined ? {} : { hook_ms }) });
+
+  it('lists each phase once across sessions and levels, in order, with its minutes and the skills each subagent ran', () => {
+    const report = phases(
+      [
+        ledger('777-x', { '2/plan': span('2026-10-21T10:00:00Z', '2026-10-21T10:20:00Z', 60000) }, { 'task-runner': { 'speckit-plan': 1 } }),
+        ledger('777-x', { '2/specify': span('2026-10-21T09:00:00Z', '2026-10-21T09:30:00Z'), '3/plan': span('2026-10-21T10:10:00Z', '2026-10-21T10:45:00Z', 30000) }, { 'task-runner': { 'speckit-plan': 1, 'speckit-tasks': 2 }, 'spec-reviewer': {} }),
+        ledger('888-other', { '2/plan': span('2026-10-20T10:00:00Z', '2026-10-20T18:00:00Z') }, { 'task-runner': { 'speckit-archive': 1 } }),
+      ],
+      '777-x',
+    );
+    assert.deepEqual(report.phases, [
+      { phase: 'specify', first: '2026-10-21T09:00:00Z', last: '2026-10-21T09:30:00Z', minutes: 30, hook_ms: 0 },
+      { phase: 'plan', first: '2026-10-21T10:00:00Z', last: '2026-10-21T10:45:00Z', minutes: 45, hook_ms: 90000 },
+    ]);
+    assert.deepEqual(report.subagent_skills, { 'task-runner': { 'speckit-plan': 2, 'speckit-tasks': 2 }, 'spec-reviewer': {} });
+  });
+
+  it('shows a phase from a ledger written before bucket times with no minutes', () => {
+    const report = phases([{ session_id: 'old', feature: '777-x', buckets: { '2/plan': { tokens: tokens(1, 1), subagent_tokens: tokens(0, 0) } } }], '777-x');
+    assert.deepEqual(report.phases, [{ phase: 'plan', first: null, last: null, minutes: null, hook_ms: 0 }]);
+    assert.deepEqual(report.subagent_skills, {});
+  });
+
+  it('--phases prints the table and exits 0, with or without ledgers', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'telemetry-phases-'));
+    try {
+      const cli = () =>
+        spawnSync(process.execPath, [new URL('./telemetry.mjs', import.meta.url).pathname, '--phases', '777-x'], {
+          encoding: 'utf8',
+          env: { ...process.env, CLAUDE_PROJECT_DIR: scratch },
+        });
+      assert.equal(cli().status, 0);
+      mkdirSync(join(scratch, '.specify/telemetry'), { recursive: true });
+      writeFileSync(
+        join(scratch, '.specify/telemetry/s1.json'),
+        JSON.stringify(ledger('777-x', { '2/plan': span('2026-10-21T10:00:00Z', '2026-10-21T10:20:00Z') }, { 'task-runner': { 'speckit-plan': 1 } })),
+      );
+      const run = cli();
+      assert.equal(run.status, 0, run.stderr);
+      assert.match(run.stdout, /plan/);
+      assert.match(run.stdout, /20/);
+      assert.match(run.stdout, /task-runner: speckit-plan/);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
     }
   });
 });

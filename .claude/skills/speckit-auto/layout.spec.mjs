@@ -36,6 +36,7 @@ const RULES = [
   ['Never wait for the user.', 'SKILL.md'],
   ['The recommendation is the answer.', 'SKILL.md'],
   ['Assumptions are written down, not held in memory.', 'SKILL.md'],
+  ['starts its first line with the UTC minute `YYYY-MM-DD HH:MM`', 'SKILL.md'],
   ['Hook prompts are yes.', 'SKILL.md'],
   ['A blocked tool call is an instruction, not a question.', 'SKILL.md'],
   ['Finish the run.', 'SKILL.md'],

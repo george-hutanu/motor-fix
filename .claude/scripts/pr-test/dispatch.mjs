@@ -23,29 +23,39 @@
 // run as a dispatched lap would, exiting 2 while it has not completed. With
 // neither, it dispatches and watches the run, for a lap run by hand.
 //
+// --flows dispatches only flows a clean `precheck.mjs --flows <f> --check`
+// proved for the PR head, read from the proof it left in this checkout; a
+// proof for an earlier commit holds while every commit since changes
+// documentation only (scripts/docs-only.ts) or no file at all. Anything else is refused, exit 64.
+//
 // The PR is read over REST everywhere (GraphQL is a budget every session
-// shares). A cloud session (CLAUDE_CODE_REMOTE=true) cannot dispatch (403),
-// so it dispatches nothing: the workflow starts by itself when the PR
-// is marked ready or pushed to, and this finds that pull_request run for the
-// head commit over REST and prints the same hand-off line. --flows, --routes
-// and --ref cannot reach such a run (it runs the default routes, no flows).
+// shares). A head gets one QA run: on the laptop the dispatched one, so the PR
+// loses its `qa: on-push` label first and pr-qa.yml's pull_request run skips.
+// A cloud session (CLAUDE_CODE_REMOTE=true) cannot dispatch (403), so it
+// dispatches nothing: `lifecycle.mjs ready` labelled the PR there, the
+// workflow starts by itself when it is marked ready or pushed to, and this
+// finds that pull_request run for the head commit over REST and prints the
+// same hand-off line. --flows, --routes and --ref cannot reach such a run (it
+// runs the default routes, no flows).
 //
 // --ref is the branch whose pr-qa.yml and tester scripts run (main; a branch
 // that changes the tester itself can name its own). Exit 0 when the report says
 // success, 1 when it says failure (blocking findings: read the report), 2 when
 // the run left no usable report (an infrastructure failure, not a verdict).
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
+import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { activeFeature } from "../lib/feature.mjs";
-import { checkFlows } from "./precheck.mjs";
+import { checkFlows, flowsHash, PROOF_DIR, proofPath } from "./precheck.mjs";
 import { qaRunLine } from "./qa-run.mjs";
 import { routeProblem } from "./sweep.mjs";
 
 export const WORKFLOW = "pr-qa.yml";
+const ON_PUSH_LABEL = "qa: on-push";
 export const ARTIFACT_PREFIX = "pr-qa-";
 export const FLOWS_LIMIT = 60000;
 
@@ -96,6 +106,48 @@ export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?
 export function findPrRun(workflowRuns) {
   const newest = [...workflowRuns].sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)))[0];
   return newest ? { databaseId: newest.id, url: newest.html_url } : null;
+}
+
+const PROOF_NAME = /^([0-9a-f]{40})-([0-9a-f]{16})$/;
+
+/**
+ * The proof that flows of `hash` passed --check at `sha` in the checkout at `root`: `{ proof }` with its
+ * path, or `{ refused }` naming what is missing. A proof for an ancestor holds while the commits since it
+ * change documentation only, or no file at all (an empty commit). Once a proof holds, the stamps for
+ * commits off the head's history (an abandoned or rewritten branch) are removed, so they do not pile up;
+ * a stamp for the head or an ancestor stays, whatever its flows. A refusal removes nothing.
+ */
+export function proofFor({ root, sha, hash }) {
+  const git = (...args) => spawnSync("git", ["-C", root, "-c", "core.quotePath=off", ...args], { encoding: "utf8" });
+  const dir = join(root, PROOF_DIR);
+  const stamps = (existsSync(dir) ? readdirSync(dir) : []).map((n) => PROOF_NAME.exec(n)).filter(Boolean).map(([, at, h]) => ({ name: `${at}-${h}`, at, h }));
+  const prune = () => {
+    for (const s of stamps)
+      if (s.at !== sha && git("merge-base", "--is-ancestor", s.at, sha).status !== 0) rmSync(join(dir, s.name), { force: true });
+  };
+  const exact = proofPath(root, sha, hash);
+  if (existsSync(exact)) {
+    prune();
+    return { proof: exact };
+  }
+  const behind = stamps
+    .filter((s) => s.h === hash && git("merge-base", "--is-ancestor", s.at, sha).status === 0)
+    .map((s) => ({ ...s, count: Number(git("rev-list", "--count", `${s.at}..${sha}`).stdout) }))
+    .sort((x, y) => x.count - y.count);
+  const head = sha.slice(0, 7);
+  const fix = `run precheck.mjs --flows <file> --check at ${head}, then dispatch again`;
+  let code = null;
+  for (const s of behind) {
+    const paths = git("diff", "--name-only", "--no-renames", `${s.at}..${sha}`).stdout.split("\n").filter((p) => p.trim());
+    if (paths.length === 0 || isDocsOnly(paths)) {
+      prune();
+      return { proof: proofPath(root, s.at, hash) };
+    }
+    code ??= { at: s.at, files: paths.filter((p) => !isDocumentation(p)) };
+  }
+  if (code) return { refused: `the flows were proven at ${code.at.slice(0, 7)}, and the commits since change code (${code.files.slice(0, 3).join(", ")}${code.files.length > 3 ? ` and ${code.files.length - 3} more` : ""}): ${fix}` };
+  if (stamps.some((s) => s.at === sha)) return { refused: `the proof for ${head} is for other flows content (the file changed since its check): ${fix}` };
+  return { refused: `no flows proof for ${head}: ${fix}` };
 }
 
 const STAGING_PREFIX = ".download-";
@@ -246,10 +298,24 @@ async function main(argv) {
       console.error("dispatch: the flows fail the pre-check; nothing was dispatched");
       return 64;
     }
+    const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+    const { refused } = top.status === 0 ? proofFor({ root: top.stdout.trim(), sha, hash: flowsHash(opt.flows) }) : { refused: "not in a git checkout, where precheck.mjs --check leaves its proof" };
+    if (refused) {
+      console.error(`dispatch: ${refused}; nothing was dispatched`);
+      return 64;
+    }
   }
   const flows = opt.flows ? encodeFlows(readFileSync(opt.flows, "utf8")) : null;
   const nonce = `${opt.pr}-${sha.slice(0, 7)}-${Date.now().toString(36)}`;
   const { args, input } = dispatchCommand({ ref: opt.ref, inputs: dispatchInputs({ pr: opt.pr, sha, lap: opt.lap, routes: opt.routes, flows, nonce }) });
+  // The label starts a pull_request run beside this one; a PR without it answers 404, which is the usual
+  // case. Any other failure is named, and the lap is dispatched anyway.
+  try {
+    gh(["api", "-X", "DELETE", `repos/{owner}/{repo}/issues/${opt.pr}/labels/${encodeURIComponent(ON_PUSH_LABEL)}`]);
+  } catch (error) {
+    const stderr = String(error.stderr ?? error.message);
+    if (!/\bHTTP 404\b/.test(stderr)) console.error(`dispatch: could not remove the ${ON_PUSH_LABEL} label: ${stderr.trim().split("\n")[0]}`);
+  }
   gh(args, { input });
   console.error(`dispatch: ${WORKFLOW} on ${opt.ref} for #${opt.pr} at ${sha.slice(0, 7)} (nonce ${nonce})`);
 

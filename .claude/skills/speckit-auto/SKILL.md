@@ -66,7 +66,10 @@ This is the whole point of the command — read it before phase 1.
 3. **Assumptions are written down, not held in memory.** Every autonomous
    answer lands in the artifact the phase owns (spec Clarifications /
    Assumptions, plan Technical Context, tasks notes) *and* as one line in the
-   run log `specs/<feature>/auto-run.md`.
+   run log `specs/<feature>/auto-run.md`. Every new entry there, whoever
+   writes it (this session or a phase agent), starts its first line with the
+   UTC minute `YYYY-MM-DD HH:MM` (`date -u +"%Y-%m-%d %H:%M"`); earlier lines
+   stay as written.
 4. **Hook prompts are yes.** `.specify/extensions.yml` runs with
    `auto_execute_hooks: true` and its git hooks ask things like "Commit
    specification changes?". In this command the answer is always yes — subject

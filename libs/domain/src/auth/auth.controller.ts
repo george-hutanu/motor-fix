@@ -13,6 +13,7 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  Inject,
   Post,
   Req,
   Res,
@@ -33,7 +34,12 @@ import {
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
-import { OpenInMaintenance, Public } from './actor.guard';
+import {
+  AUTH_OPTIONS,
+  type AuthOptions,
+  OpenInMaintenance,
+  Public,
+} from './actor.guard';
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
 import { RateLimits } from '../rate-limit/rate-limit.service';
@@ -110,6 +116,7 @@ export class AuthController {
     private readonly signIns: SignInService,
     private readonly signUps: SignUpService,
     private readonly limits: RateLimits,
+    @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
   ) {}
 
   @Post('sign-in')
@@ -125,7 +132,8 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
-    await this.limits.take('signInAttempts', req.ip ?? '');
+    if (!this.options.skipSignInAttemptsLimit)
+      await this.limits.take('signInAttempts', req.ip ?? '');
     const issued = await this.signIns.signIn(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };

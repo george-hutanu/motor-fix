@@ -1,7 +1,7 @@
 import { afterEach, describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -28,6 +28,12 @@ import {
   writeClaim,
 } from './watch.mjs';
 import { waitHolder } from './lib/watch-wait.mjs';
+
+// Each case builds real git repositories and worktrees (and one spawns the CLI):
+// about a second apiece alone, many times that beside the rest of the harness
+// suite, so the 5 s default is too tight for a loaded machine. Time inside the
+// cases is never the wall clock: every pass gets NOW and an injected sleep.
+vi.setConfig({ testTimeout: 60_000 });
 
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-04T12:00:00Z');
@@ -1233,7 +1239,7 @@ describe('--gate', () => {
         rmSync(f.root, { recursive: true, force: true });
       }
     }
-  }, 20000);
+  }, 180_000);
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
@@ -1870,5 +1876,209 @@ describe('the main checkout row', () => {
     assert.equal(actions.length, 1);
     assert.equal(actions[0].what, 'ff-main /nonexistent/main-checkout');
     assert.equal(actions[0].ok, false);
+  });
+});
+
+describe('a claim refuses a live one, and --dispatch starts the plan with no session open', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+  const claimFile = (path) => join(path, '.specify', '.cache', 'watch-claim.json');
+  const readClaim = (path) => JSON.parse(readFileSync(claimFile(path), 'utf8'));
+
+  // @traces 1361-FR-002
+  it('refuses a claim while the existing one is live by the run-state stage threshold, and replaces an expired one, leaving no file of its own behind', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      const io = captured();
+      assert.equal(main(['claim', a, 'resume'], { now: NOW }), 0);
+      assert.equal(main(['claim', a, 'tail'], { now: NOW + 5 * MIN }), 1);
+      assert.ok(io.err.includes('claim refused: resume claimed 5 min ago'), io.err.join('\n'));
+      assert.equal(readClaim(a).fix, 'resume');
+      // No run-state phase: 30 minutes. In `tests` the stage threshold is 45.
+      writeFileSync(join(a, '.specify', 'run-state.json'), JSON.stringify({ status: 'running', phase: 'tests' }));
+      assert.equal(main(['claim', a, 'tail'], { now: NOW + 40 * MIN }), 1);
+      assert.equal(readClaim(a).fix, 'resume');
+      assert.equal(main(['claim', a, 'tail'], { now: NOW + 46 * MIN }), 0);
+      assert.deepEqual(readClaim(a), { fix: 'tail', at: new Date(NOW + 46 * MIN).toISOString() });
+      assert.deepEqual(readdirSync(join(a, '.specify', '.cache')), ['watch-claim.json'], 'no temporary file is left');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-002
+  it('writeClaim returns the live claim it refused, and null once it wrote', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      assert.equal(writeClaim(a, 'resume', NOW), null);
+      assert.deepEqual(writeClaim(a, 'fix-ci', NOW + MIN), { fix: 'resume', at: new Date(NOW).toISOString() });
+      assert.equal(writeClaim(a, 'fix-ci', NOW + 31 * MIN), null);
+      assert.equal(readClaim(a).fix, 'fix-ci');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-004
+  it('names why an idle row waits or went stale: holder dead, waiting on CI, waiting on a QA run', () => {
+    const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+    const HEAD = 'd'.repeat(40);
+    const dead = fixOf(row({ holder: 'dead' }), opts);
+    assert.equal(dead.verdict, 'stale');
+    assert.match(dead.reason, /^holder dead: no live agent/);
+    // Every stale row with no live holder names it, a missing or quiet lock as much as a dead pid.
+    assert.match(fixOf(row(), opts).reason, /^holder dead: no live agent/);
+    const handed = (rollup, qaRunState) =>
+      row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, pr: summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: rollup })), qaRunState });
+    const ci = fixOf(handed([check(null, 'IN_PROGRESS'), review('SUCCESS')], { status: 'completed' }), opts);
+    assert.equal(ci.verdict, 'waiting');
+    assert.match(ci.reason, /^waiting on CI: /);
+    const qa = fixOf(handed([check('SUCCESS')], { status: 'in_progress' }), opts);
+    assert.equal(qa.verdict, 'waiting');
+    assert.match(qa.reason, /^waiting on a QA run: .*QA run 77/);
+    // The tail after a finished QA run and the merge on green are stale rows nobody holds either.
+    const tail = fixOf(handed([check('SUCCESS')], { status: 'completed' }), opts);
+    assert.equal(tail.fix, 'tail');
+    assert.match(tail.reason, /^holder dead: QA run 77 completed/);
+    const merge = fixOf(row({ activity: { at: NOW - 120 * MIN, source: 'commit' }, phase: 'merging', pr: summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] })) }), opts);
+    assert.equal(merge.fix, 'merge');
+    assert.match(merge.reason, /^holder dead: agent-review success and every check green/);
+  });
+
+  const fakeSpawn = (onSpawn = () => {}) => {
+    const calls = [];
+    const spawn = (command, args, options) => {
+      const child = { pid: 4000 + calls.length, unref: vi.fn() };
+      calls.push({ command, args, options, child });
+      onSpawn(options.cwd);
+      return child;
+    };
+    return { calls, spawn };
+  };
+
+  // @traces 1361-FR-002
+  it('holds a claim live by the run\'s own --stale thresholds, not only the defaults', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      mkdirSync(join(a, '.specify'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'run-state.json'), JSON.stringify({ status: 'running', phase: 'tests' }));
+      const io = captured();
+      assert.equal(main(['claim', a, 'resume'], { now: NOW }), 0);
+      // The default `tests` threshold (45) would let this through; the run said 60.
+      assert.equal(main(['claim', a, 'tail', '--stale', 'tests=60'], { now: NOW + 50 * MIN }), 1);
+      assert.ok(io.err.includes('claim refused: resume claimed 50 min ago'), io.err.join('\n'));
+      assert.equal(main(['claim', a, 'tail', '--stale', 'tests=60'], { now: NOW + 61 * MIN }), 0);
+      assert.equal(readClaim(a).fix, 'tail');
+      // writeClaim takes the same thresholds: a shorter one expires the claim sooner.
+      assert.equal(writeClaim(a, 'resume', NOW + 72 * MIN, { ...DEFAULT_THRESHOLDS, tests: 10 }), null);
+      assert.equal(readClaim(a).fix, 'resume');
+      assert.equal(main(['claim', a, 'tail', '--stale'], { now: NOW + 73 * MIN }), 1);
+      assert.equal(main(['claim', a, 'tail', '--stale', 'nope=5'], { now: NOW + 73 * MIN }), 1);
+      assert.equal(readClaim(a).fix, 'resume');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-001
+  it('claims each plan entry, then starts a detached task-runner in its worktree, logging under .work/watch-dispatch', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 150);
+      const b = f.add('agent-b', '902-b');
+      quietCommit(b, 120);
+      const c = f.add('agent-c', '903-c');
+      quietCommit(c, 90);
+      const gh = () => [
+        pr({ number: 22, headRefName: '902-b', headRefOid: git(b, 'rev-parse', 'HEAD'), statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }),
+        pr({ number: 23, headRefName: '903-c', headRefOid: git(c, 'rev-parse', 'HEAD'), statusCheckRollup: [check('SUCCESS')] }),
+      ];
+      // A session's --wait claims c while b is being started: its dispatch is refused.
+      const { calls, spawn } = fakeSpawn((cwd) => cwd === b && writeClaim(c, 'rerun-qa', NOW));
+      const io = captured();
+      assert.equal(main(['--dispatch'], { cwd: f.repo, ...env({ gh, spawn }), sweep: () => null }), 0);
+      assert.deepEqual(calls.map((x) => x.options.cwd), [a, b]);
+      for (const x of calls) {
+        assert.equal(x.command, 'claude');
+        assert.equal(x.args[0], '-p');
+        assert.deepEqual(x.args.slice(2, 6), ['--agent', 'task-runner', '--permission-mode', 'acceptEdits']);
+        assert.equal(x.options.detached, true);
+        assert.equal(x.child.unref.mock.calls.length, 1);
+        assert.match(x.args[1], /\.claude\/skills\/speckit-watch\/SKILL\.md/);
+        assert.ok(x.args[1].includes(x.options.cwd), 'the prompt names the worktree');
+      }
+      assert.match(calls[0].args[1], /Your fix is `resume`/);
+      assert.equal(calls[0].args.includes('--model'), false);
+      assert.match(calls[1].args[1], /Your fix is `merge`/);
+      assert.match(calls[1].args[1], /PR #22/);
+      assert.deepEqual(calls[1].args.slice(6), ['--model', 'sonnet']);
+      assert.equal(readClaim(a).fix, 'resume');
+      assert.equal(readClaim(b).fix, 'merge');
+      assert.equal(readClaim(c).fix, 'rerun-qa');
+      const logs = readdirSync(join(f.repo, '.work', 'watch-dispatch'));
+      assert.equal(logs.length, 2);
+      assert.ok(logs.some((l) => l.startsWith('agent-a-') && l.endsWith('.log')), logs.join());
+      const started = io.out.filter((l) => l.startsWith('dispatched: '));
+      assert.equal(started.length, 2);
+      assert.ok(started[0].startsWith(`dispatched: resume ${a} pid 4000 log ${join(f.repo, '.work', 'watch-dispatch', 'agent-a-')}`), started[0]);
+      assert.ok(io.out.some((l) => l.startsWith('claim refused: rerun-qa claimed 0 min ago') && l.includes(c)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-001
+  it('applies the safe fixes and the sweep as --fix does before it dispatches', () => {
+    const f = fixture();
+    try {
+      rmSync(f.add('agent-gone', '904-d'), { recursive: true, force: true });
+      let swept = 0;
+      const { calls, spawn } = fakeSpawn();
+      const io = captured();
+      assert.equal(main(['--dispatch'], { cwd: f.repo, ...env({ spawn }), sweep: () => (swept++, { what: 'swept 0 stacks', ok: true }) }), 0);
+      assert.ok(!git(f.repo, 'worktree', 'list', '--porcelain').includes('agent-gone'), 'the deleted worktree is pruned');
+      assert.equal(swept, 1);
+      assert.ok(io.out.includes('fixed: swept 0 stacks'), io.out.join('\n'));
+      assert.equal(calls.length, 0);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-003
+  it('does nothing in a cloud session: no claim, no spawn, no log', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 150);
+      vi.stubEnv('CLAUDE_CODE_REMOTE', 'true');
+      const { calls, spawn } = fakeSpawn();
+      captured();
+      let swept = 0;
+      assert.equal(main(['--dispatch'], { cwd: f.repo, ...env({ spawn }), sweep: () => (swept++, null) }), 0);
+      assert.equal(calls.length, 0);
+      assert.equal(swept, 0);
+      assert.ok(!existsSync(claimFile(a)));
+      assert.ok(!existsSync(join(f.repo, '.work')));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1361-FR-001
+  it('takes only --stale beside --dispatch', () => {
+    const f = fixture();
+    try {
+      captured();
+      for (const other of ['--gate', '--wait', '--json', '--fix']) assert.equal(main(['--dispatch', other], { cwd: f.repo, ...env({ spawn: () => assert.fail('spawned') }) }), 1, other);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
   });
 });

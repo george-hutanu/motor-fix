@@ -20,14 +20,21 @@
 // repeats while another interval fits in `--for` (110), so the model wakes only
 // when the gate fires or the wait must be re-armed. One wait per repository,
 // recorded in the git common directory.
+// `--dispatch` is a pass with no session open (scripts/watch-schedule.sh runs it
+// when the gate exits 2): `--fix`'s fixes and sweep, then each plan entry claimed
+// and started as a detached `claude -p --agent task-runner` in its worktree,
+// logged under `.work/watch-dispatch/`. It does nothing in a cloud session.
+// `claim` refuses (exit 1) while the worktree's claim is still live, so the
+// schedule and a session's `--wait` never dispatch the same worktree twice.
 //
 // Usage:
 //   node .claude/scripts/watch.mjs [--json] [--fix] [--stale qa=10,planning=20]
 //   node .claude/scripts/watch.mjs --gate [--stale …]
 //   node .claude/scripts/watch.mjs --wait [--every 15] [--for 110] [--stale …]
+//   node .claude/scripts/watch.mjs --dispatch [--stale …]
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
-import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn as nodeSpawn } from "node:child_process";
+import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
@@ -202,8 +209,8 @@ export function fixOf(row, { now, thresholds }) {
   // one is still pending.
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.agentReview === "success") {
-    if (pr.checks === "pass" && atPrHead) return { verdict: "stale", fix: "merge", reason: "agent-review success and every check green" };
-    if (pr.checks === "pending") return { verdict: "waiting", fix: null, reason: "agent-review success, waiting for CI before the merge" };
+    if (pr.checks === "pass" && atPrHead) return { verdict: "stale", fix: "merge", reason: "holder dead: agent-review success and every check green" };
+    if (pr.checks === "pending") return { verdict: "waiting", fix: null, reason: "waiting on CI: agent-review success, CI pending before the merge" };
   }
   // A handed-off PR whose QA run tests its head needs nobody until that run
   // has finished, whatever CI is doing: the tail reviews it and leaves a
@@ -211,11 +218,13 @@ export function fixOf(row, { now, thresholds }) {
   // waits only until the quiet threshold, then gets a tail like any other.
   if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(row.qaRunState == null && quiet > limit)) {
     const status = row.qaRunState?.status;
-    if (status === "completed") return { verdict: "stale", fix: "tail", reason: `QA run ${row.qaRun.id} completed (CI ${pr.checks})` };
-    return { verdict: "waiting", fix: null, reason: `waiting for QA run ${row.qaRun.id} (${status ?? "state unreadable"})` };
+    if (status === "completed") return { verdict: "stale", fix: "tail", reason: `holder dead: QA run ${row.qaRun.id} completed (CI ${pr.checks})` };
+    return { verdict: "waiting", fix: null, reason: `waiting on a QA run: QA run ${row.qaRun.id} (${status ?? "state unreadable"})` };
   }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
-  const reason = `no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
+  // Every holder short of live or owner returned above: a dead pid, no lock or
+  // a quiet one all leave the work with nobody, so each reads as holder dead.
+  const reason = `holder dead: no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
   // A story agent that handed its ready PR off (specs/<feature>/handoff.md)
   // has ended: a fresh tail agent takes CI, QA laps and the merge from there.
@@ -576,9 +585,121 @@ const gateLines = (report) =>
 
 const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
-export function writeClaim(path, fix, now = Date.now()) {
+/**
+ * Writes the worktree's claim, or returns the live claim that refuses it
+ * (live by its run-state phase's stage threshold in `thresholds`, the run's
+ * --stale ones or DEFAULT_THRESHOLDS, 30 min without one); null
+ * once written. The claim is created exclusively: its content goes to a file
+ * of this process's own, which is then hard-linked to the claim's name, and a
+ * link fails when the name exists. So of any number of claims at once exactly
+ * one wins, and no reader ever sees half a claim. An expired or unreadable
+ * claim is moved aside and the create retried once; one that turns out to have
+ * been replaced in between by a live claim is put back and refuses this one.
+ */
+export function writeClaim(path, fix, now = Date.now(), thresholds = DEFAULT_THRESHOLDS) {
+  const file = claimPath(path);
+  const threshold = thresholds[stageOf(readState(path).phase)] ?? 30;
   mkdirSync(join(path, ".specify", ".cache"), { recursive: true });
-  writeFileSync(claimPath(path), `${JSON.stringify({ fix, at: new Date(now).toISOString() })}\n`);
+  const own = `${file}.${process.pid}`;
+  writeFileSync(own, `${JSON.stringify({ fix, at: new Date(now).toISOString() })}\n`);
+  try {
+    let held = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (createOnce(own, file)) return null;
+      const raw = readText(file);
+      held = parseJson(raw);
+      // A live claim refuses this one; so does any claim still there on the retry.
+      if (claimLive(held, threshold, now) || attempt === 1) break;
+      const aside = `${file}.stale.${process.pid}`;
+      try {
+        renameSync(file, aside);
+      } catch (e) {
+        if (e.code === "ENOENT") continue;
+        throw e;
+      }
+      const moved = readText(aside);
+      if (moved !== raw) {
+        // Another claimer replaced the stale claim before this one moved it.
+        createOnce(aside, file);
+        rmSync(aside, { force: true });
+        return parseJson(moved) ?? { fix: "unknown", at: new Date(now).toISOString() };
+      }
+      rmSync(aside, { force: true });
+    }
+    return held ?? { fix: "unknown", at: new Date(now).toISOString() };
+  } finally {
+    rmSync(own, { force: true });
+  }
+}
+
+/** Hard-links `from` to `to`: true when `to` was created, false when it already existed. */
+function createOnce(from, to) {
+  try {
+    linkSync(from, to);
+    return true;
+  } catch (e) {
+    if (e.code === "EEXIST") return false;
+    throw e;
+  }
+}
+
+const readText = (file) => {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+};
+
+const parseJson = (text) => {
+  try {
+    return text === null ? null : JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
+const refused = (claim, now) => `claim refused: ${claim.fix} claimed ${Math.max(0, Math.round((now - Date.parse(claim.at)) / MIN))} min ago`;
+
+/**
+ * The prompt of a dispatched agent: the row's values, then a pointer to its
+ * fix's row of the table in the speckit-watch skill, which is not copied here.
+ */
+function dispatchPrompt(p) {
+  const where = [`branch \`${p.branch ?? "detached"}\``, p.feature && `feature \`${p.feature}\``, p.pr && `PR #${p.pr}`].filter(Boolean).join(", ");
+  return [
+    `Work in the existing worktree \`${p.path}\` (${where}), your working directory. Work only there. A watcher found this worktree stale in phase \`${p.phase}\` with no live agent.`,
+    `Your fix is \`${p.fix}\`: follow its row of the table in \`.claude/skills/speckit-watch/SKILL.md\`, step 4, then that step's closing instructions (Blocked, the reply format).`,
+  ].join("\n\n");
+}
+
+/** Claims each plan entry, then starts its agent detached, its output in `<main>/.work/watch-dispatch/`. */
+function dispatchAll(report, { cwd, now, spawn, thresholds = DEFAULT_THRESHOLDS }) {
+  const dir = join(report.rows.find((r) => r.main)?.path ?? cwd, ".work", "watch-dispatch");
+  const lines = [];
+  for (const p of report.plan) {
+    const held = writeClaim(p.path, p.fix, now, thresholds);
+    if (held) {
+      lines.push({ ok: true, line: `${refused(held, now)}: ${p.path}` });
+      continue;
+    }
+    mkdirSync(dir, { recursive: true });
+    const log = join(dir, `${basename(p.path)}-${new Date(now).toISOString().replace(/[:.]/g, "-")}.log`);
+    const fd = openSync(log, "a");
+    try {
+      const args = ["-p", dispatchPrompt(p), "--agent", "task-runner", "--permission-mode", "acceptEdits", ...(p.fix === "merge" ? ["--model", "sonnet"] : [])];
+      const child = spawn("claude", args, { cwd: p.path, detached: true, stdio: ["ignore", fd, fd] });
+      child.on?.("error", () => {});
+      child.unref();
+      if (!child.pid) throw new Error("claude did not start");
+      lines.push({ ok: true, line: `dispatched: ${p.fix} ${p.path} pid ${child.pid} log ${log}` });
+    } catch (e) {
+      lines.push({ ok: false, line: `failed: dispatch ${p.fix} ${p.path} — ${e.message}` });
+    } finally {
+      closeSync(fd);
+    }
+  }
+  return lines;
 }
 
 const ago = (now, at) => {
@@ -611,17 +732,36 @@ function render(report, now) {
   return lines.join("\n");
 }
 
-const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | claim <worktree> <fix>";
+const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | --dispatch [--stale …] | claim <worktree> <fix> [--stale …]";
 
-export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, sweep = sweepIfPresent, ...deps } = {}) {
+export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, sweep = sweepIfPresent, spawn = nodeSpawn, ...deps } = {}) {
   const at = () => now ?? Date.now();
   if (argv[0] === "claim") {
-    const [, path, fix] = argv;
+    const [, path, fix, ...rest] = argv;
+    const claimStale = [];
+    for (let i = 0; i < rest.length; i += 2) {
+      if (rest[i] !== "--stale" || !rest[i + 1]) {
+        console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}> [--stale <phase>=<minutes>,…]`);
+        return 1;
+      }
+      claimStale.push(rest[i + 1]);
+    }
     if (!path || !FIXES.includes(fix) || !existsSync(join(path, ".git"))) {
-      console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}>`);
+      console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}> [--stale <phase>=<minutes>,…]`);
       return 1;
     }
-    writeClaim(path, fix, at());
+    let claimThresholds;
+    try {
+      claimThresholds = parseStale(claimStale, DEFAULT_THRESHOLDS);
+    } catch (e) {
+      console.error(e.message);
+      return 1;
+    }
+    const held = writeClaim(path, fix, at(), claimThresholds);
+    if (held) {
+      console.error(refused(held, at()));
+      return 1;
+    }
     return 0;
   }
   const stale = [];
@@ -633,7 +773,7 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (["--json", "--fix", "--gate", "--wait"].includes(a)) flags.add(a);
+    if (["--json", "--fix", "--gate", "--wait", "--dispatch"].includes(a)) flags.add(a);
     else if (a === "--stale" && argv[i + 1]) stale.push(argv[++i]);
     else if ((a === "--every" || a === "--for") && argv[i + 1]) {
       if (!/^\d+$/.test(argv[i + 1]) || Number(argv[i + 1]) <= 0) return usage(`${a} expects a positive number of minutes`);
@@ -642,6 +782,8 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
   }
   const gate = flags.has("--gate");
   const wait = flags.has("--wait");
+  const dispatch = flags.has("--dispatch");
+  if (dispatch && flags.size > 1) return usage("--dispatch takes only --stale");
   if ((gate || wait) && (flags.has("--json") || flags.has("--fix") || (gate && wait))) return usage("--gate and --wait take only --stale (and --wait --every, --for)");
   if (!wait && Object.keys(minutes).length > 0) return usage("--every and --for go with --wait");
   const every = minutes["--every"] ?? 15;
@@ -673,6 +815,10 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
   };
   if (gate) return runGate();
   if (wait) return waitLoop({ cwd, every, limit, sleep, commandOf, runGate });
+  if (dispatch && process.env.CLAUDE_CODE_REMOTE === "true") {
+    console.log("watch: --dispatch does nothing in a cloud session");
+    return 0;
+  }
   let report;
   try {
     report = scan();
@@ -680,7 +826,13 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
     console.error(e.message);
     return 1;
   }
-  const actions = flags.has("--fix") ? [...applyFixes(cwd, report, { remove: deps.remove }), sweep(cwd)].filter(Boolean) : [];
+  const actions = flags.has("--fix") || dispatch ? [...applyFixes(cwd, report, { remove: deps.remove }), sweep(cwd)].filter(Boolean) : [];
+  if (dispatch) {
+    for (const a of actions) console.log(`${a.ok ? "fixed" : "failed"}: ${a.what}${a.ok ? "" : ` — ${a.error}`}`);
+    const started = dispatchAll(report, { cwd, now: at(), spawn, thresholds });
+    for (const s of started) console.log(s.line);
+    return started.every((s) => s.ok) ? 0 : 1;
+  }
   if (flags.has("--json")) console.log(JSON.stringify({ ...report, actions }, null, 2));
   else {
     console.log(render(report, at()));
