@@ -78,14 +78,22 @@ describe('the room a focused control keeps clear of the bars', () => {
 
 // @traces 274-FR-018
 describe('the one action of an empty state on a 320 px phone', () => {
-  it('narrows its padding and tracking with the viewport so the label keeps one line', () => {
+  it('narrows its tracking with the viewport so the label keeps one line', () => {
     const body = rule('mf-empty-state a[hlmBtn]') ?? '';
 
     expect(body).toMatch(
-      /padding-inline:\s*clamp\(var\(--mf-space-3\),[^;]*vw,\s*var\(--mf-space-5\)\)/,
-    );
-    expect(body).toMatch(
       /letter-spacing:\s*min\(var\(--mf-label-tracking\),[^;]*vw\)/,
+    );
+  });
+
+  // The grid check measures padding in whole 4 px steps, so the narrow phone
+  // gets a fixed step, never a share of the viewport.
+  it('keeps its padding on the 4 px grid, a fixed step on a narrow phone', () => {
+    const body = rule('mf-empty-state a[hlmBtn]') ?? '';
+
+    expect(body).not.toMatch(/padding[^;]*vw/);
+    expect(css).toMatch(
+      /@media \(max-width: 389px\) \{\s*mf-empty-state a\[hlmBtn\] \{\s*padding-inline:\s*var\(--mf-space-3\);\s*\}/,
     );
   });
 });
