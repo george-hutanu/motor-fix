@@ -11,6 +11,7 @@ import {
   CarsService,
   type GarageRequestListDto,
   GarageRequestsService,
+  GaragesService,
   type MeDto,
   MeService,
   NotificationsService,
@@ -138,6 +139,12 @@ async function render(
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerList: requestReads },
       },
+      {
+        provide: GaragesService,
+        useValue: {
+          verificationStatusControllerRead: () => new Promise(() => undefined),
+        },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -211,6 +218,20 @@ const atelier = (
     ],
     garageId: 'garage-1',
   }) as unknown as Partial<MeDto>;
+
+// The same membership while its file waits for the admins.
+const draftAtelier = (): Partial<MeDto> => {
+  const base = atelier() as unknown as {
+    garageAccess: Record<string, unknown>[];
+  };
+  return {
+    ...base,
+    garageAccess: base.garageAccess.map((access) => ({
+      ...access,
+      status: 'draft',
+    })),
+  } as unknown as Partial<MeDto>;
+};
 
 describe('Frame', () => {
   it('shows the full garage menu to an owner', async () => {
@@ -708,6 +729,95 @@ describe('Frame', () => {
     });
 
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 101-FR-006
+  it('reads the account again when its garage’s file is decided, so an approval opens the dashboard', async () => {
+    await render('garage', '/app/garage', []);
+
+    live.events.next({
+      at: '2027-03-04T09:00:00.000Z',
+      id: 'file-1',
+      kind: 'verification.decided',
+    });
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 101-FR-007
+  it('leaves a draft garage’s owner only "Ajutor și contact" in the menu and the bar, and the header’s tools', async () => {
+    const { element } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      draftAtelier(),
+    );
+
+    expect(menu(element)).toEqual([]);
+    expect(bar(element)).toEqual([]);
+    expect(
+      [...element.querySelectorAll('aside nav button')].map((b) =>
+        b.textContent?.trim(),
+      ),
+    ).toEqual(['Ajutor și contact']);
+    expect(
+      [
+        ...element.querySelectorAll('mf-dashboard-tab-bar nav button .label'),
+      ].map((b) => b.textContent?.trim()),
+    ).toEqual(['Ajutor și contact']);
+    expect(element.querySelector('header mf-bell')).not.toBeNull();
+    expect(element.querySelector('header mf-language-switch')).not.toBeNull();
+    expect(
+      [...element.querySelectorAll('aside .account button')].map((b) =>
+        b.textContent?.trim(),
+      ),
+    ).toContain('Ieși din cont');
+    expect(element.querySelector('mf-verification-progress')).not.toBeNull();
+  });
+
+  // @traces 101-FR-006 101-FR-007
+  it('gives the menu back once the garage is approved and moves the focus to the dashboard’s title', async () => {
+    const { current, element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      draftAtelier(),
+    );
+    expect(menu(element)).toEqual([]);
+
+    current.set(me('garage', '/app/garage', OWNER, atelier()));
+    await settle(harness);
+
+    expect(menu(element)).toEqual([
+      'Panou',
+      'Cereri de ofertă',
+      'Programări',
+      'Lucrări',
+      'Mecanici',
+      'Prețuri',
+      'Recenzii',
+      'Profilul service‑ului',
+      'Setări',
+      'Istoric modificări',
+    ]);
+    expect(element.querySelector('mf-verification-progress')).toBeNull();
+    expect(document.activeElement).toBe(element.querySelector('header h1'));
+  });
+
+  // @traces 101-FR-007
+  it('sends a draft garage’s owner from a view back to the dashboard', async () => {
+    const { element } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/requests',
+      draftAtelier(),
+    );
+
+    expect(url()).toBe('/app/garage');
+    expect(element.querySelector('mf-verification-progress')).not.toBeNull();
   });
 
   it('asks an account with an unconfirmed e-mail to confirm it, on every dashboard', async () => {

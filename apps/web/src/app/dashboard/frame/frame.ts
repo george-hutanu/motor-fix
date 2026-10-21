@@ -1,8 +1,11 @@
 import {
+  afterNextRender,
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   effect,
+  Injector,
   inject,
   type OnInit,
   signal,
@@ -125,6 +128,8 @@ export class Frame implements OnInit {
   private readonly push = inject(PushDevice);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   protected readonly base = computed(
     () => this.session.shown()?.landing ?? '/app/driver',
   );
@@ -215,6 +220,7 @@ export class Frame implements OnInit {
       this.area(),
       this.session.shown()?.capabilities ?? [],
       this.garage()?.features,
+      this.garage()?.status,
     ),
   );
   // The menu and the bar: the views, then the entries that open a task.
@@ -257,6 +263,21 @@ export class Frame implements OnInit {
         `/app/${area}` !== this.base() ||
         (view !== undefined && !this.entries().some((v) => v.path === view));
       if (off) untracked(() => void this.router.navigateByUrl(this.base()));
+    });
+    // The approval swaps the verification page for the dashboard: the focus
+    // follows to its title instead of staying on a control that is gone.
+    let status = untracked(() => this.garage()?.status);
+    effect(() => {
+      const now = this.garage()?.status;
+      if (status === 'draft' && now !== undefined && now !== 'draft')
+        afterNextRender(
+          () =>
+            this.host.nativeElement
+              .querySelector<HTMLElement>('header h1')
+              ?.focus(),
+          { injector: this.injector },
+        );
+      status = now;
     });
     if (this.adminOverview) this.followAddress(this.adminOverview);
   }
@@ -314,11 +335,12 @@ export class Frame implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => {
         if (message.kind === 'live.test') this.lastTest.set(message.at);
-        // A suspension changes what the garage's dashboard shows, and a
-        // re-check the RAR line under its verified pill.
+        // A suspension or a verification decision changes what the garage's
+        // dashboard shows, and a re-check the RAR line under its verified pill.
         if (
           message.kind === 'account.email_confirmed' ||
           message.kind === 'garage.suspended' ||
+          message.kind === 'verification.decided' ||
           message.kind === 'recheck.recorded'
         ) {
           void this.session.reload();
