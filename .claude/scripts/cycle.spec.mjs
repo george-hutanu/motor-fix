@@ -232,6 +232,17 @@ describe("cycle — the feature's logs", () => {
     assert.deepEqual(logStamps(null), []);
   });
 
+  it('reads an ISO stamp to its minute, as level.mjs and the precompact flush write them', () => {
+    const text = [
+      '- 2026-10-21T10:05:00.000Z · level 1 → 2 · files: 9',
+      '## Compaction 2026-10-21T11:30:59.999Z (auto)',
+      '2026-10-21T12:15Z bare',
+      '- 2026-10-21T13:00:00+03:00 an offset is not UTC',
+      '- 2026-10-21T14:00 no zone',
+    ].join('\n');
+    assert.deepEqual(logStamps(text), [at('10:05'), at('11:30'), at('12:15')]);
+  });
+
   it("counts the idle gaps the feature's logs show, within the PR's open to merge", () => {
     const base = { number: 1, head: '900-x', created_at: at('09:00'), merged_at: at('12:00'), timeline: [], runs: [] };
     assert.equal(cycleRow(base).idle_gaps, 1, 'opened to merged is one gap of 180');

@@ -21,9 +21,13 @@ import { loadRecords } from "./telemetry.mjs";
 const USAGE = "usage: cycle.mjs [--limit 1-100] [--pr <n>] [--json]";
 const DEFAULT_LIMIT = 25;
 const IDLE_MINUTES = 60;
-/** The feature's logs whose `- YYYY-MM-DD HH:MM` lines stamp its work. */
+/**
+ * The feature's logs whose `- YYYY-MM-DD HH:MM` lines stamp its work. An ISO stamp
+ * (`2026-10-21T10:05:00.000Z`, as level.mjs and the precompact flush's `## Compaction` heading
+ * write) counts too, read to its minute; a spaced stamp with seconds is still no minute.
+ */
 const FEATURE_LOGS = ["auto-run.md", "tracker-sync.md"];
-const STAMP = /^\s*(?:[-*]\s+|#+\s+)?(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})(?![\d:])/;
+const STAMP = /^\s*(?:[-*]\s+|#+\s+(?:Compaction\s+)?)?(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2})(?![\d:])|T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?Z)/;
 /** What a PR QA review says when the harness, not the change, failed the lap. */
 const HARNESS_FAILURES = [/flow not run/i, /Page did not load/i, /A flow threw|flows file[^\n]*error/i, /could not sign in/i, /sign[- ]?in[^\n]*\b429\b|\b429\b[^\n]*sign[- ]?in|rate_limited/i];
 
@@ -51,7 +55,7 @@ export function logStamps(text) {
     .split("\n")
     .map((line) => STAMP.exec(line))
     .filter(Boolean)
-    .map(([, day, time]) => `${day}T${time}:00Z`);
+    .map(([, day, spaced, iso]) => `${day}T${spaced ?? iso}:00Z`);
 }
 
 /** How many reviews name a harness failure; null when there are no reviews to read. */

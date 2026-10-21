@@ -113,14 +113,22 @@ const PROOF_NAME = /^([0-9a-f]{40})-([0-9a-f]{16})$/;
 /**
  * The proof that flows of `hash` passed --check at `sha` in the checkout at `root`: `{ proof }` with its
  * path, or `{ refused }` naming what is missing. A proof for an ancestor holds while the commits since it
- * change documentation only, or no file at all (an empty commit).
+ * change documentation only, or no file at all (an empty commit). Once a proof holds, the stamps that are
+ * neither for the head nor for a commit from the proven one to the head are removed, so they do not pile
+ * up; a refusal removes nothing.
  */
 export function proofFor({ root, sha, hash }) {
-  const exact = proofPath(root, sha, hash);
-  if (existsSync(exact)) return { proof: exact };
   const git = (...args) => spawnSync("git", ["-C", root, "-c", "core.quotePath=off", ...args], { encoding: "utf8" });
   const dir = join(root, PROOF_DIR);
-  const stamps = (existsSync(dir) ? readdirSync(dir) : []).map((n) => PROOF_NAME.exec(n)).filter(Boolean).map(([, at, h]) => ({ at, h }));
+  const stamps = (existsSync(dir) ? readdirSync(dir) : []).map((n) => PROOF_NAME.exec(n)).filter(Boolean).map(([, at, h]) => ({ name: `${at}-${h}`, at, h }));
+  const prune = (keep) => {
+    for (const s of stamps) if (!keep.has(s.at)) rmSync(join(dir, s.name), { force: true });
+  };
+  const exact = proofPath(root, sha, hash);
+  if (existsSync(exact)) {
+    prune(new Set([sha]));
+    return { proof: exact };
+  }
   const behind = stamps
     .filter((s) => s.h === hash && git("merge-base", "--is-ancestor", s.at, sha).status === 0)
     .map((s) => ({ ...s, count: Number(git("rev-list", "--count", `${s.at}..${sha}`).stdout) }))
@@ -130,7 +138,11 @@ export function proofFor({ root, sha, hash }) {
   let code = null;
   for (const s of behind) {
     const paths = git("diff", "--name-only", "--no-renames", `${s.at}..${sha}`).stdout.split("\n").filter((p) => p.trim());
-    if (paths.length === 0 || isDocsOnly(paths)) return { proof: proofPath(root, s.at, hash) };
+    if (paths.length === 0 || isDocsOnly(paths)) {
+      const gap = git("rev-list", `${s.at}..${sha}`).stdout.split("\n").filter(Boolean);
+      prune(new Set([s.at, sha, ...gap]));
+      return { proof: proofPath(root, s.at, hash) };
+    }
     code ??= { at: s.at, files: paths.filter((p) => !isDocumentation(p)) };
   }
   if (code) return { refused: `the flows were proven at ${code.at.slice(0, 7)}, and the commits since change code (${code.files.slice(0, 3).join(", ")}${code.files.length > 3 ? ` and ${code.files.length - 3} more` : ""}): ${fix}` };

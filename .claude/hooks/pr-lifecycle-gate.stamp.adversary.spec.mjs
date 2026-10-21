@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import { prLinked } from './pr-lifecycle-gate.mjs';
 
-const BRANCH = '1354-restart-stalled';
+const BRANCH = '900-restart-stalled';
 const dirs = [];
 
 afterEach(() => {
@@ -27,35 +27,35 @@ describe('the PR link check against stamped and date-only tracker log lines', ()
     const linked = linkedBy(
       [
         '# Tracker sync',
-        '- 2026-10-20 · pr · ST-1354 · PR #464 https://github.com/george-hutanu/motor-fix/pull/464',
-        '- 2026-10-21 09:15 · pr · ST-1354 · PR #465 https://github.com/george-hutanu/motor-fix/pull/465',
+        '- 2026-10-20 · pr · ST-900 · PR #901 https://github.com/george-hutanu/motor-fix/pull/901',
+        '- 2026-10-21 09:15 · pr · ST-900 · PR #900 https://github.com/george-hutanu/motor-fix/pull/900',
         '',
       ].join('\n'),
     );
-    assert.equal(linked(464), true);
-    assert.equal(linked(465), true);
-    assert.equal(linked(466), false);
+    assert.equal(linked(901), true);
+    assert.equal(linked(900), true);
+    assert.equal(linked(902), false);
   });
 
   // @traces 1361-FR-011
-  it('does not read #46 or #4650 as #465 in either form', () => {
-    const linked = linkedBy('- 2026-10-21 09:15 · pr · ST-1354 · PR #4650\n- 2026-10-21 · pr · ST-1354 · PR #46\n');
-    assert.equal(linked(465), false);
-    assert.equal(linked(4650), true);
-    assert.equal(linked(46), true);
+  it('does not read #90 or #9000 as #900 in either form', () => {
+    const linked = linkedBy('- 2026-10-21 09:15 · pr · ST-900 · PR #9000\n- 2026-10-21 · pr · ST-900 · PR #90\n');
+    assert.equal(linked(900), false);
+    assert.equal(linked(9000), true);
+    assert.equal(linked(90), true);
   });
 
   // @traces 1361-FR-011
   it('does not count another event on the same PR as the link: a PR comment, labels, or a pending link', () => {
     const linked = linkedBy(
       [
-        '- 2026-10-21 09:15 · pr-comment · PR #465 · Blocked: waits',
-        '- 2026-10-21 09:16 · labels · PR #465 · QA',
-        '- 2026-10-21 09:17 [TRACKER-SYNC PENDING: pr ST-1354 — network error] retry: ["pr","465"]',
+        '- 2026-10-21 09:15 · pr-comment · PR #900 · Blocked: waits',
+        '- 2026-10-21 09:16 · labels · PR #900 · QA',
+        '- 2026-10-21 09:17 [TRACKER-SYNC PENDING: pr ST-900 — network error] retry: ["pr","900"]',
         '',
       ].join('\n'),
     );
-    assert.equal(linked(465), false);
+    assert.equal(linked(900), false);
   });
 
 });

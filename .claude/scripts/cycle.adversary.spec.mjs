@@ -79,19 +79,19 @@ describe('the cycle report with sources that are missing or wrong', () => {
 });
 
 describe('cycleRow with hostile ledgers and timelines', () => {
-  const base = { number: 1, head: '1361-x', created_at: at('09:00'), merged_at: at('11:00'), timeline: [], runs: [] };
+  const base = { number: 1, head: '900-x', created_at: at('09:00'), merged_at: at('11:00'), timeline: [], runs: [] };
 
   // @traces 1361-FR-012
   it('reads hook time that is not a number a ledger can hold as missing or zero, never NaN', () => {
     for (const hook_ms of ['abc', -5, null, {}, [], '12']) {
-      const row = cycleRow({ ...base, ledgers: [{ branch: '1361-x', hook_ms }] });
+      const row = cycleRow({ ...base, ledgers: [{ branch: '900-x', hook_ms }] });
       assert.ok(row.hook_minutes === null || (Number.isFinite(row.hook_minutes) && row.hook_minutes >= 0), `${String(hook_ms)}: ${row.hook_minutes}`);
     }
   });
 
   // @traces 1361-FR-012
   it('does not add the hook time of a session on a branch that merely starts with the PR\'s branch name', () => {
-    const row = cycleRow({ ...base, ledgers: [{ branch: '1361-x', hook_ms: 60000 }, { branch: '1361-x-2', hook_ms: 600000 }, { branch: 'x-1361-x', hook_ms: 600000 }] });
+    const row = cycleRow({ ...base, ledgers: [{ branch: '900-x', hook_ms: 60000 }, { branch: '900-x-2', hook_ms: 600000 }, { branch: 'x-900-x', hook_ms: 600000 }] });
     assert.equal(row.hook_minutes, 1);
   });
 

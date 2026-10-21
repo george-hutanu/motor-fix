@@ -29,6 +29,12 @@ import {
 } from './watch.mjs';
 import { waitHolder } from './lib/watch-wait.mjs';
 
+// Each case builds real git repositories and worktrees (and one spawns the CLI):
+// about a second apiece alone, many times that beside the rest of the harness
+// suite, so the 5 s default is too tight for a loaded machine. Time inside the
+// cases is never the wall clock: every pass gets NOW and an injected sleep.
+vi.setConfig({ testTimeout: 60_000 });
+
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-04T12:00:00Z');
 
@@ -1233,7 +1239,7 @@ describe('--gate', () => {
         rmSync(f.root, { recursive: true, force: true });
       }
     }
-  }, 20000);
+  }, 180_000);
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
@@ -1924,7 +1930,8 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     const dead = fixOf(row({ holder: 'dead' }), opts);
     assert.equal(dead.verdict, 'stale');
     assert.match(dead.reason, /^holder dead: no live agent/);
-    assert.doesNotMatch(fixOf(row(), opts).reason, /holder dead/);
+    // FR-004: every stale row with no live holder names it, a missing or quiet lock as much as a dead pid.
+    assert.match(fixOf(row(), opts).reason, /^holder dead: no live agent/);
     const handed = (rollup, qaRunState) =>
       row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, pr: summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: rollup })), qaRunState });
     const ci = fixOf(handed([check(null, 'IN_PROGRESS'), review('SUCCESS')], { status: 'completed' }), opts);
@@ -1945,6 +1952,31 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     };
     return { calls, spawn };
   };
+
+  // @traces 1361-FR-002
+  it('holds a claim live by the run\'s own --stale thresholds, not only the defaults', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      mkdirSync(join(a, '.specify'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'run-state.json'), JSON.stringify({ status: 'running', phase: 'tests' }));
+      const io = captured();
+      assert.equal(main(['claim', a, 'resume'], { now: NOW }), 0);
+      // The default `tests` threshold (45) would let this through; the run said 60.
+      assert.equal(main(['claim', a, 'tail', '--stale', 'tests=60'], { now: NOW + 50 * MIN }), 1);
+      assert.ok(io.err.includes('claim refused: resume claimed 50 min ago'), io.err.join('\n'));
+      assert.equal(main(['claim', a, 'tail', '--stale', 'tests=60'], { now: NOW + 61 * MIN }), 0);
+      assert.equal(readClaim(a).fix, 'tail');
+      // writeClaim takes the same thresholds: a shorter one expires the claim sooner.
+      assert.equal(writeClaim(a, 'resume', NOW + 72 * MIN, { ...DEFAULT_THRESHOLDS, tests: 10 }), null);
+      assert.equal(readClaim(a).fix, 'resume');
+      assert.equal(main(['claim', a, 'tail', '--stale'], { now: NOW + 73 * MIN }), 1);
+      assert.equal(main(['claim', a, 'tail', '--stale', 'nope=5'], { now: NOW + 73 * MIN }), 1);
+      assert.equal(readClaim(a).fix, 'resume');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
 
   // @traces 1361-FR-001
   it('claims each plan entry, then starts a detached task-runner in its worktree, logging under .work/watch-dispatch', () => {

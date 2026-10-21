@@ -75,8 +75,8 @@ permissions:
 # `qa: on-push` label) is evaluated here before the job's `if`, so it takes a
 # group of its own and never cancels a dispatched lap.
 # The label is spelt format('{0} {1}', 'qa:', 'on-push') here and in the job's
-# `if`: a literal 'qa: on-push' puts `: ` in a plain YAML scalar, which no
-# parser (GitHub's included) accepts.
+# `if`: these are plain (unquoted) YAML scalars, which cannot carry `: `; a
+# quoted scalar could, but the expression is kept bare.
 concurrency:
   group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push'))) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}
   cancel-in-progress: true

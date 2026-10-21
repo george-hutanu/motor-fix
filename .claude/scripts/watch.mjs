@@ -222,7 +222,9 @@ export function fixOf(row, { now, thresholds }) {
     return { verdict: "waiting", fix: null, reason: `waiting on a QA run: QA run ${row.qaRun.id} (${status ?? "state unreadable"})` };
   }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
-  const reason = `${row.holder === "dead" ? "holder dead: " : ""}no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
+  // Every holder short of live or owner returned above: a dead pid, no lock or
+  // a quiet one all leave the work with nobody, so each reads as holder dead.
+  const reason = `holder dead: no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
   // A story agent that handed its ready PR off (specs/<feature>/handoff.md)
   // has ended: a fresh tail agent takes CI, QA laps and the merge from there.
@@ -585,7 +587,8 @@ const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
 
 /**
  * Writes the worktree's claim, or returns the live claim that refuses it
- * (live by its run-state phase's stage threshold, 30 min without one); null
+ * (live by its run-state phase's stage threshold in `thresholds`, the run's
+ * --stale ones or DEFAULT_THRESHOLDS, 30 min without one); null
  * once written. The claim is created exclusively: its content goes to a file
  * of this process's own, which is then hard-linked to the claim's name, and a
  * link fails when the name exists. So of any number of claims at once exactly
@@ -593,18 +596,20 @@ const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
  * claim is moved aside and the create retried once; one that turns out to have
  * been replaced in between by a live claim is put back and refuses this one.
  */
-export function writeClaim(path, fix, now = Date.now()) {
+export function writeClaim(path, fix, now = Date.now(), thresholds = DEFAULT_THRESHOLDS) {
   const file = claimPath(path);
-  const threshold = DEFAULT_THRESHOLDS[stageOf(readState(path).phase)] ?? 30;
+  const threshold = thresholds[stageOf(readState(path).phase)] ?? 30;
   mkdirSync(join(path, ".specify", ".cache"), { recursive: true });
   const own = `${file}.${process.pid}`;
   writeFileSync(own, `${JSON.stringify({ fix, at: new Date(now).toISOString() })}\n`);
   try {
-    for (let attempt = 0; ; attempt++) {
+    let held = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
       if (createOnce(own, file)) return null;
       const raw = readText(file);
-      const held = parseJson(raw);
-      if (claimLive(held, threshold, now) || attempt > 0) return held ?? { fix: "unknown", at: new Date(now).toISOString() };
+      held = parseJson(raw);
+      // A live claim refuses this one; so does any claim still there on the retry.
+      if (claimLive(held, threshold, now) || attempt === 1) break;
       const aside = `${file}.stale.${process.pid}`;
       try {
         renameSync(file, aside);
@@ -621,6 +626,7 @@ export function writeClaim(path, fix, now = Date.now()) {
       }
       rmSync(aside, { force: true });
     }
+    return held ?? { fix: "unknown", at: new Date(now).toISOString() };
   } finally {
     rmSync(own, { force: true });
   }
@@ -668,11 +674,11 @@ function dispatchPrompt(p) {
 }
 
 /** Claims each plan entry, then starts its agent detached, its output in `<main>/.work/watch-dispatch/`. */
-function dispatchAll(report, { cwd, now, spawn }) {
+function dispatchAll(report, { cwd, now, spawn, thresholds = DEFAULT_THRESHOLDS }) {
   const dir = join(report.rows.find((r) => r.main)?.path ?? cwd, ".work", "watch-dispatch");
   const lines = [];
   for (const p of report.plan) {
-    const held = writeClaim(p.path, p.fix, now);
+    const held = writeClaim(p.path, p.fix, now, thresholds);
     if (held) {
       lines.push({ ok: true, line: `${refused(held, now)}: ${p.path}` });
       continue;
@@ -726,17 +732,32 @@ function render(report, now) {
   return lines.join("\n");
 }
 
-const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | --dispatch [--stale …] | claim <worktree> <fix>";
+const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | --dispatch [--stale …] | claim <worktree> <fix> [--stale …]";
 
 export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, sweep = sweepIfPresent, spawn = nodeSpawn, ...deps } = {}) {
   const at = () => now ?? Date.now();
   if (argv[0] === "claim") {
-    const [, path, fix] = argv;
+    const [, path, fix, ...rest] = argv;
+    const claimStale = [];
+    for (let i = 0; i < rest.length; i += 2) {
+      if (rest[i] !== "--stale" || !rest[i + 1]) {
+        console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}> [--stale <phase>=<minutes>,…]`);
+        return 1;
+      }
+      claimStale.push(rest[i + 1]);
+    }
     if (!path || !FIXES.includes(fix) || !existsSync(join(path, ".git"))) {
-      console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}>`);
+      console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}> [--stale <phase>=<minutes>,…]`);
       return 1;
     }
-    const held = writeClaim(path, fix, at());
+    let claimThresholds;
+    try {
+      claimThresholds = parseStale(claimStale, DEFAULT_THRESHOLDS);
+    } catch (e) {
+      console.error(e.message);
+      return 1;
+    }
+    const held = writeClaim(path, fix, at(), claimThresholds);
     if (held) {
       console.error(refused(held, at()));
       return 1;
@@ -808,7 +829,7 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
   const actions = flags.has("--fix") || dispatch ? [...applyFixes(cwd, report, { remove: deps.remove }), sweep(cwd)].filter(Boolean) : [];
   if (dispatch) {
     for (const a of actions) console.log(`${a.ok ? "fixed" : "failed"}: ${a.what}${a.ok ? "" : ` — ${a.error}`}`);
-    const started = dispatchAll(report, { cwd, now: at(), spawn });
+    const started = dispatchAll(report, { cwd, now: at(), spawn, thresholds });
     for (const s of started) console.log(s.line);
     return started.every((s) => s.ok) ? 0 : 1;
   }
