@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { openSignIn, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -78,10 +78,7 @@ async function twoQuotes(request: APIRequestContext) {
 async function signedIn(page: Page, email: string, landing: string) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  await openSignIn(page);
   await signIn(page, email);
   await expect(page).toHaveURL(landing);
 }

@@ -503,7 +503,7 @@ test.describe('axe on the quotes a driver compares @seeded', () => {
     await rows
       .first()
       .locator('[data-part="action"]')
-      .getByRole('button')
+      .getByRole('button', { name: 'Acceptă' })
       .click();
     await expect(
       rows.first().locator('[data-part="action"] .state'),

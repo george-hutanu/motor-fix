@@ -4,34 +4,28 @@ import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { type OwnDriver, ownDriver } from './own-driver.js';
 import { accessToken, bearer } from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// The seeded driver with a Dacia Logan, and the owner of Service Auto
-// Militari, which ticks the oil service for Dacia.
-const DRIVER = 'cerere@example.test';
+// The owner of Service Auto Militari, which ticks the oil service for Dacia.
 const OWNER = 'militari@example.test';
 const OIL = 'Schimb de ulei și filtre';
 
 // The driver's own request for an oil service, with a two-line description,
 // sent to the owner's garage.
-async function sendRequest(request: APIRequestContext) {
+async function sendRequest(request: APIRequestContext, own: OwnDriver) {
   const owner = await accessToken(request, OWNER);
   const me = await request.get('/api/v1/me', { headers: bearer(owner) });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await accessToken(request, DRIVER);
-  const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
-  const { items } = (await cars.json()) as {
-    items: { id: string; model: string }[];
-  };
-  const car = items.find((item) => item.model === 'Logan') ?? items[0];
+  const driver = await accessToken(request, own.email);
   const tag = randomUUID().slice(0, 8);
   const description = `Scârțâie la frânare ${tag}\nSunați după ora 18`;
   const res = await request.post('/api/v1/quote-requests', {
     data: {
-      carId: car.id,
+      carId: own.carId,
       description,
       garageIds: [garageId],
       jobTypeIds: [oil.id],
@@ -65,13 +59,25 @@ async function signedIn(page: Page) {
 
 // @seeded: the seeded owner opens a driver's request to read it.
 test.describe('reading a request @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its driver and car straight to PostgreSQL, which needs DATABASE_URL',
+  );
+  let own: OwnDriver;
+  test.beforeEach(async ({ request }) => {
+    own = await ownDriver(request, 'cerere-proprie');
+  });
+  test.afterEach(async () => {
+    await own?.remove();
+  });
+
   // @traces 347-FR-001 347-FR-002 347-FR-003 347-FR-006 347-FR-007
   test('the owner opens a waiting request from Panou and from the view, reads it whole and sends a quote from the drawer', async ({
     page,
     request,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    const { id, tag } = await sendRequest(request);
+    const { id, tag } = await sendRequest(request, own);
     await signedIn(page);
 
     const onPanou = page
@@ -127,7 +133,7 @@ test.describe('reading a request @seeded', () => {
     request,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    const { id, tag } = await sendRequest(request);
+    const { id, tag } = await sendRequest(request, own);
     await signedIn(page);
 
     await page.goto(`/app/garage/requests/${id}`);
