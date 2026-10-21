@@ -2,6 +2,8 @@ import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   BOOKING_CONFIRMED_CONSUMER,
   BOOKING_LAPSED_CONSUMER,
+  BOOKING_TIMERS_CONSUMER,
+  BookingTimersModule,
   CAR_REMINDERS_CONSUMER,
   CATALOGUE_JOB_PENDING_CONSUMER,
   DataStoreMetricsModule,
@@ -47,7 +49,7 @@ class WorkerModule {}
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
-// WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows,
+// WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers,
 // the listing draft sweep, the listing photos' copies and the nightly
 // platform figures (placing the garages with no city first), checks the
 // services behind the admin dashboard's tiles and reads the data stores for
@@ -79,6 +81,7 @@ export function workerModule(
         consumers: [
           BOOKING_CONFIRMED_CONSUMER,
           BOOKING_LAPSED_CONSUMER,
+          BOOKING_TIMERS_CONSUMER,
           CAR_REMINDERS_CONSUMER,
           CATALOGUE_JOB_PENDING_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
@@ -100,6 +103,12 @@ export function workerModule(
         dayMs: reminderDayMs(env.APP_ENV, process.env),
         notifications,
         redisUrl: env.REDIS_URL,
+      }),
+      // Reminds the garage to confirm an accepted booking, and lapses it.
+      BookingTimersModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
       }),
       // Tells the driver of a decline once its undo window has passed.
       DeclineWindowModule.registerWorker({
