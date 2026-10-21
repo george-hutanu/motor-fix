@@ -33,7 +33,7 @@ p {
 }
 .status {
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--mf-space-2);
   color: var(--mf-amber-ink);
 }
@@ -41,6 +41,8 @@ p {
   flex: none;
   width: 8px;
   height: 8px;
+  /* Centred on the first line, however many the status wraps to. */
+  margin-top: calc((1lh - 8px) / 2);
   border-radius: 50%;
   background: var(--mf-amber);
 }

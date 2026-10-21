@@ -429,6 +429,9 @@ describe('a confirmed row', () => {
     expect(css).toMatch(
       /\.state \{[^}]*flex-direction: column;[^}]*gap: var\(--mf-space-2\)/,
     );
+    // A status that wraps keeps its lamp beside the first line.
+    expect(css).toMatch(/\.status \{[^}]*align-items: flex-start/);
+    expect(css).toMatch(/\.lamp \{[^}]*margin-top: calc\(\(1lh - 8px\) \/ 2\)/);
     // The 44 px target reaches below the number, never above it.
     expect(css).toMatch(/\.phone \{[^}]*align-items: flex-start/);
   });
