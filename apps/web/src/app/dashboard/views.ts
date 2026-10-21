@@ -1,5 +1,6 @@
 import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
+import type { GarageAccessDto } from '@motor-fix/data-access/models/garage-access-dto';
 
 import { CarsView } from './cars-view/cars-view';
 import type { EmptyIcon } from './empty-state/empty-state';
@@ -282,17 +283,22 @@ export const DASHBOARDS: Record<
   },
 };
 
+// A garage still waiting for approval opens no view: its dashboard is the
+// verification page.
 export const allowedViews = (
   area: Area,
   capabilities: readonly string[],
   features: Readonly<Record<string, boolean>> = {},
+  status?: GarageAccessDto['status'],
 ): DashboardView[] =>
-  DASHBOARDS[area].views.filter(
-    (view) =>
-      !view.unreleased &&
-      (!view.capability || capabilities.includes(view.capability)) &&
-      !(view.feature && features[view.feature] === false),
-  );
+  area === 'garage' && status === 'draft'
+    ? []
+    : DASHBOARDS[area].views.filter(
+        (view) =>
+          !view.unreleased &&
+          (!view.capability || capabilities.includes(view.capability)) &&
+          !(view.feature && features[view.feature] === false),
+      );
 
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
@@ -319,6 +325,7 @@ export const dashboardRoutes = (area: Area): Routes => [
             area,
             me?.capabilities ?? [],
             garageOf(me)?.features,
+            garageOf(me)?.status,
           ).includes(view);
         },
       ],
