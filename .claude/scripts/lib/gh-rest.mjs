@@ -110,7 +110,7 @@ function workflowNames(run, sha) {
  * The latest run of each check per workflow, as gh keeps it: a re-triggered
  * workflow leaves its cancelled run on the commit too. Without a workflow
  * name, every run of that check stays (never a false green). The latest is
- * the one started last, so an orphaned earlier attempt (lib/orphan-checks.mjs:
+ * the one started last, so an orphaned earlier attempt (hooks/merge-gate.mjs:
  * left unfinished after a newer attempt of the same run, in the same suite,
  * completed) never outranks that newer attempt. A run not yet started (no
  * start date) and unfinished ranks newest, so a queued re-run stays pending.

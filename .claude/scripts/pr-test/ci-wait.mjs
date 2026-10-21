@@ -28,7 +28,7 @@
 // UNKNOWN), and a wait polls at most once a minute. That read takes every
 // check run of the head and keeps the one started last of each check, so an
 // earlier attempt GitHub left in_progress after a newer attempt of the same
-// run completed holds nothing (lib/orphan-checks.mjs). A QA run that has already completed returns at once, before any
+// run completed holds nothing (the merge gate's orphanedChecks). A QA run that has already completed returns at once, before any
 // other read: the conflict is still read by the wait for CI before the merge,
 // and a conflicting PR gets no `CI OK` check, which the merge gate requires.
 import { ghRun, spawnRun } from "../lib/gh-rest.mjs";

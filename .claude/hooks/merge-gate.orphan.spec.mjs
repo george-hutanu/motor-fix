@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { orphanedChecks, orphanLine, runIdOf } from './orphan-checks.mjs';
+import { orphanedChecks, orphanLine, runIdOf } from './merge-gate.mjs';
 
 // The 'PR title' check: attempt 1 of run 39618505833 left in_progress at 14:37Z,
 // attempt 2 of the same run completed success at 14:43Z, and the run completed.
