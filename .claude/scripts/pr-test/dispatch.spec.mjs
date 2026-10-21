@@ -187,7 +187,7 @@ appendFileSync(join(dir, 'calls.log'), args.join(' ') + '\\n');
 const say = (v) => process.stdout.write(typeof v === 'string' ? v : JSON.stringify(v));
 const [a, b] = args;
 if (a === 'api' && b === '-X' && args[2] === 'DELETE') {
-  if (process.env.FAKE_LABEL_FAIL) { process.stderr.write('HTTP 404: Label does not exist'); process.exit(1); }
+  if (process.env.FAKE_LABEL_FAIL) { process.stderr.write(process.env.FAKE_LABEL_STDERR ?? 'gh: Label does not exist (HTTP 404)'); process.exit(1); }
 }
 else if (a === 'pr' && b === 'view') say({ state: 'OPEN', headRefOid: process.env.FAKE_HEAD });
 else if (a === 'api' && b === 'repos/{owner}/{repo}/pulls/62') say({ state: 'open', head: { sha: process.env.FAKE_HEAD } });
@@ -518,6 +518,15 @@ describe('dispatch on the laptop: the dispatched run is the head\'s one run', ()
   it('dispatches anyway when the PR has no such label to remove', () => {
     const r = fakeGh({ FAKE_LABEL_FAIL: '1' })('--no-wait');
     assert.equal(r.code, 0, r.stderr);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+    assert.doesNotMatch(r.stderr, /label/i);
+  });
+
+  it('names any other failure to remove the label by its first line, and dispatches anyway', () => {
+    const r = fakeGh({ FAKE_LABEL_FAIL: '1', FAKE_LABEL_STDERR: 'gh: Server Error (HTTP 502)\n{"message":"upstream"}' })('--no-wait');
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stderr, /could not remove the qa: on-push label: gh: Server Error \(HTTP 502\)$/m);
+    assert.doesNotMatch(r.stderr, /upstream/);
     assert.equal(called(r.calls, 'workflow run').length, 1);
   });
 

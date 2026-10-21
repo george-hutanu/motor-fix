@@ -109,6 +109,15 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(passes().at(-1), / gate 1$/);
   });
 
+  // @traces 1361-FR-001
+  it('run logs a missing george-hutanu token and runs no gate under gh\'s active account', () => {
+    fake('gh', `echo "gh $*" >> "$CALLS"\necho "no oauth token found for george-hutanu" >&2\nexit 1`);
+    const r = run('run', { GATE_EXIT: '2', GH_TOKEN: 'tok-work' });
+    assert.equal(r.status, 1, r.out);
+    assert.deepEqual(calls().filter((l) => l.startsWith('node ')), []);
+    assert.match(passes().at(-1), /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ no token for george-hutanu$/);
+  });
+
   // @traces 1361-FR-003
   it('refuses every verb in a cloud session and touches nothing', () => {
     for (const verb of ['install', 'uninstall', 'status', 'run']) {

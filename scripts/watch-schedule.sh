@@ -13,7 +13,9 @@
 # Each pass appends `<UTC time> gate <exit> [dispatch <exit>]` to
 # .work/watch-schedule/passes.log; launchd's own output goes beside it, and
 # each dispatched agent's to .work/watch-dispatch/. A pass exports GH_TOKEN for
-# george-hutanu (AGENTS.md "Identity"). Every verb refuses in a cloud session.
+# george-hutanu (AGENTS.md "Identity"); without one it logs
+# `<UTC time> no token for george-hutanu` and runs nothing. Every verb refuses
+# in a cloud session.
 LABEL=com.motorfix.watch
 
 if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
@@ -85,7 +87,12 @@ PLIST
   run)
     cd "$MAIN" || exit 1
     mkdir -p "$LOGS"
-    GH_TOKEN=$(gh auth token -u george-hutanu 2>/dev/null) && export GH_TOKEN
+    # Never fall through to gh's active account, which is the work one.
+    if ! GH_TOKEN=$(gh auth token -u george-hutanu 2>/dev/null) || [ -z "$GH_TOKEN" ]; then
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) no token for george-hutanu" >> "$LOGS/passes.log"
+      exit 1
+    fi
+    export GH_TOKEN
     node .claude/scripts/watch.mjs --gate
     gate=$?
     line="gate $gate"

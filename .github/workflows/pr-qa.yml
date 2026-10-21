@@ -74,8 +74,11 @@ permissions:
 # one a newer run has set since. A pull_request event the job skips (no
 # `qa: on-push` label) is evaluated here before the job's `if`, so it takes a
 # group of its own and never cancels a dispatched lap.
+# The label is spelt format('{0} {1}', 'qa:', 'on-push') here and in the job's
+# `if`: a literal 'qa: on-push' puts `: ` in a plain YAML scalar, which no
+# parser (GitHub's included) accepts.
 concurrency:
-  group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'qa: on-push')) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}
+  group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push'))) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
@@ -85,7 +88,7 @@ jobs:
     timeout-minutes: 60
     # A draft is not ready for QA, a fork's PR gets no write token, and a PR
     # without `qa: on-push` gets its one run from dispatch.mjs.
-    if: github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'qa: on-push'))
+    if: github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push')))
     env:
       PR: ${{ inputs.pr || github.event.pull_request.number }}
       SHA: ${{ inputs.sha || github.event.pull_request.head.sha }}

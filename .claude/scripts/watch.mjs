@@ -34,7 +34,7 @@
 //   node .claude/scripts/watch.mjs --dispatch [--stale …]
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
 import { execFileSync, spawn as nodeSpawn } from "node:child_process";
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
@@ -586,17 +586,72 @@ const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
 /**
  * Writes the worktree's claim, or returns the live claim that refuses it
  * (live by its run-state phase's stage threshold, 30 min without one); null
- * once written. The write is a rename, so a reader never sees half a claim.
+ * once written. The claim is created exclusively: its content goes to a file
+ * of this process's own, which is then hard-linked to the claim's name, and a
+ * link fails when the name exists. So of any number of claims at once exactly
+ * one wins, and no reader ever sees half a claim. An expired or unreadable
+ * claim is moved aside and the create retried once; one that turns out to have
+ * been replaced in between by a live claim is put back and refuses this one.
  */
 export function writeClaim(path, fix, now = Date.now()) {
-  const held = readJson(claimPath(path));
-  if (claimLive(held, DEFAULT_THRESHOLDS[stageOf(readState(path).phase)] ?? 30, now)) return held;
+  const file = claimPath(path);
+  const threshold = DEFAULT_THRESHOLDS[stageOf(readState(path).phase)] ?? 30;
   mkdirSync(join(path, ".specify", ".cache"), { recursive: true });
-  const temp = `${claimPath(path)}.${process.pid}`;
-  writeFileSync(temp, `${JSON.stringify({ fix, at: new Date(now).toISOString() })}\n`);
-  renameSync(temp, claimPath(path));
-  return null;
+  const own = `${file}.${process.pid}`;
+  writeFileSync(own, `${JSON.stringify({ fix, at: new Date(now).toISOString() })}\n`);
+  try {
+    for (let attempt = 0; ; attempt++) {
+      if (createOnce(own, file)) return null;
+      const raw = readText(file);
+      const held = parseJson(raw);
+      if (claimLive(held, threshold, now) || attempt > 0) return held ?? { fix: "unknown", at: new Date(now).toISOString() };
+      const aside = `${file}.stale.${process.pid}`;
+      try {
+        renameSync(file, aside);
+      } catch (e) {
+        if (e.code === "ENOENT") continue;
+        throw e;
+      }
+      const moved = readText(aside);
+      if (moved !== raw) {
+        // Another claimer replaced the stale claim before this one moved it.
+        createOnce(aside, file);
+        rmSync(aside, { force: true });
+        return parseJson(moved) ?? { fix: "unknown", at: new Date(now).toISOString() };
+      }
+      rmSync(aside, { force: true });
+    }
+  } finally {
+    rmSync(own, { force: true });
+  }
 }
+
+/** Hard-links `from` to `to`: true when `to` was created, false when it already existed. */
+function createOnce(from, to) {
+  try {
+    linkSync(from, to);
+    return true;
+  } catch (e) {
+    if (e.code === "EEXIST") return false;
+    throw e;
+  }
+}
+
+const readText = (file) => {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+};
+
+const parseJson = (text) => {
+  try {
+    return text === null ? null : JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
 
 const refused = (claim, now) => `claim refused: ${claim.fix} claimed ${Math.max(0, Math.round((now - Date.parse(claim.at)) / MIN))} min ago`;
 

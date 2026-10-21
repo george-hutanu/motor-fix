@@ -48,7 +48,7 @@ describe('PR QA workflow: trigger', () => {
     const cond = job.find((l) => l.startsWith('    if: '))?.slice('    if: '.length) ?? '';
     assert.equal(
       cond,
-      "github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'qa: on-push'))",
+      "github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push')))",
     );
   });
 
@@ -76,7 +76,7 @@ describe('PR QA workflow: trigger', () => {
   // @traces 1361-FR-006
   it('keeps one run per PR, and a pull_request event that will not run takes a group of its own, so it never cancels a dispatched lap', () => {
     assert.deepEqual(block('concurrency').map((l) => l.trim()).filter(Boolean), [
-      "group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'qa: on-push')) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}",
+      "group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, format('{0} {1}', 'qa:', 'on-push'))) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}",
       'cancel-in-progress: true',
     ]);
   });

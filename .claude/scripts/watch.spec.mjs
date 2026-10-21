@@ -1882,7 +1882,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
   const readClaim = (path) => JSON.parse(readFileSync(claimFile(path), 'utf8'));
 
   // @traces 1361-FR-002
-  it('refuses a claim while the existing one is live by the run-state stage threshold, and replaces an expired one in one rename', () => {
+  it('refuses a claim while the existing one is live by the run-state stage threshold, and replaces an expired one, leaving no file of its own behind', () => {
     const f = fixture();
     try {
       const a = f.add('agent-a', '901-a');
