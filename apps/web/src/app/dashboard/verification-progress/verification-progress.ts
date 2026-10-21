@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  signal,
   untracked,
 } from '@angular/core';
 import { GaragesService } from '@motor-fix/data-access/services/garages.service';
@@ -57,10 +58,11 @@ export class VerificationProgress {
       resync: this.live.resync,
     },
   );
-  // Said when the stage changes on screen, never for the first read.
+  // The stage a re-read moved the file to; never the first read's.
+  private readonly moved = signal<keyof typeof STAGE_NAME | null>(null);
   protected readonly announcement = computed(() => {
-    const status = this.view.value()?.status;
-    return this.view.reads() > 1 && status && Object.hasOwn(STAGE_NAME, status)
+    const status = this.moved();
+    return status && Object.hasOwn(STAGE_NAME, status)
       ? this.i18n.t('public.verificationStatus.now', {
           stage: this.i18n.t(STAGE_NAME[status]),
         })
@@ -69,15 +71,18 @@ export class VerificationProgress {
 
   constructor() {
     void this.i18n.enter('public');
-    // An approval reaches the session only when it is read again; the
-    // dashboard opens once it says approved.
+    // Each read: a new stage is announced, and an approval reaches the
+    // session only when it is read again; the dashboard opens once it says
+    // approved.
+    let shown: string | undefined;
     effect(() => {
       this.view.reads();
       untracked(() => {
-        if (
-          this.view.value()?.status === 'approved' &&
-          this.garage()?.status === 'draft'
-        )
+        const status = this.view.value()?.status;
+        if (shown !== undefined && status !== shown)
+          this.moved.set(status ?? null);
+        shown = status;
+        if (status === 'approved' && this.garage()?.status === 'draft')
           void this.session.reload();
       });
     });

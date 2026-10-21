@@ -69,7 +69,7 @@
       </div>
     } @else {
       <div class="title">
-        <h1 tabindex="-1">{{ (open().title ?? open().label) | t }}</h1>
+        <h1 tabindex="-1">{{ title() | t }}</h1>
         @if (open().path === '' && garage(); as garage) {
           <p class="line" translate="no">{{ garage.name }}</p>
         } @else if (open().subtitle; as line) {<p class="line">{{ line | t }}</p>}

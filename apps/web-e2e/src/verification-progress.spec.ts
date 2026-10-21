@@ -24,12 +24,7 @@ const footer = (page: Page) => drawer(page).locator('[data-section="footer"]');
 // The owner of a listing just sent follows its file on the dashboard while an
 // admin opens it, asks for more and approves it, with no reload.
 // @traces 101-FR-013
-test.describe('the owner follows the verification on the dashboard @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'readies the file for approval in PostgreSQL, which needs DATABASE_URL',
-  );
-
+test.describe('the owner follows the verification on the dashboard @seeded @database', () => {
   let db: Client;
   let garageId: string | undefined;
 
@@ -69,7 +64,7 @@ test.describe('the owner follows the verification on the dashboard @seeded', () 
     await signUp(page, email);
 
     await page.goto('/app/garage');
-    await expect(page$(page).locator('h1')).toHaveText(
+    await expect(page.locator('header h1')).toHaveText(
       'Profilul tău e în verificare',
     );
     await expect(lit(page)).toHaveText(/^Trimis · /);

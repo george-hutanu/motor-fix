@@ -1,4 +1,3 @@
-<h1>{{ 'garage.verification.title' | t }}</h1>
 @if (owner()) {
   @if (view.value(); as file) {
     <mf-verification-stages
@@ -25,7 +24,7 @@
   } @else {
     <div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
   }
-  <p class="sr-only" role="status">{{ announcement() }}</p>
+  <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
 } @else {
   <p>{{ 'garage.verification.checkIn' | t }}</p>
   <p>{{ 'public.verificationStatus.offMap' | t }}</p>

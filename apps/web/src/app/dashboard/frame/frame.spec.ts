@@ -803,6 +803,7 @@ describe('Frame', () => {
       'Istoric modificări',
     ]);
     expect(element.querySelector('mf-verification-progress')).toBeNull();
+    expect(title(element)).toBe('Panou service');
     expect(document.activeElement).toBe(element.querySelector('header h1'));
   });
 
@@ -818,6 +819,26 @@ describe('Frame', () => {
 
     expect(url()).toBe('/app/garage');
     expect(element.querySelector('mf-verification-progress')).not.toBeNull();
+  });
+
+  // @traces 101-FR-001 101-FR-012
+  it('titles a draft garage’s dashboard by its verification, in the page’s one h1, in both languages', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      draftAtelier(),
+    );
+
+    expect(title(element)).toBe('Profilul tău e în verificare');
+    expect(element.querySelectorAll('h1')).toHaveLength(1);
+
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+
+    expect(title(element)).toBe('Your profile is being checked');
+    expect(element.querySelectorAll('h1')).toHaveLength(1);
   });
 
   it('asks an account with an unconfirmed e-mail to confirm it, on every dashboard', async () => {

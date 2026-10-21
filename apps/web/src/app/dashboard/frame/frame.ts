@@ -252,6 +252,13 @@ export class Frame implements OnInit {
       this.entries().find((view) => view.path === (this.segments()[2] ?? '')) ??
       this.dashboard().views[0],
   );
+  // The page's one h1. A garage still waiting for approval is titled by its
+  // verification, the only thing its dashboard shows.
+  protected readonly title = computed(() =>
+    this.garage()?.status === 'draft'
+      ? 'garage.verification.title'
+      : (this.open().title ?? this.open().label),
+  );
 
   constructor() {
     // A role switch or a lost right moves the person off a view they may no
@@ -278,6 +285,11 @@ export class Frame implements OnInit {
           { injector: this.injector },
         );
       status = now;
+    });
+    // The draft garage's title is a garage text: loaded with the frame, not
+    // after the lazy page, so the header never shows its key.
+    effect(() => {
+      if (this.garage()?.status === 'draft') void this.i18n.enter('garage');
     });
     if (this.adminOverview) this.followAddress(this.adminOverview);
   }

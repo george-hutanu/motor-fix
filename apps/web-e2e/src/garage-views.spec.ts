@@ -239,10 +239,8 @@ test.describe('garage views @seeded', () => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await signedIn(page, ACCOUNTS.garage);
 
-    const checking = page.locator('mf-verification-progress');
-    await expect(checking.locator('h1')).toHaveText(
-      'Profilul tău e în verificare',
-    );
+    await expect(page.locator('mf-verification-progress')).toBeVisible();
+    await expect(title(page)).toHaveText('Profilul tău e în verificare');
     await expect(line(page)).toHaveText('Atelier Test');
     await expect(
       page.getByRole('navigation', { name: 'Meniu' }).getByRole('link'),
@@ -254,9 +252,7 @@ test.describe('garage views @seeded', () => {
     await language(page)
       .getByRole('button', { exact: true, name: 'EN' })
       .click();
-    await expect(checking.locator('h1')).toHaveText(
-      'Your profile is being checked',
-    );
+    await expect(title(page)).toHaveText('Your profile is being checked');
     await language(page)
       .getByRole('button', { exact: true, name: 'RO' })
       .click();

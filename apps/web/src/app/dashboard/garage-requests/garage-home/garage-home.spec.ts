@@ -135,9 +135,7 @@ describe('the garage Panou', () => {
     const element = await render(OWNER, { status: 'draft' });
 
     expect(element.querySelector('mf-verification-progress')).not.toBeNull();
-    expect(text(element.querySelector('h1'))).toBe(
-      'Profilul tău e în verificare',
-    );
+    expect(element.querySelector('h1')).toBeNull();
     expect(panel(element)).toBeNull();
     expect(element.querySelector('[data-verified-pill]')).toBeNull();
     expect(element.querySelector('mf-garage-legal-check')).toBeNull();

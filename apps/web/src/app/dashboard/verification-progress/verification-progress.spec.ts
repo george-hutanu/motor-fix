@@ -30,7 +30,6 @@ const TEXT = {
     offMap:
       'The profile stays off the map until it is approved. If something is missing we tell you what, and you can add it without starting over.',
     retry: 'Retry',
-    title: 'Your profile is being checked',
   },
   ro: {
     checkIn: 'O verificăm în 1–2 zile lucrătoare.',
@@ -39,7 +38,6 @@ const TEXT = {
     offMap:
       'Profilul nu apare pe hartă până la aprobare. Dacă lipsește ceva, îți scriem ce anume și poți completa fără să o iei de la capăt.',
     retry: 'Reîncearcă',
-    title: 'Profilul tău e în verificare',
   },
 } as const;
 
@@ -169,14 +167,14 @@ afterEach(() => TestBed.resetTestingModule());
 
 describe('the verification page, for the owner', () => {
   // @traces 101-FR-001
-  it('titles the page, reads the garage of the session and puts the two lines under the stages', async () => {
+  it('leaves the title to the dashboard’s header, reads the garage of the session and puts the two lines under the stages', async () => {
     const { host } = await render();
 
     expect(api.verificationStatusControllerRead).toHaveBeenCalledTimes(1);
     expect(api.verificationStatusControllerRead).toHaveBeenCalledWith({
       garageId: GARAGE,
     });
-    expect(text(host.querySelector('h1'))).toBe(TEXT.ro.title);
+    expect(host.querySelector('h1')).toBeNull();
     expect(host.querySelector('mf-verification-stages')).not.toBeNull();
     expect(text(host)).toContain(TEXT.ro.checkIn);
     expect(text(host)).toContain(TEXT.ro.offMap);
@@ -186,7 +184,7 @@ describe('the verification page, for the owner', () => {
   it('speaks English', async () => {
     const { host } = await render({ language: 'en' });
 
-    expect(text(host.querySelector('h1'))).toBe(TEXT.en.title);
+    expect(host.querySelector('h1')).toBeNull();
     expect(names(host)[0]).toBe('Submitted · 2 Mar 2027');
     expect(text(host)).toContain(TEXT.en.checkIn);
     expect(text(host)).toContain(TEXT.en.offMap);
@@ -230,7 +228,7 @@ describe('the verification page, for the owner', () => {
     expect(skeleton).not.toBeNull();
     expect(skeleton?.getAttribute('aria-hidden')).toBe('true');
     expect(host.querySelector('ol.stages')).toBeNull();
-    expect(text(host.querySelector('h1'))).toBe(TEXT.ro.title);
+    expect(host.querySelector('h1')).toBeNull();
   });
 
   // @traces 101-FR-009
@@ -455,13 +453,13 @@ describe('the verification page, following the file', () => {
 describe('the verification page, for the garage staff', () => {
   // @traces 101-FR-008
   it.each(['receptionist', 'mechanic'] as const)(
-    'gives a %s the title and the two lines, and never reads the status',
+    'gives a %s the two lines under the header’s title, and never reads the status',
     async (role) => {
       const { fixture, host } = await render({ role });
       resyncs.next();
       await emit(fixture, 'verification.decided');
 
-      expect(text(host.querySelector('h1'))).toBe(TEXT.ro.title);
+      expect(host.querySelector('h1')).toBeNull();
       expect(text(host)).toContain(TEXT.ro.checkIn);
       expect(text(host)).toContain(TEXT.ro.offMap);
       expect(host.querySelector('ol.stages')).toBeNull();
@@ -475,7 +473,7 @@ describe('the verification page, for the garage staff', () => {
   it('says it in English', async () => {
     const { host } = await render({ language: 'en', role: 'mechanic' });
 
-    expect(text(host.querySelector('h1'))).toBe(TEXT.en.title);
+    expect(host.querySelector('h1')).toBeNull();
     expect(text(host)).toContain(TEXT.en.checkIn);
     expect(text(host)).toContain(TEXT.en.offMap);
   });
