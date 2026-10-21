@@ -19,14 +19,18 @@
           if (deck.length > 1 && deck[0] === last) deck.push(deck.shift());
           return deck;
         };
-        // What is left of the round, without garbage, repeats or voices off.
-        const left = () =>
+        // What is left of the round, without garbage, repeats, voices off or
+        // the voice just shown.
+        const left = (last) =>
           (localStorage.getItem('mf-copy-deck') || '')
             .split(',')
             .map(Number)
-            .filter((v, i, all) => on.includes(v) && all.indexOf(v) === i);
+            .filter(
+              (v, i, all) =>
+                on.includes(v) && v !== last && all.indexOf(v) === i,
+            );
         const next = (last) => {
-          const found = left();
+          const found = left(last);
           const deck = found.length ? found : round(last);
           const voice = deck.shift();
           localStorage.setItem('mf-copy', voice);
