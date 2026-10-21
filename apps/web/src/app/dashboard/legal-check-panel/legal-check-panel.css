@@ -58,7 +58,7 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(96px, auto);
   align-items: center;
-  gap: 6px var(--mf-space-4);
+  gap: var(--mf-space-2) var(--mf-space-4);
   padding: var(--mf-space-3) var(--mf-space-2);
   border-top: 1px solid var(--mf-line);
 }
@@ -139,8 +139,11 @@ h2 {
     text-align: left;
   }
 }
-/* As the garage requests panel: a phone keeps 16 px sides. */
+/* As the garage requests panel: a phone keeps 16 px sides, and body-size small text. */
 @media (max-width: 767.98px) {
+  :host {
+    --mf-size-small: var(--mf-size-body);
+  }
   section {
     padding-inline: var(--mf-space-4);
   }

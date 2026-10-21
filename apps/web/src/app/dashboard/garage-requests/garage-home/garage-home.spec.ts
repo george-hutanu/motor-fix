@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -193,6 +196,16 @@ describe('the garage Panou for each role', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(text(element)).toBe(
       'Profil verificat Aici vei vedea ce se întâmplă azi în service.',
+    );
+  });
+});
+
+describe('the Panou strip', () => {
+  it('spaces its lines on the 4 px grid', () => {
+    const css = readFileSync(join(__dirname, 'garage-home.css'), 'utf8');
+
+    expect(css).toMatch(
+      /\.strip \{[^}]*gap: var\(--mf-space-2\) var\(--mf-space-4\);/,
     );
   });
 });
