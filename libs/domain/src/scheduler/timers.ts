@@ -12,8 +12,12 @@ export interface TimerKind {
 }
 
 const SWEEP_EVERY = 5 * 60_000;
-// A failed sweep keeps its job for a day of runs, and its error names a few.
-const SWEEP_FAILS_KEPT = 288;
+// SCHEDULER_SWEEP_FAILS_KEPT: how many failed sweep jobs Redis keeps, a
+// positive whole number; unset or anything else keeps 288, a day of runs.
+const keptFails = Number(process.env['SCHEDULER_SWEEP_FAILS_KEPT']);
+const SWEEP_FAILS_KEPT =
+  Number.isInteger(keptFails) && keptFails > 0 ? keptFails : 288;
+// A failed sweep's error names this many of its objects.
 const SWEEP_FAILS_NAMED = 5;
 
 // BullMQ refuses ':' in a job id.
