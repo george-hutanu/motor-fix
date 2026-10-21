@@ -25,6 +25,20 @@ export function projectToken({ env = process.env, run = (file, args, opts) => sp
   return token;
 }
 
+/**
+ * The environment every tracker gh call runs with: the session's GH_TOKEN (or a
+ * cloud session's proxy one) as it is, else GH_TOKEN filled from george-hutanu's
+ * own gh login. Never gh's active account: with neither, it throws TokenError.
+ */
+export function ghEnv({ env = process.env, run = (file, args, opts) => spawnRun({ env: opts.env })(file, args) } = {}) {
+  if (env.GH_TOKEN?.trim() || env.CLAUDE_CODE_REMOTE === "true") return env;
+  const { GH_TOKEN, GITHUB_TOKEN, GH_CONFIG_DIR, ...rest } = env;
+  const r = run("gh", ["auth", "token", "-u", "george-hutanu"], { env: rest });
+  const token = r.code === 0 ? r.stdout.trim() : "";
+  if (!token) throw new TokenError("no GH_TOKEN and no gh login for george-hutanu; gh would act as its active account");
+  return { ...rest, GH_TOKEN: token };
+}
+
 /** The token's login, once a read of the user's Projects shows it has the scope. */
 export async function assertProjectScope(github) {
   try {

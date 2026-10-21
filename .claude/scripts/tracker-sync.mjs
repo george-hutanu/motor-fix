@@ -18,10 +18,12 @@
 // on the next run; a token without the project scope prints one line naming
 // the fix), 1 when `check` fails or `pr <n>` cannot read the PR, 64 on a usage
 // error. `debt` and `ready` are retired: they exit 1 before any GitHub call.
-// The token never reaches output or the log.
+// The token never reaches output or the log. Every gh call carries george-hutanu's GH_TOKEN
+// (tracker/token.mjs ghEnv), never gh's active account. `--story` for a story not this feature's
+// own (a dependent being unblocked) writes only that story: no run-state prior, no PR unless `--pr`.
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
@@ -32,7 +34,7 @@ import { epicLabel, isContainer, statusOf, tracker } from "./tracker/issues.mjs"
 import { nextTasks } from "./tracker/next.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
 import { decide, recordPrior } from "./tracker/status.mjs";
-import { assertProjectScope, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
+import { assertProjectScope, ghEnv, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
 const BOOLEAN = new Set(["no-comment", "pending"]);
@@ -52,6 +54,9 @@ export const LOG_FILE = "tracker-sync.md";
 const logLine = ({ date, event, item, text }) => `- ${date} · ${event} · ${item} · ${text}`;
 const pendingLine = (desc, argv) => `- [TRACKER-SYNC PENDING: ${desc}]${argv ? ` retry: ${JSON.stringify(argv)}` : ""}`;
 const PENDING = /^- \[TRACKER-SYNC PENDING: (.+)\] retry: (\[.*\])$/;
+/** The marker a Blocked comment carries, so `unblock` run from any worktree can read the status it left. */
+const priorMarker = (status) => `<!-- tracker-sync prior: ${status} -->`;
+const PRIOR_MARKER = /<!-- tracker-sync prior: ([^<>]+?) -->/;
 const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 function parseArgs(argv) {
@@ -107,7 +112,28 @@ function gitRoot() {
 
 export async function main(argv, io = {}) {
   const parsed = parseArgs(argv);
-  const { env = process.env, gh = defaultGh, now = () => new Date(), stdout = console.log, stderr = console.error } = io;
+  const { env = process.env, now = () => new Date(), stdout = console.log, stderr = console.error } = io;
+  // Every gh call carries george-hutanu's token (tracker/token.mjs ghEnv), resolved once; without one a read
+  // answers "" and a write throws, so nothing ever runs as gh's active account.
+  let ghEnvironment;
+  const gh =
+    io.gh ??
+    ((args, opts = {}) => {
+      if (ghEnvironment === undefined) {
+        try {
+          ghEnvironment = ghEnv({ env, ...(io.run ? { run: io.run } : {}) });
+        } catch (error) {
+          if (!(error instanceof TokenError)) throw error;
+          ghEnvironment = error;
+        }
+      }
+      if (ghEnvironment instanceof Error) {
+        if (opts.strict) throw ghEnvironment;
+        return "";
+      }
+      const ghRunner = io.run ? { run: (file, a) => io.run(file, a, { env: ghEnvironment }) } : {};
+      return defaultGh(args, { ...opts, env: ghEnvironment, ...ghRunner });
+    });
   const repo = io.repo ?? gitRoot();
   if (Object.hasOwn(RETIRED, parsed.positional[0] ?? "")) {
     stderr(`tracker-sync: ${RETIRED[parsed.positional[0]]}`);
@@ -127,7 +153,11 @@ export async function main(argv, io = {}) {
   }
   const logFile = feature && join(feature.dir, LOG_FILE);
   let token = "";
-  const scrub = (text) => (token ? String(text).replaceAll(token, "[token]") : String(text));
+  const scrub = (text) => {
+    let out = String(text);
+    for (const secret of [token, ghEnvironment instanceof Error ? "" : ghEnvironment?.GH_TOKEN]) if (secret) out = out.replaceAll(secret, "[token]");
+    return out;
+  };
   const lines = [];
   const append = (line) => {
     if (!logFile) return;
@@ -142,6 +172,9 @@ export async function main(argv, io = {}) {
   };
   const storyNum = Number(String(parsed.flags.story ?? feature?.num ?? "").match(/\d+/)?.[0]);
   const st = `ST-${storyNum}`;
+  // The feature's own story: no --story, ST-<feature number>, or one this feature's log started or linked a PR for.
+  // Any other is a dependent, and nothing of this worktree (its run-state prior, its branch's PR) is written for it.
+  const own = !parsed.flags.story || storyNum === Number(feature?.num) || startedHere(logFile, st);
   const step = { name: event, item: st };
   const pending = (why) => {
     const desc = `${step.name} ${step.item} — ${why}`;
@@ -166,7 +199,7 @@ export async function main(argv, io = {}) {
   }
   const github = githubClient({ token, fetchImpl: io.fetchImpl ?? fetch, paceMs: PACE_MS, ...(io.sleep ? { sleep: io.sleep } : {}) });
   const t = tracker(github);
-  const ctx = { t, github, gh, repo, feature, flags: parsed.flags, rest, event, st, log, step, date };
+  const ctx = { t, github, gh, repo, feature, flags: parsed.flags, rest, event, st, own, log, step, date };
   // A PR write that fails is queued PENDING (the whole event replays) and the event goes on.
   ctx.prWrite = (args, what) => {
     try {
@@ -181,7 +214,7 @@ export async function main(argv, io = {}) {
   };
   let prNumber;
   ctx.prNumber = () => {
-    prNumber ??= String(parsed.flags.pr ?? gh(["pr", "view", "--json", "number", "-q", ".number"])).trim();
+    prNumber ??= String(parsed.flags.pr ?? (own ? gh(["pr", "view", "--json", "number", "-q", ".number"]) : "")).trim();
     return prNumber;
   };
 
@@ -285,7 +318,8 @@ async function statusEvent(ctx) {
   const { t, story, event, st, log } = ctx;
   const reason = ctx.rest.join(" ");
   const current = story.values.Status ?? "To do";
-  const decision = decide({ event, current, prior: readState(ctx.repo).prior_status ?? null });
+  const prior = ctx.own ? (readState(ctx.repo).prior_status ?? null) : event === "unblock" ? ((await dependentPrior(ctx)) ?? "To do") : null;
+  const decision = decide({ event, current, prior });
 
   // Status first, then the prior it left, so a failure further on replays into the same decision.
   if (decision.write) {
@@ -294,7 +328,7 @@ async function statusEvent(ctx) {
     if (dated && (event === "finish" || !story.values[dated])) fields[dated] = ctx.date;
     await t.setFields(story, fields);
   }
-  recordPrior(ctx.repo, event, decision);
+  if (ctx.own) recordPrior(ctx.repo, event, decision);
   if (decision.story === "Done" && story.open) {
     ctx.step.name = "close";
     await t.close(story);
@@ -303,7 +337,8 @@ async function statusEvent(ctx) {
   const comment = event === "blocked" && (decision.write || !blockLogged(ctx, reason));
   if (comment) {
     ctx.step.name = "blocked";
-    await t.comment(story, `Blocked: ${reason}`);
+    const left = decision.write ? decision.prior : prior;
+    await t.comment(story, `Blocked: ${reason}${left ? `\n\n${priorMarker(left)}` : ""}`);
   }
   log(event, st, `${decision.note}${comment ? ` — ${reason}` : ""}`);
   const blockedPr = event === "blocked" && ctx.prNumber();
@@ -320,6 +355,39 @@ async function statusEvent(ctx) {
     if (ctx.prWrite(["pr", "edit", pr, ...labels], `labels PR #${pr}`)) log("labels", `PR #${pr}`, decision.stage ?? "none");
   }
   return { status: decision.story, write: decision.write };
+}
+
+/** Whether this feature's log started, or linked a PR for, story `st`. */
+function startedHere(logFile, st) {
+  if (!logFile || !existsSync(logFile)) return false;
+  return readFileSync(logFile, "utf8")
+    .split("\n")
+    .some((line) => line.includes(` · start · ${st} · `) || line.includes(` · pr · ${st} · `));
+}
+
+/**
+ * The status a dependent story left when it was blocked: the newest `blocked` line for it in any feature's
+ * tracker log in this specs clone, else the marker in its newest Blocked comment; null when neither has it.
+ */
+async function dependentPrior(ctx) {
+  const specs = dirname(ctx.feature.dir);
+  const line = new RegExp(`^- (\\d{4}-\\d{2}-\\d{2}) · blocked · ${ctx.st} · (.+?) → Blocked(?: — |$)`);
+  let best = null;
+  for (const name of existsSync(specs) ? readdirSync(specs) : []) {
+    const file = join(specs, name, LOG_FILE);
+    if (!existsSync(file)) continue;
+    for (const text of readFileSync(file, "utf8").split("\n")) {
+      const m = text.match(line);
+      if (m && (!best || m[1] >= best.date)) best = { date: m[1], status: m[2] };
+    }
+  }
+  if (best) return best.status;
+  const comments = await ctx.github.pages(`issues/${ctx.story.number}/comments?per_page=100`);
+  for (const c of [...comments].reverse()) {
+    const m = String(c.body ?? "").match(PRIOR_MARKER);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 function prCommentLogged(ctx, pr, reason) {

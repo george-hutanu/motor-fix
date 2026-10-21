@@ -32,6 +32,11 @@ Run it from the feature's checkout; it finds the issue by the ST id its title
 starts with (`1036-…` → ST-1036, or `--story ST-<n>`), and the PR by the
 branch, or by `--pr <n>`.
 
+`--story` naming a story other than the feature's own (not `ST-<feature
+number>`, and no `start` or `pr` line for it in this feature's log), such as
+a dependent being unblocked, writes only that story: never this worktree's
+run-state prior, and never this branch's PR unless `--pr` names one.
+
 ```bash
 node .claude/scripts/tracker-sync.mjs start
 node .claude/scripts/tracker-sync.mjs pr <n>
@@ -60,7 +65,10 @@ Each call prints one JSON line and appends `- <date> · <event> · <item> ·
 log.
 
 - **Token.** `GH_PROJECT_TOKEN`, then `GH_TOKEN`, then
-  `gh auth token -u george-hutanu`; never another account or config dir. A
+  `gh auth token -u george-hutanu`; never another account or config dir.
+  Every `gh` call it makes carries `GH_TOKEN`: the session's, else filled
+  from `gh auth token -u george-hutanu`; with neither, the call is refused
+  (a write logged PENDING), never left to gh's active account. A
   token without the `project` scope prints one line with the fix,
   `gh auth refresh -h github.com -u george-hutanu -s project,read:project`,
   and logs the event PENDING.
@@ -81,7 +89,10 @@ log.
 
 The ladder is `tracker/status.mjs`'s: To do → Planning →
 Implementing → QA → Done, never backwards; only `unblock` leaves Blocked,
-returning to the status recorded in run-state. Only the Project's Status,
+returning to the status recorded in run-state (for another story's
+`--story`: the newest `blocked` line for it in any `specs/*/tracker-sync.md`,
+else the `<!-- tracker-sync prior: … -->` marker its Blocked comment carries,
+else To do). Only the Project's Status,
 dates and PR fields, the issue's state, labels and comments are written,
 never its title or text.
 
