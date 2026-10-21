@@ -1236,13 +1236,21 @@ describe('checking a draft', () => {
   });
 
   // @traces 115-FR-005
-  it.each(['open', 'submitted'] as const)(
-    'warns of a CUI another draft holds, %s',
+  it('warns of a CUI another open draft holds', async () => {
+    await holding(complete());
+    const draft = await holding(complete());
+
+    await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+      warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+    });
+  });
+
+  // @traces 116-FR-012
+  it.each(['draft', 'approved', 'suspended'] as const)(
+    'warns of a CUI a %s garage holds',
     async (status) => {
-      const other = await holding(complete());
-      await prisma.listingDraft.update({
-        data: { status },
-        where: { id: other.id },
+      await prisma.garage.create({
+        data: { cui: '18547290', name: 'Atelier Dinamo', slug: 'g-1', status },
       });
       const draft = await holding(complete());
 
@@ -1264,6 +1272,78 @@ describe('checking a draft', () => {
       });
     },
   );
+
+  // @traces 116-FR-012
+  describe('the listings holding the same CUI', () => {
+    const garage = (name: string, status: 'draft' | 'approved' | 'suspended') =>
+      prisma.garage.create({
+        data: { cui: '18547290', name, slug: `g-${randomUUID()}`, status },
+      });
+    const named = (name: string, cui = '18547290') => {
+      const data = complete(cui);
+      data.steps = { ...data.steps, '1': { ...data.steps?.['1'], name } };
+      return holding(data);
+    };
+
+    it('names the garages of any status and the other open drafts, in Romanian order', async () => {
+      await garage('Ștefan Auto', 'suspended');
+      await garage('Atelier Dinamo', 'approved');
+      await garage('Service Dobre', 'draft');
+      await named('Moto Țepeș', 'RO 18547290');
+      const draft = await named('Service Popescu');
+
+      await expect(
+        service.cuiHeldElsewhere(draft.id, '18547290'),
+      ).resolves.toEqual([
+        'Atelier Dinamo',
+        'Moto Țepeș',
+        'Service Dobre',
+        'Ștefan Auto',
+      ]);
+    });
+
+    it('counts only open drafts, never a sent one nor the draft itself', async () => {
+      const sent = await named('Service Trimis');
+      await prisma.listingDraft.update({
+        data: { status: 'submitted' },
+        where: { id: sent.id },
+      });
+      const draft = await named('Service Popescu');
+
+      await expect(
+        service.cuiHeldElsewhere(draft.id, '18547290'),
+      ).resolves.toEqual([]);
+    });
+
+    it('names nobody for another CUI', async () => {
+      await garage('Atelier Dinamo', 'approved');
+      await named('Service Dobre', '1234567');
+      const draft = await named('Service Popescu', '1234567');
+
+      await expect(
+        service.cuiHeldElsewhere(draft.id, '7654321'),
+      ).resolves.toEqual([]);
+    });
+
+    it('has an index on the open drafts the comparison can use', async () => {
+      await named('Service Dobre');
+
+      const plan = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL enable_seqscan = off`;
+        return tx.$queryRaw<{ 'QUERY PLAN': string }[]>`
+          EXPLAIN SELECT id FROM listing_draft
+          WHERE status = 'open'
+            AND regexp_replace(
+                  regexp_replace(data #>> '{steps,6,cui}', '[[:space:]]+', '', 'g'),
+                  '^ro', '', 'i'
+                ) = ${'18547290'}`;
+      });
+
+      expect(plan.map((row) => row['QUERY PLAN']).join('\n')).toContain(
+        'listing_draft_cui_idx',
+      );
+    });
+  });
 
   it("does not hold a draft's own CUI against it, nor another CUI", async () => {
     await holding(complete('1234567'));

@@ -24,6 +24,11 @@ export interface VerificationFileGarageDto {
    * The names of the other garages holding the same CUI, sorted; empty when none or no CUI
    */
   cuiAlsoUsedBy: Array<string>;
+
+  /**
+   * The names of the other listings that held the same CUI when the file was sent, joined by ", "; null when none
+   */
+  cuiWarning: string | null;
   id: string;
   name: string;
   phone: string | null;

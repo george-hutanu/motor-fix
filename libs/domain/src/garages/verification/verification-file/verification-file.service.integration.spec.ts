@@ -131,6 +131,7 @@ describe('reading a file', () => {
       businessKind: 'company',
       cui: '12345678',
       cuiAlsoUsedBy: [],
+      cuiWarning: null,
       id: garageId,
       name: 'Atelier Dinamo',
       phone: '+40722111222',
@@ -152,6 +153,15 @@ describe('reading a file', () => {
       status: 'submitted',
       submittedAt: SENT.toISOString(),
     });
+  });
+
+  // @traces 116-FR-012
+  it('carries the names the sending found holding the same CUI', async () => {
+    const file = await sent({ cuiWarning: 'Service Dobre, Ștefan Auto' });
+
+    const { garage } = await service().read(file.id);
+
+    expect(garage.cuiWarning).toBe('Service Dobre, Ștefan Auto');
   });
 
   it("carries a mobile mechanic's seat and radius, with no workshop address", async () => {

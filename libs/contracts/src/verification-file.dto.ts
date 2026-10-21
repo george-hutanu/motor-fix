@@ -247,6 +247,14 @@ export class VerificationFileGarageDto {
   cuiAlsoUsedBy!: string[];
 
   @ApiProperty({
+    description:
+      'The names of the other listings that held the same CUI when the file was sent, joined by ", "; null when none',
+    nullable: true,
+    type: String,
+  })
+  cuiWarning!: string | null;
+
+  @ApiProperty({
     description: 'The workshop; null for a mobile mechanic',
     nullable: true,
     type: String,

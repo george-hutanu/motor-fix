@@ -14238,6 +14238,11 @@
               "type": "string"
             }
           },
+          "cuiWarning": {
+            "type": "string",
+            "description": "The names of the other listings that held the same CUI when the file was sent, joined by \", \"; null when none",
+            "nullable": true
+          },
           "address": {
             "type": "string",
             "description": "The workshop; null for a mobile mechanic",
@@ -14276,6 +14281,7 @@
           "businessKind",
           "cui",
           "cuiAlsoUsedBy",
+          "cuiWarning",
           "address",
           "seatAddress",
           "serviceRadiusKm",

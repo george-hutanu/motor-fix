@@ -19,6 +19,7 @@ import {
   countGarageReport,
   countGarageSignUp,
   countJobStep,
+  countListingSubmission,
   countMoreRequest,
   countNotification,
   countQuote,
@@ -123,6 +124,7 @@ function countEverySeries() {
   for (const method of ['password', 'phone', 'google', 'apple'] as const)
     countSignIn(method);
   countGarageSignUp();
+  countListingSubmission();
   for (const outcome of ['approved', 'rejected'] as const)
     countApproval(outcome);
   REJECTION_REASONS.forEach((reason) => {
@@ -347,6 +349,8 @@ describe('the product counters', () => {
       ] as const,
     ]),
     [() => countDeclarationSigned(), 'motorfix_declarations_signed_total', {}],
+    // @traces 116-FR-020
+    [() => countListingSubmission(), 'motorfix_listing_submissions_total', {}],
     ...CONSENT_DECISIONS.map(
       (decision) =>
         [

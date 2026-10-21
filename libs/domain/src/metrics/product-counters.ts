@@ -103,6 +103,11 @@ const searches = () =>
 const signIns = () => counter('motorfix_sign_ins_total', 'Sign-ins, by method');
 const garageSignUps = () =>
   counter('motorfix_garage_sign_ups_total', 'Garage listings started');
+const listingSubmissions = () =>
+  counter(
+    'motorfix_listing_submissions_total',
+    'Garage listings sent for verification',
+  );
 const approvals = () =>
   counter(
     'motorfix_garage_approvals_total',
@@ -236,6 +241,10 @@ export function countSignIn(method: SignInMethod) {
 
 export function countGarageSignUp() {
   garageSignUps().add(1);
+}
+
+export function countListingSubmission() {
+  listingSubmissions().add(1);
 }
 
 export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
@@ -390,6 +399,7 @@ const STARTS: Record<
     [searches, each('outcome', SEARCH_OUTCOMES)],
     [signIns, each('method', SIGN_IN_METHODS)],
     [garageSignUps, [{}]],
+    [listingSubmissions, [{}]],
     [approvals, each('outcome', APPROVAL_OUTCOMES)],
     [suspensions, each('cause', SUSPENSION_CAUSES)],
     [

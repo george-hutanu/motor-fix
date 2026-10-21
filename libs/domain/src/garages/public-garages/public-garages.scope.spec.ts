@@ -32,6 +32,8 @@ const STAFF_GATE =
 const EXCEPTIONS: Record<string, string> = {
   'cars/saved-garages/saved-garages.service.ts#list':
     'a driver keeps the garages they saved after one is hidden, marked unavailable by the scope as a column',
+  'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
+    'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
   'garages/staff-invite/staff-invite.service.ts#check':
     'an invite names the garage that sent it, approved or not, to the person holding its secret',
   'garages/staff-invite/staff-invite.service.ts#joined':
