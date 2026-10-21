@@ -53,7 +53,7 @@ export function whoOf(
   };
 }
 
-export interface Fact {
+interface Fact {
   label: string;
   value: string;
 }
@@ -73,7 +73,7 @@ export function factsOf(
       value: formatLeiRange(range.fromBani, range.toBani, language),
     });
   }
-  if (job?.finalPriceBani != null) {
+  if (request.stage === 'done' && job?.finalPriceBani != null) {
     facts.push({
       label: 'driver.active.fact.finalPrice',
       value: formatLei(job.finalPriceBani, language),
