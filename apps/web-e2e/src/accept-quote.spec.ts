@@ -120,7 +120,7 @@ test.describe('accepting a quote @seeded', () => {
     // The live re-read, with no reload, within the brief's 5 seconds.
     await expect(row).toContainText('Programată', { timeout: 5_000 });
     await expect(row.locator('.waiting')).toHaveText(
-      /^Așteaptă confirmarea service‑ului · încă 2[34] h$/,
+      /^Așteaptă confirmarea service‑ului · încă 23 h$/,
     );
     // The driver's other quote is untouched by this acceptance.
     const other = page.locator(`li[data-request="${otherId}"]`);
@@ -137,7 +137,7 @@ test.describe('accepting a quote @seeded', () => {
         .locator('mf-quotes-sent-panel')
         .locator(`[data-live-id="${requestId}"]`);
       await expect(sent).toContainText('Acceptată · așteaptă confirmarea ta');
-      await expect(sent).toContainText(/încă 2[34] h/);
+      await expect(sent).toContainText(/încă 23 h/);
       await expect(sent.locator(`a[href="tel:${DRIVER_PHONE}"]`)).toHaveText(
         DRIVER_PHONE,
       );
@@ -177,7 +177,7 @@ test.describe('accepting a quote @seeded', () => {
 
     await expect(row).toContainText('Acceptată');
     await expect(row.locator('[data-part="booking"]')).toHaveText(
-      /^Așteaptă confirmarea service‑ului · încă 2[34] h$/,
+      /^Așteaptă confirmarea service‑ului · încă 23 h$/,
     );
     const width = await page.evaluate(
       () => document.documentElement.scrollWidth,

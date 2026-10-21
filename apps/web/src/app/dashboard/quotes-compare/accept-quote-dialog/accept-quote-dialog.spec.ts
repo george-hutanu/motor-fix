@@ -222,26 +222,6 @@ describe('the accept dialog: refusals', () => {
       'The quote has expired',
     ],
     [
-      { code: 'invalid_transition', currentStatus: 'withdrawn' },
-      'Service‑ul a retras oferta',
-      'The garage withdrew the quote',
-    ],
-    [
-      { code: 'invalid_transition', currentStatus: 'accepted' },
-      'Oferta a fost deja acceptată',
-      'The quote was already accepted',
-    ],
-    [
-      { code: 'invalid_transition', currentStatus: 'lost' },
-      'Oferta nu mai este disponibilă',
-      'The quote is no longer available',
-    ],
-    [
-      { code: 'invalid_transition', currentStatus: 'declined_by_driver' },
-      'Ai refuzat deja această ofertă',
-      'You already declined this quote',
-    ],
-    [
       { code: 'booking_pending' },
       'Ai deja o programare în așteptare',
       'You already have a booking waiting',
@@ -251,10 +231,15 @@ describe('the accept dialog: refusals', () => {
       'Ora propusă a trecut',
       'The proposed time has passed',
     ],
+    [
+      { code: 'invalid_transition', currentStatus: 'withdrawn' },
+      'Service‑ul nu mai primește cereri',
+      'This garage no longer takes requests',
+    ],
   ])(
-    'says %j in the driver’s language, keeps the dialog and reads the panel again',
+    'says %j in the server’s words, keeps the dialog and reads the panel again',
     async (body, ro, en) => {
-      await open({ answers: [refusal(409, body)] });
+      await open({ answers: [refusal(409, { ...body, detail: ro })] });
       button('Confirmă')?.click();
       await settle();
 
@@ -268,7 +253,10 @@ describe('the accept dialog: refusals', () => {
         n.innerHTML = '';
       });
       TestBed.resetTestingModule();
-      await open({ answers: [refusal(409, body)], language: 'en' });
+      await open({
+        answers: [refusal(409, { ...body, detail: en })],
+        language: 'en',
+      });
       button('Confirm')?.click();
       await settle();
 
@@ -278,26 +266,21 @@ describe('the accept dialog: refusals', () => {
     },
   );
 
-  it('says the server’s own words when it gives them, as for a suspended garage', async () => {
-    await open({
-      answers: [
-        refusal(409, {
-          code: 'invalid_transition',
-          currentStatus: 'withdrawn',
-          message: 'Service‑ul nu mai primește cereri',
-        }),
-      ],
-    });
+  it('says a plain failure when a refusal brings no words', async () => {
+    await open({ answers: [refusal(409, { code: 'conflict' })] });
     button('Confirmă')?.click();
     await settle();
 
     expect(panel().querySelector('[role="alert"]')?.textContent?.trim()).toBe(
-      'Service‑ul nu mai primește cereri',
+      'Nu a mers. Încearcă din nou.',
     );
+    expect(reread).toHaveBeenCalledTimes(1);
   });
 
   it('says a quote no longer the driver’s is gone', async () => {
-    await open({ answers: [refusal(404, { code: 'not_found' })] });
+    await open({
+      answers: [refusal(404, { code: 'not_found', detail: 'Not Found' })],
+    });
     button('Confirmă')?.click();
     await settle();
 

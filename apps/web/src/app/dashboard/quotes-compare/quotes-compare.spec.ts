@@ -619,6 +619,49 @@ describe('the comparison’s clock', () => {
     expect(rows(element)[0]?.classList).toContain('greyed');
     expect(acceptOf(rows(element)[1])).not.toBeNull();
   });
+
+  // @traces 314-FR-005
+  it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+      ],
+      now: Date.parse('2026-10-17T10:00:00.000Z'),
+    });
+    const loaded = Date.now();
+    const accepted = comparison({
+      quotes: [FAST, { ...CHEAP, status: 'accepted' }],
+      request: {
+        ...comparison().request,
+        booking: {
+          // Accepted 29 s after the panel opened, read a second later.
+          confirmBy: new Date(loaded + 29_000 + 24 * 3_600_000).toISOString(),
+          mechanicName: null,
+          quoteId: 'q-cheap',
+          startsAt: '2026-10-20T06:00:00.000Z',
+          status: 'awaiting_confirmation',
+        },
+        status: 'booked',
+      },
+    });
+    const { element, settle } = await render([comparison(), accepted]);
+    jest.setSystemTime(loaded + 30_000);
+
+    emit('quote.accepted');
+    jest.advanceTimersByTime(500);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    const row = rows(element).find((r) => r.dataset['quote'] === 'q-cheap');
+    expect(text(row?.querySelector('[data-part="booking"]'))).toBe(
+      'Așteaptă confirmarea service‑ului · încă 23 h',
+    );
+  });
 });
 
 // @traces 313-FR-008

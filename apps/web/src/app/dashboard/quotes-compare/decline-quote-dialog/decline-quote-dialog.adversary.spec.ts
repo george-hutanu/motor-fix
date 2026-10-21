@@ -133,11 +133,12 @@ describe('the decline dialog, failing calls', () => {
     );
   });
 
-  it('says an already-declined quote in Romanian and reads the panel again', async () => {
+  it('says an already-declined quote in the server’s words and reads the panel again', async () => {
     await open([
       refusal(409, {
         code: 'invalid_transition',
         currentStatus: 'declined_by_driver',
+        detail: 'Ai refuzat deja această ofertă',
       }),
     ]);
 
@@ -148,9 +149,15 @@ describe('the decline dialog, failing calls', () => {
     expect(reread).toHaveBeenCalledTimes(1);
   });
 
-  it('says the same refusal in English', async () => {
+  it('says an English refusal as the server words it', async () => {
     await open(
-      [refusal(409, { code: 'invalid_transition', currentStatus: 'accepted' })],
+      [
+        refusal(409, {
+          code: 'invalid_transition',
+          currentStatus: 'accepted',
+          detail: 'The quote was already accepted',
+        }),
+      ],
       'en',
     );
 
@@ -174,7 +181,7 @@ describe('the decline dialog, failing calls', () => {
     await open([
       refusal(409, {
         code: 'invalid_transition',
-        message: '<img src=x onerror=alert(1)>',
+        detail: '<img src=x onerror=alert(1)>',
       }),
     ]);
 

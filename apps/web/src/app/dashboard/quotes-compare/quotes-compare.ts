@@ -7,6 +7,7 @@ import {
   Injector,
   inject,
   input,
+  linkedSignal,
   type OnInit,
   PLATFORM_ID,
   runInInjectionContext,
@@ -115,7 +116,12 @@ export class QuotesCompare implements OnInit {
   // constructor, and a parent makes a new panel for another request.
   protected view!: LiveView<QuoteComparisonDto>;
 
-  protected readonly now = signal(new Date());
+  // Sampled again on every read, so a line read right after an acceptance
+  // measures from then; the tick moves it between reads.
+  protected readonly now = linkedSignal({
+    computation: () => new Date(),
+    source: () => this.view?.value(),
+  });
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;

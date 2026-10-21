@@ -163,7 +163,7 @@ describe('the accept dialog, retries', () => {
         error: {
           code: 'invalid_transition',
           currentStatus: 'withdrawn',
-          message: 'Service‑ul nu mai primește cereri',
+          detail: 'Service‑ul nu mai primește cereri',
         },
         status: 409,
       }),
@@ -176,7 +176,7 @@ describe('the accept dialog, retries', () => {
     expect(reread).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to the withdrawn line when the server sends no message', async () => {
+  it('says a plain failure when the server sends no words', async () => {
     await open([
       new HttpErrorResponse({
         error: { code: 'invalid_transition', currentStatus: 'withdrawn' },
@@ -187,7 +187,7 @@ describe('the accept dialog, retries', () => {
     button('Confirmă')?.click();
     await settle();
 
-    expect(alert()).toBe('Service‑ul a retras oferta');
+    expect(alert()).toBe('Nu a mers. Încearcă din nou.');
   });
 
   it('lets Renunță close an offline dialog with nothing sent', async () => {

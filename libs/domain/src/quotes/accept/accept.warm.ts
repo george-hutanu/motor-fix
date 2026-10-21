@@ -9,6 +9,8 @@ export interface AcceptOwner {
   requestId: string;
 }
 
+// The sign-in warm's life (home-warm.ts), inside the 60–120 s a private warm
+// entry may live; the cache jitters it.
 const SOFT_SECONDS = 90;
 
 export const acceptKey = (driverId: string, quoteId: string) =>

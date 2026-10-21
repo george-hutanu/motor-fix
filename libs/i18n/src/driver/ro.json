@@ -278,18 +278,9 @@
     "missing": "Nu face: {jobs}",
     "mobile": "Mecanic mobil",
     "problem": {
-      "booking_pending": "Ai deja o programare în așteptare",
       "error": "Nu a mers. Încearcă din nou.",
       "network": "Nu am putut trimite. Verifică conexiunea și încearcă din nou.",
-      "not_found": "Oferta nu mai există",
-      "slot_passed": "Ora propusă a trecut",
-      "state": {
-        "accepted": "Oferta a fost deja acceptată",
-        "declined_by_driver": "Ai refuzat deja această ofertă",
-        "expired": "Oferta a expirat",
-        "lost": "Oferta nu mai este disponibilă",
-        "withdrawn": "Service‑ul a retras oferta"
-      }
+      "not_found": "Oferta nu mai există"
     },
     "retry": "Reîncearcă",
     "sort": {

@@ -274,18 +274,9 @@
     "missing": "Does not do: {jobs}",
     "mobile": "Mobile mechanic",
     "problem": {
-      "booking_pending": "You already have a booking waiting",
       "error": "That did not work. Try again.",
       "network": "We could not send it. Check the connection and try again.",
-      "not_found": "The quote no longer exists",
-      "slot_passed": "The proposed time has passed",
-      "state": {
-        "accepted": "The quote was already accepted",
-        "declined_by_driver": "You already declined this quote",
-        "expired": "The quote has expired",
-        "lost": "The quote is no longer available",
-        "withdrawn": "The garage withdrew the quote"
-      }
+      "not_found": "The quote no longer exists"
     },
     "retry": "Retry",
     "sort": {

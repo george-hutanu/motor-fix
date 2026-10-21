@@ -149,7 +149,7 @@ describe('the decline dialog: refusals', () => {
     async (currentStatus, said) => {
       await open({
         answer: new HttpErrorResponse({
-          error: { code: 'invalid_transition', currentStatus },
+          error: { code: 'invalid_transition', currentStatus, detail: said },
           status: 409,
         }),
       });
