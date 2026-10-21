@@ -395,6 +395,11 @@ source for anything the constitution does not fix.
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
+  With no session open, `sh scripts/watch-schedule.sh install` loads a launchd
+  agent that runs the gate every 15 minutes and, when it fires, `watch.mjs
+  --dispatch`, which starts each plan entry as a detached `task-runner`. Both
+  sides share the claim: `watch.mjs claim` refuses a worktree whose claim is
+  still live, so the schedule and a session's wait never dispatch it twice.
 - A worktree goes once its PR merges or closes, or after 7 idle days with no
   PR: `.claude/scripts/worktree-remove.mjs` backs up its specs and changes
   under `.work/worktree-backfill/`, then removes it and its branch
