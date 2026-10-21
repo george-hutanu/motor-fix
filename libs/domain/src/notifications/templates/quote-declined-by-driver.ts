@@ -6,8 +6,8 @@ import type { Template } from '../templates';
 export const QUOTE_DECLINED_BY_DRIVER: Template = {
   audience: 'garage',
   bell: {
-    en: '{driverShortName} declined your quote · {car}',
-    ro: '{driverShortName} a refuzat oferta ta · {car}',
+    en: '{driverShortName} declined your quote.',
+    ro: '{driverShortName} a refuzat oferta ta.',
   },
   email: {
     en: {

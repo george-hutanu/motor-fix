@@ -38,10 +38,10 @@ describe('the declined quote message to garage staff', () => {
 
   it('says who declined, in the bell', () => {
     expect(render(KIND, 'bell', 'ro', params)).toBe(
-      'Andrei M. a refuzat oferta ta · Dacia Logan',
+      'Andrei M. a refuzat oferta ta.',
     );
     expect(render(KIND, 'bell', 'en', params)).toBe(
-      'Andrei M. declined your quote · Dacia Logan',
+      'Andrei M. declined your quote.',
     );
   });
 
