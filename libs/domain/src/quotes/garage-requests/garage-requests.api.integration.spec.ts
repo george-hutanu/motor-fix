@@ -1237,6 +1237,11 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
     expect(row.quote.status).toBe('accepted');
     expect(row.booking).toEqual({
       confirmBy: accepted.booking.confirmBy.toISOString(),
+      durationMinutes: 90,
+      id: accepted.booking.id,
+      lift: null,
+      mechanic: null,
+      startsAt: accepted.booking.startsAt.toISOString(),
       status: 'awaiting_confirmation',
     });
     expect(res.body.items[0].booking).toBeNull();
@@ -1274,9 +1279,74 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
     expect(ids(second)).toEqual([made[20]]);
   });
 
-  it('drops the row once the booking is no longer waiting for the garage', async () => {
+  // @traces 389-FR-009
+  it('keeps a confirmed row while its slot is ahead, with the slot, mechanic, lift, phone and plate', async () => {
     const dinamo = await team('Atelier Dinamo');
-    await acceptedAt(dinamo.garage.id, ago(HOUR), 'confirmed');
+    const { booking, request } = await acceptedAt(dinamo.garage.id, ago(HOUR));
+    await prisma.booking.update({
+      data: {
+        confirmedAt: new Date(),
+        confirmedBy: dinamo.owner,
+        lift: 2,
+        mechanicId: dinamo.plainMechanic.id,
+        status: 'confirmed',
+      },
+      where: { id: booking.id },
+    });
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.receptionist, 'receptionist'),
+    );
+
+    expect(ids(res)).toEqual([request.id]);
+    expect(res.body.total).toBe(1);
+    const [row] = res.body.items;
+    expect(row.booking).toEqual({
+      confirmBy: booking.confirmBy.toISOString(),
+      durationMinutes: 90,
+      id: booking.id,
+      lift: 2,
+      mechanic: { id: dinamo.plainMechanic.id, name: 'Hand' },
+      startsAt: booking.startsAt.toISOString(),
+      status: 'confirmed',
+    });
+    expect(row.driver).toEqual({ phone: PHONE, shortName: 'Andrei M.' });
+    expect(row.car.plate).toBe('B123ABC');
+    expect(JSON.stringify(res.body)).not.toMatch(/repairs|history"/i);
+    const detail = await get(
+      `/garage/requests/${request.id}`,
+      bearer(dinamo.owner, 'garage'),
+    );
+    expect(detail.body.booking).toMatchObject({
+      lift: 2,
+      mechanic: { id: dinamo.plainMechanic.id, name: 'Hand' },
+      mechanicId: dinamo.plainMechanic.id,
+    });
+  });
+
+  // @traces 389-FR-009
+  it('drops a confirmed row once its slot has ended, and a lapsed one at once', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    const done = await acceptedAt(dinamo.garage.id, ago(HOUR), 'confirmed');
+    await prisma.booking.update({
+      data: { startsAt: ago(91 * 60_000) },
+      where: { id: done.booking.id },
+    });
+    const lapsed = await acceptedAt(
+      dinamo.garage.id,
+      ago(HOUR),
+      'awaiting_confirmation',
+      (
+        await prisma.quoteRequest.findUniqueOrThrow({
+          where: { id: done.request.id },
+        })
+      ).driverId,
+    );
+    await prisma.booking.update({
+      data: { status: 'lapsed' },
+      where: { id: lapsed.booking.id },
+    });
 
     const res = await get(
       '/garage/requests?status=quoted',
@@ -1285,6 +1355,21 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
 
     expect(res.body.items).toEqual([]);
     expect(res.body.total).toBe(0);
+  });
+
+  // @traces 389-FR-009
+  it('never shows a mechanic the phone or the plate of a confirmed row', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    await acceptedAt(dinamo.garage.id, ago(HOUR), 'confirmed');
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.answering, 'mechanic'),
+    );
+
+    expect(res.body.items).toHaveLength(1);
+    expect(JSON.stringify(res.body)).not.toContain(PHONE);
+    expect(JSON.stringify(res.body)).not.toContain('B123ABC');
   });
 
   it.each([

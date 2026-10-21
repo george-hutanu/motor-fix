@@ -6,6 +6,7 @@ import type {
   GarageCloseReason,
   GarageRefDto,
   QuoteDto,
+  RequestBookingDto,
   RequestJobDto,
 } from '@motor-fix/contracts';
 import { BadRequestException } from '@nestjs/common';
@@ -121,6 +122,13 @@ export const garageRef = (garage: Garage): GarageRefDto => ({
   slug: garage.slug,
 });
 
+// The booking a list row needs to say where it stands.
+export const rowBookingOf = (booking: Booking): RequestBookingDto => ({
+  confirmBy: booking.confirmBy.toISOString(),
+  startsAt: booking.startsAt.toISOString(),
+  status: booking.status,
+});
+
 // A booking as its driver reads it.
 export const bookingOf = (
   booking: Booking & { garage: Garage },
@@ -148,7 +156,7 @@ export const bookingMechanicInclude = {
   mechanic: true,
 } as const;
 
-type MechanicRow = {
+export type MechanicRow = {
   mechanic: Mechanic | null;
   job: { mechanic: Mechanic | null } | null;
 };

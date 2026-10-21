@@ -291,6 +291,9 @@ export class RequestBookingDto {
 
   @ApiProperty({ format: 'date-time' })
   confirmBy!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
 }
 
 export class RequestSummaryDto {
@@ -437,13 +440,34 @@ export class GarageBookingDto extends OmitType(BookingDto, [
   lateCancellation!: boolean;
 }
 
+// The booking a garage's row needs: when, how long, who and where.
+export class GarageRowBookingDto extends RequestBookingDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  durationMinutes!: number;
+
+  @ApiProperty({ nullable: true, type: BookingMechanicDto })
+  mechanic!: BookingMechanicDto | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  lift!: number | null;
+}
+
 export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
   'id',
   'status',
-  'car',
   'createdAt',
   'expiresAt',
 ] as const) {
+  @ApiProperty({
+    description:
+      'The plate shows to the owner and the desk once the booking is confirmed',
+    type: GarageCarDto,
+  })
+  car!: GarageCarDto;
+
   @ApiProperty({ type: [GarageRequestJobDto] })
   jobs!: GarageRequestJobDto[];
 
@@ -470,7 +494,7 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
 
   @ApiProperty({
     description:
-      'The phone shows to the owner and the desk on a row whose quote the driver accepted while it waits for confirmation',
+      'The phone shows to the owner and the desk on a row whose quote the driver accepted, while the booking waits for confirmation or is confirmed',
     type: GarageDriverDto,
   })
   driver!: GarageDriverDto;
@@ -484,9 +508,9 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
   @ApiProperty({
     description: 'The booking the garage’s quote became',
     nullable: true,
-    type: RequestBookingDto,
+    type: GarageRowBookingDto,
   })
-  booking!: RequestBookingDto | null;
+  booking!: GarageRowBookingDto | null;
 }
 
 export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
