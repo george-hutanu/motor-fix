@@ -292,8 +292,10 @@ export class ListYourGarage {
   protected readonly statusView = signal<{
     sent: VerificationStageStatus | null;
   } | null>(null);
-  // A send in progress shows its own answer, not the one the session finds.
-  private sending = false;
+  // Set from the press that sends, and kept once sent: the page then shows
+  // its own send's answer, never the status view the session's garage would
+  // open. A dialog closed without a session clears it.
+  private sentFromHere = false;
   private ownerShown = false;
   // One key for the page's send: a send again after a failure is the same
   // send, and answers what the first made if it did get through.
@@ -369,7 +371,7 @@ export class ListYourGarage {
     // An account that already owns a garage has nothing to fill in here.
     effect(() => {
       const me = this.session.current();
-      if (!ownedGarage(me) || this.sending || this.ownerShown) return;
+      if (!ownedGarage(me) || this.sentFromHere || this.ownerShown) return;
       this.ownerShown = true;
       untracked(() => void this.showOwned(me?.role));
     });
@@ -553,9 +555,9 @@ export class ListYourGarage {
       this.surveyTracked = true;
       this.consent.track('survey_completed');
     }
-    this.sending = true;
+    this.sentFromHere = true;
     if (await this.signedIn()) await this.submit();
-    else this.sending = false;
+    else this.sentFromHere = false;
   }
 
   // A session, from before or from the sign-up dialog with the step 1
