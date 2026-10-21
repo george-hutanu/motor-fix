@@ -227,6 +227,7 @@ describe('JobTypeLoader', () => {
     expect(await history()).toEqual([]);
   });
 
+  // @traces 1357-FR-006
   it('maps every job only to a kind of work the RAR catalogue holds', async () => {
     const codes = (await prisma.rarActivity.findMany()).map(
       (activity) => activity.code,
