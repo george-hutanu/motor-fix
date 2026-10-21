@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-20
+updated: 2026-10-21
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -17,6 +17,7 @@ features:
   - 305-reject-garage-reason
   - 304-request-garage-details
   - 228-how-it-works-list-garage
+  - 101-verification-progress
 ---
 
 # Capability: Phone layout and installable web app
@@ -205,9 +206,9 @@ _From 097-garage-dashboard._
 
 _From 097-garage-dashboard._
 
-### 097-FR-008 — When the garage of the matched membership is `draft`, Panou's body MUST show the one line "Profilul tău e în verificare." / "Your profile is being checked." instead of its empty state; the shell, the header line and the menu stay. The verification‑page story replaces that line with its page. An `approved` or `suspended` garage shows Panou's empty state (FR‑004).
+### 101-FR-001 — While the garage of the session's matched membership is `draft`, `/app/garage` MUST show the verification page in place of Panou's body: the `h1` "Profilul tău e în verificare" / "Your profile is being checked", the stage strip of ST-116 (116-FR-015) fed by `GET /api/v1/garages/{garageId}/verification`, and under it the lines "O verificăm în 1–2 zile lucrătoare." / "We check it within 1–2 working days." and the off-map line of 116-FR-001. An `approved` or `suspended` garage shows Panou as today. Modifies 097-FR-008 (the one line is replaced by the page).
 
-_From 097-garage-dashboard._
+_From 101-verification-progress._
 
 ### 344-FR-017 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the dialog, the button, the Oferte trimise panel and the toasts MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every control at least 44 px tall, the warning's and hint's text at a contrast of at least 4.5:1 in both schemes, and the two price fields stacking on a phone rather than overflowing.
 
@@ -297,6 +298,14 @@ _From 228-how-it-works-list-garage._
 
 _From 228-how-it-works-list-garage._
 
+### 101-FR-007 — While the garage is `draft`, the garage area's menu and phone bar MUST hold no view entries; the header keeps the bell, the language switch and "Ieși din cont"; `/app/garage/<any view>` MUST land on `/app/garage`. Both come from `allowedViews` taking the garage's status, the one source of the menu, the phone bar and the routes' `canMatch`; the "Ajutor și contact" action stays. Once the garage is `approved` the entries return without a reload. Modifies 097-FR-008 ("the menu stay[s]" no longer holds while `draft`).
+
+_From 101-verification-progress._
+
+### 101-FR-012 — The page MUST hold at 320 px and 390 px phones, tablet and desktop, light and dark, Romanian and English, with the stages stacked vertically on a phone, no sideways scroll (a long admin note or an unbroken word wraps inside the column), the lit stage conveyed by text as well as colour, each change of stage announced in a polite (`aria-live="polite"`) live region that names the new stage, never assertive and never on first load, the button and link at least 44 px tall and reachable by keyboard, and the skeleton hidden from assistive technology.
+
+_From 101-verification-progress._
+
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
@@ -306,3 +315,4 @@ _From 228-how-it-works-list-garage._
 - `097-FR-001` — superseded by `343-FR-007` (2026-10-09)
 - `097-FR-004` — superseded by `343-FR-006` (2026-10-09)
 - `343-FR-007` — superseded by `344-FR-014` (2026-10-09)
+- `097-FR-008` — superseded by `101-FR-001` (2026-10-21)
