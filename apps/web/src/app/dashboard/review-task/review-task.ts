@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { parseLeiText } from '@motor-fix/contracts/lei-text';
+import { parseLeiText, REVIEW_TEXT_MAX } from '@motor-fix/contracts/lei-text';
 import type { Problem } from '@motor-fix/contracts/problem';
 import {
   type JobReviewContextDto,
@@ -25,7 +25,6 @@ import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 const KEY = 'driver.review';
-const TEXT_MAX = 2000;
 const STEPS = [1, 2, 3, 4, 5] as const;
 
 // A refused publish that replaces the form with its own message.
@@ -61,7 +60,7 @@ export class ReviewTask {
   protected readonly task = injectOverlayTask<{ jobId?: string }, ReviewDto>();
 
   protected readonly steps = STEPS;
-  protected readonly max = TEXT_MAX;
+  protected readonly max = REVIEW_TEXT_MAX;
   protected readonly view = signal<View>('loading');
   protected readonly context = signal<JobReviewContextDto | null>(null);
   protected readonly emailConfirmed = signal(true);
@@ -145,7 +144,7 @@ export class ReviewTask {
 
   protected async publish(event: Event) {
     event.preventDefault();
-    if (this.sending() || this.count() > TEXT_MAX) return;
+    if (this.sending() || this.count() > REVIEW_TEXT_MAX) return;
     const body = this.body();
     if (!body) return;
     this.problem.set(null);

@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 
-import { PAID_BANI_MAX } from './lei-text';
+import { PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
 import {
   CarSnapshotDto,
   DriverNameDto,
@@ -11,7 +11,8 @@ import {
 } from './quotes.dto';
 import { JOB_STATUSES, type JobStatus } from './request-status';
 
-export const REVIEW_TEXT_MAX = 2000;
+export { REVIEW_TEXT_MAX };
+
 const REVIEW_STATUSES = [
   'published',
   'reported',

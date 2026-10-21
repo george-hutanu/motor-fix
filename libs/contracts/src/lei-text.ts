@@ -1,6 +1,8 @@
 // An amount in lei as a Romanian driver types it, kept here because the
 // browser imports this file and not the validators.
 export const PAID_BANI_MAX = 100_000_000;
+// The drawer counts against the same limit the server checks.
+export const REVIEW_TEXT_MAX = 2000;
 
 type LeiText =
   | { bani: number }
