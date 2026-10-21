@@ -107,7 +107,7 @@
           <p class="error" role="alert">{{ fieldError(why) | t }}</p>
         }
       </div>
-      <p class="privacy">{{ 'driver.review.privacy' | t }}</p>
+      <p class="privacy">{{ 'driver.review.privacy' | t: { name: context()?.author?.shortName ?? '' } }}</p>
       @if (problem(); as code) {
         <p class="error" role="alert">{{ code }}</p>
       }

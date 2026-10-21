@@ -11781,6 +11781,18 @@
           }
         }
       },
+      "DriverNameDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and the last name’s initial"
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
       "ReviewJobDto": {
         "type": "object",
         "properties": {
@@ -11853,6 +11865,9 @@
       "JobReviewContextDto": {
         "type": "object",
         "properties": {
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
           "job": {
             "$ref": "#/components/schemas/ReviewJobDto"
           },
@@ -11882,6 +11897,7 @@
           }
         },
         "required": [
+          "author",
           "job",
           "garage",
           "car",
@@ -11915,18 +11931,6 @@
         "required": [
           "jobId",
           "rating"
-        ]
-      },
-      "DriverNameDto": {
-        "type": "object",
-        "properties": {
-          "shortName": {
-            "type": "string",
-            "description": "First name and the last name’s initial"
-          }
-        },
-        "required": [
-          "shortName"
         ]
       },
       "JobSummaryDto": {

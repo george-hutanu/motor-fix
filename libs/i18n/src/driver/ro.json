@@ -316,7 +316,7 @@
     "optional": "opțional",
     "paid": "Cât ai plătit",
     "paidHint": "890 lei",
-    "privacy": "Apar prenumele, mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.",
+    "privacy": "Apar doar {name}, mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.",
     "publish": "Publică recenzia",
     "published": "Publicată. E acum pe profilul {garage}.",
     "rating": {

@@ -73,6 +73,7 @@ describe('reading a job for its review', () => {
 
     expect(read.status).toBe(200);
     expect(read.body).toEqual({
+      author: { shortName: 'Andrei M.' },
       car: {
         brand: 'Mini',
         engine: '2.0 turbo',

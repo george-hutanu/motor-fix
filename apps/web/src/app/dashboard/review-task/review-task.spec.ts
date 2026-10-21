@@ -28,6 +28,7 @@ const JOB = '6c1f0a52-3b7e-4d1a-9f0e-2a4b5c6d7e8f';
 const context = (
   over: Partial<JobReviewContextDto> = {},
 ): JobReviewContextDto => ({
+  author: { shortName: 'Andrei M.' },
   car: {
     brand: 'BMW',
     engine: '2.0',
@@ -237,7 +238,7 @@ describe('the review drawer', () => {
       'Prețul a fost cel din ofertă? A fost gata la timp? Te‑ai mai duce?',
     );
     expect(text()).toContain(
-      'Apar prenumele, mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.',
+      'Apar doar Andrei M., mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.',
     );
   });
 });
@@ -300,7 +301,7 @@ describe('publishing from the drawer', () => {
     expect(field('What you paid')).toBeDefined();
     expect(field('Your comment')).toBeDefined();
     expect(text()).toContain(
-      'Shows your first name, your car and the job. Never your plate or phone number.',
+      'Only Andrei M., your car and the job are shown. Never your plate or phone number.',
     );
     button('Post review')?.click();
     await settle();

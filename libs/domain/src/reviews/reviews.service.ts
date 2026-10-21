@@ -20,7 +20,7 @@ import { PRISMA } from '../auth/prisma';
 import { refusal, taken } from '../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { PrismaClient, Review } from '../generated/prisma/client';
-import { garageRef, jobsOf, snapshotOf } from '../quotes/reads';
+import { garageRef, jobsOf, shortName, snapshotOf } from '../quotes/reads';
 
 // The statuses that hold a job's one review; the migration's review_one_live
 // index lists the same three.
@@ -68,7 +68,7 @@ export class ReviewsService {
             request: true,
           },
         },
-        driver: { select: { email: true, emailVerifiedAt: true } },
+        driver: { select: { email: true, emailVerifiedAt: true, name: true } },
         garage: true,
       },
       where: { driverId: actor.accountId, id: jobId },
@@ -76,6 +76,7 @@ export class ReviewsService {
     if (!job) throw new NotFoundException();
     const existing = await this.live(jobId);
     return {
+      author: { shortName: shortName(job.driver.name) },
       car: snapshotOf(job.booking.request),
       emailConfirmed: Boolean(job.driver.email && job.driver.emailVerifiedAt),
       existing: existing && reviewOf(existing),

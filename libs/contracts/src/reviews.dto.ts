@@ -2,7 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 
-import { CarSnapshotDto, GarageRefDto, RequestJobDto } from './quotes.dto';
+import {
+  CarSnapshotDto,
+  DriverNameDto,
+  GarageRefDto,
+  RequestJobDto,
+} from './quotes.dto';
 import { JOB_STATUSES, type JobStatus } from './request-status';
 
 export const REVIEW_TEXT_MAX = 2000;
@@ -71,6 +76,10 @@ export class ReviewJobDto {
 }
 
 export class JobReviewContextDto {
+  // The name the published review will show, for the privacy line.
+  @ApiProperty({ type: DriverNameDto })
+  author!: DriverNameDto;
+
   @ApiProperty({ type: ReviewJobDto })
   job!: ReviewJobDto;
 
