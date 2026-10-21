@@ -39,7 +39,11 @@ test.describe('the copy voice of a visit', () => {
   // @traces 006-FR-006
   // @traces 006-FR-008
   test('keeps the voice from Home to Results @seeded', async ({ browser }) => {
-    const context = await browser.newContext();
+    // Results searches only from a place: here, the one the browser gives.
+    const context = await browser.newContext({
+      geolocation: { latitude: 44.4268, longitude: 26.1025 },
+      permissions: ['geolocation'],
+    });
     await context.addInitScript(() => {
       localStorage.setItem('mf-copy-deck', '2');
       localStorage.removeItem('mf-copy');
