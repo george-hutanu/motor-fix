@@ -54,6 +54,9 @@ import {
   type RequestStatus,
 } from './request-status';
 
+// Far above any garage's lifts; keeps the number inside the column's range.
+const LIFT_MAX = 99;
+
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
 
 export class ListQueryDto {
@@ -393,6 +396,14 @@ export class DeclineRequestDto {
 
 export class GarageQuoteDto extends OmitType(QuoteDto, ['garage'] as const) {}
 
+export class BookingMechanicDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+}
+
 export class GarageBookingDto extends OmitType(BookingDto, [
   'garage',
 ] as const) {
@@ -401,6 +412,14 @@ export class GarageBookingDto extends OmitType(BookingDto, [
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   mechanicId!: string | null;
+
+  @ApiProperty({
+    description:
+      "Who does the job: the booking's mechanic, or the owner's own row when the garage works without a team",
+    nullable: true,
+    type: BookingMechanicDto,
+  })
+  mechanic!: BookingMechanicDto | null;
 
   @ApiProperty({ nullable: true, type: Number })
   lift!: number | null;
@@ -556,6 +575,42 @@ export class SendQuoteDto {
   @IsString()
   @Length(1, QUOTE_NOTE_MAX)
   note?: string | null;
+}
+
+// The garage's choices when it confirms a booking. A null is no choice: the
+// field is left out instead.
+export class ConfirmBookingDto {
+  @ApiPropertyOptional({
+    description:
+      "Required while the garage's team is on; refused while it is off",
+    format: 'uuid',
+  })
+  @ValidateIf((dto: ConfirmBookingDto) => dto.mechanicId !== undefined)
+  @IsUUID()
+  mechanicId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "1 to the garage's lift count; refused while it schedules without lifts",
+    maximum: LIFT_MAX,
+    minimum: 1,
+  })
+  @ValidateIf((dto: ConfirmBookingDto) => dto.lift !== undefined)
+  @IsInt()
+  @Min(1)
+  @Max(LIFT_MAX)
+  lift?: number;
+}
+
+export class ConfirmOptionsDto {
+  @ApiProperty({ description: '0 while the garage schedules without lifts' })
+  liftCount!: number;
+
+  @ApiProperty({
+    description: 'Empty while the garage works without a team',
+    type: [BookingMechanicDto],
+  })
+  mechanics!: BookingMechanicDto[];
 }
 
 // The driver's acceptance of a quote: whether the garage may read the car's

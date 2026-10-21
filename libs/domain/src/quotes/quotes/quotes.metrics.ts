@@ -99,3 +99,24 @@ export const quoteAccepts = () =>
 export function recordQuoteAccept(outcome: QuoteAcceptOutcome) {
   quoteAccepts().add(1, { outcome });
 }
+
+export const BOOKING_CONFIRM_OUTCOMES = [
+  'confirmed',
+  'mechanic_busy',
+  'lift_busy',
+  'outside_hours',
+  'mechanic_unavailable',
+  'invalid_transition',
+  'refused',
+] as const;
+export type BookingConfirmOutcome = (typeof BOOKING_CONFIRM_OUTCOMES)[number];
+
+export const bookingConfirms = () =>
+  meter().createCounter('motorfix_booking_confirms_total', {
+    description: 'Bookings garages tried to confirm, by outcome',
+  });
+
+// One count per confirmation a garage tries, by outcome; never who or which.
+export function recordBookingConfirm(outcome: BookingConfirmOutcome) {
+  bookingConfirms().add(1, { outcome });
+}

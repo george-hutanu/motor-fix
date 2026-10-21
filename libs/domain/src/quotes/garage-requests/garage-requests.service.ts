@@ -1,5 +1,4 @@
 import type {
-  GarageBookingDto,
   GarageCloseReason,
   GarageRequestDto,
   GarageRequestJobPriceDto,
@@ -34,8 +33,10 @@ import { ANSWERING } from '../answers';
 import { PAGE_SIZE } from '../quotes-config';
 import {
   assertCursor,
+  bookingMechanicInclude,
   closeReasonOf,
   firstLine,
+  garageBookingOf,
   iso,
   jobsOf,
   NEWEST_FIRST,
@@ -149,29 +150,6 @@ function summaryOf(
     status: row.status,
   };
 }
-
-const bookingOf = (booking: Booking): GarageBookingDto => ({
-  cancelledAt: iso(booking.cancelledAt),
-  cancelledBySide: booking.cancelledBySide,
-  cancelNote: booking.cancelNote,
-  cancelReason: booking.cancelReason,
-  completedAt: iso(booking.completedAt),
-  confirmBy: booking.confirmBy.toISOString(),
-  confirmedAt: iso(booking.confirmedAt),
-  confirmedBy: booking.confirmedBy,
-  createdAt: booking.createdAt.toISOString(),
-  durationMinutes: booking.durationMinutes,
-  historyShared: booking.historyShared,
-  id: booking.id,
-  lateCancellation: booking.lateCancellation,
-  lift: booking.lift,
-  mechanicId: booking.mechanicId,
-  moveCount: booking.moveCount,
-  noShowAt: iso(booking.noShowAt),
-  quoteId: booking.quoteId,
-  startsAt: booking.startsAt.toISOString(),
-  status: booking.status,
-});
 
 type InboxStatus = 'waiting' | 'quoted' | 'declined' | 'accepted';
 
@@ -452,7 +430,7 @@ export class GarageRequestsService {
       include: {
         ...summaryInclude(garageId),
         bookings: {
-          include: { mechanic: { select: { accountId: true } } },
+          include: bookingMechanicInclude,
           orderBy: NEWEST_FIRST,
           take: 1,
           where: { garageId },
@@ -495,7 +473,7 @@ export class GarageRequestsService {
       row.driver.phone;
     return {
       ...summary,
-      booking: booking ? bookingOf(booking) : null,
+      booking: booking ? garageBookingOf(booking) : null,
       car: {
         ...summary.car,
         ...plateOf(row.car.plate, plateShown),

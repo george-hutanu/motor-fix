@@ -1,6 +1,8 @@
 import type {
   BookingDto,
+  BookingMechanicDto,
   CarSnapshotDto,
+  GarageBookingDto,
   GarageCloseReason,
   GarageRefDto,
   QuoteDto,
@@ -14,6 +16,7 @@ import type {
   Garage,
   GarageStatus,
   JobType,
+  Mechanic,
   Quote,
   QuoteJob,
   QuoteRequest,
@@ -132,6 +135,50 @@ export const bookingOf = (
   durationMinutes: booking.durationMinutes,
   garage: garageRef(booking.garage),
   id: booking.id,
+  noShowAt: iso(booking.noShowAt),
+  quoteId: booking.quoteId,
+  startsAt: booking.startsAt.toISOString(),
+  status: booking.status,
+});
+
+// Who does the job: the booking's own mechanic, else the one its job carries
+// (the owner, for a garage that works without a team).
+export const bookingMechanicInclude = {
+  job: { select: { mechanic: true } },
+  mechanic: true,
+} as const;
+
+type MechanicRow = {
+  mechanic: Mechanic | null;
+  job: { mechanic: Mechanic | null } | null;
+};
+
+export function mechanicOf(row: MechanicRow): BookingMechanicDto | null {
+  const mechanic = row.mechanic ?? row.job?.mechanic;
+  return mechanic ? { id: mechanic.id, name: mechanic.name } : null;
+}
+
+// A booking as its garage reads it.
+export const garageBookingOf = (
+  booking: Booking & MechanicRow,
+): GarageBookingDto => ({
+  cancelledAt: iso(booking.cancelledAt),
+  cancelledBySide: booking.cancelledBySide,
+  cancelNote: booking.cancelNote,
+  cancelReason: booking.cancelReason,
+  completedAt: iso(booking.completedAt),
+  confirmBy: booking.confirmBy.toISOString(),
+  confirmedAt: iso(booking.confirmedAt),
+  confirmedBy: booking.confirmedBy,
+  createdAt: booking.createdAt.toISOString(),
+  durationMinutes: booking.durationMinutes,
+  historyShared: booking.historyShared,
+  id: booking.id,
+  lateCancellation: booking.lateCancellation,
+  lift: booking.lift,
+  mechanic: mechanicOf(booking),
+  mechanicId: booking.mechanicId,
+  moveCount: booking.moveCount,
   noShowAt: iso(booking.noShowAt),
   quoteId: booking.quoteId,
   startsAt: booking.startsAt.toISOString(),
