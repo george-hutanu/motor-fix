@@ -87,6 +87,8 @@ export { ProfileViewsModule } from './insights/profile-views/profile-views.modul
 export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { initProductCounters } from './metrics/product-counters';
+export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
+export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
@@ -111,6 +113,8 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
+export { BOOKING_TIMERS_CONSUMER } from './quotes/booking-timers/booking-timers';
+export { BookingTimersModule } from './quotes/booking-timers/booking-timers.module';
 export { DeclineService } from './quotes/decline/decline.service';
 export { DECLINE_WINDOW_CONSUMER } from './quotes/decline-window/decline-window';
 export { DeclineWindowModule } from './quotes/decline-window/decline-window.module';

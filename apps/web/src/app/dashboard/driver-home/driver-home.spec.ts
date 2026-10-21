@@ -675,7 +675,11 @@ describe('the panels’ states', () => {
 // @traces 313-FR-012
 describe('Panou’s quotes panel', () => {
   const booked = (status: 'awaiting_confirmation' | 'confirmed') =>
-    ({ confirmBy: '2026-10-18T10:00:00.000Z', status }) as const;
+    ({
+      confirmBy: '2026-10-18T10:00:00.000Z',
+      startsAt: '2026-10-20T06:00:00.000Z',
+      status,
+    }) as const;
   const comparison = (element: HTMLElement) =>
     panel(element, 'quotes')?.querySelector('mf-quotes-compare');
 
@@ -784,6 +788,22 @@ describe('Panou once a quote is accepted', () => {
     expect(requestsList).toHaveBeenCalledTimes(2);
     expect(carsList).toHaveBeenCalledTimes(1);
   });
+
+  // @traces 389-FR-016
+  it.each(['booking.confirmed', 'booking.lapsed'] as const)(
+    'reads the requests again on %s',
+    async (kind) => {
+      const { settle } = await render({
+        requests: [request({ quotesCount: 2 })],
+      });
+
+      events.next({ at: new Date().toISOString(), id: 'booking-1', kind });
+      await new Promise((r) => setTimeout(r, 400));
+      await settle();
+
+      expect(requestsList).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('reads nothing again for other kinds', async () => {
     await render({ requests: [request()] });

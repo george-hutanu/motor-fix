@@ -199,6 +199,32 @@
     "title": "Lista de prețuri"
   },
   "quotes": {
+    "confirm": {
+      "cancel": "Renunță",
+      "done": "Programare confirmată",
+      "duration": "{minutes} min",
+      "lift": "Elevator",
+      "liftNumber": "Elevator {n}",
+      "mechanic": "Mecanic",
+      "mechanicRequired": "Alege un mecanic.",
+      "noLift": "Fără elevator",
+      "noMechanics": "Adaugă mai întâi un mecanic în echipă.",
+      "openTeam": "Deschide echipa",
+      "pickMechanic": "Alege mecanicul",
+      "problem": {
+        "invalid_transition": {
+          "cancelled": "Programarea a fost anulată",
+          "confirmed": "Programarea e deja confirmată",
+          "lapsed": "Programarea a expirat"
+        },
+        "lift_busy": "Elevatorul {lift} e ocupat la ora asta",
+        "mechanic_busy": "{name} e ocupat la ora asta",
+        "mechanic_unavailable": "Mecanicul nu e disponibil",
+        "outside_hours": "În afara programului"
+      },
+      "submit": "Confirmă",
+      "title": "Confirmă programarea"
+    },
     "send": {
       "cancel": "Renunță",
       "day": "Ziua",
@@ -241,8 +267,11 @@
     },
     "sentList": {
       "accepted": "Acceptată · așteaptă confirmarea ta",
+      "booked": "Acceptată · programată",
+      "confirm": "Confirmă programarea",
       "empty": "Nicio ofertă trimisă încă.",
       "heading": "Oferte trimise",
+      "lift": "Elevator {n}",
       "loading": "Se încarcă ofertele trimise",
       "phone": "Sună clientul: {phone}",
       "waiting": "Așteaptă răspunsul clientului"

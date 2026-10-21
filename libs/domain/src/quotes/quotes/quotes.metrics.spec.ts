@@ -6,6 +6,9 @@ import {
 } from '@opentelemetry/sdk-metrics';
 
 import {
+  BOOKING_CONFIRM_OUTCOMES,
+  recordBookingConfirm,
+  recordBookingLapse,
   recordDeclineWindow,
   recordQuoteAccept,
   recordQuoteSend,
@@ -133,5 +136,32 @@ describe('counting quote acceptances', () => {
         { outcome: 'refused', value: 1 },
       ]),
     );
+  });
+});
+
+// @traces 389-FR-018
+describe('counting booking confirmations and lapses', () => {
+  it('adds one per confirmation by outcome, with no identifiers', async () => {
+    for (const outcome of BOOKING_CONFIRM_OUTCOMES)
+      recordBookingConfirm(outcome);
+    recordBookingConfirm('confirmed');
+
+    expect(await points('motorfix_booking_confirms_total')).toEqual(
+      BOOKING_CONFIRM_OUTCOMES.map((outcome) => ({
+        outcome,
+        value: outcome === 'confirmed' ? 2 : 1,
+      })),
+    );
+  });
+
+  it('adds one per lapse by where the request went and whether the sweep ran it', async () => {
+    recordBookingLapse('quoted', false);
+    recordBookingLapse('quoted', false);
+    recordBookingLapse('closed', true);
+
+    expect(await points('motorfix_booking_lapses_total')).toEqual([
+      { request: 'quoted', sweep: 'false', value: 2 },
+      { request: 'closed', sweep: 'true', value: 1 },
+    ]);
   });
 });

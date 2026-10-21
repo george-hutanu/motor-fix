@@ -2,6 +2,11 @@ import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
 import type { Overlays } from '@motor-fix/overlays';
 
 import {
+  type ConfirmBookingData,
+  ConfirmBookingDialog,
+  type ConfirmBookingResult,
+} from './confirm-booking-dialog/confirm-booking-dialog';
+import {
   type DeclineRequestData,
   DeclineRequestDialog,
   type DeclineRequestResult,
@@ -16,7 +21,7 @@ import {
 type Lists = Pick<GarageRequestsFeed, 'reload' | 'sent'> | null;
 type Request = Pick<GarageRequestSummaryDto, 'car' | 'driver' | 'id'>;
 
-// Trimite oferta and Refuză, from a row or from the open request: each opens
+// Trimite oferta, Refuză and Confirmă programarea, from a row or from the open request: each opens
 // its dialog and keeps the lists in step with the answer it returns.
 export async function sendQuote(overlays: Overlays, lists: Lists, id: string) {
   const result = await overlays.open<SendQuoteResult, SendQuoteData>(
@@ -50,5 +55,18 @@ export async function declineRequest(
     },
   );
   if (result === 'declined' || result === 'refused') lists?.reload();
+  return result;
+}
+
+export async function confirmBooking(
+  overlays: Overlays,
+  lists: Lists,
+  row: GarageRequestSummaryDto,
+) {
+  const result = await overlays.open<ConfirmBookingResult, ConfirmBookingData>(
+    ConfirmBookingDialog,
+    { data: { row }, shape: 'drawer', title: 'garage.quotes.confirm.title' },
+  );
+  if (result === 'confirmed' || result === 'refused') lists?.reload();
   return result;
 }

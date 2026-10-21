@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { databaseUrl, quotesWorld } from './quotes.testing';
 import { CANCEL_REASONS } from './quotes-config';
@@ -243,4 +245,160 @@ describe('the booking idempotency key', () => {
 
     expect(booking.idempotencyKey).toHaveLength(200);
   });
+});
+
+// @traces 389-FR-006
+describe('the garage lift count', () => {
+  const MIGRATIONS = join(__dirname, '../../prisma/migrations');
+
+  // The part of the migration after its backfill marker, statement by
+  // statement.
+  const backfill = () => {
+    const folder = readdirSync(MIGRATIONS).find((name) =>
+      name.endsWith('_booking_confirm'),
+    );
+    return readFileSync(
+      join(MIGRATIONS, String(folder), 'migration.sql'),
+      'utf8',
+    )
+      .split('-- backfill')[1]
+      .split(/;\s*$/m)
+      .map((sql) => sql.replace(/--.*$/gm, '').trim())
+      .filter((sql) => sql !== '');
+  };
+
+  const surveyed = async (lifts: string | null) => {
+    const garage = await world.garage(`Garaj ${randomUUID()}`);
+    if (lifts !== null) {
+      await prisma.garageSurvey.create({
+        data: {
+          foundVia: 'google',
+          garageId: garage.id,
+          liftsCount: lifts,
+          mechanicsCount: '1-2',
+          wantsDaySheets: false,
+          wantsLiveMedia: false,
+        },
+      });
+    }
+    return garage.id;
+  };
+
+  it('is 0 for a new garage', async () => {
+    const garage = await world.garage('Garaj Nordic');
+
+    expect(garage.liftCount).toBe(0);
+  });
+
+  it('refuses a negative count', async () => {
+    const garage = await world.garage('Garaj Nordic');
+
+    await expect(
+      prisma.garage.update({
+        data: { liftCount: -1 },
+        where: { id: garage.id },
+      }),
+    ).rejects.toThrow(/lift_count/);
+  });
+
+  it('is filled once from the sign-up survey, 0 without one', async () => {
+    const ids = {
+      fourPlus: await surveyed('4+'),
+      none: await surveyed(null),
+      one: await surveyed('1'),
+      twoThree: await surveyed('2-3'),
+      zero: await surveyed('0'),
+    };
+    await prisma.garage.updateMany({
+      data: { liftCount: 0 },
+      where: { id: { in: Object.values(ids) } },
+    });
+
+    for (const sql of backfill()) await prisma.$executeRawUnsafe(sql);
+
+    const counts = Object.fromEntries(
+      await Promise.all(
+        Object.entries(ids).map(async ([key, id]) => [
+          key,
+          (await prisma.garage.findUniqueOrThrow({ where: { id } })).liftCount,
+        ]),
+      ),
+    );
+    expect(counts).toEqual({
+      fourPlus: 4,
+      none: 0,
+      one: 1,
+      twoThree: 2,
+      zero: 0,
+    });
+  });
+});
+
+// @traces 389-FR-007
+describe('the overlap rules of confirmed bookings', () => {
+  // 09:00 in Bucharest; every booking the world makes lasts 90 minutes.
+  const NINE = Date.parse('2026-11-12T07:00:00Z');
+  const at = (minutes: number) =>
+    new Date(NINE + minutes * 60_000).toISOString();
+
+  let garageId: string;
+  let mechanicId: string;
+
+  beforeEach(async () => {
+    garageId = (await world.garage('Garaj Nordic')).id;
+    mechanicId = (
+      await prisma.mechanic.create({
+        data: { garageId, name: 'Mihai Dumitru' },
+      })
+    ).id;
+  });
+
+  it('refuses a mechanic two confirmed bookings that overlap', async () => {
+    await world.booked(garageId, at(0), 'confirmed', { mechanicId });
+
+    await expect(
+      world.booked(garageId, at(30), 'confirmed', { mechanicId }),
+    ).rejects.toThrow(/booking_mechanic_span_excl/);
+  });
+
+  it('refuses one lift of a garage two confirmed bookings that overlap', async () => {
+    await world.booked(garageId, at(0), 'confirmed', { lift: 1 });
+
+    await expect(
+      world.booked(garageId, at(89), 'confirmed', { lift: 1 }),
+    ).rejects.toThrow(/booking_lift_span_excl/);
+  });
+
+  it('lets a booking start where the other ends', async () => {
+    await world.booked(garageId, at(0), 'confirmed', { lift: 1, mechanicId });
+
+    await expect(
+      world.booked(garageId, at(90), 'confirmed', { lift: 1, mechanicId }),
+    ).resolves.toMatchObject({ status: 'confirmed' });
+  });
+
+  it('lets another lift, another garage’s lift and no lift overlap', async () => {
+    const other = await world.garage('Service Militari');
+    await world.booked(garageId, at(0), 'confirmed', { lift: 1 });
+
+    await expect(
+      Promise.all([
+        world.booked(garageId, at(0), 'confirmed', { lift: 2 }),
+        world.booked(other.id, at(0), 'confirmed', { lift: 1 }),
+        world.booked(garageId, at(0), 'confirmed'),
+        world.booked(garageId, at(0), 'confirmed'),
+      ]),
+    ).resolves.toHaveLength(4);
+  });
+
+  it.each(['awaiting_confirmation', 'cancelled', 'lapsed'] as const)(
+    'leaves a %s booking out of the rule',
+    async (status) => {
+      await world.booked(garageId, at(0), 'confirmed', { lift: 1, mechanicId });
+
+      await expect(
+        world.booked(garageId, at(0), status, { lift: 1, mechanicId }),
+      ).resolves.toMatchObject({ status });
+    },
+  );
 });

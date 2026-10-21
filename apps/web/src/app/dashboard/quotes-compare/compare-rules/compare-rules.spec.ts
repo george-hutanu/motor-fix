@@ -147,6 +147,7 @@ describe('a row’s state', () => {
   it('holds every waiting quote while the newest booking waits for the garage', () => {
     const booking = {
       confirmBy: '2026-10-18T10:00:00.000Z',
+      startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
     };
 
@@ -159,6 +160,7 @@ describe('a row’s state', () => {
   it('gives a waiting quote its action back once the booking lapsed', () => {
     const booking = {
       confirmBy: '2026-10-16T10:00:00.000Z',
+      startsAt: '2026-10-20T06:00:00.000Z',
       status: 'lapsed' as const,
     };
 
@@ -186,6 +188,7 @@ describe('the request the overview shows', () => {
     const waiting = summary({
       booking: {
         confirmBy: '2026-10-18T10:00:00.000Z',
+        startsAt: '2026-10-20T06:00:00.000Z',
         status: 'awaiting_confirmation',
       },
       createdAt: '2026-10-12T09:00:00.000Z',
@@ -193,7 +196,11 @@ describe('the request the overview shows', () => {
       status: 'booked',
     });
     const confirmed = summary({
-      booking: { confirmBy: '2026-10-18T10:00:00.000Z', status: 'confirmed' },
+      booking: {
+        confirmBy: '2026-10-18T10:00:00.000Z',
+        startsAt: '2026-10-20T06:00:00.000Z',
+        status: 'confirmed',
+      },
       createdAt: '2026-10-13T09:00:00.000Z',
       id: 'confirmed',
       status: 'booked',

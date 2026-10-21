@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-19
+updated: 2026-10-21
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -40,6 +40,7 @@ features:
   - 1191-resilient-uploads
   - 1181-rate-limits
   - 1190-live-reconnects
+  - 389-confirm-booking-lift-mechanic
 ---
 
 # Capability: Observability
@@ -847,6 +848,10 @@ _From 1181-rate-limits._
 ### 1190-FR-014 — A replay MUST be counted by outcome (`none`, `some`, `capped`) with the rows replayed, and a planned close by its reason, in the API's metrics, each listed in `infra/observability/inventory.json` with the reason no alert is needed (a failed replay degrades to the open views' re-read; a Redis outage already alerts).
 
 _From 1190-live-reconnects._
+
+### 389-FR-018 — Observability (AGENTS.md): the new endpoint, the three timer kinds and the two consumers MUST be listed in `infra/observability/inventory.json`; the confirm (a product action) MUST emit one counter with the outcome (`confirmed`, `mechanic_busy`, `lift_busy`, `outside_hours`, `mechanic_unavailable`, `invalid_transition`, `refused` for 400/403/404) and one log line per outcome naming the booking id; the lapse kind one counter of lapses with whether the request stayed open or closed; the existing queue metrics cover the timers and consumers; the PR's Observability section lists them.
+
+_From 389-confirm-booking-lift-mechanic._
 
 ## Retired
 

@@ -750,7 +750,8 @@ async function priceList(db: Client) {
   }
   await price('front-brakes', 'bmw', [110000, 170000], null, 2);
   await db.query(
-    `UPDATE garage SET labour_to_bani = COALESCE(labour_to_bani, 24000)
+    `UPDATE garage SET labour_to_bani = COALESCE(labour_to_bani, 24000),
+       lift_count = GREATEST(lift_count, 2)
      WHERE slug = 'service-auto-militari'`,
   );
   await db.query(

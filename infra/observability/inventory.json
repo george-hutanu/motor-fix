@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 149,
+    "count": 151,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1571,6 +1571,92 @@
       ],
       "reason": "the owner's add of an approved catalogue job to the price list, the proposal of a job the catalogue lacks (catalogue-jobs.controller.ts: a pending job_type with its catalogue_job.proposed event) and the removal with the job's brand ranges and ticks, written to PostgreSQL with their audit entries and a price_list.updated event in one transaction; a refused add, proposal or removal is a 4xx the error-rate rule reads; no counter of its own: the audit holds who added and proposed what; no outside call",
       "story": "ST-174"
+    },
+    {
+      "kind": "queue",
+      "name": "booking-timers",
+      "source": "libs/domain/src/quotes/booking-timers/booking-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "carries the relay's quote.accepted and booking.confirmed events and each accepted booking's two confirm reminders and its lapse, with the 5-minute sweep for a lost lapse; one BookingTimers log line per fired timer naming the booking id and what it did; lapses counted by motorfix_booking_lapses_total (request quoted or closed, by timer or sweep); BullMQ's queue metrics cover depth and failures; booking-lapse-sweep-late fires when the sweep lapses more than 10 bookings in an hour (lost timers)",
+      "story": "ST-389"
+    },
+    {
+      "kind": "queue",
+      "name": "booking-confirmed",
+      "source": "libs/domain/src/notifications/booking-confirmed/booking-confirmed.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures; the confirmations themselves are counted by motorfix_booking_confirms_total",
+      "story": "ST-389"
+    },
+    {
+      "kind": "queue",
+      "name": "booking-lapsed",
+      "source": "libs/domain/src/notifications/booking-lapsed/booking-lapsed.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the booking id and how many were told, the driver and the garage's owners and receptionists; BullMQ's queue metrics cover depth and failures; the lapses themselves are counted by motorfix_booking_lapses_total",
+      "story": "ST-389"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_booking_confirms_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the confirmations garages try by outcome (confirmed, mechanic_busy, lift_busy, outside_hours, mechanic_unavailable, invalid_transition, refused) with no identifiers, with one Confirm log line per try naming the booking id and the outcome; a refusal is a garage's choice, not an outage; the api-error-rate rule covers the service that reports it",
+      "story": "ST-389"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_booking_lapses_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "counts each lapsed booking by what became of its request (quoted when another quote is open, closed) and whether the timer or the sweep lapsed it; a rising sweep share means lost timers, which booking-lapse-sweep-late watches",
+      "story": "ST-389"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-confirm",
+      "source": "libs/domain/src/quotes/confirm/confirm.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/confirm",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one Confirm log line per try naming the booking id and the outcome; the count by outcome is the motorfix_booking_confirms_total entry",
+      "story": "ST-389"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-confirm-options",
+      "source": "libs/domain/src/quotes/confirm/confirm.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/confirm-options",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the mechanics and lifts a confirmation may pick; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-389"
     }
   ]
 }

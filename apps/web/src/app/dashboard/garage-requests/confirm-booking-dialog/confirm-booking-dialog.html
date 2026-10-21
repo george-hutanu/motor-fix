@@ -1,0 +1,68 @@
+@if (problem(); as said) {
+  <p class="problem" role="alert">{{ said }}</p>
+}
+<p class="left"><time [attr.datetime]="booking.confirmBy">{{ left() }}</time></p>
+<p class="who">
+  <span class="name">{{ row.driver.shortName }}</span>
+  <span class="car">{{ car }}</span>
+</p>
+<p class="jobs">{{ jobs() || row.descriptionLine }}</p>
+<p class="when">
+  <time [attr.datetime]="booking.startsAt">{{ slot() }}</time>
+  <span>{{ 'garage.quotes.confirm.duration' | t: { minutes: booking.durationMinutes } }}</span>
+</p>
+<form (submit)="submit($event)" novalidate>
+  @if (offered(); as choices) {
+    @if (choices.mechanicRequired) {
+      <div class="field">
+        <label for="mf-confirm-mechanic">{{ 'garage.quotes.confirm.mechanic' | t }}</label>
+        <select
+          hlmInput
+          id="mf-confirm-mechanic"
+          required
+          aria-describedby="mf-confirm-mechanic-none mf-confirm-mechanic-error"
+          [attr.aria-invalid]="mechanicMessage() ? 'true' : null"
+          [disabled]="sending()"
+          (change)="pick('mechanic', $any($event.target).value)"
+        >
+          <option value="" [selected]="!mechanic()">{{ 'garage.quotes.confirm.pickMechanic' | t }}</option>
+          @for (one of choices.mechanics; track one.id) {
+            <option [value]="one.id" [selected]="one.id === mechanic()">{{ one.name }}</option>
+          }
+        </select>
+        @if (noMechanics()) {
+          <p class="none" id="mf-confirm-mechanic-none">
+            {{ 'garage.quotes.confirm.noMechanics' | t }}
+            @if (teamLink()) {
+              <a routerLink="/app/garage/team" (click)="task.close('cancelled')">{{ 'garage.quotes.confirm.openTeam' | t }}</a>
+            }
+          </p>
+        }
+        <p class="error mf-message" id="mf-confirm-mechanic-error" role="alert">{{ mechanicMessage() }}</p>
+      </div>
+    }
+    @if (lifts().length) {
+      <div class="field">
+        <label for="mf-confirm-lift">{{ 'garage.quotes.confirm.lift' | t }}</label>
+        <select
+          hlmInput
+          id="mf-confirm-lift"
+          aria-describedby="mf-confirm-lift-error"
+          [attr.aria-invalid]="liftMessage() ? 'true' : null"
+          [disabled]="sending()"
+          (change)="pick('lift', $any($event.target).value)"
+        >
+          <option value="" [selected]="!lift()">{{ 'garage.quotes.confirm.noLift' | t }}</option>
+          @for (n of lifts(); track n) {
+            <option [value]="n" [selected]="'' + n === lift()">{{ 'garage.quotes.confirm.liftNumber' | t: { n } }}</option>
+          }
+        </select>
+        <p class="error mf-message" id="mf-confirm-lift-error" role="alert">{{ liftMessage() }}</p>
+      </div>
+    }
+  }
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.quotes.confirm.cancel' | t }}</button>
+    <button hlmBtn type="submit" [attr.aria-busy]="sending() || null" [disabled]="!offered() || noMechanics() || sending()">{{ 'garage.quotes.confirm.submit' | t }}</button>
+  </div>
+</form>

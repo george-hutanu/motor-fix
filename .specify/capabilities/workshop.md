@@ -1,9 +1,10 @@
 ---
 capability: workshop
-updated: 2026-10-09
+updated: 2026-10-21
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
+  - 389-confirm-booking-lift-mechanic
 ---
 
 # Capability: Workshop
@@ -12,9 +13,9 @@ The work in the garage for a confirmed booking: the job, its stages and the time
 
 ## Requirements
 
-### 220-FR-007 — A JOB MUST store: booking, garage, car, driver, mechanic (optional), status ∈ `to_do`, `in_work`, `paused`, `done`, `cancelled`, `started_at`, `paused_at`, `finished_at`, `handed_over_at`, `eta_at` (optional), `final_price_bani` (optional, recorded at handover by a later story), `created_at`; one JOB per booking. A JOB_STEP MUST store: job, position, `label` (the garage's text, 1 to 120 characters), `customer_label` (optional, the words the driver sees, 1 to 120 characters), `done_at` (optional). A JOB_STAGE_ENTRY MUST store: job, from status (absent for the first), to status, actor (account, optional for `system`), `actor_role`, `text` (optional, the garage's own words for the driver, at most 500 characters), `at`, so the tracker of a later story shows when each stage began. Nothing in this story creates a job; it is created `to_do` by the confirmation story.
+### 389-FR-002 — The confirm MUST lock the booking row (`SELECT … FOR UPDATE`), then, in that one transaction, check in this order: the booking is `awaiting_confirmation` (else 409 `invalid_transition` with the entity `booking` and its state), `confirm_by` is after now (else 409 `invalid_transition` with the state `lapsed`, the row left to the lapse timer), the switches and the fields agree (FR-004, FR-005), the mechanic is one of the garage's (FR-004), the lift is within 1 … the garage's lift count (FR-006), the slot lies inside the opening hours (FR-008), and the mechanic and the lift are free (FR-007); then set `status` `confirmed`, `confirmed_at`, `confirmed_by` (the actor), `mechanic_id`, `lift`; create one JOB `to_do` for the booking (garage, the request's car, the driver, the mechanic of FR-005) with its first JOB_STAGE_ENTRY (no from-status, to `to_do`, the actor); move every other `waiting` quote of the request to `lost` and every `waiting` recipient to `closed` through the transition service; record the audit entries: the booking's `stage` (`awaiting_confirmation` → `confirmed`), `mechanic_id` and `lift` (old null), the job's creation; write the outbox events `booking.confirmed` `{ bookingId, requestId, quoteId, startsAt, durationMinutes, mechanicId, lift }` to the audiences `account:{driverId}`, `garage:{garageId}` and, when the platform routes one, `mechanic:{mechanicId}`, and one `quote.closed` `{ quoteIds, requestId }` to the driver's account and each losing garage; and clear the booking's three timers (FR-010) after the commit. The request stays `booked`. Nothing is written when any check fails.
 
-_From 220-requests-quotes-bookings._
+_From 389-confirm-booking-lift-mechanic._
 
 ### 424-FR-001 — A JOB_STEP MUST also store `done_by` (the account that ticked it, optional; cleared with `done_at` on an untick), and the job's read MUST return each step's `doneAt` and `doneBy` and the job's steps done and total counts.
 
@@ -87,3 +88,7 @@ _From 424-job-steps._
 ### 424-FR-018 — Tests MUST cover, in Jest on real PostgreSQL and Redis: add, rename, reorder, remove, tick and untick by the owner and by the job's mechanic; 403 for a receptionist's writes and for another mechanic of the garage; 404 for another garage; a resent add with the same `Idempotency-Key` makes one step; positions without gaps after a removal and a reorder; the text limits and the cap of 20; ticks refused while `to_do` and everything refused once `done` or `cancelled`; `done_by` stored and cleared; audit rows and events in the same transaction; two simultaneous writes both applied; the list's day filter, order and counts. Web unit tests cover the view's controls per role and state, the optimistic save and the queue. End to end (Playwright): the owner adds three steps to a job in work; the job's mechanic, signed in on a phone, ticks one; in a second browser the owner's open panel shows "1 din 3 gata" without a reload.
 
 _From 424-job-steps._
+
+## Retired
+
+- `220-FR-007` — superseded by `389-FR-002` (2026-10-21)

@@ -3,10 +3,12 @@ import { BookingCancelReason, DeclineReason } from '../generated/prisma/enums';
 
 // @traces 220-FR-010
 // @traces 221-FR-009
+// @traces 389-FR-010
 describe('the request, quote and booking limits', () => {
   it('holds every limit and duration in one place', () => {
     expect(config).toMatchObject({
       BOOKING_CONFIRM_LAPSE_HOURS: 24,
+      BOOKING_CONFIRM_REMINDER_HOURS: [12, 2],
       BOOKING_MAX_MOVES: 2,
       DECLINE_UNDO_MINUTES: 5,
       FREE_CANCEL_CUTOFF_HOURS: 2,

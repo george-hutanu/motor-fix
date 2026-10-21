@@ -32,6 +32,7 @@ import {
   PAGE_TAKE,
   page,
   quoteOf,
+  rowBookingOf,
   snapshotOf,
 } from '../reads';
 
@@ -51,9 +52,7 @@ const summaryOf = ({
   bookings: [booking],
   ...row
 }: SummaryRow): RequestSummaryDto => ({
-  booking: booking
-    ? { confirmBy: booking.confirmBy.toISOString(), status: booking.status }
-    : null,
+  booking: booking ? rowBookingOf(booking) : null,
   car: snapshotOf(row),
   closedAt: iso(row.closedAt),
   closedReason: row.closedReason,

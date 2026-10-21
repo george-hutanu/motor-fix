@@ -552,6 +552,7 @@ describe('the comparison kept current', () => {
         ...comparison().request,
         booking: {
           confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
+          startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
         status: 'booked',
@@ -563,6 +564,7 @@ describe('the comparison kept current', () => {
         ...comparison().request,
         booking: {
           confirmBy: new Date(Date.now() - 3_600_000).toISOString(),
+          startsAt: '2026-10-20T06:00:00.000Z',
           status: 'lapsed',
         },
       },
