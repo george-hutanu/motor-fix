@@ -3,6 +3,7 @@
     [status]="status"
     [requestedItems]="view.value()?.requestedItems ?? []"
     [reason]="view.value()?.reason ?? null"
+    [submittedAt]="view.value()?.submittedAt ?? null"
   />
 }
 @if (view.failed()) {

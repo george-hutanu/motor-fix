@@ -2,11 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   input,
 } from '@angular/core';
 import type { VerificationStageStatus } from '@motor-fix/contracts';
 import { VERIFICATION_REASON_CODES } from '@motor-fix/contracts/verification-target';
-import { TranslatePipe } from '@motor-fix/i18n';
+import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 
 const KEY = 'public.verificationStatus.';
 
@@ -40,20 +41,26 @@ const SECOND: Partial<Record<VerificationStageStatus, string>> = {
   templateUrl: './verification-stages.html',
 })
 export class VerificationStages {
+  private readonly i18n = inject(I18n);
   readonly status = input.required<VerificationStageStatus>();
   readonly requestedItems = input<readonly string[]>([]);
   readonly reason = input<{ code: string; note: string } | null>(null);
+  // When the listing was sent: the first stage carries its day.
+  readonly submittedAt = input<string | null>(null);
 
   protected readonly stages = computed(() => {
     const status = this.status();
     // A status this page does not know lights no stage.
     const reached = Object.hasOwn(REACHED, status) ? REACHED[status] : 0;
+    const sent = this.submittedAt();
+    const day = sent ? formatDay(sent, this.i18n.language()) : null;
     return [
       `${KEY}submitted`,
       (Object.hasOwn(SECOND, status) && SECOND[status]) || `${KEY}inReview`,
       `${KEY}approved`,
     ].map((name, i) => ({
       current: i === reached - 1,
+      date: i === 0 ? day : null,
       lit: i < reached,
       name,
     }));

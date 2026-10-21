@@ -1,0 +1,45 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+h1,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+button[hlmBtn] {
+  justify-self: start;
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  white-space: normal;
+}
+.skeleton {
+  display: grid;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+}
+.skeleton span {
+  height: 16px;
+  border-radius: var(--mf-radius-panel);
+  background: var(--mf-line);
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  to {
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
+}

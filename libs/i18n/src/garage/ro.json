@@ -355,5 +355,11 @@
       "team": "Răspunde echipei MotorFix."
     },
     "text": "Profil suspendat · {reason}. Profilul nu apare pe hartă până se rezolvă."
+  },
+  "verification": {
+    "checkIn": "O verificăm în 1–2 zile lucrătoare.",
+    "contact": "Contactează MotorFix",
+    "loadFailed": "Nu am putut încărca starea verificării.",
+    "title": "Profilul tău e în verificare"
   }
 }

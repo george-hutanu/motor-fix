@@ -78,6 +78,8 @@ async function render(
         useValue: {
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
+          // The verification page has its own spec; here it waits.
+          verificationStatusControllerRead: () => new Promise(() => undefined),
         },
       },
     ],
@@ -128,12 +130,33 @@ describe('the garage Panou', () => {
     expect(text(element)).not.toContain('Vezi toate');
   });
 
-  it('keeps the check line, and no panel, while the garage is a draft', async () => {
+  // @traces 101-FR-001
+  it('shows the verification page, and no panel, pill or legal check, while the garage is a draft', async () => {
     const element = await render(OWNER, { status: 'draft' });
 
-    expect(text(element)).toBe('Profilul tău e în verificare.');
+    expect(element.querySelector('mf-verification-progress')).not.toBeNull();
+    expect(text(element.querySelector('h1'))).toBe(
+      'Profilul tău e în verificare',
+    );
     expect(panel(element)).toBeNull();
+    expect(element.querySelector('[data-verified-pill]')).toBeNull();
+    expect(element.querySelector('mf-garage-legal-check')).toBeNull();
   });
+
+  // @traces 101-FR-001
+  it.each(['approved', 'suspended'] as const)(
+    'shows Panou, not the verification page, for an %s garage',
+    async (status) => {
+      const element = await render(OWNER, { status });
+
+      expect(element.querySelector('mf-verification-progress')).toBeNull();
+      expect(panel(element)).not.toBeNull();
+      expect(element.querySelector('mf-garage-legal-check')).not.toBeNull();
+      expect(element.querySelector('[data-verified-pill]') !== null).toBe(
+        status === 'approved',
+      );
+    },
+  );
 
   it('shows the panel for a suspended garage', async () => {
     const element = await render(OWNER, { status: 'suspended' });
