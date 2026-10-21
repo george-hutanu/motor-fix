@@ -224,6 +224,25 @@ describe('the verification status, for the owner', () => {
     },
   );
 
+  // @traces 101-FR-004 101-FR-008
+  it('keeps an approval’s internal note out of the answer', async () => {
+    const w = await world('approved');
+    await file(w.dinamo.id, 'approved', {
+      reasonNote: 'Notă internă: verificat telefonic cu patronul.',
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      reason: null,
+      requestedItems: [],
+      status: 'approved',
+      submittedAt: SENT_AT.toISOString(),
+    });
+    expect(JSON.stringify(res.body)).not.toContain('Notă internă');
+  });
+
   it('reads the newest file', async () => {
     const w = await world();
     await file(w.dinamo.id, 'rejected', {

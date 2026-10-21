@@ -87,8 +87,13 @@ test.describe('the sign-up survey', () => {
       /WhatsApp\s*Pornit/,
     ]);
     await forward(page).click();
-    await expect(survey(page).getByRole('status')).toHaveText(
+    // Saved, then the sign-up dialog over the page with the step 1 address,
+    // which takes the status line out of the accessibility tree.
+    await expect(survey(page).locator('p.saved')).toHaveText(
       'Răspunsurile tale sunt salvate.',
     );
+    await expect(
+      page.getByRole('dialog', { name: 'Cont nou' }).getByLabel('E‑mail'),
+    ).toHaveValue(email);
   });
 });

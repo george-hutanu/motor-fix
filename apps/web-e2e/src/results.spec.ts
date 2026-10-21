@@ -734,8 +734,14 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const address = page.url();
 
-    await dragTo(page, 80);
-    await rests(page, 'full');
+    // A drag the page takes before its sheet listens leaves it half: drag
+    // again until it rests full, then step back.
+    await expect(async () => {
+      await dragTo(page, 80);
+      await expect(sheet(page)).toHaveAttribute('data-position', 'full', {
+        timeout: 1_000,
+      });
+    }).toPass();
 
     await page.goBack();
     await rests(page, 'half');

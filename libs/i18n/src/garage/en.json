@@ -354,5 +354,11 @@
       "team": "Answer the MotorFix team."
     },
     "text": "Profile suspended · {reason}. The profile is off the map until this is fixed."
+  },
+  "verification": {
+    "checkIn": "We check it within 1–2 working days.",
+    "contact": "Contact MotorFix",
+    "loadFailed": "We could not load the verification status.",
+    "title": "Your profile is being checked"
   }
 }

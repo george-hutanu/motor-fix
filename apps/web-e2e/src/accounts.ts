@@ -13,6 +13,8 @@ export const ACCOUNTS = {
   admin: 'admin@example.test',
   // A second admin, so a rule that needs two can be asked and approved.
   admin2: 'admin2@example.test',
+  // The owner of Atelier Nou, a garage still waiting for approval.
+  draftOwner: 'nou@example.test',
   driver: 'sofer@example.test',
   garage: 'service@example.test',
   // Garage only, with no garage: adding a first car makes it a driver.

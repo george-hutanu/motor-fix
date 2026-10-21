@@ -30,7 +30,6 @@ async function decisionMails(page: Page, email: string): Promise<Mail[]> {
 test.describe('the verification result e-mail @seeded @mailbox @database', () => {
   let db: Client;
   let eventId: string | undefined;
-  let fileId: string | undefined;
 
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
@@ -42,12 +41,6 @@ test.describe('the verification result e-mail @seeded @mailbox @database', () =>
     await db.query('DELETE FROM notification WHERE event_id = $1', [eventId]);
     await db.query('DELETE FROM outbox_event WHERE id = $1', [eventId]);
     eventId = undefined;
-  });
-
-  test.afterEach(async () => {
-    if (!fileId) return;
-    await db.query('DELETE FROM verification_file WHERE id = $1', [fileId]);
-    fileId = undefined;
   });
 
   test.afterAll(async () => {
@@ -63,18 +56,15 @@ test.describe('the verification result e-mail @seeded @mailbox @database', () =>
       owner: (await decisionMails(page, ACCOUNTS.garage)).length,
       receptionist: (await decisionMails(page, ACCOUNTS.receptionist)).length,
     };
-    // The seed gives the owner's garage no verification file, so the test
-    // adds the decided one the event names, and removes it afterwards.
+    // The seed approves the owner's garage through a file: the event names it.
     const { rows } = await db.query<{ file: string; garage: string }>(
-      `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at)
-       SELECT gen_random_uuid(), g.id, 'approved', now(), now() FROM garage g
-       WHERE g.slug = $1
-       RETURNING id::text AS file, garage_id::text AS garage`,
+      `SELECT f.id::text AS file, g.id::text AS garage
+       FROM verification_file f JOIN garage g ON g.id = f.garage_id
+       WHERE g.slug = $1 AND f.status = 'approved'`,
       [SLUG],
     );
-    expect(rows[0], 'the seeded garage is missing').toBeDefined();
+    expect(rows[0], 'the seeded approved file is missing').toBeDefined();
     const { file, garage } = rows[0] ?? { file: '', garage: '' };
-    fileId = file;
     const recorded = await db.query<{ id: string }>(
       `INSERT INTO outbox_event (audience, kind, payload, subject_id)
        VALUES ($1, 'verification.decided', $2, $3) RETURNING id::text`,

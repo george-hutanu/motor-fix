@@ -12,8 +12,13 @@ import { type Area, DASHBOARDS } from '../views';
 const viewOf = (area: Area, path: string) =>
   DASHBOARDS[area].views.find((view) => view.path === path)!;
 
-async function render(area: Area, path: string, language: 'ro' | 'en' = 'ro') {
-  const current = signal({ capabilities: [] } as unknown as MeDto);
+async function render(
+  area: Area,
+  path: string,
+  language: 'ro' | 'en' = 'ro',
+  me: Partial<MeDto> = {},
+) {
+  const current = signal({ capabilities: [], ...me } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -69,5 +74,19 @@ describe('a view’s own empty state', () => {
     expect(text(element)).toBe(
       'Aici vei vedea mecanicii service‑ului și ce poate face fiecare.',
     );
+  });
+});
+
+// @traces 101-FR-011
+describe('the dashboard view of a draft garage', () => {
+  it('keeps the plain line: the verification page is the dashboard’s own', async () => {
+    const element = await render('garage', '', 'ro', {
+      garageAccess: [
+        { features: {}, garageId: 'garage-1', role: 'owner', status: 'draft' },
+      ],
+      garageId: 'garage-1',
+    } as unknown as Partial<MeDto>);
+
+    expect(text(element)).toBe('Aici vei vedea ce se întâmplă azi în service.');
   });
 });

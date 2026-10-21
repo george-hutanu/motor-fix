@@ -24,6 +24,7 @@ features:
   - 1354-garage-legal-checks
   - 1357-rar-covered-jobs
   - 116-listing-verification-status
+  - 101-verification-progress
 ---
 
 # Capability: Garage verification
@@ -710,9 +711,9 @@ _From 116-listing-verification-status._
 
 _From 116-listing-verification-status._
 
-### 116-FR-015 — The status view MUST show the three stages with the lit one from the status: "Trimis" for `submitted`; "În verificare" for `in_review`; "Aprobat, pe hartă" for `approved` (all three lit); for `more_requested` the second stage reads "Cerute completări" / "More details requested" and the requested items are listed under it (adding them is #32, not built here); for `rejected` the second stage reads "Respins" / "Rejected" with the reason's text and the note; for `draft` (a garage with no file) no stage is lit and the off-map line shows, with no button. Each change is announced in a live region.
+### 101-FR-002 — The strip MUST show the sending date with the first stage, "Trimis · 2 mart. 2027" / "Submitted · 2 Mar 2027" (the i18n library's fixed short months, `formatDay`), from `submittedAt` in Europe/Bucharest, in the interface language's short-month form, wherever it is given one (this page and `ListingStatus`); a read with no `submittedAt`, and the just-sent summary, show the stage name alone. Modifies 116-FR-015 (the strip gains an optional date).
 
-_From 116-listing-verification-status._
+_From 101-verification-progress._
 
 ### 116-FR-016 — While the status view is open, `verification.opened`, `verification.decided` and `verification.reopened` arriving on the owner's stream for the garage MUST make the view read the status again (no reload); on every reconnect the view reads it again (255-FR-004). No event, audience or channel is added: the verification events already reach the garage's channel.
 
@@ -721,6 +722,38 @@ _From 116-listing-verification-status._
 ### 116-FR-021 — When the status read fails (network, 5xx), the view keeps the stage it shows, says in one line that it could not refresh, and offers "Reîncearcă" / "Retry"; the next event or reconnect reads again. On first load with no stage yet, it shows that line and the retry only.
 
 _From 116-listing-verification-status._
+
+### 101-FR-003 — For `more_requested` the page MUST list the requested items under "Cerute completări" with the existing `public.verificationStatus.items.*` labels, in the order the admin chose. The "Completează" button and the form it opens are #32's, not this story's: no button and no test for it here.
+
+_From 101-verification-progress._
+
+### 101-FR-004 — For `rejected` the page MUST show "Respins" with the reason's label from the same item labels and the admin's note as written (116-FR-015), and a button "Contactează MotorFix" / "Contact MotorFix" that opens the dashboard's contact overlay (the shell's `CONTACT` action, #166). The admin's internal approval note MUST never be in the status response or on the page (116-FR-014 unchanged).
+
+_From 101-verification-progress._
+
+### 101-FR-005 — `verification.opened`, `verification.decided` and `verification.reopened` for the garage, and every reconnect of the live stream, MUST make the page read the status again within 5 seconds, without a reload; events arriving in a burst coalesce into one read and the newest answer is the one shown (116-FR-016; no event, audience or channel is added, the verification events already reach `garage:{garageId}`).
+
+_From 101-verification-progress._
+
+### 101-FR-006 — `verification.decided` on the garage's channel MUST also make the shell read the session again, so an approval swaps the page for the full dashboard and shows the menu within 5 seconds, as `garage.suspended` does today, and keyboard focus lands on Panou's `h1` rather than being lost with the removed page; the shell's own re-read on every reconnect covers a decision the stream missed, so the page never reads the session itself.
+
+_From 101-verification-progress._
+
+### 101-FR-008 — Only the garage's `owner` reads the status; a `receptionist` or `mechanic` of a draft garage sees the title and the two lines, no strip and no status call (the route answers them 403, 116-FR-014 unchanged). Anyone outside the garage never reaches `/app/garage` for it (the area guard and 404, unchanged).
+
+_From 101-verification-progress._
+
+### 101-FR-009 — Loading shows a skeleton of the stage strip. A failed first read shows "Nu am putut încărca starea verificării." / "We could not load the verification status." with "Reîncearcă" / "Retry"; a failed refresh keeps the shown stage with the strip's one-line notice and retry (116-FR-021).
+
+_From 101-verification-progress._
+
+### 101-FR-010 — The page sends nothing, writes nothing and records no audit entry; messages about the file stay #145's.
+
+_From 101-verification-progress._
+
+### 101-FR-013 — Tests MUST cover, in colocated Jest specs: the status-to-stage mapping and the date line for all six read states; the reason and item labels; the page shown for `draft` and Panou for `approved` and `suspended`; the re-read on each of the three event kinds and on reconnect; the session re-read and swap on `verification.decided`; the empty menu and the move off `/app/garage/requests` while `draft`; the skeleton, the first-load error and the retry; and, on real PostgreSQL and Redis, 403 for the receptionist and mechanic, 404 outside the garage, and no approval note in the response (116-FR-014's tests extended where they do not already prove it). A Playwright test MUST send a listing and create the account, sign in and see "Trimis" on `/app/garage`, as an admin open the file and see "În verificare" light without a reload, ask for more and see "Cerute completări", approve and see the dashboard open.
+
+_From 101-verification-progress._
 
 ## Retired
 
@@ -767,3 +800,4 @@ _From 116-listing-verification-status._
 - `210-FR-006` — superseded by `1354-FR-004` (2026-10-20)
 - `210-FR-005` — superseded by `1354-FR-005` (2026-10-20)
 - `210-FR-011` — superseded by `1354-FR-007` (2026-10-20)
+- `116-FR-015` — superseded by `101-FR-002` (2026-10-21)

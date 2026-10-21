@@ -4,12 +4,11 @@ import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { type OwnDriver, ownDriver } from './own-driver.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// The seeded driver with a Dacia Logan, and the owner of Service Auto
-// Militari, which ticks the oil service for Dacia and lists it at 250–400 lei
-// and 1 hour on its price list.
-const DRIVER = 'cerere@example.test';
+// The owner of Service Auto Militari, which ticks the oil service for Dacia
+// and lists it at 250–400 lei and 1 hour on its price list.
 const OWNER = 'militari@example.test';
 const OIL = 'Schimb de ulei și filtre';
 
@@ -25,21 +24,16 @@ const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 // The driver sends its own request for an oil service to the owner's garage,
 // so no other flow's request is the one answered.
-async function sendRequest(request: APIRequestContext) {
+async function sendRequest(request: APIRequestContext, own: OwnDriver) {
   const owner = await accessToken(request, OWNER);
   const me = await request.get('/api/v1/me', { headers: bearer(owner) });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await accessToken(request, DRIVER);
-  const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
-  const { items } = (await cars.json()) as {
-    items: { id: string; model: string }[];
-  };
-  const car = items.find((item) => item.model === 'Logan') ?? items[0];
+  const driver = await accessToken(request, own.email);
   const res = await request.post('/api/v1/quote-requests', {
     data: {
-      carId: car.id,
+      carId: own.carId,
       description: `Schimb de ulei înainte de drum ${randomUUID().slice(0, 8)}`,
       garageIds: [garageId],
       jobTypeIds: [oil.id],
@@ -78,6 +72,18 @@ async function signedIn(page: Page, email: string, landing: string) {
 
 // @seeded: the seeded owner answers a driver's request with a quote.
 test.describe('sending a quote @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its driver and car straight to PostgreSQL, which needs DATABASE_URL',
+  );
+  let own: OwnDriver;
+  test.beforeEach(async ({ request }) => {
+    own = await ownDriver(request, 'cerere-proprie');
+  });
+  test.afterEach(async () => {
+    await own?.remove();
+  });
+
   // @traces 344-FR-010
   // @traces 344-FR-011
   // @traces 344-FR-014
@@ -89,7 +95,7 @@ test.describe('sending a quote @seeded', () => {
     request,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    const { driver, id } = await sendRequest(request);
+    const { driver, id } = await sendRequest(request, own);
     await signedIn(page, OWNER, '/app/garage');
     await page
       .getByRole('navigation', { name: 'Meniu' })
@@ -170,12 +176,12 @@ test.describe('sending a quote @seeded', () => {
     // Signed in as the driver, the request shows it has a quote.
     const context = await browser.newContext();
     try {
-      const own = await context.newPage();
-      await own.setViewportSize({ height: 900, width: 1440 });
-      await signedIn(own, DRIVER, '/app/driver');
-      await own.goto('/app/driver/requests');
+      const driverPage = await context.newPage();
+      await driverPage.setViewportSize({ height: 900, width: 1440 });
+      await signedIn(driverPage, own.email, '/app/driver');
+      await driverPage.goto('/app/driver/requests');
       await expect(
-        own
+        driverPage
           .locator('li[data-request]')
           .filter({ hasText: 'Dacia Logan' })
           .filter({ hasText: OIL })

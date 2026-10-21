@@ -22,7 +22,7 @@ const KEY = 'public.verificationStatus.';
 export const ownedGarage = (me: MeDto | null) =>
   me?.garageAccess.find((access) => access.role === 'owner')?.garageId;
 
-const STAGE_NAME: Record<VerificationStageStatus, string> = {
+export const STAGE_NAME: Record<VerificationStageStatus, string> = {
   approved: `${KEY}approved`,
   draft: `${KEY}notSent`,
   in_review: `${KEY}inReview`,

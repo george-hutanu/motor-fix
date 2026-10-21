@@ -1,0 +1,35 @@
+@if (owner()) {
+  @if (view.value(); as file) {
+    <mf-verification-stages
+      [status]="file.status"
+      [requestedItems]="file.requestedItems"
+      [reason]="file.reason"
+      [submittedAt]="file.submittedAt"
+      [showOffMap]="false"
+    />
+    <p>{{ 'garage.verification.checkIn' | t }}</p>
+    @if (file.status !== 'approved') {
+      <p class="off-map">{{ 'public.verificationStatus.offMap' | t }}</p>
+    }
+    @if (file.status === 'rejected') {
+      <button hlmBtn type="button" (click)="contact()">{{ 'garage.verification.contact' | t }}</button>
+    }
+    @if (view.failed()) {
+      <div class="failed">
+        <p>{{ 'public.verificationStatus.refreshFailed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'public.verificationStatus.retry' | t }}</button>
+      </div>
+    }
+  } @else if (view.error()) {
+    <div class="failed">
+      <p>{{ 'garage.verification.loadFailed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'public.verificationStatus.retry' | t }}</button>
+    </div>
+  } @else {
+    <div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+  }
+  <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
+} @else {
+  <p>{{ 'garage.verification.checkIn' | t }}</p>
+  <p>{{ 'public.verificationStatus.offMap' | t }}</p>
+}

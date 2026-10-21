@@ -6,6 +6,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import {
   CarsService,
   GarageRequestsService,
+  GaragesService,
   type MeDto,
   NotificationsService,
   PlacesService,
@@ -70,7 +71,7 @@ const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
 
 describe('the dashboard view lists', () => {
-  // @traces 030-FR-009, 030-FR-011
+  // @traces 030-FR-009 030-FR-011
   it('gives the driver reviews and saved garages their own empty state', () => {
     const byPath = (path: string) =>
       DASHBOARDS.driver.views.find((view) => view.path === path);
@@ -554,6 +555,22 @@ describe('the dashboard view lists', () => {
       allowedViews('garage', OWNER, { whatsapp: false }).map((v) => v.path),
     ).toEqual(paths('garage', OWNER));
   });
+
+  // @traces 101-FR-007
+  it('opens no garage view while the garage is a draft, and every allowed one once it is approved or suspended', () => {
+    expect(allowedViews('garage', OWNER, {}, 'draft')).toEqual([]);
+    for (const status of ['approved', 'suspended'] as const) {
+      expect(
+        allowedViews('garage', OWNER, {}, status).map((v) => v.path),
+      ).toEqual(paths('garage', OWNER));
+    }
+    expect(allowedViews('garage', OWNER, {}).map((v) => v.path)).toEqual(
+      paths('garage', OWNER),
+    );
+    expect(
+      allowedViews('driver', ['driver.reviews'], {}, 'draft').length,
+    ).toBeGreaterThan(0);
+  });
 });
 
 @Component({ imports: [RouterOutlet], template: '<router-outlet />' })
@@ -634,6 +651,12 @@ async function open(
       {
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerList: () => requestList() },
+      },
+      {
+        provide: GaragesService,
+        useValue: {
+          verificationStatusControllerRead: () => new Promise(() => undefined),
+        },
       },
       {
         provide: AdminOverview,
@@ -837,14 +860,12 @@ describe('the dashboard view routes', () => {
       expect(element.textContent).not.toContain(
         'Aici vei vedea ce se întâmplă azi în service.',
       );
-      expect(element.textContent).not.toContain(
-        'Profilul tău e în verificare.',
-      );
+      expect(element.querySelector('mf-verification-progress')).toBeNull();
     }
   });
 
-  // @traces 097-FR-008
-  it('says a draft garage’s profile is being checked on its dashboard, and only there', async () => {
+  // @traces 097-FR-008 101-FR-001 101-FR-007
+  it('shows a draft garage’s verification page on its dashboard, and sends every view back to it', async () => {
     const { element, harness } = await open(
       '/app/garage',
       OWNER,
@@ -852,17 +873,18 @@ describe('the dashboard view routes', () => {
       access('draft'),
     );
 
-    expect(element.textContent).toContain('Profilul tău e în verificare.');
+    expect(element.querySelector('mf-verification-progress')).not.toBeNull();
+    expect(element.querySelector('mf-garage-requests-panel')).toBeNull();
     expect(element.textContent).not.toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
     );
-    await harness.navigateByUrl('/app/garage/reviews');
-    expect(harness.routeNativeElement?.textContent).toContain(
-      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
-    );
-    expect(harness.routeNativeElement?.textContent).not.toContain(
-      'Profilul tău e în verificare.',
-    );
+    for (const view of ['requests', 'reviews', 'team']) {
+      await harness.navigateByUrl(`/app/garage/${view}`);
+      expect(TestBed.inject(Router).url).toBe('/app/garage');
+      expect(
+        harness.routeNativeElement?.querySelector('mf-verification-progress'),
+      ).not.toBeNull();
+    }
   });
 
   // @traces 097-FR-006 097-FR-008
@@ -881,7 +903,7 @@ describe('the dashboard view routes', () => {
     expect(element.textContent).toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
     );
-    expect(element.textContent).not.toContain('Profilul tău e în verificare.');
+    expect(element.querySelector('mf-verification-progress')).toBeNull();
   });
 
   it('opens the released garages view for an admin', async () => {

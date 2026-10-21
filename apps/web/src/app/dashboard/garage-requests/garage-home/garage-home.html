@@ -1,21 +1,23 @@
-<mf-suspended-banner />
-@if (verified()) {
-  <div class="strip">
-    <p class="verified" data-verified-pill>
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{{ 'garage.legal.pill' | t }}
-    </p>
-    @if (checkedLine(); as line) {
-      <span class="muted" data-verified-line>{{ line }}</span>
-    }
-  </div>
-}
-@if (owner()) {
-  <mf-garage-legal-check />
-}
 @if (draft()) {
-  <p>{{ 'shell.frame.verification' | t }}</p>
-} @else if (feed.visible()) {
-  <mf-garage-requests-panel [limit]="4" />
+  <mf-verification-progress />
 } @else {
-  <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
+  <mf-suspended-banner />
+  @if (verified()) {
+    <div class="strip">
+      <p class="verified" data-verified-pill>
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{{ 'garage.legal.pill' | t }}
+      </p>
+      @if (checkedLine(); as line) {
+        <span class="muted" data-verified-line>{{ line }}</span>
+      }
+    </div>
+  }
+  @if (owner()) {
+    <mf-garage-legal-check />
+  }
+  @if (feed.visible()) {
+    <mf-garage-requests-panel [limit]="4" />
+  } @else {
+    <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
+  }
 }

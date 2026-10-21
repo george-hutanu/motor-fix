@@ -2126,9 +2126,11 @@ describe('the RAR and activities rows', () => {
 
   it('corrects the number through the admin call and shows the answer', async () => {
     const host = await open();
-    api.verificationFileControllerCorrect.mockResolvedValue(
-      fileOf({ file: { rarNumber: 'CJ 221/2021' } }),
-    );
+    const corrected = fileOf({ file: { rarNumber: 'CJ 221/2021' } });
+    api.verificationFileControllerCorrect.mockImplementation(async () => {
+      answer = async () => corrected;
+      return corrected;
+    });
     const rar = () => row(host, 'register', 'rar');
 
     press(rar(), 'Corectează');
@@ -2146,6 +2148,39 @@ describe('the RAR and activities rows', () => {
       id: FILE,
     });
     expect(rar()?.querySelector('[data-part="correct"]')).toBeNull();
+    expect(text(rar())).toContain('CJ 221/2021');
+  });
+
+  it('keeps the corrected number when a re-read sent before it answers after it', async () => {
+    const host = await open(fileOf({ file: { rarNumber: null } }));
+    const corrected = fileOf({ file: { rarNumber: 'CJ 221/2021' } });
+    let stale: (file: VerificationFileDto) => void = () => undefined;
+    answer = () => new Promise((resolve) => (stale = resolve));
+    events.next({
+      at: NOW.toISOString(),
+      id: FILE,
+      kind: 'verification.opened',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await settle();
+    api.verificationFileControllerCorrect.mockImplementation(async () => {
+      answer = async () => corrected;
+      return corrected;
+    });
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    (field as HTMLInputElement).value = 'cj 221/2021';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+    // The re-read went out before the correction: it reads the number missing.
+    const LATER = new Date(NOW.getTime() + 1000).toISOString();
+    stale(fileOf({ file: { openedAt: LATER, rarNumber: null } }));
+    await settle();
+
     expect(text(rar())).toContain('CJ 221/2021');
   });
 

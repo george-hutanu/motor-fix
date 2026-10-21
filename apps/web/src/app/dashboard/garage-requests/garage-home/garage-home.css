@@ -13,7 +13,7 @@ p {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px var(--mf-space-4);
+  gap: var(--mf-space-2) var(--mf-space-4);
   min-width: 0;
 }
 .strip .muted {

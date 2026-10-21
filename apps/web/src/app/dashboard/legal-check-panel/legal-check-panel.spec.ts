@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import type { LegalCheckDto, LegalCheckRowDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -406,6 +409,22 @@ describe('the panel of a suspended garage', () => {
 
     expect(text(rar)).toBe(
       'RAR technical authorisation withdrawn on 12 Sep 2026 · Autorizația a expirat la 31 august re-checked on 12 Sep 2026 problem',
+    );
+  });
+});
+
+describe('the panel on a phone', () => {
+  const css = readFileSync(join(__dirname, 'legal-check-panel.css'), 'utf8');
+
+  it('writes its small text at body size on a phone', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\) \{\s*:host \{\s*--mf-size-small: var\(--mf-size-body\);/,
+    );
+  });
+
+  it('spaces its rows on the 4 px grid', () => {
+    expect(css).toMatch(
+      /\.row \{[^}]*gap: var\(--mf-space-2\) var\(--mf-space-4\);/,
     );
   });
 });

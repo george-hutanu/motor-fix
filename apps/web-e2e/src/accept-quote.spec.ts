@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { openSignIn, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // The seeded driver with a Dacia Logan and a phone, and the owner of
-// Service Auto Militari, the one approved seeded garage with staff (the test
-// workshop is a draft, which no request reaches).
+// Service Auto Militari, the approved seeded garage a request reaches (the
+// staff's workshop has no place on the map, so no request finds it).
 const DRIVER = 'cerere@example.test';
 const DRIVER_PHONE = '+40700000102';
 const MILITARI = 'militari@example.test';
@@ -78,10 +78,7 @@ async function twoQuotes(request: APIRequestContext) {
 async function signedIn(page: Page, email: string, landing: string) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  await openSignIn(page);
   await signIn(page, email);
   await expect(page).toHaveURL(landing);
 }

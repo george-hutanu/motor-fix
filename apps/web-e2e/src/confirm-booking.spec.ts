@@ -24,11 +24,26 @@ const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 // A slot days ahead, drawn from 300 days of minutes, so a run on a database
 // an earlier run left (or a parallel one) finds the mechanic and the lift
-// free: two hour-long slots overlap about once in 3,600 draws.
-function freeSlot() {
+// free: two hour-long slots overlap about once in 3,600 draws. A Bucharest
+// public holiday is drawn again: confirming refuses it as outside the hours.
+async function freeSlot(request: APIRequestContext) {
+  const year = new Date().getFullYear();
+  const holidays = new Set<string>();
+  for (const one of [year, year + 1, year + 2]) {
+    const res = await request.get(`/api/v1/public-holidays?year=${one}`);
+    expect(res.ok()).toBe(true);
+    for (const { day } of (await res.json()) as { day: string }[])
+      holidays.add(day);
+  }
+  const bucharestDay = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  });
   const minute = Math.floor(Date.now() / MINUTE);
-  const ahead = 3 * 24 * 60 + randomInt(300 * 24 * 60);
-  return new Date((minute + ahead) * MINUTE).toISOString();
+  for (;;) {
+    const ahead = 3 * 24 * 60 + randomInt(300 * 24 * 60);
+    const slot = new Date((minute + ahead) * MINUTE);
+    if (!holidays.has(bucharestDay.format(slot))) return slot.toISOString();
+  }
 }
 
 // One request of the driver's, quoted by Militari and accepted by the driver,
@@ -62,7 +77,7 @@ async function accepted(request: APIRequestContext) {
       durationMinutes: 60,
       fromLei: 300,
       requestId,
-      slot: freeSlot(),
+      slot: await freeSlot(request),
       toLei: 400,
     },
     headers: { ...bearer(militari), 'Idempotency-Key': randomUUID() },

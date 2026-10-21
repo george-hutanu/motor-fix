@@ -46,3 +46,36 @@ describe('the empty-state texts of a new account', () => {
     }
   });
 });
+
+const area = (name: 'garage' | 'shell', language: 'ro' | 'en') =>
+  flatten(
+    name,
+    JSON.parse(
+      readFileSync(join(__dirname, name, `${language}.json`), 'utf8'),
+    ) as Texts,
+  );
+
+describe('the verification page texts', () => {
+  // @traces 101-FR-011
+  it('has the page’s keys in Romanian and in English, none empty, and the old check line gone', () => {
+    const keys = [
+      'garage.verification.checkIn',
+      'garage.verification.contact',
+      'garage.verification.loadFailed',
+      'garage.verification.title',
+    ];
+    for (const language of ['ro', 'en'] as const) {
+      const texts = area('garage', language);
+      for (const key of keys) expect(texts[key]?.trim()).toBeTruthy();
+      expect(
+        area('shell', language)['shell.frame.verification'],
+      ).toBeUndefined();
+    }
+    expect(area('garage', 'ro')['garage.verification.title']).toBe(
+      'Profilul tău e în verificare',
+    );
+    expect(area('garage', 'en')['garage.verification.title']).toBe(
+      'Your profile is being checked',
+    );
+  });
+});

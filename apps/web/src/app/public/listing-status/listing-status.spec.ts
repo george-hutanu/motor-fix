@@ -89,6 +89,8 @@ const lit = (host: HTMLElement) =>
   );
 const secondStage = (host: HTMLElement) =>
   text(host.querySelector('ol.stages > li:nth-child(2) .name'));
+const firstStage = (host: HTMLElement) =>
+  text(host.querySelector('ol.stages > li:nth-child(1) .name'));
 const failedLine = (host: HTMLElement) => host.querySelector('.refresh-failed');
 const retry = (host: HTMLElement) =>
   failedLine(host)?.querySelector<HTMLButtonElement>('button') ?? null;
@@ -141,6 +143,24 @@ describe('the listing status', () => {
     const { host } = await render({ sent: 'submitted' });
 
     expect(lit(host)).toEqual([true, false, false]);
+  });
+
+  // @traces 101-FR-002
+  it('dates the first stage with the sending the read gives', async () => {
+    const { host } = await render();
+
+    expect(firstStage(host)).toBe('Trimis · 20 oct. 2026');
+  });
+
+  // @traces 101-FR-002
+  it('keeps the just-sent stage dateless until the read answers', async () => {
+    api.verificationStatusControllerRead.mockReturnValue(
+      new Promise(() => undefined),
+    );
+
+    const { host } = await render({ sent: 'submitted' });
+
+    expect(firstStage(host)).toBe('Trimis');
   });
 
   // @traces 116-FR-016

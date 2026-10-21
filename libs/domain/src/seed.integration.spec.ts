@@ -145,6 +145,11 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'nou@example.test': {
+        lastRole: 'garage',
+        roles: ['garage'],
+        status: 'active',
+      },
       'receptie-militari@example.test': {
         lastRole: 'receptionist',
         roles: ['receptionist'],
@@ -284,7 +289,7 @@ describe('seed', () => {
       ]),
     ).toEqual([
       ['atelier-dinamo', 'draft', ['in_review']],
-      ['atelier-test', 'draft', []],
+      ['atelier-nou', 'draft', []],
       ['service-dobre', 'draft', ['submitted']],
     ]);
   });
@@ -340,8 +345,8 @@ describe('seed', () => {
         where: { status: { not: 'approved' } },
       }),
     ).toBe(2);
-    expect(await prisma.verificationFile.count()).toBe(10);
-    expect(await prisma.verificationCheck.count()).toBe(80);
+    expect(await prisma.verificationFile.count()).toBe(11);
+    expect(await prisma.verificationCheck.count()).toBe(88);
   });
 
   it('gives each waiting file its 8 checks, none run yet', async () => {
@@ -394,11 +399,11 @@ describe('seed of the listed garages', () => {
       (g) => g.brands.find((b) => b.brand.key === 'dacia')?.stance ?? 'none',
     );
 
-  it('lists eight garages, each with a place, five taking Dacia, one refusing it, two silent', async () => {
+  it('lists nine garages, the staff garage without a place, six taking Dacia, one refusing it, two silent', async () => {
     expect(seed('test').status).toBe(0);
 
     const garages = await listed();
-    expect(garages).toHaveLength(8);
+    expect(garages).toHaveLength(9);
     expect(dacia(garages).sort()).toEqual([
       'does_not_take',
       'none',
@@ -408,8 +413,9 @@ describe('seed of the listed garages', () => {
       'works_on',
       'works_on',
       'works_on',
+      'works_on',
     ]);
-    for (const garage of garages) {
+    for (const garage of garages.filter((g) => g.slug !== 'atelier-test')) {
       expect(garage.latitude).not.toBeNull();
       expect(garage.longitude).not.toBeNull();
     }
@@ -522,7 +528,7 @@ describe('seed of the listed garages', () => {
   });
 
   // @traces 163-FR-005
-  it('places six listed garages in București and two in Cluj-Napoca, for the figures by city', async () => {
+  it('places six listed garages in București and two in Cluj-Napoca, the staff garage in no city, for the figures by city', async () => {
     expect(seed('test').status).toBe(0);
 
     const cities = await prisma.garage.groupBy({
@@ -540,6 +546,7 @@ describe('seed of the listed garages', () => {
     ).toEqual([
       ['bucuresti', 'București', 6],
       ['cluj-napoca', 'Cluj-Napoca', 2],
+      [null, null, 1],
     ]);
   });
 
@@ -554,7 +561,7 @@ describe('seed of the listed garages', () => {
       );
     });
 
-    it('starts with the leftover gone, so the seed links five garages to Dacia', async () => {
+    it('starts with the leftover gone, so the seed links six garages to Dacia', async () => {
       expect(await prisma.brand.count({ where: { key: 'dacia-left' } })).toBe(
         0,
       );
@@ -562,7 +569,7 @@ describe('seed of the listed garages', () => {
 
       expect(
         dacia(await listed()).filter((s) => s === 'works_on'),
-      ).toHaveLength(5);
+      ).toHaveLength(6);
     });
   });
 
@@ -604,7 +611,7 @@ describe('seed of the listed garages', () => {
     const admin = await prisma.account.findUniqueOrThrow({
       where: { email: 'admin@example.test' },
     });
-    expect(garages).toHaveLength(8);
+    expect(garages).toHaveLength(9);
     for (const garage of garages) {
       expect(garage.verificationFiles).toEqual([
         {
@@ -644,6 +651,7 @@ describe('seed of the listed garages', () => {
     ).toEqual([
       ['atelier-berceni', 4.9, 80, 15000],
       ['atelier-drumul-taberei', 4.2, 15, 14000],
+      ['atelier-test', null, 0, null],
       ['auto-pipera', null, 0, 22000],
       ['mecanic-mobil-cluj', 4.8, 35, 12000],
       ['service-auto-militari', 4.9, 120, 18000],

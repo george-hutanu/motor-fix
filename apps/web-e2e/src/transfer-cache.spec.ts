@@ -112,12 +112,22 @@ test.describe('a server-rendered page read once @seeded', () => {
     page,
   }) => {
     await hydrated(page, '/ro');
+    // The driver's Panou reads their own data with the token; those reads
+    // may leave after the address changes, so they are waited for first.
+    const own = [
+      '/api/v1/requests',
+      '/api/v1/quote-requests/active',
+      '/api/v1/cars',
+    ].map((path) =>
+      page.waitForResponse((res) => new URL(res.url()).pathname === path),
+    );
     await page
       .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, ACCOUNTS.driver);
     await expect(page).toHaveURL('/app/driver');
+    await Promise.all(own);
 
     const seen = reads(page);
     await openHome(page);

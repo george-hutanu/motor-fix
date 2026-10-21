@@ -1,18 +1,19 @@
-import {
-  type BrowserContext,
-  expect,
-  type Locator,
-  type Page,
-} from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ownAddress, ownMap, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
-import { JOBS, jpeg, KEPT } from './listing-kept.js';
+import {
+  answerSurvey,
+  confirmation,
+  current,
+  fillListing,
+  panel,
+  signUp,
+  statusView,
+  unique,
+} from './listing-send.js';
 
 test.beforeEach(({ context }) => ownMap(context));
-
-// A fake password for the accounts these tests create; never a real one.
-const NEW_PASSWORD = 'parola-noua-de-test';
 
 const TEXT = {
   en: {
@@ -28,60 +29,6 @@ const TEXT = {
 } as const;
 
 type Language = keyof typeof TEXT;
-
-const prices = (page: Page) => page.locator('mf-prices-step');
-const photos = (page: Page) => page.locator('mf-photos-step');
-const confirmation = (page: Page) =>
-  page.locator('mf-missing-summary .summary');
-const survey = (page: Page) => page.locator('mf-signup-survey');
-const panel = (page: Page) =>
-  page.getByRole('dialog').locator('mf-overlay-panel');
-const statusView = (page: Page) => page.locator('.status-view');
-const current = (scope: Locator) =>
-  scope.locator('mf-verification-stages li[aria-current="step"] .name');
-
-async function range(page: Page, name: string, from: string, to: string) {
-  await prices(page)
-    .getByRole('textbox', { exact: true, name: `${name}, de la` })
-    .fill(from);
-  await prices(page)
-    .getByRole('textbox', { exact: true, name: `${name}, până la` })
-    .fill(to);
-}
-
-const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-// A listing with nothing missing, under a name of its own so the admin's
-// queue shows its row; the e-mail is the one the sign-up dialog starts with.
-async function fillListing(context: BrowserContext, page: Page, name: string) {
-  const copy = structuredClone(KEPT);
-  copy.data.steps['1'].name = name;
-  await context.addInitScript((kept) => {
-    if (sessionStorage.getItem('kept')) return;
-    localStorage.setItem('mf.listing-draft', kept);
-    sessionStorage.setItem('kept', '1');
-  }, JSON.stringify(copy));
-  await ready(page, '/ro/list-your-garage');
-  const email = `trimis-${unique()}@example.test`;
-  await page.getByLabel('E‑mail').fill(email);
-  await page.getByLabel('E‑mail').blur();
-  // The photo picker opens once the draft exists on the server.
-  await expect(
-    photos(page).getByRole('button', { name: 'Alege fotografii' }),
-  ).toBeEnabled();
-  // The most popular brand, whichever the catalogue ranks first.
-  await page.locator('mf-brands-step .chips > li > button').first().click();
-  await range(page, 'Manoperă, pe oră', '120', '200');
-  for (const [job, from, to] of JOBS) await range(page, job, from, to);
-  await photos(page)
-    .locator('input[type="file"]')
-    .setInputFiles([jpeg('fata.jpg')]);
-  // The photo counts only once its upload has a key on the server.
-  await expect(photos(page).locator('li.photo').first()).toHaveAttribute(
-    'data-key',
-    /garage_photo\//,
-  );
-}
 
 // The public frame's switch, in a menu on a phone: a click that does not
 // scroll, as the listing check spec does.
@@ -99,28 +46,6 @@ async function press(page: Page, language: Language) {
   await expect(confirmation(page).locator('.complete')).toHaveText(
     TEXT[language].heading,
   );
-}
-
-// Five answers, each the first offered, then the starting features.
-async function answerSurvey(page: Page) {
-  await confirmation(page).locator('button.tell-us').click();
-  const forward = survey(page).locator('button.forward');
-  await forward.click();
-  for (let question = 0; question < 5; question++) {
-    await survey(page).getByRole('radio').first().click();
-    await forward.click();
-  }
-  await expect(survey(page).locator('.features li')).toHaveCount(5);
-  await forward.click();
-  await expect(panel(page)).toBeVisible();
-}
-
-async function signUp(page: Page, email: string) {
-  await expect(panel(page).locator('#mf-sign-up-email')).toHaveValue(email);
-  await panel(page).locator('#mf-sign-up-password').fill(NEW_PASSWORD);
-  await panel(page).getByRole('checkbox').check();
-  await panel(page).locator('button[type="submit"]').click();
-  await expect(statusView(page).locator('h1')).toBeFocused();
 }
 
 interface Layout {
@@ -163,10 +88,18 @@ async function holds(page: Page, scope: Locator) {
   await page.emulateMedia({ colorScheme: 'light' });
 }
 
-const stagesRead = (scope: Locator, language: Language) =>
-  expect(scope.locator('mf-verification-stages li .name')).toHaveText([
-    ...TEXT[language].stages,
+// The status view names the sending day beside the first stage; the
+// confirmation, shown before the server answers, does not.
+const sentOn = (stage: string) =>
+  new RegExp(`^${stage} · \\d{1,2} \\S+ \\d{4}$`);
+
+const stagesRead = (scope: Locator, language: Language, dated = false) => {
+  const [first = '', ...rest] = TEXT[language].stages;
+  return expect(scope.locator('mf-verification-stages li .name')).toHaveText([
+    dated ? sentOn(first) : first,
+    ...rest,
   ]);
+};
 
 test.describe('sending a listing for verification @seeded', () => {
   // @traces 116-FR-040
@@ -187,7 +120,7 @@ test.describe('sending a listing for verification @seeded', () => {
     await answerSurvey(page);
     await signUp(page, email);
 
-    await expect(current(statusView(page))).toHaveText('Trimis');
+    await expect(current(statusView(page))).toHaveText(sentOn('Trimis'));
     await expect(statusView(page).locator('mf-garage-preview')).toContainText(
       TEXT.ro.preview,
     );
@@ -207,9 +140,11 @@ test.describe('sending a listing for verification @seeded', () => {
       await signIn(desk, ACCOUNTS.admin);
       await expect(desk).toHaveURL('/app/admin');
       await desk.goto('/app/admin/garages');
+      // The link names its file: a row filter can catch a neighbour's link
+      // while the list re-renders.
       await desk
-        .locator('mf-admin-queue li.row', { hasText: name })
-        .locator('a.open')
+        .locator('mf-admin-queue')
+        .getByRole('link', { exact: true, name: `Deschide dosarul ${name}` })
         .click();
       await expect(desk.locator('mf-verification-file h3')).toHaveText(name);
     } finally {
@@ -258,9 +193,9 @@ test.describe('the confirmation, the sign-up step and the status view on every s
       await holds(page, panel(page));
 
       await signUp(page, email);
-      await stagesRead(statusView(page), language);
+      await stagesRead(statusView(page), language, true);
       await expect(current(statusView(page))).toHaveText(
-        TEXT[language].stages[0],
+        sentOn(TEXT[language].stages[0]),
       );
       await holds(page, statusView(page));
     });

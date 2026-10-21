@@ -15,6 +15,7 @@ async function render(
     status: VerificationStageStatus;
     requestedItems?: string[];
     reason?: { code: string; note: string } | null;
+    submittedAt?: string | null;
   },
   language: 'ro' | 'en' = 'ro',
 ) {
@@ -177,6 +178,54 @@ describe('the verification stages', () => {
     },
   );
 
+  // @traces 101-FR-002
+  it.each([
+    ['ro', 'Trimis · 2 mart. 2027'],
+    ['en', 'Submitted · 2 Mar 2027'],
+  ] as const)(
+    'gives the first stage its sending day in %s',
+    async (language, first) => {
+      const host = await render(
+        { status: 'in_review', submittedAt: '2027-03-02T08:30:00.000Z' },
+        language,
+      );
+
+      expect(names(host)[0]).toBe(first);
+    },
+  );
+
+  // @traces 101-FR-002
+  it('reads the day in Bucharest, where a late evening is already the next day', async () => {
+    const host = await render({
+      status: 'submitted',
+      submittedAt: '2027-03-01T22:30:00.000Z',
+    });
+
+    expect(names(host)[0]).toBe('Trimis · 2 mart. 2027');
+  });
+
+  // @traces 101-FR-002
+  it('names the first stage alone with no sending day', async () => {
+    const host = await render({ status: 'submitted', submittedAt: null });
+
+    expect(names(host)).toEqual([
+      'Trimis',
+      'În verificare',
+      'Aprobat, pe hartă',
+    ]);
+  });
+
+  // @traces 101-FR-002
+  it('dates the first stage only', async () => {
+    const host = await render({
+      reason: { code: 'rar', note: 'n' },
+      status: 'rejected',
+      submittedAt: '2027-03-02T08:30:00.000Z',
+    });
+
+    expect(names(host).slice(1)).toEqual(['Respins', 'Aprobat, pe hartă']);
+  });
+
   // @traces 116-FR-019
   it('stacks the stages on a phone and sets them in a row from a tablet', () => {
     const css = readFileSync(
@@ -192,5 +241,22 @@ describe('the verification stages', () => {
     expect(css.slice(wide)).toMatch(
       /\.stages \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
     );
+  });
+});
+
+// @traces 101-FR-002
+describe('the sending date', () => {
+  it('keeps the date on one line', () => {
+    const css = readFileSync(
+      join(__dirname, 'verification-stages.css'),
+      'utf8',
+    );
+    const html = readFileSync(
+      join(__dirname, 'verification-stages.html'),
+      'utf8',
+    );
+
+    expect(html).toContain('<span class="date">{{ stage.date }}</span>');
+    expect(css).toMatch(/\.date \{[^}]*white-space: nowrap;/);
   });
 });

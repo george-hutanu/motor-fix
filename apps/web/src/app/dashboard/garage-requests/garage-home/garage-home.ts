@@ -8,6 +8,7 @@ import { formatDayMonth, I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { GarageLegalCheck } from '../../garage-legal-check/garage-legal-check';
 import { garageOf, Session } from '../../session';
+import { VerificationProgress } from '../../verification-progress/verification-progress';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { GarageRequestsPanel } from '../garage-requests-panel/garage-requests-panel';
 import { SuspendedBanner } from '../suspended-banner/suspended-banner';
@@ -15,9 +16,9 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 // The garage's Panou: the "Profil verificat" pill and the RAR check line for
 // the owner and the receptionist of an approved garage, and the legal check
 // for its owner, suspended too; the
-// four newest waiting requests for whoever may answer quotes; the review line
-// while the garage is a draft; the suspension banner above it all while the
-// garage is suspended.
+// four newest waiting requests for whoever may answer quotes; the suspension
+// banner above it all while the garage is suspended. A draft garage sees only
+// where its verification stands.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -25,6 +26,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
     GarageRequestsPanel,
     SuspendedBanner,
     TranslatePipe,
+    VerificationProgress,
   ],
   selector: 'mf-garage-home',
   styleUrl: './garage-home.css',

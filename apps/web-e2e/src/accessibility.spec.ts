@@ -498,13 +498,20 @@ test.describe('axe on the quotes a driver compares @seeded', () => {
       found.push(...(await quotesShown(page, `the quotes on ${path}`)));
     }
 
-    // Accepting the first quote turns its row and locks the other.
+    // Accepting the first quote, once confirmed, turns its row and locks the
+    // other.
     await page.setViewportSize(DESKTOP);
     await rows
       .first()
       .locator('[data-part="action"]')
-      .getByRole('button')
+      .getByRole('button', { exact: true, name: 'Acceptă' })
       .click();
+    // Accepting asks first, in a dialog.
+    const confirm = page.getByRole('dialog', { name: /^Accepți oferta/ });
+    await confirm
+      .getByRole('button', { exact: true, name: 'Confirmă' })
+      .click();
+    await expect(confirm).toBeHidden();
     await expect(
       rows.first().locator('[data-part="action"] .state'),
     ).toBeVisible();
