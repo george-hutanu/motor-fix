@@ -6,10 +6,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { PriceListService } from './price-list.service';
+import { AuditService } from '../../audit/audit.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { JobTypeLoader } from '../../catalogue/job-types/job-type-loader';
+import { JOB_TYPES } from '../../catalogue/job-types/job-types';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -394,6 +397,59 @@ describe('the public profile and the owner agree', () => {
       owner.filter((item) => item.public).map((item) => item.jobTypeId),
     );
     expect(shown.map((job) => job.id)).toEqual([jobs[0].id, jobs[5].id]);
+  });
+});
+
+// @traces 1357-FR-005
+describe('the shipped catalogue and the RAR activities', () => {
+  const catalogue = async () => {
+    await new JobTypeLoader(prisma, new AuditService()).load(JOB_TYPES);
+    const jobs = await prisma.jobType.findMany({
+      where: { key: { in: ['ac-regas', 'diagnosis'] } },
+    });
+    const byKey = new Map(jobs.map((job) => [job.key, job.id]));
+    return {
+      diagnosis: byKey.get('diagnosis') ?? '',
+      regas: byKey.get('ac-regas') ?? '',
+    };
+  };
+
+  it('hides the air-con regas of a garage whose activities lack air-con', async () => {
+    const w = await world(['mechanics', 'brakes', 'steering', 'suspension']);
+    const { regas, diagnosis } = await catalogue();
+    await price(w, regas, 0);
+    await price(w, diagnosis, 1);
+
+    expect((await read(w)).body.items).toEqual([
+      expect.objectContaining({
+        jobTypeId: regas,
+        public: false,
+        reason: 'not_authorised',
+      }),
+      expect.objectContaining({ jobTypeId: diagnosis, public: true }),
+    ]);
+    expect(
+      (await profile(w)).body.jobTypes.map((job: { id: string }) => job.id),
+    ).toEqual([diagnosis]);
+  });
+
+  it('lists the air-con regas once the activities include air-con', async () => {
+    const w = await world(['mechanics', 'air_con']);
+    const { regas } = await catalogue();
+    await price(w, regas, 0);
+
+    expect((await read(w)).body.items[0]).toMatchObject({ public: true });
+    expect(
+      (await profile(w)).body.jobTypes.map((job: { id: string }) => job.id),
+    ).toEqual([regas]);
+  });
+
+  it('lists the air-con regas of a garage with no activities recorded', async () => {
+    const w = await world();
+    const { regas } = await catalogue();
+    await price(w, regas, 0);
+
+    expect((await read(w)).body.items[0]).toMatchObject({ public: true });
   });
 });
 

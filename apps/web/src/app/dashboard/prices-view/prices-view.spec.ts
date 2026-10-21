@@ -229,6 +229,7 @@ describe('Prețuri: every job with its state', () => {
     );
   });
 
+  // @traces 1357-FR-002
   it('names each reason in both languages, every hidden row amber', async () => {
     const reasons = [
       ['rejected', 'respins', 'rejected'],
@@ -376,6 +377,36 @@ describe('Prețuri: brand ranges under their job', () => {
     await settle();
 
     expect(brandLines(rows(element)[2])).toEqual(['BMW · 1,100–1,700 lei']);
+  });
+});
+
+// @traces 1357-FR-004
+describe('Prețuri: a job outside the RAR authorisation', () => {
+  const regas = (shown: boolean) =>
+    item({
+      jobTypeId: 'ac-regas',
+      nameEn: 'Air-con regas',
+      nameRo: 'Încărcare freon climă',
+      public: shown,
+      ...(shown ? {} : { reason: 'not_authorised' as const }),
+    });
+
+  it('turns the row to on the profile when a price list change re-reads it covered', async () => {
+    let covered = false;
+    const { element, settle } = await render(async () => ({
+      items: [regas(covered)],
+    }));
+    await settle();
+    expect(rows(element)[0].dataset['public']).toBe('false');
+
+    covered = true;
+    events.next(message('price_list.updated', GARAGE));
+    await wait(350);
+    await settle();
+
+    const [row] = rows(element);
+    expect(cell(row, 'state')).toBe('pe profil');
+    expect(row.dataset['public']).toBe('true');
   });
 });
 

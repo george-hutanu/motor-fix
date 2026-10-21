@@ -2046,6 +2046,7 @@ describe('the RAR and activities rows', () => {
     TestBed.resetTestingModule();
   };
 
+  // @traces 1357-FR-003
   it('labels the rows by what is checked, the RAR row by its result', async () => {
     const host = await open();
     expect(text(row(host, 'register', 'rar'))).toContain(
@@ -2272,6 +2273,7 @@ describe('the RAR and activities rows', () => {
     );
   });
 
+  // @traces 1357-FR-003
   it('names the ticked activities and the uncovered jobs of a recorded activities row', async () => {
     const more = {
       activities: [

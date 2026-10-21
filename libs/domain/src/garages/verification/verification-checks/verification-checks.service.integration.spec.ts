@@ -15,6 +15,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../../notifications/notifications.testing';
+import { PRICE_ROW_SELECT, priceListJobs } from '../../price-list/price-list';
 import { VerificationService } from '../verification.service';
 
 // @traces 300-FR-003 300-FR-004 300-FR-005 300-FR-006 300-FR-007 300-FR-009 300-FR-010 300-FR-011
@@ -241,6 +242,7 @@ describe('recording a check', () => {
     );
   });
 
+  // @traces 1357-FR-004
   it('stores the activities on the garage in the same save', async () => {
     const answer = await record('activities', {
       activities: ['mechanics', 'brakes'],
@@ -267,6 +269,49 @@ describe('recording a check', () => {
         result: 'not_run',
       },
     });
+  });
+
+  // @traces 1357-FR-004
+  it('lists a job on the next price read once the recorded activities cover it', async () => {
+    const regas = await prisma.jobType.create({
+      data: {
+        key: `regas-${randomUUID()}`,
+        nameEn: 'Air-con regas',
+        nameRo: 'Încărcare freon climă',
+        rarActivity: 'air_con',
+        status: 'approved',
+      },
+    });
+    await prisma.garagePrice.create({
+      data: {
+        fromBani: 10_000,
+        garageId,
+        jobTypeId: regas.id,
+        position: 0,
+        toBani: 20_000,
+        updatedBy: mihai.accountId,
+      },
+    });
+    const read = async () => {
+      const garage = await prisma.garage.findUniqueOrThrow({
+        select: { prices: { select: PRICE_ROW_SELECT }, rarActivities: true },
+        where: { id: garageId },
+      });
+      return priceListJobs(garage.prices, garage.rarActivities)[0];
+    };
+
+    await record('activities', {
+      activities: ['mechanics'],
+      detail: 'lipsește climatizarea',
+      result: 'warning',
+    });
+    expect(await read()).toMatchObject({ reason: 'not_authorised' });
+
+    await record('activities', {
+      activities: ['mechanics', 'air_con'],
+      result: 'ok',
+    });
+    expect((await read())?.reason).toBeUndefined();
   });
 
   // @traces 204-FR-004
@@ -304,6 +349,7 @@ describe('recording a check', () => {
   });
 
   // @traces 357-FR-006
+  // @traces 1357-FR-004
   it('drops the public profile when the activities change, since they decide its jobs', async () => {
     const changed = () =>
       prisma.outboxEvent.findMany({

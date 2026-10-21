@@ -646,8 +646,8 @@ async function quoteable(db: Client) {
 
 // Atelier Dinamo's waiting file, as the admin's RAR and activities forms read
 // it: a workshop address under "aceeași adresă" and two priced jobs to mark
-// covered or not. Neither job type maps to a RAR activity yet, so both
-// read covered. Set once: an owner's later edit is never put back.
+// covered or not: oil-service needs `mechanics` and front-brakes `brakes`, so
+// a record without `brakes` leaves the brakes job uncovered. Set once: an owner's later edit is never put back.
 async function dinamoForms(db: Client) {
   await db.query(
     `UPDATE garage SET address = 'Strada Dinamo 12, Cluj-Napoca'
