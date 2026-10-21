@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 147,
+    "count": 149,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -884,6 +884,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_listing_submissions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each garage listing sent for verification (product action listing_submitted; the consent-gated browser event of the same name keeps firing from the page), charted per hour and per day on motorfix-product; a replayed send is not counted; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-116"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_approvals_total",
       "source": "libs/domain/src/garages/verification/verification.service.ts",
       "dashboard": "motorfix-product",
@@ -1118,6 +1127,32 @@
       ],
       "reason": "read-only and writes nothing; a 422 is the owner's form still lacking values, not a failure, so it is read by status on the dashboard and not alerted on; the api traces carry the route span",
       "story": "ST-115"
+    },
+    {
+      "kind": "endpoint",
+      "name": "listing-submit",
+      "source": "libs/domain/src/garages/listing-drafts/submit/submit.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/listing-drafts/:id/submit and status (201 sent or replayed, 400 without an Idempotency-Key, 401, 404 draft_not_found, 409 draft_already_submitted or garage_already_exists, 422 validation_failed)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one transaction writes the garage, its owner, the verification file, the outbox rows and the audit entries; each success logs one ListingSubmitService line (draft id, garage id, account id; never an e-mail or a token) and adds to motorfix_listing_submissions_total; no alert of its own: a failed send is a 5xx the api-error-rate rule reads, a refused one is the owner's answer shown on the page, and a replay under the same Idempotency-Key writes nothing; no outside call",
+      "story": "ST-116"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-verification-status",
+      "source": "libs/domain/src/garages/verification/verification-status/verification-status.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/garages/:garageId/verification",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no writes, re-read by the owner's page on each verification event and on reconnect; a 403 or 404 is a caller without access, which the error-rate rule reads with the rest; no counter or alert of its own; no outside call",
+      "story": "ST-116"
     },
     {
       "kind": "endpoint",
