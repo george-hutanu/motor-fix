@@ -71,6 +71,8 @@ model Garage {
   prices                     GaragePrice[]
   // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
   hours                      Json                                   @default("{}")
+  // Lifts numbered 1..liftCount on a confirmed booking; 0 schedules none.
+  liftCount                  Int                                    @default(0) @map("lift_count")
   closedDays                 GarageClosedDay[]
   facilities                 GarageFacility[]
   // CHECKs in the migration: +40 and nine digits; 1 to 160 characters; a

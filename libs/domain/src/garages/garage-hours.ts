@@ -1,12 +1,15 @@
 import {
   DEFAULT_HOURS,
+  type Interval,
   isHoursSection,
   lastClosedDay,
+  WEEKDAYS,
 } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
 import type { AuditEntry, AuditPort } from '../audit/audit.port';
 import { refusal } from '../auth/sign-up.service';
+import { local, localDay } from '../bucharest';
 import type { Prisma } from '../generated/prisma/client';
 
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
@@ -125,4 +128,42 @@ export async function writeGarageHours(
       })),
   ];
   await audit.recordMany(tx, entries);
+}
+
+// The Bucharest day and wall-clock minute of an instant. Romania's offsets are
+// whole hours, so the minute is the UTC one.
+function wall(at: Date) {
+  const day = localDay(at);
+  return {
+    day,
+    minute: local(at).hour * 60 + at.getUTCMinutes(),
+    weekday: WEEKDAYS[(new Date(day).getUTCDay() + 6) % 7],
+  };
+}
+
+const minuteOf = (time: string) =>
+  Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+
+// Whether [start, start + duration) lies inside one interval of the garage's
+// hours on one Bucharest day that is neither a closed day nor a public
+// holiday. The ends are read on the local clock, so a span across a clock
+// change keeps its real length. A garage that has set no hours at all takes
+// any span that starts on an open day.
+export function spanInsideHours(
+  hours: Partial<Record<string, Interval[]>>,
+  closedDays: ReadonlySet<string>,
+  holidays: ReadonlySet<string>,
+  startsAt: Date,
+  durationMinutes: number,
+): boolean {
+  if (Number.isNaN(startsAt.getTime())) return false;
+  const start = wall(startsAt);
+  const end = wall(new Date(startsAt.getTime() + durationMinutes * 60_000));
+  if (closedDays.has(start.day) || holidays.has(start.day)) return false;
+  if (Object.keys(hours).length === 0) return true;
+  if (end.day !== start.day) return false;
+  return (hours[start.weekday] ?? []).some(
+    ([from, to]) =>
+      minuteOf(from) <= start.minute && end.minute <= minuteOf(to),
+  );
 }
