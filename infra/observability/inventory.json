@@ -822,6 +822,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "quote-requests-active",
+      "source": "libs/domain/src/workshop/active-request/active-request.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/active",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver's open request closest to the workshop and its stage, read from PostgreSQL in two statements and writing nothing; no counter or alert of its own: a read of the driver's own data, covered by the API's error-rate and latency alerts; no outside call",
+      "story": "ST-274"
+    },
+    {
+      "kind": "endpoint",
       "name": "quotes",
       "source": "libs/domain/src/quotes/quotes/quotes.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/quotes",

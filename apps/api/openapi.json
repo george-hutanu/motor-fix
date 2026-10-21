@@ -3320,6 +3320,35 @@
         ]
       }
     },
+    "/api/v1/quote-requests/active": {
+      "get": {
+        "operationId": "ActiveRequestController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveRequestAnswerDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "requests"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -11793,6 +11822,235 @@
           "id",
           "status",
           "declinedAt"
+        ]
+      },
+      "ActiveRequestCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year"
+        ]
+      },
+      "ActiveRequestRangeDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end, in bani"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "ActiveRequestBookingDto": {
+        "type": "object",
+        "properties": {
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "completed"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "garage",
+          "status",
+          "startsAt",
+          "confirmBy"
+        ]
+      },
+      "ActiveRequestStepDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "done",
+              "now",
+              "todo"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "state"
+        ]
+      },
+      "ActiveRequestJobDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "etaAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "The estimate the garage set, else the start plus the booking’s duration, up to a 5-minute mark; null when done"
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActiveRequestStepDto"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "startedAt",
+          "etaAt",
+          "finalPriceBani",
+          "steps"
+        ]
+      },
+      "ActiveRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done"
+            ]
+          },
+          "car": {
+            "$ref": "#/components/schemas/ActiveRequestCarDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "range": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveRequestRangeDto"
+              }
+            ]
+          },
+          "booking": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveRequestBookingDto"
+              }
+            ]
+          },
+          "mechanicName": {
+            "type": "string",
+            "nullable": true
+          },
+          "job": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveRequestJobDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "stage",
+          "car",
+          "jobs",
+          "description",
+          "range",
+          "booking",
+          "mechanicName",
+          "job"
+        ]
+      },
+      "ActiveRequestAnswerDto": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveRequestDto"
+              }
+            ]
+          },
+          "openCount": {
+            "type": "number",
+            "description": "How many of the driver’s requests are open"
+          }
+        },
+        "required": [
+          "request",
+          "openCount"
         ]
       },
       "DriverNameDto": {

@@ -9,6 +9,13 @@ export { Api } from './api';
 
 export type { AcceptedTextDto } from './models/accepted-text-dto';
 export type { AcceptQuoteDto } from './models/accept-quote-dto';
+export type { ActiveRequestAnswerDto } from './models/active-request-answer-dto';
+export type { ActiveRequestBookingDto } from './models/active-request-booking-dto';
+export type { ActiveRequestCarDto } from './models/active-request-car-dto';
+export type { ActiveRequestDto } from './models/active-request-dto';
+export type { ActiveRequestJobDto } from './models/active-request-job-dto';
+export type { ActiveRequestRangeDto } from './models/active-request-range-dto';
+export type { ActiveRequestStepDto } from './models/active-request-step-dto';
 export type { AdminAccountCountDto } from './models/admin-account-count-dto';
 export type { AdminAccountDto } from './models/admin-account-dto';
 export type { AdminAccountsPageDto } from './models/admin-accounts-page-dto';
@@ -486,6 +493,8 @@ export type { RequestsControllerList$Params as RequestsControllerList$Params } f
 export { requestsControllerList as requestsControllerList } from './fn/requests/requests-controller-list';
 export type { RequestsControllerGet$Params as RequestsControllerGet$Params } from './fn/requests/requests-controller-get';
 export { requestsControllerGet as requestsControllerGet } from './fn/requests/requests-controller-get';
+export type { ActiveRequestControllerGet$Params as ActiveRequestControllerGet$Params } from './fn/requests/active-request-controller-get';
+export { activeRequestControllerGet as activeRequestControllerGet } from './fn/requests/active-request-controller-get';
 export type { GarageRequestsControllerList$Params as GarageRequestsControllerList$Params } from './fn/garage-requests/garage-requests-controller-list';
 export { garageRequestsControllerList as garageRequestsControllerList } from './fn/garage-requests/garage-requests-controller-list';
 export type { GarageRequestsControllerGet$Params as GarageRequestsControllerGet$Params } from './fn/garage-requests/garage-requests-controller-get';
