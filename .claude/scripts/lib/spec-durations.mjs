@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // How long each spec took in Jest, so the post-edit hook (post-edit-check.sh)
-// runs only the fast ones (ST-1355). A spec runs when it has no record, its
+// runs only the fast ones. A spec runs when it has no record, its
 // record is under 5 s, or the record is older than 7 days; a slow one is left
 // to the Stop gate's jest --onlyChanged. The time is Jest's own, never the wait
 // for a heavy slot.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Whether speckit-auto's preflight may skip the full typecheck, lint and test
-// run (ST-1355): only on a clean worktree whose HEAD is its merge base with
+// run: only on a clean worktree whose HEAD is its merge base with
 // origin/main and whose commit has a successful CI OK check, which already ran
 // that suite. Prints `skip <sha7>` or `run <reason>`; any failed read prints
 // `run`, never `skip`.

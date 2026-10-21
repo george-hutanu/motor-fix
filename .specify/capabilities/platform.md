@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-18
+updated: 2026-10-21
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -93,6 +93,7 @@ features:
   - 1178-keycloak-sizing
   - 1348-release-green
   - 1181-rate-limits
+  - 1355-cheaper-gates-lighter-context
 ---
 
 # Capability: Platform
@@ -455,9 +456,9 @@ _From 673-story-tail-agents._
 
 _From 673-story-tail-agents._
 
-### 691-FR-005 — `.claude/agents/task-runner.md` (:21-24) MUST say that `/speckit-auto`'s Preflight and phase 1 and the author skills read the card, and that the reviewers (`spec-reviewer`, `code-reviewer`) and the PR tester read the full `.specify/memory/constitution.md` themselves.
+### 1355-FR-009 — (H) `spec-reviewer.md`, `code-reviewer.md`, `pr-tester.md` and `spec-challenger.md` MUST read `.specify/memory/constitution-card.md` and only the sections of `constitution.md` for the principles each judges (named by heading, read by range), never the whole file; `task-runner.md` (:21-24) MUST say so in place of "read the full constitution"; `constitution-card.spec.mjs` MUST fail when an agent definition names `constitution.md` without a section.
 
-_From 691-author-skills-card._
+_From 1355-cheaper-gates-lighter-context._
 
 ### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
 
@@ -583,9 +584,9 @@ _From 704-auto-phase-model-pins._
 
 _From 696-lifecycle-script._
 
-### 1324-FR-012 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the tracker `qa` event; commit and push the `qa` line; write `handoff.md` (no `deferred.md` filing and no `Deferred:` line).
+### 1355-FR-001 — (B) `scripts/observability-inventory.ts`, `scripts/pr-body-check.ts` (the draft rules before ready, every section at ready) and `scripts/structure-check.ts --base origin/main` MUST run locally before a push in the commit protocol's slice end (`commit-protocol.md`), in `lifecycle.mjs ready` (before `pr-body-check.ts`'s existing place, so 1324-FR-012's order gains these checks first) and in `tail.md` step 3's fix path (as the one command `lifecycle.mjs check`, which also runs FR-002's affected typecheck and unit tests, before every push of a fix); a failing check MUST stop the push or the ready with that check's output, and a harness spec MUST cover each check's refusal in `lifecycle.mjs ready`.
 
-_From 1324-retire-debt-and-ready._
+_From 1355-cheaper-gates-lighter-context._
 
 ### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the tracker `finish` event, post one finish comment on the merged PR, restore `tracker-sync.md` and delete `handoff.md`.
 
@@ -643,9 +644,9 @@ _From 703-idle-watch-gate._
 
 _From 703-idle-watch-gate._
 
-### 705-FR-001 — SKILL.md holds the frontmatter, User Input, Goal, Autonomy Contract, the run-order table with a reference-file column, Size, Run state, Hard Stops, Notifying, the Final Report envelope and the Agent Execution Rules deltas. Nothing else.
+### 1355-FR-010 — (H) A tail agent's dispatch (`hand-off.md`, `speckit-watch`'s `tail` fix) MUST name `tail.md` and the reply envelope only, not `speckit-auto/SKILL.md`; the files it names MUST total under 30,000 bytes, and `tail.md` MUST hold what the tail needs of `SKILL.md` (the Hard Stops it can hit, the run-state and repair-cap rules) in its own words or by one pointer per rule.
 
-_From 705-auto-skill-split._
+_From 1355-cheaper-gates-lighter-context._
 
 ### 705-FR-002 — Every other section moves, unchanged in substance, to one of these files beside it: `preflight.md`, `phases-plan.md` (1–8), `phases-build.md` (9–12), `phases-close.md` (13–17), `commit-protocol.md`, `hand-off.md`, `tail.md` and `report.md`.
 
@@ -1116,10 +1117,6 @@ _From 691-author-skills-card._
 _From 691-author-skills-card._
 
 ### 691-FR-004 — `speckit-specify`'s batch-read rule (:399, "Read the template, the constitution, and any repo files you need in one batch before writing") MUST name the card in place of the constitution.
-
-_From 691-author-skills-card._
-
-### 691-FR-006 — `.claude/agents/spec-reviewer.md`, `.claude/agents/code-reviewer.md` and `.claude/agents/pr-tester.md` MUST keep every line that reads `.specify/memory/constitution.md`; this feature changes none of them.
 
 _From 691-author-skills-card._
 
@@ -2347,6 +2344,34 @@ _From 1181-rate-limits._
 
 _From 1181-rate-limits._
 
+### 1355-FR-002 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red; `stop-test-gate.sh` is unchanged.
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-003 — (D2) Preflight MUST skip the full suite when `git status --porcelain` is empty, HEAD equals its merge base with `origin/main` (after `git fetch -q origin main`; a failed fetch counts as no success), and that commit carries a check run whose name ends in `CI OK` with conclusion `success`, read over REST (`.claude/scripts/lib/gh-rest.mjs`), writing `Preflight suite skipped: base <sha7> has CI OK` to `auto-run.md`; any other state (dirty tree, no such run, pending, failure, a REST error) MUST run the suite as today.
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-004 — (D3) `post-edit-check.sh` MUST keep its Biome check and MUST run the colocated spec only when that spec's last recorded duration under `.specify/.cache/` is under 5 s, or there is no record, or the record is older than 7 days; every run it makes MUST record Jest's own duration (the heavy-slot wait excluded) there; a skipped spec MUST be named in the hook's additional context so the Stop gate's `jest --onlyChanged` is the next check.
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-005 — (E) `code-reviewer` MUST run once per story run, in phase 14 (`phases-close.md`) after converge; phase 12 (`phases-build.md`, `speckit-harden/SKILL.md`) MUST run the mechanical audits and `test-adversary` only; `auto-run.md` MUST name that one run.
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-006 — (E) The PR tester (`pr-tester.md`, `speckit-pr-test/SKILL.md`) MUST review the run's evidence (flows sent, screenshots named, layout and axe findings) and conformance (every requirement reached and tested, `tasks.md` true, nothing beyond scope); it MUST NOT carry a durability or style rubric of its own, and its report table MUST hold only evidence and conformance findings (the design rubric on the screenshots is evidence and stays).
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-007 — (F) `commit-protocol.md`, `phases-close.md` and `speckit-archive` MUST fold the trace, label and other process commits into the first implementation slice and the archive's Spec Delta merge and any inventory change into the last, so a PR carries the start commit plus at most one commit per slice; the empty `chore(<scope>): ST-<n> start …` commit MUST be made only when the draft PR needs a commit before the first slice (merges of `origin/main` and QA-lap fixes are not slices and are not counted).
+
+_From 1355-cheaper-gates-lighter-context._
+
+### 1355-FR-008 — (H) AGENTS.md MUST be under 15,000 bytes, keeping the rules and the pointers (a lifecycle step keeps one sentence naming the rule, its gate and the skill with the how-to; every `gh`/`node` invocation moves; identity, the tracker and lifecycle rules in one list, the hard limits, the folder structure, product and stack) and moving each lifecycle how-to paragraph it drops into the skill that runs it (`speckit-auto`, `speckit-watch`, `speckit-pr-test`, `speckit-tracker-sync`); its "Parallel work is watched" paragraph MUST be unchanged; `context-audit.mjs` MUST be green and CLAUDE.local.md MUST NOT grow.
+
+_From 1355-cheaper-gates-lighter-context._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2422,3 +2447,7 @@ _From 1181-rate-limits._
 - `000-FR-001` — superseded by `1348-FR-001` (2026-10-17)
 - `000-FR-014` — superseded by `1348-FR-002` (2026-10-17)
 - `251-FR-012` — superseded by `1348-FR-003` (2026-10-17)
+- `691-FR-006` — removed by 1355-cheaper-gates-lighter-context (2026-10-21)
+- `1324-FR-012` — superseded by `1355-FR-001` (2026-10-21)
+- `691-FR-005` — superseded by `1355-FR-009` (2026-10-21)
+- `705-FR-001` — superseded by `1355-FR-010` (2026-10-21)

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Authors read the card, not the 26 KB constitution; reviewers read the full
-// file. The card is only safe while it names the same principles and version.
+// Authors read the card, not the 26 KB constitution; reviewers read the card
+// and only their principles' sections. The card is only safe while it names the
+// same principles and version.
 
 const memory = join(import.meta.dirname, '..', '..', '.specify', 'memory');
 const CARD = join(memory, 'constitution-card.md');

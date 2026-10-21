@@ -65,7 +65,10 @@ esac
 [ -n "$test_file" ] || exit 0
 
 durations=".claude/scripts/lib/spec-durations.mjs"
-if [ -f "$durations" ] && ! node "$durations" should "$test_file"; then
+# Only exit 1 means "slow, skip"; a crash or a usage error still runs the spec.
+should=0
+[ -f "$durations" ] && { node "$durations" should "$test_file"; should=$?; }
+if [ "$should" -eq 1 ]; then
   echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: Jest took 5 s or more on it in the last 7 days. The Stop gate runs it (jest --onlyChanged) before the turn ends.\"}}"
   exit 0
 fi
@@ -87,7 +90,7 @@ if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
   exit 0
 fi
 if [ "$code" -ne 0 ]; then
-  echo "❌ Affected tests failed: $test_file (after editing $rel). Fix now — the Stop gate and .husky/pre-commit will block until green." >&2
+  echo "❌ Affected tests failed: $test_file (after editing $rel). Fix now — the Stop gate and lifecycle.mjs check will block until green." >&2
   exit 2
 fi
 exit 0

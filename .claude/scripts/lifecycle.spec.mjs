@@ -416,13 +416,18 @@ describe('check: the CI-only checks and the affected tests before a push', () =>
   }
 
   // @traces 1355-FR-001
-  it('ready runs the local checks after the level check and before the records commit; a failing one leaves the PR a draft', () => {
+  for (const [prefix, name] of [
+    ['node scripts/observability-inventory.ts', 'observability-inventory'],
+    ['node scripts/structure-check.ts', 'structure-check'],
+    ['npm run lint', 'lint'],
+    ['sh scripts/heavy.sh', 'affected typecheck and unit tests'],
+  ]) it(`ready runs ${name} after the level check and before the records commit; a failing one leaves the PR a draft`, () => {
     const body = join(repo, 'body.md');
     writeFileSync(body, '## Why\n\nfilled\n');
-    const h = harness({ answers: [MERGE_BASE, ['node scripts/observability-inventory.ts', { code: 1, stdout: 'inventory: no entry for queue mail\n' }]] });
+    const h = harness({ answers: [MERGE_BASE, [prefix, { code: 1, stdout: 'refused\n' }]] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, false);
-    assert.equal(result.stopped, 'observability-inventory');
+    assert.equal(result.stopped, name);
     assert.ok(h.calls.includes('node .claude/scripts/level.mjs check --ready --json'));
     assert.ok(!h.calls.some((c) => c.includes('specs-repo.mjs commit') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
   });

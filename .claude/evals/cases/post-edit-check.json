@@ -13,7 +13,41 @@
         }
       ]
     },
-    "payload": { "tool_name": "Edit", "tool_input": { "file_path": "libs/demo/src/demo.spec.ts" } },
-    "expect": { "exit": 0, "stdout": "additionalContext.*libs/demo/src/demo\\.spec\\.ts was not run" }
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "libs/demo/src/demo.spec.ts"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "additionalContext.*libs/demo/src/demo\\.spec\\.ts was not run"
+    }
+  },
+  {
+    "id": "runs-the-spec-when-the-duration-script-crashes",
+    "hook": "post:edit:affected-tests",
+    "why": "only the duration script's exit 1 means slow; a crash (here exit 2) must not turn every per-edit run off, so the spec still runs (a stub jest that fails proves it ran; the stub duration script makes it executable, as the fixture writes plain files)",
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/demo/src/demo.spec.ts": "it('holds', () => {});\n",
+            "node_modules/.bin/jest": "#!/bin/sh\necho stub jest ran >&2\nexit 1\n",
+            ".claude/scripts/lib/spec-durations.mjs": "import { chmodSync } from 'node:fs';\nchmodSync('node_modules/.bin/jest', 0o755);\nprocess.exit(2);\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "libs/demo/src/demo.spec.ts"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "Affected tests failed: libs/demo/src/demo\\.spec\\.ts"
+    }
   }
 ]

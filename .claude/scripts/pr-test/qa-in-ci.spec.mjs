@@ -10,7 +10,7 @@ const read = (rel) => readFileSync(fileURLToPath(new URL(`../../../${rel}`, impo
 const agent = read('.claude/agents/pr-tester.md');
 const skill = read('.claude/skills/speckit-pr-test/SKILL.md');
 const agents = read('AGENTS.md');
-// AGENTS.md keeps the rules; the how-to moved to these (ST-1355).
+// AGENTS.md keeps the rules; the how-to moved to these.
 const lifecycle = read('.claude/skills/speckit-auto/lifecycle.md');
 const cloudDoc = read('.claude/skills/speckit-auto/cloud.md');
 const watchSkill = read('.claude/skills/speckit-watch/SKILL.md');

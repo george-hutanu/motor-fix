@@ -215,9 +215,13 @@ product and architecture documentation lives in the specs repo's
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
+- Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`
+  to Opus for sessions started afterwards (`on` restores, `status` tells).
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
-  the list in `apps/api/src/public-routes.integration.spec.ts`.
+  the list in `apps/api/src/public-routes.integration.spec.ts`. The web
+  interceptor answers a `sign_in_required` 401 with the sign-in dialog over
+  the screen, then sends the call again once.
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end; a spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`. Mutation is never
