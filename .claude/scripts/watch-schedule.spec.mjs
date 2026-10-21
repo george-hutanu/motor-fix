@@ -44,7 +44,7 @@ const calls = () => (existsSync(t.calls) ? readFileSync(t.calls, 'utf8').trim().
 const passes = () => readFileSync(join(t.main, '.work', 'watch-schedule', 'passes.log'), 'utf8').trim().split('\n');
 
 describe('scripts/watch-schedule.sh', () => {
-  // @traces 1361-watch-schedule-qa-telemetry-FR-003
+  // @traces 1361-FR-003
   it('install renders the launchd agent for the main checkout every 900 s and bootstraps it', () => {
     const r = run('install');
     assert.equal(r.status, 0, r.out);
@@ -60,7 +60,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.ok(calls().includes(`launchctl bootstrap gui/${uid} ${join(t.home, PLIST)}`), calls().join('\n'));
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-003
+  // @traces 1361-FR-003
   it('uninstall boots the agent out and removes its plist', () => {
     assert.equal(run('install').status, 0);
     const r = run('uninstall');
@@ -69,7 +69,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.ok(calls().some((l) => l.startsWith('launchctl bootout gui/')), calls().join('\n'));
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-003
+  // @traces 1361-FR-003
   it('status prints whether the agent is loaded and the last pass', () => {
     mkdirSync(join(t.main, '.work', 'watch-schedule'), { recursive: true });
     writeFileSync(join(t.main, '.work', 'watch-schedule', 'passes.log'), '2026-10-21T10:00:00Z gate 0\n2026-10-21T10:15:00Z gate 2 dispatch 0\n');
@@ -81,7 +81,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(run('status').out, /not loaded/);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('run runs the gate and nothing more when it finds no work', () => {
     const r = run('run', { GATE_EXIT: '0' });
     assert.equal(r.status, 0, r.out);
@@ -93,7 +93,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(passes().at(-1), /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ gate 0$/);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('run dispatches when the gate exits 2, and logs both exit codes', () => {
     const r = run('run', { GATE_EXIT: '2', DISPATCH_EXIT: '0' });
     assert.equal(r.status, 0, r.out);
@@ -102,14 +102,14 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(passes().at(-1), / gate 2 dispatch 0$/);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('run logs a failing gate and dispatches nothing', () => {
     run('run', { GATE_EXIT: '1' });
     assert.equal(calls().filter((l) => l.startsWith('node ')).length, 1);
     assert.match(passes().at(-1), / gate 1$/);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-003
+  // @traces 1361-FR-003
   it('refuses every verb in a cloud session and touches nothing', () => {
     for (const verb of ['install', 'uninstall', 'status', 'run']) {
       const r = run(verb, { CLAUDE_CODE_REMOTE: 'true', GATE_EXIT: '2' });
@@ -121,7 +121,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.ok(!existsSync(join(t.main, '.work')));
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-005
+  // @traces 1361-FR-005
   it('is described in the speckit-watch skill and AGENTS.md, with the claim both sides share', () => {
     const read = (rel) => readFileSync(join(import.meta.dirname, '..', '..', rel), 'utf8').replace(/\s+/g, ' ');
     const skill = read('.claude/skills/speckit-watch/SKILL.md');

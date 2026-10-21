@@ -413,7 +413,7 @@ const hookLine = (durationMs, timestamp = '2026-10-21T10:00:30Z') =>
 const stopSummary = (durations, timestamp = '2026-10-21T10:05:00Z') =>
   `${JSON.stringify({ type: 'system', subtype: 'stop_hook_summary', timestamp, hookInfos: [...durations.map((durationMs) => ({ command: 'x', durationMs })), { command: 'callback' }] })}\n`;
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-009
+// @traces 1361-FR-009
 describe('telemetry — subagent skills, bucket times and hook time', () => {
   it('counts the skills and subagents a subagent transcript invokes, per agent type, without its other tool calls', () => {
     const record = emptyRecord('s1');
@@ -484,7 +484,7 @@ describe('telemetry — subagent skills, bucket times and hook time', () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-010
+// @traces 1361-FR-010
 describe('telemetry — the ledgers of the whole machine, read from a worktree', () => {
   let world;
   beforeEach(() => {
@@ -526,7 +526,7 @@ describe('telemetry — the ledgers of the whole machine, read from a worktree',
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-013
+// @traces 1361-FR-013
 describe('telemetry — a feature\'s phases', () => {
   const ledger = (feature, buckets, subagent_skills = {}) => ({ session_id: `s-${Math.random()}`, feature, buckets, subagent_skills, tokens: tokens(0, 0) });
   const span = (first, last, hook_ms) => ({ tokens: tokens(1, 1), subagent_tokens: tokens(0, 0), first, last, ...(hook_ms === undefined ? {} : { hook_ms }) });

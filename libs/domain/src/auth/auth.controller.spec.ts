@@ -8,7 +8,7 @@ import type { SignInService } from './sign-in.service';
 import type { SignUpService } from './sign-up.service';
 import type { RateLimits } from '../rate-limit/rate-limit.service';
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-008
+// @traces 1361-FR-008
 
 const ADDRESS = '203.0.113.7';
 const BODY = { email: 'sofer@example.test', password: 'parola-de-test' };

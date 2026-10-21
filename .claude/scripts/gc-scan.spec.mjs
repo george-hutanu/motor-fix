@@ -185,7 +185,7 @@ describe('rankCandidates', () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-010
+// @traces 1361-FR-010
 describe('gc-scan — run from a worktree', () => {
   let scratch;
   let main;

@@ -1,6 +1,6 @@
 import { signInLimitConfig } from './qa-sign-in-limit';
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-008
+// @traces 1361-FR-008
 
 describe('signInLimitConfig', () => {
   it.each(['1', 'true'])(

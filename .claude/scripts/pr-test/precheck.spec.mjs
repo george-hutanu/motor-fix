@@ -205,7 +205,7 @@ describe('precheck --check: the flows against the app and API already serving', 
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-007
+// @traces 1361-FR-007
 describe('precheck --check: a clean check leaves a proof that dispatch.mjs reads', () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'precheck-proof-')));
   const repo = join(dir, 'repo');

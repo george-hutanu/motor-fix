@@ -43,7 +43,7 @@ describe('PR QA workflow: trigger', () => {
     assert.deepEqual(block('pull_request', 2, block('on')).map((l) => l.trim()).filter(Boolean), ['types: [ready_for_review, synchronize, reopened]']);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  // @traces 1361-FR-006
   it('runs on pull_request only for a ready same-repository PR labelled qa: on-push, and never skips a dispatched run', () => {
     const cond = job.find((l) => l.startsWith('    if: '))?.slice('    if: '.length) ?? '';
     assert.equal(
@@ -73,7 +73,7 @@ describe('PR QA workflow: trigger', () => {
     assert.ok(title.includes('${{ inputs.sha || github.event.pull_request.head.sha }}'), title);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  // @traces 1361-FR-006
   it('keeps one run per PR, and a pull_request event that will not run takes a group of its own, so it never cancels a dispatched lap', () => {
     assert.deepEqual(block('concurrency').map((l) => l.trim()).filter(Boolean), [
       "group: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'qa: on-push')) && format('pr-qa-{0}', inputs.pr || github.event.pull_request.number) || format('pr-qa-skip-{0}', github.run_id) }}",
@@ -81,7 +81,7 @@ describe('PR QA workflow: trigger', () => {
     ]);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-008
+  // @traces 1361-FR-008
   it('lifts the sign-in route limit for the API it boots, and nowhere else', () => {
     assert.match(block('env', 4, job).join('\n'), /^ {6}PR_QA_SIGN_IN_UNLIMITED: '1'$/m);
     assert.equal(code.split('PR_QA_SIGN_IN_UNLIMITED').length, 2, 'set once, in the job env');

@@ -1091,7 +1091,7 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
     assert.ok(existsSync(join(featureDir, 'handoff.md')));
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  // @traces 1361-FR-006
   it('ready labels the PR qa: on-push before marking it ready, so its pull_request run is the head\'s one QA run', () => {
     let i = 0;
     const h = harness({
@@ -1119,7 +1119,7 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
     assert.deepEqual(graphql(h.calls), []);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-006
+  // @traces 1361-FR-006
   it('ready on the laptop adds no qa: on-push label: the dispatched run is the head\'s one run there', () => {
     const h = harness({ answers: [['git diff --cached --quiet', { code: 1 }]] });
     writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');

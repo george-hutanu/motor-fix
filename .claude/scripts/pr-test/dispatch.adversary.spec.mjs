@@ -66,7 +66,7 @@ describe('dispatch --flows pre-check', () => {
     assert.doesNotMatch(sb.calls(), /workflow/);
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-007
+  // @traces 1361-FR-007
   it('goes on to dispatch once a clean flows file passes the pre-check and was proven against the head', () => {
     const sb = sandbox();
     const f = join(sb.d, 'flows.mjs');

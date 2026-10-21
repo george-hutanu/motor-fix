@@ -1,4 +1,4 @@
-export interface SignInLimitConfig {
+interface SignInLimitConfig {
   // The signInAttempts route limit is not taken. The failure limits stay.
   skipAttemptsLimit: boolean;
 }

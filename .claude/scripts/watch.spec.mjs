@@ -1881,7 +1881,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
   const claimFile = (path) => join(path, '.specify', '.cache', 'watch-claim.json');
   const readClaim = (path) => JSON.parse(readFileSync(claimFile(path), 'utf8'));
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-002
+  // @traces 1361-FR-002
   it('refuses a claim while the existing one is live by the run-state stage threshold, and replaces an expired one in one rename', () => {
     const f = fixture();
     try {
@@ -1903,7 +1903,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-002
+  // @traces 1361-FR-002
   it('writeClaim returns the live claim it refused, and null once it wrote', () => {
     const f = fixture();
     try {
@@ -1917,7 +1917,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-004
+  // @traces 1361-FR-004
   it('names why an idle row waits or went stale: holder dead, waiting on CI, waiting on a QA run', () => {
     const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
     const HEAD = 'd'.repeat(40);
@@ -1946,7 +1946,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     return { calls, spawn };
   };
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('claims each plan entry, then starts a detached task-runner in its worktree, logging under .work/watch-dispatch', () => {
     const f = fixture();
     try {
@@ -1994,7 +1994,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('applies the safe fixes and the sweep as --fix does before it dispatches', () => {
     const f = fixture();
     try {
@@ -2012,7 +2012,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-003
+  // @traces 1361-FR-003
   it('does nothing in a cloud session: no claim, no spawn, no log', () => {
     const f = fixture();
     try {
@@ -2032,7 +2032,7 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 
-  // @traces 1361-watch-schedule-qa-telemetry-FR-001
+  // @traces 1361-FR-001
   it('takes only --stale beside --dispatch', () => {
     const f = fixture();
     try {

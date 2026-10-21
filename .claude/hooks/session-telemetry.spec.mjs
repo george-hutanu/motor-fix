@@ -16,7 +16,7 @@ const git = (cwd, ...args) =>
 const assistant = (id, timestamp) =>
   `${JSON.stringify({ type: 'assistant', timestamp, message: { id, usage: { input_tokens: 3, output_tokens: 4 }, content: [] } })}\n`;
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-009
+// @traces 1361-FR-009
 describe('session telemetry — a session working in a worktree', () => {
   let scratch;
   let main;

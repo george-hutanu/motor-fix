@@ -673,7 +673,7 @@ describe("every gh call carries george-hutanu's token", () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-011
+// @traces 1361-FR-011
 describe("the log's time stamp", () => {
   const late = () => new Date(Date.UTC(2026, 9, 10, 21, 7, 42));
 

@@ -446,7 +446,7 @@ function provenRepo() {
   return { repo, c1, c2, c3, flows, spec, hash: flowsHash(flows), stamp };
 }
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-007
+// @traces 1361-FR-007
 describe('dispatch --flows: the flows must have been proven against the head', () => {
   it('accepts the proof for the head and these flows', () => {
     const t = provenRepo();
@@ -503,7 +503,7 @@ describe('dispatch --flows: the flows must have been proven against the head', (
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-006
+// @traces 1361-FR-006
 describe('dispatch on the laptop: the dispatched run is the head\'s one run', () => {
   const REMOVE = 'api -X DELETE repos/{owner}/{repo}/issues/62/labels/qa%3A%20on-push';
 

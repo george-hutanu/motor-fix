@@ -34,7 +34,7 @@ const full = () => ({
   ],
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-012
+// @traces 1361-FR-012
 describe('cycle — idle gaps', () => {
   it('lists every gap over 60 minutes between consecutive times, whatever their order', () => {
     assert.deepEqual(idleGaps([at('12:00'), at('09:00'), at('10:00'), at('10:30'), at('14:01')]), [90, 121]);
@@ -50,7 +50,7 @@ describe('cycle — idle gaps', () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-012
+// @traces 1361-FR-012
 describe('cycle — harness-caused laps', () => {
   it('counts the reviews that name a harness failure', () => {
     const reviews = [
@@ -71,7 +71,7 @@ describe('cycle — harness-caused laps', () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-012
+// @traces 1361-FR-012
 describe('cycle — one row', () => {
   it('prints open to ready, ready to merge, laps, harness laps, idle gaps and hook minutes', () => {
     assert.deepEqual(cycleRow(full()), {
@@ -103,7 +103,7 @@ describe('cycle — one row', () => {
   });
 });
 
-// @traces 1361-watch-schedule-qa-telemetry-FR-012
+// @traces 1361-FR-012
 describe('cycle — the report', () => {
   const merged = (n, extra = {}) => ({ number: n, head: { ref: `b${n}` }, created_at: at('09:00'), merged_at: at('10:00'), ...extra });
   const fakeApi = (routes) => (path) => {
