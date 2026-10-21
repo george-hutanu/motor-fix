@@ -229,6 +229,7 @@ describe('Prețuri: every job with its state', () => {
     );
   });
 
+  // @traces 1357-FR-002
   it('names each reason in both languages, every hidden row amber', async () => {
     const reasons = [
       ['rejected', 'respins', 'rejected'],
@@ -379,7 +380,6 @@ describe('Prețuri: brand ranges under their job', () => {
   });
 });
 
-// @traces 1357-FR-002
 // @traces 1357-FR-004
 describe('Prețuri: a job outside the RAR authorisation', () => {
   const regas = (shown: boolean) =>
@@ -390,23 +390,6 @@ describe('Prețuri: a job outside the RAR authorisation', () => {
       public: shown,
       ...(shown ? {} : { reason: 'not_authorised' as const }),
     });
-
-  it('reads the row as hidden by the RAR authorisation with an amber lamp, in both languages', async () => {
-    const answer = async () => ({ items: [regas(false)] });
-    const romanian = await render(answer);
-    await romanian.settle();
-    const [row] = rows(romanian.element);
-    expect(cell(row, 'state')).toBe('ascuns · nu e în autorizația RAR');
-    expect(row.dataset['public']).toBe('false');
-    expect(row.querySelector('[data-lamp]')).not.toBeNull();
-    TestBed.resetTestingModule();
-
-    const english = await render(answer, 'en');
-    await english.settle();
-    expect(cell(rows(english.element)[0], 'state')).toBe(
-      'hidden · not in your RAR authorisation',
-    );
-  });
 
   it('turns the row to on the profile when a price list change re-reads it covered', async () => {
     let covered = false;
