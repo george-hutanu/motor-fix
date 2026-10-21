@@ -64,6 +64,7 @@ export { writeGarageBrands } from './garages/garage-brands/write-garage-brands';
 export { writeGarageHours } from './garages/garage-hours';
 export { writeGaragePayments } from './garages/garage-settings/write-garage-payments';
 export { GaragesModule } from './garages/garages.module';
+export { ListingSubmitModule } from './garages/listing-drafts/submit/submit.module';
 export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.service';
 export { GaragePhotosService } from './garages/photos/garage-photos.service';
 export { ListingPhotosModule } from './garages/photos/listing-photos/listing-photos.module';

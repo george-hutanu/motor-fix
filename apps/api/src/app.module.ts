@@ -18,6 +18,7 @@ import {
   HealthModule,
   ListingDocumentsModule,
   ListingPhotosModule,
+  ListingSubmitModule,
   NotificationsModule,
   oauthSettings,
   observabilityUrl,
@@ -72,6 +73,10 @@ export class AppModule {
       verificationConfig(env.APP_ENV, process.env),
       observabilityUrl(grafanaUrl(process.env), env.APP_ENV),
     );
+    const photos = ListingPhotosModule.register(
+      { redisUrl: env.REDIS_URL },
+      garages,
+    );
     return {
       imports: [
         HealthModule.register({
@@ -104,8 +109,9 @@ export class AppModule {
         SupportModule.register(supportConfig(process.env)),
         DemandModule,
         garages,
-        ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
+        photos,
         ListingDocumentsModule.register(garages),
+        ListingSubmitModule.register(garages, photos),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
         SystemLogModule.register({
           databaseUrl: env.DATABASE_URL,

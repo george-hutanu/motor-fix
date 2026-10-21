@@ -267,6 +267,7 @@ describe('the listing draft routes', () => {
       'POST /api/v1/listing-drafts/{id}/documents/{kind}/upload-url',
       'POST /api/v1/listing-drafts/{id}/photos',
       'POST /api/v1/listing-drafts/{id}/photos/upload-url',
+      'POST /api/v1/listing-drafts/{id}/submit',
     ]);
   });
 

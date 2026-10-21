@@ -124,6 +124,7 @@ export type { ListingDraftDto } from './models/listing-draft-dto';
 export type { ListingDraftSavedDto } from './models/listing-draft-saved-dto';
 export type { ListingPhotoDto } from './models/listing-photo-dto';
 export type { ListingPhotosDto } from './models/listing-photos-dto';
+export type { ListingSubmittedDto } from './models/listing-submitted-dto';
 export type { LiveTestDto } from './models/live-test-dto';
 export type { MeDto } from './models/me-dto';
 export type { MyConsentsDto } from './models/my-consents-dto';
@@ -576,6 +577,8 @@ export type { ListingDocumentsControllerConfirm$Params as ListingDocumentsContro
 export { listingDocumentsControllerConfirm as listingDocumentsControllerConfirm } from './fn/listing-drafts/listing-documents-controller-confirm';
 export type { ListingDocumentsControllerRemove$Params as ListingDocumentsControllerRemove$Params } from './fn/listing-drafts/listing-documents-controller-remove';
 export { listingDocumentsControllerRemove as listingDocumentsControllerRemove } from './fn/listing-drafts/listing-documents-controller-remove';
+export type { ListingSubmitControllerSubmit$Params as ListingSubmitControllerSubmit$Params } from './fn/listing-drafts/listing-submit-controller-submit';
+export { listingSubmitControllerSubmit as listingSubmitControllerSubmit } from './fn/listing-drafts/listing-submit-controller-submit';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

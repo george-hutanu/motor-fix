@@ -101,6 +101,7 @@ export class GaragesModule {
         GarageMechanicsService,
         GaragePlaceService,
         GaragePricesService,
+        LegalDocumentsService,
         VerificationService,
       ],
       imports: [CacheModule, notifications],

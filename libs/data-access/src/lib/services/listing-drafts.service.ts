@@ -42,6 +42,9 @@ import { ListingPhotosControllerRemove$Params } from '../fn/listing-drafts/listi
 import { listingPhotosControllerUploadAddress } from '../fn/listing-drafts/listing-photos-controller-upload-address';
 import { ListingPhotosControllerUploadAddress$Params } from '../fn/listing-drafts/listing-photos-controller-upload-address';
 import { ListingPhotosDto } from '../models/listing-photos-dto';
+import { listingSubmitControllerSubmit } from '../fn/listing-drafts/listing-submit-controller-submit';
+import { ListingSubmitControllerSubmit$Params } from '../fn/listing-drafts/listing-submit-controller-submit';
+import { ListingSubmittedDto } from '../models/listing-submitted-dto';
 import { PhotoUploadAddressDto } from '../models/photo-upload-address-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -348,6 +351,39 @@ export class ListingDraftsService extends BaseService {
   listingDocumentsControllerRemove(params: ListingDocumentsControllerRemove$Params, context?: HttpContext): Promise<void> {
     const resp = this.listingDocumentsControllerRemove$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `listingSubmitControllerSubmit()` */
+  static readonly ListingSubmitControllerSubmitPath = '/api/v1/listing-drafts/{id}/submit';
+
+  /**
+   * Send the draft: its garage and verification file are created.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingSubmitControllerSubmit()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingSubmitControllerSubmit$Response(params: ListingSubmitControllerSubmit$Params, context?: HttpContext): Promise<StrictHttpResponse<ListingSubmittedDto>> {
+    const obs = listingSubmitControllerSubmit(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Send the draft: its garage and verification file are created.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingSubmitControllerSubmit$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingSubmitControllerSubmit(params: ListingSubmitControllerSubmit$Params, context?: HttpContext): Promise<ListingSubmittedDto> {
+    const resp = this.listingSubmitControllerSubmit$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ListingSubmittedDto>): ListingSubmittedDto => r.body);
   }
 
 }
