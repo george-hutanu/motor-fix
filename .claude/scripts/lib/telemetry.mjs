@@ -52,7 +52,8 @@ export const emptyRecord = (sessionId) => ({
   // The level and phase of the last write; `buckets` holds the tokens folded
   // in while each "<level>/<phase>" pair was current, so a promotion splits a
   // run's cost instead of rewriting it. Each bucket also keeps its first and
-  // last write time and the hook milliseconds spent while it was current.
+  // last write time, the hook milliseconds spent while it was current and,
+  // per agent type, the skills subagents invoked then (`subagent_skills`).
   level: null,
   phase: null,
   buckets: {},
@@ -145,7 +146,10 @@ export function mergeTranscript(record, text, { bucket, agentType, cursor = reco
       if (!agentType) bump(record.tools, block.name);
       if (block.name === "Skill") {
         bump(record.skills, block.input?.skill);
-        if (agentType && block.input?.skill) bump((record.subagent_skills[agentType] ??= {}), block.input.skill);
+        if (agentType && block.input?.skill) {
+          bump((record.subagent_skills[agentType] ??= {}), block.input.skill);
+          if (into) bump(((into.subagent_skills ??= {})[agentType] ??= {}), block.input.skill);
+        }
       }
       if (block.name === "Agent" || block.name === "Task") bump(record.agents, block.input?.subagent_type);
     }

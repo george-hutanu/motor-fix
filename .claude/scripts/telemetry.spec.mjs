@@ -433,6 +433,21 @@ describe('telemetry — subagent skills, bucket times and hook time', () => {
     const { record } = mergeTranscript(emptyRecord('s1'), assistant([toolUse('Skill', { skill: 'speckit-auto' })]), { bucket: '2/plan' });
     assert.deepEqual(record.skills, { 'speckit-auto': 1 });
     assert.deepEqual(record.subagent_skills, {});
+    assert.equal(record.buckets['2/plan'].subagent_skills, undefined);
+  });
+
+  it('buckets each subagent skill invocation under the <level>/<phase> current at the write, per agent type', () => {
+    const record = emptyRecord('s1');
+    const cursor = { last_message_id: null, last_usage: null };
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-plan' })], used(1, 1), undefined, 'b1'), { bucket: '2/plan', agentType: 'task-runner', cursor });
+    mergeTranscript(record, assistant([toolUse('Skill', { skill: 'speckit-tasks' }), toolUse('Skill', { skill: 'speckit-tasks' })], used(1, 1), undefined, 'b2'), {
+      bucket: '2/tasks',
+      agentType: 'task-runner',
+      cursor,
+    });
+    assert.deepEqual(record.buckets['2/plan'].subagent_skills, { 'task-runner': { 'speckit-plan': 1 } });
+    assert.deepEqual(record.buckets['2/tasks'].subagent_skills, { 'task-runner': { 'speckit-tasks': 2 } });
+    assert.deepEqual(record.subagent_skills, { 'task-runner': { 'speckit-plan': 1, 'speckit-tasks': 2 } });
   });
 
   it('stamps each bucket with the first and last time it was written, from session and subagent lines', () => {
