@@ -288,8 +288,6 @@ _From 228-how-it-works-list-garage._
 - `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
 - `226-FR-004` — superseded by `227-FR-011` (2026-10-10)
 - `226-FR-008` — superseded by `227-FR-010` (2026-10-10)
-
 - `229-FR-004` — superseded by `271-FR-005` (2026-10-18)
-
 - `225-FR-007` — superseded by `228-FR-008` (2026-10-20)
 - `225-FR-003` — superseded by `228-FR-013` (2026-10-20)

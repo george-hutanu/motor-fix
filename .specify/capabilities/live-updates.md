@@ -428,20 +428,14 @@ _From 1190-live-reconnects._
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
-
 - `253-FR-012` — superseded by `257-FR-010` (2026-10-05)
-
 - `253-FR-015` — superseded by `256-FR-011` (2026-10-05)
 - `257-FR-009` — superseded by `256-FR-002` (2026-10-05)
 - `257-FR-010` — superseded by `256-FR-012` (2026-10-05)
-
 - `254-FR-003` — superseded by `574-FR-001` (2026-10-07)
-
 - `254-FR-001` — superseded by `419-FR-006` (2026-10-07)
-
 - `419-FR-002` — superseded by `267-FR-018` (2026-10-14)
 - `419-FR-010` — superseded by `267-FR-019` (2026-10-14)
-
 - `253-FR-013` — superseded by `1190-FR-007` (2026-10-19)
 - `253-FR-007` — superseded by `1190-FR-006` (2026-10-19)
 - `253-FR-005` — superseded by `1190-FR-002` (2026-10-19)

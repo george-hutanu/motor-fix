@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { githubClient } from "./github.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
-import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
+import { assertProjectScope, ghEnv, projectToken, TokenError } from "./token.mjs";
 
 const SECRET = "ghp_SECRET_never_print_me";
 
@@ -71,5 +71,43 @@ describe("assertProjectScope", () => {
       return true;
     });
     assert.equal(gh.writes().length, 0);
+  });
+});
+
+// @traces 1360-FR-004
+describe("ghEnv", () => {
+  const login = (token) => {
+    const calls = [];
+    const run = (file, args, opts) => {
+      calls.push({ file, args, opts });
+      return token ? { code: 0, stdout: `${token}\n`, stderr: "" } : { code: 1, stdout: "", stderr: "" };
+    };
+    return { run, calls };
+  };
+
+  it("keeps the session's GH_TOKEN without running gh", () => {
+    const l = login("other");
+    assert.equal(ghEnv({ env: { GH_TOKEN: SECRET, HOME: "/h" }, run: l.run }).GH_TOKEN, SECRET);
+    assert.equal(l.calls.length, 0);
+  });
+
+  it("keeps a cloud session's proxy GH_TOKEN", () => {
+    const l = login("other");
+    const env = { CLAUDE_CODE_REMOTE: "true", GH_TOKEN: "proxy-injected" };
+    assert.deepEqual(ghEnv({ env, run: l.run }), env);
+    assert.equal(l.calls.length, 0);
+  });
+
+  it("fills a missing GH_TOKEN from gh's george-hutanu login, overriding GITHUB_TOKEN's account", () => {
+    const l = login(SECRET);
+    const env = ghEnv({ env: { HOME: "/h", GITHUB_TOKEN: "work", GH_CONFIG_DIR: "/x" }, run: l.run });
+    assert.equal(env.GH_TOKEN, SECRET);
+    assert.equal(env.HOME, "/h");
+    assert.deepEqual(l.calls[0].args, ["auth", "token", "-u", "george-hutanu"]);
+    assert.ok(!("GITHUB_TOKEN" in l.calls[0].opts.env) && !("GH_CONFIG_DIR" in l.calls[0].opts.env));
+  });
+
+  it("refuses when george-hutanu has no gh login, rather than leave gh to its active account", () => {
+    assert.throws(() => ghEnv({ env: { HOME: "/h" }, run: login(null).run }), (e) => e instanceof TokenError && /george-hutanu/.test(e.message));
   });
 });

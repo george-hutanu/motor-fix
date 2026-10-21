@@ -851,16 +851,11 @@ _From 1190-live-reconnects._
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
-
 - `875-FR-007` — superseded by `879-FR-016` (2026-10-08)
 - `881-FR-002` — superseded by `879-FR-012` (2026-10-08)
-
 - `879-FR-010` — superseded by `244-FR-018` (2026-10-10)
-
 - `879-FR-010` — superseded by `251-FR-018` (2026-10-10)
-
 - `1024-FR-007` — superseded by `1175-FR-006` (2026-10-15)
-
 - `1024-FR-001` — superseded by `880-FR-013` (2026-10-17)
 - `1024-FR-009` — superseded by `880-FR-014` (2026-10-17)
 - `1024-FR-011` — superseded by `880-FR-015` (2026-10-17)
@@ -870,7 +865,5 @@ _From 1190-live-reconnects._
 - `880-FR-014` — superseded by `1347-FR-002` (2026-10-17)
 - `251-FR-003` — superseded by `1347-FR-003` (2026-10-17)
 - `251-FR-004` — superseded by `1347-FR-004` (2026-10-17)
-
 - `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)
-
 - `297-FR-005` — superseded by `299-FR-019` (2026-10-17)

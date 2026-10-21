@@ -773,16 +773,12 @@ _From 1352-catalogue-job-visibility._
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
 - `194-FR-018` — superseded by `195-FR-010` (2026-10-04)
-
 - `194-FR-003` — superseded by `196-FR-007` (2026-10-05)
 - `194-FR-008` — superseded by `196-FR-019` (2026-10-05)
 - `194-FR-013` — superseded by `196-FR-014` (2026-10-05)
-
 - `560-FR-001` — superseded by `806-FR-001` (2026-10-07)
-
 - `199-FR-009` — superseded by `032-FR-001` (2026-10-10)
 - `279-FR-013` — the sending-domain how-to page lives in the specs repo, which CI cannot read; docs-lint checks it, no test can trace it (2026-10-18)
-
 - `194-FR-001` — superseded by `1351-FR-008` (2026-10-19)
 - `199-FR-003` — superseded by `1190-FR-005` (2026-10-19)
 - `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)

@@ -503,12 +503,27 @@ describe('merging a delta into the living capability', () => {
         const parsed = parseCapability(plan.text);
         assert.deepEqual([...parsed.retired.keys()].sort(), [T('000', '001'), T('001', '009')]);
         assert.equal(plan.text.match(/^## Retired$/gm).length, 1);
+        const retiredList = plan.text.slice(plan.text.indexOf('## Retired')).trim().split('\n').slice(2);
+        assert.ok(retiredList.every((l) => l.startsWith('- ')), `one list, no blank line inside:\n${retiredList.join('\n')}`);
         assert.ok(parsed.requirements.has(T('001', '004')));
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     });
   }
+
+  it('sets an added requirement off from the one before it by a blank line', () => {
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', { features: ['001-x'], requirements: [[T('001', '004'), 'lists tasks']] }),
+      'specs/002-fixture/spec.md': spec([['FR-006', 'creates it on demand']], ['### Capability: `cli-tasks`', '', '- **Adds**: FR-006'].join('\n')),
+    });
+    try {
+      const [plan] = planMerge(dir, feature(dir));
+      assert.match(plan.text, /_From 001-x\._\n\n### 002-FR-006 — /);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   it('keeps a superseded requirement in its original position', () => {
     // Reading order is the order the behaviour was built in. A replacement

@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -88,7 +88,7 @@ function repoWith({ deferred, comment } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false } = {}) {
+async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, realGh = false } = {}) {
   const out = [];
   const err = [];
   const ghCalls = [];
@@ -102,7 +102,7 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
     },
     sleep: async () => {},
     run: tokenRun ?? (() => ({ code: 1, stdout: "", stderr: "" })),
-    gh: (args) => {
+    gh: realGh ? undefined : (args) => {
       ghCalls.push(args);
       if (ghFails(args)) throw new Error(`gh ${args.join(" ")}: HTTP 502`);
       if (args[0] === "pr" && args[1] === "view") return args.includes(".url") ? `${PR_URL}\n` : "335\n";
@@ -187,7 +187,7 @@ describe("status events move the story's issue in Project #11", () => {
   });
 });
 
-// @traces 1036-FR-004
+// @traces 1036-FR-004 1360-FR-003
 describe("blocked and unblock", () => {
   it("posts the reason once on the issue and the PR, and unblock returns to the status it left", async () => {
     const gh = world({ story: "QA" });
@@ -196,7 +196,7 @@ describe("blocked and unblock", () => {
     assert.equal(gh.itemValues(60).Status, "Blocked");
     assert.deepEqual(
       gh.state.comments.get(60).map((c) => c.body),
-      ["Blocked: CI red"],
+      ["Blocked: CI red\n\n<!-- tracker-sync prior: QA -->"],
     );
     assert.ok(first.gh.some((a) => a[0] === "pr" && a[1] === "comment" && a.includes("Blocked: CI red")));
     assert.ok(prEdits(first).some((a) => a.join(" ").includes("--add-label QA --add-label blocked")));
@@ -506,5 +506,167 @@ describe("GitHub only", () => {
     assert.ok(urls.length > 0);
     assert.ok(urls.every((u) => u.startsWith("https://api.github.com/")), urls.filter((u) => !u.startsWith("https://api.github.com/")).join("\n"));
     assert.equal(gh.itemValues(60).Status, "Done");
+  });
+});
+
+// @traces 1360-FR-001 1360-FR-002 1360-FR-003 1360-FR-005
+describe("an event for another story, run from this feature's worktree", () => {
+  // This worktree runs ST-1036 (#60), Implementing, with its own prior recorded; ST-290 (#62) is the Blocked dependent.
+  const worktree = (log) => {
+    const repo = repoWith();
+    writeFileSync(join(repo, ".specify", "run-state.json"), JSON.stringify({ status: "in-progress", prior_status: "Planning" }));
+    if (log) {
+      mkdirSync(join(repo, "specs", "1290-garage-hours"), { recursive: true });
+      writeFileSync(join(repo, "specs", "1290-garage-hours", "tracker-sync.md"), log);
+    }
+    return repo;
+  };
+  const runState = (repo) => JSON.parse(readFileSync(join(repo, ".specify", "run-state.json"), "utf8"));
+  const prCalls = (r) => r.gh.filter((a) => a[0] === "pr");
+
+  it("unblock returns the dependent to the status its own log says it left, and touches nothing of this worktree", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = worktree("# Tracker sync — 1290-garage-hours\n\n- 2026-10-01 · blocked · ST-290 · To do → Blocked — waits on ST-12\n- 2026-10-03 · unblock · ST-290 · Blocked → To do\n- 2026-10-04 · blocked · ST-290 · Planning → Blocked — waits on ST-1036\n");
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "Planning");
+    assert.equal(gh.itemValues(60).Status, "Implementing", "this worktree's story is not moved");
+    assert.deepEqual(prCalls(r), [], "no read of, label on or comment to this branch's PR");
+    assert.equal(runState(repo).prior_status, "Planning", "this worktree's recorded prior is kept");
+  });
+
+  it("unblock reads the prior from the dependent's Blocked comment when no log has it", async () => {
+    const gh = world({ story: "Implementing" });
+    gh.state.comments.set(62, [{ id: "IC_1", body: "Blocked: x\n\n<!-- tracker-sync prior: Implementing -->" }, { id: "IC_2", body: "Blocked: y\n\n<!-- tracker-sync prior: QA -->" }]);
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo: worktree() });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "QA", "the newest Blocked comment wins");
+    assert.deepEqual(prCalls(r), []);
+  });
+
+  it("the Blocked comment's marker wins over an older block cycle in a stale log", async () => {
+    const gh = world({ story: "Implementing" });
+    gh.state.comments.set(62, [{ id: "IC_1", body: "Blocked: y\n\n<!-- tracker-sync prior: Planning -->" }]);
+    const repo = worktree("# Tracker sync — 1290-garage-hours\n\n- 2026-10-01 · blocked · ST-290 · To do → Blocked — waits on ST-12\n");
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "Planning");
+  });
+
+  it("a prior that is not a status unblock may return to is ignored, and the next source is read", async () => {
+    const gh = world({ story: "Implementing" });
+    gh.state.comments.set(62, [{ id: "IC_1", body: "Blocked: y\n\n<!-- tracker-sync prior: Implementing -->" }, { id: "IC_2", body: "Blocked: z\n\n<!-- tracker-sync prior: Done -->" }, { id: "IC_3", body: "Blocked: w\n\n<!-- tracker-sync prior: Shipped -->" }]);
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo: worktree("# x\n\n- 2026-10-05 · blocked · ST-290 · Done → Blocked — y\n") });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "Implementing");
+    assert.equal(issueOf(gh, 62).state ?? "open", "open", "never closed by a Done read back");
+  });
+
+  it("two features' logs blocking it on the same day: the log written last wins, not the folder listed last", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = worktree();
+    const write = (folder, status, when) => {
+      mkdirSync(join(repo, "specs", folder), { recursive: true });
+      const file = join(repo, "specs", folder, "tracker-sync.md");
+      writeFileSync(file, `# x\n\n- 2026-10-05 · blocked · ST-290 · ${status} → Blocked — y\n`);
+      utimesSync(file, when, when);
+    };
+    write("1100-a", "QA", new Date(2026, 9, 5, 18));
+    write("1200-b", "Planning", new Date(2026, 9, 5, 9));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "QA", r.err.join("\n"));
+  });
+
+  it("unblock with no recorded prior returns the dependent to To do, not this worktree's status", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = worktree();
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "To do");
+    assert.deepEqual(prCalls(r), []);
+    assert.equal(runState(repo).prior_status, "Planning");
+  });
+
+  it("blocked on another story records its prior in the comment, not in this worktree, and leaves this PR alone", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = worktree();
+    const r = await run(["blocked", "waits", "on", "ST-1036", "--story", "ST-330"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(63).Status, "Blocked");
+    assert.deepEqual(gh.state.comments.get(63).map((c) => c.body), ["Blocked: waits on ST-1036\n\n<!-- tracker-sync prior: To do -->"]);
+    assert.deepEqual(prCalls(r), []);
+    assert.equal(runState(repo).prior_status, "Planning");
+    const back = await run(["unblock", "--story", "ST-330"], { gh, repo });
+    assert.equal(gh.itemValues(63).Status, "To do", back.err.join("\n"));
+  });
+
+  it("an explicit --pr is still honoured for another story", async () => {
+    const gh = world();
+    const r = await run(["unblock", "--story", "ST-290", "--pr", "335"], { gh, repo: worktree() });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.ok(prEdits(r).some((a) => a.includes("335")));
+  });
+
+  it("a story this feature's log linked a PR for is its own too", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = repoWith();
+    writeFileSync(join(repo, FEATURE, "tracker-sync.md"), "# Tracker sync — 1036-github-tracker-lifecycle\n\n- 2026-10-01 · pr · ST-290 · PR #335 https://github.com/george-hutanu/motor-fix/pull/335\n");
+    writeFileSync(join(repo, ".specify", "run-state.json"), JSON.stringify({ prior_status: "QA" }));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(gh.itemValues(62).Status, "QA", r.err.join("\n"));
+    assert.ok(prEdits(r).some((a) => a.includes("335")));
+  });
+
+  it("a story this feature's log started is its own, whatever the feature number: run-state prior and its PR", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = repoWith();
+    writeFileSync(join(repo, FEATURE, "tracker-sync.md"), "# Tracker sync — 1036-github-tracker-lifecycle\n\n- 2026-10-01 · start · ST-290 · To do → Planning\n");
+    writeFileSync(join(repo, ".specify", "run-state.json"), JSON.stringify({ prior_status: "QA" }));
+    const r = await run(["unblock", "--story", "ST-290"], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(62).Status, "QA");
+    assert.ok(prEdits(r).some((a) => a.includes("335")), "its own PR is labelled");
+  });
+});
+
+// @traces 1360-FR-004
+describe("every gh call carries george-hutanu's token", () => {
+  const spawner = ({ login }) => {
+    const calls = [];
+    const fn = (file, args, opts = {}) => {
+      calls.push({ args, env: opts.env ?? {} });
+      if (args[0] === "auth") return login ? { code: 0, stdout: `${login}\n`, stderr: "" } : { code: 1, stdout: "", stderr: "no account" };
+      if (args[0] === "pr" && args[1] === "view") return { code: 0, stdout: "335\n", stderr: "" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    return { fn, calls, gh: () => calls.filter((c) => c.args[0] !== "auth") };
+  };
+
+  it("a shell without GH_TOKEN gets george-hutanu's login token on every gh call", async () => {
+    const s = spawner({ login: "gho_LOGIN_secret" });
+    const r = await run(["qa"], { gh: world({ story: "Implementing" }), env: { GH_PROJECT_TOKEN: TOKEN }, tokenRun: s.fn, realGh: true });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.ok(s.calls.some((c) => c.args.join(" ") === "auth token -u george-hutanu" && !("GH_TOKEN" in c.env)));
+    assert.ok(s.gh().length >= 2, "pr view and pr edit ran");
+    assert.ok(s.gh().every((c) => c.env.GH_TOKEN === "gho_LOGIN_secret"), JSON.stringify(s.gh().map((c) => c.args)));
+    assert.ok(!r.out.join("").includes("gho_LOGIN_secret") && !r.log.includes("gho_LOGIN_secret"));
+  });
+
+  it("the session's GH_TOKEN is kept as it is", async () => {
+    const s = spawner({ login: "gho_LOGIN_secret" });
+    const r = await run(["qa"], { gh: world({ story: "Implementing" }), env: { GH_TOKEN: TOKEN }, tokenRun: s.fn, realGh: true });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.ok(s.gh().length >= 2 && s.gh().every((c) => c.env.GH_TOKEN === TOKEN));
+  });
+
+  it("with no george-hutanu token, no gh call runs as the active account: the label write is PENDING", async () => {
+    const s = spawner({ login: null });
+    const gh = world({ story: "Implementing" });
+    const r = await run(["qa", "--pr", "335"], { gh, env: { GH_PROJECT_TOKEN: TOKEN }, tokenRun: s.fn, realGh: true });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(60).Status, "QA", "the tracker write still lands");
+    assert.deepEqual(s.gh(), [], "gh never ran without the token");
+    assert.ok(r.log.includes("[TRACKER-SYNC PENDING: labels PR #335"), r.log);
+    assert.match(r.log, /george-hutanu/);
   });
 });

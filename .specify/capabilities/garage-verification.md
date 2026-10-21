@@ -704,16 +704,13 @@ _From 1357-rar-covered-jobs._
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
-
 - `301-FR-005` — superseded by `302-FR-003` (2026-10-17)
 - `207-FR-002` — superseded by `302-FR-002` (2026-10-17)
 - `300-FR-003` — superseded by `302-FR-007` (2026-10-17)
 - `300-FR-010` — superseded by `302-FR-007` (2026-10-17)
-
 - `302-FR-007` — superseded by `203-FR-007` (2026-10-17)
 - `300-FR-006` — superseded by `203-FR-004` (2026-10-17)
 - `302-FR-004` — superseded by `203-FR-006` (2026-10-17)
-
 - `207-FR-008` — superseded by `306-FR-004` (2026-10-17)
 - `302-FR-009` — superseded by `306-FR-007` (2026-10-17)
 - `302-FR-001` — superseded by `306-FR-006` (2026-10-17)
@@ -723,7 +720,6 @@ _From 1357-rar-covered-jobs._
 - `203-FR-001` — superseded by `204-FR-002` (2026-10-17)
 - `203-FR-004` — superseded by `204-FR-005` (2026-10-17)
 - `300-FR-005` — superseded by `204-FR-013` (2026-10-17)
-
 - `306-FR-001` — superseded by `303-FR-003` (2026-10-18)
 - `306-FR-003` — superseded by `303-FR-004` (2026-10-18)
 - `306-FR-004` — superseded by `303-FR-006` (2026-10-18)
@@ -731,24 +727,19 @@ _From 1357-rar-covered-jobs._
 - `204-FR-009` — superseded by `303-FR-007` (2026-10-18)
 - `207-FR-001` — superseded by `303-FR-005` (2026-10-18)
 - `207-FR-003` — superseded by `303-FR-005` (2026-10-18)
-
 - `204-FR-009` — superseded by `069-FR-008` (2026-10-18)
 - `306-FR-007` — superseded by `069-FR-009` (2026-10-18)
 - `312-FR-007` — superseded by `069-FR-003` (2026-10-18)
 - `207-FR-009` — superseded by `259-FR-002` (2026-10-18)
 - `303-FR-004` — superseded by `259-FR-004` (2026-10-18)
-
 - `300-FR-007` — superseded by `210-FR-011` (2026-10-18)
 - `303-FR-001` — superseded by `305-FR-001` (2026-10-18)
-
 - `305-FR-001` — superseded by `304-FR-001` (2026-10-18)
 - `305-FR-006` — superseded by `304-FR-006` (2026-10-18)
-
 - `303-FR-005` — superseded by `1351-FR-006` (2026-10-19)
 - `300-FR-004` — superseded by `1351-FR-006` (2026-10-19)
 - `066-FR-004` — superseded by `1351-FR-007` (2026-10-19)
 - `066-FR-002` — superseded by `1351-FR-010` (2026-10-19)
-
 - `210-FR-002` — superseded by `1354-FR-001` (2026-10-20)
 - `210-FR-003` — superseded by `1354-FR-002` (2026-10-20)
 - `210-FR-009` — superseded by `1354-FR-003` (2026-10-20)
