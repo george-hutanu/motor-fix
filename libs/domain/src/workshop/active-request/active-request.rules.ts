@@ -74,16 +74,29 @@ const OPEN_QUOTES = new Set<QuoteStatus>(['waiting', 'accepted']);
 const WAITING = new Set<RequestStatus>(['sent', 'quoted']);
 const FIVE_MINUTES = 5 * 60_000;
 
+type LiveStatus = (typeof LIVE_BOOKINGS)[number];
+
+const isLive = <B extends { status: string }>(
+  b: B,
+): b is B & { status: LiveStatus } =>
+  (LIVE_BOOKINGS as readonly string[]).includes(b.status);
+
 export const liveBooking = <B extends BookingRow>(row: { bookings: B[] }) =>
-  row.bookings.find((b) =>
-    (LIVE_BOOKINGS as readonly string[]).includes(b.status),
-  );
+  row.bookings.find(isLive);
+
+type LiveJobStatus = Exclude<JobStatus, 'cancelled'>;
+
+const isLiveJob = <J extends JobRow>(
+  job: J | null | undefined,
+): job is J & { status: LiveJobStatus } => !!job && job.status !== 'cancelled';
 
 // A cancelled job is no job.
 export const jobOf = <J extends JobRow>(
   booking: { job: J | null } | undefined,
-): J | null =>
-  booking?.job && booking.job.status !== 'cancelled' ? booking.job : null;
+): (J & { status: LiveJobStatus }) | null => {
+  const job = booking?.job;
+  return isLiveJob(job) ? job : null;
+};
 
 // The stage comes from the newest live booking and its job; the request's own
 // status only tells a quoted request from a sent one.
@@ -115,7 +128,7 @@ const RANK: Record<ActiveRequestStage, number> = {
   sent: 2,
 };
 
-export function lastChangeOf(row: RequestRow): number {
+function lastChangeOf(row: RequestRow): number {
   const times: (Date | null)[] = [row.createdAt];
   for (const quote of row.quotes) times.push(quote.sentAt);
   for (const booking of row.bookings) {

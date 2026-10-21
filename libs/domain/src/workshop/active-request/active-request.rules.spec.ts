@@ -2,7 +2,6 @@ import {
   byClosest,
   etaOf,
   isOpen,
-  lastChangeOf,
   mechanicOf,
   rangeOf,
   stageOf,
@@ -218,35 +217,44 @@ describe('the open request closest to the workshop', () => {
 });
 
 // @traces 274-FR-002
-describe('when a request last changed', () => {
+describe('when a request last changed, between two of the same stage', () => {
+  // The other request has the newer id, so it wins unless this one changed
+  // later than its 09:00.
+  const later = (r: Row, other: Row) =>
+    [{ ...other, id: 'z' }, r].sort(byClosest)[0] === r;
+
   it('is its creation when nothing else happened', () => {
-    expect(lastChangeOf(row())).toBe(at('07:00').getTime());
+    expect(
+      later(row({ createdAt: at('10:00') }), row({ createdAt: at('09:00') })),
+    ).toBe(true);
+    expect(later(row(), row({ createdAt: at('09:00') }))).toBe(false);
   });
 
   it.each([
-    ['a quote sent', row({ quotes: [quote(1, 2, 'waiting', at('10:00'))] })],
+    ['a quote sent', (t: Date) => row({ quotes: [quote(1, 2, 'waiting', t)] })],
     [
       'the booking made',
-      row({ bookings: [booking({ createdAt: at('10:00') })] }),
+      (t: Date) => row({ bookings: [booking({ createdAt: t })] }),
     ],
     [
       'the booking confirmed',
-      row({ bookings: [booking({ confirmedAt: at('10:00') })] }),
+      (t: Date) => row({ bookings: [booking({ confirmedAt: t })] }),
     ],
     [
       'the job started',
-      row({ bookings: [booking({ job: job({ startedAt: at('10:00') }) })] }),
+      (t: Date) => row({ bookings: [booking({ job: job({ startedAt: t }) })] }),
     ],
     [
       'the job paused',
-      row({ bookings: [booking({ job: job({ pausedAt: at('10:00') }) })] }),
+      (t: Date) => row({ bookings: [booking({ job: job({ pausedAt: t }) })] }),
     ],
     [
       'the job finished',
-      row({ bookings: [booking({ job: job({ finishedAt: at('10:00') }) })] }),
+      (t: Date) =>
+        row({ bookings: [booking({ job: job({ finishedAt: t }) })] }),
     ],
-  ])('is %s when it is the latest', (_what, r) => {
-    expect(lastChangeOf(r)).toBe(at('10:00').getTime());
+  ])('is %s when it is the latest', (_what, make) => {
+    expect(later(make(at('10:00')), make(at('09:00')))).toBe(true);
   });
 });
 

@@ -380,7 +380,7 @@ describe('the cost of the read', () => {
     const dinamo = await world.garage('Atelier Dinamo');
     await working(andrei, dinamo.id, 'in_work');
     const requests = jest.spyOn(client().quoteRequest, 'findMany');
-    const features = jest.spyOn(client().garageFeature, 'findMany');
+    const features = jest.spyOn(client().garageFeature, 'findUnique');
 
     await read(andrei);
     const one = [requests.mock.calls.length, features.mock.calls.length];

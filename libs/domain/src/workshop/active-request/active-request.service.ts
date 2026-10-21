@@ -70,7 +70,7 @@ export class ActiveRequestService {
             confirmBy: booking.confirmBy.toISOString(),
             garage: garageRef(booking.garage),
             startsAt: booking.startsAt.toISOString(),
-            status: booking.status as 'awaiting_confirmation',
+            status: booking.status,
           }
         : null,
       car: { brand: row.carBrand, model: row.carModel, year: row.carYear },
@@ -82,7 +82,7 @@ export class ActiveRequestService {
               etaAt: iso(etaOf(job, booking.durationMinutes)),
               finalPriceBani: job.finalPriceBani,
               startedAt: iso(job.startedAt),
-              status: job.status as 'to_do',
+              status: job.status,
               steps: stepsOf(job.steps, job.status),
             }
           : null,
@@ -96,9 +96,9 @@ export class ActiveRequestService {
 
   // Mechanics are named unless the garage turned its team off.
   private async teamOn(garageId: string): Promise<boolean> {
-    const rows = await this.prisma.garageFeature.findMany({
-      where: { garageId, key: 'team_mechanics' },
+    const row = await this.prisma.garageFeature.findUnique({
+      where: { garageId_key: { garageId, key: 'team_mechanics' } },
     });
-    return rows[0]?.enabled ?? true;
+    return row?.enabled ?? true;
   }
 }

@@ -5,6 +5,7 @@ features:
   - 220-requests-quotes-bookings
   - 424-job-steps
   - 389-confirm-booking-lift-mechanic
+  - 274-request-stages
 ---
 
 # Capability: Workshop
@@ -88,6 +89,90 @@ _From 424-job-steps._
 ### 424-FR-018 — Tests MUST cover, in Jest on real PostgreSQL and Redis: add, rename, reorder, remove, tick and untick by the owner and by the job's mechanic; 403 for a receptionist's writes and for another mechanic of the garage; 404 for another garage; a resent add with the same `Idempotency-Key` makes one step; positions without gaps after a removal and a reorder; the text limits and the cap of 20; ticks refused while `to_do` and everything refused once `done` or `cancelled`; `done_by` stored and cleared; audit rows and events in the same transaction; two simultaneous writes both applied; the list's day filter, order and counts. Web unit tests cover the view's controls per role and state, the optimistic save and the queue. End to end (Playwright): the owner adds three steps to a job in work; the job's mechanic, signed in on a phone, ticks one; in a second browser the owner's open panel shows "1 din 3 gata" without a reload.
 
 _From 424-job-steps._
+
+### 274-FR-001 — The API MUST offer `GET /api/v1/quote-requests/active`, for the signed-in driver only (capability `driver.requests`; any other role answered 404, a visitor asked to sign in), returning the driver's active request or `null`, and the number of the driver's open requests. A request is open when its status is `sent`, `quoted`, `booked` or `in_work`, or `done` with its job not yet handed over; a `booked` or `in_work` request with no live booking (awaiting the garage, confirmed or completed), as after a no-show, is not open. Another driver's requests are never read.
+
+_From 274-request-stages._
+
+### 274-FR-002 — The active request MUST be the open request closest to the workshop by its stage (FR-003): in work, then booked, then waiting for quotes (`sent` or `quoted`), then done (car ready, last: nothing yet records the handover that ends it); a tie goes to the request changed most recently (the latest of its creation, its quotes' sending, its booking's creation or confirmation and its job's start, pause or finish), then to the newest id.
+
+_From 274-request-stages._
+
+### 274-FR-003 — The read MUST return the request's stage, derived from its newest booking that is awaiting the garage, confirmed or completed, and that booking's job, before the request's own status: `done` (the job `done`), `in_work` (the job `in_work` or `paused`), `booked` (such a booking, its job not started or none), else `quoted` (request status `quoted`) or `sent`. The request's status only decides whether it is open (FR-001); when it and the job disagree, the job wins.
+
+_From 274-request-stages._
+
+### 274-FR-004 — The read MUST return the request's id, its car snapshot (brand, model, year), its job types (Romanian and English names, in order) and its description, so the panel titles it "<jobs> · <brand> <model>", falling back to the description's first line when it has no job type.
+
+_From 274-request-stages._
+
+### 274-FR-005 — The read MUST return the quoted range in bani: before a quote is accepted, the lowest `from_bani` and the highest `to_bani` across the request's open (`waiting`) quotes; once booked, the accepted quote's range; none while there is no such quote (a `quoted` request whose quotes all ended shows Ofertă with no range).
+
+_From 274-request-stages._
+
+### 274-FR-006 — Once booked, the read MUST return the booking's garage (name, slug), its status (`awaiting_confirmation`, `confirmed` or, once the job is done, `completed`), its start and its confirm-by time; before booking, no garage and no booking.
+
+_From 274-request-stages._
+
+### 274-FR-007 — The read MUST return the mechanic's name, the job's mechanic when the job has one, else the confirmed booking's, even when the mechanic hid themselves; none while the booking awaits the garage, when the garage's `team_mechanics` switch is off (on when unset) or when no mechanic is set.
+
+_From 274-request-stages._
+
+### 274-FR-008 — Once the job has started, the read MUST return the job's status, its start and its estimated finish: `eta_at` when set, else the job's `started_at` plus the booking's duration; either rounded up to the next 5-minute mark (an exact mark stays, any seconds past it round up). Before the job starts, no start and no finish; once the job is done, no estimate.
+
+_From 274-request-stages._
+
+### 274-FR-009 — The read MUST return the job's steps in position order, each with the garage's customer wording (else its label) and its state: `done` when ticked, `now` for the first unticked step while the job is `in_work`, else `todo`; and the final price in bani once recorded.
+
+_From 274-request-stages._
+
+### 274-FR-010 — The panel Cererea activă MUST show five stages on a line, Trimisă, Ofertă, Programată, În lucru, Gata: those before the current stage filled, the current one glowing and marked as the current step for assistive technology (`aria-current="step"`), the later ones grey; on Gata, Gata is filled, glowing and marked current.
+
+_From 274-request-stages._
+
+### 274-FR-011 — The panel MUST show the title (FR-004), and once booked the garage's name, followed by "mecanic <name>" when a mechanic is named (FR-007).
+
+_From 274-request-stages._
+
+### 274-FR-012 — The panel MUST show "Ofertă" with the range formatted in lei whenever there is one, and, when the job is done and a final price is recorded, that price next to the range.
+
+_From 274-request-stages._
+
+### 274-FR-013 — While the booking awaits the garage the panel MUST show "Așteaptă confirmarea service-ului · încă <time left>"; once confirmed and before the job starts, "Programată" with the booking's day and time; times in Europe/Bucharest with "azi", "mâine" or the weekday and date; the time left is recomputed every minute while the panel is open.
+
+_From 274-request-stages._
+
+### 274-FR-014 — Once the job has started the panel MUST show "Început" with the start and, until it is done, "Gata, estimat" with "<day>, în jur de <time>"; while paused, the line "În pauză"; when done, "Mașina e gata. Poți veni după ea." and no estimate. Before a quote is accepted, no start and no finish are shown.
+
+_From 274-request-stages._
+
+### 274-FR-015 — The panel MUST show "Pașii lucrării · <done> din <total> gata" and each step with "gata", "acum" or nothing, and hide the section when the job has no step or there is no job.
+
+_From 274-request-stages._
+
+### 274-FR-016 — When the driver has more than one open request, the overview's panel MUST show the link "Încă <n> cereri deschise" (n = open requests − 1) to Cererile mele.
+
+_From 274-request-stages._
+
+### 274-FR-017 — The panel MUST carry Cerere nouă, a link to Home in the driver's language, in every state but loading and error.
+
+_From 274-request-stages._
+
+### 274-FR-018 — The panel MUST be the first, wide panel of the overview when the driver has an open request (the overview keeps its invitations to add a car and find a garage when none is open), and MUST sit at the top of Cererile mele when the driver has any request, showing "Nicio cerere deschisă" with Cerere nouă when none is open.
+
+_From 274-request-stages._
+
+### 274-FR-019 — While the read is pending the panel MUST show a skeleton of itself marked busy for assistive technology (`aria-busy`); when it fails, "Nu am putut încărca cererea." with Reîncearcă, which reads it again.
+
+_From 274-request-stages._
+
+### 274-FR-020 — The panel MUST read again on the request events the overview already follows (`quote.accepted`, `booking.confirmed`, `booking.lapsed`) plus `quote.sent`, and, in Cererile mele, on the events its list follows; it adds no live channel of its own (live updates are ST-275).
+
+_From 274-request-stages._
+
+### 274-FR-021 — Every text MUST exist in Romanian and English, and the panel MUST fit 320 px wide with no sideways scroll, in light and dark.
+
+_From 274-request-stages._
 
 ## Retired
 
