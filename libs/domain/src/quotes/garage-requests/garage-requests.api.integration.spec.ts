@@ -1055,7 +1055,7 @@ describe('GET /garage/requests?status=quoted', () => {
     }
   });
 
-  // @traces 314-accept-quote-FR-015
+  // @traces 314-FR-015
   it('keeps a quote the driver declined until the quote’s own expiry', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');

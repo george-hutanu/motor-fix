@@ -76,7 +76,7 @@ describe('AccountLoader.activeAccount', () => {
 });
 
 describe('actorOf', () => {
-  // @traces 314-accept-quote-FR-016
+  // @traces 314-FR-016
   it('builds a driver with every role the account holds, its language and no garage', () => {
     const found = account({
       language: 'en',

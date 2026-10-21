@@ -463,7 +463,7 @@ describe('sorting the comparison', () => {
 
 // @traces 313-FR-010
 // @traces 313-FR-015
-// @traces 314-accept-quote-FR-009
+// @traces 314-FR-009
 describe('the comparison kept current', () => {
   it.each([
     'quote.sent',
@@ -622,8 +622,8 @@ describe('the comparison’s clock', () => {
 });
 
 // @traces 313-FR-008
-// @traces 314-accept-quote-FR-002
-// @traces 314-accept-quote-FR-004
+// @traces 314-FR-002
+// @traces 314-FR-004
 describe('accepting a quote from the comparison', () => {
   it('opens the confirmation naming the garage, its range and its slot', async () => {
     const { element, settle } = await render([comparison()]);
@@ -674,7 +674,7 @@ describe('accepting a quote from the comparison', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-010
+// @traces 314-FR-010
 describe('declining a quote from the comparison', () => {
   it('asks to decline the garage’s quote, then reads again', async () => {
     const { element, settle } = await render([comparison()], {

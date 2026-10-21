@@ -69,6 +69,7 @@ export class DeclineQuoteService {
   ): Promise<DeclinedQuoteDto> {
     const quote = await tx.quote.findUnique({
       select: {
+        expiresAt: true,
         garage: { select: { status: true } },
         garageId: true,
         request: { select: { driverId: true } },
@@ -80,10 +81,15 @@ export class DeclineQuoteService {
     if (quote?.request.driverId !== actor.accountId) {
       throw new NotFoundException();
     }
+    const at = new Date();
+    // A quote past its validity is expired, whether or not the sweep has
+    // moved it yet; a suspended garage's reads as withdrawn.
+    if (quote.status === 'waiting' && quote.expiresAt <= at) {
+      throw quoteRefused(actor, 'expired', TO);
+    }
     if (quote.status === 'waiting' && quote.garage.status === 'suspended') {
       throw quoteRefused(actor, 'withdrawn', TO, SUSPENDED);
     }
-    const at = new Date();
     await moveQuote(
       tx,
       { audit: this.audit, events: this.events },

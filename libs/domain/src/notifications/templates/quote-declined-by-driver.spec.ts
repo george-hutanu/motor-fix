@@ -12,7 +12,7 @@ const params = {
   link,
 };
 
-// @traces 314-accept-quote-FR-014
+// @traces 314-FR-014
 describe('the declined quote message to garage staff', () => {
   it('is registered for the garage and passes the template check', () => {
     expect(TEMPLATES[KIND]?.audience).toBe('garage');

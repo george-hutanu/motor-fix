@@ -344,7 +344,7 @@ describe('accepting from a row', () => {
     expect(host.accepted).toEqual(['q-7']);
   });
 
-  // @traces 314-accept-quote-FR-022
+  // @traces 314-FR-022
   it('disables Acceptă and Refuză while the driver is offline', async () => {
     const { host, row } = await render(quote(), { locked: true });
 
@@ -369,7 +369,7 @@ const waitingFor = (
   ...over,
 });
 
-// @traces 314-accept-quote-FR-005
+// @traces 314-FR-005
 describe('an accepted quote waiting for the garage', () => {
   it('shows Acceptată with a green lamp and the hours left, rounded down', async () => {
     const booking = waitingFor('2026-10-10T09:59:00.000Z');
@@ -419,7 +419,7 @@ describe('an accepted quote waiting for the garage', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-007
+// @traces 314-FR-007
 describe('a booked quote', () => {
   it('names the day, the hour and the mechanic', async () => {
     const booking = waitingFor('2026-10-10T09:59:00.000Z', {
@@ -454,7 +454,7 @@ describe('a booked quote', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-008
+// @traces 314-FR-008
 describe('a lapsed booking’s quote', () => {
   it('says the garage did not confirm, with no action', async () => {
     const booking = waitingFor('2026-10-09T09:00:00.000Z', {
@@ -471,9 +471,9 @@ describe('a lapsed booking’s quote', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-006
-// @traces 314-accept-quote-FR-010
-// @traces 314-accept-quote-FR-013
+// @traces 314-FR-006
+// @traces 314-FR-010
+// @traces 314-FR-013
 describe('declining from a row', () => {
   it('offers Refuză beside Acceptă on an open quote', async () => {
     const { host, row } = await render(quote({ id: 'q-9' }));

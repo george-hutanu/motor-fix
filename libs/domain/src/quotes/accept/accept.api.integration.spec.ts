@@ -812,8 +812,8 @@ describe('two acceptances at once', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-004
-// @traces 314-accept-quote-FR-016
+// @traces 314-FR-004
+// @traces 314-FR-016
 describe('POST /quotes/:id/accept refusals in the driver’s language', () => {
   const english = (accountId: string) =>
     prisma.account.update({

@@ -130,7 +130,7 @@ const messages = (accountId: string) =>
     where: { accountId, fallbackOf: null, kind: 'QUOTE_DECLINED_BY_DRIVER' },
   });
 
-// @traces 314-accept-quote-FR-014
+// @traces 314-FR-014
 describe('telling the garage the driver declined its quote', () => {
   it('listens to quote.declined_by_driver', () => {
     expect(QUOTE_DECLINED_CONSUMER.kinds).toEqual(['quote.declined_by_driver']);

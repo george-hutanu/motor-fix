@@ -83,8 +83,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 314-accept-quote-FR-010
-// @traces 314-accept-quote-FR-023
+// @traces 314-FR-010
+// @traces 314-FR-023
 describe('the decline dialog', () => {
   it('asks to decline the garage’s quote, with no reason asked', async () => {
     await open();
@@ -128,7 +128,7 @@ describe('the decline dialog', () => {
     expect(decline).not.toHaveBeenCalled();
   });
 
-  // @traces 314-accept-quote-FR-022
+  // @traces 314-FR-022
   it('keeps Confirmă disabled while offline', async () => {
     await open();
     offline.set(true);
@@ -138,7 +138,7 @@ describe('the decline dialog', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-012
+// @traces 314-FR-012
 describe('the decline dialog: refusals', () => {
   it.each([
     ['accepted', 'Oferta a fost deja acceptată'],

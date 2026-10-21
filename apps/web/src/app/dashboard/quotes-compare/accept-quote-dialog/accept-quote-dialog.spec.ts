@@ -97,8 +97,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 314-accept-quote-FR-002
-// @traces 314-accept-quote-FR-023
+// @traces 314-FR-002
+// @traces 314-FR-023
 describe('the accept dialog: what it asks', () => {
   it('names the garage, its range and its slot, with the history box unticked', async () => {
     await open();
@@ -139,7 +139,7 @@ describe('the accept dialog: what it asks', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-003
+// @traces 314-FR-003
 describe('the accept dialog: accepting', () => {
   it('accepts without sharing the history unless ticked, then closes', async () => {
     await open();
@@ -201,7 +201,7 @@ describe('the accept dialog: accepting', () => {
     await expect(result).resolves.toBe('accepted');
   });
 
-  // @traces 314-accept-quote-FR-022
+  // @traces 314-FR-022
   it('keeps Confirmă disabled while offline', async () => {
     await open();
     offline.set(true);
@@ -213,7 +213,7 @@ describe('the accept dialog: accepting', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-004
+// @traces 314-FR-004
 describe('the accept dialog: refusals', () => {
   it.each([
     [

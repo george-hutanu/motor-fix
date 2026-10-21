@@ -198,7 +198,7 @@ export function moveQuote(
   });
 }
 
-export interface Cancellation {
+interface Cancellation {
   side: CancelledBySide;
   reason: BookingCancelReason;
   note?: string;

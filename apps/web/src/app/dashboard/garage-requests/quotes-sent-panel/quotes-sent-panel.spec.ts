@@ -265,8 +265,8 @@ describe('the quotes-sent-panel stylesheet', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-015
-// @traces 314-accept-quote-FR-019
+// @traces 314-FR-015
+// @traces 314-FR-019
 describe('Oferte trimise after the driver answers', () => {
   const HOUR = 3_600_000;
 

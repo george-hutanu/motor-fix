@@ -146,11 +146,11 @@ test.describe('accepting a quote @seeded', () => {
     }
   });
 
-  // @traces 314-accept-quote-FR-002
-  // @traces 314-accept-quote-FR-003
-  // @traces 314-accept-quote-FR-005
-  // @traces 314-accept-quote-FR-007
-  // @traces 314-accept-quote-FR-009
+  // @traces 314-FR-002
+  // @traces 314-FR-003
+  // @traces 314-FR-005
+  // @traces 314-FR-007
+  // @traces 314-FR-009
   test('the driver accepts in the comparison with the history ticked, sees it wait, and sees it booked with the mechanic once the owner confirms', async ({
     browser,
     page,

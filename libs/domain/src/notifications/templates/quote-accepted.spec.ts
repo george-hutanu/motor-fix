@@ -16,7 +16,7 @@ const params = {
 
 // @traces 222-FR-010
 // @traces 222-FR-013
-// @traces 314-accept-quote-FR-017
+// @traces 314-FR-017
 describe('the accepted quote message to garage staff', () => {
   it('is registered for the garage and passes the template check', () => {
     expect(TEMPLATES[KIND]?.audience).toBe('garage');

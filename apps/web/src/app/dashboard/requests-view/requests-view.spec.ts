@@ -217,7 +217,7 @@ describe('Cererile mele once a quote is accepted', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-019
+// @traces 314-FR-019
 describe('Cererile mele’s clock after an acceptance', () => {
   const HOUR = 3_600_000;
 

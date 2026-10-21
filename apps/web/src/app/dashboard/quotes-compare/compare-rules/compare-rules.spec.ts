@@ -70,7 +70,7 @@ const summary = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 const ids = (quotes: CompareQuoteDto[]) => quotes.map((q) => q.id);
 
 // @traces 313-FR-005
-// @traces 314-accept-quote-FR-021
+// @traces 314-FR-021
 describe('the header', () => {
   it('counts every row but the ones the driver declined', () => {
     const quotes = [
@@ -170,12 +170,12 @@ describe('a row’s state', () => {
 });
 
 // @traces 313-FR-012
-// @traces 314-accept-quote-FR-001
-// @traces 314-accept-quote-FR-005
-// @traces 314-accept-quote-FR-006
-// @traces 314-accept-quote-FR-007
-// @traces 314-accept-quote-FR-008
-// @traces 314-accept-quote-FR-013
+// @traces 314-FR-001
+// @traces 314-FR-005
+// @traces 314-FR-006
+// @traces 314-FR-007
+// @traces 314-FR-008
+// @traces 314-FR-013
 describe('a row’s state as the booking moves', () => {
   const booking = (
     status: 'awaiting_confirmation' | 'confirmed' | 'lapsed',

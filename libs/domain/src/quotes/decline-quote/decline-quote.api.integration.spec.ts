@@ -52,8 +52,8 @@ const entries = (quoteId: string) =>
     where: { at: { gte: since }, subjectId: quoteId },
   });
 
-// @traces 314-accept-quote-FR-011
-// @traces 314-accept-quote-FR-013
+// @traces 314-FR-011
+// @traces 314-FR-013
 describe('POST /quotes/:id/decline', () => {
   it('declines the waiting quote, stamped, leaving the request and the other quote as they were', async () => {
     const { andrei, other, quote, request } = await quoted();
@@ -128,7 +128,7 @@ describe('POST /quotes/:id/decline', () => {
     expect(res.body.status).toBe('declined_by_driver');
   });
 
-  // @traces 314-accept-quote-FR-020
+  // @traces 314-FR-020
   it('marks the entry as the assistant’s when a grant declined the quote', async () => {
     const { andrei, quote } = await quoted();
     const service = new DeclineQuoteService(prisma, new AuditService(), outbox);
@@ -145,7 +145,7 @@ describe('POST /quotes/:id/decline', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-012
+// @traces 314-FR-012
 describe('POST /quotes/:id/decline refused', () => {
   it.each([
     [

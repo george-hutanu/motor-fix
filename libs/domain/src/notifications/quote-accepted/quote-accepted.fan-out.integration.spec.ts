@@ -157,7 +157,7 @@ describe('telling the garage its quote was accepted', () => {
     }
   });
 
-  // @traces 314-accept-quote-FR-017
+  // @traces 314-FR-017
   it('names the driver, the car and the slot in Romania’s time, in each reader’s language', async () => {
     const { booking, desk, job, owner } = await acceptedQuote();
     await prisma.booking.update({

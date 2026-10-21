@@ -153,7 +153,7 @@ describe('Overlays: open and close', () => {
     expect(dialog.querySelector('#name')).not.toBeNull();
   });
 
-  // @traces 314-accept-quote-FR-002
+  // @traces 314-FR-002
   it('fills the title’s parameters', async () => {
     await openTask((host) => {
       host.options = {

@@ -229,8 +229,8 @@ describe('GET /quote-requests/:id/quotes', () => {
     });
   });
 
-  // @traces 314-accept-quote-FR-007
-  // @traces 314-accept-quote-FR-008
+  // @traces 314-FR-007
+  // @traces 314-FR-008
   it('names the booking’s quote and, once confirmed, its mechanic', async () => {
     const { andrei, dinamo, quote, request } = await quoted();
     const booking = await world.booking(quote.id, 'confirmed');
@@ -557,7 +557,7 @@ describe('GET /quote-requests/:id/quotes first seen', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-018
+// @traces 314-FR-018
 describe('warming the accept call from the comparison', () => {
   const redis = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
   afterAll(() => redis.disconnect());

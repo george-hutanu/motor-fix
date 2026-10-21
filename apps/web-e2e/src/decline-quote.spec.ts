@@ -73,9 +73,9 @@ async function signedIn(page: Page, email: string, landing: string) {
 
 // @seeded: the seeded driver declines Militari's quote.
 test.describe('declining a quote @seeded', () => {
-  // @traces 314-accept-quote-FR-010
-  // @traces 314-accept-quote-FR-013
-  // @traces 314-accept-quote-FR-015
+  // @traces 314-FR-010
+  // @traces 314-FR-013
+  // @traces 314-FR-015
   test('the driver declines one quote: the row greys out and the owner’s Oferte trimise says the customer declined it', async ({
     browser,
     page,

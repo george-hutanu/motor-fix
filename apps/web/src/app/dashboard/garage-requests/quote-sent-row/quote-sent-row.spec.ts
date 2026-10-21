@@ -467,7 +467,7 @@ describe('type scale on a phone', () => {
   });
 });
 
-// @traces 314-accept-quote-FR-015
+// @traces 314-FR-015
 describe('a row whose quote the driver declined', () => {
   const declined = () => {
     const base = sample('2026-10-10T06:00:00Z');

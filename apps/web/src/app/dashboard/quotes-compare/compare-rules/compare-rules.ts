@@ -75,8 +75,9 @@ export function rowState(
     return 'lapsed';
   }
   if (quote.status !== 'waiting') return STATE_OF[quote.status];
+  // Both still ahead, or the quote cannot be taken (an unreadable time too).
   const at = now.getTime();
-  if (Date.parse(quote.expiresAt) <= at || Date.parse(quote.slot) <= at) {
+  if (!(Date.parse(quote.expiresAt) > at && Date.parse(quote.slot) > at)) {
     return 'expired';
   }
   return (booking && HELD[booking.status]) ?? 'open';
