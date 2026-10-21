@@ -170,4 +170,69 @@ describe('JobTypeLoader under hostile files and failures', () => {
       before,
     );
   });
+
+  // @traces 1357-FR-001
+  it('records a change of kind and of a name as one entry per field and counts the job once', async () => {
+    await loader.load(JOB_TYPES);
+    const before = (await history()).length;
+
+    const result = await loader.load(
+      JOB_TYPES.map((job) =>
+        job.key === 'ac-regas'
+          ? { ...job, nameEn: 'Regas', rarActivity: 'mechanics' }
+          : job,
+      ),
+    );
+
+    expect(result.changed).toBe(1);
+    const updates = (await history())
+      .slice(before)
+      .map((e) => [e.action, e.field]);
+    expect(updates.sort()).toEqual([
+      ['update', 'nameEn'],
+      ['update', 'rarActivity'],
+    ]);
+  });
+
+  // @traces 1357-FR-001
+  it('keeps the kind of a stored job the file no longer names', async () => {
+    await loader.load(JOB_TYPES);
+
+    const result = await loader.load(
+      JOB_TYPES.filter((j) => j.key !== 'ac-regas'),
+    );
+
+    expect(result.changed).toBe(0);
+    expect(
+      (await prisma.jobType.findUniqueOrThrow({ where: { key: 'ac-regas' } }))
+        .rarActivity,
+    ).toBe('air_con');
+  });
+
+  // @traces 1357-FR-001
+  it('clears a stored kind to null and writes nothing on the second load', async () => {
+    await loader.load(JOB_TYPES);
+    await loader.load(
+      JOB_TYPES.map((j) =>
+        j.key === 'oil-service' ? { ...j, rarActivity: null } : j,
+      ),
+    );
+    const entries = (await history()).length;
+
+    const again = await loader.load(
+      JOB_TYPES.map((j) =>
+        j.key === 'oil-service' ? { ...j, rarActivity: null } : j,
+      ),
+    );
+
+    expect(again.changed).toBe(0);
+    expect(await history()).toHaveLength(entries);
+    expect(
+      (
+        await prisma.jobType.findUniqueOrThrow({
+          where: { key: 'oil-service' },
+        })
+      ).rarActivity,
+    ).toBeNull();
+  });
 });

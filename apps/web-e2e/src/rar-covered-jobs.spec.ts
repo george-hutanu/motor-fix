@@ -24,7 +24,7 @@ test.describe('the jobs a RAR authorisation covers @seeded @database', () => {
   const password = 'proprietar-rar-2026';
   const slug = `e2e-rar-${stamp}`;
   let db: Client;
-  let garageId = '';
+  const garageIds: string[] = [];
 
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
@@ -32,7 +32,7 @@ test.describe('the jobs a RAR authorisation covers @seeded @database', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
+    await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
     await db.query('DELETE FROM account WHERE email = $1', [email]);
     await db.end();
   });
@@ -47,7 +47,8 @@ test.describe('the jobs a RAR authorisation covers @seeded @database', () => {
        RETURNING id::text`,
       [`Atelier RAR ${stamp}`, slug],
     );
-    garageId = made.rows[0]?.id ?? '';
+    const garageId = made.rows[0]?.id ?? '';
+    garageIds.push(garageId);
 
     const signUp = await request.post('/api/v1/auth/sign-up', {
       data: {
