@@ -83,14 +83,19 @@ is. With neither, the PR has no recorded QA run (step 3). It starts on a finishe
 CI's state, and it never waits on either: a lap that needs a new run
 dispatches it and ends, and a pending check is left to the session's CI wait.
 
-1. If the branch is behind `origin/main`, merge it in with
-   `node .claude/scripts/merge-main.mjs`, which resolves the capability,
-   hook registry and contract conflicts itself (exit 1 lists the paths left
-   for you: resolve them, `git add`, run it again; a name under `bless` is a
-   gate script both sides changed: read its diff, then
-   `node .claude/scripts/doctor.mjs --bless-hooks`). Run
+1. Ask whether main has to come in at all:
+   `node .claude/scripts/merge-main.mjs --needed` (Constitution VII: main
+   merged in only on overlap). Exit 1 (`not needed`): a behind head that
+   shares nothing with main keeps its QA run and its `agent-review`; merge
+   nothing. Exit 0 (`needed: <rule>`) or exit 2 (git could not answer):
+   merge it in with `node .claude/scripts/merge-main.mjs`, which resolves
+   the capability, hook registry and contract conflicts itself (its exit 1
+   lists the paths left for you: resolve them, `git add`, run it again; a
+   name under `bless` is a gate script both sides changed: read its diff,
+   then `node .claude/scripts/doctor.mjs --bless-hooks`). Run
    `node .claude/scripts/lifecycle.mjs check` and push: the new head needs a
-   new run (step 3's "no run" case).
+   new run (step 3's "no run" case). Merge `origin/main` itself, never a
+   pull request's merge ref.
 2. Read CI: `gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
    lists what did not pass (`agent-review` aside). A pending check
    does not hold the review: the tail goes on to step 3 on the finished run, never
@@ -106,7 +111,17 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    line (`gh pr edit --body-file`) and sets `agent-review` on the head commit;
    the story and the PR's stage label stay QA.
    - **No run for the head** (none recorded, or one about an older head):
-     write the flows to `.specify/.cache/qa-flows-<n>.mjs`, run
+     write the flows to `.specify/.cache/qa-flows-<n>.mjs` and prove them
+     live, the proof `dispatch.mjs --flows` requires: boot the stack with
+     `eval "$(node scripts/test-services.ts origin/main)"`, start the API and
+     web dev servers on it, and run
+     `node .claude/scripts/pr-test/precheck.mjs --flows .specify/.cache/qa-flows-<n>.mjs --spec specs/<feature>/spec.md --check`
+     until it exits 0; a clean run leaves the proof for the head. A dispatch
+     exit 64 naming no live proof for this head means the check was not run on
+     it, or the head moved since: run it again on this head. There is no flag
+     that dispatches without the proof. A machine without Docker cannot boot
+     the stack: that is a needs-confirmation question on the task
+     (`speckit-tracker-sync blocked <question>`), never a dispatch without it. Then run
      `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`,
      replace the note's `QA run:` line with the one it prints, post the note
      with `node .claude/scripts/lifecycle.mjs handoff --pr <n>`, and end with
@@ -132,11 +147,16 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      with `--no-wait` as above, rewrite the note's `QA run:` line, post it
      (`lifecycle.mjs handoff --pr <n>`), and end with
      `NEXT: tail #<n> after QA run <id>`.
-4. On `agent-review` success with every other check green (a check still
-   pending: end with `NEXT: merge #<n> after CI`): merge `origin/main` in
-   again with `merge-main.mjs` if it moved (a new head needs a new tester run), write
-   `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §4) when there
-   is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`
+4. On `agent-review` success with every other check green, or with a check
+   still pending: write `specs/<feature>/finish-comment.md`
+   (`speckit-tracker-sync` §4) when there is something to record, and commit
+   it with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`,
+   so a later merge finds it. A check still pending: end with
+   `NEXT: merge #<n> after CI`. Otherwise ask
+   `node .claude/scripts/merge-main.mjs --needed` again; on exit 0 or 2
+   merge `origin/main` in with `merge-main.mjs` (a new head needs a new tester
+   run), on exit 1 merge nothing. Then
+   `node .claude/scripts/lifecycle.mjs merge --pr <n>`
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's
    status there does not carry).
