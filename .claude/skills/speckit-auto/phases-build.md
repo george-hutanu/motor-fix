@@ -30,17 +30,16 @@ the gate working, not a problem to fix.
 
 Invoke `speckit-implement`. Gate overrides:
 
-- Step 2's checklist gate ("Some checklists have unchecked items… (yes/no)")
-  is answered `yes` automatically. After phase 6 it should be moot; if items
-  remain, proceed and list them in the final report.
+- Step 2's checklist count asks nothing. After phase 6 it should read zero;
+  if items remain, proceed and list them in the final report.
 - Run every phase of `tasks.md` to completion in this turn. Batch the
   independent tool calls of `[P]` tasks in one response.
 - Principle I is a gate on your own output here: no speculative abstraction,
   no single-implementation interface layer, no new dependency where existing
   code suffices. Anything that looks like bloat goes to Complexity Tracking in
   the plan or gets cut.
-- A pre-existing bug or unrequested improvement found along the way goes to
-  Follow-ups, not into the change.
+- A pre-existing bug found along the way is fixed in this PR (AGENTS.md);
+  one that needs an owner decision is a `needs-confirmation` question.
 
 ### 11. Converge
 

@@ -20,43 +20,9 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
-## Pre-Execution Checks
-
-**Check for extension hooks (before analysis)**:
-- Check if `.specify/extensions.yml` exists in the project root.
-- If it exists, read it and look for entries under the `hooks.before_analyze` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-    ```
-    ## Extension Hooks
-
-    **Optional Pre-Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-  - **Mandatory hook** (`optional: false`):
-    ```
-    ## Extension Hooks
-
-    **Automatic Pre-Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-
-    Wait for the result of the hook command before proceeding to the Goal.
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Goal
+
+Hooks: `.specify/extensions.yml` registers only the optional `speckit.git.commit` before and after this command; commits follow `.claude/skills/speckit-auto/commit-protocol.md`.
 
 Identify inconsistencies, duplications, ambiguities, and underspecified items across the three core artifacts (`spec.md`, `plan.md`, `tasks.md`) before implementation. This command MUST run only after `/speckit-tasks` has successfully produced a complete `tasks.md`.
 
@@ -77,8 +43,6 @@ Run `python3 .specify/scripts/python/check_prerequisites.py --json --require-spe
 - TASKS = FEATURE_DIR/tasks.md
 - CONTEXT = FEATURE_DIR/context.md (optional — the specs repo's `docs/`, as /speckit-context read it)
 - CHECKLISTS = FEATURE_DIR/checklists/*.md (optional — reviewer-owned)
-- CODE = `git diff --name-only <merge-base>..HEAD` plus the working tree, so a
-  task's claimed completion can be checked against files that actually changed
 
 Abort with an error message if any required file is missing (instruct the user to run missing prerequisite command).
 For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
@@ -167,20 +131,6 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Tasks with no mapped requirement/story
 - Success Criteria requiring buildable work (performance, security, availability) not reflected in tasks
 
-#### E2. False Completion (code-aware)
-
-Only for tasks marked `[X]`. For each, check that the files it names appear in
-the branch's changed-file list, and read the ones it claims to have created.
-
-- A task marked `[X]` whose named file does not exist → **CRITICAL**.
-- A task marked `[X]` whose file exists but holds a stub, a `TODO`, an empty
-  function, or no reference to the behavior described → **CRITICAL**.
-- An FR whose only covering task is one of the above → **CRITICAL**.
-
-This is the most common failure mode in the workflow and the one every other
-pass is blind to: three artifacts can agree perfectly with each other and with
-nothing on disk.
-
 #### E3. Contradiction with Organisational Context
 
 Only when CONTEXT exists.
@@ -191,15 +141,6 @@ Only when CONTEXT exists.
 - An open item under **Contradictions with spec.md** that no clarification
   resolved → **HIGH**. `/speckit-clarify` was supposed to settle it.
 - A **Proposed Clarification** neither accepted nor rejected → **MEDIUM**.
-
-#### E4. Checklist Truthfulness
-
-Only when CHECKLISTS exist.
-
-- A checklist item marked `[X]` whose underlying gap is still visible in the
-  spec (the quality criterion it asserts is plainly unmet) → **HIGH**.
-- Unchecked items remaining while `tasks.md` is fully checked → **MEDIUM**;
-  implementation outran its own review gate.
 
 #### F. Inconsistency
 
@@ -259,39 +200,6 @@ At end of report, output a concise Next Actions block:
 
 Ask the user: "Would you like me to suggest concrete remediation edits for the top N issues?" (Do NOT apply them automatically.)
 
-### 9. Check for extension hooks
-
-After reporting, check if `.specify/extensions.yml` exists in the project root.
-- If it exists, read it and look for entries under the `hooks.after_analyze` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-    ```
-    ## Extension Hooks
-
-    **Optional Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-  - **Mandatory hook** (`optional: false`):
-    ```
-    ## Extension Hooks
-
-    **Automatic Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Operating Principles
 
 ### Context Efficiency
@@ -332,3 +240,14 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
 - Step 8 override: put the concrete remediation edits for CRITICAL and
   HIGH findings in the report itself (still no file writes) instead of
   asking whether to suggest them.
+
+Cut (project-local override), because no run here takes these lanes:
+
+- Pre-Execution Checks and step 9 (Check for extension hooks): the only hooks
+  registered for analyze are the optional `speckit.git.commit`, named in one
+  line under Goal.
+- E2 (False Completion) and its CODE input: analyze runs at `/speckit-auto`
+  phase 8, before any task is `[X]`; `/speckit-converge` compares the code
+  with `tasks.md` after implementation.
+- E4 (Checklist Truthfulness): phase 6 drives every checklist to zero
+  unchecked items before analyze runs.
