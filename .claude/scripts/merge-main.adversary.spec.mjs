@@ -296,3 +296,86 @@ describe('merge-main pieces', () => {
     assert.ok(out === null || !/^(<{7}|={7}|>{7})/m.test(out));
   });
 });
+
+// @traces 1357-merge-when-overlapping-FR-002
+// @traces 1357-merge-when-overlapping-FR-005
+// @traces 1357-merge-when-overlapping-FR-006
+describe('merge-main --needed against real git repositories', () => {
+  const needed = (cwd) => {
+    // No GitHub remote here: the mergeability is unread and the file rules decide.
+    const r = spawnSync(process.execPath, [SCRIPT, '--needed'], { cwd, encoding: 'utf8', env: { ...process.env, GH_TOKEN: 'none', GH_HOST: 'github.invalid' } });
+    return { code: r.status, out: r.stdout.trim(), err: r.stderr };
+  };
+  const state = (cwd) => [sh(cwd, 'rev-parse', 'HEAD'), sh(cwd, 'status', '--porcelain')].join('|');
+  const mainMoves = (w, path, text) => {
+    put(w.seed, path, text);
+    commit(w.seed, `main changes ${path}`);
+    sh(w.seed, 'push', '-q', 'origin', 'main');
+  };
+
+  it('exits 1 for a branch behind main that shares nothing with it, and changes nothing', () => {
+    const w = world({ 'apps/api/src/a.ts': 'a\n', 'apps/web/src/b.ts': 'b\n' });
+    const c = w.clone('a');
+    put(c, 'apps/api/src/a.ts', 'a2\n');
+    commit(c, 'pr');
+    mainMoves(w, 'apps/web/src/b.ts', 'b2\n');
+    const before = state(c);
+    const r = needed(c);
+    assert.equal(r.code, 1, r.err);
+    assert.equal(r.out, 'not needed');
+    assert.equal(state(c), before);
+    assert.equal(spawnSync('git', ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { cwd: c }).status, 1);
+  });
+
+  it('exits 0 naming the file rule when main changed a file the branch changed', () => {
+    const w = world({ 'apps/api/src/a.ts': 'a\n', 'tail.md': 'x\n' });
+    const c = w.clone('a');
+    put(c, 'tail.md', 'ours\n');
+    commit(c, 'pr');
+    mainMoves(w, 'tail.md', 'x\ntheirs\n');
+    const r = needed(c);
+    assert.equal(r.code, 0, r.err);
+    assert.equal(r.out, 'needed: same file');
+  });
+
+  it('counts a file main renamed away from under the branch', () => {
+    const w = world({ 'notes/old.md': 'n\n' });
+    const c = w.clone('a');
+    put(c, 'notes/old.md', 'n2\n');
+    commit(c, 'pr');
+    sh(w.seed, 'mv', 'notes/old.md', 'notes/new.md');
+    commit(w.seed, 'rename');
+    sh(w.seed, 'push', '-q', 'origin', 'main');
+    assert.equal(needed(c).out, 'needed: same file');
+  });
+
+  it('exits 1 without a merge when main has not moved', () => {
+    const w = world({ 'a.md': 'a\n' });
+    const c = w.clone('a');
+    put(c, 'a.md', 'a2\n');
+    commit(c, 'pr');
+    assert.deepEqual([needed(c).code, needed(c).out], [1, 'not needed']);
+  });
+
+  it('exits 2 with nothing on stdout when there is no origin to fetch', () => {
+    const w = world({ 'a.md': 'a\n' });
+    const c = w.clone('a');
+    sh(c, 'remote', 'remove', 'origin');
+    const r = needed(c);
+    assert.equal(r.code, 2);
+    assert.equal(r.out, '');
+    assert.match(r.err, /git fetch/);
+  });
+
+  it('then merges origin/main, never a pull ref, when the merge is run', () => {
+    const w = world({ 'tail.md': 'x\n' });
+    const c = w.clone('a');
+    put(c, 'other.md', 'o\n');
+    commit(c, 'pr');
+    mainMoves(w, 'tail.md', 'y\n');
+    assert.equal(run(c).code, 0);
+    assert.match(sh(c, 'log', '-1', '--format=%s'), /origin\/main|origin\/HEAD|'main'/);
+    assert.equal(sh(c, 'rev-parse', 'HEAD^2').trim(), sh(c, 'rev-parse', 'origin/main').trim());
+    assert.doesNotMatch(readFileSync(SCRIPT, 'utf8'), /refs\/pull/);
+  });
+});

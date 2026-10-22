@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import { fingerprint } from './lib/hooks.mjs';
 
-import { classify, fixFrontMatter, mergeCapability, mergeMain, mergeRegistry, unionConflicts } from './merge-main.mjs';
+import { classify, fixFrontMatter, latestLapReport, mergeCapability, mergeMain, mergeNeeded, mergeRegistry, overlap, unionConflicts } from './merge-main.mjs';
 
 const cap = (date, features, lines) => ['---', 'capability: platform', `updated: ${date}`, 'features:', ...features.map((f) => `  - ${f}`), '---', '', ...lines, ''].join('\n');
 
@@ -274,5 +274,188 @@ describe('mergeMain against real repositories', () => {
     assert.equal(second.code, 0);
     assert.equal(second.merged, false);
     assert.deepEqual(second.resolved, []);
+  });
+});
+
+// @traces 1357-merge-when-overlapping-FR-002
+// @traces 1357-merge-when-overlapping-FR-003
+// @traces 1357-merge-when-overlapping-FR-006
+describe('overlap: whether origin/main has to be merged in', () => {
+  const none = { prFiles: ['apps/api/src/a.ts'], mainFiles: ['apps/web/src/b.ts'], mergeable: 'MERGEABLE', lapReport: null };
+  const STORAGE = "::error::the PR's docker-compose.yml has no storage service: merge main into the branch";
+
+  it('is not needed when the two sides share no file, project or infra path', () => {
+    assert.deepEqual(overlap(none), { needed: false, rule: null });
+  });
+
+  it('is needed on a conflict before any file is compared', () => {
+    assert.deepEqual(overlap({ ...none, mergeable: 'CONFLICTING' }), { needed: true, rule: 'conflict' });
+  });
+
+  it('is needed when main changed a file the PR changes', () => {
+    assert.deepEqual(overlap({ ...none, mainFiles: ['.claude/scripts/x.mjs'], prFiles: ['.claude/scripts/x.mjs'] }), { needed: true, rule: 'same file' });
+  });
+
+  it('is needed when main changed another file of the same Nx project', () => {
+    assert.deepEqual(overlap({ ...none, mainFiles: ['apps/api/src/other.ts'] }), { needed: true, rule: 'same project' });
+    assert.deepEqual(overlap({ ...none, prFiles: ['libs/domain/src/x.ts'], mainFiles: ['libs/domain/project.json'] }), { needed: true, rule: 'same project' });
+  });
+
+  it('matches a project on its whole folder name, and treats .claude, scripts and .specify as no project', () => {
+    assert.equal(overlap({ ...none, prFiles: ['apps/web/src/a.ts'], mainFiles: ['apps/web-e2e/src/b.ts'] }).needed, false);
+    assert.equal(overlap({ ...none, prFiles: ['.claude/scripts/a.mjs'], mainFiles: ['.claude/scripts/b.mjs'] }).needed, false);
+    assert.equal(overlap({ ...none, prFiles: ['scripts/a.ts'], mainFiles: ['scripts/b.ts'] }).needed, false);
+    assert.equal(overlap({ ...none, prFiles: ['apps/x.json'], mainFiles: ['apps/y.json'] }).needed, false);
+  });
+
+  it('is needed when main changed any infra path, whatever the PR changed', () => {
+    for (const path of [
+      'docker-compose.yml',
+      'docker-compose.test.yml',
+      'package-lock.json',
+      'libs/domain/prisma/schema.prisma',
+      'apps/api/openapi.json',
+      '.github/workflows/ci.yml',
+      '.claude/hooks/registry.json',
+      '.specify/capabilities/platform.md',
+    ]) {
+      assert.deepEqual(overlap({ ...none, prFiles: ['.claude/skills/x/SKILL.md'], mainFiles: [path] }), { needed: true, rule: 'infra path' }, path);
+    }
+  });
+
+  it('matches an infra path from the repository root only', () => {
+    for (const path of ['apps/web/package-lock.json', 'infra/docker-compose.yml', 'docs/.github/workflows/x.yml', 'libs/domain/prisma-notes.md']) {
+      assert.equal(overlap({ ...none, prFiles: ['.claude/skills/x/SKILL.md'], mainFiles: [path] }).needed, false, path);
+    }
+  });
+
+  it('is needed when the latest lap report shows the compose storage error', () => {
+    assert.deepEqual(overlap({ ...none, lapReport: `# QA\n${STORAGE}\n` }), { needed: true, rule: 'lap report' });
+    assert.equal(overlap({ ...none, lapReport: '# QA\nall flows passed\n' }).needed, false);
+  });
+
+  it('names the first rule that holds, in the order conflict, same file, same project, infra path, lap report', () => {
+    const all = { prFiles: ['apps/api/src/a.ts'], mainFiles: ['apps/api/src/a.ts', 'package-lock.json'], mergeable: 'CONFLICTING', lapReport: STORAGE };
+    assert.equal(overlap(all).rule, 'conflict');
+    assert.equal(overlap({ ...all, mergeable: 'MERGEABLE' }).rule, 'same file');
+    assert.equal(overlap({ ...all, mergeable: 'MERGEABLE', mainFiles: ['apps/api/src/b.ts', 'package-lock.json'] }).rule, 'same project');
+    assert.equal(overlap({ ...all, mergeable: 'UNKNOWN', mainFiles: ['package-lock.json'] }).rule, 'infra path');
+    assert.equal(overlap({ ...all, mergeable: null, mainFiles: ['README.md'] }).rule, 'lap report');
+  });
+});
+
+// @traces 1357-merge-when-overlapping-FR-002
+// @traces 1357-merge-when-overlapping-FR-003
+// @traces 1357-merge-when-overlapping-FR-005
+// @traces 1357-merge-when-overlapping-FR-006
+describe('mergeNeeded: the --needed answer for the current branch', () => {
+  const ok = (stdout = '') => ({ status: 0, stdout, stderr: '' });
+  const fail = (stderr) => ({ status: 1, stdout: '', stderr });
+  /** A fake git: the answer for each command by its first words; every call is recorded. */
+  const fakeGit = (answers) => {
+    const calls = [];
+    const git = (args) => {
+      calls.push(args.join(' '));
+      const key = Object.keys(answers).find((k) => args.join(' ').startsWith(k));
+      return key ? answers[key] : ok();
+    };
+    return { git, calls };
+  };
+  const behind = (over = {}) =>
+    fakeGit({
+      'fetch': ok(),
+      'merge-base HEAD origin/main': ok('base\n'),
+      'rev-list --count base..origin/main': ok('3\n'),
+      'diff --name-only --no-renames base HEAD': ok('apps/api/src/a.ts\n'),
+      'diff --name-only --no-renames base origin/main': ok('apps/web/src/b.ts\n'),
+      ...over,
+    });
+  const gh = (mergeable) => () => ({ code: 0, stdout: `${mergeable}\n`, stderr: '' });
+
+  it('answers not needed with exit 1 for a behind head that shares nothing with main', () => {
+    const { git } = behind();
+    assert.deepEqual(mergeNeeded({ git, gh: gh('MERGEABLE'), lapReport: () => null }), { code: 1, line: 'not needed' });
+  });
+
+  it('answers needed with exit 0 and the rule when main changed a file the PR changes', () => {
+    const { git } = behind({ 'diff --name-only --no-renames base origin/main': ok('apps/api/src/a.ts\n') });
+    assert.deepEqual(mergeNeeded({ git, gh: gh('MERGEABLE'), lapReport: () => null }), { code: 0, line: 'needed: same file' });
+  });
+
+  it('answers needed on a conflict GitHub reports', () => {
+    const { git } = behind();
+    assert.deepEqual(mergeNeeded({ git, gh: gh('CONFLICTING'), lapReport: () => null }), { code: 0, line: 'needed: conflict' });
+  });
+
+  it('reads the lap report and answers needed on the compose storage error', () => {
+    const { git } = behind();
+    const lapReport = () => "the PR's docker-compose.yml has no storage service: merge main into the branch";
+    assert.deepEqual(mergeNeeded({ git, gh: gh('MERGEABLE'), lapReport }), { code: 0, line: 'needed: lap report' });
+  });
+
+  it('answers not needed without reading a file when main has no commit since the merge-base', () => {
+    const { git, calls } = behind({ 'rev-list --count base..origin/main': ok('0\n') });
+    let asked = false;
+    const out = mergeNeeded({ git, gh: () => ((asked = true), { code: 0, stdout: 'CONFLICTING\n', stderr: '' }), lapReport: () => ((asked = true), null) });
+    assert.deepEqual(out, { code: 1, line: 'not needed' });
+    assert.equal(asked, false);
+    assert.ok(!calls.some((c) => c.startsWith('diff')), calls.join('\n'));
+  });
+
+  it('falls through to the file rules when the mergeability cannot be read, naming it, and never says not needed on that alone', () => {
+    const unread = () => ({ code: 1, stdout: '', stderr: 'no pull requests found for branch "x"' });
+    const clean = mergeNeeded({ git: behind().git, gh: unread, lapReport: () => null });
+    assert.equal(clean.code, 1);
+    assert.match(clean.warning, /mergeability unread: no pull requests found/);
+    const shared = mergeNeeded({ git: behind({ 'diff --name-only --no-renames base origin/main': ok('package-lock.json\n') }).git, gh: unread, lapReport: () => null });
+    assert.equal(shared.code, 0);
+    assert.equal(shared.line, 'needed: infra path');
+  });
+
+  it('treats UNKNOWN mergeability as unread, not as a conflict', () => {
+    const out = mergeNeeded({ git: behind().git, gh: gh('UNKNOWN'), lapReport: () => null });
+    assert.equal(out.code, 1);
+    assert.match(out.warning, /mergeability unread: UNKNOWN/);
+  });
+
+  it('exits 2 with the reason and no answer when git cannot fetch, find the merge-base or diff', () => {
+    for (const broken of ['fetch', 'merge-base HEAD origin/main', 'rev-list --count base..origin/main', 'diff --name-only --no-renames base HEAD', 'diff --name-only --no-renames base origin/main']) {
+      const out = mergeNeeded({ git: behind({ [broken]: fail('boom') }).git, gh: gh('MERGEABLE'), lapReport: () => null });
+      assert.equal(out.code, 2, broken);
+      assert.equal(out.line, undefined, broken);
+      assert.match(out.error, /boom/, broken);
+    }
+  });
+
+  it('counts a rename under its old and new paths, and compares against origin/main, never a pull ref', () => {
+    const { git, calls } = behind();
+    mergeNeeded({ git, gh: gh('MERGEABLE'), lapReport: () => null });
+    assert.ok(calls.every((c) => !/refs\/pull/.test(c)), calls.join('\n'));
+    assert.ok(calls.includes('diff --name-only --no-renames base origin/main'), calls.join('\n'));
+    assert.ok(!calls.some((c) => /^(merge|commit|checkout|reset|push)( |$)/.test(c)), 'it changes nothing');
+  });
+});
+
+// @traces 1357-merge-when-overlapping-FR-003
+describe('latestLapReport', () => {
+  let dir;
+  beforeEach(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), 'lap-report-')));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('reads the report of the highest-numbered lap, by number not by name', () => {
+    for (const [lap, text] of [['lap2', 'two'], ['lap10', 'ten'], ['lap9', 'nine']]) {
+      mkdirSync(join(dir, 'pr-review', lap), { recursive: true });
+      writeFileSync(join(dir, 'pr-review', lap, 'report.md'), text);
+    }
+    assert.equal(latestLapReport(dir), 'ten');
+  });
+
+  it('is null with no pr-review folder, no lap, or a lap without its report', () => {
+    assert.equal(latestLapReport(dir), null);
+    assert.equal(latestLapReport(null), null);
+    mkdirSync(join(dir, 'pr-review', 'lap1'), { recursive: true });
+    assert.equal(latestLapReport(dir), null);
   });
 });

@@ -21,11 +21,27 @@
 // main (the merge commit made, or nothing to merge), 1 when paths are left
 // (the merge stays in progress: resolve them, `git add`, run this again),
 // 2 on a git or generator failure. It never pushes, rebases or forces.
+//
+//   node .claude/scripts/merge-main.mjs --needed
+//
+// Whether the merge is worth making at all: main is merged in only on overlap.
+// Changes nothing, and compares against origin/main, never a pull request merge ref.
+// Needed when the first of these holds: GitHub reports the PR CONFLICTING;
+// main changed a file the PR changed (`git diff --name-only --no-renames`
+// from the merge-base); main changed a file in an Nx project the PR changed
+// (`apps/<x>`, `libs/<y>`); main changed an infra path (INFRA below); the
+// feature's latest `pr-review/lap<k>/report.md` holds the compose storage
+// error. Prints `needed: <rule>` and exits 0, or `not needed` and exits 1
+// (an unread mergeability is named on stderr); exits 2 with the git error on
+// stderr when it cannot fetch, find the merge-base or diff, which every caller
+// treats as needed.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { activeFeature } from "./lib/feature.mjs";
+import { ghRun } from "./lib/gh-rest.mjs";
 import { fingerprint } from "./lib/hooks.mjs";
 
 const REGISTRY = ".claude/hooks/registry.json";
@@ -306,6 +322,95 @@ export function mergeMain({ cwd, git = realGit(cwd), regenerate = realRegenerate
   if (commit.status !== 0) return done(2, `git commit: ${commit.stderr || commit.stdout}`);
   result.merged = true;
   return done(0);
+}
+
+/** Paths from the repo root whose change on main always warrants the merge. */
+const INFRA = [
+  /^docker-compose[^/]*\.yml$/,
+  /^package-lock\.json$/,
+  /^libs\/domain\/prisma\//,
+  /^apps\/api\/openapi\.json$/,
+  /^\.github\/workflows\//,
+  /^\.claude\/hooks\/registry\.json$/,
+  /^\.specify\/capabilities\//,
+];
+/** The PR QA workflow's error when the PR's compose file predates main's storage service. */
+const STORAGE_ERROR = "docker-compose.yml has no storage service";
+
+/** The Nx project a path sits in (`apps/<x>`, `libs/<y>`), or null. */
+const projectOf = (path) => {
+  const m = /^(apps|libs)\/([^/]+)\//.exec(path);
+  return m ? `${m[1]}/${m[2]}` : null;
+};
+
+/** The first rule that makes the merge needed, in order: conflict, same file, same project, infra path, lap report. */
+export function overlap({ prFiles = [], mainFiles = [], mergeable = null, lapReport = null }) {
+  const pr = new Set(prFiles);
+  const projects = new Set(prFiles.map(projectOf).filter(Boolean));
+  let rule = null;
+  if (mergeable === "CONFLICTING") rule = "conflict";
+  else if (mainFiles.some((f) => pr.has(f))) rule = "same file";
+  else if (mainFiles.some((f) => projects.has(projectOf(f)))) rule = "same project";
+  else if (mainFiles.some((f) => INFRA.some((re) => re.test(f)))) rule = "infra path";
+  else if (typeof lapReport === "string" && lapReport.includes(STORAGE_ERROR)) rule = "lap report";
+  return { needed: rule !== null, rule };
+}
+
+/** The text of the feature's highest-numbered `pr-review/lap<k>/report.md`, or null. */
+export function latestLapReport(featureDir) {
+  if (!featureDir) return null;
+  let laps;
+  try {
+    laps = readdirSync(join(featureDir, "pr-review"))
+      .map((name) => /^lap(\d+)$/.exec(name))
+      .filter(Boolean)
+      .sort((a, b) => Number(b[1]) - Number(a[1]));
+  } catch {
+    return null;
+  }
+  if (!laps.length) return null;
+  try {
+    return readFileSync(join(featureDir, "pr-review", laps[0][0], "report.md"), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+const lines = (text) => text.split("\n").map((l) => l.trim()).filter(Boolean);
+
+/** The --needed answer: {code: 0 needed | 1 not needed | 2 git failure, line?, warning?, error?}. */
+export function mergeNeeded({ cwd = process.cwd(), git = realGit(cwd), gh = (args) => ghRun(args), lapReport = () => latestLapReport(activeFeature(cwd)?.dir) } = {}) {
+  const step = (args) => {
+    const r = git(args);
+    if (r.status !== 0) throw new Error(`git ${args[0]}: ${(r.stderr || r.stdout || "").trim()}`);
+    return r.stdout ?? "";
+  };
+  let prFiles;
+  let mainFiles;
+  try {
+    step(["fetch", "--quiet", "origin", "main"]);
+    const base = step(["merge-base", "HEAD", "origin/main"]).trim();
+    if (Number(step(["rev-list", "--count", `${base}..origin/main`]).trim()) === 0) return { code: 1, line: "not needed" };
+    prFiles = lines(step(["diff", "--name-only", "--no-renames", base, "HEAD"]));
+    mainFiles = lines(step(["diff", "--name-only", "--no-renames", base, "origin/main"]));
+  } catch (err) {
+    return { code: 2, error: err.message };
+  }
+  const read = gh(["pr", "view", "--json", "mergeable", "--jq", ".mergeable"]);
+  const state = read.code === 0 ? read.stdout.trim() : "";
+  const known = state === "CONFLICTING" || state === "MERGEABLE";
+  const warning = known ? undefined : `mergeability unread: ${read.code === 0 ? state || "empty" : (read.stderr || "").trim() || `gh exit ${read.code}`}`;
+  const { needed, rule } = overlap({ prFiles, mainFiles, mergeable: known ? state : null, lapReport: lapReport() });
+  const out = needed ? { code: 0, line: `needed: ${rule}` } : { code: 1, line: "not needed" };
+  return warning ? { ...out, warning } : out;
+}
+
+if (isEntryPoint(import.meta.url) && process.argv.includes("--needed")) {
+  const { code, line, warning, error } = mergeNeeded();
+  if (warning) console.error(warning);
+  if (error) console.error(error);
+  if (line) console.log(line);
+  process.exit(code);
 }
 
 if (isEntryPoint(import.meta.url)) {
