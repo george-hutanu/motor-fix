@@ -266,3 +266,75 @@ describe('work that must not be touched', () => {
     expect(await requestStatus(request.id)).toBe('closed');
   });
 });
+
+// @traces 428-FR-002 428-FR-007
+describe('requests that are not open', () => {
+  it('leaves in_work, done and already closed requests untouched and silent', async () => {
+    const driverId = await account('Andrei Ion Marin', ['driver']);
+    const inWork = await world.request(driverId, { status: 'in_work' });
+    const done = await world.request(driverId, { status: 'done' });
+    const closed = await world.request(driverId, { status: 'closed' });
+    const handler = await start();
+    const mark = await outboxMark(prisma);
+    const entries = await prisma.activityLog.count();
+
+    await handler.onEvent(closing(driverId));
+
+    expect(await requestStatus(inWork.id)).toBe('in_work');
+    expect(await requestStatus(done.id)).toBe('done');
+    const after = await prisma.quoteRequest.findUniqueOrThrow({
+      where: { id: closed.id },
+    });
+    expect(after.closedReason).toBe('cancelled');
+    expect(await newEvents(mark)).toEqual([]);
+    expect(await prisma.activityLog.count()).toBe(entries);
+  });
+
+  it('closes thirty open requests, each with its own event', async () => {
+    const driverId = await account('Andrei Ion Marin', ['driver']);
+    const requests = [];
+    for (let i = 0; i < 30; i += 1)
+      requests.push(await world.request(driverId));
+    const handler = await start();
+    const mark = await outboxMark(prisma);
+
+    await handler.onEvent(closing(driverId));
+
+    const events = await newEvents(mark);
+    expect(events.map((e) => e.subjectId).sort()).toEqual(
+      requests.map((r) => r.id).sort(),
+    );
+    expect(
+      await prisma.quoteRequest.count({
+        where: { closedReason: 'account_closed', driverId, status: 'closed' },
+      }),
+    ).toBe(30);
+  }, 60_000);
+});
+
+// @traces 428-FR-001
+describe('an event naming no usable account', () => {
+  it.each(['not-a-uuid', ''])(
+    'ends normally and writes nothing for the account id %p',
+    async (accountId) => {
+      const driverId = await account('Andrei Ion Marin', ['driver']);
+      const request = await world.request(driverId);
+      const handler = await start();
+      const mark = await outboxMark(prisma);
+
+      await expect(
+        handler.onEvent({
+          data: {
+            id: '7',
+            kind: 'account.deleted',
+            payload: { accountId },
+            subjectId: accountId,
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(await requestStatus(request.id)).toBe('sent');
+      expect(await newEvents(mark)).toEqual([]);
+    },
+  );
+});

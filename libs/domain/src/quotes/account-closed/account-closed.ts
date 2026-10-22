@@ -20,7 +20,7 @@ export const ACCOUNT_CLOSED_QUEUE = 'account-closed';
 
 // A failed job is tried twice more, 1 and 2 minutes later; each try finds
 // only what the one before left open.
-export const ACCOUNT_CLOSED_RUN: JobsOptions = {
+const ACCOUNT_CLOSED_RUN: JobsOptions = {
   attempts: 3,
   backoff: { delay: 60_000, type: 'exponential' },
   removeOnComplete: true,
@@ -46,6 +46,8 @@ export interface AccountClosedEvent {
 const SYSTEM: TransitionActor = { accountId: null, role: 'system' };
 const OPEN = ['sent', 'quoted', 'booked'] as const;
 const STARTED = ['in_work', 'paused', 'done'];
+// Account ids are UUIDs; any other id names no account, so nothing is open.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Tx = Prisma.TransactionClient;
 
@@ -84,11 +86,13 @@ export class AccountClosed {
     if (!KINDS.includes(kind as EventKind)) return;
     const accountId = payload.accountId ?? subjectId;
     if (!accountId) return;
-    const open = await this.prisma.quoteRequest.findMany({
-      orderBy: { id: 'asc' },
-      select: { id: true },
-      where: { driverId: accountId, status: { in: [...OPEN] } },
-    });
+    const open = UUID.test(accountId)
+      ? await this.prisma.quoteRequest.findMany({
+          orderBy: { id: 'asc' },
+          select: { id: true },
+          where: { driverId: accountId, status: { in: [...OPEN] } },
+        })
+      : [];
     const counts = { cancelled: 0, closed: 0, failed: 0, kept: 0, skipped: 0 };
     let failure: unknown;
     for (const { id } of open) {
