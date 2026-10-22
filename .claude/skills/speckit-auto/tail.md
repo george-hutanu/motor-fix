@@ -130,10 +130,26 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      report): dispatch again once for that head, the same way, at the same
      lap. A second unusable run for the head is posted with
      `post.mjs --missing` and blocks the run (`verification-failed`).
-   - **A failing lap** (blocking findings, a failing check, or any medium or
-     low finding: fix every verified finding in this PR; an owner decision is
-     a `needs-confirmation` question, `speckit-tracker-sync blocked
-     <question>`): fix every one, tests first, run
+   - **A passing lap with findings** (`agent-review` success reading
+     `No blocking findings; <N> in all`, N >= 1, every check green or
+     pending; Constitution VII step 5): the testing is over. Fix each
+     medium and low finding, tests first, committed as `fix`, `test`,
+     `docs`, `style` or `refactor` (no merge commit, no `feat`); list each
+     under `## Fixed after QA` in `specs/<feature>/finish-comment.md`, one
+     line per finding with its severity and the fix commit's sha (git-ignored,
+     it stays in the worktree as `handoff.md` does), and commit the lap's
+     report with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
+     run `node .claude/scripts/lifecycle.mjs check`,
+     push, then `node .claude/scripts/pr-test/carry.mjs <n>`, which carries
+     the lap's verdict to the fixed head (`carried from <sha>: QA fixes`).
+     No `run-state.mjs repair`, no dispatch: end with
+     `NEXT: merge #<n> after CI`. If `carry.mjs` exits 1 (a cloud lap's
+     status has no count, or a commit is not a lap fix), the head needs a
+     real lap: dispatch it as a failing lap's is, counting `repair`.
+   - **A failing lap** (a blocker or high finding, or a failing check: fix
+     every verified finding in this PR, the lap's medium and low ones too;
+     an owner decision is a `needs-confirmation` question,
+     `speckit-tracker-sync blocked <question>`): fix every one, tests first, run
      `node .claude/scripts/lifecycle.mjs check` (the CI-only checks and the
      affected typecheck and unit tests; a refusal is fixed first), commit
      and push the fix, then the lap's report and any new `tracker-sync.md`
@@ -147,11 +163,15 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      with `--no-wait` as above, rewrite the note's `QA run:` line, post it
      (`lifecycle.mjs handoff --pr <n>`), and end with
      `NEXT: tail #<n> after QA run <id>`.
-4. On `agent-review` success with every other check green, or with a check
-   still pending: write `specs/<feature>/finish-comment.md`
-   (`speckit-tracker-sync` §4) when there is something to record, and commit
-   it with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`,
-   so a later merge finds it. A check still pending: end with
+4. On `agent-review` success (its own, or carried) with every other check
+   green, or with a check still pending: write `specs/<feature>/finish-comment.md`
+   (`speckit-tracker-sync` §4) when there is something to record, keeping a
+   lap's `## Fixed after QA` list (`lifecycle.mjs merge` stops before the
+   merge while it names fewer findings than the lap reported), and commit
+   the feature's records with
+   `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
+   `finish-comment.md` itself is git-ignored and stays in the worktree, as
+   `handoff.md` does, for the merge to read. A check still pending: end with
    `NEXT: merge #<n> after CI`. Otherwise ask
    `node .claude/scripts/merge-main.mjs --needed` again; on exit 0 or 2
    merge `origin/main` in with `merge-main.mjs` (a new head needs a new tester
@@ -160,7 +180,8 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's
    status there does not carry).
-   It refuses exactly when the merge gate does (its message is the `fix`);
+   It refuses when the merge gate does, and when a passing lap's
+   `## Fixed after QA` list falls short (its message is the `fix`);
    otherwise it merges, runs the tracker's `finish`, posts one finish comment on the
    merged PR, restores `tracker-sync.md` and deletes `handoff.md`. On `left`,
    run those events through `speckit-tracker-sync`, then its `then`.

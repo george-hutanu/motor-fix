@@ -368,6 +368,45 @@ describe('merge gate — a verdict carried over a docs-only head is verified, no
     assert.match(decideMerge(prc([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), carried()]), lookup(state())), /CI failed/);
     assert.match(decideMerge(prc([carried()]), lookup(state())), /no CI OK check/);
   });
+
+  // A passing lap's medium and low findings are fixed on the branch and ride on its verdict.
+  const fixesState = (over = {}) =>
+    state({
+      fromReview: { state: 'success', description: 'No blocking findings; 2 in all. Booted 2/2.' },
+      compare: {
+        status: 'ahead',
+        total_commits: 2,
+        commits: [
+          { sha: 'b'.repeat(40), parents: [{ sha: FROM }], commit: { message: 'test(api): ST-9 pin it' } },
+          { sha: 'abc1234def5678', parents: [{ sha: 'b'.repeat(40) }], commit: { message: 'fix(api): ST-9 fix it' } },
+        ],
+        files: [{ filename: 'apps/api/src/x.ts' }, { filename: 'apps/api/src/x.spec.ts' }],
+      },
+      ...over,
+    });
+  const fixesCarried = () => carried(`carried from ${FROM}: QA fixes`);
+
+  // @traces 1362-FR-005
+  it('lets a verified QA-fixes carry merge on green CI', () => {
+    assert.equal(decideMerge(prc([...green, fixesCarried()]), lookup(fixesState())), null);
+  });
+
+  // @traces 1362-FR-005
+  it('refuses a QA-fixes carry with a feature or merge commit, or from a lap with no findings', () => {
+    const feat = fixesState();
+    feat.compare.commits[1].commit.message = 'feat(api): ST-9 more';
+    assert.match(decideMerge(prc([...green, fixesCarried()]), lookup(feat)), /carried from fffffff.*not a lap fix/);
+    const merged = fixesState();
+    merged.compare.commits[0].parents.push({ sha: 'd'.repeat(40) });
+    assert.match(decideMerge(prc([...green, fixesCarried()]), lookup(merged)), /merge commit/);
+    const none = fixesState({ fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' } });
+    assert.match(decideMerge(prc([...green, fixesCarried()]), lookup(none)), /no medium or low finding/);
+  });
+
+  // @traces 1362-FR-005
+  it('still needs every CI check after a verified QA-fixes carry', () => {
+    assert.match(decideMerge(prc([run('Unit tests', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS'), fixesCarried()]), lookup(fixesState())), /CI/);
+  });
 });
 
 // A gate Claude Code stops for running long does not block, so the

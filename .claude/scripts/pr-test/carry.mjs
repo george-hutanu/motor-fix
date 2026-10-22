@@ -1,28 +1,39 @@
-// Carry an `agent-review` success over a head that changes documentation only.
+// Carry an `agent-review` success over a head the PR tester has no new reason
+// to judge. Two kinds:
 //
-// A commit that adds only documentation after the PR tester passed a commit
-// would otherwise cost a full tester lap that judges nothing new. Instead
-// the earlier verdict is carried: the head gets `agent-review` success with the
-// description `carried from <sha>: docs-only change`, and the PR's "Agent
-// review" section says so.
+// - docs: the commits after the tested one change documentation only. The
+//   description is `carried from <sha>: docs-only change`.
+// - fixes: the tested lap passed (no blocker or high) but reported medium or
+//   low findings, and the commits after it are that lap's fixes (Constitution
+//   VII step 5). The description is `carried from <sha>: QA fixes`.
 //
-// The merge gate (`pre:bash:merge-gate`) does not trust that description. It
-// re-checks the claim with `judgeCarry`: the named commit has a success of its
-// own (not itself carried), it is an ancestor of head, every path between them
-// is documentation by `scripts/docs-only.ts` (the definition CI's docs-only
-// skip uses) and none is a `deferred.md` (tech-debt tickets are retired), and
-// no real lap failed on a commit after it or on head. Anything else needs a
-// real lap.
+// The PR's "Agent review" section says which. The merge gate
+// (`pre:bash:merge-gate`) does not trust the description. It re-checks the
+// claim with `judgeCarry`, for both kinds: the named commit has a success of
+// its own (not itself carried) and is an ancestor of head, the range is within
+// MAX_COMMITS and the compare's file cap, none of its paths is a `deferred.md`
+// (tech-debt tickets are retired), and no real lap failed on a commit after it
+// or on head. A docs carry also needs every path to be documentation by
+// `scripts/docs-only.ts` and a named lap that reported no finding. A fixes
+// carry needs the named lap's own count (`No blocking findings; <N> in all`,
+// N >= 1) and every later commit to be single-parent and typed fix, test,
+// docs, style or refactor: the gate checks the shape, not the content, which
+// the finish comment's "Fixed after QA" list ties to the findings
+// (`lifecycle.mjs merge`). Anything else needs a real lap.
 //
 //   node .claude/scripts/pr-test/carry.mjs <pr> [--dry-run]
-// exits 0 when it carried (or would, on --dry-run), 1 when the head needs a
-// real lap (the reason on stderr), 2 when gh failed.
+// picks the kind from the named lap, and exits 0 when it carried (or would, on
+// --dry-run), 1 when the head needs a real lap (the reason on stderr), 2 when
+// gh failed.
 import { fileURLToPath } from "node:url";
 
 import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { STATUS_CONTEXT, realGh, replaceSection } from "./post.mjs";
 
-const CARRY = /^carried from ([0-9a-f]{7,40}): docs-only change/;
+const CARRY = /^carried from ([0-9a-f]{7,40}): (docs-only change|QA fixes)/;
+const KIND_TEXT = { docs: "docs-only change", fixes: "QA fixes" };
+const COUNT = /^No blocking findings; (\d+) in all/;
+const FIX_TYPE = /^(fix|test|docs|style|refactor)(\([^)]*\))?!?: /;
 // GitHub's compare lists at most 300 files. MAX_COMMITS bounds the statuses
 // reads (one per commit) a carry costs: a docs-only tail longer than that gets
 // a real lap.
@@ -31,10 +42,33 @@ export const MAX_COMMITS = 10;
 const REPO = "{owner}/{repo}";
 const short = (sha) => String(sha).slice(0, 7);
 
-export const carryDescription = (from) => `carried from ${from}: docs-only change`;
+export const carryDescription = (from, kind = "docs") => {
+  if (!Object.hasOwn(KIND_TEXT, kind)) throw new Error(`unknown carry kind: ${kind}`);
+  return `carried from ${from}: ${KIND_TEXT[kind]}`;
+};
 
 /** The commit a carried verdict names, or null when the description is not a carry. */
 export const carriedFrom = (description) => String(description ?? "").match(CARRY)?.[1] ?? null;
+
+/** "docs" or "fixes" for a carried verdict, null for anything else. */
+export function carryKind(description) {
+  const text = String(description ?? "").match(CARRY)?.[2];
+  return text ? (text === KIND_TEXT.fixes ? "fixes" : "docs") : null;
+}
+
+/** The finding count of the PR tester's own success (`No blocking findings; <N> in all`), or null. */
+export function findingCount(description) {
+  const n = String(description ?? "").match(COUNT)?.[1];
+  return n === undefined ? null : Number(n);
+}
+
+/** Why a commit after the named lap is not one of its fixes, or null. */
+function notAFix(c) {
+  if (!Array.isArray(c?.parents) || typeof c?.commit?.message !== "string") return `${short(c?.sha)}'s parents and message could not be read`;
+  if (c.parents.length !== 1) return `${short(c.sha)} is a merge commit`;
+  const subject = c.commit.message.split("\n")[0];
+  return FIX_TYPE.test(subject) ? null : `${short(c.sha)} is not a lap fix (${subject.slice(0, 60)}): only fix, test, docs, style and refactor commits ride on a lap's verdict`;
+}
 
 /** The newest agent-review status in a REST statuses list (newest first), lowercased. */
 export function latestReview(statuses) {
@@ -45,7 +79,7 @@ export function latestReview(statuses) {
 const realFailure = (review) => review && review.state !== "success" && !carriedFrom(review.description);
 
 /** Why this carry does not hold, or null when it does. */
-export function judgeCarry({ from, head, fromReview, compare, between = [], headReviews = [] }) {
+export function judgeCarry({ from, head, kind = "docs", fromReview, compare, between = [], headReviews = [] }) {
   const f = short(from);
   const h = short(head);
   if (compare?.status !== "ahead") return `${f} is not an ancestor of ${h}`;
@@ -57,7 +91,14 @@ export function judgeCarry({ from, head, fromReview, compare, between = [], head
   const paths = files.flatMap((x) => [x.filename, x.previous_filename]).filter(Boolean);
   const deferred = paths.find((p) => p.split("/").pop() === "deferred.md");
   if (deferred) return `${f}..${h} changes ${deferred}: tech-debt tickets are retired, so it needs a real lap`;
-  if (!isDocsOnly(paths)) {
+  const count = findingCount(fromReview.description);
+  if (kind === "fixes") {
+    if (!(count >= 1)) return `${f}'s lap reported no medium or low finding, so there are no QA fixes to carry`;
+    const odd = (compare.commits ?? []).map(notAFix).find(Boolean);
+    if (odd) return odd;
+  } else if (count >= 1) {
+    return `${f}'s lap reported ${count} findings: their fixes are owed, so this is not a docs-only carry`;
+  } else if (!isDocsOnly(paths)) {
     const code = paths.filter((p) => !isDocumentation(p));
     return `${f}..${h} is not documentation only${code.length ? `: it changes ${code.slice(0, 3).join(", ")}${code.length > 3 ? ` and ${code.length - 3} more` : ""}` : ""}`;
   }
@@ -115,9 +156,10 @@ export async function fetchCarryState({ from, head, gh }) {
 }
 
 /**
- * The carry this PR's head qualifies for: { from, head } when it holds,
- * { from, head, reason } when the diff rules it out, { reason } when there is
- * nothing to carry. Throws when gh fails.
+ * The carry this PR's head qualifies for: { from, head, kind } when it holds,
+ * { from, head, kind, reason } when the diff rules it out, { head, reason }
+ * when there is nothing to carry. The kind is "fixes" when the named lap
+ * reported findings, else "docs". Throws when gh fails.
  */
 export function findCarry({ pr, gh = realGh }) {
   const view = ghJson(gh, ["pr", "view", String(pr), "--json", "commits,headRefOid"]);
@@ -125,22 +167,28 @@ export function findCarry({ pr, gh = realGh }) {
   if (latestReview(statusesOf(gh, head))) return { head, reason: `${short(head)} already has an agent-review status` };
   const earlier = (view.commits ?? []).map((c) => c.oid).filter((sha) => sha !== head).reverse().slice(0, MAX_COMMITS);
   let from = null;
+  let kind = "docs";
   for (const sha of earlier) {
     const review = latestReview(statusesOf(gh, sha));
     if (!review || (review.state === "success" && carriedFrom(review.description))) continue;
     if (review.state !== "success") return { head, reason: `the latest verdict, on ${short(sha)}, is ${review.state}` };
     from = sha;
+    if (findingCount(review.description) >= 1) kind = "fixes";
     break;
   }
   if (!from) return { head, reason: `no agent-review success in the ${MAX_COMMITS} commits before head` };
-  const reason = judgeCarry({ from, head, ...readCarryState({ from, head, gh }) });
-  return reason ? { from, head, reason } : { from, head };
+  const reason = judgeCarry({ from, head, kind, ...readCarryState({ from, head, gh }) });
+  return reason ? { from, head, kind, reason } : { from, head, kind };
 }
 
 /** Set the carried status on head and note it in the PR's "Agent review" section. */
-export function postCarry({ pr, from, head, gh = realGh, dryRun = false }) {
-  const description = carryDescription(from);
-  const section = `Verdict: success (agent-review carried from ${short(from)} to ${short(head)})\n\nThe commits after ${short(from)} change documentation only (\`scripts/docs-only.ts\`), so its verdict stands; no new lap ran.`;
+export function postCarry({ pr, from, head, kind = "docs", gh = realGh, dryRun = false }) {
+  const description = carryDescription(from, kind);
+  const why =
+    kind === "fixes"
+      ? `The commits after ${short(from)} fix the medium and low findings its passing lap reported (listed under "Fixed after QA" in the finish comment), so its verdict stands; no new lap ran.`
+      : `The commits after ${short(from)} change documentation only (\`scripts/docs-only.ts\`), so its verdict stands; no new lap ran.`;
+  const section = `Verdict: success (agent-review carried from ${short(from)} to ${short(head)})\n\n${why}`;
   const read = gh(["pr", "view", String(pr), "--json", "body"]);
   const current = read.code === 0 ? (JSON.parse(read.stdout).body ?? "") : "";
   const nextBody = replaceSection(current, "Agent review", section);
@@ -166,8 +214,8 @@ function main(argv) {
       console.error(`no carry for #${pr}: ${found.reason}; run a real lap`);
       return 1;
     }
-    const out = postCarry({ pr, from: found.from, head: found.head, dryRun });
-    console.log(`${dryRun ? "would carry" : "carried"} agent-review success from ${short(found.from)} to ${short(found.head)} on #${pr}${out.section ? ` (${out.section})` : ""}`);
+    const out = postCarry({ pr, from: found.from, head: found.head, kind: found.kind, dryRun });
+    console.log(`${dryRun ? "would carry" : "carried"} agent-review success from ${short(found.from)} to ${short(found.head)} on #${pr} (${KIND_TEXT[found.kind]}${out.section ? `, ${out.section}` : ""})`);
     return 0;
   } catch (e) {
     console.error(`carry.mjs: ${e.message}`);

@@ -61,9 +61,13 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      `merge-main.mjs --needed` finds an overlap, never a rebase; checks
      are waited for in the background, never in a foreground `sleep`.
   6. QA, beside step 5: the PR tester (`/speckit-pr-test <n>`) reviews the
-     finished run; fix every blocking finding tests first, push, dispatch the
-     new head's run and end. Each lap counts toward
-     `SPECKIT_MAX_REPAIR_ITERATIONS` (10); at the cap the task is Blocked.
+     finished run. A blocker or high finding fails the lap: fix every
+     finding tests first, push, dispatch the new head's run and end; each
+     such lap counts toward `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the
+     cap the task is Blocked. A lap with neither ends the testing: fix its
+     medium and low findings tests first, push, carry its verdict
+     (`pr-test/carry.mjs`) and merge on green CI, the finish comment listing
+     them under "Fixed after QA"; no lap is counted.
   7. Merge on `agent-review` success with every other check green, at once;
      a failing, pending or missing check is never merged. Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session

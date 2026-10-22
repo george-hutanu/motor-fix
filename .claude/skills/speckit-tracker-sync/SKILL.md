@@ -146,6 +146,10 @@ Clarifications and Assumptions, and the PR's Agent review, and collect:
 - **Deviations** from the story's Build brief or acceptance criteria.
 - **Decisions taken on the owner's behalf**: every `(autonomous default)`.
 - **Open questions** left for the owner.
+- **Fixed after QA** (the heading `## Fixed after QA`): after a lap that passed with medium or low findings,
+  one line per finding with its severity and the fix commit's sha (the
+  tail writes it; `lifecycle.mjs merge` stops before the merge while it
+  names fewer findings than the lap reported).
 
 When one exists, write one bullet per item under those headings, each with its
 source file, plus the PR link, to the git-ignored

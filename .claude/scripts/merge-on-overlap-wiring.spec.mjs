@@ -29,9 +29,10 @@ describe('the constitution merges main on overlap, not on behind', () => {
   const constitution = read('.specify/memory/constitution.md');
   const seven = constitution.slice(constitution.indexOf('### VII.'), constitution.indexOf('### ', constitution.indexOf('### VII.') + 8));
 
-  it('is at 4.1.1, with its Sync Impact Report naming the owner\'s request', () => {
-    assert.match(constitution, /\*\*Version\*\*: 4\.1\.1 \| \*\*Ratified\*\*: 2026-10-03 \| \*\*Last Amended\*\*: 2026-10-22/);
-    assert.match(constitution, /Sync Impact Report \(v4\.1\.1\)[^>]*4\.1\.0 → 4\.1\.1 \(PATCH/);
+  it('keeps its 4.1.1 Sync Impact Report naming the owner\'s request, at 4.1.1 or later', () => {
+    const [, major, minor, patch] = constitution.match(/\*\*Version\*\*: (\d+)\.(\d+)\.(\d+) \| \*\*Ratified\*\*: 2026-10-03/).map(Number);
+    assert.ok(major * 1e6 + minor * 1e3 + patch >= 4001001, `version ${major}.${minor}.${patch} is below 4.1.1`);
+    assert.match(constitution, /report \(v4\.1\.1\)[^>]*4\.1\.0 → 4\.1\.1 \(PATCH/);
   });
 
   it('says in VII that a behind branch merges main only when the overlap test needs it', () => {

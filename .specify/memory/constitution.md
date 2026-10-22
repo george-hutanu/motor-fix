@@ -1,5 +1,24 @@
 <!--
-Sync Impact Report (v4.1.1)
+Sync Impact Report (v5.0.0)
+- Version change: 4.1.1 → 5.0.0 (MAJOR: a rule of Principle VII step 5
+  changes. The tester no longer runs again on every new head: a lap with no
+  blocker or high finding ends the testing, its medium and low findings are
+  fixed on the branch (tests first) without counting a repair lap or running
+  another lap, its verdict is carried to the fixed head (`carried from <sha>:
+  QA fixes`, pr-test/carry.mjs), and the PR merges on green CI with the
+  finish comment listing the fixes. A lap with any blocker or high finding
+  still fails. The merge-gate Enforcement row names the carries it verifies)
+- Source: ST-1362, the owner's approval of 2026-10-22.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line, VII
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — lifecycle step 6
+  - ✅ .claude/skills/speckit-auto/tail.md (steps 3-4), speckit-pr-test,
+    speckit-tracker-sync §4
+  - ✅ .claude/hooks/merge-gate.mjs, lifecycle.mjs merge, watch.mjs, their
+    specs and evals/cases/merge-gate.json
+
+Previous report (v4.1.1)
 - Version change: 4.1.0 → 4.1.1 (PATCH: Principle VII step 4 merges
   `origin/main` into a behind branch only when
   `.claude/scripts/merge-main.mjs --needed` finds an overlap (a conflict, a
@@ -605,9 +624,15 @@ waits for the owner:
    constitution, and sets the `agent-review` commit status. The unit suites
    are CI's, on every PR; the integration suite runs on demand and before
    every release; the full end-to-end suite runs on demand and its three core
-   flows against staging before every release; the tester runs none of them. Blocking findings
-   are fixed (tests first) and the tester runs again on the new head, at most
-   `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
+   flows against staging before every release; the tester runs none of them. A lap
+   with a blocker or high finding fails: its findings are fixed (tests first)
+   and the tester runs again on the new head, at most
+   `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked. A
+   lap with neither ends the testing: its medium and low findings are fixed
+   on the branch (tests first, only fix, test, docs, style or refactor
+   commits), no repair lap is counted and no lap runs again; its verdict is
+   carried to the fixed head (`carried from <sha>: QA fixes`), and the finish
+   comment lists each fix under "Fixed after QA".
 6. Merge the PR when `agent-review` is success on its head commit and every
    other check passes; a pending, failing or missing check is never merged.
    Then set the task Done and close its issue. A PR opened by Dependabot (read from its author on
@@ -696,7 +721,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
 | VII main checkout | `main-checkout-gate.mjs` (PreToolUse); `watch.mjs` main row, `session-watch-reminder.mjs` | refuses an Edit, Write or NotebookEdit of a file git tracks in the main checkout, whichever session asks (worktrees, untracked and ignored paths and other repositories pass; `SPECKIT_ALLOW_MAIN_EDIT=1` overrides; a git failure lets it through); the watch reports the main checkout `behind` (safe fix `ff-main`) or `dirty: <files>`, and the session-start reminder names it |
-| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
+| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester (its own, or one it verifies was carried from the PR's tested commit over a documentation-only change or over a passing lap's QA fixes), or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
 | Full verification | `.husky/pre-commit`; `lifecycle.mjs check` and `ready` | the commit hook runs identity, the folder rules and Biome on the staged files only; the CI-only checks, `npm run lint` and the affected `typecheck` and unit `test` (`JEST_SUITE=unit`, in a `scripts/heavy.sh` slot, no Docker) run at each slice end, before every tail fix push and at ready, refusing on red |
@@ -775,4 +800,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 4.1.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-22
+**Version**: 5.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-22

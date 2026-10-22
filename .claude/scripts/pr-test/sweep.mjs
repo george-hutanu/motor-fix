@@ -41,6 +41,10 @@ const LOCALES = { ro: "ro-RO", en: "en-GB" };
 const LANG_KEY = "mf.lang";
 // The role this browser last saw signed in (the web app's Session, `mf-role`).
 const ROLE_KEY = "mf-role";
+// Home shows one of five copy voices, shuffled per load (apps/web/src/index.html); the sweep pins the first,
+// as an admin's pin would, so a shot never differs from the baseline's by the voice the shuffle drew.
+const VOICES_KEY = "mf-copy-voices";
+const PINNED_VOICES = JSON.stringify({ enabled: [1, 2, 3, 4, 5], pinned: 1 });
 
 // A path of letters, digits, '-' and '/' slugs as itself; anything else (a query, `/:lang`, an escape) or a
 // long one also gets a short hash of the whole, so two routes that differ only there never share a file.
@@ -254,6 +258,22 @@ export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interva
   return false;
 }
 
+// The web fonts load after the page does, so a shot taken before they arrive renders its text in the
+// fallback and differs from the baseline's on a page nobody changed: wait, bounded, for
+// document.fonts.ready. A page that cannot be read, or whose fonts never settle, is shot as it is (false).
+export const FONT_SETTLE_MS = 5000;
+export async function settleFonts(page, { timeout = FONT_SETTLE_MS } = {}) {
+  let timer;
+  const late = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(false), timeout);
+  });
+  try {
+    return await Promise.race([page.evaluate(async () => { await document.fonts.ready; }).then(() => true, () => false), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // One sweep page's browser context. Reduced motion stills the charts' entry
 // animation, so a shot never catches a bar mid-flight and differs from the
 // baseline's on a page nobody changed (settleCanvases stays as the fallback).
@@ -270,11 +290,19 @@ export const contextOptions = (run) => {
   };
 };
 
-// One run's browser context: its viewport, scheme and language, the role hint when it is signed in, and maps
-// reading the app's own empty style, so no tile is fetched from outside.
+// One run's browser context: its viewport, scheme and language, the role hint when it is signed in, Home's
+// copy voice pinned, and maps reading the app's own empty style, so no tile is fetched from outside.
 export async function openContext(browser, run) {
   const context = await browser.newContext(contextOptions(run));
   await keepBrowser(context, run);
+  await context.addInitScript(
+    ([key, value]) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+    [VOICES_KEY, PINNED_VOICES],
+  );
   await context.addInitScript(() => {
     globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
   });
@@ -317,6 +345,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
         // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
+        await settleFonts(page);
         await settleCanvases(page);
         await page.screenshot(shotOptions(page, screenshot));
         screenshots.push(screenshot);

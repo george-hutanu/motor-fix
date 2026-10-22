@@ -100,15 +100,20 @@ to `tracker-sync.md` at its next event.
      Its routes are `path[?query][@role][:status]` (`/:lang` first only,
      `@role` required under `/app/`), and its flows are proven first with
      `precheck.mjs --flows <f> --check` against a running app (the skill's
-     "Routes and flows"). Fix every blocking finding
-     (tests first), push, dispatch the new head's run with `--no-wait` and
-     end, as at ready; each lap counts toward
+     "Routes and flows"). A blocker or high finding fails the lap: fix every
+     finding (tests first), push, dispatch the new head's run with `--no-wait` and
+     end, as at ready; each such lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the cap the task goes to
      Blocked and the PR stays unmerged. A head that differs from the last
      tested commit by documentation only (`scripts/docs-only.ts`) carries that verdict instead of a new lap
      (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
+     A lap with no blocker or high finding ends QA: its medium and low
+     findings are fixed (tests first), listed under "Fixed after QA" in
+     `finish-comment.md`, and its verdict carried to the fixed head
+     (`carried from <sha>: QA fixes`), with no lap counted (tail.md step 3).
   7. Merge on `agent-review` success with every other check green, at once
-     (`gh pr merge <n> --merge`; a check still pending ends the tail with
+     (`node .claude/scripts/lifecycle.mjs merge --pr <n>`, which also checks
+     the "Fixed after QA" list; a check still pending ends the tail with
      `NEXT: merge #<n> after CI`, and the session waits for CI and dispatches
      the `merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-tracker-sync finish`, which closes its issue).
