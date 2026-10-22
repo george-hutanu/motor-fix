@@ -2464,7 +2464,7 @@ _From 1358-preflight-delta-archive._
 
 _From 1358-preflight-delta-archive._
 
-### 1358-FR-006 — `capabilities.mjs validate` MUST report ERROR `delta-adds-and-modifies` when an FR is named under Adds and as a Modifies replacement anywhere in the delta, WARN `delta-all-adds` when the delta names Adds and no Modifies or Removes in any section, and print one `<capability>: +A ~M -R` counts line per capability section; every existing ERROR rule stays.
+### 1358-FR-006 — `capabilities.mjs validate` MUST report ERROR `delta-adds-and-modifies` when an FR is named under Adds and as a Modifies replacement anywhere in the delta, WARN `delta-all-adds` when the delta names Adds and no Modifies or Removes in any section, ERROR `delta-capability-twice` when two `### Capability:` sections name the same capability (the second merge plan would overwrite the first), and print one `<capability>: +A ~M -R` counts line per capability section; every existing ERROR rule stays.
 
 _From 1358-preflight-delta-archive._
 
