@@ -32,16 +32,19 @@ const SLOTS: Slot[] = [
   'sub',
 ];
 
-// Every voice text of one language, labelled for the failure message.
-function allTexts(language: string): [string, string][] {
-  const out: [string, string][] = [];
-  for (const [v, texts] of Object.entries(publicVoices(language)))
-    for (const [slot, text] of Object.entries(texts))
-      out.push([`public.voice.${v}.${slot}`, text]);
-  for (const [v, text] of Object.entries(reviewVoices(language)))
-    out.push([`driver.review.voices.${v}`, text]);
-  return out;
-}
+// Every voice text of one language, labelled for the failure message;
+// a plural group gives one text per category.
+type Nested = string | { [key: string]: Nested };
+const labelled = (label: string, text: Nested): [string, string][] =>
+  typeof text === 'string'
+    ? [[label, text]]
+    : Object.entries(text).flatMap(([key, t]) =>
+        labelled(`${label}.${key}`, t),
+      );
+const allTexts = (language: string) => [
+  ...labelled('public.voice', publicVoices(language)),
+  ...labelled('driver.review.voices', reviewVoices(language)),
+];
 
 function lookup(language: string, key: string): string | undefined {
   const [area, ...path] = key.split('.');
@@ -94,7 +97,11 @@ describe('the translation files hold five complete voices', () => {
     const holes = (t: string) => (t.match(/\{[^}]*\}/g) ?? []).sort();
     const en = new Map(allTexts('en'));
     for (const [key, ro] of allTexts('ro'))
-      expect([key, holes(ro)]).toEqual([key, holes(en.get(key) ?? '')]);
+      expect([key, holes(ro)]).toEqual([
+        key,
+        // Romanian's "few" has no English group; it matches "other".
+        holes(en.get(key) ?? en.get(key.replace(/\.few$/, '.other')) ?? ''),
+      ]);
   });
 
   it('names the brand where the slot is about the brand, in both languages', () => {
@@ -120,7 +127,10 @@ describe('how the voice texts are written', () => {
 
   it.each(['ro', 'en'])('writes every %s text in sentence case', (language) => {
     const wrong = allTexts(language).filter(([, t]) => {
-      const letters = t.replace(/\{brand\}/g, 'Brand');
+      // A count opens its sentence with a number.
+      const letters = t
+        .replace(/\{brand\}/g, 'Brand')
+        .replace(/^\{count\} \p{L}/u, '0 X');
       const first = /\p{L}/u.exec(letters)?.[0] ?? '';
       const shouting = /\p{Ll}/u.test(letters) === false;
       return first !== first.toUpperCase() || shouting;

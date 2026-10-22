@@ -288,7 +288,7 @@ describe('GET /brands under hostile queries', () => {
     expect(res.status).toBe(200);
   });
 
-  it('exposes only id, name, slug and popularity on an item', async () => {
+  it('exposes only id, name, slug, popularity and the your form on an item', async () => {
     await loader.load([{ key: 'a', name: 'Alfa', popularity: 1 }]);
 
     const res = await get();
@@ -297,6 +297,7 @@ describe('GET /brands under hostile queries', () => {
       'id',
       'name',
       'popularity',
+      'roPossessive',
       'slug',
     ]);
   });

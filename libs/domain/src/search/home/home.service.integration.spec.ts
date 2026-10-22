@@ -540,3 +540,40 @@ describe('HomeService.forBrand: the brand lists', () => {
     expect(fixed).not.toHaveProperty('serviceRadiusKm');
   });
 });
+
+describe('HomeService.forBrand while garages are approved', () => {
+  // @traces 007-FR-017
+  it('never answers more takers than garages, the counts from one statement', async () => {
+    for (let n = 0; n < 6; n++) {
+      await garage(`draft-${n}`, [[dacia, 'works_on']], 'draft');
+    }
+    const reads = watchGarageReads(prisma);
+    try {
+      const approving = (async () => {
+        for (let n = 0; n < 6; n++) {
+          await prisma.garage.update({
+            data: { status: 'approved' },
+            where: { slug: `draft-${n}` },
+          });
+        }
+      })();
+      const answers = await Promise.all(
+        Array.from({ length: 12 }, () => home.forBrand('dacia')),
+      );
+      await approving;
+
+      for (const { takers, total } of answers) {
+        expect(takers).toBeLessThanOrEqual(total);
+      }
+      expect(
+        reads.statements().filter((sql) => sql.sql.includes('COUNT(*)')),
+      ).toHaveLength(12);
+      expect(await home.forBrand('dacia')).toMatchObject({
+        takers: 6,
+        total: 6,
+      });
+    } finally {
+      reads.restore();
+    }
+  });
+});

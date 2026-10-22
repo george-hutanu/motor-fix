@@ -119,6 +119,23 @@ export class Home {
     const tiles = this.tiles();
     return tiles.find((brand) => brand.slug === this.kept) ?? tiles[0];
   });
+  // A brand change after the first one shown blurs the headline in, until the
+  // new headline's animation ends; with reduced motion nothing plays, so
+  // nothing is marked.
+  protected readonly rising = linkedSignal<string | undefined, boolean>({
+    computation: (slug, previous) =>
+      !untracked(this.reduced) &&
+      !!previous?.source &&
+      previous.source !== slug,
+    source: () => this.selected()?.slug,
+  });
+  // Voice 4's Romanian headline says "your <brand>"; a brand without the
+  // form, and every English line, takes the plain name.
+  protected readonly own = computed(() => {
+    const brand = this.selected();
+    if (!brand) return '';
+    return (this.i18n.language() === 'ro' && brand.roPossessive) || brand.name;
+  });
   // Until a person reaches for the picker the brand changes on its own, and
   // a screen reader is not told each time.
   protected readonly touched = signal(this.kept !== null);
@@ -164,6 +181,20 @@ export class Home {
       ? undefined
       : this.home.value(),
   );
+  // Voice 3's figures, from the answer the count line and the dial read;
+  // nothing while it loads or after it failed.
+  protected readonly figures = computed(() => {
+    const answer = this.answer();
+    if (!answer) return '';
+    const { best, takers } = answer;
+    const count =
+      takers === 0
+        ? this.i18n.t('public.voice.v3.none')
+        : this.i18n.t('public.voice.v3.count', { count: takers });
+    if (takers === 0 || typeof best?.rating !== 'number') return ` ${count}`;
+    const rating = formatRating(best.rating, this.i18n.language());
+    return ` ${count} ${this.i18n.t('public.voice.v3.top', { rating })}`;
+  });
   protected readonly noneNear = computed(
     () => this.answer()?.total === 0 && Boolean(this.place()),
   );
@@ -226,16 +257,55 @@ export class Home {
     effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;
-      const timer = setInterval(() => {
-        if (!this.document.hidden) this.advance();
-      }, CYCLE_MS);
-      onCleanup(() => clearInterval(timer));
+      // Hidden, the count stops; shown again, it starts over from 5 seconds.
+      let timer: ReturnType<typeof setInterval> | undefined;
+      const follow = () => {
+        clearInterval(timer);
+        timer = this.document.hidden
+          ? undefined
+          : setInterval(() => this.advance(), CYCLE_MS);
+      };
+      follow();
+      this.document.addEventListener('visibilitychange', follow);
+      onCleanup(() => {
+        clearInterval(timer);
+        this.document.removeEventListener('visibilitychange', follow);
+      });
     });
 
     // The tiles are read on both sides: in the browser, right after a server
     // render, the transfer cache answers with what the server read.
     const brands = inject(BrandsService);
     const pending = inject(PendingTasks);
+    // Each read waits for the one before it, so the last one asked for is the
+    // one shown: a slow public answer never covers the driver's.
+    const visitor = () =>
+      brands
+        .popularBrandsControllerTiles({ limit: POPULAR }, publicRead())
+        .catch(() => []);
+    let reads = visitor().then((tiles) => this.popular.set(tiles));
+    pending.run(() => reads);
+    // A driver's own cars' brands lead: once their session is known, the
+    // tiles are read again with it; a failed read keeps the public ones.
+    // Signed out, the visitor's popular tiles come back.
+    let readFor: string | undefined;
+    effect(() => {
+      const me = this.session.current();
+      if (!this.hydrated()) return;
+      if (me?.role === 'driver') {
+        if (me.id === readFor) return;
+        readFor = me.id;
+        reads = reads.then(() =>
+          brands.popularBrandsControllerTiles({ limit: POPULAR }).then(
+            (own) => this.popular.set(own),
+            () => undefined,
+          ),
+        );
+      } else if (readFor !== undefined) {
+        readFor = undefined;
+        reads = reads.then(async () => this.popular.set(await visitor()));
+      }
+    });
     if (this.server) {
       const health = inject(HealthService);
       void pending.run(async () => {
@@ -244,13 +314,6 @@ export class Home {
         this.state.set(HEALTH, ready);
       });
     }
-    void pending.run(async () => {
-      this.popular.set(
-        await brands
-          .popularBrandsControllerTiles({ limit: POPULAR }, publicRead())
-          .catch(() => []),
-      );
-    });
   }
 
   protected async pickPlace() {

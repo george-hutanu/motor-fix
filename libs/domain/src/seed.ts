@@ -52,21 +52,76 @@ const GARAGES = [
 // The catalogue's own rows: the brands the listed garages name, and
 // Mercedes-Benz, which none names, so the brand pickers offer an unmarked one.
 const BRANDS = [
-  { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+  {
+    key: 'bmw',
+    name: 'BMW',
+    popularity: 1,
+    roPossessive: 'BMW\u2011ul tău',
+    slug: 'bmw',
+  },
   {
     key: 'mercedes-benz',
     name: 'Mercedes-Benz',
     popularity: 3,
+    roPossessive: 'Mercedesul tău',
     slug: 'mercedes-benz',
   },
-  { key: 'audi', name: 'Audi', popularity: 4, slug: 'audi' },
-  { key: 'volkswagen', name: 'Volkswagen', popularity: 5, slug: 'volkswagen' },
-  { key: 'skoda', name: 'Škoda', popularity: 6, slug: 'skoda' },
-  { key: 'dacia', name: 'Dacia', popularity: 7, slug: 'dacia' },
-  { key: 'renault', name: 'Renault', popularity: 8, slug: 'renault' },
-  { key: 'ford', name: 'Ford', popularity: 9, slug: 'ford' },
-  { key: 'toyota', name: 'Toyota', popularity: 10, slug: 'toyota' },
-  { key: 'tesla', name: 'Tesla', popularity: 12, slug: 'tesla' },
+  {
+    key: 'audi',
+    name: 'Audi',
+    popularity: 4,
+    roPossessive: 'Audi\u2011ul tău',
+    slug: 'audi',
+  },
+  {
+    key: 'volkswagen',
+    name: 'Volkswagen',
+    popularity: 5,
+    roPossessive: 'VW\u2011ul tău',
+    slug: 'volkswagen',
+  },
+  {
+    key: 'skoda',
+    name: 'Škoda',
+    popularity: 6,
+    roPossessive: 'Škoda ta',
+    slug: 'skoda',
+  },
+  {
+    key: 'dacia',
+    name: 'Dacia',
+    popularity: 7,
+    roPossessive: 'Dacia ta',
+    slug: 'dacia',
+  },
+  {
+    key: 'renault',
+    name: 'Renault',
+    popularity: 8,
+    roPossessive: 'Renault\u2011ul tău',
+    slug: 'renault',
+  },
+  {
+    key: 'ford',
+    name: 'Ford',
+    popularity: 9,
+    roPossessive: 'Fordul tău',
+    slug: 'ford',
+  },
+  {
+    key: 'toyota',
+    name: 'Toyota',
+    popularity: 10,
+    roPossessive: 'Toyota ta',
+    slug: 'toyota',
+  },
+  {
+    key: 'tesla',
+    name: 'Tesla',
+    popularity: 12,
+    roPossessive: 'Tesla ta',
+    slug: 'tesla',
+  },
 ];
 
 // Listed garages, so Home and search have a known count: 5 of 8 take Dacia.
@@ -797,10 +852,10 @@ async function seed(db: Client, secret: string) {
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
     await db.query(
-      `INSERT INTO brand (id, key, name, slug, popularity, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, now())
+      `INSERT INTO brand (id, key, name, slug, popularity, ro_possessive, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, now())
        ON CONFLICT DO NOTHING`,
-      [brand.key, brand.name, brand.slug, brand.popularity],
+      [brand.key, brand.name, brand.slug, brand.popularity, brand.roPossessive],
     );
   }
   for (const garage of LISTED) await list(db, garage);
