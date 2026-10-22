@@ -19,47 +19,6 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
-## Pre-Execution Checks
-
-**Check for extension hooks (before convergence)**:
-
-- Check if `.specify/extensions.yml` exists in the project root.
-- If it exists, read it and look for entries under the `hooks.before_converge` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-
-    ```text
-    ## Extension Hooks
-
-    **Optional Pre-Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-
-  - **Mandatory hook** (`optional: false`):
-
-    ```text
-    ## Extension Hooks
-
-    **Automatic Pre-Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-
-    Wait for the result of the hook command before proceeding to the Goal.
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Goal
 
 Close the gap between what a feature's specification, plan, and tasks call for and what the
@@ -189,20 +148,7 @@ Before appending anything, output a compact, severity-graded summary (no file wr
 
 <!-- project-local addition (Constitution II) -->
 
-Convergence compares the codebase against local artifacts, which are only as
-current as the day they were written. Before reporting, fetch the feature's
-Jira issue again with `mcp__claude_ai_Atlassian__getJiraIssue` (cloudId
-`f6dd7c49-a92f-4551-b898-7b3e9b6d2602`, `comment` included in `fields`) and
-treat the ticket as a fourth source alongside spec, plan and tasks:
-
-- A comment that narrows scope can make an unbuilt task **correctly** unbuilt —
-  record it as `contradicts` against the spec, not as a gap to close.
-- A comment that adds a requirement is reported, never appended to `tasks.md`:
-  the ticket is the only source of scope, and a new requirement is the
-  reporter's call to make in a ticket of its own.
-- A flag or status change on the ticket goes in the findings table.
-- If the ticket cannot be fetched, record the lane as unavailable rather than
-  reporting agreement you did not verify.
+Re-read the story's GitHub issue with its comments (`gh issue view <n> --comments -R george-hutanu/motor-fix-specs`): a comment that narrows scope makes the unbuilt work a `contradicts` finding, one that adds a requirement is reported and never appended; if it cannot be read, record the lane as unavailable.
 
 ## Convergence Findings
 
@@ -258,46 +204,6 @@ Append to the **end** of `tasks.md`, per the append contract:
 - On `converged`: recommend proceeding to review / opening a PR. No further implement pass
   is needed for this feature's specified scope.
 
-### 9. Check for extension hooks
-
-After producing the result, check if `.specify/extensions.yml` exists in the project root.
-
-- If it exists, read it and look for entries under the `hooks.after_converge` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- Report the convergence outcome (`converged` or `tasks_appended`) in-session before listing
-  any hooks, so users can decide whether to run optional follow-up commands.
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-
-    ```text
-    ## Extension Hooks
-
-    **Optional Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-
-  - **Mandatory hook** (`optional: false`):
-
-    ```text
-    ## Extension Hooks
-
-    **Automatic Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Done When
 
 - [ ] Every FR and plan decision checked against the code, not against `tasks.md`'s checkboxes
@@ -313,3 +219,10 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
 
 - Evidence is `path:line` from a file read this session. A `missing`
   finding states what was searched and where, so the absence is checkable.
+
+Cut (project-local override), because no run here takes these lanes:
+
+- Pre-Execution Checks and step 9 (Check for extension hooks):
+  `.specify/extensions.yml` registers no hook for converge.
+- The Jira lane of Re-read the ticket before reporting: the tracker is
+  GitHub; the section keeps one `gh issue view` line.
