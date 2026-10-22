@@ -23,6 +23,8 @@ import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 import type { Outcome } from '../admin/system-log/system-log';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
+  ACCOUNT_CLOSED_SERIES,
+  accountClosedCleanups,
   BOOKING_CONFIRM_OUTCOMES,
   BOOKING_LAPSE_REQUESTS,
   bookingConfirms,
@@ -491,6 +493,7 @@ const STARTS: Record<
         each('sweep', ['true', 'false']),
       ),
     ],
+    [accountClosedCleanups, ACCOUNT_CLOSED_SERIES],
     [
       bookingLapses,
       across(
