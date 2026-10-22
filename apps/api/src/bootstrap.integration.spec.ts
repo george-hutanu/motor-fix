@@ -341,3 +341,18 @@ describe('api conventions', () => {
     await request(app.getHttpServer()).get('/api/docs').expect(404);
   });
 });
+
+// @traces 1192-FR-008
+describe('starting the api', () => {
+  afterEach(() => {
+    delete process.env['IMAGE_BASE_URL'];
+  });
+
+  it('refuses an image address that is neither an http(s) URL nor a path', () => {
+    process.env['IMAGE_BASE_URL'] = 'img.motorfix.ro';
+
+    expect(() =>
+      configureApp({} as INestApplication, { APP_ENV: 'test' }),
+    ).toThrow(/IMAGE_BASE_URL/);
+  });
+});

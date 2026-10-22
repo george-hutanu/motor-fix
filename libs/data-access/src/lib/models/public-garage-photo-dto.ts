@@ -15,6 +15,16 @@ export interface PublicGaragePhotoDto {
   id: string;
 
   /**
+   * Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed
+   */
+  imageBase?: string;
+
+  /**
+   * A ThumbHash of the photo, base64, shown while it loads
+   */
+  thumbhash?: string;
+
+  /**
    * The thumbnail copy (400 px), signed for an hour
    */
   thumbnailUrl: string;

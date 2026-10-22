@@ -344,7 +344,7 @@ describe('the price list through the profile cache', () => {
     await get(garage.slug);
 
     const stored = JSON.parse(
-      (await other.get(`v2:profile:${garage.slug}:-`)) ?? 'null',
+      (await other.get(`v3:profile:${garage.slug}:-`)) ?? 'null',
     );
     expect(stored.v.prices).toHaveLength(1);
   });

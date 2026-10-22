@@ -1,10 +1,11 @@
 ---
 capability: storage
-updated: 2026-10-18
+updated: 2026-10-22
 features:
   - 422-private-file-storage
   - 110-workshop-photos
   - 1191-resilient-uploads
+  - 1192-photo-variants
 ---
 
 # Capability: Storage
@@ -41,13 +42,17 @@ _From 422-private-file-storage._
 
 _From 422-private-file-storage._
 
-### 110-FR-003 — Deleting a photo key MUST also delete the keys derived from it (its thumbnail and display copy), in one storage call, and succeed when any of them holds no object (422-FR-008); the storage rules for the `garage_photo` purpose stay JPEG, PNG and WebP with their signature check (422-FR-001, 422-FR-005), so a file whose bytes are not a photo is deleted and refused with `file_type_mismatch`. HEIC is not accepted: the worker's image library cannot decode it on the runtime image (`deferred.md`).
+### 1192-FR-004 — Deleting a photo key MUST also delete the keys derived from it (its thumbnail, its display copy and its eight variants, the variants found through the digest on its thumbnail's metadata), and succeed when any of them holds no object; a photo without a digest deletes the key and its two copies as today. The thumbnail MUST be deleted last, after the others succeeded, so a delete that fails part-way can be repeated and still finds the digest. The storage rules for the `garage_photo` purpose and their signature check stay as 1191-FR-005 sets them (supersedes 110-FR-003, whose HEIC exclusion 1191-FR-005 already lifted).
 
-_From 110-workshop-photos._
+_From 1192-photo-variants._
 
 ### 422-FR-011 — The refusals in FR-002 and FR-005 MUST be raised as HTTP errors with status 422 or 409 whose body carries the stable `code`, so the owning endpoint answers with that status and code. (The API's error filter keeping a carried `code` is delivered by ST-79, not here.)
 
 _From 422-private-file-storage._
+
+### 1192-FR-011 — One named photo configuration MUST give the job's `attempts` (default 3), the failed jobs kept (`removeOnFail`, default 100), sharp's `limitInputPixels` (default 268,402,689) and the worker's concurrency (default the CPU count), each from an optional environment variable (`PHOTO_JOB_ATTEMPTS`, `PHOTO_JOB_KEEP_FAILED`, `PHOTO_MAX_INPUT_PIXELS`, `PHOTO_WORKER_CONCURRENCY`) whose malformed or non-positive value falls back to the default; `listing-photos.service.ts` and `photo-processing.ts` read it. A unit test MUST cover the defaults and a set value.
+
+_From 1192-photo-variants._
 
 ## Retired
 
@@ -55,3 +60,4 @@ _From 422-private-file-storage._
 - `422-FR-001` — superseded by `1191-FR-005` (2026-10-18)
 - `422-FR-003` — superseded by `1191-FR-006` (2026-10-18)
 - `422-FR-012` — superseded by `1191-FR-006` (2026-10-18)
+- `110-FR-003` — superseded by `1192-FR-004` (2026-10-22)

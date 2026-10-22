@@ -197,3 +197,41 @@ export function telemetry(
     traceSampleRatio: env === 'production' ? 0.2 : 1,
   };
 }
+
+const wholeNumber = (value: string | undefined, fallback: number) =>
+  value && /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value))
+    ? Number(value)
+    : fallback;
+
+// The photo pipeline's limits. sharp's own default pixel limit is the
+// fallback; the worker defaults to one photo per core, since each photo's
+// sharp calls run on one thread.
+export function photoConfig(
+  source: Record<string, string | undefined> = process.env,
+) {
+  return {
+    attempts: wholeNumber(source['PHOTO_JOB_ATTEMPTS'], 3),
+    concurrency: wholeNumber(
+      source['PHOTO_WORKER_CONCURRENCY'],
+      navigator.hardwareConcurrency,
+    ),
+    keepFailed: wholeNumber(source['PHOTO_JOB_KEEP_FAILED'], 100),
+    maxInputPixels: wholeNumber(source['PHOTO_MAX_INPUT_PIXELS'], 268_402_689),
+  };
+}
+
+// Where the browser loads photo variants from: the API on the same origin
+// until a CDN host is set.
+export function imageBaseUrl(
+  source: Record<string, string | undefined> = process.env,
+): string {
+  const value = source['IMAGE_BASE_URL'];
+  if (!value) return '/api/v1/images';
+  const absolute = /^https?:\/\/[^/]/i.test(value) && URL.canParse(value);
+  if (!absolute && !/^\/(?!\/)/.test(value)) {
+    throw new Error(
+      'IMAGE_BASE_URL must be an http(s) URL or a path starting with /',
+    );
+  }
+  return value.replace(/\/+$/, '');
+}

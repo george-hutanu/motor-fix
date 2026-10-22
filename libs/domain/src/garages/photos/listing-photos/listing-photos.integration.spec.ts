@@ -294,7 +294,29 @@ describe('confirming a photo', () => {
       await storage.contentTypeOf(`${confirmed.key}.display`),
       await storage.contentTypeOf(`${confirmed.key}.thumb`),
       await storage.metadataOf(`${confirmed.key}.thumb`),
-    ]).toEqual(['image/jpeg', 'image/jpeg', { height: '16', width: '16' }]);
+    ]).toEqual([
+      'image/jpeg',
+      'image/jpeg',
+      expect.objectContaining({ height: '16', width: '16' }),
+    ]);
+  });
+
+  // @traces 1192-FR-001 1192-FR-004
+  it('leaves the eight variants of a processed photo cached for a year, and removing it removes them', async () => {
+    const draft = await newDraft();
+    const key = await uploaded(draft.id, draft.token, HEIC, 'image/heic');
+    const confirmed = await photos.confirm(draft.id, draft.token, key);
+
+    await processPhoto(storage, confirmed.key);
+
+    const variants = [...store.objects.entries()].filter(([name]) =>
+      name.startsWith(`g/${draft.id}/`),
+    );
+    expect(variants.map(([, object]) => object.cacheControl)).toEqual(
+      Array(8).fill('public, max-age=31536000, immutable'),
+    );
+    await storage.deleteWithCopies(confirmed.key);
+    expect(store.objects.size).toBe(0);
   });
 
   it.each([
@@ -502,6 +524,28 @@ describe('describing photos for the sending', () => {
     expect(await photos.describe([b, a])).toEqual([
       { key: b },
       { height: 600, key: a, width: 800 },
+    ]);
+  });
+
+  // @traces 1192-FR-005
+  it('answers where the variants of a processed photo are and its preview', async () => {
+    const draft = await newDraft();
+    const key = `garage_photo/${draft.id}/${randomUUID()}`;
+    await storage.putObject(`${key}.thumb`, JPEG, 'image/jpeg', {
+      digest: 'd'.repeat(64),
+      height: '600',
+      thumbhash: 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG',
+      width: '800',
+    });
+
+    expect(await photos.describe([key])).toEqual([
+      {
+        height: 600,
+        key,
+        thumbhash: 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG',
+        variantPath: `g/${draft.id}/${'d'.repeat(64)}`,
+        width: 800,
+      },
     ]);
   });
 });

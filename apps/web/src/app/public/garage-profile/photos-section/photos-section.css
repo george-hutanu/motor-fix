@@ -17,7 +17,7 @@
   overflow: hidden;
   border: 1px solid var(--mf-line);
   border-radius: 24px;
-  background: var(--mf-panel-raised);
+  background: var(--mf-panel-raised) center / cover no-repeat;
   color: var(--mf-text-secondary);
   cursor: pointer;
   animation: mf-pop var(--mf-motion-pop) var(--mf-motion-ease)
@@ -26,6 +26,10 @@
 
 .tile.cover {
   flex: 2 1 420px;
+}
+
+.tile picture {
+  display: contents;
 }
 
 .tile img {

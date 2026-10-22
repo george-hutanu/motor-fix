@@ -35,8 +35,11 @@ const recorded = () => ({
       Description: 'mf-no-cache-app-api',
       Enabled: true,
       Guid: 'guid-app-api',
-      TriggerMatchingType: 0,
-      Triggers: [urlRule(['*/api/*', '*/app/*'])],
+      TriggerMatchingType: 1,
+      Triggers: [
+        urlRule(['*/api/*', '*/app/*']),
+        { ...urlRule(['*/api/v1/images/*']), PatternMatchingType: 2 },
+      ],
     },
     {
       ActionParameter1: '0',

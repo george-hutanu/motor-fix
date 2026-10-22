@@ -24,6 +24,7 @@ import { GarageLabourController } from './price-list/labour/labour.controller';
 import { PriceListController } from './price-list/price-list.controller';
 import { PriceListService } from './price-list/price-list.service';
 import { GaragePricesService } from './prices/garage-prices/garage-prices.service';
+import { ImagesController } from './public-garages/images/images.controller';
 import { PublicGaragesService } from './public-garages/public-garages';
 import { PublicGaragesController } from './public-garages/public-garages.controller';
 import {
@@ -86,6 +87,7 @@ export class GaragesModule {
         GarageInvitesController,
         GarageReportsController,
         GarageFeaturesController,
+        ImagesController,
         GarageSettingsController,
         InvitesController,
         LegalCheckController,

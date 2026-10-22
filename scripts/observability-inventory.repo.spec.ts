@@ -299,6 +299,19 @@ describe('the copy voice on requests, drafts and the admin read', () => {
   });
 });
 
+// @traces 1192-FR-012
+describe('the photo variant route', () => {
+  it('is one OpenAPI operation, templated by its path, that the inventory counts', () => {
+    const paths = Object.keys(
+      JSON.parse(readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'))
+        .paths,
+    ).filter((path) => path.startsWith('/api/v1/images/'));
+
+    expect(paths).toEqual(['/api/v1/images/g/{owner}/{digest}/{file}']);
+    expect(checkInventory(root)).toEqual([]);
+  });
+});
+
 // @traces 398-FR-013
 describe('the garage feature switch route', () => {
   repoIt(

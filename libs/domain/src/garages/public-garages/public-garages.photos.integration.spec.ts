@@ -112,6 +112,8 @@ interface Photo {
   displayUrl: string;
   height?: number;
   id: string;
+  imageBase?: string;
+  thumbhash?: string;
   thumbnailUrl: string;
   width?: number;
 }
@@ -245,5 +247,40 @@ describe('the photos of a public garage profile', () => {
 
     expect(cached).toEqual(first);
     expect(fresh.map(({ id }) => id)).toEqual([b.id, a.id]);
+  });
+});
+
+// @traces 1192-FR-007 1192-FR-008
+describe('the responsive variants of a public garage photo', () => {
+  const DIGEST = 'e'.repeat(64);
+  const PREVIEW = 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG';
+
+  it('answers where the variants are served from and the preview', async () => {
+    const garage = await approved();
+    const row = await photo(garage.id, 0);
+    const variantPath = `g/${garage.id}/${DIGEST}`;
+    await prisma.garagePhoto.update({
+      data: { thumbhash: PREVIEW, variantPath },
+      where: { id: row.id },
+    });
+
+    const [answered] = (await read(garage.slug)).body.photos as Photo[];
+
+    expect(answered).toMatchObject({
+      id: row.id,
+      imageBase: `/api/v1/images/${variantPath}`,
+      thumbhash: PREVIEW,
+    });
+    expect(answered.imageBase).not.toContain('garage_photo/');
+  });
+
+  it('answers neither for a photo processed before the variants existed', async () => {
+    const garage = await approved();
+    await photo(garage.id, 0);
+
+    const [answered] = (await read(garage.slug)).body.photos as Photo[];
+
+    expect(answered).not.toHaveProperty('imageBase');
+    expect(answered).not.toHaveProperty('thumbhash');
   });
 });

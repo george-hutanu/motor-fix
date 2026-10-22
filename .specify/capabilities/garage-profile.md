@@ -19,6 +19,7 @@ features:
   - 1183-garage-profile-page
   - 1353-verified-badge-last-check
   - 330-listed-facilities
+  - 1192-photo-variants
 ---
 
 # Capability: Garage profile
@@ -71,10 +72,6 @@ _From 307-public-garage-profile._
 
 _From 271-garage-distance._
 
-### 310-FR-004 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as thumbnails, in the list's order, the large cover tile showing the photo's display copy and every other tile its thumbnail copy, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall, as `design.md` fixes them). Photos below the fold MUST load lazily; the first photo MUST load eagerly.
-
-_From 310-photo-gallery._
-
 ### 307-FR-015 — The page MUST show skeletons for the header and each section while the read is open; on 404, the "Pagina nu există" / "This page does not exist" view with a link to Home (the existing not-found view); on 410, the "no longer available" view, "Acest service nu mai este disponibil" / "This garage is no longer available" with a link to Home; the server answers the page with status 404 and 410 for those two views, 200 otherwise; on any other failure, an error block "Nu am putut încărca service-ul" / "We could not load the garage" with "Încearcă din nou" / "Try again" that repeats the read.
 
 _From 307-public-garage-profile._
@@ -107,9 +104,9 @@ _From 310-photo-gallery._
 
 _From 310-photo-gallery._
 
-### 310-FR-004 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as thumbnails, in the list's order, the large cover tile showing the photo's display copy and every other tile its thumbnail copy, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall, as `design.md` fixes them). Photos below the fold MUST load lazily; the first photo MUST load eagerly.
+### 1192-FR-009 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as tiles, in the list's order, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall). A photo with an `imageBase` MUST show as a `<picture>`: an AVIF `<source>` whose `srcset` lists the four widths, and an `NgOptimizedImage` `<img>` whose custom image loader names the WebP variant of each of the four widths (listed in its `ngSrcset`: its own srcset generation refuses a `sizes` holding pixels), both with a `sizes` matching the tile's rendered width (below 640 px `calc(100vw - 32px)`; above it the cover `min(66vw, 840px)` and the others `min(33vw, 420px)`, from the section's 1,280 px width and the tile bases), the image filling its tile so the tile's size never depends on the image, the ThumbHash as the tile's background (a data URL) until the image paints over it (NgOptimizedImage's own placeholder sits on the image, which stays transparent until it loads), and `priority` (`fetchpriority="high"`, eager) on the cover only, the other tiles lazy. A photo without `imageBase` MUST show its display copy on the cover tile and its thumbnail copy on the others, the first eager and the rest lazy, as before. Alt texts, the full-screen view and its failure handling (310-FR-006 to 310-FR-012) do not change (supersedes 310-FR-004).
 
-_From 310-photo-gallery._
+_From 1192-photo-variants._
 
 ### 310-FR-005 — While the profile is being read the section MUST show grey tiles in the final layout, and a tile whose image fails to load MUST show a neutral placeholder tile while the others still show.
 
@@ -458,6 +455,18 @@ _From 1353-verified-badge-last-check._
 
 _From 330-listed-facilities._
 
+### 1192-FR-006 — `GET /api/v1/images/g/{owner}/{digest}/{file}` MUST be public (no session, `@Public()`, on the public-routes list) and answer a variant's bytes with its content type and `Cache-Control: public, max-age=31536000, immutable` and `CDN-Tag: garage:<garage id>` (so the purge every `garage.updated` already sends to the CDN drops a removed photo's cached variants, the one case that needs a purge) only when `{owner}` is a valid owner id, `{digest}` 64 lowercase hex characters, `{file}` one of the eight `<width>.<avif|webp>` names, and a gallery row of an approved garage holds the variant path; otherwise it MUST answer 404 `not_found` with `Cache-Control: no-store` and read no object (a draft's photos stay unreachable without the draft's token, 110-FR-012). A held path whose object is missing in the store also answers that 404; a store that cannot be read answers 503 `storage_unavailable` with `Cache-Control: no-store`. A refused address costs at most one indexed lookup (none for a malformed one); the route carries no rate limit of its own, as the CDN answers repeat reads. The API never resizes or re-encodes at read time.
+
+_From 1192-photo-variants._
+
+### 1192-FR-007 — The public profile read MUST add, for each photo whose row has a variant path, `imageBase` (the image host's base address followed by `/g/<owner id>/<digest>`, no trailing slash, so a variant's address is `<imageBase>/<width>.<avif|webp>`) and `thumbhash`; the widths are the fixed list shared by the API and the web app. Photos without one answer as today. The answer still never carries a storage key, bucket or the original's path (310-FR-001); the variant path is a public address, not a storage key of the original. The profile cache's shape version MUST be bumped (310-FR-013).
+
+_From 1192-photo-variants._
+
+### 1192-FR-008 — The image host's base address MUST come from the optional `IMAGE_BASE_URL` of the API (the `img.` host behind the CDN in production), defaulting to `/api/v1/images` so the web app's own origin serves variants where no image host exists (local, CI, PR QA). A value that is not an absolute `https:`/`http:` URL or a path starting with `/` is refused at boot. The CDN configuration (`infra/cdn/bunny.json`) MUST exempt `*/api/v1/images/*` from the edge rule that stops caching `/api/` in every environment, so the CDN keeps variants by their `Cache-Control`; a signed-in viewer's requests still bypass the CDN (the browser cache keeps them).
+
+_From 1192-photo-variants._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -472,3 +481,4 @@ _From 330-listed-facilities._
 - `307-FR-010` — superseded by `1353-FR-002` (2026-10-20)
 - `307-FR-018` — superseded by `1353-FR-003` (2026-10-20)
 - `1183-FR-001` — superseded by `330-FR-007` (2026-10-22)
+- `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)

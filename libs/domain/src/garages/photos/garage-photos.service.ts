@@ -28,13 +28,17 @@ export class GaragePhotosService {
     });
     await tx.garagePhoto.deleteMany({ where: { garageId } });
     const rows = await tx.garagePhoto.createManyAndReturn({
-      data: photos.map(({ height, key, width }, position) => ({
-        fileKey: key,
-        garageId,
-        height,
-        position,
-        width,
-      })),
+      data: photos.map(
+        ({ height, key, thumbhash, variantPath, width }, position) => ({
+          fileKey: key,
+          garageId,
+          height,
+          position,
+          thumbhash,
+          variantPath,
+          width,
+        }),
+      ),
       select: { fileKey: true, id: true, position: true },
     });
 
