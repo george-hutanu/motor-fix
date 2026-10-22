@@ -6,7 +6,7 @@ import type {
 
 export type SearchKey = Pick<
   GarageSearchControllerForBrand$Params,
-  'bbox' | 'brand' | 'brandId' | 'near' | 'radius'
+  'bbox' | 'brand' | 'brandId' | 'near' | 'radius' | 'sort'
 >;
 
 // What Results showed when the driver left it: its loaded pages and cursor,
@@ -19,13 +19,14 @@ interface KeptResults {
   scrollY: number;
 }
 
-const keyOf = ({ bbox, brand, brandId, near, radius }: SearchKey) =>
+const keyOf = ({ bbox, brand, brandId, near, radius, sort }: SearchKey) =>
   JSON.stringify([
     brand ?? null,
     brandId ?? null,
     near ?? '',
     radius ?? '',
     bbox ?? '',
+    sort ?? '',
   ]);
 
 // The last search Results showed, for the way back from a garage's profile.

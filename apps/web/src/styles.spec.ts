@@ -132,3 +132,16 @@ describe('the map’s zoom buttons while Results takes text on a phone', () => {
     expect(body).toMatch(/visibility:\s*hidden/);
   });
 });
+
+// The sheet's top edge over the zoom buttons (full, or any rest of a stage
+// too short to clear them): they hide rather than lie under its handle.
+describe('the map’s zoom buttons under the Results sheet on a phone', () => {
+  it('hides them while the sheet covers them', () => {
+    const body = rule(
+      'mf-results:has(mf-results-sheet.over-zoom) mf-results-map .maplibregl-ctrl-top-right',
+    );
+
+    expect(body).toBeDefined();
+    expect(body).toMatch(/visibility:\s*hidden/);
+  });
+});

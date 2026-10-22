@@ -3014,8 +3014,9 @@ describe('the brand chips and the brand search from a tablet up', () => {
       ([, sel]) => sel.trim() === selector,
     )?.[2] ?? '';
 
-  it('keeps the search on the chips line: the row does not wrap, the chips shrink and wrap inside their own box', () => {
-    expect(rule('.brands')).toMatch(/flex-wrap: nowrap;/);
+  it('keeps the search on the chips line, the sorts on their own: the chips shrink and wrap inside their own box', () => {
+    expect(rule('.brands')).toMatch(/flex-wrap: wrap;/);
+    expect(rule('.brands mf-sort-control')).toMatch(/flex-basis: 100%;/);
     expect(rule('mf-brand-chips')).toMatch(/flex: 1 1 0;/);
     expect(rule('mf-brand-chips')).toMatch(/min-width: 0;/);
     expect(rule('.brands mf-brand-search')).toMatch(/flex: 0 0 16rem;/);
@@ -3252,10 +3253,13 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule(':host')).toMatch(/overflow: hidden;/);
   });
 
-  it('lets the consent bar lie over the stage on a short phone, so the map and the half sheet keep their room', () => {
+  // Up to 880 px tall: under the summary the sheet's header (the chips, the
+  // brand search and the sorts) left a 375 x 812 phone's map a strip with
+  // the bar asking, its pins under the low sheet (ST-328 full CI).
+  it('lets the consent bar lie over the stage on a phone up to 880 px tall, so the map and the half sheet keep their room', () => {
     const short =
       css.match(
-        /@media \(max-width: 767px\) and \(max-height: 667px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+        /@media \(max-width: 767px\) and \(max-height: 880px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
       )?.[1] ?? '';
 
     expect(short).toMatch(
@@ -3991,5 +3995,265 @@ describe('Results in the visit’s voice', () => {
     await reads[0]?.answer();
 
     expect(said(page().querySelector('h1'))).toBe('They don’t frown at a BMW');
+  });
+});
+
+// @traces 328-FR-009 328-FR-010 328-FR-011 328-FR-012 328-FR-013
+describe('Results sorting', () => {
+  beforeEach(async () => {
+    await configure();
+    Element.prototype.scrollTo = jest.fn();
+    window.scrollTo = jest.fn();
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const control = () => page().querySelector('mf-sort-control');
+  const buttons = () => [
+    ...page().querySelectorAll<HTMLButtonElement>('mf-sort-control button'),
+  ];
+  const button = (name: string) => buttons().find((b) => said(b) === name);
+  const pressed = () =>
+    buttons()
+      .filter((b) => b.getAttribute('aria-pressed') === 'true')
+      .map(said);
+  const pick = async (name: string) => {
+    button(name)?.click();
+    await settle();
+    await settle();
+  };
+  const cardNames = () =>
+    [...page().querySelectorAll('mf-result-card h2')].map(said);
+  const PRICED = () =>
+    pageOf({
+      items: [
+        garageOf('three', 'Atelier Trei'),
+        garageOf('four', 'Service Patru'),
+      ],
+    });
+  async function shown(url = `/ro/garages?brand=bmw&near=${NEAR}`) {
+    await open(url);
+    await reads[0]?.answer();
+  }
+
+  it('shows the three sorts in the row of brands, rating marked, named as a group', async () => {
+    await shown();
+
+    expect(
+      page().querySelector('.brands mf-sort-control fieldset'),
+    ).not.toBeNull();
+    expect(
+      control()?.querySelector('fieldset')?.getAttribute('aria-label'),
+    ).toBe('Sortare');
+    expect(buttons().map(said)).toEqual(['Notă', 'Distanță', 'Preț']);
+    expect(buttons().every((b) => b.type === 'button')).toBe(true);
+    expect(pressed()).toEqual(['Notă']);
+  });
+
+  it('speaks English', async () => {
+    await open(`/en/garages?brand=bmw&near=${NEAR}`, { language: 'en' });
+    await reads[0]?.answer();
+
+    expect(buttons().map(said)).toEqual(['Rating', 'Distance', 'Price']);
+    expect(
+      control()?.querySelector('fieldset')?.getAttribute('aria-label'),
+    ).toBe('Sort');
+  });
+
+  it('writes the sort into the bar as a new history entry and asks again, unlogged, from the first page', async () => {
+    await shown();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+    await pick('Preț');
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: { sort: 'price' },
+        queryParamsHandling: 'merge',
+      }),
+    );
+    expect(navigate.mock.calls.at(-1)?.[1]?.replaceUrl).toBeFalsy();
+    expect(TestBed.inject(Router).url).toContain('sort=price');
+    expect(searches().at(-1)).toEqual({
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'price',
+    });
+    expect(pressed()).toEqual(['Preț']);
+  });
+
+  it('writes no sort into the bar for the rating order', async () => {
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=price`);
+
+    await pick('Notă');
+
+    expect(TestBed.inject(Router).url).not.toContain('sort=');
+    // Named on the request, so the change is counted as one, not a search.
+    expect(searches().at(-1)).toEqual({
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'rating',
+    });
+  });
+
+  it('reads the sort from the bar on the first search, logged', async () => {
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=distance`);
+
+    expect(searches()).toEqual([
+      { brand: 'bmw', log: '1', near: NEAR, sort: 'distance' },
+    ]);
+    expect(pressed()).toEqual(['Distanță']);
+  });
+
+  it('takes an unknown sort in the bar as the rating order', async () => {
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=newest`);
+
+    expect(searches()).toEqual([{ brand: 'bmw', log: '1', near: NEAR }]);
+    expect(pressed()).toEqual(['Notă']);
+  });
+
+  it('changes nothing for the sort already shown', async () => {
+    await shown();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+    await pick('Notă');
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(searches()).toHaveLength(1);
+  });
+
+  it('keeps the old cards under the progress bar, then shows the new order with its first card selected, from the top', async () => {
+    await shown();
+
+    await pick('Preț');
+
+    expect(cardNames()).toEqual(['Atelier Unu', 'Service Doi']);
+    expect(page().querySelector('.cards.swapping')).not.toBeNull();
+
+    await reads.at(-1)?.answer(PRICED());
+
+    expect(page().querySelector('.cards.swapping')).toBeNull();
+    expect(cardNames()).toEqual(['Atelier Trei', 'Service Patru']);
+    expect(
+      page()
+        .querySelector('mf-result-card')
+        ?.querySelector('article.card.selected'),
+    ).not.toBeNull();
+    expect(Element.prototype.scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ top: 0 }),
+    );
+  });
+
+  it('keeps the sort when the brand changes', async () => {
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=price`);
+
+    page()
+      .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
+      ?.click();
+    await settle();
+    await settle();
+
+    expect(searches().at(-1)).toEqual({
+      brand: 'audi',
+      log: '1',
+      near: NEAR,
+      sort: 'price',
+    });
+    expect(pressed()).toEqual(['Preț']);
+  });
+
+  it('keeps the area the map was moved to', async () => {
+    await shown();
+    mapMoved({ bbox: '44.4,26,44.5,26.2' });
+    await settle();
+    await reads.at(-1)?.answer();
+
+    await pick('Preț');
+
+    expect(searches().at(-1)).toEqual({
+      bbox: '44.4,26,44.5,26.2',
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'price',
+    });
+    await reads.at(-1)?.answer();
+
+    await pick('Notă');
+
+    expect(searches().at(-1)).toEqual({
+      bbox: '44.4,26,44.5,26.2',
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'rating',
+    });
+  });
+
+  it('changes a card in place on a live rating change, never re-ordering the sorted list', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=price`);
+    const [first, second] = page().querySelectorAll('.cards > li');
+
+    messages.next({
+      at: '2026-10-11T12:00:00.000Z',
+      id: 'review-9',
+      kind: 'review.posted',
+    });
+    await jest.advanceTimersByTimeAsync(300);
+    await settle();
+    expect(reads).toHaveLength(2);
+    expect(reads[1]?.params).toEqual(
+      expect.objectContaining({ ids: 'one,two' }),
+    );
+    await reads[1]?.answer(
+      pageOf({
+        items: [
+          { ...garageOf('two', 'Service Doi'), rating: 5 },
+          garageOf('one', 'Atelier Unu'),
+        ],
+      }),
+    );
+
+    const now = page().querySelectorAll('.cards > li');
+    expect(cardNames()).toEqual(['Atelier Unu', 'Service Doi']);
+    expect(now[0]).toBe(first);
+    expect(now[1]).toBe(second);
+    expect(searches().filter((q) => !q.ids)).toHaveLength(1);
+    jest.useRealTimers();
+  });
+
+  it('turns Distanță off, saying why, until a place is known, and shows the rating order meanwhile', async () => {
+    // The browser is still asked for the place.
+    asks = [];
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocation,
+    });
+    await open('/ro/garages?brand=bmw&sort=distance', { placed: false });
+    Reflect.deleteProperty(navigator, 'geolocation');
+
+    const distance = button('Distanță');
+    expect(distance?.disabled).toBe(true);
+    const why = page().querySelector(
+      `#${distance?.getAttribute('aria-describedby')}`,
+    );
+    expect(said(why)).toBe('Alege un loc');
+    expect(pressed()).toEqual(['Notă']);
+    expect(searches()).toEqual([]);
+  });
+
+  it('takes Notă back from a distance waiting for a place', async () => {
+    asks = [];
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocation,
+    });
+    await open('/ro/garages?brand=bmw&sort=distance', { placed: false });
+    Reflect.deleteProperty(navigator, 'geolocation');
+
+    await pick('Notă');
+
+    expect(TestBed.inject(Router).url).not.toContain('sort=');
   });
 });

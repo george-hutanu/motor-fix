@@ -1190,3 +1190,380 @@ describe('the order index', () => {
     expect(JSON.stringify(plan)).toContain('garage_list_order_idx');
   });
 });
+
+type Sort = 'rating' | 'distance' | 'price';
+
+const sortChanges = (sort: Sort) =>
+  counterTotal(reader, 'motorfix_sort_changes_total', { sort });
+
+// One page around Cluj under the sort, unlogged as a sort change is.
+const sortedPage = (sort: Sort | undefined, cursor?: string) =>
+  search.forBrand(dacia, cursor, CLUJ, undefined, false, undefined, sort);
+
+async function everySortedPage(sort: Sort) {
+  const pages: Page[] = [await sortedPage(sort)];
+  while (pages.at(-1)?.nextCursor && pages.length < 10) {
+    pages.push(await sortedPage(sort, pages.at(-1)?.nextCursor ?? undefined));
+  }
+  return pages;
+}
+
+interface Spot {
+  bani?: number | null;
+  km: number;
+  rating?: number | null;
+  reviews?: number;
+  serviceRadiusKm?: number;
+  stance?: Stance;
+}
+
+// A degree of latitude on the sphere the search measures on.
+const KM_PER_DEGREE = 111.195;
+
+// A garage `km` north of Cluj with its rating, reviews and hourly rate in
+// bani; a mobile mechanic when it has a service radius.
+async function spot(
+  name: string,
+  { bani = null, km, rating = null, reviews, serviceRadiusKm, stance }: Spot,
+) {
+  const id = await garage(name, { stance });
+  await prisma.garage.update({
+    data: {
+      labourFromBani: bani,
+      latitude: CLUJ.lat + km / KM_PER_DEGREE,
+      longitude: CLUJ.lng,
+      rating,
+      reviewCount: reviews ?? (rating === null ? 0 : 1),
+      ...(serviceRadiusKm !== undefined && {
+        businessKind: 'mobile' as const,
+        seatAddress: 'Strada Sediului 1, Cluj-Napoca',
+        serviceRadiusKm,
+      }),
+    },
+    where: { id },
+  });
+  return id;
+}
+
+const namesOf = (page: Page) => page.items.map((item) => item.name);
+
+// @traces 328-FR-002 328-FR-003 328-FR-004 328-FR-005 328-FR-015
+describe('sorting a group', () => {
+  beforeEach(async () => {
+    await spot('Alfa', {
+      bani: 12_000,
+      km: 6,
+      rating: 4.8,
+      stance: 'works_on',
+    });
+    await spot('Beta', {
+      bani: 12_000,
+      km: 2,
+      rating: 4.5,
+      stance: 'works_on',
+    });
+    await spot('Gama', { km: 2, stance: 'works_on' });
+    await spot('Delta', {
+      bani: 0,
+      km: 0.5,
+      rating: 5,
+      stance: 'does_not_take',
+    });
+    await spot('Epsilon', { bani: 20_000, km: 15, rating: 3 });
+    await spot('Zeta', { bani: 5_000, km: 8, stance: 'does_not_take' });
+  });
+
+  it.each([
+    [undefined, ['Alfa', 'Beta', 'Gama', 'Delta', 'Epsilon', 'Zeta']],
+    ['rating', ['Alfa', 'Beta', 'Gama', 'Delta', 'Epsilon', 'Zeta']],
+    ['distance', ['Beta', 'Gama', 'Alfa', 'Delta', 'Zeta', 'Epsilon']],
+    ['price', ['Alfa', 'Beta', 'Gama', 'Delta', 'Zeta', 'Epsilon']],
+  ] as const)(
+    'lists the takers first, each group by the sort %s, ties by rating',
+    async (sort, names) => {
+      expect(namesOf(await sortedPage(sort))).toEqual(names);
+    },
+  );
+});
+
+// @traces 328-FR-004 328-FR-007
+describe('sorting a mobile mechanic by distance', () => {
+  it('ranks it by the distance from the place to its home base, and its card still shows no distance', async () => {
+    await spot('Service Fix', { km: 8, rating: 3, stance: 'works_on' });
+    const mobile = await spot('Mecanic Mobil', {
+      km: 12,
+      rating: 5,
+      serviceRadiusKm: 20,
+      stance: 'works_on',
+    });
+
+    const far = await sortedPage('distance');
+    await prisma.garage.update({
+      data: { latitude: CLUJ.lat + 5 / KM_PER_DEGREE, rating: 1 },
+      where: { id: mobile },
+    });
+    const near = await sortedPage('distance');
+
+    expect(namesOf(far)).toEqual(['Service Fix', 'Mecanic Mobil']);
+    expect(namesOf(near)).toEqual(['Mecanic Mobil', 'Service Fix']);
+    for (const page of [far, near]) {
+      expect(page.items.find((item) => item.id === mobile)).toMatchObject({
+        comesToYou: true,
+        distanceKm: null,
+        serviceRadiusKm: 20,
+      });
+    }
+  });
+});
+
+const BANI = [0, 5_000, 5_000, 12_000, 30_000, null];
+
+// The n-th of a list full of ties under every sort: four ratings, two
+// review counts, five names, seven distances, six rates (none among them),
+// the first 25 taking the brand.
+async function mixedSpot(n: number) {
+  const rating = RATINGS[n % 4] ?? null;
+  const reviews = rating === null ? 0 : 1 + Number(n % 3 === 0);
+  const name = `Service ${n % 5}`;
+  const km = 1 + (n % 7);
+  const bani = BANI[n % 6] ?? null;
+  const taker = n < 25;
+  const id = await spot(name, {
+    bani,
+    km,
+    rating,
+    reviews,
+    stance: taker ? 'works_on' : undefined,
+  });
+  return { bani, id, km, name, rating, reviews, taker };
+}
+
+type SpotRow = Awaited<ReturnType<typeof mixedSpot>>;
+
+const BY: Record<Sort, (a: SpotRow, b: SpotRow) => number> = {
+  distance: (a, b) => a.km - b.km || byOrder(a, b),
+  price: (a, b) =>
+    (a.bani ?? Number.MAX_SAFE_INTEGER) - (b.bani ?? Number.MAX_SAFE_INTEGER) ||
+    byOrder(a, b),
+  rating: byOrder,
+};
+
+// @traces 328-FR-002 328-FR-006 328-FR-015
+describe('paging a sort', () => {
+  it.each(['rating', 'distance', 'price'] as const)(
+    'pages 45 garages full of ties under %s, the takers first, none repeated or skipped',
+    async (sort) => {
+      const rows: SpotRow[] = [];
+      for (let n = 0; n < 45; n += 1) rows.push(await mixedSpot(n));
+
+      const pages = await everySortedPage(sort);
+
+      expect(pages.map((page) => page.items.length)).toEqual([20, 20, 5]);
+      expect(
+        pages.flatMap((page) => page.items.map((item) => item.id)),
+      ).toEqual(
+        [
+          ...rows.filter((row) => row.taker).sort(BY[sort]),
+          ...rows.filter((row) => !row.taker).sort(BY[sort]),
+        ].map((row) => row.id),
+      );
+    },
+  );
+
+  it.each([
+    ['distance', { latitude: CLUJ.lat }],
+    ['price', { labourFromBani: 0 }],
+  ] as const)(
+    'repeats and skips nothing under %s when the boundary garage moves to the top',
+    async (sort, change) => {
+      for (let n = 0; n < 45; n += 1) await mixedSpot(n);
+      const order = firstSeen(await everySortedPage(sort)).map(
+        (item) => item.id,
+      );
+      const first = await sortedPage(sort);
+      await prisma.garage.update({
+        data: change,
+        where: { id: first.items[19]?.id },
+      });
+
+      const pages = [first];
+      while (pages.at(-1)?.nextCursor && pages.length < 10) {
+        pages.push(
+          await sortedPage(sort, pages.at(-1)?.nextCursor ?? undefined),
+        );
+      }
+
+      expect(
+        pages.flatMap((page) => page.items.map((item) => item.id)),
+      ).toEqual(order);
+    },
+  );
+
+  it.each([
+    ['distance', { latitude: CLUJ.lat + 30 / KM_PER_DEGREE }],
+    ['price', { labourFromBani: 90_000 }],
+  ] as const)(
+    'starts the next page where the last one ended under %s when the boundary garage drops',
+    async (sort, change) => {
+      for (let n = 0; n < 45; n += 1) await mixedSpot(n);
+      const order = firstSeen(await everySortedPage(sort)).map(
+        (item) => item.id,
+      );
+      const first = await sortedPage(sort);
+      await prisma.garage.update({
+        data: change,
+        where: { id: first.items[19]?.id },
+      });
+
+      const next = await sortedPage(sort, first.nextCursor ?? undefined);
+
+      expect(next.items[0]?.id).toBe(order[20]);
+    },
+  );
+
+  it('carries the sort and the boundary value it was made under', async () => {
+    for (let n = 0; n < 45; n += 1) await mixedSpot(n);
+
+    const [rating, distance, price] = await Promise.all(
+      (['rating', 'distance', 'price'] as const).map((sort) =>
+        sortedPage(sort),
+      ),
+    );
+
+    expect(decoded(rating?.nextCursor ?? null)).toMatchObject({ s: 'rating' });
+    expect(decoded(rating?.nextCursor ?? null)).not.toHaveProperty('d');
+    expect(decoded(distance?.nextCursor ?? null)).toMatchObject({
+      d: expect.any(Number),
+      s: 'distance',
+    });
+    expect(decoded(price?.nextCursor ?? null)).toMatchObject({
+      p: 30_000,
+      s: 'price',
+    });
+  });
+});
+
+// @traces 328-FR-006
+describe('refuses a cursor of another sort', () => {
+  let rating: string;
+  let distance: string;
+  let price: string;
+
+  beforeEach(async () => {
+    for (let n = 0; n < 21; n += 1) await mixedSpot(n);
+    [rating, distance, price] = await Promise.all(
+      (['rating', 'distance', 'price'] as const).map(
+        async (sort) => (await sortedPage(sort)).nextCursor ?? '',
+      ),
+    );
+  });
+
+  it.each([
+    ['a rating cursor under price', 'price', () => rating],
+    ['a price cursor under rating', 'rating', () => price],
+    ['a price cursor with no sort asked', undefined, () => price],
+    ['a distance cursor under price', 'price', () => distance],
+    [
+      'a cursor naming no sort',
+      'rating',
+      () => tamper(rating, { s: undefined }),
+    ],
+    [
+      'a cursor naming an unknown sort',
+      'rating',
+      () => tamper(rating, { s: 'new' }),
+    ],
+    ['a distance under rating', 'rating', () => tamper(rating, { d: 100 })],
+    ['a rate under distance', 'distance', () => tamper(distance, { p: 100 })],
+    [
+      'a distance cursor with no distance',
+      'distance',
+      () => tamper(distance, { d: undefined }),
+    ],
+    ['a negative distance', 'distance', () => tamper(distance, { d: -1 })],
+    [
+      'a distance that is not a number',
+      'distance',
+      () => tamper(distance, { d: 'far' }),
+    ],
+    [
+      'a price cursor with no rate',
+      'price',
+      () => tamper(price, { p: undefined }),
+    ],
+    ['a fractional rate', 'price', () => tamper(price, { p: 1.5 })],
+    ['a negative rate', 'price', () => tamper(price, { p: -1 })],
+    [
+      'a rate past the column',
+      'price',
+      () => tamper(price, { p: 2_147_483_648 }),
+    ],
+    ['a rate that is not a number', 'price', () => tamper(price, { p: '100' })],
+  ] as const)('%s', async (_, sort, cursorOf) => {
+    expect(await refusal(sortedPage(sort, cursorOf()))).toMatchObject({
+      body: { code: 'invalid_cursor' },
+      status: 400,
+    });
+  });
+
+  it('takes a price cursor whose boundary has no rate', async () => {
+    const next = await sortedPage('price', tamper(price, { p: null }));
+
+    expect(next.items.length).toBeGreaterThan(0);
+  });
+});
+
+// @traces 328-FR-008 328-FR-014
+describe('counting a sort change', () => {
+  it('counts an unlogged first page naming a sort as a sort change, never as a search, and writes no log row', async () => {
+    for (let n = 0; n < 21; n += 1) await mixedSpot(n);
+    const before = {
+      price: await sortChanges('price'),
+      rating: await sortChanges('rating'),
+      results: await searches('results'),
+    };
+
+    const first = await sortedPage('price');
+    await sortedPage('price', first.nextCursor ?? undefined);
+    await sortedPage('rating');
+    await search.forBrand(
+      dacia,
+      undefined,
+      CLUJ,
+      undefined,
+      false,
+      { east: 23.75, north: 46.9, south: 46.7, west: 23.5 },
+      'price',
+    );
+    await settled();
+
+    expect(await prisma.searchLog.count()).toBe(0);
+    expect(await searches('results')).toBe(before.results);
+    expect(await sortChanges('price')).toBe(before.price + 1);
+    expect(await sortChanges('rating')).toBe(before.rating + 1);
+  });
+
+  it('counts a logged first page under a sort as a search, not as a sort change', async () => {
+    await mixedSpot(0);
+    const before = {
+      price: await sortChanges('price'),
+      results: await searches('results'),
+    };
+
+    await search.forBrand(
+      dacia,
+      undefined,
+      CLUJ,
+      undefined,
+      true,
+      undefined,
+      'price',
+    );
+    await search.forBrand(dacia, undefined, CLUJ);
+    await settled();
+
+    expect(await prisma.searchLog.count()).toBe(1);
+    expect(await searches('results')).toBe(before.results + 2);
+    expect(await sortChanges('price')).toBe(before.price);
+  });
+});

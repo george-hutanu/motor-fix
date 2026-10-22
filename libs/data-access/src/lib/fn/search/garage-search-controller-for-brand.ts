@@ -50,6 +50,11 @@ export interface GarageSearchControllerForBrand$Params {
  * The nextCursor of the previous page; opaque
  */
   cursor?: string;
+
+/**
+ * The order inside each group: rating, distance from near (only with near) or the lowest hourly rate first; ties fall back to the rating order
+ */
+  sort?: 'rating' | 'distance' | 'price';
 }
 
 export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string, params?: GarageSearchControllerForBrand$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageSearchPageDto>> {
@@ -63,6 +68,7 @@ export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string
     rb.query('ids', params.ids, {});
     rb.query('log', params.log, {});
     rb.query('cursor', params.cursor, {});
+    rb.query('sort', params.sort, {});
   }
 
   return http.request(

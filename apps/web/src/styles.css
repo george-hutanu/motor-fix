@@ -18,6 +18,17 @@
   }
 }
 
+/* Wherever the Results sheet's top edge lies over the zoom buttons (full,
+   any rest of a stage too short to clear them, a drag passing over them),
+   they hide rather than sit under its handle. */
+@media (max-width: 767px) {
+  mf-results:has(mf-results-sheet.over-zoom)
+    mf-results-map
+    .maplibregl-ctrl-top-right {
+    visibility: hidden;
+  }
+}
+
 /* The one action an empty state holds is projected into it, so its own
    stylesheet cannot reach it. Until the driver's texts load the label is its
    key, one unbreakable word. Its tracking narrows with the viewport and, on a

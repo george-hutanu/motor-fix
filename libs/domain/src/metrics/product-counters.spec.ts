@@ -28,6 +28,7 @@ import {
   countResubmission,
   countSearch,
   countSignIn,
+  countSortChange,
   countSupportEmail,
   countSupportMessage,
   countSystemLogEntry,
@@ -72,6 +73,8 @@ const GARAGE_REPORT_OUTCOMES = [
   'already_reported',
   'refused',
 ] as const;
+
+const SORTS = ['rating', 'distance', 'price'] as const;
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -121,6 +124,9 @@ function startedNames(process: 'api' | 'worker') {
 // Every series an instance can add, once each.
 function countEverySeries() {
   for (const outcome of ['results', 'none'] as const) countSearch(outcome);
+  SORTS.forEach((sort) => {
+    countSortChange(sort);
+  });
   for (const method of ['password', 'phone', 'google', 'apple'] as const)
     countSignIn(method);
   countGarageSignUp();
@@ -207,6 +213,15 @@ describe('the product counters', () => {
       { outcome: 'results' },
     ],
     [() => countSearch('none'), 'motorfix_searches_total', { outcome: 'none' }],
+    // @traces 328-FR-014
+    ...SORTS.map(
+      (sort) =>
+        [
+          () => countSortChange(sort),
+          'motorfix_sort_changes_total',
+          { sort },
+        ] as const,
+    ),
     [
       () => countSignIn('password'),
       'motorfix_sign_ins_total',

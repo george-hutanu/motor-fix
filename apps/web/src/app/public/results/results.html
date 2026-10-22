@@ -61,6 +61,7 @@
         (pick)="changeBrand($event)"
       />
       <mf-brand-search (chosen)="chooseBrand($event)" />
+      <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />
     </div>
   }
   <div #found class="found">
