@@ -427,7 +427,6 @@ export class DraftKeeper {
           email,
           language: this.language(),
           step: sent.step,
-          // Only a form opened from Home carries the voice it was opened in.
           ...(this.consent.granted() &&
             this.voice.fromHome && { copyVoice: this.voice.voice }),
         },

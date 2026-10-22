@@ -133,10 +133,17 @@ test.describe('copy voice analytics', { tag: '@database' }, () => {
 
       await expect
         .poll(() => events.map(({ n }) => n))
-        .toEqual(['home_visit', 'quote_request_started', 'quote_request_sent']);
-      expect(events[0]?.p).toEqual({ voice: 2 });
-      expect(events[1]?.p).toMatchObject({ voice: 2 });
-      expect(events[2]?.p).toMatchObject({ voice: 2 });
+        .toEqual([
+          'home_visit',
+          'garage_opened',
+          'quote_request_started',
+          'quote_request_sent',
+        ]);
+      const props = (name: string) => events.find(({ n }) => n === name)?.p;
+      expect(props('home_visit')).toEqual({ voice: 2 });
+      expect(props('garage_opened')).not.toHaveProperty('voice');
+      expect(props('quote_request_started')).toMatchObject({ voice: 2 });
+      expect(props('quote_request_sent')).toMatchObject({ voice: 2 });
       expect(body['copyVoice']).toBe(2);
       expect(await storedVoices(driver.email)).toEqual([2]);
     } finally {
