@@ -125,8 +125,8 @@ An advisory second lane over the same scripts for non-mechanical judgements
 (is this requirement testable, does this context line still change behaviour).
 It is [Jev](https://docs.typesafe.ai), reached by `fetch` in
 `.claude/scripts/lib/jev.mjs`, keyed by `TYPESAFE_API_KEY` or `JEV` in `.env`.
-It never reaches an exit code, fails open (no key → one line saying the lane
-was unavailable), and never runs per-edit. Off with `SPECKIT_JEV=0`, or per
+It never reaches an exit code, is silent with no key (one line when switched
+off), and never runs per-edit. Off with `SPECKIT_JEV=0`, or per
 run with `--no-jev`; `--check` runs drop it.
 
 ## Maintaining the harness
