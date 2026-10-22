@@ -23,14 +23,14 @@ const NEGATIVE_SECONDS = 60;
 const LOCK_MS = 3000;
 const POLL_MS = 50;
 
-// The `v3` is the shape of what is stored: a change to it bumps the version.
+// The `v4` is the shape of what is stored: a change to it bumps the version.
 // A part's own colons are escaped, so a slug or brand a visitor types never
 // names another part's key.
 export const cacheKey = (kind: CacheKind, ...parts: string[]) =>
-  `v3:${kind}:${parts.map((part) => part.replaceAll('%', '%25').replaceAll(':', '%3A')).join(':')}`;
-export const lockKey = (key: string) => `v3:lock:${key}`;
-export const tagKey = (tag: string) => `v3:tag:${tag}`;
-export const purgedKey = (tag: string) => `v3:purged:${tag}`;
+  `v4:${kind}:${parts.map((part) => part.replaceAll('%', '%25').replaceAll(':', '%3A')).join(':')}`;
+export const lockKey = (key: string) => `v4:lock:${key}`;
+export const tagKey = (tag: string) => `v4:tag:${tag}`;
+export const purgedKey = (tag: string) => `v4:purged:${tag}`;
 export const kindOf = (key: string) => key.split(':')[1] as CacheKind;
 
 // Lifetimes are jittered ×0.9–1.1 so entries written together do not expire

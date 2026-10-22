@@ -297,6 +297,7 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
     doesNotTake: [ref(w.tesla)],
     facilities: ['courtesy_car', 'waiting_area'],
     facilitiesNote: 'Mașina la schimb se cere la programare',
+    hours: {},
     id: w.garage.id,
     jobTypes: [
       { id: w.brakes.id, nameEn: 'Brakes', nameRo: 'Frâne' },
@@ -408,6 +409,7 @@ describe('the profile read on a cache miss', () => {
       businessKind: 'mobile',
       doesNotTake: [],
       facilities: [],
+      hours: {},
       id: garage.id,
       jobTypes: [],
       name: 'Mecanic la domiciliu',

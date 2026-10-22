@@ -93,6 +93,7 @@ describe('reading a garage by slug, hostilely', () => {
       'brandNote',
       'doesNotTake',
       'facilities',
+      'hours',
       'id',
       'jobTypes',
       'name',

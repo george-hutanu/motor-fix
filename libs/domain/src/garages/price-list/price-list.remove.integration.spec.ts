@@ -520,7 +520,7 @@ describe('what the removal leaves alone', () => {
     await profile();
     await profile(w.bmw.slug);
     await profile(w.mini.slug);
-    const entry = (slug: string) => `v3:profile:${w.nord.slug}:${slug}`;
+    const entry = (slug: string) => `v4:profile:${w.nord.slug}:${slug}`;
 
     await remove(w);
 

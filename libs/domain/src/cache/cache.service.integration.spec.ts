@@ -103,7 +103,7 @@ describe('the cache service', () => {
     const ttl = await other.pttl(k);
     expect(ttl).toBeGreaterThan(540_000 + 590_000);
     expect(ttl).toBeLessThanOrEqual(660_000 + 600_000);
-    expect(await other.zrange('v3:tag:garage:a', '0', '-1')).toContain(k);
+    expect(await other.zrange('v4:tag:garage:a', '0', '-1')).toContain(k);
   });
 
   it('serves a stale entry at once and refreshes it once behind the read', async () => {
@@ -330,7 +330,7 @@ describe('the cache service', () => {
     const cache = new CacheService(client());
     const tag = `garage:${randomUUID()}`;
     const gone = key();
-    await other.zadd(`v3:tag:${tag}`, Date.now() - 1000, gone);
+    await other.zadd(`v4:tag:${tag}`, Date.now() - 1000, gone);
 
     const k = key();
     await cache.read({
@@ -339,7 +339,7 @@ describe('the cache service', () => {
       soft: 600,
     });
 
-    expect(await other.zrange(`v3:tag:${tag}`, '0', '-1')).toEqual([k]);
+    expect(await other.zrange(`v4:tag:${tag}`, '0', '-1')).toEqual([k]);
   });
 
   it('names the answer’s tags on the request while Redis is down', async () => {
