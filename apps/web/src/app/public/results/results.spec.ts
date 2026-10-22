@@ -4171,6 +4171,40 @@ describe('Results sorting', () => {
     });
   });
 
+  it('changes a card in place on a live rating change, never re-ordering the sorted list', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
+    await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=price`);
+    const [first, second] = page().querySelectorAll('.cards > li');
+
+    messages.next({
+      at: '2026-10-11T12:00:00.000Z',
+      id: 'review-9',
+      kind: 'review.posted',
+    });
+    await jest.advanceTimersByTimeAsync(300);
+    await settle();
+    expect(reads).toHaveLength(2);
+    expect(reads[1]?.params).toEqual(
+      expect.objectContaining({ ids: 'one,two' }),
+    );
+    await reads[1]?.answer(
+      pageOf({
+        items: [
+          { ...garageOf('two', 'Service Doi'), rating: 5 },
+          garageOf('one', 'Atelier Unu'),
+        ],
+      }),
+    );
+
+    const now = page().querySelectorAll('.cards > li');
+    expect(cardNames()).toEqual(['Atelier Unu', 'Service Doi']);
+    expect(now[0]).toBe(first);
+    expect(now[1]).toBe(second);
+    expect(searches().filter((q) => !q.ids)).toHaveLength(1);
+    jest.useRealTimers();
+  });
+
   it('turns Distanță off, saying why, until a place is known, and shows the rating order meanwhile', async () => {
     // The browser is still asked for the place.
     asks = [];

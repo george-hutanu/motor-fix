@@ -239,6 +239,7 @@ describe('GarageSearchQueryDto sort', () => {
     expect(query.sort).toBeUndefined();
   });
 
+  // @traces 328-FR-016
   it.each(['newest', 'RATING', '', 'rating,price'])(
     'refuses the sort %p, naming sort',
     (sort) => {
