@@ -5,12 +5,19 @@
 # detached task-runner per plan entry, each claimed first (the claim a
 # session's `--wait` and /speckit-watch share, so neither dispatches twice).
 #
-#   scripts/watch-schedule.sh install    render ~/Library/LaunchAgents/com.motorfix.watch.plist and load it
+#   scripts/watch-schedule.sh install [--gate-only|--dispatch]  render ~/Library/LaunchAgents/com.motorfix.watch.plist and load it
 #   scripts/watch-schedule.sh uninstall  unload it and remove the plist
-#   scripts/watch-schedule.sh status     loaded or not, and the last pass
-#   scripts/watch-schedule.sh run        one pass (what launchd runs)
+#   scripts/watch-schedule.sh status     loaded or not, the last pass, the newest plan file
+#   scripts/watch-schedule.sh run [--gate-only|--dispatch]      one pass (what launchd runs)
 #
-# Each pass appends `<UTC time> gate <exit> [dispatch <exit>]` to
+# `--gate-only` runs the gate and never dispatches: on gate exit 2 each plan
+# line goes, behind its UTC time, to .work/watch-schedule/plan-<UTC date>.log
+# (no plan file on exit 0 or 1). `--dispatch`, the default, is the pass above.
+# Start with `install --gate-only`; after a week of plan files with
+# no line a person would refuse, `uninstall`, then `install --dispatch`.
+# The owner runs install; no PR or agent loads the agent.
+#
+# Each pass appends `<UTC time> gate <exit> [dispatch <exit>|gate-only]` to
 # .work/watch-schedule/passes.log; launchd's own output goes beside it, and
 # each dispatched agent's to .work/watch-dispatch/. A pass exports GH_TOKEN for
 # george-hutanu (AGENTS.md "Identity"); without one it logs
@@ -30,7 +37,26 @@ PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOGS="$MAIN/.work/watch-schedule"
 DOMAIN="gui/$(id -u)"
 
-case "${1:-}" in
+usage() {
+  echo "usage: watch-schedule.sh install [--gate-only|--dispatch]|uninstall|status|run [--gate-only|--dispatch]" >&2
+  exit 64
+}
+
+verb=${1:-}
+[ $# -gt 0 ] && shift
+mode=dispatch
+seen=""
+for arg in "$@"; do
+  case "$arg" in
+    --gate-only) mode=gate-only ;;
+    --dispatch) mode=dispatch ;;
+    *) usage ;;
+  esac
+  seen="$seen $arg"
+done
+case "$seen" in *--gate-only*--dispatch*|*--dispatch*--gate-only*) usage ;; esac
+
+case "$verb" in
   install)
     path=""
     for tool in node claude gh; do
@@ -50,6 +76,7 @@ case "${1:-}" in
     <string>/bin/sh</string>
     <string>$MAIN/scripts/watch-schedule.sh</string>
     <string>run</string>
+    <string>--$mode</string>
   </array>
   <key>WorkingDirectory</key>
   <string>$MAIN</string>
@@ -69,7 +96,7 @@ case "${1:-}" in
 PLIST
     launchctl bootout "$DOMAIN" "$PLIST" 2>/dev/null
     launchctl bootstrap "$DOMAIN" "$PLIST" || exit 1
-    echo "watch-schedule: installed $PLIST (every 15 min from $MAIN)"
+    echo "watch-schedule: installed $PLIST (every 15 min from $MAIN, $mode)"
     ;;
   uninstall)
     launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null
@@ -83,6 +110,8 @@ PLIST
       echo "not loaded"
     fi
     if [ -f "$LOGS/passes.log" ]; then echo "last pass: $(tail -n 1 "$LOGS/passes.log")"; else echo "last pass: none"; fi
+    newest=$(ls "$LOGS"/plan-*.log 2>/dev/null | sort | tail -n 1)
+    echo "plan files: ${newest:-none}"
     ;;
   run)
     cd "$MAIN" || exit 1
@@ -93,6 +122,17 @@ PLIST
       exit 1
     fi
     export GH_TOKEN
+    if [ "$mode" = gate-only ]; then
+      plan=$(node .claude/scripts/watch.mjs --gate)
+      gate=$?
+      now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      [ -n "$plan" ] && printf '%s\n' "$plan"
+      if [ "$gate" -eq 2 ] && [ -n "$plan" ]; then
+        printf '%s\n' "$plan" | sed "s/^/$now /" >> "$LOGS/plan-$(date -u +%Y-%m-%d).log"
+      fi
+      echo "$now gate $gate gate-only" >> "$LOGS/passes.log"
+      exit "$gate"
+    fi
     node .claude/scripts/watch.mjs --gate
     gate=$?
     line="gate $gate"
@@ -106,7 +146,6 @@ PLIST
     exit "$code"
     ;;
   *)
-    echo "usage: watch-schedule.sh install|uninstall|status|run" >&2
-    exit 64
+    usage
     ;;
 esac
