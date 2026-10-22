@@ -1,8 +1,8 @@
 # Constitution card — v5.0.0
 
 For authors: each principle of `.specify/memory/constitution.md` in one line,
-with the gate that enforces it. The full text governs; reviewers read the
-sections they judge.
+with its gate. The full text governs; reviewers read the sections they judge;
+`constitution-card.spec.mjs` checks it.
 
 - **I. No Bloated Code (NON-NEGOTIABLE)** — the smallest change that fully solves it; no speculative layer, knob, dead code, or dependency where ~20 lines do. Gate: review (`code-reviewer`, `spec-reviewer`).
 - **II. Test Discipline** — failing tests first; colocated Jest specs; API tests on real PostgreSQL and Valkey; unit tests in CI on every PR, the integration suite on demand and before every release; Playwright end to end, the full suite on demand and the three core flows against staging before every release; no mutation run in a task; no FR or task id in source but a whole-line `// @traces` comment naming `<feature>-FR-<n>` ids in a test file. Gates: `red-first-gate.mjs`, `post-edit-check.sh`, `stop-test-gate.sh`, `.husky/pre-commit`.
