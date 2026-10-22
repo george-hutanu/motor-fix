@@ -4,7 +4,7 @@
     @for (v of voices; track v.n) {
       <div [attr.data-voice-of]="v.n">
         <p class="label">{{ v.copy.eyebrow | t }}</p>
-        <h2>{{ v.copy.headline | t: { brand: v.n === 4 ? own() : brand.name } }}</h2>
+        <h2>{{ v.copy.headline | t: { brand: v.n === 4 ? own() : brand.name, figures: figures() } }}</h2>
         <p>{{ v.copy.sub | t: { brand: brand.name } }}</p>
       </div>
     }

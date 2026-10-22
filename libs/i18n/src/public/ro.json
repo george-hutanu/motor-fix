@@ -1000,16 +1000,23 @@
       "sub": "Spune‑ne ce mașină ai și îți arătăm service‑urile pe care le recomandă alți șoferi ca tine."
     },
     "v3": {
+      "count": {
+        "few": "{count} service‑uri.",
+        "one": "{count} service.",
+        "other": "{count} de service‑uri."
+      },
       "cta": "Pornește căutarea",
       "eyebrow": "Diagnoză: mecanic",
       "feat": "Date, nu promisiuni.",
       "garage": "Service nelistat? Adaugă datele.",
-      "headline": "{brand}. 3 service‑uri. Nota maximă: 4,9.",
+      "headline": "{brand}.{figures}",
       "list": "Compatibile cu {brand}",
       "no": "Incompatibil: {brand}",
       "noLabel": "Incompatibil cu",
+      "none": "Niciun service încă.",
       "parts": "Selectează sistemul",
-      "sub": "Marcă, lucrare, distanță, tarif pe oră. Patru date și ai service‑ul potrivit."
+      "sub": "Marcă, lucrare, distanță, tarif pe oră. Patru date și ai service‑ul potrivit.",
+      "top": "Nota maximă: {rating}."
     },
     "v4": {
       "cta": "Găsește‑l acum",

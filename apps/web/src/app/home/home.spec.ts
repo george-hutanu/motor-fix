@@ -1718,7 +1718,7 @@ describe('Home in the visit’s voice', () => {
     ).toEqual([
       'Cine se pricepe la BMW?',
       'Știm un mecanic bun pentru BMW.',
-      'BMW. 3 service‑uri. Nota maximă: 4,9.',
+      'BMW. 2 service‑uri.',
       'BMW merită mai mult decât „merge și așa”.',
       'Știi cât costă înainte să lași cheile.',
     ]);
@@ -1852,5 +1852,108 @@ describe('Home headline in voice 4', () => {
     expect(
       page().querySelector('.hero [data-voice-of="1"] h2')?.textContent,
     ).toContain('Cine se pricepe la BMW?');
+  });
+});
+
+describe('Home headline in voice 3', () => {
+  const headline = () =>
+    page()
+      .querySelector('.hero [data-voice-of="3"] h2')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+  const english = async () => {
+    await TestBed.inject(LanguageChoice).choose('en');
+    await settle();
+  };
+
+  // @traces 007-brand-headline-FR-006
+  // @traces 007-brand-headline-FR-009
+  it('reads the takers and the best rating from the Home answer', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+
+    expect(headline()).toBe('BMW. 3 service‑uri. Nota maximă: 4,9.');
+    await english();
+    expect(headline()).toBe('BMW. 3 garages. Top rating: 4.9.');
+  });
+
+  // @traces 007-brand-headline-FR-007
+  // @traces 007-brand-headline-FR-020
+  it.each([
+    [1, 'BMW. 1 service.'],
+    [2, 'BMW. 2 service‑uri.'],
+    [19, 'BMW. 19 service‑uri.'],
+    [20, 'BMW. 20 de service‑uri.'],
+    [101, 'BMW. 101 service‑uri.'],
+    [120, 'BMW. 120 de service‑uri.'],
+  ])('counts %i takers by the Romanian plural rules', async (takers, line) => {
+    await render();
+    await reads[0].answer(takers, 200);
+
+    expect(headline()).toBe(line);
+  });
+
+  // @traces 007-brand-headline-FR-007
+  it.each([
+    [1, 'BMW. 1 garage.'],
+    [20, 'BMW. 20 garages.'],
+  ])('counts %i takers in English', async (takers, line) => {
+    await render();
+    await reads[0].answer(takers, 200);
+    await english();
+
+    expect(headline()).toBe(line);
+  });
+
+  // @traces 007-brand-headline-FR-008
+  // @traces 007-brand-headline-FR-020
+  it('says no garage takes the brand yet, with no rating, at 0 takers', async () => {
+    await render();
+    await reads[0].answer(0, 5);
+
+    expect(headline()).toBe('BMW. Niciun service încă.');
+    await english();
+    expect(headline()).toBe('BMW. No garage yet.');
+  });
+
+  // @traces 007-brand-headline-FR-008
+  it('leaves the rating out when the dial has no rated garage', async () => {
+    await render();
+    await reads[0].answer(2, 5, {
+      best: { ...MILITARI, rating: null },
+      preview: [],
+    });
+
+    expect(headline()).toBe('BMW. 2 service‑uri.');
+  });
+
+  // @traces 007-brand-headline-FR-011
+  it('shows the brand line alone while loading and after a failure', async () => {
+    await render();
+    expect(headline()).toBe('BMW.');
+
+    await reads[0].fail(new HttpErrorResponse({ status: 500 }));
+    expect(headline()).toBe('BMW.');
+  });
+
+  // @traces 007-brand-headline-FR-010
+  it('agrees with the count line and the dial, and moves with them when the place changes', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+    expect(tally()).toContain('3 din 6');
+    expect(dialValue()).toBe('4,9');
+    expect(headline()).toBe('BMW. 3 service‑uri. Nota maximă: 4,9.');
+
+    await pick(HERE);
+    expect(headline()).toBe('BMW.');
+    await reads[1].answer(1, 2, {
+      best: garageOf({ rating: 4.6 }),
+      preview: [],
+    });
+
+    expect(tally()).toContain('1 din 2');
+    expect(dialValue()).toBe('4,6');
+    expect(headline()).toBe('BMW. 1 service. Nota maximă: 4,6.');
+    expect(homeApi.homeControllerForBrand).toHaveBeenCalledTimes(2);
   });
 });

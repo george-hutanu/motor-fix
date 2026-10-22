@@ -171,6 +171,20 @@ export class Home {
       ? undefined
       : this.home.value(),
   );
+  // Voice 3's figures, from the answer the count line and the dial read;
+  // nothing while it loads or after it failed.
+  protected readonly figures = computed(() => {
+    const answer = this.answer();
+    if (!answer) return '';
+    const { best, takers } = answer;
+    const count =
+      takers === 0
+        ? this.i18n.t('public.voice.v3.none')
+        : this.i18n.t('public.voice.v3.count', { count: takers });
+    if (takers === 0 || typeof best?.rating !== 'number') return ` ${count}`;
+    const rating = formatRating(best.rating, this.i18n.language());
+    return ` ${count} ${this.i18n.t('public.voice.v3.top', { rating })}`;
+  });
   protected readonly noneNear = computed(
     () => this.answer()?.total === 0 && Boolean(this.place()),
   );
