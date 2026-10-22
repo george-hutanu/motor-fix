@@ -24,7 +24,7 @@ const prTest = read('.claude/skills/speckit-pr-test/SKILL.md');
 const watch = read('.claude/skills/speckit-watch/SKILL.md');
 const NEEDED = /merge-main\.mjs --needed/;
 
-// @traces 1357-merge-when-overlapping-FR-001
+// @traces 1357-FR-001
 describe('the constitution merges main on overlap, not on behind', () => {
   const constitution = read('.specify/memory/constitution.md');
   const seven = constitution.slice(constitution.indexOf('### VII.'), constitution.indexOf('### ', constitution.indexOf('### VII.') + 8));
@@ -49,8 +49,8 @@ describe('the constitution merges main on overlap, not on behind', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-004
-// @traces 1357-merge-when-overlapping-FR-005
+// @traces 1357-FR-004
+// @traces 1357-FR-005
 describe('every caller asks the overlap test before merging main', () => {
   it('the tail, before the review and again before the merge', () => {
     assert.match(step(tailSteps, 1, 2), NEEDED);
@@ -91,8 +91,8 @@ describe('every caller asks the overlap test before merging main', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-007
-// @traces 1357-merge-when-overlapping-FR-008
+// @traces 1357-FR-007
+// @traces 1357-FR-008
 describe('the live flows proof is written down where a dispatch is made', () => {
   const noRun = tailSteps.slice(tailSteps.indexOf('**No run for the head**'), tailSteps.indexOf('**An unusable run**'));
   const one = step(handoff, 1, 2);
@@ -114,7 +114,7 @@ describe('the live flows proof is written down where a dispatch is made', () => 
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-010
+// @traces 1357-FR-010
 describe('turning dispatch on after a gate-only week', () => {
   it('is said in the script header and in the watch skill', () => {
     const header = read('scripts/watch-schedule.sh').split(' LABEL=')[0];
@@ -132,7 +132,7 @@ describe('turning dispatch on after a gate-only week', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-012
+// @traces 1357-FR-012
 describe('the tail records its finish before a pending check ends it', () => {
   it('writes finish-comment.md through the specs repo before NEXT: merge after CI', () => {
     const four = step(tailSteps, 4, 5);
@@ -141,5 +141,25 @@ describe('the tail records its finish before a pending check ends it', () => {
     assert.ok(write !== -1 && pending !== -1, four);
     assert.ok(write < pending, 'the write comes before the pending-check end');
     assert.match(four.slice(write, pending), /specs-repo\.mjs commit/);
+  });
+});
+
+// @traces 1357-FR-013
+describe('no gate script is left unblessed', () => {
+  it('every registered hook script still matches the fingerprint recorded for it', async () => {
+    const { fingerprint } = await import('./lib/hooks.mjs');
+    const registry = JSON.parse(readFileSync(join(root, '.claude', 'hooks', 'registry.json'), 'utf8'));
+    const entries = [...Object.values(registry.hooks ?? {}), ...Object.values(registry.helpers ?? {})].filter((e) => e?.script && e?.fingerprint);
+    assert.ok(entries.length > 0);
+    for (const e of entries) assert.equal(fingerprint(join(root, '.claude', 'hooks', e.script)), e.fingerprint, e.script);
+  });
+});
+
+// @traces 1357-FR-014
+describe('the skills this change edits are the project\'s own', () => {
+  it('none of them is a stock spec-kit file, so no override marker is owed', () => {
+    const stock = Object.keys(JSON.parse(readFileSync(join(root, '.specify', 'integrations', 'claude.manifest.json'), 'utf8')).files);
+    for (const f of ['.claude/skills/speckit-auto/tail.md', '.claude/skills/speckit-auto/hand-off.md', '.claude/skills/speckit-auto/lifecycle.md', '.claude/skills/speckit-pr-test/SKILL.md', '.claude/skills/speckit-watch/SKILL.md'])
+      assert.ok(!stock.includes(f), f);
   });
 });

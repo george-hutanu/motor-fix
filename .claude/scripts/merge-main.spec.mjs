@@ -277,9 +277,9 @@ describe('mergeMain against real repositories', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-002
-// @traces 1357-merge-when-overlapping-FR-003
-// @traces 1357-merge-when-overlapping-FR-006
+// @traces 1357-FR-002
+// @traces 1357-FR-003
+// @traces 1357-FR-006
 describe('overlap: whether origin/main has to be merged in', () => {
   const none = { prFiles: ['apps/api/src/a.ts'], mainFiles: ['apps/web/src/b.ts'], mergeable: 'MERGEABLE', lapReport: null };
   const STORAGE = "::error::the PR's docker-compose.yml has no storage service: merge main into the branch";
@@ -344,10 +344,10 @@ describe('overlap: whether origin/main has to be merged in', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-002
-// @traces 1357-merge-when-overlapping-FR-003
-// @traces 1357-merge-when-overlapping-FR-005
-// @traces 1357-merge-when-overlapping-FR-006
+// @traces 1357-FR-002
+// @traces 1357-FR-003
+// @traces 1357-FR-005
+// @traces 1357-FR-006
 describe('mergeNeeded: the --needed answer for the current branch', () => {
   const ok = (stdout = '') => ({ status: 0, stdout, stderr: '' });
   const fail = (stderr) => ({ status: 1, stdout: '', stderr });
@@ -436,7 +436,7 @@ describe('mergeNeeded: the --needed answer for the current branch', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-003
+// @traces 1357-FR-003
 describe('latestLapReport', () => {
   let dir;
   beforeEach(() => {

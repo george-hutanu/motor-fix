@@ -144,8 +144,8 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(bullet, /share the claim/);
   });
 
-  // @traces 1357-merge-when-overlapping-FR-009
-  // @traces 1357-merge-when-overlapping-FR-006
+  // @traces 1357-FR-009
+  // @traces 1357-FR-006
   it('run --gate-only appends the gate\'s plan lines to the day\'s plan file and dispatches nothing', () => {
     fake('node', `echo "node $* token=$GH_TOKEN cwd=$(pwd)" >> "$CALLS"\ncase "$*" in *--gate*) printf 'tail .worktrees/a #12\\nmerge .worktrees/b #13\\n'; exit 2;; esac\nexit 0`);
     const r = run(['run', '--gate-only']);
@@ -160,7 +160,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.ok(!existsSync(join(t.main, '.work', 'watch-dispatch')));
   });
 
-  // @traces 1357-merge-when-overlapping-FR-009
+  // @traces 1357-FR-009
   it('run --gate-only writes no plan file when the gate finds nothing or fails', () => {
     for (const code of ['0', '1']) {
       const r = run(['run', '--gate-only'], { GATE_EXIT: code });
@@ -171,7 +171,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.equal(calls().filter((l) => l.includes('--dispatch')).length, 0);
   });
 
-  // @traces 1357-merge-when-overlapping-FR-009
+  // @traces 1357-FR-009
   it('install --gate-only renders a plist that runs the pass gate-only; status names the newest plan file', () => {
     assert.equal(run(['install', '--gate-only']).status, 0);
     assert.match(readFileSync(join(t.home, PLIST), 'utf8'), /<string>run<\/string>\s*<string>--gate-only<\/string>/);
@@ -180,7 +180,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.match(run('status').out, /plan files: .*plan-2026-10-21\.log/);
   });
 
-  // @traces 1357-merge-when-overlapping-FR-009
+  // @traces 1357-FR-009
   it('run --dispatch is today\'s pass, and --gate-only with --dispatch is a usage error that runs nothing', () => {
     const r = run(['run', '--dispatch'], { GATE_EXIT: '2' });
     assert.equal(r.status, 0, r.out);
@@ -193,7 +193,7 @@ describe('scripts/watch-schedule.sh', () => {
     assert.ok(!existsSync(join(t.home, PLIST)));
   });
 
-  // @traces 1357-merge-when-overlapping-FR-011
+  // @traces 1357-FR-011
   it('run --gate-only never calls launchctl', () => {
     run(['run', '--gate-only'], { GATE_EXIT: '2' });
     assert.deepEqual(calls().filter((l) => l.startsWith('launchctl')), []);

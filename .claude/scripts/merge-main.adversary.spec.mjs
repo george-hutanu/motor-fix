@@ -297,9 +297,9 @@ describe('merge-main pieces', () => {
   });
 });
 
-// @traces 1357-merge-when-overlapping-FR-002
-// @traces 1357-merge-when-overlapping-FR-005
-// @traces 1357-merge-when-overlapping-FR-006
+// @traces 1357-FR-002
+// @traces 1357-FR-005
+// @traces 1357-FR-006
 describe('merge-main --needed against real git repositories', () => {
   const needed = (cwd) => {
     // No GitHub remote here: the mergeability is unread and the file rules decide.
