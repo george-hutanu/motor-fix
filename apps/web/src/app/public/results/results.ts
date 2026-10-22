@@ -233,6 +233,9 @@ export class Results {
   // Where the page was scrolled to when the kept results were shown again.
   private scrollBack: { inSheet: boolean; y: number } | undefined;
   private popped = false;
+  // The kept results were shown again: the stream then opens for them, and
+  // their one first-page read covers that opening (1356-FR-008).
+  private restored = false;
 
   // The brand last picked in the search beside the chips.
   protected readonly chosenBrand = signal<BrandDto | undefined>(undefined);
@@ -302,6 +305,7 @@ export class Results {
         this.logNext = false;
         this.scrollBack = { inSheet: kept.inSheet, y: kept.scrollY };
         this.refreshWanted = true;
+        this.restored = true;
         return kept.page;
       }
       const asked: Query =
@@ -618,6 +622,10 @@ export class Results {
     // The stream may have missed events while it was closed.
     this.live.resync.pipe(takeUntilDestroyed()).subscribe(() => {
       if (!untracked(this.answer)) return;
+      if (this.restored) {
+        this.restored = false;
+        return;
+      }
       for (const id of untracked(this.loaded)) this.wanted.add(id);
       this.countsWanted = true;
       this.pinsWanted = true;
