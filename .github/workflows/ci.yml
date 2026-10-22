@@ -197,7 +197,9 @@ jobs:
     needs: changes
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The suite alone takes 27 to 29 minutes (domain's run takes 27), so 30
+    # cancelled it at the edge of a finished run.
+    timeout-minutes: 45
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
