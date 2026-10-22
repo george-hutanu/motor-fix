@@ -887,7 +887,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "a count has no failure to alert on; a sort change on Results is counted here by sort and never as a search, and a reload of a sorted address counts once more",
+      "reason": "a count has no failure to alert on; a sort change on Results is counted here by sort and never as a search, and every other unlogged first page that names Distanță or Preț (a reload, the Reîncarcă retry, a map settle, a step through the history, the restart after an invalid cursor) counts once more, an overcount accepted in the plan",
       "story": "ST-328"
     },
     {

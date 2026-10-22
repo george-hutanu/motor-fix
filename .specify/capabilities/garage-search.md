@@ -49,21 +49,17 @@ _From 042-brand-verdict._
 
 _From 043-brand-first-garage-list._
 
-### 328-FR-006 — The cursor (1356-FR-009) MUST carry the sort it was made under and the boundary garage's value for that sort (its distance in metres exactly as the query computed it, never rounded, or its rate in bani, besides the rating and review count it carries today), so the next page continues the same order and repeats or skips nothing; a cursor presented with a different sort, brand, group or box MUST be refused as `invalid_cursor` (043-FR-006).
+### 328-FR-006 — The cursor (1356-FR-009) MUST carry the sort it was made under and the boundary garage's value for that sort (its distance in metres exactly as the query computed it, never rounded, or its rate in bani, besides the rating and review count it carries today), so the next page continues the same order and repeats or skips nothing; a cursor presented with a different sort, brand, group or box MUST be refused as `invalid_cursor` (043-FR-006). The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor`.
 
 _From 328-sort-results._
 
-### 328-FR-003 — `rating` MUST keep today's order inside each group (267-FR-001): rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z, then id.
+### 328-FR-003 — `rating` MUST keep today's order inside each group (267-FR-001): rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same.
 
 _From 328-sort-results._
 
 ### 267-FR-003 — Each listed garage MUST carry, besides the fields of 042-FR-012 and 229-FR-012, what its card shows: `rating` (one decimal, null until reviewed), `reviewCount`, `labourFromLei` (whole lei, null until set), `businessKind`, `city` (the address's city; never for a mobile mechanic; absent when unknown), `serviceRadiusKm` (a mobile mechanic only), and `facilities` (the kinds of its facility rows in status `listed`, in a fixed catalogue order). Nothing private travels: no phone, address, seat or account.
 
 _From 267-brand-results._
-
-### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
-
-_From 1356-results-load-more._
 
 ### 043-FR-010 — The search MUST read a garage's answer for a brand from the garage brand rows ST-39 created (one row per garage and brand, no row is `unstated`), never from a second copy.
 
@@ -283,7 +279,7 @@ _From 270-card-pin-link._
 
 _From 1358-results-phone-map-list._
 
-### 328-FR-012 — A sort change MUST request the first page with the new sort and no `log=1`, show the brand-change loading state of 1355-FR-011 meanwhile (the old cards dimmed under the thin progress bar), and on the answer replace the list, scroll it to its top, re-order its cards with the rise of 1355-FR-006 (a 16 px rise lasting at most 520 ms; none under reduced motion) and select the first card with the pointed state cleared; on Mobile · Results the sheet keeps its position (1358-FR-008).
+### 328-FR-012 — A sort change MUST request the first page with the new sort and no `log=1`, show the brand-change loading state of 1355-FR-011 meanwhile (the old cards dimmed under the thin progress bar), and on the answer replace the list, scroll it to its top, re-order its cards with the rise of 1355-FR-006 (a 16 px rise lasting at most 520 ms; none under reduced motion) and select the first card with the pointed state cleared; on Mobile · Results the sheet keeps its position (1358-FR-008). Any fresh answer (a new brand, place or radius, a visible-area load, "Înapoi la 25 km", the "Reîncarcă" chip, a sort change) selects the first card with the pointed state cleared, nothing with an empty list; an in-place card change and a pins re-read keep the selection; only a brand or sort change scrolls the list to its top and plays the rise.
 
 _From 328-sort-results._
 
@@ -575,7 +571,7 @@ _From 328-sort-results._
 
 _From 328-sort-results._
 
-### 328-FR-009 — Results MUST show a sort control with three choices, Notă, Distanță and Preț ("Rating", "Distance", "Price" in English), Notă selected by default, as one named group of three buttons with a pressed state (`aria-pressed`), at least 44 px tall each, its name read to assistive technology ("Sortare" / "Sort") and the selected choice announced; on Results + map it sits in the brand chips' row, right-aligned, above the list, on Mobile · Results it joins the sheet's header after the chip row (1358-FR-006), on every size with no sideways scroll at 320 px.
+### 328-FR-009 — Results MUST show a sort control with three choices, Notă, Distanță and Preț ("Rating", "Distance", "Price" in English), Notă selected by default, as one named group of three buttons with a pressed state (`aria-pressed`), at least 44 px tall each, its name read to assistive technology ("Sortare" / "Sort") and the selected choice announced; on Results + map it takes its own full-width line under the brand chips and the brand search, above the list (the row has no room for all three beside each other), on Mobile · Results it joins the sheet's header after the chip row (1358-FR-006), on every size with no sideways scroll at 320 px.
 
 _From 328-sort-results._
 

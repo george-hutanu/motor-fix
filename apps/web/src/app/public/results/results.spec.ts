@@ -4174,6 +4174,16 @@ describe('Results sorting', () => {
       near: NEAR,
       sort: 'price',
     });
+    await reads.at(-1)?.answer();
+
+    await pick('Notă');
+
+    expect(searches().at(-1)).toEqual({
+      bbox: '44.4,26,44.5,26.2',
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'rating',
+    });
   });
 
   it('changes a card in place on a live rating change, never re-ordering the sorted list', async () => {

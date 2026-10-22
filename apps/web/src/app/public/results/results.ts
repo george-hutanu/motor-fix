@@ -304,19 +304,15 @@ export class Results {
         this.refreshWanted = true;
         return kept.page;
       }
-      if (params.bbox)
-        return this.search.garageSearchControllerForBrand(params);
+      const asked: Query =
+        sortChange && !params.sort ? { ...params, sort: 'rating' } : params;
+      if (params.bbox) return this.search.garageSearchControllerForBrand(asked);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
       const log = this.logNext || (searched !== this.logged && !this.popped);
-      const sort = sortChange && !log && !params.sort;
       this.logNext = false;
       this.logged = searched;
       return this.search.garageSearchControllerForBrand(
-        log
-          ? { ...params, log: '1' }
-          : sort
-            ? { ...params, sort: 'rating' }
-            : params,
+        log ? { ...params, log: '1' } : asked,
       );
     },
     params: () => this.query(),
