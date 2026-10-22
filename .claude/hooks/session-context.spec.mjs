@@ -74,7 +74,7 @@ describe('session context — as a hook', () => {
     assert.match(out, /Constitution:/);
   });
 
-  // @traces 1360-FR-009
+  // @traces 1360-FR-009 1360-FR-016
   it('injects no instinct, whatever its confidence', () => {
     mkdirSync(join(repo, '.specify/memory/instincts'), { recursive: true });
     writeFileSync(

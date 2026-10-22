@@ -194,6 +194,9 @@ export function fixOf(row, { now, thresholds }) {
     return { verdict: "done", fix: "remove", reason: `${pr.state}, nothing unpushed` };
   }
   if (row.holder === "live" || row.holder === "owner") return { verdict: row.phase === "done" ? "done" : "ok", fix: null, reason: `held (${row.holder})` };
+  // A level-1 story's agent ends after harden and leaves the rest to a closer:
+  // nobody is coming until one is dispatched, and the closer owns the draft's CI.
+  if (row.closer && row.phase !== "done") return { verdict: "stale", fix: "resume", reason: "handed to a closer after harden" };
   // A worktree with no PR (a list that was read, not "unknown") and nothing
   // pushed-but-missing is swept once idle for thresholds.idle.
   if (row.pr === null && !row.main && (now - row.activity.at) / MIN > (thresholds.idle ?? DEFAULT_THRESHOLDS.idle)) {
@@ -202,9 +205,6 @@ export function fixOf(row, { now, thresholds }) {
     return { verdict: "done", fix: "remove", reason: days };
   }
   if (row.phase === "done") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
-  // A level-1 story's agent ends after harden and leaves the rest to a closer:
-  // nobody is coming until one is dispatched, and the closer owns the draft's CI.
-  if (row.closer) return { verdict: "stale", fix: "resume", reason: "handed to a closer after harden" };
   // GitHub runs no CI on a PR that conflicts with main: nothing else moves it
   // until main is merged in, so no quiet threshold applies.
   if (pr?.state === "ready" && pr.mergeable === "CONFLICTING") return { verdict: "conflict", fix: "merge-main", reason: "conflicts with main: no CI runs until origin/main is merged in" };

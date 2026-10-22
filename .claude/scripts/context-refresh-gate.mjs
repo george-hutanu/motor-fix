@@ -17,7 +17,7 @@ class ReadError extends Error {}
 
 function stamp(text) {
   const m = /^- \*\*Gathered\*\*: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) · specs trunk ([0-9a-f]{7,40})\s*$/m.exec(text);
-  if (!m) throw new ReadError("Gathered has no UTC time and specs trunk sha");
+  if (!m || Number.isNaN(Date.parse(m[1]))) throw new ReadError("Gathered has no UTC time and specs trunk sha");
   return { at: m[1], sha: m[2] };
 }
 
@@ -43,7 +43,18 @@ function api(run, path) {
   }
 }
 
-const after = (iso, at) => Date.parse(iso) > Date.parse(at);
+/** Whether `iso` is later than `at`; a date GitHub sent that cannot be read is a ReadError, never "not later". */
+function after(iso, at, what) {
+  const t = typeof iso === "string" ? Date.parse(iso) : Number.NaN;
+  if (Number.isNaN(t)) throw new ReadError(`${what} has no readable date`);
+  return t > Date.parse(at);
+}
+
+function list(run, path) {
+  const items = api(run, path);
+  if (!Array.isArray(items)) throw new ReadError(`gh api ${path} answered no list`);
+  return items;
+}
 
 function check({ featureDir, root, run }) {
   const file = join(featureDir, "context.md");
@@ -53,14 +64,15 @@ function check({ featureDir, root, run }) {
   const n = anchorIssue(text);
 
   const issue = api(run, `issues/${n}`);
-  if (after(issue.updated_at, at)) return `story #${n} updated ${issue.updated_at}`;
+  if (!issue || typeof issue !== "object" || Array.isArray(issue)) throw new ReadError(`gh api issues/${n} answered no issue`);
+  if (after(issue.updated_at, at, `story #${n}`)) return `story #${n} updated ${issue.updated_at}`;
   const ep = issue.labels?.map((l) => l.name).find((name) => /^EP-\d+$/.test(name));
   if (ep) {
-    const epic = api(run, "issues?labels=epic&state=all&per_page=100").find((e) => e.title.startsWith(`${ep} `));
+    const epic = list(run, "issues?labels=epic&state=all&per_page=100").find((e) => !e.pull_request && e.title?.startsWith(`${ep} `));
     if (!epic) return `no epic for ${ep}`;
-    if (after(epic.updated_at, at)) return `epic #${epic.number} updated ${epic.updated_at}`;
-    const sibling = api(run, `issues?labels=${ep}&state=all&since=${at}&per_page=100`).find(
-      (s) => !s.pull_request && s.number !== n && s.number !== epic.number && after(s.created_at, at),
+    if (after(epic.updated_at, at, `epic #${epic.number}`)) return `epic #${epic.number} updated ${epic.updated_at}`;
+    const sibling = list(run, `issues?labels=${ep}&state=all&since=${at}&per_page=100`).find(
+      (s) => !s.pull_request && s.number !== n && s.number !== epic.number && after(s.created_at, at, `issue #${s.number}`),
     );
     if (sibling) return `new sibling #${sibling.number}`;
   }

@@ -2130,7 +2130,7 @@ describe('a level-1 story handed to a closer after harden', () => {
     assert.equal(fixOf(row({ phase: 'blocked', closer: true }), opts).verdict, 'blocked');
   });
 
-  // @traces 1360-FR-012 1360-FR-013
+  // @traces 1360-FR-012 1360-FR-013 1360-FR-016
   it('offers resume from collect for phase closer with a dead story agent lock, and stops once the closer sets refresh', () => {
     const f = fixture();
     try {
