@@ -402,6 +402,11 @@
       "row": "Mechanic {n}",
       "speciality": "What they mostly work on"
     },
+    "noChange": {
+      "cancel": "Cancel",
+      "send": "Send",
+      "title": "You changed nothing. Send anyway?"
+    },
     "notSaved": "The draft could not be saved on the server. Try again.",
     "offline": "Offline · we save when you are back",
     "onFile": {

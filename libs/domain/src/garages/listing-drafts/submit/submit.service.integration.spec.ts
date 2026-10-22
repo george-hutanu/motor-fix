@@ -24,6 +24,7 @@ import type { ListingPhotosService } from '../../photos/listing-photos/listing-p
 import { GaragePlaceService } from '../../place/garage-place.service';
 import { GaragePricesService } from '../../prices/garage-prices/garage-prices.service';
 import { VerificationService } from '../../verification/verification.service';
+import { CompletionService } from '../completion/completion.service';
 import { ListingDraftsService } from '../listing-drafts.service';
 
 const { account, prisma } = fixtures();
@@ -35,6 +36,20 @@ const photos = {
   describe: async (keys: string[]) =>
     keys.map((key) => ({ height: 600, key, width: 800 })),
 } as unknown as ListingPhotosService;
+const verification = new VerificationService(audit, outbox, {
+  skipManualApproval: false,
+});
+const completion = new CompletionService(
+  prisma,
+  new GarageDetailsService(audit),
+  new GaragePricesService(audit, outbox),
+  new GarageMechanicsService(audit),
+  new GaragePlaceService(audit),
+  new GaragePhotosService(audit),
+  legal,
+  verification,
+  audit,
+);
 const service = new ListingSubmitService(
   prisma,
   new ListingDraftsService(prisma, {} as never, { webUrl: '' } as never),
@@ -45,7 +60,7 @@ const service = new ListingSubmitService(
   new GaragePlaceService(audit),
   new GaragePhotosService(audit),
   photos,
-  new VerificationService(audit, outbox, { skipManualApproval: false }),
+  verification,
   legal,
   new NotificationsService(
     prisma,
@@ -57,6 +72,7 @@ const service = new ListingSubmitService(
   ),
   audit,
   outbox,
+  completion,
 );
 
 const PAGE = 'listing-documents/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/p1';
@@ -644,5 +660,69 @@ describe('a CUI another listing holds', () => {
         where: { id: sent.fileId },
       }),
     ).toMatchObject({ cuiWarning: 'Atelier Vechi, Service Rival' });
+  });
+});
+
+// @traces 208-FR-007
+describe('a draft bound to a file asked for more', () => {
+  it('leaves an unbound draft to the first sending', async () => {
+    const resend = jest.spyOn(CompletionService.prototype, 'resend');
+    try {
+      const actor = await driver();
+      const { id, token } = await draft();
+
+      await service.submit(actor, id, token, 'key-1');
+
+      expect(resend).not.toHaveBeenCalled();
+    } finally {
+      resend.mockRestore();
+    }
+  });
+
+  it('sends the file again instead of creating a garage, though its owner already has one', async () => {
+    const actor = await driver();
+    const first = await draft();
+    const sent = await service.submit(actor, first.id, first.token, 'key-1');
+    await prisma.verificationFile.update({
+      data: { decidedAt: new Date(), status: 'more_requested' },
+      where: { id: sent.fileId },
+    });
+    const key = newToken();
+    const copy = await prisma.listingDraft.create({
+      data: {
+        data: complete() as never,
+        email: 'ana@service.ro',
+        language: 'ro',
+        step: 5,
+        tokens: {
+          create: { hash: key.hash, kind: 'browser', sentAt: new Date() },
+        },
+        updatedAt: new Date(),
+        verificationFileId: sent.fileId,
+      },
+    });
+    const answer = { ...sent, warnings: [] };
+    const resend = jest
+      .spyOn(CompletionService.prototype, 'resend')
+      .mockResolvedValue(answer);
+    const owner: Actor = {
+      ...actor,
+      garageId: sent.garageId,
+      role: 'garage',
+      roles: ['driver', 'garage'],
+    };
+
+    try {
+      expect(await service.submit(owner, copy.id, key.token, 'key-2')).toEqual(
+        answer,
+      );
+      expect(resend).toHaveBeenCalledTimes(1);
+    } finally {
+      resend.mockRestore();
+    }
+    expect(await prisma.garage.count()).toBe(1);
+    expect(
+      await prisma.listingDraft.findUniqueOrThrow({ where: { id: copy.id } }),
+    ).toMatchObject({ status: 'submitted', submitKey: 'key-2' });
   });
 });

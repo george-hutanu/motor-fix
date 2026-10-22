@@ -1,6 +1,5 @@
 import {
   checkListing,
-  type FieldProblem,
   isListingDraftData,
   isSurveySection,
   type ListingDraftData,
@@ -47,6 +46,10 @@ import { GaragePlaceService } from '../../place/garage-place.service';
 import { GaragePricesService } from '../../prices/garage-prices/garage-prices.service';
 import { applySurvey } from '../../survey/survey';
 import { VerificationService } from '../../verification/verification.service';
+import {
+  CompletionService,
+  type Sending,
+} from '../completion/completion.service';
 import { ListingDraftsService } from '../listing-drafts.service';
 
 const notFound = () =>
@@ -99,12 +102,6 @@ function earlierAnswer(
   return draft.submitResult;
 }
 
-interface Extras {
-  holders: string[];
-  sizes: PhotoSize[];
-  warnings: FieldProblem[];
-}
-
 const dataOf = (draft: ListingDraft): ListingDraftData =>
   isListingDraftData(draft.data) ? draft.data : {};
 
@@ -132,6 +129,7 @@ export class ListingSubmitService {
     private readonly notifications: NotificationsService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly completion: CompletionService,
   ) {}
 
   async submit(
@@ -160,6 +158,26 @@ export class ListingSubmitService {
         });
         const replay = earlierAnswer(locked, key);
         if (replay) return { replay };
+        if (locked.verificationFileId) {
+          const file = await this.completion.fileFor(
+            tx,
+            actor,
+            locked.verificationFileId,
+          );
+          const fresh = dataOf(locked);
+          const warnings = this.recheck(
+            fresh,
+            locked.email,
+            holders.length > 0,
+          );
+          const sent = await this.completion.resend(tx, actor, file, fresh, {
+            holders,
+            sizes,
+            warnings,
+          });
+          await this.markSent(tx, actor, id, key, sent);
+          return { resent: sent };
+        }
         const owned = await tx.garageMember.findFirst({
           where: { accountId: actor.accountId, role: 'owner' },
         });
@@ -177,6 +195,12 @@ export class ListingSubmitService {
       { timeout: this.timeout },
     );
     if (outcome.replay) return outcome.replay;
+    if (outcome.resent) {
+      this.logger.log(
+        `listing resent: draft ${id} file ${outcome.resent.fileId} garage ${outcome.resent.garageId} account ${actor.accountId}`,
+      );
+      return outcome.resent;
+    }
     this.logger.log(
       `listing sent: draft ${id} garage ${outcome.sent.garageId} account ${actor.accountId}`,
     );
@@ -250,7 +274,7 @@ export class ListingSubmitService {
     tx: Prisma.TransactionClient,
     actor: Actor,
     data: ListingDraftData,
-    extras: Extras,
+    extras: Sending,
   ): Promise<ListingSubmittedDto> {
     const { accountId } = actor;
     await this.accounts.grantRole(
@@ -280,7 +304,7 @@ export class ListingSubmitService {
     owner: Actor,
     garageId: string,
     data: ListingDraftData,
-    { holders, sizes, warnings }: Extras,
+    { holders, sizes, warnings }: Sending,
   ): Promise<ListingSubmittedDto> {
     const { accountId } = owner;
     const steps = data.steps ?? {};

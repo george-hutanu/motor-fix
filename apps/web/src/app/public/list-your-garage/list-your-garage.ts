@@ -49,6 +49,7 @@ import {
 import { askedSteps } from '@motor-fix/contracts/verification-target';
 import type { HeldDocumentDto, JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { Consent } from '../../consent/consent';
@@ -69,6 +70,7 @@ import {
   MissingSummary,
   type SummaryState,
 } from '../missing-summary/missing-summary';
+import { confirmNoChange } from '../no-change-dialog/no-change-dialog';
 import { PhotosStep } from '../photos-step/photos-step';
 import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
@@ -171,6 +173,9 @@ export class ListYourGarage {
   private ticked: Set<number> | null = null;
   protected readonly signIn = inject(SignInDialog);
   private readonly session = inject(Session);
+  private readonly overlays = inject(Overlays);
+  // The form holds a copy of the owner's live garage, sent back over it.
+  private overCopy = false;
   protected readonly steps = STEPS;
   // The draft's steps['5'], kept and restored with the rest of the form.
   protected readonly hours = computed(() => hoursOf(this.keeper.draft().data));
@@ -433,6 +438,7 @@ export class ListYourGarage {
       this.statusView.set({ sent: null });
       return;
     }
+    this.overCopy = true;
     const steps = askedSteps(copy.requestedItems);
     this.requested.set(steps);
     this.heldDocuments.set(copy.held);
@@ -585,6 +591,12 @@ export class ListYourGarage {
     }
     this.finishNotice.set(saved ? 'saved' : 'failed');
     if (!saved) return;
+    if (
+      this.overCopy &&
+      !this.keeper.changedSince() &&
+      !(await confirmNoChange(this.overlays))
+    )
+      return;
     if (!this.surveyTracked) {
       this.surveyTracked = true;
       this.consent.track('survey_completed');

@@ -648,7 +648,9 @@ export class VerificationService {
       submittedAt: new Date(),
     });
     await withChecks(tx, file.id);
-    await this.announce(tx, file, 'verification.submitted');
+    await this.announce(tx, file, 'verification.submitted', {
+      resubmission: true,
+    });
     countResubmission();
     this.logger.log(`file ${fileId} resent`);
     return this.autoApprove(tx, file);
@@ -776,6 +778,7 @@ export class VerificationService {
       reason?: string | null;
       note?: string | null;
       adminId?: string | null;
+      resubmission?: true;
     } = {},
   ) {
     const published = extra.decision === 'approved';

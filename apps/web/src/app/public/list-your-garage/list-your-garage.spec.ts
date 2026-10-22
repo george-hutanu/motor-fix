@@ -3086,6 +3086,226 @@ describe('a signed-in account that owns a garage', () => {
         page.querySelector('.area[data-kind="onrc_certificate"] .on-file'),
       ).toBeNull();
     });
+
+    describe('sent again', () => {
+      const SUBMIT = `${API}/c1/submit`;
+      const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
+      const PAGE = 'listing-documents/0f1e2d3c-0000-4000-8000-000000000002/p1';
+      // The live garage as the copy reads it: nothing missing, the survey
+      // answered when it was first sent.
+      const LIVE = {
+        declaredAt: '2026-10-11T10:00:00.000Z',
+        declaredByName: 'Ion Popescu',
+        documents: {
+          onrc_certificate: { pages: [PAGE] },
+          rar_authorisation: { pages: [PAGE] },
+        },
+        files: [PHOTO],
+        steps: {
+          '1': {
+            businessKind: 'company',
+            knownFor: 'Frâne și distribuție',
+            name: 'Service Popescu',
+            phone: '+40722123456',
+          },
+          '2': {
+            brands: [{ brandId: DACIA.id, name: 'Dacia', stance: 'works_on' }],
+          },
+          '3': {
+            jobs: [{ fromBani: 15_000, jobTypeId: jobId(1), toBani: 30_000 }],
+            labour: { fromBani: 12_000, toBani: 20_000 },
+          },
+          '4': {},
+          '5': {
+            payments: ['cash'],
+            place: { address: 'Str. Lungă 1, Brașov', lat: 45.65, lng: 25.6 },
+          },
+          '6': { cui: '18547290', rarNumber: 'BV-123' },
+        },
+        survey: {
+          foundVia: 'google',
+          liftsCount: '0',
+          mechanicsCount: '0',
+          wantsDaySheets: false,
+          wantsLiveMedia: true,
+        },
+      };
+      const SENT = {
+        fileId: 'f1',
+        garageId: 'g1',
+        status: 'submitted',
+        warnings: [],
+      };
+      const http = () => TestBed.inject(HttpTestingController);
+      const sends = () => http().match((r) => r.url === SUBMIT);
+      const dialogButton = (label: string) =>
+        [
+          ...document.querySelectorAll<HTMLButtonElement>(
+            'mf-overlay-panel button',
+          ),
+        ].find((button) => text(button) === label);
+      const createButton = (page: HTMLElement) =>
+        page.querySelector<HTMLButtonElement>(
+          'mf-signup-survey button.forward',
+        ) as HTMLButtonElement;
+
+      async function click(harness: RouterTestingHarness, element: Element) {
+        (element as HTMLElement).click();
+        for (let i = 0; i < 5; i++) await pause();
+        await settle(harness);
+      }
+
+      // The copy opened, checked and its survey's summary reached, one press
+      // from sending.
+      async function atCreate(edited = false) {
+        session.current.set(OWNER);
+        const { harness, page } = await open('/ro/list-your-garage');
+        await settle(harness);
+        await answered(harness, await copyAsked(), {
+          ...COPY,
+          data: LIVE,
+          edited,
+          requestedItems: ['photos'],
+          step: 5,
+        });
+        for (const photos of http().match((r) => r.url.endsWith('/photos')))
+          await answered(harness, photos, {
+            photos: [{ key: PHOTO, thumbnailUrl: 'https://cdn.test/p.jpg' }],
+          });
+        await click(
+          harness,
+          page.querySelector('.actions button.send') as Element,
+        );
+        await answered(harness, await request(), { warnings: [] });
+        await click(
+          harness,
+          page.querySelector('mf-missing-summary button.tell-us') as Element,
+        );
+        expect(text(page.querySelector('mf-signup-survey h1'))).toBe(
+          'Pornim service-ul tău cu:',
+        );
+        return { harness, page };
+      }
+
+      afterEach(() => {
+        document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+          n.innerHTML = '';
+        });
+      });
+
+      // @traces 208-FR-010
+      it('asks before sending a copy nothing was changed in, and sends on "Trimite"', async () => {
+        const { harness, page } = await atCreate();
+
+        await click(harness, createButton(page));
+
+        expect(text(document.querySelector('[role="dialog"]'))).toContain(
+          'Nu ai schimbat nimic. Trimiți oricum?',
+        );
+        expect(sends()).toEqual([]);
+        await click(harness, dialogButton('Trimite') as Element);
+        const [send] = sends();
+        expect(send?.request.headers.get('x-listing-token')).toBe('ct');
+      });
+
+      // @traces 208-FR-010
+      it.each([
+        ['"Renunță"', 'cancel'],
+        ['Escape', 'escape'],
+      ])(
+        'sends nothing on %s and leaves the copy as it was',
+        async (_, how) => {
+          const { harness, page } = await atCreate();
+          await click(harness, createButton(page));
+
+          if (how === 'cancel')
+            await click(harness, dialogButton('Renunță') as Element);
+          else {
+            document.activeElement?.dispatchEvent(
+              new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }),
+            );
+            for (let i = 0; i < 5; i++) await pause();
+            await settle(harness);
+          }
+
+          expect(sends()).toEqual([]);
+          expect(document.querySelector('[role="dialog"]')).toBeNull();
+          expect(statusView(page)).toBeNull();
+          expect(stored()?.data).toEqual(LIVE);
+        },
+      );
+
+      // @traces 208-FR-010
+      it('sends without asking once the copy holds a save made since it opened', async () => {
+        const { harness, page } = await atCreate(true);
+
+        await click(harness, createButton(page));
+
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(sends()).toHaveLength(1);
+      });
+
+      // @traces 208-FR-009
+      it('shows the confirmation with focus on its heading once sent', async () => {
+        const { harness, page } = await atCreate(true);
+        await click(harness, createButton(page));
+
+        await answered(harness, sends()[0] as TestRequest, SENT, 201);
+
+        const view = statusView(page) as HTMLElement;
+        expect(document.activeElement).toBe(view.querySelector('h1'));
+        expect(text(view.querySelector('.state'))).toBe(
+          'În verificare · nepublicat',
+        );
+        expect(formShown(page)).toBe(false);
+      });
+
+      // @traces 208-FR-008
+      it('swaps the form for the status view when the file asks for nothing more by now', async () => {
+        garages.verificationStatusControllerRead.mockResolvedValue({
+          ...IN_REVIEW,
+          status: 'approved',
+        });
+        const { harness, page } = await atCreate(true);
+        await click(harness, createButton(page));
+
+        await answered(
+          harness,
+          sends()[0] as TestRequest,
+          {
+            code: 'verification_transition_refused',
+            currentStatus: 'approved',
+          },
+          409,
+        );
+
+        expect(statusView(page)).not.toBeNull();
+        expect(formShown(page)).toBe(false);
+        expect(page.querySelector('mf-signup-survey')).toBeNull();
+      });
+
+      // @traces 208-FR-009
+      it('keeps the copy after a failed send and sends it again under the same key, asking nothing twice', async () => {
+        const { harness, page } = await atCreate();
+        await click(harness, createButton(page));
+        await click(harness, dialogButton('Trimite') as Element);
+        const first = sends()[0] as TestRequest;
+        await answered(harness, first, null, 500);
+
+        const note = page.querySelector('.send-result');
+        expect(text(note)).toContain('Nu am putut trimite cererea.');
+        expect(stored()?.data).toEqual(LIVE);
+        const again = note?.querySelector('button') as HTMLButtonElement;
+        expect(text(again)).toBe('Trimite din nou');
+        await click(harness, again);
+
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        const [second] = sends();
+        expect(second?.request.headers.get('Idempotency-Key')).toBe(
+          first.request.headers.get('Idempotency-Key'),
+        );
+      });
+    });
   });
 
   it.each([

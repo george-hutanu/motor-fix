@@ -411,6 +411,11 @@
       "row": "Mecanicul {n}",
       "speciality": "Pe ce lucrează de obicei"
     },
+    "noChange": {
+      "cancel": "Renunță",
+      "send": "Trimite",
+      "title": "Nu ai schimbat nimic. Trimiți oricum?"
+    },
     "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
     "offline": "Neconectat · salvăm când revii online",
     "onFile": {

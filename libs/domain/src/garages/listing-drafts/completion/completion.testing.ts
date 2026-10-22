@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { ListingDraftData, SurveySection } from '@motor-fix/contracts';
 
+import { CompletionService } from './completion.service';
 import { AuditService } from '../../../audit/audit.service';
 import { AccountsService } from '../../../auth/accounts.service';
 import { newToken } from '../../../auth/email-confirmation/email-confirmation';
@@ -58,21 +59,46 @@ export function completionWorld(prisma: PrismaClient) {
     { sendToDraft: async () => undefined } as never,
     { webUrl: '' } as never,
   );
+  const details = new GarageDetailsService(audit);
+  const prices = new GaragePricesService(audit, outbox);
+  const mechanics = new GarageMechanicsService(audit);
+  const place = new GaragePlaceService(audit);
+  const photos = new GaragePhotosService(audit);
+  const verification = new VerificationService(audit, outbox, {
+    skipManualApproval: false,
+  });
+  const documents = new LegalDocumentsService(
+    prisma,
+    audit,
+    outbox,
+    {} as never,
+  );
+  const completion = new CompletionService(
+    prisma,
+    details,
+    prices,
+    mechanics,
+    place,
+    photos,
+    documents,
+    verification,
+    audit,
+  );
   const submit = new ListingSubmitService(
     prisma,
     drafts,
     new AccountsService(prisma, audit, outbox),
-    new GarageDetailsService(audit),
-    new GaragePricesService(audit, outbox),
-    new GarageMechanicsService(audit),
-    new GaragePlaceService(audit),
-    new GaragePhotosService(audit),
+    details,
+    prices,
+    mechanics,
+    place,
+    photos,
     {
       describe: async (keys: string[]) =>
         keys.map((key) => ({ height: 600, key, width: 800 })),
     } as unknown as ListingPhotosService,
-    new VerificationService(audit, outbox, { skipManualApproval: false }),
-    new LegalDocumentsService(prisma, audit, outbox, {} as never),
+    verification,
+    documents,
     new NotificationsService(
       prisma,
       {} as never,
@@ -83,6 +109,7 @@ export function completionWorld(prisma: PrismaClient) {
     ),
     audit,
     outbox,
+    completion,
   );
   const world: World = { brakes: '', dacia: '', oil: '', tesla: '' };
 
@@ -267,5 +294,5 @@ export function completionWorld(prisma: PrismaClient) {
     };
   }
 
-  return { drafts, full, listed, plain, reset, submit, world };
+  return { completion, drafts, full, listed, plain, reset, submit, world };
 }
