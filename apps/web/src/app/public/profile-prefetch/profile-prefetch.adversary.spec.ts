@@ -15,6 +15,7 @@ const garageOf = (slug: string): PublicGarageDto => ({
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: `g-${slug}`,
   jobTypes: [],
   name: slug,

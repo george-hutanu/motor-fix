@@ -35,6 +35,19 @@
     "backBrand": "Service‑uri pentru {brand}",
     "backHome": "Acasă",
     "badge": "Verificat · autorizație RAR",
+    "details": {
+      "facilities": "Facilități",
+      "free": "gratuit",
+      "payment": "Plată: {methods}",
+      "payments": {
+        "card": "card",
+        "cash": "numerar",
+        "transfer": "transfer"
+      },
+      "perDay": "{price} / zi",
+      "refuses": "Nu lucrează pe",
+      "worksOn": "Lucrează pe"
+    },
     "distance": "la {km}",
     "estimate": {
       "anyMechanic": "Orice mecanic",
@@ -79,6 +92,10 @@
       "other": "{count} de recenzii"
     },
     "verified": "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}.",
+    "where": {
+      "mobile": "Vine la tine în zona de {km}",
+      "title": "Unde"
+    },
     "works": "Lucrează pe {brand}"
   },
   "gone": {

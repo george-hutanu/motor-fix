@@ -28,6 +28,7 @@ import {
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
+import { DetailsSection } from './details-section/details-section';
 import { EstimateBar } from './estimate-bar/estimate-bar';
 import { EstimateSection } from './estimate-section/estimate-section';
 import { Gone } from './gone/gone';
@@ -37,6 +38,7 @@ import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { sourceOf } from './view-source';
+import { WhereSection } from './where-section/where-section';
 import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import { PlaceStore } from '../../home/place/place-store';
@@ -71,6 +73,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
 @Component({
   imports: [
     DayPipe,
+    DetailsSection,
     EstimateBar,
     EstimateSection,
     Gone,
@@ -85,6 +88,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     SaveGarageButton,
     RouterLink,
     TranslatePipe,
+    WhereSection,
   ],
   providers: [PriceSelection],
   selector: 'mf-garage-profile',

@@ -18,6 +18,7 @@ const GARAGE = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-1',
   jobTypes: [],
   name: 'Service Auto Militari',

@@ -1,0 +1,46 @@
+@if (worksOn().length) {
+  <div class="group works">
+    <h2>{{ 'public.garageProfile.details.worksOn' | t }}</h2>
+    <ul class="chips">
+      @for (brand of worksOn(); track brand.id) {
+        <li>
+          <mf-lamp state="green" [label]="brand.name" />
+          @if (brand.fuels) {
+            <span class="fuels">{{ brand.fuels }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </div>
+}
+@if (doesNotTake().length) {
+  <div class="group refuses">
+    <h2>{{ 'public.garageProfile.details.refuses' | t }}</h2>
+    <ul class="chips">
+      @for (brand of doesNotTake(); track brand.id) {
+        <li><mf-lamp state="red" [label]="brand.name" /></li>
+      }
+    </ul>
+  </div>
+}
+@if (brandNote()) {
+  <p class="brand-note">{{ brandNote() }}</p>
+}
+@if (hasFacilities()) {
+  <div class="group facilities">
+    <h2>{{ 'public.garageProfile.details.facilities' | t }}</h2>
+    @if (facilities().length) {
+      <ul class="list">
+        @for (facility of facilities(); track facility) {
+          <li>{{ facility }}</li>
+        }
+      </ul>
+    }
+    @if (payment()) {
+      <p class="payment">{{ payment() }}</p>
+    }
+    @if (facilitiesNote()) {
+      <p class="facilities-note">{{ facilitiesNote() }}</p>
+    }
+  </div>
+}

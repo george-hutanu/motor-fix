@@ -35,6 +35,7 @@ const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-militari',
   jobTypes: [OIL, PADS],
   name: 'Service Auto Militari',

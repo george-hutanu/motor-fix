@@ -31,6 +31,7 @@ const base = (id: string, prices: PublicGarageDto['prices']) =>
     brandNote: null,
     doesNotTake: [],
     facilities: [],
+    hours: {},
     id,
     jobTypes: [],
     name: 'Service',
