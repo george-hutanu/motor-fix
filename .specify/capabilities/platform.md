@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -96,6 +96,7 @@ features:
   - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
   - 1362-pr-qa-boot-orphan-checks
+  - 1361-trim-dead-lanes
 ---
 
 # Capability: Platform
@@ -2440,6 +2441,58 @@ _From 1362-pr-qa-boot-orphan-checks._
 ### 1362-FR-005 — `gh-rest`'s check reads (`pr checks`, `pr view statusCheckRollup`, `ciOkOn`), and so `ci-wait.mjs`, MUST read every check run of the head (`filter=all`) and keep the one started last of each check, so an orphan never outranks its newer completed attempt and a newer attempt still running stays pending.
 
 _From 1362-pr-qa-boot-orphan-checks._
+
+### 1361-FR-101 — `speckit-clarify` MUST no longer carry the interactive question-rendering boilerplate (the per-question presentation format, the option-table formatting rules, the "wait for the user" prose of the sequential loop) and its hook blocks (replaced by one line naming the optional `speckit.git.commit` hooks), while keeping, in its deltas record, the one-question-per-turn gate that a human-driven run still honours.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-102 — `speckit-checklist` MUST no longer carry its "Pre-Execution Checks" hook block, its "Post-Execution Checks" hook block, or its "Anti-Examples: What NOT To Do" block (origin/main 2026-10-22 lines 53-87, 327-359 and 296-325, located by content).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-103 — `speckit-analyze` MUST no longer carry its "Pre-Execution Checks" hook block, its "9. Check for extension hooks" block, or detection blocks E2 (False Completion, code-aware) and E4 (Checklist Truthfulness) (lines 23-57, 262-293, and the E2/E4 headings).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-104 — `speckit-implement` MUST no longer carry its "Project Setup Verification" ignore-file matrix (lines 107-149), its "Check checklists status" interactive block (lines 63-95; one line survives: count unchecked items per checklist and report them, never ask) or its Jira "Re-read the ticket before reporting" lane (one line survives: re-read the story's GitHub issue with its comments).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-105 — `speckit-converge` MUST no longer carry its before-convergence hook block (lines 24-61), its after-convergence hook block (lines 261-299) or its Jira "Re-read the ticket before reporting" lane (one line survives, as in FR-104).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-106 — `.claude/agents/code-reviewer.md` MUST no longer carry the "house bar" section (lines 66-114), and its rubric MUST state the bounded-loop rule (HIGH) inside item 2 and the dependency-reason rule (a dependency, engine pin or `.npmrc` change carries its reason) inside item 5, keeping the rubric at six items.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-107 — Each rubric item 1 to 6 MUST keep every severity word it carries on origin/main (1 HIGH; 2 HIGH, CRITICAL; 3 CRITICAL; 4 HIGH; 5 MEDIUM, HIGH; 6 CRITICAL, HIGH).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-108 — Line 3 of `code-reviewer.md` (its `description:` front matter, which ST-1359 edits) MUST be unchanged by this story: the diff against `origin/main` touches no line of the front matter.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-109 — Each cut from a stock spec-kit skill MUST be recorded as a project-local override in the file's deltas record (the `## Agent Execution Rules: <command> deltas` section with its `project-local addition` marker), one line per cut naming the block and the reason it does not apply here; a file with no record gets one.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-110 — Every file touched MUST still carry the rule that each verified review, QA or harden finding is fixed in the current task's PR, where it carried it before, and no defer route is reintroduced.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-111 — `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST pass on the branch head; a gate script that is edited is blessed with `node .claude/scripts/doctor.mjs --bless-hooks` after its diff is read (none is expected).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-112 — The change MUST touch only harness text under `.claude/` (skills and the reviewer agent) and the feature's own specs folder: no product code, no gate script, no constitution text.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-113 — The `Done When` lines that only dispatch hooks (clarify, analyze) MUST go with their hook blocks, and implement's deltas bullet that defers a pre-existing bug or unrequested improvement is rewritten to fix it in this PR (an owner decision becomes a needs-confirmation question), so no touched file contradicts the fix-in-PR rule (FR-110).
+
+_From 1361-trim-dead-lanes._
 
 ## Retired
 
