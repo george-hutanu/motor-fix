@@ -284,7 +284,7 @@ describe('the order of the checks', () => {
     expect(refused.status).toBe(404);
   });
 
-  it('answers job_not_done before email_not_confirmed, review_exists and field errors', async () => {
+  it('answers job_not_done before already_reviewed, email_not_confirmed and field errors', async () => {
     const s = await setting('cancelled');
     await unconfirm(s);
     await live(s);
@@ -295,10 +295,20 @@ describe('the order of the checks', () => {
     expect(refused.body.code).toBe('job_not_done');
   });
 
-  it('answers email_not_confirmed before review_exists and field errors', async () => {
+  it('answers already_reviewed before email_not_confirmed and field errors', async () => {
     const s = await setting();
     await unconfirm(s);
     await live(s);
+
+    const refused = await publish(s.as, { jobId: s.job.id, ...badFields });
+
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('already_reviewed');
+  });
+
+  it('answers email_not_confirmed before field errors', async () => {
+    const s = await setting();
+    await unconfirm(s);
 
     const refused = await publish(s.as, { jobId: s.job.id, ...badFields });
 
@@ -324,7 +334,7 @@ describe('posting twice', () => {
     const second = await publish(s.as, { jobId: s.job.id, rating: 5 });
 
     expect([first.status, second.status]).toEqual([201, 409]);
-    expect(second.body.code).toBe('review_exists');
+    expect(second.body.code).toBe('already_reviewed');
     expect(await reviews(s.job.id)).toHaveLength(1);
     expect(
       await prisma.activityLog.count({

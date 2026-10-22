@@ -3,6 +3,7 @@ capability: reviews
 updated: 2026-10-21
 features:
   - 022-review-drawer
+  - 023-review-confirmed-job
 ---
 
 # Capability: Reviews
@@ -55,9 +56,9 @@ _From 022-review-drawer._
 
 _From 022-review-drawer._
 
-### 022-FR-012 — When the job already has a live review, the drawer MUST show that review (rating with its words, amount if given, comment if given, posted date) in place of the form, on open and after a 409 on publish; a reported or removed review also shows a one-line note saying so.
+### 023-FR-015 — The drawer MUST show, in place of the form and with its close control, the own-garage message when the reason is `own_garage` and the removed message when it is `review_removed`, on open and after a publish answered with that code; for `already_reviewed` it shows the existing review (rating with its words, amount if given, comment if given, posted date) in place of the form, with a one-line note when it is reported. The two messages use the layout of ST-22's not-done state: readable at 320 px with no sideways scroll, in light and dark, Romanian and English, the close control reachable by keyboard.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
 
 ### 022-FR-012a — When the caller's job is not `done`, the drawer MUST show a not-done message in place of the form, on open and after a 409 job_not_done.
 
@@ -91,21 +92,21 @@ _From 022-review-drawer._
 
 _From 022-review-drawer._
 
-### 022-FR-019 — The service MUST answer 404 `not_found` for a job that does not exist, whose driver is not the caller, or when the caller is not a driver (garage staff included): never 403.
+### 023-FR-003 — The service MUST answer 404 `not_found`, with one body for every case, when the job does not exist, its driver is not the caller, or the caller is not a driver.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
 
-### 022-FR-020 — The service MUST answer 409 `job_not_done` for the caller's job whose status is not `done`.
+### 023-FR-004 — The service MUST answer 409 `job_not_done` (with `currentStatus`) for the caller's job in any status but `done`.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
 
-### 022-FR-021 — The service MUST answer 409 (code `review_exists`, with the existing review's status as `currentStatus` in the body; the drawer re-reads the read operation to show the review itself) when the job already has a live review (status published, reported or removed); a database-level uniqueness rule MUST make two concurrent posts yield exactly one review.
+### 023-FR-006 — The service MUST answer 409 `already_reviewed` (with `currentStatus`) when the job has a `published` or `reported` review.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
 
-### 022-FR-022 — The service MUST answer 409 `email_not_confirmed` when the caller's e-mail is not confirmed or the account has no e-mail.
+### 023-FR-009 — The service MUST answer 409 `email_not_confirmed` when the caller's e-mail is not confirmed or the account has no e-mail.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
 
 ### 022-FR-023 — Every refusal MUST carry a machine code the drawer maps to words in the driver's language; an unknown code reads as the code itself.
 
@@ -119,6 +120,59 @@ _From 022-review-drawer._
 
 _From 022-review-drawer._
 
-### 022-FR-026 — After the global pipe's 400 (wrong types, unknown members), the checks MUST run in this order: 404, `job_not_done`, `email_not_confirmed`, `review_exists`, then the 422 bounds, so a job that cannot be reviewed never answers a field error first.
+### 023-FR-002 — After the session check (401) and the global pipe's 400, the publish operation MUST run its checks in this order and answer with the first that fails: 404 `not_found`, 409 `job_not_done`, 403 `own_garage`, 409 `already_reviewed` or `review_removed`, 409 `email_not_confirmed`, then the 422 field bounds.
 
-_From 022-review-drawer._
+_From 023-review-confirmed-job._
+
+### 023-FR-001 — One use case MUST decide whether a caller may review a job, and both the publish operation and every read that offers "Scrie recenzia" (the drawer's read, the eligibility read) MUST take their answer from it.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-005 — The service MUST answer 403 `own_garage` when the caller has a member row (any role) at the job's garage or is a mechanic of that garage linked to the caller's account.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-007 — The service MUST answer 409 `review_removed` (with `currentStatus` `removed`) and the message "Recenzia ta a fost ștearsă de MotorFix; poți doar contesta decizia." / "MotorFix removed your review; you can only appeal the decision." when the job's review was removed.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-008 — A review in `deleted_by_author` MUST NOT block a new review of the job.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-010 — Two concurrent publishes for one job MUST yield exactly one 201 and one 409 `already_reviewed`, guaranteed by the database.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-011 — Every refusal body MUST be `{ code, message }` (plus `currentStatus` where stated), the message in the caller's language (Romanian or English).
+
+_From 023-review-confirmed-job._
+
+### 023-FR-012 — The rule "reviews only after a confirmed job" MUST NOT change any answer on the job path: with it on or off, FR-002 to FR-011 answer the same.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-013 — The service MUST expose an eligibility read for 1 to 50 job ids (UUIDs; else 400 `validation_failed`) of the signed-in driver, in first-occurrence order without duplicates, answering each id once with `offer` (whether a screen shows "Scrie recenzia") and `reason` (null when allowed, else the code the publish would answer); `offer` is true only when `reason` is null or `email_not_confirmed`; an id that is not the caller's job answers `offer` false, reason `not_found`.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-014 — The drawer's read MUST carry the same `offer` and `reason` for its job.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-016 — Every new word MUST exist in Romanian and English.
+
+_From 023-review-confirmed-job._
+
+### 023-FR-017 — Publish refusals MUST be counted by code on the existing review-outcome counter (the eligibility read, which writes nothing, is not counted there), and the eligibility read MUST ship with its request metrics, dashboard panel, alert (its 5xx rate, as the other API operations' alerts) and inventory line.
+
+_From 023-review-confirmed-job._
+
+## Retired
+
+- `022-FR-012` — superseded by `023-FR-015` (2026-10-21)
+- `022-FR-019` — superseded by `023-FR-003` (2026-10-21)
+- `022-FR-020` — superseded by `023-FR-004` (2026-10-21)
+- `022-FR-021` — superseded by `023-FR-006` (2026-10-21)
+- `022-FR-022` — superseded by `023-FR-009` (2026-10-21)
+- `022-FR-026` — superseded by `023-FR-002` (2026-10-21)

@@ -6,10 +6,12 @@ import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageRefDto } from '../models/garage-ref-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 import { ReviewDto } from '../models/review-dto';
+import { ReviewEligibilityDto } from '../models/review-eligibility-dto';
 import { ReviewJobDto } from '../models/review-job-dto';
 export interface JobReviewContextDto {
   author: DriverNameDto;
   car: CarSnapshotDto;
+  eligibility: ReviewEligibilityDto;
   emailConfirmed: boolean;
   existing: (ReviewDto & {
 }) | null;
