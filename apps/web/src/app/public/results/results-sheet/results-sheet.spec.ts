@@ -138,6 +138,57 @@ describe('ResultsSheet on a phone', () => {
     );
   });
 
+  // The map's zoom buttons sit in the top 104 px of the stage: whenever the
+  // sheet's top edge is over them, at rest or under the finger, they hide, so
+  // its handle never lies across the zoom-out button (ST-328 QA lap 4).
+  const overZoom = () => host().classList.contains('over-zoom');
+
+  it('leaves the zoom buttons shown while half and low rest under them', async () => {
+    expect(position()).toBe('half');
+    expect(overZoom()).toBe(false);
+
+    await toLow();
+    expect(overZoom()).toBe(false);
+  });
+
+  it('hides the zoom buttons while full covers them', async () => {
+    await press();
+    expect(position()).toBe('full');
+    expect(overZoom()).toBe(true);
+
+    await press();
+    expect(position()).toBe('low');
+    expect(overZoom()).toBe(false);
+  });
+
+  it('hides them at every rest of a stage too short to clear them', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 120 : 200;
+      });
+    await drag(300, 301);
+    expect(position()).toBe('half');
+    expect(overZoom()).toBe(true);
+
+    await press();
+    await press();
+    expect(position()).toBe('low');
+    expect(overZoom()).toBe(true);
+  });
+
+  it('hides them while a drag holds the sheet over them, and shows them again under it', () => {
+    pointer(handle(), 'pointerdown', 400);
+    pointer(handle(), 'pointermove', 200);
+    fixture.detectChanges();
+    expect(offset()).toBe('100px');
+    expect(overZoom()).toBe(true);
+
+    pointer(handle(), 'pointermove', 400);
+    fixture.detectChanges();
+    expect(overZoom()).toBe(false);
+  });
+
   it('opens at half', () => {
     expect(position()).toBe('half');
   });

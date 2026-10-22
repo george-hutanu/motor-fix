@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready } from './accounts.js';
@@ -178,6 +178,26 @@ test.describe('sorting the Results page @seeded @database', () => {
     });
   }
 
+  // The sort's line makes the sheet's header taller: on a 320 × 568 phone
+  // its rests can reach over the map's zoom buttons, which then hide rather
+  // than lie under its handle, at every rest.
+  test('keeps the zoom-out button clear of the sheet handle at every rest on a 320 px phone', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 568, width: 320 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await ready(page, opened());
+    await expect(cards(page)).toHaveCount(3);
+    const handle = page.locator('mf-results-sheet button.handle');
+    const zoomOut = page.locator('.maplibregl-ctrl-zoom-out');
+    await expect(zoomOut).toHaveCount(1);
+
+    for (let rest = 0; rest < 3; rest++) {
+      expect(await across(zoomOut, handle)).toBe(false);
+      await handle.click();
+    }
+  });
+
   test('fits a 320 px phone without scrolling sideways', async ({ page }) => {
     await page.setViewportSize({ height: 640, width: 320 });
     await ready(page, opened());
@@ -188,3 +208,16 @@ test.describe('sorting the Results page @seeded @database', () => {
     expect(wide).toBe(false);
   });
 });
+
+// Whether a shown `a` shares any area with `b`; a hidden one never does.
+async function across(a: Locator, b: Locator): Promise<boolean> {
+  const shown = await a.evaluate((el) =>
+    el.checkVisibility({ visibilityProperty: true }),
+  );
+  if (!shown) return false;
+  const [x, y] = [await a.boundingBox(), await b.boundingBox()];
+  if (!x || !y) throw new Error('no box');
+  const wide = Math.min(x.x + x.width, y.x + y.width) - Math.max(x.x, y.x);
+  const tall = Math.min(x.y + x.height, y.y + y.height) - Math.max(x.y, y.y);
+  return wide > 0 && tall > 0;
+}
