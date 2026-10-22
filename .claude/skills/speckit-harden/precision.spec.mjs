@@ -38,6 +38,9 @@ describe('harden precision: the adversary skips only covered cases and runs as a
     assert.match(text, /\*\*One skip rule\.\*\* Skip a case only when a colocated spec already asserts\s+the same concrete input and the same concrete outcome/);
     assert.match(text, /No other reason skips a case\./);
     assert.match(text, /^Covered already: <file>:<line> — <case>/m);
+    const skipBullet = text.match(/^- \*\*One skip rule\.\*\*[\s\S]*?(?=^- )/m)[0];
+    assert.doesNotMatch(skipBullet, /src\//);
+    assert.match(text, /^- \*\*`\*\.spec\.ts` only\.\*\*[^]*?You never touch `src\/` bodies[^]*?^- \*\*One skip rule/m);
   });
 
   // @traces 1359-FR-007

@@ -52,11 +52,11 @@ For each public entry point:
 
 - **`*.spec.ts` only.** You create or extend test files colocated with the
   surface under attack (`foo.ts` → `foo.adversary.spec.ts`), or in the app's
-  `test/` directory for HTTP.
+  `test/` directory for HTTP. You never touch `src/` bodies; the red-first
+  gate blocks you if you try, and it is right to.
 - **One skip rule.** Skip a case only when a colocated spec already asserts
   the same concrete input and the same concrete outcome, and name that spec
-  on a `Covered already` line. No other reason skips a case. You never touch `src/` bodies; the red-first gate blocks
-  you if you try, and it is right to.
+  on a `Covered already` line. No other reason skips a case.
 - **House conventions**: Jest; plain titles describing the behavior; no FR
   ids, ticket keys, task ids or other internal identifiers anywhere in the
   file except a whole-line `// @traces <feature>-FR-<n>` comment; no comment that restates its own test; temp dirs via `mkdtemp`, cleaned
