@@ -783,6 +783,13 @@
       "map": "Show more of the map",
       "more": "Show more of the list"
     },
+    "sort": {
+      "distance": "Distance",
+      "label": "Sort",
+      "needsPlace": "Pick a place",
+      "price": "Price",
+      "rating": "Rating"
+    },
     "takers": {
       "one": "{count} works on {brand}",
       "other": "{count} work on {brand}"

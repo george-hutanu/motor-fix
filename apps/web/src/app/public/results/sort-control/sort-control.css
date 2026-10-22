@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.sorts {
+  border: 0;
+  display: flex;
+  gap: var(--mf-space-2);
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.sort {
+  background: none;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text);
+  cursor: pointer;
+  flex: 1 1 0;
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--mf-tap);
+  min-width: 0;
+  padding: 0 var(--mf-space-2);
+  white-space: nowrap;
+}
+
+.sort:hover:not(:disabled) {
+  border-color: var(--mf-line-strong);
+}
+
+/* The pressed sort: its own border and tint, not the colour alone. */
+.sort[aria-pressed="true"] {
+  background: var(--mf-amber-tint);
+  border-color: var(--mf-amber-ink);
+  color: var(--mf-amber-ink);
+  cursor: default;
+}
+
+.sort:disabled {
+  border-style: dashed;
+  color: var(--mf-text-secondary);
+  cursor: not-allowed;
+}
+
+.why {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  margin: var(--mf-space-1) 0 0;
+}
+
+/* From a tablet up the three sit at the end of their line. */
+@media (min-width: 768px) {
+  .sorts {
+    margin-inline-start: auto;
+    max-inline-size: 24rem;
+  }
+}

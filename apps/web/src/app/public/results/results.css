@@ -72,7 +72,7 @@ mf-address-field {
 .brands {
   align-items: flex-start;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--mf-space-3);
   margin-block-end: var(--mf-space-4);
 }
@@ -84,6 +84,11 @@ mf-brand-chips {
 
 .brands mf-brand-search {
   flex: 0 0 16rem;
+}
+
+/* The sorts take their own line under the brands. */
+.brands mf-sort-control {
+  flex-basis: 100%;
 }
 
 /* On a phone the page is one screen between the site bar and the tab bar:

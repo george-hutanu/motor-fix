@@ -1,0 +1,17 @@
+<fieldset class="sorts" [attr.aria-label]="'public.results.sort.label' | t">
+  @for (each of sorts; track each) {
+    <button
+      type="button"
+      class="sort"
+      [attr.aria-pressed]="each === sort()"
+      [disabled]="off(each)"
+      [attr.aria-describedby]="off(each) ? whyId : null"
+      (click)="pick.emit(each)"
+    >
+      {{ 'public.results.sort.' + each | t }}
+    </button>
+  }
+</fieldset>
+@if (!placeKnown()) {
+  <p class="why" [id]="whyId">{{ 'public.results.sort.needsPlace' | t }}</p>
+}

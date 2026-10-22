@@ -1,0 +1,169 @@
+import { expect, type Page } from '@playwright/test';
+import { Client } from 'pg';
+
+import { ready } from './accounts.js';
+import { test } from './fixtures.js';
+
+// A brand and three garages of this file's own, written straight to
+// PostgreSQL near Tulcea, where no seeded garage stands: each sort puts a
+// different one first. A deployed address has no database to write to, and
+// leaves @database flows out.
+// @traces 328-FR-001 328-FR-003 328-FR-004 328-FR-005 328-FR-009 328-FR-010 328-FR-011 328-FR-012 328-FR-013
+test.describe('sorting the Results page @seeded @database', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  const stamp = Date.now().toString(36);
+  const brand = { name: `Marca Sortată ${stamp}`, slug: `marca-sort-${stamp}` };
+  const near = '45.180,28.800';
+  const opened = (sort?: string) =>
+    `/ro/garages?brand=${brand.slug}&near=${near}${sort ? `&sort=${sort}` : ''}`;
+  // name, rating, km north of the place, hourly rate in bani
+  const garages = [
+    [`Alfa ${stamp}`, 4.8, 6, 20_000],
+    [`Beta ${stamp}`, 4.5, 1, 30_000],
+    [`Gama ${stamp}`, 3.9, 3, 9_000],
+  ] as const;
+  let db: Client;
+  let brandId = '';
+  const ids: string[] = [];
+
+  const cards = (page: Page) =>
+    page.getByRole('list', { name: 'Service‑uri găsite' }).getByRole('heading');
+  const first = async (page: Page) =>
+    (await cards(page).first().textContent())?.trim();
+  const sorts = (page: Page) => page.getByRole('group', { name: 'Sortare' });
+
+  test.beforeAll(async () => {
+    db = new Client({ connectionString: process.env['DATABASE_URL'] });
+    await db.connect();
+    const made = await db.query<{ id: string }>(
+      `INSERT INTO brand (id, key, name, slug, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $1, now()) RETURNING id`,
+      [brand.slug, brand.name],
+    );
+    brandId = made.rows[0]?.id ?? '';
+    for (const [name, rating, km, bani] of garages) {
+      const row = await db.query<{ id: string }>(
+        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count, latitude, longitude, labour_from_bani)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, 5, $4, 28.8, $5) RETURNING id`,
+        [
+          name,
+          `e2e-sort-${name.toLowerCase().replace(/\W+/g, '-')}`,
+          rating,
+          45.18 + km / 111.195,
+          bani,
+        ],
+      );
+      const id = row.rows[0]?.id ?? '';
+      ids.push(id);
+      await db.query(
+        `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+         VALUES ($1, $2, 'works_on', true, true, true, true, now())`,
+        [id, brandId],
+      );
+    }
+  });
+
+  test.afterAll(async () => {
+    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
+    await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
+    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await db.end();
+  });
+
+  test('reorders the list by each sort, keeps it in the bar and goes back through the history', async ({
+    page,
+  }) => {
+    await ready(page, opened());
+    await expect(cards(page)).toHaveCount(3);
+    await expect(
+      sorts(page).getByRole('button', { name: 'Notă' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(await first(page)).toBe(`Alfa ${stamp}`);
+
+    await sorts(page).getByRole('button', { name: 'Distanță' }).click();
+    await expect(page).toHaveURL(/sort=distance/);
+    await expect.poll(() => first(page)).toBe(`Beta ${stamp}`);
+
+    await sorts(page).getByRole('button', { name: 'Preț' }).click();
+    await expect(page).toHaveURL(/sort=price/);
+    await expect.poll(() => first(page)).toBe(`Gama ${stamp}`);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/sort=distance/);
+    await expect.poll(() => first(page)).toBe(`Beta ${stamp}`);
+  });
+
+  test('opens a sorted address in its order, its sort pressed', async ({
+    page,
+  }) => {
+    await ready(page, opened('price'));
+    await expect(cards(page)).toHaveCount(3);
+    await expect(
+      sorts(page).getByRole('button', { name: 'Preț' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(await first(page)).toBe(`Gama ${stamp}`);
+  });
+
+  test('keeps the sort through a brand change and a reload of the same address', async ({
+    page,
+  }) => {
+    await ready(page, opened('price'));
+    await expect(cards(page)).toHaveCount(3);
+
+    await page
+      .getByRole('group', { name: 'Marca' })
+      .getByRole('button', { pressed: false })
+      .first()
+      .click();
+    await expect(page).not.toHaveURL(new RegExp(`brand=${brand.slug}`));
+    await expect(page).toHaveURL(/sort=price/);
+    await expect(
+      sorts(page).getByRole('button', { name: 'Preț' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await page.goBack();
+    await page.reload();
+    await expect(page).toHaveURL(/sort=price/);
+    await expect(cards(page)).toHaveCount(3);
+    await expect(
+      sorts(page).getByRole('button', { name: 'Preț' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(await first(page)).toBe(`Gama ${stamp}`);
+  });
+
+  for (const size of [
+    { height: 900, width: 1280 },
+    { height: 844, width: 390 },
+  ]) {
+    test(`selects the first card, in view, after each switch at ${size.width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(size);
+      await ready(page, opened());
+      await expect(cards(page)).toHaveCount(3);
+
+      for (const [name, top] of [
+        ['Distanță', `Beta ${stamp}`],
+        ['Preț', `Gama ${stamp}`],
+      ] as const) {
+        await sorts(page).getByRole('button', { name }).click();
+        await expect.poll(() => first(page)).toBe(top);
+        const selected = page.locator('mf-result-card article.card.selected');
+        await expect(selected).toHaveCount(1);
+        await expect(selected.getByRole('heading')).toHaveText(top);
+        await expect(selected).toBeInViewport();
+      }
+    });
+  }
+
+  test('fits a 320 px phone without scrolling sideways', async ({ page }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await ready(page, opened());
+    await expect(sorts(page)).toBeVisible();
+    const wide = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(wide).toBe(false);
+  });
+});
