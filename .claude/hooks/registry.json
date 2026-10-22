@@ -107,7 +107,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "cad085812a2c"
+      "fingerprint": "759f54a07ef1"
     },
     {
       "id": "pre:edit:red-first",
@@ -145,7 +145,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "c8cee0ad3c27"
+      "fingerprint": "bb47ab2d4db5"
     },
     {
       "id": "stop:test-gate",

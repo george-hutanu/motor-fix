@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews a diff for durability and bloat — will it hold under failure, and is any of it unnecessary — against a fixed rubric and motor-fix Constitution Principle I. Read-only; never edits. Runs alongside spec-reviewer, which judges conformance to the spec; this one judges the code on its own terms. Invoked by /speckit-harden and by /speckit-auto's review phase.
+description: Reviews a diff for durability and bloat — will it hold under failure, and is any of it unnecessary — against a fixed rubric and motor-fix Constitution Principle I. Read-only; never edits. Runs alongside spec-reviewer, which judges conformance to the spec; this one judges the code on its own terms. Invoked by /speckit-review and by /speckit-auto's review phase (phase 14), not by /speckit-harden.
 tools: Read, Grep, Glob, Bash, mcp__webstorm__analyze_calls, mcp__webstorm__search_symbol, mcp__webstorm__get_file_problems
 model: fable
 ---

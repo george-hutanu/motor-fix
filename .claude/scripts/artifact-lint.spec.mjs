@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,9 +10,10 @@ const diffAudit = join(import.meta.dirname, 'diff-audit.mjs');
 
 /**
  * A feature with one requirement and one task, in a directory that has no
- * `.env`. No key means the lane reports itself unavailable instead of calling
- * out — which is exactly what makes the flag matrix testable offline: the
- * unavailable NOTE is the proof that the lane was ATTEMPTED.
+ * `.env`. The flag matrix runs with a key present and the lane switched off
+ * (SPECKIT_JEV=0): the lane then reports itself switched off instead of
+ * calling out, and that NOTE is the offline proof that it was ATTEMPTED.
+ * Without a key the lane is skipped silently, so it proves nothing.
  */
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'artifact-lint-'));
@@ -32,9 +33,9 @@ const run = (file, args, cwd) =>
   spawnSync(process.execPath, [file, ...args], {
     cwd,
     encoding: 'utf8',
-    // Both names cleared: the lane must find no credential whatever this
-    // machine exports, or the spec would pass or fail by accident.
-    env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', CLAUDE_PROJECT_DIR: cwd },
+    // A stand-in key, switched off: the lane is attempted and makes no call,
+    // whatever this machine exports.
+    env: { ...process.env, TYPESAFE_API_KEY: 'present', JEV: '', SPECKIT_JEV: '0', CLAUDE_PROJECT_DIR: cwd },
   });
 
 const attempted = (result) => /jev-unavailable/.test(result.stdout);
@@ -75,10 +76,16 @@ describe('artifact-lint — the semantic lane default', () => {
     assert.match(result.stdout, /artifact-lint: 020-a-feature/);
   });
 
-  it('says the lane was unavailable rather than printing a clean report', () => {
-    const result = run(script, [], fixture());
-    assert.match(result.stdout, /no TYPESAFE_API_KEY \(or JEV\)/);
-    assert.match(result.stdout, /mechanical findings only/);
+  // @traces 1359-FR-008
+  it('says nothing about the lane when no key is set', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stdout, /jev|TYPESAFE_API_KEY/);
   });
 
   it('reports "switched off" rather than "no key" when it was switched off', () => {
@@ -112,5 +119,24 @@ describe('diff-audit — the same default', { timeout: 30_000 }, () => {
       withLane.stdout.split('\n').filter((l) => l.includes('[')).length,
       asCheck.stdout.split('\n').filter((l) => l.includes('[')).length,
     );
+  });
+});
+
+// Tests are required here (Constitution II), so the tasks template /speckit-tasks
+// fills must not call them optional. The override sits where the template
+// resolver looks first.
+describe('the tasks template override', () => {
+  const ROOT = new URL('../..', import.meta.url).pathname;
+  const file = join(ROOT, '.specify/templates/overrides/tasks-template.md');
+
+  // @traces 1359-FR-011
+  it('exists, never calls tests optional, and gives every story a required tests block', () => {
+    assert.ok(existsSync(file), 'override missing');
+    const text = readFileSync(file, 'utf8');
+    assert.doesNotMatch(text, /OPTIONAL/);
+    const stories = text.match(/^## Phase \d+: User Story \d+/gm) ?? [];
+    const blocks = text.match(/^### Tests for User Story \d+ \(REQUIRED/gm) ?? [];
+    assert.ok(stories.length >= 3);
+    assert.equal(blocks.length, stories.length);
   });
 });

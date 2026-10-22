@@ -141,6 +141,9 @@ jobs:
           npm run test:harness
           # The plugin's validate and tests run on a pinned Claude CLI.
           npm run test:mods
+          # A gate that stopped firing, or one edited without a re-bless.
+          node .claude/scripts/doctor.mjs --check
+          node .claude/scripts/harness-eval.mjs --check
       # The local stack (docker-compose.yml) the PR tester boots: every image
       # still pulls, the services come up healthy (the object store only once
       # its bucket exists) and the app's storage operations pass against the

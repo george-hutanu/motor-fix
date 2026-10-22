@@ -72,6 +72,16 @@ describe('gc-scan — hooks and permissions', () => {
     assert.deepEqual(paths(hookCandidates(repo)), ['.claude/hooks/forgotten.sh']);
   });
 
+  // @traces 1359-FR-014
+  it('does not propose a spec file beside a gate', () => {
+    write('.claude/hooks/registry.json', { hooks: [{ id: 'a:b', script: 'live.mjs' }] });
+    write('.claude/hooks/live.mjs', '// live\n');
+    write('.claude/hooks/live.spec.mjs', '// spec\n');
+    write('.claude/hooks/live.adversary.spec.mjs', '// adversary\n');
+    write('.claude/hooks/live.test.js', '// test\n');
+    assert.deepEqual(paths(hookCandidates(repo)), []);
+  });
+
   it('finds duplicate and already-covered permission entries', () => {
     const found = permissionCandidates({
       permissions: { allow: ['Bash(npm test)', 'Bash(npm test)', 'Bash(git status:*)', 'Bash(git status --short)'] },

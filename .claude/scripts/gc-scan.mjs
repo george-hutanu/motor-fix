@@ -38,7 +38,7 @@ export function hookCandidates(repo) {
   if (!registry || !existsSync(dir)) return [];
   const known = new Set([...registry.hooks.map((h) => h.script), ...(registry.helpers ?? []).map((h) => h.script), "run-hook.mjs"]);
   return readdirSync(dir)
-    .filter((f) => /\.(mjs|js|sh)$/.test(f) && !known.has(f))
+    .filter((f) => /\.(mjs|js|sh)$/.test(f) && !/\.(spec|test)\.[cm]?js$/.test(f) && !known.has(f))
     .map((f) => candidate("hooks", `.claude/hooks/${f}`, "on disk but in no registry entry — it runs from nowhere", "trash"));
 }
 
