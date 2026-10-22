@@ -1,5 +1,5 @@
-// @traces 1192-photo-variants-FR-001 1192-photo-variants-FR-002
-// @traces 1192-photo-variants-FR-003 1192-photo-variants-FR-011
+// @traces 1192-FR-001 1192-FR-002
+// @traces 1192-FR-003 1192-FR-011
 import { createHash } from 'node:crypto';
 
 import sharp from 'sharp';

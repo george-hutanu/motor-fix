@@ -17,7 +17,7 @@ import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageModule } from '../../../storage/storage.module';
 import { GaragesModule } from '../../garages.module';
 
-// @traces 1192-photo-variants-FR-006
+// @traces 1192-FR-006
 
 const redisUrl = redisUrlFor(2);
 const { prisma, reset } = fixtures();

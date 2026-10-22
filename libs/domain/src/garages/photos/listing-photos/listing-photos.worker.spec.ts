@@ -29,7 +29,7 @@ describe('ListingPhotosWorkerModule', () => {
     expect(provider('PHOTOS_QUEUE')?.useFactory()).toBeUndefined();
   });
 
-  // @traces 1192-photo-variants-FR-010
+  // @traces 1192-FR-010
   it('processes as many photos at once as the configured concurrency', () => {
     process.env['PHOTO_WORKER_CONCURRENCY'] = '3';
     try {

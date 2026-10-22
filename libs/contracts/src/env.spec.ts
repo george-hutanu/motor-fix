@@ -1,7 +1,7 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
 // @traces 879-FR-017 244-FR-004
 // @traces 430-FR-004 430-FR-007
-// @traces 1192-photo-variants-FR-008 1192-photo-variants-FR-011
+// @traces 1192-FR-008 1192-FR-011
 import {
   bunnyConfig,
   faroUrl,

@@ -37,7 +37,7 @@ describe('cache lifetimes', () => {
   });
 });
 
-// @traces 1192-photo-variants-FR-008
+// @traces 1192-FR-008
 describe('cache keys', () => {
   it('names the version and the read kind first', () => {
     expect(cacheKey('profile', 'service-auto', '-')).toBe(

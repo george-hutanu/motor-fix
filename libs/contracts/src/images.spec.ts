@@ -1,4 +1,4 @@
-// @traces 1192-photo-variants-FR-001 1192-photo-variants-FR-007
+// @traces 1192-FR-001 1192-FR-007
 import { IMAGE_FORMATS, IMAGE_WIDTHS, variantFile } from './images';
 
 describe('the image variants', () => {

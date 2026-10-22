@@ -1,4 +1,9 @@
 import {
+  IMAGE_LOADER,
+  type ImageLoaderConfig,
+  NgOptimizedImage,
+} from '@angular/common';
+import {
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -29,6 +34,14 @@ const TILE_SIZES = '(max-width: 639px) calc(100vw - 32px), min(33vw, 420px)';
 const srcset = (base: string, format: string) =>
   IMAGE_WIDTHS.map((w) => `${base}/${w}.${format} ${w}w`).join(', ');
 
+// NgOptimizedImage asks the loader for each width of WIDTHS; the variant of
+// that width is the WebP one, AVIF coming from the <source>. The widths are
+// listed rather than generated: the sizes hold pixel values, which its own
+// srcset generation refuses.
+const WIDTHS = IMAGE_WIDTHS.map((w) => `${w}w`).join(', ');
+const webpVariant = ({ src, width }: ImageLoaderConfig) =>
+  `${src}/${width ?? 1600}.webp`;
+
 const preview = (thumbhash: string | undefined) => {
   if (!thumbhash) return null;
   try {
@@ -45,7 +58,8 @@ const preview = (thumbhash: string | undefined) => {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.aria-label]': 'label()' },
-  imports: [PhotoViewer],
+  imports: [NgOptimizedImage, PhotoViewer],
+  providers: [{ provide: IMAGE_LOADER, useValue: webpVariant }],
   selector: 'section[mf-photos-section]',
   styleUrl: './photos-section.css',
   templateUrl: './photos-section.html',
@@ -61,6 +75,7 @@ export class PhotosSection {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly viewer = viewChild(PhotoViewer);
 
+  protected readonly widths = WIDTHS;
   protected readonly label = computed(() =>
     this.i18n.t('public.garageProfile.photos.label'),
   );
@@ -77,15 +92,15 @@ export class PhotosSection {
       ...(photo.imageBase
         ? {
             avif: srcset(photo.imageBase, 'avif'),
+            base: photo.imageBase,
             sizes: i === 0 ? COVER_SIZES : TILE_SIZES,
-            src: `${photo.imageBase}/1600.webp`,
-            webp: srcset(photo.imageBase, 'webp'),
+            src: webpVariant({ src: photo.imageBase }),
           }
         : {
             avif: null,
-            sizes: null,
+            base: null,
+            sizes: '',
             src: i === 0 ? photo.displayUrl : photo.thumbnailUrl,
-            webp: null,
           }),
     }));
   });

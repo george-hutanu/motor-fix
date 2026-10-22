@@ -61,7 +61,7 @@ describe('the gallery rows of a sent listing', () => {
     ]);
   });
 
-  // @traces 1192-photo-variants-FR-005
+  // @traces 1192-FR-005
   it("keeps where each photo's variants are and its preview", async () => {
     const [a, b] = [keyOf(), keyOf()];
     const variantPath = `g/${a.split('/')[1]}/${'c'.repeat(64)}`;

@@ -1,4 +1,4 @@
-// @traces 1192-photo-variants-FR-001 1192-photo-variants-FR-004
+// @traces 1192-FR-001 1192-FR-004
 import { Test } from '@nestjs/testing';
 
 import { S3TestStore } from './s3-test-store';

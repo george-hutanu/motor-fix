@@ -250,7 +250,7 @@ describe('the photos of a public garage profile', () => {
   });
 });
 
-// @traces 1192-photo-variants-FR-007 1192-photo-variants-FR-008
+// @traces 1192-FR-007 1192-FR-008
 describe('the responsive variants of a public garage photo', () => {
   const DIGEST = 'e'.repeat(64);
   const PREVIEW = 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG';

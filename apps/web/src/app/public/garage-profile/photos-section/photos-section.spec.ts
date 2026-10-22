@@ -316,7 +316,7 @@ describe('the photos section kept live', () => {
   });
 });
 
-// @traces 1192-photo-variants-FR-009
+// @traces 1192-FR-009
 describe('the photos section with responsive variants', () => {
   const BASE = '/api/v1/images/g/d-1';
   const PREVIEW = 'WSoDBYCHiIh4h3eAeHd3cXeIcIgI';
@@ -357,7 +357,8 @@ describe('the photos section with responsive variants', () => {
     );
     expect(imageOf(cover).getAttribute('sizes')).toBe(COVER_SIZES);
     expect(imageOf(cover).getAttribute('src')).toBe(`${BASE}/1/1600.webp`);
-    expect(imageOf(second).getAttribute('sizes')).toBe(TILE_SIZES);
+    // A lazy image may size itself from its laid-out width first.
+    expect(imageOf(second).getAttribute('sizes')).toBe(`auto, ${TILE_SIZES}`);
   });
 
   it('fetches the cover first and the other tiles only when near', () => {

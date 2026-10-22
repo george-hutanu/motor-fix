@@ -301,7 +301,7 @@ describe('confirming a photo', () => {
     ]);
   });
 
-  // @traces 1192-photo-variants-FR-001 1192-photo-variants-FR-004
+  // @traces 1192-FR-001 1192-FR-004
   it('leaves the eight variants of a processed photo cached for a year, and removing it removes them', async () => {
     const draft = await newDraft();
     const key = await uploaded(draft.id, draft.token, HEIC, 'image/heic');
@@ -527,7 +527,7 @@ describe('describing photos for the sending', () => {
     ]);
   });
 
-  // @traces 1192-photo-variants-FR-005
+  // @traces 1192-FR-005
   it('answers where the variants of a processed photo are and its preview', async () => {
     const draft = await newDraft();
     const key = `garage_photo/${draft.id}/${randomUUID()}`;

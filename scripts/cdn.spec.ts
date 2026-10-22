@@ -207,7 +207,7 @@ describe('infra/cdn/bunny.json', () => {
     }
   });
 
-  // @traces 1192-photo-variants-FR-008
+  // @traces 1192-FR-008
   it.each(envs)(
     '%s: never caches /api/ but the photo variants, /app/ or a signed-in request',
     (env) => {

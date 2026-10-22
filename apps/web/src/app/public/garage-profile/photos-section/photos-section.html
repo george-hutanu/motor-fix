@@ -29,26 +29,35 @@
           <path d="m3 16 5-5 4 4 3-3 6 6M3 3l18 18" />
         </svg>
       } @else {
-        <picture>
-          @if (tile.avif) {
+        @if (tile.base) {
+          <picture>
             <source
               type="image/avif"
               [attr.srcset]="tile.avif"
               [attr.sizes]="tile.sizes"
             />
-          }
+            <img
+              draggable="false"
+              fill
+              [alt]="tile.alt"
+              [ngSrc]="tile.base"
+              [ngSrcset]="widths"
+              [priority]="i === 0"
+              [sizes]="tile.sizes"
+              (error)="mark(broken, tile.src)"
+              (load)="mark(loaded, tile.src)"
+            />
+          </picture>
+        } @else {
           <img
             draggable="false"
             [alt]="tile.alt"
-            [attr.fetchpriority]="i === 0 ? 'high' : null"
             [attr.loading]="i === 0 ? 'eager' : 'lazy'"
-            [attr.sizes]="tile.sizes"
-            [attr.srcset]="tile.webp"
             [src]="tile.src"
             (error)="mark(broken, tile.src)"
             (load)="mark(loaded, tile.src)"
           />
-        </picture>
+        }
       }
     </button>
   }
