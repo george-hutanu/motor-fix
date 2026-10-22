@@ -11,7 +11,12 @@
   margin: var(--mf-space-1) 0;
 }
 
+/* The eyebrow in the mock's label type: Michroma capitals, tracked, so the
+   longest one (voice 4 in Romanian) wraps onto two lines at 320 px. */
 .label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
   margin: 0;
   text-transform: uppercase;
 }
