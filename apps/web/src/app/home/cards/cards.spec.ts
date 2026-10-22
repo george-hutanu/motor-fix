@@ -7,6 +7,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { HomeCards, type ResultsRoute } from './cards';
+import { RED_LAMP } from '../../red-lamp.testing';
 import { spoken } from '../../spoken.testing';
 
 const BMW: BrandDto = { id: 'b', name: 'BMW', popularity: 1, slug: 'bmw' };
@@ -456,4 +457,35 @@ describe('HomeCards in the visit’s voice', () => {
     expect(said(card.querySelector('mf-lamp'))).toBe('Not compatible: BMW');
     expect(lists(card)[1]).toBe('Not compatible with Tesla');
   });
+});
+
+describe('HomeCards red lamp in every voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const lamp = (page: HTMLElement) =>
+    said(cards(page)[0].querySelector('mf-lamp'));
+
+  // @traces 007-brand-headline-FR-012
+  // @traces 007-brand-headline-FR-013
+  it.each(RED_LAMP)(
+    'voice %s in %s, %s: names the brand',
+    async (voice, language, stance, says) => {
+      document.documentElement.dataset['voice'] = voice;
+      const page = await render([garageOf({ stance, worksOn: ['Dacia'] })], {
+        language,
+      });
+
+      expect(lamp(page)).toBe(says('BMW'));
+      fixture.componentRef.setInput('brand', {
+        ...BMW,
+        id: 'd',
+        name: 'Dacia',
+        slug: 'dacia',
+      });
+      fixture.detectChanges();
+      expect(lamp(page)).toBe(says('Dacia'));
+    },
+  );
 });

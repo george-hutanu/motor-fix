@@ -9,6 +9,7 @@ import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { ResultCard } from './result-card';
+import { RED_LAMP } from '../../../red-lamp.testing';
 import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
 
 const BMW: BrandRefDto = { id: 'b-bmw', name: 'BMW', slug: 'bmw' };
@@ -600,4 +601,25 @@ describe('ResultCard in the visit’s voice', () => {
 
     expect(said(card.querySelector('mf-lamp'))).toBe('Doesn’t work on BMW');
   });
+});
+
+describe('ResultCard red lamp in every voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  // @traces 007-brand-headline-FR-012
+  // @traces 007-brand-headline-FR-013
+  it.each(RED_LAMP)(
+    'voice %s in %s, %s: names the brand',
+    async (voice, language, stance, says) => {
+      document.documentElement.dataset['voice'] = voice;
+      const card = await render(garageOf({ stance }), { language });
+
+      expect(said(card.querySelector('mf-lamp'))).toBe(says('BMW'));
+      fixture.componentRef.setInput('brand', DACIA);
+      fixture.detectChanges();
+      expect(said(card.querySelector('mf-lamp'))).toBe(says('Dacia'));
+    },
+  );
 });

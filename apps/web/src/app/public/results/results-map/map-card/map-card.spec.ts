@@ -8,6 +8,7 @@ import type {
 import { I18n } from '@motor-fix/i18n';
 
 import { MapCard } from './map-card';
+import { RED_LAMP } from '../../../../red-lamp.testing';
 
 const BMW: BrandRefDto = { id: 'b-bmw', name: 'BMW', slug: 'bmw' };
 const PIN: GaragePinDto = {
@@ -141,4 +142,29 @@ describe('the small card on the map in the visit’s voice', () => {
       'Primește BMW',
     );
   });
+});
+
+describe('the small card’s red lamp in every voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  // @traces 007-brand-headline-FR-012
+  // @traces 007-brand-headline-FR-013
+  it.each(RED_LAMP)(
+    'voice %s in %s, %s: names the brand',
+    async (voice, language, stance, says) => {
+      document.documentElement.dataset['voice'] = voice;
+      const card = await render({ ...PIN, stance }, undefined, language);
+
+      expect(said(card.querySelector('mf-lamp'))).toBe(says('BMW'));
+      fixture.componentRef.setInput('brand', {
+        id: 'b-dacia',
+        name: 'Dacia',
+        slug: 'dacia',
+      });
+      fixture.detectChanges();
+      expect(said(card.querySelector('mf-lamp'))).toBe(says('Dacia'));
+    },
+  );
 });
