@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -17,6 +17,7 @@ features:
   - 313-compare-quotes
   - 389-confirm-booking-lift-mechanic
   - 314-accept-quote
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Quotes
@@ -704,6 +705,18 @@ _From 314-accept-quote._
 ### 314-FR-023 — Both dialogs MUST trap focus, close on Escape exactly as Renunță (nothing sent), label the history box for assistive technology, and return focus to the row's button that opened them; states are never conveyed by colour alone (the green lamp always comes with its text line).
 
 _From 314-accept-quote._
+
+### 009-FR-004 — When the web app sends a quote request, the request body MUST carry the visit's voice (`copyVoice`, 1–5) only when a valid granted consent is in force at the moment of the send; otherwise the body carries no `copyVoice`. The dialog, the form, the idempotency key and every other part of the send are unchanged.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-005 — A quote request MUST store `copy_voice`, empty or 1–5, set at creation from the body's `copyVoice` when it is an integer from 1 to 5 and left empty otherwise (absent, null, 0, 7, a text, a decimal, an array): the DTO coerces such a value to absent at the edge, so the call is never refused or answered differently for it; it MUST never be changed after creation; a replayed send keeps the first row (221-FR-008). A request created through the AI assistant's tools MUST store no voice: the tool input has no such field.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-012 — Tests MUST cover, in Jest: `copy_voice` stored on a request and on a draft from a body value 1–5; 0, 7, a text and null stored as empty with the call answered as before; a draft created after a form opened by its own address carrying no voice; a request body without consent carrying no `copyVoice`; the wrapper sending nothing without consent; `home_visit` sent once for a Home load that took a voice and not for one that kept it; the 30-day counts per voice on real PostgreSQL (inside and outside the window, a submitted draft counted, a voiceless row counted nowhere). In Playwright, end to end: with consent given, in a voice 2 visit, send a quote request and check the stored row's voice and the intercepted analytics calls (Home visit, started, sent, each with `voice` 2); repeat without consent and check no analytics call and an empty `copy_voice`.
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

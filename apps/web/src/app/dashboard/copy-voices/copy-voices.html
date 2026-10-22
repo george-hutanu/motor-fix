@@ -8,7 +8,7 @@
           <div class="name">
             <span [id]="'copy-voice-' + v.voice">{{ name(v) | t }}</span>
             <span class="hint">{{ example(v) | t: brand }}</span>
-            <span class="hint counts">{{ counts(v) }}</span>
+            <span class="hint">{{ counts(v) }}</span>
             @if (pinned(); as p) {
               @if (p === v.voice) {
                 <span class="hint" [id]="'copy-voice-hint-' + v.voice">{{ 'admin.copyVoices.pinnedHint' | t }}</span>

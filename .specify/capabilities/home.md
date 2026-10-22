@@ -11,6 +11,7 @@ features:
   - 228-how-it-works-list-garage
   - 006-copy-voice-rotation
   - 010-copy-voice-switch
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Home
@@ -328,6 +329,18 @@ _From 006-copy-voice-rotation._
 ### 010-FR-010 — The voice taken at the start of a visit (006-FR-002, 006-FR-005) MUST come only from the voices that are on, using the device's last read copy of the settings (all five on, none pinned, when it has none or when the stored copy is unreadable or inconsistent: no voice on, a pinned voice that is off): a stored round skips voices that are off; with a voice pinned, a visit that would take a new voice takes the pinned one, stores it as the visit's voice with the time, and leaves the stored round as it was; a visit that keeps its stored voice keeps it only while that voice is on (else it takes a new voice as above).
 
 _From 010-copy-voice-switch._
+
+### 009-FR-001 — Under a valid granted analytics consent, each Home page load in the browser that takes the visit's voice (006-FR-002, 010-FR-010: a new voice off the round, or the pinned one) MUST send exactly one analytics event `home_visit` with the property `voice` (1–5) = the voice taken. The page-head script marks such a load (`data-voice-new`) and the app reads that mark once; a Home load that keeps the voice under the 2.5-second rule (006-FR-004), a load on any other page (006-FR-005, also when storage is blocked) and the server render carry no mark and MUST send none. When consent is granted later in the same page session (on any page of the app), the event is sent at that moment, once, with the voice in force then; it is never sent twice for one load.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-010 — An analytics service that is unreachable, slow or blocked MUST cost nothing: the event is dropped, nothing retries, nothing waits, and the page, the send and the draft show no error (the wrapper's existing behaviour holds for the new event and property).
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-011 — Nothing of this story MUST run on the server render of a page or write to the device: the voice is read from the visit's one voice source, the consent from the consent service, and the "opened from Home" fact is known from the page load itself.
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

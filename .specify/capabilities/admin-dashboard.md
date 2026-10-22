@@ -22,6 +22,7 @@ features:
   - 299-system-log-search
   - 1351-rar-monthly-recheck
   - 010-copy-voice-switch
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Admin dashboard
@@ -816,6 +817,18 @@ _From 010-copy-voice-switch._
 ### 010-FR-016 — The new endpoints and the product action MUST ship with their metrics, logs, dashboard panel and alert in `infra/observability/inventory.json`.
 
 _From 010-copy-voice-switch._
+
+### 009-FR-008 — The admin copy voices read (010-FR-002) MUST carry, for each voice, two counts: the quote requests created within the last 30 days (30 × 24 hours before the read, by the server's clock) with that `copy_voice`, and the listing drafts created within the same window with that `copy_voice`, whatever their status since (open, submitted). A row without a voice counts for no voice. Only an admin reads them; the read's access rule, caching and the change call's rules (010-FR-003 … 010-FR-007) are unchanged.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-009 — Each row of the "Voci de text" section (010-FR-012) MUST show the two counts under the voice's example line, with plural forms by the message format (one / few / other), e.g. "12 cereri de ofertă · 3 înscrieri începute", "1 cerere de ofertă · 20 de înscrieri începute" (EN "12 quote requests · 1 listing started"), with 0 when there is none, and the section's hint MUST name the window once: "în ultimele 30 de zile" (EN "in the last 30 days"); the counts are formatted by the language's digit grouping and the line wraps onto a second line, never truncated, when it does not fit; the row MUST fit at 320 px with nothing scrolling sideways, in light and dark, and the counts MUST be read out with their labels. The switches, the pin button and the error texts of ST-10 are unchanged.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-013 — This story adds no service, queue, endpoint, product action or outside call: the two columns ride on the existing send and creation, the counts on the existing admin read, and the events on the existing analytics wrapper, so `infra/observability/inventory.json` needs no new entry and the PR's Observability section says so (N/A with that reason).
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

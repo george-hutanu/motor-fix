@@ -5,13 +5,10 @@ import {
   ArrayUnique,
   IsArray,
   IsIn,
-  IsInt,
   IsOptional,
   IsString,
   IsUUID,
-  Max,
   MaxLength,
-  Min,
 } from 'class-validator';
 
 import { copyVoiceOrUndefined } from './copy-voices.dto';
@@ -102,9 +99,6 @@ export class CreateQuoteRequestDto {
   })
   @Transform(copyVoiceOrUndefined)
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
   copyVoice?: number;
 }
 

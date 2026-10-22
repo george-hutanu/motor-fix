@@ -58,9 +58,6 @@ export class CreateListingDraftDto extends DraftFields {
   })
   @Transform(copyVoiceOrUndefined)
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
   copyVoice?: number;
 }
 
