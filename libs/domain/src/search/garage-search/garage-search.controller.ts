@@ -44,7 +44,7 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near; invalid_cursor: not a page of this search, of another box or of another sort',
   })
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
@@ -76,6 +76,7 @@ export class GarageSearchController {
       query.radius,
       query.log === '1',
       bbox,
+      query.sort,
     );
   }
 

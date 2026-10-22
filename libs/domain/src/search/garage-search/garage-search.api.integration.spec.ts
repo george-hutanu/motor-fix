@@ -108,7 +108,7 @@ describe('GET /search/garages', () => {
     ['a brand that is not a uuid', { brandId: 'dacia' }],
     ['a slug and an id together', { brand: 'dacia', brandId: randomUUID() }],
     ['a slug with capitals', { brand: 'Dacia' }],
-    ['an unknown parameter', { brandId: randomUUID(), sort: 'rating' }],
+    ['an unknown parameter', { brandId: randomUUID(), order: 'rating' }],
     [
       'a cursor over 256 characters',
       { brandId: randomUUID(), cursor: 'a'.repeat(257) },
@@ -547,5 +547,73 @@ describe('GET /search/garages past its limit', () => {
     await used(ADDRESS, limit);
 
     await from(`::ffff:${ADDRESS}`, { brandId: dacia }).expect(429);
+  });
+});
+
+// @traces 328-FR-001 328-FR-004 328-FR-006
+describe('GET /search/garages with a sort', () => {
+  const messages = (res: request.Response) =>
+    ([] as string[]).concat(res.body.message ?? []);
+
+  it('lists the nearest garage first under distance', async () => {
+    await placed('Alfa', 0.05, 'works_on');
+    await placed('Beta', 0.01, 'works_on');
+
+    const res = await search({ brand: 'dacia', near: NEAR, sort: 'distance' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Beta',
+      'Alfa',
+    ]);
+  });
+
+  it.each([
+    ['an unknown sort', { near: NEAR, sort: 'newest' }],
+    ['a sort in capitals', { near: NEAR, sort: 'PRICE' }],
+    ['distance without a place', { sort: 'distance' }],
+    ['distance with a box and no place', { bbox: BBOX, sort: 'distance' }],
+  ])('answers 400 naming the sort to %s', async (_, query) => {
+    const res = await search({ brand: 'dacia', ...query });
+
+    expect(res.status).toBe(400);
+    expect(messages(res).some((message) => message.startsWith('sort '))).toBe(
+      true,
+    );
+  });
+
+  it('answers 400 invalid_cursor to a cursor of another sort', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await placed(`Service ${String(n).padStart(2, '0')}`, 0.01, 'works_on');
+    }
+    const first = await search({ brand: 'dacia', near: NEAR, sort: 'price' });
+
+    const res = await search({
+      brand: 'dacia',
+      cursor: first.body.nextCursor,
+      near: NEAR,
+    });
+
+    expect(first.body.nextCursor).toEqual(expect.any(String));
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('reads the cards shown again in the order of the search, whatever the sort', async () => {
+    const alfa = await placed('Alfa', 0.01, 'works_on');
+    const beta = await placed('Beta', 0.01, 'does_not_take');
+
+    const res = await search({
+      brand: 'dacia',
+      ids: [beta, alfa].join(','),
+      near: NEAR,
+      sort: 'price',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([
+      alfa,
+      beta,
+    ]);
   });
 });

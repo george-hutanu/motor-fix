@@ -23,13 +23,15 @@ interface SearchKey {
   // The visible box as its shared 3-decimal text.
   bbox?: string;
   cursor?: string;
+  // The order of a page; the pins have none.
+  sort?: string;
 }
 
 const searchKey = (
   generation: string,
-  { bbox, brandId, cursor, kind, near, radiusKm }: SearchKey,
+  { bbox, brandId, cursor, kind, near, radiusKm, sort }: SearchKey,
 ) =>
-  `garage-search:v1:${generation}:${kind}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${bbox ?? '-'}:${cursor ?? '-'}`;
+  `garage-search:v1:${generation}:${kind}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${bbox ?? '-'}:${cursor ?? '-'}:${sort ?? '-'}`;
 
 export const SEARCH_AUDIENCE = /^public:(garage:|search$|search:)/;
 

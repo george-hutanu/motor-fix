@@ -132,7 +132,7 @@ describe('the search cache', () => {
     const res = await search({ brand: 'dacia', near: NEAR });
 
     expect(res.status).toBe(200);
-    const key = `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`;
+    const key = `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`;
     expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
     const ttl = await other.ttl(key);
     expect(ttl).toBeGreaterThan(0);
@@ -147,8 +147,8 @@ describe('the search cache', () => {
 
     expect((await entries()).sort()).toEqual(
       [
-        `garage-search:v1:${gen}:page:${dacia}:-:25:-:-`,
-        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`,
+        `garage-search:v1:${gen}:page:${dacia}:-:25:-:-:rating`,
+        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
       ].sort(),
     );
   });
@@ -177,6 +177,33 @@ describe('the search cache', () => {
 
     expect(wider.body.items[0].name).toBe('Nume nou');
     expect(nowhere.body.items[0].name).toBe('Nume nou');
+  });
+
+  // @traces 328-FR-006
+  it('keeps each sort under its own key, the rating order under the same key named or not', async () => {
+    const gen = await generation();
+    const before = await cacheCounts();
+
+    await search({ brand: 'dacia', near: NEAR }).expect(200);
+    await search({ brand: 'dacia', near: NEAR, sort: 'rating' }).expect(200);
+    await rename('Nume nou');
+    const byPrice = await search({ brand: 'dacia', near: NEAR, sort: 'price' });
+    const byDistance = await search({
+      brand: 'dacia',
+      near: NEAR,
+      sort: 'distance',
+    });
+
+    expect(byPrice.body.items[0].name).toBe('Nume nou');
+    expect(byDistance.body.items[0].name).toBe('Nume nou');
+    expect((await entries()).sort()).toEqual(
+      [
+        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:distance`,
+        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:price`,
+        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
+      ].sort(),
+    );
+    expect(await since(before)).toEqual({ fallback: 0, hit: 1, miss: 3 });
   });
 
   it('never caches an ids read', async () => {
@@ -291,7 +318,7 @@ describe('the search cache for a box on the list', () => {
     }).expect(200);
 
     expect(await entries()).toEqual([
-      `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:${BBOX}:-`,
+      `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:${BBOX}:-:rating`,
     ]);
   });
 
@@ -316,12 +343,12 @@ describe('the search cache for the map pins', () => {
     const res = await pins({ brand: 'dacia', near: NEAR });
 
     expect(res.status).toBe(200);
-    const key = `garage-search:v1:${gen}:pins:${dacia}:${NEAR}:25:-:-`;
+    const key = `garage-search:v1:${gen}:pins:${dacia}:${NEAR}:25:-:-:-`;
     expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
     expect(
       JSON.parse(
         (await other.get(
-          `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`,
+          `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
         )) as string,
       ),
     ).toEqual(page.body);
@@ -339,7 +366,7 @@ describe('the search cache for the map pins', () => {
     await pins({ bbox: BBOX, brandId: dacia, radius: '50' }).expect(200);
 
     expect(await entries()).toEqual([
-      `garage-search:v1:${gen}:pins:${dacia}:-:25:${BBOX}:-`,
+      `garage-search:v1:${gen}:pins:${dacia}:-:25:${BBOX}:-:-`,
     ]);
   });
 
