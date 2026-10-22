@@ -158,7 +158,7 @@ describe('who a live event reaches', () => {
     expect(mover.kinds()).toEqual(['booking.move_refused']);
   });
 
-  // @traces 574-FR-002
+  // @traces 398-FR-008
   // @traces 172-FR-007
   it('keeps prices, settings, feature switches, the team, reviews, the profile and invites from a receptionist, and gives the owner everything', async () => {
     const receptionist = staff('maria', 'receptionist');
@@ -371,7 +371,7 @@ describe('streams that follow the account', () => {
   );
 });
 
-// @traces 574-FR-001 574-FR-002 574-FR-003
+// @traces 398-FR-008
 describe('what each garage role hears through the garage channel', () => {
   // One kind per family of the capability table, and one no family claims.
   const FAMILIES = [
@@ -475,7 +475,7 @@ describe('what each garage role hears through the garage channel', () => {
   });
 });
 
-// @traces 574-FR-001
+// @traces 398-FR-008
 describe('the kind-to-capability table', () => {
   it('gives every kind at most one capability', () => {
     for (const kind of [...EVENT_KINDS, 'garage.settings_changed']) {
