@@ -6,10 +6,18 @@ Read at phase 13.
 
 ### 13. Ticket refresh
 
-Invoke `speckit-context --since`. A run takes hours and the organisation does
-not pause for it: a comment that narrows the ask, a flag, a linked story that
-now owns half the work. This phase re-reads the story's issue against the digest's own
-`Gathered` date and appends a `## Refresh` section to `context.md`.
+Run `node .claude/scripts/context-refresh-gate.mjs specs/<feature>` first. It
+compares the story, its epic, the epic's new issues and the specs trunk's
+`docs/` log against the digest's `Gathered` stamp, with no model call, and
+prints one line:
+
+- `skip`: append `## Refresh <UTC time>` and `gate: no change` to
+  `context.md`, log it, and run no `speckit-context`.
+- `dispatch <reason>`: log the reason in `auto-run.md` and invoke
+  `speckit-context --since`. A run takes hours and the organisation does not
+  pause for it: a comment that narrows the ask, a flag, a linked story that
+  now owns half the work. It re-reads the story's issue against the digest's
+  `Gathered` stamp and appends a `## Refresh` section to `context.md`.
 
 Gate overrides:
 

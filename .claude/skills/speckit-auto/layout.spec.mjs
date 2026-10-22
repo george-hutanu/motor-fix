@@ -257,3 +257,29 @@ describe('ST-1358 text lands where the run reads it', () => {
     has('.claude/skills/speckit-archive/SKILL.md', 'read `git diff -- .specify/capabilities/`', '`/speckit-retro` is manual only in the `/speckit-auto` chain');
   });
 });
+
+describe('ST-1360 text lands where the run reads it', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+  const has = (path, ...phrases) => {
+    const text = at(path);
+    for (const phrase of phrases) assert.ok(text.includes(phrase), `${path} lacks: ${phrase}`);
+  };
+
+  // @traces 1360-FR-004
+  it('phase 13 runs the model-free gate before any researcher', () => {
+    has('.claude/skills/speckit-auto/phases-close.md',
+      'Run `node .claude/scripts/context-refresh-gate.mjs specs/<feature>` first.',
+      'append `## Refresh <UTC time>` and `gate: no change` to `context.md`, log it, and run no `speckit-context`.',
+      '`dispatch <reason>`: log the reason in `auto-run.md` and invoke `speckit-context --since`.');
+  });
+
+  // @traces 1360-FR-005
+  it('speckit-context stamps Gathered with the time and the specs trunk sha, and finds the epic by its title', () => {
+    has('.claude/skills/speckit-context/SKILL.md',
+      '- **Gathered**: <UTC ISO 8601 time to the second> · specs trunk <sha>',
+      'Gathered: <UTC time> · specs trunk <sha>.',
+      'gh issue list -R $R --label epic --state all --search "EP-<k> in:title" --json number,title',
+      'an epic carries `epic`, not its own `EP-<k>`');
+  });
+});
