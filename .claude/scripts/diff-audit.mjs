@@ -186,11 +186,11 @@ for (const file of sources) {
   const sibling = join(repo, dirname(file), `${stem}.spec.ts`);
   if (existsSync(sibling)) continue;
   // What a mention looks like depends on how this project writes imports:
-  // `/stem.js` (or `.ts`) under nodenext, `/stem` closed by a quote under
+  // `/stem.js` (or `.ts`) under nodenext, `/stem` closed by a quote or backtick under
   // bundler, and either when the tsconfig names no style.
   const resolution = importStyle(repo, file);
   const nodenext = [`/${stem}.js`, ...(resolution?.tsExtensions ? [`/${stem}.ts`] : [])];
-  const bundler = [`/${stem}'`, `/${stem}"`];
+  const bundler = [`/${stem}'`, `/${stem}"`, `/${stem}\``];
   const forms =
     resolution?.style === "nodenext" ? nodenext : resolution?.style === "bundler" ? bundler : [...nodenext, ...bundler];
   if (!corpus.some((f) => isSpec(f.path) && forms.some((form) => f.text.includes(form)))) {

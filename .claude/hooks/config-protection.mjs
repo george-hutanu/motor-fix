@@ -181,7 +181,9 @@ function onPayload(raw) {
   // is stale. Say it here, while the fix is cheap. An unreadable registry
   // fingerprints nothing, so it says nothing.
   const registry = loadRegistry(repo);
-  const fingerprinted = [...(registry?.hooks ?? []), ...(registry?.helpers ?? [])].map((h) => `.claude/hooks/${h.script}`);
+  const fingerprinted = [...(registry?.hooks ?? []), ...(registry?.helpers ?? [])]
+    .filter((h) => typeof h?.script === "string")
+    .map((h) => `.claude/hooks/${h.script}`);
   if (fingerprinted.includes(rel))
     console.error(
       `[config-protection] ${rel} is a gate script — re-bless the registry with \`node .claude/scripts/doctor.mjs --bless-hooks\` after reviewing the change.`,
