@@ -68,13 +68,16 @@
         };
         const any = () =>
           pinned || on[Math.floor(Math.random() * on.length)];
+        const home = /^\/(ro|en)?\/?$/.test(location.pathname);
+        // Whether this load took a voice rather than keeping the visit's.
+        let taken = false;
         const pick = () => {
           const stored = Number(localStorage.getItem('mf-copy'));
           const last = on.includes(stored) ? stored : 0;
-          const home = /^\/(ro|en)?\/?$/.test(location.pathname);
           const gap = Date.now() - localStorage.getItem('mf-copy-at');
           if (last && (!home || (gap >= 0 && gap < 2500))) return last;
           const voice = next(last);
+          taken = true;
           localStorage.setItem('mf-copy-at', Date.now());
           return voice;
         };
@@ -83,8 +86,14 @@
           voice = pick();
         } catch {
           voice = any();
+          taken = home;
         }
-        document.documentElement.setAttribute('data-voice', voice);
+        const html = document.documentElement;
+        html.setAttribute('data-voice', voice);
+        // The marks the app reads once: the page was loaded on Home, and this
+        // load took the voice it tells the analytics of.
+        if (home) html.setAttribute('data-home', '');
+        if (home && taken) html.setAttribute('data-voice-new', '');
         // The app hands over each read of the settings: they are kept for the
         // next loads, and a visit whose voice is now off moves to a new one,
         // its start time kept.

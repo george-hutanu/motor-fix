@@ -9,6 +9,7 @@ describe('the event contract', () => {
         'filter_applied',
         'garage_opened',
         'garage_saved',
+        'home_visit',
         'listing_started',
         'listing_step_completed',
         'listing_submitted',
@@ -143,5 +144,48 @@ describe('the properties an event keeps', () => {
         role: 'driver',
       }),
     ).toEqual({ role: 'driver' });
+  });
+});
+
+// @traces 009-FR-002
+describe('the copy voice on an event', () => {
+  it('keeps a voice from 1 to 5 on a Home visit, and nothing else', () => {
+    for (const voice of [1, 2, 3, 4, 5])
+      expect(sanitise('home_visit', { voice })).toEqual({ voice });
+    expect(sanitise('home_visit', { source: 'home', voice: 2 })).toEqual({
+      voice: 2,
+    });
+  });
+
+  it('keeps the voice on a request started, a request sent and a listing started', () => {
+    expect(
+      sanitise('quote_request_started', { source: 'profile', voice: 3 }),
+    ).toEqual({ source: 'profile', voice: 3 });
+    expect(sanitise('quote_request_sent', { jobs: 1, voice: 5 })).toEqual({
+      jobs: 1,
+      voice: 5,
+    });
+    expect(sanitise('listing_started', { voice: 1 })).toEqual({ voice: 1 });
+  });
+
+  it('drops a voice that is no voice', () => {
+    for (const voice of [0, 6, 2.5, '3', 'v3'])
+      for (const name of [
+        'home_visit',
+        'quote_request_started',
+        'quote_request_sent',
+        'listing_started',
+      ])
+        expect(sanitise(name, { voice })).toEqual({});
+  });
+
+  it('drops the voice on every other event', () => {
+    expect(sanitise('garage_opened', { source: 'home', voice: 2 })).toEqual({
+      source: 'home',
+    });
+    expect(sanitise('listing_submitted', { voice: 2 })).toEqual({});
+    expect(sanitise('review_posted', { rating: 4, voice: 2 })).toEqual({
+      rating: 4,
+    });
   });
 });

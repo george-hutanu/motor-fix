@@ -53,6 +53,7 @@ import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import { type Place, PlaceStore } from '../../../home/place/place-store';
 import { SignInDialog } from '../../../sign-in/sign-in-dialog';
+import { Voice } from '../../../voice/voice';
 
 export interface RequestQuoteData {
   garage: PublicGarageDto;
@@ -136,6 +137,7 @@ export class RequestQuote {
   >();
   private readonly router = inject(Router);
   private readonly consent = inject(Consent);
+  private readonly voice = inject(Voice);
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
   protected readonly garage = this.task.data.garage;
@@ -440,6 +442,7 @@ export class RequestQuote {
       garages:
         garageIds.length > 3 ? '4–5' : garageIds.length > 1 ? '2–3' : '1',
       jobs: jobTypeIds.length,
+      voice: this.voice.voice,
       ...(brand && { brand }),
     });
   }
@@ -456,6 +459,7 @@ export class RequestQuote {
         this.task.data.source,
         ...value.garageIds.map(() => 'search' as const),
       ],
+      ...(this.consent.granted() && { copyVoice: this.voice.voice }),
     };
   }
 }

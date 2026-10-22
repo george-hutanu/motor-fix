@@ -144,6 +144,7 @@ describe('RequestQuoteButton handing jobs over, hostile', () => {
     expect(track).toHaveBeenCalledTimes(2);
     expect(track).toHaveBeenNthCalledWith(1, 'quote_request_started', {
       source: 'profile',
+      voice: 1,
     });
   });
 

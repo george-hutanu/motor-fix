@@ -46,7 +46,7 @@ const session = {
   roleHint: signal<string | null>(null),
   switchRole: jest.fn(),
 };
-const consent = { track: jest.fn() };
+const consent = { granted: () => false, track: jest.fn() };
 // The status view's read and its live stream, which these cases never drive.
 const garages = { verificationStatusControllerRead: jest.fn() };
 const live = {

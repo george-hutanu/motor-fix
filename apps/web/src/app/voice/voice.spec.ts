@@ -32,6 +32,8 @@ function voiceOf(mark: string | null) {
 
 afterEach(() => {
   delete document.documentElement.dataset['voice'];
+  document.documentElement.removeAttribute('data-home');
+  document.documentElement.removeAttribute('data-voice-new');
   delete (window as { mfCopyVoice?: unknown }).mfCopyVoice;
 });
 
@@ -286,5 +288,78 @@ describe('the settings read at boot', () => {
 
   it('reads none on the server', () => {
     expect(boot('server')).not.toHaveBeenCalled();
+  });
+});
+
+function marked(marks: string[]) {
+  for (const mark of marks) document.documentElement.setAttribute(mark, '');
+  TestBed.resetTestingModule();
+  return TestBed.inject(Voice);
+}
+
+// @traces 009-FR-001 009-FR-011
+describe('how the page was loaded', () => {
+  it('came from Home only when the page head marked it so', () => {
+    expect(marked(['data-home']).fromHome).toBe(true);
+    document.documentElement.removeAttribute('data-home');
+    expect(marked(['data-voice-new']).fromHome).toBe(false);
+  });
+
+  it('took its voice only when the page head marked it so', () => {
+    expect(marked(['data-home', 'data-voice-new']).taken).toBe(true);
+    document.documentElement.removeAttribute('data-voice-new');
+    expect(marked(['data-home']).taken).toBe(false);
+  });
+
+  it('is neither with no mark', () => {
+    const voice = marked([]);
+
+    expect(voice.fromHome).toBe(false);
+    expect(voice.taken).toBe(false);
+  });
+
+  it('keeps what it read at the start, whatever the page says later', () => {
+    const voice = marked([]);
+    document.documentElement.setAttribute('data-home', '');
+    document.documentElement.setAttribute('data-voice-new', '');
+
+    expect(voice.fromHome).toBe(false);
+    expect(voice.taken).toBe(false);
+  });
+
+  it('reads the marks through getAttribute, once, on a document without dataset', () => {
+    const getAttribute = jest.fn((name: string) =>
+      name === 'data-voice' ? '2' : '',
+    );
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DOCUMENT, useValue: { documentElement: { getAttribute } } },
+      ],
+    });
+    const voice = TestBed.inject(Voice);
+    const calls = getAttribute.mock.calls.length;
+
+    expect(voice.fromHome).toBe(true);
+    expect(voice.taken).toBe(true);
+    expect(getAttribute).toHaveBeenCalledWith('data-home');
+    expect(getAttribute).toHaveBeenCalledWith('data-voice-new');
+    expect(getAttribute.mock.calls.length).toBe(calls);
+  });
+
+  it('is neither on the server render, which carries no mark', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: DOCUMENT,
+          useValue: { documentElement: { getAttribute: () => null } },
+        },
+      ],
+    });
+    const voice = TestBed.inject(Voice);
+
+    expect(voice.fromHome).toBe(false);
+    expect(voice.taken).toBe(false);
   });
 });
