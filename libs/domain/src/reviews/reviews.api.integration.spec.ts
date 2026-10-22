@@ -81,6 +81,7 @@ describe('reading a job for its review', () => {
         model: 'Cooper S',
         year: 2019,
       },
+      eligibility: { jobId: s.job.id, offer: true, reason: null },
       emailConfirmed: true,
       existing: null,
       garage: {
@@ -316,6 +317,7 @@ describe('what a review may hold', () => {
 
 // @traces 022-FR-012 022-FR-019
 // @traces 022-FR-020 022-FR-021 022-FR-026
+// @traces 023-FR-004 023-FR-010
 describe('who may review a job, and when', () => {
   it('answers 404 for a job that does not exist', async () => {
     const s = await setting();
@@ -365,9 +367,13 @@ describe('who may review a job, and when', () => {
     },
   );
 
-  it.each(['published', 'reported', 'removed'] as ReviewStatus[])(
-    'answers 409 review_exists over a %s review, and reads it back',
-    async (status) => {
+  it.each([
+    ['published', 'already_reviewed'],
+    ['reported', 'already_reviewed'],
+    ['removed', 'review_removed'],
+  ] as [ReviewStatus, string][])(
+    'answers a %s review with 409 %s, and reads it back',
+    async (status, code) => {
       const s = await setting();
       const first = await reviewIn(s, status);
 
@@ -375,7 +381,7 @@ describe('who may review a job, and when', () => {
 
       expect(refused.status).toBe(409);
       expect(refused.body).toMatchObject({
-        code: 'review_exists',
+        code,
         currentStatus: status,
         entity: 'review',
       });
@@ -414,14 +420,14 @@ describe('who may review a job, and when', () => {
 
     expect(answers.map((a) => a.status).sort()).toEqual([201, 409]);
     expect(answers.find((a) => a.status === 409)?.body).toMatchObject({
-      code: 'review_exists',
+      code: 'already_reviewed',
       currentStatus: 'published',
     });
     expect(await reviews(s.job.id)).toHaveLength(1);
     expect(await audits(s.job.id)).toHaveLength(1);
   });
 
-  it('answers review_exists before a field error', async () => {
+  it('answers already_reviewed before a field error', async () => {
     const s = await setting();
     await reviewIn(s, 'published');
 
@@ -431,7 +437,7 @@ describe('who may review a job, and when', () => {
       rating: 4,
     });
 
-    expect(refused.body.code).toBe('review_exists');
+    expect(refused.body.code).toBe('already_reviewed');
   });
 });
 

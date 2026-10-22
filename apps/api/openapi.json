@@ -3335,6 +3335,55 @@
         ]
       }
     },
+    "/api/v1/reviews/eligibility": {
+      "get": {
+        "operationId": "ReviewsController_eligibility",
+        "parameters": [
+          {
+            "name": "jobIds",
+            "required": true,
+            "in": "query",
+            "description": "1 to 50 job ids, comma-separated",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewEligibilityDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: no id, more than 50, or one not a UUID"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: the caller is not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Whether the caller may review each of their jobs, and why not",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/job/{jobId}": {
       "get": {
         "operationId": "ReviewsController_forJob",
@@ -3411,11 +3460,14 @@
           "401": {
             "description": "sign_in_required"
           },
+          "403": {
+            "description": "own_garage: staff of the job’s garage"
+          },
           "404": {
             "description": "not_found: not the caller’s job"
           },
           "409": {
-            "description": "job_not_done; email_not_confirmed; review_exists"
+            "description": "job_not_done; already_reviewed; review_removed; email_not_confirmed"
           },
           "422": {
             "description": "validation_failed: rating, paidBani or text out of range, named in errors"
@@ -11936,6 +11988,35 @@
           "declinedAt"
         ]
       },
+      "ReviewEligibilityDto": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "offer": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "not_found",
+              "job_not_done",
+              "own_garage",
+              "already_reviewed",
+              "review_removed",
+              "email_not_confirmed"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "jobId",
+          "offer",
+          "reason"
+        ]
+      },
       "DriverNameDto": {
         "type": "object",
         "properties": {
@@ -12052,6 +12133,9 @@
                 "$ref": "#/components/schemas/ReviewDto"
               }
             ]
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/ReviewEligibilityDto"
           }
         },
         "required": [
@@ -12062,7 +12146,8 @@
           "jobs",
           "emailConfirmed",
           "hasEmail",
-          "existing"
+          "existing",
+          "eligibility"
         ]
       },
       "PublishReviewDto": {

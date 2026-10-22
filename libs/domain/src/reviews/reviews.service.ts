@@ -4,27 +4,29 @@ import {
   type PublishReviewDto,
   REVIEW_TEXT_MAX,
   type ReviewDto,
+  type ReviewEligibilityDto,
 } from '@motor-fix/contracts';
 import {
-  HttpException,
   HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
+import {
+  LIVE,
+  ReviewEligibility,
+  refusalOf,
+  type Verdict,
+} from './eligibility/eligibility';
 import { recordReviewPosted } from './reviews.metrics';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
 import { refusal, taken } from '../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
-import type { PrismaClient, Review } from '../generated/prisma/client';
+import type { Job, PrismaClient, Review } from '../generated/prisma/client';
 import { garageRef, jobsOf, shortName, snapshotOf } from '../quotes/reads';
-
-// The statuses that hold a job's one review; the migration's review_one_live
-// index lists the same three.
-const LIVE = ['published', 'reported', 'removed'] as const;
 
 const reviewOf = (review: Review): ReviewDto => ({
   id: review.id,
@@ -36,11 +38,11 @@ const reviewOf = (review: Review): ReviewDto => ({
   text: review.text,
 });
 
-const conflict = (
-  code: string,
-  message: string,
-  extra?: { entity: string; currentStatus: string },
-) => new HttpException({ code, message, ...extra }, HttpStatus.CONFLICT);
+const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
+  jobId,
+  offer,
+  reason,
+});
 
 // A driver reviews their own finished job, once.
 @Injectable()
@@ -49,7 +51,17 @@ export class ReviewsService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly eligible: ReviewEligibility,
   ) {}
+
+  // Each id once, in the order first asked.
+  async eligibility(
+    actor: Actor,
+    jobIds: string[],
+  ): Promise<ReviewEligibilityDto[]> {
+    const verdicts = await this.eligible.judge(actor, [...new Set(jobIds)]);
+    return verdicts.map(dtoOf);
+  }
 
   async read(actor: Actor, jobId: string): Promise<JobReviewContextDto> {
     const job = await this.prisma.job.findFirst({
@@ -74,10 +86,14 @@ export class ReviewsService {
       where: { driverId: actor.accountId, id: jobId },
     });
     if (!job) throw new NotFoundException();
-    const existing = await this.live(jobId);
+    const [existing, [verdict]] = await Promise.all([
+      this.live(jobId),
+      this.eligible.judge(actor, [jobId]),
+    ]);
     return {
       author: { shortName: shortName(job.driver.name) },
       car: snapshotOf(job.booking.request),
+      eligibility: dtoOf(verdict),
       emailConfirmed: Boolean(job.driver.email && job.driver.emailVerifiedAt),
       existing: existing && reviewOf(existing),
       garage: garageRef(job.garage),
@@ -88,14 +104,7 @@ export class ReviewsService {
   }
 
   async publish(actor: Actor, dto: PublishReviewDto): Promise<ReviewDto> {
-    const en = actor.language === 'en';
-    const job = await this.prisma.job.findFirst({
-      include: { driver: { select: { email: true, emailVerifiedAt: true } } },
-      where: { driverId: actor.accountId, id: dto.jobId },
-    });
-    if (!job) throw new NotFoundException();
-    refuseJob(job, en);
-    await this.refuseExisting(dto.jobId, en);
+    const job = await this.refuse(actor, dto.jobId);
     judge(dto);
     try {
       const review = await this.prisma.$transaction(async (tx) => {
@@ -142,54 +151,25 @@ export class ReviewsService {
       return reviewOf(review);
     } catch (error) {
       // Another post for the job committed between the check and the insert.
-      if (taken(error)) await this.refuseExisting(dto.jobId, en);
+      if (taken(error)) await this.refuse(actor, dto.jobId);
       throw error;
     }
+  }
+
+  // Throws the first reason the caller may not review the job, counted.
+  private async refuse(actor: Actor, jobId: string) {
+    const [verdict] = await this.eligible.judge(actor, [jobId]);
+    const { job, reason } = verdict;
+    // A verdict with no reason is always of a job found.
+    if (reason === null) return job as Job;
+    if (reason !== 'not_found') recordReviewPosted(reason);
+    throw refusalOf({ ...verdict, reason }, actor.language);
   }
 
   private live(jobId: string) {
     return this.prisma.review.findFirst({
       where: { jobId, status: { in: [...LIVE] } },
     });
-  }
-
-  private async refuseExisting(jobId: string, en: boolean) {
-    const existing = await this.live(jobId);
-    if (!existing) return;
-    recordReviewPosted('review_exists');
-    throw conflict(
-      'review_exists',
-      en ? 'This job already has your review' : 'Lucrarea are deja recenzia ta',
-      { currentStatus: existing.status, entity: 'review' },
-    );
-  }
-}
-
-type JobForReview = {
-  status: string;
-  driver: { email: string | null; emailVerifiedAt: Date | null };
-};
-
-// A job is reviewed once it is done, by an account whose e-mail is confirmed.
-function refuseJob(job: JobForReview, en: boolean) {
-  if (job.status !== 'done') {
-    recordReviewPosted('job_not_done');
-    throw conflict(
-      'job_not_done',
-      en
-        ? 'A job is reviewed once it is done'
-        : 'O lucrare se evaluează după ce e gata',
-      { currentStatus: job.status, entity: 'job' },
-    );
-  }
-  if (!job.driver.email || !job.driver.emailVerifiedAt) {
-    recordReviewPosted('email_not_confirmed');
-    throw conflict(
-      'email_not_confirmed',
-      en
-        ? 'Confirm your e-mail address to publish a review'
-        : 'Confirmă-ți adresa de e-mail ca să publici recenzia',
-    );
   }
 }
 

@@ -212,6 +212,7 @@ export type { RequestPlatformRuleChangeDto } from './models/request-platform-rul
 export type { RequestSummaryDto } from './models/request-summary-dto';
 export type { ResponseRateDto } from './models/response-rate-dto';
 export type { ReviewDto } from './models/review-dto';
+export type { ReviewEligibilityDto } from './models/review-eligibility-dto';
 export type { ReviewJobDto } from './models/review-job-dto';
 export type { SavedGarageBrandDto } from './models/saved-garage-brand-dto';
 export type { SavedGarageDto } from './models/saved-garage-dto';

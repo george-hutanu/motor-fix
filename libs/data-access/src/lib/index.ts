@@ -218,6 +218,7 @@ export type { RequestPlatformRuleChangeDto } from './models/request-platform-rul
 export type { RequestSummaryDto } from './models/request-summary-dto';
 export type { ResponseRateDto } from './models/response-rate-dto';
 export type { ReviewDto } from './models/review-dto';
+export type { ReviewEligibilityDto } from './models/review-eligibility-dto';
 export type { ReviewJobDto } from './models/review-job-dto';
 export type { SavedGarageBrandDto } from './models/saved-garage-brand-dto';
 export type { SavedGarageDto } from './models/saved-garage-dto';
@@ -522,6 +523,8 @@ export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
+export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';
+export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
 export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
 export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
 export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';

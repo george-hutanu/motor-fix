@@ -354,7 +354,6 @@
     "email": "Confirmă‑ți adresa de e‑mail ca să publici recenzia.",
     "existing": {
       "postedAt": "Publicată pe {date}",
-      "removed": "Recenzia a fost scoasă de pe profil.",
       "reported": "Recenzia a fost raportată și e în verificare.",
       "title": "Recenzia ta"
     },
@@ -372,6 +371,7 @@
     "notDone": "Poți scrie o recenzie după ce lucrarea e gata.",
     "notFound": "Nu am găsit lucrarea.",
     "optional": "opțional",
+    "ownGarage": "Nu poți scrie o recenzie pentru propriul service.",
     "paid": "Cât ai plătit",
     "paidHint": "890 lei",
     "privacy": "Apar doar {name}, mașina și lucrarea. Niciodată numărul de înmatriculare sau telefonul.",
@@ -386,6 +386,7 @@
       "group": "Notă de la 1 la 5",
       "label": "Nota ta"
     },
+    "removed": "Recenzia ta a fost ștearsă de MotorFix; poți doar contesta decizia.",
     "resend": "Trimite din nou linkul",
     "resent": "Ți‑am trimis din nou linkul.",
     "retry": "Încearcă din nou",

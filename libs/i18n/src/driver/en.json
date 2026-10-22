@@ -349,7 +349,6 @@
     "email": "Confirm your e-mail address to post the review.",
     "existing": {
       "postedAt": "Posted on {date}",
-      "removed": "The review was taken off the profile.",
       "reported": "The review was reported and is being checked.",
       "title": "Your review"
     },
@@ -367,6 +366,7 @@
     "notDone": "You can write a review once the job is done.",
     "notFound": "We couldn't find the job.",
     "optional": "optional",
+    "ownGarage": "You cannot review your own garage.",
     "paid": "What you paid",
     "paidHint": "890 lei",
     "privacy": "Only {name}, your car and the job are shown. Never your plate or phone number.",
@@ -381,6 +381,7 @@
       "group": "Rating from 1 to 5",
       "label": "Your rating"
     },
+    "removed": "MotorFix removed your review; you can only appeal the decision.",
     "resend": "Send the link again",
     "resent": "We sent the link again.",
     "retry": "Try again",
