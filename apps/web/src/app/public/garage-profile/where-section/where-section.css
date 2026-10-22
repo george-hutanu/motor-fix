@@ -23,6 +23,7 @@ p {
   overflow-wrap: anywhere;
 }
 
+.address,
 .area {
   color: var(--mf-text-secondary);
 }
