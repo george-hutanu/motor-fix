@@ -40,11 +40,12 @@ function hydrationErrors(page: Page) {
 const PROFILE = '/ro/garages/service-auto-militari?brand=dacia';
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
-// Reads only the browser makes, by design: the maintenance flag must be
-// fresh, Home's count is never read on the server, and the live stream and
-// the profile view belong to the open page.
+// Reads only the browser makes, by design: the maintenance flag and the copy
+// voices must be fresh, Home's count is never read on the server, and the
+// live stream and the profile view belong to the open page.
 const BROWSER_ONLY = [
   /^GET \/api\/v1\/platform-status$/,
+  /^GET \/api\/v1\/copy-voices$/,
   /^GET \/api\/v1\/home$/,
   /^GET \/api\/v1\/live\/public$/,
   /^POST \/api\/v1\/garages\/[^/]+\/views$/,
@@ -54,7 +55,11 @@ const outside = (seen: Read[]) =>
     .map(({ method, path }) => `${method} ${path}`)
     .filter((read) => !BROWSER_ONLY.some((allowed) => allowed.test(read)));
 // The browser-only reads a page makes once: a second one is a repeated read.
-const ONCE = ['GET /api/v1/platform-status', 'GET /api/v1/home'];
+const ONCE = [
+  'GET /api/v1/platform-status',
+  'GET /api/v1/copy-voices',
+  'GET /api/v1/home',
+];
 const repeated = (seen: Read[]) =>
   ONCE.filter(
     (once) =>
