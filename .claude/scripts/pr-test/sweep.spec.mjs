@@ -264,6 +264,7 @@ describe('signing in from a QA flow', () => {
     return { added, scripts, addCookies: async (cookies) => added.push(...cookies), addInitScript: async (fn, arg) => scripts.push([fn, arg]) };
   };
   // What the context's init scripts leave in a fresh page's localStorage.
+  const PINNED_VOICE = JSON.stringify({ enabled: [1, 2, 3, 4, 5], pinned: 1 });
   const storedBy = (context) => {
     const store = new Map();
     const saved = globalThis.localStorage;
@@ -331,7 +332,17 @@ describe('signing in from a QA flow', () => {
     assert.deepEqual(opened, [contextOptions(owner), contextOptions(visitor)]);
     assert.equal(storedBy(ownerContext)['mf-role'], 'garage');
     assert.equal(storedBy(ownerContext)['mf.lang'], 'en');
-    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro' });
+    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro', 'mf-copy-voices': PINNED_VOICE });
+  });
+
+  // Home shows one of five copy voices, shuffled per load: a shot of one beside the baseline's of another is a
+  // change nobody made, so every swept context opens with the same voice pinned, as an admin would pin it.
+  it('pins the copy voice in every swept context, so Home shows the same hero in every run', async () => {
+    const browser = { newContext: async () => fakeContext() };
+    for (const run of matrix({ routes: ['/', '/:lang/list-your-garage@garage'], schemes: ['light'], langs: ['ro', 'en'] })) {
+      const settings = JSON.parse(storedBy(await openContext(browser, run))['mf-copy-voices']);
+      assert.deepEqual(settings, { enabled: [1, 2, 3, 4, 5], pinned: 1 });
+    }
   });
 
   it('refuses a call with no role, and a run with no session', async () => {
