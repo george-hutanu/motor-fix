@@ -95,6 +95,10 @@ describe('the constitution card', () => {
     assert.match(readFileSync(CARD, 'utf8'), /\*\*II\. Test Discipline\*\*[^\n]*no mutation run in a task/);
   });
 
+  it('names the spec that keeps it in step with the constitution', () => {
+    assert.match(readFileSync(CARD, 'utf8').replace(/\s+/g, ' '), /`constitution-card\.spec\.mjs` checks it/);
+  });
+
   it('stays a card', () => {
     const bytes = Buffer.byteLength(readFileSync(CARD, 'utf8'));
     assert.ok(bytes <= MAX_BYTES, `${bytes} bytes, above ${MAX_BYTES}`);
