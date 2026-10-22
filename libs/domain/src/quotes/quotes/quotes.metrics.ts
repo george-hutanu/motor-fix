@@ -156,3 +156,26 @@ export function recordBookingLapse(
 ) {
   bookingLapses().add(1, { request, sweep: String(sweep) });
 }
+
+// Each request or booking a closed account's clean-up found open, by what
+// happened to it; never whose.
+export const ACCOUNT_CLOSED_SERIES = [
+  { kind: 'request', outcome: 'closed' },
+  { kind: 'request', outcome: 'skipped' },
+  { kind: 'request', outcome: 'failed' },
+  { kind: 'booking', outcome: 'cancelled' },
+  { kind: 'booking', outcome: 'skipped' },
+] as const;
+type AccountClosedSeries = (typeof ACCOUNT_CLOSED_SERIES)[number];
+
+export const accountClosedCleanups = () =>
+  meter().createCounter('motorfix_account_closed_cleanups_total', {
+    description:
+      'Requests and bookings a deleted or suspended account left open, by what the clean-up did',
+  });
+
+export function recordAccountClosedCleanup<
+  K extends AccountClosedSeries['kind'],
+>(kind: K, outcome: Extract<AccountClosedSeries, { kind: K }>['outcome']) {
+  accountClosedCleanups().add(1, { kind, outcome });
+}

@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 194-email-sending
   - 195-message-templates
@@ -39,6 +39,7 @@ features:
   - 1190-live-reconnects
   - 1352-catalogue-job-visibility
   - 389-confirm-booking-lift-mechanic
+  - 428-close-on-account-closed
 ---
 
 # Capability: Notifications
@@ -777,6 +778,18 @@ _From 389-confirm-booking-lift-mechanic._
 ### 389-FR-013 — `booking.confirmed` and `booking.lapsed` MUST each have one registered consumer in the notifications worker: for `booking.confirmed`, one BOOKING_CONFIRMED to the driver (the catalogue's `bookings` group, always sent) with the templates bell and push "Programare confirmată · <garage> · <slot>" / "Booking confirmed · <garage> · <slot>", e-mail subject "Programare confirmată: <garage>, <slot>" / "Booking confirmed: <garage>, <slot>", opening on Cererile mele; for `booking.lapsed`, one BOOKING_LAPSED to the driver, "Service‑ul nu a confirmat. Alege altă ofertă." / "The garage did not confirm. Choose another quote." (bell, push, e-mail subject "Programarea nu a fost confirmată" / "The booking was not confirmed"), opening on Cererile mele, and one per owner and receptionist of the garage, "Programarea lui <driver> a expirat neconfirmată" / "<driver>'s booking lapsed unconfirmed", opening on Oferte trimise; each built at most once per booking and recipient when the event is delivered again. QUOTE_LOST for the losing garages is #147's and is not built here.
 
 _From 389-confirm-booking-lift-mechanic._
+
+### 428-FR-009 — The notifications module MUST react to `request.cancelled` with a fan-out that sends REQUEST_CANCELLED, with the param `reason`, once to every owner and receptionist of each garage in `garageIds`, keyed by the outbox event id; mechanics and the driver are never told.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-010 — The notifications module MUST react to `booking.cancelled` with reason `driver_account_closed` with a fan-out that sends BOOKING_CANCELLED once to every owner and receptionist of the booking's garage and to the booking's mechanic when that mechanic has an account, keyed by the outbox event id; the driver is not told. A `booking.cancelled` with another reason (the cancellation stories' own) is left to its owning story.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-011 — REQUEST_CANCELLED and BOOKING_CANCELLED render through the existing templates; where the owning story (#147 for REQUEST_CANCELLED; #1258 and #203 for BOOKING_CANCELLED) has not written texts yet, the generic bell and e-mail text fills in, as 195-FR-010 allows. The garages are told at any time: quiet hours do not hold a booking change.
+
+_From 428-close-on-account-closed._
 
 ## Retired
 

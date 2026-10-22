@@ -1,5 +1,8 @@
 import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
+  ACCOUNT_CLOSED_CONSUMER,
+  AccountClosedModule,
+  BOOKING_CANCELLED_CONSUMER,
   BOOKING_CONFIRMED_CONSUMER,
   BOOKING_LAPSED_CONSUMER,
   BOOKING_TIMERS_CONSUMER,
@@ -25,6 +28,7 @@ import {
   QUOTE_ACCEPTED_CONSUMER,
   QUOTE_DECLINED_CONSUMER,
   QUOTE_RECEIVED_CONSUMER,
+  REQUEST_CANCELLED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
   RemindersModule,
   reminderDayMs,
@@ -80,6 +84,8 @@ export function workerModule(
       OutboxRelayModule.register({
         cdn: bunnyConfig(process.env),
         consumers: [
+          ACCOUNT_CLOSED_CONSUMER,
+          BOOKING_CANCELLED_CONSUMER,
           BOOKING_CONFIRMED_CONSUMER,
           BOOKING_LAPSED_CONSUMER,
           BOOKING_TIMERS_CONSUMER,
@@ -92,6 +98,7 @@ export function workerModule(
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,
           QUOTE_DECLINED_CONSUMER,
+          REQUEST_CANCELLED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
           supportMessagesConsumer(support),
           VERIFICATION_RESULT_CONSUMER,
@@ -103,6 +110,11 @@ export function workerModule(
       RemindersModule.registerWorker({
         daily: dailyTasks(email.webUrl),
         dayMs: reminderDayMs(env.APP_ENV, process.env),
+        notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Closes a deleted or suspended driver's requests and bookings.
+      AccountClosedModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
       }),

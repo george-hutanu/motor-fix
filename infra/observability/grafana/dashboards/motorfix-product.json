@@ -4269,7 +4269,7 @@
       "gridPos": {
         "h": 4,
         "w": 12,
-        "x": 0,
+        "x": 6,
         "y": 192
       },
       "targets": [
@@ -4281,6 +4281,38 @@
           },
           "expr": "sum by (change) (increase(motorfix_copy_voice_changes_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{change}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 148,
+      "type": "stat",
+      "title": "Closed accounts cleaned up, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 192
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, outcome) (increase(motorfix_account_closed_cleanups_total{deployment_environment=\"$env\"}[24h]))",
+          "legendFormat": "{{kind}} {{outcome}}"
         }
       ],
       "fieldConfig": {

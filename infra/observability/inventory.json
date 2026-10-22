@@ -1734,6 +1734,54 @@
       "story": "ST-389"
     },
     {
+      "kind": "queue",
+      "name": "account-closed",
+      "source": "libs/domain/src/quotes/account-closed/account-closed.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's account.deleted and account.suspended events; one AccountClosed log line per event naming the account id and the requests closed, skipped and failed and the bookings cancelled and skipped; a request that fails is retried with the job (3 tries) and worker-jobs-failed fires on the last; the outcomes are counted by motorfix_account_closed_cleanups_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-428"
+    },
+    {
+      "kind": "queue",
+      "name": "request-cancelled",
+      "source": "libs/domain/src/notifications/request-cancelled/request-cancelled.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the request id and how many of the garages' owners and receptionists were told; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-428"
+    },
+    {
+      "kind": "queue",
+      "name": "booking-cancelled",
+      "source": "libs/domain/src/notifications/booking-cancelled/booking-cancelled.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the booking id and how many were told, the garage's owners and receptionists and the booked mechanic; only a closed driver account's cancellations are sent from here; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-428"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_account_closed_cleanups_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each request a closed driver account left open by outcome (closed, skipped because its booking had started, failed) and each booking by outcome (cancelled, skipped); a count has nothing to alert on, and a failed clean-up is the account-closed job failing, which worker-jobs-failed watches",
+      "story": "ST-428"
+    },
+    {
       "kind": "endpoint",
       "name": "booking-confirm",
       "source": "libs/domain/src/quotes/confirm/confirm.controller.ts",

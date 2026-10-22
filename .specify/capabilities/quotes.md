@@ -18,6 +18,7 @@ features:
   - 389-confirm-booking-lift-mechanic
   - 314-accept-quote
   - 009-copy-voice-analytics
+  - 428-close-on-account-closed
 ---
 
 # Capability: Quotes
@@ -717,6 +718,46 @@ _From 009-copy-voice-analytics._
 ### 009-FR-012 — Tests MUST cover, in Jest: `copy_voice` stored on a request and on a draft from a body value 1–5; 0, 7, a text and null stored as empty with the call answered as before; a draft created after a form opened by its own address carrying no voice; a request body without consent carrying no `copyVoice`; the wrapper sending nothing without consent; `home_visit` sent once for a Home load that took a voice and not for one that kept it; the 30-day counts per voice on real PostgreSQL (inside and outside the window, a submitted draft counted, a voiceless row counted nowhere). In Playwright, end to end: with consent given, in a voice 2 visit, send a quote request and check the stored row's voice and the intercepted analytics calls (Home visit, started, sent, each with `voice` 2); repeat without consent and check no analytics call and an empty `copy_voice`.
 
 _From 009-copy-voice-analytics._
+
+### 428-FR-001 — The worker MUST consume `account.deleted` and `account.suspended` in the quotes module through one queue of its own fed by the outbox relay, keyed by the outbox event id, and MUST ignore `account.restored` (nothing is reopened).
+
+_From 428-close-on-account-closed._
+
+### 428-FR-002 — For the account the event names, the handler MUST find each open request — status `sent` or `quoted`, or `booked` whose live booking is cancellable under FR-004 or which has no live booking — and close it in its own transaction: every `waiting` recipient to `closed`, every `waiting` quote to `lost`, the accepted quote (when the booking is cancelled) to `lost`, the request to `closed` with `closed_reason` = `account_closed`; a `quoted` recipient is left `quoted`.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-003 — The same transaction MUST record one `request.cancelled` outbox event, subject the request, payload `{ requestId, reason: 'account_closed', garageIds }` where `garageIds` are the garages whose recipient was `waiting` or `quoted` at the close, audience the request's driver and those garages (`garage:{garageId}` live updates). When `garageIds` is empty (no recipient was `waiting` or `quoted`), the event is still recorded and FR-009 sends nothing.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-004 — A booking is cancellable when its status is `awaiting_confirmation` or `confirmed`, its `starts_at` is after now, and it has no job or a job in `to_do`; the handler MUST cancel it in the request's transaction: booking to `cancelled` with `cancelled_by_side` = `system` and `cancel_reason` = `driver_account_closed`, its `to_do` job to `cancelled`, and one `booking.cancelled` outbox event, subject the booking, payload `{ bookingId, requestId, garageId, reason: 'driver_account_closed' }`, audience the booking's driver, garage and mechanic.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-005 — A booking whose job is `in_work`, `paused` or `done`, or whose start is not after now, or in any other status, MUST be left unchanged together with its job and its request.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-006 — Every status change MUST be made through the existing transition services, so each writes one audit entry with actor `system` (actor id none, name "MotorFix") in the same transaction (220-FR-011), and the booking's cancel reason is audited as the cancellation stories audit it.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-007 — The handler MUST be idempotent: it writes nothing for a row already `closed` or `cancelled`, so a second delivery of the same event writes no row, audit entry, event or message; the outbox relay's per-event job id and the notification module's per-event idempotency key keep the messages from doubling.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-008 — A failure in one request's transaction MUST NOT undo the others; the job MUST finish the remaining requests, then fail so the queue retries it (3 attempts, exponential backoff), and a final failure MUST be logged as the worker logs final failures (876-FR-007), which the existing failed-jobs alert reports.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-012 — The handler MUST report one counter of clean-up outcomes labelled by record kind (`request`, `booking`) and outcome (`closed`/`cancelled`, `skipped`, `failed`; `skipped` = found open and left alone by FR-005) with no other label (876-FR-011), one log line per handled event, written also when nothing was open, naming the account's subject id and the counts (no personal data), and MUST run inside the worker's job span; the new queue MUST be listed in `infra/observability/inventory.json` with its dashboard and alerts (the queue backlog, growing and failed-jobs alerts), the inventory check passing.
+
+_From 428-close-on-account-closed._
+
+### 428-FR-013 — Tests MUST cover, in Jest on real PostgreSQL and Redis where rows are written: scenarios 1–7 of the story (one request with two waiting and one quoted recipient; a confirmed future booking with a `to_do` job; a started job left alone; `account.suspended` identical; `account.restored` does nothing; a second delivery writes nothing; nothing open writes nothing), only future bookings cancelled, the reason values, the audit entries with actor `system`, the two fan-outs' recipients and their idempotency, and one failing request not undoing the others; every test file carries its `// @traces` line. The end-to-end Playwright scenario of the Build brief (a driver deletes the account from the web app) waits for #235, which builds the delete; this story's tests use a stand-in event, since nothing emits the two events yet.
+
+_From 428-close-on-account-closed._
 
 ## Retired
 
