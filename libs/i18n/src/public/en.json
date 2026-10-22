@@ -930,6 +930,7 @@
   },
   "verificationStatus": {
     "approved": "Approved, on the map",
+    "complete": "Complete",
     "inReview": "Under review",
     "items": {
       "address": "The address",

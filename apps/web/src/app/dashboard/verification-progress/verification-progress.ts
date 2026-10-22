@@ -7,6 +7,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { GaragesService } from '@motor-fix/data-access/services/garages.service';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -20,8 +21,9 @@ import { Live } from '../live';
 import { garageOf, Session } from '../session';
 
 // The dashboard of a garage still waiting for approval: where its file
-// stands, read again whenever an admin opens, decides or reopens it. Only the
-// owner reads the file; the rest of the staff are told it is being checked.
+// stands, read again whenever an admin opens, decides or reopens it and
+// whenever it is sent again. Only the owner reads the file and answers a
+// request for more; the rest of the staff are told it is being checked.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, VerificationStages],
@@ -34,6 +36,7 @@ export class VerificationProgress {
   private readonly i18n = inject(I18n);
   private readonly live = inject(Live);
   private readonly overlays = inject(Overlays);
+  private readonly router = inject(Router);
   private readonly session = inject(Session);
 
   private readonly garage = computed(() => garageOf(this.session.current()));
@@ -53,6 +56,7 @@ export class VerificationProgress {
         'verification.opened',
         'verification.decided',
         'verification.reopened',
+        'verification.submitted',
       ]),
       goneOn: [],
       resync: this.live.resync,
@@ -83,6 +87,11 @@ export class VerificationProgress {
         shown = status;
       });
     });
+  }
+
+  // The form opens over the garage's saved listing.
+  protected complete() {
+    void this.router.navigateByUrl('/list-your-garage');
   }
 
   protected contact() {

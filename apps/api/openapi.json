@@ -16311,6 +16311,11 @@
               "type": "string"
             }
           },
+          "note": {
+            "type": "string",
+            "description": "The admin's note to a request for more; null otherwise",
+            "nullable": true
+          },
           "reason": {
             "description": "Only for a rejection",
             "nullable": true,
@@ -16326,6 +16331,7 @@
           "status",
           "submittedAt",
           "requestedItems",
+          "note",
           "reason"
         ]
       },

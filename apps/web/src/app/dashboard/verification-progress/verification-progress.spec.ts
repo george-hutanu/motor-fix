@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import type {
   EventKind,
   LiveMessage,
@@ -70,6 +71,7 @@ const answer = (
   value: VerificationStatusDto['status'],
   extra: Partial<VerificationStatusDto> = {},
 ): VerificationStatusDto => ({
+  note: null,
   reason: null,
   requestedItems: [],
   status: value,
@@ -106,6 +108,7 @@ async function render({
       { provide: Live, useValue: live },
       { provide: Overlays, useValue: overlays },
       { provide: Session, useValue: { current: me, reload, shown: me } },
+      provideRouter([]),
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -372,8 +375,8 @@ describe('the verification page, following the file', () => {
     expect(api.verificationStatusControllerRead).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 101-FR-003
-  it('lists what more was asked for in the order the admin chose, with no button', async () => {
+  // @traces 101-FR-003 208-FR-002
+  it('lists what more was asked for in the order the admin chose, with Completează the one button', async () => {
     api.verificationStatusControllerRead.mockResolvedValue(
       answer('more_requested', { requestedItems: ['rar', 'photos'] }),
     );
@@ -385,7 +388,7 @@ describe('the verification page, following the file', () => {
       'Autorizația RAR',
       'Fotografiile',
     ]);
-    expect(buttons(host)).toHaveLength(0);
+    expect(buttons(host).map(text)).toEqual(['Completează']);
   });
 
   // @traces 101-FR-004
@@ -439,6 +442,126 @@ describe('the verification page, following the file', () => {
   });
 });
 
+const NOTE =
+  'Fotografiile nu arată atelierul. Adaugă 3 fotografii din interior.';
+const asked = (extra: Partial<VerificationStatusDto> = {}) =>
+  answer('more_requested', {
+    note: NOTE,
+    requestedItems: ['photos'],
+    ...extra,
+  });
+
+describe('the verification page, on a request for more', () => {
+  // @traces 208-FR-002
+  it('lists the items, gives the note word for word and offers Completează', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(asked());
+
+    const { host } = await render();
+
+    expect(current(host)).toBe('Cerute completări');
+    expect([...host.querySelectorAll('.items li')].map(text)).toEqual([
+      'Fotografiile',
+    ]);
+    expect(text(host.querySelector('.note'))).toBe(NOTE);
+    const complete = button(host, 'Completează');
+    expect(complete).not.toBeNull();
+    expect(complete?.hasAttribute('hlmBtn')).toBe(true);
+    expect(complete?.getAttribute('type')).toBe('button');
+    expect(complete?.disabled).toBe(false);
+    expect(complete?.getAttribute('tabindex')).toBeNull();
+  });
+
+  // @traces 208-FR-002
+  it('says it in English', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(asked());
+
+    const { host } = await render({ language: 'en' });
+
+    expect(current(host)).toBe('More details requested');
+    expect([...host.querySelectorAll('.items li')].map(text)).toEqual([
+      'The photos',
+    ]);
+    expect(text(host.querySelector('.note'))).toBe(NOTE);
+    expect(button(host, 'Complete')).not.toBeNull();
+  });
+
+  // @traces 208-FR-002
+  it('shows the note and the button with no list when no item was named', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(
+      asked({ requestedItems: [] }),
+    );
+
+    const { host } = await render();
+
+    expect(host.querySelector('.items')).toBeNull();
+    expect(text(host.querySelector('.note'))).toBe(NOTE);
+    expect(button(host, 'Completează')).not.toBeNull();
+  });
+
+  // @traces 208-FR-002
+  it('opens the listing form on Completează', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(asked());
+    const { host } = await render();
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+
+    button(host, 'Completează')?.click();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(String(navigate.mock.calls[0]?.[0])).toBe('/list-your-garage');
+  });
+
+  // @traces 208-FR-002
+  it.each(['submitted', 'in_review', 'rejected', 'approved'] as const)(
+    'offers no note and no Completează on a %s file',
+    async (status) => {
+      api.verificationStatusControllerRead.mockResolvedValue(
+        answer(status, {
+          reason:
+            status === 'rejected' ? { code: 'rar', note: 'Expirată.' } : null,
+        }),
+      );
+
+      const { host } = await render();
+
+      expect(button(host, 'Completează')).toBeNull();
+      expect(text(host)).not.toContain(NOTE);
+    },
+  );
+
+  // @traces 208-FR-002
+  it('brings the request to an open page on a decision, without a reload', async () => {
+    const { fixture, host } = await render();
+    expect(button(host, 'Completează')).toBeNull();
+    api.verificationStatusControllerRead.mockResolvedValue(asked());
+
+    await emit(fixture, 'verification.decided');
+
+    expect(text(host.querySelector('.note'))).toBe(NOTE);
+    expect(button(host, 'Completează')).not.toBeNull();
+  });
+
+  // @traces 208-FR-009
+  it('reads again when the file is sent again and shows Trimis with no request', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(asked());
+    const { fixture, host } = await render();
+    const resent = '2027-03-09T10:00:00.000Z';
+    api.verificationStatusControllerRead.mockResolvedValue(
+      answer('submitted', { submittedAt: resent }),
+    );
+
+    const started = Date.now();
+    await emit(fixture, 'verification.submitted');
+
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(api.verificationStatusControllerRead).toHaveBeenCalledTimes(2);
+    expect(current(host)).toBe('Trimis · 9 mart. 2027');
+    expect(button(host, 'Completează')).toBeNull();
+    expect(host.querySelector('.note')).toBeNull();
+  });
+});
+
 describe('the verification page, for the garage staff', () => {
   // @traces 101-FR-008
   it.each(['receptionist', 'mechanic'] as const)(
@@ -455,6 +578,20 @@ describe('the verification page, for the garage staff', () => {
       expect(host.querySelector('.skeleton')).toBeNull();
       expect(text(host)).not.toContain(TEXT.ro.loadFailed);
       expect(api.verificationStatusControllerRead).not.toHaveBeenCalled();
+    },
+  );
+
+  // @traces 208-FR-002
+  it.each(['receptionist', 'mechanic'] as const)(
+    'gives a %s no note and no Completează while more is asked for',
+    async (role) => {
+      api.verificationStatusControllerRead.mockResolvedValue(asked());
+
+      const { host } = await render({ role });
+
+      expect(button(host, 'Completează')).toBeNull();
+      expect(text(host)).not.toContain(NOTE);
+      expect(host.querySelector('.items')).toBeNull();
     },
   );
 

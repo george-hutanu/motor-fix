@@ -1804,9 +1804,7 @@ describe('the approval note', () => {
       where: { fileId_kind: { fileId, kind: kind as never } },
     });
   const drop = (verificationFileId: string, kind: string) =>
-    prisma.legalDocument.delete({
-      where: { verificationFileId_kind: { kind, verificationFileId } },
-    });
+    prisma.legalDocument.deleteMany({ where: { kind, verificationFileId } });
   const missingOn = async () =>
     (await history(garageId)).find(
       (entry) => entry.field === 'verificationMissing',

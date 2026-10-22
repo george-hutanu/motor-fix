@@ -11,6 +11,10 @@ import {
   Min,
 } from 'class-validator';
 
+import {
+  DOCUMENT_KINDS,
+  type DocumentKind,
+} from './legal-documents/legal-documents';
 import type { ListingDraftData } from './listing-sections';
 
 const LANGUAGES = ['ro', 'en'] as const;
@@ -125,6 +129,38 @@ export class ListingDraftDto {
 
   @ApiProperty({ format: 'date-time' })
   updatedAt!: string;
+}
+
+export class HeldDocumentDto {
+  @ApiProperty({ enum: DOCUMENT_KINDS })
+  kind!: DocumentKind;
+
+  @ApiProperty({ minimum: 1, type: 'integer' })
+  pages!: number;
+
+  @ApiProperty({ format: 'date', nullable: true, type: String })
+  issuedOn!: string | null;
+}
+
+// A live garage read back into the form's shape, to answer a request for more.
+export class CompletionCopyDto extends ListingDraftDto {
+  @ApiProperty({ description: "This browser's key to the copy" })
+  token!: string;
+
+  @ApiProperty({
+    description: 'What the request for more asks for',
+    type: [String],
+  })
+  requestedItems!: string[];
+
+  @ApiProperty({ description: 'Saved at least once since it was opened' })
+  edited!: boolean;
+
+  @ApiProperty({
+    description: 'The documents on file, one per kind',
+    type: [HeldDocumentDto],
+  })
+  held!: HeldDocumentDto[];
 }
 
 export class ContinueLinkSentDto {

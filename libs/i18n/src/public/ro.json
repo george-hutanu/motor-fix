@@ -947,6 +947,7 @@
   },
   "verificationStatus": {
     "approved": "Aprobat, pe hartă",
+    "complete": "Completează",
     "inReview": "În verificare",
     "items": {
       "address": "Adresa",
