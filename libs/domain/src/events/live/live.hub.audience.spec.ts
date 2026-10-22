@@ -167,7 +167,6 @@ describe('who a live event reaches', () => {
       'price_list.updated',
       'catalogue_job.decided',
       'garage.settings_changed',
-      'garage.features_changed',
       'member.joined',
       'mechanic.updated',
       'review.posted',
@@ -188,6 +187,34 @@ describe('who a live event reaches', () => {
 
     expect(receptionist.kinds()).toEqual(shown);
     expect(owner.kinds()).toEqual([...hidden, ...shown]);
+  });
+
+  // @traces 398-FR-008
+  it('gives a feature switch change to the owner, a receptionist and a mechanic of the garage, never to another garage', async () => {
+    const owner = staff('ion', 'garage');
+    const receptionist = staff('maria', 'receptionist');
+    const mechanic = staff('elena', 'mechanic', 'm1');
+    const elsewhere = open('zoe', 'garage', ['garage:g2'], 'g2');
+
+    await fanOut(['garage:g1'], 'garage.features_changed');
+
+    for (const sink of [owner, receptionist, mechanic]) {
+      expect(sink.kinds()).toEqual(['garage.features_changed']);
+    }
+    expect(elsewhere.kinds()).toEqual([]);
+  });
+
+  // @traces 398-FR-008
+  it('keeps the garage settings change with the owner alone', async () => {
+    const owner = staff('ion', 'garage');
+    const receptionist = staff('maria', 'receptionist');
+    const mechanic = staff('elena', 'mechanic', 'm1');
+
+    await fanOut(['garage:g1'], 'garage.settings_changed');
+
+    expect(owner.kinds()).toEqual(['garage.settings_changed']);
+    expect(receptionist.kinds()).toEqual([]);
+    expect(mechanic.kinds()).toEqual([]);
   });
 
   it("forwards no media event to the staff of a garage that switched live media off, and still to the job's driver", async () => {
@@ -277,7 +304,11 @@ describe('the cached garage access', () => {
       await fanOut(['garage:g1'], 'request.updated');
 
       expect(load).toHaveBeenCalledTimes(2);
-      expect(mechanic.kinds()).toEqual(['request.updated']);
+      expect(mechanic.kinds()).toEqual(
+        kind === 'garage.features_changed'
+          ? [kind, 'request.updated']
+          : ['request.updated'],
+      );
     },
   );
 
@@ -350,7 +381,7 @@ describe('what each garage role hears through the garage channel', () => {
     ['member.removed', 'garage.team'],
     ['mechanic.added', 'garage.team'],
     ['invite.sent', 'garage.team'],
-    ['garage.features_changed', 'garage.feature_switches'],
+    ['garage.settings_changed', 'garage.feature_switches'],
     ['garage.updated', 'garage.profile'],
     ['review.posted', 'garage.reviews'],
     ['request.created', 'garage.requests'],
