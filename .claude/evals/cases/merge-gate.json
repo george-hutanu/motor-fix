@@ -500,5 +500,61 @@
       "exit": 2,
       "stderr": "within 0.5 s"
     }
+  },
+  {
+    "id": "merge-gate-passes-a-verified-qa-fixes-carry",
+    "hook": "pre:bash:merge-gate",
+    "why": "a lap with no blocker or high finding ends the testing; the fix commits for its medium and low findings keep its verdict and merge on green CI (Constitution VII step 5)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 2 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"fix(api): ST-9 empty list answers 200\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-qa-fixes-carry-over-a-feature-commit",
+    "hook": "pre:bash:merge-gate",
+    "why": "only a lap's fixes ride on its verdict; a feat commit is new work the PR tester has not judged",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 2 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"feat(api): ST-9 a new route\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "not a lap fix"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-qa-fixes-carry-from-a-clean-lap",
+    "hook": "pre:bash:merge-gate",
+    "why": "a lap that reported no finding left nothing to fix, so code after it needs a real lap",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"fix(api): ST-9 empty list answers 200\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no medium or low finding"
+    }
   }
 ]

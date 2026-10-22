@@ -418,6 +418,18 @@ describe('step 5', () => {
     ).toEqual([{ code, field: 'steps.5.courtesyCar.pricePerDayBani' }]);
   });
 
+  // @traces 330-FR-002
+  it('refuses a facilities note over 200 characters', () => {
+    expect(errorsOf(five({ facilitiesNote: 'a'.repeat(201) }))).toEqual([
+      { code: 'invalid', field: 'steps.5.facilitiesNote' },
+    ]);
+  });
+
+  it('asks nothing of a facilities note within the limit or absent', () => {
+    expect(errorsOf(five({ facilitiesNote: 'a'.repeat(200) }))).toEqual([]);
+    expect(errorsOf(five({ facilitiesNote: '  ' }))).toEqual([]);
+  });
+
   it('asks nothing of a free or unlisted courtesy car', () => {
     expect(
       errorsOf(

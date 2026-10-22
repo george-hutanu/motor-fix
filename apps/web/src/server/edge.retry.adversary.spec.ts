@@ -8,7 +8,7 @@ import {
   type Server,
   type ServerResponse,
 } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 
 import express from 'express';
 
@@ -25,6 +25,9 @@ const close = (server: Server) =>
   new Promise<void>((resolve) => server.close(() => resolve()));
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// One turn of the event loop: past its poll, check and close phases.
+const turn = () => new Promise((resolve) => setImmediate(resolve));
 
 type Entry = {
   level: string;
@@ -344,15 +347,39 @@ describe('web edge proxy failures and retries', () => {
 
   // @traces 1345-FR-010
   describe('a visitor who leaves', () => {
+    // Settled once the proxy has seen every visitor go and has closed each of
+    // their API requests: the API sees a close only after the proxy's own
+    // handlers for it have run. Two more turns let a retry or a log line that
+    // would follow it happen before anything is asserted.
+    const watchLeaving = (count: number) => {
+      const gone: Promise<unknown>[] = [];
+      const closed: Promise<unknown>[] = [];
+      web.on('request', (_req, res: ServerResponse) => {
+        if (gone.length < count)
+          gone.push(new Promise((resolve) => res.once('close', resolve)));
+      });
+      upstream.on('request', (req: IncomingMessage) => {
+        if (closed.length < count)
+          closed.push(new Promise((resolve) => req.once('close', resolve)));
+      });
+      return async () => {
+        while (gone.length < count || closed.length < count) await turn();
+        await Promise.all([...gone, ...closed]);
+        await turn();
+        await turn();
+      };
+    };
+
     it('is neither retried nor logged above info while the API is silent', async () => {
       behave = () => {};
+      const settled = watchLeaving(1);
       const req = httpRequest(`${base}/api/v1/slow`);
       req.on('error', () => {});
       req.end();
-      while (seen.length === 0) await pause(10);
+      while (seen.length === 0) await turn();
 
       req.destroy();
-      await pause(300);
+      await settled();
 
       expect(seen).toHaveLength(1);
       expect(entries()).toEqual([]);
@@ -363,6 +390,7 @@ describe('web edge proxy failures and retries', () => {
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         res.write('data: one\n\n');
       };
+      const settled = watchLeaving(1);
       const req = httpRequest(`${base}/api/v1/live`);
       req.on('error', () => {});
       const opened = new Promise<void>((resolve) =>
@@ -372,7 +400,38 @@ describe('web edge proxy failures and retries', () => {
       await opened;
 
       req.destroy();
-      await pause(300);
+      await settled();
+
+      expect(seen).toHaveLength(1);
+      expect(entries()).toEqual([]);
+    });
+
+    // The visitor's connection is gone but its close is not yet announced
+    // when the proxy reads the API's close: called from a timer, the API's
+    // close is read in this turn's poll phase and the visitor's announced
+    // only in its close phase, after it.
+    it('is not logged when the API closes the stream as the visitor leaves', async () => {
+      let api: Socket | undefined;
+      behave = (req, res) => {
+        api = req.socket;
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write('data: one\n\n');
+      };
+      const visitors: Socket[] = [];
+      web.on('connection', (socket: Socket) => visitors.push(socket));
+      const settled = watchLeaving(1);
+      const req = httpRequest(`${base}/api/v1/live`);
+      req.on('error', () => {});
+      const opened = new Promise<void>((resolve) =>
+        req.on('response', (res) => res.once('data', () => resolve())),
+      );
+      req.end();
+      await opened;
+      await pause(1);
+
+      for (const socket of visitors) socket.destroy();
+      api?.destroy();
+      await settled();
 
       expect(seen).toHaveLength(1);
       expect(entries()).toEqual([]);
@@ -380,16 +439,17 @@ describe('web edge proxy failures and retries', () => {
 
     it('leaves nothing in the logs after twenty visitors leave mid-flight', async () => {
       behave = () => {};
+      const settled = watchLeaving(20);
       const reqs = Array.from({ length: 20 }, (_, i) => {
         const req = httpRequest(`${base}/api/v1/slow/${i}`);
         req.on('error', () => {});
         req.end();
         return req;
       });
-      while (seen.length < 20) await pause(10);
+      while (seen.length < 20) await turn();
 
       for (const req of reqs) req.destroy();
-      await pause(300);
+      await settled();
 
       expect(seen).toHaveLength(20);
       expect(entries()).toEqual([]);

@@ -229,6 +229,7 @@
                   [problems]="stepProblems()[4]"
                   [showAll]="asked()"
                   (shown)="mark('hours', $event)"
+                  (held)="noteHeld.set($event)"
                 />
               }
             </section>

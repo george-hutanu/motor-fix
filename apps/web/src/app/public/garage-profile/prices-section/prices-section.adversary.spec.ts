@@ -29,6 +29,7 @@ const C = row('j-c', 'Lucrare C', 'Job C', 10_000, 20_000);
 const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   labour: { fromBani: 18_000, toBani: 24_000 },

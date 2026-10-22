@@ -40,8 +40,8 @@ describe('cache lifetimes', () => {
 describe('cache keys', () => {
   it('names the version and the read kind first', () => {
     expect(cacheKey('profile', 'service-auto', '-')).toBe(
-      'v1:profile:service-auto:-',
+      'v2:profile:service-auto:-',
     );
-    expect(cacheKey('popular-brands', '8')).toBe('v1:popular-brands:8');
+    expect(cacheKey('popular-brands', '8')).toBe('v2:popular-brands:8');
   });
 });

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, settleFonts, toFindings } from './sweep.mjs';
 
 describe('a sweep page\'s browser context', () => {
   it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
@@ -264,6 +264,7 @@ describe('signing in from a QA flow', () => {
     return { added, scripts, addCookies: async (cookies) => added.push(...cookies), addInitScript: async (fn, arg) => scripts.push([fn, arg]) };
   };
   // What the context's init scripts leave in a fresh page's localStorage.
+  const PINNED_VOICE = JSON.stringify({ enabled: [1, 2, 3, 4, 5], pinned: 1 });
   const storedBy = (context) => {
     const store = new Map();
     const saved = globalThis.localStorage;
@@ -331,7 +332,17 @@ describe('signing in from a QA flow', () => {
     assert.deepEqual(opened, [contextOptions(owner), contextOptions(visitor)]);
     assert.equal(storedBy(ownerContext)['mf-role'], 'garage');
     assert.equal(storedBy(ownerContext)['mf.lang'], 'en');
-    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro' });
+    assert.deepEqual(storedBy(visitorContext), { 'mf.lang': 'ro', 'mf-copy-voices': PINNED_VOICE });
+  });
+
+  // Home shows one of five copy voices, shuffled per load: a shot of one beside the baseline's of another is a
+  // change nobody made, so every swept context opens with the same voice pinned, as an admin would pin it.
+  it('pins the copy voice in every swept context, so Home shows the same hero in every run', async () => {
+    const browser = { newContext: async () => fakeContext() };
+    for (const run of matrix({ routes: ['/', '/:lang/list-your-garage@garage'], schemes: ['light'], langs: ['ro', 'en'] })) {
+      const settings = JSON.parse(storedBy(await openContext(browser, run))['mf-copy-voices']);
+      assert.deepEqual(settings, { enabled: [1, 2, 3, 4, 5], pinned: 1 });
+    }
   });
 
   it('refuses a call with no role, and a run with no session', async () => {
@@ -525,5 +536,31 @@ describe('settling canvas charts before the shot', () => {
     const body = source.slice(source.indexOf('export async function runSweep'));
     assert.ok(body.indexOf('await settleCanvases(page)') > 0);
     assert.ok(body.indexOf('await settleCanvases(page)') < body.indexOf('await page.screenshot('));
+  });
+});
+
+describe('settling web fonts before the shot', () => {
+  it('waits for the page\'s fonts to load', async () => {
+    let waited = false;
+    const page = { evaluate: async (fn) => { await fn.call(null); waited = true; } };
+    globalThis.document = { fonts: { ready: Promise.resolve() } };
+    try {
+      assert.equal(await settleFonts(page), true);
+    } finally {
+      delete globalThis.document;
+    }
+    assert.equal(waited, true);
+  });
+
+  it('shoots the page as it is when its fonts never settle or it cannot be read', async () => {
+    assert.equal(await settleFonts({ evaluate: () => new Promise(() => {}) }, { timeout: 20 }), false);
+    assert.equal(await settleFonts({ evaluate: async () => { throw new Error('Execution context was destroyed'); } }), false);
+  });
+
+  it('runs before every screenshot of the sweep', async () => {
+    const source = await readFile(fileURLToPath(new URL('./sweep.mjs', import.meta.url)), 'utf8');
+    const body = source.slice(source.indexOf('export async function runSweep'));
+    assert.ok(body.indexOf('await settleFonts(page)') > 0);
+    assert.ok(body.indexOf('await settleFonts(page)') < body.indexOf('await page.screenshot('));
   });
 });

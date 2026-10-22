@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-20
+updated: 2026-10-22
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -18,6 +18,7 @@ features:
   - 311-estimate-within-reach
   - 1183-garage-profile-page
   - 1353-verified-badge-last-check
+  - 330-listed-facilities
 ---
 
 # Capability: Garage profile
@@ -409,9 +410,9 @@ _From 311-estimate-within-reach._
 
 _From 311-estimate-within-reach._
 
-### 1183-FR-001 — On a cache miss, the public profile read MUST obtain everything the answer needs in exactly one PostgreSQL statement: the garage row with the brands it works on (each with its fuels and job ticks), its photos in position order, its price rows with their job types, the courtesy-car facility, its response stats and the decision time of its latest approved verification file, each aggregate with an explicit `ORDER BY` that reproduces today's order (deep equality, not byte-level). The brand-in-context lookup stays its own cached read (1235-FR-003) and does not count. An integration test MUST count every query event the read issues on a miss after the brand lookup, unfiltered, and assert one; the read runs outside `$transaction`.
+### 330-FR-007 — On a cache miss, the public profile read MUST obtain everything the answer needs in exactly one PostgreSQL statement, as 1183-FR-001 states, with "the courtesy-car facility" replaced by every facility row in status `listed` and the facilities note; the query-count integration test keeps asserting one statement.
 
-_From 1183-garage-profile-page._
+_From 330-listed-facilities._
 
 ### 1183-FR-002 — The same statement MUST also return the status of a garage that is not publicly listed, so that the 404 `not_found` / 410 `gone` verdict of 307-FR-001 needs no second statement; the verdict rules themselves do not change.
 
@@ -453,6 +454,10 @@ _From 1353-verified-badge-last-check._
 
 _From 1353-verified-badge-last-check._
 
+### 330-FR-005 — The public read of an approved garage (`GET /api/v1/garages/:slug`) MUST carry `facilities` — every facility of the garage with status `listed`, in catalogue order (`courtesy_car`, `pickup_dropoff`, `waiting_area`) — always present (empty when none), and `facilitiesNote`, a string, when the garage has one (absent otherwise); the courtesy car's terms stay as 397-FR-012 defines them, now shown only when `courtesy_car` is listed.
+
+_From 330-listed-facilities._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -466,3 +471,4 @@ _From 1353-verified-badge-last-check._
 - `307-FR-002` — superseded by `1353-FR-001` (2026-10-20)
 - `307-FR-010` — superseded by `1353-FR-002` (2026-10-20)
 - `307-FR-018` — superseded by `1353-FR-003` (2026-10-20)
+- `1183-FR-001` — superseded by `330-FR-007` (2026-10-22)

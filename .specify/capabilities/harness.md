@@ -3,6 +3,7 @@ capability: harness
 updated: 2026-10-22
 features:
   - 1359-red-first-harden-precision
+  - 1362-lap-verdict-merge
 ---
 
 # Capability: Spec-kit harness
@@ -70,5 +71,41 @@ _From 1359-red-first-harden-precision._
 ### 1359-FR-015 — Every gate-script edit (FR-001, FR-010) MUST be followed by `node .claude/scripts/doctor.mjs --bless-hooks` after its diff is read; `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST stay green, and the eval pass rate MUST not drop below the recorded 1.
 
 _From 1359-red-first-harden-precision._
+
+### 1362-FR-001 — A QA lap with no blocker and no high finding (`agent-review` success) and one or more medium or low findings is a passing lap with findings: the tail fixes every finding in the PR, tests first, runs `lifecycle.mjs check`, pushes, counts no repair lap and dispatches no QA run.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-002 — `carry.mjs <n>` carries the lap's success to such a fix head with the description `carried from <sha>: QA fixes`, and notes it in the PR's Agent review section, the same record a docs-only carry writes.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-003 — A fixes carry holds only when the named commit is one of the PR's commits and an ancestor of head within `MAX_COMMITS` commits and 299 files, its own `agent-review` is a success the tester wrote (not carried) whose description reads `No blocking findings; <N> in all` with N ≥ 1, every commit after it has one parent and a Conventional Commit type of `fix`, `test`, `docs`, `style` or `refactor`, no path is a `deferred.md`, and no real lap failed on a commit after it or on head. The gate verifies the commits' shape, not their content: the tie between each finding and its commit is the FR-007 list.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-004 — `carry.mjs` picks the kind itself from the named commit's success: `QA fixes` when it reports N ≥ 1 findings (FR-003), `docs-only change` when it reports none or no count and the diff is documentation only (`scripts/docs-only.ts`); a docs carry from a success reporting N ≥ 1 is refused, so findings never merge through it. Otherwise it exits 1 with the reason.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-005 — The merge gate verifies a fixes carry with the same `judgeCarry` it uses for a docs carry, and refuses one it cannot verify; CI green on head and the provenance of the named commit's success are still required.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-006 — A lap with any blocker or high finding stays a failing lap: nothing carries from a failure, the tail counts `run-state.mjs repair` and dispatches a new run.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-007 — `lifecycle.mjs merge` reads the head's `agent-review` before the merge call and the finding count N of the verdict that stands (head's own tester success, or the commit a fixes carry names). When N ≥ 1 it stops before the merge unless `specs/<feature>/finish-comment.md` holds a `## Fixed after QA` section with at least N list lines, each naming its severity (`medium` or `low`); under a fixes carry each line also names a commit of the PR after the named commit. The finish comment it posts carries that list.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-008 — `watch.mjs` looks up the carry for a ready PR with no `agent-review` on head whose fix would be `tail` or `rerun-qa`, and gives it `carry-review` (applied model-free with the kind `carry.mjs` picked) when the carry holds, whatever CI's state, ahead of `tail` for a handed-off PR; a head with the carried success is `waiting` while CI runs and `merge` once every check is green, and a failing check after the carry is the handed-off PR's `tail` as before.
+
+_From 1362-lap-verdict-merge._
+
+### 1362-FR-009 — The constitution is amended to v5.0.0 (MAJOR): Principle VII step 5 and the Enforcement row of `merge-gate.mjs` state the rule, with a Sync Impact Report; the card, `CLAUDE.local.md`'s version line, AGENTS.md lifecycle step 6, tail.md steps 3–4, the `speckit-pr-test` skill and `speckit-tracker-sync` §4 say the same.
+
+_From 1362-lap-verdict-merge._
 
 ## Retired

@@ -50,6 +50,7 @@ const CHAIN = row(
 const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   labour: { fromBani: 18_000, toBani: 24_000 },

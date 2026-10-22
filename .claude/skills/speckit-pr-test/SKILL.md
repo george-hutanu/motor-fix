@@ -43,7 +43,8 @@ without a status, so the test runs again.
    `unchanged` and only catches a PR that skipped that step. The story and its
    timeline row stay QA for the whole loop.
 2. **Carry** (skip on `--dry-run`, or pass it on): when the head differs from
-   the last commit with an `agent-review` success by documentation only, the
+   the last commit with an `agent-review` success by documentation only, or
+   only by the fixes for that lap's medium and low findings (step 5), the
    verdict carries and no lap runs:
 
    ```bash
@@ -51,8 +52,11 @@ without a status, so the test runs again.
    ```
 
    Exit 0 set `agent-review` success on the head (`carried from <sha>:
-   docs-only change`) and noted it in the PR's Agent review section: go to
-   step 5. "Documentation only" is `scripts/docs-only.ts`, the definition CI's
+   docs-only change`, or `carried from <sha>: QA fixes` when that lap
+   reported findings) and noted it in the PR's Agent review section: go to
+   step 5. A QA-fixes carry needs the lap's own count (`No blocking findings;
+   <N> in all`, N >= 1) and only single-parent fix, test, docs, style or
+   refactor commits after it. "Documentation only" is `scripts/docs-only.ts`, the definition CI's
    docs-only skip uses (Markdown outside `.claude/`, `.specify/` and
    `.github/`, or `docs/`). It never carries past a failing verdict, onto a
    head that already has a status, or over any other file, and the merge gate
@@ -93,12 +97,24 @@ without a status, so the test runs again.
    gh api repos/{owner}/{repo}/commits/<sha>/status --jq '.statuses[] | select(.context=="agent-review") | .state'
    ```
 
-5. **Success**: return to the caller, which merges on green CI
+5. **Success** (no blocker or high finding): the testing is over. When the
+   lap still reported medium or low findings (its status reads `No blocking
+   findings; <N> in all`, N >= 1), fix each in this PR, a failing test first,
+   then the fix, committed as `fix`, `test`, `docs`, `style` or `refactor`;
+   list each under `## Fixed after QA` in `specs/<feature>/finish-comment.md`,
+   one line per finding with its severity and the fix commit's sha (the file
+   is git-ignored: it stays in the worktree, as `handoff.md` does); then
+   `lifecycle.mjs check`, push, and
+   `carry.mjs <n>`. No repair lap is counted and no run is dispatched. Then
+   return to the caller, which merges on green CI
    (`node .claude/scripts/pr-test/ci-wait.mjs <n>` with `run_in_background`,
    which prints only the checks that did not pass, then
-   `gh pr merge <n> --merge`, then `speckit-tracker-sync finish`). The merge
-   gate refuses while any check is failing, running or missing.
-6. **Failure**: the implementing agent fixes every blocking finding — a failing
+   `lifecycle.mjs merge`, which refuses while the list is short, and runs
+   `speckit-tracker-sync finish`, whose comment carries the list). The merge
+   gate refuses while any check is failing, running or missing. A carry that
+   exits 1 (a cloud lap's status has no count, or a commit is not a lap fix)
+   needs a real lap: step 6.
+6. **Failure** (a blocker or high finding): the implementing agent fixes every finding — a failing
    test first that reproduces it (`/speckit-tests` rules), then the fix — commits,
    pushes, and counts the lap:
 
@@ -108,11 +124,10 @@ without a status, so the test runs again.
 
    Then dispatch the new head's run with `dispatch.mjs <n> --no-wait` and
    end (speckit-auto "The tail"); the next tail comes back to step 2 with its
-   `RUN`. A medium or low finding is fixed the same way in the lap (test
-   first, counted as a lap), pre-existing or adjacent ones included, even
-   when `agent-review` passed: fix every verified finding in this PR; an
-   owner decision is a `needs-confirmation` question (`speckit-tracker-sync
-   blocked <question>`).
+   `RUN`. The lap's medium and low findings are fixed in the same lap (test
+   first), pre-existing or adjacent ones included: fix every verified
+   finding in this PR; an owner decision is a `needs-confirmation` question
+   (`speckit-tracker-sync blocked <question>`).
 7. **Cap reached** (`repair` exits 1): the run is blocked with
    `repair-loop-exceeded`. Run `speckit-tracker-sync blocked` with the reason
    (open findings, laps used), comment the same on the PR
@@ -152,7 +167,7 @@ days); the report names them and gives the run's URL. The specs repository's
 - Never post on, push to, or set a status on a PR you were asked to dry-run.
 - Never set `agent-review` by hand; only the PR QA workflow sets it, from
   its run (the only writer in a cloud session), `post.mjs`, from a report,
-  and `carry.mjs`, from a verified docs-only carry. The merge gate traces
+  and `carry.mjs`, from a verified docs-only or QA-fixes carry. The merge gate traces
   who wrote it (`provenance.mjs`): a PR that changes `pr-qa.yml` needs a lap
   dispatched on `main` from the laptop.
 - Never merge with `agent-review` missing or failing on the head commit.

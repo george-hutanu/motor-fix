@@ -2283,6 +2283,79 @@ describe('sending for verification', () => {
     expect(cuiInput(page).getAttribute('aria-invalid')).toBe('true');
   });
 
+  // @traces 330-FR-002
+  it('holds the send of a complete listing at the facilities note while it is too long, asking the server nothing', async () => {
+    const { harness, page } = await completeCopy();
+    const note = page.querySelector<HTMLInputElement>(
+      'mf-hours-step [name="facilitiesNote"]',
+    ) as HTMLInputElement;
+    fillIn(harness, note, 'a'.repeat(201));
+    note.dispatchEvent(new Event('blur'));
+    await settle(harness);
+
+    await press(harness, page);
+
+    expect(
+      TestBed.inject(HttpTestingController).match((r) =>
+        /\/check$/.test(r.url),
+      ),
+    ).toEqual([]);
+    expect(
+      text(page.querySelector(`#${note.getAttribute('aria-describedby')}`)),
+    ).toBe('Nota poate avea cel mult 200 de caractere');
+    expect(document.activeElement).toBe(note);
+  });
+
+  // @traces 330-FR-002
+  it('holds the send at the facilities note only for its own error, not for another step 5 error the server found', async () => {
+    const { harness, page } = await completeCopy();
+    await press(harness, page);
+    await answered(
+      harness,
+      await request(),
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'steps.5.payments' }],
+        warnings: [],
+      },
+      422,
+    );
+    expect(dotted(page)).toEqual([5]);
+
+    await press(harness, page);
+
+    // The press goes on to the server, as for any complete copy: the draft
+    // is saved before it is judged again.
+    expect(
+      TestBed.inject(HttpTestingController).match((r) =>
+        /\/listing-drafts\/d1$/.test(r.url),
+      ),
+    ).toHaveLength(1);
+    expect(document.activeElement).not.toBe(
+      page.querySelector('mf-hours-step [name="facilitiesNote"]'),
+    );
+  });
+
+  // @traces 330-FR-002 115-FR-007
+  it('marks step 5, not ticks it, while its facilities note is too long, and ticks it again once it holds', async () => {
+    const { harness, page } = await completeCopy();
+    const note = page.querySelector<HTMLInputElement>(
+      'mf-hours-step [name="facilitiesNote"]',
+    ) as HTMLInputElement;
+    fillIn(harness, note, 'a'.repeat(201));
+    note.dispatchEvent(new Event('blur'));
+    await settle(harness);
+
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 6]);
+    expect(dotted(page)).toEqual([5]);
+
+    fillIn(harness, note, 'a'.repeat(200));
+    await settle(harness);
+
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(dotted(page)).toEqual([]);
+  });
+
   // @traces 115-FR-007
   it('ticks all six steps of a complete listing and marks none', async () => {
     const { page } = await completeCopy();

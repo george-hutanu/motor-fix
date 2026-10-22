@@ -105,6 +105,7 @@ describe('reading a garage by its public slug', () => {
     expect(res.body).toEqual({
       brandNote: null,
       doesNotTake: [],
+      facilities: [],
       id: approved.id,
       jobTypes: [],
       name: 'Atelier Dinamo',
@@ -144,6 +145,7 @@ describe('reading a garage by its public slug', () => {
       'businessKind',
       'description',
       'doesNotTake',
+      'facilities',
       'id',
       'jobTypes',
       'name',
@@ -313,6 +315,70 @@ describe('reading a garage by its public slug', () => {
       paid: true,
       pricePerDayBani: 12000,
     });
+  });
+
+  // @traces 330-FR-005
+  it('carries every listed facility in catalogue order, the courtesy car terms and the note', async () => {
+    const approved = await garage('approved');
+    await prisma.garageFacility.createMany({
+      data: [
+        { facility: 'waiting_area', garageId: approved.id },
+        { facility: 'courtesy_car', garageId: approved.id },
+      ],
+    });
+    await prisma.$executeRaw`UPDATE garage SET courtesy_car_paid = true, courtesy_car_price_per_day_bani = 10000, facilities_note = 'Mașina la schimb se cere la programare' WHERE id = ${approved.id}::uuid`;
+
+    const res = await read(approved.slug);
+
+    expect(res.body).toMatchObject({
+      courtesyCar: { paid: true, pricePerDayBani: 10000 },
+      facilities: ['courtesy_car', 'waiting_area'],
+      facilitiesNote: 'Mașina la schimb se cere la programare',
+    });
+  });
+
+  // @traces 330-FR-005
+  it('carries all three facilities when the garage lists them', async () => {
+    const approved = await garage('approved');
+    await prisma.garageFacility.createMany({
+      data: [
+        { facility: 'pickup_dropoff', garageId: approved.id },
+        { facility: 'waiting_area', garageId: approved.id },
+        { facility: 'courtesy_car', garageId: approved.id },
+      ],
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.facilities).toEqual([
+      'courtesy_car',
+      'pickup_dropoff',
+      'waiting_area',
+    ]);
+  });
+
+  // @traces 330-FR-005
+  it('carries an empty facility list and no note when the garage has neither', async () => {
+    const approved = await garage('approved');
+
+    const res = await read(approved.slug);
+
+    expect(res.body.facilities).toEqual([]);
+    expect(res.body).not.toHaveProperty('facilitiesNote');
+  });
+
+  // @traces 330-FR-006
+  it('shows nothing of a draft garage, its facilities and note included', async () => {
+    const draft = await garage('draft');
+    await prisma.garageFacility.create({
+      data: { facility: 'waiting_area', garageId: draft.id },
+    });
+    await prisma.$executeRaw`UPDATE garage SET facilities_note = 'Doar la programare' WHERE id = ${draft.id}::uuid`;
+
+    const res = await read(draft.slug);
+
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(res.body)).not.toMatch(/waiting_area|programare/);
   });
 
   it('carries the ticked fuels of each taken brand, none ticked included', async () => {
@@ -830,6 +896,8 @@ const PUBLIC_FIELDS = new Set([
   'courtesyCar',
   'description',
   'doesNotTake',
+  'facilities',
+  'facilitiesNote',
   'id',
   'jobTypes',
   'labour',
@@ -1234,11 +1302,11 @@ describe('the price list a profile carries', () => {
     const redis = app.get(AUTH_REDIS);
 
     expect(
-      (await redis.zrange(`v1:tag:garage:${approved.id}`, '0', '-1')).sort(),
+      (await redis.zrange(`v2:tag:garage:${approved.id}`, '0', '-1')).sort(),
     ).toEqual(
       [
-        `v1:profile:${approved.slug}:-`,
-        `v1:profile:${approved.slug}:${bmw.slug}`,
+        `v2:profile:${approved.slug}:-`,
+        `v2:profile:${approved.slug}:${bmw.slug}`,
       ].sort(),
     );
 

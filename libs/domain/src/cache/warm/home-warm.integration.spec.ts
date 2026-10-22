@@ -80,8 +80,8 @@ afterAll(async () => {
 
 const warmKeys = () =>
   Promise.all([
-    redis.keys('v1:driver-home:*'),
-    redis.keys('v1:garage-home:*'),
+    redis.keys('v2:driver-home:*'),
+    redis.keys('v2:garage-home:*'),
   ]).then(([driver, garage]) => [...driver, ...garage]);
 
 beforeEach(async () => {
@@ -89,7 +89,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
   const keys = [
     ...(await warmKeys()),
-    ...(await redis.keys('v1:tag:warm:*')),
+    ...(await redis.keys('v2:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];

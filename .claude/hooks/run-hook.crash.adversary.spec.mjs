@@ -74,6 +74,36 @@ describe('a fail-closed gate that crashes', () => {
     assert.match(r.stderr, /SPECKIT_DISABLED_HOOKS=pre:bash:commit-gate/);
   });
 
+  // A spawn that fails (no interpreter here; EAGAIN or ENOMEM on a loaded
+  // runner) has not approved the request either.
+  it('refuses when the shell gate cannot be started', () => {
+    put('pre-commit-check.sh', '#!/bin/sh\nexit 0\n');
+    const empty = mkdtempSync(join(tmpdir(), 'runhook-nopath-'));
+    try {
+      const r = run(COMMIT, { PATH: empty }, JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }));
+      assert.equal(r.status, 2);
+      assert.match(r.stderr, /could not be started/);
+      assert.match(r.stderr, /SPECKIT_DISABLED_HOOKS=pre:bash:commit-gate/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  it('still passes an advisory hook that cannot be started', () => {
+    const regPath = join(dir, '.claude/hooks/registry.json');
+    const reg = JSON.parse(readFileSync(regPath, 'utf8'));
+    reg.hooks.find((h) => h.id === COMMIT).fail_closed = false;
+    writeFileSync(regPath, JSON.stringify(reg));
+    const empty = mkdtempSync(join(tmpdir(), 'runhook-nopath-'));
+    try {
+      const r = run(COMMIT, { PATH: empty }, JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }));
+      assert.equal(r.status, 0);
+      assert.match(r.stderr, /gate not enforced/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
   it('refuses when the shell gate is not executable-parsable (syntax error)', () => {
     put('pre-commit-check.sh', '#!/bin/sh\nif then fi\n');
     const r = run(COMMIT, {}, JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }));

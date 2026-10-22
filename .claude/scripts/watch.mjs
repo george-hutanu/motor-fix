@@ -232,17 +232,21 @@ export function fixOf(row, { now, thresholds }) {
   // a quiet one all leave the work with nobody, so each reads as holder dead.
   const reason = `holder dead: no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
+  // A head with no verdict that only adds documentation, or only the QA fixes
+  // of a lap that passed with medium or low findings, keeps that lap's verdict
+  // (pr-test/carry.mjs, applied by --fix; the merge gate re-checks it),
+  // whatever CI is doing: once carried it waits on CI, merges on green, and a
+  // failing check goes to a tail as before.
+  if (pr?.state === "ready" && !pr.agentReview && row.carry?.from && !row.carry.reason) {
+    const what = row.carry.kind === "fixes" ? "QA fixes" : "docs-only";
+    return { verdict: "stale", fix: "carry-review", reason: `${reason}; ${what} since ${row.carry.from.slice(0, 7)}` };
+  }
   // A story agent that handed its ready PR off (specs/<feature>/handoff.md)
   // has ended: a fresh tail agent takes CI, QA laps and the merge from there.
   if (pr?.state === "ready" && row.handoff) return { verdict: "stale", fix: "tail", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
-  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs,
-  // unless its head only adds documentation to a tested commit: then the verdict
-  // is carried (pr-test/carry.mjs, applied by --fix) and the merge gate checks it.
-  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) {
-    if (row.carry?.from && !row.carry.reason) return { verdict: "stale", fix: "carry-review", reason: `${reason}; docs-only since ${row.carry.from.slice(0, 7)}` };
-    return { verdict: "stale", fix: "rerun-qa", reason };
-  }
+  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs.
+  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
   return { verdict: "stale", fix: "resume", reason };
 }
 
@@ -485,8 +489,9 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       }
     }
     let fixed = fixOf(row, { now, thresholds });
-    // Only a row about to re-run QA is worth the few gh calls a carry lookup costs.
-    if (fixed.fix === "rerun-qa" && carry) {
+    // Only a row about to re-run QA or get a tail, with no verdict on its
+    // head, is worth the few gh calls a carry lookup costs.
+    if ((fixed.fix === "rerun-qa" || fixed.fix === "tail") && pr?.state === "ready" && !pr.agentReview && carry) {
       try {
         row.carry = carry(pr.number);
       } catch {
@@ -561,7 +566,7 @@ export function applyFixes(repo, report, { postCarry: post = postCarry, remove =
       // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
       const what = `carry #${d.pr} from ${d.carry.from.slice(0, 7)}`;
       try {
-        post({ pr: d.pr, from: d.carry.from, head: d.carry.head });
+        post({ pr: d.pr, from: d.carry.from, head: d.carry.head, kind: d.carry.kind });
         actions.push({ what, ok: true });
       } catch (e) {
         actions.push({ what, ok: false, error: e.message });

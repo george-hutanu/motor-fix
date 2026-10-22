@@ -266,33 +266,44 @@ export class ListYourGarage {
     const problems = this.problems();
     return STEPS.map((step) => forStep(problems, step.n as ListingStep));
   });
-  // The steps the list ticks: none of their fields is missing or wrong.
+  // Sending was asked for: every field shows what is wrong with it.
+  protected readonly asked = signal(false);
+  private readonly shownErrors = signal<Partial<Record<Part, boolean>>>({});
+  // A facilities note past its limit, which the draft cannot see.
+  protected readonly noteHeld = signal(false);
+  // The steps where a field shows an error, one the draft cannot see (a
+  // facilities note past its limit stays in its step) included.
+  private readonly showing = computed(() => {
+    const shown = this.shownErrors();
+    return new Set<number>(
+      Object.entries(shown).flatMap(([part, on]) =>
+        on ? [PART_STEP[part as Part]] : [],
+      ),
+    );
+  });
+  // The steps the list ticks: none of their fields is missing or wrong, and
+  // none shows an error.
   protected readonly done = computed(
     () =>
       new Set(
         STEPS.filter(
-          (step) => this.stepProblems()[step.n - 1]?.errors.length === 0,
+          (step) =>
+            this.stepProblems()[step.n - 1]?.errors.length === 0 &&
+            !this.showing().has(step.n),
         ).map((step) => step.n),
       ),
   );
-  // Sending was asked for: every field shows what is wrong with it.
-  protected readonly asked = signal(false);
-  private readonly shownErrors = signal<Partial<Record<Part, boolean>>>({});
   // The steps the list marks red: asked for, or a field there shows an error.
-  protected readonly dots = computed(() => {
-    const shown = this.shownErrors();
-    const asked = this.asked();
-    return new Set(
-      STEPS.filter(
-        (step) =>
-          !this.done().has(step.n) &&
-          (asked ||
-            Object.entries(shown).some(
-              ([part, on]) => on && PART_STEP[part as Part] === step.n,
-            )),
-      ).map((step) => step.n),
-    );
-  });
+  protected readonly dots = computed(
+    () =>
+      new Set(
+        STEPS.filter(
+          (step) =>
+            !this.done().has(step.n) &&
+            (this.asked() || this.showing().has(step.n)),
+        ).map((step) => step.n),
+      ),
+  );
   protected readonly inFlight = signal(false);
   // The sign-up survey shows in place of the form, once the listing is
   // complete or when the draft comes back with an answer in it.
@@ -561,6 +572,12 @@ export class ListYourGarage {
     if (this.ownCheck().errors.length > 0) {
       this.asked.set(true);
       this.toSummary();
+      return;
+    }
+    // A facilities note past its limit stays in its step, never in the draft
+    // the check reads: the step's own error holds the send.
+    if (this.noteHeld()) {
+      this.goTo('steps.5.facilitiesNote');
       return;
     }
     // What the server judges is the copy as it stood at the press; a change

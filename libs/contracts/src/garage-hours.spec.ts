@@ -8,8 +8,10 @@ import {
   closedDaysError,
   DEFAULT_HOURS,
   FACILITIES,
+  FACILITIES_NOTE_MAX,
   hoursComplete,
   intervalsError,
+  isFacilitiesNote,
   isHoursSection,
   isTime,
   isWeeklyHours,
@@ -289,6 +291,49 @@ describe('the step 5 section', () => {
     ['nothing', null],
   ])('refuses %s', (_, section) => {
     expect(isHoursSection(section)).toBe(false);
+  });
+});
+
+// @traces 330-FR-003
+describe('the facilities note in the section', () => {
+  it('holds at most 200 characters', () => {
+    expect(FACILITIES_NOTE_MAX).toBe(200);
+  });
+
+  it.each([
+    ['no note', {}],
+    ['an empty note', { facilitiesNote: '' }],
+    ['a note of spaces only', { facilitiesNote: '   ' }],
+    [
+      'a short note',
+      { facilitiesNote: 'Mașina la schimb se cere la programare' },
+    ],
+    ['a note of 200 letters', { facilitiesNote: 'ș'.repeat(200) }],
+    ['200 letters inside spaces', { facilitiesNote: `  ${'a'.repeat(200)}  ` }],
+    [
+      'a note without any facility',
+      { facilities: [], facilitiesNote: 'Doar la programare' },
+    ],
+  ])('accepts %s', (_, section) => {
+    expect(isHoursSection(section)).toBe(true);
+  });
+
+  it.each([
+    ['a note of 201 letters', 'a'.repeat(201)],
+    ['a note of 201 emoji', '🚗'.repeat(201)],
+    ['a note with a line break', 'Mașina la schimb\nse cere la programare'],
+    ['a note with a tab', 'Mașina\tla schimb'],
+    ['a NUL byte', 'a\u0000b'],
+    ['null', null],
+    ['a number', 5],
+    ['a list', ['nota']],
+  ])('refuses %s', (_, facilitiesNote) => {
+    expect(isHoursSection({ facilitiesNote })).toBe(false);
+  });
+
+  it('judges a typed note the same way for the step', () => {
+    expect(isFacilitiesNote('Doar la programare')).toBe(true);
+    expect(isFacilitiesNote('a'.repeat(201))).toBe(false);
   });
 });
 

@@ -531,15 +531,25 @@ test.describe('the map beside the results @seeded', () => {
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const tally = page.locator('.summary .tally');
     await expect(tally).toContainText('4 service‑uri găsite');
+    // The map exists before its style loads and it frames the garages; the
+    // pins are drawn only after that frame, so a jump made sooner is undone.
     await expect
       .poll(() =>
-        page.evaluate(
-          () =>
-            (window as unknown as { __MF_MAP?: unknown }).__MF_MAP !==
-            undefined,
-        ),
+        page.evaluate(async () => {
+          const map = (
+            window as unknown as {
+              __MF_MAP?: {
+                getSource(
+                  id: string,
+                ): { getData(): Promise<{ features: unknown[] }> } | undefined;
+              };
+            }
+          ).__MF_MAP;
+          const data = await map?.getSource('pins')?.getData();
+          return data?.features.length ?? 0;
+        }),
       )
-      .toBe(true);
+      .toBeGreaterThan(0);
 
     // Away from the fixed garages; a jump is not the driver's, so it loads nothing.
     await page.evaluate(() =>
