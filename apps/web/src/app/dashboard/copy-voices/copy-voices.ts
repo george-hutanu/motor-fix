@@ -24,8 +24,9 @@ type State = Pick<CopyVoiceDto, 'enabled' | 'pinned'>;
 
 const PLACEHOLDERS = [1, 2, 3, 4, 5];
 
-// The example line shows each voice's Home headline for one brand.
-const BRAND = { brand: 'BMW' };
+// The example line shows each voice's Home headline for one brand; voice 3's
+// figures stay empty, as on Home before its answer arrives.
+const BRAND = { brand: 'BMW', figures: '' };
 
 // The refusals the section names; anything else reads as a failed save.
 const ERRORS: Record<string, string> = {

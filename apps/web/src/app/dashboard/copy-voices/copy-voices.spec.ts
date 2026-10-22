@@ -133,6 +133,13 @@ describe('the copy voices section', () => {
     );
   });
 
+  it('fills every placeholder of the example headline, voice 3 included', async () => {
+    const { element } = await render();
+
+    for (const li of rows(element)) expect(text(li)).not.toMatch(/[{}]/);
+    expect(text(row(element, 3))).toContain('BMW.');
+  });
+
   it('keeps the switch and the pin together on one line after the name', async () => {
     const { element } = await render();
 
