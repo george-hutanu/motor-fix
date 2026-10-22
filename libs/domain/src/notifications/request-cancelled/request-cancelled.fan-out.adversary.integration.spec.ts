@@ -156,3 +156,28 @@ describe('who hears about a cancelled request', () => {
     ).toBe(1);
   });
 });
+
+// @traces 428-FR-009
+describe('a cancelled request that changed meanwhile', () => {
+  // A request row goes only with its erased account: nothing is sent about it.
+  it('tells nobody when the request row is gone', async () => {
+    const driverId = await account('Andrei Ion Marin', ['driver']);
+    const dinamo = await owned('Atelier Dinamo');
+    const job = await jobFor([dinamo.garage.id], driverId);
+    await prisma.quoteRequest.delete({ where: { id: job.data.subjectId } });
+    const fanOut = await start();
+
+    await expect(fanOut.handle(job)).resolves.toBeUndefined();
+
+    expect(
+      await prisma.notification.count({
+        where: { accountId: dinamo.owner, kind: 'REQUEST_CANCELLED' },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.notification.count({
+        where: { accountId: driverId, kind: 'REQUEST_CANCELLED' },
+      }),
+    ).toBe(0);
+  });
+});

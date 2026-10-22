@@ -4,11 +4,7 @@ import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import {
-  ACCOUNT_CLOSED_CONSUMER,
-  ACCOUNT_CLOSED_RUN,
-  AccountClosed,
-} from './account-closed';
+import { ACCOUNT_CLOSED_CONSUMER, AccountClosed } from './account-closed';
 import { AccountClosedModule } from './account-closed.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
@@ -159,7 +155,7 @@ describe('listening to a closed account', () => {
 
   // @traces 428-FR-008
   it('retries a failed job three times, waiting longer each time', () => {
-    expect(ACCOUNT_CLOSED_RUN).toMatchObject({
+    expect(ACCOUNT_CLOSED_CONSUMER.jobs).toMatchObject({
       attempts: 3,
       backoff: { type: 'exponential' },
     });

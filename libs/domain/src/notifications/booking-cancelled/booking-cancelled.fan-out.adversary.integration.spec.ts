@@ -131,3 +131,43 @@ describe('who hears about a booking cancelled with the account', () => {
     expect(await told()).toBe(once);
   });
 });
+
+// @traces 428-FR-010
+describe('a cancelled booking that changed meanwhile', () => {
+  it('ends normally and never tells the driver when the booking row is gone', async () => {
+    const { driverId, job } = await cancelledAt('driver_account_closed');
+    await prisma.booking.delete({ where: { id: job.data.subjectId } });
+    const fanOut = await start();
+
+    await expect(fanOut.handle(job)).resolves.toBeUndefined();
+
+    expect(await told({ accountId: driverId })).toBe(0);
+  });
+
+  it('tells a mechanic who is also the garage owner once', async () => {
+    const { dinamo, job } = await cancelledAt('driver_account_closed');
+    const mechanic = await prisma.mechanic.create({
+      data: {
+        accountId: dinamo.owner,
+        canAnswerQuotes: false,
+        garageId: dinamo.garage.id,
+        name: 'Fixer',
+      },
+    });
+    await prisma.booking.update({
+      data: { mechanicId: mechanic.id },
+      where: { id: job.data.subjectId },
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    expect(
+      await told({
+        accountId: dinamo.owner,
+        channel: 'in_app',
+        fallbackOf: null,
+      }),
+    ).toBe(1);
+  });
+});
