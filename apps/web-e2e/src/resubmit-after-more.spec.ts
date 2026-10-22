@@ -1,14 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import {
-  ACCOUNTS,
-  openSignIn,
-  ownAddress,
-  ownMap,
-  ready,
-  signIn,
-} from './accounts.js';
+import { ownAddress, ownMap, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
 import { jpeg } from './listing-kept.js';
 import {
@@ -100,9 +93,8 @@ test.describe('sending the file again after a request for more @database', () =>
     const admin = await browser.newContext();
     try {
       const queue = await admin.newPage();
-      await ready(queue, '/ro/garages');
-      await openSignIn(queue);
-      await signIn(queue, ACCOUNTS.admin2);
+      // Signed in before leaving: a navigation cuts a sign-in still in flight.
+      await signInAsAdmin2(queue);
       await queue.goto('/app/admin/garages');
       const row = queue.locator('li.row').filter({ hasText: name });
       await expect(row.locator('.tag')).toHaveText('Actualizat', {
