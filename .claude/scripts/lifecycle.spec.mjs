@@ -59,6 +59,7 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ['git rev-parse --abbrev-ref HEAD', { stdout: `${branch}\n` }],
     ['git rev-parse HEAD', { stdout: 'abcdef1234567890\n' }],
     ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }],
+    ['git rev-parse origin/main', { stdout: 'ma1n0000\n' }],
     ['gh auth token -u george-hutanu', { stdout: 'tok-from-gh\n' }],
     ['gh pr create', { stdout: `${PR_URL}\n` }],
     ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),
@@ -439,11 +440,12 @@ describe('check and ready reuse a passing proof of the local checks for the same
   beforeEach(() => fixture());
 
   const TREE = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555';
-  const proofFile = () => join(repo, '.specify', '.cache', `local-checks-${repo.split('/').at(-1)}.json`);
-  const tree = (sha = TREE, base = 'b45e0000', status = '') => [
+  const proofFile = () => join(repo, '.specify', '.cache', 'local-checks.json');
+  const tree = (sha = TREE, base = 'b45e0000', status = '', main = 'ma1n0000') => [
     ['git status --porcelain', { stdout: status }],
     ['git write-tree', { stdout: `${sha}\n` }],
     ['git merge-base HEAD origin/main', { stdout: `${base}\n` }],
+    ['git rev-parse origin/main', { stdout: `${main}\n` }],
   ];
   const ran = (h) => h.calls.filter((c) => /^(node scripts\/(observability|structure)|npm run lint|sh scripts\/heavy\.sh)/.test(c));
 
@@ -483,7 +485,7 @@ describe('check and ready reuse a passing proof of the local checks for the same
       assert.equal(step(['check'], h.io).ok, true);
       assert.equal(ran(h).length, 4);
       assert.ok(!existsSync(proofFile()), 'a dirty worktree records nothing');
-      writeFileSync(proofFile(), JSON.stringify({ tree: TREE, base: 'b45e0000', at: 'x' }));
+      writeFileSync(proofFile(), JSON.stringify({ tree: TREE, base: 'b45e0000', main: 'ma1n0000', at: 'x' }));
       const again = harness({ answers: tree(TREE, 'b45e0000', status) });
       step(['check'], again.io);
       assert.equal(ran(again).length, 4, 'a dirty worktree never reuses a proof');
@@ -504,6 +506,18 @@ describe('check and ready reuse a passing proof of the local checks for the same
       assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).tree, sha.trim(), 'the proof is overwritten with the tree just checked');
     });
   }
+
+  // @traces 1358-FR-014
+  // @traces 1358-FR-015
+  it('runs the checks again when origin/main moved and the merge base did not', () => {
+    step(['check'], harness({ answers: tree() }).io);
+    const h = harness({ answers: tree(TREE, 'b45e0000', '', 'm0ved000') });
+    const result = step(['check'], h.io);
+    assert.equal(ran(h).length, 4, h.calls.join('\n'));
+    assert.ok(!result.did.some((d) => /reused proof/.test(d)));
+    assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).main, 'm0ved000');
+    assert.equal(h.calls.filter((c) => c === 'git merge-base HEAD origin/main').length, 1, 'the merge base is read once');
+  });
 
   // @traces 1358-FR-015
   it('runs the checks when there is no proof', () => {

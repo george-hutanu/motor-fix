@@ -48,6 +48,9 @@ export const capabilitiesDir = (repo) => join(repo, ".specify", "capabilities");
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/** A file's text with every line ending made `\n`, so a merge never writes a file of mixed endings. */
+const readText = (file) => readFileSync(file, "utf8").replace(/\r\n?/g, "\n");
+
 // --- reading the living specs -----------------------------------------------
 
 /**
@@ -95,7 +98,7 @@ export function loadCapabilities(repo) {
   for (const name of existsSync(dir) ? readdirSync(dir).sort() : []) {
     if (!name.endsWith(".md")) continue;
     const file = join(dir, name);
-    const text = readFileSync(file, "utf8");
+    const text = readText(file);
     const parsed = parseCapability(text);
     out.set(parsed.slug ?? basename(name, ".md"), { ...parsed, file, name, text });
   }
@@ -220,15 +223,16 @@ export function declaredRequirements(specText) {
  * capability on merge; WARN is worth a look. Imported by artifact-lint so the
  * rules live in one place and fire from both entry points.
  */
-export function validateFeature(repo, feature) {
+export function validateFeature(repo, feature, { delta: out } = {}) {
   const findings = [];
   const add = (level, rule, message) => findings.push({ level, rule, message });
   const specFile = join(feature.dir, "spec.md");
   if (!existsSync(specFile)) return findings;
 
-  const specText = readFileSync(specFile, "utf8");
+  const specText = readText(specFile);
   const declared = declaredRequirements(specText);
   const delta = parseDelta(specText);
+  if (out) out.push(...delta);
   const caps = loadCapabilities(repo);
   // The archive merges a feature's delta and then marks it Archived; after
   // that, the capability holding its Adds, and tombstones naming this feature
@@ -332,7 +336,7 @@ const renderRequirement = (token, text, feature) =>
 const requirementBlock = (base) => new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^#{2,3} )[\\s\\S])*`, "m");
 
 export function planMerge(repo, feature) {
-  const specText = readFileSync(join(feature.dir, "spec.md"), "utf8");
+  const specText = readText(join(feature.dir, "spec.md"));
   const declared = declaredRequirements(specText);
   const caps = loadCapabilities(repo);
   const plans = [];
@@ -386,7 +390,8 @@ export function planMerge(repo, feature) {
       text = text.replace(/^features:\s*\[\s*\]\s*$/m, "features:");
       text = text.replace(/^(features:\n(?:\s+-\s+\S+\n)*)/m, (m) => `${m}  - ${feature.name}\n`);
     }
-    plans.push({ capability: section.capability, file: cap.file, text, added, modified, removed });
+    // The section and the file as it stood ride along, so checkMerge needs no second read.
+    plans.push({ capability: section.capability, file: cap.file, text, added, modified, removed, section, before: cap.text });
   }
   return plans;
 }
@@ -494,12 +499,13 @@ function main() {
   }
 
   if (command === "validate") {
-    const findings = validateFeature(repo, feature);
+    const delta = [];
+    const findings = validateFeature(repo, feature, { delta });
     const errors = findings.filter((f) => f.level === "ERROR");
     console.log(`capabilities: ${feature.name} — ${errors.length} error(s), ${findings.length - errors.length} warning(s)`);
     for (const f of findings) console.log(`  ${f.level === "ERROR" ? "✗" : "!"} [${f.rule}] ${f.message}`);
     if (findings.length === 0) console.log("  ✓ the delta merges cleanly");
-    for (const s of parseDelta(readFileSync(join(feature.dir, "spec.md"), "utf8")))
+    for (const s of delta)
       console.log(`${s.capability}: +${s.adds.length} ~${s.modifies.length} -${s.removes.length}`);
     return check && errors.length ? 1 : 0;
   }
@@ -517,11 +523,7 @@ function main() {
       return 0;
     }
     // Every planned file is checked before any is written.
-    const caps = loadCapabilities(repo);
-    const sections = parseDelta(readFileSync(join(feature.dir, "spec.md"), "utf8"));
-    const failures = plans.flatMap((plan) =>
-      checkMerge(plan, caps.get(plan.capability), sections.find((s) => s.capability === plan.capability), feature.num),
-    );
+    const failures = plans.flatMap((plan) => checkMerge(plan, { text: plan.before }, plan.section, feature.num));
     if (failures.length) {
       console.error(`capabilities: ${feature.name} — the merge would not match its delta; nothing written:`);
       for (const f of failures) console.error(`  ✗ ${f}`);
