@@ -2,6 +2,7 @@ import type {
   APIRequestContext,
   Browser,
   BrowserContext,
+  Page,
   PlaywrightTestArgs,
   PlaywrightTestOptions,
   PlaywrightWorkerArgs,
@@ -126,6 +127,19 @@ export async function routedContext(
 }
 
 /**
+ * The `page` fixture: a test's own page.route handlers are the page's, not the
+ * context's, so they are removed here, before a handler still fetching can
+ * outlive the test.
+ */
+export async function routedPage(
+  { page }: { page: Page },
+  use: (page: Page) => Promise<void>,
+) {
+  await use(page);
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+}
+
+/**
  * The `request` fixture: the API calls a flow sets up with, sign-ins among
  * them, from an address of the test's own like its browser's.
  */
@@ -150,5 +164,6 @@ async function addressedRequest(
 export const test = base.extend<Record<never, never>, { browser: Browser }>({
   browser: [addressingBrowser, { scope: 'worker' }],
   context: routedContext,
+  page: routedPage,
   request: addressedRequest,
 });

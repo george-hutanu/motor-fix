@@ -998,16 +998,22 @@
       "sub": "Tell us what you drive and we’ll show you the garages other drivers like you recommend."
     },
     "v3": {
+      "count": {
+        "one": "{count} garage.",
+        "other": "{count} garages."
+      },
       "cta": "Start search",
       "eyebrow": "Diagnostic: mechanic",
       "feat": "Data, not promises.",
       "garage": "Garage not listed? Add its data.",
-      "headline": "{brand}. 3 garages. Top rating: 4.9.",
+      "headline": "{brand}.{figures}",
       "list": "Compatible with {brand}",
       "no": "Not compatible: {brand}",
       "noLabel": "Not compatible with",
+      "none": "No garage yet.",
       "parts": "Select the system",
-      "sub": "Brand, job, distance, hourly rate. Four inputs and you have the right garage."
+      "sub": "Brand, job, distance, hourly rate. Four inputs and you have the right garage.",
+      "top": "Top rating: {rating}."
     },
     "v4": {
       "cta": "Find them now",

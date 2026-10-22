@@ -17,8 +17,8 @@
         "standard",
         "strict"
       ],
-      "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "2c3230fb133c"
+      "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, a context-audit line when the context file grew or has findings, and the check commands — inside a character budget",
+      "fingerprint": "7e03b8c87c54"
     },
     {
       "id": "session:start:watch-reminder",
@@ -107,7 +107,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "cad085812a2c"
+      "fingerprint": "d41bbf47a1f4"
     },
     {
       "id": "pre:edit:red-first",
@@ -145,7 +145,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "c8cee0ad3c27"
+      "fingerprint": "84029254d149"
     },
     {
       "id": "stop:test-gate",

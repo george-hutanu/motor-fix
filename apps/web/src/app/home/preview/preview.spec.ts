@@ -4,6 +4,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { HomePreview } from './preview';
+import { RED_LAMP } from '../../red-lamp.testing';
 
 // @traces 226-FR-002
 // @traces 226-FR-003
@@ -246,6 +247,35 @@ describe('HomePreview at 320 px in every voice', () => {
       expect(Math.max(...runs.map((run) => run.length))).toBeLessThanOrEqual(
         13,
       );
+    },
+  );
+});
+
+describe('HomePreview red lamp in every voice', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const lamp = (page: HTMLElement) =>
+    said(page.querySelector('mf-lamp') ?? undefined);
+
+  // @traces 007-FR-012
+  // @traces 007-FR-013
+  it.each(RED_LAMP)(
+    'voice %s in %s, %s: names the brand',
+    async (voice, language, stance, says) => {
+      document.documentElement.dataset['voice'] = voice;
+      const page = await render([garageOf({ stance })], { language });
+
+      expect(lamp(page)).toBe(says('Dacia'));
+      fixture.componentRef.setInput('brand', {
+        ...DACIA,
+        id: 'b',
+        name: 'BMW',
+        slug: 'bmw',
+      });
+      fixture.detectChanges();
+      expect(lamp(page)).toBe(says('BMW'));
     },
   );
 });

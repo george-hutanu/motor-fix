@@ -318,7 +318,7 @@ describe('phase, precedence and the stage table', () => {
       planning: ['size', 'constitution', 'specify', 'context', 'clarify', 'plan', 'checklist', 'tasks', 'analyze'],
       tests: ['tests'],
       development: ['implement', 'converge', 'harden'],
-      review: ['refresh', 'review', 'agent-context', 'retro', 'archive', 'hand-off'],
+      review: ['closer', 'refresh', 'review', 'retro', 'archive', 'hand-off'],
       qa: ['pr-test', 'qa'],
       merging: ['merge'],
     };

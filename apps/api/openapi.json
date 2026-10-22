@@ -2591,7 +2591,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Active brands by popularity, unranked last, then by name",
+            "description": "Active brands by popularity, unranked last, then by name; a signed-in driver’s own cars’ brands first",
             "content": {
               "application/json": {
                 "schema": {
@@ -9778,6 +9778,12 @@
           "popularity": {
             "type": "integer",
             "description": "1 is the most popular; null is unranked",
+            "nullable": true
+          },
+          "roPossessive": {
+            "type": "string",
+            "description": "Romanian \"your\" form of the name, its hyphen U+2011; null or absent reads as the name",
+            "example": "BMW‑ul tău",
             "nullable": true
           }
         },

@@ -3820,6 +3820,49 @@ describe('Results loading more', () => {
   });
 
   // @traces 1356-FR-008
+  it.each(['before', 'after'])(
+    'reads nothing more when the stream opens for the list shown on the way back %s its first page lands, and re-reads on a later re-open',
+    async (when) => {
+      await loaded();
+      await scrolledToEnd();
+      await reads[1]?.answer(
+        pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+      );
+      await harness.navigateByUrl('/ro/elsewhere');
+      await settle();
+      await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+      await settle();
+      pinsApi.mockClear();
+
+      if (when === 'after') await reads[2]?.answer(first());
+      resync.next();
+      await settle();
+      if (when === 'before') await reads[2]?.answer(first());
+      await settle();
+
+      expect(searches().slice(2)).toEqual([{ brand: 'bmw', near: NEAR }]);
+      expect(pinsApi).not.toHaveBeenCalled();
+      expect(names()).toHaveLength(40);
+
+      // The stream lost and opened again: the cards and the counts are read.
+      resync.next();
+      await settle();
+      await reads[3]?.answer(first());
+      await settle();
+
+      expect(pinsApi).toHaveBeenCalledTimes(1);
+      expect(searches().slice(3)).toEqual([
+        {
+          brand: 'bmw',
+          ids: Array.from({ length: 20 }, (_, i) => `g${i}`).join(','),
+          near: NEAR,
+        },
+        { brand: 'bmw', near: NEAR },
+      ]);
+    },
+  );
+
+  // @traces 1356-FR-008
   it('starts another search from its first page, logged', async () => {
     await loaded();
     await scrolledToEnd();

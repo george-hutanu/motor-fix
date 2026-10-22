@@ -141,6 +141,9 @@ jobs:
           npm run test:harness
           # The plugin's validate and tests run on a pinned Claude CLI.
           npm run test:mods
+          # A gate that stopped firing, or one edited without a re-bless.
+          node .claude/scripts/doctor.mjs --check
+          node .claude/scripts/harness-eval.mjs --check
       # The local stack (docker-compose.yml) the PR tester boots: every image
       # still pulls, the services come up healthy (the object store only once
       # its bucket exists) and the app's storage operations pass against the
@@ -197,7 +200,9 @@ jobs:
     needs: changes
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The suite alone takes 27 to 29 minutes (domain's run takes 27), so 30
+    # cancelled it at the edge of a finished run.
+    timeout-minutes: 45
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.

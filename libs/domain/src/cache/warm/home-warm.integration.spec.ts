@@ -28,6 +28,7 @@ import { CarsService } from '../../cars/my-cars/cars/cars.service';
 import { noEvents } from '../../events/event.port';
 import { QuotesModule } from '../../quotes/quotes.module';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
+import { ROUTE_LIMITS } from '../../rate-limit/rate-limit.config';
 import { cacheKey } from '../cache.service';
 import { purgeAudience } from '../purge';
 
@@ -90,6 +91,7 @@ beforeEach(async () => {
     ...(await warmKeys()),
     ...(await redis.keys('v1:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
+    ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
   if (keys.length) await redis.del(...keys);
   jest.restoreAllMocks();

@@ -222,16 +222,18 @@ describe('conditional and HEAD requests on the public reads', () => {
     expect(res.status).toBe(304);
   });
 
-  it('sets no Vary other than Accept-Encoding on a 404, a 400 and a 200', async () => {
+  it('varies a 404 and a 400 on the encoding alone, and a visitor 200 on the session', async () => {
     const answers = [
       await get(missing()),
       await get('/api/v1/brands/popular?limit=0'),
       await get(`/api/v1/garages/${garage.slug}`),
     ];
 
-    expect(answers.map((r) => r.headers['vary'] ?? 'Accept-Encoding')).toEqual(
-      Array(3).fill('Accept-Encoding'),
-    );
+    expect(answers.map((r) => r.headers['vary'] ?? 'Accept-Encoding')).toEqual([
+      'Accept-Encoding',
+      'Accept-Encoding',
+      'Authorization',
+    ]);
   });
 });
 

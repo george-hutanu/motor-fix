@@ -2082,3 +2082,76 @@ describe('a claim refuses a live one, and --dispatch starts the plan with no ses
     }
   });
 });
+
+describe('a level-1 story handed to a closer after harden', () => {
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const none = { pr: null, runState: { status: 'draft', phase: null }, artifacts: null, qaLive: false };
+  const agentLock = 'claude agent agent-a1 (pid 2214 start Sun Oct  4 08:07:18 2026)';
+  const base = { main: false, lock: null, alive: (pid) => pid === 2214, qaLive: false, claim: null, threshold: 30, now: NOW };
+
+  // @traces 1360-FR-011
+  it('maps every run-state phase to its stage, closer to review and agent-context to none', () => {
+    const at = (phase) => phaseOf({ ...none, runState: { status: 'in-progress', phase } });
+    const table = {
+      planning: ['size', 'constitution', 'specify', 'context', 'clarify', 'plan', 'checklist', 'tasks', 'analyze'],
+      tests: ['tests'],
+      development: ['implement', 'converge', 'harden'],
+      review: ['closer', 'refresh', 'review', 'retro', 'archive', 'hand-off'],
+      qa: ['pr-test', 'qa'],
+      merging: ['merge'],
+    };
+    for (const [stage, phases] of Object.entries(table)) for (const p of phases) assert.equal(at(p), stage, p);
+    assert.equal(at('agent-context'), 'development');
+  });
+
+  // @traces 1360-FR-012
+  it('does not let a claude agent lock hold a closer worktree, but a live claim, a QA run or the owner does', () => {
+    assert.equal(holderOf({ ...base, lock: agentLock, closer: true }), 'none');
+    assert.equal(holderOf({ ...base, lock: agentLock, closer: false }), 'live');
+    assert.equal(holderOf({ ...base, lock: 'claude session s (pid 2214 start Sun Oct  4 08:07:18 2026)', closer: true }), 'live');
+    assert.equal(holderOf({ ...base, lock: agentLock, closer: true, claim: { fix: 'resume', at: new Date(NOW - 5 * MIN).toISOString() } }), 'live');
+    assert.equal(holderOf({ ...base, lock: agentLock, closer: true, qaLive: true }), 'live');
+    assert.equal(holderOf({ ...base, main: true, closer: true }), 'owner');
+  });
+
+  // @traces 1360-FR-012
+  it('is stale with resume at once, ahead of the quiet threshold and of fix-ci', () => {
+    const fresh = { activity: { at: NOW, source: 'run-state' } };
+    const r = fixOf(row({ ...fresh, phase: 'review', closer: true }), opts);
+    assert.deepEqual(r, { verdict: 'stale', fix: 'resume', reason: 'handed to a closer after harden' });
+    const red = summarizePr(pr({ isDraft: true, statusCheckRollup: [check('FAILURE')] }));
+    assert.equal(fixOf(row({ ...fresh, phase: 'review', closer: true, pr: red }), opts).fix, 'resume');
+    assert.equal(fixOf(row({ phase: 'review', pr: red, activity: { at: NOW - 600 * MIN, source: 'commit' } }), opts).fix, 'fix-ci');
+  });
+
+  // @traces 1360-FR-012
+  it('leaves a held or blocked closer worktree alone', () => {
+    assert.equal(fixOf(row({ phase: 'review', closer: true, holder: 'live' }), opts).verdict, 'ok');
+    assert.equal(fixOf(row({ phase: 'blocked', closer: true }), opts).verdict, 'blocked');
+  });
+
+  // @traces 1360-FR-012 1360-FR-013 1360-FR-016
+  it('offers resume from collect for phase closer with a dead story agent lock, and stops once the closer sets refresh', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '906-closer');
+      quietCommit(a, 1);
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 2214 start Sun Oct  4 08:07:18 2026)', a);
+      const state = (status, phase) => writeFileSync(join(a, '.specify', 'run-state.json'), JSON.stringify({ status, phase, updated: new Date(NOW - 1 * MIN).toISOString() }));
+      const at = () => collect(f.repo, env({ alive: (pid) => pid === 2214 })).rows.find((x) => x.path === a);
+      state('in-progress', 'closer');
+      let r = at();
+      assert.equal(r.verdict, 'stale');
+      assert.equal(r.fix, 'resume');
+      assert.equal(r.reason, 'handed to a closer after harden');
+      state('blocked', 'closer');
+      assert.equal(at().verdict, 'blocked');
+      state('in-progress', 'refresh');
+      r = at();
+      assert.notEqual(r.fix, 'resume');
+      assert.equal(r.holder, 'live');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});

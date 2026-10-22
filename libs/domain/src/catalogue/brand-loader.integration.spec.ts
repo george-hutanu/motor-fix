@@ -186,6 +186,64 @@ describe('BrandLoader', () => {
     ]);
   });
 
+  // @traces 007-FR-004
+  it('stores the your form of a brand it creates and records it as created', async () => {
+    await loader.load([{ ...FILE[0], roPossessive: 'BMW\u2011ul tău' }]);
+
+    expect(
+      await prisma.brand.findUniqueOrThrow({ where: { key: 'bmw' } }),
+    ).toMatchObject({ roPossessive: 'BMW\u2011ul tău' });
+    expect(await history()).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        newValue: expect.objectContaining({ roPossessive: 'BMW\u2011ul tău' }),
+      }),
+    ]);
+  });
+
+  // @traces 007-FR-004
+  it('fills the your form of a brand stored without one on the next load, recording the change', async () => {
+    await loader.load(FILE);
+    const dacia = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'dacia' },
+    });
+
+    const result = await loader.load([
+      FILE[0],
+      FILE[1],
+      { ...FILE[2], roPossessive: 'Dacia ta' },
+    ]);
+
+    expect(result.changed).toBe(1);
+    expect(
+      await prisma.brand.findUniqueOrThrow({ where: { key: 'dacia' } }),
+    ).toMatchObject({ id: dacia.id, roPossessive: 'Dacia ta' });
+    expect(
+      (await history()).filter((entry) => entry.action === 'update'),
+    ).toEqual([
+      expect.objectContaining({
+        field: 'roPossessive',
+        newValue: 'Dacia ta',
+        oldValue: null,
+        subjectId: dacia.id,
+      }),
+    ]);
+  });
+
+  // @traces 007-FR-004
+  it('updates a changed your form and leaves an unchanged one alone', async () => {
+    await loader.load([{ ...FILE[2], roPossessive: 'Dacia ta' }]);
+
+    expect(
+      (await loader.load([{ ...FILE[2], roPossessive: 'Dacia ta' }])).changed,
+    ).toBe(0);
+    await loader.load([{ ...FILE[2], roPossessive: 'Dacia voastră' }]);
+
+    expect(
+      await prisma.brand.findUniqueOrThrow({ where: { key: 'dacia' } }),
+    ).toMatchObject({ roPossessive: 'Dacia voastră' });
+  });
+
   // @traces 228-FR-015
   it('keeps the rank of a brand it already holds, so a reload never undoes the nightly ranking', async () => {
     await loader.load(FILE);

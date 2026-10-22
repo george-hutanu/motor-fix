@@ -74,7 +74,7 @@ const RULES = [
   // phases-build.md: phases 9-12
   ['No internal identifier goes into the source', 'phases-build.md'],
   ['Tests that pass before any implementation exist are not red-first', 'phases-build.md'],
-  ['Expect `post-edit-check.sh` to report failures', 'phases-build.md'],
+  ['`post-edit-check.sh` answers a red-first spec', 'phases-build.md'],
   ["Step 2's checklist count asks nothing", 'phases-build.md'],
   ['Batch the independent tool calls of `[P]` tasks', 'phases-build.md'],
   ['Loop limit: 2 converge cycles', 'phases-build.md'],
@@ -89,9 +89,7 @@ const RULES = [
   ['must exist. The `after_specify` and `before_implement` hooks write it', 'phases-close.md'],
   ['`verified` or `use a workflow`', 'phases-close.md'],
   ['CRITICAL/HIGH findings that survive the re-review block completion', 'phases-close.md'],
-  ['The active plan is not written into a tracked file', 'phases-close.md'],
-  ['retro-evidence.mjs --since <start-commit> --jev', 'phases-close.md'],
-  ['instincts.mjs triggered --since <start-commit>', 'phases-close.md'],
+  ['One read-only command, with the same `<start-commit>` the Final Report quotes', 'phases-close.md'],
   ['`--since` is not optional.', 'phases-close.md'],
   // commit-protocol.md
   ['One Conventional Commit per implementation slice', 'commit-protocol.md'],
@@ -114,7 +112,7 @@ const RULES = [
   ['A PR with no checks, or one still failing at the limit, is a Hard Stop', 'tail.md'],
   // report.md: the report's sections and the completion checklist
   ["Phases run, with each one's outcome in a line.", 'report.md'],
-  ['Retrospective evidence (unjudged): both command outputs verbatim', 'report.md'],
+  ["Retrospective evidence (unjudged): the command's output verbatim", 'report.md'],
   ['Red-first proven before implementation', 'report.md'],
   ['No Stryker disable added', 'report.md'],
 ];
@@ -172,6 +170,9 @@ const FORBIDDEN = [
   ['.git/info/exclude', 'specs/ is tracked'],
   ['Jira', 'the tracker is GitHub issues'],
   ['`mutation-runner` per touched package', 'mutation runs only in CI'],
+  ['instincts.mjs triggered', 'instincts left the auto chain'],
+  ['retro-evidence.mjs --since <start-commit> --jev', 'phase 16 runs without the Jev lane'],
+  ['`agent-context`,', 'phase 15 left the story path'],
 ];
 
 describe('speckit-auto layout', () => {
@@ -221,8 +222,8 @@ describe('speckit-auto layout', () => {
   });
 });
 
-// The text each ST-1358 rule puts in a skill, template or agent, where a run reads it.
-describe('ST-1358 text lands where the run reads it', () => {
+// The text each preflight and archive rule puts in a skill, template or agent, where a run reads it.
+describe('the preflight and archive text lands where the run reads it', () => {
   const root = join(dir, '..', '..', '..');
   const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
   const has = (path, ...phrases) => {
@@ -255,5 +256,71 @@ describe('ST-1358 text lands where the run reads it', () => {
   it('specify reads the GitHub story; archive reads the diff and leaves the retro manual', () => {
     has('.claude/skills/speckit-specify/SKILL.md', 'gh issue view <n> --repo george-hutanu/motor-fix-specs --comments', 'the Jira and Figma steps (0 and 0b) are cut');
     has('.claude/skills/speckit-archive/SKILL.md', 'read `git diff -- .specify/capabilities/`', '`/speckit-retro` is manual only in the `/speckit-auto` chain');
+  });
+});
+
+describe('the refresh gate and closer text lands where the run reads it', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+  const has = (path, ...phrases) => {
+    const text = at(path);
+    for (const phrase of phrases) assert.ok(text.includes(phrase), `${path} lacks: ${phrase}`);
+  };
+
+  // @traces 1360-FR-004
+  it('phase 13 runs the model-free gate before any researcher', () => {
+    has('.claude/skills/speckit-auto/phases-close.md',
+      'Run `node .claude/scripts/context-refresh-gate.mjs specs/<feature>` first.',
+      'append `## Refresh <UTC time>` and `gate: no change` to `context.md`, log it, and run no `speckit-context`.',
+      '`dispatch <reason>`: log the reason in `auto-run.md` and invoke `speckit-context --since`.');
+  });
+
+  // @traces 1360-FR-010 1360-FR-014 1360-FR-015
+  it('stops a level-1 story after harden and keeps levels 2 and 3 in one agent', () => {
+    has('.claude/skills/speckit-auto/SKILL.md',
+      '| 1 one-session | 2, 7, 9, 10, 12, then a closer: 14, 16',
+      'Levels 2 and 3 keep one agent from preflight through the hand-off',
+      '`converge`, `harden`, `closer`, `refresh`');
+    has('.claude/skills/speckit-auto/phases-close.md',
+      '## Level 1: the stop after harden',
+      '`## Decisions for the closer`', '`### Gates self-answered`', '`### Deviations`', '`### Open items`',
+      'node .claude/scripts/run-state.mjs set --status in-progress --phase closer',
+      'the PR stays a draft', '`NEXT: resume <feature>`',
+      'A cloud session (`CLAUDE_CODE_REMOTE=true`) does not split');
+  });
+
+  // @traces 1360-FR-013 1360-FR-015
+  it('gives the closer its reading list, its first act and who dispatches it', () => {
+    has('.claude/skills/speckit-auto/phases-close.md',
+      '## The closer',
+      'First act: `node .claude/scripts/run-state.mjs set --status in-progress --phase refresh`',
+      '`auto-run.md` with its `## Decisions for the closer`, `spec.md`, `tasks.md`, `node .claude/scripts/run-state.mjs show`, `git log --oneline <start>..HEAD`',
+      'the phases the level owes from 13 on and the hand-off');
+    has('.claude/skills/speckit-auto/preflight.md', '`watch.mjs claim <worktree> resume`', 'as the closer');
+    has('.claude/skills/speckit-auto/lifecycle.md', "A level-1 story's agent ends at phase 12 and a closer");
+    has('.claude/skills/speckit-auto/hand-off.md', 'runs the hand-off, or on level 1 the closer');
+    has('.claude/skills/speckit-watch/SKILL.md', 'At run-state phase `closer`');
+    has('.claude/skills/speckit-auto/report.md', '`NEXT: resume <feature>`');
+  });
+
+  // @traces 1360-FR-006 1360-FR-008
+  it('phase 15 is retired to the session start and phase 16 runs one command', () => {
+    has('.claude/skills/speckit-auto/SKILL.md',
+      '| 15 | Agent context (retired) | none: the session start runs the context-file audit |',
+      'Phases 13 and 16 run beside phase 14\'s reviewers');
+    has('.claude/skills/speckit-auto/phases-close.md',
+      'Nothing runs here. The SessionStart hook (`session-context.mjs`) runs the context-file audit',
+      'node .claude/scripts/retro-evidence.mjs --since <start-commit>\n'.trim(),
+      'learn, evolve and `instincts.mjs` run by hand, outside the chain');
+    assert.ok(!at('.claude/skills/speckit-auto/phases-close.md').includes('--jev'));
+  });
+
+  // @traces 1360-FR-005
+  it('speckit-context stamps Gathered with the time and the specs trunk sha, and finds the epic by its title', () => {
+    has('.claude/skills/speckit-context/SKILL.md',
+      '- **Gathered**: <UTC ISO 8601 time to the second> · specs trunk <sha>',
+      'Gathered: <UTC time> · specs trunk <sha>.',
+      'gh issue list -R $R --label epic --state all --search "EP-<k> in:title" --json number,title',
+      'an epic carries `epic`, not its own `EP-<k>`');
   });
 });

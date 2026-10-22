@@ -26,7 +26,7 @@
 // Under `standard` those edits pass with a reminder to re-bless fingerprints.
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
-import { profileOf } from "../scripts/lib/hooks.mjs";
+import { loadRegistry, profileOf } from "../scripts/lib/hooks.mjs";
 import { contextFileName, measure, readBaseline } from "../scripts/context-audit.mjs";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { traceTokens } from "../scripts/lib/traces.mjs";
@@ -176,9 +176,15 @@ function onPayload(raw) {
   });
   if (reason) block(reason);
 
-  // Not a block: a hook script changed, so its registry fingerprint is now
-  // stale and `npm test` will say so. Say it here, while the fix is cheap.
-  if (rel.startsWith(".claude/hooks/") && rel.endsWith(".mjs"))
+  // Not a block: a script the registry fingerprints changed (a gate or a
+  // helper, whatever its extension), so `npm test` will say the fingerprint
+  // is stale. Say it here, while the fix is cheap. An unreadable registry
+  // fingerprints nothing, so it says nothing.
+  const registry = loadRegistry(repo);
+  const fingerprinted = [...(registry?.hooks ?? []), ...(registry?.helpers ?? [])]
+    .filter((h) => typeof h?.script === "string")
+    .map((h) => `.claude/hooks/${h.script}`);
+  if (fingerprinted.includes(rel))
     console.error(
       `[config-protection] ${rel} is a gate script — re-bless the registry with \`node .claude/scripts/doctor.mjs --bless-hooks\` after reviewing the change.`,
     );

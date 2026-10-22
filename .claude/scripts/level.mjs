@@ -131,7 +131,7 @@ export function pointFeature(repo, featureDirectory, { now = Date.now() } = {}) 
 
 // The phases a level 2 run has and a level 1 run skips (/speckit-auto's
 // Size table): what a promotion owes from that point on.
-const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze", "converge", "refresh", "agent-context", "archive"];
+const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze", "converge", "refresh", "archive"];
 
 /** Files the branch changed against origin/main, committed or not; null when that cannot be computed. */
 function changedFiles(repo) {

@@ -694,20 +694,54 @@ describe('Home brand cycling', () => {
     expect(count()?.getAttribute('aria-live')).toBe('off');
   });
 
-  it('waits while the page is hidden and goes on when it is shown', async () => {
-    await render();
+  // What the browser does as the tab goes to the back and comes forward.
+  const hide = (hidden: boolean) => {
     Object.defineProperty(document, 'hidden', {
       configurable: true,
-      value: true,
+      value: hidden,
     });
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  it('waits while the page is hidden and goes on when it is shown', async () => {
+    await render();
+    hide(true);
 
     await tick(15000);
     expect(checked()).toBe('BMW');
 
-    Object.defineProperty(document, 'hidden', {
-      configurable: true,
-      value: false,
-    });
+    hide(false);
+    await tick(5000);
+    expect(checked()).toBe('Mini');
+  });
+
+  // @traces 007-FR-018
+  it('pauses mid-count when hidden and waits a full 5 seconds once shown', async () => {
+    await render();
+    await tick(3000);
+    hide(true);
+    await tick(2000);
+    expect(checked()).toBe('BMW');
+    await tick(60500);
+    expect(checked()).toBe('BMW');
+
+    hide(false);
+    await tick(0);
+    expect(checked()).toBe('BMW');
+    await tick(4999);
+    expect(checked()).toBe('BMW');
+    await tick(1);
+    expect(checked()).toBe('Mini');
+    await tick(5000);
+    expect(checked()).toBe('Mercedes-Benz');
+  });
+
+  // @traces 007-FR-018
+  it('does not start a second count when shown twice', async () => {
+    await render();
+    hide(false);
+    hide(false);
+
     await tick(5000);
     expect(checked()).toBe('Mini');
   });
@@ -1718,7 +1752,7 @@ describe('Home in the visit’s voice', () => {
     ).toEqual([
       'Cine se pricepe la BMW?',
       'Știm un mecanic bun pentru BMW.',
-      'BMW. 3 service‑uri. Nota maximă: 4,9.',
+      'BMW. 2 service‑uri.',
       'BMW merită mai mult decât „merge și așa”.',
       'Știi cât costă înainte să lași cheile.',
     ]);
@@ -1783,5 +1817,382 @@ describe('Home in the visit’s voice', () => {
     expect(words(hero(4)?.querySelector('h2'))).toBe(
       'Your BMW deserves better than “it’ll do”.',
     );
+  });
+});
+
+describe('Home headline in voice 4', () => {
+  const FORMS: Record<string, string> = {
+    bmw: 'BMW‑ul tău',
+    dacia: 'Dacia ta',
+  };
+  const WITH_FORMS = BRANDS.map((b) => ({ ...b, roPossessive: FORMS[b.slug] }));
+  const FORD: BrandDto = {
+    id: 'ford',
+    name: 'Ford',
+    popularity: 9,
+    roPossessive: 'Fordul tău',
+    slug: 'ford',
+  };
+  const headline = () =>
+    page()
+      .querySelector('.hero [data-voice-of="4"] h2')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+  const find = async (found: BrandDto) => {
+    fixture.debugElement
+      .query(By.directive(BrandSearch))
+      .componentInstance.chosen.emit(found);
+    await settle();
+  };
+
+  // @traces 007-FR-001
+  // @traces 007-FR-020
+  it('names the car by its your form in Romanian, tile by tile and from the search', async () => {
+    await render(WITH_FORMS);
+    expect(headline()).toBe('BMW‑ul tău merită mai mult decât „merge și așa”.');
+
+    await choose('Dacia');
+    expect(headline()).toBe('Dacia ta merită mai mult decât „merge și așa”.');
+
+    await find(FORD);
+    expect(headline()).toBe('Fordul tău merită mai mult decât „merge și așa”.');
+  });
+
+  // @traces 007-FR-003
+  // @traces 007-FR-020
+  it.each([
+    ['null', null],
+    ['empty', ''],
+    ['absent', undefined],
+  ])('falls back to the plain name when the form is %s', async (_, form) => {
+    await render([{ ...BRANDS[1], roPossessive: form }, ...BRANDS.slice(2)]);
+
+    expect(headline()).toBe('Mini merită mai mult decât „merge și așa”.');
+  });
+
+  // @traces 007-FR-001
+  it('keeps the plain name in English', async () => {
+    await render(WITH_FORMS);
+    await TestBed.inject(LanguageChoice).choose('en');
+    await settle();
+
+    expect(headline()).toBe('Your BMW deserves better than “it’ll do”.');
+  });
+
+  // @traces 007-FR-001
+  it('leaves the other voices on the plain name', async () => {
+    await render(WITH_FORMS);
+
+    expect(
+      page().querySelector('.hero [data-voice-of="1"] h2')?.textContent,
+    ).toContain('Cine se pricepe la BMW?');
+  });
+});
+
+describe('Home headline in voice 3', () => {
+  const headline = () =>
+    page()
+      .querySelector('.hero [data-voice-of="3"] h2')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+  const english = async () => {
+    await TestBed.inject(LanguageChoice).choose('en');
+    await settle();
+  };
+
+  // @traces 007-FR-006
+  // @traces 007-FR-009
+  it('reads the takers and the best rating from the Home answer', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+
+    expect(headline()).toBe('BMW. 3 service‑uri. Nota maximă: 4,9.');
+    await english();
+    expect(headline()).toBe('BMW. 3 garages. Top rating: 4.9.');
+  });
+
+  // @traces 007-FR-007
+  // @traces 007-FR-020
+  it.each([
+    [1, 'BMW. 1 service.'],
+    [2, 'BMW. 2 service‑uri.'],
+    [19, 'BMW. 19 service‑uri.'],
+    [20, 'BMW. 20 de service‑uri.'],
+    [101, 'BMW. 101 service‑uri.'],
+    [120, 'BMW. 120 de service‑uri.'],
+  ])('counts %i takers by the Romanian plural rules', async (takers, line) => {
+    await render();
+    await reads[0].answer(takers, 200);
+
+    expect(headline()).toBe(line);
+  });
+
+  // @traces 007-FR-007
+  it.each([
+    [1, 'BMW. 1 garage.'],
+    [20, 'BMW. 20 garages.'],
+  ])('counts %i takers in English', async (takers, line) => {
+    await render();
+    await reads[0].answer(takers, 200);
+    await english();
+
+    expect(headline()).toBe(line);
+  });
+
+  // @traces 007-FR-008
+  // @traces 007-FR-020
+  it('says no garage takes the brand yet, with no rating, at 0 takers', async () => {
+    await render();
+    await reads[0].answer(0, 5);
+
+    expect(headline()).toBe('BMW. Niciun service încă.');
+    await english();
+    expect(headline()).toBe('BMW. No garage yet.');
+  });
+
+  // @traces 007-FR-008
+  it('leaves the rating out when the dial has no rated garage', async () => {
+    await render();
+    await reads[0].answer(2, 5, {
+      best: { ...MILITARI, rating: null },
+      preview: [],
+    });
+
+    expect(headline()).toBe('BMW. 2 service‑uri.');
+  });
+
+  // @traces 007-FR-011
+  it('shows the brand line alone while loading and after a failure', async () => {
+    await render();
+    expect(headline()).toBe('BMW.');
+
+    await reads[0].fail(new HttpErrorResponse({ status: 500 }));
+    expect(headline()).toBe('BMW.');
+  });
+
+  // @traces 007-FR-010
+  it('agrees with the count line and the dial, and moves with them when the place changes', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+    expect(tally()).toContain('3 din 6');
+    expect(dialValue()).toBe('4,9');
+    expect(headline()).toBe('BMW. 3 service‑uri. Nota maximă: 4,9.');
+
+    await pick(HERE);
+    expect(headline()).toBe('BMW.');
+    await reads[1].answer(1, 2, {
+      best: garageOf({ rating: 4.6 }),
+      preview: [],
+    });
+
+    expect(tally()).toContain('1 din 2');
+    expect(dialValue()).toBe('4,6');
+    expect(headline()).toBe('BMW. 1 service. Nota maximă: 4,6.');
+    expect(homeApi.homeControllerForBrand).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Home headline swap', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const rising = () =>
+    page().querySelector('.hero')?.classList.contains('rising');
+  const heading = () => page().querySelector('[data-voice-of="1"] h2');
+
+  const settled = async () => {
+    heading()?.dispatchEvent(new Event('animationend', { bubbles: true }));
+    await settle();
+  };
+
+  // @traces 007-FR-002
+  it('blurs the headline in after a brand change until its animation ends, not on the first render', async () => {
+    await render();
+    expect(rising()).toBe(false);
+    const before = heading();
+
+    await choose('Audi');
+
+    expect(rising()).toBe(true);
+    expect(heading()).not.toBe(before);
+    expect(heading()?.textContent?.trim()).toBe('Cine se pricepe la Audi?');
+    await settled();
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-FR-002
+  it('restarts the blur for a second change mid-animation', async () => {
+    await render();
+
+    await choose('Audi');
+    const first = heading();
+    await choose('Mini');
+
+    expect(heading()).not.toBe(first);
+    expect(heading()?.textContent?.trim()).toBe('Cine se pricepe la Mini?');
+    await settle();
+    expect(rising()).toBe(true);
+    await settled();
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-FR-002
+  it('never marks the headline rising under reduced motion, where no animation ends', async () => {
+    reduced.set(true);
+    await render();
+
+    await choose('Audi');
+
+    expect(heading()?.textContent?.trim()).toBe('Cine se pricepe la Audi?');
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-FR-002
+  it('blurs the headline in on the automatic change too', async () => {
+    jest.useFakeTimers();
+    await render();
+
+    jest.advanceTimersByTime(5000);
+    await settle();
+
+    expect(checked()).toBe('Mini');
+    expect(rising()).toBe(true);
+  });
+
+  // The Jest transform drops component styles, so they are read from the source.
+  // @traces 007-FR-002
+  it('plays the blur-in only on a rising headline, and only without reduced motion', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const motion = css.match(
+      /@media \(prefers-reduced-motion: no-preference\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1];
+    const animating = (block: string) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, , body]) => body.includes('mf-swap-in 520ms'))
+        .map(([, sel]) => sel.trim());
+
+    expect(animating(motion ?? '')).toEqual(['.hero.rising h2']);
+    expect(animating(css.replace(motion ?? '', ''))).toEqual([]);
+  });
+
+  // @traces 007-FR-002
+  it('does not blur the headline on the server', async () => {
+    TestBed.resetTestingModule();
+    await configure('server');
+    await render();
+
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-FR-002
+  it.each(['1', '2', '3', '4', '5'])(
+    'keeps voice %s through a brand change',
+    async (voice) => {
+      document.documentElement.dataset['voice'] = voice;
+      localStorage.setItem('mf-copy', voice);
+      await render();
+
+      await choose('Audi');
+
+      expect(rising()).toBe(true);
+      expect(document.documentElement.dataset['voice']).toBe(voice);
+      expect(localStorage.getItem('mf-copy')).toBe(voice);
+    },
+  );
+});
+
+describe('Home tiles for a signed-in driver', () => {
+  const own = [BRANDS[5], ...BRANDS.filter((_, i) => i !== 5)];
+  const signedIn = (role: MeDto['role'], id = 'ana') =>
+    session.current.set({ city: null, id, role } as MeDto);
+  const reads = () => tilesApi.popularBrandsControllerTiles.mock.calls;
+
+  // @traces 007-FR-014
+  it('reads the tiles again with the session once the driver is known, and shows their order', async () => {
+    await render();
+    expect(reads()).toHaveLength(1);
+    expect(reads()[0][1].get(PUBLIC_READ)).toBe(true);
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(own);
+
+    signedIn('driver');
+    await settle();
+    await settle();
+
+    expect(reads()).toHaveLength(2);
+    expect(reads()[1][1]).toBeUndefined();
+    expect(tiles()[0].textContent?.trim()).toBe(own[0].name);
+    signedIn('driver');
+    await settle();
+    expect(reads()).toHaveLength(2);
+  });
+
+  // @traces 007-FR-016
+  it('never reads them again for a visitor or another role', async () => {
+    await render();
+    signedIn('garage');
+    await settle();
+
+    expect(reads()).toHaveLength(1);
+    expect(checked()).toBe('BMW');
+  });
+
+  // @traces 007-FR-014
+  it('keeps the public tiles when the driver’s read fails', async () => {
+    await render();
+    tilesApi.popularBrandsControllerTiles.mockRejectedValue(
+      new HttpErrorResponse({ status: 503 }),
+    );
+
+    signedIn('driver');
+    await settle();
+    await settle();
+
+    expect(reads()).toHaveLength(2);
+    expect(tiles().map((t) => t.textContent?.trim())).toEqual(NAMES);
+  });
+  // @traces 007-FR-014
+  it('shows the driver’s order even when the public read answers after it', async () => {
+    let answer!: (tiles: BrandDto[]) => void;
+    tilesApi.popularBrandsControllerTiles.mockImplementation((_, context) =>
+      context?.get(PUBLIC_READ)
+        ? new Promise<BrandDto[]>((resolve) => {
+            answer = resolve;
+          })
+        : Promise.resolve(own),
+    );
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await settle();
+
+    signedIn('driver');
+    await settle();
+    answer(BRANDS);
+    await settle();
+    await settle();
+
+    expect(tiles()[0].textContent?.trim()).toBe(own[0].name);
+  });
+
+  // @traces 007-FR-015
+  it('gives the visitor after a sign-out the popular tiles again', async () => {
+    await render();
+    tilesApi.popularBrandsControllerTiles.mockImplementation((_, context) =>
+      Promise.resolve(context?.get(PUBLIC_READ) ? BRANDS : own),
+    );
+    signedIn('driver');
+    await settle();
+    await settle();
+    expect(tiles()[0].textContent?.trim()).toBe(own[0].name);
+
+    session.current.set(null);
+    await settle();
+    await settle();
+
+    expect(reads()).toHaveLength(3);
+    expect(reads()[2][1].get(PUBLIC_READ)).toBe(true);
+    expect(tiles().map((t) => t.textContent?.trim())).toEqual(NAMES);
   });
 });

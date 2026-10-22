@@ -72,7 +72,7 @@ const STAGES = {
   planning: ["size", "constitution", "specify", "context", "clarify", "plan", "checklist", "tasks", "analyze"],
   tests: ["tests"],
   development: ["implement", "converge", "harden"],
-  review: ["refresh", "review", "agent-context", "retro", "archive", "hand-off"],
+  review: ["closer", "refresh", "review", "retro", "archive", "hand-off"],
   qa: ["pr-test", "qa"],
   merging: ["merge"],
 };
@@ -150,12 +150,15 @@ const claimLive = (claim, threshold, now) => typeof claim?.at === "string" && no
 /**
  * A `claude agent` lock carries the pid of the session that started the
  * subagent, not the subagent's own, so a live pid there only proves the session
- * runs: the subagent counts as live while its worktree keeps moving.
+ * runs: the subagent counts as live while its worktree keeps moving. At run-state
+ * phase `closer` that subagent has ended by design (a level-1 story stops after
+ * harden), so its lock holds nothing.
  */
-export function holderOf({ main, self = false, lock, alive, qaLive, claim, threshold, now, activityAt = now }) {
+export function holderOf({ main, self = false, lock, alive, qaLive, claim, threshold, now, activityAt = now, closer = false }) {
   if (main) return "owner";
   if (self || qaLive || claimLive(claim, threshold, now)) return "live";
   if (lock === null) return "none";
+  if (closer && lock.startsWith("claude agent ")) return "none";
   const pid = lockPid(lock);
   if (pid === null) return "live";
   if (!alive(pid)) return "dead";
@@ -191,6 +194,9 @@ export function fixOf(row, { now, thresholds }) {
     return { verdict: "done", fix: "remove", reason: `${pr.state}, nothing unpushed` };
   }
   if (row.holder === "live" || row.holder === "owner") return { verdict: row.phase === "done" ? "done" : "ok", fix: null, reason: `held (${row.holder})` };
+  // A level-1 story's agent ends after harden and leaves the rest to a closer:
+  // nobody is coming until one is dispatched, and the closer owns the draft's CI.
+  if (row.closer && row.phase !== "done") return { verdict: "stale", fix: "resume", reason: "handed to a closer after harden" };
   // A worktree with no PR (a list that was read, not "unknown") and nothing
   // pushed-but-missing is swept once idle for thresholds.idle.
   if (row.pr === null && !row.main && (now - row.activity.at) / MIN > (thresholds.idle ?? DEFAULT_THRESHOLDS.idle)) {
@@ -446,7 +452,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const { activity, clean, gitFailed } = activityOf(w.path, runState);
     const ahead = git(w.path, ["rev-list", "--count", "HEAD", "--not", "--remotes"]);
     const unpushed = ahead !== null && /^\d+$/.test(ahead.trim()) ? Number(ahead.trim()) : null;
-    const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now, activityAt: activity.at });
+    const closer = runState.phase === "closer" && runState.status !== "blocked";
+    const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now, activityAt: activity.at, closer });
     const row = {
       path: w.path,
       branch: w.branch,
@@ -463,6 +470,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       head: w.head,
       main: w.main,
       handoff,
+      closer,
       qaRun,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };

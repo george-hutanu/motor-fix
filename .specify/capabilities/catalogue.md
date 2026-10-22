@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -16,6 +16,7 @@ features:
   - 176-price-change-activity-log
   - 1352-catalogue-job-visibility
   - 1357-rar-covered-jobs
+  - 007-brand-headline
 ---
 
 # Capability: Catalogue
@@ -32,9 +33,9 @@ _From 039-brand-catalogue._
 
 _From 228-how-it-works-list-garage._
 
-### 039-FR-003 — The brand list MUST be loaded from a versioned data file kept in the repository by a loader that stores every brand of the file exactly once, and the repository MUST ship a development file holding at least the twelve brands of the mock (BMW, Mini, Mercedes-Benz, Audi, Volkswagen, Škoda, Dacia, Renault, Ford, Toyota, Hyundai, Tesla).
+### 007-FR-004 — Every brand in the catalogue's list MUST carry a Romanian "your" form, held on the brand row and loaded with the catalogue: the mock's eight ("BMW‑ul tău", "VW‑ul tău", "Mercedesul tău", "Fordul tău", "Dacia ta", "Toyota ta", "Škoda ta", "Tesla ta") and the rest by the rule in Assumptions; the end-to-end seed sets it for every brand row.
 
-_From 039-brand-catalogue._
+_From 007-brand-headline._
 
 ### 228-FR-015 — A catalogue reload MUST NOT undo the nightly ranking: it sets a popularity rank only on the brands it inserts.
 
@@ -272,6 +273,10 @@ _From 1357-rar-covered-jobs._
 
 _From 1357-rar-covered-jobs._
 
+### 007-FR-004 — Every brand in the catalogue's list MUST carry a Romanian "your" form, held on the brand row and loaded with the catalogue: the mock's eight ("BMW‑ul tău", "VW‑ul tău", "Mercedesul tău", "Fordul tău", "Dacia ta", "Toyota ta", "Škoda ta", "Tesla ta") and the rest by the rule in Assumptions; the end-to-end seed sets it for every brand row.
+
+_From 007-brand-headline._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
@@ -279,3 +284,4 @@ _From 1357-rar-covered-jobs._
 - `039-FR-002` — superseded by `228-FR-012` (2026-10-20)
 - `039-FR-004` — superseded by `228-FR-015` (2026-10-20)
 - `173-FR-007` — superseded by `1352-FR-008` (2026-10-20)
+- `039-FR-003` — superseded by `007-FR-004` (2026-10-22)

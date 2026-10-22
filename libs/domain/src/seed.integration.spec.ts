@@ -6,6 +6,7 @@ import { isValidCui } from '@motor-fix/contracts';
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
+import { BRANDS } from './catalogue/brands';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -613,6 +614,23 @@ describe('seed of the listed garages', () => {
         where: { key: 'dacia' },
       }),
     ).toEqual({ active: true, name: 'Dacia', popularity: 7, slug: 'dacia' });
+  });
+
+  // @traces 007-FR-004
+  it('gives every brand row it inserts the catalogue your form of that brand', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
+
+    expect(seed('test').status).toBe(0);
+
+    const rows = await prisma.brand.findMany({
+      select: { key: true, roPossessive: true },
+    });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.roPossessive).toBe(
+        BRANDS.find((brand) => brand.key === row.key)?.roPossessive,
+      );
+    }
   });
 
   // @traces 312-FR-008

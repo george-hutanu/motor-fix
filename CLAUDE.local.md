@@ -51,7 +51,7 @@ check; its Enforcement section is the authority. In short:
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
-| `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
+| `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus one `context-audit:` line when this file grew or has findings |
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
 | `.husky/pre-commit` | every real commit | identity, structure, staged Biome; typecheck + tests in `lifecycle.mjs check` |
 
@@ -125,8 +125,8 @@ An advisory second lane over the same scripts for non-mechanical judgements
 (is this requirement testable, does this context line still change behaviour).
 It is [Jev](https://docs.typesafe.ai), reached by `fetch` in
 `.claude/scripts/lib/jev.mjs`, keyed by `TYPESAFE_API_KEY` or `JEV` in `.env`.
-It never reaches an exit code, fails open (no key → one line saying the lane
-was unavailable), and never runs per-edit. Off with `SPECKIT_JEV=0`, or per
+It never reaches an exit code, is silent with no key (one line when switched
+off), and never runs per-edit. Off with `SPECKIT_JEV=0`, or per
 run with `--no-jev`; `--check` runs drop it.
 
 ## Maintaining the harness

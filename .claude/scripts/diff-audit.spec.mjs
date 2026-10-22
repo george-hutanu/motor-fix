@@ -168,3 +168,84 @@ describe('diff-audit base', () => {
     assert.match(summary(), new RegExp(`^diff-audit: 1 changed file\\(s\\) vs ${base.slice(0, 7)} `));
   });
 });
+
+// Rules for an apps/server and an apps/scanner this repo does not have were
+// noise, and so was an untested-new-file WARN that looked for `/stem.js` in a
+// project whose imports carry no extension.
+// @traces 1359-FR-004
+describe('diff-audit drops the rules for apps this repo does not have', () => {
+  it('raises no param-property-di, for-of-in-scanner or sync-io-in-scanner', () => {
+    write('apps/server/src/a.service.ts', 'export class A {\n  constructor(private readonly b: B) {}\n}\n');
+    write('apps/scanner/src/scan.ts', "export function scan(xs) {\n  for (const x of xs) readFileSync(x);\n}\n");
+    const out = run().join('\n');
+    assert.doesNotMatch(out, /param-property-di|for-of-in-scanner|sync-io-in-scanner/);
+  });
+});
+
+// @traces 1359-FR-005
+describe('diff-audit untested-new-file reads the import style from the tsconfig', () => {
+  const untested = () => run().filter((l) => l.includes('[untested-new-file]'));
+
+  it('takes an extensionless import as a mention under bundler resolution', () => {
+    write('libs/domain/src/thing.ts', 'export const thing = 1;\n');
+    write('libs/domain/src/other.spec.ts', "import { thing } from './thing';\n");
+    assert.deepEqual(untested(), []);
+  });
+
+  it('takes a .js import as a mention under nodenext resolution', () => {
+    write('apps/web-e2e/src/thing.ts', 'export const thing = 1;\n');
+    write('apps/web-e2e/src/other.spec.ts', "import { thing } from './thing.js';\n");
+    assert.deepEqual(untested(), []);
+  });
+
+  it('still warns when no spec mentions the file', () => {
+    write('libs/domain/src/thing.ts', 'export const thing = 1;\n');
+    assert.equal(untested().length, 1);
+  });
+
+  it('does not take a longer name for the file under bundler resolution', () => {
+    write('libs/domain/src/thing.ts', 'export const thing = 1;\n');
+    write('libs/domain/src/thing-list.ts', 'export const list = 1;\n');
+    write('libs/domain/src/other.spec.ts', "import { list } from './thing-list';\n");
+    assert.deepEqual(untested().map((l) => l.includes('thing.ts')), [true]);
+  });
+
+  it('accepts either form when the tsconfig names no style', () => {
+    write('libs/plain/tsconfig.json', { compilerOptions: {} });
+    write('libs/plain/src/a.ts', 'export const a = 1;\n');
+    write('libs/plain/src/b.ts', 'export const b = 1;\n');
+    write('libs/plain/src/uses.spec.ts', "import { a } from './a';\nimport { b } from './b.js';\n");
+    assert.deepEqual(untested(), []);
+  });
+});
+
+// @traces 1359-FR-008
+describe('diff-audit Jev lane: silent without a key', { timeout: 30_000 }, () => {
+  const lane = (env) => {
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'base');
+    write('package.json', { dependencies: { 'left-pad': '1.0.0' } });
+    return spawnSync(process.execPath, [SCRIPT], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '', CLAUDE_PROJECT_DIR: repo, ...env },
+    }).stdout;
+  };
+
+  it('prints no unavailable line when no key is set', () => {
+    const out = lane({});
+    assert.match(out, /\[new-dependency\]/);
+    assert.doesNotMatch(out, /jev lane/);
+  });
+
+  it('still says so when the lane was switched off with a key present', () => {
+    assert.match(lane({ TYPESAFE_API_KEY: 'present', SPECKIT_JEV: '0' }), /jev lane unavailable \(switched off/);
+  });
+
+  it('still says so when the lane was switched off and no key is set', () => {
+    assert.match(lane({ SPECKIT_JEV: '0' }), /jev lane unavailable \(switched off/);
+  });
+
+  it('prints no unavailable line when SPECKIT_JEV=1 asks for the lane but no key is set', () => {
+    assert.doesNotMatch(lane({ SPECKIT_JEV: '1' }), /jev lane/);
+  });
+});

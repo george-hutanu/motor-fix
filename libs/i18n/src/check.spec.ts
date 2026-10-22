@@ -163,6 +163,28 @@ describe('the workspace', () => {
     ).toEqual([]);
   });
 
+  // @traces 007-FR-006
+  // @traces 007-FR-007
+  it.each([
+    ['ro', ['few', 'one', 'other']],
+    ['en', ['one', 'other']],
+  ])(
+    'gives voice 3 in %s a live headline, a full plural count, a none and a top line',
+    (language, categories) => {
+      const v3 = flatten('public', areaFile('public', language));
+
+      expect(v3['public.voice.v3.headline']).toBe('{brand}.{figures}');
+      expect(
+        Object.keys(v3)
+          .filter((key) => key.startsWith('public.voice.v3.count.'))
+          .map((key) => key.split('.').at(-1))
+          .sort(),
+      ).toEqual(categories);
+      expect(v3['public.voice.v3.none']).toBeTruthy();
+      expect(v3['public.voice.v3.top']).toContain('{rating}');
+    },
+  );
+
   it('has no typed-in text and no unknown key in any template', () => {
     const keys = new Set(
       AREAS.flatMap((area) => Object.keys(flatten(area, areaFile(area, 'ro')))),

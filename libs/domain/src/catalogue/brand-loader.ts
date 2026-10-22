@@ -59,6 +59,7 @@ export class BrandLoader {
       const after = {
         active: true,
         name: record.name,
+        roPossessive: record.roPossessive ?? null,
         slug: slugOf(record.name),
       };
       const brand = byKey.get(record.key);
@@ -83,7 +84,10 @@ export class BrandLoader {
   private async create(
     tx: Prisma.TransactionClient,
     key: string,
-    fields: Pick<Brand, 'active' | 'name' | 'popularity' | 'slug'>,
+    fields: Pick<
+      Brand,
+      'active' | 'name' | 'popularity' | 'roPossessive' | 'slug'
+    >,
   ) {
     const created = await tx.brand.create({ data: { ...fields, key } });
     await this.audit.record(tx, {
@@ -100,7 +104,9 @@ export class BrandLoader {
   private async update(
     tx: Prisma.TransactionClient,
     brand: Brand,
-    after: Partial<Pick<Brand, 'active' | 'name' | 'popularity' | 'slug'>>,
+    after: Partial<
+      Pick<Brand, 'active' | 'name' | 'popularity' | 'roPossessive' | 'slug'>
+    >,
   ) {
     const fields = Object.fromEntries(
       Object.entries(after).filter(
