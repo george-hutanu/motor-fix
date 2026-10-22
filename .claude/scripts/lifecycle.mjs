@@ -10,6 +10,10 @@
 //   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment (cloud only)
 //   node .claude/scripts/lifecycle.mjs handoff --restore [--pr <n>]  write a missing handoff.md from the newest one
 //
+// merge first checks the finish comment: after a lap that passed with medium or
+// low findings, specs/<feature>/finish-comment.md lists each under "## Fixed
+// after QA" (fixedAfterQa), or the step stops before the merge call.
+//
 // git ignores handoff.md, so a cloud session resumed on a fresh VM has none:
 // there the PR keeps every version of the note as a comment whose first line
 // is HANDOFF_MARK, and the newest one wins. Off the cloud the worktree keeps
@@ -41,6 +45,7 @@ import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
+import { carriedFrom, carryKind, findingCount, latestReview, statusesArgs } from "./pr-test/carry.mjs";
 import { featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
@@ -492,12 +497,55 @@ function handoff(ctx, flags) {
 /** A PR comment over REST: the body from a file. */
 const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
 
+const FIXED_HEADING = "## Fixed after QA";
+const ghList = (r) => {
+  try {
+    return JSON.parse(r.stdout || "null");
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Constitution VII step 5: a lap that passed with N medium or low findings
+ * merges only once the finish comment's "Fixed after QA" list names each one
+ * with its severity. N is the standing verdict's own count: head's tester
+ * success, or the lap a QA-fixes carry names, where each line must also name
+ * one of the fix commits after that lap. The merge gate judges the verdict;
+ * this judges the list. Returns why it falls short, or null.
+ */
+function fixedAfterQa(ctx, head, file) {
+  const review = latestReview(ghList(ctx.gh(...statusesArgs(head))));
+  if (review?.state !== "success") return null;
+  const kind = carryKind(review.description);
+  if (kind === "docs") return null;
+  let count = findingCount(review.description);
+  let commits = null;
+  if (kind === "fixes") {
+    const from = carriedFrom(review.description);
+    count = findingCount(latestReview(ghList(ctx.gh(...statusesArgs(from))))?.description);
+    const compare = ghList(ctx.gh("api", `repos/{owner}/{repo}/compare/${from}...${head}`));
+    commits = (compare?.commits ?? []).map((c) => String(c.sha));
+  }
+  if (!(count >= 1)) return null;
+  const text = existsSync(file) ? readFileSync(file, "utf8") : "";
+  const section = text.split(/^(?=## )/m).find((part) => part.startsWith(FIXED_HEADING)) ?? "";
+  const lines = section.split("\n").filter((l) => /^\s*(?:[-*]|\d+\.)\s+\S/.test(l));
+  const named = lines.filter((l) => /\b(medium|low)\b/i.test(l));
+  const fixed = commits ? named.filter((l) => (l.match(/\b[0-9a-f]{7,40}\b/g) ?? []).some((sha) => commits.some((c) => c.startsWith(sha)))) : named;
+  if (fixed.length >= count) return null;
+  const each = commits ? "its severity (medium or low) and the fix commit after the lap" : "its severity (medium or low)";
+  return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}": add one list line per finding, naming ${each}, commit it to the specs repo, then the rerun`;
+}
+
 function merge(ctx, flags) {
   const cloud = ctx.env.CLAUDE_CODE_REMOTE === "true";
-  const view = JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title,headRefName").stdout);
+  const view = JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title,headRefName,headRefOid").stdout);
   settleStory(ctx, flags, view.title);
   const n = String(view.number);
   if (view.state !== "MERGED") {
+    const short = fixedAfterQa(ctx, view.headRefOid, join(ctx.feature.dir, "finish-comment.md"));
+    if (short) throw new Stop("Fixed after QA", short);
     ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
     ctx.did.push("merged");
   }

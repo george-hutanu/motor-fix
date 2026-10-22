@@ -37,6 +37,7 @@ function fixture({ trackerScript = true } = {}) {
 const REST = 'gh api repos/{owner}/{repo}/';
 // The branch has no PR: gh's PR reads go over REST, the branch's pulls first.
 const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
+const HEAD_STATUSES = 'gh api repos/{owner}/{repo}/commits/abcdef1234567890/statuses?per_page=100';
 const NO_PR = [`${REST}pulls?head=`, { stdout: '[[]]' }];
 /** The branch's pull as REST answers it, overriding the harness default. */
 const pullAt = (props) => {
@@ -678,15 +679,16 @@ describe('merge', () => {
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
     assert.equal(calls[0], `${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`);
     assert.equal(calls[1], `${REST}pulls/141 -X GET`);
-    assert.equal(calls[2], MERGE);
-    assert.equal(calls[3], `${REST}pulls/141 -X GET`);
-    assert.equal(calls[4], 'git worktree list --porcelain');
-    assert.equal(calls[5], `node scripts/test-services.ts down ${repo}`);
-    assert.equal(calls[6], `node .claude/scripts/tracker-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
-    assert.equal(calls[7], `git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`);
-    assert.equal(calls[8], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`);
-    assert.match(calls[9], /^gh pr comment 141 --body-file \S+$/);
-    assert.equal(calls.length, 10);
+    assert.equal(calls[2], HEAD_STATUSES);
+    assert.equal(calls[3], MERGE);
+    assert.equal(calls[4], `${REST}pulls/141 -X GET`);
+    assert.equal(calls[5], 'git worktree list --porcelain');
+    assert.equal(calls[6], `node scripts/test-services.ts down ${repo}`);
+    assert.equal(calls[7], `node .claude/scripts/tracker-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
+    assert.equal(calls[8], `git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`);
+    assert.equal(calls[9], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`);
+    assert.match(calls[10], /^gh pr comment 141 --body-file \S+$/);
+    assert.equal(calls.length, 11);
     assert.match(comment, /^## Finish log/);
     assert.match(comment, /feed1234beef/);
     assert.match(comment, /- one/);
@@ -744,7 +746,7 @@ describe('merge', () => {
     assert.equal(result.stopped, `gate: ${MERGE}`);
     assert.equal(result.fix, message);
     assert.ok(!h.calls.includes(MERGE));
-    assert.equal(h.calls.at(-1), `${REST}pulls/141 -X GET`);
+    assert.equal(h.calls.at(-1), HEAD_STATUSES);
     assert.ok(!h.calls.some((c) => c.includes('test-services')), 'no stack is stopped for a PR that did not merge');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
   });
@@ -768,6 +770,76 @@ describe('merge', () => {
     assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'the stack is stopped before the tracker finish can stop the step');
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr comment')));
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
+  });
+});
+
+// A passing lap's medium and low findings are fixed after it, and the finish
+// comment lists each one before the PR may merge (Constitution VII step 5).
+describe('merge after a passing lap that reported findings', () => {
+  beforeEach(() => fixture());
+  const FROM = '1'.repeat(40);
+  const FIX = '2'.repeat(40);
+  const review = (description) => ({ stdout: JSON.stringify([{ context: 'agent-review', state: 'success', description }]) });
+  const own = (n) => [HEAD_STATUSES, review(`No blocking findings; ${n} in all. Booted 2/2.`)];
+  const carriedFixes = [
+    [HEAD_STATUSES, review(`carried from ${FROM}: QA fixes`)],
+    [`gh api repos/{owner}/{repo}/commits/${FROM}/statuses`, review('No blocking findings; 2 in all. Booted 2/2.')],
+    [`gh api repos/{owner}/{repo}/compare/${FROM}...abcdef1234567890`, { stdout: JSON.stringify({ status: 'ahead', commits: [{ sha: FIX }, { sha: 'abcdef1234567890' }] }) }],
+  ];
+  const comment = (text) => writeFileSync(join(featureDir, 'finish-comment.md'), text);
+  const stoppedBeforeMerge = (result, h) => {
+    assert.equal(result.ok, false, JSON.stringify(result));
+    assert.equal(result.stopped, 'Fixed after QA');
+    assert.match(result.fix, /finish-comment\.md/);
+    assert.ok(!h.calls.includes(MERGE), 'nothing merged');
+  };
+
+  // @traces 1362-FR-007
+  it('stops before the merge while the finish comment does not list every finding the lap reported', () => {
+    let h = harness({ answers: [own(2)] });
+    stoppedBeforeMerge(step(['merge'], h.io), h);
+    comment('## Fixed after QA\n\n- medium: the empty list answered 500\n');
+    h = harness({ answers: [own(2)] });
+    const result = step(['merge'], h.io);
+    stoppedBeforeMerge(result, h);
+    assert.match(result.fix, /2 findings/);
+    comment('## Fixed after QA\n\n- the empty list answered 500\n- the label overflowed\n');
+    h = harness({ answers: [own(2)] });
+    stoppedBeforeMerge(step(['merge'], h.io), h);
+  });
+
+  // @traces 1362-FR-007
+  it('merges on an own success once the list names each finding with its severity, and posts it', () => {
+    comment('**Decisions**\n- one\n\n## Fixed after QA\n\n- medium: the empty list answered 500\n- low: the label overflowed at 320 px\n');
+    let posted = '';
+    const h = harness({ answers: [own(2), ['gh pr comment', (cmd) => { posted = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(MERGE));
+    assert.match(posted, /## Fixed after QA[\s\S]*- low: the label overflowed/);
+  });
+
+  // @traces 1362-FR-007
+  it('needs no list after a lap with no findings', () => {
+    const h = harness({ answers: [own(0)] });
+    assert.equal(step(['merge'], h.io).ok, true);
+    assert.ok(h.calls.includes(MERGE));
+  });
+
+  // @traces 1362-FR-007
+  it('under a QA-fixes carry, takes the count from the named lap and needs each line to name a fix commit after it', () => {
+    comment('## Fixed after QA\n\n- medium: the empty list answered 500 (2222222)\n- low: the label overflowed\n');
+    let h = harness({ answers: carriedFixes });
+    const result = step(['merge'], h.io);
+    stoppedBeforeMerge(result, h);
+    assert.match(result.fix, /commit/);
+    comment('## Fixed after QA\n\n- medium: the empty list answered 500 (2222222)\n- low: the label overflowed (1111111)\n');
+    h = harness({ answers: carriedFixes });
+    stoppedBeforeMerge(step(['merge'], h.io), h);
+    comment('## Fixed after QA\n\n- medium: the empty list answered 500 (2222222)\n- low: the label overflowed (abcdef1)\n');
+    h = harness({ answers: carriedFixes });
+    assert.equal(step(['merge'], h.io).ok, true);
+    assert.ok(h.calls.includes(MERGE));
   });
 });
 
