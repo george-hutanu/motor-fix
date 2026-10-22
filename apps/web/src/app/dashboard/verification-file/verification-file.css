@@ -98,6 +98,16 @@ h4 {
 .history {
   gap: var(--mf-space-1);
 }
+.replaced {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  padding-left: var(--mf-space-3);
+  border-left: 2px solid var(--mf-line);
+}
+.replaced .line {
+  color: var(--mf-text-secondary);
+}
 .document[data-missing] .line {
   color: var(--mf-red-ink);
 }

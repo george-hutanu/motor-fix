@@ -96,8 +96,9 @@ const oneOf = (values: readonly string[]) => (value: unknown) =>
 
 const isId = (value: unknown) => typeof value === 'string' && UUID.test(value);
 
+// Counted in code points, as the mechanics write and the table count them.
 const trimmedWithin = (value: string | undefined, min: number, max: number) => {
-  const length = value?.trim().length ?? 0;
+  const length = [...(value?.trim() ?? '')].length;
   return length >= min && length <= max;
 };
 

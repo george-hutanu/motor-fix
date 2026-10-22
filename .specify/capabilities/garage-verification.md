@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -25,6 +25,7 @@ features:
   - 1357-rar-covered-jobs
   - 116-listing-verification-status
   - 101-verification-progress
+  - 208-resubmit-after-more
 ---
 
 # Capability: Garage verification
@@ -707,9 +708,9 @@ _From 1357-rar-covered-jobs._
 
 _From 116-listing-verification-status._
 
-### 116-FR-014 — The system MUST expose `GET /api/v1/garages/{garageId}/verification` for the garage's `owner` and for an admin: the derived status of 207-FR-006 (`draft`, `submitted`, `in_review`, `more_requested`, `rejected`, `approved`), `submittedAt`, and for `more_requested` the requested items, for `rejected` the reason code and note; 403 `forbidden` to a `receptionist` or `mechanic` of that garage; a `suspended` garage reads `approved` here (suspension is the dashboard's, #121); 404 `not_found` with no garage data to anyone else (another garage's staff, a driver, an unknown id); 401 without a session.
+### 208-FR-001 — The status read (`GET /api/v1/garages/{garageId}/verification`, 116-FR-014) MUST carry, for a `more_requested` file, the admin's note as stored (the file's `reason_note`, exposed as the DTO field `note`, contracts/completion.md) beside the requested items, and never the internal approval note or the reason of a decision other than the current one; 403 for a receptionist or mechanic and 404 outside the garage stay. Modifies 116-FR-014.
 
-_From 116-listing-verification-status._
+_From 208-resubmit-after-more._
 
 ### 101-FR-002 — The strip MUST show the sending date with the first stage, "Trimis · 2 mart. 2027" / "Submitted · 2 Mar 2027" (the i18n library's fixed short months, `formatDay`), from `submittedAt` in Europe/Bucharest, in the interface language's short-month form, wherever it is given one (this page and `ListingStatus`); a read with no `submittedAt`, and the just-sent summary, show the stage name alone. Modifies 116-FR-015 (the strip gains an optional date).
 
@@ -754,6 +755,42 @@ _From 101-verification-progress._
 ### 101-FR-013 — Tests MUST cover, in colocated Jest specs: the status-to-stage mapping and the date line for all six read states; the reason and item labels; the page shown for `draft` and Panou for `approved` and `suspended`; the re-read on each of the three event kinds and on reconnect; the session re-read and swap on `verification.decided`; the empty menu and the move off `/app/garage/requests` while `draft`; the skeleton, the first-load error and the retry; and, on real PostgreSQL and Redis, 403 for the receptionist and mechanic, 404 outside the garage, and no approval note in the response (116-FR-014's tests extended where they do not already prove it). A Playwright test MUST send a listing and create the account, sign in and see "Trimis" on `/app/garage`, as an admin open the file and see "În verificare" light without a reload, ask for more and see "Cerute completări", approve and see the dashboard open.
 
 _From 101-verification-progress._
+
+### 208-FR-002 — While the file is `more_requested`, the verification page of ST-101 (`/app/garage`, the owner only) MUST show under "Cerute completări" / "More details requested" the items with their existing labels, the note word for word, and a button "Completează" / "Complete" (at least 44 px tall, keyboard reachable) that opens the listing form with the completion copy of FR-004; no note, no button for any other status; the staff of the garage see the title and the two lines only (101-FR-008 unchanged). The existing live re-read (101-FR-005) brings the request to an open page within 5 seconds. Modifies 101-FR-003 (the button and the note are added).
+
+_From 208-resubmit-after-more._
+
+### 208-FR-004 — The system MUST let the garage's `owner` open a **completion copy** of a `more_requested` garage: the garage's saved rows (step 1 details and place, step 2 brands and stances, step 3 prices, step 4 mechanic cards, step 5 hours and payments, step 6 CUI, RAR number and declaration), its current legal documents and its photos, read into the draft shape the listing form keeps; one open copy per file, opened again as long as the file is `more_requested`, with the owner's edits kept; 403 for a receptionist or mechanic, 404 for anyone outside the garage, 409 `verification_transition_refused` when the file is not `more_requested`. The copy is never swept while its file is `more_requested`; once the file leaves it, the sweep removes the open copy. It is not a visitor's draft: it needs the session, not a continue link.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-006 — Replacing a legal document in step 6 MUST keep the replacement's pages in the copy until the resend and, in the resend's transaction, make the new upload the current LEGAL_DOCUMENT of its kind and keep the old row marked replaced (`replaced_at`, proposed); a kind not replaced keeps its row untouched; a replacement removed before the send leaves the file as it was. Admin reads of the file MUST show the current document per kind and list a replaced one as "înlocuit" / "replaced" with its date; a replaced document's pages stay downloadable to admins. One `document.uploaded` event per replaced document, emitted at the resend in that transaction, as the brief says. The per-file-and-kind uniqueness becomes a partial unique index over rows with no `replaced_at`.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-007 — The send of a completion copy MUST, in one transaction that rolls back whole if any write fails: re-check the copy with the first send's rules (116-FR-007: 422 with the field list, nothing written; the two step 6 uploads not required; the `cui_in_use` warning stored on the file, never a refusal, 116-FR-012); write the copy back over the garage's own rows (details, place, brands, prices, mechanics, hours, payments, photos, documents), changing only what differs; write one audit entry per changed field with old and new values, one per photo or brand added or removed, one per replaced document, none for an unchanged value, and one for the resend; move the file `more_requested` → `submitted` through the existing `resend` transition (new `submittedAt`; `decidedAt`, `reasonNote` and `requestedItems` kept, so `resubmitted` and `requestedAt` derive as 304-FR-007 states); hand the outbox `verification.submitted` with `resubmission: true` in the same transaction (Principle VI). The garage stays `draft` and out of public reads while the stored automatic-approval switch is off; with it on, the existing `resend` ends in the automatic approval exactly as today (unchanged). The resubmissions counter counts once (304-FR-012). The same `Idempotency-Key` rule as the first send applies (116-FR-008).
+
+_From 208-resubmit-after-more._
+
+### 208-FR-008 — A send when the file is not `more_requested` (decided, reopened, or already resent) MUST answer 409 `verification_transition_refused` with `currentStatus`, nothing written; the form then shows the status view with the status read again. A receptionist or mechanic sending MUST be refused 403; anyone outside the garage 404.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-009 — After a successful resend the form MUST show the confirmation and status view of 116-FR-001 ("Am primit cererea. O verificăm în 1–2 zile lucrătoare.", "Trimis" lit with the new date), focus on its heading; `/app/garage` MUST show "Trimis" with the new date and no request within 5 seconds (the `verification.submitted` event reaches the garage's channel). The admins' queue MUST show the garage waiting from the new sending time with "Actualizat" (304-FR-007), and the ADMIN_VERIFICATION_QUEUED fan-out MUST fire as for a first send (116-FR-011); nothing new is added to notifications.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-010 — When the owner sends a copy holding no save made since the copy was created (an edit from an earlier session counts as a change), the form MUST first ask "Nu ai schimbat nimic. Trimiți oricum?" / "You changed nothing. Send anyway?" in a dialog with "Trimite" / "Send" and "Renunță" / "Cancel"; confirmed, the send runs; cancelled or dismissed, nothing is sent and focus returns to the send button. The dialog never shows when a change was saved.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-011 — The owner's half of a request for more MUST be observable: the resend counted once per committed resend (the existing `motorfix_verification_resubmissions_total`, 304-FR-012), one log line per resend (file id, garage id, no note), and every new endpoint under the API's request metrics by route with the API-wide error and latency rules, listed in `infra/observability/inventory.json` with the reason no alert of its own is needed (`scripts/observability-inventory.ts` passes). A new product action (opening a completion copy) is counted once per copy opened.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-019 — Tests MUST exist before the code (Principle II), with `// @traces` lines naming this feature's FR ids. Jest on real PostgreSQL and Redis: the status read's note for `more_requested` and none for other statuses, no approval note; the completion copy holding every row, document and photo of the garage, one per file, 403/404/409; the resend from `more_requested` only, 409 after an approval, a rejection and a reopening, 403 for a receptionist and a mechanic, 404 outside; every row kept when nothing changed and no audit entry written; a changed field's entry with old and new values; a replaced document kept and marked, the new one current, the untouched kind's row unchanged; the outbox `verification.submitted` with `resubmission: true`; `resubmitted` and `requestedAt` on the admin's file read; the garage `draft` and absent from public reads; the counter and log line; the `cui_in_use` warning after a CUI change; the whole send rolled back on one failed write. Jest for the browser: the page's note, items and button per status and role; the form at the asked-for step with the copy's data; the no-change dialog's three outcomes; the 409 swap to the status view; and FR-013 to FR-018's unit tests. Playwright (on demand and at release): the admin asks for photos; the owner sees the note and the button, adds 3 photos and sends; the admin sees the garage back in the queue with "Actualizat" and the change list.
+
+_From 208-resubmit-after-more._
 
 ## Retired
 
@@ -801,3 +838,4 @@ _From 101-verification-progress._
 - `210-FR-005` — superseded by `1354-FR-005` (2026-10-20)
 - `210-FR-011` — superseded by `1354-FR-007` (2026-10-20)
 - `116-FR-015` — superseded by `101-FR-002` (2026-10-21)
+- `116-FR-014` — superseded by `208-FR-001` (2026-10-22)

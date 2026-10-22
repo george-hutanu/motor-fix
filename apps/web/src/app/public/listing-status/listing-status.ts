@@ -32,8 +32,8 @@ export const STAGE_NAME: Record<VerificationStageStatus, string> = {
 };
 
 // The signed-in owner's listing on its way to the map: the session's garage
-// read again whenever an admin opens, decides or reopens its file, and on
-// every reconnect of the account's live stream.
+// read again whenever an admin opens, decides or reopens its file, when it
+// is sent again, and on every reconnect of the account's live stream.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, VerificationStages],
@@ -62,6 +62,7 @@ export class ListingStatus {
         'verification.opened',
         'verification.decided',
         'verification.reopened',
+        'verification.submitted',
       ]),
       goneOn: [],
       resync: this.live.resync,

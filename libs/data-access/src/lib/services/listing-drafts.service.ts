@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { completionControllerOpen } from '../fn/listing-drafts/completion-controller-open';
+import { CompletionControllerOpen$Params } from '../fn/listing-drafts/completion-controller-open';
+import { CompletionCopyDto } from '../models/completion-copy-dto';
 import { ContinueLinkSentDto } from '../models/continue-link-sent-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
 import { DraftDocumentDto } from '../models/draft-document-dto';
@@ -384,6 +387,39 @@ export class ListingDraftsService extends BaseService {
   listingSubmitControllerSubmit(params: ListingSubmitControllerSubmit$Params, context?: HttpContext): Promise<ListingSubmittedDto> {
     const resp = this.listingSubmitControllerSubmit$Response(params, context);
     return resp.then((r: StrictHttpResponse<ListingSubmittedDto>): ListingSubmittedDto => r.body);
+  }
+
+  /** Path part for operation `completionControllerOpen()` */
+  static readonly CompletionControllerOpenPath = '/api/v1/listing-drafts/completion';
+
+  /**
+   * Open the copy of the owner's garage that answers a request for more, or the one already open.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `completionControllerOpen()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  completionControllerOpen$Response(params?: CompletionControllerOpen$Params, context?: HttpContext): Promise<StrictHttpResponse<CompletionCopyDto>> {
+    const obs = completionControllerOpen(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Open the copy of the owner's garage that answers a request for more, or the one already open.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `completionControllerOpen$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  completionControllerOpen(params?: CompletionControllerOpen$Params, context?: HttpContext): Promise<CompletionCopyDto> {
+    const resp = this.completionControllerOpen$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CompletionCopyDto>): CompletionCopyDto => r.body);
   }
 
 }

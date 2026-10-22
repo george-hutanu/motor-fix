@@ -237,6 +237,73 @@ describe('the daily run', () => {
   });
 });
 
+// @traces 208-FR-004
+describe('a copy of a live garage', () => {
+  it('gets no reminder and is never deleted, its photos kept', async () => {
+    const garage = await prisma.garage.create({
+      data: { name: 'Service Popescu', slug: 'service-popescu' },
+    });
+    const file = await prisma.verificationFile.create({
+      data: { garageId: garage.id, status: 'more_requested' },
+    });
+    const copy = await draft(daysAgo(120), {
+      data: { files: ['garage-photos/a.jpg'] },
+      verificationFileId: file.id,
+    });
+
+    await sweep.run(NOW);
+
+    expect(sent).toEqual([]);
+    expect(deleted).toEqual([]);
+    await expect(
+      prisma.listingDraft.findUniqueOrThrow({ where: { id: copy.id } }),
+    ).resolves.toMatchObject({ remindedAt: null, status: 'open' });
+  });
+
+  it('goes once its file was decided, releasing only the keys the garage does not hold', async () => {
+    const garage = await prisma.garage.create({
+      data: { name: 'Service Popescu', slug: 'service-popescu' },
+    });
+    await prisma.garagePhoto.create({
+      data: {
+        fileKey: 'garage-photos/shown.jpg',
+        garageId: garage.id,
+        position: 0,
+      },
+    });
+    const file = await prisma.verificationFile.create({
+      data: { garageId: garage.id, status: 'approved' },
+    });
+    await prisma.legalDocument.create({
+      data: {
+        kind: 'rar_authorisation',
+        pages: ['documents/held.pdf'],
+        verificationFileId: file.id,
+      },
+    });
+    const copy = await draft(daysAgo(1), {
+      data: {
+        documents: {
+          rar: { pages: ['documents/held.pdf', 'documents/new-page.pdf'] },
+        },
+        files: ['garage-photos/shown.jpg', 'garage-photos/uploaded.jpg'],
+      },
+      verificationFileId: file.id,
+    });
+
+    await sweep.run(NOW);
+
+    expect(sent).toEqual([]);
+    expect(deleted.sort()).toEqual([
+      'documents/new-page.pdf',
+      'garage-photos/uploaded.jpg',
+    ]);
+    await expect(
+      prisma.listingDraft.findUnique({ where: { id: copy.id } }),
+    ).resolves.toBeNull();
+  });
+});
+
 // @traces 116-FR-036
 describe('the reminder e-mail and its queue', () => {
   let refusals = 0;

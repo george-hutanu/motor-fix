@@ -38,6 +38,7 @@ const status = (
   value: VerificationStatusDto['status'],
   extra: Partial<VerificationStatusDto> = {},
 ): VerificationStatusDto => ({
+  note: null,
   reason: null,
   requestedItems: [],
   status: value,
@@ -196,6 +197,26 @@ describe('the listing status', () => {
       'Certificatul nu se citește.',
     );
     expect(announced(host)).toContain('Respins');
+  });
+
+  // @traces 208-FR-009
+  it('reads again when the file is sent again and lights Trimis with the new day', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(
+      status('more_requested', { requestedItems: ['photos'] }),
+    );
+    const { fixture, host } = await render();
+    api.verificationStatusControllerRead.mockResolvedValue(
+      status('submitted', { submittedAt: '2026-10-22T09:00:00.000Z' }),
+    );
+
+    events.next({ id: 'f1', kind: 'verification.submitted' } as LiveMessage);
+    await pause(350);
+    await settle(fixture);
+
+    expect(api.verificationStatusControllerRead).toHaveBeenCalledTimes(2);
+    expect(lit(host)).toEqual([true, false, false]);
+    expect(firstStage(host)).toBe('Trimis · 22 oct. 2026');
+    expect(host.querySelector('.items')).toBeNull();
   });
 
   // @traces 116-FR-016

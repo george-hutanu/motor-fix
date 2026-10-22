@@ -36,6 +36,7 @@ import {
 import {
   appliedAt,
   daysUntil,
+  formatDay,
   formatNum,
   I18n,
   TranslatePipe,
@@ -404,6 +405,18 @@ export class VerificationFile {
       doc,
       failed: failed?.id === doc.id ? failed.n : null,
       line: this.documentLine(doc),
+      // A replaced document opens as the current one does, by its own id.
+      replaced: doc.replaced.map((older) => {
+        const kept = { ...doc, id: older.id, pages: older.pages };
+        return {
+          buttons: value.storageReady ? this.pageButtons(kept) : [],
+          doc: kept,
+          failed: failed?.id === older.id ? failed.n : null,
+          line: this.t('documents.replacedOn', {
+            date: formatDay(older.at, this.i18n.language()),
+          }),
+        };
+      }),
       stale: this.staleLine(doc),
       unavailable: doc.present && !value.storageReady,
     }));

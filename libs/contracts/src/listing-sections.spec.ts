@@ -1,3 +1,4 @@
+import { checkListing } from './listing-check/listing-check';
 import {
   type DetailsSection,
   detailsComplete,
@@ -219,6 +220,18 @@ describe('the mechanics section', () => {
     expect(mechanicsComplete({ mechanics: [], onProfile: false })).toBe(true);
     expect(mechanicsComplete({})).toBe(true);
     expect(mechanicsComplete({ mechanics: [{ name: ' I ' }] })).toBe(false);
+  });
+
+  // @traces 208-FR-018
+  it('counts a name in code points, so one emoji is too short here and on send', () => {
+    const emoji = { mechanics: [{ name: ' 🔧 ' }] };
+    expect(mechanicsComplete(emoji)).toBe(false);
+    expect(mechanicsComplete({ mechanics: [{ name: '🔧🔧' }] })).toBe(true);
+    const listing = checkListing({ data: { steps: { '4': emoji } } });
+    expect(listing.errors).toContainEqual({
+      code: 'invalid',
+      field: 'steps.4.mechanics[0].name',
+    });
   });
 });
 

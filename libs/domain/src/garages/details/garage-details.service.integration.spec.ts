@@ -214,3 +214,98 @@ describe('GarageDetailsService.create', () => {
     expect(await prisma.garage.count()).toBe(1);
   });
 });
+
+// @traces 208-FR-007
+describe('GarageDetailsService.update', () => {
+  let garageId = '';
+  const update = (given: DetailsSection) =>
+    prisma.$transaction((tx) => details.update(tx, owner, garageId, given));
+  const changes = async () =>
+    (await history()).filter((entry) => entry.action === 'update');
+
+  beforeEach(async () => {
+    garageId = (await create(section)).id;
+  });
+
+  it('writes only the fields that differ, one history entry each with the old and new value', async () => {
+    await update({
+      ...section,
+      knownFor: 'Distribuție',
+      phone: '0733 000 111',
+    });
+
+    expect(
+      await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }),
+    ).toMatchObject({
+      knownFor: 'Distribuție',
+      name: 'Service Popescu',
+      phone: '+40733000111',
+      slug: 'service-popescu',
+    });
+    expect(await changes()).toHaveLength(2);
+    expect(await changes()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actorId: owner,
+          actorRole: 'owner',
+          field: 'phone',
+          garageId,
+          newValue: '+40733000111',
+          oldValue: '+40722123456',
+          subjectId: garageId,
+        }),
+        expect.objectContaining({
+          field: 'knownFor',
+          newValue: 'Distribuție',
+          oldValue: 'Frâne și distribuție',
+        }),
+      ]),
+    );
+  });
+
+  it('writes nothing for a section that only differs in spaces and the phone format', async () => {
+    const before = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+
+    await update({
+      ...section,
+      name: 'Service Popescu',
+      phone: '+40722123456',
+    });
+
+    expect(await changes()).toEqual([]);
+    expect(
+      await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }),
+    ).toEqual(before);
+  });
+
+  it('gives a renamed garage the slug of its new name', async () => {
+    await update({ ...section, name: 'Atelier Nord' });
+
+    expect(
+      await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }),
+    ).toMatchObject({ name: 'Atelier Nord', slug: 'atelier-nord' });
+    expect((await changes()).map((entry) => entry.field)).toEqual(['name']);
+  });
+
+  it('drops the legal form when the service stops being mobile', async () => {
+    await update({
+      ...section,
+      businessKind: 'mobile',
+      mobileLegalForm: 'pfa',
+    });
+    await update(section);
+
+    expect(
+      await prisma.garage.findUniqueOrThrow({ where: { id: garageId } }),
+    ).toMatchObject({ businessKind: 'company', mobileLegalForm: null });
+  });
+
+  it('refuses a broken section and changes nothing', async () => {
+    expect(await refused(update({ ...section, phone: 'call me' }))).toEqual([
+      { code: 'romanian', field: 'phone' },
+    ]);
+    expect(await changes()).toEqual([]);
+  });
+});

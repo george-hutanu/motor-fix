@@ -738,3 +738,145 @@ describe('a job proposed by a concurrent save of another garage', () => {
     ]);
   });
 });
+
+// @traces 208-FR-007
+describe('GaragePricesService.saveAgain', () => {
+  type W = Awaited<ReturnType<typeof world>>;
+  const first = (w: W): StartingPricesInput => ({
+    jobs: [
+      { fromBani: lei(150), jobTypeId: w.diagnosis, toBani: lei(250) },
+      { fromBani: lei(350), jobTypeId: w.oil, toBani: lei(500) },
+      { fromBani: lei(400), name: 'Schimb ambreiaj', toBani: lei(900) },
+    ],
+    labour,
+  });
+  const again = (w: W, input: StartingPricesInput) =>
+    prisma.$transaction((tx) => prices.saveAgain(tx, w.garage, w.mihai, input));
+  // What the second save added to the history and the outbox.
+  async function sent(w: W) {
+    await save(w, first(w));
+    const entries = (await history(w)).length;
+    const proposals = await prisma.jobType.count({
+      where: { proposedByGarageId: w.garage },
+    });
+    return {
+      entries: async () => (await history(w)).slice(entries),
+      proposals: async () =>
+        (await prisma.jobType.count({
+          where: { proposedByGarageId: w.garage },
+        })) - proposals,
+    };
+  }
+
+  it('writes no row and no entry for the same prices, a proposed job included', async () => {
+    const w = await world();
+    const { entries, proposals } = await sent(w);
+    const before = await rows(w);
+
+    const result = await again(w, first(w));
+
+    expect(await rows(w)).toEqual(before);
+    expect(await entries()).toEqual([]);
+    expect(await proposals()).toBe(0);
+    expect(result.jobs.map((job) => job.jobTypeId)).toEqual(
+      before.map((row) => row.jobTypeId),
+    );
+  });
+
+  it('diffs the rows: one changed, one removed, one added, the labour updated', async () => {
+    const w = await world();
+    const { entries } = await sent(w);
+    const [diagnosis, oil] = await rows(w);
+
+    await again(w, {
+      jobs: [
+        { fromBani: lei(200), jobTypeId: w.diagnosis, toBani: lei(250) },
+        { fromBani: lei(400), name: 'Schimb ambreiaj', toBani: lei(900) },
+        { fromBani: lei(600), jobTypeId: w.brakes, toBani: lei(1_800) },
+      ],
+      labour: { ...labour, toBani: lei(260) },
+    });
+
+    const now = await rows(w);
+    expect(now.map((row) => [row.jobTypeId, row.position])).toEqual([
+      [w.diagnosis, 0],
+      [expect.any(String), 1],
+      [w.brakes, 2],
+    ]);
+    expect(now[0]?.id).toBe(diagnosis?.id);
+    expect(now[0]?.fromBani).toBe(20_000);
+    const summary = (await entries()).map(
+      ({ action, field, subjectId, subjectType }) => ({
+        action,
+        field,
+        subjectId,
+        subjectType,
+      }),
+    );
+    expect(summary).toEqual(
+      expect.arrayContaining([
+        {
+          action: 'update',
+          field: 'labour_to_bani',
+          subjectId: w.garage,
+          subjectType: 'garage',
+        },
+        {
+          action: 'update',
+          field: 'from_bani',
+          subjectId: diagnosis?.id,
+          subjectType: 'garage_price',
+        },
+        {
+          action: 'delete',
+          field: null,
+          subjectId: oil?.id,
+          subjectType: 'garage_price',
+        },
+        {
+          action: 'create',
+          field: null,
+          subjectId: now[2]?.id,
+          subjectType: 'garage_price',
+        },
+      ]),
+    );
+    expect(summary.filter((entry) => entry.field === 'position')).toHaveLength(
+      1,
+    );
+    expect(summary).toHaveLength(5);
+  });
+
+  it('proposes a job name the garage has not proposed before', async () => {
+    const w = await world();
+    const { proposals } = await sent(w);
+
+    await again(w, {
+      ...first(w),
+      jobs: [
+        ...first(w).jobs,
+        { fromBani: lei(100), name: 'Spălare motor', toBani: lei(200) },
+      ],
+    });
+
+    expect(await proposals()).toBe(1);
+    expect(await rows(w)).toHaveLength(4);
+  });
+
+  it('refuses a broken range and changes nothing', async () => {
+    const w = await world();
+    const { entries } = await sent(w);
+    const before = await rows(w);
+
+    const errors = await refused(
+      again(w, {
+        jobs: [{ fromBani: lei(500), jobTypeId: w.oil, toBani: lei(100) }],
+        labour,
+      }),
+    );
+
+    expect(errors).not.toEqual([]);
+    expect(await rows(w)).toEqual(before);
+    expect(await entries()).toEqual([]);
+  });
+});
