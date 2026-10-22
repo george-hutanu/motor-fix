@@ -1,10 +1,13 @@
 <header><h1>{{ 'shell.brand' | t }}</h1></header>
 @if (selected(); as brand) {
-  <section class="hero">
+  <section class="hero" [class.rising]="rising()">
     @for (v of voices; track v.n) {
       <div [attr.data-voice-of]="v.n">
         <p class="label">{{ v.copy.eyebrow | t }}</p>
-        <h2>{{ v.copy.headline | t: { brand: v.n === 4 ? own() : brand.name, figures: figures() } }}</h2>
+        <!-- Re-created for another brand, so its blur-in plays again. -->
+        @for (shown of [brand]; track shown.id) {
+          <h2>{{ v.copy.headline | t: { brand: v.n === 4 ? own() : shown.name, figures: figures() } }}</h2>
+        }
         <p>{{ v.copy.sub | t: { brand: brand.name } }}</p>
       </div>
     }

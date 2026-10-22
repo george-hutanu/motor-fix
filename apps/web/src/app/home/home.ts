@@ -52,6 +52,8 @@ import { keysOf, Voice } from '../voice/voice';
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 
 const CYCLE_MS = 5000;
+// How long a new brand's headline takes to blur in, as on Results.
+const RISE_MS = 520;
 // The strip's brands, in ranking order; the first eight are the tiles.
 const POPULAR = 16;
 const TILES = 8;
@@ -118,6 +120,12 @@ export class Home {
   protected readonly selected = linkedSignal<BrandDto | undefined>(() => {
     const tiles = this.tiles();
     return tiles.find((brand) => brand.slug === this.kept) ?? tiles[0];
+  });
+  // A brand change after the first one shown blurs the headline in, once.
+  protected readonly rising = linkedSignal<string | undefined, boolean>({
+    computation: (slug, previous) =>
+      !!previous?.source && previous.source !== slug,
+    source: () => this.selected()?.slug,
   });
   // Voice 4's Romanian headline says "your <brand>"; a brand without the
   // form, and every English line, takes the plain name.
@@ -244,6 +252,11 @@ export class Home {
       this.choice.shown.set(this.selected()?.slug ?? null);
     });
     inject(DestroyRef).onDestroy(() => this.choice.shown.set(null));
+    effect((onCleanup) => {
+      if (!this.rising()) return;
+      const risen = setTimeout(() => this.rising.set(false), RISE_MS);
+      onCleanup(() => clearTimeout(risen));
+    });
     effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;

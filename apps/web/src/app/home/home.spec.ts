@@ -1957,3 +1957,88 @@ describe('Home headline in voice 3', () => {
     expect(homeApi.homeControllerForBrand).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('Home headline swap', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset['voice'];
+  });
+
+  const rising = () =>
+    page().querySelector('.hero')?.classList.contains('rising');
+  const heading = () => page().querySelector('[data-voice-of="1"] h2');
+
+  // @traces 007-brand-headline-FR-002
+  it('blurs the headline in for 520 ms after a brand change, not on the first render', async () => {
+    jest.useFakeTimers();
+    await render();
+    expect(rising()).toBe(false);
+    const before = heading();
+
+    await choose('Audi');
+
+    expect(rising()).toBe(true);
+    expect(heading()).not.toBe(before);
+    expect(heading()?.textContent?.trim()).toBe('Cine se pricepe la Audi?');
+    jest.advanceTimersByTime(519);
+    await settle();
+    expect(rising()).toBe(true);
+    jest.advanceTimersByTime(1);
+    await settle();
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-brand-headline-FR-002
+  it('blurs the headline in on the automatic change too', async () => {
+    jest.useFakeTimers();
+    await render();
+
+    jest.advanceTimersByTime(5000);
+    await settle();
+
+    expect(checked()).toBe('Mini');
+    expect(rising()).toBe(true);
+  });
+
+  // @traces 007-brand-headline-FR-002
+  it('does not blur the headline on the server', async () => {
+    TestBed.resetTestingModule();
+    await configure('server');
+    await render();
+
+    expect(rising()).toBe(false);
+  });
+
+  // @traces 007-brand-headline-FR-002
+  it.each(['1', '2', '3', '4', '5'])(
+    'keeps voice %s through a brand change',
+    async (voice) => {
+      document.documentElement.dataset['voice'] = voice;
+      localStorage.setItem('mf-copy', voice);
+      await render();
+
+      await choose('Audi');
+
+      expect(rising()).toBe(true);
+      expect(document.documentElement.dataset['voice']).toBe(voice);
+      expect(localStorage.getItem('mf-copy')).toBe(voice);
+    },
+  );
+
+  // The Jest transform drops component styles, so they are read from the source.
+  // @traces 007-brand-headline-FR-002
+  it('plays the blur-in only on a rising headline, and only without reduced motion', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const motion = css.match(
+      /@media \(prefers-reduced-motion: no-preference\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1];
+    const animating = (block: string) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, , body]) => body.includes('mf-swap-in 520ms'))
+        .map(([, sel]) => sel.trim());
+
+    expect(animating(motion ?? '')).toEqual(['.hero.rising h2']);
+    expect(animating(css.replace(motion ?? '', ''))).toEqual([]);
+  });
+});
