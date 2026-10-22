@@ -19,6 +19,7 @@ import {
   issuedWithinWindow,
 } from '@motor-fix/contracts/legal-documents';
 import type { ListingCheck } from '@motor-fix/contracts/listing-check';
+import type { HeldDocumentDto } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput } from '@motor-fix/ui-cockpit';
 
@@ -56,6 +57,8 @@ export class DocumentsStep {
   readonly kind = input<string>();
   readonly documents = model<DraftDocuments>({});
   readonly declaration = model<Declaration>({});
+  // Over a copy, the documents already on the file: an upload replaces one.
+  readonly held = input<HeldDocumentDto[]>([]);
   // The page's judgement of this step, and whether sending was asked for.
   readonly problems = input<ListingCheck>(NO_PROBLEMS);
   readonly showAll = input(false);
@@ -102,14 +105,26 @@ export class DocumentsStep {
     const message = this.declarationMessage();
     return message && !message.warning ? message.key : null;
   });
-  // A missing document only tells; it never stops the listing.
+  protected readonly onFile = computed(() =>
+    Object.fromEntries(
+      this.held().map((document) => [document.kind, document.pages]),
+    ),
+  );
+  // A missing document only tells; it never stops the listing. One on the
+  // file is not missing.
   protected readonly documentMessages = computed(() => {
     const check = this.problems();
     const all = this.showAll();
+    const onFile = this.onFile();
     return Object.fromEntries(
       DOCUMENT_KINDS.map((kind) => [
         kind,
-        this.watch.message(check, `documents.${kind}`, { all, filled: false }),
+        onFile[kind]
+          ? null
+          : this.watch.message(check, `documents.${kind}`, {
+              all,
+              filled: false,
+            }),
       ]),
     );
   });

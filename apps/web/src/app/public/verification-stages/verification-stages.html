@@ -11,6 +11,9 @@
             }
           </ul>
         }
+        @if (requestNote(); as note) {
+          <p class="note">{{ note }}</p>
+        }
         @if (rejection(); as rejection) {
           <p class="reason">{{ rejection.name | t }}</p>
           <p class="note">{{ rejection.note }}</p>

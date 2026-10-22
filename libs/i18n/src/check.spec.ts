@@ -147,6 +147,7 @@ describe('unknownKeys', () => {
   });
 });
 
+// @traces 208-FR-012
 describe('the workspace', () => {
   it('registers every folder of translation files as an area', () => {
     const folders = readdirSync(__dirname, { withFileTypes: true })

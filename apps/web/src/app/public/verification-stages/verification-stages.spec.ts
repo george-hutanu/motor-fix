@@ -15,6 +15,7 @@ async function render(
     status: VerificationStageStatus;
     requestedItems?: string[];
     reason?: { code: string; note: string } | null;
+    note?: string | null;
     submittedAt?: string | null;
   },
   language: 'ro' | 'en' = 'ro',
@@ -242,6 +243,72 @@ describe('the verification stages', () => {
       /\.stages \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
     );
   });
+});
+
+// @traces 208-FR-003
+describe("the admin's note on a request for more", () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  const NOTE =
+    'Fotografiile nu arată atelierul. Adaugă 3 fotografii din interior.';
+
+  it('sets the note word for word under the items of the second stage', async () => {
+    const host = await render({
+      note: NOTE,
+      requestedItems: ['photos'],
+      status: 'more_requested',
+    });
+
+    const second = stages(host)[1];
+    const note = second?.querySelector('.note');
+    expect(text(note)).toBe(NOTE);
+    const items = second?.querySelector('.items');
+    expect(items).not.toBeNull();
+    expect(
+      items && note
+        ? items.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING
+        : 0,
+    ).toBeTruthy();
+  });
+
+  it('sets the note with no list when no item was named', async () => {
+    const host = await render({ note: NOTE, status: 'more_requested' });
+
+    expect(stages(host)[1]?.querySelector('.items')).toBeNull();
+    expect(text(stages(host)[1]?.querySelector('.note'))).toBe(NOTE);
+  });
+
+  it('keeps an unbroken 200-character word inside the column', async () => {
+    const word = 'a'.repeat(200);
+    const host = await render({ note: word, status: 'more_requested' });
+    const css = readFileSync(
+      join(__dirname, 'verification-stages.css'),
+      'utf8',
+    );
+
+    expect(text(stages(host)[1]?.querySelector('.note'))).toBe(word);
+    expect(css).toMatch(/\.note[^{]*\{[^}]*overflow-wrap: anywhere/);
+    expect(css).toMatch(/\.stages > li \{[^}]*min-width: 0/);
+  });
+
+  it('shows no note when there is none', async () => {
+    const host = await render({
+      note: null,
+      requestedItems: ['photos'],
+      status: 'more_requested',
+    });
+
+    expect(host.querySelector('.note')).toBeNull();
+  });
+
+  it.each(['submitted', 'in_review', 'approved'] as const)(
+    'never shows a request note on a %s file',
+    async (status) => {
+      const host = await render({ note: NOTE, status });
+
+      expect(text(host)).not.toContain(NOTE);
+    },
+  );
 });
 
 // @traces 101-FR-002

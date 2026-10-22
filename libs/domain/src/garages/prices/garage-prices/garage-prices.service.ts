@@ -18,7 +18,11 @@ import {
 } from '../../../audit/audit.port';
 import { refusal, taken } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
-import type { JobTypeStatus, Prisma } from '../../../generated/prisma/client';
+import type {
+  GaragePrice,
+  JobTypeStatus,
+  Prisma,
+} from '../../../generated/prisma/client';
 import { uniqueSlug } from '../../garage-slug';
 import { isRecord, plainText } from '../../plain-text';
 
@@ -149,6 +153,9 @@ function payloadErrors({ jobs, labour }: StartingPricesInput) {
   return errors;
 }
 
+const rowKey = (row: { jobTypeId: string; brandId: string | null }) =>
+  pairOf(row.jobTypeId, row.brandId);
+
 // What a price row is created with, recorded as its audit entry's new value.
 type RowFields = {
   brandId: string | null;
@@ -203,23 +210,11 @@ export class GaragePricesService {
     actorId: string,
     given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
-    if (!wellShaped(given.jobs)) {
-      throw refuse([{ code: 'invalid', field: 'jobs' }]);
-    }
-    const input = sameCase(given);
+    const { fromBani, input, toBani } = await this.checked(tx, garageId, given);
     const garage = await tx.garage.findUniqueOrThrow({
       select: { labourFromBani: true, labourToBani: true },
       where: { id: garageId },
     });
-    const errors = payloadErrors(input);
-    if (errors.length === 0) {
-      errors.push(...(await this.catalogueErrors(tx, garageId, input.jobs)));
-    }
-    if (errors.length > 0) throw refuse(errors);
-    const { fromBani, toBani } = input.labour as {
-      fromBani: number;
-      toBani: number;
-    };
     await tx.garage.update({
       data: { labourFromBani: fromBani, labourToBani: toBani },
       where: { id: garageId },
@@ -266,6 +261,212 @@ export class GaragePricesService {
         warnings: checkPriceRange(started(input.labour)).warnings,
       },
     };
+  }
+
+  // Step 3 sent again over a live garage: rows matched by job and brand, so
+  // only what differs is written, one history entry each. A name the garage
+  // proposed before is its pending job again, not a second proposal.
+  // `worksOn` is the brands the same sending takes, written after the prices.
+  async saveAgain(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    actorId: string,
+    given: StartingPricesInput,
+    worksOn?: readonly string[],
+  ): Promise<StartingPricesResult> {
+    const { fromBani, input, toBani } = await this.checked(
+      tx,
+      garageId,
+      given,
+      { worksOn },
+    );
+    const scope = { actorId, actorRole: 'garage' as const, garageId };
+    await this.labourAgain(tx, scope, fromBani, toBani);
+    const ids = await this.jobIds(tx, scope, input.jobs);
+    const wanted = input.jobs.map((job, position) => ({
+      brandId: job.brandId ?? null,
+      durationMinutes: null,
+      fromBani: job.fromBani as number,
+      jobTypeId: ids.get(jobOf(job)) as string,
+      position,
+      toBani: job.toBani ?? null,
+      visible: true as const,
+    }));
+    const stored = await this.dropRows(tx, scope, wanted);
+    const jobs: StartingPricesResult['jobs'] = [];
+    for (const [i, fields] of wanted.entries()) {
+      const row = stored.find((one) => rowKey(one) === rowKey(fields));
+      const id = row
+        ? await this.updateRow(tx, scope, row, fields)
+        : (
+            await this.createRow(
+              tx,
+              scope,
+              fields,
+              refuse([{ code: 'duplicate', field: `jobs[${i}].jobTypeId` }]),
+            )
+          ).id;
+      const warnings = checkPriceRange(started(input.jobs[i] as Job)).warnings;
+      jobs.push({ ...fields, id, warnings });
+    }
+    return {
+      jobs,
+      labour: {
+        fromBani,
+        toBani,
+        warnings: checkPriceRange(started(input.labour)).warnings,
+      },
+    };
+  }
+
+  // Step 3 as sent, refused unless every field and catalogue job holds.
+  private async checked(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    given: StartingPricesInput,
+    again?: { worksOn?: readonly string[] },
+  ) {
+    if (!isRecord(given as unknown))
+      throw refuse([{ code: 'invalid', field: 'section' }]);
+    if (!wellShaped(given.jobs)) {
+      throw refuse([{ code: 'invalid', field: 'jobs' }]);
+    }
+    const input = sameCase(given);
+    const errors = payloadErrors(input);
+    if (errors.length === 0) {
+      errors.push(
+        ...(await this.catalogueErrors(tx, garageId, input.jobs, again)),
+      );
+    }
+    if (errors.length > 0) throw refuse(errors);
+    const { fromBani, toBani } = input.labour as {
+      fromBani: number;
+      toBani: number;
+    };
+    return { fromBani, input, toBani };
+  }
+
+  // Deletes the stored rows the sending no longer lists; answers the rest.
+  private async dropRows(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    wanted: readonly RowFields[],
+  ) {
+    const stored = await tx.garagePrice.findMany({
+      where: { garageId: scope.garageId },
+    });
+    const kept = new Set(wanted.map(rowKey));
+    for (const row of stored.filter((one) => !kept.has(rowKey(one)))) {
+      await tx.garagePrice.delete({ where: { id: row.id } });
+      await this.audit.record(tx, {
+        ...scope,
+        action: 'delete',
+        oldValue: {
+          brand_id: row.brandId,
+          from_bani: row.fromBani,
+          job_type_id: row.jobTypeId,
+          to_bani: row.toBani,
+        },
+        subjectId: row.id,
+        subjectType: 'garage_price',
+      });
+    }
+    return stored.filter((row) => kept.has(rowKey(row)));
+  }
+
+  private async labourAgain(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    fromBani: number,
+    toBani: number,
+  ) {
+    const { garageId } = scope;
+    const garage = await tx.garage.findUniqueOrThrow({
+      select: { labourFromBani: true, labourToBani: true },
+      where: { id: garageId },
+    });
+    if (garage.labourFromBani === fromBani && garage.labourToBani === toBani) {
+      return;
+    }
+    await tx.garage.update({
+      data: { labourFromBani: fromBani, labourToBani: toBani },
+      where: { id: garageId },
+    });
+    await this.audit.recordChanges(
+      tx,
+      { ...scope, subjectId: garageId, subjectType: 'garage' },
+      {
+        labour_from_bani: garage.labourFromBani,
+        labour_to_bani: garage.labourToBani,
+      },
+      { labour_from_bani: fromBani, labour_to_bani: toBani },
+    );
+  }
+
+  // A stored row moved to the range and place the sending gives it; answers
+  // its id.
+  private async updateRow(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    row: GaragePrice,
+    fields: RowFields,
+  ) {
+    const before = {
+      from_bani: row.fromBani,
+      position: row.position,
+      to_bani: row.toBani,
+    };
+    const after = {
+      from_bani: fields.fromBani,
+      position: fields.position,
+      to_bani: fields.toBani,
+    };
+    if (JSON.stringify(before) === JSON.stringify(after)) return row.id;
+    await tx.garagePrice.update({
+      data: {
+        fromBani: fields.fromBani,
+        position: fields.position,
+        toBani: fields.toBani,
+        updatedBy: scope.actorId,
+      },
+      where: { id: row.id },
+    });
+    await this.audit.recordChanges(
+      tx,
+      { ...scope, subjectId: row.id, subjectType: 'garage_price' },
+      before,
+      after,
+    );
+    return row.id;
+  }
+
+  // The catalogue id of each entry's job: its own, the garage's pending job
+  // of the same name, or a job proposed now.
+  private async jobIds(
+    tx: Prisma.TransactionClient,
+    scope: RowScope,
+    jobs: readonly Job[],
+  ) {
+    const pending = await tx.jobType.findMany({
+      select: { id: true, nameRo: true },
+      where: { proposedByGarageId: scope.garageId },
+    });
+    const ids = new Map<string, string>(
+      pending.map((job) => [nameOf(job.nameRo), job.id]),
+    );
+    for (const [i, job] of jobs.entries()) {
+      if (isSet(job.jobTypeId)) {
+        ids.set(jobOf(job), job.jobTypeId);
+        continue;
+      }
+      if (ids.has(jobOf(job))) continue;
+      const clash = refuse([{ code: 'duplicate', field: `jobs[${i}].name` }]);
+      ids.set(
+        jobOf(job),
+        await this.propose(tx, scope, job.name as string, clash),
+      );
+    }
+    return ids;
   }
 
   // A price row with its audit entry; `clash` is thrown when a concurrent
@@ -361,10 +562,13 @@ export class GaragePricesService {
 
   // Jobs and brands the catalogue does not hold, brands the garage does not
   // take, ranges already stored, and proposals of a job already approved.
+  // A sending again (`again` given) matches its stored ranges, so they are
+  // no duplicate, and checks the brands against the ones it takes.
   private async catalogueErrors(
     tx: Prisma.TransactionClient,
     garageId: string,
     jobs: readonly Job[],
+    again?: { worksOn?: readonly string[] },
   ) {
     const jobIds = [
       ...new Set(jobs.flatMap((job) => (job.jobTypeId ? [job.jobTypeId] : []))),
@@ -392,7 +596,10 @@ export class GaragePricesService {
     const approved = await approvedNames(tx);
     const status = new Map(jobTypes.map((job) => [job.id, job.status]));
     const known = new Set(brands.map((brand) => brand.id));
-    const worksOn = new Set(takenBrands.map((row) => row.brandId));
+    const worksOn = new Set(
+      again?.worksOn?.map((id) => id.toLowerCase()) ??
+        takenBrands.map((row) => row.brandId),
+    );
     const storedPairs = new Set(
       stored.map((row) => pairOf(`id:${row.jobTypeId}`, row.brandId)),
     );
@@ -401,7 +608,7 @@ export class GaragePricesService {
         ? undefined
         : jobProblem(
             status.get(job.jobTypeId),
-            storedPairs.has(pairOf(jobOf(job), job.brandId)),
+            !again && storedPairs.has(pairOf(jobOf(job), job.brandId)),
           );
     const brandProblem = ({ brandId }: Job) => {
       if (!brandId) return undefined;

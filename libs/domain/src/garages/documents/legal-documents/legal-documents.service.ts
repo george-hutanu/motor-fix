@@ -1,7 +1,9 @@
 import {
   DOCUMENT_KINDS,
   DOWNLOAD_URL_MINUTES,
+  type DocumentKind,
   type DocumentPageAddressDto,
+  type DraftDocuments,
   declarationDone,
   isDocumentKind,
   type ListingDraftData,
@@ -69,34 +71,7 @@ export class LegalDocumentsService {
     for (const kind of DOCUMENT_KINDS) {
       const document = draftData.documents?.[kind];
       if (!document?.pages.length) continue;
-      const row = await tx.legalDocument.create({
-        data: {
-          issuedOn: document.issuedOn ? new Date(document.issuedOn) : null,
-          kind,
-          pages: document.pages,
-          verificationFileId: file.id,
-        },
-      });
-      await this.audit.record(tx, {
-        ...by,
-        action: 'create',
-        garageId: file.garageId,
-        kind,
-        newValue: {
-          issuedOn: document.issuedOn,
-          kind,
-          pages: document.pages.length,
-        },
-        subjectId: row.id,
-        subjectType: 'legal_document',
-      });
-      await this.events.record(tx, {
-        audience: { adminOnly: true, type: 'platform' },
-        kind: 'document.uploaded',
-        payload: { documentId: row.id, garageId: file.garageId, kind },
-        subjectId: row.id,
-      });
-      created.push(row);
+      created.push(await this.add(tx, actor, file, kind, document, null));
     }
     await tx.verificationFile.update({
       data: {
@@ -116,6 +91,74 @@ export class LegalDocumentsService {
       subjectType: 'verification_file',
     });
     return created;
+  }
+
+  // In the resend's transaction: each kind the copy holds pages of becomes
+  // the file's current document, the one it replaces kept with its
+  // `replacedAt`. A kind the copy holds no page of is left as it is.
+  async replace(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    documents: DraftDocuments | undefined,
+    file: { id: string; garageId: string },
+  ): Promise<LegalDocument[]> {
+    const created: LegalDocument[] = [];
+    for (const kind of DOCUMENT_KINDS) {
+      const document = documents?.[kind];
+      if (!document?.pages.length) continue;
+      const old = await tx.legalDocument.findFirst({
+        where: { kind, replacedAt: null, verificationFileId: file.id },
+      });
+      created.push(await this.add(tx, actor, file, kind, document, old));
+    }
+    return created;
+  }
+
+  // One document's row, the mark on the one it replaces if any, its audit
+  // entry and the admins' event.
+  private async add(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    file: { id: string; garageId: string },
+    kind: DocumentKind,
+    document: { issuedOn?: string; pages: string[] },
+    old: LegalDocument | null,
+  ): Promise<LegalDocument> {
+    if (old) {
+      await tx.legalDocument.update({
+        data: { replacedAt: new Date() },
+        where: { id: old.id },
+      });
+    }
+    const row = await tx.legalDocument.create({
+      data: {
+        issuedOn: document.issuedOn ? new Date(document.issuedOn) : null,
+        kind,
+        pages: document.pages,
+        verificationFileId: file.id,
+      },
+    });
+    await this.audit.record(tx, {
+      action: old ? 'update' : 'create',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      garageId: file.garageId,
+      kind,
+      newValue: {
+        issuedOn: document.issuedOn,
+        kind,
+        pages: document.pages.length,
+      },
+      subjectId: row.id,
+      subjectType: 'legal_document',
+    });
+    await this.events.record(tx, {
+      audience: { adminOnly: true, type: 'platform' },
+      kind: 'document.uploaded',
+      payload: { documentId: row.id, garageId: file.garageId, kind },
+      subjectId: row.id,
+    });
+    return row;
   }
 
   // The garage's own staff are told they are not admins; anyone else, and

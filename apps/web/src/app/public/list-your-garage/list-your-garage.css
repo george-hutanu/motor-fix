@@ -41,6 +41,10 @@ nav button:focus-visible {
   font-weight: normal;
   color: var(--mf-text-secondary);
 }
+.asked {
+  font-weight: normal;
+  color: var(--mf-amber-ink);
+}
 ol {
   margin: 0;
   padding: 0;

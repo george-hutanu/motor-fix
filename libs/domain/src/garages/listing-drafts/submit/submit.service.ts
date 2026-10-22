@@ -1,6 +1,5 @@
 import {
   checkListing,
-  type FieldProblem,
   isListingDraftData,
   isSurveySection,
   type ListingDraftData,
@@ -47,6 +46,10 @@ import { GaragePlaceService } from '../../place/garage-place.service';
 import { GaragePricesService } from '../../prices/garage-prices/garage-prices.service';
 import { applySurvey } from '../../survey/survey';
 import { VerificationService } from '../../verification/verification.service';
+import {
+  CompletionService,
+  type Sending,
+} from '../completion/completion.service';
 import { ListingDraftsService } from '../listing-drafts.service';
 
 const notFound = () =>
@@ -66,7 +69,7 @@ const ownsOne = () =>
     'This account already has a garage',
   );
 
-const OWNER_PERMISSIONS = {
+export const OWNER_PERMISSIONS = {
   canAnswerQuotes: true,
   canMoveBookings: true,
   canRecordFinalPrice: true,
@@ -85,25 +88,6 @@ const isSent = (value: unknown): value is ListingSubmittedDto => {
     Array.isArray(sent['warnings'])
   );
 };
-
-// The answer a sent draft keeps for its key; another key, or a stored answer
-// that is not one, is refused.
-function earlierAnswer(
-  draft: ListingDraft,
-  key: string,
-): ListingSubmittedDto | undefined {
-  if (draft.status !== 'submitted') return undefined;
-  if (draft.submitKey !== key || !isSent(draft.submitResult)) {
-    throw sentAlready();
-  }
-  return draft.submitResult;
-}
-
-interface Extras {
-  holders: string[];
-  sizes: PhotoSize[];
-  warnings: FieldProblem[];
-}
 
 const dataOf = (draft: ListingDraft): ListingDraftData =>
   isListingDraftData(draft.data) ? draft.data : {};
@@ -132,6 +116,7 @@ export class ListingSubmitService {
     private readonly notifications: NotificationsService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly completion: CompletionService,
   ) {}
 
   async submit(
@@ -141,7 +126,7 @@ export class ListingSubmitService {
     key: string,
   ): Promise<ListingSubmittedDto> {
     const draft = await this.draftOf(id, token);
-    const answered = earlierAnswer(draft, key);
+    const answered = await this.earlierAnswer(draft, key);
     if (answered) return answered;
     // Both read outside the transaction: the object store, and a read the
     // drafts service makes on its own connection.
@@ -158,8 +143,28 @@ export class ListingSubmitService {
         const locked = await tx.listingDraft.findUniqueOrThrow({
           where: { id },
         });
-        const replay = earlierAnswer(locked, key);
+        const replay = await this.earlierAnswer(locked, key);
         if (replay) return { replay };
+        if (locked.verificationFileId) {
+          const file = await this.completion.fileFor(
+            tx,
+            actor,
+            locked.verificationFileId,
+          );
+          const fresh = dataOf(locked);
+          const warnings = this.recheck(
+            fresh,
+            locked.email,
+            holders.length > 0,
+          );
+          const resent = await this.completion.resend(tx, actor, file, fresh, {
+            holders,
+            sizes,
+            warnings,
+          });
+          await this.markSent(tx, actor, id, key, resent.sent);
+          return { resent };
+        }
         const owned = await tx.garageMember.findFirst({
           where: { accountId: actor.accountId, role: 'owner' },
         });
@@ -177,6 +182,14 @@ export class ListingSubmitService {
       { timeout: this.timeout },
     );
     if (outcome.replay) return outcome.replay;
+    if (outcome.resent) {
+      const { dropped, sent } = outcome.resent;
+      this.logger.log(
+        `listing resent: draft ${id} file ${sent.fileId} garage ${sent.garageId} account ${actor.accountId}`,
+      );
+      await this.listingPhotos.release(dropped, id);
+      return sent;
+    }
     this.logger.log(
       `listing sent: draft ${id} garage ${outcome.sent.garageId} account ${actor.accountId}`,
     );
@@ -216,6 +229,22 @@ export class ListingSubmitService {
     return warnings;
   }
 
+  // The answer a sent draft keeps for its key; another key, or a stored answer
+  // that is not one, is refused, a completion copy's with its file's status.
+  private async earlierAnswer(
+    draft: ListingDraft,
+    key: string,
+  ): Promise<ListingSubmittedDto | undefined> {
+    if (draft.status !== 'submitted') return undefined;
+    if (draft.submitKey === key && isSent(draft.submitResult)) {
+      return draft.submitResult;
+    }
+    if (draft.verificationFileId) {
+      throw await this.completion.movedOn(draft.verificationFileId);
+    }
+    throw sentAlready();
+  }
+
   private async markSent(
     tx: Prisma.TransactionClient,
     actor: Actor,
@@ -250,7 +279,7 @@ export class ListingSubmitService {
     tx: Prisma.TransactionClient,
     actor: Actor,
     data: ListingDraftData,
-    extras: Extras,
+    extras: Sending,
   ): Promise<ListingSubmittedDto> {
     const { accountId } = actor;
     await this.accounts.grantRole(
@@ -280,7 +309,7 @@ export class ListingSubmitService {
     owner: Actor,
     garageId: string,
     data: ListingDraftData,
-    { holders, sizes, warnings }: Extras,
+    { holders, sizes, warnings }: Sending,
   ): Promise<ListingSubmittedDto> {
     const { accountId } = owner;
     const steps = data.steps ?? {};

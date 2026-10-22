@@ -187,6 +187,7 @@
     "title": "Team invitation"
   },
   "listing": {
+    "askedFor": "Asked by MotorFix",
     "bar": "{n} / 6 · {label}",
     "brands": {
       "chips": "Your brands",
@@ -401,8 +402,17 @@
       "row": "Mechanic {n}",
       "speciality": "What they mostly work on"
     },
+    "noChange": {
+      "cancel": "Cancel",
+      "send": "Send",
+      "title": "You changed nothing. Send anyway?"
+    },
     "notSaved": "The draft could not be saved on the server. Try again.",
     "offline": "Offline · we save when you are back",
+    "onFile": {
+      "one": "On file: {count} page",
+      "other": "On file: {count} pages"
+    },
     "optional": "optional",
     "photos": {
       "backward": "Move photo {n} later",
@@ -492,6 +502,10 @@
     "rarHint": "from the authorisation displayed in the workshop",
     "rarNumber": "RAR technical authorisation number",
     "rarShort": "At least 3 characters",
+    "replacesOnFile": {
+      "one": "Replaces the document on file ({count} page)",
+      "other": "Replaces the document on file ({count} pages)"
+    },
     "required": "required",
     "save": "Save draft",
     "saved": "Draft saved",
@@ -937,6 +951,7 @@
   },
   "verificationStatus": {
     "approved": "Approved, on the map",
+    "complete": "Complete",
     "inReview": "Under review",
     "items": {
       "address": "The address",

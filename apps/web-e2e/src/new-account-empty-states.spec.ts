@@ -34,7 +34,7 @@ const invitation = (page: Page, key: 'car' | 'search') =>
   page.locator(`[data-invitation="${key}"]`);
 
 test.describe('a new account sees helpful empty states @seeded', () => {
-  // @traces 030-FR-002, 030-FR-003, 030-FR-004
+  // @traces 030-FR-002 030-FR-003 030-FR-004
   test('a new driver is invited to add a car and to find a garage, in Romanian and English', async ({
     page,
   }) => {
@@ -102,7 +102,7 @@ test.describe('a new account sees helpful empty states @seeded', () => {
     expect(smallest).toBeGreaterThanOrEqual(12);
   });
 
-  // @traces 030-FR-009, 030-FR-011
+  // @traces 030-FR-009 030-FR-011
   test('a new driver finds each view’s own empty state, never the shared placeholder', async ({
     page,
   }) => {

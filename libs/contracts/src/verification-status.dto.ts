@@ -41,6 +41,13 @@ export class VerificationStatusDto {
   requestedItems!: string[];
 
   @ApiProperty({
+    description: "The admin's note to a request for more; null otherwise",
+    nullable: true,
+    type: String,
+  })
+  note!: string | null;
+
+  @ApiProperty({
     description: 'Only for a rejection',
     nullable: true,
     type: VerificationRejectionDto,

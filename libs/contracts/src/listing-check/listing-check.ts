@@ -93,7 +93,7 @@ const count = (value: unknown): number | undefined =>
 const blank = (value: unknown) =>
   value === undefined || value === null || value === '';
 
-const trimmed = (value: unknown) => text(value)?.trim().length ?? 0;
+const trimmed = (value: unknown) => [...(text(value)?.trim() ?? '')].length;
 const within = (length: number, min: number, max: number) =>
   length >= min && length <= max;
 

@@ -168,6 +168,25 @@ describe('removing a photo', () => {
     expect(store.objects.has(key)).toBe(true);
   });
 
+  // @traces 208-FR-005 208-FR-007
+  it('keeps the stored photo a live garage still shows when its copy lets it go', async () => {
+    const draft = await draftWith(2);
+    const [first, second] = draft.keys as [string, string];
+    const garage = await prisma.garage.create({
+      data: { name: 'Service Popescu', slug: `g-${randomUUID()}` },
+    });
+    await prisma.garagePhoto.create({
+      data: { fileKey: first, garageId: garage.id, position: 0 },
+    });
+
+    await photos.remove(draft.id, draft.token, first);
+
+    expect(await filesOf(draft.id)).toEqual([second]);
+    expect(store.objects.has(first)).toBe(true);
+    expect(store.objects.has(`${first}.thumb`)).toBe(true);
+    expect(store.objects.has(`${first}.display`)).toBe(true);
+  });
+
   it('is refused for a wrong token and for a sent draft', async () => {
     const draft = await draftWith(1);
     const key = draft.keys[0] as string;

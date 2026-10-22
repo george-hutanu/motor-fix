@@ -22,6 +22,11 @@ beforeEach(() => {
       const top = tops[sections.indexOf(this)] ?? 0;
       return { bottom: top + 40, height: 40, top } as DOMRect;
     });
+  // A frame runs once the task that asked for it is over.
+  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
+    void Promise.resolve().then(() => run(0));
+    return 1;
+  });
   Object.defineProperty(document.documentElement, 'scrollHeight', {
     configurable: true,
     value: 8000,
@@ -74,6 +79,8 @@ const ended = () => window.dispatchEvent(new Event('scrollend'));
 const scrolled = async (harness: RouterTestingHarness, to: number[]) => {
   tops = to;
   window.dispatchEvent(new Event('scroll'));
+  // Under a fake clock a frame is a timer of its own.
+  if ('clock' in setTimeout) await jest.advanceTimersByTimeAsync(16);
   await settle(harness);
 };
 const FLIGHT = [990, 1990, 2990, 3990, 4990, 5990];

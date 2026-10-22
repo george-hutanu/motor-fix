@@ -148,6 +148,7 @@ describe('the verification status, for the owner', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      note: null,
       reason: null,
       requestedItems: [],
       status: 'draft',
@@ -168,6 +169,7 @@ describe('the verification status, for the owner', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
+        note: null,
         reason: null,
         requestedItems: [],
         status,
@@ -235,6 +237,7 @@ describe('the verification status, for the owner', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      note: null,
       reason: null,
       requestedItems: [],
       status: 'approved',
@@ -257,6 +260,118 @@ describe('the verification status, for the owner', () => {
     const res = await read(w.dinamo.id, w.owner);
 
     expect(res.body).toMatchObject({ reason: null, status: 'in_review' });
+  });
+});
+
+const NOTE =
+  'Fotografiile nu arată atelierul. Adaugă 3 fotografii din interior.';
+
+// @traces 208-FR-001
+describe("the admin's note on a request for more", () => {
+  it('gives the note word for word beside the items', async () => {
+    const w = await world();
+    await file(w.dinamo.id, 'more_requested', {
+      reasonCode: 'photos',
+      reasonNote: NOTE,
+      requestedItems: ['photos'],
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      note: NOTE,
+      reason: null,
+      requestedItems: ['photos'],
+      status: 'more_requested',
+      submittedAt: SENT_AT.toISOString(),
+    });
+  });
+
+  it('reads no note for a request that wrote none', async () => {
+    const w = await world();
+    await file(w.dinamo.id, 'more_requested', { requestedItems: [] });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body).toMatchObject({ note: null, status: 'more_requested' });
+  });
+
+  it.each(['submitted', 'in_review', 'rejected'] as const)(
+    'reads no request note for a %s file, though the file keeps one',
+    async (status) => {
+      const w = await world();
+      await file(w.dinamo.id, status, {
+        reasonCode: 'other',
+        reasonNote: NOTE,
+        requestedItems: ['photos'],
+      });
+
+      const res = await read(w.dinamo.id, w.owner);
+
+      expect(res.body.note).toBeNull();
+      expect(res.body.requestedItems).toEqual([]);
+    },
+  );
+
+  it('never gives an approval’s internal note as the note', async () => {
+    const w = await world('approved');
+    await file(w.dinamo.id, 'approved', {
+      reasonNote: 'Notă internă: verificat telefonic cu patronul.',
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.note).toBeNull();
+    expect(JSON.stringify(res.body)).not.toContain('Notă internă');
+  });
+
+  it('gives the note of the current request, never an earlier decision’s', async () => {
+    const w = await world();
+    await file(w.dinamo.id, 'rejected', {
+      createdAt: new Date('2026-10-01T08:00:00Z'),
+      reasonCode: 'documents',
+      reasonNote: 'Vechi',
+    });
+    await file(w.dinamo.id, 'more_requested', {
+      createdAt: new Date('2026-10-10T08:00:00Z'),
+      reasonNote: NOTE,
+      requestedItems: ['photos'],
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.note).toBe(NOTE);
+    expect(JSON.stringify(res.body)).not.toContain('Vechi');
+  });
+
+  it.each(['receptionist', 'mechanic'] as const)(
+    'refuses a %s of the garage the note',
+    async (who) => {
+      const w = await world();
+      await file(w.dinamo.id, 'more_requested', {
+        reasonNote: NOTE,
+        requestedItems: ['photos'],
+      });
+
+      const res = await read(w.dinamo.id, w[who]);
+
+      expect(res.status).toBe(403);
+      expect(JSON.stringify(res.body)).not.toContain('Fotografiile');
+    },
+  );
+
+  it('tells an owner of another garage nothing of it', async () => {
+    const w = await world();
+    await file(w.dinamo.id, 'more_requested', {
+      reasonNote: NOTE,
+      requestedItems: ['photos'],
+    });
+
+    const res = await read(w.dinamo.id, w.other);
+
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(res.body)).not.toContain('Fotografiile');
   });
 });
 

@@ -155,6 +155,7 @@
         "one": "{n} page",
         "other": "{n} pages"
       },
+      "replacedOn": "replaced on {date}",
       "stale": "Older than 30 days at the time of sending",
       "today": "issued today",
       "unavailable": "unavailable",

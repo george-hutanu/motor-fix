@@ -257,7 +257,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-// @traces 221-FR-002, 221-FR-003, 221-FR-013, 221-FR-017
+// @traces 221-FR-002 221-FR-003 221-FR-013 221-FR-017
 describe('the quote request dialog', () => {
   it('preselects the only car, lists the garage’s jobs switched off and offers Trimite', async () => {
     await open();
@@ -495,7 +495,7 @@ describe('the quote request dialog for a visitor with no session', () => {
   });
 });
 
-// @traces 221-FR-006, 221-FR-016, 221-FR-017
+// @traces 221-FR-006 221-FR-016 221-FR-017
 describe('the garage picker', () => {
   it('starts with the profile’s garage ticked and locked', async () => {
     await open();

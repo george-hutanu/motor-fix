@@ -1,6 +1,7 @@
 import {
   approvalGaps,
   approvalGapsFrom,
+  askedSteps,
   queueLamp,
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
@@ -144,5 +145,21 @@ describe("the server's list of what an approval passes over", () => {
     ['a null line', [null]],
   ])('is none for %s', (_, value) => {
     expect(approvalGapsFrom(value)).toBeNull();
+  });
+});
+
+// @traces 208-FR-005
+describe('the steps a request for more asks for', () => {
+  it('are the form steps holding the items, lowest first, each once', () => {
+    expect(askedSteps(['rar', 'photos', 'documents', 'address'])).toEqual([
+      5, 6,
+    ]);
+    expect(askedSteps(['photos'])).toEqual([5]);
+  });
+
+  it('are the first step for anything else, or for nothing named', () => {
+    expect(askedSteps(['other'])).toEqual([1]);
+    expect(askedSteps(['other', 'rar'])).toEqual([1, 6]);
+    expect(askedSteps([])).toEqual([1]);
   });
 });

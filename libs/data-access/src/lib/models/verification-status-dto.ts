@@ -5,6 +5,11 @@ import { VerificationRejectionDto } from '../models/verification-rejection-dto';
 export interface VerificationStatusDto {
 
   /**
+   * The admin's note to a request for more; null otherwise
+   */
+  note: string | null;
+
+  /**
    * Only for a rejection
    */
   reason: (VerificationRejectionDto & {

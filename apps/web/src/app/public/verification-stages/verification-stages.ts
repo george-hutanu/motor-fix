@@ -45,6 +45,8 @@ export class VerificationStages {
   readonly status = input.required<VerificationStageStatus>();
   readonly requestedItems = input<readonly string[]>([]);
   readonly reason = input<{ code: string; note: string } | null>(null);
+  // What the admin wrote with a request for more.
+  readonly note = input<string | null>(null);
   // When the listing was sent: the first stage carries its day.
   readonly submittedAt = input<string | null>(null);
   // A page that writes its own off-map line, after its own text, turns this one off.
@@ -71,6 +73,9 @@ export class VerificationStages {
     this.status() === 'more_requested'
       ? this.requestedItems().map(itemName)
       : [],
+  );
+  protected readonly requestNote = computed(() =>
+    this.status() === 'more_requested' ? this.note() : null,
   );
   protected readonly rejection = computed(() => {
     const reason = this.reason();

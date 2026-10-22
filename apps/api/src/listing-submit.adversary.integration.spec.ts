@@ -388,6 +388,7 @@ describe('GET /garages/:id/verification over HTTP', () => {
     const res = await read(garage.id, bearer).expect(200);
 
     expect(res.body).toEqual({
+      note: null,
       reason: null,
       requestedItems: [],
       status: 'draft',
@@ -425,6 +426,7 @@ describe('GET /garages/:id/verification over HTTP', () => {
     const res = await read(garage.id, bearer).expect(200);
 
     expect(res.body).toEqual({
+      note: null,
       reason: null,
       requestedItems: [],
       status: 'submitted',
