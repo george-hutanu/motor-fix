@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { IMAGE_WIDTHS } from '@motor-fix/contracts/images';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import {
@@ -17,6 +18,26 @@ import {
   type ViewerLabels,
   type ViewerPhoto,
 } from '@motor-fix/ui-cockpit/photo-viewer';
+import { thumbHashToDataURL } from 'thumbhash';
+
+// The tile widths the layout gives, so the browser picks the smallest copy
+// that fills one: the cover takes two thirds of the row, the others a third,
+// and on a phone each takes the screen less its gutters.
+const COVER_SIZES = '(max-width: 639px) calc(100vw - 32px), min(66vw, 840px)';
+const TILE_SIZES = '(max-width: 639px) calc(100vw - 32px), min(33vw, 420px)';
+
+const srcset = (base: string, format: string) =>
+  IMAGE_WIDTHS.map((w) => `${base}/${w}.${format} ${w}w`).join(', ');
+
+const preview = (thumbhash: string | undefined) => {
+  if (!thumbhash) return null;
+  try {
+    const bytes = Uint8Array.from(atob(thumbhash), (c) => c.charCodeAt(0));
+    return `url(${thumbHashToDataURL(bytes)})`;
+  } catch {
+    return null;
+  }
+};
 
 // The garage's photos on its profile: the first one large, the rest as tiles,
 // each opening the full-screen view. A photo whose address has expired is read
@@ -52,7 +73,20 @@ export class PhotosSection {
         total: photos.length,
       }),
       id: photo.id,
-      src: i === 0 ? photo.displayUrl : photo.thumbnailUrl,
+      preview: preview(photo.thumbhash),
+      ...(photo.imageBase
+        ? {
+            avif: srcset(photo.imageBase, 'avif'),
+            sizes: i === 0 ? COVER_SIZES : TILE_SIZES,
+            src: `${photo.imageBase}/1600.webp`,
+            webp: srcset(photo.imageBase, 'webp'),
+          }
+        : {
+            avif: null,
+            sizes: null,
+            src: i === 0 ? photo.displayUrl : photo.thumbnailUrl,
+            webp: null,
+          }),
     }));
   });
 

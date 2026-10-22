@@ -315,3 +315,72 @@ describe('the photos section kept live', () => {
     await closeView();
   });
 });
+
+// @traces 1192-photo-variants-FR-009
+describe('the photos section with responsive variants', () => {
+  const BASE = '/api/v1/images/g/d-1';
+  const PREVIEW = 'WSoDBYCHiIh4h3eAeHd3cXeIcIgI';
+  const responsive = (n: number) => ({
+    ...photo(n),
+    imageBase: `${BASE}/${n}`,
+    thumbhash: PREVIEW,
+  });
+  const listed = (base: string, format: string) =>
+    [320, 640, 960, 1600].map((w) => `${base}/${w}.${format} ${w}w`).join(', ');
+  const COVER_SIZES = '(max-width: 639px) calc(100vw - 32px), min(66vw, 840px)';
+  const TILE_SIZES = '(max-width: 639px) calc(100vw - 32px), min(33vw, 420px)';
+  const avifOf = (tile: HTMLElement) =>
+    tile.querySelector<HTMLSourceElement>(
+      'picture > source[type="image/avif"]',
+    );
+
+  beforeEach(() => show({ photos: [responsive(1), responsive(2), photo(3)] }));
+
+  it('offers every AVIF width first and lets the browser pick by the tile width', () => {
+    const [cover, second] = tiles();
+
+    expect(avifOf(cover)?.getAttribute('srcset')).toBe(
+      listed(`${BASE}/1`, 'avif'),
+    );
+    expect(avifOf(cover)?.getAttribute('sizes')).toBe(COVER_SIZES);
+    expect(avifOf(second)?.getAttribute('srcset')).toBe(
+      listed(`${BASE}/2`, 'avif'),
+    );
+    expect(avifOf(second)?.getAttribute('sizes')).toBe(TILE_SIZES);
+  });
+
+  it('falls back to the WebP widths in the image itself', () => {
+    const [cover, second] = tiles();
+
+    expect(imageOf(cover).getAttribute('srcset')).toBe(
+      listed(`${BASE}/1`, 'webp'),
+    );
+    expect(imageOf(cover).getAttribute('sizes')).toBe(COVER_SIZES);
+    expect(imageOf(cover).getAttribute('src')).toBe(`${BASE}/1/1600.webp`);
+    expect(imageOf(second).getAttribute('sizes')).toBe(TILE_SIZES);
+  });
+
+  it('fetches the cover first and the other tiles only when near', () => {
+    const [cover, second] = tiles();
+
+    expect(imageOf(cover).getAttribute('fetchpriority')).toBe('high');
+    expect(imageOf(cover).getAttribute('loading')).not.toBe('lazy');
+    expect(imageOf(second).getAttribute('fetchpriority')).not.toBe('high');
+    expect(imageOf(second).getAttribute('loading')).toBe('lazy');
+  });
+
+  it('paints the blurred preview in the tile while the photo loads', () => {
+    const [cover, , plain] = tiles();
+
+    expect(cover.style.backgroundImage).toContain('data:image/png;base64,');
+    expect(plain.style.backgroundImage).toBe('');
+  });
+
+  it('keeps the signed copies for a photo without variants', () => {
+    const third = tiles()[2];
+
+    expect(avifOf(third)).toBeNull();
+    expect(imageOf(third).getAttribute('src')).toBe('https://s/3.thumb');
+    expect(imageOf(third).hasAttribute('srcset')).toBe(false);
+  });
+});
