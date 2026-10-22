@@ -2503,6 +2503,7 @@ _From 1358-preflight-delta-archive._
 ### 1358-FR-017 — Every edited gate script MUST be blessed (`doctor.mjs --bless-hooks` after reading its diff); `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST be green.
 
 _From 1358-preflight-delta-archive._
+
 ### 1357-FR-001 — The constitution's Principle VII step on merging `main` (`constitution.md` around :582), AGENTS.md's lifecycle step 5 and the constitution card MUST state, as a PATCH (4.1.0 → 4.1.1, dated 2026-10-22, asked for by the owner), that `origin/main` is merged into a branch only when the overlap test says the merge is needed, never merely because the branch is behind; a clean behind head keeps its passed QA run and `agent-review`.
 
 _From 1357-merge-when-overlapping._
