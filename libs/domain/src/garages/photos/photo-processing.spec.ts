@@ -22,6 +22,10 @@ const located = (width: number, height: number) =>
     .withXmp('<x:xmpmeta xmlns:x="adobe:ns:meta/"></x:xmpmeta>')
     .toBuffer();
 
+// Each test encodes every responsive variant (AVIF, WebP, JPEG): seconds
+// apiece on a loaded CI runner, past Jest's 5 s default.
+jest.setTimeout(60_000);
+
 describe('processing a photo', () => {
   const store = new S3TestStore();
   let storage: StorageService;
@@ -251,7 +255,7 @@ describe('processing a photo', () => {
         ]);
         expect(meta.format).toBe(format === 'avif' ? 'heif' : 'webp');
       }
-    }, 30_000);
+    });
 
     it('encodes AVIF at quality 50, effort 4 and WebP at quality 75', async () => {
       const original = await located(2400, 1200);
@@ -269,7 +273,7 @@ describe('processing a photo', () => {
       expect(webp.equals(await at640().webp({ quality: 75 }).toBuffer())).toBe(
         true,
       );
-    }, 30_000);
+    });
 
     it('never enlarges a narrow photo past its own width', async () => {
       const original = await located(500, 400);
