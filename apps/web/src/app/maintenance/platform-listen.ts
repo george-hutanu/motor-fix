@@ -10,8 +10,10 @@ import { filter, merge } from 'rxjs';
 import type { PlatformStatus } from './platform-status';
 import { Live } from '../dashboard/live';
 import { PublicLive } from '../public/live';
+import { Voice } from '../voice/voice';
 
 const RULE = 'maintenance_mode';
+const VOICES = 'copy_voices';
 const CHANGED = ['platform_rule.changed'] as const;
 
 // Waited after the page settles, and after the last download ended, before a
@@ -38,17 +40,26 @@ function whenQuiet(done: () => void): void {
   wait();
 }
 
-// Re-reads the status on every change of the rule heard on either live stream
-// and whenever a stream opens again; holds the public stream while the
-// signed-in one is closed. Loaded apart, in the browser only, so the streams
-// stay out of the first download.
+// Re-reads the status, and the copy voices, on every change heard on either
+// live stream and whenever a stream opens again; a voices re-read names its
+// time so no cache answers it. Holds the public stream while the signed-in
+// one is closed. Loaded apart, in the browser only, so the streams stay out
+// of the first download.
 export function listen(status: PlatformStatus, injector: Injector): void {
   const live = injector.get(Live);
   const publicLive = injector.get(PublicLive);
-  merge(live.on(CHANGED), publicLive.on(CHANGED))
+  const voice = injector.get(Voice);
+  const changed = merge(live.on(CHANGED), publicLive.on(CHANGED));
+  changed
     .pipe(filter((m) => m.id === RULE))
     .subscribe(() => void status.read());
-  merge(live.resync, publicLive.resync).subscribe(() => void status.read());
+  changed
+    .pipe(filter((m) => m.id === VOICES))
+    .subscribe((m) => void voice.read(m.at));
+  merge(live.resync, publicLive.resync).subscribe(() => {
+    void status.read();
+    void voice.read(new Date().toISOString());
+  });
 
   const settled = signal(false);
   void injector

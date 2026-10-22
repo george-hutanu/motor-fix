@@ -5,9 +5,32 @@
     <title>MotorFix</title>
     <script id="mf-voice">
       // The visit's copy voice, taken before the first paint: the next one of
-      // a shuffled round on each full load of Home, kept on any other page.
+      // a shuffled round on each full load of Home, kept on any other page,
+      // among the voices the admins left on, or the one they pinned.
       (() => {
-        const on = [1, 2, 3, 4, 5];
+        const all = [1, 2, 3, 4, 5];
+        // Settings are a list of distinct voices, at least one, and the pinned
+        // voice among them or none.
+        const valid = (s) =>
+          !!s &&
+          Array.isArray(s.enabled) &&
+          s.enabled.length > 0 &&
+          s.enabled.every(
+            (v, i, list) => all.includes(v) && list.indexOf(v) === i,
+          ) &&
+          (s.pinned === null || s.enabled.includes(s.pinned));
+        let on = all;
+        let pinned = null;
+        const use = (s) => {
+          on = s.enabled;
+          pinned = s.pinned;
+        };
+        // The device's copy of the last settings read; none, or a broken one,
+        // is every voice on and none pinned.
+        try {
+          const kept = JSON.parse(localStorage.getItem('mf-copy-voices'));
+          if (valid(kept)) use(kept);
+        } catch {}
         // A new round: the enabled voices shuffled, never opening with the
         // voice just shown.
         const round = (last) => {
@@ -29,7 +52,13 @@
               (v, i, all) =>
                 on.includes(v) && v !== last && all.indexOf(v) === i,
             );
+        // A new voice for the visit: the pinned one, the round left as it
+        // was, or the next of the round.
         const next = (last) => {
+          if (pinned) {
+            localStorage.setItem('mf-copy', pinned);
+            return pinned;
+          }
           const found = left(last);
           const deck = found.length ? found : round(last);
           const voice = deck.shift();
@@ -37,6 +66,8 @@
           localStorage.setItem('mf-copy-deck', deck.join(','));
           return voice;
         };
+        const any = () =>
+          pinned || on[Math.floor(Math.random() * on.length)];
         const pick = () => {
           const stored = Number(localStorage.getItem('mf-copy'));
           const last = on.includes(stored) ? stored : 0;
@@ -51,9 +82,30 @@
         try {
           voice = pick();
         } catch {
-          voice = on[Math.floor(Math.random() * on.length)];
+          voice = any();
         }
         document.documentElement.setAttribute('data-voice', voice);
+        // The app hands over each read of the settings: they are kept for the
+        // next loads, and a visit whose voice is now off moves to a new one,
+        // its start time kept.
+        window.mfCopyVoice = (settings) => {
+          if (!valid(settings)) return voice;
+          use(settings);
+          try {
+            localStorage.setItem(
+              'mf-copy-voices',
+              JSON.stringify({ enabled: on, pinned }),
+            );
+          } catch {}
+          if (on.includes(voice)) return voice;
+          try {
+            voice = next(voice);
+          } catch {
+            voice = any();
+          }
+          document.documentElement.setAttribute('data-voice', voice);
+          return voice;
+        };
       })();
     </script>
     <base href="/" />
