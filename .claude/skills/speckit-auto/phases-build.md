@@ -21,8 +21,10 @@ prove red: run the new spec files with
 pass before any implementation exist are not red-first — fix the test, do not
 proceed.
 
-Expect `post-edit-check.sh` to report failures while you write these. That is
-the gate working, not a problem to fix.
+`post-edit-check.sh` answers a red-first spec (new on the branch, a relative
+import that resolves to no file) with a note and leaves it unrun. A failure
+dump instead means the spec's imports resolve, so it is not red-first: look
+at it.
 
 **Do not commit here.** See `commit-protocol.md`.
 

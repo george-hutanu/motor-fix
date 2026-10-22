@@ -64,6 +64,17 @@ case "$rel" in
 esac
 [ -n "$test_file" ] || exit 0
 
+# A spec new on the branch whose relative import does not exist yet fails with
+# "Cannot find module", which tells nobody anything: leave it unrun and say why.
+red_first=".claude/scripts/lib/red-first-spec.mjs"
+if [ -f "$red_first" ]; then
+  spec="$(node "$red_first" "$test_file")"
+  if [ $? -eq 1 ]; then
+    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run: it is red-first (new on the branch, '$spec' resolves to no file). A failure dump on a spec means its imports resolve.\"}}"
+    exit 0
+  fi
+fi
+
 durations=".claude/scripts/lib/spec-durations.mjs"
 # Only exit 1 means "slow, skip"; a crash or a usage error still runs the spec.
 should=0
