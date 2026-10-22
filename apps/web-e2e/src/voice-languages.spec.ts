@@ -129,9 +129,12 @@ async function choose(page: Page, language: Language, brand: string) {
   await page.getByRole('option', { exact: true, name: brand }).click();
 }
 
-// Voice 4 says "your <brand>" in Romanian, in the brand's own form.
-const brandShown = (voice: Voice, language: Language) =>
-  voice === '4' && language === 'ro' ? 'Mercedesul tău' : 'Mercedes‑Benz';
+// The brand whose hyphen each voice shows: voice 4 says "your <brand>" in
+// Romanian, and of the seeded forms only BMW's carries a hyphen.
+const hyphenated = (voice: Voice, language: Language) =>
+  voice === '4' && language === 'ro'
+    ? { brand: 'BMW', word: 'BMW‑ul' }
+    : { brand: 'Mercedes-Benz', word: 'Mercedes‑Benz' };
 
 // The slots of a voice whose words, around their placeholders, all show in
 // the page's visible text. Compared without case: a label may be uppercased.
@@ -239,11 +242,11 @@ test.describe('every voice on a 320 px phone @seeded', () => {
     for (const voice of VOICES)
       await visiting(browser, voice, async (page) => {
         for (const language of LANGUAGES) {
-          const shown = brandShown(voice, language);
+          const { brand, word } = hyphenated(voice, language);
           await home(page, language);
-          await choose(page, language, 'Mercedes-Benz');
-          await expect(headline(page)).toContainText(shown);
-          expect(await lines(headline(page), shown)).toBe(1);
+          await choose(page, language, brand);
+          await expect(headline(page)).toContainText(word);
+          expect(await lines(headline(page), word)).toBe(1);
         }
       });
   });
