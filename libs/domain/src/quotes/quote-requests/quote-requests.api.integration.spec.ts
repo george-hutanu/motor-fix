@@ -835,6 +835,15 @@ describe('the copy voice of a request', () => {
     },
   );
 
+  it('cannot hold a voice outside 1 to 5, even by a direct write', async () => {
+    const { auth, body } = await scene();
+    const res = await send(body, auth);
+
+    await expect(
+      prisma.$executeRaw`UPDATE quote_request SET copy_voice = 7 WHERE id = ${res.body.id}::uuid`,
+    ).rejects.toThrow();
+  });
+
   it('keeps the first voice when the same key is sent again', async () => {
     const { auth, body } = await scene();
     const key = randomUUID();

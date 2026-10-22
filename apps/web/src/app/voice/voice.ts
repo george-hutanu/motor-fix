@@ -73,7 +73,7 @@ export class Voice {
   private reads = 0;
   // The document loaded on Home, as the page head saw it.
   readonly fromHome: boolean;
-  // This load took a new voice for the visit, rather than keeping one.
+  // This Home load took a new voice for the visit, rather than keeping one.
   readonly taken: boolean;
 
   constructor() {
@@ -82,7 +82,7 @@ export class Voice {
     const mark = html.getAttribute('data-voice') ?? '';
     this.n.set(/^[1-5]$/.test(mark) ? Number(mark) : 1);
     this.fromHome = html.getAttribute('data-home') !== null;
-    this.taken = html.getAttribute('data-voice-new') !== null;
+    this.taken = this.fromHome && html.getAttribute('data-voice-new') !== null;
   }
 
   get voice(): number {

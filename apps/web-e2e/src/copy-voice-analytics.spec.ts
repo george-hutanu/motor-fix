@@ -111,11 +111,6 @@ async function storedVoices(email: string) {
 
 // @traces 009-FR-012
 test.describe('copy voice analytics', { tag: '@database' }, () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'reads the stored request from PostgreSQL, which needs DATABASE_URL',
-  );
-
   test('sends the voice on the Home visit, the request events and the stored request with consent', async ({
     browser,
     request,

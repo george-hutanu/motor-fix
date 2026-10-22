@@ -14,7 +14,7 @@ import { Voice } from '../voice';
 // soon as consent allows it: at boot, or when the visitor accepts later, with
 // the voice in force at that moment.
 @Injectable({ providedIn: 'root' })
-export class HomeVisit {
+class HomeVisit {
   private readonly consent = inject(Consent);
   private readonly voice = inject(Voice);
   private sent = false;
