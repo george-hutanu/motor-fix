@@ -229,6 +229,7 @@ test.describe('every voice on a 320 px phone @seeded', () => {
 
   // @traces 008-FR-003
   // @traces 008-FR-004
+  // @traces 008-FR-006
   test('voice 4 in Romanian wraps its label on two lines and its headline in four, the brand whole', async ({
     browser,
   }) => {
@@ -243,6 +244,16 @@ test.describe('every voice on a 320 px phone @seeded', () => {
           .locator('.label')
           .evaluate((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
       ).toBeGreaterThanOrEqual(16);
+      // The headline keeps the mock's Michroma capitals (FR-006).
+      expect(
+        await headline(page).evaluate((e) => {
+          const s = getComputedStyle(e);
+          return [
+            s.fontFamily.split(',')[0].replace(/["']/g, ''),
+            s.textTransform,
+          ];
+        }),
+      ).toEqual(['Michroma', 'uppercase']);
       for (const [brand, shown] of [
         ['BMW', 'BMW‑ul tău'],
         ['Mercedes-Benz', 'Mercedesul tău'],
