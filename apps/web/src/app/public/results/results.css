@@ -169,10 +169,12 @@ mf-brand-chips {
   }
 }
 
-/* A short phone (an iPhone SE) with the consent bar asking would leave the
-   map a strip under the summary: the bar lies over the stage instead, until
-   it is answered, and the map and the half sheet keep their room. */
-@media (max-width: 767px) and (max-height: 667px) {
+/* A phone up to 880 px tall (an iPhone SE, a 375 x 812 one) with the
+   consent bar asking would leave the map a strip between the summary and the
+   sheet's header (the chips, the brand search and the sorts): the bar lies
+   over the stage instead, until it is answered, and the map and the half
+   sheet keep their room. */
+@media (max-width: 767px) and (max-height: 880px) {
   :host {
     height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));
   }

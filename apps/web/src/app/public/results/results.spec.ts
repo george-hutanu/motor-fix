@@ -3253,10 +3253,13 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule(':host')).toMatch(/overflow: hidden;/);
   });
 
-  it('lets the consent bar lie over the stage on a short phone, so the map and the half sheet keep their room', () => {
+  // Up to 880 px tall: under the summary the sheet's header (the chips, the
+  // brand search and the sorts) left a 375 x 812 phone's map a strip with
+  // the bar asking, its pins under the low sheet (ST-328 full CI).
+  it('lets the consent bar lie over the stage on a phone up to 880 px tall, so the map and the half sheet keep their room', () => {
     const short =
       css.match(
-        /@media \(max-width: 767px\) and \(max-height: 667px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+        /@media \(max-width: 767px\) and \(max-height: 880px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
       )?.[1] ?? '';
 
     expect(short).toMatch(
