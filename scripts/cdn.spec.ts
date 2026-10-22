@@ -42,8 +42,11 @@ const recorded = () => ({
       Description: 'mf-no-cache-app-api',
       Enabled: true,
       Guid: 'guid-app-api',
-      TriggerMatchingType: 0,
-      Triggers: [urlRule(['*/api/*', '*/app/*'])],
+      TriggerMatchingType: 1,
+      Triggers: [
+        urlRule(['*/api/*', '*/app/*']),
+        { ...urlRule(['*/api/v1/images/*']), PatternMatchingType: 2 },
+      ],
     },
     {
       ActionParameter1: '0',
@@ -204,8 +207,9 @@ describe('infra/cdn/bunny.json', () => {
     }
   });
 
+  // @traces 1192-FR-008
   it.each(envs)(
-    '%s: never caches /api/, /app/ or a signed-in request',
+    '%s: never caches /api/ but the photo variants, /app/ or a signed-in request',
     (env) => {
       const rules = config.environments[env].edgeRules;
       const byName = Object.fromEntries(
@@ -215,11 +219,16 @@ describe('infra/cdn/bunny.json', () => {
         ActionParameter1: '0',
         ActionType: 'OverrideCacheTime',
         Description: 'mf-no-cache-app-api',
-        TriggerMatchingType: 'Any',
+        TriggerMatchingType: 'All',
         Triggers: [
           {
             PatternMatches: ['*/api/*', '*/app/*'],
             PatternMatchingType: 'Any',
+            Type: 'Url',
+          },
+          {
+            PatternMatches: ['*/api/v1/images/*'],
+            PatternMatchingType: 'None',
             Type: 'Url',
           },
         ],
@@ -432,13 +441,14 @@ describe('cdn apply', () => {
       Description: 'mf-no-cache-app-api',
       Enabled: true,
       Guid: 'guid-app-api',
-      TriggerMatchingType: 0,
+      TriggerMatchingType: 1,
       Triggers: [
         {
           PatternMatches: ['*/api/*', '*/app/*'],
           PatternMatchingType: 0,
           Type: 0,
         },
+        { PatternMatches: ['*/api/v1/images/*'], PatternMatchingType: 2 },
       ],
     });
     expect(sent[3]?.body).toMatchObject({

@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -41,6 +41,7 @@ features:
   - 1181-rate-limits
   - 1190-live-reconnects
   - 389-confirm-booking-lift-mechanic
+  - 1192-photo-variants
 ---
 
 # Capability: Observability
@@ -852,6 +853,14 @@ _From 1190-live-reconnects._
 ### 389-FR-018 — Observability (AGENTS.md): the new endpoint, the three timer kinds and the two consumers MUST be listed in `infra/observability/inventory.json`; the confirm (a product action) MUST emit one counter with the outcome (`confirmed`, `mechanic_busy`, `lift_busy`, `outside_hours`, `mechanic_unavailable`, `invalid_transition`, `refused` for 400/403/404) and one log line per outcome naming the booking id; the lapse kind one counter of lapses with whether the request stayed open or closed; the existing queue metrics cover the timers and consumers; the PR's Observability section lists them.
 
 _From 389-confirm-booking-lift-mechanic._
+
+### 1192-FR-012 — The image route MUST be counted by the API's existing request metrics, traces and dashboard (labelled by its route template, never the digest), and `infra/observability/inventory.json` MUST list it with the API's endpoint count; the variant writes are covered by the photo queue's existing job metrics and failure log.
+
+_From 1192-photo-variants._
+
+### 1192-FR-013 — The image policy (sizes, formats, addresses, caching, placeholder, what stays signed) MUST be written in the specs repo's documentation, where no page describes it today.
+
+_From 1192-photo-variants._
 
 ## Retired
 

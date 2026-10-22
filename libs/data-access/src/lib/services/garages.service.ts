@@ -32,6 +32,8 @@ import { GarageReportsControllerReport$Params } from '../fn/garages/garage-repor
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
+import { getImageVariant } from '../fn/garages/get-image-variant';
+import { GetImageVariant$Params } from '../fn/garages/get-image-variant';
 import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
 import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
@@ -296,6 +298,31 @@ export class GaragesService extends BaseService {
   garageFeaturesControllerSet(params: GarageFeaturesControllerSet$Params, context?: HttpContext): Promise<GarageFeaturesDto> {
     const resp = this.garageFeaturesControllerSet$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageFeaturesDto>): GarageFeaturesDto => r.body);
+  }
+
+  /** Path part for operation `getImageVariant()` */
+  static readonly GetImageVariantPath = '/api/v1/images/g/{owner}/{digest}/{file}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getImageVariant()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getImageVariant$Response(params: GetImageVariant$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = getImageVariant(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getImageVariant$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getImageVariant(params: GetImageVariant$Params, context?: HttpContext): Promise<void> {
+    const resp = this.getImageVariant$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `garageSettingsControllerUpdate()` */

@@ -122,6 +122,18 @@ export class PublicGaragePhotoDto {
 
   @ApiPropertyOptional({ description: 'Upright, when known', minimum: 1 })
   height?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed',
+  })
+  imageBase?: string;
+
+  @ApiPropertyOptional({
+    description: 'A ThumbHash of the photo, base64, shown while it loads',
+    maxLength: 64,
+  })
+  thumbhash?: string;
 }
 
 export class PublicGarageDto extends GarageBrandAnswerDto {

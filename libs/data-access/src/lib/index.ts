@@ -576,6 +576,8 @@ export type { GarageReportsControllerReport$Params as GarageReportsControllerRep
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
 export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
+export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
+export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params } from './fn/garages/legal-check-controller-read';

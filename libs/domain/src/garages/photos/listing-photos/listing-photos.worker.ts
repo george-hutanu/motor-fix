@@ -1,3 +1,4 @@
+import { photoConfig } from '@motor-fix/contracts';
 import {
   isFinalFailure,
   observeQueue,
@@ -62,6 +63,7 @@ export class ListingPhotosWorkerModule implements OnApplicationShutdown {
               LISTING_PHOTOS_QUEUE,
               (job) => inJob(job, () => processPhoto(storage, job.data.key)),
               {
+                concurrency: photoConfig().concurrency,
                 connection: {
                   maxRetriesPerRequest: null,
                   url: options.redisUrl,

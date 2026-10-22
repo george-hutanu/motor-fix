@@ -1,3 +1,7 @@
+// @traces 1192-FR-001 1192-FR-002
+// @traces 1192-FR-003 1192-FR-011
+import { createHash } from 'node:crypto';
+
 import sharp from 'sharp';
 
 import { HEIC_BASE64 } from './heic/heic.fixture';
@@ -17,6 +21,10 @@ const located = (width: number, height: number) =>
     })
     .withXmp('<x:xmpmeta xmlns:x="adobe:ns:meta/"></x:xmpmeta>')
     .toBuffer();
+
+// Each test encodes every responsive variant (AVIF, WebP, JPEG): seconds
+// apiece on a loaded CI runner, past Jest's 5 s default.
+jest.setTimeout(60_000);
 
 describe('processing a photo', () => {
   const store = new S3TestStore();
@@ -103,10 +111,9 @@ describe('processing a photo', () => {
 
     await processPhoto(storage, KEY);
 
-    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual({
-      height: '1200',
-      width: '800',
-    });
+    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual(
+      expect.objectContaining({ height: '1200', width: '800' }),
+    );
   });
 
   it('keeps a PNG display copy in PNG and makes its thumbnail a JPEG', async () => {
@@ -144,10 +151,9 @@ describe('processing a photo', () => {
         copy(name).contentType,
       ]).toEqual([name, 'jpeg', 16, 16, undefined, undefined, 'image/jpeg']);
     }
-    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual({
-      height: '16',
-      width: '16',
-    });
+    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual(
+      expect.objectContaining({ height: '16', width: '16' }),
+    );
   });
 
   // @traces 1191-FR-005
@@ -160,6 +166,19 @@ describe('processing a photo', () => {
     store.put(KEY, heic, 'image/heic');
 
     await expect(processPhoto(storage, KEY)).rejects.toThrow(/pixel limit/);
+
+    expect([...store.objects.keys()]).toEqual([KEY]);
+  });
+
+  it('refuses a photo above the configured pixel limit and writes nothing', async () => {
+    store.put(KEY, await located(200, 100), 'image/jpeg');
+
+    process.env['PHOTO_MAX_INPUT_PIXELS'] = '10000';
+    try {
+      await expect(processPhoto(storage, KEY)).rejects.toThrow(/pixel limit/);
+    } finally {
+      delete process.env['PHOTO_MAX_INPUT_PIXELS'];
+    }
 
     expect([...store.objects.keys()]).toEqual([KEY]);
   });
@@ -195,5 +214,166 @@ describe('processing a photo', () => {
 
     putting.mockRestore();
     expect([...store.objects.keys()]).toEqual([]);
+  });
+
+  describe('the responsive variants', () => {
+    const OWNER = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
+    const WIDTHS = [320, 640, 960, 1600];
+    const digestOf = (bytes: Buffer) =>
+      createHash('sha256').update(KEY).update(bytes).digest('hex');
+    const variantKeys = (digest: string) =>
+      WIDTHS.flatMap((w) => [
+        `g/${OWNER}/${digest}/${w}.avif`,
+        `g/${OWNER}/${digest}/${w}.webp`,
+      ]);
+    const variant = (key: string) => {
+      const object = store.objects.get(key);
+      if (!object) throw new Error(`no variant ${key}`);
+      return object;
+    };
+
+    it('writes four widths in AVIF and WebP at an address fixed by the content', async () => {
+      const original = await located(2400, 1200);
+      store.put(KEY, original, 'image/jpeg');
+
+      await processPhoto(storage, KEY);
+
+      for (const key of variantKeys(digestOf(original))) {
+        const object = variant(key);
+        const meta = await sharp(object.body).metadata();
+        const [width, format] = key.split('/').at(-1)?.split('.') ?? [];
+        expect([
+          key,
+          meta.width,
+          object.contentType,
+          object.cacheControl,
+        ]).toEqual([
+          key,
+          Number(width),
+          `image/${format}`,
+          'public, max-age=31536000, immutable',
+        ]);
+        expect(meta.format).toBe(format === 'avif' ? 'heif' : 'webp');
+      }
+    });
+
+    it('encodes AVIF at quality 50, effort 4 and WebP at quality 75', async () => {
+      const original = await located(2400, 1200);
+      store.put(KEY, original, 'image/jpeg');
+      const at640 = () => sharp(original).rotate().resize({ width: 640 });
+
+      await processPhoto(storage, KEY);
+
+      const [avif, webp] = variantKeys(digestOf(original))
+        .filter((key) => key.includes('/640.'))
+        .map((key) => variant(key).body);
+      expect(
+        avif.equals(await at640().avif({ effort: 4, quality: 50 }).toBuffer()),
+      ).toBe(true);
+      expect(webp.equals(await at640().webp({ quality: 75 }).toBuffer())).toBe(
+        true,
+      );
+    });
+
+    it('never enlarges a narrow photo past its own width', async () => {
+      const original = await located(500, 400);
+      store.put(KEY, original, 'image/jpeg');
+
+      await processPhoto(storage, KEY);
+
+      const widths = await Promise.all(
+        variantKeys(digestOf(original)).map(
+          async (key) => (await sharp(variant(key).body).metadata()).width,
+        ),
+      );
+      expect(widths).toEqual([320, 320, 500, 500, 500, 500, 500, 500]);
+    });
+
+    it('turns a sideways photo upright', async () => {
+      const turned = await sharp({
+        create: { background: '#3c3', channels: 3, height: 800, width: 1200 },
+      })
+        .jpeg()
+        .withMetadata({ orientation: 6 })
+        .toBuffer();
+      store.put(KEY, turned, 'image/jpeg');
+
+      await processPhoto(storage, KEY);
+
+      const meta = await sharp(
+        variant(`g/${OWNER}/${digestOf(turned)}/1600.webp`).body,
+      ).metadata();
+      expect([meta.width, meta.height, meta.orientation]).toEqual([
+        800,
+        1200,
+        undefined,
+      ]);
+    });
+
+    it('carries no location or other metadata in any variant', async () => {
+      const original = await located(1200, 900);
+      store.put(KEY, original, 'image/jpeg');
+
+      await processPhoto(storage, KEY);
+
+      for (const key of variantKeys(digestOf(original))) {
+        const object = variant(key);
+        const meta = await sharp(object.body).metadata();
+        expect([key, meta.exif, meta.xmp, meta.iptc, object.metadata]).toEqual([
+          key,
+          undefined,
+          undefined,
+          undefined,
+          {},
+        ]);
+      }
+    });
+
+    it('writes the thumbnail last, naming the digest and a ThumbHash preview', async () => {
+      const original = await located(1200, 900);
+      store.put(KEY, original, 'image/jpeg');
+      const written: string[] = [];
+      const put = storage.putObject.bind(storage);
+      const putting = jest
+        .spyOn(storage, 'putObject')
+        .mockImplementation(async (...args) => {
+          written.push(args[0]);
+          return put(...args);
+        });
+
+      await processPhoto(storage, KEY);
+
+      putting.mockRestore();
+      expect(written.at(-1)).toBe(`${KEY}.thumb`);
+      expect(written.slice(0, -1).sort()).toEqual(
+        [...variantKeys(digestOf(original)), `${KEY}.display`].sort(),
+      );
+      const meta = await storage.metadataOf(`${KEY}.thumb`);
+      expect(meta).toEqual({
+        digest: digestOf(original),
+        height: '900',
+        thumbhash: expect.stringMatching(/^[A-Za-z0-9+/]{8,64}={0,2}$/),
+        width: '1200',
+      });
+      expect(meta?.['thumbhash']?.length).toBeLessThanOrEqual(64);
+    });
+
+    it('removes the variants it wrote when a later write fails, and fails', async () => {
+      store.put(KEY, await located(1200, 900), 'image/jpeg');
+      const put = storage.putObject.bind(storage);
+      let writes = 0;
+      const putting = jest
+        .spyOn(storage, 'putObject')
+        .mockImplementation(async (...args) => {
+          writes += 1;
+          if (writes === 4) throw new Error('store down');
+          return put(...args);
+        });
+
+      await expect(processPhoto(storage, KEY)).rejects.toThrow('store down');
+
+      putting.mockRestore();
+      expect([...store.objects.keys()]).toEqual([KEY]);
+    });
   });
 });

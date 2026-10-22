@@ -6,6 +6,7 @@
       class="tile"
       [class.cover]="i === 0"
       [style.--tile-step]="i"
+      [style.background-image]="tile.preview"
       [attr.data-loaded]="loaded().has(tile.src)"
       [attr.data-failed]="broken().has(tile.src)"
       (click)="open(i, button)"
@@ -28,14 +29,35 @@
           <path d="m3 16 5-5 4 4 3-3 6 6M3 3l18 18" />
         </svg>
       } @else {
-        <img
-          draggable="false"
-          [alt]="tile.alt"
-          [attr.loading]="i === 0 ? 'eager' : 'lazy'"
-          [src]="tile.src"
-          (error)="mark(broken, tile.src)"
-          (load)="mark(loaded, tile.src)"
-        />
+        @if (tile.base) {
+          <picture>
+            <source
+              type="image/avif"
+              [attr.srcset]="tile.avif"
+              [attr.sizes]="tile.sizes"
+            />
+            <img
+              draggable="false"
+              fill
+              [alt]="tile.alt"
+              [ngSrc]="tile.base"
+              [ngSrcset]="widths"
+              [priority]="i === 0"
+              [sizes]="tile.sizes"
+              (error)="mark(broken, tile.src)"
+              (load)="mark(loaded, tile.src)"
+            />
+          </picture>
+        } @else {
+          <img
+            draggable="false"
+            [alt]="tile.alt"
+            [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+            [src]="tile.src"
+            (error)="mark(broken, tile.src)"
+            (load)="mark(loaded, tile.src)"
+          />
+        }
       }
     </button>
   }

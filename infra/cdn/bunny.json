@@ -29,7 +29,7 @@
           "Description": "mf-no-cache-app-api",
           "ActionType": "OverrideCacheTime",
           "ActionParameter1": "0",
-          "TriggerMatchingType": "Any",
+          "TriggerMatchingType": "All",
           "Triggers": [
             {
               "Type": "Url",
@@ -37,6 +37,13 @@
               "PatternMatches": [
                 "*/api/*",
                 "*/app/*"
+              ]
+            },
+            {
+              "Type": "Url",
+              "PatternMatchingType": "None",
+              "PatternMatches": [
+                "*/api/v1/images/*"
               ]
             }
           ]
@@ -139,7 +146,7 @@
           "Description": "mf-no-cache-app-api",
           "ActionType": "OverrideCacheTime",
           "ActionParameter1": "0",
-          "TriggerMatchingType": "Any",
+          "TriggerMatchingType": "All",
           "Triggers": [
             {
               "Type": "Url",
@@ -147,6 +154,13 @@
               "PatternMatches": [
                 "*/api/*",
                 "*/app/*"
+              ]
+            },
+            {
+              "Type": "Url",
+              "PatternMatchingType": "None",
+              "PatternMatches": [
+                "*/api/v1/images/*"
               ]
             }
           ]

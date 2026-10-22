@@ -18,6 +18,8 @@ import {
   type FileRule,
   type StorageEnv,
   UPLOAD_URL_MINUTES,
+  VARIANT_DIGEST,
+  variantKeys,
 } from '@motor-fix/contracts';
 import { storageTelemetry } from '@motor-fix/observability';
 import {
@@ -32,8 +34,7 @@ import {
 
 export const STORAGE_OPTIONS = Symbol('STORAGE_OPTIONS');
 
-const FILE_COPIES = ['thumb', 'display'] as const;
-type FileCopy = (typeof FILE_COPIES)[number];
+type FileCopy = 'display' | 'thumb';
 
 export interface SignedUpload {
   expiresAt: string;
@@ -282,11 +283,13 @@ export class StorageService implements OnApplicationShutdown {
     body: Buffer | Uint8Array | string,
     contentType: string,
     metadata?: Record<string, string>,
+    cacheControl?: string,
   ): Promise<void> {
     await this.s3.send(
       new PutObjectCommand({
         Body: body,
         Bucket: this.bucket,
+        CacheControl: cacheControl,
         ContentType: contentType,
         Key: key,
         Metadata: metadata,
@@ -299,6 +302,23 @@ export class StorageService implements OnApplicationShutdown {
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
     );
     return Buffer.from((await object.Body?.transformToByteArray()) ?? []);
+  }
+
+  // Null when nothing is stored at the key.
+  async readStored(
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string } | null> {
+    const object = await this.s3
+      .send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
+      .catch((error: unknown) => {
+        if (statusOf(error) === 404) return null;
+        throw error;
+      });
+    if (!object) return null;
+    return {
+      body: Buffer.from((await object.Body?.transformToByteArray()) ?? []),
+      contentType: object.ContentType ?? 'application/octet-stream',
+    };
   }
 
   // Null when nothing is stored at the key.
@@ -316,14 +336,28 @@ export class StorageService implements OnApplicationShutdown {
     return `${key}.${copy}`;
   }
 
+  // Where a photo's responsive copies live: g/<owner id>/<content digest>.
+  variantPath(key: string, digest: string): string {
+    return `g/${key.split('/')[1]}/${digest}`;
+  }
+
   // A file goes with every copy made from it; S3 answers a delete of a
-  // missing key with success, so copies never made cost nothing.
+  // missing key with success, so copies never made cost nothing. The
+  // thumbnail names the variants, so it goes last: a failed delete leaves
+  // it for the retry to find them again.
   async deleteWithCopies(key: string): Promise<void> {
+    const thumb = this.derivedKey(key, 'thumb');
+    const digest = (await this.metadataOf(thumb))?.['digest'];
+    const variants =
+      digest && VARIANT_DIGEST.test(digest)
+        ? variantKeys(this.variantPath(key, digest))
+        : [];
     await Promise.all(
-      [key, ...FILE_COPIES.map((copy) => this.derivedKey(key, copy))].map(
-        (each) => this.deleteObject(each),
+      [key, this.derivedKey(key, 'display'), ...variants].map((each) =>
+        this.deleteObject(each),
       ),
     );
+    await this.deleteObject(thumb);
   }
 
   async deleteObject(key: string): Promise<void> {

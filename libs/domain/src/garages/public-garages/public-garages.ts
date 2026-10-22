@@ -1,6 +1,7 @@
 import {
   FACILITIES,
   type Facility,
+  imageBaseUrl,
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
   PUBLIC_IMAGE_URL_MINUTES,
   type PublicGarageBrandDto,
@@ -47,10 +48,14 @@ type BrandRow = {
   stance: GarageBrandStance;
 };
 
+// The admin's verification file leaves out the variants: a garage in review
+// is not served by the public image route.
 type PhotoRow = {
   fileKey: string;
   height: number | null;
   id: string;
+  thumbhash?: string | null;
+  variantPath?: string | null;
   width: number | null;
 };
 
@@ -326,7 +331,8 @@ export class PublicGaragesService {
           ), '[]'::jsonb) AS brands,
           COALESCE((
             SELECT jsonb_agg(jsonb_build_object('fileKey', ph.file_key,
-              'height', ph.height, 'id', ph.id, 'width', ph.width)
+              'height', ph.height, 'id', ph.id, 'thumbhash', ph.thumbhash,
+              'variantPath', ph.variant_path, 'width', ph.width)
               ORDER BY ph.position, ph.id)
             FROM garage_photo ph WHERE ph.garage_id = g.id
           ), '[]'::jsonb) AS photos,
@@ -406,12 +412,22 @@ export class PublicGaragesService {
     };
   }
 
+  // The garage whose listed photo has its variants at the path; null when no
+  // approved garage shows one there.
+  async variantHolder(variantPath: string): Promise<string | null> {
+    const photo = await this.prisma.garagePhoto.findUnique({
+      select: { garage: { select: { id: true, status: true } } },
+      where: { variantPath },
+    });
+    return photo?.garage.status === 'approved' ? photo.garage.id : null;
+  }
+
   // A row the worker has sized has its copies. An unsized one is asked of its
   // thumbnail, which also carries the size; without one it is not ready yet.
   // The admin's verification file signs the gallery the same way.
   async photos(rows: PhotoRow[]): Promise<PublicGaragePhotoDto[]> {
     const answered = await Promise.all(
-      rows.map(async ({ fileKey, id, ...size }) => {
+      rows.map(async ({ fileKey, id, thumbhash, variantPath, ...size }) => {
         const thumb = this.storage.derivedKey(fileKey, 'thumb');
         let { height, width } = size;
         if (width === null) {
@@ -442,7 +458,16 @@ export class PublicGaragesService {
             ),
           ),
         );
-        return { displayUrl, id, thumbnailUrl, ...present({ height, width }) };
+        return {
+          displayUrl,
+          id,
+          thumbnailUrl,
+          ...present({ height, width }),
+          ...(variantPath && {
+            imageBase: `${imageBaseUrl()}/${variantPath}`,
+            ...present({ thumbhash: thumbhash ?? null }),
+          }),
+        };
       }),
     );
     return answered.filter((photo) => photo !== null);

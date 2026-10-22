@@ -34,6 +34,7 @@
       "@motor-fix/contracts/garage-report-text": [
         "./libs/contracts/src/garage-report-text.ts"
       ],
+      "@motor-fix/contracts/images": ["./libs/contracts/src/images.ts"],
       "@motor-fix/contracts/legal-documents": [
         "./libs/contracts/src/legal-documents/legal-documents.ts"
       ],

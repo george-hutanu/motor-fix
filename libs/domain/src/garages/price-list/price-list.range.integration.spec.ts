@@ -845,11 +845,11 @@ describe('what a range change tells the profile', () => {
     const w = await world();
     const profile = () => http().get(`/garages/${w.nord.slug}`);
     await profile();
-    expect(await redis.exists(`v2:profile:${w.nord.slug}:-`)).toBe(1);
+    expect(await redis.exists(`v3:profile:${w.nord.slug}:-`)).toBe(1);
 
     await setRange(w, NEW_RANGE);
 
-    expect(await redis.exists(`v2:profile:${w.nord.slug}:-`)).toBe(0);
+    expect(await redis.exists(`v3:profile:${w.nord.slug}:-`)).toBe(0);
     const res = await profile();
     expect(res.body.prices).toEqual([
       expect.objectContaining({

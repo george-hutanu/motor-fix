@@ -1,4 +1,9 @@
 import {
+  IMAGE_LOADER,
+  type ImageLoaderConfig,
+  NgOptimizedImage,
+} from '@angular/common';
+import {
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -10,6 +15,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { IMAGE_WIDTHS } from '@motor-fix/contracts/images';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import {
@@ -17,6 +23,34 @@ import {
   type ViewerLabels,
   type ViewerPhoto,
 } from '@motor-fix/ui-cockpit/photo-viewer';
+import { thumbHashToDataURL } from 'thumbhash';
+
+// The tile widths the layout gives, so the browser picks the smallest copy
+// that fills one: the cover takes two thirds of the row, the others a third,
+// and on a phone each takes the screen less its gutters.
+const COVER_SIZES = '(max-width: 639px) calc(100vw - 32px), min(66vw, 840px)';
+const TILE_SIZES = '(max-width: 639px) calc(100vw - 32px), min(33vw, 420px)';
+
+const srcset = (base: string, format: string) =>
+  IMAGE_WIDTHS.map((w) => `${base}/${w}.${format} ${w}w`).join(', ');
+
+// NgOptimizedImage asks the loader for each width of WIDTHS; the variant of
+// that width is the WebP one, AVIF coming from the <source>. The widths are
+// listed rather than generated: the sizes hold pixel values, which its own
+// srcset generation refuses.
+const WIDTHS = IMAGE_WIDTHS.map((w) => `${w}w`).join(', ');
+const webpVariant = ({ src, width }: ImageLoaderConfig) =>
+  `${src}/${width ?? 1600}.webp`;
+
+const preview = (thumbhash: string | undefined) => {
+  if (!thumbhash) return null;
+  try {
+    const bytes = Uint8Array.from(atob(thumbhash), (c) => c.charCodeAt(0));
+    return `url(${thumbHashToDataURL(bytes)})`;
+  } catch {
+    return null;
+  }
+};
 
 // The garage's photos on its profile: the first one large, the rest as tiles,
 // each opening the full-screen view. A photo whose address has expired is read
@@ -24,7 +58,8 @@ import {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.aria-label]': 'label()' },
-  imports: [PhotoViewer],
+  imports: [NgOptimizedImage, PhotoViewer],
+  providers: [{ provide: IMAGE_LOADER, useValue: webpVariant }],
   selector: 'section[mf-photos-section]',
   styleUrl: './photos-section.css',
   templateUrl: './photos-section.html',
@@ -40,6 +75,7 @@ export class PhotosSection {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly viewer = viewChild(PhotoViewer);
 
+  protected readonly widths = WIDTHS;
   protected readonly label = computed(() =>
     this.i18n.t('public.garageProfile.photos.label'),
   );
@@ -52,7 +88,20 @@ export class PhotosSection {
         total: photos.length,
       }),
       id: photo.id,
-      src: i === 0 ? photo.displayUrl : photo.thumbnailUrl,
+      preview: preview(photo.thumbhash),
+      ...(photo.imageBase
+        ? {
+            avif: srcset(photo.imageBase, 'avif'),
+            base: photo.imageBase,
+            sizes: i === 0 ? COVER_SIZES : TILE_SIZES,
+            src: webpVariant({ src: photo.imageBase }),
+          }
+        : {
+            avif: null,
+            base: null,
+            sizes: '',
+            src: i === 0 ? photo.displayUrl : photo.thumbnailUrl,
+          }),
     }));
   });
 

@@ -25,6 +25,7 @@ export const UNUSED_STORAGE: StorageEnv = {
 
 interface StoredObject {
   body: Buffer;
+  cacheControl?: string;
   contentType: string;
   etag: string;
   metadata: Record<string, string>;
@@ -65,7 +66,7 @@ export class S3TestStore {
   readonly objects = new Map<string, StoredObject>();
   now = () => Date.now();
   beforeCopy: (() => void) | undefined;
-  beforeDelete: (() => void) | undefined;
+  beforeDelete: ((key: string) => void) | undefined;
   private readonly server: Server = createServer((req, res) =>
     this.handle(req, res).catch((error: unknown) => {
       const refusal =
@@ -112,9 +113,11 @@ export class S3TestStore {
     body: Buffer,
     contentType: string,
     metadata: Record<string, string> = {},
+    cacheControl?: string,
   ) {
     this.objects.set(key, {
       body,
+      cacheControl,
       contentType,
       etag: `"${randomUUID()}"`,
       metadata,
@@ -134,7 +137,7 @@ export class S3TestStore {
     if (!key) this.onBucket(req, res);
     else if (req.method === 'PUT') this.putObject(req, key, body, res);
     else if (req.method === 'DELETE') {
-      this.beforeDelete?.();
+      this.beforeDelete?.(key);
       this.objects.delete(key);
       res.writeHead(204).end();
     } else this.getObject(req, url, key, res);
@@ -224,6 +227,7 @@ export class S3TestStore {
         body,
         req.headers['content-type'] ?? 'binary/octet-stream',
         metadataOf(req),
+        req.headers['cache-control'],
       );
       res.writeHead(200, { etag: this.objects.get(key)?.etag }).end();
       return;
@@ -238,7 +242,13 @@ export class S3TestStore {
     if (ifMatch && ifMatch !== source.etag) {
       throw new Refusal(412, 'PreconditionFailed');
     }
-    this.put(key, source.body, source.contentType, source.metadata);
+    this.put(
+      key,
+      source.body,
+      source.contentType,
+      source.metadata,
+      source.cacheControl,
+    );
     res
       .writeHead(200, { 'content-type': 'application/xml' })
       .end(
@@ -258,16 +268,7 @@ export class S3TestStore {
       res.writeHead(404).end();
       return;
     }
-    const headers: Record<string, string> = {
-      'content-type': object.contentType,
-      etag: object.etag,
-      ...Object.fromEntries(
-        Object.entries(object.metadata).map(([name, value]) => [
-          `x-amz-meta-${name}`,
-          value,
-        ]),
-      ),
-    };
+    const headers = headersOf(object);
     const disposition = url.searchParams.get('response-content-disposition');
     if (disposition) headers['content-disposition'] = disposition;
     const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? '');
@@ -285,6 +286,18 @@ export class S3TestStore {
     res.end(req.method === 'HEAD' ? undefined : body);
   }
 }
+
+const headersOf = (object: StoredObject): Record<string, string> => ({
+  'content-type': object.contentType,
+  etag: object.etag,
+  ...(object.cacheControl && { 'cache-control': object.cacheControl }),
+  ...Object.fromEntries(
+    Object.entries(object.metadata).map(([name, value]) => [
+      `x-amz-meta-${name}`,
+      value,
+    ]),
+  ),
+});
 
 const metadataOf = (req: IncomingMessage) =>
   Object.fromEntries(
