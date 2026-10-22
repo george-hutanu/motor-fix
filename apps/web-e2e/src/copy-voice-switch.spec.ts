@@ -170,13 +170,14 @@ test.describe('switching copy voices off and pinning one @seeded', () => {
     await context.close();
 
     // A device that has read the settings: every voice its loads draw, as
-    // the page head marks it before the first paint, is one that is on.
+    // the page head marks it before the first paint, is one that is on. The
+    // script runs before <html> exists, so it watches the whole document.
     const device = await visit(browser, () => {
       const marks: string[] = [];
       (window as unknown as { marks: string[] }).marks = marks;
       new MutationObserver(() =>
         marks.push(document.documentElement.getAttribute('data-voice') ?? ''),
-      ).observe(document.documentElement, { attributeFilter: ['data-voice'] });
+      ).observe(document, { attributeFilter: ['data-voice'], subtree: true });
     });
     for (let i = 0; i < 5; i++) {
       await device.page.waitForTimeout(2_600);
