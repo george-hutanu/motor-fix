@@ -76,7 +76,8 @@ describe('cache headers on read routes', () => {
         PUBLIC_POLICY,
       ]);
       expect(res.headers['etag']).toMatch(/^W\//);
-      expect(varyOf(path, res)).toEqual([path, 'Accept-Encoding']);
+      // A driver's session may change the answer, so no cache hands it on.
+      expect([path, res.headers['vary']]).toEqual([path, 'Authorization']);
     }
   });
 
