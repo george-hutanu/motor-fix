@@ -8,6 +8,7 @@ import {
   answerSurvey,
   confirmation,
   fillListing,
+  NEW_PASSWORD,
   signUp,
   unique,
 } from './listing-send.js';
@@ -57,8 +58,7 @@ async function kept(page: Page, text: string) {
 // A garage listed through the form, BMW taken first as fillListing does, then
 // Dacia taken without electric, Tesla refused, a paid courtesy car, card
 // payment and its own week; sent, approved in the admin's drawer, and read on
-// its public profile. The stance change goes out through the outbox as the
-// listing's own edits do.
+// its public profile. The stance change is the owner's own brand write.
 // @traces 308-FR-014 308-FR-015 308-FR-016
 test.describe('the brands, facilities and hours on a public profile @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
@@ -241,6 +241,7 @@ test.describe('the brands, facilities and hours on a public profile @seeded @dat
 
   test('shows a brand the garage stops taking without reloading the page', async ({
     page,
+    request,
   }) => {
     const stream = page.waitForResponse(
       (r) =>
@@ -256,20 +257,27 @@ test.describe('the brands, facilities and hours on a public profile @seeded @dat
       if (frame === page.mainFrame()) navigations++;
     });
 
-    // A refused brand keeps no fuels, as the listing's own write leaves it.
-    await db.query('BEGIN');
-    await db.query(
-      `UPDATE garage_brand SET stance = 'does_not_take', petrol = false,
-         diesel = false, hybrid = false, electric = false, updated_at = now()
-        WHERE garage_id = $1 AND brand_id = (SELECT id FROM brand WHERE key = 'dacia')`,
-      [id],
+    // The owner refuses Dacia through the brand write the garage's own page uses.
+    const signedIn = await request.post('/api/v1/auth/sign-in', {
+      data: { email, password: NEW_PASSWORD, remember: false },
+    });
+    expect(signedIn.ok()).toBe(true);
+    const { accessToken } = (await signedIn.json()) as { accessToken: string };
+    const { rows } = await db.query<{ id: string; key: string }>(
+      `SELECT id::text, key FROM brand WHERE key IN ('bmw', 'dacia', 'tesla')`,
     );
-    await db.query(
-      `INSERT INTO outbox_event (kind, subject_id, audience)
-       VALUES ('garage.updated', $1, $2)`,
-      [id, [`garage:${id}`, `public:garage:${id}`]],
-    );
-    await db.query('COMMIT');
+    const brandId = (key: string) => rows.find((row) => row.key === key)?.id;
+    const written = await request.put(`/api/v1/garages/${id}/brands`, {
+      data: {
+        brands: [
+          { brandId: brandId('bmw'), stance: 'works_on' },
+          { brandId: brandId('dacia'), stance: 'does_not_take' },
+          { brandId: brandId('tesla'), stance: 'does_not_take' },
+        ],
+      },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    expect(written.status(), await written.text()).toBe(200);
 
     await expect(brands(page).locator('.refuses li')).toHaveText(
       [/Dacia/, /Tesla/],
