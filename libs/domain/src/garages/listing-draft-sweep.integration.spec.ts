@@ -274,9 +274,18 @@ describe('a copy of a live garage', () => {
     const file = await prisma.verificationFile.create({
       data: { garageId: garage.id, status: 'approved' },
     });
+    await prisma.legalDocument.create({
+      data: {
+        kind: 'rar_authorisation',
+        pages: ['documents/held.pdf'],
+        verificationFileId: file.id,
+      },
+    });
     const copy = await draft(daysAgo(1), {
       data: {
-        documents: { rar: { pages: ['documents/new-page.pdf'] } },
+        documents: {
+          rar: { pages: ['documents/held.pdf', 'documents/new-page.pdf'] },
+        },
         files: ['garage-photos/shown.jpg', 'garage-photos/uploaded.jpg'],
       },
       verificationFileId: file.id,

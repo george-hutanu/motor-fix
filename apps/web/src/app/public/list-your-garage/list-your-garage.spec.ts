@@ -3176,6 +3176,33 @@ describe('a signed-in account that owns a garage', () => {
       ).toBeNull();
     });
 
+    it('keeps the form and its note when the copy fails to open, and asks again on the next session', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(
+        harness,
+        await copyAsked(),
+        { code: 'unavailable', status: 503 },
+        503,
+      );
+
+      expect(formShown(page)).toBe(true);
+      expect(statusView(page)).toBeNull();
+      expect(asked(page)).toEqual([]);
+      expect(note(page)).toBe(
+        'Ciorna nu a putut fi salvată pe server. Încearcă din nou.',
+      );
+
+      session.current.set({ ...OWNER });
+      for (let i = 0; i < 5; i++) await pause();
+      await settle(harness);
+      await answered(harness, await copyAsked(), COPY);
+
+      expect(asked(page)).toEqual([6]);
+    });
+
     describe('sent again', () => {
       const SUBMIT = `${API}/c1/submit`;
       const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
