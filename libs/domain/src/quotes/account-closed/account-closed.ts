@@ -68,6 +68,11 @@ interface Outcome {
   booking?: 'cancelled' | 'skipped';
 }
 
+interface Counts {
+  request: Record<'closed' | 'skipped' | 'failed', number>;
+  booking: Record<'cancelled' | 'skipped', number>;
+}
+
 // When a driver's account is deleted or suspended, the driver's open
 // requests close and their bookings that have not started are cancelled, by
 // the system, so no garage keeps waiting for someone who will not come.
@@ -93,7 +98,10 @@ export class AccountClosed {
           where: { driverId: accountId, status: { in: [...OPEN] } },
         })
       : [];
-    const counts = { cancelled: 0, closed: 0, failed: 0, kept: 0, skipped: 0 };
+    const counts: Counts = {
+      booking: { cancelled: 0, skipped: 0 },
+      request: { closed: 0, failed: 0, skipped: 0 },
+    };
     let failure: unknown;
     for (const { id } of open) {
       try {
@@ -103,13 +111,13 @@ export class AccountClosed {
         this.count(outcome, counts);
       } catch (error) {
         failure ??= error;
-        counts.failed += 1;
+        counts.request.failed += 1;
         recordAccountClosedCleanup('request', 'failed');
         this.logger.error(`request ${id} not closed: ${String(error)}`);
       }
     }
     this.logger.log(
-      `account ${accountId} ${kind}: requests closed ${counts.closed}, skipped ${counts.skipped}, failed ${counts.failed}; bookings cancelled ${counts.cancelled}, skipped ${counts.kept}`,
+      `account ${accountId} ${kind}: requests closed ${counts.request.closed}, skipped ${counts.request.skipped}, failed ${counts.request.failed}; bookings cancelled ${counts.booking.cancelled}, skipped ${counts.booking.skipped}`,
     );
     if (failure) throw failure;
   }
@@ -234,15 +242,12 @@ export class AccountClosed {
     });
   }
 
-  private count(
-    outcome: Outcome,
-    counts: Record<'cancelled' | 'closed' | 'kept' | 'skipped', number>,
-  ) {
+  private count(outcome: Outcome, counts: Counts) {
     if (outcome.request === 'gone') return;
-    counts[outcome.request] += 1;
+    counts.request[outcome.request] += 1;
     recordAccountClosedCleanup('request', outcome.request);
     if (!outcome.booking) return;
-    counts[outcome.booking === 'cancelled' ? 'cancelled' : 'kept'] += 1;
+    counts.booking[outcome.booking] += 1;
     recordAccountClosedCleanup('booking', outcome.booking);
   }
 }

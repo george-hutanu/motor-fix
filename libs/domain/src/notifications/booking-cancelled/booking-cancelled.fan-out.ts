@@ -58,7 +58,12 @@ export class BookingCancelledFanOut {
 
   async handle(job: Pick<Job<BookingCancelledEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
-    if (payload.reason !== ANNOUNCED) return;
+    if (payload.reason !== ANNOUNCED) {
+      this.logger.log(
+        `booking ${payload.bookingId} cancelled for ${payload.reason}: not this fan-out's`,
+      );
+      return;
+    }
     const booking = await this.prisma.booking.findUnique({
       select: {
         driver: { select: { name: true } },
