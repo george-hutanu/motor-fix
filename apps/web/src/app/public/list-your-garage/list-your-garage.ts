@@ -46,6 +46,7 @@ import {
   isPlaceSection,
   type PlaceSection,
 } from '@motor-fix/contracts/place-section';
+import { askedSteps } from '@motor-fix/contracts/verification-target';
 import type { JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
@@ -151,6 +152,12 @@ export class ListYourGarage {
     MissingSummary,
     { read: ElementRef },
   );
+  // Resolves once the browser's own draft is restored, which a copy then
+  // takes the place of.
+  private markOpened = () => {};
+  private readonly opened = new Promise<void>((resolve) => {
+    this.markOpened = resolve;
+  });
   // A jump's own scroll is under way: however late it starts (up to the
   // stall), none of its movement decides the current step.
   private held = false;
@@ -287,6 +294,8 @@ export class ListYourGarage {
   protected readonly sendState = signal<
     'owner' | 'failed' | 'incomplete' | null
   >(null);
+  // The steps the admins' request for more points at, over a copy.
+  protected readonly requested = signal<number[]>([]);
   // The owner's listing on its way to the map, with what the send answered
   // when it was sent from this page; the form is done with.
   protected readonly statusView = signal<{
@@ -399,7 +408,10 @@ export class ListYourGarage {
       });
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
-      void this.keeper.open(link).then((step) => this.restore(step));
+      void this.keeper.open(link).then((step) => {
+        this.restore(step);
+        this.markOpened();
+      });
       // A visitor's browser is asked nothing: each ask renews the cookie.
       if (this.knownAccount()) void this.session.load({ keepLanguage: true });
     });
@@ -413,7 +425,20 @@ export class ListYourGarage {
   private async showOwned(role: string | undefined) {
     if (role !== 'garage')
       await this.session.switchRole('garage').catch(() => undefined);
-    this.statusView.set({ sent: null });
+    await this.opened;
+    const copy = await this.keeper.openCopy();
+    if (!copy) {
+      this.statusView.set({ sent: null });
+      return;
+    }
+    const steps = askedSteps(copy.requestedItems);
+    this.requested.set(steps);
+    this.surveyOpen.set(false);
+    this.ticked = new Set(this.done());
+    this.shown.set(this.stored());
+    afterNextRender(() => this.show(steps[0] as number), {
+      injector: this.injector,
+    });
   }
 
   // The fields show what was typed until they are left; the values below
@@ -596,6 +621,8 @@ export class ListYourGarage {
     }
     if (outcome.kind === 'sent') await this.sent(outcome.result.status);
     else if (outcome.kind === 'incomplete') this.refusedSend(outcome);
+    // The file asks for nothing more by now: its status says why.
+    else if (outcome.kind === 'refused') this.statusView.set({ sent: null });
     else this.sendState.set(outcome.kind);
   }
 

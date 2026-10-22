@@ -187,6 +187,7 @@
     "title": "Team invitation"
   },
   "listing": {
+    "askedFor": "Asked by MotorFix",
     "bar": "{n} / 6 · {label}",
     "brands": {
       "chips": "Your brands",

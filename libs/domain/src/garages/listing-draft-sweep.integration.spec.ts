@@ -237,6 +237,30 @@ describe('the daily run', () => {
   });
 });
 
+// @traces 208-FR-004
+describe('a copy of a live garage', () => {
+  it('gets no reminder and is never deleted, its photos kept', async () => {
+    const garage = await prisma.garage.create({
+      data: { name: 'Service Popescu', slug: 'service-popescu' },
+    });
+    const file = await prisma.verificationFile.create({
+      data: { garageId: garage.id, status: 'more_requested' },
+    });
+    const copy = await draft(daysAgo(120), {
+      data: { files: ['garage-photos/a.jpg'] },
+      verificationFileId: file.id,
+    });
+
+    await sweep.run(NOW);
+
+    expect(sent).toEqual([]);
+    expect(deleted).toEqual([]);
+    await expect(
+      prisma.listingDraft.findUniqueOrThrow({ where: { id: copy.id } }),
+    ).resolves.toMatchObject({ remindedAt: null, status: 'open' });
+  });
+});
+
 // @traces 116-FR-036
 describe('the reminder e-mail and its queue', () => {
   let refusals = 0;

@@ -834,6 +834,15 @@
           },
           "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "Files returned"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_listing_completions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Completion copies opened"
         }
       ],
       "fieldConfig": {
@@ -875,6 +884,15 @@
           },
           "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "Files returned"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_listing_completions_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "Completion copies opened"
         }
       ],
       "fieldConfig": {
@@ -916,6 +934,15 @@
           },
           "expr": "sum(increase(motorfix_verification_resubmissions_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "Files returned"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_listing_completions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "Completion copies opened"
         }
       ],
       "fieldConfig": {

@@ -6676,6 +6676,45 @@
         ]
       }
     },
+    "/api/v1/listing-drafts/completion": {
+      "post": {
+        "operationId": "CompletionController_open",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionCopyDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff other than the owner"
+          },
+          "404": {
+            "description": "not_found: no garage, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused, with currentStatus: the file asks for nothing more"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open the copy of the owner's garage that answers a request for more, or the one already open",
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -16572,6 +16611,103 @@
           "fileId",
           "status",
           "warnings"
+        ]
+      },
+      "HeldDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "issuedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind",
+          "pages",
+          "issuedOn"
+        ]
+      },
+      "CompletionCopyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "step": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "submitted"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "description": "This browser's key to the copy"
+          },
+          "requestedItems": {
+            "description": "What the request for more asks for",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "edited": {
+            "type": "boolean",
+            "description": "Saved at least once since it was opened"
+          },
+          "held": {
+            "description": "The documents on file, one per kind",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HeldDocumentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "data",
+          "step",
+          "language",
+          "status",
+          "updatedAt",
+          "token",
+          "requestedItems",
+          "edited",
+          "held"
         ]
       },
       "LiveTestDto": {

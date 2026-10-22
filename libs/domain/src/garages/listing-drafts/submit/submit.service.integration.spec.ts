@@ -85,7 +85,7 @@ async function mark() {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE account, brand, garage, job_type, listing_draft CASCADE',
+    'TRUNCATE account, brand, garage, job_type, listing_draft, outbox_event CASCADE',
   );
   dacia = (
     await prisma.brand.create({

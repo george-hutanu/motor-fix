@@ -60,6 +60,7 @@ export class ListingDraftSweep implements DailyTask {
         remindedAt: null,
         status: 'open',
         updatedAt: { lte: daysBefore(now, REMIND_AFTER_DAYS) },
+        verificationFileId: null,
       },
     });
     for (const draft of due) {
@@ -73,7 +74,11 @@ export class ListingDraftSweep implements DailyTask {
     const cutoff = daysBefore(now, DELETE_AFTER_DAYS);
     const expired = await this.prisma.listingDraft.findMany({
       select: { id: true },
-      where: { status: 'open', updatedAt: { lte: cutoff } },
+      where: {
+        status: 'open',
+        updatedAt: { lte: cutoff },
+        verificationFileId: null,
+      },
     });
     for (const draft of expired) {
       await this.deleteOne(draft, cutoff).catch((error: unknown) =>
@@ -137,7 +142,12 @@ export class ListingDraftSweep implements DailyTask {
       await this.storage.deleteWithCopies(key);
     }
     await this.prisma.listingDraft.deleteMany({
-      where: { id: draft.id, status: 'open', updatedAt: { lte: cutoff } },
+      where: {
+        id: draft.id,
+        status: 'open',
+        updatedAt: { lte: cutoff },
+        verificationFileId: null,
+      },
     });
   }
 

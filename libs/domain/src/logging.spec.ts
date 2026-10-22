@@ -84,7 +84,9 @@ describe('JsonLogger', () => {
       logger.error('ana@example.com, 0722 123 456, car B 123 ABC', 'Mailer'),
     );
 
-    expect(JSON.stringify(line)).not.toMatch(/ana@example|0722|123 ABC/);
+    // The epoch timestamp's digits can hold 0722 by chance.
+    const { timestamp: _at, ...rest } = line;
+    expect(JSON.stringify(rest)).not.toMatch(/ana@example|0722|123 ABC/);
     expect(line['message']).toBe('***, ***, car ***');
   });
 

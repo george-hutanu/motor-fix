@@ -8,6 +8,7 @@ import type {
 } from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import {
+  type CompletionCopyDto,
   ListingDraftsService,
   type ListingSubmittedDto,
 } from '@motor-fix/data-access';
@@ -41,6 +42,7 @@ type CheckOutcome =
 type SubmitOutcome =
   | { kind: 'sent'; result: ListingSubmittedDto }
   | { kind: 'owner' }
+  | { kind: 'refused' }
   | { kind: 'incomplete'; errors: FieldProblem[]; warnings: FieldProblem[] }
   | { kind: 'failed' };
 interface DraftNote {
@@ -105,6 +107,9 @@ export class DraftKeeper {
   private again = false;
   private failedCall = false;
   private waiters: (() => void)[] = [];
+  // The copy as it opened: whether it had been saved since, and its data.
+  private copyEdited = false;
+  private copyData: string | undefined;
   private browserTimer: ReturnType<typeof setTimeout> | undefined;
   private serverTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -137,6 +142,33 @@ export class DraftKeeper {
     }
     this.ready = true;
     return step;
+  }
+
+  // The owner's copy of the live garage, when its file asks for more; null
+  // otherwise, the form left as it was.
+  async openCopy(): Promise<CompletionCopyDto | null> {
+    try {
+      const copy = await this.api.completionControllerOpen();
+      this.adoptCopy(copy);
+      return copy;
+    } catch {
+      return null;
+    }
+  }
+
+  adoptCopy(copy: CompletionCopyDto) {
+    this.adopt(fromServer(copy, copy.token, new Date()));
+    this.write();
+    this.view.set('form');
+    this.copyEdited = copy.edited;
+    this.copyData = JSON.stringify(copy.data);
+  }
+
+  // Whether the copy differs from the live garage it was opened over.
+  changedSince(): boolean {
+    return (
+      this.copyEdited || JSON.stringify(this.draft().data) !== this.copyData
+    );
   }
 
   type(email: string) {
@@ -306,6 +338,11 @@ export class DraftKeeper {
     const problem = toProblem(error);
     if (problem.status === 409 && problem.code === 'garage_already_exists')
       return { kind: 'owner' };
+    if (
+      problem.status === 409 &&
+      problem.code === 'verification_transition_refused'
+    )
+      return { kind: 'refused' };
     if (problem.status === 422 && problem.errors)
       return {
         errors: problem.errors,

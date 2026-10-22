@@ -2897,6 +2897,27 @@ describe('a signed-in account that owns a garage', () => {
       li.classList.contains('lit'),
     );
 
+  // The copy the page asks for first; a file asking for nothing refuses it.
+  async function copyAsked(): Promise<TestRequest> {
+    const http = TestBed.inject(HttpTestingController);
+    for (let i = 0; i < 200; i++) {
+      const [found] = http.match(
+        (req) => req.method === 'POST' && req.url === `${API}/completion`,
+      );
+      if (found) return found;
+      await pause();
+    }
+    throw new Error('the copy was never asked for');
+  }
+  async function noCopy(harness: RouterTestingHarness) {
+    await answered(
+      harness,
+      await copyAsked(),
+      { code: 'verification_transition_refused', currentStatus: 'in_review' },
+      409,
+    );
+  }
+
   beforeEach(() => {
     garages.verificationStatusControllerRead.mockResolvedValue(IN_REVIEW);
   });
@@ -2906,6 +2927,7 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage');
     await settle(harness);
+    await noCopy(harness);
 
     expect(formShown(page)).toBe(false);
     expect(page.querySelector('mf-signup-survey')).toBeNull();
@@ -2939,6 +2961,7 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage');
     await settle(harness);
+    await noCopy(harness);
 
     expect(session.switchRole).toHaveBeenCalledWith('garage');
     expect(statusView(page)).not.toBeNull();
@@ -2952,6 +2975,7 @@ describe('a signed-in account that owns a garage', () => {
     session.current.set(OWNER);
     for (let i = 0; i < 5; i++) await pause();
     await settle(harness);
+    await noCopy(harness);
 
     expect(formShown(page)).toBe(false);
     expect(statusView(page)).not.toBeNull();
@@ -2963,10 +2987,84 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage?draft=link-key');
     await settle(harness);
+    await answered(harness, await request(), {
+      data: {},
+      email: 'ion@service.test',
+      id: 'd1',
+      language: 'ro',
+      status: 'open',
+      step: 1,
+      updatedAt: '2026-10-07T11:00:00.000Z',
+    });
+    await noCopy(harness);
 
     expect(statusView(page)).not.toBeNull();
     expect(formShown(page)).toBe(false);
     expect(page.querySelector('.ended')).toBeNull();
+  });
+
+  // @traces 208-FR-005
+  describe('whose file asks for more', () => {
+    const COPY = {
+      data: { steps: { '1': { name: 'Service Popescu' } } },
+      edited: false,
+      email: 'ana@service.ro',
+      held: [],
+      id: 'c1',
+      language: 'ro',
+      requestedItems: ['rar', 'documents'],
+      status: 'open',
+      step: 6,
+      token: 'ct',
+      updatedAt: '2026-10-21T10:00:00.000Z',
+    };
+    const asked = (page: HTMLElement) =>
+      [...page.querySelectorAll('section > h2')].flatMap((h2, i) =>
+        h2.querySelector('.asked') ? [i + 1] : [],
+      );
+
+    it('opens the form over the copy at the step asked for, marked as asked by MotorFix', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(harness, await copyAsked(), COPY);
+
+      expect(statusView(page)).toBeNull();
+      expect(formShown(page)).toBe(true);
+      expect(asked(page)).toEqual([6]);
+      expect(text(page.querySelector('#pasul-6 > h2 .asked'))).toBe(
+        '· Cerut de MotorFix',
+      );
+      expect(current(page)[0]).toMatch(/^6 /);
+      expect(
+        page.querySelector<HTMLInputElement>('#pasul-1 mf-details-step input')
+          ?.value,
+      ).toBe('Service Popescu');
+    });
+
+    it.each([
+      [['address'], [5], 5],
+      [['photos'], [5], 5],
+      [['other', 'rar'], [1, 6], 1],
+      [[], [1], 1],
+    ])(
+      'marks the steps of %j and opens at the first',
+      async (items, marked, step) => {
+        session.current.set(OWNER);
+
+        const { harness, page } = await open('/ro/list-your-garage');
+        await settle(harness);
+        await answered(harness, await copyAsked(), {
+          ...COPY,
+          requestedItems: items,
+          step,
+        });
+
+        expect(asked(page)).toEqual(marked);
+        expect(current(page)[0]).toMatch(new RegExp(`^${step} `));
+      },
+    );
   });
 
   it.each([

@@ -311,6 +311,8 @@ export type { ListingDocumentsControllerRemove$Params as ListingDocumentsControl
 export { listingDocumentsControllerRemove as listingDocumentsControllerRemove } from './fn/listing-drafts/listing-documents-controller-remove';
 export type { ListingSubmitControllerSubmit$Params as ListingSubmitControllerSubmit$Params } from './fn/listing-drafts/listing-submit-controller-submit';
 export { listingSubmitControllerSubmit as listingSubmitControllerSubmit } from './fn/listing-drafts/listing-submit-controller-submit';
+export type { CompletionControllerOpen$Params as CompletionControllerOpen$Params } from './fn/listing-drafts/completion-controller-open';
+export { completionControllerOpen as completionControllerOpen } from './fn/listing-drafts/completion-controller-open';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

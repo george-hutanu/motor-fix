@@ -192,6 +192,7 @@
     "title": "Invitație în echipă"
   },
   "listing": {
+    "askedFor": "Cerut de MotorFix",
     "bar": "{n} / 6 · {label}",
     "brands": {
       "chips": "Mărcile tale",

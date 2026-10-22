@@ -168,6 +168,10 @@ const NOT_CHANGES = new Set([
   'ListingPhotosService.remove',
   'ListingDocumentsService.confirm',
   'ListingDocumentsService.remove',
+  // A copy of a live garage is a draft too: the garage changes only when it
+  // is sent, and that send writes the history.
+  'CompletionService.open',
+  'CompletionService.create',
   // Runs inside the activities check's record, whose one entry carries the
   // list before and after.
   'VerificationChecksService.writeActivities',

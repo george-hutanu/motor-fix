@@ -105,7 +105,7 @@
         <div class="sections">
           @for (step of steps; track step.n) {
             <section [id]="prefix() + step.n">
-              <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}</h2>
+              <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}@if (requested().includes(step.n)) {<span class="asked"> · {{ 'public.listing.askedFor' | t }}</span>}</h2>
               @if (step.n === 1) {
                 <div class="field">
                   <label for="listing-email">{{ 'public.listing.email' | t }}</label>
