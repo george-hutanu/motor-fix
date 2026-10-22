@@ -277,7 +277,7 @@ describe('the QA fixes carry', () => {
     assert.match(judgeCarry(fixes({ fromReview: { state: 'success', description: 'PR QA lap 2 passed' } })), /no medium or low finding/);
   });
 
-  // @traces 1362-FR-003, 1362-FR-006
+  // @traces 1362-FR-003 1362-FR-006
   it('refuses a failing lap, a carried success, or a commit that is not an ancestor', () => {
     assert.match(judgeCarry(fixes({ fromReview: { state: 'failure', description: '1 blocking finding; 3 in all' } })), /no agent-review success/);
     assert.match(judgeCarry(fixes({ fromReview: { state: 'success', description: carryDescription(MID, 'fixes') } })), /itself carried/);
