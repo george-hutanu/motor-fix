@@ -10,9 +10,10 @@ const diffAudit = join(import.meta.dirname, 'diff-audit.mjs');
 
 /**
  * A feature with one requirement and one task, in a directory that has no
- * `.env`. No key means the lane reports itself unavailable instead of calling
- * out — which is exactly what makes the flag matrix testable offline: the
- * unavailable NOTE is the proof that the lane was ATTEMPTED.
+ * `.env`. The flag matrix runs with a key present and the lane switched off
+ * (SPECKIT_JEV=0): the lane then reports itself switched off instead of
+ * calling out, and that NOTE is the offline proof that it was ATTEMPTED.
+ * Without a key the lane is skipped silently, so it proves nothing.
  */
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'artifact-lint-'));
@@ -32,9 +33,9 @@ const run = (file, args, cwd) =>
   spawnSync(process.execPath, [file, ...args], {
     cwd,
     encoding: 'utf8',
-    // Both names cleared: the lane must find no credential whatever this
-    // machine exports, or the spec would pass or fail by accident.
-    env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', CLAUDE_PROJECT_DIR: cwd },
+    // A stand-in key, switched off: the lane is attempted and makes no call,
+    // whatever this machine exports.
+    env: { ...process.env, TYPESAFE_API_KEY: 'present', JEV: '', SPECKIT_JEV: '0', CLAUDE_PROJECT_DIR: cwd },
   });
 
 const attempted = (result) => /jev-unavailable/.test(result.stdout);
@@ -75,10 +76,16 @@ describe('artifact-lint — the semantic lane default', () => {
     assert.match(result.stdout, /artifact-lint: 020-a-feature/);
   });
 
-  it('says the lane was unavailable rather than printing a clean report', () => {
-    const result = run(script, [], fixture());
-    assert.match(result.stdout, /no TYPESAFE_API_KEY \(or JEV\)/);
-    assert.match(result.stdout, /mechanical findings only/);
+  // @traces 1359-FR-008
+  it('says nothing about the lane when no key is set', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stdout, /jev|TYPESAFE_API_KEY/);
   });
 
   it('reports "switched off" rather than "no key" when it was switched off', () => {
@@ -90,6 +97,29 @@ describe('artifact-lint — the semantic lane default', () => {
     });
     assert.match(result.stdout, /switched off/);
     assert.doesNotMatch(result.stdout, /no TYPESAFE_API_KEY/);
+  });
+
+  // @traces 1359-FR-008
+  it('keeps the switched-off line when no key is set either', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '0', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.match(result.stdout, /switched off/);
+    assert.doesNotMatch(result.stdout, /no TYPESAFE_API_KEY/);
+  });
+
+  // @traces 1359-FR-008
+  it('says nothing when SPECKIT_JEV=1 asks for the lane but no key is set', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '1', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.doesNotMatch(result.stdout, /jev|TYPESAFE_API_KEY/);
   });
 });
 

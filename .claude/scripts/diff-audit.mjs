@@ -172,23 +172,6 @@ for (const file of changed.filter((f) => /\.[cm]?tsx?$/.test(f))) {
   }
 }
 
-// 5. Parameter-property DI in apps/server. AGENTS.md documents the trap: swc
-//    can elide an import whose only use is a constructor parameter's type, and
-//    `design:paramtypes` then degrades to Object, so Nest fails to resolve the
-//    dependency under vitest while `nest build` compiles the same code fine.
-//
-//    A WARN, not an ERROR, because it does not always fire: a class whose
-//    service import survives the transform resolves normally, and this repo has
-//    a controller in exactly that state, boots it through TestingModule, and is
-//    green. The signal worth raising is "this is the documented trap, and a
-//    green suite is not proof you escaped it" — the tests decide, not the shape.
-for (const file of sources.filter((f) => f.startsWith("apps/server/src/"))) {
-  const text = readFileSync(join(repo, file), "utf8");
-  if (/constructor\s*\([^)]*\b(private|protected|public|readonly)\b/s.test(text)) {
-    add("WARN", "param-property-di", file, "parameter-property constructor — the documented vitest/swc DI trap; confirm a test actually instantiates this class");
-  }
-}
-
 // 6. A new source file no test mentions. Not "untested" in the coverage sense —
 //    nothing anywhere refers to it, which is the shape of code written ahead of
 //    a need.
@@ -202,7 +185,15 @@ for (const file of sources) {
   const stem = basename(file).replace(/\.tsx?$/, "");
   const sibling = join(repo, dirname(file), `${stem}.spec.ts`);
   if (existsSync(sibling)) continue;
-  if (!corpus.some((f) => isSpec(f.path) && f.text.includes(`/${stem}.js`))) {
+  // What a mention looks like depends on how this project writes imports:
+  // `/stem.js` (or `.ts`) under nodenext, `/stem` closed by a quote or backtick under
+  // bundler, and either when the tsconfig names no style.
+  const resolution = importStyle(repo, file);
+  const nodenext = [`/${stem}.js`, ...(resolution?.tsExtensions ? [`/${stem}.ts`] : [])];
+  const bundler = [`/${stem}'`, `/${stem}"`, `/${stem}\``];
+  const forms =
+    resolution?.style === "nodenext" ? nodenext : resolution?.style === "bundler" ? bundler : [...nodenext, ...bundler];
+  if (!corpus.some((f) => isSpec(f.path) && forms.some((form) => f.text.includes(form)))) {
     add("WARN", "untested-new-file", file, "new source file, and no spec imports it");
   }
 }
@@ -211,19 +202,11 @@ for (const file of sources) {
 //    inline review on PRs 17–37, each a review round when missed. WARNs, not
 //    ERRORs: every one has a legitimate exception the reviewer has also
 //    accepted, so the finding says "justify or fix", not "wrong".
-const SCANNER_SRC = /^apps\/scanner\/src\//;
-const SYNC_IO = /\b(readFileSync|writeFileSync|appendFileSync|readdirSync|statSync|existsSync|execSync|spawnSync)\s*\(/;
 for (const file of sources) {
   const added = addedLines(file);
   for (const line of added) {
     if (/\bwhile\s*\(\s*true\s*\)|\bfor\s*\(\s*;\s*;\s*\)/.test(line)) {
-      add("WARN", "unbounded-loop", file, "`while (true)` / `for (;;)` — add a hard iteration cap or document the exit; an unbounded loop locks the scanner");
-    }
-    if (SCANNER_SRC.test(file) && /\bfor\s*\(\s*(const|let)\s+[^)]*\s+of\s+/.test(line)) {
-      add("WARN", "for-of-in-scanner", file, "`for...of` in scanner source — indexed `for` on any per-file/per-line/per-match path (AGENTS.md); fine only for load-time loops over small collections");
-    }
-    if (SCANNER_SRC.test(file) && !/(config|startup|bootstrap|main)\.ts$/.test(file) && SYNC_IO.test(line)) {
-      add("WARN", "sync-io-in-scanner", file, `synchronous I/O \`${line.match(SYNC_IO)[1]}\` in scanner source freezes the main thread — async, or justify as startup-only`);
+      add("WARN", "unbounded-loop", file, "`while (true)` / `for (;;)` — add a hard iteration cap or document the exit; an unbounded loop hangs the process");
     }
     if (/\[\s*['"]\.[a-z0-9]{1,5}['"]\s*,\s*['"]\.[a-z0-9]{1,5}['"]/.test(line)) {
       add("WARN", "extension-list", file, "hand-rolled file-extension list — the reviewer asks for `istextorbinary` every time; an extension list also misses the OOM case (large binary with a text extension)");
@@ -242,14 +225,17 @@ for (const file of sources) {
 //     every pull request — and it is the one judgement here that is not
 //     mechanical. WARN-only, like every finding this lane produces: --check
 //     still exits on the mechanical ERRORs alone.
-if (useJev) {
+// No key means the lane was never set up: say nothing. A lane switched off
+// on purpose, key or not, still gets its one line from unavailableNote below.
+const jev = useJev ? await import("./lib/jev.mjs") : null;
+if (useJev && (jev.jevKey(repo) || jev.jevSwitchedOff(repo))) {
   const deps = findings
     .filter((f) => f.rule === "new-dependency")
     .map((f) => ({ name: f.message.match(/`([^`]+)`/)?.[1], where: f.where }))
     .filter((d) => d.name);
 
   if (deps.length > 0) {
-    const { ask, choice, choiceOf, qid, unavailableNote } = await import("./lib/jev.mjs");
+    const { ask, choice, choiceOf, qid, unavailableNote } = jev;
     // The lines that actually use it, not the whole branch: a dependency is
     // justified by its call sites or not at all.
     const usage = (name) =>
@@ -291,7 +277,7 @@ if (useJev) {
 }
 
 const errors = findings.filter((f) => f.level === "ERROR");
-const order = ["dead-export", "import-extension", "suppression", "new-dependency", "dependency-unjustified", "unbounded-loop", "sync-io-in-scanner", "for-of-in-scanner", "extension-list", "param-property-di", "index-ts", "test-only-export", "untested-new-file"];
+const order = ["dead-export", "import-extension", "suppression", "new-dependency", "dependency-unjustified", "unbounded-loop", "extension-list", "index-ts", "test-only-export", "untested-new-file"];
 findings.sort((a, b) => order.indexOf(a.rule) - order.indexOf(b.rule));
 
 console.log(

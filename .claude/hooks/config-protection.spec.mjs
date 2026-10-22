@@ -1,7 +1,8 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   baselineSize,
@@ -268,5 +269,39 @@ describe('config-protection — what the port changed', () => {
     });
     assert.match(why, /trace-matrix\.mjs reads those \/\/ @traces lines/);
     assert.ok(why.includes(fake('002', '004')), why);
+  });
+});
+
+// The re-bless reminder follows the registry, not the file extension: a
+// registered shell gate or helper changes its fingerprint too, and a spec
+// beside a gate changes none.
+describe('config-protection — the re-bless reminder', () => {
+  // @traces 1359-FR-010
+  it('reminds for a registered shell gate and for a registered helper', () => {
+    for (const rel of ['.claude/hooks/post-edit-check.sh', '.claude/hooks/commit-msg-policy.js']) {
+      const out = run({ tool_input: { file_path: join(REPO, rel), content: '# x' } });
+      assert.equal(out.status, 0);
+      assert.match(out.stderr, /re-bless the registry/, rel);
+    }
+  });
+
+  // @traces 1359-FR-010
+  it('says nothing for a spec file beside a gate', () => {
+    const out = run({ tool_input: { file_path: join(REPO, '.claude/hooks/some-new-gate.spec.mjs'), content: '// x' } });
+    assert.equal(out.status, 0);
+    assert.equal(out.stderr, '');
+  });
+
+  // @traces 1359-FR-010
+  it('prints nothing and passes when the registry cannot be read', () => {
+    const repo = mkdtempSync(join(tmpdir(), 'cp-registry-'));
+    mkdirSync(join(repo, '.claude/hooks'), { recursive: true });
+    writeFileSync(join(repo, '.claude/hooks/registry.json'), '{ not json');
+    const out = run(
+      { tool_input: { file_path: join(repo, '.claude/hooks/some-gate.mjs'), content: '// x' } },
+      { CLAUDE_PROJECT_DIR: repo },
+    );
+    assert.equal(out.status, 0);
+    assert.equal(out.stderr, '');
   });
 });
