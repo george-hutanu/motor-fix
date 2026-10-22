@@ -7,8 +7,14 @@
   padding: var(--mf-space-4);
 }
 
+/* The headline in the mock's Michroma capitals, scaled to the screen: the
+   phone size keeps voice 4 in Romanian within four lines at 320 px. */
 .hero h2 {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-subheading);
+  font-weight: 400;
   margin: var(--mf-space-1) 0;
+  text-transform: uppercase;
 }
 
 /* The eyebrow in the mock's label type: Michroma capitals, tracked, so the
@@ -140,6 +146,10 @@
 }
 
 @media (min-width: 768px) {
+  .hero h2 {
+    font-size: var(--mf-size-title);
+  }
+
   .dial {
     grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
   }
