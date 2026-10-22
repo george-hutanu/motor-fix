@@ -174,6 +174,9 @@ type Settings = { enabled: number[]; pinned: number | null };
 
 function withSettings(mark: string, answers: (Settings | Error)[]) {
   document.documentElement.dataset['voice'] = mark;
+  // A stand-in for the page head: the pin, else the first voice on.
+  (window as { mfCopyVoice?: unknown }).mfCopyVoice = (s: Settings) =>
+    s.pinned ?? s.enabled[0];
   TestBed.resetTestingModule();
   const pending: ((answer: Settings | Error) => void)[] = [];
   const settings = jest.fn(
@@ -215,18 +218,12 @@ describe('the settings read while the visit runs', () => {
     expect(voice.feat2).toBe('public.voice.v2.feat2');
   });
 
-  it('without the page head, keeps a voice still on and moves one that is off', () => {
+  it('keeps the voice when the page head did not run', () => {
     const voice = voiceOf('3');
 
-    voice.apply({ enabled: [3, 5], pinned: 5 });
-    expect(voice.voice).toBe(3);
-
     voice.apply({ enabled: [1, 5], pinned: 5 });
-    expect(voice.voice).toBe(5);
-    expect(document.documentElement.getAttribute('data-voice')).toBe('5');
 
-    voice.apply({ enabled: [2, 4], pinned: null });
-    expect(voice.voice).toBe(2);
+    expect(voice.voice).toBe(3);
   });
 
   it('reads the settings, past every cache when given a time', async () => {

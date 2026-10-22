@@ -12,7 +12,7 @@
     },
     "paused": "paused while voice {voice} is pinned",
     "pin": "Pin for everyone",
-    "pinned": "Pinned for everyone",
+    "pinnedHint": "Remove the pin to switch it off",
     "retry": "Try again",
     "saveFailed": "Could not save. Try again.",
     "stale": "The voice changed in the meantime. We read it again.",

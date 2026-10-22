@@ -10,7 +10,7 @@
             <span class="hint">{{ example(v) | t: brand }}</span>
             @if (pinned(); as p) {
               @if (p === v.voice) {
-                <span class="tag">{{ 'admin.copyVoices.pinned' | t }}</span>
+                <span class="hint" [id]="'copy-voice-hint-' + v.voice">{{ 'admin.copyVoices.pinnedHint' | t }}</span>
               } @else {
                 <span class="hint paused">{{ 'admin.copyVoices.paused' | t: { voice: p } }}</span>
               }
@@ -20,6 +20,7 @@
             [checked]="v.enabled"
             [disabled]="pending() !== null || v.pinned"
             [aria-label]="name(v) | t"
+            [aria-describedby]="v.pinned ? 'copy-voice-hint-' + v.voice : null"
             (checkedChange)="toggle(v)"
           />
           <button

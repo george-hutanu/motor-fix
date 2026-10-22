@@ -269,6 +269,12 @@ describe('pinning a voice', () => {
     const { element } = await render(voices({ 2: OFF, 4: PINNED }));
 
     expect(toggle(element, 4).disabled).toBe(true);
+    expect(text(row(element, 4))).toContain('Scoate fixarea ca să o oprești');
+    expect(
+      element.querySelector(
+        `#${toggle(element, 4).getAttribute('aria-describedby')}`,
+      )?.textContent,
+    ).toContain('Scoate fixarea ca să o oprești');
     expect(text(row(element, 4))).not.toContain('în pauză');
     for (const voice of [1, 2, 3, 5]) {
       expect(text(row(element, voice))).toContain(

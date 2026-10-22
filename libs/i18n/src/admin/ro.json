@@ -12,7 +12,7 @@
     },
     "paused": "în pauză cât e fixată vocea {voice}",
     "pin": "Fixează pentru toți",
-    "pinned": "Fixată pentru toți",
+    "pinnedHint": "Scoate fixarea ca să o oprești",
     "retry": "Reîncearcă",
     "saveFailed": "Nu am putut salva. Încearcă din nou.",
     "stale": "Vocea s‑a schimbat între timp. Am citit‑o din nou.",

@@ -44,12 +44,6 @@ li {
 .hint {
   color: var(--mf-text-secondary);
 }
-.tag {
-  align-self: flex-start;
-  padding: 0 var(--mf-space-2);
-  border: 1px solid var(--mf-line-strong);
-  border-radius: 999px;
-}
 hlm-switch {
   flex-shrink: 0;
 }
@@ -73,9 +67,6 @@ button[hlmBtn] {
 @media (min-width: 768px) {
   .hint {
     font-size: var(--mf-size-small);
-  }
-  .tag {
-    font-size: var(--mf-size-label);
   }
 }
 

@@ -161,17 +161,33 @@ test.describe('switching copy voices off and pinning one @seeded', () => {
 
     await set(request, 4, { enabled: false, pinned: false });
 
+    // The 2 s of SC-003 run from the change reaching the page; the worker's
+    // relay of the event to the stream comes before them.
     await expect(mark(page)).not.toHaveAttribute('data-voice', '4', {
       timeout: 5_000,
     });
     await expect(headline(page)).not.toHaveText(/merită mai mult/);
     await context.close();
 
+    // A device that has read the settings: every voice its loads draw, as
+    // the page head marks it before the first paint, is one that is on.
+    const device = await visit(browser, () => {
+      const marks: string[] = [];
+      (window as unknown as { marks: string[] }).marks = marks;
+      new MutationObserver(() =>
+        marks.push(document.documentElement.getAttribute('data-voice') ?? ''),
+      ).observe(document.documentElement, { attributeFilter: ['data-voice'] });
+    });
     for (let i = 0; i < 5; i++) {
-      const fresh = await visit(browser);
-      await expect(mark(fresh.page)).toHaveAttribute('data-voice', /^[1235]$/);
-      await fresh.context.close();
+      await device.page.waitForTimeout(2_600);
+      await device.page.goto('/ro');
+      const drawn = await device.page.evaluate(
+        () => (window as unknown as { marks: string[] }).marks,
+      );
+      expect(drawn.length).toBeGreaterThan(0);
+      expect(drawn).not.toContain('4');
     }
+    await device.context.close();
   });
 
   // @traces 010-FR-010

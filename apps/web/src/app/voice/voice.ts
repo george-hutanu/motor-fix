@@ -8,6 +8,7 @@ import {
   provideAppInitializer,
   signal,
 } from '@angular/core';
+import type { PublicCopyVoicesDto } from '@motor-fix/data-access';
 import { PlatformService } from '@motor-fix/data-access/services/platform.service';
 
 export type Slot =
@@ -54,12 +55,7 @@ export const keysOf = (n: number): Readonly<Record<Slot, string>> =>
     ]),
   ) as Record<Slot, string>;
 
-export interface CopyVoiceSettings {
-  enabled: number[];
-  pinned: number | null;
-}
-
-type Head = { mfCopyVoice?: (settings: CopyVoiceSettings) => number };
+type Head = { mfCopyVoice?: (settings: PublicCopyVoicesDto) => number };
 
 // The copy voice of the visit. The script in the page head picks it before
 // the first paint and marks <html data-voice>; it is read once here, so a
@@ -114,19 +110,11 @@ export class Voice {
     }
   }
 
-  apply(settings: CopyVoiceSettings): void {
+  // The page head picks the voice, and stores it, as it does at the start of
+  // a visit; a page whose head script did not run keeps its voice.
+  apply(settings: PublicCopyVoicesDto): void {
     const head = (this.document.defaultView as Head | null)?.mfCopyVoice;
-    this.n.set(head ? head(settings) : this.fallback(settings));
-  }
-
-  // Without the page head's script: the voice stays while it is on, else the
-  // pinned voice or the first one on, for this page only.
-  private fallback({ enabled, pinned }: CopyVoiceSettings): number {
-    const n = this.n();
-    if (enabled.includes(n) || enabled.length === 0) return n;
-    const next = pinned ?? enabled[0];
-    this.document.documentElement.setAttribute('data-voice', String(next));
-    return next;
+    if (head) this.n.set(head(settings));
   }
 }
 
