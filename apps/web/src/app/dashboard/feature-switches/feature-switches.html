@@ -1,0 +1,28 @@
+<section [attr.aria-labelledby]="id + '-title'">
+  <h2 [id]="id + '-title'">{{ 'garage.features.title' | t }}</h2>
+  <p class="hint">{{ 'garage.features.intro' | t }}</p>
+  <ul>
+    @for (row of rows; track row.key) {
+      <li>
+        <div class="row">
+          <div class="name">
+            <span aria-hidden="true">{{ row.name | t }}</span>
+            <span class="hint" [id]="id + '-' + row.key">{{ row.description | t }}</span>
+          </div>
+          <hlm-switch
+            #control
+            [inputId]="id + '-switch-' + row.key"
+            [checked]="states()[row.key]"
+            [disabled]="busy().has(row.key)"
+            [aria-label]="row.name | t"
+            [aria-describedby]="id + '-' + row.key"
+            (checkedChange)="toggle(row.key, $event, control)"
+          />
+        </div>
+        @if (errors()[row.key]; as message) {
+          <p role="alert" class="error">{{ message | t }}</p>
+        }
+      </li>
+    }
+  </ul>
+</section>
