@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -153,6 +154,26 @@ test.describe('sorting the Results page @seeded @database', () => {
         await expect(selected).toHaveCount(1);
         await expect(selected.getByRole('heading')).toHaveText(top);
         await expect(selected).toBeInViewport();
+      }
+    });
+  }
+
+  // The pressed sort's amber text stands on its own opaque tint, so axe
+  // measures it against what is drawn and finds it readable.
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`keeps every sort readable, pressed or not, ${colorScheme}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      for (const sort of [undefined, 'price']) {
+        await ready(page, opened(sort));
+        await expect(cards(page)).toHaveCount(3);
+        const found = await violations(
+          page,
+          { runOnly: { type: 'rule', values: ['color-contrast'] } },
+          { include: [['mf-sort-control']] },
+        );
+        expect(found).toEqual([]);
       }
     });
   }

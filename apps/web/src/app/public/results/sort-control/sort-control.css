@@ -71,8 +71,16 @@
   color: var(--mf-text);
 }
 
-/* The pressed sort: amber ink over the thumb's border, not the colour alone. */
+/* The pressed sort: amber ink on its own opaque tint, ringed in amber, not
+   the colour alone. The tint is the button's, so its text is measured against
+   what is drawn under it; the thumb behind only carries the slide. */
 .sort[aria-pressed="true"] {
+  background-color: color-mix(
+    in srgb,
+    var(--mf-amber-ink) 10%,
+    var(--mf-panel)
+  );
+  box-shadow: inset 0 0 0 1.5px var(--mf-amber-ink);
   color: var(--mf-amber-ink);
   cursor: default;
 }
@@ -99,6 +107,11 @@
   .thumb {
     border-color: Highlight;
     box-shadow: none;
+  }
+
+  .sort[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
 
