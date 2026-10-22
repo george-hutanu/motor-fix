@@ -62,41 +62,16 @@ The text the user typed after `/speckit-specify` in the triggering message **is*
 
 Given that feature description, do this:
 
-0. **Read the ticket, comments included** (project rule) — when the description
-   is or names a Jira issue (a key like `BKP-1310`, or an
-   `anchorfree.atlassian.net/browse/...` URL, including one the user pasted on
-   its own line):
-
-   Fetch it with `mcp__claude_ai_Atlassian__getJiraIssue`, cloudId
-   `f6dd7c49-a92f-4551-b898-7b3e9b6d2602`, and pass `comment` in `fields`
-   alongside summary/description/status/issuetype/parent/issuelinks. The
-   default field set omits comments, and **the comments are where scope is
-   corrected**: a reviewer narrowing the ask, a product owner deferring half of
-   it, an engineer naming a constraint the description predates. A spec written
-   from the description alone reports "no comments" while two of them sit on
-   the ticket, and the correction lands after the work is built.
-
-   Read them as spec input, not as background: a comment that contradicts the
-   description wins, and is recorded in Clarifications with its author and
-   date. Also read every issue this one links to or parents — a sibling ticket
-   often owns the half you would otherwise assume. If the ticket cannot be
-   fetched (no MCP connection, no permission), say so in the spec's header as
-   an unread source rather than writing as if it held nothing.
-
-0b. **Look at the design the ticket links** — when the description or ticket
-   carries a `figma.com/design/<fileKey>/...?node-id=<a>-<b>` URL:
-
-   Call `mcp__claude_ai_Figma__get_screenshot` with that `fileKey` and
-   `nodeId` (`a:b`), default `maxDimension`, and fetch the PNG by the curl
-   instructions it returns. One call, two at most — this account has been
-   rate-limited after two Figma calls in a session, and a spec that guesses
-   the panel it is populating is the failure this step exists to prevent
-   (feature 010 derived its filter facets from the data model because the
-   screenshot was never seen). Read the image: every control, label, and
-   value the design shows is a candidate requirement; every one the ticket
-   text does not mention is a **Proposed Clarification**, not a requirement.
-   Do not call `get_design_context` here — it needs the design-to-code
-   guidance loaded and returns code a spec has no use for.
+0. **Read the story, comments included** (project rule) — when the description
+   names a story or epic (`ST-<n>`, `EP-<n>`) or a george-hutanu/motor-fix-specs
+   issue: `gh issue view <n> --repo george-hutanu/motor-fix-specs --comments`
+   (off a tty the comments can print nothing: then `--json body,comments`).
+   **The comments are where scope is corrected**: a reviewer narrowing the ask,
+   the owner deferring half of it, a constraint the body predates. Read them as
+   spec input, not as background: a comment that contradicts the body wins, and
+   is recorded in Clarifications with its author and date. If the issue cannot
+   be read, say so in the spec's header as an unread source rather than writing
+   as if it held nothing.
 
 1. **Generate a concise short name** (2-4 words) for the feature:
    - Analyze the feature description and extract the most meaningful keywords
@@ -379,7 +354,7 @@ Success criteria must be:
 
 ## Done When
 
-- [ ] Ticket fetched WITH its comments (or its absence recorded as an unread source), and every comment that moves scope reflected in the spec
+- [ ] Story read with its comments (or its absence recorded as an unread source), and every comment that moves scope reflected in the spec
 - [ ] Specification written to `SPEC_FILE` and validated against quality checklist
 - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above
 - [ ] Completion reported to user with feature directory, spec file path, and checklist results
@@ -390,12 +365,15 @@ Success criteria must be:
 
 The constitution's Agent Execution Rules apply in full. Specific to this command:
 
-- Sources are the user's description, the ticket it names (comments included),
+- Sources are the user's description, the story it names (comments included),
   and this repo — nothing else. Every
   default you choose is a line in Assumptions; every number in Success
   Criteria traces to the description or to something measured in the repo
   (existing tests, limits, benchmarks), otherwise it is an assumption, not
   a metric.
+- Step 0 reads the story from GitHub with `gh`; the Jira and Figma steps
+  (0 and 0b) are cut (2026-10-22): the tracker is GitHub, and the design is
+  read by `speckit-design-check`.
 - Read the template, the constitution card, and any repo files you need in one
   batch before writing.
 - Settle structure and open decisions in reasoning, then write the spec

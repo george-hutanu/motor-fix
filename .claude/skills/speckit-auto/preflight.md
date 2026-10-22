@@ -18,14 +18,21 @@ Run these before phase 1, in one batch:
   starting branch and commit.
 - Read the card, `.specify/memory/constitution-card.md` (each
   principle and the gate that will fire at you), not the full constitution;
-  the reviewers and the PR tester read that.
+  the reviewers and the PR tester read that. Beside it,
+  `grep -nE '^\*\*Version\*\*|\[[A-Z_]+\]' .specify/memory/constitution.md`:
+  a version and no unfilled `[PLACEHOLDER]` token, which phase 1 uses.
 - `node .claude/scripts/lib/preflight-skip.mjs` first: `skip <sha7>` (a clean
   tree at its merge base with `origin/main`, whose commit has a successful
   `CI OK`) means CI already ran the suite on this base; log `Preflight suite
   skipped: base <sha7> has CI OK` in `auto-run.md` and count the start green.
-  On `run <reason>`:
-  `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
-  — the repo MUST start green (on a failure, `grep -nE '✕|●|FAIL|Error'` the log
+  On `run <reason>`, the suite is the one this machine can run: the full
+  `test` only when `DATABASE_URL` and `REDIS_URL` are both set and non-empty
+  in the run's environment (`.env` is not read), else `test:unit`, which runs
+  no `*.integration.spec.ts`. A cloud session's environment sets both
+  (`cloud.md`), so it runs and logs `full`.
+  `SUITE=$([ -n "$DATABASE_URL" ] && [ -n "$REDIS_URL" ] && echo test || echo test:unit); sh scripts/heavy.sh sh -c "npm run typecheck && npm run lint && npm run $SUITE" > <scratchpad>/preflight.log 2>&1; echo "exit $? $SUITE"; tail -n 40 <scratchpad>/preflight.log`
+  and log `Preflight suite: unit <sha7>` or `Preflight suite: full <sha7>`
+  (the start commit) in `auto-run.md` — the repo MUST start green (on a failure, `grep -nE '✕|●|FAIL|Error'` the log
   rather than reading all of it). Through Nx, whose cache every worktree shares
   (`~/.nx/<workspace hash>`), a project unchanged since another worktree
   checked it is a cache hit, not a rerun. A red start is a hard stop; the run has no way to tell a pre-existing

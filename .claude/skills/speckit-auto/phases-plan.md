@@ -8,10 +8,9 @@ Read at phase 1 (a level-1 run reads it for phases 2 and 7). Each phase follows 
 
 Do **not** invoke `/speckit-constitution`: it rewrites the constitution and
 propagates into templates and installed skill files, which is not a decision
-an autonomous run gets to make. Instead confirm with
-`grep -nE '^\*\*Version\*\*|\[[A-Z_]+\]' .specify/memory/constitution.md`
-that it has a version and no unfilled `[PLACEHOLDER]` tokens, and carry the
-principles on the card read in preflight (`.specify/memory/constitution-card.md`)
+an autonomous run gets to make. Instead use the preflight grep's result (a
+version and no unfilled `[PLACEHOLDER]` token; not run again here), and carry
+the principles on the card read in preflight (`.specify/memory/constitution-card.md`)
 — Principle I (No Bloated Code) first — into every later phase.
 
 Only if the file is missing or still a bare template: invoke
@@ -34,8 +33,12 @@ and the repo. Each answer becomes a line under the spec's **Assumptions**
 marked `(autonomous default)`. A number in Success Criteria that no source
 supports is an assumption, not a metric — write it as one.
 
-Then `node .claude/scripts/level.mjs check` (it does the same after phases 4
-and 7). A 0 or 1 that trips a wire (more FRs than the threshold, an open
+Then `node .claude/scripts/level.mjs check` and
+`node .claude/scripts/capabilities.mjs validate --check` (the template's
+`## Spec Delta`: an FR that changes a requirement a capability holds is a
+Modifies naming it); a validate ERROR is fixed in `spec.md` before phase 3.
+`level.mjs check` runs again after phases 4
+and 7. A 0 or 1 that trips a wire (more FRs than the threshold, an open
 clarification, a contract path, a second Nx project) becomes 2, logged in
 `auto-run.md` with the wire; run the phases it skipped (3, 4, 5, 6, 8) in run
 order before the next one. It never lowers a level.
