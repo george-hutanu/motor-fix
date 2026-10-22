@@ -125,4 +125,40 @@ describe('the shipped brand file', () => {
       volkswagen: 'hatchback',
     });
   });
+
+  // @traces 007-brand-headline-FR-004
+  // @traces 007-brand-headline-FR-005
+  it('gives every brand its Romanian your form, the mock eight verbatim', () => {
+    expect(
+      Object.fromEntries(
+        BRANDS.map((brand) => [brand.key, brand.roPossessive]),
+      ),
+    ).toEqual({
+      'alfa-romeo': 'Alfa Romeo\u2011ul tău',
+      audi: 'Audi\u2011ul tău',
+      bmw: 'BMW\u2011ul tău',
+      citroen: 'Citroënul tău',
+      dacia: 'Dacia ta',
+      ford: 'Fordul tău',
+      hyundai: 'Hyundai\u2011ul tău',
+      'mercedes-benz': 'Mercedesul tău',
+      mini: 'Mini\u2011ul tău',
+      opel: 'Opelul tău',
+      renault: 'Renault\u2011ul tău',
+      skoda: 'Škoda ta',
+      tesla: 'Tesla ta',
+      toyota: 'Toyota ta',
+      volkswagen: 'VW\u2011ul tău',
+    });
+  });
+
+  // @traces 007-brand-headline-FR-005
+  it('joins a form with the non-breaking hyphen, never the plain one', () => {
+    for (const brand of BRANDS) {
+      expect(brand.roPossessive).not.toContain('-');
+    }
+    expect(
+      BRANDS.filter((brand) => brand.roPossessive?.includes('\u2011ul')),
+    ).toHaveLength(7);
+  });
 });

@@ -95,7 +95,25 @@ describe('GET /brands/popular', () => {
       'id',
       'name',
       'popularity',
+      'roPossessive',
       'slug',
+    ]);
+  });
+
+  // @traces 007-brand-headline-FR-001
+  it("carries each tile's Romanian your form for the headline", async () => {
+    await prisma.brand.create({
+      data: {
+        key: 'bmw',
+        name: 'BMW',
+        popularity: 1,
+        roPossessive: 'BMW\u2011ul tău',
+        slug: 'bmw',
+      },
+    });
+
+    expect((await popular()).body).toEqual([
+      expect.objectContaining({ name: 'BMW', roPossessive: 'BMW\u2011ul tău' }),
     ]);
   });
 

@@ -82,12 +82,24 @@ describe('GET /brands', () => {
           id: expect.any(String),
           name: 'Škoda',
           popularity: 6,
+          roPossessive: 'Škoda ta',
           slug: 'skoda',
         },
       ]);
       expect(res.body).toMatchObject({ nextCursor: null, total: 1 });
     },
   );
+
+  // @traces 007-brand-headline-FR-003
+  it('answers a brand without a your form with a null one', async () => {
+    await loader.load([{ key: 'lada', name: 'Lada' }]);
+
+    const res = await search({ q: 'lada' });
+
+    expect(res.body.items).toEqual([
+      expect.objectContaining({ name: 'Lada', roPossessive: null }),
+    ]);
+  });
 
   it('lists every active brand by popularity, then unranked brands by name', async () => {
     await loader.load([

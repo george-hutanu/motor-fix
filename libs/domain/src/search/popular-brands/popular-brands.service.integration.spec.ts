@@ -54,6 +54,7 @@ describe('PopularBrandsService.tiles', () => {
       id: expect.any(String),
       name: 'Bmw',
       popularity: 1,
+      roPossessive: null,
       slug: 'bmw',
     });
   });

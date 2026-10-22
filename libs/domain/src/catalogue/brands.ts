@@ -19,29 +19,86 @@ export interface BrandRecord {
   popularity?: number;
   // The generic body drawn when the brand has no licensed car; absent is a saloon.
   bodyStyle?: BodyStyle;
+  // "Your <brand>" in Romanian, its hyphen non-breaking (U+2011) so the
+  // brand never breaks from its article.
+  roPossessive?: string;
 }
 
 export const BRANDS: readonly BrandRecord[] = [
-  { key: 'bmw', name: 'BMW', popularity: 1 },
-  { key: 'mini', name: 'Mini', popularity: 2 },
-  { key: 'mercedes-benz', name: 'Mercedes-Benz', popularity: 3 },
-  { key: 'audi', name: 'Audi', popularity: 4 },
+  { key: 'bmw', name: 'BMW', popularity: 1, roPossessive: 'BMW\u2011ul tău' },
+  {
+    key: 'mini',
+    name: 'Mini',
+    popularity: 2,
+    roPossessive: 'Mini\u2011ul tău',
+  },
+  {
+    key: 'mercedes-benz',
+    name: 'Mercedes-Benz',
+    popularity: 3,
+    roPossessive: 'Mercedesul tău',
+  },
+  {
+    key: 'audi',
+    name: 'Audi',
+    popularity: 4,
+    roPossessive: 'Audi\u2011ul tău',
+  },
   {
     bodyStyle: 'hatchback',
     key: 'volkswagen',
     name: 'Volkswagen',
     popularity: 5,
+    roPossessive: 'VW\u2011ul tău',
   },
-  { bodyStyle: 'estate', key: 'skoda', name: 'Škoda', popularity: 6 },
-  { bodyStyle: 'suv', key: 'dacia', name: 'Dacia', popularity: 7 },
-  { key: 'renault', name: 'Renault', popularity: 8 },
-  { bodyStyle: 'fastback', key: 'ford', name: 'Ford', popularity: 9 },
-  { bodyStyle: 'crossover', key: 'toyota', name: 'Toyota', popularity: 10 },
-  { key: 'hyundai', name: 'Hyundai', popularity: 11 },
-  { key: 'tesla', name: 'Tesla', popularity: 12 },
-  { key: 'alfa-romeo', name: 'Alfa Romeo' },
-  { key: 'citroen', name: 'Citroën' },
-  { key: 'opel', name: 'Opel' },
+  {
+    bodyStyle: 'estate',
+    key: 'skoda',
+    name: 'Škoda',
+    popularity: 6,
+    roPossessive: 'Škoda ta',
+  },
+  {
+    bodyStyle: 'suv',
+    key: 'dacia',
+    name: 'Dacia',
+    popularity: 7,
+    roPossessive: 'Dacia ta',
+  },
+  {
+    key: 'renault',
+    name: 'Renault',
+    popularity: 8,
+    roPossessive: 'Renault\u2011ul tău',
+  },
+  {
+    bodyStyle: 'fastback',
+    key: 'ford',
+    name: 'Ford',
+    popularity: 9,
+    roPossessive: 'Fordul tău',
+  },
+  {
+    bodyStyle: 'crossover',
+    key: 'toyota',
+    name: 'Toyota',
+    popularity: 10,
+    roPossessive: 'Toyota ta',
+  },
+  {
+    key: 'hyundai',
+    name: 'Hyundai',
+    popularity: 11,
+    roPossessive: 'Hyundai\u2011ul tău',
+  },
+  { key: 'tesla', name: 'Tesla', popularity: 12, roPossessive: 'Tesla ta' },
+  {
+    key: 'alfa-romeo',
+    name: 'Alfa Romeo',
+    roPossessive: 'Alfa Romeo\u2011ul tău',
+  },
+  { key: 'citroen', name: 'Citroën', roPossessive: 'Citroënul tău' },
+  { key: 'opel', name: 'Opel', roPossessive: 'Opelul tău' },
 ];
 
 export class BrandFileError extends Error {}

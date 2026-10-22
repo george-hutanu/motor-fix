@@ -9740,6 +9740,12 @@
             "type": "integer",
             "description": "1 is the most popular; null is unranked",
             "nullable": true
+          },
+          "roPossessive": {
+            "type": "string",
+            "description": "Romanian \"your\" form of the name, its hyphen U+2011; null or absent reads as the name",
+            "example": "BMW‑ul tău",
+            "nullable": true
           }
         },
         "required": [
