@@ -7,7 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { PlatformService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import { provideVoiceRead, type Slot, Voice } from './voice';
+import { provideVoiceRead, type Slot, unbroken, Voice } from './voice';
 
 const SLOTS: Slot[] = [
   'eyebrow',
@@ -362,5 +362,18 @@ describe('how the page was loaded', () => {
 
     expect(voice.fromHome).toBe(false);
     expect(voice.taken).toBe(false);
+  });
+});
+
+// @traces 008-FR-004
+describe('a brand named in a voice text', () => {
+  it('keeps every hyphen of its name unbroken', () => {
+    expect(unbroken('Mercedes-Benz')).toBe('Mercedes\u2011Benz');
+    expect(unbroken('Rolls-Royce-Motor')).toBe('Rolls\u2011Royce\u2011Motor');
+  });
+
+  it('stays as given when it has no hyphen, or already an unbreaking one', () => {
+    expect(unbroken('BMW')).toBe('BMW');
+    expect(unbroken('BMW\u2011ul tău')).toBe('BMW\u2011ul tău');
   });
 });

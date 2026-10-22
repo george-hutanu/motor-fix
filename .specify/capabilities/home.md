@@ -13,6 +13,7 @@ features:
   - 010-copy-voice-switch
   - 009-copy-voice-analytics
   - 007-brand-headline
+  - 008-voice-languages
 ---
 
 # Capability: Home
@@ -287,9 +288,9 @@ _From 228-how-it-works-list-garage._
 
 _From 228-how-it-works-list-garage._
 
-### 006-FR-001 — The site MUST hold five complete copy voices, each in Romanian and English, with these texts per voice: the small label above the headline, the headline, the paragraph under it, the main button, the 3D car section title, the garage list title, the benefits headline (one or two lines), the call to garages, the review drawer title, the red-lamp label and its short form. The texts are the mock's (boards Copy1–Copy5).
+### 008-FR-001 — Every text of each of the five voices — the slots of 006-FR-001: the small label above the headline, the headline, the paragraph under it, the main button, the 3D car section title, the garage list title, the benefits headline, the call to garages, the review drawer title, the red-lamp label and its short form — MUST exist in Romanian and in English in the shared translation files, one set per voice, the English being the mock's (boards Copy1–Copy5); the benefits headline has a second line in voices 1, 2 and 4 and none in voices 3 and 5, in both languages alike.
 
-_From 006-copy-voice-rotation._
+_From 008-voice-languages._
 
 ### 010-FR-010 — The voice taken at the start of a visit (006-FR-002, 006-FR-005) MUST come only from the voices that are on, using the device's last read copy of the settings (all five on, none pinned, when it has none or when the stored copy is unreadable or inconsistent: no voice on, a pinned voice that is off): a stored round skips voices that are off; with a voice pinned, a visit that would take a new voice takes the pinned one, stores it as the visit's voice with the time, and leaves the stored round as it was; a visit that keeps its stored voice keeps it only while that voice is on (else it takes a new voice as above).
 
@@ -418,6 +419,38 @@ _From 007-brand-headline._
 
 _From 007-brand-headline._
 
+### 008-FR-002 — At 320 × 640 px, in each of the five voices and in each language, Home, Results and the review drawer MUST render with no sideways scroll (`scrollWidth` ≤ `clientWidth`), no voice text cut, clipped or ending in an ellipsis, no two texts overlapping, and no text under 12 px, the pin and chip tags included, in the light theme in the end-to-end run and in both themes in the PR QA sweep's 320 px shots (286-FR-002, 286-FR-004 hold for every voice).
+
+_From 008-voice-languages._
+
+### 008-FR-003 — In voice 4 in Romanian at 320 px, the label above the headline („Fără „las‑o la noi și vedem””) MUST wrap onto two lines inside the hero, and the headline with the "your" form of a brand („BMW‑ul tău merită mai mult decât „merge și așa”.”) MUST fit in at most four lines; the four-line cap holds for every "your" form of 007-FR-004 (asserted for BMW and Mercedes-Benz), and any other brand owes FR-002 only.
+
+_From 008-voice-languages._
+
+### 008-FR-004 — A hyphenated brand word in any voice text — the plain name ("Mercedes‑Benz") as much as the "your" form ("BMW‑ul", 007-FR-005) — MUST keep its hyphen unbroken and MUST never be split across lines, in every voice and language: the brand argument of the voice texts has its U+002D hyphen rewritten to the non-breaking U+2011 at render time, the catalogue data left as given (018-FR-004).
+
+_From 008-voice-languages._
+
+### 008-FR-005 — Switching the language during a visit MUST keep the visit's voice (one voice per visit, 006-FR-002) and MUST change every voice text on the screen to the new language together — the hero, the section titles, the benefits headline, the call to garages, the red-lamp labels and the review drawer title — leaving none in the previous language; the review drawer, modal, reads the voice in the dashboard's language.
+
+_From 008-voice-languages._
+
+### 008-FR-006 — Every Romanian voice text MUST render its ș, ț, Ș, Ț (comma below) and its quotes „ ” in the Cockpit fonts (Michroma for the headline, Hanken Grotesk for the rest) with no fallback glyph or box; the headline keeps the mock's capitals and screen-scaled size.
+
+_From 008-voice-languages._
+
+### 008-FR-008 — In voices 3 and 5 the benefits section MUST show one headline line with no empty line, placeholder or gap where the second line of the other voices sits.
+
+_From 008-voice-languages._
+
+### 008-FR-009 — This story reads nothing on the server, writes nothing, emits no event and sends no notification; it changes texts, layout and checks only.
+
+_From 008-voice-languages._
+
+### 008-FR-010 — One Jest spec, reading the translation JSON files directly (not through `i18n.t`, which falls back to Romanian), MUST check that every voice key of FR-001 exists in both languages and is not empty (except the two absent second lines) and that no voice text carries the other language's marker words; an end-to-end test MUST, at 320 × 640 px, for each voice and language (ten runs), load Home, Results and the review drawer, assert `scrollWidth` ≤ `clientWidth`, the smallest computed font size ≥ 12 px and no element with clipped text, and keep one screenshot per run as the review's evidence.
+
+_From 008-voice-languages._
+
 ## Retired
 
 - `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
@@ -432,3 +465,4 @@ _From 007-brand-headline._
 - `225-FR-004` — superseded by `007-FR-001` (2026-10-22)
 - `006-FR-007` — superseded by `007-FR-012` (2026-10-22)
 - `225-FR-001` — superseded by `007-FR-014` (2026-10-22)
+- `006-FR-001` — superseded by `008-FR-001` (2026-10-22)

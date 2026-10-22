@@ -1,6 +1,6 @@
 <section aria-labelledby="home-cards-heading">
   <div class="head">
-    <h2 id="home-cards-heading">{{ voice.copy.list | t: { brand: brand().name } }}</h2>
+    <h2 id="home-cards-heading">{{ voice.copy.list | t: { brand: unbroken(brand().name) } }}</h2>
     <a class="all" [routerLink]="results().commands" [queryParams]="results().queryParams">{{
       'public.home.cards.link' | t
     }}</a>

@@ -7,11 +7,23 @@
   padding: var(--mf-space-4);
 }
 
+/* The headline in the mock's Michroma capitals, scaled to the screen: the
+   phone size keeps voice 4 in Romanian within four lines at 320 px. */
 .hero h2 {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-subheading);
+  font-weight: 400;
   margin: var(--mf-space-1) 0;
+  text-transform: uppercase;
 }
 
+/* The eyebrow in the mock's label type: Michroma capitals, tracked, so the
+   longest one (voice 4 in Romanian) wraps onto two lines at 320 px; body
+   size on a phone, below. */
 .label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
   margin: 0;
   text-transform: uppercase;
 }
@@ -125,7 +137,19 @@
   min-height: 44px;
 }
 
+/* A phone reads the label at body size; voice 4 in Romanian still wraps
+   onto two lines at 320 px. */
+@media (max-width: 767.98px) {
+  .label {
+    font-size: var(--mf-size-body);
+  }
+}
+
 @media (min-width: 768px) {
+  .hero h2 {
+    font-size: var(--mf-size-title);
+  }
+
   .dial {
     grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
   }

@@ -54,6 +54,10 @@ export const keysOf = (n: number): Readonly<Record<Slot, string>> =>
     ]),
   ) as Record<Slot, string>;
 
+// A brand's own hyphen never breaks the line ("Mercedes-Benz", "BMW-ul"): the
+// name goes in as an unbreaking hyphen, so no line ends inside it.
+export const unbroken = (name: string) => name.replace(/-/g, '\u2011');
+
 type Head = { mfCopyVoice?: (settings: PublicCopyVoicesDto) => number };
 
 // The copy voice of the visit. The script in the page head picks it before

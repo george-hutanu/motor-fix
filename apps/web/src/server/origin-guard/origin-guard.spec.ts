@@ -19,7 +19,7 @@ async function serve(secrets: string[]) {
   app.get('/health/ready', (_req, res) => res.send('ready'));
   app.use((_req, res) => res.send('reached'));
   server = createServer(app);
-  await new Promise<void>((done) => server?.listen(0, done));
+  await new Promise<void>((done) => server?.listen(0, '127.0.0.1', done));
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
 

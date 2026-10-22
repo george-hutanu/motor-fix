@@ -59,7 +59,7 @@ import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
-import { Voice } from '../../voice/voice';
+import { unbroken, Voice } from '../../voice/voice';
 import {
   type AddressChoice,
   AddressField,
@@ -159,6 +159,7 @@ export class Results {
   private readonly memory = inject(ResultsMemory);
   protected readonly i18n = inject(I18n);
   protected readonly voice = inject(Voice);
+  protected readonly unbroken = unbroken;
 
   private readonly bar = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,

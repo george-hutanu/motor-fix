@@ -223,6 +223,7 @@ describe('cockpit.css contrast', () => {
 describe('cockpit.css typefaces', () => {
   const faces = ['@fontsource/michroma', '@fontsource-variable/hanken-grotesk'];
 
+  // @traces 008-FR-006
   it('self-hosts both families with swap and a Latin Extended subset', () => {
     for (const pkg of faces) {
       expect(css).toContain(`@import "${pkg}/index.css";`);
@@ -234,7 +235,7 @@ describe('cockpit.css typefaces', () => {
       const ranges = [...face.matchAll(/unicode-range:\s*([^;]+);/g)].map(
         ([, r]) => r,
       );
-      for (const glyph of ['ă', 'â', 'î', 'ș', 'ț']) {
+      for (const glyph of ['ă', 'â', 'î', 'ș', 'ț', 'Ș', 'Ț', '„', '”']) {
         const code = glyph.codePointAt(0)!;
         const covered = ranges.some((r) =>
           r.split(',').some((part) => {

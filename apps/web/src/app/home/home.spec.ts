@@ -2061,6 +2061,48 @@ describe('Home headline swap', () => {
   });
 
   // The Jest transform drops component styles, so they are read from the source.
+  // @traces 008-FR-006
+  it('sets the hero headline in Michroma capitals, scaled up from the phone', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const wide =
+      css.match(
+        /@media \(min-width: 768px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+    const rule = (block: string) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, sel]) => sel.trim() === '.hero h2')
+        .map(([, , body]) => body.trim())
+        .join(' ');
+    const phone = rule(css.replace(wide, ''));
+
+    expect(phone).toContain('font-family: var(--mf-font-label);');
+    expect(phone).toContain('text-transform: uppercase;');
+    expect(phone).toContain('font-size: var(--mf-size-subheading);');
+    expect(rule(wide)).toContain('font-size: var(--mf-size-title);');
+  });
+
+  // @traces 008-FR-003
+  it('sets the hero label at body size on a phone and in the label type above it', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const phone = css.match(
+      /@media \(max-width: 767\.98px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1];
+    const size = (block: string) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, sel]) => sel.trim() === '.label')
+        .map(([, , body]) => body.match(/font-size: ([^;]+);/)?.[1])
+        .filter(Boolean);
+
+    expect(size(phone ?? '')).toEqual(['var(--mf-size-body)']);
+    expect(size(css.replace(phone ?? '', ''))).toEqual([
+      'var(--mf-size-label)',
+    ]);
+  });
+
   // @traces 007-FR-002
   it('plays the blur-in only on a rising headline, and only without reduced motion', () => {
     const css = readFileSync(join(__dirname, 'home.css'), 'utf8')

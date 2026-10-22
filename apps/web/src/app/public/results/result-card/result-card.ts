@@ -19,7 +19,7 @@ import {
 } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
-import { Voice } from '../../../voice/voice';
+import { unbroken, Voice } from '../../../voice/voice';
 import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
 import { SaveGarageButton } from '../../saved-garages/save-garage-button/save-garage-button';
 
@@ -180,7 +180,7 @@ export class ResultCard {
   protected readonly stance = computed(() =>
     this.i18n.t(
       this.takes() ? 'public.results.card.worksOn' : this.voice.key('no'),
-      { brand: this.brand().name },
+      { brand: unbroken(this.brand().name) },
     ),
   );
 
