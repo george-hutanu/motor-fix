@@ -223,6 +223,38 @@
       }
     },
     {
+      "id": 147,
+      "type": "stat",
+      "title": "Sort changes, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum (increase(motorfix_sort_changes_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "sort changes"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
       "id": 146,
       "type": "timeseries",
       "title": "Sort changes per day, by sort",
@@ -232,8 +264,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 24,
-        "x": 0,
+        "w": 18,
+        "x": 6,
         "y": 5
       },
       "targets": [

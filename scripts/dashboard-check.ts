@@ -57,6 +57,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_report_decisions_total',
   'motorfix_rechecks_total',
   'motorfix_listing_submissions_total',
+  'motorfix_sort_changes_total',
 ];
 const SIGNAL_SOURCES = new Set(['prometheus', 'loki', 'tempo', 'grafana']);
 const GRAFANA = '-- Grafana --';
