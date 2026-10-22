@@ -500,7 +500,7 @@ export class VerificationService {
       }),
       tx.legalDocument.findMany({
         select: { kind: true },
-        where: { verificationFileId: fileId },
+        where: { replacedAt: null, verificationFileId: fileId },
       }),
     ]);
     const missing = approvalGaps(

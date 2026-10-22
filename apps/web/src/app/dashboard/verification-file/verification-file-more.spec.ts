@@ -85,6 +85,7 @@ function fileOf(
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
+        replaced: [],
         stale: false,
       },
       {
@@ -93,6 +94,7 @@ function fileOf(
         kind: 'rar_authorisation',
         pages: 1,
         present: true,
+        replaced: [],
         stale: null,
       },
     ],

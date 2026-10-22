@@ -310,6 +310,17 @@ export class VerificationFileJobDto {
   rarActivity!: string | null;
 }
 
+export class VerificationFileReplacedDocumentDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ minimum: 1, type: 'integer' })
+  pages!: number;
+
+  @ApiProperty({ description: 'When it was replaced', format: 'date-time' })
+  at!: string;
+}
+
 export class VerificationFileDocumentDto {
   @ApiProperty({ enum: DOCUMENT_KINDS })
   kind!: DocumentKind;
@@ -333,6 +344,13 @@ export class VerificationFileDocumentDto {
     type: Boolean,
   })
   stale!: boolean | null;
+
+  @ApiProperty({
+    description:
+      'The older documents of the kind, kept when replaced, newest first',
+    type: () => [VerificationFileReplacedDocumentDto],
+  })
+  replaced!: VerificationFileReplacedDocumentDto[];
 }
 
 export class VerificationFileReporterDto {

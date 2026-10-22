@@ -233,6 +233,24 @@
                 <button type="button" class="action" (click)="openPage(row.doc, row.failed)">{{ 'admin.file.retry' | t }}</button>
               </span>
             }
+            @for (older of row.replaced; track older.doc.id) {
+              <div class="replaced">
+                <span class="line">{{ older.line }}</span>
+                @if (older.buttons.length) {
+                  <span class="pages">
+                    @for (button of older.buttons; track button.n) {
+                      <button type="button" class="action ghost" [attr.aria-label]="button.named + ', ' + older.line" (click)="openPage(older.doc, button.n)">{{ button.label }}</button>
+                    }
+                  </span>
+                }
+                @if (older.failed !== null) {
+                  <span class="page-failed" role="alert">
+                    <span>{{ 'admin.file.documents.failed' | t }}</span>
+                    <button type="button" class="action" (click)="openPage(older.doc, older.failed)">{{ 'admin.file.retry' | t }}</button>
+                  </span>
+                }
+              </div>
+            }
           </li>
         }
       </ul>

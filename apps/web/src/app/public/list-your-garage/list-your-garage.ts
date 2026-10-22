@@ -47,7 +47,7 @@ import {
   type PlaceSection,
 } from '@motor-fix/contracts/place-section';
 import { askedSteps } from '@motor-fix/contracts/verification-target';
-import type { JobTypeDto } from '@motor-fix/data-access';
+import type { HeldDocumentDto, JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -296,6 +296,8 @@ export class ListYourGarage {
   >(null);
   // The steps the admins' request for more points at, over a copy.
   protected readonly requested = signal<number[]>([]);
+  // The documents on the garage's file, over a copy.
+  protected readonly heldDocuments = signal<HeldDocumentDto[]>([]);
   // The owner's listing on its way to the map, with what the send answered
   // when it was sent from this page; the form is done with.
   protected readonly statusView = signal<{
@@ -433,6 +435,7 @@ export class ListYourGarage {
     }
     const steps = askedSteps(copy.requestedItems);
     this.requested.set(steps);
+    this.heldDocuments.set(copy.held);
     this.surveyOpen.set(false);
     this.ticked = new Set(this.done());
     this.shown.set(this.stored());

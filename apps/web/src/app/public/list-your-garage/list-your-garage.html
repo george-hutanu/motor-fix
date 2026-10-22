@@ -184,6 +184,7 @@
                   [token]="keeper.draft().token"
                   [kind]="details().businessKind"
                   [documents]="documents()"
+                  [held]="heldDocuments()"
                   (documentsChange)="keeper.documents($event)"
                   [declaration]="declaration()"
                   (declarationChange)="keeper.declaration($event)"

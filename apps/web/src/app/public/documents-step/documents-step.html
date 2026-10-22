@@ -2,6 +2,7 @@
 @for (each of kinds; track each) {
   @let pages = pagesOf(each);
   @let missing = documentMessages()[each];
+  @let held = onFile()[each];
   <mf-document-area
     [attr.data-field]="'documents.' + each"
     tabindex="-1"
@@ -12,6 +13,15 @@
     [pages]="pages"
     (pagesChange)="setPages(each, $event)"
   >
+    @if (held) {
+      <p class="on-file">
+        @if (pages.length) {
+          {{ 'public.listing.replacesOnFile' | t: { count: held } }}
+        } @else {
+          {{ 'public.listing.onFile' | t: { count: held } }}
+        }
+      </p>
+    }
     @if (missing) {
       <p [class]="missing.warning ? 'warning' : 'error'" [id]="'listing-' + each + '-missing'">{{ missing.key | t }}</p>
     }

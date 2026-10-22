@@ -3065,6 +3065,27 @@ describe('a signed-in account that owns a garage', () => {
         expect(current(page)[0]).toMatch(new RegExp(`^${step} `));
       },
     );
+
+    // @traces 208-FR-006
+    it('shows step 6 the documents the file holds', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(harness, await copyAsked(), {
+        ...COPY,
+        held: [{ issuedOn: null, kind: 'rar_authorisation', pages: 2 }],
+      });
+
+      expect(
+        text(
+          page.querySelector('.area[data-kind="rar_authorisation"] .on-file'),
+        ),
+      ).toBe('Pe dosar: 2 pagini');
+      expect(
+        page.querySelector('.area[data-kind="onrc_certificate"] .on-file'),
+      ).toBeNull();
+    });
   });
 
   it.each([

@@ -29,6 +29,11 @@ h3 {
 .warning {
   color: var(--mf-text-secondary);
 }
+.on-file {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--mf-text-secondary);
+}
 mf-document-area:focus-visible {
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;

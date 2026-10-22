@@ -271,6 +271,7 @@ export type { VerificationFileDto } from './models/verification-file-dto';
 export type { VerificationFileGarageDto } from './models/verification-file-garage-dto';
 export type { VerificationFileJobDto } from './models/verification-file-job-dto';
 export type { VerificationFileRejectionDto } from './models/verification-file-rejection-dto';
+export type { VerificationFileReplacedDocumentDto } from './models/verification-file-replaced-document-dto';
 export type { VerificationFileReportDto } from './models/verification-file-report-dto';
 export type { VerificationFileReporterDto } from './models/verification-file-reporter-dto';
 export type { VerificationFileStateDto } from './models/verification-file-state-dto';

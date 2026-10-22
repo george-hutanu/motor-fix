@@ -277,7 +277,9 @@ export class VerificationFileService {
           }),
         ),
       documents: DOCUMENT_KINDS.map((kind) => {
-        const held = file.documents.find((d) => d.kind === kind);
+        const held = file.documents.find(
+          (d) => d.kind === kind && !d.replacedAt,
+        );
         const issuedOn = held?.issuedOn ?? null;
         return {
           id: held?.id ?? null,
@@ -285,6 +287,13 @@ export class VerificationFileService {
           kind,
           pages: held?.pages.length ?? 0,
           present: Boolean(held),
+          replaced: file.documents
+            .flatMap(({ id, pages, kind: of, replacedAt }) =>
+              of === kind && replacedAt
+                ? [{ at: replacedAt.toISOString(), id, pages: pages.length }]
+                : [],
+            )
+            .sort((a, b) => b.at.localeCompare(a.at)),
           stale:
             held && kind === 'onrc_certificate'
               ? certificateStale(issuedOn, file.submittedAt)

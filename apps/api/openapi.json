@@ -15687,6 +15687,29 @@
           "rarActivity"
         ]
       },
+      "VerificationFileReplacedDocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "at": {
+            "type": "string",
+            "description": "When it was replaced",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "pages",
+          "at"
+        ]
+      },
       "VerificationFileDocumentDto": {
         "type": "object",
         "properties": {
@@ -15718,6 +15741,13 @@
             "type": "boolean",
             "description": "The certificate only: no issue date, or issued more than 30 days before the latest sending; null for every other kind",
             "nullable": true
+          },
+          "replaced": {
+            "description": "The older documents of the kind, kept when replaced, newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileReplacedDocumentDto"
+            }
           }
         },
         "required": [
@@ -15726,7 +15756,8 @@
           "id",
           "pages",
           "issuedOn",
-          "stale"
+          "stale",
+          "replaced"
         ]
       },
       "VerificationFileReporterDto": {
