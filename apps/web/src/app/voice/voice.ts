@@ -1,5 +1,15 @@
-import { DOCUMENT } from '@angular/common';
-import { Injectable, inject } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import {
+  computed,
+  Injectable,
+  Injector,
+  inject,
+  PLATFORM_ID,
+  provideAppInitializer,
+  signal,
+} from '@angular/core';
+import type { PublicCopyVoicesDto } from '@motor-fix/data-access';
+import { PlatformService } from '@motor-fix/data-access/services/platform.service';
 
 export type Slot =
   | 'cta'
@@ -45,30 +55,72 @@ export const keysOf = (n: number): Readonly<Record<Slot, string>> =>
     ]),
   ) as Record<Slot, string>;
 
+type Head = { mfCopyVoice?: (settings: PublicCopyVoicesDto) => number };
+
 // The copy voice of the visit. The script in the page head picks it before
 // the first paint and marks <html data-voice>; it is read once here, so a
 // voice another tab takes later never mixes into this one. The server's page
-// carries no mark, so it renders voice 1.
+// carries no mark, so it renders voice 1. It changes only when the admins
+// switch it off: the settings read while the visit runs go back to the page
+// head, which moves the visit to a voice that is on.
 @Injectable({ providedIn: 'root' })
 export class Voice {
-  readonly voice: number;
-  // The keys of this visit's voice, by slot.
-  readonly copy: Readonly<Record<Slot, string>>;
-  // The benefits headline's second line, or null for a one-line voice.
-  readonly feat2: string | null;
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly n = signal(1);
+  private readonly keys = computed(() => keysOf(this.n()));
+  // Only the newest read decides.
+  private reads = 0;
 
   constructor() {
     // getAttribute, not dataset: the server's document has no dataset.
-    const mark =
-      inject(DOCUMENT).documentElement.getAttribute('data-voice') ?? '';
-    this.voice = /^[1-5]$/.test(mark) ? Number(mark) : 1;
-    this.copy = keysOf(this.voice);
-    this.feat2 = ONE_LINE.has(this.voice)
-      ? null
-      : `public.voice.v${this.voice}.feat2`;
+    const mark = this.document.documentElement.getAttribute('data-voice') ?? '';
+    this.n.set(/^[1-5]$/.test(mark) ? Number(mark) : 1);
+  }
+
+  get voice(): number {
+    return this.n();
+  }
+
+  // The keys of this visit's voice, by slot.
+  get copy(): Readonly<Record<Slot, string>> {
+    return this.keys();
+  }
+
+  // The benefits headline's second line, or null for a one-line voice.
+  get feat2(): string | null {
+    const n = this.n();
+    return ONE_LINE.has(n) ? null : `public.voice.v${n}.feat2`;
   }
 
   key(slot: Slot): string {
     return this.copy[slot];
   }
+
+  // `at` makes the read miss every cache, after a change or a stream reopen.
+  async read(at?: string): Promise<void> {
+    const read = ++this.reads;
+    try {
+      const settings = await this.injector
+        .get(PlatformService)
+        .publicCopyVoicesControllerSettings(at ? { at } : undefined);
+      if (read === this.reads) this.apply(settings);
+    } catch {
+      // Unknown settings change nothing: keep the voice.
+    }
+  }
+
+  // The page head picks the voice, and stores it, as it does at the start of
+  // a visit; a page whose head script did not run keeps its voice.
+  apply(settings: PublicCopyVoicesDto): void {
+    const head = (this.document.defaultView as Head | null)?.mfCopyVoice;
+    if (head) this.n.set(head(settings));
+  }
 }
+
+// The settings read once at boot, in the browser only and without holding the
+// first render; a cache may answer it.
+export const provideVoiceRead = () =>
+  provideAppInitializer(() => {
+    if (isPlatformBrowser(inject(PLATFORM_ID))) void inject(Voice).read();
+  });

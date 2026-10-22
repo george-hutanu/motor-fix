@@ -4168,6 +4168,38 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 146,
+      "type": "stat",
+      "title": "Copy voice changes, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 192
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (change) (increase(motorfix_copy_voice_changes_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{change}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

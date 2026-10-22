@@ -1,4 +1,24 @@
 {
+  "copyVoices": {
+    "lastVoice": "At least one voice stays on",
+    "line": "Which copy visitors see on the home page",
+    "loadFailed": "Could not load the voices",
+    "name": {
+      "v1": "1 · Straight to the point",
+      "v2": "2 · Like a friend",
+      "v3": "3 · Technical",
+      "v4": "4 · With a smile",
+      "v5": "5 · No surprises"
+    },
+    "paused": "paused while voice {voice} is pinned",
+    "pin": "Pin for everyone",
+    "pinnedHint": "Remove the pin to switch it off",
+    "retry": "Try again",
+    "saveFailed": "Could not save. Try again.",
+    "stale": "The voice changed in the meantime. We read it again.",
+    "title": "Copy voices",
+    "unpin": "Remove pin"
+  },
   "demand": {
     "allBrands": "See all brands",
     "allJobs": "See all jobs",

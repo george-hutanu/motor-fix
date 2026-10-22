@@ -18,6 +18,9 @@ import {
 test('the context fixture removes every route handler once the test ends', async () => {
   const calls: string[] = [];
   const context = {
+    addInitScript: async () => {
+      calls.push('init');
+    },
     route: async () => {
       calls.push('route');
     },
@@ -31,6 +34,7 @@ test('the context fixture removes every route handler once the test ends', async
   });
 
   expect(calls).toContain('route');
+  expect(calls).toContain('init');
   expect(calls.slice(-2)).toEqual(['use', 'unrouteAll:ignoreErrors']);
 });
 

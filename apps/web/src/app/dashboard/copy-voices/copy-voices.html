@@ -1,0 +1,56 @@
+<section [attr.aria-busy]="list() === undefined && !failed()">
+  <h2>{{ 'admin.copyVoices.title' | t }}</h2>
+  <p class="hint">{{ 'admin.copyVoices.line' | t }}</p>
+  @if (list(); as voices) {
+    <ul>
+      @for (v of voices.voices; track v.voice) {
+        <li>
+          <div class="name">
+            <span [id]="'copy-voice-' + v.voice">{{ name(v) | t }}</span>
+            <span class="hint">{{ example(v) | t: brand }}</span>
+            @if (pinned(); as p) {
+              @if (p === v.voice) {
+                <span class="hint" [id]="'copy-voice-hint-' + v.voice">{{ 'admin.copyVoices.pinnedHint' | t }}</span>
+              } @else {
+                <span class="hint paused">{{ 'admin.copyVoices.paused' | t: { voice: p } }}</span>
+              }
+            }
+          </div>
+          <div class="controls">
+            <hlm-switch
+              [checked]="v.enabled"
+              [disabled]="pending() !== null || v.pinned"
+              [aria-label]="name(v) | t"
+              [aria-describedby]="v.pinned ? 'copy-voice-hint-' + v.voice : null"
+              (checkedChange)="toggle(v)"
+            />
+            <button
+              hlmBtn
+              variant="secondary"
+              type="button"
+              data-pin
+              [attr.aria-describedby]="'copy-voice-' + v.voice"
+              [attr.aria-pressed]="v.pinned"
+              [disabled]="pending() !== null || !v.enabled"
+              (click)="pin(v)"
+            >
+              {{ pinLabel(v) | t }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+    @if (error(); as key) {
+      <p role="alert">{{ key | t }}</p>
+    }
+  } @else if (failed()) {
+    <p role="alert">{{ 'admin.copyVoices.loadFailed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="load()">
+      {{ 'admin.copyVoices.retry' | t }}
+    </button>
+  } @else {
+    @for (n of placeholders; track n) {
+      <div class="skeleton" aria-hidden="true"></div>
+    }
+  }
+</section>

@@ -2,10 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DOCUMENT } from '@angular/common';
+import { computed, PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { PlatformService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import { type Slot, Voice } from './voice';
+import { provideVoiceRead, type Slot, Voice } from './voice';
 
 const SLOTS: Slot[] = [
   'eyebrow',
@@ -30,6 +32,7 @@ function voiceOf(mark: string | null) {
 
 afterEach(() => {
   delete document.documentElement.dataset['voice'];
+  delete (window as { mfCopyVoice?: unknown }).mfCopyVoice;
 });
 
 // @traces 006-FR-006
@@ -164,5 +167,124 @@ describe('the texts of each voice', () => {
     expect(three.i18n.t(three.voice.key('headline'), { brand: 'BMW' })).toBe(
       'BMW. 3 garages. Top rating: 4.9.',
     );
+  });
+});
+
+type Settings = { enabled: number[]; pinned: number | null };
+
+function withSettings(mark: string, answers: (Settings | Error)[]) {
+  document.documentElement.dataset['voice'] = mark;
+  // A stand-in for the page head: the pin, else the first voice on.
+  (window as { mfCopyVoice?: unknown }).mfCopyVoice = (s: Settings) =>
+    s.pinned ?? s.enabled[0];
+  TestBed.resetTestingModule();
+  const pending: ((answer: Settings | Error) => void)[] = [];
+  const settings = jest.fn(
+    () =>
+      new Promise<Settings>((resolve, reject) => {
+        const settle = (answer: Settings | Error) =>
+          answer instanceof Error ? reject(answer) : resolve(answer);
+        const next = answers.shift();
+        if (next) settle(next);
+        else pending.push(settle);
+      }),
+  );
+  TestBed.configureTestingModule({
+    providers: [
+      {
+        provide: PlatformService,
+        useValue: { publicCopyVoicesControllerSettings: settings },
+      },
+    ],
+  });
+  return { pending, settings, voice: TestBed.inject(Voice) };
+}
+
+// @traces 010-FR-011
+describe('the settings read while the visit runs', () => {
+  it('moves every text to the voice the page head picks when the visit voice is off', () => {
+    const hand = jest.fn(() => 2);
+    (window as { mfCopyVoice?: unknown }).mfCopyVoice = hand;
+    const voice = voiceOf('4');
+    const headline = computed(() => voice.copy.headline);
+    expect(headline()).toBe('public.voice.v4.headline');
+
+    voice.apply({ enabled: [1, 2, 3], pinned: null });
+
+    expect(hand).toHaveBeenCalledWith({ enabled: [1, 2, 3], pinned: null });
+    expect(voice.voice).toBe(2);
+    expect(headline()).toBe('public.voice.v2.headline');
+    expect(voice.key('no')).toBe('public.voice.v2.no');
+    expect(voice.feat2).toBe('public.voice.v2.feat2');
+  });
+
+  it('keeps the voice when the page head did not run', () => {
+    const voice = voiceOf('3');
+
+    voice.apply({ enabled: [1, 5], pinned: 5 });
+
+    expect(voice.voice).toBe(3);
+  });
+
+  it('reads the settings, past every cache when given a time', async () => {
+    const { settings, voice } = withSettings('1', [
+      { enabled: [2], pinned: 2 },
+    ]);
+
+    await voice.read('2026-10-22T10:00:00.000Z');
+
+    expect(settings).toHaveBeenCalledWith({ at: '2026-10-22T10:00:00.000Z' });
+    expect(voice.voice).toBe(2);
+  });
+
+  it('acts on the newest read even when an older one answers last', async () => {
+    const { pending, voice } = withSettings('1', []);
+    const older = voice.read();
+    const newer = voice.read('x');
+
+    pending[1]({ enabled: [3], pinned: null });
+    pending[0]({ enabled: [4], pinned: null });
+    await Promise.all([older, newer]);
+
+    expect(voice.voice).toBe(3);
+  });
+
+  it('keeps the voice when the read fails', async () => {
+    const { voice } = withSettings('4', [new Error('offline')]);
+
+    await voice.read();
+
+    expect(voice.voice).toBe(4);
+  });
+});
+
+// @traces 010-FR-011
+describe('the settings read at boot', () => {
+  const boot = (platform: string) => {
+    TestBed.resetTestingModule();
+    const settings = jest.fn(async () => ({ enabled: [1], pinned: null }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideVoiceRead(),
+        { provide: PLATFORM_ID, useValue: platform },
+        {
+          provide: PlatformService,
+          useValue: { publicCopyVoicesControllerSettings: settings },
+        },
+      ],
+    });
+    TestBed.inject(Voice);
+    return settings;
+  };
+
+  it('reads them once in the browser, which a cache may answer', () => {
+    const settings = boot('browser');
+
+    expect(settings).toHaveBeenCalledTimes(1);
+    expect(settings).toHaveBeenCalledWith(undefined);
+  });
+
+  it('reads none on the server', () => {
+    expect(boot('server')).not.toHaveBeenCalled();
   });
 });

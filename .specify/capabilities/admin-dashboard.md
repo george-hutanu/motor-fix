@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-19
+updated: 2026-10-22
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -21,6 +21,7 @@ features:
   - 404-demand-searches
   - 299-system-log-search
   - 1351-rar-monthly-recheck
+  - 010-copy-voice-switch
 ---
 
 # Capability: Admin dashboard
@@ -759,6 +760,62 @@ _From 299-system-log-search._
 ### 1351-FR-013 — On `recheck.recorded` the live hub MUST publish to `admin`, `garage:{garageId}` (the owner's legal panel re-reads its date, #96) and `public:garage:{garageId}` (the badge, when #95 ships); the public profile cache for the garage MUST be dropped as for `garage.updated` (1183-FR-005).
 
 _From 1351-rar-monthly-recheck._
+
+### 010-FR-001 — The system MUST keep one stored setting per copy voice (1–5) with whether it is on, whether it is pinned, and who changed it last and when; the five are seeded on, none pinned.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-002 — An admin (the `admin.settings` capability) MUST be able to read the five settings with `GET /api/v1/admin/copy-voices`; anyone else MUST get 404 `not_found`.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-003 — An admin MUST be able to change one voice with `PATCH /api/v1/admin/copy-voices/:voice`, sending the new on/off and pinned state and the state the admin's screen showed; anyone else, and any voice other than 1–5, MUST get 404 `not_found`, and a body that is not the three states (on/off, pinned, seen) MUST get 400. The answer is the five settings as they now stand.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-004 — A change that would leave no voice on MUST be refused with 422 `last_voice`.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-005 — A change that pins a voice that is (or would be) off MUST be refused with 422 `voice_off`; switching off the pinned voice MUST be refused with 422 `voice_pinned`.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-006 — Pinning a voice MUST remove the pin from any other voice in the same change, so at most one voice is pinned.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-007 — A change MUST lock all five settings for its transaction and check, under the lock, first the seen state (differing from the stored state of that voice: 409 `stale_value`), then whether it changes anything (no: 200 with the settings as stored), then the rules of FR-004 and FR-005; two admins changing the same voice at once are thus serialised and the second gets the 409. The pin moved off another voice (FR-006) is derived by the server and has no seen-state check.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-008 — Each saved change MUST write, in the same transaction, one audit entry per voice whose state changed (actor, role, voice, old and new on/off and pinned) and one `platform_rule.changed` event with rule key `copy_voices` and the old and new public settings; the event goes to the admins and to the `system` channel every open screen listens to. A change to the state already stored writes neither.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-009 — `GET /api/v1/copy-voices` MUST be open to everyone (signed in or not), return only the list of voices that are on and the pinned voice (or none), and be cacheable for 60 seconds. It MUST also answer while the platform is in maintenance (the Home page shows then too).
+
+_From 010-copy-voice-switch._
+
+### 010-FR-012 — The admin dashboard's Setări MUST show, to admins only and after the platform rules, a section "Voci de text" (EN "Copy voices") with one row per voice: its number and name, its Home headline as an example (with BMW for the brand), an on/off switch, and "Fixează pentru toți" (EN "Pin for everyone") or, on the pinned voice, "Scoate fixarea" (EN "Remove pin").
+
+_From 010-copy-voice-switch._
+
+### 010-FR-013 — While a voice is pinned, the other rows MUST read "în pauză cât e fixată vocea N" (EN "paused while voice N is pinned"), the pinned voice's switch MUST be disabled, and the pin button of a voice that is off MUST be disabled.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-014 — A save in the section MUST show the new state at once (optimistic); on a refusal the row MUST go back to the stored state and show the error: "Cel puțin o voce rămâne activă" (EN "At least one voice stays on") for `last_voice`, "Vocea s-a schimbat între timp. Am citit-o din nou." (EN "The voice changed in the meantime. We read it again.") for 409, after which the section reads the settings again, and a generic error ("Nu am putut salva. Încearcă din nou." / "Could not save. Try again.") otherwise.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-015 — An admin's Setări open on another screen MUST read the settings again when a `copy_voices` change is heard on the admin live stream.
+
+_From 010-copy-voice-switch._
+
+### 010-FR-016 — The new endpoints and the product action MUST ship with their metrics, logs, dashboard panel and alert in `infra/observability/inventory.json`.
+
+_From 010-copy-voice-switch._
 
 ## Retired
 
