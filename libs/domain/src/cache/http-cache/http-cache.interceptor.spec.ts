@@ -39,6 +39,10 @@ function call(
     setHeader: (name: string, value: string) => {
       set[name.toLowerCase()] = value;
     },
+    vary: (field: string) => {
+      const vary = set['vary'];
+      set['vary'] = vary ? `${vary}, ${field}` : field;
+    },
   };
   const context = {
     getClass: () => Routes,
@@ -61,7 +65,10 @@ function call(
 // @traces 1182-FR-009 1182-FR-010
 describe('the HTTP cache policy', () => {
   it('gives a marked visitor read the public policy', async () => {
-    expect(await call('marked')).toEqual({ 'cache-control': PUBLIC_POLICY });
+    expect(await call('marked')).toEqual({
+      'cache-control': PUBLIC_POLICY,
+      vary: 'Authorization',
+    });
     expect(PUBLIC_POLICY).toBe(
       'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400',
     );
@@ -84,6 +91,27 @@ describe('the HTTP cache policy', () => {
       await call('unmarked', { actor: { id: 'a' }, method: 'HEAD' }),
     ).toEqual({
       'cache-control': 'private, no-cache',
+    });
+  });
+
+  // @traces 007-FR-016
+  it('keeps a marked read answered with a session private, no-cache', async () => {
+    expect(await call('marked', { actor: { id: 'a' } })).toEqual({
+      'cache-control': 'private, no-cache',
+    });
+    expect(await call('marked')).toEqual({
+      'cache-control': PUBLIC_POLICY,
+      vary: 'Authorization',
+    });
+  });
+
+  // @traces 007-FR-016
+  it('varies a shared answer on Authorization, after any Vary the route set', async () => {
+    expect(
+      await call('marked', { headers: { vary: 'Accept-Language' } }),
+    ).toEqual({
+      'cache-control': PUBLIC_POLICY,
+      vary: 'Accept-Language, Authorization',
     });
   });
 

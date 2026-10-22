@@ -23,6 +23,7 @@ import { noEvents } from '../../events/event.port';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 import { QuotesModule } from '../../quotes/quotes.module';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
+import { ROUTE_LIMITS } from '../../rate-limit/rate-limit.config';
 
 const redisUrl = redisUrlFor(10);
 const tokenSecret = 'test-secret';
@@ -52,6 +53,7 @@ beforeEach(async () => {
     ...(await redis.keys('v1:garage-home:*')),
     ...(await redis.keys('v1:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
+    ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
   if (keys.length) await redis.del(...keys);
 });

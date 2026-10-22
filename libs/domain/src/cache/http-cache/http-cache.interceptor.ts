@@ -21,9 +21,10 @@ export const PUBLIC_POLICY =
 // A visitor read whose answer depends on its path and query alone.
 export const PublicCache = () => SetMetadata(PUBLIC_CACHE, true);
 
-// On a successful read: the public policy and the served answer's tags for a
-// marked route, `private, no-cache` for one answered with a session. A header
-// the route set itself, a streamed answer and a problem are left as they are.
+// On a successful read: the public policy, `Vary: Authorization` and the
+// served answer's tags for a marked route a visitor read, `private, no-cache`
+// for any read answered with a session. A header the route set itself, a
+// streamed answer and a problem are left as they are.
 @Injectable()
 export class HttpCacheInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
@@ -38,17 +39,22 @@ export class HttpCacheInterceptor implements NestInterceptor {
       return next.handle();
     }
     const res = http.getResponse<Response>();
-    const marked = this.reflector.getAllAndOverride<boolean | undefined>(
-      PUBLIC_CACHE,
-      [context.getHandler(), context.getClass()],
-    );
+    const shared =
+      !req.actor &&
+      this.reflector.getAllAndOverride<boolean | undefined>(PUBLIC_CACHE, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
     return next.handle().pipe(
       tap(() => {
         if (res.headersSent || res.getHeader('Cache-Control') !== undefined) {
           return;
         }
-        if (marked) {
+        if (shared) {
           res.setHeader('Cache-Control', PUBLIC_POLICY);
+          // The same path answers a driver differently, so no cache may hand
+          // this copy to a request that carries a session.
+          res.vary('Authorization');
           const tags = requestContext.getStore()?.cacheTags;
           if (tags?.length) res.setHeader('Cache-Tag', tags.join(','));
         } else if (req.actor) {

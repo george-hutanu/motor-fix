@@ -104,8 +104,9 @@ test-adversary`) with `FEATURE_DIR` and the public surface the spec defines —
 route paths, exported functions, contract schemas. It sees the spec and the
 contract and nothing else, and writes the tests you are least likely to: the
 empty input, the value one past the cap, the same call twice, every "MUST NOT"
-attempted. Its tests land in the working tree next to yours and go red with
-them. Its report is not shown to the user; add its table to yours in step 5.
+attempted. Its tests land in the working tree next to yours, named
+`<subject>.adversary.spec.ts`, and go red with them; `/speckit-harden` step 2
+finds them by that name and attacks only the surface they leave. Its report is not shown to the user; add its table to yours in step 5.
 
 ### 5. Handoff (do NOT commit at red)
 

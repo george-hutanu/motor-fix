@@ -11,6 +11,7 @@ features:
   - 228-how-it-works-list-garage
   - 006-copy-voice-rotation
   - 010-copy-voice-switch
+  - 007-brand-headline
 ---
 
 # Capability: Home
@@ -21,9 +22,9 @@ The public Home page: the brand picker of the most searched brands, the hero tha
 
 _None yet: 225-brand-picker's Spec Delta adds the first ones when it is archived._
 
-### 225-FR-001 — Home MUST show a brand picker of up to eight tiles, read through the public tiles read (FR-010), rendered on the server with the page so they are present before any script runs; the tiles MUST be buttons with the brand name as their text (written as the catalogue writes it), in a radio-group pattern (one group with an accessible name "Marca mașinii" / "Car brand", each tile telling whether it is selected), each at least 44 px tall, with no text under 12 px; the group MUST be one Tab stop with the arrow keys moving the selection between tiles (roving focus), and the focused tile MUST show a visible focus ring in both themes.
+### 007-FR-014 — For a signed-in driver with cars, Home's tiles MUST start with the brands of the driver's cars that are not removed and still active in the catalogue, in car order (the order the driver added them, oldest first), then the most popular brands, 8 tiles in all with no brand twice; with more than 8 such brands the first 8 by car order and no popular brand.
 
-_From 225-brand-picker._
+_From 007-brand-headline._
 
 ### 225-FR-002 — Exactly one tile MUST be selected at all times; on load it is the first tile. Choosing a tile selects it and deselects the others.
 
@@ -33,9 +34,9 @@ _From 225-brand-picker._
 
 _From 228-how-it-works-list-garage._
 
-### 225-FR-004 — The hero MUST be filled through one copy slot taking the brand name: a label, a headline and a paragraph in the page's language (texts in Clarifications), re-filled whenever the selected brand changes; the hero's section order MUST leave the car section's place after the picker (an empty, named region, nothing else) for the Brand experience stories.
+### 007-FR-001 — In voice 4 the Romanian headline MUST use the brand's "your" form in place of the plain name: "Dacia ta merită mai mult decât „merge și așa”.", "BMW‑ul tău merită mai mult decât „merge și așa”.", "Fordul tău merită…"; the English headline stays "Your {brand} deserves better than “it’ll do”.".
 
-_From 225-brand-picker._
+_From 007-brand-headline._
 
 ### 225-FR-005 — Under the main button, the count MUST read "{X} din {Y} service-uri primesc {brand}" through the message format's plural forms — Y of 1: "1 service", 2–19: "{Y} service-uri", 20 and up: "{Y} de service-uri"; the verb agrees with X ("primește" for 1, "primesc" otherwise) — English "{X} of {Y} garage(s) take(s) {brand}"; where Y = the approved garages (all of Romania until a place exists) and X = those whose answer for the brand is `works_on`; `does_not_take` and `unstated` garages count in Y only; `draft` and `suspended` garages count nowhere.
 
@@ -309,9 +310,9 @@ _From 006-copy-voice-rotation._
 
 _From 010-copy-voice-switch._
 
-### 006-FR-007 — On Home the visit's voice MUST set the label above the headline, the headline, the paragraph, the main button, the 3D car section title, the garage list title, the benefits headline, the call to garages and the red-lamp label of a refusing garage: the full label with the brand ("Nu lucrează pe BMW") on the preview rows' lamp, the short form ("Nu lucrează pe") before the list of refused brands on the cards.
+### 007-FR-012 — A garage that refuses the chosen brand, or has not marked it, MUST carry a red lamp whose label is the visit's voice's wording with the brand: 1 "Nu primește {brand}", 2 "Nu lucrează pe {brand}", 3 "Incompatibil: {brand}", 4 "La {brand} zice „pas”", 5 "Nu lucrează pe {brand}" (and their English forms: 1 "Doesn’t take {brand}", 2 and 5 "Doesn’t work on {brand}", 3 "Not compatible: {brand}", 4 "Says “pass” on {brand}").
 
-_From 006-copy-voice-rotation._
+_From 007-brand-headline._
 
 ### 006-FR-008 — On Results the visit's voice MUST set the page title and the red-lamp label of a refusing garage (the full label on the card's and the map card's lamp, the short form before the list of refused brands); in the review drawer it MUST set the title.
 
@@ -329,6 +330,82 @@ _From 006-copy-voice-rotation._
 
 _From 010-copy-voice-switch._
 
+### 007-FR-001 — In voice 4 the Romanian headline MUST use the brand's "your" form in place of the plain name: "Dacia ta merită mai mult decât „merge și așa”.", "BMW‑ul tău merită mai mult decât „merge și așa”.", "Fordul tău merită…"; the English headline stays "Your {brand} deserves better than “it’ll do”.".
+
+_From 007-brand-headline._
+
+### 007-FR-002 — When the brand changes in any voice, the voice MUST stay and only the brand part of the headline text MUST change (the wording around it is the same voice's), with the mock's swap animation (a 520 ms blur-in of the headline) in every voice, one code path (none under reduced motion).
+
+_From 007-brand-headline._
+
+### 007-FR-003 — A brand with no "your" form in the catalogue (one reached from the full brand search) MUST read in voice 4 with its plain name, as the mock does.
+
+_From 007-brand-headline._
+
+### 007-FR-005 — The "your" form of a brand whose name ends in a hyphenated article ("BMW‑ul") MUST carry a non-breaking hyphen so the brand never breaks across lines.
+
+_From 007-brand-headline._
+
+### 007-FR-006 — In voice 3 the headline MUST read "{brand}. {count}. Nota maximă: {rating}." in Romanian and "{brand}. {count}. Top rating: {rating}." in English, with the count of garages in the area that take the brand and the best garage's rating.
+
+_From 007-brand-headline._
+
+### 007-FR-007 — Voice 3's count MUST follow the Romanian plural rules: "1 service.", "2 service‑uri.", "19 service‑uri.", "20 de service‑uri.", "101 service‑uri.", "120 de service‑uri."; in English "1 garage.", "20 garages.".
+
+_From 007-brand-headline._
+
+### 007-FR-008 — With no garage in the area that takes the brand, voice 3 MUST read "{brand}. Niciun service încă." ("{brand}. No garage yet.") with no rating part; with takers but no rated garage on the dial, the count MUST show and the rating part MUST be left out. The rating is the dial's figure (the best-rated garage in the area, as FR-010), never a separate best among the takers.
+
+_From 007-brand-headline._
+
+### 007-FR-009 — Voice 3's rating MUST show one decimal, a comma in Romanian (4,9) and a point in English (4.9), as the dial's reading does.
+
+_From 007-brand-headline._
+
+### 007-FR-010 — Voice 3's count and rating MUST be the same figures as Home's count line and rating dial, taken from the same Home answer for the brand and place, never computed separately; when the place changes, all three change together.
+
+_From 007-brand-headline._
+
+### 007-FR-011 — While Home's answer is loading, or after it failed, voice 3 MUST show the brand line only ("{brand}.") and the numbers when they arrive.
+
+_From 007-brand-headline._
+
+### 007-FR-012 — A garage that refuses the chosen brand, or has not marked it, MUST carry a red lamp whose label is the visit's voice's wording with the brand: 1 "Nu primește {brand}", 2 "Nu lucrează pe {brand}", 3 "Incompatibil: {brand}", 4 "La {brand} zice „pas”", 5 "Nu lucrează pe {brand}" (and their English forms: 1 "Doesn’t take {brand}", 2 and 5 "Doesn’t work on {brand}", 3 "Not compatible: {brand}", 4 "Says “pass” on {brand}").
+
+_From 007-brand-headline._
+
+### 007-FR-013 — The red-lamp label MUST be the same text on Home's preview rows, Home's cards, and the Results list and map cards for the same voice and brand, and MUST name the new brand as soon as the brand changes.
+
+_From 007-brand-headline._
+
+### 007-FR-014 — For a signed-in driver with cars, Home's tiles MUST start with the brands of the driver's cars that are not removed and still active in the catalogue, in car order (the order the driver added them, oldest first), then the most popular brands, 8 tiles in all with no brand twice; with more than 8 such brands the first 8 by car order and no popular brand.
+
+_From 007-brand-headline._
+
+### 007-FR-015 — A removed car's brand MUST no longer go first; a visitor or a driver with no car MUST get the 8 most popular brands, as today.
+
+_From 007-brand-headline._
+
+### 007-FR-016 — A tiles answer cached for a visitor MUST never be served to a signed-in driver with cars, and the driver's answer never to a visitor.
+
+_From 007-brand-headline._
+
+### 007-FR-017 — Home's total and takers MUST come from one consistent snapshot (one repeatable-read transaction or one statement), so an approval landing between them never yields takers greater than total.
+
+_From 007-brand-headline._
+
+### 007-FR-018 — The hero's automatic 5 s brand change MUST stop while the page is hidden and restart when the page is shown, the next change coming no sooner than 5 s after showing; no change happens while hidden.
+
+_From 007-brand-headline._
+
+### 007-FR-019 — The committed Home brand flow of the PR QA run MUST tap a brand and assert that the hero text names that brand, failing when the hero does not change; a Playwright spec in `apps/web-e2e` MUST read voice 4 on Dacia and on BMW, switch the brand and check the voice stays, and with voice 3 check the headline's numbers equal the count line and the dial.
+
+_From 007-brand-headline._
+
+### 007-FR-020 — Unit tests MUST cover the "your" form for the mock's eight brands and the plain-name fallback; Romanian plurals for 0, 1, 2, 19, 20, 101 and 120 garages; voice 3 with no takers and with no rating; the red-lamp label for each voice for a refusing and an unmarked brand; the seed setting the "your" form for every brand row; the three tiles cases of popular brands with the cache rule; the count's consistent snapshot (integration); and the hidden-page timer with fake timers (hidden at 3 s, shown again, the next move no sooner than 5 s after showing and none while hidden).
+
+_From 007-brand-headline._
+
 ## Retired
 
 - `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
@@ -340,3 +417,6 @@ _From 010-copy-voice-switch._
 - `006-FR-002` — superseded by `010-FR-010` (2026-10-22)
 - `006-FR-011` — superseded by `010-FR-010` (2026-10-22)
 - `006-FR-006` — superseded by `010-FR-011` (2026-10-22)
+- `225-FR-004` — superseded by `007-FR-001` (2026-10-22)
+- `006-FR-007` — superseded by `007-FR-012` (2026-10-22)
+- `225-FR-001` — superseded by `007-FR-014` (2026-10-22)

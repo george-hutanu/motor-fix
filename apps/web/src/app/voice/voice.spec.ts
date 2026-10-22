@@ -164,9 +164,10 @@ describe('the texts of each voice', () => {
     expect(one.i18n.t(one.voice.key('noLabel'))).toBe('Doesn’t take');
 
     const three = await texts('en', '3');
-    expect(three.i18n.t(three.voice.key('headline'), { brand: 'BMW' })).toBe(
-      'BMW. 3 garages. Top rating: 4.9.',
-    );
+    const figures = ` ${three.i18n.t('public.voice.v3.count', { count: 3 })} ${three.i18n.t('public.voice.v3.top', { rating: '4.9' })}`;
+    expect(
+      three.i18n.t(three.voice.key('headline'), { brand: 'BMW', figures }),
+    ).toBe('BMW. 3 garages. Top rating: 4.9.');
   });
 });
 

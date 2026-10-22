@@ -148,9 +148,11 @@ for (const f of validateFeature(repo, { ...feature, num: feature.num ?? feature.
 
 // The semantic lane. Imported dynamically so a run without --jev — which is
 // every run inside the specs and every --check in the commit gate — never
-// loads it and never reads .env.
-if (useJev && spec !== null && frIds.length > 0) {
-  const { ask, noul, noulOf, qid, score, scoreOf } = await import("./lib/jev.mjs");
+// loads it and never reads .env. With no key the lane was never set up, so
+// it says nothing; switched off, key or not, it says so once below.
+const jev = useJev ? await import("./lib/jev.mjs") : null;
+if (useJev && spec !== null && frIds.length > 0 && (jev.jevKey(repo) || jev.jevSwitchedOff(repo))) {
+  const { ask, noul, noulOf, qid, score, scoreOf } = jev;
 
   // The requirement AS WRITTEN, not the whole spec: a paragraph of context
   // three sections away is what makes a vague requirement look answerable.

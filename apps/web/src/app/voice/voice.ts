@@ -25,8 +25,7 @@ export type Slot =
   | 'sub';
 
 // Voices whose benefits headline has no second line; the translation files
-// carry no feat2 for them (voice.spec.ts holds the two together). Voice 3's
-// headline shows sample figures until the live counts replace them.
+// carry no feat2 for them (voice.spec.ts holds the two together).
 const ONE_LINE = new Set([3, 5]);
 
 const SLOTS: readonly Slot[] = [

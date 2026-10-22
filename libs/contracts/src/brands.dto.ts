@@ -36,6 +36,15 @@ export class BrandDto {
     type: 'integer',
   })
   popularity!: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Romanian "your" form of the name, its hyphen U+2011; null or absent reads as the name',
+    example: 'BMW\u2011ul tău',
+    nullable: true,
+    type: String,
+  })
+  roPossessive?: string | null;
 }
 
 export class BrandPageDto {

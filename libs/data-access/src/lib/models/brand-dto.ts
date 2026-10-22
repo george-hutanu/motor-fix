@@ -9,5 +9,10 @@ export interface BrandDto {
    * 1 is the most popular; null is unranked
    */
   popularity: number | null;
+
+  /**
+   * Romanian "your" form of the name, its hyphen U+2011; null or absent reads as the name
+   */
+  roPossessive?: string | null;
   slug: string;
 }

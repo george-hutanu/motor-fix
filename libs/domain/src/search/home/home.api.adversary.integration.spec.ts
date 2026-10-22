@@ -346,11 +346,13 @@ describe('GET /brands/popular', () => {
     expect(odd.body).toEqual(visitor.body);
   });
 
-  it('answers each brand with exactly id, name, slug and popularity', async () => {
+  it('answers each brand with exactly id, name, slug, popularity and its Romanian possessive', async () => {
     const id = await brand('a', 1, true, 'A');
 
     const res = await popular();
 
-    expect(res.body).toEqual([{ id, name: 'A', popularity: 1, slug: 'a' }]);
+    expect(res.body).toEqual([
+      { id, name: 'A', popularity: 1, roPossessive: null, slug: 'a' },
+    ]);
   });
 });

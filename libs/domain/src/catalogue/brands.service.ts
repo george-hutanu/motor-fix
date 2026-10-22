@@ -60,7 +60,13 @@ export class BrandsService {
         { popularity: { nulls: 'last', sort: 'asc' } },
         { name: 'asc' },
       ],
-      select: { id: true, name: true, popularity: true, slug: true },
+      select: {
+        id: true,
+        name: true,
+        popularity: true,
+        roPossessive: true,
+        slug: true,
+      },
       where: { active: true },
     });
     await this.cache(() =>

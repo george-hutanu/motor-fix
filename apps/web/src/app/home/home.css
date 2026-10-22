@@ -130,3 +130,17 @@
     grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
   }
 }
+
+/* A new brand's headline blurs in, only after a brand change. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero.rising h2 {
+    animation: mf-swap-in 520ms var(--mf-motion-ease) backwards;
+  }
+}
+
+@keyframes mf-swap-in {
+  from {
+    filter: blur(6px);
+    opacity: 0;
+  }
+}

@@ -88,7 +88,7 @@ the pass.
 `diff-audit.mjs` covers only what biome and tsc structurally cannot see:
 cross-file dead exports, the per-app relative-import extension rule (which fails
 at build time, not typecheck), new dependencies, added suppressions,
-parameter-property DI in `apps/server`, and new source files no test mentions.
+and new source files no test mentions.
 Fix every ERROR. Judge each WARN — several are legitimate by design (a test seam,
 a deliberate Stryker disable on an equivalent mutant); say which you kept and
 why.
@@ -107,9 +107,16 @@ the line reads "Design audit: skipped, no web file changed".
 
 ### 2. Adversarial tests
 
+A delta run. List the adversary specs already on the branch:
+
+```bash
+git diff --name-only --diff-filter=A <merge-base> -- '*.adversary.spec.*'
+```
+
 Invoke the `test-adversary` subagent (Agent tool,
-`subagent_type: test-adversary`) with the feature directory and the diff's
-public surface. It has not seen the implementation and must not; it writes the
+`subagent_type: test-adversary`) with the feature directory, the diff's
+public surface and that list, asking for the surface those files do not
+cover yet. An empty list means a full run over the whole surface. It has not seen the implementation and must not; it writes the
 tests the author's model of the code did not suggest. Every failing test it
 leaves is either a defect or a spec gap — you decide which, and a defect is
 fixed here while a spec gap goes to "Needs you". Its report is not shown to the
