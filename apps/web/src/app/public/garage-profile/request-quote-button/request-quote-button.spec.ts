@@ -134,7 +134,7 @@ async function press(host: HTMLElement) {
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 221-FR-002, 221-FR-013, 221-FR-016
+// @traces 221-FR-002 221-FR-013 221-FR-016
 describe('RequestQuoteButton', () => {
   it('is a primary Cere ofertă that opens the dialog for the garage, from the profile', async () => {
     const host = await render();
