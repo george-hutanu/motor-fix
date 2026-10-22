@@ -110,10 +110,10 @@ which uses the same scan, so a pass started by it always has something to do.
    | --- | --- |
    | `resume` | Read `specs/<feature>/auto-run.md`, `tasks.md` and `node .claude/scripts/run-state.mjs show`, then continue `/speckit-auto` from the phase run-state names (its section "After a context compaction" applies), through the hand-off. With an `agent-review` failure on the PR head, that is the QA fix loop: fix the blocking findings tests first, push, `run-state.mjs repair`, run `/speckit-pr-test <pr>` again. Without a feature, read the branch's commits and PR and finish the lifecycle the same way. |
    | `tail` | The story's agent handed this ready PR off. Run `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>` (a missing note comes back from the PR's newest `<!-- speckit-handoff -->` comment), read `specs/<feature>/handoff.md`, then run "The tail" in `.claude/skills/speckit-auto/tail.md` (not `SKILL.md`): the tester on the finished QA run (`RUN`), its fixes (tests first), each followed by a new run dispatched with `--no-wait` and an end, never a wait, the merge, `speckit-tracker-sync finish` with its finish comment on the PR, then delete `handoff.md`. |
-   | `merge-main` | The ready PR conflicts with `main`, so no CI runs on it. Merge `origin/main` into the branch with `node .claude/scripts/merge-main.mjs` (never a rebase, never a forced push; a merge already in progress in the worktree is finished, not restarted), which resolves the capability specs, the hook registry and the generated client itself; resolve what its `left` names by hand, run `doctor.mjs --bless-hooks` for an id under `bless` after reading its diff, run the affected tests, commit and push; then `.claude/scripts/pr-test/dispatch.mjs <pr> --no-wait` and end with `NEXT: tail #<pr> after QA run <id>`. A merge it cannot finish, or tests that stay red, is `git merge --abort` and `speckit-tracker-sync blocked <reason>`; no repair lap is counted. |
+   | `merge-main` | The ready PR conflicts with `main`, so no CI runs on it. Confirm with `node .claude/scripts/merge-main.mjs --needed` (exit 1: nothing to merge, end with `NEXT: none`), then merge `origin/main` into the branch with `node .claude/scripts/merge-main.mjs` (never a rebase, never a forced push; a merge already in progress in the worktree is finished, not restarted), which resolves the capability specs, the hook registry and the generated client itself; resolve what its `left` names by hand, run `doctor.mjs --bless-hooks` for an id under `bless` after reading its diff, run the affected tests, commit and push; then `.claude/scripts/pr-test/dispatch.mjs <pr> --no-wait` and end with `NEXT: tail #<pr> after QA run <id>`. A merge it cannot finish, or tests that stay red, is `git merge --abort` and `speckit-tracker-sync blocked <reason>`; no repair lap is counted. |
    | `rerun-qa` | Run `/speckit-pr-test <pr>` on the current head, then follow lifecycle steps 6–7. |
    | `fix-ci` | List what did not pass and read the failing job's log tail, both with the summary-only reads in AGENTS.md "Agent replies" (never the whole log); fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
-   | `merge` | `agent-review` succeeded and every check is green: run tail.md steps 5–6 at once, the merge (`gh pr merge <pr> --merge`), `speckit-tracker-sync finish` and the finish. Behind `main` with a conflict or shared files, merge it in with `node .claude/scripts/merge-main.mjs` instead and hand the new head back to QA (`dispatch.mjs <pr> --no-wait`, `NEXT: tail #<pr> after QA run <id>`). |
+   | `merge` | `agent-review` succeeded and every check is green: run tail.md steps 5–6 at once, the merge (`gh pr merge <pr> --merge`), `speckit-tracker-sync finish` and the finish. Behind `main`, ask `node .claude/scripts/merge-main.mjs --needed` first: exit 1 merges nothing and goes on to the merge; on exit 0 or 2 merge it in with `node .claude/scripts/merge-main.mjs` instead and hand the new head back to QA (`dispatch.mjs <pr> --no-wait`, `NEXT: tail #<pr> after QA run <id>`). |
 
    End the prompt with: "If the work cannot go on without the owner, set it
    Blocked (`run-state.mjs set --status blocked --blocking <condition>`, then
@@ -178,15 +178,18 @@ isolated in a worktree never arms the wait.
 A pass with nothing to do writes nothing and dispatches nothing; under the
 wait it never starts, since the gate stays silent.
 
-With no session open, a launchd agent keeps the watch instead:
-`sh scripts/watch-schedule.sh install` (from the main checkout) loads
-`com.motorfix.watch`, which every 15 minutes runs `watch.mjs --gate` there and,
-on exit 2, `watch.mjs --dispatch`: this pass's `--fix` fixes and sweep, then
+With no session open, a launchd agent keeps the watch instead. The owner
+starts it with `sh scripts/watch-schedule.sh install --gate-only` (from the
+main checkout): every 15 minutes it runs `watch.mjs --gate` and, on exit 2,
+appends the plan lines to `.work/watch-schedule/plan-<UTC date>.log`,
+dispatching nothing. After a week of plan files with no line a person would
+refuse, `uninstall`, then `install --dispatch`: `com.motorfix.watch` then runs
+the gate and, on exit 2, `watch.mjs --dispatch`: this pass's `--fix` fixes and sweep, then
 each plan entry claimed and started as a detached `claude -p --agent
 task-runner` in its worktree (`--model sonnet` for `merge`), its prompt this
 step 4's opening with a pointer to the fix's row of the table. `status` shows
-whether it is loaded and the last line of `.work/watch-schedule/passes.log`
-(`<time> gate <exit> [dispatch <exit>]`); each agent's output is in
+whether it is loaded, the last line of `.work/watch-schedule/passes.log`
+(`<time> gate <exit> [dispatch <exit>|gate-only]`) and the newest plan file; each agent's output is in
 `.work/watch-dispatch/`; `uninstall` removes it. It shares the claim with the
 wait: `claim` refuses a worktree whose claim is still live, whichever side
 wrote it, so the two never dispatch one worktree twice, and the caps count

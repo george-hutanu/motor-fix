@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report (v4.1.0)
+Sync Impact Report (v4.1.1)
+- Version change: 4.1.0 → 4.1.1 (PATCH: Principle VII step 4 merges
+  `origin/main` into a behind branch only when
+  `.claude/scripts/merge-main.mjs --needed` finds an overlap (a conflict, a
+  shared file or Nx project, an infra path, the compose storage error in the
+  latest lap report); a clean behind head keeps its QA run. A wording of how
+  the step runs; no principle or gate added or removed)
+- Source: ST-1357, the owner's request of 2026-10-22.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line, VII
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — lifecycle step 5
+
+Previous report (v4.1.0)
 - Version change: 4.0.0 → 4.1.0 (MINOR: Principle II gains a bullet.
   Mutation testing is never part of a task's lifecycle; it runs only on
   `main`'s schedule and by `workflow_dispatch`, no task dispatches, reads or
@@ -579,8 +592,10 @@ waits for the owner:
 3. When the work is done (tests, typecheck and lint green, review with no
    CRITICAL/HIGH left), mark the PR ready, swap its label to `QA`, and set
    the task QA. There is no In review stage: a ready PR is in QA.
-4. Merge `origin/main` into the branch if it is behind and wait for CI, in
-   the background. A failing check is fixed on the branch and waited for
+4. Wait for CI, in the background. A branch behind `main` merges
+   `origin/main` in only when `node .claude/scripts/merge-main.mjs --needed`
+   finds an overlap (exit 0, or exit 2 when git cannot answer); a clean
+   behind head keeps its QA run. A failing check is fixed on the branch and waited for
    again.
 5. Beside step 4, as soon as the PR is ready and with the task and the PR's
    label still QA, run the PR tester (`/speckit-pr-test`) on the head
@@ -760,4 +775,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 4.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-17
+**Version**: 4.1.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-22

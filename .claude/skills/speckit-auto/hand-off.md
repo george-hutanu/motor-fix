@@ -24,7 +24,17 @@ and QA lap is where most of a story's cost went.
    names a module that does not load, a `networkidle` wait and every
    acceptance scenario no flow names (`US<k> scenario <m>`, or a
    `// not a flow: US<k> scenario <m> — <reason>` line); fix each until it
-   exits 0. These were most of the failed first laps measured.
+   exits 0. These were most of the failed first laps measured. Then prove
+   them live, the proof `dispatch.mjs --flows` requires: boot the stack with
+   `eval "$(node scripts/test-services.ts origin/main)"`, start the API and
+   web dev servers on it, and run
+   `node .claude/scripts/pr-test/precheck.mjs --flows .specify/.cache/qa-flows-<n>.mjs --spec specs/<feature>/spec.md --check`
+   until it exits 0; a clean run leaves the proof for the head. A dispatch
+   exit 64 naming no live proof for this head means the check was not run on
+   it, or the head moved since: run it again on this head. There is no flag
+   that dispatches without the proof. A machine without Docker cannot boot
+   the stack: that is a needs-confirmation question on the task
+   (`speckit-tracker-sync blocked <question>`), never a dispatch without it.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    runs `lifecycle.mjs check`'s CI-only checks, lint and the affected
    typecheck and unit tests, commits and pushes the feature records (phase
@@ -44,8 +54,9 @@ and QA lap is where most of a story's cost went.
    it dispatches the PR QA workflow for the head, prints one line,
    `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
    run appeared) the note records no run and the tail dispatches one; on
-   exit 64 the flows failed the pre-check and nothing was dispatched: fix
-   what it named and run it again.
+   exit 64 the flows failed the pre-check or have no live proof for the
+   head, and nothing was dispatched: fix what it named (step 1's `--check`
+   for a missing proof) and run it again.
 4. Add that line, as printed, to `specs/<feature>/handoff.md` (step 2 wrote
    the rest; git ignores it; the tail deletes it), then post the note again
    with `node .claude/scripts/lifecycle.mjs handoff --pr <n>` (a cloud
