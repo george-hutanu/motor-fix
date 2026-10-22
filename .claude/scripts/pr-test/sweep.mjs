@@ -254,6 +254,22 @@ export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interva
   return false;
 }
 
+// The web fonts load after the page does, so a shot taken before they arrive renders its text in the
+// fallback and differs from the baseline's on a page nobody changed: wait, bounded, for
+// document.fonts.ready. A page that cannot be read, or whose fonts never settle, is shot as it is (false).
+export const FONT_SETTLE_MS = 5000;
+export async function settleFonts(page, { timeout = FONT_SETTLE_MS } = {}) {
+  let timer;
+  const late = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(false), timeout);
+  });
+  try {
+    return await Promise.race([page.evaluate(async () => { await document.fonts.ready; }).then(() => true, () => false), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // One sweep page's browser context. Reduced motion stills the charts' entry
 // animation, so a shot never catches a bar mid-flight and differs from the
 // baseline's on a page nobody changed (settleCanvases stays as the fallback).
@@ -317,6 +333,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
         // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
+        await settleFonts(page);
         await settleCanvases(page);
         await page.screenshot(shotOptions(page, screenshot));
         screenshots.push(screenshot);
