@@ -4,7 +4,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { formatLei, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
-import { Voice } from '../../voice/voice';
+import { unbroken, Voice } from '../../voice/voice';
 
 // Three rows under Home's dial: the two best garages that take the brand,
 // then the best one that does not. Each row opens the garage's profile.
@@ -33,7 +33,7 @@ export class HomePreview {
       garage.stance === 'works_on'
         ? 'public.home.preview.worksOn'
         : this.voice.key('no'),
-      { brand: this.brand().name },
+      { brand: unbroken(this.brand().name) },
     );
     return text.replace(/(?<![:;,.])\s+(\S+)\s*$/, '\u00a0$1');
   }

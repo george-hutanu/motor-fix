@@ -8,6 +8,7 @@ export async function signInAs(
   role: string,
   landing: string,
   capabilities: string[] = [],
+  language: 'ro' | 'en' = 'ro',
 ) {
   await page.route('**/api/v1/auth/refresh', (route) =>
     route.fulfill({ json: { accessToken: 'stubbed' } }),
@@ -27,7 +28,7 @@ export async function signInAs(
         garageId: landing === '/app/garage' ? 'garage-1' : null,
         id: `${role}-1`,
         landing,
-        language: 'ro',
+        language,
         name: `Test ${role}`,
         role,
         roles: [role],

@@ -8,7 +8,7 @@ import type {
 import { formatLei, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
-import { Voice } from '../../../../voice/voice';
+import { unbroken, Voice } from '../../../../voice/voice';
 
 // A tapped pin whose garage the list does not show: what the pin knows at
 // once, then the garage's name, rating and way to its page once read.
@@ -31,7 +31,7 @@ export class MapCard {
   protected readonly stance = computed(() =>
     this.i18n.t(
       this.takes() ? 'public.results.card.worksOn' : this.voice.key('no'),
-      { brand: this.brand().name },
+      { brand: unbroken(this.brand().name) },
     ),
   );
 

@@ -6,9 +6,9 @@
         <p class="label">{{ v.copy.eyebrow | t }}</p>
         <!-- Re-created for another brand, so its blur-in plays again. -->
         @for (shown of [brand]; track shown.id) {
-          <h2 (animationend)="rising.set(false)">{{ v.copy.headline | t: { brand: v.n === 4 ? own() : shown.name, figures: figures() } }}</h2>
+          <h2 (animationend)="rising.set(false)">{{ v.copy.headline | t: { brand: v.n === 4 ? own() : unbroken(shown.name), figures: figures() } }}</h2>
         }
-        <p>{{ v.copy.sub | t: { brand: brand.name } }}</p>
+        <p>{{ v.copy.sub | t: { brand: unbroken(brand.name) } }}</p>
       </div>
     }
   </section>
