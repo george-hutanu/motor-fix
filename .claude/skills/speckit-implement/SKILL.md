@@ -145,6 +145,8 @@ Check if `.specify/extensions.yml` exists in the project root.
 
 ## Re-read the ticket before reporting
 
+<!-- project-local addition (Constitution II) -->
+
 Re-read the story's GitHub issue with its comments (`gh issue view <n> --comments -R george-hutanu/motor-fix-specs`) and report any comment that moved scope, with its author and date; if it cannot be read, say the check did not run.
 
 ## Completion Report

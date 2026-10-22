@@ -146,6 +146,8 @@ Before appending anything, output a compact, severity-graded summary (no file wr
 
 ## Re-read the ticket before reporting
 
+<!-- project-local addition (Constitution II) -->
+
 Re-read the story's GitHub issue with its comments (`gh issue view <n> --comments -R george-hutanu/motor-fix-specs`): a comment that narrows scope makes the unbuilt work a `contradicts` finding, one that adds a requirement is reported and never appended; if it cannot be read, record the lane as unavailable.
 
 ## Convergence Findings

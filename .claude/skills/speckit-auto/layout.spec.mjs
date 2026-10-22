@@ -75,7 +75,7 @@ const RULES = [
   ['No internal identifier goes into the source', 'phases-build.md'],
   ['Tests that pass before any implementation exist are not red-first', 'phases-build.md'],
   ['Expect `post-edit-check.sh` to report failures', 'phases-build.md'],
-  ["Step 2's checklist gate", 'phases-build.md'],
+  ["Step 2's checklist count asks nothing", 'phases-build.md'],
   ['Batch the independent tool calls of `[P]` tasks', 'phases-build.md'],
   ['Loop limit: 2 converge cycles', 'phases-build.md'],
   ['A suppression is never the fix', 'phases-build.md'],

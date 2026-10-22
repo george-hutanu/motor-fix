@@ -48,6 +48,8 @@ describe('hook registry — contents', () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
+  // @traces 1361-FR-111
+  // @traces 1361-FR-112
   it('fingerprints match the scripts on disk', () => {
     for (const entry of loadRegistry(REPO).hooks) {
       assert.equal(

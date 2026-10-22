@@ -2,7 +2,6 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fingerprint, loadRegistry, scriptPath } from '../scripts/lib/hooks.mjs';
 
 // The phase skills and the code reviewer carry only lanes a run here takes:
 // no hook dispatch for hooks a skill does not own, no interactive rendering
@@ -133,9 +132,9 @@ describe('the code reviewer keeps its bar without the borrowed one', () => {
   });
 });
 
-describe('the trim leaves the gates and the reviewer\'s front matter alone', () => {
+describe('the trim leaves the reviewer\'s front matter alone', () => {
   // @traces 1361-FR-108
-  it('keeps every code-reviewer front-matter line but description, which ST-1359 owns', () => {
+  it('keeps every code-reviewer front-matter line but description', () => {
     const lines = read('agents/code-reviewer.md').split('\n');
     assert.deepEqual([lines[0], lines[1], lines[3], lines[4], lines[5]], [
       '---',
@@ -147,11 +146,5 @@ describe('the trim leaves the gates and the reviewer\'s front matter alone', () 
     assert.match(lines[2], /^description: /);
   });
 
-  // @traces 1361-FR-111
-  // @traces 1361-FR-112
-  it('edits no gate script: each registered gate still matches its reviewed fingerprint', () => {
-    const repo = join(claude, '..');
-    const stale = loadRegistry(repo).hooks.filter((h) => fingerprint(scriptPath(repo, h)) !== h.fingerprint).map((h) => h.id);
-    assert.deepEqual(stale, []);
-  });
+
 });
