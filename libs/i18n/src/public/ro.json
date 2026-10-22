@@ -365,6 +365,8 @@
       "duplicate": "Ziua e deja în listă",
       "facilities": "Facilități pentru clienți",
       "facilitiesHint": "Șoferii pot filtra după ele. Bifează doar ce oferi mereu, nu „uneori”.",
+      "facilitiesNote": "Notă despre facilități",
+      "facilitiesNoteTooLong": "Nota poate avea cel mult 200 de caractere",
       "facility": {
         "courtesy_car": "Mașină la schimb",
         "pickup_dropoff": "Preluare și predare",

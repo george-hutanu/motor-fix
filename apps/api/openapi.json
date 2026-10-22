@@ -15060,6 +15060,23 @@
               }
             ]
           },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "facilitiesNote": {
+            "type": "string",
+            "description": "What the garage wrote about its facilities; absent when none",
+            "maxLength": 200
+          },
           "jobTypes": {
             "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
@@ -15103,6 +15120,7 @@
           "reviewCount",
           "responseRate",
           "paymentMethods",
+          "facilities",
           "jobTypes",
           "prices",
           "photos"

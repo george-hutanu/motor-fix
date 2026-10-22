@@ -1,4 +1,6 @@
 import {
+  FACILITIES,
+  type Facility,
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
   PUBLIC_IMAGE_URL_MINUTES,
   type PublicGarageBrandDto,
@@ -60,9 +62,10 @@ type ProfileRow = {
   brand_note: string | null;
   brands: BrandRow[] | null;
   business_kind: BusinessKind | null;
-  courtesy_car: boolean;
   courtesy_car_paid: boolean;
   courtesy_car_price_per_day_bani: number | null;
+  facilities: Facility[];
+  facilities_note: string | null;
   id: string;
   known_for: string | null;
   labour_from_bani: number | null;
@@ -167,16 +170,20 @@ function priceListOf(
   };
 }
 
-// The courtesy car, when the garage lists one.
-const courtesyCarOf = (row: ProfileRow) =>
-  row.courtesy_car
+// Every facility the garage lists, in catalogue order, the courtesy car's
+// terms when it is one of them, and the note.
+const facilitiesOf = (row: ProfileRow) => ({
+  facilities: FACILITIES.filter((f) => row.facilities.includes(f)),
+  ...present({ facilitiesNote: row.facilities_note }),
+  ...(row.facilities.includes('courtesy_car')
     ? {
         courtesyCar: {
           paid: row.courtesy_car_paid,
           ...present({ pricePerDayBani: row.courtesy_car_price_per_day_bani }),
         },
       }
-    : {};
+    : {}),
+});
 
 // A mobile mechanic is shown by the area it serves: its position is the
 // owner's seat, so it never leaves with the garage.
@@ -276,7 +283,7 @@ export class PublicGaragesService {
   }
 
   // The whole profile in one statement: the garage, its brands with their
-  // fuels and job ticks, photos, price rows, courtesy car, response figures
+  // fuels and job ticks, photos, price rows, facilities, response figures
   // and day of last check. Outside the scope only the status comes back.
   private async read(slug: string): Promise<ProfileRow | undefined> {
     const [row] = await this.prisma.$queryRaw<ProfileRow[]>`
@@ -288,10 +295,11 @@ export class PublicGaragesService {
         g.payment_cash, g.payment_transfer, g.rar_activities,
         g.rating::float8 AS rating, g.review_count, g.service_radius_km,
         rs.lifetime_requests, rs.rate,
-        EXISTS (
-          SELECT 1 FROM garage_facility f
-          WHERE f.garage_id = g.id AND f.facility = 'courtesy_car'
-        ) AS courtesy_car,
+        g.facilities_note,
+        ARRAY(
+          SELECT f.facility::text FROM garage_facility f
+          WHERE f.garage_id = g.id AND f.status = 'listed'
+        ) AS facilities,
         to_char(g.last_checked_on, 'YYYY-MM-DD') AS last_checked_on,
         d.brands, d.photos, d.prices
       FROM garage g
@@ -382,7 +390,7 @@ export class PublicGaragesService {
         transfer: row.payment_transfer,
       },
       photos: await this.photos(row.photos ?? []),
-      ...courtesyCarOf(row),
+      ...facilitiesOf(row),
       ...placeOf(row),
       ...present({ businessKind: row.business_kind }),
       ...(row.known_for?.trim() ? { description: row.known_for } : {}),

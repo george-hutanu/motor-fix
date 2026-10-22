@@ -72,10 +72,10 @@ describe('the brand Home answer through the cache service', () => {
 
     expect(second.body).toEqual(first.body);
     expect(second.body.brand.name).toBe('Dacia');
-    expect((await other.zrange('v1:tag:search', '0', '-1')).sort()).toEqual(
-      ['v1:home:dacia:-', 'v1:home:dacia:44.433,26.104'].sort(),
+    expect((await other.zrange('v2:tag:search', '0', '-1')).sort()).toEqual(
+      ['v2:home:dacia:-', 'v2:home:dacia:44.433,26.104'].sort(),
     );
-    const ttl = await other.pttl('v1:home:dacia:-');
+    const ttl = await other.pttl('v2:home:dacia:-');
     expect(ttl).toBeGreaterThan(54_000 + 590_000);
     expect(ttl).toBeLessThanOrEqual(66_000 + 600_000);
   });
@@ -92,7 +92,7 @@ describe('the brand Home answer through the cache service', () => {
 
   it('keeps an unknown brand’s 404 out of the cache', async () => {
     expect((await get('/home', { brand: 'tesla' })).status).toBe(404);
-    expect(await other.exists('v1:home:tesla:-')).toBe(0);
+    expect(await other.exists('v2:home:tesla:-')).toBe(0);
   });
 });
 
@@ -105,8 +105,8 @@ describe('the popular tiles through the cache service', () => {
     const second = await get('/brands/popular', { limit: '3' });
 
     expect(second.body).toEqual(first.body);
-    expect(await other.zrange('v1:tag:search', '0', '-1')).toEqual([
-      'v1:popular-brands:3',
+    expect(await other.zrange('v2:tag:search', '0', '-1')).toEqual([
+      'v2:popular-brands:3',
     ]);
   });
 
@@ -115,7 +115,7 @@ describe('the popular tiles through the cache service', () => {
 
     expect((await get('/brands/popular', { limit: '2' })).body).toEqual([]);
 
-    const ttl = await other.pttl('v1:popular-brands:2');
+    const ttl = await other.pttl('v2:popular-brands:2');
     expect(ttl).toBeGreaterThan(50_000);
     expect(ttl).toBeLessThanOrEqual(66_000);
   });

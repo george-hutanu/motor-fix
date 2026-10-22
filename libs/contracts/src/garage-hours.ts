@@ -46,11 +46,13 @@ export interface HoursSection {
   hours?: WeeklyHours;
   closedDays?: ClosedDay[];
   facilities?: Facility[];
+  facilitiesNote?: string;
   payments?: Payment[];
   courtesyCar?: CourtesyCar;
 }
 
 export const CLOSED_NOTE_MAX = 80;
+export const FACILITIES_NOTE_MAX = 200;
 export const CLOSED_DAY_YEARS = 2;
 const INTERVALS_MAX = 2;
 
@@ -178,6 +180,12 @@ export const isSetOf =
     new Set(value).size === value.length;
 
 const isFacilities = isSetOf(FACILITIES);
+
+// Typed into a single-line field: a control character never belongs in it.
+export const isFacilitiesNote = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  !/\p{Cc}/u.test(value) &&
+  letters(value.trim()) <= FACILITIES_NOTE_MAX;
 const isPayments = isSetOf(PAYMENTS);
 
 export const isCourtesyPrice = (value: unknown): value is number =>
@@ -203,9 +211,17 @@ export function isHoursSection(
   value: unknown,
 ): value is Record<string, unknown> & HoursSection {
   if (!isRecord(value)) return false;
-  const { closedDays, courtesyCar, facilities, hours, payments } = value;
+  const {
+    closedDays,
+    courtesyCar,
+    facilities,
+    facilitiesNote,
+    hours,
+    payments,
+  } = value;
   return (
     (hours === undefined || isWeeklyHours(hours)) &&
+    (facilitiesNote === undefined || isFacilitiesNote(facilitiesNote)) &&
     (closedDays === undefined || closedDaysError(closedDays) === null) &&
     (facilities === undefined || isFacilities(facilities)) &&
     (payments === undefined || isPayments(payments)) &&

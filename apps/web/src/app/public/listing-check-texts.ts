@@ -28,6 +28,7 @@ const TEXTS: Readonly<Record<string, string>> = {
   'steps.4.mechanics[].name:invalid': `${L}.mechanics.nameNeeded`,
   'steps.5.courtesyCar.pricePerDayBani:invalid': `${L}.hours.courtesy.priceRange`,
   'steps.5.courtesyCar.pricePerDayBani:required': `${L}.hours.courtesy.priceMissing`,
+  'steps.5.facilitiesNote:invalid': `${L}.hours.facilitiesNoteTooLong`,
   'steps.5.hours:required': `${L}.check.hoursNeeded`,
   'steps.5.payments:required': `${L}.hours.payment.needed`,
   'steps.5.place.address:required': `${L}.check.addressNeeded`,

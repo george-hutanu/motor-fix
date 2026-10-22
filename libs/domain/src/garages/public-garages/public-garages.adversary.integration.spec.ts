@@ -92,6 +92,7 @@ describe('reading a garage by slug, hostilely', () => {
     expect(Object.keys(res.body).sort()).toEqual([
       'brandNote',
       'doesNotTake',
+      'facilities',
       'id',
       'jobTypes',
       'name',

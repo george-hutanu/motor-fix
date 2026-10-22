@@ -494,6 +494,26 @@ describe('what a card shows', () => {
     expect(item).not.toHaveProperty('serviceRadiusKm');
   });
 
+  // @traces 330-FR-006
+  it('carries the listed facilities without the note, and nothing of a draft garage', async () => {
+    const approved = await card('Alfa Service', {}, ['waiting_area']);
+    await prisma.$executeRaw`UPDATE garage SET facilities_note = 'Doar la programare' WHERE id = ${approved}::uuid`;
+    const draft = await garage('Beta Draft', {
+      stance: 'works_on',
+      status: 'draft',
+    });
+    await prisma.garageFacility.create({
+      data: { facility: 'courtesy_car', garageId: draft },
+    });
+
+    const { items } = await search.forBrand(dacia);
+
+    expect(items.map((item) => [item.name, item.facilities])).toEqual([
+      ['Alfa Service', ['waiting_area']],
+    ]);
+    expect(JSON.stringify(items)).not.toContain('programare');
+  });
+
   it('rounds the rate to the nearest leu', async () => {
     await card('Alfa', { labourFromBani: 18_049 });
     await card('Beta', { labourFromBani: 18_050 });

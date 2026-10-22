@@ -6,6 +6,7 @@ import {
   GarageBrandAnswerDto,
   PublicBrandDto,
 } from './garage-brands.dto';
+import { FACILITIES, FACILITIES_NOTE_MAX, type Facility } from './garage-hours';
 import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
@@ -208,6 +209,19 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: CourtesyCarDto,
   })
   courtesyCar?: CourtesyCarDto;
+
+  @ApiProperty({
+    description: 'The facilities it lists, in catalogue order',
+    enum: FACILITIES,
+    isArray: true,
+  })
+  facilities!: Facility[];
+
+  @ApiPropertyOptional({
+    description: 'What the garage wrote about its facilities; absent when none',
+    maxLength: FACILITIES_NOTE_MAX,
+  })
+  facilitiesNote?: string;
 
   @ApiProperty({
     description:

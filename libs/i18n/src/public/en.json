@@ -356,6 +356,8 @@
       "duplicate": "The day is already in the list",
       "facilities": "Facilities for customers",
       "facilitiesHint": "Drivers can filter by these. Tick only what you always offer, not \"sometimes\".",
+      "facilitiesNote": "Note about the facilities",
+      "facilitiesNoteTooLong": "The note can have at most 200 characters",
       "facility": {
         "courtesy_car": "Courtesy car",
         "pickup_dropoff": "Pick-up and drop-off",

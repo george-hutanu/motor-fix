@@ -237,6 +237,95 @@ describe("writing a garage's hours, closed days and facilities", () => {
   });
 });
 
+// @traces 330-FR-004
+describe("writing a garage's facilities note", () => {
+  const note = async () =>
+    (
+      await prisma.garage.findUniqueOrThrow({
+        select: { facilitiesNote: true },
+        where: { id: garageId },
+      })
+    ).facilitiesNote;
+  const rows = async () =>
+    (
+      await prisma.garageFacility.findMany({
+        orderBy: { facility: 'asc' },
+        where: { garageId },
+      })
+    ).map((row) => [row.facility, row.status]);
+
+  it('writes the courtesy car and the waiting area as listed, no pick-up, and the trimmed note', async () => {
+    await write({
+      courtesyCar: { paid: true, pricePerDayBani: 10_000 },
+      facilities: ['courtesy_car', 'waiting_area'],
+      facilitiesNote: '  Mașina la schimb se cere la programare  ',
+      payments: ['cash'],
+    });
+
+    expect(await rows()).toEqual([
+      ['courtesy_car', 'listed'],
+      ['waiting_area', 'listed'],
+    ]);
+    expect(await note()).toBe('Mașina la schimb se cere la programare');
+  });
+
+  it.each([
+    [[]],
+    [['waiting_area']],
+    [['courtesy_car', 'pickup_dropoff', 'waiting_area']],
+  ])(
+    'writes one listed row per ticked facility of %j beside the note',
+    async (facilities) => {
+      await write({ facilities, facilitiesNote: 'Doar la programare' });
+
+      expect((await rows()).map(([facility]) => facility)).toEqual(facilities);
+      expect(await note()).toBe('Doar la programare');
+    },
+  );
+
+  it.each([
+    ['no note', {}],
+    ['a note of spaces', { facilitiesNote: '   ' }],
+  ])('writes %s as none', async (_, section) => {
+    await write(section);
+
+    expect(await note()).toBeNull();
+  });
+
+  it('refuses a note of 201 characters whole', async () => {
+    const refused = await refusalOf(
+      write({ facilities: ['waiting_area'], facilitiesNote: 'a'.repeat(201) }),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(await rows()).toEqual([]);
+    expect(await note()).toBeNull();
+  });
+
+  it('is refused by the database over 200 characters', async () => {
+    await expect(
+      prisma.garage.update({
+        data: { facilitiesNote: 'a'.repeat(201) },
+        where: { id: garageId },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('records the starting note in the history, by the garage', async () => {
+    await write({ facilitiesNote: 'Doar la programare' });
+
+    const entry = await prisma.activityLog.findFirstOrThrow({
+      where: { field: 'facilitiesNote', garageId },
+    });
+    expect(entry).toMatchObject({
+      action: 'update',
+      actorRole: 'owner',
+      newValue: 'Doar la programare',
+      subjectType: 'garage',
+    });
+  });
+});
+
 describe("the history of a garage's hours, closed days and facilities", () => {
   const entries = () =>
     prisma.activityLog.findMany({

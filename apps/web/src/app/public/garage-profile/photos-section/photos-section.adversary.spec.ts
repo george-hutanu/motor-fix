@@ -21,6 +21,7 @@ const many = (count: number) =>
 const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   name: 'Atelier Dinamo',

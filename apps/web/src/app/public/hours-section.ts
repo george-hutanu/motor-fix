@@ -10,6 +10,7 @@ import {
   type Facility,
   type HoursSection,
   type Interval,
+  isFacilitiesNote,
   isHoursSection,
   isWeeklyHours,
   PAYMENTS,
@@ -34,7 +35,14 @@ const stepFive = (data: unknown) => {
 export function hoursOf(data: unknown): HoursSection {
   const section = stepFive(data);
   if (!isRecord(section)) return {};
-  const { closedDays, courtesyCar, facilities, hours, payments } = section;
+  const {
+    closedDays,
+    courtesyCar,
+    facilities,
+    facilitiesNote,
+    hours,
+    payments,
+  } = section;
   const read: HoursSection = {};
   if (isWeeklyHours(hours)) read.hours = hours;
   if (closedDaysError(closedDays) === null)
@@ -45,6 +53,7 @@ export function hoursOf(data: unknown): HoursSection {
     read.payments = payments as Payment[];
   if (courtesyCar !== undefined && isHoursSection({ courtesyCar }))
     read.courtesyCar = courtesyCar as CourtesyCar;
+  if (isFacilitiesNote(facilitiesNote)) read.facilitiesNote = facilitiesNote;
   return read;
 }
 
@@ -58,6 +67,7 @@ export function mergeHours(
     closedDays: _c,
     courtesyCar: _cc,
     facilities: _f,
+    facilitiesNote: _n,
     hours: _h,
     payments: _p,
     ...rest
@@ -67,6 +77,8 @@ export function mergeHours(
   if (value.closedDays?.length) merged['closedDays'] = value.closedDays;
   if (value.facilities?.length) merged['facilities'] = value.facilities;
   if (value.payments?.length) merged['payments'] = value.payments;
+  if (value.facilitiesNote?.trim())
+    merged['facilitiesNote'] = value.facilitiesNote;
   // The car's terms only while the car itself is ticked.
   if (value.courtesyCar && value.facilities?.includes('courtesy_car'))
     merged['courtesyCar'] = value.courtesyCar;

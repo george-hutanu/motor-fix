@@ -61,8 +61,11 @@ export function mountEdge(app: Express, apiUrl: string) {
     // A body is never replayed.
     const retriable = req.method === 'GET' || req.method === 'HEAD';
     let retried = false;
-    // The browser went away: nothing is retried or reported.
+    // The browser went away: nothing is retried or reported. Its connection
+    // can be gone before the response's close event says so, and the API's
+    // own close can be handled in between.
     let left = false;
+    const gone = () => left || req.socket.destroyed || !req.socket.writable;
     // The API cut the answer after its headers and the proxy cut the browser.
     let failed = false;
     let upstream: ClientRequest | undefined;
@@ -77,7 +80,7 @@ export function mountEdge(app: Express, apiUrl: string) {
       res.destroy();
     };
     const refused = (error: Error) => {
-      if (left) return;
+      if (gone()) return;
       if (res.headersSent) return cut();
       if (retriable && !retried) {
         retried = true;
@@ -104,7 +107,7 @@ export function mountEdge(app: Express, apiUrl: string) {
         (answer) => {
           res.writeHead(answer.statusCode ?? 502, ownHeaders(answer.headers));
           answer.on('close', () => {
-            if (!answer.complete && !left && !res.writableFinished) cut();
+            if (!answer.complete && !gone() && !res.writableFinished) cut();
           });
           answer.pipe(res);
         },

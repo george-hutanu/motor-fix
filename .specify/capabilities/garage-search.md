@@ -21,6 +21,7 @@ features:
   - 1358-results-phone-map-list
   - 1356-results-load-more
   - 328-sort-results
+  - 330-listed-facilities
 ---
 
 # Capability: Garage search
@@ -598,6 +599,14 @@ _From 328-sort-results._
 ### 328-FR-016 — Out of scope: the facility filters (#210, #183), the Home dial's choice (#148), any sort beyond the three, and a new index for the price or distance order unless the plan's `EXPLAIN` shows a page past the first needs one (Principle I).
 
 _From 328-sort-results._
+
+### 330-FR-006 — The public read and search MUST read only facility rows in status `listed`; a garage not publicly listed MUST expose no facility or note through either. Search and the Results card do not carry the note.
+
+_From 330-listed-facilities._
+
+### 330-FR-008 — Tests MUST cover, in Jest: the section guard with a note of 0, 200 and 201 characters, spaces only, a control character and a non-string; the step's error message; on real PostgreSQL: the send writing rows for drafts with 0, 1 and 3 facilities and the note with its audit entry, the send rolled back whole when the facility write fails, the public read listing every facility and the note for an approved garage and nothing for a `draft` one, and search's card facilities from `listed` rows; in Playwright: step 5 filled with two facilities and a note kept after a reload and the over-long note's error at 320 px (the send, the approved profile, the draft's 404 and the Results card are covered by the integration suite on real PostgreSQL).
+
+_From 330-listed-facilities._
 
 ## Retired
 

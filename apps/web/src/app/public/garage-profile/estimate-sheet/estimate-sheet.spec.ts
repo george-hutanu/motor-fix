@@ -17,6 +17,7 @@ import { PriceSelection } from '../price-selection/price-selection';
 const GARAGE = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   name: 'Service Auto Militari',
