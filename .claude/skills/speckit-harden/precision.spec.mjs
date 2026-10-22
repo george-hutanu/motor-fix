@@ -1,6 +1,8 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // The prose half of red-first and harden precision: the skills, agents, the
@@ -93,5 +95,32 @@ describe('the tasks template override', () => {
     const blocks = text.match(/^### Tests for User Story \d+ \(REQUIRED/gm) ?? [];
     assert.ok(stories.length >= 3);
     assert.equal(blocks.length, stories.length);
+  });
+  // @traces 1359-FR-011
+  it('fills into a tasks.md that artifact-lint --check finds no defect in (SC-005)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tasks-template-'));
+    const feature = join(dir, 'specs', '020-a-feature');
+    mkdirSync(join(dir, '.specify'), { recursive: true });
+    mkdirSync(feature, { recursive: true });
+    writeFileSync(join(dir, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/020-a-feature', level: 2 }));
+    writeFileSync(
+      join(feature, 'spec.md'),
+      ['## Requirements', '', '- **FR-001**: One.', '- **FR-002**: Two.', '- **FR-003**: Three.', ''].join('\n'),
+    );
+    writeFileSync(join(feature, 'plan.md'), '# Plan\n');
+    let n = 0;
+    const tasks = readFileSync(file, 'utf8').replace(/^(- \[ \] T\d{3} \[P\] \[US(\d)\] Contract test for) \[endpoint\]/gm, (_, head, story) => {
+      n += 1;
+      return `${head} FR-00${story}`;
+    });
+    assert.equal(n, 3, 'one contract test task per story');
+    writeFileSync(join(feature, 'tasks.md'), tasks);
+    const result = spawnSync(process.execPath, [join(REPO, '.claude/scripts/artifact-lint.mjs'), '--check'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir, SPECKIT_JEV: '0' },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.doesNotMatch(result.stdout, /ERROR|WARN/);
   });
 });
