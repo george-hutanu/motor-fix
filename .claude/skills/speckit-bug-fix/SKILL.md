@@ -126,7 +126,7 @@ Once resolved, set `BUG_SLUG` and `BUG_DIR = .specify/bugs/<BUG_SLUG>`, and brie
 - [ ] A test that fails on the bug and passes on the fix exists, and was seen failing first
 - [ ] The fix matches the assessment's root cause — not the symptom, not a nearby refactor
 - [ ] `jest --onlyChanged`, `lint` and `typecheck` green
-- [ ] Anything else noticed is under Follow-ups, not in the diff
+- [ ] Anything else noticed is fixed in this PR, or asked as a `needs-confirmation` question
 
 ## Agent Execution Rules: bug-fix deltas
 
@@ -134,8 +134,9 @@ Once resolved, set `BUG_SLUG` and `BUG_DIR = .specify/bugs/<BUG_SLUG>`, and brie
 
 The constitution's Agent Execution Rules apply in full. Specific to this command:
 
-- Anything wrong you notice outside the assessment's remediation goes
-  under Follow-ups, not into the change.
+- Anything wrong you notice outside the assessment's remediation is fixed
+  in this PR too (AGENTS.md); one that needs an owner decision is a
+  `needs-confirmation` question.
 - Tests: one focused test per behavior the fix pins down, sized like the
   neighboring `*.spec.ts`.
 - No bug id, ticket key or other internal identifier in the source — not in a

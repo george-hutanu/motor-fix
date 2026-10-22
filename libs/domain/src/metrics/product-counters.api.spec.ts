@@ -55,15 +55,16 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 91 (the decision refusals include
+// Every series the API starts: its own 92 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
 // no_open_report; the rejections one per reason; the listings sent, the
-// requests for more and the files sent again one each; the report decisions one per outcome),
+// requests for more, the copies opened to answer one and the files sent
+// again one each; the report decisions one per outcome),
 // one per check kind and result, one per re-check result, one per booking
 // confirmation outcome, one per quote decline outcome and one per review
 // outcome, and one sort change per sort.
 const API_SERIES =
-  91 +
+  92 +
   SORTS.length +
   BOOKING_CONFIRM_OUTCOMES.length +
   QUOTE_DECLINE_OUTCOMES.length +
@@ -125,6 +126,10 @@ describe("the API's product counters at start", () => {
         ...named(all, 'motorfix_verification_resubmissions_total'),
       ].map((one) => one.labels),
     ).toEqual([{}, {}]);
+    // @traces 208-FR-011
+    expect(
+      named(all, 'motorfix_listing_completions_total').map((one) => one.labels),
+    ).toEqual([{}]);
     // @traces 069-FR-011
     expect(
       named(all, 'motorfix_report_decisions_total').map(

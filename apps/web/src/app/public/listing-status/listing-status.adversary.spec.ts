@@ -37,6 +37,7 @@ const status = (
   value: VerificationStatusDto['status'],
   extra: Partial<VerificationStatusDto> = {},
 ): VerificationStatusDto => ({
+  note: null,
   reason: null,
   requestedItems: [],
   status: value,

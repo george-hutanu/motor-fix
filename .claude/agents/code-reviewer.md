@@ -47,6 +47,9 @@ running: keep the grep result, mark it "unconfirmed", move on.
    down, missing, empty, zero, huge, malformed, or arrives twice? Each answer
    is in a test or it is a guess. An untested failure path is HIGH; a failure
    path that leaks a handle, a transaction, or a temp directory is CRITICAL.
+   An unbounded loop — `while (true)`, `for (;;)`, a `while` whose exit
+   depends on the data — without a hard iteration cap or a documented exit is
+   HIGH.
 3. **Resource discipline.** Every handle, transaction and temp directory is
    released on the failure path as well as the happy one. CRITICAL.
 4. **Order and shared state.** Nothing assumes an order it does not enforce,
@@ -57,61 +60,13 @@ running: keep the grep result, mark it "unconfirmed", move on.
    carrying an internal identifier (FR id, task id, ticket key) — a whole-line
    `// @traces <feature>-FR-<n>` comment in a test file excepted. Each is a
    deletion, and each is a finding: MEDIUM alone, HIGH when it adds a dependency
-   or a layer.
+   or a layer. A dependency, engine pin or `.npmrc` change carries its reason;
+   a bump with no API the code needs is a finding: MEDIUM, HIGH when it adds a
+   dependency.
 6. **Test honesty.** Would each new test still pass with the implementation
    deleted? Does any assertion check only that something is truthy, or that a
    mock was called? Was any existing test weakened? Weakened is CRITICAL;
    vacuous is HIGH.
-
-## The house bar — what the human reviewer will flag if you do not
-
-Distilled from 61 inline review comments the repo's principal reviewer left on
-PRs 17–37. Every item below was raised three or more times; treat each as a
-finding, not a preference. A PR that reaches them with one of these still in
-it costs a review round.
-
-- **Every loop is bounded.** `while (true)`, `for (;;)`, or a `while` whose
-  exit depends on the data: add a hard iteration cap or a documented exit, or
-  it is a finding — "unbounded while loops will lock the scanner indefinitely".
-  HIGH.
-- **Hot paths use indexed `for`.** `for...of` on a per-file, per-line, or
-  per-match loop is a finding; elsewhere (load-time, small collections) it is
-  fine (AGENTS.md). MEDIUM.
-- **No synchronous I/O on the main thread** in `apps/scanner`:
-  `readFileSync`, `writeFileSync`, `execSync` and friends "freeze the main
-  thread until they complete". Startup and config loading are the exception;
-  anything per-file is not. HIGH.
-- **Binary and huge inputs are guarded before they are read.** Use the
-  `istextorbinary` package, never a hand-rolled extension list or buffer
-  scan; a large binary read into memory is "an OOM crash". Missing guard is
-  HIGH.
-- **Limits are configurable and documented.** A hard-coded size, count,
-  concurrency or timeout is a finding unless it is read from a specifically
-  named environment variable (`process.env['SCANNER_MAX_FILE_BYTES']`, not a
-  generic name) and documented where it is read. MEDIUM.
-- **A dependency, engine pin, or `.npmrc` change carries its reason.** "What
-  is this dependency for?" is the first question asked of every
-  `package.json` diff; a version bump with no API the code needs is a
-  finding. Repo-wide config that only one package needs goes on that package.
-  MEDIUM.
-- **Names and layout say what things are.** No new `index.ts` except a
-  package barrel ("they become messy"); a utility used by one plugin still
-  lives in a shared utility location, not under the plugin; directories and
-  ids carry no redundant prefixing. LOW, but always raised.
-- **Encoding is never assumed.** Offsets are byte or character offsets, said
-  which; a text/binary decision is normalised (text/, not application/); code
-  that only handles UTF-8 says so in a comment, and a test with a non-UTF-8
-  file exists. MEDIUM.
-- **A known gap is a `TODO`, never silence.** A limit that will be revisited,
-  a stub logger, a temporary build step — each carries a `TODO:` saying what
-  changes and when. A gap with no TODO is a finding; a TODO with a ticket key
-  in it is one too (Constitution II). LOW.
-
-Also asked, once each, and worth pre-empting: why `interface` over `type`;
-why an `unknown` (document it); whether a regex really wants a global
-multiline flag; whether a construct is portable across Bun and Node; whether a
-symlink is relative to the repo (follow) or external (block); test temp files
-under `node_modules/.cache`, never in the tree.
 
 ## Triage — every finding takes one of two routes
 

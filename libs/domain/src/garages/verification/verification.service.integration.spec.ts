@@ -1804,9 +1804,7 @@ describe('the approval note', () => {
       where: { fileId_kind: { fileId, kind: kind as never } },
     });
   const drop = (verificationFileId: string, kind: string) =>
-    prisma.legalDocument.delete({
-      where: { verificationFileId_kind: { kind, verificationFileId } },
-    });
+    prisma.legalDocument.deleteMany({ where: { kind, verificationFileId } });
   const missingOn = async () =>
     (await history(garageId)).find(
       (entry) => entry.field === 'verificationMissing',
@@ -2849,6 +2847,27 @@ describe('asking a garage for more', () => {
     } finally {
       log.mockRestore();
     }
+  });
+
+  // @traces 208-FR-007
+  it('tells a sending again apart from a first sending in the event it announces', async () => {
+    const first = await inTx((tx) => service().submit(tx, mihai, garageId));
+    await prisma.verificationFile.update({
+      data: { status: 'rejected' },
+      where: { id: first.id },
+    });
+    const asked = await fileIn('more_requested');
+
+    await inTx((tx) => service().resend(tx, mihai, asked.id));
+
+    const [submitted] = await events(first.id);
+    expect(submitted?.payload).not.toHaveProperty('resubmission');
+    const resent = (await events(asked.id)).filter(
+      (event) => event.kind === 'verification.submitted',
+    );
+    expect(resent.map((event) => event.payload)).toEqual([
+      { fileId: asked.id, garageId, resubmission: true },
+    ]);
   });
 
   // @traces 304-FR-014

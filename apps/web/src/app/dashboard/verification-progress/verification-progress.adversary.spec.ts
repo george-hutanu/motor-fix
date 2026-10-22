@@ -67,6 +67,7 @@ const answer = (
   value: VerificationStatusDto['status'],
   extra: Partial<VerificationStatusDto> = {},
 ): VerificationStatusDto => ({
+  note: null,
   reason: null,
   requestedItems: [],
   status: value,
@@ -313,7 +314,8 @@ describe('what the page never shows', () => {
         ...answer(status, { reason: { code: 'rar', note: 'Motiv public.' } }),
         approvalNote: 'NOTA INTERNA SECRETA',
         internalNote: 'NOTA INTERNA SECRETA',
-        note: 'NOTA INTERNA SECRETA',
+        // On a request for more, note is the admin's note to the owner.
+        ...(status !== 'more_requested' && { note: 'NOTA INTERNA SECRETA' }),
       } as unknown as VerificationStatusDto);
 
       const { host } = await render();
@@ -353,8 +355,8 @@ describe('what the page never shows', () => {
     );
   });
 
-  // @traces 101-FR-003
-  it('shows "Cerute completări" with no list and no button when the request names no items', async () => {
+  // @traces 101-FR-003 208-FR-002
+  it('shows "Cerute completări" with no list and Completează the one button when the request names no items', async () => {
     api.verificationStatusControllerRead.mockResolvedValue(
       answer('more_requested', { requestedItems: [] }),
     );
@@ -363,7 +365,7 @@ describe('what the page never shows', () => {
 
     expect(current(host)).toBe('Cerute completări');
     expect(host.querySelectorAll('.items li')).toHaveLength(0);
-    expect(buttons(host)).toHaveLength(0);
+    expect(buttons(host).map((b) => text(b))).toEqual(['Completează']);
   });
 
   // @traces 101-FR-003

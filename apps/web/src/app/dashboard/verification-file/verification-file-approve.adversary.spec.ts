@@ -85,6 +85,7 @@ function fileOf(
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
+        replaced: [],
         stale: false,
       },
       {
@@ -93,6 +94,7 @@ function fileOf(
         kind: 'rar_authorisation',
         pages: 1,
         present: true,
+        replaced: [],
         stale: null,
       },
     ],
@@ -606,6 +608,7 @@ describe('approving, attacked', () => {
             kind: 'onrc_certificate',
             pages: 0,
             present: false,
+            replaced: [],
             stale: null,
           },
           {
@@ -614,6 +617,7 @@ describe('approving, attacked', () => {
             kind: 'rar_authorisation',
             pages: 1,
             present: true,
+            replaced: [],
             stale: null,
           },
         ] as VerificationFileDto['documents'],

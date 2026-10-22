@@ -1351,6 +1351,24 @@ describe('checking a draft', () => {
       ).resolves.toEqual(['Atelier Dinamo', UNNAMED_LISTING, UNNAMED_LISTING]);
     });
 
+    // @traces 208-FR-007
+    it('leaves out the garage a copy answers for, and names any other', async () => {
+      const own = await garage('Service Popescu', 'draft');
+      await garage('Atelier Dinamo', 'approved');
+      const file = await prisma.verificationFile.create({
+        data: { garageId: own.id, status: 'more_requested' },
+      });
+      const copy = await named('Service Popescu');
+      await prisma.listingDraft.update({
+        data: { verificationFileId: file.id },
+        where: { id: copy.id },
+      });
+
+      await expect(
+        service.cuiHeldElsewhere(copy.id, '18547290'),
+      ).resolves.toEqual(['Atelier Dinamo']);
+    });
+
     it('names nobody for another CUI', async () => {
       await garage('Atelier Dinamo', 'approved');
       await named('Service Dobre', '1234567');

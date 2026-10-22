@@ -457,9 +457,18 @@ export class ListingDraftsService {
   // and the other open drafts (their step 1 name), in Romanian order. Step 6
   // keeps the CUI as typed, so the stored one is stripped as stripCui strips
   // it; the expression is listing_draft_cui_idx's, character for character.
+  // A copy of a live garage does not count that garage.
   async cuiHeldElsewhere(id: string, cui: string): Promise<string[]> {
+    const own = await this.prisma.listingDraft.findUnique({
+      select: { verificationFile: { select: { garageId: true } } },
+      where: { id },
+    });
+    const ownGarage = own?.verificationFile?.garageId;
     const [garages, drafts] = await Promise.all([
-      this.prisma.garage.findMany({ select: { name: true }, where: { cui } }),
+      this.prisma.garage.findMany({
+        select: { name: true },
+        where: { cui, ...(ownGarage && { id: { not: ownGarage } }) },
+      }),
       this.prisma.$queryRaw<{ name: string | null }[]>`
         SELECT data #>> '{steps,1,name}' AS name FROM listing_draft
         WHERE id <> ${id}::uuid

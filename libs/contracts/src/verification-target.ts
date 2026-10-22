@@ -46,6 +46,21 @@ export const VERIFICATION_REASON_CODES = [
 ] as const;
 export type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
 
+// The listing form's step that holds each item a request for more names: the
+// place and the photos share step 5. Anything else is read from the first.
+const ASKED_STEP: Partial<Record<string, number>> = {
+  address: 5,
+  documents: 6,
+  photos: 5,
+  rar: 6,
+};
+
+// The steps a request for more asks for, lowest first, each once.
+export function askedSteps(items: readonly string[]): number[] {
+  const steps = new Set(items.map((item) => ASKED_STEP[item] ?? 1));
+  return steps.size ? [...steps].sort((a, b) => a - b) : [1];
+}
+
 // A report decision's reason the garage is given, and the admins' own note.
 export const REPORT_REASON_MAX = 200;
 export const REPORT_NOTE_MAX = 1000;

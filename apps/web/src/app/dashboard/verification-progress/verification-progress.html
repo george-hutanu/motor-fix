@@ -4,9 +4,13 @@
       [status]="file.status"
       [requestedItems]="file.requestedItems"
       [reason]="file.reason"
+      [note]="file.note"
       [submittedAt]="file.submittedAt"
       [showOffMap]="false"
     />
+    @if (file.status === 'more_requested') {
+      <button hlmBtn type="button" (click)="complete()">{{ 'public.verificationStatus.complete' | t }}</button>
+    }
     <p>{{ 'garage.verification.checkIn' | t }}</p>
     @if (file.status !== 'approved') {
       <p class="off-map">{{ 'public.verificationStatus.offMap' | t }}</p>

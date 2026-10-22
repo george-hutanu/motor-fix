@@ -114,10 +114,11 @@ describe('the tail reads tail.md alone, and AGENTS.md stays small', () => {
     assert.ok(bytes < 15000, `${bytes} bytes`);
   });
 
-  // The bullet as it stood on main at 24ecff8, before AGENTS.md was cut down.
+  // The bullet as it stood on main at 24ecff8, before AGENTS.md was cut down,
+  // plus ST-1357's gate-only schedule clause.
   it('keeps the "Parallel work is watched" bullet word for word', () => {
     const bullet = read(join(repoRoot, 'AGENTS.md')).match(/^- Parallel work is watched[\s\S]*?(?=\n- )/m)?.[0] ?? '';
     const sha = createHash('sha256').update(bullet).digest('hex');
-    assert.equal(sha, '6d99de84561d20ebadb6339fb984b5b589ab1a077c3c154e4a64f3f54ca88f51');
+    assert.equal(sha, 'a31ad77e365406690efaae93e057641178a7f39b33a24d80df13beda4484e840');
   });
 });

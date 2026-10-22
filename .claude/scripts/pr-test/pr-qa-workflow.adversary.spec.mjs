@@ -114,7 +114,7 @@ describe('the sign-in limit flag', () => {
 
   // @traces 1361-FR-008
   it('appears nowhere that boots staging, production or a developer\'s stack with a value', () => {
-    const found = spawnSync('git', ['-C', ROOT, '-c', 'submodule.recurse=false', 'grep', '--untracked', '-I', '-n', 'PR_QA_SIGN_IN_UNLIMITED', '--', '.', ':!*.spec.ts', ':!*.spec.mjs'], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean);
+    const found = spawnSync('git', ['-c', 'submodule.recurse=false', '-C', ROOT, 'grep', '--untracked', '-I', '-n', 'PR_QA_SIGN_IN_UNLIMITED', '--', '.', ':!*.spec.ts', ':!*.spec.mjs'], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean);
     const outside = found.filter((l) => !/^(\.github\/workflows\/pr-qa\.yml|\.env\.example|libs\/domain\/src\/auth\/|specs\/|\.specify\/capabilities\/|\.claude\/scripts\/pr-test\/)/.test(l));
     assert.deepEqual(outside, []);
     const example = found.filter((l) => /^\.env\.example:\d+:PR_QA_SIGN_IN_UNLIMITED=/.test(l));

@@ -264,6 +264,44 @@ describe('the requests for more and the files returned', () => {
   });
 });
 
+// @traces 208-FR-011
+describe('the completion copies', () => {
+  const COUNTER = 'motorfix_listing_completions_total';
+
+  it('are charted beside the requests for more, and listed with their endpoint', () => {
+    const dashboard = JSON.parse(
+      read(
+        'infra',
+        'observability',
+        'grafana',
+        'dashboards',
+        'motorfix-product.json',
+      ),
+    ) as { panels: { title?: string; targets?: { expr: string }[] }[] };
+    expect(
+      dashboard.panels.filter(
+        (p) =>
+          p.title?.startsWith('Requests for more and files returned,') &&
+          (p.targets ?? []).some((t) => t.expr.includes(COUNTER)),
+      ).length,
+    ).toBe(3);
+
+    const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
+      .entries as { kind: string; name: string; source: string }[];
+    expect(
+      entries.find((e) => e.kind === 'product-counter' && e.name === COUNTER),
+    ).toMatchObject({ alerts: 'none', dashboard: 'motorfix-product' });
+    expect(
+      entries.find(
+        (e) => e.kind === 'endpoint' && e.name === 'listing-completion',
+      ),
+    ).toMatchObject({
+      source:
+        'libs/domain/src/garages/listing-drafts/completion/completion.controller.ts',
+    });
+  });
+});
+
 // @traces 1183-FR-006
 describe('the garage profile latency', () => {
   const ROUTE = 'http_route="/api/v1/garages/:slug"';

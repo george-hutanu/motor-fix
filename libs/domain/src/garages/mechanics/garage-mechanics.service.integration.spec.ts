@@ -169,3 +169,100 @@ describe('GarageMechanicsService.saveCards', () => {
     await nothingStored();
   });
 });
+
+// @traces 208-FR-007
+describe('GarageMechanicsService.saveAgain', () => {
+  const again = (section: MechanicsSection) =>
+    prisma.$transaction((tx) =>
+      mechanics.saveAgain(tx, garage, owner, section),
+    );
+  // The first save's entries, left out: a millisecond stamp cannot part them.
+  let earlier = new Set<string>();
+  const newer = async () =>
+    (await history()).filter((entry) => !earlier.has(entry.id));
+
+  beforeEach(async () => {
+    await save({
+      mechanics: [
+        { name: 'Andrei Pop', speciality: 'Electrică' },
+        { name: 'Mihai Ionescu' },
+      ],
+      onProfile: true,
+    });
+    earlier = new Set((await history()).map((entry) => entry.id));
+  });
+
+  it('writes nothing for the same cards', async () => {
+    const before = await cards();
+
+    await again({
+      mechanics: [
+        { name: ' Andrei Pop ', speciality: 'Electrică' },
+        { name: 'Mihai Ionescu' },
+      ],
+      onProfile: true,
+    });
+
+    expect(await cards()).toEqual(before);
+    expect(await newer()).toEqual([]);
+  });
+
+  it('matches the cards by name: one added, one removed, one changed', async () => {
+    const [andrei, mihai] = await cards();
+
+    await again({
+      mechanics: [
+        { name: 'Andrei Pop', speciality: 'Diagnoză' },
+        { name: 'Ion Marin' },
+      ],
+      onProfile: true,
+    });
+
+    const now = await cards();
+    expect(now.map((card) => card.name)).toEqual(['Andrei Pop', 'Ion Marin']);
+    expect(now[0]?.id).toBe(andrei?.id);
+    expect(
+      (await newer()).map(({ action, field, subjectId }) => ({
+        action,
+        field,
+        subjectId,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        { action: 'update', field: 'speciality', subjectId: andrei?.id },
+        { action: 'delete', field: null, subjectId: mihai?.id },
+        { action: 'create', field: null, subjectId: now[1]?.id },
+      ]),
+    );
+    expect(await newer()).toHaveLength(3);
+  });
+
+  it('keeps a card that holds an account even when the section leaves it out', async () => {
+    const [, mihai] = await cards();
+    const accountId = await account('Mecanic Mihai', ['mechanic']);
+    await prisma.mechanic.update({
+      data: { accountId },
+      where: { id: mihai?.id },
+    });
+
+    await again({
+      mechanics: [{ name: 'Andrei Pop', speciality: 'Electrică' }],
+      onProfile: true,
+    });
+
+    expect((await cards()).map((card) => card.name)).toEqual([
+      'Andrei Pop',
+      'Mihai Ionescu',
+    ]);
+    expect(await newer()).toEqual([]);
+  });
+
+  it('refuses a broken card and changes nothing', async () => {
+    const before = await cards();
+
+    expect(await refused(again({ mechanics: [{ name: 'A' }] }))).toEqual([
+      { code: 'length', field: 'mechanics[0].name' },
+    ]);
+    expect(await cards()).toEqual(before);
+  });
+});

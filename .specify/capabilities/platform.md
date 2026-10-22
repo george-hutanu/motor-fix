@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -96,6 +96,8 @@ features:
   - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
   - 1362-pr-qa-boot-orphan-checks
+  - 1357-merge-when-overlapping
+  - 1361-trim-dead-lanes
 ---
 
 # Capability: Platform
@@ -2440,6 +2442,113 @@ _From 1362-pr-qa-boot-orphan-checks._
 ### 1362-FR-005 — `gh-rest`'s check reads (`pr checks`, `pr view statusCheckRollup`, `ciOkOn`), and so `ci-wait.mjs`, MUST read every check run of the head (`filter=all`) and keep the one started last of each check, so an orphan never outranks its newer completed attempt and a newer attempt still running stays pending.
 
 _From 1362-pr-qa-boot-orphan-checks._
+
+### 1357-FR-001 — The constitution's Principle VII step on merging `main` (`constitution.md` around :582), AGENTS.md's lifecycle step 5 and the constitution card MUST state, as a PATCH (4.1.0 → 4.1.1, dated 2026-10-22, asked for by the owner), that `origin/main` is merged into a branch only when the overlap test says the merge is needed, never merely because the branch is behind; a clean behind head keeps its passed QA run and `agent-review`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-002 — `merge-main.mjs` MUST offer the overlap test as code (`merge-main.mjs --needed`): exit 0 when a merge is needed, exit 1 when it is not, with one line on stdout naming the rule that decided (the first that holds, in the order (a) to (e) of FR-003); exit 2 with the reason on stderr when it cannot compute the answer (fetch, merge-base or diff failing), which every caller treats as "needed", so an error never skips a merge; it changes nothing in the worktree.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-003 — The overlap test MUST answer "needed" when any of these holds, and "not needed" otherwise: (a) GitHub reports the PR as conflicting with `main`; (b) a file `main` changed since the merge-base is also changed by the PR; (c) `main` changed a file under the same Nx project folder (`apps/<x>` or `libs/<y>`, matched on the first two path segments exactly, so `apps/web` is not `apps/web-e2e`) as a file the PR changes; the PR's files are `git diff --name-only --no-renames <merge-base> HEAD` and main's are the same command against `origin/main`, so a rename or delete counts under both its old and new path; (d) `main` changed a path matching (repo-root patterns, full path) `docker-compose*.yml`, `package-lock.json`, `libs/domain/prisma/**`, `apps/api/openapi.json`, `.github/workflows/**`, `.claude/hooks/registry.json` or `.specify/capabilities/**`; (e) the latest lap report of the PR holds the PR QA workflow's message `the PR's docker-compose.yml has no storage service: merge main into the branch`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-004 — `tail.md` steps 1 and 4, `lifecycle.md` step 5, `speckit-pr-test/SKILL.md`'s post-merge rule and `watch.mjs`'s `merge-main` fix MUST call the overlap test and merge only on "needed"; none of them merges because the branch is behind.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-005 — No merge in the harness MUST take the `refs/pull/<n>/merge` ref; the merge source is always `origin/main`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-006 — `npm run test:harness` MUST hold a vitest case for every branch of the overlap test (each rule of FR-003 answering "needed", and the no-overlap "not needed"), and for the `--gate-only` behaviour of FR-009.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-007 — `hand-off.md` step 1 and `tail.md` step 3's no-run case MUST say how to make the live flows proof: boot the stack with `eval "$(node scripts/test-services.ts origin/main)"`, run `node .claude/scripts/pr-test/precheck.mjs --flows <file> --spec <spec> --check` until exit 0; that `dispatch.mjs` exit 64 means no proof exists for this head; that no flag skips the proof; and that a Docker-less machine is a `needs-confirmation` question on the task.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-008 — No script or skill MUST gain a way to dispatch a QA run without a live proof for the head.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-009 — `scripts/watch-schedule.sh` MUST accept `--gate-only`, under which each scheduled pass runs `watch.mjs --gate`, appends the gate's plan lines to a file named by the UTC date under the schedule's log folder when the gate reports something to do, records the pass in `passes.log` (a gate error, exit 1, writes no plan file and is logged there as today), and never claims or dispatches; `--gate-only` with `--dispatch` is a usage error.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-010 — The script's header and the watch skill MUST say how and when to turn `--dispatch` on: after a week of plan files holding no line a person would refuse.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-011 — This change MUST NOT load the launchd agent: no `install`, `launchctl load` or `bootstrap` runs from the PR, the lifecycle or a test; the owner installs it.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-012 — `tail.md` step 4's pending-check path (today it ends before the step's write is reached) MUST write `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §4, when there is something to record), committed through the specs repo, before ending with `NEXT: merge #<n> after CI`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-013 — Every gate-script edit the change makes MUST be followed by reading its diff and `node .claude/scripts/doctor.mjs --bless-hooks`; `node .claude/scripts/harness-eval.mjs --check` and `npm run test:harness` stay green.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-014 — A cut from a stock spec-kit skill or template MUST be marked as a project-local override where the file records its deltas.
+
+_From 1357-merge-when-overlapping._
+### 1361-FR-101 — `speckit-clarify` MUST no longer carry the interactive question-rendering boilerplate (the per-question presentation format, the option-table formatting rules, the "wait for the user" prose of the sequential loop) and its hook blocks (replaced by one line naming the optional `speckit.git.commit` hooks), while keeping, in its deltas record, the one-question-per-turn gate that a human-driven run still honours.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-102 — `speckit-checklist` MUST no longer carry its "Pre-Execution Checks" hook block, its "Post-Execution Checks" hook block, or its "Anti-Examples: What NOT To Do" block (origin/main 2026-10-22 lines 53-87, 327-359 and 296-325, located by content).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-103 — `speckit-analyze` MUST no longer carry its "Pre-Execution Checks" hook block, its "9. Check for extension hooks" block, or detection blocks E2 (False Completion, code-aware) and E4 (Checklist Truthfulness) (lines 23-57, 262-293, and the E2/E4 headings).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-104 — `speckit-implement` MUST no longer carry its "Project Setup Verification" ignore-file matrix (lines 107-149), its "Check checklists status" interactive block (lines 63-95; one line survives: count unchecked items per checklist and report them, never ask) or its Jira "Re-read the ticket before reporting" lane (one line survives: re-read the story's GitHub issue with its comments).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-105 — `speckit-converge` MUST no longer carry its before-convergence hook block (lines 24-61), its after-convergence hook block (lines 261-299) or its Jira "Re-read the ticket before reporting" lane (one line survives, as in FR-104).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-106 — `.claude/agents/code-reviewer.md` MUST no longer carry the "house bar" section (lines 66-114), and its rubric MUST state the bounded-loop rule (HIGH) inside item 2 and the dependency-reason rule (a dependency, engine pin or `.npmrc` change carries its reason) inside item 5, keeping the rubric at six items.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-107 — Each rubric item 1 to 6 MUST keep every severity word it carries on origin/main (1 HIGH; 2 HIGH, CRITICAL; 3 CRITICAL; 4 HIGH; 5 MEDIUM, HIGH; 6 CRITICAL, HIGH).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-108 — Line 3 of `code-reviewer.md` (its `description:` front matter, which ST-1359 edits) MUST be unchanged by this story: the diff against `origin/main` touches no line of the front matter.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-109 — Each cut from a stock spec-kit skill MUST be recorded as a project-local override in the file's deltas record (the `## Agent Execution Rules: <command> deltas` section with its `project-local addition` marker), one line per cut naming the block and the reason it does not apply here; a file with no record gets one.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-110 — Every file touched MUST still carry the rule that each verified review, QA or harden finding is fixed in the current task's PR, where it carried it before, and no defer route is reintroduced.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-111 — `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST pass on the branch head; a gate script that is edited is blessed with `node .claude/scripts/doctor.mjs --bless-hooks` after its diff is read (none is expected).
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-112 — The change MUST touch only harness text under `.claude/` (skills and the reviewer agent) and the feature's own specs folder: no product code, no gate script, no constitution text.
+
+_From 1361-trim-dead-lanes._
+
+### 1361-FR-113 — The `Done When` lines that only dispatch hooks (clarify, analyze) MUST go with their hook blocks, and implement's deltas bullet that defers a pre-existing bug or unrequested improvement is rewritten to fix it in this PR (an owner decision becomes a needs-confirmation question), so no touched file contradicts the fix-in-PR rule (FR-110).
+
+_From 1361-trim-dead-lanes._
 
 ## Retired
 

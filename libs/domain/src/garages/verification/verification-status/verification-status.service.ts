@@ -83,10 +83,12 @@ export class VerificationStatusService {
     const file = garage.verificationFiles[0] ?? null;
     const { key, reason } = garageStatusKey(garage, file);
     const status = STAGE[key];
+    const asked = status === 'more_requested';
     return {
+      // A resend keeps the request's note on the file: only an open request shows it.
+      note: asked ? (file?.reasonNote ?? null) : null,
       reason: reason ?? null,
-      requestedItems:
-        status === 'more_requested' ? (file?.requestedItems ?? []) : [],
+      requestedItems: asked ? (file?.requestedItems ?? []) : [],
       status,
       submittedAt: file ? file.submittedAt.toISOString() : null,
     };

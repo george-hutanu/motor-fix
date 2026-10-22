@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -32,6 +32,7 @@ features:
   - 1191-resilient-uploads
   - 1359-signup-survey
   - 116-listing-verification-status
+  - 208-resubmit-after-more
 ---
 
 # Capability: Garage listing
@@ -1144,6 +1145,34 @@ _From 116-listing-verification-status._
 ### 116-FR-040 — Tests MUST cover, in colocated Jest specs on real PostgreSQL and Redis: the send creating every record or none (one write failed); a signed-in driver gaining `garage` with no second account; 422 with the field list; the same `Idempotency-Key` giving one garage and the same body, a different key on a submitted draft giving 409, two concurrent sends giving one garage; the outbox rows and audit entries in the same transaction; a duplicate CUI (garage and draft) giving the warning, never a refusal; 409 `garage_already_exists` creating nothing; 403 and 404 on the status read per role; the public reads excluding the sent garage; the live re-read on each verification kind and on reconnect; FR-030 to FR-037 as named. A Playwright test MUST fill the form, send it, answer the survey, sign up with e-mail and password and check "Trimis" lit, then as an admin open the file and check the owner's view moves to "În verificare" without a reload.
 
 _From 116-listing-verification-status._
+
+### 208-FR-005 — `/list-your-garage` MUST show the form over the completion copy when the signed-in owner's file is `more_requested` (from the button or opened directly), scrolled to the first step that holds a requested item (`address` → step 5, which holds the place part, `documents` and `rar` → step 6, `photos` → the photos part, `other` or none → step 1) with that step's heading marked "Cerut de MotorFix" / "Asked by MotorFix"; every step stays editable; the form's save-as-you-type, browser copy, retries, field check, document and photo uploads apply to the copy as to a first draft (ST-806, 116-FR-007). For any other status the status view shows as today (116-FR-017). Modifies 116-FR-017.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-013 — (from #566) `follow()` in `list-your-garage.ts` MUST read the layout through `matchMedia('(min-width: 768px)')` and do at most one layout read per animation frame; no `getComputedStyle` call runs on a scroll event (unit test).
+
+_From 208-resubmit-after-more._
+
+### 208-FR-014 — (from #634) With the pinned save bar shown (tablet and up), focusing the last field of a step MUST scroll it fully above the bar: `scroll-padding-bottom` on the scrolling element equal to the bar's height (unit test).
+
+_From 208-resubmit-after-more._
+
+### 208-FR-015 — (from #643) The jump's hold MUST be released only by a `scrollend` that follows a scroll seen after the jump; a unit test with a stale queued `scrollend` keeps the hold.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-016 — (from #599) `apps/web/src/app/public/draft/draft-keeper.spec.ts` MUST exist with DraftKeeper's direct cases moved from `list-your-garage.spec.ts`; line coverage of `draft-keeper.ts` does not drop.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-017 — (from #640) Each section service (details, mechanics, prices) MUST answer 422 `validation_failed` for a `null` or non-object section instead of throwing; a unit test per service.
+
+_From 208-resubmit-after-more._
+
+### 208-FR-018 — (from #641) Listing completeness MUST count code points (`[...value.trim()].length`) as the mechanics write does; a one-emoji name is incomplete in step 4 and refused on send, consistently (unit test).
+
+_From 208-resubmit-after-more._
 
 ## Retired
 

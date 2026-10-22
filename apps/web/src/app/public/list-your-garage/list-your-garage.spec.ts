@@ -33,6 +33,10 @@ import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 // jsdom lays nothing out: each heading is placed by hand, the page is tall
 // enough not to sit at its end, and scrolling is recorded, not done.
 let tops = [1000, 2000, 3000, 4000, 5000, 6000];
+let frames = 0;
+// From a tablet up the save bar is pinned and the list of steps stands beside the form.
+let wide = false;
+const actionsHeight = 72;
 const scrolls: ScrollIntoViewOptions[] = [];
 const signIn = { join: jest.fn(), start: jest.fn() };
 // The account behind the page: none until the dialog makes one.
@@ -108,9 +112,30 @@ beforeEach(() => {
     .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
     .mockImplementation(function (this: HTMLElement) {
       const sections = [...document.querySelectorAll('section h2')];
+      if (this.classList.contains('actions'))
+        return {
+          bottom: 700,
+          height: actionsHeight,
+          top: 700 - actionsHeight,
+        } as DOMRect;
       const top = tops[sections.indexOf(this)] ?? 0;
       return { bottom: top + 40, height: 40, top } as DOMRect;
     });
+  // A frame runs once the task that asked for it is over.
+  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
+    void Promise.resolve().then(() => run(0));
+    return ++frames;
+  });
+  wide = false;
+  jest.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        addEventListener() {},
+        matches: query === '(min-width: 768px)' && wide,
+        media: query,
+        removeEventListener() {},
+      }) as unknown as MediaQueryList,
+  );
   Object.defineProperty(document.documentElement, 'scrollHeight', {
     configurable: true,
     value: 8000,
@@ -403,6 +428,8 @@ describe('the current step', () => {
       await jest.advanceTimersByTimeAsync(160);
       tops = [-2000, -1000, -10, 990, 1990, 2990];
       window.dispatchEvent(new Event('scroll'));
+      // Under a fake clock a frame is a timer of its own.
+      await jest.advanceTimersByTimeAsync(16);
       await settle(harness);
       expect(current(page)).toEqual(['3 Prețuri']);
     } finally {
@@ -442,6 +469,68 @@ describe('the current step', () => {
     window.dispatchEvent(new Event('scroll'));
     await settle(harness);
     expect(current(page)).toEqual(['2 Mărci']);
+  });
+
+  // @traces 208-FR-013
+  it('reads the layout by the tablet query and once per frame, however many scrolls the frame holds', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(window.matchMedia).toHaveBeenCalledWith('(min-width: 768px)');
+    const styles = jest.spyOn(window, 'getComputedStyle');
+    const reads = HTMLElement.prototype.getBoundingClientRect as jest.Mock;
+    const headings = [...page.querySelectorAll('section h2')];
+    reads.mockClear();
+
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
+    for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('scroll'));
+    expect(reads).not.toHaveBeenCalled();
+    await settle(harness);
+
+    expect(styles).not.toHaveBeenCalled();
+    const headingReads = reads.mock.contexts.filter((element) =>
+      headings.includes(element as Element),
+    );
+    expect(headingReads).toHaveLength(headings.length);
+    expect(current(page)).toEqual(['3 Prețuri']);
+  });
+
+  // @traces 208-FR-014
+  it('keeps a focused last field above the pinned save bar by padding the page as tall as the bar', async () => {
+    wide = true;
+    const { harness, page } = await open('/ro/list-your-garage');
+    const root = document.documentElement;
+
+    const fields = page.querySelectorAll<HTMLElement>(
+      'section:first-of-type input, section:first-of-type textarea',
+    );
+    fields[fields.length - 1].focus();
+    await settle(harness);
+    expect(root.style.scrollPaddingBottom).toBe(`${actionsHeight}px`);
+
+    harness.fixture.destroy();
+    expect(root.style.scrollPaddingBottom).toBe('');
+  });
+
+  it('pads nothing on a phone, where the save bar ends the form', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(document.documentElement.style.scrollPaddingBottom).toBe('');
+  });
+
+  // @traces 208-FR-015
+  it('keeps the hold through a scroll end left over from before the jump', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    entries(page)[3].click();
+    ended();
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['4 Mecanici · opțional']);
+
+    ended();
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['3 Prețuri']);
   });
 
   it('jumps without a smooth scroll when the device asks for reduced motion', async () => {
@@ -2897,6 +2986,27 @@ describe('a signed-in account that owns a garage', () => {
       li.classList.contains('lit'),
     );
 
+  // The copy the page asks for first; a file asking for nothing refuses it.
+  async function copyAsked(): Promise<TestRequest> {
+    const http = TestBed.inject(HttpTestingController);
+    for (let i = 0; i < 200; i++) {
+      const [found] = http.match(
+        (req) => req.method === 'POST' && req.url === `${API}/completion`,
+      );
+      if (found) return found;
+      await pause();
+    }
+    throw new Error('the copy was never asked for');
+  }
+  async function noCopy(harness: RouterTestingHarness) {
+    await answered(
+      harness,
+      await copyAsked(),
+      { code: 'verification_transition_refused', currentStatus: 'in_review' },
+      409,
+    );
+  }
+
   beforeEach(() => {
     garages.verificationStatusControllerRead.mockResolvedValue(IN_REVIEW);
   });
@@ -2906,6 +3016,7 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage');
     await settle(harness);
+    await noCopy(harness);
 
     expect(formShown(page)).toBe(false);
     expect(page.querySelector('mf-signup-survey')).toBeNull();
@@ -2939,6 +3050,7 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage');
     await settle(harness);
+    await noCopy(harness);
 
     expect(session.switchRole).toHaveBeenCalledWith('garage');
     expect(statusView(page)).not.toBeNull();
@@ -2952,6 +3064,7 @@ describe('a signed-in account that owns a garage', () => {
     session.current.set(OWNER);
     for (let i = 0; i < 5; i++) await pause();
     await settle(harness);
+    await noCopy(harness);
 
     expect(formShown(page)).toBe(false);
     expect(statusView(page)).not.toBeNull();
@@ -2963,10 +3076,352 @@ describe('a signed-in account that owns a garage', () => {
 
     const { harness, page } = await open('/ro/list-your-garage?draft=link-key');
     await settle(harness);
+    await answered(harness, await request(), {
+      data: {},
+      email: 'ion@service.test',
+      id: 'd1',
+      language: 'ro',
+      status: 'open',
+      step: 1,
+      updatedAt: '2026-10-07T11:00:00.000Z',
+    });
+    await noCopy(harness);
 
     expect(statusView(page)).not.toBeNull();
     expect(formShown(page)).toBe(false);
     expect(page.querySelector('.ended')).toBeNull();
+  });
+
+  // @traces 208-FR-005
+  describe('whose file asks for more', () => {
+    const COPY = {
+      data: { steps: { '1': { name: 'Service Popescu' } } },
+      edited: false,
+      email: 'ana@service.ro',
+      held: [],
+      id: 'c1',
+      language: 'ro',
+      requestedItems: ['rar', 'documents'],
+      status: 'open',
+      step: 6,
+      token: 'ct',
+      updatedAt: '2026-10-21T10:00:00.000Z',
+    };
+    const asked = (page: HTMLElement) =>
+      [...page.querySelectorAll('section > h2')].flatMap((h2, i) =>
+        h2.querySelector('.asked') ? [i + 1] : [],
+      );
+
+    it('opens the form over the copy at the step asked for, marked as asked by MotorFix', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(harness, await copyAsked(), COPY);
+
+      expect(statusView(page)).toBeNull();
+      expect(formShown(page)).toBe(true);
+      expect(asked(page)).toEqual([6]);
+      expect(text(page.querySelector('#pasul-6 > h2 .asked'))).toBe(
+        '· Cerut de MotorFix',
+      );
+      expect(current(page)[0]).toMatch(/^6 /);
+      expect(
+        page.querySelector<HTMLInputElement>('#pasul-1 mf-details-step input')
+          ?.value,
+      ).toBe('Service Popescu');
+    });
+
+    it.each([
+      [['address'], [5], 5],
+      [['photos'], [5], 5],
+      [['other', 'rar'], [1, 6], 1],
+      [[], [1], 1],
+    ])(
+      'marks the steps of %j and opens at the first',
+      async (items, marked, step) => {
+        session.current.set(OWNER);
+
+        const { harness, page } = await open('/ro/list-your-garage');
+        await settle(harness);
+        await answered(harness, await copyAsked(), {
+          ...COPY,
+          requestedItems: items,
+          step,
+        });
+
+        expect(asked(page)).toEqual(marked);
+        expect(current(page)[0]).toMatch(new RegExp(`^${step} `));
+      },
+    );
+
+    // @traces 208-FR-006
+    it('shows step 6 the documents the file holds', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(harness, await copyAsked(), {
+        ...COPY,
+        held: [{ issuedOn: null, kind: 'rar_authorisation', pages: 2 }],
+      });
+
+      expect(
+        text(
+          page.querySelector('.area[data-kind="rar_authorisation"] .on-file'),
+        ),
+      ).toBe('Pe dosar: 2 pagini');
+      expect(
+        page.querySelector('.area[data-kind="onrc_certificate"] .on-file'),
+      ).toBeNull();
+    });
+
+    it('keeps the form and its note when the copy fails to open, and asks again on the next session', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/ro/list-your-garage');
+      await settle(harness);
+      await answered(
+        harness,
+        await copyAsked(),
+        { code: 'unavailable', status: 503 },
+        503,
+      );
+
+      expect(formShown(page)).toBe(true);
+      expect(statusView(page)).toBeNull();
+      expect(asked(page)).toEqual([]);
+      expect(note(page)).toBe(
+        'Ciorna nu a putut fi salvată pe server. Încearcă din nou.',
+      );
+
+      session.current.set({ ...OWNER });
+      for (let i = 0; i < 5; i++) await pause();
+      await settle(harness);
+      await answered(harness, await copyAsked(), COPY);
+
+      expect(asked(page)).toEqual([6]);
+    });
+
+    describe('sent again', () => {
+      const SUBMIT = `${API}/c1/submit`;
+      const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
+      const PAGE = 'listing-documents/0f1e2d3c-0000-4000-8000-000000000002/p1';
+      // The live garage as the copy reads it: nothing missing, the survey
+      // answered when it was first sent.
+      const LIVE = {
+        declaredAt: '2026-10-11T10:00:00.000Z',
+        declaredByName: 'Ion Popescu',
+        documents: {
+          onrc_certificate: { pages: [PAGE] },
+          rar_authorisation: { pages: [PAGE] },
+        },
+        files: [PHOTO],
+        steps: {
+          '1': {
+            businessKind: 'company',
+            knownFor: 'Frâne și distribuție',
+            name: 'Service Popescu',
+            phone: '+40722123456',
+          },
+          '2': {
+            brands: [{ brandId: DACIA.id, name: 'Dacia', stance: 'works_on' }],
+          },
+          '3': {
+            jobs: [{ fromBani: 15_000, jobTypeId: jobId(1), toBani: 30_000 }],
+            labour: { fromBani: 12_000, toBani: 20_000 },
+          },
+          '4': {},
+          '5': {
+            payments: ['cash'],
+            place: { address: 'Str. Lungă 1, Brașov', lat: 45.65, lng: 25.6 },
+          },
+          '6': { cui: '18547290', rarNumber: 'BV-123' },
+        },
+        survey: {
+          foundVia: 'google',
+          liftsCount: '0',
+          mechanicsCount: '0',
+          wantsDaySheets: false,
+          wantsLiveMedia: true,
+        },
+      };
+      const SENT = {
+        fileId: 'f1',
+        garageId: 'g1',
+        status: 'submitted',
+        warnings: [],
+      };
+      const http = () => TestBed.inject(HttpTestingController);
+      const sends = () => http().match((r) => r.url === SUBMIT);
+      const dialogButton = (label: string) =>
+        [
+          ...document.querySelectorAll<HTMLButtonElement>(
+            'mf-overlay-panel button',
+          ),
+        ].find((button) => text(button) === label);
+      const createButton = (page: HTMLElement) =>
+        page.querySelector<HTMLButtonElement>(
+          'mf-signup-survey button.forward',
+        ) as HTMLButtonElement;
+
+      async function click(harness: RouterTestingHarness, element: Element) {
+        (element as HTMLElement).click();
+        for (let i = 0; i < 5; i++) await pause();
+        await settle(harness);
+      }
+
+      // The copy opened, checked and its survey's summary reached, one press
+      // from sending.
+      async function atCreate(edited = false) {
+        session.current.set(OWNER);
+        const { harness, page } = await open('/ro/list-your-garage');
+        await settle(harness);
+        await answered(harness, await copyAsked(), {
+          ...COPY,
+          data: LIVE,
+          edited,
+          requestedItems: ['photos'],
+          step: 5,
+        });
+        for (const photos of http().match((r) => r.url.endsWith('/photos')))
+          await answered(harness, photos, {
+            photos: [{ key: PHOTO, thumbnailUrl: 'https://cdn.test/p.jpg' }],
+          });
+        await click(
+          harness,
+          page.querySelector('.actions button.send') as Element,
+        );
+        await answered(harness, await request(), { warnings: [] });
+        await click(
+          harness,
+          page.querySelector('mf-missing-summary button.tell-us') as Element,
+        );
+        expect(text(page.querySelector('mf-signup-survey h1'))).toBe(
+          'Pornim service-ul tău cu:',
+        );
+        return { harness, page };
+      }
+
+      afterEach(() => {
+        document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+          n.innerHTML = '';
+        });
+      });
+
+      // @traces 208-FR-010
+      it('asks before sending a copy nothing was changed in, and sends on "Trimite"', async () => {
+        const { harness, page } = await atCreate();
+
+        await click(harness, createButton(page));
+
+        expect(text(document.querySelector('[role="dialog"]'))).toContain(
+          'Nu ai schimbat nimic. Trimiți oricum?',
+        );
+        expect(sends()).toEqual([]);
+        await click(harness, dialogButton('Trimite') as Element);
+        const [send] = sends();
+        expect(send?.request.headers.get('x-listing-token')).toBe('ct');
+      });
+
+      // @traces 208-FR-010
+      it.each([
+        ['"Renunță"', 'cancel'],
+        ['Escape', 'escape'],
+      ])(
+        'sends nothing on %s and leaves the copy as it was',
+        async (_, how) => {
+          const { harness, page } = await atCreate();
+          await click(harness, createButton(page));
+
+          if (how === 'cancel')
+            await click(harness, dialogButton('Renunță') as Element);
+          else {
+            document.activeElement?.dispatchEvent(
+              new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }),
+            );
+            for (let i = 0; i < 5; i++) await pause();
+            await settle(harness);
+          }
+
+          expect(sends()).toEqual([]);
+          expect(document.querySelector('[role="dialog"]')).toBeNull();
+          expect(statusView(page)).toBeNull();
+          expect(stored()?.data).toEqual(LIVE);
+        },
+      );
+
+      // @traces 208-FR-010
+      it('sends without asking once the copy holds a save made since it opened', async () => {
+        const { harness, page } = await atCreate(true);
+
+        await click(harness, createButton(page));
+
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(sends()).toHaveLength(1);
+      });
+
+      // @traces 208-FR-009
+      it('shows the confirmation with focus on its heading once sent', async () => {
+        const { harness, page } = await atCreate(true);
+        await click(harness, createButton(page));
+
+        await answered(harness, sends()[0] as TestRequest, SENT, 201);
+
+        const view = statusView(page) as HTMLElement;
+        expect(document.activeElement).toBe(view.querySelector('h1'));
+        expect(text(view.querySelector('.state'))).toBe(
+          'În verificare · nepublicat',
+        );
+        expect(formShown(page)).toBe(false);
+      });
+
+      // @traces 208-FR-008
+      it('swaps the form for the status view when the file asks for nothing more by now', async () => {
+        garages.verificationStatusControllerRead.mockResolvedValue({
+          ...IN_REVIEW,
+          status: 'approved',
+        });
+        const { harness, page } = await atCreate(true);
+        await click(harness, createButton(page));
+
+        await answered(
+          harness,
+          sends()[0] as TestRequest,
+          {
+            code: 'verification_transition_refused',
+            currentStatus: 'approved',
+          },
+          409,
+        );
+
+        expect(statusView(page)).not.toBeNull();
+        expect(formShown(page)).toBe(false);
+        expect(page.querySelector('mf-signup-survey')).toBeNull();
+      });
+
+      // @traces 208-FR-009
+      it('keeps the copy after a failed send and sends it again under the same key, asking nothing twice', async () => {
+        const { harness, page } = await atCreate();
+        await click(harness, createButton(page));
+        await click(harness, dialogButton('Trimite') as Element);
+        const first = sends()[0] as TestRequest;
+        await answered(harness, first, null, 500);
+
+        const note = page.querySelector('.send-result');
+        expect(text(note)).toContain('Nu am putut trimite cererea.');
+        expect(stored()?.data).toEqual(LIVE);
+        const again = note?.querySelector('button') as HTMLButtonElement;
+        expect(text(again)).toBe('Trimite din nou');
+        await click(harness, again);
+
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        const [second] = sends();
+        expect(second?.request.headers.get('Idempotency-Key')).toBe(
+          first.request.headers.get('Idempotency-Key'),
+        );
+      });
+    });
   });
 
   it.each([

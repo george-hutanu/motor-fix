@@ -50,43 +50,9 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
-## Pre-Execution Checks
-
-**Check for extension hooks (before checklist generation)**:
-- Check if `.specify/extensions.yml` exists in the project root.
-- If it exists, read it and look for entries under the `hooks.before_checklist` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-    ```
-    ## Extension Hooks
-
-    **Optional Pre-Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-  - **Mandatory hook** (`optional: false`):
-    ```
-    ## Extension Hooks
-
-    **Automatic Pre-Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-
-    Wait for the result of the hook command before proceeding to the Execution Steps.
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Execution Steps
+
+Hooks: `.specify/extensions.yml` registers only the optional `speckit.git.commit` before and after this command; commits follow `.claude/skills/speckit-auto/commit-protocol.md`.
 
 1. **Setup**: Run `python3 .specify/scripts/python/check_prerequisites.py --json --template checklist-template` from repo root and parse JSON for FEATURE_DIR, AVAILABLE_DOCS list, and TEMPLATE_CONTENT.
    - All file paths must be absolute.
@@ -293,74 +259,20 @@ Each carries a category tag (`Clarity`, `Completeness`, `Consistency`,
 `Coverage`, `Measurability`, `Edge Case`) and either a spec reference or `Gap`
 when the spec is silent — `Gap` items are the valuable ones.
 
-## Anti-Examples: What NOT To Do
-
-**❌ WRONG - These test implementation, not requirements:**
-
-```markdown
-- [ ] CHK001 - Verify landing page displays 3 episode cards [Spec §FR-001]
-- [ ] CHK002 - Test hover states work correctly on desktop [Spec §FR-003]
-- [ ] CHK003 - Confirm logo click navigates to home page [Spec §FR-010]
-- [ ] CHK004 - Check that related episodes section shows 3-5 items [Spec §FR-005]
-```
-
-**✅ CORRECT - These test requirements quality:**
-
-```markdown
-- [ ] CHK001 - Are the number and layout of featured episodes explicitly specified? [Completeness, Spec §FR-001]
-- [ ] CHK002 - Are hover state requirements consistently defined for all interactive elements? [Consistency, Spec §FR-003]
-- [ ] CHK003 - Are navigation requirements clear for all clickable brand elements? [Clarity, Spec §FR-010]
-- [ ] CHK004 - Is the selection criteria for related episodes documented? [Gap, Spec §FR-005]
-- [ ] CHK005 - Are loading state requirements defined for asynchronous episode data? [Gap]
-- [ ] CHK006 - Can "visual hierarchy" requirements be objectively measured? [Measurability, Spec §FR-001]
-```
-
-**Key Differences:**
-
-- Wrong: Tests if the system works correctly
-- Correct: Tests if the requirements are written correctly
-- Wrong: Verification of behavior
-- Correct: Validation of requirement quality
-- Wrong: "Does it do X?"
-- Correct: "Is X clearly specified?"
-
-## Post-Execution Checks
-
-**Check for extension hooks (after checklist generation)**:
-Check if `.specify/extensions.yml` exists in the project root.
-- If it exists, read it and look for entries under the `hooks.after_checklist` key
-- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
-- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
-- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
-  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
-  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
-- For each executable hook, output the following based on its `optional` flag:
-  - **Optional hook** (`optional: true`):
-    ```
-    ## Extension Hooks
-
-    **Optional Hook**: {extension}
-    Command: `/{command}`
-    Description: {description}
-
-    Prompt: {prompt}
-    To execute: `/{command}`
-    ```
-  - **Mandatory hook** (`optional: false`):
-    ```
-    ## Extension Hooks
-
-    **Automatic Hook**: {extension}
-    Executing: `/{command}`
-    EXECUTE_COMMAND: {command}
-    ```
-    After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-- If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
-
 ## Done When
 
 - [ ] Every item is falsifiable — it can be checked against the spec and come out wrong
 - [ ] No item restates a requirement; each tests a property of the requirements
 - [ ] Items map to the spec's own sections so a reader can find what each one judges
 
+## Agent Execution Rules: checklist deltas
+
+<!-- project-local addition — re-apply after `specify integration upgrade` -->
+
+Cut (project-local override), because no run here takes these lanes:
+
+- Pre-Execution Checks and Post-Execution Checks: the only hooks registered
+  for checklist are the optional `speckit.git.commit`, named in one line under
+  Execution Steps.
+- Anti-Examples: What NOT To Do: the purpose section and the sample items
+  above already say a checklist tests the requirements, not the code.

@@ -18,7 +18,7 @@ The report's sections:
 - `spec-reviewer` findings: fixed, and unaddressed MEDIUM/LOW.
 - Retrospective evidence (unjudged): both command outputs verbatim, with the
   suggested verdict labelled as a suggestion and its confidence quoted.
-- Follow-ups: everything noticed and deliberately not done.
+- Follow-ups: the `needs-confirmation` questions raised for the owner; everything else noticed was fixed in this PR.
 - Anything left out, and why.
 
 ## Completion Checklist

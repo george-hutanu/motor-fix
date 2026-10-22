@@ -376,7 +376,7 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
   );
 });
 
-// @traces 221-FR-014, 221-SC-002
+// @traces 221-FR-014 221-SC-002
 describe('Cererile mele', () => {
   it('shows each request with its car, jobs, status and how long ago, in the order read', async () => {
     const { element } = await render([

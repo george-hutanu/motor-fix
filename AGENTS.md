@@ -57,7 +57,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      a fresh **tail agent**. The story's agent, the tail and every
      `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
      `general-purpose`.
-  5. Get CI green: merge `origin/main` when behind, never a rebase; checks
+  5. Get CI green: merge `origin/main` only when
+     `merge-main.mjs --needed` finds an overlap, never a rebase; checks
      are waited for in the background, never in a foreground `sleep`.
   6. QA, beside step 5: the PR tester (`/speckit-pr-test <n>`) reviews the
      finished run; fix every blocking finding tests first, push, dispatch the
@@ -217,9 +218,11 @@ source for anything the constitution does not fix.
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
-  With no session open, `sh scripts/watch-schedule.sh install` loads a launchd
-  agent that runs the gate every 15 minutes and, when it fires, `watch.mjs
-  --dispatch`, which starts each plan entry as a detached `task-runner`. Both
+  With no session open, `sh scripts/watch-schedule.sh install --gate-only`
+  loads a launchd agent that runs the gate every 15 minutes and logs its plan
+  lines; after a week with none a person would refuse, `install --dispatch`
+  also runs `watch.mjs --dispatch`, which starts each plan entry as a
+  detached `task-runner`. Both
   sides share the claim: `watch.mjs claim` refuses a worktree whose claim is
   still live, so the schedule and a session's wait never dispatch it twice.
 - Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`

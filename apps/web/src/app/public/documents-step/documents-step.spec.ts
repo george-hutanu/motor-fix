@@ -12,6 +12,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
 import { checkListing } from '@motor-fix/contracts/listing-check';
+import type { HeldDocumentDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { DocumentsStep } from './documents-step';
@@ -54,6 +55,7 @@ interface Options {
   draftId?: string;
   declaration?: Declaration;
   documents?: DraftDocuments;
+  held?: HeldDocumentDto[];
   kind?: string;
   language?: 'ro' | 'en';
 }
@@ -62,6 +64,7 @@ async function open({
   draftId = DRAFT,
   declaration = {},
   documents = {},
+  held,
   kind = 'company',
   language = 'ro',
 }: Options = {}) {
@@ -77,6 +80,7 @@ async function open({
   fixture.componentRef.setInput('kind', kind);
   fixture.componentRef.setInput('documents', documents);
   fixture.componentRef.setInput('declaration', declaration);
+  if (held) fixture.componentRef.setInput('held', held);
   fixture.componentRef.setInput('problems', judged(documents, declaration));
   const rejudge = () =>
     fixture.componentRef.setInput(
@@ -904,5 +908,78 @@ describe('the declaration', () => {
     expect(global).toMatch(
       /input\[type="checkbox"\]\.mf-check \{[^}]*\sheight:\s*var\(--mf-tap\)/,
     );
+  });
+});
+
+// @traces 208-FR-006
+describe('the documents on file, over a copy', () => {
+  const onFile = (section: HTMLElement) =>
+    text(section.querySelector('.on-file'));
+  const held = (
+    kind: HeldDocumentDto['kind'],
+    pages: number,
+  ): HeldDocumentDto => ({ issuedOn: null, kind, pages });
+
+  it('says how many pages each held document has on file, in the plural forms', async () => {
+    const opened = await open({
+      held: [held('onrc_certificate', 1), held('rar_authorisation', 3)],
+    });
+
+    expect(onFile(certificate(opened.step))).toBe('Pe dosar: 1 pagină');
+    expect(onFile(authorisation(opened.step))).toBe('Pe dosar: 3 pagini');
+  });
+
+  it('counts twenty and more with "de", and says it in English', async () => {
+    const ro = await open({ held: [held('rar_authorisation', 20)] });
+    expect(onFile(authorisation(ro.step))).toBe('Pe dosar: 20 de pagini');
+    TestBed.resetTestingModule();
+
+    const en = await open({
+      held: [held('onrc_certificate', 1), held('rar_authorisation', 2)],
+      language: 'en',
+    });
+    expect(onFile(certificate(en.step))).toBe('On file: 1 page');
+    expect(onFile(authorisation(en.step))).toBe('On file: 2 pages');
+  });
+
+  it('says nothing on file for a kind not held, and tells no held kind as missing', async () => {
+    const opened = await open({ held: [held('onrc_certificate', 2)] });
+
+    expect(certificate(opened.step).querySelector('.on-file')).not.toBeNull();
+    expect(authorisation(opened.step).querySelector('.on-file')).toBeNull();
+    expect(
+      certificate(opened.step).querySelector(
+        '#listing-onrc_certificate-missing',
+      ),
+    ).toBeNull();
+    expect(
+      authorisation(opened.step).querySelector(
+        '#listing-rar_authorisation-missing',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('shows an upload of a held kind as the replacement of the one on file', async () => {
+    const opened = await open({
+      documents: { rar_authorisation: { pages: [keyOf(1)] } },
+      held: [held('rar_authorisation', 3)],
+    });
+
+    expect(onFile(authorisation(opened.step))).toBe(
+      'Înlocuiește documentul de pe dosar (3 pagini)',
+    );
+  });
+
+  it('says the document on file again once its replacement is removed', async () => {
+    const opened = await open({
+      documents: { rar_authorisation: { pages: [keyOf(1)] } },
+      held: [held('rar_authorisation', 3)],
+    });
+
+    button(pages(authorisation(opened.step))[0], /Șterge/).click();
+    await opened.settle();
+
+    expect(documentsOf(opened)).toEqual({});
+    expect(onFile(authorisation(opened.step))).toBe('Pe dosar: 3 pagini');
   });
 });

@@ -160,7 +160,7 @@ export class ListingPhotosService implements OnApplicationShutdown {
   // orphan is logged rather than kept in the owner's photos.
   async remove(id: string, token: string | undefined, key: string) {
     await this.drafts.open(id, token);
-    await this.prisma.$transaction(async (tx) => {
+    const shown = await this.prisma.$transaction(async (tx) => {
       const row = await locked(tx, id);
       if (row.status === 'submitted') throw submitted();
       const files = filesOf(row.data);
@@ -176,12 +176,23 @@ export class ListingPhotosService implements OnApplicationShutdown {
         },
         where: { id },
       });
+      // A copy of a live garage holds its photos: the garage still shows one
+      // the copy lets go of, until the copy is sent.
+      return tx.garagePhoto.findUnique({ where: { fileKey: key } });
     });
-    await this.storage.deleteWithCopies(key).catch((error: unknown) => {
-      this.logger.error(
-        `photo of draft ${id} left in storage: ${key}: ${String(error)}`,
-      );
-    });
+    if (!shown) await this.release([key], id);
+  }
+
+  // Photos no draft or garage holds any more, deleted after the commit that
+  // let them go; one storage cannot delete is logged, never thrown.
+  async release(keys: string[], draftId: string): Promise<void> {
+    for (const key of keys) {
+      await this.storage.deleteWithCopies(key).catch((error: unknown) => {
+        this.logger.error(
+          `photo of draft ${draftId} left in storage: ${key}: ${String(error)}`,
+        );
+      });
+    }
   }
 
   // For the sending story: the size of each processed photo, in order.

@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -18,6 +18,7 @@ features:
   - 304-request-garage-details
   - 228-how-it-works-list-garage
   - 101-verification-progress
+  - 208-resubmit-after-more
 ---
 
 # Capability: Phone layout and installable web app
@@ -305,6 +306,14 @@ _From 101-verification-progress._
 ### 101-FR-012 — The page MUST hold at 320 px and 390 px phones, tablet and desktop, light and dark, Romanian and English, with the stages stacked vertically on a phone, no sideways scroll (a long admin note or an unbroken word wraps inside the column), the lit stage conveyed by text as well as colour, each change of stage announced in a polite (`aria-live="polite"`) live region that names the new stage, never assertive and never on first load, the button and link at least 44 px tall and reachable by keyboard, and the skeleton hidden from assistive technology.
 
 _From 101-verification-progress._
+
+### 208-FR-003 — The three stages' texts and labels, the note and the button MUST hold at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll (a long note or an unbroken word wraps inside the column); the button is text as well as colour; the new texts live in the shared i18n files (U+2011 in hyphenated Romanian words).
+
+_From 208-resubmit-after-more._
+
+### 208-FR-012 — Every new DTO and error code lives in the contracts library, every route is REST with OpenAPI and the generated client is regenerated (Principle V); every new text exists in the shared i18n files in Romanian and English; a new web component is a `<name>/` folder (Principle IV); the form, the dialog and the page hold at 320 px and 390 px, tablet and desktop, light and dark, with no sideways scroll, controls at least 44 px tall, states conveyed by text as well as colour.
+
+_From 208-resubmit-after-more._
 
 ## Retired
 

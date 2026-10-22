@@ -4,6 +4,8 @@ import { ListingSubmitController } from './submit.controller';
 import { ListingSubmitService } from './submit.service';
 import { AUDIT_PORT } from '../../../audit/audit.port';
 import { AuditService } from '../../../audit/audit.service';
+import { CompletionController } from '../completion/completion.controller';
+import { CompletionService } from '../completion/completion.service';
 
 // Apart from GaragesModule: the send reads the photos' sizes, and the photos
 // module already imports `garages`. `notifications` is the application's
@@ -16,11 +18,12 @@ export class ListingSubmitModule {
     notifications: DynamicModule,
   ): DynamicModule {
     return {
-      controllers: [ListingSubmitController],
+      controllers: [ListingSubmitController, CompletionController],
       imports: [garages, photos, notifications],
       module: ListingSubmitModule,
       providers: [
         ListingSubmitService,
+        CompletionService,
         { provide: AUDIT_PORT, useClass: AuditService },
       ],
     };

@@ -32,21 +32,29 @@ const STAFF_GATE =
 const OWN_NEW_GARAGE =
   "the send reads only the garage it just created in its own transaction, as the account it makes that garage's owner; the garage stays a draft no public read shows";
 
+// A completion copy sent again writes each step back the same way, over the
+// garage of the file it is bound to.
+const OWN_COPY =
+  "a copy sent again reads only the garage of the file it is bound to, in the transaction that has just checked the actor is that garage's owner and the file asks for more";
+
 // Reads a non-staff entry point reaches that may skip the scope, each with
 // why it must see a garage the public listing hides.
 const EXCEPTIONS: Record<string, string> = {
   'cars/saved-garages/saved-garages.service.ts#list':
     'a driver keeps the garages they saved after one is hidden, marked unavailable by the scope as a column',
-  'garages/details/garage-details.service.ts#create':
-    'a new garage takes a slug no garage holds, hidden or not; it reads only the slugs it might take, and returns none',
+  'garages/details/garage-details.service.ts#slugOf':
+    'a new or renamed garage takes a slug no garage holds, hidden or not; it reads only the slugs it might take, and returns none',
+  'garages/details/garage-details.service.ts#update': OWN_COPY,
   'garages/garage-brands/write-garage-brands.ts#writeGarageBrands':
     OWN_NEW_GARAGE,
   'garages/garage-hours.ts#writeGarageHours': OWN_NEW_GARAGE,
   'garages/garage-settings/write-garage-payments.ts#writeGaragePayments':
     OWN_NEW_GARAGE,
+  'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
   'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
     'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
   'garages/place/garage-place.service.ts#write': OWN_NEW_GARAGE,
+  'garages/prices/garage-prices/garage-prices.service.ts#labourAgain': OWN_COPY,
   'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':
     OWN_NEW_GARAGE,
   'garages/staff-invite/staff-invite.service.ts#check':

@@ -175,10 +175,11 @@ days); the report names them and gives the run's URL. The specs repository's
 - **QA runs in CI, not on the laptop.** A QA run holds no heavy slot, so ready
   PRs are not queued behind the 16 GB laptop; only a `--local` run (Actions
   unavailable) waits for a `scripts/heavy.sh` slot. After a merge, a PR
-  waiting in QA merges `origin/main` and is tested again only if it now
-  conflicts with `main` or shares changed files with what merged (never a
-  rebase, which would need a forced push); its CI already runs on the merge
-  result.
+  waiting in QA asks `merge-main.mjs --needed` (`.claude/scripts/`), and
+  merges `origin/main` and is tested again only on exit 0 or 2 (a conflict,
+  a file or Nx project shared with what merged, an infra path, or the lap
+  report's compose storage error); exit 1 keeps its run (never a rebase,
+  which would need a forced push).
 - **No images in the repo.** Screenshots are evidence for a chat, a review
   or a PR comment, never a commit: QA copies only `report.md` and
   `report.json` into `pr-review/`, and `specs/.gitignore` refuses images there. Real
