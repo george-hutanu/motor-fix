@@ -63,7 +63,7 @@ export function parseCapability(text) {
   const headings = [];
   const tombstones = [];
   let section = null;
-  for (const line of text.split("\n")) {
+  for (const line of text.split(/\r?\n/)) {
     const heading = line.match(/^##\s+(.+?)\s*$/);
     if (heading) {
       section = heading[1].toLowerCase();
@@ -141,7 +141,7 @@ const listValues = (line) =>
  * legitimately has nothing to merge.
  */
 export function parseDelta(specText) {
-  const lines = specText.split("\n");
+  const lines = specText.split(/\r?\n/);
   const start = lines.findIndex((l) => /^##\s+Spec Delta\b/i.test(l));
   if (start === -1) return [];
   const sections = [];
@@ -197,7 +197,7 @@ export function declaredRequirements(specText) {
   const out = new Map();
   let current = null;
   let indent = 0;
-  for (const line of specText.split("\n")) {
+  for (const line of specText.split(/\r?\n/)) {
     const m = line.match(/^(\s*)-\s+\*{0,2}(FR-\d{3}[a-z]?)\*{0,2}\s*[:.]\s*(.*)$/);
     const more = line.match(/^(\s+)(?:-\s+)?(\S.*)$/);
     if (m) {
@@ -303,6 +303,10 @@ export function validateFeature(repo, feature) {
     if (replacements.has(id)) add("ERROR", "delta-adds-and-modifies", `${id} is under Adds and is a Modifies replacement — name it once, as the replacement`);
   if (delta.some((s) => s.adds.length) && !delta.some((s) => s.modifies.length || s.removes.length))
     add("WARN", "delta-all-adds", "the delta only adds — an FR that changes a requirement a capability holds is a Modifies naming it");
+  // Each section is planned from the file as it stands, so a second one would overwrite the first.
+  const named = delta.map((section) => section.capability);
+  for (const slug of new Set(named.filter((slug, i) => named.indexOf(slug) !== i)))
+    add("ERROR", "delta-capability-twice", `${slug} is named by more than one \`### Capability:\` section — list its changes in one`);
 
   // An archived feature's requirements already live in a capability under its
   // own number; they are assigned even when its delta no longer names them.
@@ -344,9 +348,9 @@ export function planMerge(repo, feature) {
     for (const { base, by } of section.modifies) {
       if (!by || !cap.requirements.has(base)) continue;
       const token = `${feature.num}-${by}`;
-      // The replacement takes the first base's place in the document, so the
-      // reading order of a capability stays the order its behaviour was built
-      // in; a later base it also replaces only leaves.
+      // The replacement takes the place of the first base the delta lists for
+      // it, so the capability keeps reading in build order; a later base it
+      // also replaces only leaves.
       const written = modified.some((m) => m.token === token);
       // A function, so a `$` pattern in the requirement text is written as is.
       const replacement = written ? "" : `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;

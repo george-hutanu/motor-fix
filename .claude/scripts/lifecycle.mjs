@@ -370,8 +370,11 @@ function localChecks(ctx) {
   }
   runChecks(ctx);
   if (!key) return;
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify({ ...key, at: new Date().toISOString() })}\n`);
+  // The proof only saves time: a cache that cannot be written leaves the next run to check again.
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${JSON.stringify({ ...key, at: new Date().toISOString() })}\n`);
+  } catch {}
 }
 
 function runChecks(ctx) {
