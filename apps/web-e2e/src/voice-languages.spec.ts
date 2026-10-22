@@ -79,6 +79,8 @@ async function results(page: Page, voice: Voice, language: Language) {
   await page
     .getByRole('link', { name: TEXTS[language].voice[`v${voice}`].cta })
     .click();
+  // Home has a level-one heading too: wait for the Results address first.
+  await expect(page).toHaveURL(new RegExp(`/${language}/garages`));
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await settled(page);
 }
@@ -163,8 +165,20 @@ async function shownSlots(page: Page, voice: Voice, language: Language) {
 // that language, and none is left in the first.
 async function switchKeepsVoice(page: Page, voice: Voice, from: Language) {
   const to = OTHER[from];
-  const before = await shownSlots(page, voice, from);
-  expect(before.length).toBeGreaterThan(0);
+  // Results fills its list after the page settles: read the slots once two
+  // reads half a second apart agree.
+  let before: string[] = [];
+  await expect
+    .poll(
+      async () => {
+        const seen = await shownSlots(page, voice, from);
+        const same = seen.length > 0 && seen.join() === before.join();
+        before = seen;
+        return same;
+      },
+      { intervals: [500] },
+    )
+    .toBe(true);
 
   await page
     .getByRole('group', { name: LANGUAGE_GROUP[from] })
@@ -245,8 +259,15 @@ test.describe('every voice on a 320 px phone @seeded', () => {
           const { brand, word } = hyphenated(voice, language);
           await home(page, language);
           await choose(page, language, brand);
-          await expect(headline(page)).toContainText(word);
-          expect(await lines(headline(page), word)).toBe(1);
+          // Voice 5 names the brand in the paragraph under the headline.
+          const carrier = visible(
+            page,
+            'mf-home .hero :is(h2, p:not(.label))',
+          ).filter({
+            hasText: word,
+          });
+          await expect(carrier).toHaveCount(1);
+          expect(await lines(carrier, word)).toBe(1);
         }
       });
   });
