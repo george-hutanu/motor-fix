@@ -102,6 +102,9 @@ export class HoursStep {
   readonly showAll = input(false);
   // Whether any field shows an error, for the step list's dot.
   readonly shown = output<boolean>();
+  // Whether the facilities note is past its limit: the draft cannot see it,
+  // so the page holds the send at the note itself.
+  readonly held = output<boolean>();
 
   protected readonly times = TIMES;
   protected readonly days = WEEKDAYS;
@@ -201,6 +204,7 @@ export class HoursStep {
 
   constructor() {
     effect(() => this.shown.emit(Object.values(this.failing()).some(Boolean)));
+    effect(() => this.held.emit(this.overLong() !== undefined));
     // The calendar comes with the client: a server render would drop it.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
     const year = Number(this.today().slice(0, 4));

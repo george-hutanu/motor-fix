@@ -269,6 +269,8 @@ export class ListYourGarage {
   // Sending was asked for: every field shows what is wrong with it.
   protected readonly asked = signal(false);
   private readonly shownErrors = signal<Partial<Record<Part, boolean>>>({});
+  // A facilities note past its limit, which the draft cannot see.
+  protected readonly noteHeld = signal(false);
   // The steps where a field shows an error, one the draft cannot see (a
   // facilities note past its limit stays in its step) included.
   private readonly showing = computed(() => {
@@ -574,7 +576,7 @@ export class ListYourGarage {
     }
     // A facilities note past its limit stays in its step, never in the draft
     // the check reads: the step's own error holds the send.
-    if (this.shownErrors().hours) {
+    if (this.noteHeld()) {
       this.goTo('steps.5.facilitiesNote');
       return;
     }

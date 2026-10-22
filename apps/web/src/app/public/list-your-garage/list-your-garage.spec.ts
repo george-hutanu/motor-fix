@@ -2306,6 +2306,36 @@ describe('sending for verification', () => {
     expect(document.activeElement).toBe(note);
   });
 
+  // @traces 330-FR-002
+  it('holds the send at the facilities note only for its own error, not for another step 5 error the server found', async () => {
+    const { harness, page } = await completeCopy();
+    await press(harness, page);
+    await answered(
+      harness,
+      await request(),
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'steps.5.payments' }],
+        warnings: [],
+      },
+      422,
+    );
+    expect(dotted(page)).toEqual([5]);
+
+    await press(harness, page);
+
+    // The press goes on to the server, as for any complete copy: the draft
+    // is saved before it is judged again.
+    expect(
+      TestBed.inject(HttpTestingController).match((r) =>
+        /\/listing-drafts\/d1$/.test(r.url),
+      ),
+    ).toHaveLength(1);
+    expect(document.activeElement).not.toBe(
+      page.querySelector('mf-hours-step [name="facilitiesNote"]'),
+    );
+  });
+
   // @traces 330-FR-002 115-FR-007
   it('marks step 5, not ticks it, while its facilities note is too long, and ticks it again once it holds', async () => {
     const { harness, page } = await completeCopy();
