@@ -106,6 +106,9 @@ function orderOf(sort: SearchSort, area: AreaSql | undefined): Prisma.Sql {
 const RATING = /^(?:[1-4]\.\d|5\.0)$/;
 // review_count is a PostgreSQL integer.
 const INT4_MAX = 2_147_483_647;
+// No two points on the sphere the distances are measured on (mean radius
+// 6,371,008.8 m) lie farther apart than half its circumference.
+const FARTHEST_M = Math.PI * 6_371_008.8;
 
 const invalidCursor = () =>
   refusal(
@@ -126,7 +129,7 @@ function sortValueOk(parsed: Partial<Cursor>): boolean {
   const hasD = 'd' in parsed;
   const hasP = 'p' in parsed;
   if (s === 'distance') {
-    return !hasP && typeof d === 'number' && Number.isFinite(d) && d >= 0;
+    return !hasP && typeof d === 'number' && d >= 0 && d <= FARTHEST_M;
   }
   if (s === 'price') return !hasD && (p === null || isCount(p));
   return !hasD && !hasP;
