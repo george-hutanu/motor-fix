@@ -33,9 +33,9 @@
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
@@ -334,8 +334,47 @@ function check(ctx) {
   return {};
 }
 
-/** The CI-only checks and the affected typecheck and unit tests, which the commit hook no longer runs. */
+/**
+ * The tree the local checks would judge: `git write-tree` and the merge base
+ * with origin/main, or null on a dirty worktree or when git gives either empty.
+ */
+function proofKey(ctx) {
+  try {
+    if (ctx.git("status", "--porcelain").stdout.trim()) return null;
+    const tree = ctx.git("write-tree").stdout.trim();
+    const base = tree && ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
+    return tree && base ? { tree, base } : null;
+  } catch (e) {
+    if (e instanceof Stop) return null;
+    throw e;
+  }
+}
+
+/**
+ * The CI-only checks and the affected typecheck and unit tests, which the
+ * commit hook no longer runs: skipped when a passing proof (one file per
+ * worktree in .specify/.cache/) covers this clean tree and merge base.
+ */
 function localChecks(ctx) {
+  const key = proofKey(ctx);
+  const file = join(ctx.repo, ".specify", ".cache", `local-checks-${basename(resolve(ctx.repo))}.json`);
+  if (key) {
+    let proof = null;
+    try {
+      proof = JSON.parse(readFileSync(file, "utf8"));
+    } catch {}
+    if (proof?.tree === key.tree && proof?.base === key.base) {
+      ctx.did.push(`local checks: reused proof ${key.tree.slice(0, 7)}`);
+      return;
+    }
+  }
+  runChecks(ctx);
+  if (!key) return;
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify({ ...key, at: new Date().toISOString() })}\n`);
+}
+
+function runChecks(ctx) {
   runCheck(ctx, "observability-inventory", "node", ["scripts/observability-inventory.ts"]);
   runCheck(ctx, "structure-check", "node", ["scripts/structure-check.ts", "--base", "origin/main"]);
   runCheck(ctx, "lint", "npm", ["run", "lint"]);

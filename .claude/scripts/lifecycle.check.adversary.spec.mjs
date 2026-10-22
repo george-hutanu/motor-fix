@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -188,5 +188,37 @@ describe('lifecycle check: the affected tests are measured from the merge base',
     assert.match(cmd, /--base=0123abcd(\s|$)/);
     assert.match(cmd, /JEST_SUITE=unit/);
     assert.match(cmd, /nx affected -t typecheck test/);
+  });
+});
+
+// @traces 1358-FR-014
+describe('lifecycle check: a failing check leaves no proof behind', () => {
+  beforeEach(fixture);
+  afterEach(() => rmSync(repo, { recursive: true, force: true }));
+
+  const proofFile = () => join(repo, '.specify', '.cache', `local-checks-${repo.split('/').at(-1)}.json`);
+  const clean = (sha) => [
+    ['git status --porcelain', { stdout: '' }],
+    ['git write-tree', { stdout: `${sha}\n` }],
+  ];
+
+  for (const prefix of ['node scripts/observability-inventory.ts', 'node scripts/structure-check.ts', 'npm run lint', 'sh scripts/heavy.sh']) {
+    it(`records no proof when ${prefix} fails`, () => {
+      const h = harness({ answers: [[prefix, { code: 1, stdout: 'refused\n' }], ...clean('aaaa1111')] });
+      assert.equal(step(['check'], h.io).ok, false);
+      assert.ok(!existsSync(proofFile()));
+    });
+  }
+
+  it('keeps the old proof after a failure on a new tree, and never reads it for that tree', () => {
+    assert.equal(step(['check'], harness({ answers: clean('aaaa1111') }).io).ok, true);
+    const failed = harness({ answers: [['npm run lint', { code: 1, stdout: 'refused\n' }], ...clean('bbbb2222')] });
+    assert.equal(step(['check'], failed.io).ok, false);
+    assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).tree, 'aaaa1111');
+    const rerun = harness({ answers: clean('bbbb2222') });
+    const result = step(['check'], rerun.io);
+    assert.equal(result.ok, true);
+    assert.equal(local(rerun).filter((c) => !c.startsWith('node scripts/pr-body-check.ts')).length, 4);
+    assert.ok(!result.did.some((d) => /reused proof/.test(d)));
   });
 });
