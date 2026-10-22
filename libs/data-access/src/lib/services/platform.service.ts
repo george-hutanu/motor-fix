@@ -12,6 +12,9 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { platformStatusControllerStatus } from '../fn/platform/platform-status-controller-status';
 import { PlatformStatusControllerStatus$Params } from '../fn/platform/platform-status-controller-status';
 import { PlatformStatusDto } from '../models/platform-status-dto';
+import { publicCopyVoicesControllerSettings } from '../fn/platform/public-copy-voices-controller-settings';
+import { PublicCopyVoicesControllerSettings$Params } from '../fn/platform/public-copy-voices-controller-settings';
+import { PublicCopyVoicesDto } from '../models/public-copy-voices-dto';
 
 @Injectable({ providedIn: 'root' })
 export class PlatformService extends BaseService {
@@ -42,6 +45,31 @@ export class PlatformService extends BaseService {
   platformStatusControllerStatus(params?: PlatformStatusControllerStatus$Params, context?: HttpContext): Promise<PlatformStatusDto> {
     const resp = this.platformStatusControllerStatus$Response(params, context);
     return resp.then((r: StrictHttpResponse<PlatformStatusDto>): PlatformStatusDto => r.body);
+  }
+
+  /** Path part for operation `publicCopyVoicesControllerSettings()` */
+  static readonly PublicCopyVoicesControllerSettingsPath = '/api/v1/copy-voices';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `publicCopyVoicesControllerSettings()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicCopyVoicesControllerSettings$Response(params?: PublicCopyVoicesControllerSettings$Params, context?: HttpContext): Promise<StrictHttpResponse<PublicCopyVoicesDto>> {
+    const obs = publicCopyVoicesControllerSettings(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `publicCopyVoicesControllerSettings$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicCopyVoicesControllerSettings(params?: PublicCopyVoicesControllerSettings$Params, context?: HttpContext): Promise<PublicCopyVoicesDto> {
+    const resp = this.publicCopyVoicesControllerSettings$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PublicCopyVoicesDto>): PublicCopyVoicesDto => r.body);
   }
 
 }

@@ -15,6 +15,21 @@ model PlatformRule {
   @@map("platform_rule")
 }
 
+// One row per copy voice of the home page (1-5): whether visitors may get it
+// and whether every new visit gets it. At least one is on and at most one is
+// pinned, a pinned one on; the service keeps that under a lock of all five.
+model CopyVoiceSetting {
+  id        String    @id @default(uuid()) @db.Uuid
+  voice     Int       @unique @db.SmallInt
+  enabled   Boolean   @default(true)
+  pinned    Boolean   @default(false)
+  // No foreign key: the last change outlives the account, as the audit does.
+  updatedBy String?   @map("updated_by") @db.Uuid
+  updatedAt DateTime? @map("updated_at") @db.Timestamptz(3)
+
+  @@map("copy_voice_setting")
+}
+
 enum PlatformRuleChangeStatus {
   requested
   approved

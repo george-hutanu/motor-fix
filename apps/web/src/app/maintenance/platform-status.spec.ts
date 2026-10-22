@@ -8,6 +8,7 @@ import { PlatformStatus } from './platform-status';
 import { Live } from '../dashboard/live';
 import { Session } from '../dashboard/session';
 import { PublicLive } from '../public/live';
+import { Voice } from '../voice/voice';
 
 type Answer = { maintenance: boolean } | Error;
 
@@ -36,6 +37,7 @@ async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
   const current = signal<MeDto | null>(null);
   const live = { ...fakeStream(), state: signal('closed') };
   const leave = jest.fn();
+  const voice = { read: jest.fn(async () => undefined) };
   const publicLive = {
     ...fakeStream(),
     register: jest.fn(() => leave),
@@ -50,6 +52,7 @@ async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
       { provide: Session, useValue: { current } },
       { provide: Live, useValue: live },
       { provide: PublicLive, useValue: publicLive },
+      { provide: Voice, useValue: voice },
     ],
   });
   const platformStatus = TestBed.inject(PlatformStatus);
@@ -65,6 +68,7 @@ async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
     platformStatus,
     publicLive,
     status,
+    voice,
   };
 }
 
@@ -269,5 +273,51 @@ describe('PlatformStatus', () => {
 
     expect(publicLive.register).not.toHaveBeenCalled();
     expect(status).not.toHaveBeenCalled();
+  });
+
+  // @traces 010-FR-011
+  it.each(['live', 'publicLive'] as const)(
+    're-reads the copy voices past every cache on a change heard on the %s stream',
+    async (stream) => {
+      const fakes = await setUp();
+      fakes.voice.read.mockClear();
+
+      fakes[stream].events.next(changed('copy_voices'));
+      await settle();
+
+      expect(fakes.voice.read).toHaveBeenCalledWith('2026-10-08T12:00:00.000Z');
+      expect(fakes.status).not.toHaveBeenCalled();
+    },
+  );
+
+  // @traces 010-FR-011
+  it.each(['live', 'publicLive'] as const)(
+    're-reads the copy voices past every cache when the %s stream opens again',
+    async (stream) => {
+      const fakes = await setUp({ answers: [{ maintenance: false }] });
+      fakes.voice.read.mockClear();
+
+      fakes[stream].resync.next();
+      await settle();
+
+      expect(fakes.voice.read).toHaveBeenCalledWith(expect.any(String));
+    },
+  );
+
+  // @traces 010-FR-011
+  it('leaves the copy voices alone on a change of another rule', async () => {
+    const { live, voice } = await setUp({ answers: [{ maintenance: false }] });
+    voice.read.mockClear();
+
+    live.events.next(changed('maintenance_mode'));
+    await settle();
+
+    expect(voice.read).not.toHaveBeenCalled();
+  });
+
+  it('reads no copy voices on the server', async () => {
+    const { voice } = await setUp({ platform: 'server' });
+
+    expect(voice.read).not.toHaveBeenCalled();
   });
 });

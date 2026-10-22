@@ -1,6 +1,6 @@
 ---
 capability: home
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 225-brand-picker
   - 229-location-or-address
@@ -10,6 +10,7 @@ features:
   - 271-garage-distance
   - 228-how-it-works-list-garage
   - 006-copy-voice-rotation
+  - 010-copy-voice-switch
 ---
 
 # Capability: Home
@@ -288,9 +289,9 @@ _From 228-how-it-works-list-garage._
 
 _From 006-copy-voice-rotation._
 
-### 006-FR-002 — A visit that starts with a full page load of Home MUST take the next voice from the stored round, before the first paint, and store it as the visit's voice, with the time it was taken and the rest of the round; with no round left, a new shuffled round of the enabled voices is started first. The voice is taken once per page load, in one place.
+### 010-FR-010 — The voice taken at the start of a visit (006-FR-002, 006-FR-005) MUST come only from the voices that are on, using the device's last read copy of the settings (all five on, none pinned, when it has none or when the stored copy is unreadable or inconsistent: no voice on, a pinned voice that is off): a stored round skips voices that are off; with a voice pinned, a visit that would take a new voice takes the pinned one, stores it as the visit's voice with the time, and leaves the stored round as it was; a visit that keeps its stored voice keeps it only while that voice is on (else it takes a new voice as above).
 
-_From 006-copy-voice-rotation._
+_From 010-copy-voice-switch._
 
 ### 006-FR-003 — A round MUST hold each enabled voice exactly once, and a new round MUST NOT start with the voice that ended the previous one (that voice moves to the end of the new round).
 
@@ -304,9 +305,9 @@ _From 006-copy-voice-rotation._
 
 _From 006-copy-voice-rotation._
 
-### 006-FR-006 — One voice source MUST serve every voice text of the visit; the voice is fixed in memory when the page loads and is not re-read from storage, so another tab taking a new voice does not change this one. Moving between screens inside the app and switching the language MUST keep the voice.
+### 010-FR-011 — Once the app runs in the browser it MUST read the settings, keep the copy on the device for the next page loads, and read them again, past every cache, on every `copy_voices` change heard on a live stream and whenever a stream opens again. When the visit's voice is now off, every voice text on screen MUST move to the next voice (the pinned one when a voice is pinned, else the next enabled voice taken off the stored round), stored as the visit's voice with the visit's start time unchanged, within 2 seconds of the change being heard (the re-read included); when a read fails the page keeps its current voice and the device's copy, and tries again at the next change heard, stream reopening or page load; a voice that is still on stays, even when another voice is pinned.
 
-_From 006-copy-voice-rotation._
+_From 010-copy-voice-switch._
 
 ### 006-FR-007 — On Home the visit's voice MUST set the label above the headline, the headline, the paragraph, the main button, the 3D car section title, the garage list title, the benefits headline, the call to garages and the red-lamp label of a refusing garage: the full label with the brand ("Nu lucrează pe BMW") on the preview rows' lamp, the short form ("Nu lucrează pe") before the list of refused brands on the cards.
 
@@ -324,9 +325,9 @@ _From 006-copy-voice-rotation._
 
 _From 006-copy-voice-rotation._
 
-### 006-FR-011 — Voices that are switched off MUST be skipped by the round; until the admin settings exist, all five voices are on.
+### 010-FR-010 — The voice taken at the start of a visit (006-FR-002, 006-FR-005) MUST come only from the voices that are on, using the device's last read copy of the settings (all five on, none pinned, when it has none or when the stored copy is unreadable or inconsistent: no voice on, a pinned voice that is off): a stored round skips voices that are off; with a voice pinned, a visit that would take a new voice takes the pinned one, stores it as the visit's voice with the time, and leaves the stored round as it was; a visit that keeps its stored voice keeps it only while that voice is on (else it takes a new voice as above).
 
-_From 006-copy-voice-rotation._
+_From 010-copy-voice-switch._
 
 ## Retired
 
@@ -336,3 +337,6 @@ _From 006-copy-voice-rotation._
 - `229-FR-004` — superseded by `271-FR-005` (2026-10-18)
 - `225-FR-007` — superseded by `228-FR-008` (2026-10-20)
 - `225-FR-003` — superseded by `228-FR-013` (2026-10-20)
+- `006-FR-002` — superseded by `010-FR-010` (2026-10-22)
+- `006-FR-011` — superseded by `010-FR-010` (2026-10-22)
+- `006-FR-006` — superseded by `010-FR-011` (2026-10-22)

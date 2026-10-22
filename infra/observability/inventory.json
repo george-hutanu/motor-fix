@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 156,
+    "count": 159,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -570,6 +570,15 @@
       "alerts": "none",
       "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-260"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_copy_voice_changes_total",
+      "source": "libs/domain/src/admin/platform-rules/copy-voices/copy-voices.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts copy voices switched on, off, pinned or unpinned by admins, with one CopyVoices log line per changed voice; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-10"
     },
     {
       "kind": "outside-service",

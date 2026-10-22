@@ -2,6 +2,11 @@ import { type DynamicModule, Module } from '@nestjs/common';
 
 import { PlatformRuleChangesController } from './changes/changes.controller';
 import { PlatformRuleChangesService } from './changes/changes.service';
+import {
+  CopyVoicesController,
+  PublicCopyVoicesController,
+} from './copy-voices/copy-voices.controller';
+import { CopyVoicesService } from './copy-voices/copy-voices.service';
 import { PlatformRulesController } from './platform-rules.controller';
 import {
   PLATFORM_RULES_OPTIONS,
@@ -25,6 +30,8 @@ export class PlatformRulesModule {
         PlatformRulesController,
         PlatformRuleChangesController,
         PlatformStatusController,
+        CopyVoicesController,
+        PublicCopyVoicesController,
       ],
       // Other modules (the reviews story) read reviewPolicy() from here.
       exports: [PlatformRulesService],
@@ -33,6 +40,7 @@ export class PlatformRulesModule {
       providers: [
         PlatformRulesService,
         PlatformRuleChangesService,
+        CopyVoicesService,
         { provide: PLATFORM_RULES_OPTIONS, useValue: options },
         { provide: AUDIT_PORT, useClass: AuditService },
       ],

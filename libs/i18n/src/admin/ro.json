@@ -1,4 +1,24 @@
 {
+  "copyVoices": {
+    "lastVoice": "Cel puțin o voce rămâne activă",
+    "line": "Ce variante de text văd vizitatorii pe prima pagină",
+    "loadFailed": "Nu am putut încărca vocile",
+    "name": {
+      "v1": "1 · La obiect",
+      "v2": "2 · Ca de la un prieten",
+      "v3": "3 · Tehnic",
+      "v4": "4 · Cu zâmbet",
+      "v5": "5 · Fără surprize"
+    },
+    "paused": "în pauză cât e fixată vocea {voice}",
+    "pin": "Fixează pentru toți",
+    "pinnedHint": "Scoate fixarea ca să o oprești",
+    "retry": "Reîncearcă",
+    "saveFailed": "Nu am putut salva. Încearcă din nou.",
+    "stale": "Vocea s‑a schimbat între timp. Am citit‑o din nou.",
+    "title": "Voci de text",
+    "unpin": "Scoate fixarea"
+  },
   "demand": {
     "allBrands": "Vezi toate mărcile",
     "allJobs": "Vezi toate lucrările",

@@ -62,12 +62,13 @@ export default defineConfig({
   // flows read: they run after them. The photo flows add an approved garage,
   // which Home's counts would take in: they run after everything else. The platform rules
   // and maintenance flows switch maintenance on, which refuses every non-admin
-  // call platform-wide: they run alone, one file after the other, last.
+  // call platform-wide, and the copy voice switch flows change the voices the
+  // round reads: they run alone, one file after the other, last.
   projects: [
     {
       name: 'chromium',
       testIgnore:
-        /(platform-rules|garage-photos|garage-prices-(edit|manage)|maintenance)\.spec\.ts$/,
+        /(platform-rules|copy-voice-switch|garage-photos|garage-prices-(edit|manage)|maintenance)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -85,7 +86,7 @@ export default defineConfig({
     {
       dependencies: ['garage-photos'],
       name: 'platform-rules',
-      testMatch: /platform-rules\.spec\.ts$/,
+      testMatch: /(platform-rules|copy-voice-switch)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

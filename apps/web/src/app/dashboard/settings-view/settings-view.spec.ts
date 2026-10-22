@@ -8,6 +8,9 @@ import { Session } from '../session';
 @Component({ selector: 'mf-platform-rules', template: '' })
 class PlatformRulesStub {}
 
+@Component({ selector: 'mf-copy-voices', template: '' })
+class CopyVoicesStub {}
+
 @Component({ selector: 'mf-push-panel', template: '' })
 class PushPanelStub {}
 
@@ -27,6 +30,7 @@ function render(me: MeDto | null) {
   TestBed.overrideComponent(SettingsView, {
     set: {
       imports: [
+        CopyVoicesStub,
         NotificationSettingsStub,
         PlatformRulesStub,
         PrivacyPanelStub,
@@ -70,10 +74,18 @@ describe('SettingsView', () => {
     expect(element.querySelector('mf-push-panel')).not.toBeNull();
   });
 
+  // @traces 010-FR-012
+  it('shows the copy voices right after the platform rules to an admin', async () => {
+    const element = await rendered(account(['admin.settings']));
+
+    expect(element.children[1]?.tagName).toBe('MF-COPY-VOICES');
+  });
+
   it('shows no platform rules to a garage session', async () => {
     const element = await rendered(account(['garage.settings']));
 
     expect(element.querySelector('mf-platform-rules')).toBeNull();
+    expect(element.querySelector('mf-copy-voices')).toBeNull();
     expect(element.querySelector('mf-notification-settings')).not.toBeNull();
   });
 

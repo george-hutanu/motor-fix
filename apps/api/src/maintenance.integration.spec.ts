@@ -31,6 +31,7 @@ const OPEN = [
   'GET /api/v1/auth/oauth/google/callback',
   'GET /api/v1/auth/oauth/pending',
   'GET /api/v1/auth/providers',
+  'GET /api/v1/copy-voices',
   'GET /api/v1/live',
   'GET /api/v1/live/public',
   'GET /api/v1/platform-status',

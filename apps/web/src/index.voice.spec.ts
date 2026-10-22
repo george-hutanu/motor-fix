@@ -260,3 +260,142 @@ describe('a browser that refuses to store', () => {
     ).toBe(5);
   });
 });
+
+type Settings = { enabled: number[]; pinned: number | null };
+
+const kept = (store: Store, settings: unknown) =>
+  store.set('mf-copy-voices', JSON.stringify(settings));
+
+const hand = (settings: unknown): number =>
+  (window as unknown as { mfCopyVoice: (s: unknown) => number }).mfCopyVoice(
+    settings,
+  );
+
+const mark = () => Number(document.documentElement.dataset['voice']);
+
+// @traces 010-FR-010
+describe("the device's copy of the voice settings", () => {
+  it('draws a new round from the voices that are on', () => {
+    const store: Store = new Map();
+    kept(store, { enabled: [2, 4], pinned: null });
+
+    const voice = load(store);
+    const rest = (round(store) ?? '').split(',').map(Number);
+
+    expect([voice, ...rest].sort()).toEqual([2, 4]);
+  });
+
+  it('skips a voice switched off in the stored round and as the stored voice', () => {
+    const store: Store = new Map([
+      ['mf-copy', '3'],
+      ['mf-copy-deck', '3,4,1'],
+    ]);
+    kept(store, { enabled: [1, 2, 4, 5], pinned: null });
+
+    expect(load(store, { at: 999_000, path: '/ro/results/bmw' })).toBe(4);
+  });
+
+  it('gives a new visit the pinned voice, stored with the time, the round left as it was', () => {
+    const store: Store = new Map([
+      ['mf-copy', '1'],
+      ['mf-copy-deck', '2,3'],
+    ]);
+    kept(store, { enabled: [1, 2, 3, 4, 5], pinned: 4 });
+
+    expect(load(store, { at: 9_000_000 })).toBe(4);
+    expect(store.get('mf-copy')).toBe('4');
+    expect(store.get('mf-copy-at')).toBe('9000000');
+    expect(round(store)).toBe('2,3');
+  });
+
+  it('keeps a stored voice that is still on, even with another voice pinned', () => {
+    const store: Store = new Map([
+      ['mf-copy', '2'],
+      ['mf-copy-at', '1000000'],
+    ]);
+    kept(store, { enabled: [1, 2, 3], pinned: 3 });
+
+    expect(load(store, { at: 1_000_100 })).toBe(2);
+    expect(load(store, { path: '/ro/results/bmw' })).toBe(2);
+  });
+
+  it.each([
+    'banana',
+    { enabled: [], pinned: null },
+    { enabled: [1, 9], pinned: null },
+    { enabled: [2, 2], pinned: null },
+    { enabled: [1, 2], pinned: 5 },
+    { enabled: '1,2', pinned: null },
+  ])(
+    'counts the stored settings %j as all five on, none pinned',
+    (settings) => {
+      const store: Store = new Map();
+      kept(store, settings);
+      const voice = load(store);
+      const rest = (round(store) ?? '').split(',').map(Number);
+
+      expect([voice, ...rest].sort()).toEqual([1, 2, 3, 4, 5]);
+    },
+  );
+});
+
+// @traces 010-FR-011
+describe('the settings the app hands over', () => {
+  it('keeps them on the device for the next loads', () => {
+    const store: Store = new Map();
+    load(store);
+    const settings: Settings = { enabled: [1, 3], pinned: null };
+
+    hand(settings);
+
+    expect(JSON.parse(store.get('mf-copy-voices') ?? 'null')).toEqual(settings);
+  });
+
+  it('moves a visit whose voice is now off to the next voice on, keeping its start time', () => {
+    const store: Store = new Map();
+    const voice = load(store, { at: 5_000_000 });
+    const enabled = [1, 2, 3, 4, 5].filter((v) => v !== voice);
+
+    const moved = hand({ enabled, pinned: null });
+
+    expect(enabled).toContain(moved);
+    expect(mark()).toBe(moved);
+    expect(store.get('mf-copy')).toBe(String(moved));
+    expect(store.get('mf-copy-at')).toBe('5000000');
+  });
+
+  it('moves it to the pinned voice when one is pinned', () => {
+    const store: Store = new Map();
+    const voice = load(store);
+    const pinned = voice === 5 ? 4 : 5;
+
+    expect(hand({ enabled: [pinned], pinned })).toBe(pinned);
+    expect(mark()).toBe(pinned);
+  });
+
+  it('leaves a voice that is still on, even when another is pinned', () => {
+    const store: Store = new Map();
+    const voice = load(store);
+    const pinned = voice === 5 ? 4 : 5;
+
+    expect(hand({ enabled: [1, 2, 3, 4, 5], pinned })).toBe(voice);
+    expect(mark()).toBe(voice);
+  });
+
+  it('ignores settings that are not settings', () => {
+    const store: Store = new Map();
+    const voice = load(store);
+
+    expect(hand({ enabled: [], pinned: null })).toBe(voice);
+    expect(store.has('mf-copy-voices')).toBe(false);
+  });
+
+  it('still moves the voice when the browser refuses to store', () => {
+    const voice = load(new Map(), { blocked: true, random: () => 0 });
+
+    const moved = hand({ enabled: [voice === 1 ? 2 : 1], pinned: null });
+
+    expect(moved).not.toBe(voice);
+    expect(mark()).toBe(moved);
+  });
+});

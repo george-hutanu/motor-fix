@@ -7261,6 +7261,122 @@
           "platform"
         ]
       }
+    },
+    "/api/v1/admin/copy-voices": {
+      "get": {
+        "operationId": "CopyVoicesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyVoicesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/copy-voices/{voice}": {
+      "patch": {
+        "operationId": "CopyVoicesController_change",
+        "parameters": [
+          {
+            "name": "voice",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeCopyVoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyVoicesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no voice"
+          },
+          "409": {
+            "description": "stale_value"
+          },
+          "422": {
+            "description": "last_voice, voice_off, voice_pinned"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/copy-voices": {
+      "get": {
+        "operationId": "PublicCopyVoicesController_settings",
+        "parameters": [
+          {
+            "name": "at",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCopyVoicesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
     }
   },
   "info": {
@@ -16807,6 +16923,113 @@
         },
         "required": [
           "maintenance"
+        ]
+      },
+      "CopyVoiceDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Visitors may get this voice"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Every new visit gets this voice"
+          },
+          "voice": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned",
+          "voice",
+          "updatedAt"
+        ]
+      },
+      "CopyVoicesDto": {
+        "type": "object",
+        "properties": {
+          "voices": {
+            "description": "Voices 1 to 5, in order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CopyVoiceDto"
+            }
+          }
+        },
+        "required": [
+          "voices"
+        ]
+      },
+      "CopyVoiceStateDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Visitors may get this voice"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Every new visit gets this voice"
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned"
+        ]
+      },
+      "ChangeCopyVoiceDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Visitors may get this voice"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Every new visit gets this voice"
+          },
+          "seen": {
+            "description": "The voice's state the admin's screen showed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CopyVoiceStateDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned",
+          "seen"
+        ]
+      },
+      "PublicCopyVoicesDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "description": "The voices that are on, ascending",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "pinned": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "pinned"
         ]
       }
     }
