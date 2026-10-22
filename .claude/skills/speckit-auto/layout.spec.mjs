@@ -222,7 +222,7 @@ describe('speckit-auto layout', () => {
   });
 });
 
-// The text each ST-1358 rule puts in a skill, template or agent, where a run reads it.
+// The text each preflight and archive rule puts in a skill, template or agent, where a run reads it.
 describe('the preflight and archive text lands where the run reads it', () => {
   const root = join(dir, '..', '..', '..');
   const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
