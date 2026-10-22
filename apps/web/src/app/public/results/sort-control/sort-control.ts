@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { SEARCH_SORTS, type SearchSort } from '@motor-fix/contracts';
+import type { SearchSort } from '@motor-fix/contracts/search-place';
 import { TranslatePipe } from '@motor-fix/i18n';
 
 let next = 0;
@@ -17,7 +17,11 @@ export class SortControl {
   readonly placeKnown = input(true);
   readonly pick = output<SearchSort>();
 
-  protected readonly sorts = SEARCH_SORTS;
+  protected readonly sorts = [
+    { label: 'public.results.sort.rating', sort: 'rating' },
+    { label: 'public.results.sort.distance', sort: 'distance' },
+    { label: 'public.results.sort.price', sort: 'price' },
+  ] as const;
   protected readonly whyId = `mf-sort-why-${next++}`;
 
   protected off(sort: SearchSort) {

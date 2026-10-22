@@ -1,14 +1,14 @@
 <fieldset class="sorts" [attr.aria-label]="'public.results.sort.label' | t">
-  @for (each of sorts; track each) {
+  @for (each of sorts; track each.sort) {
     <button
       type="button"
       class="sort"
-      [attr.aria-pressed]="each === sort()"
-      [disabled]="off(each)"
-      [attr.aria-describedby]="off(each) ? whyId : null"
-      (click)="pick.emit(each)"
+      [attr.aria-pressed]="each.sort === sort()"
+      [disabled]="off(each.sort)"
+      [attr.aria-describedby]="off(each.sort) ? whyId : null"
+      (click)="pick.emit(each.sort)"
     >
-      {{ 'public.results.sort.' + each | t }}
+      {{ each.label | t }}
     </button>
   }
 </fieldset>
