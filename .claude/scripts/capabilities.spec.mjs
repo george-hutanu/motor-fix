@@ -4,7 +4,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
+import { traceTokens } from './lib/traces.mjs';
 import {
+  checkMerge,
   declaredRequirements,
   loadCapabilities,
   parseCapability,
@@ -74,7 +76,9 @@ const spec = (frs, delta) =>
 
 const feature = (dir, name = '002-fixture') => ({ dir: join(dir, 'specs', name), name, num: name.slice(0, 3) });
 
-const rules = (findings) => findings.map((f) => f.rule).sort();
+// delta-all-adds (1358-FR-006) is a WARN on every Adds-only delta; the cases
+// below judge the other rules, so it is left out of what they compare.
+const rules = (findings) => findings.map((f) => f.rule).filter((r) => r !== 'delta-all-adds').sort();
 
 describe('reading a living capability spec', () => {
   it('reads requirements from headings and retirements from the tombstone list', () => {
@@ -161,6 +165,7 @@ describe('reading a feature delta', () => {
     assert.equal(declared.get('FR-001'), 'bolded');
   });
 
+  // @traces 1358-FR-010
   it('reads a requirement wrapped over indented lines as one text', () => {
     const declared = declaredRequirements(
       [
@@ -168,7 +173,7 @@ describe('reading a feature delta', () => {
         '  (`ro`) and English (`en`); Romanian is the',
         '  default.',
         '- **FR-002**: one line',
-        '  - a nested bullet is not part of it',
+        '  - a nested bullet is part of it',
         '- **FR-003**: ends at a blank line',
         '',
         '  indented prose after the blank is not part of it',
@@ -177,7 +182,7 @@ describe('reading a feature delta', () => {
       ].join('\n'),
     );
     assert.equal(declared.get('FR-001'), 'The list of languages MUST be defined once, as Romanian (`ro`) and English (`en`); Romanian is the default.');
-    assert.equal(declared.get('FR-002'), 'one line');
+    assert.equal(declared.get('FR-002'), 'one line a nested bullet is part of it');
     assert.equal(declared.get('FR-003'), 'ends at a blank line');
     assert.equal(declared.get('FR-004'), 'ends at an unindented line');
   });
@@ -640,5 +645,176 @@ describe('the capabilities command', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('the Spec Delta checked when the spec is written', () => {
+  const build = (delta, frs = [['FR-001', 'adds a flag'], ['FR-006', 'lists tasks with a column']]) =>
+    fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', { requirements: [[T('001', '004'), 'lists tasks']] }),
+      '.specify/capabilities/other.md': capability('other', { requirements: [[T('001', '005'), 'other']] }),
+      'specs/002-fixture/spec.md': spec(frs, delta),
+    });
+  const all = (delta, frs) => {
+    const dir = build(delta, frs);
+    try {
+      return validateFeature(dir, feature(dir));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const cli = (dir, args) =>
+    spawnSync(process.execPath, [join(root, '.claude', 'scripts', 'capabilities.mjs'), ...args], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+    });
+
+  // @traces 1358-FR-006
+  it('reports an FR named under Adds and as a Modifies replacement as an ERROR', () => {
+    const findings = all('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006\n- **Modifies**: ' + B('001', '004') + ' → `FR-006`');
+    const hit = findings.filter((f) => f.rule === 'delta-adds-and-modifies');
+    assert.equal(hit.length, 1, JSON.stringify(findings));
+    assert.equal(hit[0].level, 'ERROR');
+    assert.match(hit[0].message, /FR-006/);
+  });
+
+  // @traces 1358-FR-006
+  it('catches the same FR added in one section and a replacement in another', () => {
+    const findings = all(
+      '### Capability: `cli-tasks`\n\n- **Adds**: FR-001\n\n### Capability: `other`\n\n- **Modifies**: ' + B('001', '005') + ' → `FR-001`',
+      [['FR-001', 'adds a flag']],
+    );
+    assert.ok(findings.some((f) => f.rule === 'delta-adds-and-modifies' && f.level === 'ERROR'), JSON.stringify(findings));
+  });
+
+  // @traces 1358-FR-006
+  it('warns, never errors, about a delta of Adds alone, and stays quiet once it modifies or removes', () => {
+    const only = all('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006');
+    assert.deepEqual(only.map((f) => [f.level, f.rule]), [['WARN', 'delta-all-adds']]);
+    const mixed = all('### Capability: `cli-tasks`\n\n- **Adds**: FR-001\n- **Modifies**: ' + B('001', '004') + ' → `FR-006`');
+    assert.ok(!mixed.some((f) => f.rule === 'delta-all-adds'), JSON.stringify(mixed));
+    const removing = all('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006\n\n### Capability: `other`\n\n- **Removes**: ' + B('001', '005') + ' — gone');
+    assert.ok(!removing.some((f) => f.rule === 'delta-all-adds'), JSON.stringify(removing));
+  });
+
+  // @traces 1358-FR-006
+  it('keeps the existing ERROR rules beside the new ones', () => {
+    const findings = all('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-009\n- **Modifies**: ' + B('001', '077') + ' → `FR-006`');
+    assert.deepEqual(rules(findings), ['delta-adds-undeclared', 'delta-base-missing']);
+  });
+
+  // @traces 1358-FR-006
+  it('prints one counts line per capability section, and exits 0 under --check on a WARN', () => {
+    const dir = build('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006\n\n### Capability: `other`\n\n- **Adds**: none');
+    try {
+      const r = cli(dir, ['validate', 'specs/002-fixture', '--check']);
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+      assert.match(r.stdout, /delta-all-adds/);
+      assert.match(r.stdout, /^cli-tasks: \+2 ~0 -0$/m);
+      assert.match(r.stdout, /^other: \+0 ~0 -0$/m);
+      writeFileSync(
+        join(dir, 'specs/002-fixture/spec.md'),
+        spec([['FR-001', 'a'], ['FR-006', 'b']], '### Capability: `cli-tasks`\n\n- **Adds**: FR-001\n- **Modifies**: ' + B('001', '004') + ' → `FR-006`'),
+      );
+      const mixed = cli(dir, ['validate', 'specs/002-fixture', '--check']);
+      assert.match(mixed.stdout, /^cli-tasks: \+1 ~1 -0$/m);
+      writeFileSync(
+        join(dir, 'specs/002-fixture/spec.md'),
+        spec([['FR-006', 'b']], '### Capability: `cli-tasks`\n\n- **Adds**: FR-006\n- **Modifies**: ' + B('001', '004') + ' → `FR-006`'),
+      );
+      const both = cli(dir, ['validate', 'specs/002-fixture', '--check']);
+      assert.equal(both.status, 1);
+      assert.match(both.stdout, /delta-adds-and-modifies/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('ids: a long feature number read whole, a lettered requirement number', () => {
+  // @traces 1358-FR-009
+  it('reads a feature number of four digits whole in a trace line, a heading and a Modifies base', () => {
+    assert.deepEqual([...traceTokens(`// @traces ${T('1358', '009')}\n`)], [T('1358', '009')]);
+    const parsed = parseCapability(capability('platform', { requirements: [[T('1018', '018'), 'grammar']] }));
+    assert.deepEqual([...parsed.requirements.keys()], [T('1018', '018')]);
+    const [section] = parseDelta('## Spec Delta\n\n### Capability: `platform`\n\n- **Modifies**: ' + B('1018', '018') + ' → `FR-009`\n');
+    assert.deepEqual(section.modifies, [{ base: T('1018', '018'), by: 'FR-009' }]);
+    assert.notEqual(section.modifies[0].base, T('018', '018'));
+  });
+
+  // @traces 1358-FR-009
+  it('reads a lettered requirement in headings, retired entries and declared requirements', () => {
+    const parsed = parseCapability(
+      capability('c', { requirements: [[T('002', '004a'), 'lettered']], retired: [[T('001', '003b'), 'gone']] }),
+    );
+    assert.deepEqual([...parsed.requirements.keys()], [T('002', '004a')]);
+    assert.equal(parsed.requirements.get(T('002', '004a')), 'lettered');
+    assert.deepEqual([...parsed.retired.keys()], [T('001', '003b')]);
+    const declared = declaredRequirements('- **FR-004**: plain\n- **FR-004a**: lettered\n');
+    assert.deepEqual([...declared.keys()], ['FR-004', 'FR-004a']);
+    assert.equal(declared.get('FR-004a'), 'lettered');
+  });
+
+  // @traces 1358-FR-009
+  it('reads a lettered id in Adds, Modifies and Removes, and keeps a range unlettered', () => {
+    const [section] = parseDelta(
+      [
+        '## Spec Delta',
+        '',
+        '### Capability: `c`',
+        '',
+        '- **Adds**: FR-004a, FR-001–FR-003, FR-005a–FR-007',
+        '- **Modifies**: ' + B('001', '002a') + ' → `FR-008a`',
+        '- **Removes**: ' + B('001', '003b') + ' — gone',
+        '',
+      ].join('\n'),
+    );
+    assert.deepEqual(section.adds, ['FR-004a', 'FR-001', 'FR-002', 'FR-003']);
+    assert.deepEqual(section.modifies, [{ base: T('001', '002a'), by: 'FR-008a' }]);
+    assert.deepEqual(section.removes, [{ base: T('001', '003b'), why: 'gone' }]);
+  });
+});
+
+describe('wrapped requirement text and wrapped delta lists', () => {
+  // @traces 1358-FR-010
+  it('reads a requirement continued on deeper lines, nested bullets included, as one text', () => {
+    const declared = declaredRequirements(
+      [
+        '  - **FR-001**: an indented bullet',
+        '    continues here',
+        '    - and in a nested bullet',
+        '  - **FR-002**: a sibling, not a continuation',
+      ].join('\n'),
+    );
+    assert.equal(declared.get('FR-001'), 'an indented bullet continues here and in a nested bullet');
+    assert.equal(declared.get('FR-002'), 'a sibling, not a continuation');
+  });
+
+  // @traces 1358-FR-010
+  it('reads an Adds, Modifies or Removes list wrapped on indented lines as one list', () => {
+    const [section] = parseDelta(
+      [
+        '## Spec Delta',
+        '',
+        '### Capability: `c`',
+        '',
+        '- **Adds**: FR-001,',
+        '  FR-002–FR-003',
+        '- **Modifies**:',
+        '  - ' + B('001', '004') + ' → `FR-004`',
+        '  - ' + B('001', '005') + ' → `FR-005`',
+        '- **Removes**: ' + B('001', '009') + ' — the directory is',
+        '  created on demand',
+        '',
+        'Prose after the list is not part of it.',
+      ].join('\n'),
+    );
+    assert.deepEqual(section.adds, ['FR-001', 'FR-002', 'FR-003']);
+    assert.deepEqual(section.modifies, [
+      { base: T('001', '004'), by: 'FR-004' },
+      { base: T('001', '005'), by: 'FR-005' },
+    ]);
+    assert.deepEqual(section.removes, [{ base: T('001', '009'), why: 'the directory is created on demand' }]);
   });
 });

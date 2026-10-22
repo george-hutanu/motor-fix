@@ -26,7 +26,8 @@
 //
 // `Adds` names this feature's own ids (FR-XXX, ranges allowed). `Modifies` and
 // `Removes` name requirements ALREADY IN the capability, feature-qualified
-// (`NNN-FR-XXX`) because FR numbering restarts per feature.
+// (`NNN-FR-XXX`) because FR numbering restarts per feature. A requirement
+// number may carry one lowercase letter (`FR-004a`); a range never does.
 //
 // Validation catches the mistake OpenSpec itself reports as a bug (Fission-AI/
 // OpenSpec#1112): a `Modifies`/`Removes` naming a requirement the base spec
@@ -58,6 +59,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 export function parseCapability(text) {
   const requirements = new Map();
   const retired = new Map();
+  // Every token in order, repeats kept: the Maps hide a token held twice.
+  const headings = [];
+  const tombstones = [];
   let section = null;
   for (const line of text.split("\n")) {
     const heading = line.match(/^##\s+(.+?)\s*$/);
@@ -66,16 +70,22 @@ export function parseCapability(text) {
       continue;
     }
     if (section === "requirements") {
-      const m = line.match(/^###\s+(\d{3,}-FR-\d{3})\s*(?:—|-|:)?\s*(.*)$/);
-      if (m) requirements.set(m[1], m[2].trim());
+      const m = line.match(/^###\s+(\d{3,}-FR-\d{3}[a-z]?)\s*(?:—|-|:)?\s*(.*)$/);
+      if (m) {
+        requirements.set(m[1], m[2].trim());
+        headings.push(m[1]);
+      }
     } else if (section === "retired") {
-      const m = line.match(/^-\s+`(\d{3,}-FR-\d{3})`\s*(?:—|-|:)?\s*(.*)$/);
-      if (m) retired.set(m[1], m[2].trim());
+      const m = line.match(/^-\s+`(\d{3,}-FR-\d{3}[a-z]?)`\s*(?:—|-|:)?\s*(.*)$/);
+      if (m) {
+        retired.set(m[1], m[2].trim());
+        tombstones.push(m[1]);
+      }
     }
   }
   const slug = text.match(/^capability:\s*(\S+)\s*$/m)?.[1] ?? null;
   const features = [...text.matchAll(/^\s+-\s+(\d{3,}-[\w-]+)\s*$/gm)].map((m) => m[1]);
-  return { slug, features, requirements, retired };
+  return { slug, features, requirements, retired, headings, tombstones };
 }
 
 /** Every capability on disk, keyed by slug. */
@@ -107,10 +117,10 @@ export function retiredTokens(repo) {
 
 // --- reading a feature's delta ----------------------------------------------
 
-/** `FR-001–FR-004` / `FR-001-FR-004` / `FR-007` → the ids it covers. */
+/** `FR-001–FR-004` / `FR-001-FR-004` / `FR-007` / `FR-007a` → the ids it covers; a range is never lettered. */
 function expandRange(token) {
   const range = token.match(/^(FR-\d{3})\s*[–—-]+\s*(FR-\d{3})$/);
-  if (!range) return /^FR-\d{3}$/.test(token) ? [token] : [];
+  if (!range) return /^FR-\d{3}[a-z]?$/.test(token) ? [token] : [];
   const from = Number(range[1].slice(3));
   const to = Number(range[2].slice(3));
   if (to < from) return [];
@@ -136,48 +146,66 @@ export function parseDelta(specText) {
   if (start === -1) return [];
   const sections = [];
   let current = null;
+  // A list bullet and the lines indented under it, joined: a nested bullet is
+  // one more entry, a plain line continues the entry before it.
+  let list = null;
+  const flush = () => {
+    if (list && current) readList(current, list.kind, list.text);
+    list = null;
+  };
   for (const line of lines.slice(start + 1)) {
     if (/^##\s+/.test(line) && !/^###/.test(line)) break; // next top-level section ends the block
     const cap = line.match(/^###\s+Capability:\s*`?([\w-]+)`?/i);
     if (cap) {
+      flush();
       current = { capability: cap[1], adds: [], modifies: [], removes: [] };
       sections.push(current);
       continue;
     }
-    if (!current) continue;
-    if (/^[\s-]*\*{0,2}Adds\*{0,2}\s*:/i.test(line)) {
-      for (const value of listValues(line)) current.adds.push(...expandRange(value.replace(/`/g, "")));
-    } else if (/^[\s-]*\*{0,2}Modifies\*{0,2}\s*:/i.test(line)) {
-      for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:→|->)\s*`?(FR-\d{3})`?/);
-        if (m) current.modifies.push({ base: m[1], by: m[2] });
-        else current.modifies.push({ base: value.replace(/`/g, ""), by: null });
-      }
-    } else if (/^[\s-]*\*{0,2}Removes\*{0,2}\s*:/i.test(line)) {
-      for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:—|-|:)?\s*(.*)$/);
-        if (m) current.removes.push({ base: m[1], why: m[2].trim() });
-      }
+    const key = line.match(/^([\s-]*)\*{0,2}(Adds|Modifies|Removes)\*{0,2}\s*:/i);
+    const more = list && line.match(/^(\s+)(-\s+)?(\S.*)$/);
+    if (key) {
+      flush();
+      list = { kind: key[2].toLowerCase(), indent: key[1].match(/^\s*/)[0].length, text: line };
+    } else if (more && more[1].length > list.indent) {
+      list.text += `${more[2] ? ", " : " "}${more[3]}`;
+    } else flush();
+  }
+  flush();
+  return sections;
+}
+
+function readList(section, kind, line) {
+  for (const value of listValues(line)) {
+    if (kind === "adds") section.adds.push(...expandRange(value.replace(/`/g, "")));
+    else if (kind === "modifies") {
+      const m = value.match(/`?(\d{3,}-FR-\d{3}[a-z]?)`?\s*(?:→|->)\s*`?(FR-\d{3}[a-z]?)`?/);
+      section.modifies.push(m ? { base: m[1], by: m[2] } : { base: value.replace(/`/g, ""), by: null });
+    } else {
+      const m = value.match(/`?(\d{3,}-FR-\d{3}[a-z]?)`?\s*(?:—|-|:)?\s*(.*)$/);
+      if (m) section.removes.push({ base: m[1], why: m[2].trim() });
     }
   }
-  return sections;
 }
 
 /**
  * The FR ids a spec DECLARES, with the text of each — same rule as artifact-lint.
- * A requirement wrapped over indented lines is one text: the continuation runs
- * until a blank line, an unindented line or another bullet.
+ * A requirement wrapped over lines indented deeper than its bullet, nested
+ * bullets included, is one text; a blank or shallower line ends it.
  */
 export function declaredRequirements(specText) {
   const out = new Map();
   let current = null;
+  let indent = 0;
   for (const line of specText.split("\n")) {
-    const m = line.match(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]\s*(.*)$/);
+    const m = line.match(/^(\s*)-\s+\*{0,2}(FR-\d{3}[a-z]?)\*{0,2}\s*[:.]\s*(.*)$/);
+    const more = line.match(/^(\s+)(?:-\s+)?(\S.*)$/);
     if (m) {
-      current = out.has(m[1]) ? null : m[1];
-      if (current) out.set(current, m[2].trim());
-    } else if (current && /^\s+\S/.test(line) && !/^\s*-\s/.test(line)) {
-      out.set(current, `${out.get(current)} ${line.trim()}`);
+      current = out.has(m[2]) ? null : m[2];
+      indent = m[1].length;
+      if (current) out.set(current, m[3].trim());
+    } else if (current && more && more[1].length > indent) {
+      out.set(current, `${out.get(current)} ${more[2].trim()}`);
     } else {
       current = null;
     }
@@ -269,6 +297,13 @@ export function validateFeature(repo, feature) {
     }
   }
 
+  // An FR both added and named as a replacement would be written twice.
+  const replacements = new Set(delta.flatMap((section) => section.modifies.map(({ by }) => by).filter(Boolean)));
+  for (const id of new Set(delta.flatMap((section) => section.adds)))
+    if (replacements.has(id)) add("ERROR", "delta-adds-and-modifies", `${id} is under Adds and is a Modifies replacement — name it once, as the replacement`);
+  if (delta.some((s) => s.adds.length) && !delta.some((s) => s.modifies.length || s.removes.length))
+    add("WARN", "delta-all-adds", "the delta only adds — an FR that changes a requirement a capability holds is a Modifies naming it");
+
   // An archived feature's requirements already live in a capability under its
   // own number; they are assigned even when its delta no longer names them.
   const archived = (id) =>
@@ -309,12 +344,13 @@ export function planMerge(repo, feature) {
     for (const { base, by } of section.modifies) {
       if (!by || !cap.requirements.has(base)) continue;
       const token = `${feature.num}-${by}`;
-      // The replacement takes the base's place in the document, so the reading
-      // order of a capability stays the order its behaviour was built in.
-      const pattern = requirementBlock(base);
+      // The replacement takes the first base's place in the document, so the
+      // reading order of a capability stays the order its behaviour was built
+      // in; a later base it also replaces only leaves.
+      const written = modified.some((m) => m.token === token);
       // A function, so a `$` pattern in the requirement text is written as is.
-      const replacement = `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;
-      text = text.replace(pattern, () => replacement);
+      const replacement = written ? "" : `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;
+      text = text.replace(requirementBlock(base), () => replacement);
       modified.push({ base, token });
     }
 
@@ -349,6 +385,36 @@ export function planMerge(repo, feature) {
     plans.push({ capability: section.capability, file: cap.file, text, added, modified, removed });
   }
   return plans;
+}
+
+/**
+ * What is wrong with a planned capability file, against its delta (empty when
+ * nothing): each Adds and replacement token a heading exactly once, no base
+ * still a heading, one new tombstone per base, the heading count the delta
+ * implies, and no token twice among headings and tombstones.
+ */
+export function checkMerge(plan, cap, section, num) {
+  const was = parseCapability(cap.text);
+  const now = parseCapability(plan.text);
+  const failures = [];
+  const count = (list, token) => list.filter((t) => t === token).length;
+  const adds = section.adds.map((id) => `${num}-${id}`);
+  const replacements = [...new Set(section.modifies.filter(({ by }) => by).map(({ by }) => `${num}-${by}`))];
+  const bases = [...section.modifies, ...section.removes].map(({ base }) => base);
+  for (const token of [...adds, ...replacements]) {
+    const n = count(now.headings, token);
+    if (n !== 1) failures.push(`${plan.capability}: ${token} is a requirement heading ${n} times, not once`);
+  }
+  for (const base of bases) if (now.requirements.has(base)) failures.push(`${plan.capability}: ${base} is still a requirement heading`);
+  const gained = now.tombstones.length - was.tombstones.length;
+  if (gained !== bases.length || bases.some((base) => !now.retired.has(base)))
+    failures.push(`${plan.capability}: ${gained} tombstone(s) added, not one for each of ${bases.length} base(s)`);
+  const expected = was.headings.length + adds.length - bases.length + replacements.length;
+  if (now.headings.length !== expected)
+    failures.push(`${plan.capability}: ${now.headings.length} requirement heading(s), not the ${expected} the delta implies`);
+  const all = [...now.headings, ...now.tombstones];
+  for (const token of new Set(all)) if (count(all, token) > 1) failures.push(`${plan.capability}: ${token} appears twice among the headings and the retired list`);
+  return failures;
 }
 
 /** Append a block at the end of a `## <heading>` section, creating it if absent. */
@@ -425,6 +491,8 @@ function main() {
     console.log(`capabilities: ${feature.name} — ${errors.length} error(s), ${findings.length - errors.length} warning(s)`);
     for (const f of findings) console.log(`  ${f.level === "ERROR" ? "✗" : "!"} [${f.rule}] ${f.message}`);
     if (findings.length === 0) console.log("  ✓ the delta merges cleanly");
+    for (const s of parseDelta(readFileSync(join(feature.dir, "spec.md"), "utf8")))
+      console.log(`${s.capability}: +${s.adds.length} ~${s.modifies.length} -${s.removes.length}`);
     return check && errors.length ? 1 : 0;
   }
 
@@ -439,6 +507,17 @@ function main() {
     if (plans.length === 0) {
       console.log(`capabilities: ${feature.name} changes no capability.`);
       return 0;
+    }
+    // Every planned file is checked before any is written.
+    const caps = loadCapabilities(repo);
+    const sections = parseDelta(readFileSync(join(feature.dir, "spec.md"), "utf8"));
+    const failures = plans.flatMap((plan) =>
+      checkMerge(plan, caps.get(plan.capability), sections.find((s) => s.capability === plan.capability), feature.num),
+    );
+    if (failures.length) {
+      console.error(`capabilities: ${feature.name} — the merge would not match its delta; nothing written:`);
+      for (const f of failures) console.error(`  ✗ ${f}`);
+      return 1;
     }
     for (const plan of plans) {
       console.log(
