@@ -2,6 +2,7 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { signAccessToken } from '../../auth/access-token';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -15,7 +16,7 @@ import {
 import { SearchModule } from '../search.module';
 
 const redisUrl = redisUrlFor(3);
-const { prisma } = fixtures();
+const { account, prisma } = fixtures();
 serialDatabase(databaseUrl);
 
 let app: INestApplication;
@@ -188,4 +189,72 @@ describe('GET /brands/popular', () => {
       expect(res.status).toBe(400);
     },
   );
+});
+
+describe('GET /brands/popular for a signed-in driver', () => {
+  let driver: string;
+  const bearer = () =>
+    `Bearer ${signAccessToken({ accountId: driver, role: 'driver' }, 'test')}`;
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE account CASCADE');
+    driver = await account('ana');
+    await brands([
+      ['Bmw', 1],
+      ['Mini', 2],
+      ['Dacia', 3],
+      ['Tesla', 4],
+    ]);
+    const tesla = await prisma.brand.findFirstOrThrow({
+      where: { name: 'Tesla' },
+    });
+    await prisma.car.create({
+      data: {
+        brandId: tesla.id,
+        fuel: 'electric',
+        idempotencyKey: 'tesla',
+        model: 'Model 3',
+        odometerKm: 1000,
+        ownerId: driver,
+        year: 2022,
+      },
+    });
+  });
+
+  // @traces 007-brand-headline-FR-014
+  // @traces 007-brand-headline-FR-016
+  it('puts the driver’s brands first and keeps the answer private', async () => {
+    const res = await popular().set('Authorization', bearer());
+
+    expect(res.status).toBe(200);
+    expect(names(res.body)).toEqual(['Tesla', 'Bmw', 'Mini', 'Dacia']);
+    expect(res.headers['cache-control']).toBe('private, no-cache');
+    expect(Object.keys(res.body[0]).sort()).toEqual([
+      'id',
+      'name',
+      'popularity',
+      'roPossessive',
+      'slug',
+    ]);
+  });
+
+  // @traces 007-brand-headline-FR-016
+  it('never hands a driver’s order to the visitor after them, nor the visitor’s to the driver', async () => {
+    await popular().set('Authorization', bearer());
+    const visitor = await popular();
+    const again = await popular().set('Authorization', bearer());
+
+    expect(names(visitor.body)).toEqual(['Bmw', 'Mini', 'Dacia', 'Tesla']);
+    expect(visitor.headers['cache-control']).toBe(PUBLIC_POLICY);
+    expect(names(again.body)).toEqual(['Tesla', 'Bmw', 'Mini', 'Dacia']);
+  });
+
+  // @traces 007-brand-headline-FR-016
+  it('answers a bad token as it answers a visitor', async () => {
+    const res = await popular().set('Authorization', 'Bearer not-a-token');
+
+    expect(res.status).toBe(200);
+    expect(names(res.body)).toEqual(['Bmw', 'Mini', 'Dacia', 'Tesla']);
+    expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
+  });
 });

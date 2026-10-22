@@ -269,6 +269,20 @@ export class Home {
     // The tiles are read on both sides: in the browser, right after a server
     // render, the transfer cache answers with what the server read.
     const brands = inject(BrandsService);
+    // A driver's own cars' brands lead: once their session is known, the
+    // tiles are read again with it; a failed read keeps the public ones.
+    let readFor: string | undefined;
+    effect(() => {
+      const me = this.session.current();
+      if (!this.hydrated() || me?.role !== 'driver' || me.id === readFor) {
+        return;
+      }
+      readFor = me.id;
+      void brands.popularBrandsControllerTiles({ limit: POPULAR }).then(
+        (own) => this.popular.set(own),
+        () => undefined,
+      );
+    });
     const pending = inject(PendingTasks);
     if (this.server) {
       const health = inject(HealthService);

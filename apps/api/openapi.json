@@ -2591,7 +2591,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Active brands by popularity, unranked last, then by name",
+            "description": "Active brands by popularity, unranked last, then by name; a signed-in driver’s own cars’ brands first",
             "content": {
               "application/json": {
                 "schema": {

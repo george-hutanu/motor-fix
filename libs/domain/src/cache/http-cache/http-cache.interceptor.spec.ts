@@ -87,6 +87,14 @@ describe('the HTTP cache policy', () => {
     });
   });
 
+  // @traces 007-brand-headline-FR-016
+  it('keeps a marked read answered with a session private, no-cache', async () => {
+    expect(await call('marked', { actor: { id: 'a' } })).toEqual({
+      'cache-control': 'private, no-cache',
+    });
+    expect(await call('marked')).toEqual({ 'cache-control': PUBLIC_POLICY });
+  });
+
   it('leaves an unmarked visitor route, a write, a failure and a set header alone', async () => {
     expect(await call('unmarked')).toEqual({});
     expect(await call('marked', { method: 'POST' })).toEqual({});

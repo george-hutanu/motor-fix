@@ -2042,3 +2042,54 @@ describe('Home headline swap', () => {
     expect(animating(css.replace(motion ?? '', ''))).toEqual([]);
   });
 });
+
+describe('Home tiles for a signed-in driver', () => {
+  const own = [BRANDS[5], ...BRANDS.filter((_, i) => i !== 5)];
+  const signedIn = (role: MeDto['role'], id = 'ana') =>
+    session.current.set({ city: null, id, role } as MeDto);
+  const reads = () => tilesApi.popularBrandsControllerTiles.mock.calls;
+
+  // @traces 007-brand-headline-FR-014
+  it('reads the tiles again with the session once the driver is known, and shows their order', async () => {
+    await render();
+    expect(reads()).toHaveLength(1);
+    expect(reads()[0][1].get(PUBLIC_READ)).toBe(true);
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(own);
+
+    signedIn('driver');
+    await settle();
+    await settle();
+
+    expect(reads()).toHaveLength(2);
+    expect(reads()[1][1]).toBeUndefined();
+    expect(tiles()[0].textContent?.trim()).toBe(own[0].name);
+    signedIn('driver');
+    await settle();
+    expect(reads()).toHaveLength(2);
+  });
+
+  // @traces 007-brand-headline-FR-016
+  it('never reads them again for a visitor or another role', async () => {
+    await render();
+    signedIn('garage');
+    await settle();
+
+    expect(reads()).toHaveLength(1);
+    expect(checked()).toBe('BMW');
+  });
+
+  // @traces 007-brand-headline-FR-014
+  it('keeps the public tiles when the driver’s read fails', async () => {
+    await render();
+    tilesApi.popularBrandsControllerTiles.mockRejectedValue(
+      new HttpErrorResponse({ status: 503 }),
+    );
+
+    signedIn('driver');
+    await settle();
+    await settle();
+
+    expect(reads()).toHaveLength(2);
+    expect(tiles().map((t) => t.textContent?.trim())).toEqual(NAMES);
+  });
+});
