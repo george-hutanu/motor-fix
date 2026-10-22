@@ -5,6 +5,7 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { featureOn } from './feature-on';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -30,10 +31,11 @@ async function switches(
   tx: Prisma.TransactionClient,
   garageId: string,
 ): Promise<GarageFeaturesDto['features']> {
-  const rows = await tx.garageFeature.findMany({ where: { garageId } });
-  const stored = new Map(rows.map((r) => [r.key, r.enabled]));
   const features = {} as GarageFeaturesDto['features'];
-  for (const key of FEATURE_KEYS) features[key] = stored.get(key) ?? true;
+  // One query per key, in turn: the transaction runs one at a time anyway.
+  for (const key of FEATURE_KEYS) {
+    features[key] = await featureOn(tx, garageId, key);
+  }
   return features;
 }
 
