@@ -35,6 +35,7 @@ features:
   - 208-resubmit-after-more
   - 330-listed-facilities
   - 009-copy-voice-analytics
+  - 1192-photo-variants
 ---
 
 # Capability: Garage listing
@@ -1198,6 +1199,26 @@ _From 009-copy-voice-analytics._
 ### 009-FR-007 — A listing draft MUST store `copy_voice` under the same rules as FR-005: empty or 1–5, set at creation from `copyVoice` when it is an integer 1–5, otherwise empty, never refusing the call, never changed by a later save, submit, reminder or link.
 
 _From 009-copy-voice-analytics._
+
+### 1192-FR-001 — After a confirm, the worker MUST, besides the thumbnail and display copies of 110-FR-010 (which stay, for the listing step, the verification file and the full-screen view), write eight variants of the photo: widths 320, 640, 960 and 1,600 px, each as AVIF (quality 50, effort 4) and WebP (quality 75), auto-oriented (`rotate()`), resized to the width without enlargement, with no metadata written (no `withMetadata()`). Each is stored at `g/<owner id>/<digest>/<width>.<avif|webp>`, where `<owner id>` is the photo key's owner segment (the draft id) and `<digest>` the lowercase hex SHA-256 of the photo's key followed by its original bytes, with its image content type and `Cache-Control: public, max-age=31536000, immutable`. The variants MUST be written before the thumbnail, so a processed photo (its thumbnail exists) always has them; a job attempt that fails after writing some variants MUST delete them before it fails (a retry writes the same addresses again), so no variant outlives a photo that was never processed.
+
+_From 1192-photo-variants._
+
+### 1192-FR-002 — The worker MUST compute a ThumbHash of the upright photo (from a copy at most 100 px on its long side) and store it, base64-encoded, with the digest on the thumbnail's metadata beside the width and height (`thumbhash`, `digest`).
+
+_From 1192-photo-variants._
+
+### 1192-FR-003 — No variant MUST carry EXIF, XMP, IPTC or GPS data; a test MUST process a photo carrying GPS tags and find none in any variant.
+
+_From 1192-photo-variants._
+
+### 1192-FR-005 — The gallery row (`garage_photo`) MUST carry the photo's variant path `g/<owner id>/<digest>` (unique, nullable) and its ThumbHash (nullable), copied from the thumbnail's metadata by the sending story's call (110-FR-011, `describe`) with the width and height; a row written before this story, or from a photo processed before it, has neither.
+
+_From 1192-photo-variants._
+
+### 1192-FR-010 — The worker MUST process at most one photo job per CPU at once by default (the configuration of FR-011), each sharp pipeline single-threaded.
+
+_From 1192-photo-variants._
 
 ## Retired
 
