@@ -23,11 +23,7 @@ const HOURS = {
 // a paid courtesy car, card payment and its opening hours; the stance change
 // goes out through the outbox as the listing's own edits do.
 // @traces 308-FR-014 308-FR-015 308-FR-016
-test.describe('the brands, facilities and hours on a public profile', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its garage straight to PostgreSQL, which needs DATABASE_URL',
-  );
+test.describe('the brands, facilities and hours on a public profile @database', () => {
   test.describe.configure({ mode: 'serial' });
   const tag = Date.now().toString(36);
   const slug = `e2e-detalii-${tag}`;

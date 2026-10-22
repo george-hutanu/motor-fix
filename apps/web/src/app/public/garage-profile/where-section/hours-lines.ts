@@ -1,7 +1,7 @@
 import { isWeeklyHours, WEEKDAYS } from '@motor-fix/contracts/garage-hours';
 import type { Language } from '@motor-fix/i18n';
 
-export interface HoursLine {
+interface HoursLine {
   days: string;
   times: string;
 }
