@@ -18,6 +18,11 @@ import type { Redis } from 'ioredis';
 import { BellController } from './bell/bell.controller';
 import { BellService } from './bell/bell.service';
 import {
+  BOOKING_CANCELLED_QUEUE,
+  type BookingCancelledEvent,
+  BookingCancelledFanOut,
+} from './booking-cancelled/booking-cancelled.fan-out';
+import {
   BOOKING_CONFIRMED_QUEUE,
   type BookingConfirmedEvent,
   BookingConfirmedFanOut,
@@ -88,6 +93,11 @@ import {
   type QuoteSentEvent,
 } from './quote-received/quote-received.fan-out';
 import {
+  REQUEST_CANCELLED_QUEUE,
+  type RequestCancelledEvent,
+  RequestCancelledFanOut,
+} from './request-cancelled/request-cancelled.fan-out';
+import {
   REQUEST_RECEIVED_QUEUE,
   type RequestCreatedEvent,
   RequestReceivedFanOut,
@@ -123,6 +133,8 @@ const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
+const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
+const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
@@ -178,6 +190,12 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
+    @Optional()
+    @Inject(REQUEST_CANCELLED_WORKER)
+    private readonly requestCancelledWorker?: Worker | null,
+    @Optional()
+    @Inject(BOOKING_CANCELLED_WORKER)
+    private readonly bookingCancelledWorker?: Worker | null,
     @Optional()
     @Inject(VERIFICATION_RESULT_WORKER)
     private readonly verificationResultWorker?: Worker | null,
@@ -499,6 +517,60 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        RequestCancelledFanOut,
+        {
+          inject: [RequestCancelledFanOut],
+          provide: REQUEST_CANCELLED_WORKER,
+          useFactory: (fanOut: RequestCancelledFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('RequestCancelled').error(
+                'PUBLIC_WEB_URL missing; cancelled request messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<RequestCancelledEvent>(
+              REQUEST_CANCELLED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('RequestCancelled'));
+            return worker;
+          },
+        },
+        BookingCancelledFanOut,
+        {
+          inject: [BookingCancelledFanOut],
+          provide: BOOKING_CANCELLED_WORKER,
+          useFactory: (fanOut: BookingCancelledFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('BookingCancelled').error(
+                'PUBLIC_WEB_URL missing; cancelled booking messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<BookingCancelledEvent>(
+              BOOKING_CANCELLED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('BookingCancelled'));
+            return worker;
+          },
+        },
         VerificationResultFanOut,
         {
           inject: [VerificationResultFanOut],
@@ -619,6 +691,8 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.quoteDeclinedWorker?.close();
     await this.bookingConfirmedWorker?.close();
     await this.bookingLapsedWorker?.close();
+    await this.requestCancelledWorker?.close();
+    await this.bookingCancelledWorker?.close();
     await this.verificationResultWorker?.close();
     await this.garageSuspendedWorker?.close();
     await this.garageReportDecidedWorker?.close();

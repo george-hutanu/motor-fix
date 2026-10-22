@@ -1,0 +1,182 @@
+import { Logger } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+
+import {
+  REQUEST_CANCELLED_CONSUMER,
+  RequestCancelledFanOut,
+} from './request-cancelled.fan-out';
+import { serialDatabase } from '../../auth/serial-db.testing';
+import { quotesWorld } from '../../quotes/quotes.testing';
+import { NotificationsModule } from '../notifications.module';
+import { NotificationsService } from '../notifications.service';
+import {
+  databaseUrl,
+  fixtures,
+  redisUrlFor,
+  testConfig,
+  testPhoneConfig,
+} from '../notifications.testing';
+
+const redisUrl = redisUrlFor(9);
+const { account, prisma, reset } = fixtures();
+const world = quotesWorld(prisma);
+serialDatabase(databaseUrl);
+
+// 23:00 in Bucharest, inside quiet hours.
+const NIGHT = new Date('2026-10-09T20:00:00Z');
+
+let app: TestingModule | undefined;
+
+afterEach(async () => {
+  await app?.close();
+  app = undefined;
+  jest.restoreAllMocks();
+});
+
+afterAll(() => prisma.$disconnect());
+
+beforeEach(async () => {
+  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  await reset();
+  await prisma.outboxEvent.deleteMany();
+});
+
+async function start() {
+  app = await Test.createTestingModule({
+    imports: [
+      NotificationsModule.registerWorker({
+        databaseUrl,
+        email: testConfig('http://127.0.0.1:9'),
+        phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+        push: null,
+        redisUrl,
+      }),
+    ],
+  }).compile();
+  await app.init();
+  app.get(NotificationsService).now = () => NIGHT;
+  return app.get(RequestCancelledFanOut);
+}
+
+// A garage with an owner, a receptionist and a mechanic who has an account.
+async function staffed(name: string) {
+  const garage = await world.garage(name);
+  const owner = await account(`${name} Owner`, ['garage']);
+  const desk = await account(`${name} Desk`, ['receptionist']);
+  const fixer = await account(`${name} Fixer`, ['mechanic']);
+  await prisma.garageMember.createMany({
+    data: [
+      { accountId: owner, garageId: garage.id, role: 'owner' },
+      { accountId: desk, garageId: garage.id, role: 'receptionist' },
+    ],
+  });
+  await prisma.mechanic.create({
+    data: {
+      accountId: fixer,
+      canAnswerQuotes: true,
+      garageId: garage.id,
+      name,
+    },
+  });
+  return { desk, fixer, garage, owner };
+}
+
+// Andrei's request, closed when his account closed, and the event it left.
+async function cancelled() {
+  const driverId = await account('Andrei Ion Marin', ['driver']);
+  const dinamo = await staffed('Atelier Dinamo');
+  const nord = await staffed('Service Nord');
+  const request = await world.request(driverId, { status: 'closed' });
+  const payload = {
+    garageIds: [dinamo.garage.id, nord.garage.id],
+    reason: 'account_closed',
+    requestId: request.id,
+  };
+  const event = await prisma.outboxEvent.create({
+    data: {
+      audience: [`account:${driverId}`],
+      kind: 'request.cancelled',
+      payload,
+      subjectId: request.id,
+    },
+  });
+  const job = {
+    data: {
+      id: String(event.id),
+      kind: event.kind,
+      payload,
+      subjectId: request.id,
+    },
+  };
+  return { dinamo, driverId, job, nord };
+}
+
+const bells = (accountId: string) =>
+  prisma.notification.findMany({
+    where: {
+      accountId,
+      channel: 'in_app',
+      fallbackOf: null,
+      kind: 'REQUEST_CANCELLED',
+    },
+  });
+
+// @traces 428-FR-009 428-FR-011
+describe('telling the garages a closed account’s request is cancelled', () => {
+  it('listens to request.cancelled on its own queue', () => {
+    expect(REQUEST_CANCELLED_CONSUMER.kinds).toEqual(['request.cancelled']);
+    expect(REQUEST_CANCELLED_CONSUMER.queue).toBe('request-cancelled');
+  });
+
+  it('tells each owner and receptionist of every garage once, with the reason', async () => {
+    const { dinamo, job, nord } = await cancelled();
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    for (const person of [dinamo.owner, dinamo.desk, nord.owner, nord.desk]) {
+      const mine = await bells(person);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].params).toMatchObject({ reason: 'account_closed' });
+    }
+  });
+
+  it('tells no mechanic and not the driver', async () => {
+    const { dinamo, driverId, job, nord } = await cancelled();
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    for (const person of [dinamo.fixer, nord.fixer, driverId]) {
+      expect(await bells(person)).toEqual([]);
+    }
+  });
+
+  it('holds nothing for the night', async () => {
+    const { job } = await cancelled();
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    expect(
+      await prisma.notification.count({
+        where: { kind: 'REQUEST_CANCELLED', status: 'held' },
+      }),
+    ).toBe(0);
+  });
+
+  it('builds each message once when the same event is handled twice', async () => {
+    const { job } = await cancelled();
+    const fanOut = await start();
+    const count = () =>
+      prisma.notification.count({ where: { kind: 'REQUEST_CANCELLED' } });
+
+    await fanOut.handle(job);
+    const once = await count();
+    await fanOut.handle(job);
+
+    expect(once).toBeGreaterThan(0);
+    expect(await count()).toBe(once);
+  });
+});
