@@ -150,8 +150,9 @@ for (const f of validateFeature(repo, { ...feature, num: feature.num ?? feature.
 // every run inside the specs and every --check in the commit gate — never
 // loads it and never reads .env. With no key the lane was never set up, so
 // it says nothing; switched off with a key, it says so once below.
-if (useJev && spec !== null && frIds.length > 0 && (await import("./lib/jev.mjs")).jevKey(repo)) {
-  const { ask, noul, noulOf, qid, score, scoreOf } = await import("./lib/jev.mjs");
+const jev = useJev ? await import("./lib/jev.mjs") : null;
+if (useJev && spec !== null && frIds.length > 0 && jev.jevKey(repo)) {
+  const { ask, noul, noulOf, qid, score, scoreOf } = jev;
 
   // The requirement AS WRITTEN, not the whole spec: a paragraph of context
   // three sections away is what makes a vague requirement look answerable.

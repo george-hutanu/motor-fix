@@ -15,11 +15,13 @@ import { isEntryPoint } from "./entry.mjs";
 const SPECIFIER =
   /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*)(['"])(\.{1,2}\/[^'"\n]*)\1/g;
 const TYPE_ONLY = /\bimport\s+type\s[^;]*?\bfrom\s*['"][^'"\n]*['"]/g;
+// Comments are dropped before matching: a commented-out import is not loaded.
+const COMMENTS = /\/\*[\s\S]*?\*\/|(^|[^:\\])\/\/.*$/gm;
 const EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs", ".json"];
 
 /** The `./` and `../` specifiers a spec loads at run time, in order. */
 export function relativeSpecifiers(text) {
-  return [...text.replace(TYPE_ONLY, "").matchAll(SPECIFIER)].map((m) => m[2]);
+  return [...text.replace(COMMENTS, "$1").replace(TYPE_ONLY, "").matchAll(SPECIFIER)].map((m) => m[2]);
 }
 
 const isFile = (path) => existsSync(path) && statSync(path).isFile();

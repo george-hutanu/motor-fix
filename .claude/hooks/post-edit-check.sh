@@ -70,7 +70,7 @@ red_first=".claude/scripts/lib/red-first-spec.mjs"
 if [ -f "$red_first" ]; then
   spec="$(node "$red_first" "$test_file")"
   if [ $? -eq 1 ]; then
-    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run: it is red-first (new on the branch, '$spec' resolves to no file). A failure dump on a spec means its imports resolve.\"}}"
+    node -e 'const [file, spec] = process.argv.slice(1); console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `${file} was not run: it is red-first (new on the branch, '"'"'${spec}'"'"' resolves to no file). A failure dump on a spec means its imports resolve.` } }))' "$test_file" "$spec"
     exit 0
   fi
 fi

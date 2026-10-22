@@ -227,14 +227,15 @@ for (const file of sources) {
 //     still exits on the mechanical ERRORs alone.
 // No key means the lane was never set up: say nothing. A key with the lane
 // switched off still gets its one line from unavailableNote below.
-if (useJev && (await import("./lib/jev.mjs")).jevKey(repo)) {
+const jev = useJev ? await import("./lib/jev.mjs") : null;
+if (useJev && jev.jevKey(repo)) {
   const deps = findings
     .filter((f) => f.rule === "new-dependency")
     .map((f) => ({ name: f.message.match(/`([^`]+)`/)?.[1], where: f.where }))
     .filter((d) => d.name);
 
   if (deps.length > 0) {
-    const { ask, choice, choiceOf, qid, unavailableNote } = await import("./lib/jev.mjs");
+    const { ask, choice, choiceOf, qid, unavailableNote } = jev;
     // The lines that actually use it, not the whole branch: a dependency is
     // justified by its call sites or not at all.
     const usage = (name) =>

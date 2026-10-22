@@ -56,5 +56,4 @@ describe('hookCandidates against awkward hook directories', () => {
     assert.equal(JSON.stringify(hookCandidates(repo)).includes('a.spec.mjs'), false);
   });
 
-
 });

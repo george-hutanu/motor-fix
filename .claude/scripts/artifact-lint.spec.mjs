@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -119,24 +119,5 @@ describe('diff-audit — the same default', { timeout: 30_000 }, () => {
       withLane.stdout.split('\n').filter((l) => l.includes('[')).length,
       asCheck.stdout.split('\n').filter((l) => l.includes('[')).length,
     );
-  });
-});
-
-// Tests are required here (Constitution II), so the tasks template /speckit-tasks
-// fills must not call them optional. The override sits where the template
-// resolver looks first.
-describe('the tasks template override', () => {
-  const ROOT = new URL('../..', import.meta.url).pathname;
-  const file = join(ROOT, '.specify/templates/overrides/tasks-template.md');
-
-  // @traces 1359-FR-011
-  it('exists, never calls tests optional, and gives every story a required tests block', () => {
-    assert.ok(existsSync(file), 'override missing');
-    const text = readFileSync(file, 'utf8');
-    assert.doesNotMatch(text, /OPTIONAL/);
-    const stories = text.match(/^## Phase \d+: User Story \d+/gm) ?? [];
-    const blocks = text.match(/^### Tests for User Story \d+ \(REQUIRED/gm) ?? [];
-    assert.ok(stories.length >= 3);
-    assert.equal(blocks.length, stories.length);
   });
 });

@@ -61,5 +61,4 @@ describe('config-protection re-bless reminder against a hostile registry', () =>
     assert.equal(edit(repo, '.claude/hooks/gate.mjs/extra').stderr, '');
   });
 
-
 });

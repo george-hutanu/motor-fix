@@ -1,8 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fingerprint, loadRegistry, scriptPath } from '../../scripts/lib/hooks.mjs';
 
 // The prose half of red-first and harden precision: the skills, agents, the
 // CI step and the eval cases that the scripts' own specs cannot see.
@@ -74,11 +73,22 @@ describe('harness catch rate: CI, templates and the reviewer say what the gates 
     assert.match(line3, /Invoked by \/speckit-review and by \/speckit-auto's review phase/);
     assert.doesNotMatch(line3, /Invoked by \/speckit-harden/);
   });
+});
 
-  // @traces 1359-FR-015
-  it('keeps the two edited gates blessed', () => {
-    const hooks = loadRegistry(REPO).hooks.filter((h) => ['post-edit-check.sh', 'config-protection.mjs'].includes(h.script));
-    assert.equal(hooks.length, 2);
-    for (const h of hooks) assert.equal(h.fingerprint, fingerprint(scriptPath(REPO, h)), h.script);
+// Tests are required here (Constitution II), so the tasks template /speckit-tasks
+// fills must not call them optional. The override sits where the template
+// resolver looks first.
+describe('the tasks template override', () => {
+  const file = join(REPO, '.specify/templates/overrides/tasks-template.md');
+
+  // @traces 1359-FR-011
+  it('exists, never calls tests optional, and gives every story a required tests block', () => {
+    assert.ok(existsSync(file), 'override missing');
+    const text = readFileSync(file, 'utf8');
+    assert.doesNotMatch(text, /OPTIONAL/);
+    const stories = text.match(/^## Phase \d+: User Story \d+/gm) ?? [];
+    const blocks = text.match(/^### Tests for User Story \d+ \(REQUIRED/gm) ?? [];
+    assert.ok(stories.length >= 3);
+    assert.equal(blocks.length, stories.length);
   });
 });

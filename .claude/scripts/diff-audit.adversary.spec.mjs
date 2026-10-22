@@ -44,13 +44,11 @@ describe('untested-new-file under bundler resolution', () => {
     assert.deepEqual(untested(), []);
   });
 
-
   it('does not take a file with a dot in its stem for a lookalike name', () => {
     write('libs/domain/src/a.b.ts', 'export const ab = 1;\n');
     write('libs/domain/src/uses.spec.ts', "import { x } from './aXb';\n");
     assert.equal(untested().length, 1);
   });
-
 
   it('survives a stem full of regex metacharacters', () => {
     write('libs/domain/src/a+b(c).ts', 'export const x = 1;\n');

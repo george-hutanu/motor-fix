@@ -1,7 +1,7 @@
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,8 +20,14 @@ const write = (root, files) => {
 const git = (root, ...args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' }).toString();
 
 /** A repo whose first commit is the base; `files` are committed on top of it. */
+const roots = [];
+afterAll(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
 const repo = (baseFiles, files = {}) => {
   const root = mkdtempSync(join(tmpdir(), 'red-first-'));
+  roots.push(root);
   git(root, 'init', '-q', '-b', 'main');
   git(root, 'config', 'user.email', 't@example.com');
   git(root, 'config', 'user.name', 't');
@@ -49,6 +55,11 @@ describe('relativeSpecifiers: the imports a red-first spec could be waiting on',
       "import { x } from '@nestjs/common';",
     ].join('\n');
     assert.deepEqual(relativeSpecifiers(text), ['./a', '../side', './b', '../c', './d', './e']);
+  });
+
+  it('skips commented-out imports, which are never loaded', () => {
+    const text = "// import { a } from './old';\n/* jest.mock('./gone'); */\nimport { u } from './u'; // from './x'";
+    assert.deepEqual(relativeSpecifiers(text), ['./u']);
   });
 
   it('skips import type, which is erased and never fails Jest', () => {

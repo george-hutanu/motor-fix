@@ -57,7 +57,6 @@ describe('relativeSpecifiers on awkward source', () => {
     assert.deepEqual(relativeSpecifiers("import type {\n  A,\n  B,\n} from './types';"), []);
   });
 
-
 });
 
 // @traces 1359-FR-001
@@ -66,8 +65,6 @@ describe('unresolvedSpecifier on awkward resolution', () => {
     const root = repo({ 'libs/x/src/dir/readme.md': '' });
     assert.equal(unresolvedSpecifier(join(root, 'libs/x/src/a.spec.ts'), "import './dir';"), './dir');
   });
-
-
 
   it('calls a dangling symlink unresolved', () => {
     const root = repo({});
@@ -100,7 +97,6 @@ describe('redFirst on hostile inputs', () => {
     assert.equal(redFirst(root, SPEC, env), null);
   });
 
-
   it('finishes on a spec of tens of megabytes', { timeout: 30_000 }, () => {
     const root = repo({});
     write(root, { [SPEC]: `${'// filler line\n'.repeat(1_400_000)}import './ghost';\n` });
@@ -112,7 +108,6 @@ describe('redFirst on hostile inputs', () => {
     assert.equal(redFirst(root, 'libs/x/src/gone.spec.ts', env), null);
   });
 
-
   it('treats an empty SPECKIT_BASE_REF as unset', () => {
     const root = repo({}, { [SPEC]: "import './a';\n" });
     assert.equal(redFirst(root, SPEC, { SPECKIT_BASE_REF: '' }), null);
@@ -123,7 +118,6 @@ describe('redFirst on hostile inputs', () => {
 describe('the CLI on hostile arguments', () => {
   const run = (root, args, extra = {}) =>
     spawnSync(process.execPath, [CLI, ...args], { cwd: root, env: { ...process.env, ...extra }, encoding: 'utf8' });
-
 
   it('exits 0 outside a git repository', () => {
     const dir = mkdtempSync(join(tmpdir(), 'red-first-nogit-'));
