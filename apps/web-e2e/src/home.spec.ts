@@ -199,7 +199,8 @@ test.describe('the place on Home @seeded', () => {
 
     await expect(line(page)).toHaveText(/În toată România\s*·\s*Alege locul/);
     await daciaLine(page);
-    await expect(page.locator('mf-home')).not.toContainText('km');
+    // A distance, not the letters: seeded brand names carry random stamps ("…6kmsf").
+    await expect(page.locator('mf-home')).not.toContainText(/\d\s*km\b/);
   });
 
   test.describe('with the location shared', () => {
