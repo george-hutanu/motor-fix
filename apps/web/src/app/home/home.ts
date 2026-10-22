@@ -260,10 +260,20 @@ export class Home {
     effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;
-      const timer = setInterval(() => {
-        if (!this.document.hidden) this.advance();
-      }, CYCLE_MS);
-      onCleanup(() => clearInterval(timer));
+      // Hidden, the count stops; shown again, it starts over from 5 seconds.
+      let timer: ReturnType<typeof setInterval> | undefined;
+      const follow = () => {
+        clearInterval(timer);
+        timer = this.document.hidden
+          ? undefined
+          : setInterval(() => this.advance(), CYCLE_MS);
+      };
+      follow();
+      this.document.addEventListener('visibilitychange', follow);
+      onCleanup(() => {
+        clearInterval(timer);
+        this.document.removeEventListener('visibilitychange', follow);
+      });
     });
 
     // The tiles are read on both sides: in the browser, right after a server

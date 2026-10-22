@@ -694,20 +694,54 @@ describe('Home brand cycling', () => {
     expect(count()?.getAttribute('aria-live')).toBe('off');
   });
 
-  it('waits while the page is hidden and goes on when it is shown', async () => {
-    await render();
+  // What the browser does as the tab goes to the back and comes forward.
+  const hide = (hidden: boolean) => {
     Object.defineProperty(document, 'hidden', {
       configurable: true,
-      value: true,
+      value: hidden,
     });
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  it('waits while the page is hidden and goes on when it is shown', async () => {
+    await render();
+    hide(true);
 
     await tick(15000);
     expect(checked()).toBe('BMW');
 
-    Object.defineProperty(document, 'hidden', {
-      configurable: true,
-      value: false,
-    });
+    hide(false);
+    await tick(5000);
+    expect(checked()).toBe('Mini');
+  });
+
+  // @traces 007-brand-headline-FR-018
+  it('pauses mid-count when hidden and waits a full 5 seconds once shown', async () => {
+    await render();
+    await tick(3000);
+    hide(true);
+    await tick(2000);
+    expect(checked()).toBe('BMW');
+    await tick(60500);
+    expect(checked()).toBe('BMW');
+
+    hide(false);
+    await tick(0);
+    expect(checked()).toBe('BMW');
+    await tick(4999);
+    expect(checked()).toBe('BMW');
+    await tick(1);
+    expect(checked()).toBe('Mini');
+    await tick(5000);
+    expect(checked()).toBe('Mercedes-Benz');
+  });
+
+  // @traces 007-brand-headline-FR-018
+  it('does not start a second count when shown twice', async () => {
+    await render();
+    hide(false);
+    hide(false);
+
     await tick(5000);
     expect(checked()).toBe('Mini');
   });
