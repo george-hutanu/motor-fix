@@ -4086,7 +4086,12 @@ describe('Results sorting', () => {
     await pick('Notă');
 
     expect(TestBed.inject(Router).url).not.toContain('sort=');
-    expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+    // Named on the request, so the change is counted as one, not a search.
+    expect(searches().at(-1)).toEqual({
+      brand: 'bmw',
+      near: NEAR,
+      sort: 'rating',
+    });
   });
 
   it('reads the sort from the bar on the first search, logged', async () => {
@@ -4223,5 +4228,19 @@ describe('Results sorting', () => {
     expect(said(why)).toBe('Alege un loc');
     expect(pressed()).toEqual(['Notă']);
     expect(searches()).toEqual([]);
+  });
+
+  it('takes Notă back from a distance waiting for a place', async () => {
+    asks = [];
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocation,
+    });
+    await open('/ro/garages?brand=bmw&sort=distance', { placed: false });
+    Reflect.deleteProperty(navigator, 'geolocation');
+
+    await pick('Notă');
+
+    expect(TestBed.inject(Router).url).not.toContain('sort=');
   });
 });

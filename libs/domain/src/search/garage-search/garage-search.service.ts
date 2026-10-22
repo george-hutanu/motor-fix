@@ -5,7 +5,6 @@ import {
   type ListedGarageDto,
   nearOf,
   SEARCH_PAGE_SIZE,
-  SEARCH_SORTS,
   type SearchBbox,
   type SearchPoint,
   type SearchSort,
@@ -152,7 +151,6 @@ function decode(
   if (
     b !== brandId ||
     s !== sort ||
-    !SEARCH_SORTS.includes(s) ||
     !sortValueOk(parsed) ||
     !GROUPS.includes(g as Cursor['g']) ||
     !isUUID(i) ||

@@ -2,8 +2,6 @@ import { Component, input, output } from '@angular/core';
 import type { SearchSort } from '@motor-fix/contracts/search-place';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-let next = 0;
-
 // The order of the list: three buttons, the current one pressed. Distanță
 // needs a place, so it is off, saying why, until one is known.
 @Component({
@@ -22,7 +20,7 @@ export class SortControl {
     { label: 'public.results.sort.distance', sort: 'distance' },
     { label: 'public.results.sort.price', sort: 'price' },
   ] as const;
-  protected readonly whyId = `mf-sort-why-${next++}`;
+  protected readonly whyId = 'mf-sort-why';
 
   protected off(sort: SearchSort) {
     return sort === 'distance' && !this.placeKnown();

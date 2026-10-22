@@ -227,6 +227,9 @@ export class Results {
   // move of the map or a step back or forward through the history.
   private logNext = false;
   private logged: string | undefined;
+  // A sort change names its sort, the rating order too, so it is counted as
+  // one and never as a search; a reload of the rating order names none.
+  private sortNext = false;
   // Where the page was scrolled to when the kept results were shown again.
   private scrollBack: { inSheet: boolean; y: number } | undefined;
   private popped = false;
@@ -291,6 +294,8 @@ export class Results {
   // page is read again in place.
   protected readonly results = resource({
     loader: async ({ params }) => {
+      const sortChange = this.sortNext;
+      this.sortNext = false;
       const kept = this.memory.take(params);
       if (kept) {
         this.logged = kept.logged;
@@ -303,10 +308,15 @@ export class Results {
         return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
       const log = this.logNext || (searched !== this.logged && !this.popped);
+      const sort = sortChange && !log && !params.sort;
       this.logNext = false;
       this.logged = searched;
       return this.search.garageSearchControllerForBrand(
-        log ? { ...params, log: '1' } : params,
+        log
+          ? { ...params, log: '1' }
+          : sort
+            ? { ...params, sort: 'rating' }
+            : params,
       );
     },
     params: () => this.query(),
@@ -651,8 +661,8 @@ export class Results {
       ...(UUID.test(brand) ? { brandId: brand } : { brand }),
       near,
       ...(radius ? { radius } : {}),
-      // The rating order is the list's own; no other is sent without a place.
-      ...(sort !== 'rating' && near ? { sort } : {}),
+      // The rating order is the list's own.
+      ...(sort !== 'rating' ? { sort } : {}),
     };
   }
 
@@ -880,7 +890,8 @@ export class Results {
   // Another order of the same list: a new entry in the history, nothing
   // written for the rating order; the sort already shown changes nothing.
   protected changeSort(sort: SearchSort) {
-    if (sort === untracked(this.sortShown)) return;
+    if (sort === untracked(this.sort)) return;
+    this.sortNext = true;
     void this.write({ sort: sort === 'rating' ? null : sort }, { push: true });
   }
 

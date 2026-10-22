@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-20
+updated: 2026-10-22
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -20,6 +20,7 @@ features:
   - 1355-results-brand-chips
   - 1358-results-phone-map-list
   - 1356-results-load-more
+  - 328-sort-results
 ---
 
 # Capability: Garage search
@@ -48,13 +49,13 @@ _From 042-brand-verdict._
 
 _From 043-brand-first-garage-list._
 
-### 1356-FR-009 — The cursor of 267-FR-002 MUST carry, besides the brand, the group, the last garage's id and the box, the order values the boundary garage had when its page was answered (rating and review count); the next page starts after that point in the order of 267-FR-001 even when the boundary garage's rating or review count has changed since, and its name is still read back by id. The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters, so its length is its size in bytes: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor` (043-FR-009 as amended here).
+### 328-FR-006 — The cursor (1356-FR-009) MUST carry the sort it was made under and the boundary garage's value for that sort (its distance in metres exactly as the query computed it, never rounded, or its rate in bani, besides the rating and review count it carries today), so the next page continues the same order and repeats or skips nothing; a cursor presented with a different sort, brand, group or box MUST be refused as `invalid_cursor` (043-FR-006).
 
-_From 1356-results-load-more._
+_From 328-sort-results._
 
-### 267-FR-001 — The garage search for a brand (`GET /api/v1/search/garages`) MUST order each group by rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z under the database's default collation, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same; the group rule of 043-FR-001 (takers first, on every page) is unchanged.
+### 328-FR-003 — `rating` MUST keep today's order inside each group (267-FR-001): rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z, then id.
 
-_From 267-brand-results._
+_From 328-sort-results._
 
 ### 267-FR-003 — Each listed garage MUST carry, besides the fields of 042-FR-012 and 229-FR-012, what its card shows: `rating` (one decimal, null until reviewed), `reviewCount`, `labourFromLei` (whole lei, null until set), `businessKind`, `city` (the address's city; never for a mobile mechanic; absent when unknown), `serviceRadiusKm` (a mobile mechanic only), and `facilities` (the kinds of its facility rows in status `listed`, in a fixed catalogue order). Nothing private travels: no phone, address, seat or account.
 
@@ -282,9 +283,9 @@ _From 270-card-pin-link._
 
 _From 1358-results-phone-map-list._
 
-### 1355-FR-006 — When the list shown is replaced by a fresh answer (a new brand, place or radius, a visible-area load, "Înapoi la 25 km", the "Reîncarcă" chip, and any later sort or filter change) the first card's garage MUST become selected and the pointed state cleared; with an empty list nothing is selected. An in-place card change and a pins re-read MUST keep the selection. Only after a brand change MUST the list also go back to the top, its cards re-ordered with a short animation (a 16 px rise lasting at most 520 ms, as the mock's row-in; none under reduced motion); any other replacement does not scroll the list.
+### 328-FR-012 — A sort change MUST request the first page with the new sort and no `log=1`, show the brand-change loading state of 1355-FR-011 meanwhile (the old cards dimmed under the thin progress bar), and on the answer replace the list, scroll it to its top, re-order its cards with the rise of 1355-FR-006 (a 16 px rise lasting at most 520 ms; none under reduced motion) and select the first card with the pointed state cleared; on Mobile · Results the sheet keeps its position (1358-FR-008).
 
-_From 1355-results-brand-chips._
+_From 328-sort-results._
 
 ### 270-FR-007 — The selected card MUST show the theme's selected state (050-FR-007: amber border and text accent on the 10% amber tint, the `--mf-amber*` tokens of `libs/ui-cockpit`), in both schemes; its lamp, texts and controls are otherwise unchanged. A pointed card that is not selected shows no card change: only its pin lights.
 
@@ -550,6 +551,58 @@ _From 1356-results-load-more._
 
 _From 1356-results-load-more._
 
+### 328-FR-001 — The garage search (`GET /api/v1/search/garages`) MUST accept `sort` ∈ `rating` (the default when absent), `distance`, `price`; any other value MUST answer 400 `validation_failed` naming `sort`, as the radius does today. `sort=distance` without a place (`near`; a box alone is no place) MUST answer 400 `validation_failed` too.
+
+_From 328-sort-results._
+
+### 328-FR-002 — Whatever the sort, the two brand groups of 043-FR-001 MUST stay in order: no garage of the second group (refuses or unmarked) ever comes before one of the first, on any page.
+
+_From 328-sort-results._
+
+### 328-FR-004 — `distance` MUST order each group nearest first by the distance of 271-FR-010 (the place to the garage's stored position, on the sphere); a mobile mechanic ranks by the distance from the place to its stored position (its home base, the centre of its service area), exactly as a fixed garage does; ties fall back to the order of FR-003.
+
+_From 328-sort-results._
+
+### 328-FR-005 — `price` MUST order each group by the hourly rate low to high (`labour_from_bani`, the exact value, not the rounded lei), garages without a rate (`labour_from_bani` NULL; `0` is a rate and sorts first) after every garage with one; ties fall back to the order of FR-003.
+
+_From 328-sort-results._
+
+### 328-FR-007 — Each listed garage MUST keep the shape of 267-FR-003: no new field; a mobile mechanic's item carries no distance, its stored position stays on the server (229-FR-011), and its card keeps its area line ("Mecanic mobil · vine la tine · rază {n} km", 229-FR-015).
+
+_From 328-sort-results._
+
+### 328-FR-008 — A sort change MUST write no search-log row and MUST NOT count as a new search (267-FR-007: `log=1` is the first page's of a new search only; a sort change sends no `log=1`), as a reload, a page read or a map move does not today (1355-FR-008, 1356-FR-010).
+
+_From 328-sort-results._
+
+### 328-FR-009 — Results MUST show a sort control with three choices, Notă, Distanță and Preț ("Rating", "Distance", "Price" in English), Notă selected by default, as one named group of three buttons with a pressed state (`aria-pressed`), at least 44 px tall each, its name read to assistive technology ("Sortare" / "Sort") and the selected choice announced; on Results + map it sits in the brand chips' row, right-aligned, above the list, on Mobile · Results it joins the sheet's header after the chip row (1358-FR-006), on every size with no sideways scroll at 320 px.
+
+_From 328-sort-results._
+
+### 328-FR-010 — The chosen sort MUST live in the address bar as `sort=distance` or `sort=price`; the default Notă writes no `sort` parameter and a `sort` the page does not know reads as Notă. A brand change MUST keep it (1355-FR-005), a reload or a shared link MUST restore it, and the kept list of 1356-FR-008 is the list of that search with that sort.
+
+_From 328-sort-results._
+
+### 328-FR-011 — While a place is unknown (the location refused or still asked for, no address typed) the Distanță choice MUST be shown unavailable (disabled, with the reason "Alege un loc" / "Pick a place" as its accessible description) and MUST never send `sort=distance`; an address bar naming `sort=distance` with no place keeps the parameter and shows Notă selected; once a place is known, that new search goes out with the address bar's sort (Distanță) and no other rule.
+
+_From 328-sort-results._
+
+### 328-FR-013 — A live rating change (256, 419) MUST update the card in place and MUST NOT re-order the list under any sort; the order is the search's until the next first-page read.
+
+_From 328-sort-results._
+
+### 328-FR-014 — A sort change MUST increment one counter in the existing search counter family (`sort_change`, label `sort="rating|distance|price"`), which writes no log row and is not the search count of FR-008; the search counter itself gains no label. Both are listed in the PR's Observability section and in `infra/observability/inventory.json`; no new endpoint, service, queue or alert.
+
+_From 328-sort-results._
+
+### 328-FR-015 — Jest on real PostgreSQL and Redis MUST cover: each sort inside both groups with ties on the sort value, the groups first under every sort, unrated garages last under `rating` and garages without a rate last under `price`, the mobile mechanic ranked from its stored position (12 km / 8 km / 5 km), the cursor across pages for each sort (no repeat, no skip, with a value change between pages), a cursor of one sort refused under another, 400 for an unknown sort and for `distance` without a place, and no search-log row on a sort change; the contract tests cover the `sort` parameter. Web unit tests cover the control's state from the address bar, the brand change keeping it, the disabled Distanță without a place, the scroll to top and the first card selected, and no `log=1` on a sort change. Playwright (`web-e2e`) switches between the three sorts checking the first card each time, changes the brand and checks the sort is kept.
+
+_From 328-sort-results._
+
+### 328-FR-016 — Out of scope: the facility filters (#210, #183), the Home dial's choice (#148), any sort beyond the three, and a new index for the price or distance order unless the plan's `EXPLAIN` shows a page past the first needs one (Principle I).
+
+_From 328-sort-results._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -574,3 +627,6 @@ _From 1356-results-load-more._
 - `270-FR-004` — superseded by `1358-FR-007` (2026-10-20)
 - `267-FR-002` — superseded by `1356-FR-009` (2026-10-20)
 - `043-FR-009` — superseded by `1356-FR-009` (2026-10-20)
+- `267-FR-001` — superseded by `328-FR-003` (2026-10-22)
+- `1356-FR-009` — superseded by `328-FR-006` (2026-10-22)
+- `1355-FR-006` — superseded by `328-FR-012` (2026-10-22)
