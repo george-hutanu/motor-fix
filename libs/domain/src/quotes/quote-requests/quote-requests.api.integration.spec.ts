@@ -797,3 +797,97 @@ describe('whether each garage usually answers the same day', () => {
     expect(res.body.recipients[0].answersSameDay).toBe(false);
   });
 });
+
+const voiceOf = async (id: string) => {
+  const [row] = await prisma.$queryRaw<{ copy_voice: number | null }[]>`
+    SELECT copy_voice FROM quote_request WHERE id = ${id}::uuid`;
+  return row?.copy_voice;
+};
+
+// What differs between two sends of the same body: the row ids and the times.
+const shape = (body: object) =>
+  JSON.stringify(body)
+    .replace(/"id":"[\da-f-]{36}"/g, '"id":"id"')
+    .replace(/"\d{4}-\d\d-\d\dT[\d:.]+Z"/g, '"at"');
+
+// @traces 009-FR-005
+describe('the copy voice of a request', () => {
+  it('stores the voice the visit was in', async () => {
+    const { auth, body } = await scene();
+
+    const res = await send({ ...body, copyVoice: 3 }, auth);
+
+    expect(res.status).toBe(201);
+    expect(await voiceOf(res.body.id)).toBe(3);
+  });
+
+  it.each([7, 0, 'x', null])(
+    'stores no voice for %p and answers as without one',
+    async (copyVoice) => {
+      const { auth, body } = await scene();
+
+      const without = await send(body, auth);
+      const res = await send({ ...body, copyVoice }, auth);
+
+      expect(res.status).toBe(without.status);
+      expect(shape(res.body)).toBe(shape(without.body));
+      expect(await voiceOf(res.body.id)).toBeNull();
+    },
+  );
+
+  it('keeps the first voice when the same key is sent again', async () => {
+    const { auth, body } = await scene();
+    const key = randomUUID();
+
+    const first = await send({ ...body, copyVoice: 3 }, auth, key);
+    const second = await send({ ...body, copyVoice: 5 }, auth, key);
+
+    expect(second.body.id).toBe(first.body.id);
+    expect((await rows()).requests).toBe(1);
+    expect(await voiceOf(first.body.id)).toBe(3);
+  });
+
+  it('keeps the voice when a garage answers with a quote', async () => {
+    const { auth, body, car, oil, brakes } = await scene();
+    const dinamo = await team('Atelier Dinamo');
+    await prisma.garageBrand.create({
+      data: {
+        brandId: car.brandId,
+        garageId: dinamo.garage.id,
+        stance: 'works_on',
+      },
+    });
+    await prisma.garageBrandJob.createMany({
+      data: [oil.id, brakes.id].map((jobTypeId) => ({
+        brandId: car.brandId,
+        garageId: dinamo.garage.id,
+        jobTypeId,
+      })),
+    });
+    const sent = await send(
+      { ...body, copyVoice: 3, garageIds: [dinamo.garage.id] },
+      auth,
+    );
+
+    const quoted = await post(
+      '/quotes',
+      {
+        durationMinutes: 120,
+        fromLei: 650,
+        requestId: sent.body.id,
+        slot: new Date(Date.now() + 48 * 3_600_000).toISOString(),
+        toLei: 800,
+      },
+      bearer(dinamo.owner, 'garage'),
+      randomUUID(),
+    );
+
+    expect(quoted.status).toBe(201);
+    expect(
+      await prisma.quoteRequest.findUniqueOrThrow({
+        where: { id: sent.body.id },
+      }),
+    ).toMatchObject({ status: 'quoted' });
+    expect(await voiceOf(sent.body.id)).toBe(3);
+  });
+});

@@ -519,6 +519,9 @@ model ListingDraft {
   // file; null for a first listing. One open copy per file: the partial
   // unique index listing_draft_one_open_copy, in SQL.
   verificationFileId String?             @map("verification_file_id") @db.Uuid
+  // The copy voice of the visit (1-5) when the form opened from Home, stored
+  // only with analytics consent.
+  copyVoice          Int?                @map("copy_voice") @db.SmallInt
   verificationFile   VerificationFile?   @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
   tokens             ListingDraftToken[]
   notifications      Notification[]

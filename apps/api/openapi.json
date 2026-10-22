@@ -11658,6 +11658,12 @@
             "description": "Trimmed; required, of at least 10 characters, when no job is chosen",
             "maxLength": 1000,
             "nullable": true
+          },
+          "copyVoice": {
+            "type": "number",
+            "description": "The copy voice of the visit, 1-5, sent only with analytics consent",
+            "maximum": 5,
+            "minimum": 1
           }
         },
         "required": [
@@ -14260,6 +14266,12 @@
             "type": "string",
             "description": "Trimmed and lower-cased",
             "maxLength": 254
+          },
+          "copyVoice": {
+            "type": "number",
+            "description": "The copy voice of the visit, 1-5, sent only with analytics consent",
+            "maximum": 5,
+            "minimum": 1
           }
         },
         "required": [

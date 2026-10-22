@@ -4,6 +4,11 @@
 export interface CreateListingDraftDto {
 
   /**
+   * The copy voice of the visit, 1-5, sent only with analytics consent
+   */
+  copyVoice?: number;
+
+  /**
    * The form data, whole every time
    */
   data: {

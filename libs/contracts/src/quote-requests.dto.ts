@@ -5,12 +5,16 @@ import {
   ArrayUnique,
   IsArray,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
+import { copyVoiceOrUndefined } from './copy-voices.dto';
 import { NearQueryDto } from './near.dto';
 import type { Problem } from './problem';
 import {
@@ -89,6 +93,19 @@ export class CreateQuoteRequestDto {
   @IsString()
   @MaxLength(REQUEST_DESCRIPTION_MAX)
   description?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'The copy voice of the visit, 1-5, sent only with analytics consent',
+    maximum: 5,
+    minimum: 1,
+  })
+  @Transform(copyVoiceOrUndefined)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  copyVoice?: number;
 }
 
 export class CandidateGaragesQueryDto extends NearQueryDto {

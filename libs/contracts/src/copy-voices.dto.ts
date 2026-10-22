@@ -2,6 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsDefined, ValidateNested } from 'class-validator';
 
+// Anything but a whole 1 to 5 is dropped rather than refused: a bad voice
+// never costs the visitor the request or the listing it rides on.
+export const copyVoiceOrUndefined = ({ value }: { value: unknown }) =>
+  Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 5
+    ? value
+    : undefined;
+
 export class CopyVoiceStateDto {
   @ApiProperty({ description: 'Visitors may get this voice' })
   @IsBoolean()
