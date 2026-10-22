@@ -103,6 +103,22 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+## Spec Delta
+
+<!-- project-local addition (constitution v4.1.0) — re-apply after `specify integration upgrade` -->
+<!--
+  The living capability (.specify/capabilities/<slug>.md) each FR changes, one
+  section per capability; `capabilities.mjs validate --check` reads it at
+  specify. A requirement that changes one a capability already holds is
+  a Modifies naming it (feature-qualified), never an Add.
+-->
+
+### Capability: `[slug]`
+
+- **Adds**: FR-001–FR-005
+- **Modifies**: `[NNN-FR-XXX]` → `FR-006`
+- **Removes**: none
+
 ## Success Criteria *(mandatory)*
 
 <!--

@@ -33,7 +33,7 @@
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
@@ -334,12 +334,58 @@ function check(ctx) {
   return {};
 }
 
-/** The CI-only checks and the affected typecheck and unit tests, which the commit hook no longer runs. */
+/**
+ * The tree the local checks would judge: `git write-tree`, the merge base with
+ * origin/main and origin/main's own sha (structure-check judges against the
+ * ref itself), or null on a dirty worktree or when git gives any of them empty.
+ */
+function proofKey(ctx) {
+  try {
+    if (ctx.git("status", "--porcelain").stdout.trim()) return null;
+    const tree = ctx.git("write-tree").stdout.trim();
+    const base = tree && ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
+    const main = base && ctx.git("rev-parse", "origin/main").stdout.trim();
+    return tree && base && main ? { tree, base, main } : null;
+  } catch (e) {
+    if (e instanceof Stop) return null;
+    throw e;
+  }
+}
+
+/**
+ * The CI-only checks and the affected typecheck and unit tests, which the
+ * commit hook no longer runs: skipped when a passing proof in
+ * .specify/.cache/ (per worktree, as .specify/ is) covers this clean tree,
+ * merge base and origin/main.
+ */
 function localChecks(ctx) {
+  const key = proofKey(ctx);
+  const file = join(ctx.repo, ".specify", ".cache", "local-checks.json");
+  if (key) {
+    let proof = null;
+    try {
+      proof = JSON.parse(readFileSync(file, "utf8"));
+    } catch {}
+    if (proof?.tree === key.tree && proof?.base === key.base && proof?.main === key.main) {
+      ctx.did.push(`local checks: reused proof ${key.tree.slice(0, 7)}`);
+      return;
+    }
+  }
+  runChecks(ctx, key?.base);
+  if (!key) return;
+  // The proof only saves time: a cache that cannot be written leaves the next run to check again.
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${JSON.stringify({ ...key, at: new Date().toISOString() })}\n`);
+  } catch {}
+}
+
+/** `known` is the merge base proofKey already read, when it read one. */
+function runChecks(ctx, known) {
   runCheck(ctx, "observability-inventory", "node", ["scripts/observability-inventory.ts"]);
   runCheck(ctx, "structure-check", "node", ["scripts/structure-check.ts", "--base", "origin/main"]);
   runCheck(ctx, "lint", "npm", ["run", "lint"]);
-  const base = ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
+  const base = known || ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
   if (!base) throw new Stop("affected typecheck and unit tests", `no merge base with origin/main: git fetch origin, then rerun ${SELF} check`);
   runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`]);
 }

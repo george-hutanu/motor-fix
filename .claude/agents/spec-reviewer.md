@@ -70,6 +70,8 @@ range (or "working tree"). Gather your own evidence:
    A changed screen must match its board in `specs/<feature>/design.md`
    (layout, states, texts): a difference is a finding unless `design.md` says
    the Build brief overrides the board there.
+   An FR that changes a requirement a capability already holds is a Modifies
+   naming that requirement in the `## Spec Delta`, not an Adds.
 3. **Test honesty** — do the new tests assert real behavior, not vacuous
    always-pass assertions? Did any pre-existing test get weakened, `.skip`ped,
    or deleted to make the suite pass? Weakened tests are CRITICAL.
