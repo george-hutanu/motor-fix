@@ -29,10 +29,23 @@ const publicOf = (rows: CopyVoiceSetting[]): PublicCopyVoicesDto => ({
   pinned: rows.find((r) => r.pinned)?.voice ?? null,
 });
 
-const listOf = (rows: CopyVoiceSetting[]): CopyVoicesDto => ({
+const COUNT_WINDOW_MS = 30 * 86_400_000;
+
+type Tally = { copyVoice: number | null; _count: { _all: number } };
+
+const tallyOf = (groups: Tally[], voice: number) =>
+  groups.find((g) => g.copyVoice === voice)?._count._all ?? 0;
+
+const listOf = (
+  rows: CopyVoiceSetting[],
+  requests: Tally[],
+  listings: Tally[],
+): CopyVoicesDto => ({
   voices: rows.map((r) => ({
     enabled: r.enabled,
+    listings: tallyOf(listings, r.voice),
     pinned: r.pinned,
+    requests: tallyOf(requests, r.voice),
     updatedAt: r.updatedAt?.toISOString() ?? null,
     voice: r.voice,
   })),
@@ -102,7 +115,7 @@ export class CopyVoicesService {
 
   async list(actor: Actor): Promise<CopyVoicesDto> {
     requireCapability(actor, 'admin.settings');
-    return listOf(await this.rows(this.prisma));
+    return this.withCounts(await this.rows(this.prisma));
   }
 
   async change(
@@ -140,7 +153,29 @@ export class CopyVoicesService {
         `voice ${c.voice} ${JSON.stringify(c.before)} -> ${JSON.stringify(c.after)} by ${actor.accountId}`,
       );
     }
-    return listOf(rows);
+    return this.withCounts(rows);
+  }
+
+  // The requests sent and the listing drafts started in each voice over the
+  // last 30 days, whatever became of them since.
+  private async withCounts(rows: CopyVoiceSetting[]): Promise<CopyVoicesDto> {
+    const where = {
+      copyVoice: { not: null },
+      createdAt: { gte: new Date(Date.now() - COUNT_WINDOW_MS) },
+    };
+    const [requests, listings] = await Promise.all([
+      this.prisma.quoteRequest.groupBy({
+        _count: { _all: true },
+        by: ['copyVoice'],
+        where,
+      }),
+      this.prisma.listingDraft.groupBy({
+        _count: { _all: true },
+        by: ['copyVoice'],
+        where,
+      }),
+    ]);
+    return listOf(rows, requests, listings);
   }
 
   // Each changed row with its audit entry, then one event for the change.

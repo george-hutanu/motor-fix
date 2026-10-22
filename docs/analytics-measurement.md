@@ -13,7 +13,7 @@ keeps this list in step with the event table in
 | --- | --- | --- | --- | --- |
 | Home | Share of visitors who choose a brand | `brand_picked` (`source: home_picker`) over the Home page views | yes | The brand strip and the results chips will send `home_strip` and `results_chips` when they exist |
 | Home | Share who continue to Results or a garage profile | `garage_opened` (`source: home`) and the Results page views | yes | Page views are named by route template, never the address |
-| Home | Garage sign-ups started from the bottom section | not measured at launch | yes | `listing_started` carries no source |
+| Home | Garage sign-ups started from the bottom section | not measured at launch | yes | `listing_started` carries no source; its `voice` says only that the form opened from Home |
 | Sign-in | Share of visitors who create an account when asked | `sign_up_completed`; the share needs the dialog's openings, which are not sent | yes | Not measured at launch as a share |
 | Sign-in | Sign-up method split: e-mail, Apple, Google, phone | `sign_up_completed` (`method`) | yes | `role` is always `driver` until garage sign-up exists |
 | Quote request and booking | Requests per day | database count: requests sent, overview with period "today"; also `quote_request_sent` | yes | The count is the truth; the event only covers consenting visitors |
@@ -41,17 +41,18 @@ in `analytics-events.ts`, and its page is the route template.
 | Event | Surface | Built |
 | --- | --- | --- |
 | `sign_up_completed` | E-mail sign-up, Google or Apple first sign-in, phone sign-up | built |
+| `home_visit` | Home: a full load that took the visit's copy voice, once, with the voice | built |
 | `brand_picked` | Home: a brand picker tile or a brand search result | built |
 | `garage_opened` | The garage profile, once per open, with where it was opened from | built |
 | `filter_applied` | Results filters | not built |
 | `garage_saved` | Saving a garage from its profile or a result card | not built |
-| `quote_request_started` | "Cere ofertă" on the garage profile | built |
-| `quote_request_sent` | The quote request created, once per send | built |
+| `quote_request_started` | "Cere ofertă" on the garage profile, with the copy voice | built |
+| `quote_request_sent` | The quote request created, once per send, with the copy voice | built |
 | `message_sent` | Messages between a driver and a garage | not built |
 | `request_answered` | The garage sends a quote or declines a request | built |
 | `quote_accepted` | The driver accepts a quote in the web | not built |
 | `review_posted` | A driver posts a review | not built |
-| `listing_started` | List your garage: the draft's first server copy | built |
+| `listing_started` | List your garage: the draft's first server copy, with the copy voice when the form opened from Home | built |
 | `listing_step_completed` | List your garage: a step newly completed | built |
 | `survey_completed` | List your garage: the closing survey | not built |
 | `listing_submitted` | List your garage: the send reaching complete | built |

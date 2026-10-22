@@ -29,6 +29,7 @@ import {
   writeDraft,
 } from './draft';
 import { Consent } from '../../consent/consent';
+import { Voice } from '../../voice/voice';
 
 type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
 type EmailError = 'emailInvalid' | 'emailNeeded';
@@ -85,6 +86,7 @@ export class DraftKeeper {
   private readonly api = inject(ListingDraftsService);
   private readonly i18n = inject(I18n);
   private readonly consent = inject(Consent);
+  private readonly voice = inject(Voice);
   private readonly router = inject(Router);
 
   readonly draft = signal<BrowserDraft>({
@@ -425,11 +427,16 @@ export class DraftKeeper {
           email,
           language: this.language(),
           step: sent.step,
+          ...(this.consent.granted() &&
+            this.voice.fromHome && { copyVoice: this.voice.voice }),
         },
       });
       this.serverEmail = saved.email;
       this.confirm(sent, saved);
-      this.consent.track('listing_started');
+      this.consent.track(
+        'listing_started',
+        this.voice.fromHome ? { voice: this.voice.voice } : {},
+      );
     } catch (error) {
       this.fail(error);
     } finally {

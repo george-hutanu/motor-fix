@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 079-account-model
   - 082-sign-in
@@ -39,6 +39,7 @@ features:
   - 1359-signup-survey
   - 116-listing-verification-status
   - 101-verification-progress
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Accounts
@@ -1055,6 +1056,14 @@ _From 1348-release-green._
 ### 101-FR-011 — Every new text exists under `garage.verification.*` in the shared i18n files, and `shell.frame.verification` is removed in Romanian and English (Romanian hyphenated words use U+2011); the page is a `<name>/` component folder (Principle IV); no new route, DTO or endpoint is added; the generated client is unchanged.
 
 _From 101-verification-progress._
+
+### 009-FR-002 — The launch events `quote_request_started`, `quote_request_sent` and `listing_started` (250-FR-004, 250-FR-005) MUST carry a property `voice` (1–5): for the two request events, the visit's voice at the moment of the action; for `listing_started`, the visit's voice only when the form was opened from Home (FR-006), otherwise no `voice` property. The event contract MUST list `home_visit` and the `voice` property with its allowed values, so anything else is dropped before it leaves, as today.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-003 — Without a valid granted consent, no event and no voice property MUST leave the browser, and nothing else about the visit changes: no new storage, no new call, no new prompt. The existing one wrapper of the consent service is the only path an event takes.
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

@@ -1,4 +1,4 @@
-type Rule = readonly string[] | 'slug' | 'count' | 'step' | 'rating';
+type Rule = readonly string[] | 'slug' | 'count' | 'step' | 'rating' | 'voice';
 
 // The launch events and the only properties each may carry. Plausible keeps
 // what it is sent, so anything else is dropped before it leaves.
@@ -14,7 +14,8 @@ export const ANALYTICS_EVENTS = {
     source: ['results', 'map_pin', 'home', 'shared_link', 'saved_list'],
   },
   garage_saved: { source: ['profile', 'result_card'] },
-  listing_started: {},
+  home_visit: { voice: 'voice' },
+  listing_started: { voice: 'voice' },
   listing_step_completed: { step: 'step' },
   listing_submitted: {},
   message_sent: { side: ['driver', 'garage'] },
@@ -26,8 +27,9 @@ export const ANALYTICS_EVENTS = {
     brand: 'slug',
     garages: ['1', '2–3', '4–5'],
     jobs: 'count',
+    voice: 'voice',
   },
-  quote_request_started: { source: ['profile', 'results'] },
+  quote_request_started: { source: ['profile', 'results'], voice: 'voice' },
   request_answered: { action: ['quote', 'decline'] },
   review_posted: { has_text: ['yes', 'no'], rating: 'rating' },
   sign_up_completed: {
@@ -45,6 +47,7 @@ const RANGES = {
   count: [1, Number.MAX_SAFE_INTEGER],
   rating: [1, 5],
   step: [1, 6],
+  voice: [1, 5],
 } as const;
 
 function allowed(rule: Rule, value: unknown): value is string | number {

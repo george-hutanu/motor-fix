@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 // runs 180 s an attempt, three attempts, inside a 10-minute step limit. apt runs
 // under sudo, where `timeout` cannot kill it, so a failed attempt kills it as root
 // and repairs dpkg: otherwise the next attempt dies on the dpkg lock it left held.
+// When all three stall (a slow mirror, not a hang), an apt step still goes on if every
+// library the cached chromium loads resolves: the runner image carries them, and what
+// apt was still fetching were extra fonts and upgrades (QA runs 39784692110, 39794595292).
 // The workflows keep one key per line and two-space indentation, so the steps are
 // read from the text, as pr-qa-workflow.spec.mjs does.
 const WORKFLOWS = ['ci.yml', 'pr-qa.yml', 'release.yml'];
@@ -52,6 +55,16 @@ function script(step) {
 /** `--with-deps` and `install-deps` run apt under sudo; a browser-only install does not. */
 const usesApt = (run) => /--with-deps|install-deps/.test(run);
 
+/** What an apt step runs after its third failed attempt, the same in every workflow. */
+const FALLBACK = [
+  'bins=$(find "$HOME/.cache/ms-playwright" -type f \\( -name chrome -o -name headless_shell -o -name chrome-headless-shell \\) 2>/dev/null || true)',
+  "if [ -n \"$bins\" ] && ! ldd $bins 2>&1 | grep -q 'not found'; then",
+  '  echo "::warning::playwright: apt never finished, but every library chromium loads resolves; going on"',
+  '  exit 0',
+  'fi',
+  'exit 1',
+].join('\n');
+
 const installs = WORKFLOWS.flatMap((name) => steps(read(name)).filter((s) => /playwright install/.test(s.text)).map((s) => ({ ...s, name })));
 
 describe('Playwright install steps: bounded, retried', () => {
@@ -75,7 +88,7 @@ describe('Playwright install steps: bounded, retried', () => {
       it('runs each attempt under a 180 s limit, killed 10 s later, at most 3 attempts', () => {
         assert.match(run, /^for attempt in 1 2 3; do$/m);
         assert.match(run, /^ {2}timeout -k 10 180 npx playwright install\b.*&& exit 0$/m);
-        assert.match(run, /^done\nexit 1$/m);
+        assert.ok(run.endsWith(usesApt(run) ? `done\n${FALLBACK}` : 'done\nexit 1'), run);
         const bare = run.split('\n').filter((l) => /npx playwright install/.test(l) && !/timeout -k 10 180 npx/.test(l));
         assert.deepEqual(bare, [], 'an install outside the bound');
       });
@@ -103,14 +116,21 @@ describe('the retry loop, run', () => {
   // logic, on any machine.
   const apt = installs.find((s) => usesApt(script(s)));
   const loop = apt ? script(apt) : '';
-  const runLoop = (succeedOn) => {
+  const runLoop = (succeedOn, { browser = false, missing = false } = {}) => {
     const dir = mkdtempSync(join(tmpdir(), 'pw-retry-'));
+    const home = join(dir, 'home');
     try {
+      if (browser) {
+        mkdirSync(join(home, '.cache/ms-playwright/chromium-1/chrome-linux'), { recursive: true });
+        writeFileSync(join(home, '.cache/ms-playwright/chromium-1/chrome-linux/chrome'), '');
+      }
+      writeFileSync(join(dir, 'ldd'), `#!/bin/sh\necho "libnss3.so => ${missing ? 'not found' : '/usr/lib/libnss3.so'}"\n`);
       writeFileSync(join(dir, 'npx'), `#!/bin/sh\nn=$(cat "${dir}/count" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "${dir}/count"\n[ "$n" -ge ${succeedOn} ]\n`);
       writeFileSync(join(dir, 'timeout'), '#!/bin/sh\nshift 3\nexec "$@"\n');
       writeFileSync(join(dir, 'sudo'), `#!/bin/sh\necho x >> "${dir}/cleanups"\n`);
-      for (const bin of ['npx', 'timeout', 'sudo']) chmodSync(join(dir, bin), 0o755);
-      const r = spawnSync('bash', ['-e', '-c', loop], { encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}` } });
+      for (const bin of ['npx', 'timeout', 'sudo', 'ldd']) chmodSync(join(dir, bin), 0o755);
+      const env = { ...process.env, HOME: home, PATH: `${dir}:${process.env.PATH}` };
+      const r = spawnSync('bash', ['-e', '-c', loop], { encoding: 'utf8', env });
       const calls = Number(readFileSync(join(dir, 'count'), 'utf8'));
       const cleanups = existsSync(join(dir, 'cleanups')) ? readFileSync(join(dir, 'cleanups'), 'utf8').trim().split('\n').length : 0;
       return { code: r.status, calls, cleanups, out: r.stdout };
@@ -137,5 +157,22 @@ describe('the retry loop, run', () => {
     assert.equal(r.calls, 3);
     assert.equal(r.cleanups, 3);
     assert.match(r.out, /attempt 3 of 3/);
+  });
+
+  it('goes on after three stalled attempts when every library the cached chromium loads resolves', () => {
+    const r = runLoop(99, { browser: true });
+    assert.equal(r.code, 0);
+    assert.equal(r.calls, 3);
+    assert.match(r.out, /every library chromium loads resolves; going on/);
+  });
+
+  it('fails after three stalled attempts when a library chromium loads is missing', () => {
+    const r = runLoop(99, { browser: true, missing: true });
+    assert.equal(r.code, 1);
+    assert.doesNotMatch(r.out, /going on/);
+  });
+
+  it('fails after three stalled attempts when no browser is cached to check', () => {
+    assert.equal(runLoop(99, { browser: false }).code, 1);
   });
 });

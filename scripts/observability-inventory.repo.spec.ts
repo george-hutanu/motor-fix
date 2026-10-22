@@ -275,3 +275,26 @@ describe('the garage legal check read route', () => {
     );
   });
 });
+
+// @traces 009-FR-013
+describe('the copy voice on requests, drafts and the admin read', () => {
+  repoIt('rides the routes the inventory already counts, adding none', () => {
+    const api = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    );
+    const fields = (schema: string) =>
+      Object.keys(api.components.schemas[schema].properties);
+
+    expect(fields('CreateQuoteRequestDto')).toContain('copyVoice');
+    expect(fields('CreateListingDraftDto')).toContain('copyVoice');
+    expect(fields('CopyVoiceDto')).toEqual(
+      expect.arrayContaining(['requests', 'listings']),
+    );
+    expect(Object.keys(api.paths['/api/v1/quote-requests'])).toEqual(['post']);
+    expect(Object.keys(api.paths['/api/v1/listing-drafts'])).toEqual(['post']);
+    expect(Object.keys(api.paths['/api/v1/admin/copy-voices'])).toEqual([
+      'get',
+    ]);
+    expect(checkInventory(root)).toEqual([]);
+  });
+});

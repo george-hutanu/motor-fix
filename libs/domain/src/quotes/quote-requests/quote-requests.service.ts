@@ -258,6 +258,7 @@ export class QuoteRequestsService {
           carId: car.id,
           carModel: car.model,
           carYear: car.year,
+          copyVoice: dto.copyVoice ?? null,
           createdAt: now,
           description: dto.description ?? null,
           driverId,

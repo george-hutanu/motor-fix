@@ -298,9 +298,10 @@ describe('the quote request started event', () => {
     await press(host);
 
     expect(track).toHaveBeenCalledTimes(1);
-    expect(track).toHaveBeenCalledWith('quote_request_started', {
-      source: 'profile',
-    });
+    expect(track).toHaveBeenCalledWith(
+      'quote_request_started',
+      expect.objectContaining({ source: 'profile' }),
+    );
   });
 
   it('names the profile as the source on a shared link too', async () => {
@@ -308,8 +309,26 @@ describe('the quote request started event', () => {
 
     await press(host);
 
+    expect(track).toHaveBeenCalledWith(
+      'quote_request_started',
+      expect.objectContaining({ source: 'profile' }),
+    );
+  });
+});
+
+// @traces 009-FR-002
+describe('the voice on the quote request started event', () => {
+  afterEach(() => document.documentElement.removeAttribute('data-voice'));
+
+  it('carries the visit’s voice', async () => {
+    document.documentElement.setAttribute('data-voice', '4');
+    const host = await render();
+
+    await press(host);
+
     expect(track).toHaveBeenCalledWith('quote_request_started', {
       source: 'profile',
+      voice: 4,
     });
   });
 });
@@ -345,9 +364,10 @@ describe('RequestQuoteButton with jobs handed over', () => {
 
     expect(button(host)?.textContent?.trim()).toBe('CERE OFERTĂ');
     await press(host);
-    expect(track).toHaveBeenCalledWith('quote_request_started', {
-      source: 'profile',
-    });
+    expect(track).toHaveBeenCalledWith(
+      'quote_request_started',
+      expect.objectContaining({ source: 'profile' }),
+    );
   });
 });
 

@@ -294,6 +294,7 @@ describe('sending the copy again', () => {
       await prisma.listingDraft.findUniqueOrThrow({ where: { id: copy.id } }),
     ).toMatchObject({ status: 'submitted' });
     const events = await prisma.outboxEvent.findMany({
+      orderBy: { id: 'asc' },
       where: { kind: 'verification.submitted', subjectId: garage.fileId },
     });
     expect(events.map((event) => event.payload)).toEqual([

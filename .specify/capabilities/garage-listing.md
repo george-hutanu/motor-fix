@@ -33,6 +33,7 @@ features:
   - 1359-signup-survey
   - 116-listing-verification-status
   - 208-resubmit-after-more
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Garage listing
@@ -1173,6 +1174,14 @@ _From 208-resubmit-after-more._
 ### 208-FR-018 — (from #641) Listing completeness MUST count code points (`[...value.trim()].length`) as the mechanics write does; a one-emoji name is incomplete in step 4 and refused on send, consistently (unit test).
 
 _From 208-resubmit-after-more._
+
+### 009-FR-006 — When the web app creates the server copy of a listing draft (114-FR-005), the body MUST carry `copyVoice` only when both hold: a valid granted consent is in force, and the form was opened from Home, meaning the document loaded on Home (the Romanian or English Home address) and the form was reached inside the app, in that same page session, by any route. A form whose document loaded by its own address (a direct link, a reload, a continue link, a copy-of-a-live-garage link) MUST send no `copyVoice`, whatever the device's stored voice.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-007 — A listing draft MUST store `copy_voice` under the same rules as FR-005: empty or 1–5, set at creation from `copyVoice` when it is an integer 1–5, otherwise empty, never refusing the call, never changed by a later save, submit, reminder or link.
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

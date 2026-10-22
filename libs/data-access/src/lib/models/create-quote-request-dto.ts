@@ -5,6 +5,11 @@ export interface CreateQuoteRequestDto {
   carId: string;
 
   /**
+   * The copy voice of the visit, 1-5, sent only with analytics consent
+   */
+  copyVoice?: number;
+
+  /**
    * Trimmed; required, of at least 10 characters, when no job is chosen
    */
   description?: string | null;
