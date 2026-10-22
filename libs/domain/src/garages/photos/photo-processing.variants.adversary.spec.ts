@@ -47,6 +47,9 @@ describe('processing a photo into variants, hostile inputs', () => {
   });
 
   beforeEach(() => store.objects.clear());
+  afterEach(() => {
+    delete process.env['PHOTO_MAX_INPUT_PIXELS'];
+  });
 
   it('gives the same bytes under two keys two different variant paths', async () => {
     const bytes = await solid(800, 600).jpeg().toBuffer();
@@ -115,9 +118,9 @@ describe('processing a photo into variants, hostile inputs', () => {
   it('writes no variant when the pixel limit refuses the photo', async () => {
     store.put(KEY, await solid(100, 100).jpeg().toBuffer(), 'image/jpeg');
 
-    await expect(
-      processPhoto(storage, KEY, { maxInputPixels: 9_999 }),
-    ).rejects.toThrow();
+    process.env['PHOTO_MAX_INPUT_PIXELS'] = '9999';
+
+    await expect(processPhoto(storage, KEY)).rejects.toThrow();
 
     expect([...store.objects.keys()]).toEqual([KEY]);
   });
@@ -126,7 +129,9 @@ describe('processing a photo into variants, hostile inputs', () => {
     const bytes = await solid(100, 100).jpeg().toBuffer();
     store.put(KEY, bytes, 'image/jpeg');
 
-    await processPhoto(storage, KEY, { maxInputPixels: 10_000 });
+    process.env['PHOTO_MAX_INPUT_PIXELS'] = '10000';
+
+    await processPhoto(storage, KEY);
 
     expect(variantKeysIn(store)).toEqual(keysOf(digestOf(KEY, bytes)).sort());
   }, 60_000);

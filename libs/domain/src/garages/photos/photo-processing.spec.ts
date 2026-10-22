@@ -169,9 +169,12 @@ describe('processing a photo', () => {
   it('refuses a photo above the configured pixel limit and writes nothing', async () => {
     store.put(KEY, await located(200, 100), 'image/jpeg');
 
-    await expect(
-      processPhoto(storage, KEY, { maxInputPixels: 10_000 }),
-    ).rejects.toThrow(/pixel limit/);
+    process.env['PHOTO_MAX_INPUT_PIXELS'] = '10000';
+    try {
+      await expect(processPhoto(storage, KEY)).rejects.toThrow(/pixel limit/);
+    } finally {
+      delete process.env['PHOTO_MAX_INPUT_PIXELS'];
+    }
 
     expect([...store.objects.keys()]).toEqual([KEY]);
   });
@@ -248,6 +251,24 @@ describe('processing a photo', () => {
         ]);
         expect(meta.format).toBe(format === 'avif' ? 'heif' : 'webp');
       }
+    }, 30_000);
+
+    it('encodes AVIF at quality 50, effort 4 and WebP at quality 75', async () => {
+      const original = await located(2400, 1200);
+      store.put(KEY, original, 'image/jpeg');
+      const at640 = () => sharp(original).rotate().resize({ width: 640 });
+
+      await processPhoto(storage, KEY);
+
+      const [avif, webp] = variantKeys(digestOf(original))
+        .filter((key) => key.includes('/640.'))
+        .map((key) => variant(key).body);
+      expect(
+        avif.equals(await at640().avif({ effort: 4, quality: 50 }).toBuffer()),
+      ).toBe(true);
+      expect(webp.equals(await at640().webp({ quality: 75 }).toBuffer())).toBe(
+        true,
+      );
     }, 30_000);
 
     it('never enlarges a narrow photo past its own width', async () => {

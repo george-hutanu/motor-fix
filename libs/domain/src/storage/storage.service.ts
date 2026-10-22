@@ -18,6 +18,7 @@ import {
   type FileRule,
   type StorageEnv,
   UPLOAD_URL_MINUTES,
+  VARIANT_DIGEST,
   variantKeys,
 } from '@motor-fix/contracts';
 import { storageTelemetry } from '@motor-fix/observability';
@@ -34,7 +35,6 @@ import {
 export const STORAGE_OPTIONS = Symbol('STORAGE_OPTIONS');
 
 type FileCopy = 'display' | 'thumb';
-const DIGEST = /^[0-9a-f]{64}$/;
 
 export interface SignedUpload {
   expiresAt: string;
@@ -349,7 +349,7 @@ export class StorageService implements OnApplicationShutdown {
     const thumb = this.derivedKey(key, 'thumb');
     const digest = (await this.metadataOf(thumb))?.['digest'];
     const variants =
-      digest && DIGEST.test(digest)
+      digest && VARIANT_DIGEST.test(digest)
         ? variantKeys(this.variantPath(key, digest))
         : [];
     await Promise.all(

@@ -1,3 +1,4 @@
+import { IMMUTABLE, VARIANT_DIGEST, VARIANT_FILE } from '@motor-fix/contracts';
 import {
   Controller,
   Get,
@@ -24,9 +25,6 @@ import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../public-garages';
 
 const OWNER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const DIGEST = /^[0-9a-f]{64}$/;
-const FILE = /^(320|640|960|1600)\.(avif|webp)$/;
-const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
 
@@ -66,8 +64,8 @@ export class ImagesController {
     const path = `g/${owner}/${digest}`;
     if (
       !OWNER.test(owner) ||
-      !DIGEST.test(digest) ||
-      !FILE.test(file) ||
+      !VARIANT_DIGEST.test(digest) ||
+      !VARIANT_FILE.test(file) ||
       !req.path.endsWith(`/images/${path}/${file}`)
     ) {
       throw notFound();

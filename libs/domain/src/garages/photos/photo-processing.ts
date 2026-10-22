@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import {
   IMAGE_FORMATS,
   IMAGE_WIDTHS,
+  IMMUTABLE,
   photoConfig,
   variantFile,
 } from '@motor-fix/contracts';
@@ -23,7 +24,11 @@ const THUMB_PX = 400;
 const DISPLAY_PX = 1600;
 // ThumbHash encodes from at most 100 px a side.
 const PREVIEW_PX = 100;
-const IMMUTABLE = 'public, max-age=31536000, immutable';
+// The encoder settings the variants are sized and budgeted for.
+const ENCODING = {
+  avif: { effort: 4, quality: 50 },
+  webp: { quality: 75 },
+} as const;
 const KEPT_FORMATS: Record<string, 'png' | 'webp'> = {
   png: 'png',
   webp: 'webp',
@@ -66,14 +71,13 @@ async function opened(original: Buffer, maxInputPixels: number) {
 export async function processPhoto(
   storage: StorageService,
   key: string,
-  limits = { maxInputPixels: photoConfig().maxInputPixels },
 ): Promise<void> {
   // The photo was removed while its job waited.
   if ((await storage.metadataOf(key)) === null) return;
   const original = await storage.readObject(key);
   const { format, height, source, width } = await opened(
     original,
-    limits.maxInputPixels,
+    photoConfig().maxInputPixels,
   );
 
   const fitted = (px: number) =>
@@ -117,7 +121,7 @@ export async function processPhoto(
           await source()
             .rotate()
             .resize({ width: px, withoutEnlargement: true })
-            .toFormat(each)
+            .toFormat(each, ENCODING[each])
             .toBuffer(),
           `image/${each}`,
           undefined,

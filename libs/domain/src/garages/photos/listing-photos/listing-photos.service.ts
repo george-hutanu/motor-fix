@@ -223,16 +223,17 @@ export class ListingPhotosService implements OnApplicationShutdown {
 
   // A lost job is added again by the next read, so a failure here only logs.
   private async queue(key: string) {
+    const { attempts, keepFailed } = photoConfig();
     await this.jobs
       .add(
         'process',
         { key },
         {
-          attempts: photoConfig().attempts,
+          attempts,
           backoff: { delay: 5000, type: 'exponential' },
           jobId: key,
           removeOnComplete: true,
-          removeOnFail: photoConfig().keepFailed,
+          removeOnFail: keepFailed,
         },
       )
       .catch((error: unknown) => {

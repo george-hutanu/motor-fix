@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppEnv } from '@motor-fix/contracts';
+import { type AppEnv, imageBaseUrl } from '@motor-fix/contracts';
 import { JsonLogger, requestContext } from '@motor-fix/domain';
 import { routeLabel } from '@motor-fix/observability';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
@@ -15,6 +15,8 @@ import { ProblemFilter, sendProblem } from './problem.filter';
 const REQUEST_ID = /^[\w.-]{1,128}$/;
 
 export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
+  // A bad image address fails the boot, not every garage profile read.
+  imageBaseUrl();
   app.useLogger(new JsonLogger());
   // The browser reaches the API through the web app's edge, which appends the
   // address it saw; only private hops are trusted, so req.ip is the caller's.
