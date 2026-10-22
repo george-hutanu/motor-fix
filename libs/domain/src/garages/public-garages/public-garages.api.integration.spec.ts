@@ -1302,11 +1302,11 @@ describe('the price list a profile carries', () => {
     const redis = app.get(AUTH_REDIS);
 
     expect(
-      (await redis.zrange(`v2:tag:garage:${approved.id}`, '0', '-1')).sort(),
+      (await redis.zrange(`v3:tag:garage:${approved.id}`, '0', '-1')).sort(),
     ).toEqual(
       [
-        `v2:profile:${approved.slug}:-`,
-        `v2:profile:${approved.slug}:${bmw.slug}`,
+        `v3:profile:${approved.slug}:-`,
+        `v3:profile:${approved.slug}:${bmw.slug}`,
       ].sort(),
     );
 

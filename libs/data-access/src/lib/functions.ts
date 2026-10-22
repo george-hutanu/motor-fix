@@ -253,6 +253,8 @@ export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRev
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
+export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
+export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { LegalCheckControllerRead$Params as LegalCheckControllerRead$Params } from './fn/garages/legal-check-controller-read';

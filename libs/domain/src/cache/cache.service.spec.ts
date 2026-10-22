@@ -37,11 +37,12 @@ describe('cache lifetimes', () => {
   });
 });
 
+// @traces 1192-photo-variants-FR-008
 describe('cache keys', () => {
   it('names the version and the read kind first', () => {
     expect(cacheKey('profile', 'service-auto', '-')).toBe(
-      'v2:profile:service-auto:-',
+      'v3:profile:service-auto:-',
     );
-    expect(cacheKey('popular-brands', '8')).toBe('v2:popular-brands:8');
+    expect(cacheKey('popular-brands', '8')).toBe('v3:popular-brands:8');
   });
 });

@@ -5,6 +5,7 @@ import {
   type ListingPhotosDto,
   PHOTOS_MAX,
   type PhotoUploadAddressDto,
+  photoConfig,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -31,6 +32,9 @@ export interface PhotoSize {
   key: string;
   width?: number;
   height?: number;
+  // g/<draft id>/<digest>: where the responsive variants are.
+  variantPath?: string;
+  thumbhash?: string;
 }
 
 const full = () =>
@@ -205,10 +209,15 @@ export class ListingPhotosService implements OnApplicationShutdown {
       this.storage.derivedKey(key, 'thumb'),
     );
     if (!meta?.['width'] || !meta['height']) return { key };
+    const digest = meta['digest'];
     return {
       height: Number(meta['height']),
       key,
       width: Number(meta['width']),
+      ...(digest && {
+        thumbhash: meta['thumbhash'],
+        variantPath: this.storage.variantPath(key, digest),
+      }),
     };
   }
 
@@ -219,11 +228,11 @@ export class ListingPhotosService implements OnApplicationShutdown {
         'process',
         { key },
         {
-          attempts: 3,
+          attempts: photoConfig().attempts,
           backoff: { delay: 5000, type: 'exponential' },
           jobId: key,
           removeOnComplete: true,
-          removeOnFail: 100,
+          removeOnFail: photoConfig().keepFailed,
         },
       )
       .catch((error: unknown) => {

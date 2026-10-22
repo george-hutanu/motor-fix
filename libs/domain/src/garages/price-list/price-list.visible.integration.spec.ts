@@ -411,7 +411,7 @@ describe('what a hide leaves alone', () => {
       where: { id: w.nord.id },
     });
     expect(garage.status).toBe('approved');
-    expect(await redis.exists(`v2:profile:${w.nord.slug}:-`)).toBe(0);
+    expect(await redis.exists(`v3:profile:${w.nord.slug}:-`)).toBe(0);
     expect(await profilePrices(w)).not.toContain(w.brakes.id);
   });
 

@@ -4684,6 +4684,52 @@
         ]
       }
     },
+    "/api/v1/images/g/{owner}/{digest}/{file}": {
+      "get": {
+        "operationId": "getImageVariant",
+        "parameters": [
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digest",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "file",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The variant, cached for a year"
+          },
+          "404": {
+            "description": "not_found: no listed garage shows a photo at this address"
+          },
+          "503": {
+            "description": "storage_unavailable: the object store did not answer"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}": {
       "patch": {
         "operationId": "GarageSettingsController_update",
@@ -14940,6 +14986,15 @@
             "type": "number",
             "description": "Upright, when known",
             "minimum": 1
+          },
+          "imageBase": {
+            "type": "string",
+            "description": "Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed"
+          },
+          "thumbhash": {
+            "type": "string",
+            "description": "A ThumbHash of the photo, base64, shown while it loads",
+            "maxLength": 64
           }
         },
         "required": [

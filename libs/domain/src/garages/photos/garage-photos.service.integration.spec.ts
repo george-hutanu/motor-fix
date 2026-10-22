@@ -61,6 +61,40 @@ describe('the gallery rows of a sent listing', () => {
     ]);
   });
 
+  // @traces 1192-photo-variants-FR-005
+  it("keeps where each photo's variants are and its preview", async () => {
+    const [a, b] = [keyOf(), keyOf()];
+    const variantPath = `g/${a.split('/')[1]}/${'c'.repeat(64)}`;
+
+    await prisma.$transaction((tx) =>
+      service.saveRows(
+        tx,
+        garageId,
+        [
+          {
+            height: 900,
+            key: a,
+            thumbhash: 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG',
+            variantPath,
+            width: 1200,
+          },
+          { height: 600, key: b, width: 800 },
+        ],
+        actorId,
+      ),
+    );
+
+    const rows = await prisma.garagePhoto.findMany({
+      orderBy: { position: 'asc' },
+      select: { thumbhash: true, variantPath: true },
+      where: { garageId },
+    });
+    expect(rows).toEqual([
+      { thumbhash: 'HBkSHYSIeHiPiHh8eJd4eTN0EEQG', variantPath },
+      { thumbhash: null, variantPath: null },
+    ]);
+  });
+
   it('writes nothing when the sending transaction fails', async () => {
     await expect(
       prisma.$transaction(async (tx) => {

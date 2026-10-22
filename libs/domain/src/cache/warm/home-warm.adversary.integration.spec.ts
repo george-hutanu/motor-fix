@@ -49,9 +49,9 @@ beforeEach(async () => {
   await world.reset();
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
   const keys = [
-    ...(await redis.keys('v2:driver-home:*')),
-    ...(await redis.keys('v2:garage-home:*')),
-    ...(await redis.keys('v2:tag:warm:*')),
+    ...(await redis.keys('v3:driver-home:*')),
+    ...(await redis.keys('v3:garage-home:*')),
+    ...(await redis.keys('v3:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
@@ -138,7 +138,7 @@ function watch(nest: INestApplication) {
   jest.spyOn(store, 'eval').mockImplementation((...args) => {
     const key = args
       .map(String)
-      .find((arg) => /^v2:(driver|garage)-home:/.test(arg));
+      .find((arg) => /^v3:(driver|garage)-home:/.test(arg));
     if (!key || !String(args[0]).includes('ZADD')) return evaluate(...args);
     const who = key.split(':')[2] ?? '';
     const run = () =>
