@@ -17,13 +17,15 @@
 // does not imply CI finished: the gate also refuses while any other check is
 // failing or still running, or while CI OK has not reported at all.
 //
-// A success carried over a docs-only head (`carried from <sha>: docs-only
-// change`, set by .claude/scripts/pr-test/carry.mjs) is verified, not trusted:
-// the named commit must be one of the PR's own commits with a success of its
-// own, an ancestor of head, differing from it by documentation only
-// (scripts/docs-only.ts), with no real failing lap after it; otherwise the
-// merge is refused as if there were no verdict. A carry the gate cannot verify
-// is refused too. SPECKIT_CARRY_STATE replaces those reads for the eval cases.
+// A carried success (`carried from <sha>: docs-only change` or `...: QA fixes`,
+// set by .claude/scripts/pr-test/carry.mjs) is verified, not trusted: the
+// named commit must be one of the PR's own commits with a success of its own,
+// an ancestor of head, with no real failing lap after it; a docs carry differs
+// from it by documentation only (scripts/docs-only.ts), a QA-fixes carry
+// names a lap that reported medium or low findings and adds only single-parent
+// fix, test, docs, style or refactor commits (Constitution VII step 5);
+// otherwise the merge is refused as if there were no verdict. A carry the
+// gate cannot verify is refused too. SPECKIT_CARRY_STATE replaces those reads for the eval cases.
 //
 // Fail-closed where the gate cannot see. A PR it cannot read is refused, and
 // so is every merge it cannot finish checking within DEADLINE_MS: Claude Code
@@ -69,7 +71,7 @@ import { execFile } from "node:child_process";
 
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
-import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
+import { carriedFrom, carryKind, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
 import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
 import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
 
@@ -186,7 +188,7 @@ function carryRefusal(pr, review, sha, carry) {
   } catch (e) {
     return `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, and the gate could not verify it (${e.message}). ${rerun}`;
   }
-  const why = judgeCarry({ from, head: pr.headRefOid, ...state });
+  const why = judgeCarry({ from, head: pr.headRefOid, kind: carryKind(description), ...state });
   return why ? `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, but ${why}. ${rerun}` : null;
 }
 
