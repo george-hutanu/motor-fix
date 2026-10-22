@@ -1785,3 +1785,72 @@ describe('Home in the visit’s voice', () => {
     );
   });
 });
+
+describe('Home headline in voice 4', () => {
+  const FORMS: Record<string, string> = {
+    bmw: 'BMW‑ul tău',
+    dacia: 'Dacia ta',
+  };
+  const WITH_FORMS = BRANDS.map((b) => ({ ...b, roPossessive: FORMS[b.slug] }));
+  const FORD: BrandDto = {
+    id: 'ford',
+    name: 'Ford',
+    popularity: 9,
+    roPossessive: 'Fordul tău',
+    slug: 'ford',
+  };
+  const headline = () =>
+    page()
+      .querySelector('.hero [data-voice-of="4"] h2')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+  const find = async (found: BrandDto) => {
+    fixture.debugElement
+      .query(By.directive(BrandSearch))
+      .componentInstance.chosen.emit(found);
+    await settle();
+  };
+
+  // @traces 007-brand-headline-FR-001
+  // @traces 007-brand-headline-FR-020
+  it('names the car by its your form in Romanian, tile by tile and from the search', async () => {
+    await render(WITH_FORMS);
+    expect(headline()).toBe('BMW‑ul tău merită mai mult decât „merge și așa”.');
+
+    await choose('Dacia');
+    expect(headline()).toBe('Dacia ta merită mai mult decât „merge și așa”.');
+
+    await find(FORD);
+    expect(headline()).toBe('Fordul tău merită mai mult decât „merge și așa”.');
+  });
+
+  // @traces 007-brand-headline-FR-003
+  // @traces 007-brand-headline-FR-020
+  it.each([
+    ['null', null],
+    ['empty', ''],
+    ['absent', undefined],
+  ])('falls back to the plain name when the form is %s', async (_, form) => {
+    await render([{ ...BRANDS[1], roPossessive: form }, ...BRANDS.slice(2)]);
+
+    expect(headline()).toBe('Mini merită mai mult decât „merge și așa”.');
+  });
+
+  // @traces 007-brand-headline-FR-001
+  it('keeps the plain name in English', async () => {
+    await render(WITH_FORMS);
+    await TestBed.inject(LanguageChoice).choose('en');
+    await settle();
+
+    expect(headline()).toBe('Your BMW deserves better than “it’ll do”.');
+  });
+
+  // @traces 007-brand-headline-FR-001
+  it('leaves the other voices on the plain name', async () => {
+    await render(WITH_FORMS);
+
+    expect(
+      page().querySelector('.hero [data-voice-of="1"] h2')?.textContent,
+    ).toContain('Cine se pricepe la BMW?');
+  });
+});

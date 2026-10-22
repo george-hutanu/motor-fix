@@ -119,6 +119,13 @@ export class Home {
     const tiles = this.tiles();
     return tiles.find((brand) => brand.slug === this.kept) ?? tiles[0];
   });
+  // Voice 4's Romanian headline says "your <brand>"; a brand without the
+  // form, and every English line, takes the plain name.
+  protected readonly own = computed(() => {
+    const brand = this.selected();
+    if (!brand) return '';
+    return (this.i18n.language() === 'ro' && brand.roPossessive) || brand.name;
+  });
   // Until a person reaches for the picker the brand changes on its own, and
   // a screen reader is not told each time.
   protected readonly touched = signal(this.kept !== null);
