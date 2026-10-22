@@ -18,7 +18,7 @@ export const LIVE = ['published', 'reported', 'removed'] as const;
 type EligibilityFacts = {
   job: { status: string } | null;
   staff: boolean;
-  // The job's live review (a status in LIVE), if any.
+  // The job's review, if any; only one in a LIVE status blocks (FR-008).
   review: { status: string } | null;
   emailConfirmed: boolean;
 };
@@ -29,8 +29,10 @@ export function reasonOf(facts: EligibilityFacts): ReviewRefusal | null {
   if (!facts.job) return 'not_found';
   if (facts.job.status !== 'done') return 'job_not_done';
   if (facts.staff) return 'own_garage';
-  if (facts.review?.status === 'removed') return 'review_removed';
-  if (facts.review) return 'already_reviewed';
+  const status = facts.review?.status;
+  if (status === 'removed') return 'review_removed';
+  if (status && (LIVE as readonly string[]).includes(status))
+    return 'already_reviewed';
   if (!facts.emailConfirmed) return 'email_not_confirmed';
   return null;
 }

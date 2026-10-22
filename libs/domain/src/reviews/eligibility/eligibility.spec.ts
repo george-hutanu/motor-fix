@@ -8,6 +8,7 @@ const allowed = {
 } as const;
 
 // @traces 023-FR-001 023-FR-002
+// @traces 023-FR-008
 // @traces 023-FR-009
 // @traces 023-FR-013
 describe('whether a driver may review a job', () => {
@@ -37,6 +38,12 @@ describe('whether a driver may review a job', () => {
       expect(reasonOf(facts)).toBe(reason);
     },
   );
+
+  it('does not count a review its author deleted', () => {
+    expect(
+      reasonOf({ ...allowed, review: { status: 'deleted_by_author' } }),
+    ).toBeNull();
+  });
 
   it.each([
     [null, true],
