@@ -59,6 +59,7 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ['git rev-parse --abbrev-ref HEAD', { stdout: `${branch}\n` }],
     ['git rev-parse HEAD', { stdout: 'abcdef1234567890\n' }],
     ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }],
+    ['git rev-parse origin/main', { stdout: 'ma1n0000\n' }],
     ['gh auth token -u george-hutanu', { stdout: 'tok-from-gh\n' }],
     ['gh pr create', { stdout: `${PR_URL}\n` }],
     ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),
@@ -245,6 +246,8 @@ describe('ready', () => {
       `${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`,
       `${REST}pulls/141 -X GET`,
       'node .claude/scripts/level.mjs check --ready --json',
+      'git status --porcelain',
+      'git write-tree',
       ...LOCAL,
       `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 feature records -- ${FEATURE}`,
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
@@ -433,6 +436,119 @@ describe('check: the CI-only checks and the affected tests before a push', () =>
 });
 
 // @traces 749-FR-002 749-FR-003
+describe('check and ready reuse a passing proof of the local checks for the same clean tree', () => {
+  beforeEach(() => fixture());
+
+  const TREE = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555';
+  const proofFile = () => join(repo, '.specify', '.cache', 'local-checks.json');
+  const tree = (sha = TREE, base = 'b45e0000', status = '', main = 'ma1n0000') => [
+    ['git status --porcelain', { stdout: status }],
+    ['git write-tree', { stdout: `${sha}\n` }],
+    ['git merge-base HEAD origin/main', { stdout: `${base}\n` }],
+    ['git rev-parse origin/main', { stdout: `${main}\n` }],
+  ];
+  const ran = (h) => h.calls.filter((c) => /^(node scripts\/(observability|structure)|npm run lint|sh scripts\/heavy\.sh)/.test(c));
+
+  // @traces 1358-FR-014
+  // @traces 1358-FR-015
+  it('runs the local checks once, then reuses the proof on a second check of the same tree', () => {
+    const first = harness({ answers: tree() });
+    assert.equal(step(['check'], first.io).ok, true);
+    assert.equal(ran(first).length, 4);
+    assert.ok(existsSync(proofFile()), 'a passing check on a clean tree records a proof');
+    const second = harness({ answers: tree() });
+    const result = step(['check'], second.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.deepEqual(ran(second), [], second.calls.join('\n'));
+    assert.ok(result.did.includes(`local checks: reused proof ${TREE.slice(0, 7)}`), JSON.stringify(result.did));
+    assert.ok(second.calls.some((c) => c.startsWith('node scripts/pr-body-check.ts')), 'the PR body is not part of the proof');
+  });
+
+  // @traces 1358-FR-014
+  it('lets ready reuse the proof check wrote', () => {
+    assert.equal(step(['check'], harness({ answers: tree() }).io).ok, true);
+    const body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n\nfilled\n');
+    const h = harness({ answers: tree() });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.deepEqual(ran(h), [], h.calls.join('\n'));
+    assert.ok(result.did.includes(`local checks: reused proof ${TREE.slice(0, 7)}`), JSON.stringify(result));
+  });
+
+  // @traces 1358-FR-014
+  // @traces 1358-FR-015
+  for (const status of [' M apps/api/src/a.ts\n', '?? scratch.txt\n']) {
+    it(`runs the checks and records no proof when git status shows ${status.trim()}`, () => {
+      assert.equal(step(['check'], harness({ answers: tree() }).io).ok, true);
+      rmSync(proofFile());
+      const h = harness({ answers: tree(TREE, 'b45e0000', status) });
+      assert.equal(step(['check'], h.io).ok, true);
+      assert.equal(ran(h).length, 4);
+      assert.ok(!existsSync(proofFile()), 'a dirty worktree records nothing');
+      writeFileSync(proofFile(), JSON.stringify({ tree: TREE, base: 'b45e0000', main: 'ma1n0000', at: 'x' }));
+      const again = harness({ answers: tree(TREE, 'b45e0000', status) });
+      step(['check'], again.io);
+      assert.equal(ran(again).length, 4, 'a dirty worktree never reuses a proof');
+    });
+  }
+
+  // @traces 1358-FR-015
+  for (const [label, sha, base] of [
+    ['another tree', 'ffff9999', 'b45e0000'],
+    ['another merge base', TREE, 'c0ffee00'],
+  ]) {
+    it(`runs the checks for ${label}`, () => {
+      step(['check'], harness({ answers: tree() }).io);
+      const h = harness({ answers: tree(sha, base) });
+      const result = step(['check'], h.io);
+      assert.equal(ran(h).length, 4);
+      assert.ok(!result.did.some((d) => /reused proof/.test(d)));
+      assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).tree, sha.trim(), 'the proof is overwritten with the tree just checked');
+    });
+  }
+
+  // @traces 1358-FR-014
+  // @traces 1358-FR-015
+  it('runs the checks again when origin/main moved and the merge base did not', () => {
+    step(['check'], harness({ answers: tree() }).io);
+    const h = harness({ answers: tree(TREE, 'b45e0000', '', 'm0ved000') });
+    const result = step(['check'], h.io);
+    assert.equal(ran(h).length, 4, h.calls.join('\n'));
+    assert.ok(!result.did.some((d) => /reused proof/.test(d)));
+    assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).main, 'm0ved000');
+    assert.equal(h.calls.filter((c) => c === 'git merge-base HEAD origin/main').length, 1, 'the merge base is read once');
+  });
+
+  // @traces 1358-FR-015
+  it('runs the checks when there is no proof', () => {
+    const h = harness({ answers: tree() });
+    step(['check'], h.io);
+    assert.equal(ran(h).length, 4);
+  });
+
+  // @traces 1358-FR-014
+  it('reads and writes no proof when git write-tree prints nothing or fails', () => {
+    mkdirSync(dirname(proofFile()), { recursive: true });
+    writeFileSync(proofFile(), JSON.stringify({ tree: '', base: 'b45e0000', at: 'x' }));
+    const h = harness({ answers: tree('') });
+    assert.equal(step(['check'], h.io).ok, true);
+    assert.equal(ran(h).length, 4);
+    assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).at, 'x');
+    const failed = harness({ answers: [['git write-tree', { code: 128, stderr: 'fatal: error building trees' }], ...tree()] });
+    const result = step(['check'], failed.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(ran(failed).length, 4);
+    assert.equal(JSON.parse(readFileSync(proofFile(), 'utf8')).at, 'x');
+  });
+
+  // @traces 1358-FR-014
+  it('reads and writes no proof when the merge base is empty', () => {
+    const h = harness({ answers: tree(TREE, '') });
+    assert.equal(step(['check'], h.io).ok, false);
+    assert.ok(!existsSync(proofFile()));
+  });
+});
+
 describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const MARK = '<!-- speckit-handoff -->';
   const note = () => join(featureDir, 'handoff.md');
