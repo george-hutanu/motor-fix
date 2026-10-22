@@ -20,6 +20,9 @@ const api = apiBoot();
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 type Method = (typeof METHODS)[number];
 
+const ALL_VOICES_ON =
+  'UPDATE copy_voice_setting SET enabled = true, pinned = false';
+
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
@@ -76,6 +79,17 @@ const FIXTURES: Record<
         return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
       },
     },
+  'PATCH /api/v1/admin/copy-voices/{voice}': {
+    body: () => ({
+      enabled: false,
+      pinned: false,
+      seen: { enabled: true, pinned: false },
+    }),
+    path: async () => {
+      await db.query(ALL_VOICES_ON);
+      return '/api/v1/admin/copy-voices/5';
+    },
+  },
   'PATCH /api/v1/admin/platform-rules/{key}': {
     body: () => ({ seen: false, value: true }),
     path: async () => {
@@ -356,6 +370,8 @@ afterAll(async () => {
      WHERE key = 'maintenance_mode'`,
   );
   await app.get<Maintenance>(MAINTENANCE, { strict: false }).set(false);
+  // The copy voice fixture switched voice 5 off; the home page shares it.
+  await db.query(ALL_VOICES_ON);
   await clearRequests();
   await db.end();
   await api.stop();
