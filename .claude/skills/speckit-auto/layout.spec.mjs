@@ -275,6 +275,34 @@ describe('ST-1360 text lands where the run reads it', () => {
       '`dispatch <reason>`: log the reason in `auto-run.md` and invoke `speckit-context --since`.');
   });
 
+  // @traces 1360-FR-010 1360-FR-014 1360-FR-015
+  it('stops a level-1 story after harden and keeps levels 2 and 3 in one agent', () => {
+    has('.claude/skills/speckit-auto/SKILL.md',
+      '| 1 one-session | 2, 7, 9, 10, 12, then a closer: 14, 16',
+      'Levels 2 and 3 keep one agent from preflight through the hand-off',
+      '`converge`, `harden`, `closer`, `refresh`');
+    has('.claude/skills/speckit-auto/phases-close.md',
+      '## Level 1: the stop after harden',
+      '`## Decisions for the closer`', '`### Gates self-answered`', '`### Deviations`', '`### Open items`',
+      'node .claude/scripts/run-state.mjs set --status in-progress --phase closer',
+      'the PR stays a draft', '`NEXT: resume <feature>`',
+      'A cloud session (`CLAUDE_CODE_REMOTE=true`) does not split');
+  });
+
+  // @traces 1360-FR-013 1360-FR-015
+  it('gives the closer its reading list, its first act and who dispatches it', () => {
+    has('.claude/skills/speckit-auto/phases-close.md',
+      '## The closer',
+      'First act: `node .claude/scripts/run-state.mjs set --status in-progress --phase refresh`',
+      '`auto-run.md` with its `## Decisions for the closer`, `spec.md`, `tasks.md`, `node .claude/scripts/run-state.mjs show`, `git log --oneline <start>..HEAD`',
+      'the phases the level owes from 13 on and the hand-off');
+    has('.claude/skills/speckit-auto/preflight.md', '`watch.mjs claim <worktree> resume`', 'as the closer');
+    has('.claude/skills/speckit-auto/lifecycle.md', "A level-1 story's agent ends at phase 12 and a closer");
+    has('.claude/skills/speckit-auto/hand-off.md', 'runs the hand-off, or on level 1 the closer');
+    has('.claude/skills/speckit-watch/SKILL.md', 'At run-state phase `closer`');
+    has('.claude/skills/speckit-auto/report.md', '`NEXT: resume <feature>`');
+  });
+
   // @traces 1360-FR-006 1360-FR-008
   it('phase 15 is retired to the session start and phase 16 runs one command', () => {
     has('.claude/skills/speckit-auto/SKILL.md',

@@ -154,9 +154,12 @@ below actually run:
 | Level | Phases |
 |---|---|
 | 0 trivial | none of this — change, verify, commit. Say so and stop. |
-| 1 one-session | 2, 7, 9, 10, 12, 14, 16 — no org context, plan, checklist or analyze |
+| 1 one-session | 2, 7, 9, 10, 12, then a closer: 14, 16 — no org context, plan, checklist or analyze |
 | 2 feature | all of them (the default) |
 | 3 project | all of them, per feature, against the shared brief |
+
+A level-1 story's agent ends after phase 12 with `NEXT: resume <feature>`, and
+a fresh closer runs the rest (`phases-close.md`). Levels 2 and 3 keep one agent from preflight through the hand-off; a cloud session never splits.
 
 A level chooses phases, never gates. Phase 9 runs at every level above 0: the
 red-first hook reads the spec and the tasks, not the level, and a run that skips
@@ -179,7 +182,7 @@ node .claude/scripts/run-state.mjs set --status in-progress --phase <name> --fea
 
 Use exactly these phase names: `size`, `constitution`, `specify`, `context`,
 `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `tests`, `implement`,
-`converge`, `harden`, `refresh`, `review`, `retro`, `archive`,
+`converge`, `harden`, `closer`, `refresh`, `review`, `retro`, `archive`,
 `hand-off`, `pr-test`, `merge`. `/speckit-watch` maps them to a stage
 (`.claude/scripts/watch.mjs`) and judges a worktree stale by that stage's
 threshold; any other name falls back to the feature's artifacts.

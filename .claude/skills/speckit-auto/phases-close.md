@@ -1,6 +1,34 @@
 # speckit-auto: phases 13–17
 
-Read at phase 13.
+Read at phase 13, and on level 1 right after phase 12.
+
+## Level 1: the stop after harden
+
+A level-1 story's agent ends after phase 12 and a fresh agent, the closer,
+runs the rest. A cloud session (`CLAUDE_CODE_REMOTE=true`) does not split: one
+agent runs through the hand-off, as on levels 2 and 3.
+
+1. Append `## Decisions for the closer` to `auto-run.md` with three
+   sub-headings: `### Gates self-answered` (every gate answered, with its
+   answer), `### Deviations` and `### Open items` (`none` where empty).
+2. Every commit is pushed; the PR stays a draft.
+3. `node .claude/scripts/run-state.mjs set --status in-progress --phase closer`
+4. Reply with the envelope and `NEXT: resume <feature>`.
+
+`watch.mjs` offers `resume` for a worktree at phase `closer` at once: the
+story agent's lock no longer holds it.
+
+## The closer
+
+A fresh `task-runner`, dispatched on `NEXT: resume <feature>` by the
+orchestrating session after `node .claude/scripts/watch.mjs claim <worktree> resume`,
+by the owner's own session the same way, or by `/speckit-watch`'s `resume` fix.
+
+- First act: `node .claude/scripts/run-state.mjs set --status in-progress --phase refresh`,
+  so the watcher stops offering `resume`.
+- Read `auto-run.md` with its `## Decisions for the closer`, `spec.md`, `tasks.md`, `node .claude/scripts/run-state.mjs show`, `git log --oneline <start>..HEAD`.
+- Run the phases the level owes from 13 on and the hand-off (`hand-off.md`),
+  ending as the hand-off says.
 
 ## Phases 13–17
 

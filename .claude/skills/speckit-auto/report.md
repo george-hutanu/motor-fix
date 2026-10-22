@@ -1,6 +1,7 @@
 # speckit-auto: the report
 
 Read at the hand-off, before the reply. The envelope and where the report goes are in `SKILL.md`, "Final Report".
+A level-1 story's agent writes no report: it stops after harden with `NEXT: resume <feature>`, and the closer writes this one at the hand-off.
 
 ## Report sections
 
