@@ -30,6 +30,7 @@ import {
 } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { render } from '../../notifications/templates';
+import { featureOn } from '../features/feature-on';
 
 export const INVITE_EMAIL = Symbol('INVITE_EMAIL');
 
@@ -346,10 +347,7 @@ export class StaffInviteService {
   }
 
   private async assertMechanics(garageId: string) {
-    const off = await this.prisma.garageFeature.findFirst({
-      where: { enabled: false, garageId, key: FEATURE },
-    });
-    if (off) throw featureOff();
+    if (!(await featureOn(this.prisma, garageId, FEATURE))) throw featureOff();
   }
 
   // The owner, or someone who already holds this kind at the garage.

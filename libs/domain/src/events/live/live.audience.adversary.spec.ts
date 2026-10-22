@@ -282,7 +282,6 @@ describe('what each garage role gets through the garage channel', () => {
     'price_list.updated',
     'price_list.item_added',
     'garage.settings_changed',
-    'garage.features_changed',
     'member.added',
     'member.removed',
     'mechanic.created',

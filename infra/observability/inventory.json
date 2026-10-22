@@ -767,6 +767,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-features-set",
+      "source": "libs/domain/src/garages/features/features.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/features/:feature",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each change of a switch is audited with the owner, the feature and the old and new state, and recorded as a garage.features_changed event in the same transaction; a 409 mechanics_on_team is the rule working, not a failure",
+      "story": "ST-398"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-garage-suspension",
       "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/suspend",

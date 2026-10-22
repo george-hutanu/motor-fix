@@ -311,3 +311,31 @@ describe('the photo variant route', () => {
     expect(checkInventory(root)).toEqual([]);
   });
 });
+
+// @traces 398-FR-013
+describe('the garage feature switch route', () => {
+  repoIt(
+    'is an OpenAPI operation the inventory lists under the api alerts, with no metric of its own',
+    () => {
+      const write = JSON.parse(
+        readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+      ).paths['/api/v1/garages/{garageId}/features/{feature}'];
+      const inventory = JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      );
+      const entries: {
+        name?: string;
+        metric?: string;
+        alerts?: string[];
+      }[] = Object.values(inventory).flatMap((each) =>
+        Array.isArray(each) ? each : [],
+      );
+      const set = entries.find((each) => each.name === 'garage-features-set');
+
+      expect(Object.keys(write)).toEqual(['put']);
+      expect(set?.metric).toMatch(/^http\.server\.request\.duration/);
+      expect(set?.alerts).toEqual(['api-error-rate', 'api-latency']);
+      expect(checkInventory(root)).toEqual([]);
+    },
+  );
+});

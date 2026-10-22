@@ -42,11 +42,12 @@ const PRIVATE = /^(request|quote|booking|job|media|live|message|car|repair)\./;
 // The capability a garage's staff need to hear a kind through the garage
 // channel; who holds which is capabilitiesOf's to say. A kind no family claims
 // reaches an owner and a receptionist, and never a mechanic, whose own jobs and
-// bookings come through their mechanic channel.
+// bookings come through their mechanic channel; the one exception is
+// garage.features_changed, which every open dashboard of the garage re-reads.
 export const KIND_CAPABILITY: [RegExp, Capability][] = [
   [/^(price_list|catalogue_job)\./, 'garage.prices'],
   [/^(member|mechanic|invite)\./, 'garage.team'],
-  [/^garage\.(settings_changed|features_changed)$/, 'garage.feature_switches'],
+  [/^garage\.settings_changed$/, 'garage.feature_switches'],
   [/^garage\.updated$/, 'garage.profile'],
   [/^review\./, 'garage.reviews'],
   [/^(request|message)\./, 'garage.requests'],
@@ -135,6 +136,7 @@ function allows(
     return false;
   const rights = staffRights(access, role, accountId);
   if (!rights) return false;
+  if (kind === 'garage.features_changed') return true;
   if (role === 'mechanic' && keys.some((key) => key.startsWith('mechanic:')))
     return true;
   const needs = KIND_CAPABILITY.find(([kinds]) => kinds.test(kind))?.[1];

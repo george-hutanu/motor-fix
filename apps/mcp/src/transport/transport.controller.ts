@@ -8,6 +8,7 @@ import {
   type createPrisma,
   DaySheetService,
   DeclineService,
+  featureOn,
   GarageFiguresService,
   GarageRequestsService,
   GarageScheduleService,
@@ -80,12 +81,7 @@ export class TransportController {
     this.toolNames = tools.map((t) => t.name);
     this.ctx = {
       accounts,
-      featureOn: async (garageId, key) =>
-        (
-          await prisma.garageFeature.findUnique({
-            where: { garageId_key: { garageId, key } },
-          })
-        )?.enabled ?? true,
+      featureOn: (garageId, key) => featureOn(prisma, garageId, key),
       garage: {
         daySheet: new DaySheetService(prisma),
         decline: new DeclineService(prisma, new AuditService(), outbox),

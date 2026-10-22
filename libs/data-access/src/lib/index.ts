@@ -96,6 +96,8 @@ export type { GarageBrandOwnerAnswerDto } from './models/garage-brand-owner-answ
 export type { GarageBrandStanceDto } from './models/garage-brand-stance-dto';
 export type { GarageCarDto } from './models/garage-car-dto';
 export type { GarageDriverDto } from './models/garage-driver-dto';
+export type { GarageFeaturesDto } from './models/garage-features-dto';
+export type { GarageFeatureSwitchesDto } from './models/garage-feature-switches-dto';
 export type { GaragePermissionsDto } from './models/garage-permissions-dto';
 export type { GaragePinDto } from './models/garage-pin-dto';
 export type { GaragePinsDto } from './models/garage-pins-dto';
@@ -238,6 +240,7 @@ export type { SavePushSubscriptionDto } from './models/save-push-subscription-dt
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SendQuoteDto } from './models/send-quote-dto';
 export type { SessionDto } from './models/session-dto';
+export type { SetGarageFeatureDto } from './models/set-garage-feature-dto';
 export type { SignInDto } from './models/sign-in-dto';
 export type { SignUpDto } from './models/sign-up-dto';
 export type { StaffChannelDto } from './models/staff-channel-dto';
@@ -571,6 +574,8 @@ export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRev
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
+export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
+export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';

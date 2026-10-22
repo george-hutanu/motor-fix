@@ -18,7 +18,7 @@ export const FEATURE_KEYS = [
   'day_sheets',
   'whatsapp',
 ] as const;
-type FeatureKey = (typeof FEATURE_KEYS)[number];
+export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export interface SurveySection {
   mechanicsCount?: (typeof MECHANICS_COUNTS)[number];

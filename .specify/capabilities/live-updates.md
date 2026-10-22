@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-19
+updated: 2026-10-22
 features:
   - 253-live-connection
   - 254-live-audience
@@ -22,6 +22,7 @@ features:
   - 172-price-list-states
   - 173-price-range-in-place
   - 1190-live-reconnects
+  - 398-garage-feature-switches
 ---
 
 # Capability: Live updates
@@ -102,9 +103,9 @@ _From 419-live-garage-updates._
 
 _From 254-live-audience._
 
-### 574-FR-001 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities (`capabilitiesOf(role, permissions)`, the one capability table) through one table mapping kind families to the capability needed to read them: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed`, `garage.features_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. The hub MUST hold no other per-role list of kinds. (Modifies 254-FR-003.)
+### 398-FR-008 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities through one table of kind families: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. For an owner or a receptionist still that garage's staff in that role, a kind in a mapped family MUST reach the stream only when the role holds its capability, and a kind in no family MUST reach it. For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`), and a kind in no family MUST NOT; the mechanic's own channel, the staff-membership check and the feature-switch rules are unchanged. The one exception, and the hub's only other list of kinds: `garage.features_changed` is in no family and MUST reach every staff stream of the garage, the owner, a receptionist and a mechanic alike, after the membership check; the hub's cached access for the garage is still dropped on it (254-FR-006). (Restates 574-FR-001, 574-FR-002 and 574-FR-003 with that exception.)
 
-_From 574-live-hub-capabilities._
+_From 398-garage-feature-switches._
 
 ### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
 
@@ -282,14 +283,6 @@ _From 582-live-toast-axe._
 
 _From 582-live-toast-axe._
 
-### 574-FR-002 — For an owner or a receptionist who is still that garage's staff in that role (the 254 membership check, done before the table), a kind in a mapped family MUST reach the stream only when the role holds that family's capability, and a kind in no family MUST reach it. In consequence the owner still receives every kind, and a receptionist no longer receives `review.*`, `garage.updated` or `invite.*`, on top of the `price_list.*`, `member.*`, `mechanic.*`, `garage.settings_changed` and `garage.features_changed` kinds already withheld.
-
-_From 574-live-hub-capabilities._
-
-### 574-FR-003 — For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`, `booking.moved` included), and a kind in no family MUST NOT; a kind met on the mechanic's own `mechanic:{mechanicId}` channel, the staff-membership check and the feature switches (254 live audience: membership and feature-switch rules) are unchanged.
-
-_From 574-live-hub-capabilities._
-
 ### 586-FR-001 — The live end-to-end suite MUST include a check in which a signed-in garage owner has the "Invită în echipă" dialog open with text typed into a text field and that field focused, and an admin sends the live test update to that account from another context; the check MUST assert that the update's line "Actualizare de test în direct" is visible on the dashboard within 2 seconds.
 
 _From 586-live-e2e-typed-text._
@@ -439,3 +432,6 @@ _From 1190-live-reconnects._
 - `253-FR-013` — superseded by `1190-FR-007` (2026-10-19)
 - `253-FR-007` — superseded by `1190-FR-006` (2026-10-19)
 - `253-FR-005` — superseded by `1190-FR-002` (2026-10-19)
+- `574-FR-001` — superseded by `398-FR-008` (2026-10-22)
+- `574-FR-002` — superseded by `398-FR-008` (2026-10-22)
+- `574-FR-003` — superseded by `398-FR-008` (2026-10-22)

@@ -389,9 +389,11 @@ export class Frame implements OnInit {
       .subscribe((message) => {
         if (message.kind === 'live.test') this.lastTest.set(message.at);
         // A suspension or a verification decision changes what the garage's
-        // dashboard shows, and a re-check the RAR line under its verified pill.
+        // dashboard shows, a re-check the RAR line under its verified pill, and
+        // the owner's feature switches its menu, bar and routes.
         if (
           message.kind === 'account.email_confirmed' ||
+          message.kind === 'garage.features_changed' ||
           message.kind === 'garage.suspended' ||
           message.kind === 'verification.decided' ||
           message.kind === 'recheck.recorded'

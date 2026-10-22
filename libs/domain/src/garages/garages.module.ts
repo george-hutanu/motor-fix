@@ -8,6 +8,8 @@ import {
 import { GarageDetailsService } from './details/garage-details.service';
 import { LegalDocumentsController } from './documents/legal-documents/legal-documents.controller';
 import { LegalDocumentsService } from './documents/legal-documents/legal-documents.service';
+import { GarageFeaturesController } from './features/features.controller';
+import { GarageFeaturesService } from './features/features.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
 import { GarageSettingsController } from './garage-settings/garage-settings.controller';
@@ -84,6 +86,7 @@ export class GaragesModule {
         GarageBrandsController,
         GarageInvitesController,
         GarageReportsController,
+        GarageFeaturesController,
         ImagesController,
         GarageSettingsController,
         InvitesController,
@@ -122,6 +125,7 @@ export class GaragesModule {
           provide: GARAGE_REPORTS_OPTIONS,
           useValue: { webUrl: email.webUrl },
         },
+        GarageFeaturesService,
         GarageSettingsService,
         LegalCheckService,
         LegalDocumentsService,

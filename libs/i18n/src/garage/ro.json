@@ -1,4 +1,36 @@
 {
+  "features": {
+    "confirm": {
+      "cancel": "Renunță",
+      "line": {
+        "day_sheets": "Fișa zilei și trimiterea ei dispar; echipa nu mai primește foi de lucru.",
+        "lift_schedule": "Elevatoarele dispar din programări, din meniu și din fișele de lucru.",
+        "live_media": "Butoanele „Foto, video, live” dispar din lucrări.",
+        "team_mechanics": "Mecanicii, invitațiile și alegerea mecanicului dispar din meniu și din programări.",
+        "whatsapp": "Mesajele WhatsApp către echipa ta se opresc. Clienții nu sunt afectați."
+      },
+      "off": "Oprește",
+      "title": "Oprești „{name}”?"
+    },
+    "description": {
+      "day_sheets": "Fișa zilei pentru fiecare mecanic, de tipărit sau de trimis.",
+      "lift_schedule": "Programările pe elevatoare și alegerea elevatorului.",
+      "live_media": "Poze, video și transmisiuni live din atelier pentru client.",
+      "team_mechanics": "Mecanicii tăi, invitațiile și alegerea mecanicului la programare.",
+      "whatsapp": "Mesajele WhatsApp către echipa ta: foi de lucru și alerte."
+    },
+    "intro": "Oprește ce nu folosește service‑ul tău. Ce oprești dispare din meniu și din ecrane pentru toată echipa.",
+    "mechanicsOnTeam": "Scoate mai întâi mecanicii din echipă.",
+    "name": {
+      "day_sheets": "Foi de lucru",
+      "lift_schedule": "Program pe elevatoare",
+      "live_media": "Poze și video live",
+      "team_mechanics": "Echipă și mecanici",
+      "whatsapp": "WhatsApp"
+    },
+    "saveFailed": "Nu am putut salva. Încearcă din nou.",
+    "title": "Funcții"
+  },
   "invite": {
     "canAnswerQuotes": "Poate răspunde la cererile de ofertă",
     "cancel": "Anulează",
