@@ -180,12 +180,19 @@ export class ListingPhotosService implements OnApplicationShutdown {
       // the copy lets go of, until the copy is sent.
       return tx.garagePhoto.findUnique({ where: { fileKey: key } });
     });
-    if (shown) return;
-    await this.storage.deleteWithCopies(key).catch((error: unknown) => {
-      this.logger.error(
-        `photo of draft ${id} left in storage: ${key}: ${String(error)}`,
-      );
-    });
+    if (!shown) await this.release([key], id);
+  }
+
+  // Photos no draft or garage holds any more, deleted after the commit that
+  // let them go; one storage cannot delete is logged, never thrown.
+  async release(keys: string[], draftId: string): Promise<void> {
+    for (const key of keys) {
+      await this.storage.deleteWithCopies(key).catch((error: unknown) => {
+        this.logger.error(
+          `photo of draft ${draftId} left in storage: ${key}: ${String(error)}`,
+        );
+      });
+    }
   }
 
   // For the sending story: the size of each processed photo, in order.

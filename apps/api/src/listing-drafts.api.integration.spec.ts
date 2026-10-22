@@ -271,6 +271,7 @@ describe('the listing draft routes', () => {
       'GET /api/v1/listing-drafts/{id}/photos',
       'PATCH /api/v1/listing-drafts/{id}',
       'POST /api/v1/listing-drafts',
+      'POST /api/v1/listing-drafts/completion',
       'POST /api/v1/listing-drafts/{id}/check',
       'POST /api/v1/listing-drafts/{id}/continue-link',
       'POST /api/v1/listing-drafts/{id}/documents/{kind}',

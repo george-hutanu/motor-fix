@@ -26,6 +26,7 @@ const {
   drafts,
   listed,
   plain,
+  released,
   reset,
   submit,
 } = completionWorld(prisma);
@@ -470,6 +471,40 @@ describe('sending the copy again', () => {
     ).toMatchObject({ cui: '12345674' });
   });
 
+  it('hands the photos the copy let go of back to storage once the sending commits', async () => {
+    await asked(['photos']);
+    const copy = await service.open(garage.owner);
+    const gone = copy.data.files ?? [];
+    expect(gone).toHaveLength(1);
+    const added = `garage-photos/${randomUUID()}/p3`;
+    await saved(copy, (data) => ({ ...data, files: [added] }));
+
+    await send(copy);
+
+    expect(released).toEqual(gone);
+    expect(
+      (
+        await prisma.garagePhoto.findMany({
+          orderBy: { position: 'asc' },
+          where: { garageId: garage.garageId },
+        })
+      ).map((photo) => photo.fileKey),
+    ).toEqual([added]);
+  });
+
+  it('hands no photo back to storage when the copy keeps them all', async () => {
+    await asked(['photos']);
+    const copy = await service.open(garage.owner);
+    await saved(copy, (data) => ({
+      ...data,
+      files: [...(data.files ?? []), `garage-photos/${randomUUID()}/p4`],
+    }));
+
+    await send(copy);
+
+    expect(released).toEqual([]);
+  });
+
   it('answers the same result to the same key, sending again once', async () => {
     await asked(['photos']);
     const copy = await service.open(garage.owner);
@@ -479,6 +514,7 @@ describe('sending the copy again', () => {
     const second = await send(copy, garage.owner, key);
 
     expect(second).toEqual(first);
+    expect(released).toEqual([]);
     expect(
       await prisma.activityLog.count({
         where: { kind: 'verification_resent', subjectId: garage.fileId },
@@ -585,5 +621,25 @@ describe('a sending again that is refused', () => {
     ).toMatchObject({ phone: '+40722123456' });
     expect(await fileOf()).toMatchObject({ status: 'more_requested' });
     await nothingWritten(copy, since);
+  });
+
+  it('keeps every photo in storage when the sending rolls back', async () => {
+    await asked(['photos']);
+    const copy = await service.open(garage.owner);
+    await saved(copy, (data) => ({
+      ...data,
+      files: [`garage-photos/${randomUUID()}/p5`],
+    }));
+    const replace = jest
+      .spyOn(LegalDocumentsService.prototype, 'replace')
+      .mockRejectedValueOnce(new Error('storage down'));
+
+    try {
+      await expect(send(copy)).rejects.toThrow('storage down');
+    } finally {
+      replace.mockRestore();
+    }
+
+    expect(released).toEqual([]);
   });
 });

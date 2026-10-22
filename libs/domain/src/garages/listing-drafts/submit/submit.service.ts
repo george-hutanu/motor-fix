@@ -89,19 +89,6 @@ const isSent = (value: unknown): value is ListingSubmittedDto => {
   );
 };
 
-// The answer a sent draft keeps for its key; another key, or a stored answer
-// that is not one, is refused.
-function earlierAnswer(
-  draft: ListingDraft,
-  key: string,
-): ListingSubmittedDto | undefined {
-  if (draft.status !== 'submitted') return undefined;
-  if (draft.submitKey !== key || !isSent(draft.submitResult)) {
-    throw sentAlready();
-  }
-  return draft.submitResult;
-}
-
 const dataOf = (draft: ListingDraft): ListingDraftData =>
   isListingDraftData(draft.data) ? draft.data : {};
 
@@ -139,7 +126,7 @@ export class ListingSubmitService {
     key: string,
   ): Promise<ListingSubmittedDto> {
     const draft = await this.draftOf(id, token);
-    const answered = earlierAnswer(draft, key);
+    const answered = await this.earlierAnswer(draft, key);
     if (answered) return answered;
     // Both read outside the transaction: the object store, and a read the
     // drafts service makes on its own connection.
@@ -156,7 +143,7 @@ export class ListingSubmitService {
         const locked = await tx.listingDraft.findUniqueOrThrow({
           where: { id },
         });
-        const replay = earlierAnswer(locked, key);
+        const replay = await this.earlierAnswer(locked, key);
         if (replay) return { replay };
         if (locked.verificationFileId) {
           const file = await this.completion.fileFor(
@@ -170,13 +157,13 @@ export class ListingSubmitService {
             locked.email,
             holders.length > 0,
           );
-          const sent = await this.completion.resend(tx, actor, file, fresh, {
+          const resent = await this.completion.resend(tx, actor, file, fresh, {
             holders,
             sizes,
             warnings,
           });
-          await this.markSent(tx, actor, id, key, sent);
-          return { resent: sent };
+          await this.markSent(tx, actor, id, key, resent.sent);
+          return { resent };
         }
         const owned = await tx.garageMember.findFirst({
           where: { accountId: actor.accountId, role: 'owner' },
@@ -196,10 +183,12 @@ export class ListingSubmitService {
     );
     if (outcome.replay) return outcome.replay;
     if (outcome.resent) {
+      const { dropped, sent } = outcome.resent;
       this.logger.log(
-        `listing resent: draft ${id} file ${outcome.resent.fileId} garage ${outcome.resent.garageId} account ${actor.accountId}`,
+        `listing resent: draft ${id} file ${sent.fileId} garage ${sent.garageId} account ${actor.accountId}`,
       );
-      return outcome.resent;
+      await this.listingPhotos.release(dropped, id);
+      return sent;
     }
     this.logger.log(
       `listing sent: draft ${id} garage ${outcome.sent.garageId} account ${actor.accountId}`,
@@ -238,6 +227,22 @@ export class ListingSubmitService {
       );
     }
     return warnings;
+  }
+
+  // The answer a sent draft keeps for its key; another key, or a stored answer
+  // that is not one, is refused, a completion copy's with its file's status.
+  private async earlierAnswer(
+    draft: ListingDraft,
+    key: string,
+  ): Promise<ListingSubmittedDto | undefined> {
+    if (draft.status !== 'submitted') return undefined;
+    if (draft.submitKey === key && isSent(draft.submitResult)) {
+      return draft.submitResult;
+    }
+    if (draft.verificationFileId) {
+      throw await this.completion.movedOn(draft.verificationFileId);
+    }
+    throw sentAlready();
   }
 
   private async markSent(

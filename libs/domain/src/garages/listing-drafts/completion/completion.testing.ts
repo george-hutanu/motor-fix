@@ -73,6 +73,8 @@ export function completionWorld(prisma: PrismaClient) {
     outbox,
     {} as never,
   );
+  // The photo keys handed back to storage after a committed sending.
+  const released: string[] = [];
   const completion = new CompletionService(
     prisma,
     details,
@@ -96,6 +98,9 @@ export function completionWorld(prisma: PrismaClient) {
     {
       describe: async (keys: string[]) =>
         keys.map((key) => ({ height: 600, key, width: 800 })),
+      release: async (keys: string[]) => {
+        released.push(...keys);
+      },
     } as unknown as ListingPhotosService,
     verification,
     documents,
@@ -114,6 +119,7 @@ export function completionWorld(prisma: PrismaClient) {
   const world: World = { brakes: '', dacia: '', oil: '', tesla: '' };
 
   async function reset() {
+    released.length = 0;
     await prisma.$executeRawUnsafe(
       'TRUNCATE account, brand, garage, job_type, listing_draft CASCADE',
     );
@@ -294,5 +300,15 @@ export function completionWorld(prisma: PrismaClient) {
     };
   }
 
-  return { completion, drafts, full, listed, plain, reset, submit, world };
+  return {
+    completion,
+    drafts,
+    full,
+    listed,
+    plain,
+    released,
+    reset,
+    submit,
+    world,
+  };
 }

@@ -15,7 +15,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
   styleUrl: './no-change-dialog.css',
   templateUrl: './no-change-dialog.html',
 })
-export class NoChangeDialog {
+class NoChangeDialog {
   protected readonly task = injectOverlayTask<undefined, OverlayResult<true>>();
 }
 

@@ -165,8 +165,8 @@ export class CompletionService {
     file: VerificationFile,
     data: ListingDraftData,
     { holders, sizes, warnings }: Sending,
-  ): Promise<ListingSubmittedDto> {
-    const cuiChanged = await this.writeGarage(
+  ): Promise<{ dropped: string[]; sent: ListingSubmittedDto }> {
+    const { cuiChanged, dropped } = await this.writeGarage(
       tx,
       actor.accountId,
       file.garageId,
@@ -182,25 +182,36 @@ export class CompletionService {
       ),
     );
     return {
-      fileId: file.id,
-      garageId: file.garageId,
-      status: sent.status === 'approved' ? 'approved' : 'submitted',
-      warnings: warnings.filter(
-        (warning) =>
-          warning.code !== 'document_missing' || !held.has(warning.field),
-      ),
+      dropped,
+      sent: {
+        fileId: file.id,
+        garageId: file.garageId,
+        status: sent.status === 'approved' ? 'approved' : 'submitted',
+        warnings: warnings.filter(
+          (warning) =>
+            warning.code !== 'document_missing' || !held.has(warning.field),
+        ),
+      },
     };
   }
 
+  // The refusal a sent copy answers a new key with: the file has moved on.
+  async movedOn(fileId: string): Promise<HttpException> {
+    const file = await this.prisma.verificationFile.findUniqueOrThrow({
+      where: { id: fileId },
+    });
+    return refused(file.status);
+  }
+
   // Each step through its own writer, and only where it differs from the
-  // garage; answers whether the CUI changed.
+  // garage; answers whether the CUI changed and the photo keys let go of.
   private async writeGarage(
     tx: Prisma.TransactionClient,
     accountId: string,
     garageId: string,
     data: ListingDraftData,
     sizes: PhotoSize[],
-  ): Promise<boolean> {
+  ): Promise<{ cuiChanged: boolean; dropped: string[] }> {
     const live = await copyOf(tx, garageId);
     const steps = data.steps ?? {};
     const was = live.steps ?? {};
@@ -215,17 +226,17 @@ export class CompletionService {
     await this.writeOffer(tx, accountId, garageId, steps, was);
     await this.mechanics.saveAgain(tx, garageId, accountId, steps['4'] ?? {});
     await this.writeHours(tx, accountId, garageId, steps['5'] ?? {}, was['5']);
-    if (!same(data.files ?? [], live.files)) {
+    const files = data.files ?? [];
+    if (!same(files, live.files)) {
       await this.photos.saveRows(
         tx,
         garageId,
-        (data.files ?? []).map(
-          (key) => sizes.find((size) => size.key === key) ?? { key },
-        ),
+        files.map((key) => sizes.find((size) => size.key === key) ?? { key }),
         accountId,
       );
     }
-    return cuiChanged;
+    const dropped = (live.files ?? []).filter((key) => !files.includes(key));
+    return { cuiChanged, dropped };
   }
 
   private async writeCui(

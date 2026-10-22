@@ -35,6 +35,7 @@ const legal = new LegalDocumentsService(prisma, audit, outbox, {} as never);
 const photos = {
   describe: async (keys: string[]) =>
     keys.map((key) => ({ height: 600, key, width: 800 })),
+  release: async () => undefined,
 } as unknown as ListingPhotosService;
 const verification = new VerificationService(audit, outbox, {
   skipManualApproval: false,
@@ -704,7 +705,7 @@ describe('a draft bound to a file asked for more', () => {
     const answer = { ...sent, warnings: [] };
     const resend = jest
       .spyOn(CompletionService.prototype, 'resend')
-      .mockResolvedValue(answer);
+      .mockResolvedValue({ dropped: [], sent: answer });
     const owner: Actor = {
       ...actor,
       garageId: sent.garageId,
