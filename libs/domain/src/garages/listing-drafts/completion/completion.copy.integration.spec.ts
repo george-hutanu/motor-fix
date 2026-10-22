@@ -34,7 +34,7 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
-// @traces 208-FR-004, 208-FR-019
+// @traces 208-FR-004 208-FR-019
 describe('the copy of a live garage', () => {
   it('reads every answer back into the form, photos in their order', async () => {
     const sent = full(closedDay());

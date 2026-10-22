@@ -20,6 +20,7 @@ const entry = (overrides: Partial<BrowserDraft> = {}): BrowserDraft => ({
   ...overrides,
 });
 
+// @traces 208-FR-016
 describe('DraftKeeper before the check', () => {
   const SENT = {
     fileId: 'f1',

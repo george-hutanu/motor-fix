@@ -64,7 +64,7 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
-// @traces 208-FR-004, 208-FR-005
+// @traces 208-FR-004 208-FR-005
 describe('opening the copy', () => {
   it('answers the owner a copy of the garage bound to its file, with a key of its own', async () => {
     await asked(['photos']);
@@ -258,7 +258,7 @@ const entriesSince = (since: Date) =>
 const fileOf = () =>
   prisma.verificationFile.findUniqueOrThrow({ where: { id: garage.fileId } });
 
-// @traces 208-FR-007, 208-FR-019
+// @traces 208-FR-007 208-FR-019
 describe('sending the copy again', () => {
   it('sends the file back for verification, keeping what was asked for, the garage still a draft', async () => {
     await asked(['photos']);
@@ -487,7 +487,7 @@ describe('sending the copy again', () => {
   });
 });
 
-// @traces 208-FR-008, 208-FR-007
+// @traces 208-FR-008 208-FR-007
 describe('a sending again that is refused', () => {
   async function nothingWritten(copy: CompletionCopyDto, since: Date) {
     expect(await entriesSince(since)).toEqual([]);

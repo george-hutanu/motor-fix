@@ -30,7 +30,7 @@ const listed = (dto: object) =>
       []) as string[]
   ).map((name) => name.replace(/^:/, ''));
 
-// @traces 208-FR-004, 208-FR-012
+// @traces 208-FR-004 208-FR-012
 describe('the completion copy in the contract', () => {
   it('is a listing draft with its key, the items asked for, whether it was edited and the documents on file', () => {
     const names = listed(CompletionCopyDto.prototype);
@@ -99,7 +99,7 @@ describe('the completion copy in the contract', () => {
   });
 });
 
-// @traces 208-FR-001, 208-FR-012
+// @traces 208-FR-001 208-FR-012
 describe("the status read's note in the contract", () => {
   it('carries the note, null outside a request for more', () => {
     expect(documented(VerificationStatusDto.prototype, 'note')).toMatchObject({

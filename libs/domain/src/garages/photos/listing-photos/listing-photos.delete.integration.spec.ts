@@ -168,7 +168,7 @@ describe('removing a photo', () => {
     expect(store.objects.has(key)).toBe(true);
   });
 
-  // @traces 208-FR-005, 208-FR-007
+  // @traces 208-FR-005 208-FR-007
   it('keeps the stored photo a live garage still shows when its copy lets it go', async () => {
     const draft = await draftWith(2);
     const [first, second] = draft.keys as [string, string];
