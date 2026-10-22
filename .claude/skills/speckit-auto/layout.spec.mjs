@@ -220,3 +220,40 @@ describe('speckit-auto layout', () => {
     assert.deepEqual(found, []);
   });
 });
+
+// The text each ST-1358 rule puts in a skill, template or agent, where a run reads it.
+describe('ST-1358 text lands where the run reads it', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+  const has = (path, ...phrases) => {
+    const text = at(path);
+    for (const phrase of phrases) assert.ok(text.includes(phrase), `${path} lacks: ${phrase}`);
+  };
+
+  // @traces 1358-FR-001 1358-FR-002
+  it('preflight picks the suite from the environment and logs it; Hard Stop 2 names it', () => {
+    has('.claude/skills/speckit-auto/preflight.md',
+      'SUITE=$([ -n "$DATABASE_URL" ] && [ -n "$REDIS_URL" ] && echo test || echo test:unit)',
+      '`Preflight suite: unit <sha7>` or `Preflight suite: full <sha7>`',
+      'so it runs and logs `full`');
+    has('.claude/skills/speckit-auto/SKILL.md', 'the stop naming the suite that ran (`unit` or `full`');
+  });
+
+  // @traces 1358-FR-003 1358-FR-005
+  it('phase 1 uses the preflight grep; phase 2 validates the Spec Delta', () => {
+    has('.claude/skills/speckit-auto/preflight.md', "grep -nE '^\\*\\*Version\\*\\*|\\[[A-Z_]+\\]' .specify/memory/constitution.md");
+    has('.claude/skills/speckit-auto/phases-plan.md', "use the preflight grep's result", 'node .claude/scripts/capabilities.mjs validate --check');
+  });
+
+  // @traces 1358-FR-004 1358-FR-007
+  it('the spec template carries the Spec Delta and the spec reviewer judges it', () => {
+    has('.specify/templates/spec-template.md', '## Spec Delta', 'project-local addition', '- **Modifies**:');
+    has('.claude/agents/spec-reviewer.md', 'is a Modifies naming that requirement in the `## Spec Delta`, not an Adds.');
+  });
+
+  // @traces 1358-FR-008 1358-FR-013
+  it('specify reads the GitHub story; archive reads the diff and leaves the retro manual', () => {
+    has('.claude/skills/speckit-specify/SKILL.md', 'gh issue view <n> --repo george-hutanu/motor-fix-specs --comments', 'the Jira and Figma steps (0 and 0b) are cut');
+    has('.claude/skills/speckit-archive/SKILL.md', 'read `git diff -- .specify/capabilities/`', '`/speckit-retro` is manual only in the `/speckit-auto` chain');
+  });
+});
