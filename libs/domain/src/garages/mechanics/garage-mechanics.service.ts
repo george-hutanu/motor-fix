@@ -39,7 +39,9 @@ function sectionErrors(mechanics: MechanicsSection['mechanics'] = []) {
 
 // The section's cards as the table stores them; a refusal writes nothing.
 function cardsOf(section: MechanicsSection) {
-  const errors = sectionErrors(section.mechanics);
+  const errors = isRecord(section as unknown)
+    ? sectionErrors(section.mechanics)
+    : [{ code: 'invalid', field: 'section' }];
   if (errors.length > 0) {
     throw refusal(
       HttpStatus.UNPROCESSABLE_ENTITY,

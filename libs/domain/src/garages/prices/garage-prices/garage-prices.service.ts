@@ -210,6 +210,8 @@ export class GaragePricesService {
     actorId: string,
     given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
+    if (!isRecord(given as unknown))
+      throw refuse([{ code: 'invalid', field: 'section' }]);
     if (!wellShaped(given.jobs)) {
       throw refuse([{ code: 'invalid', field: 'jobs' }]);
     }
@@ -286,6 +288,8 @@ export class GaragePricesService {
     given: StartingPricesInput,
     worksOn?: readonly string[],
   ): Promise<StartingPricesResult> {
+    if (!isRecord(given as unknown))
+      throw refuse([{ code: 'invalid', field: 'section' }]);
     if (!wellShaped(given.jobs)) {
       throw refuse([{ code: 'invalid', field: 'jobs' }]);
     }

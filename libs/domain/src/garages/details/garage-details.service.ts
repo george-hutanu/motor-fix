@@ -15,7 +15,7 @@ import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal, taken } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
 import { uniqueSlug } from '../garage-slug';
-import { plainText } from '../plain-text';
+import { isRecord, plainText } from '../plain-text';
 
 const refuse = (errors: FieldProblem[]) =>
   refusal(
@@ -70,6 +70,8 @@ function sectionErrors(section: DetailsSection) {
 
 // The section checked and normalised as the garage stores it.
 function valuesOf(section: DetailsSection) {
+  if (!isRecord(section as unknown))
+    throw refuse([{ code: 'invalid', field: 'section' }]);
   const errors = sectionErrors(section);
   if (errors.length > 0) throw refuse(errors);
   const businessKind = section.businessKind as NonNullable<

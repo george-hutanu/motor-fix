@@ -33,6 +33,10 @@ import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 // jsdom lays nothing out: each heading is placed by hand, the page is tall
 // enough not to sit at its end, and scrolling is recorded, not done.
 let tops = [1000, 2000, 3000, 4000, 5000, 6000];
+let frames = 0;
+// From a tablet up the save bar is pinned and the list of steps stands beside the form.
+let wide = false;
+const actionsHeight = 72;
 const scrolls: ScrollIntoViewOptions[] = [];
 const signIn = { join: jest.fn(), start: jest.fn() };
 // The account behind the page: none until the dialog makes one.
@@ -108,9 +112,30 @@ beforeEach(() => {
     .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
     .mockImplementation(function (this: HTMLElement) {
       const sections = [...document.querySelectorAll('section h2')];
+      if (this.classList.contains('actions'))
+        return {
+          bottom: 700,
+          height: actionsHeight,
+          top: 700 - actionsHeight,
+        } as DOMRect;
       const top = tops[sections.indexOf(this)] ?? 0;
       return { bottom: top + 40, height: 40, top } as DOMRect;
     });
+  // A frame runs once the task that asked for it is over.
+  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
+    void Promise.resolve().then(() => run(0));
+    return ++frames;
+  });
+  wide = false;
+  jest.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        addEventListener() {},
+        matches: query === '(min-width: 768px)' && wide,
+        media: query,
+        removeEventListener() {},
+      }) as unknown as MediaQueryList,
+  );
   Object.defineProperty(document.documentElement, 'scrollHeight', {
     configurable: true,
     value: 8000,
@@ -403,6 +428,8 @@ describe('the current step', () => {
       await jest.advanceTimersByTimeAsync(160);
       tops = [-2000, -1000, -10, 990, 1990, 2990];
       window.dispatchEvent(new Event('scroll'));
+      // Under a fake clock a frame is a timer of its own.
+      await jest.advanceTimersByTimeAsync(16);
       await settle(harness);
       expect(current(page)).toEqual(['3 Prețuri']);
     } finally {
@@ -442,6 +469,68 @@ describe('the current step', () => {
     window.dispatchEvent(new Event('scroll'));
     await settle(harness);
     expect(current(page)).toEqual(['2 Mărci']);
+  });
+
+  // @traces 208-FR-013
+  it('reads the layout by the tablet query and once per frame, however many scrolls the frame holds', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(window.matchMedia).toHaveBeenCalledWith('(min-width: 768px)');
+    const styles = jest.spyOn(window, 'getComputedStyle');
+    const reads = HTMLElement.prototype.getBoundingClientRect as jest.Mock;
+    const headings = [...page.querySelectorAll('section h2')];
+    reads.mockClear();
+
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
+    for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('scroll'));
+    expect(reads).not.toHaveBeenCalled();
+    await settle(harness);
+
+    expect(styles).not.toHaveBeenCalled();
+    const headingReads = reads.mock.contexts.filter((element) =>
+      headings.includes(element as Element),
+    );
+    expect(headingReads).toHaveLength(headings.length);
+    expect(current(page)).toEqual(['3 Prețuri']);
+  });
+
+  // @traces 208-FR-014
+  it('keeps a focused last field above the pinned save bar by padding the page as tall as the bar', async () => {
+    wide = true;
+    const { harness, page } = await open('/ro/list-your-garage');
+    const root = document.documentElement;
+
+    const fields = page.querySelectorAll<HTMLElement>(
+      'section:first-of-type input, section:first-of-type textarea',
+    );
+    fields[fields.length - 1].focus();
+    await settle(harness);
+    expect(root.style.scrollPaddingBottom).toBe(`${actionsHeight}px`);
+
+    harness.fixture.destroy();
+    expect(root.style.scrollPaddingBottom).toBe('');
+  });
+
+  it('pads nothing on a phone, where the save bar ends the form', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(document.documentElement.style.scrollPaddingBottom).toBe('');
+  });
+
+  // @traces 208-FR-015
+  it('keeps the hold through a scroll end left over from before the jump', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    entries(page)[3].click();
+    ended();
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['4 Mecanici · opțional']);
+
+    ended();
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['3 Prețuri']);
   });
 
   it('jumps without a smooth scroll when the device asks for reduced motion', async () => {

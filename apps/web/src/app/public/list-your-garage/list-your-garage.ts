@@ -149,6 +149,7 @@ export class ListYourGarage {
   private readonly route = inject(ActivatedRoute);
   private readonly nav = viewChild<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
+  private readonly actions = viewChild<ElementRef<HTMLElement>>('actions');
   private readonly field = viewChild<ElementRef<HTMLElement>>('email');
   private readonly summary = viewChild<unknown, ElementRef<HTMLElement>>(
     MissingSummary,
@@ -163,6 +164,13 @@ export class ListYourGarage {
   // A jump's own scroll is under way: however late it starts (up to the
   // stall), none of its movement decides the current step.
   private held = false;
+  // A scroll end counts for the jump only after a scroll of the jump's own:
+  // one queued before it is the end of an earlier scroll.
+  private scrollSeen = false;
+  // From a tablet up the list of steps stands beside the form and the save
+  // bar is pinned to the bottom.
+  private wide = false;
+  private frame = 0;
   private quiet: ReturnType<typeof setTimeout> | undefined;
   // The step last jumped to, held while the page cannot bring it to the line.
   private tapped: number | null = null;
@@ -393,26 +401,40 @@ export class ListYourGarage {
     });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
+      const media = window.matchMedia('(min-width: 768px)');
+      this.wide = media.matches;
       const onScroll = () => {
-        if (!this.held) this.follow();
-        else if (!('onscrollend' in window)) this.restartQuiet();
+        if (!this.held) return this.schedule();
+        this.scrollSeen = true;
+        if (!('onscrollend' in window)) this.restartQuiet();
         // The jump has started: its scroll end lets go, not the stall.
         else clearTimeout(this.quiet);
       };
       // A resize is no movement of the jump's: it never restarts the quiet time.
       const onResize = () => {
-        if (!this.held) this.follow();
+        if (!this.held) this.schedule();
       };
-      const onScrollEnd = () => this.release();
+      const onScrollEnd = () => {
+        if (this.scrollSeen) this.release();
+      };
+      const onMedia = () => {
+        this.wide = media.matches;
+        onResize();
+      };
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', onResize, { passive: true });
       window.addEventListener('scrollend', onScrollEnd, { passive: true });
+      media.addEventListener('change', onMedia);
       destroyRef.onDestroy(() => {
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', onResize);
         window.removeEventListener('scrollend', onScrollEnd);
+        media.removeEventListener('change', onMedia);
         clearTimeout(this.quiet);
+        cancelAnimationFrame(this.frame);
+        document.documentElement.style.scrollPaddingBottom = '';
       });
+      // Judged before the draft is restored, which then moves to its step.
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
       void this.keeper.open(link).then((step) => {
@@ -784,6 +806,7 @@ export class ListYourGarage {
       window.innerHeight,
     );
     this.held = Math.abs(target - window.scrollY) >= 1;
+    this.scrollSeen = false;
     if (this.held) this.quiet = setTimeout(() => this.release(), STALL_MS);
     heading.scrollIntoView({
       behavior: this.reduced() ? 'auto' : 'smooth',
@@ -804,16 +827,28 @@ export class ListYourGarage {
     this.quiet = setTimeout(() => this.release(), QUIET_MS);
   }
 
+  // Every scroll and resize of a frame is judged once, as the next begins;
+  // a jump started in between holds the step instead.
+  private schedule() {
+    if (this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      if (!this.held) this.follow();
+    });
+  }
+
   private follow() {
     const bar = this.bar()?.nativeElement;
     const nav = this.nav()?.nativeElement;
     if (!bar || !nav) return;
     // On a phone the headings pass under the bar; on a desktop, under the top
     // of the sticky list.
-    const line =
-      getComputedStyle(bar).display === 'none'
-        ? nav.getBoundingClientRect().top
-        : bar.getBoundingClientRect().bottom;
+    const line = this.wide
+      ? nav.getBoundingClientRect().top
+      : bar.getBoundingClientRect().bottom;
+    // A field focused under the pinned save bar is scrolled up above it.
+    const pinned = this.wide ? this.actions()?.nativeElement : undefined;
+    const padding = pinned ? `${pinned.getBoundingClientRect().height}px` : '';
     const root = document.documentElement;
     // A page that does not scroll is at its top, not at its end.
     const atEnd =
@@ -825,6 +860,7 @@ export class ListYourGarage {
     if (tapped && keepsTapped(step, tapped, tops[tapped - 1], innerHeight))
       step = tapped;
     else this.tapped = null;
+    root.style.scrollPaddingBottom = padding;
     this.current.set(step);
     this.keeper.stepTo(step);
   }
