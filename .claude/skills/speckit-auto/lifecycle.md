@@ -112,7 +112,8 @@ to `tracker-sync.md` at its next event.
      `finish-comment.md`, and its verdict carried to the fixed head
      (`carried from <sha>: QA fixes`), with no lap counted (tail.md step 3).
   7. Merge on `agent-review` success with every other check green, at once
-     (`gh pr merge <n> --merge`; a check still pending ends the tail with
+     (`node .claude/scripts/lifecycle.mjs merge --pr <n>`, which also checks
+     the "Fixed after QA" list; a check still pending ends the tail with
      `NEXT: merge #<n> after CI`, and the session waits for CI and dispatches
      the `merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-tracker-sync finish`, which closes its issue).

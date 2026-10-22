@@ -168,8 +168,10 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    (`speckit-tracker-sync` §4) when there is something to record, keeping a
    lap's `## Fixed after QA` list (`lifecycle.mjs merge` stops before the
    merge while it names fewer findings than the lap reported), and commit
-   it with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`,
-   so a later merge finds it. A check still pending: end with
+   the feature's records with
+   `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
+   `finish-comment.md` itself is git-ignored and stays in the worktree, as
+   `handoff.md` does, for the merge to read. A check still pending: end with
    `NEXT: merge #<n> after CI`. Otherwise ask
    `node .claude/scripts/merge-main.mjs --needed` again; on exit 0 or 2
    merge `origin/main` in with `merge-main.mjs` (a new head needs a new tester
@@ -178,7 +180,8 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's
    status there does not carry).
-   It refuses exactly when the merge gate does (its message is the `fix`);
+   It refuses when the merge gate does, and when a passing lap's
+   `## Fixed after QA` list falls short (its message is the `fix`);
    otherwise it merges, runs the tracker's `finish`, posts one finish comment on the
    merged PR, restores `tracker-sync.md` and deletes `handoff.md`. On `left`,
    run those events through `speckit-tracker-sync`, then its `then`.
