@@ -3,7 +3,12 @@ import { join } from 'node:path';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { type HttpContext, HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
+import {
+  makeStateKey,
+  PLATFORM_ID,
+  RESPONSE_INIT,
+  TransferState,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -777,6 +782,52 @@ describe('the profile read the server render hands over', () => {
     const [query, context] = api.publicGaragesControllerBySlug.mock.calls[0];
     expect(query).toEqual({ brand: 'bmw', slug: 'service-auto-militari' });
     expect(context?.get(PUBLIC_READ)).toBe(true);
+  });
+});
+
+// The server render's answer rides the page, so hydration keeps the drawn
+// profile instead of clearing it for a read of its own.
+describe('the answer the server render drew', () => {
+  const SERVED = makeStateKey<PublicGarageDto>(
+    'profile:["service-auto-militari","bmw"]',
+  );
+
+  it('draws the served answer on hydration, with no skeleton and no read', async () => {
+    const state = TestBed.inject(TransferState);
+    state.set(SERVED, FIXED);
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    expect(page().querySelector('[aria-busy="true"]')).toBeNull();
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+    expect(reads).toHaveLength(0);
+    expect(state.hasKey(SERVED)).toBe(false);
+  });
+
+  it('hands the answer over from the server render', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { component: GarageProfile, path: ':lang/garages/:garage' },
+        ]),
+        { provide: GaragesService, useValue: api },
+        { provide: PublicLive, useValue: live },
+        { provide: Consent, useValue: consent },
+        { provide: ProfilePrefetch, useValue: prefetch },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: RESPONSE_INIT, useValue: response },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    harness = await RouterTestingHarness.create();
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    await reads[0]?.answer(FIXED);
+
+    expect(TestBed.inject(TransferState).get(SERVED, null)).toEqual(FIXED);
   });
 });
 
