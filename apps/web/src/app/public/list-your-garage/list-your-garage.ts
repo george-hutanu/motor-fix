@@ -273,7 +273,7 @@ export class ListYourGarage {
   // facilities note past its limit stays in its step) included.
   private readonly showing = computed(() => {
     const shown = this.shownErrors();
-    return new Set(
+    return new Set<number>(
       Object.entries(shown).flatMap(([part, on]) =>
         on ? [PART_STEP[part as Part]] : [],
       ),
