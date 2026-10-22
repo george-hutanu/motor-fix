@@ -181,6 +181,7 @@ describe('telling the garage a closed account’s booking is cancelled', () => {
     ).toBe(0);
   });
 
+  // @traces 428-FR-007
   it('builds each message once when the same event is handled twice', async () => {
     const { job } = await cancelled();
     const fanOut = await start();
