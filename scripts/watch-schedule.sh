@@ -44,17 +44,14 @@ usage() {
 
 verb=${1:-}
 [ $# -gt 0 ] && shift
-mode=dispatch
-seen=""
+mode=""
 for arg in "$@"; do
   case "$arg" in
-    --gate-only) mode=gate-only ;;
-    --dispatch) mode=dispatch ;;
+    --gate-only | --dispatch) [ -n "$mode" ] && [ "$mode" != "${arg#--}" ] && usage; mode=${arg#--} ;;
     *) usage ;;
   esac
-  seen="$seen $arg"
 done
-case "$seen" in *--gate-only*--dispatch*|*--dispatch*--gate-only*) usage ;; esac
+mode=${mode:-dispatch}
 
 case "$verb" in
   install)
@@ -128,7 +125,7 @@ PLIST
       now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
       [ -n "$plan" ] && printf '%s\n' "$plan"
       if [ "$gate" -eq 2 ] && [ -n "$plan" ]; then
-        printf '%s\n' "$plan" | sed "s/^/$now /" >> "$LOGS/plan-$(date -u +%Y-%m-%d).log"
+        printf '%s\n' "$plan" | sed "s/^/$now /" >> "$LOGS/plan-${now%%T*}.log"
       fi
       echo "$now gate $gate gate-only" >> "$LOGS/passes.log"
       exit "$gate"

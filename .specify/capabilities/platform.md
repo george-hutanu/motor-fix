@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-21
+updated: 2026-10-22
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -96,6 +96,7 @@ features:
   - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
   - 1362-pr-qa-boot-orphan-checks
+  - 1357-merge-when-overlapping
 ---
 
 # Capability: Platform
@@ -2440,6 +2441,62 @@ _From 1362-pr-qa-boot-orphan-checks._
 ### 1362-FR-005 — `gh-rest`'s check reads (`pr checks`, `pr view statusCheckRollup`, `ciOkOn`), and so `ci-wait.mjs`, MUST read every check run of the head (`filter=all`) and keep the one started last of each check, so an orphan never outranks its newer completed attempt and a newer attempt still running stays pending.
 
 _From 1362-pr-qa-boot-orphan-checks._
+
+### 1357-FR-001 — The constitution's Principle VII step on merging `main` (`constitution.md` around :582), AGENTS.md's lifecycle step 5 and the constitution card MUST state, as a PATCH (4.1.0 → 4.1.1, dated 2026-10-22, asked for by the owner), that `origin/main` is merged into a branch only when the overlap test says the merge is needed, never merely because the branch is behind; a clean behind head keeps its passed QA run and `agent-review`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-002 — `merge-main.mjs` MUST offer the overlap test as code (`merge-main.mjs --needed`): exit 0 when a merge is needed, exit 1 when it is not, with one line on stdout naming the rule that decided (the first that holds, in the order (a) to (e) of FR-003); exit 2 with the reason on stderr when it cannot compute the answer (fetch, merge-base or diff failing), which every caller treats as "needed", so an error never skips a merge; it changes nothing in the worktree.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-003 — The overlap test MUST answer "needed" when any of these holds, and "not needed" otherwise: (a) GitHub reports the PR as conflicting with `main`; (b) a file `main` changed since the merge-base is also changed by the PR; (c) `main` changed a file under the same Nx project folder (`apps/<x>` or `libs/<y>`, matched on the first two path segments exactly, so `apps/web` is not `apps/web-e2e`) as a file the PR changes; the PR's files are `git diff --name-only --no-renames <merge-base> HEAD` and main's are the same command against `origin/main`, so a rename or delete counts under both its old and new path; (d) `main` changed a path matching (repo-root patterns, full path) `docker-compose*.yml`, `package-lock.json`, `libs/domain/prisma/**`, `apps/api/openapi.json`, `.github/workflows/**`, `.claude/hooks/registry.json` or `.specify/capabilities/**`; (e) the latest lap report of the PR holds the PR QA workflow's message `the PR's docker-compose.yml has no storage service: merge main into the branch`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-004 — `tail.md` steps 1 and 4, `lifecycle.md` step 5, `speckit-pr-test/SKILL.md`'s post-merge rule and `watch.mjs`'s `merge-main` fix MUST call the overlap test and merge only on "needed"; none of them merges because the branch is behind.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-005 — No merge in the harness MUST take the `refs/pull/<n>/merge` ref; the merge source is always `origin/main`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-006 — `npm run test:harness` MUST hold a vitest case for every branch of the overlap test (each rule of FR-003 answering "needed", and the no-overlap "not needed"), and for the `--gate-only` behaviour of FR-009.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-007 — `hand-off.md` step 1 and `tail.md` step 3's no-run case MUST say how to make the live flows proof: boot the stack with `eval "$(node scripts/test-services.ts origin/main)"`, run `node .claude/scripts/pr-test/precheck.mjs --flows <file> --spec <spec> --check` until exit 0; that `dispatch.mjs` exit 64 means no proof exists for this head; that no flag skips the proof; and that a Docker-less machine is a `needs-confirmation` question on the task.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-008 — No script or skill MUST gain a way to dispatch a QA run without a live proof for the head.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-009 — `scripts/watch-schedule.sh` MUST accept `--gate-only`, under which each scheduled pass runs `watch.mjs --gate`, appends the gate's plan lines to a file named by the UTC date under the schedule's log folder when the gate reports something to do, records the pass in `passes.log` (a gate error, exit 1, writes no plan file and is logged there as today), and never claims or dispatches; `--gate-only` with `--dispatch` is a usage error.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-010 — The script's header and the watch skill MUST say how and when to turn `--dispatch` on: after a week of plan files holding no line a person would refuse.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-011 — This change MUST NOT load the launchd agent: no `install`, `launchctl load` or `bootstrap` runs from the PR, the lifecycle or a test; the owner installs it.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-012 — `tail.md` step 4's pending-check path (today it ends before the step's write is reached) MUST write `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §4, when there is something to record), committed through the specs repo, before ending with `NEXT: merge #<n> after CI`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-013 — Every gate-script edit the change makes MUST be followed by reading its diff and `node .claude/scripts/doctor.mjs --bless-hooks`; `node .claude/scripts/harness-eval.mjs --check` and `npm run test:harness` stay green.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-014 — A cut from a stock spec-kit skill or template MUST be marked as a project-local override where the file records its deltas.
+
+_From 1357-merge-when-overlapping._
 
 ## Retired
 
