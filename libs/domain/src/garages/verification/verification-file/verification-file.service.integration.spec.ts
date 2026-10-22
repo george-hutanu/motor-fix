@@ -232,6 +232,7 @@ describe('reading a file', () => {
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
+        replaced: [],
         stale: true,
       },
       {
@@ -240,6 +241,7 @@ describe('reading a file', () => {
         kind: 'rar_authorisation',
         pages: 0,
         present: false,
+        replaced: [],
         stale: null,
       },
     ]);
@@ -964,5 +966,72 @@ describe('a file back after a request for more', () => {
 
     expect(read.resubmitted).toBe(false);
     expect(read.requestedAt).toBeNull();
+  });
+});
+
+// @traces 208-FR-006
+describe('a file whose documents were replaced', () => {
+  const document = (
+    fileId: string,
+    pages: string[],
+    replacedAt: Date | null,
+    issuedOn: string | null = null,
+  ) =>
+    prisma.legalDocument.create({
+      data: {
+        issuedOn: issuedOn ? new Date(issuedOn) : null,
+        kind: 'onrc_certificate',
+        pages,
+        replacedAt,
+        verificationFileId: fileId,
+      },
+    });
+  const FIRST = new Date('2026-10-12T09:00:00Z');
+  const SECOND = new Date('2026-10-14T09:00:00Z');
+
+  it('reads the current document of each kind and lists the replaced ones, newest first', async () => {
+    const file = await sent();
+    const oldest = await document(file.id, ['a'], FIRST, '2026-09-01');
+    const older = await document(file.id, ['b', 'c'], SECOND, '2026-09-20');
+    const current = await document(file.id, ['d'], null, '2026-10-10');
+
+    const { documents } = await service().read(file.id);
+
+    expect(documents[0]).toEqual({
+      id: current.id,
+      issuedOn: '2026-10-10',
+      kind: 'onrc_certificate',
+      pages: 1,
+      present: true,
+      replaced: [
+        { at: SECOND.toISOString(), id: older.id, pages: 2 },
+        { at: FIRST.toISOString(), id: oldest.id, pages: 1 },
+      ],
+      stale: false,
+    });
+    expect(documents[1]).toMatchObject({ present: false, replaced: [] });
+  });
+
+  it("keeps a replaced document's openings in the timeline", async () => {
+    const file = await sent();
+    const replaced = await document(file.id, ['a'], FIRST);
+    await document(file.id, ['b'], null);
+    await prisma.activityLog.create({
+      data: {
+        action: 'open',
+        actorId: ioana,
+        actorName: 'Ioana',
+        actorRole: 'admin',
+        garageId,
+        kind: 'onrc_certificate',
+        newValue: { page: 1 },
+        subjectId: replaced.id,
+        subjectType: 'legal_document',
+      },
+    });
+
+    const { timeline } = await service().read(file.id);
+
+    expect(timeline.entries.map((e) => e.subjectId)).toEqual([replaced.id]);
   });
 });

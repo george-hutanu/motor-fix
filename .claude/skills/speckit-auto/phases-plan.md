@@ -110,8 +110,8 @@ Phase agent: `model: sonnet`.
 Invoke `speckit-checklist` for the requirements checklist. Then drive it to
 zero unchecked items: for each unchecked item, either fix the underlying
 spec/plan gap and check it, or — when the item does not apply to this feature —
-strike it with a one-line justification. This is what lets phase 10 pass its own
-checklist gate on the merits instead of overriding it.
+strike it with a one-line justification, so phase 10's checklist count reads
+zero.
 
 ### 7. Tasks
 

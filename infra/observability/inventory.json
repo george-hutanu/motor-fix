@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 159,
+    "count": 160,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -959,6 +959,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_listing_completions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each completion copy an owner opens to answer a request for more once per copy: opening the same copy again is not counted; charted beside the requests for more and the files returned on motorfix-product; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-208"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_approvals_total",
       "source": "libs/domain/src/garages/verification/verification.service.ts",
       "dashboard": "motorfix-product",
@@ -1206,6 +1215,19 @@
       ],
       "reason": "one transaction writes the garage, its owner, the verification file, the outbox rows and the audit entries; each success logs one ListingSubmitService line (draft id, garage id, account id; never an e-mail or a token) and adds to motorfix_listing_submissions_total; no alert of its own: a failed send is a 5xx the api-error-rate rule reads, a refused one is the owner's answer shown on the page, and a replay under the same Idempotency-Key writes nothing; no outside call",
       "story": "ST-116"
+    },
+    {
+      "kind": "endpoint",
+      "name": "listing-completion",
+      "source": "libs/domain/src/garages/listing-drafts/completion/completion.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/listing-drafts/completion and status (200 the copy, 401, 403 forbidden for staff who are not the owner, 404 not_found with no garage or no file, 409 verification_transition_refused when the file asks for nothing more)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "reads the garage into one open copy per file and writes a browser key; the copy's creation logs one Completion line (copy id, file id, garage id; never an e-mail or a token) and adds to motorfix_listing_completions_total; no alert of its own: a failed open is a 5xx the api-error-rate rule reads, a refusal is the page's status view, and a second open answers the same copy; no outside call",
+      "story": "ST-208"
     },
     {
       "kind": "endpoint",

@@ -158,6 +158,7 @@
         "one": "{n} pagină",
         "other": "{n} de pagini"
       },
+      "replacedOn": "înlocuit la {date}",
       "stale": "Mai vechi de 30 de zile la data trimiterii",
       "today": "emis azi",
       "unavailable": "indisponibil",

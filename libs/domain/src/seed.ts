@@ -866,6 +866,18 @@ async function seed(db: Client, secret: string) {
      CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
+  // A sent listing carries both legal documents, the certificate issued
+  // within its window; the pages are keys only, nothing is in the store.
+  await db.query(
+    `INSERT INTO legal_document (verification_file_id, kind, pages, issued_on)
+     SELECT f.id, k, ARRAY['legal_document/' || f.id::text || '/seed-' || k || '-1'],
+       CASE WHEN k = 'onrc_certificate' THEN (f.submitted_at - interval '1 day')::date END
+     FROM verification_file f
+     JOIN garage g ON g.id = f.garage_id AND g.slug = ANY($1)
+     CROSS JOIN unnest(ARRAY['onrc_certificate', 'rar_authorisation']) AS k
+     ON CONFLICT DO NOTHING`,
+    [WAITING.map(({ garage }) => garage)],
+  );
   await clearDay(db);
   await requests(db);
   await startOlderJob(db);

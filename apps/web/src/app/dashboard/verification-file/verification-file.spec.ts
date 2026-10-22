@@ -106,6 +106,7 @@ function fileOf(
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
+        replaced: [],
         stale: false,
       },
       {
@@ -114,6 +115,7 @@ function fileOf(
         kind: 'rar_authorisation',
         pages: 1,
         present: true,
+        replaced: [],
         stale: null,
       },
     ],
@@ -650,6 +652,7 @@ describe('the documents', () => {
             kind: 'onrc_certificate',
             pages: 2,
             present: true,
+            replaced: [],
             stale: false,
           },
           {
@@ -658,6 +661,7 @@ describe('the documents', () => {
             kind: 'rar_authorisation',
             pages: 3,
             present: true,
+            replaced: [],
             stale: null,
           },
         ],
@@ -688,6 +692,7 @@ describe('the documents', () => {
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
+            replaced: [],
             stale: false,
           },
         ],
@@ -718,6 +723,7 @@ describe('the documents', () => {
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
+            replaced: [],
             stale: false,
           },
           {
@@ -726,6 +732,7 @@ describe('the documents', () => {
             kind: 'rar_authorisation',
             pages: 0,
             present: false,
+            replaced: [],
             stale: null,
           },
         ],
@@ -751,6 +758,7 @@ describe('the documents', () => {
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
+            replaced: [],
             stale: true,
           },
         ],
@@ -814,6 +822,78 @@ describe('the documents', () => {
   });
 });
 
+// @traces 208-FR-006
+describe('the replaced documents', () => {
+  const replacedFile = () =>
+    fileOf({
+      documents: [
+        {
+          id: 'doc-onrc',
+          issuedOn: daysAgo(2),
+          kind: 'onrc_certificate',
+          pages: 1,
+          present: true,
+          replaced: [
+            { at: '2026-10-14T09:00:00.000Z', id: 'doc-onrc-2', pages: 2 },
+            { at: '2026-10-12T09:00:00.000Z', id: 'doc-onrc-1', pages: 1 },
+          ],
+          stale: false,
+        },
+        {
+          id: 'doc-rar',
+          issuedOn: null,
+          kind: 'rar_authorisation',
+          pages: 1,
+          present: true,
+          replaced: [],
+          stale: null,
+        },
+      ],
+    });
+  const replaced = (host: HTMLElement, kind: string) => [
+    ...(row(host, 'documents', kind)?.querySelectorAll<HTMLElement>(
+      '.replaced',
+    ) ?? []),
+  ];
+
+  it('lists each replaced document under the current one, newest first, with its date', async () => {
+    const host = await open(replacedFile());
+
+    const onrc = replaced(host, 'onrc_certificate');
+    expect(onrc.map((each) => text(each.querySelector('.line')))).toEqual([
+      'înlocuit la 14 oct. 2026',
+      'înlocuit la 12 oct. 2026',
+    ]);
+    expect(buttons(onrc[0] ?? null)).toEqual([
+      'Deschide pagina 1',
+      'Deschide pagina 2',
+    ]);
+    expect(buttons(onrc[1] ?? null)).toEqual(['Deschide']);
+    expect(replaced(host, 'rar_authorisation')).toEqual([]);
+  });
+
+  it('says it in English', async () => {
+    const host = await open(replacedFile(), 'en');
+
+    expect(
+      text(replaced(host, 'onrc_certificate')[1]?.querySelector('.line')),
+    ).toBe('replaced on 12 Oct 2026');
+  });
+
+  it('opens a replaced page by its own document', async () => {
+    const host = await open(replacedFile());
+
+    press(replaced(host, 'onrc_certificate')[0] ?? null, 'Deschide pagina 2');
+    await settle();
+
+    expect(documents.legalDocumentsControllerPageAddress).toHaveBeenCalledWith({
+      documentId: 'doc-onrc-2',
+      id: FILE,
+      n: '2',
+    });
+  });
+});
+
 describe('the manual checks', () => {
   it('lists the four checks in order, with a problem button each', async () => {
     const host = await open();
@@ -856,6 +936,7 @@ describe('the manual checks', () => {
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
+            replaced: [],
             stale: false,
           },
           {
@@ -864,6 +945,7 @@ describe('the manual checks', () => {
             kind: 'rar_authorisation',
             pages: 0,
             present: false,
+            replaced: [],
             stale: null,
           },
         ],
@@ -1503,6 +1585,7 @@ describe('the company and CAEN rows', () => {
             kind: 'onrc_certificate',
             pages: 0,
             present: false,
+            replaced: [],
             stale: null,
           },
         ] as VerificationFileDto['documents'],
@@ -2551,6 +2634,7 @@ describe('approving', () => {
             kind: 'onrc_certificate',
             pages: 2,
             present: true,
+            replaced: [],
             stale: false,
           },
           {
@@ -2559,6 +2643,7 @@ describe('approving', () => {
             kind: 'rar_authorisation',
             pages: 0,
             present: false,
+            replaced: [],
             stale: null,
           },
         ] as VerificationFileDto['documents'],

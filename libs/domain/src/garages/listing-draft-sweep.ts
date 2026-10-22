@@ -6,7 +6,7 @@ import {
   REMIND_AFTER_DAYS,
 } from './listing-drafts/listing-drafts';
 import { newToken } from '../auth/email-confirmation/email-confirmation';
-import type { PrismaClient } from '../generated/prisma/client';
+import type { Prisma, PrismaClient } from '../generated/prisma/client';
 import type { NotificationsService } from '../notifications/notifications.service';
 import type { DailyTask } from '../scheduler/daily';
 import type { StorageService } from '../storage/storage.service';
@@ -35,6 +35,16 @@ const keysOf = (data: unknown): string[] => {
   ];
 };
 
+// The open drafts the sweep deletes: a first listing untouched for 90 days,
+// and a copy of a live garage once its file no longer asks for more.
+const expiredWhere = (cutoff: Date): Prisma.ListingDraftWhereInput => ({
+  OR: [
+    { updatedAt: { lte: cutoff }, verificationFileId: null },
+    { verificationFile: { status: { not: 'more_requested' } } },
+  ],
+  status: 'open',
+});
+
 // Once a day: drafts untouched for 90 days go, photos and documents included, and the
 // open ones untouched for 3 days get their one reminder. A draft that fails
 // is logged by its id alone and left for the next day.
@@ -60,6 +70,7 @@ export class ListingDraftSweep implements DailyTask {
         remindedAt: null,
         status: 'open',
         updatedAt: { lte: daysBefore(now, REMIND_AFTER_DAYS) },
+        verificationFileId: null,
       },
     });
     for (const draft of due) {
@@ -73,7 +84,7 @@ export class ListingDraftSweep implements DailyTask {
     const cutoff = daysBefore(now, DELETE_AFTER_DAYS);
     const expired = await this.prisma.listingDraft.findMany({
       select: { id: true },
-      where: { status: 'open', updatedAt: { lte: cutoff } },
+      where: expiredWhere(cutoff),
     });
     for (const draft of expired) {
       await this.deleteOne(draft, cutoff).catch((error: unknown) =>
@@ -127,17 +138,33 @@ export class ListingDraftSweep implements DailyTask {
     }
   }
 
-  // The files first: a draft whose files stay is kept for the next run.
+  // The files first: a draft whose files stay is kept for the next run. A
+  // copy shares keys with its garage's photos and documents; those stay.
   private async deleteOne(draft: { id: string }, cutoff: Date) {
     const row = await this.prisma.listingDraft.findUnique({
       select: { data: true },
       where: { id: draft.id },
     });
-    for (const key of keysOf(row?.data)) {
+    const keys = keysOf(row?.data);
+    const [photos, documents] = await Promise.all([
+      this.prisma.garagePhoto.findMany({
+        select: { fileKey: true },
+        where: { fileKey: { in: keys } },
+      }),
+      this.prisma.legalDocument.findMany({
+        select: { pages: true },
+        where: { pages: { hasSome: keys } },
+      }),
+    ]);
+    const held = new Set([
+      ...photos.map((photo) => photo.fileKey),
+      ...documents.flatMap((document) => document.pages),
+    ]);
+    for (const key of keys.filter((each) => !held.has(each))) {
       await this.storage.deleteWithCopies(key);
     }
     await this.prisma.listingDraft.deleteMany({
-      where: { id: draft.id, status: 'open', updatedAt: { lte: cutoff } },
+      where: { ...expiredWhere(cutoff), id: draft.id },
     });
   }
 

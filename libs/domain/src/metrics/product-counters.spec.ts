@@ -11,6 +11,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 import {
   countAccountChange,
   countApproval,
+  countCompletionOpened,
   countConsentRecord,
   countDeclarationSigned,
   countDocumentOpened,
@@ -138,6 +139,7 @@ function countEverySeries() {
   });
   countMoreRequest();
   countResubmission();
+  countCompletionOpened();
   countQuote();
   // Only a template with an e-mail text is ever counted as an e-mail sent.
   for (const [template, text] of Object.entries(TEMPLATES)) {
@@ -366,6 +368,8 @@ describe('the product counters', () => {
     [() => countDeclarationSigned(), 'motorfix_declarations_signed_total', {}],
     // @traces 116-FR-020
     [() => countListingSubmission(), 'motorfix_listing_submissions_total', {}],
+    // @traces 208-FR-011
+    [() => countCompletionOpened(), 'motorfix_listing_completions_total', {}],
     ...CONSENT_DECISIONS.map(
       (decision) =>
         [

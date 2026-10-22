@@ -192,6 +192,7 @@
     "title": "Invitație în echipă"
   },
   "listing": {
+    "askedFor": "Cerut de MotorFix",
     "bar": "{n} / 6 · {label}",
     "brands": {
       "chips": "Mărcile tale",
@@ -410,8 +411,18 @@
       "row": "Mecanicul {n}",
       "speciality": "Pe ce lucrează de obicei"
     },
+    "noChange": {
+      "cancel": "Renunță",
+      "send": "Trimite",
+      "title": "Nu ai schimbat nimic. Trimiți oricum?"
+    },
     "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
     "offline": "Neconectat · salvăm când revii online",
+    "onFile": {
+      "few": "Pe dosar: {count} pagini",
+      "one": "Pe dosar: {count} pagină",
+      "other": "Pe dosar: {count} de pagini"
+    },
     "optional": "opțional",
     "photos": {
       "backward": "Mută înapoi fotografia {n}",
@@ -503,6 +514,11 @@
     "rarHint": "de pe autorizația afișată în atelier",
     "rarNumber": "Numărul autorizației tehnice RAR",
     "rarShort": "Cel puțin 3 caractere",
+    "replacesOnFile": {
+      "few": "Înlocuiește documentul de pe dosar ({count} pagini)",
+      "one": "Înlocuiește documentul de pe dosar ({count} pagină)",
+      "other": "Înlocuiește documentul de pe dosar ({count} de pagini)"
+    },
     "required": "obligatoriu",
     "save": "Salvează ciorna",
     "saved": "Ciorna e salvată",
@@ -954,6 +970,7 @@
   },
   "verificationStatus": {
     "approved": "Aprobat, pe hartă",
+    "complete": "Completează",
     "inReview": "În verificare",
     "items": {
       "address": "Adresa",

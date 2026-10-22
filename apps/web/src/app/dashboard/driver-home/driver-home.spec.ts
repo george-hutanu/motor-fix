@@ -397,7 +397,7 @@ describe('Panou for a driver with a car and no active request', () => {
   );
 });
 
-// @traces 030-FR-002, 030-FR-007
+// @traces 030-FR-002 030-FR-007
 describe('Panou with an active request', () => {
   it('shows Cererea activă with its heading linked to Cererile mele, and no invitation', async () => {
     const { element } = await render({

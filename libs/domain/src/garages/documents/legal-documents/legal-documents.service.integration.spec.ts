@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ListingDraftData } from '@motor-fix/contracts';
+import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
@@ -437,5 +437,199 @@ describe('an admin opening a page', () => {
     expect((await refusalOf(call())).status).toBe(404);
     expect(await opens()).toHaveLength(0);
     expect(await opened('onrc_certificate')).toBe(counted);
+  });
+});
+
+// @traces 208-FR-006
+describe('replacing documents at a resend', () => {
+  let onrcId: string;
+  let rarId: string;
+  let fresh: string[];
+  let attached: Set<string>;
+
+  beforeEach(async () => {
+    const created = await attach(draftData());
+    onrcId = created.find((each) => each.kind === 'onrc_certificate')?.id ?? '';
+    rarId = created.find((each) => each.kind === 'rar_authorisation')?.id ?? '';
+    attached = new Set(
+      (await entries('legal_document')).map((each) => each.id),
+    );
+    await prisma.outboxEvent.deleteMany();
+    fresh = await stored(1);
+  });
+
+  const replace = (documents: DraftDocuments | undefined) =>
+    prisma.$transaction((tx) =>
+      service.replace(tx, owner, documents, { garageId, id: fileId }),
+    );
+  // The attach's own entries cannot be deleted: the log is append-only.
+  const written = async () =>
+    (await entries('legal_document')).filter((each) => !attached.has(each.id));
+  const current = () =>
+    prisma.legalDocument.findMany({
+      orderBy: { kind: 'asc' },
+      where: { replacedAt: null, verificationFileId: fileId },
+    });
+
+  it('makes the new upload current and keeps the old row, marked replaced', async () => {
+    const before = Date.now();
+
+    const [created, ...more] = await replace({
+      onrc_certificate: { issuedOn: '2026-10-20', pages: fresh },
+    });
+
+    expect(more).toHaveLength(0);
+    const old = await prisma.legalDocument.findUniqueOrThrow({
+      where: { id: onrcId },
+    });
+    expect(old.pages).toEqual(certificate);
+    expect(old.replacedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
+    const [onrc, rar] = await current();
+    expect(onrc).toMatchObject({
+      id: created?.id,
+      kind: 'onrc_certificate',
+      pages: fresh,
+      status: 'valid',
+    });
+    expect(onrc?.issuedOn?.toISOString().slice(0, 10)).toBe('2026-10-20');
+    expect(rar?.id).toBe(rarId);
+  });
+
+  it('writes one update entry with the kind and one admin event per replaced kind', async () => {
+    const pages = await stored(2, JPEG, 'image/jpeg');
+
+    const created = await replace({
+      onrc_certificate: { issuedOn: '2026-10-20', pages: fresh },
+      rar_authorisation: { pages },
+    });
+
+    const entered = await written();
+    expect(entered).toHaveLength(2);
+    for (const row of created) {
+      expect(entered).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: 'update',
+            actorId: owner.accountId,
+            garageId,
+            kind: row.kind,
+            subjectId: row.id,
+          }),
+        ]),
+      );
+    }
+    const sent = await events();
+    expect(sent).toHaveLength(2);
+    for (const row of created) {
+      expect(sent).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            audience: ['admin'],
+            payload: { documentId: row.id, garageId, kind: row.kind },
+            subjectId: row.id,
+          }),
+        ]),
+      );
+    }
+  });
+
+  it('leaves a kind not replaced untouched: no row, no mark, no entry, no event', async () => {
+    await replace({
+      onrc_certificate: { issuedOn: '2026-10-20', pages: fresh },
+    });
+
+    const authorisations = await prisma.legalDocument.findMany({
+      where: { kind: 'rar_authorisation', verificationFileId: fileId },
+    });
+    expect(authorisations).toHaveLength(1);
+    expect(authorisations[0]).toMatchObject({ id: rarId, replacedAt: null });
+    expect((await written()).map((each) => each.kind)).toEqual([
+      'onrc_certificate',
+    ]);
+    expect(
+      (await events()).map((each) => (each.payload as { kind: string }).kind),
+    ).toEqual(['onrc_certificate']);
+  });
+
+  it.each([
+    ['no documents', undefined],
+    ['none left', {}],
+    ['a kind with no page left', { onrc_certificate: { pages: [] } }],
+  ])(
+    'changes nothing for a replacement removed before the send (%s)',
+    async (_, documents) => {
+      expect(await replace(documents)).toEqual([]);
+
+      expect(await rows()).toHaveLength(2);
+      expect((await current()).map((each) => each.id).sort()).toEqual(
+        [onrcId, rarId].sort(),
+      );
+      expect(await written()).toHaveLength(0);
+      expect(await events()).toHaveLength(0);
+    },
+  );
+
+  it('adds a kind the file never held as its current document', async () => {
+    await prisma.legalDocument.delete({ where: { id: rarId } });
+    const pages = await stored(1, JPEG, 'image/jpeg');
+
+    const [created] = await replace({ rar_authorisation: { pages } });
+
+    const [, rar] = await current();
+    expect(rar).toMatchObject({ id: created?.id, pages });
+    expect(await events()).toHaveLength(1);
+  });
+
+  it('keeps one current row per kind however often it is replaced', async () => {
+    await replace({ onrc_certificate: { pages: fresh } });
+    const again = await stored(1);
+    await replace({ onrc_certificate: { pages: again } });
+
+    const certificates = await prisma.legalDocument.findMany({
+      where: { kind: 'onrc_certificate', verificationFileId: fileId },
+    });
+    expect(certificates).toHaveLength(3);
+    expect(certificates.filter((each) => !each.replacedAt)).toHaveLength(1);
+    expect((await current())[0]?.pages).toEqual(again);
+  });
+
+  it('refuses a second current row of a kind at the database', async () => {
+    await expect(
+      prisma.legalDocument.create({
+        data: {
+          kind: 'onrc_certificate',
+          pages: fresh,
+          verificationFileId: fileId,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
+  it("is undone with the caller's transaction", async () => {
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await service.replace(
+          tx,
+          owner,
+          { onrc_certificate: { pages: fresh } },
+          { garageId, id: fileId },
+        );
+        throw new Error('a later write failed');
+      }),
+    ).rejects.toThrow('a later write failed');
+
+    expect(await rows()).toHaveLength(2);
+    expect((await current()).map((each) => each.id).sort()).toEqual(
+      [onrcId, rarId].sort(),
+    );
+    expect(await events()).toHaveLength(0);
+  });
+
+  it('still opens a replaced page to an admin', async () => {
+    await replace({ onrc_certificate: { pages: fresh } });
+
+    const answer = await service.pageAddress(admin, fileId, onrcId, '2');
+
+    expect(new URL(answer.url).pathname).toContain(certificate[1]);
   });
 });

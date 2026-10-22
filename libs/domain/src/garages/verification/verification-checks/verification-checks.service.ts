@@ -436,7 +436,7 @@ export class VerificationChecksService {
       }),
       tx.legalDocument.findMany({
         select: { kind: true },
-        where: { verificationFileId: fileId },
+        where: { replacedAt: null, verificationFileId: fileId },
       }),
       tx.garage.findUniqueOrThrow({
         select: { rarActivities: true },
@@ -519,7 +519,11 @@ export class VerificationChecksService {
         where: { id: file.garageId },
       }),
       tx.legalDocument.count({
-        where: { kind: 'onrc_certificate', verificationFileId: fileId },
+        where: {
+          kind: 'onrc_certificate',
+          replacedAt: null,
+          verificationFileId: fileId,
+        },
       }),
     ]);
     return {
