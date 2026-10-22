@@ -145,6 +145,4 @@ describe('the trim leaves the reviewer\'s front matter alone', () => {
     ]);
     assert.match(lines[2], /^description: /);
   });
-
-
 });
