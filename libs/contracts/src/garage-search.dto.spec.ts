@@ -38,8 +38,8 @@ describe('GarageSearchQueryDto', () => {
   });
 
   it('refuses a parameter it does not know', () => {
-    expect(errors({ brandId: BRAND, sort: 'rating' })).toContain(
-      'property sort should not exist',
+    expect(errors({ brandId: BRAND, order: 'rating' })).toContain(
+      'property order should not exist',
     );
   });
 });
@@ -207,6 +207,7 @@ describe('GaragePinsQueryDto', () => {
     ['ids', { ids: ID(1) }],
     ['log', { log: '1' }],
     ['cursor', { cursor: 'abc' }],
+    ['sort', { sort: 'price' }],
   ])('refuses %s, which only a page of the list reads', (_case, extra) => {
     expect(check({ brand: 'bmw', ...extra })).not.toEqual([]);
   });
@@ -214,5 +215,49 @@ describe('GaragePinsQueryDto', () => {
   it('refuses neither and both of brand and brandId', () => {
     expect(check({})).not.toEqual([]);
     expect(check({ brand: 'bmw', brandId: BRAND })).not.toEqual([]);
+  });
+});
+
+const NEAR = '44.437,26.117';
+
+// @traces 328-FR-001
+describe('GarageSearchQueryDto sort', () => {
+  it.each(['rating', 'distance', 'price'])(
+    'takes sort=%s with a place',
+    (sort) => {
+      expect(errors({ brand: 'bmw', near: NEAR, sort })).toEqual([]);
+    },
+  );
+
+  it.each(['rating', 'price'])('takes sort=%s without a place', (sort) => {
+    expect(errors({ brand: 'bmw', sort })).toEqual([]);
+  });
+
+  it('leaves the sort out when none is asked for', () => {
+    const query = plainToInstance(GarageSearchQueryDto, { brand: 'bmw' });
+
+    expect(query.sort).toBeUndefined();
+  });
+
+  it.each(['newest', 'RATING', '', 'rating,price'])(
+    'refuses the sort %p, naming sort',
+    (sort) => {
+      expect(errors({ brand: 'bmw', near: NEAR, sort }).join()).toMatch(
+        /^sort /,
+      );
+    },
+  );
+
+  it('refuses a repeated sort key', () => {
+    expect(
+      errors({ brand: 'bmw', near: NEAR, sort: ['price', 'rating'] }),
+    ).not.toEqual([]);
+  });
+
+  it.each([
+    ['no place', { brand: 'bmw' }],
+    ['a box and no place', { bbox: '44.35,26,44.5,26.25', brand: 'bmw' }],
+  ])('refuses sort=distance with %s, naming sort', (_, query) => {
+    expect(errors({ ...query, sort: 'distance' }).join()).toMatch(/^sort /);
   });
 });

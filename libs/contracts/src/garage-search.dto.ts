@@ -25,7 +25,9 @@ import {
   SEARCH_IDS_MAX,
   SEARCH_PINS_MAX,
   SEARCH_RADII,
+  SEARCH_SORTS,
   type SearchRadius,
+  type SearchSort,
 } from './search-place';
 
 // Up to one page of different garage ids, comma-separated; a repeated key
@@ -163,6 +165,28 @@ export class GarageSearchQueryDto extends GaragePinsQueryDto {
   // Base64url, so its 256 characters are 256 bytes whatever is sent.
   @Matches(/^[A-Za-z0-9_-]*$/)
   cursor?: string;
+
+  @ApiPropertyOptional({
+    default: SEARCH_SORTS[0],
+    description:
+      'The order inside each group: rating, distance from near (only with near) or the lowest hourly rate first; ties fall back to the rating order',
+    enum: SEARCH_SORTS,
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(SEARCH_SORTS, {
+    message: `sort must be one of ${SEARCH_SORTS.join(', ')}`,
+  })
+  @ValidateBy({
+    name: 'sortNeedsPlace',
+    validator: {
+      defaultMessage: () => 'sort distance needs near',
+      validate: (value, args) =>
+        value !== 'distance' ||
+        ((args as ValidationArguments).object as GarageSearchQueryDto).near !==
+          undefined,
+    },
+  })
+  sort?: SearchSort;
 }
 
 export class ListedGarageDto extends GarageBrandAnswerDto {
@@ -258,7 +282,7 @@ export class GarageSearchPageDto {
 
   @ApiProperty({
     description:
-      'Garages that work on the brand first, then the rest; inside a group by rating (unrated last), then reviews, name and id; 20 at most',
+      'Garages that work on the brand first, then the rest; inside a group by the sort (rating, unrated last; distance, nearest first; price, lowest hourly rate first and none last), ties by rating, then reviews, name and id; 20 at most',
     type: [ListedGarageDto],
   })
   items!: ListedGarageDto[];

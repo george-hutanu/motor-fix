@@ -7,6 +7,10 @@ export const SEARCH_RADIUS_DEFAULT_KM = 25;
 export const SEARCH_RADII = [SEARCH_RADIUS_DEFAULT_KM, 50] as const;
 export type SearchRadius = (typeof SEARCH_RADII)[number];
 
+// The orders a list of results can take; rating is the order with none named.
+export const SEARCH_SORTS = ['rating', 'distance', 'price'] as const;
+export type SearchSort = (typeof SEARCH_SORTS)[number];
+
 // The garages one page of results shows.
 export const SEARCH_PAGE_SIZE = 20;
 // The garages a live re-read or stream names: one page's worth.
