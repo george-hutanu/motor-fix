@@ -1,4 +1,7 @@
+import { inMemory } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
+import { MeterProvider } from '@opentelemetry/sdk-metrics';
 
 import { CopyVoicesService } from './copy-voices.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -11,6 +14,8 @@ import {
 } from '../../../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
+const { metricReader } = inMemory();
+metrics.setGlobalMeterProvider(new MeterProvider({ readers: [metricReader] }));
 serialDatabase(databaseUrl);
 
 const NONE = {
@@ -51,6 +56,19 @@ const events = () =>
   prisma.outboxEvent.findMany({
     where: { kind: 'platform_rule.changed', subjectId: 'copy_voices' },
   });
+
+async function counts() {
+  const { resourceMetrics } = await metricReader.collect();
+  const found = resourceMetrics.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .find((m) => m.descriptor.name === 'motorfix_copy_voice_changes_total');
+  return Object.fromEntries(
+    (found?.dataPoints ?? []).map((point) => [
+      point.attributes['change'],
+      point.value,
+    ]),
+  ) as Record<string, number>;
+}
 
 const ON = { enabled: true, pinned: false };
 const OFF = { enabled: false, pinned: false };
@@ -240,5 +258,25 @@ describe('changing a voice', () => {
       old: { enabled: [1, 2, 3, 4, 5], pinned: 2 },
     });
     expect(event.audience).toEqual(['admin', 'system']);
+  });
+
+  // @traces 010-FR-016
+  it('counts each change by what it did, and nothing for a refusal', async () => {
+    const before = await counts();
+    const added = async () => {
+      const now = await counts();
+      return Object.fromEntries(
+        Object.entries(now)
+          .map(([k, v]) => [k, v - (before[k] ?? 0)])
+          .filter(([, v]) => v !== 0),
+      );
+    };
+    await set(2, PINNED);
+
+    await voices().change(ioana, 5, { ...PINNED, seen: ON });
+    await voices().change(ioana, 3, { ...OFF, seen: ON });
+    await refusal(voices().change(ioana, 5, { ...OFF, seen: PINNED }));
+
+    expect(await added()).toEqual({ disabled: 1, pinned: 1, unpinned: 1 });
   });
 });
