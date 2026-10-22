@@ -109,6 +109,7 @@ const facilities = () =>
   );
 
 // @traces 308-FR-004
+// @traces 308-FR-005
 // @traces 308-FR-006
 // @traces 308-FR-007
 // @traces 308-FR-015
