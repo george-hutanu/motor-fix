@@ -223,7 +223,7 @@ describe('speckit-auto layout', () => {
 });
 
 // The text each ST-1358 rule puts in a skill, template or agent, where a run reads it.
-describe('ST-1358 text lands where the run reads it', () => {
+describe('the preflight and archive text lands where the run reads it', () => {
   const root = join(dir, '..', '..', '..');
   const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
   const has = (path, ...phrases) => {
@@ -259,7 +259,7 @@ describe('ST-1358 text lands where the run reads it', () => {
   });
 });
 
-describe('ST-1360 text lands where the run reads it', () => {
+describe('the refresh gate and closer text lands where the run reads it', () => {
   const root = join(dir, '..', '..', '..');
   const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
   const has = (path, ...phrases) => {

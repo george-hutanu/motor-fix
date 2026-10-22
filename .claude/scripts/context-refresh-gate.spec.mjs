@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -18,8 +18,14 @@ const CONTEXT = `# Feature Context: x
 - **Gathered**: ${GATHERED} · specs trunk c89bb72f
 `;
 
+const roots = [];
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
 function fixture({ context = CONTEXT, clone = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'refresh-gate-'));
+  roots.push(root);
   const featureDir = join(root, 'specs', '1360-x');
   mkdirSync(featureDir, { recursive: true });
   if (context !== null) writeFileSync(join(featureDir, 'context.md'), context);
@@ -65,7 +71,6 @@ describe('context-refresh-gate: skip when nothing moved', () => {
     assert.equal(gate({ featureDir, root, run }), 'skip');
     assert.deepEqual(listing(featureDir), before);
     assert.ok(calls.some((c) => c.join(' ') === `git -C ${join(root, '.motor-fix-specs')} log --oneline c89bb72f..origin/trunk -- docs/`));
-    rmSync(root, { recursive: true, force: true });
   });
 
   // @traces 1360-FR-002
