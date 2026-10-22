@@ -412,8 +412,12 @@ export function checkMerge(plan, cap, section, num) {
   const expected = was.headings.length + adds.length - bases.length + replacements.length;
   if (now.headings.length !== expected)
     failures.push(`${plan.capability}: ${now.headings.length} requirement heading(s), not the ${expected} the delta implies`);
+  // A duplicate the file already held is not this merge's; one it adds is refused.
   const all = [...now.headings, ...now.tombstones];
-  for (const token of new Set(all)) if (count(all, token) > 1) failures.push(`${plan.capability}: ${token} appears twice among the headings and the retired list`);
+  const had = [...was.headings, ...was.tombstones];
+  for (const token of new Set(all))
+    if (count(all, token) > Math.max(1, count(had, token)))
+      failures.push(`${plan.capability}: ${token} appears twice among the headings and the retired list`);
   return failures;
 }
 

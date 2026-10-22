@@ -375,6 +375,19 @@ describe('merge --apply checks the planned file against its delta', () => {
     }
   });
 
+  it('merges beside a duplicate the capability already held, which is not this merge\'s', () => {
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', [[T('001', '004'), 'lists tasks'], [T('001', '004'), 'again']]),
+      'specs/002-fixture/spec.md': spec(),
+    });
+    try {
+      const r = cli(dir, ['merge', 'specs/002-fixture', '--apply']);
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('refuses to add a requirement the capability already retired', () => {
     const dir = fixture({
       '.specify/capabilities/cli-tasks.md': capability('cli-tasks', [], [[T('002', '001'), 'removed by 002-fixture (2026-01-01)']]),
