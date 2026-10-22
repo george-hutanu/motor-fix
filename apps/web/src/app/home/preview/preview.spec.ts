@@ -259,8 +259,8 @@ describe('HomePreview red lamp in every voice', () => {
   const lamp = (page: HTMLElement) =>
     said(page.querySelector('mf-lamp') ?? undefined);
 
-  // @traces 007-brand-headline-FR-012
-  // @traces 007-brand-headline-FR-013
+  // @traces 007-FR-012
+  // @traces 007-FR-013
   it.each(RED_LAMP)(
     'voice %s in %s, %s: names the brand',
     async (voice, language, stance, says) => {

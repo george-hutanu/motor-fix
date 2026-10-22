@@ -587,7 +587,7 @@ describe('seed of the listed garages', () => {
     ).toEqual({ active: true, name: 'Dacia', popularity: 7, slug: 'dacia' });
   });
 
-  // @traces 007-brand-headline-FR-004
+  // @traces 007-FR-004
   it('gives every brand row it inserts the catalogue your form of that brand', async () => {
     await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
 

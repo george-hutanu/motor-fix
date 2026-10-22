@@ -162,8 +162,8 @@ describe('the workspace', () => {
     ).toEqual([]);
   });
 
-  // @traces 007-brand-headline-FR-006
-  // @traces 007-brand-headline-FR-007
+  // @traces 007-FR-006
+  // @traces 007-FR-007
   it.each([
     ['ro', ['few', 'one', 'other']],
     ['en', ['one', 'other']],

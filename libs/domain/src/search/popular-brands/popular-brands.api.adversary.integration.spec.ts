@@ -107,7 +107,7 @@ async function car(
 const names = (body: { name: string }[]) => body.map((b) => b.name);
 
 describe('GET /brands/popular for a signed-in driver, hostile data', () => {
-  // @traces 007-brand-headline-FR-014
+  // @traces 007-FR-014
   it('puts the oldest car first, whatever the order the cars were inserted in', async () => {
     const [a, b, c] = [
       await brand('Aaa', 1),
@@ -254,7 +254,7 @@ describe('GET /brands/popular for a signed-in driver, hostile data', () => {
 });
 
 describe('GET /brands/popular caching across callers', () => {
-  // @traces 007-brand-headline-FR-016
+  // @traces 007-FR-016
   it('serves a driver their own list after a visitor warmed the cache', async () => {
     const dacia = await brand('Dacia', 5);
     await brand('Bmw', 1);

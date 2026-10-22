@@ -101,7 +101,7 @@ describe('GET /brands/popular', () => {
     ]);
   });
 
-  // @traces 007-brand-headline-FR-001
+  // @traces 007-FR-001
   it("carries each tile's Romanian your form for the headline", async () => {
     await prisma.brand.create({
       data: {
@@ -122,6 +122,7 @@ describe('GET /brands/popular', () => {
     const res = await popular();
 
     expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
+    expect(res.headers['vary']).toMatch(/\bAuthorization\b/i);
   });
 
   it('never lets a refusal be cached publicly', async () => {
@@ -221,8 +222,8 @@ describe('GET /brands/popular for a signed-in driver', () => {
     });
   });
 
-  // @traces 007-brand-headline-FR-014
-  // @traces 007-brand-headline-FR-016
+  // @traces 007-FR-014
+  // @traces 007-FR-016
   it('puts the driver’s brands first and keeps the answer private', async () => {
     const res = await popular().set('Authorization', bearer());
 
@@ -238,7 +239,7 @@ describe('GET /brands/popular for a signed-in driver', () => {
     ]);
   });
 
-  // @traces 007-brand-headline-FR-016
+  // @traces 007-FR-016
   it('never hands a driver’s order to the visitor after them, nor the visitor’s to the driver', async () => {
     await popular().set('Authorization', bearer());
     const visitor = await popular();
@@ -246,10 +247,11 @@ describe('GET /brands/popular for a signed-in driver', () => {
 
     expect(names(visitor.body)).toEqual(['Bmw', 'Mini', 'Dacia', 'Tesla']);
     expect(visitor.headers['cache-control']).toBe(PUBLIC_POLICY);
+    expect(visitor.headers['vary']).toMatch(/\bAuthorization\b/i);
     expect(names(again.body)).toEqual(['Tesla', 'Bmw', 'Mini', 'Dacia']);
   });
 
-  // @traces 007-brand-headline-FR-016
+  // @traces 007-FR-016
   it('answers a bad token as it answers a visitor', async () => {
     const res = await popular().set('Authorization', 'Bearer not-a-token');
 

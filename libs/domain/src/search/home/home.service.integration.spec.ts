@@ -542,7 +542,7 @@ describe('HomeService.forBrand: the brand lists', () => {
 });
 
 describe('HomeService.forBrand while garages are approved', () => {
-  // @traces 007-brand-headline-FR-017
+  // @traces 007-FR-017
   it('never answers more takers than garages, the counts from one statement', async () => {
     for (let n = 0; n < 6; n++) {
       await garage(`draft-${n}`, [[dacia, 'works_on']], 'draft');

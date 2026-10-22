@@ -126,8 +126,8 @@ describe('the shipped brand file', () => {
     });
   });
 
-  // @traces 007-brand-headline-FR-004
-  // @traces 007-brand-headline-FR-005
+  // @traces 007-FR-004
+  // @traces 007-FR-005
   it('gives every brand its Romanian your form, the mock eight verbatim', () => {
     expect(
       Object.fromEntries(
@@ -152,7 +152,7 @@ describe('the shipped brand file', () => {
     });
   });
 
-  // @traces 007-brand-headline-FR-005
+  // @traces 007-FR-005
   it('joins a form with the non-breaking hyphen, never the plain one', () => {
     for (const brand of BRANDS) {
       expect(brand.roPossessive).not.toContain('-');

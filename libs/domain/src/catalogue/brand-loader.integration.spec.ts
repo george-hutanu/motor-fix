@@ -186,7 +186,7 @@ describe('BrandLoader', () => {
     ]);
   });
 
-  // @traces 007-brand-headline-FR-004
+  // @traces 007-FR-004
   it('stores the your form of a brand it creates and records it as created', async () => {
     await loader.load([{ ...FILE[0], roPossessive: 'BMW\u2011ul tău' }]);
 
@@ -201,7 +201,7 @@ describe('BrandLoader', () => {
     ]);
   });
 
-  // @traces 007-brand-headline-FR-004
+  // @traces 007-FR-004
   it('fills the your form of a brand stored without one on the next load, recording the change', async () => {
     await loader.load(FILE);
     const dacia = await prisma.brand.findUniqueOrThrow({
@@ -230,7 +230,7 @@ describe('BrandLoader', () => {
     ]);
   });
 
-  // @traces 007-brand-headline-FR-004
+  // @traces 007-FR-004
   it('updates a changed your form and leaves an unchanged one alone', async () => {
     await loader.load([{ ...FILE[2], roPossessive: 'Dacia ta' }]);
 

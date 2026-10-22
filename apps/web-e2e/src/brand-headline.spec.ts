@@ -38,7 +38,7 @@ async function choose(page: Page, label: string, brand: string) {
 }
 
 test.describe('the headline names the brand chosen @seeded', () => {
-  // @traces 007-brand-headline-FR-019
+  // @traces 007-FR-019
   test('voice 4 says the brand in its own form, and keeps the voice', async ({
     browser,
   }) => {
@@ -59,7 +59,7 @@ test.describe('the headline names the brand chosen @seeded', () => {
     await page.context().close();
   });
 
-  // @traces 007-brand-headline-FR-019
+  // @traces 007-FR-019
   test('voice 3 reads the count line and the dial, and says when nobody takes the brand', async ({
     browser,
   }) => {

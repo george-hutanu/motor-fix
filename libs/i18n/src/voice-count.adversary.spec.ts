@@ -10,7 +10,7 @@ describe('voice 3 count plurals', () => {
     await i18n.enter('public');
   });
 
-  // @traces 007-brand-headline-FR-006
+  // @traces 007-FR-006
   it.each([
     [0, '0 service‑uri.'],
     [1, '1 service.'],

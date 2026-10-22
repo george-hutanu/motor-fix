@@ -52,8 +52,6 @@ import { keysOf, Voice } from '../voice/voice';
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 
 const CYCLE_MS = 5000;
-// How long a new brand's headline takes to blur in, as on Results.
-const RISE_MS = 520;
 // The strip's brands, in ranking order; the first eight are the tiles.
 const POPULAR = 16;
 const TILES = 8;
@@ -121,10 +119,14 @@ export class Home {
     const tiles = this.tiles();
     return tiles.find((brand) => brand.slug === this.kept) ?? tiles[0];
   });
-  // A brand change after the first one shown blurs the headline in, once.
+  // A brand change after the first one shown blurs the headline in, until the
+  // new headline's animation ends; with reduced motion nothing plays, so
+  // nothing is marked.
   protected readonly rising = linkedSignal<string | undefined, boolean>({
     computation: (slug, previous) =>
-      !!previous?.source && previous.source !== slug,
+      !untracked(this.reduced) &&
+      !!previous?.source &&
+      previous.source !== slug,
     source: () => this.selected()?.slug,
   });
   // Voice 4's Romanian headline says "your <brand>"; a brand without the
@@ -253,11 +255,6 @@ export class Home {
     });
     inject(DestroyRef).onDestroy(() => this.choice.shown.set(null));
     effect((onCleanup) => {
-      if (!this.rising()) return;
-      const risen = setTimeout(() => this.rising.set(false), RISE_MS);
-      onCleanup(() => clearTimeout(risen));
-    });
-    effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;
       // Hidden, the count stops; shown again, it starts over from 5 seconds.
@@ -279,21 +276,36 @@ export class Home {
     // The tiles are read on both sides: in the browser, right after a server
     // render, the transfer cache answers with what the server read.
     const brands = inject(BrandsService);
+    const pending = inject(PendingTasks);
+    // Each read waits for the one before it, so the last one asked for is the
+    // one shown: a slow public answer never covers the driver's.
+    const visitor = () =>
+      brands
+        .popularBrandsControllerTiles({ limit: POPULAR }, publicRead())
+        .catch(() => []);
+    let reads = visitor().then((tiles) => this.popular.set(tiles));
+    pending.run(() => reads);
     // A driver's own cars' brands lead: once their session is known, the
     // tiles are read again with it; a failed read keeps the public ones.
+    // Signed out, the visitor's popular tiles come back.
     let readFor: string | undefined;
     effect(() => {
       const me = this.session.current();
-      if (!this.hydrated() || me?.role !== 'driver' || me.id === readFor) {
-        return;
+      if (!this.hydrated()) return;
+      if (me?.role === 'driver') {
+        if (me.id === readFor) return;
+        readFor = me.id;
+        reads = reads.then(() =>
+          brands.popularBrandsControllerTiles({ limit: POPULAR }).then(
+            (own) => this.popular.set(own),
+            () => undefined,
+          ),
+        );
+      } else if (readFor !== undefined) {
+        readFor = undefined;
+        reads = reads.then(async () => this.popular.set(await visitor()));
       }
-      readFor = me.id;
-      void brands.popularBrandsControllerTiles({ limit: POPULAR }).then(
-        (own) => this.popular.set(own),
-        () => undefined,
-      );
     });
-    const pending = inject(PendingTasks);
     if (this.server) {
       const health = inject(HealthService);
       void pending.run(async () => {
@@ -302,13 +314,6 @@ export class Home {
         this.state.set(HEALTH, ready);
       });
     }
-    void pending.run(async () => {
-      this.popular.set(
-        await brands
-          .popularBrandsControllerTiles({ limit: POPULAR }, publicRead())
-          .catch(() => []),
-      );
-    });
   }
 
   protected async pickPlace() {

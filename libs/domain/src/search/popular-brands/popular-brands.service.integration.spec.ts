@@ -90,7 +90,7 @@ describe('PopularBrandsService.tiles for a driver', () => {
     driver = await account('ana');
   });
 
-  // @traces 007-brand-headline-FR-014
+  // @traces 007-FR-014
   it('puts the brands of the driver’s cars first, oldest car first, then the popular ones', async () => {
     await car('Dacia', 1);
     await car('Volvo', 2);
@@ -99,7 +99,7 @@ describe('PopularBrandsService.tiles for a driver', () => {
     expect(await mine(3)).toEqual(['Dacia', 'Volvo', 'Bmw']);
   });
 
-  // @traces 007-brand-headline-FR-014
+  // @traces 007-FR-014
   it('names a brand once for two cars of it', async () => {
     await car('Audi', 1);
     await car('Dacia', 2);
@@ -108,7 +108,7 @@ describe('PopularBrandsService.tiles for a driver', () => {
     expect(await mine(8)).toEqual(['Audi', 'Dacia', 'Bmw', 'Skoda', 'Volvo']);
   });
 
-  // @traces 007-brand-headline-FR-015
+  // @traces 007-FR-015
   it('leaves out a removed car and a retired brand', async () => {
     await car('Volvo', 1, new Date());
     await car('Lada', 2);
@@ -116,7 +116,7 @@ describe('PopularBrandsService.tiles for a driver', () => {
     expect(await mine(8)).toEqual(['Bmw', 'Dacia', 'Skoda', 'Audi', 'Volvo']);
   });
 
-  // @traces 007-brand-headline-FR-014
+  // @traces 007-FR-014
   it('answers only the driver’s brands when they fill the limit', async () => {
     await car('Volvo', 1);
     await car('Audi', 2);
@@ -125,7 +125,7 @@ describe('PopularBrandsService.tiles for a driver', () => {
     expect(await mine(2)).toEqual(['Volvo', 'Audi']);
   });
 
-  // @traces 007-brand-headline-FR-014
+  // @traces 007-FR-014
   it('answers the popular list to a driver without a car, and to another driver', async () => {
     const other = await account('ion');
     await car('Volvo', 1);

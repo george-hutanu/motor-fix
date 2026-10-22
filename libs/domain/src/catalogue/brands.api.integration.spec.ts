@@ -90,7 +90,7 @@ describe('GET /brands', () => {
     },
   );
 
-  // @traces 007-brand-headline-FR-003
+  // @traces 007-FR-003
   it('answers a brand without a your form with a null one', async () => {
     await loader.load([{ key: 'lada', name: 'Lada' }]);
 

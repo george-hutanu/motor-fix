@@ -1,7 +1,7 @@
 import { BRANDS } from './brands';
 
 describe('catalogue brands your form', () => {
-  // @traces 007-brand-headline-FR-003
+  // @traces 007-FR-003
   it('gives every brand a non-empty Romanian your form', () => {
     const missing = BRANDS.filter((b) => !b.roPossessive?.trim()).map(
       (b) => b.key,
