@@ -58,10 +58,9 @@ describe('processing a photo, hostile inputs', () => {
 
     await processPhoto(storage, KEY);
 
-    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual({
-      height: '1',
-      width: '1',
-    });
+    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual(
+      expect.objectContaining({ height: '1', width: '1' }),
+    );
   });
 
   it('keeps a very wide strip at least one pixel high', async () => {
@@ -161,7 +160,7 @@ describe('processing a photo, hostile inputs', () => {
         store.objects.get(`${KEY}.thumb`)?.body ?? Buffer.alloc(0),
       ),
     ).toBe(0);
-    expect(store.objects.size).toBe(3);
+    expect(store.objects.size).toBe(11);
   });
 
   it('processes a 24 megapixel photo within the limits', async () => {
@@ -177,9 +176,8 @@ describe('processing a photo, hostile inputs', () => {
       store.objects.get(`${KEY}.display`)?.body,
     ).metadata();
     expect([display.width, display.height]).toEqual([1600, 1067]);
-    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual({
-      height: '4000',
-      width: '6000',
-    });
+    expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual(
+      expect.objectContaining({ height: '4000', width: '6000' }),
+    );
   }, 30_000);
 });

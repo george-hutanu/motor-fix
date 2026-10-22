@@ -1,13 +1,16 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
 // @traces 879-FR-017 244-FR-004
 // @traces 430-FR-004 430-FR-007
+// @traces 1192-photo-variants-FR-008 1192-photo-variants-FR-011
 import {
   bunnyConfig,
   faroUrl,
   grafanaUrl,
+  imageBaseUrl,
   originSecrets,
   outageWebhookToken,
   PLACES_ENV,
+  photoConfig,
   placesApiKey,
   plausibleDomain,
   publicWebUrl,
@@ -358,4 +361,73 @@ describe('bunnyConfig', () => {
       bunnyConfig({ BUNNY_API_KEY: ' ', BUNNY_PULL_ZONE_ID: '42' }),
     ).toBeUndefined();
   });
+});
+
+describe('photoConfig', () => {
+  it('keeps the photo job and worker at their defaults when nothing is set', () => {
+    expect(photoConfig({})).toEqual({
+      attempts: 3,
+      concurrency: navigator.hardwareConcurrency,
+      keepFailed: 100,
+      maxInputPixels: 268_402_689,
+    });
+  });
+
+  it('takes each limit from its variable', () => {
+    expect(
+      photoConfig({
+        PHOTO_JOB_ATTEMPTS: '5',
+        PHOTO_JOB_KEEP_FAILED: '20',
+        PHOTO_MAX_INPUT_PIXELS: '50000000',
+        PHOTO_WORKER_CONCURRENCY: '2',
+      }),
+    ).toEqual({
+      attempts: 5,
+      concurrency: 2,
+      keepFailed: 20,
+      maxInputPixels: 50_000_000,
+    });
+  });
+
+  it.each(['0', '-3', 'many', '2.5', ' '])(
+    'falls back to the default for %p',
+    (value) => {
+      expect(
+        photoConfig({
+          PHOTO_JOB_ATTEMPTS: value,
+          PHOTO_JOB_KEEP_FAILED: value,
+          PHOTO_MAX_INPUT_PIXELS: value,
+          PHOTO_WORKER_CONCURRENCY: value,
+        }),
+      ).toEqual(photoConfig({}));
+    },
+  );
+});
+
+describe('imageBaseUrl', () => {
+  it('serves variants from the API on the same origin when unset', () => {
+    expect(imageBaseUrl({})).toBe('/api/v1/images');
+    expect(imageBaseUrl({ IMAGE_BASE_URL: '' })).toBe('/api/v1/images');
+  });
+
+  it('takes an absolute address or a path, without a trailing slash', () => {
+    expect(imageBaseUrl({ IMAGE_BASE_URL: 'https://img.motorfix.ro/' })).toBe(
+      'https://img.motorfix.ro',
+    );
+    expect(
+      imageBaseUrl({ IMAGE_BASE_URL: 'http://localhost:3000/api/v1/images' }),
+    ).toBe('http://localhost:3000/api/v1/images');
+    expect(imageBaseUrl({ IMAGE_BASE_URL: '/images/' })).toBe('/images');
+  });
+
+  it.each(['img.motorfix.ro', 'ftp://img.motorfix.ro', '//img.motorfix.ro'])(
+    'refuses %p',
+    (value) => {
+      expect(() => imageBaseUrl({ IMAGE_BASE_URL: value })).toThrow(
+        new Error(
+          'IMAGE_BASE_URL must be an http(s) URL or a path starting with /',
+        ),
+      );
+    },
+  );
 });

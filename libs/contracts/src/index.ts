@@ -26,6 +26,7 @@ export * from './garage-suspension.dto';
 export * from './garages.dto';
 export * from './health.dto';
 export * from './home.dto';
+export * from './images';
 export * from './job-types.dto';
 export * from './jobs.dto';
 export * from './legal-check.dto';
