@@ -897,7 +897,7 @@ describe('a ready PR whose head is docs-only since its last verdict', () => {
       const asked = [];
       const report = collect(f.repo, env({
         gh: () => [pr({ headRefOid: head }), pr({ number: 22, headRefName: '902-draft', isDraft: true })],
-        carry: (n) => (asked.push(n), { from: FROM, head }),
+        carry: (n) => (asked.push(n), { from: FROM, head, kind: 'docs' }),
       }));
       assert.deepEqual(asked, [21]);
       const row = report.rows.find((x) => x.path === a);
@@ -905,7 +905,7 @@ describe('a ready PR whose head is docs-only since its last verdict', () => {
       assert.ok(!report.plan.some((p) => p.path === a), 'a carry is not dispatched to an agent');
       const posted = [];
       const actions = applyFixes(f.repo, report, { postCarry: (c) => (posted.push(c), {}) });
-      assert.deepEqual(posted, [{ pr: 21, from: FROM, head }]);
+      assert.deepEqual(posted, [{ pr: 21, from: FROM, head, kind: 'docs' }]);
       assert.ok(actions.some((x) => x.ok && /carry #21/.test(x.what)), JSON.stringify(actions));
     } finally {
       rmSync(f.root, { recursive: true, force: true });
@@ -933,6 +933,56 @@ describe('a ready PR whose head is docs-only since its last verdict', () => {
     const r = { path: '/x', fix: 'carry-review', holder: 'none', pr: { number: 21 }, carry: { from: FROM, head: 'abc' } };
     const actions = applyFixes('/nonexistent', { rows: [r], prunable: [], orphanLocks: [] }, { postCarry: () => { throw new Error('HTTP 403'); } });
     assert.deepEqual(actions, [{ what: 'carry #21 from fffffff', ok: false, error: 'HTTP 403' }]);
+  });
+});
+
+describe('a handed-off PR whose head holds the QA fixes of a passing lap', () => {
+  const quiet = { phase: 'qa', handoff: true, activity: { at: NOW - 120 * MIN, source: 'commit' } };
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const FROM = 'f'.repeat(40);
+  const fixes = { from: FROM, head: 'abc', kind: 'fixes' };
+
+  // @traces 1362-FR-008
+  it('carries the verdict ahead of a tail, whatever CI is doing', () => {
+    for (const c of [check('SUCCESS'), check(null, 'IN_PROGRESS'), check('FAILURE')]) {
+      const r = fixOf(row({ ...quiet, pr: summarizePr(pr({ statusCheckRollup: [c] })), carry: fixes }), opts);
+      assert.equal(r.fix, 'carry-review', JSON.stringify(c));
+      assert.match(r.reason, /QA fixes since fffffff/);
+    }
+    // No carry, or one that does not hold: the tail, as before.
+    const ready = summarizePr(pr({ statusCheckRollup: [check('SUCCESS')] }));
+    assert.equal(fixOf(row({ ...quiet, pr: ready }), opts).fix, 'tail');
+    assert.equal(fixOf(row({ ...quiet, pr: ready, carry: { ...fixes, reason: 'ccccccc is not a lap fix' } }), opts).fix, 'tail');
+  });
+
+  // @traces 1362-FR-008
+  it('once carried, waits on CI, merges on green and sends a failing check to a tail', () => {
+    const at = (c) => fixOf(row({ ...quiet, head: 'abc', pr: summarizePr(pr({ headRefOid: 'abc', statusCheckRollup: [c, { ...review('SUCCESS'), description: `carried from ${FROM}: QA fixes` }] })) }), opts).fix;
+    assert.equal(at(check('SUCCESS')), 'merge');
+    assert.equal(at(check(null, 'IN_PROGRESS')), null);
+    assert.equal(at(check('FAILURE')), 'tail');
+  });
+
+  // @traces 1362-FR-008
+  it('looks the carry up for a handed-off row and posts it with its kind', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 120);
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), '# hand-off\n');
+      utimesSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), new Date(NOW - 120 * MIN), new Date(NOW - 120 * MIN));
+      const head = git(a, 'rev-parse', 'HEAD');
+      const asked = [];
+      const report = collect(f.repo, env({ gh: () => [pr({ headRefOid: head })], carry: (n) => (asked.push(n), { from: FROM, head, kind: 'fixes' }) }));
+      assert.deepEqual(asked, [21]);
+      assert.equal(report.rows.find((x) => x.path === a).fix, 'carry-review');
+      const posted = [];
+      applyFixes(f.repo, report, { postCarry: (c) => (posted.push(c), {}) });
+      assert.deepEqual(posted, [{ pr: 21, from: FROM, head, kind: 'fixes' }]);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
   });
 });
 
