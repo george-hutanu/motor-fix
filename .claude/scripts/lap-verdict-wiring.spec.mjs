@@ -53,4 +53,21 @@ describe('the constitution ends QA on a lap with no blocker or high finding', ()
     assert.match(prTest, /## Fixed after QA/);
     assert.match(trackerSync, /`## Fixed after QA`/);
   });
+  // @traces 1362-FR-001
+  it('has the tail fix a passing lap\'s findings tests first, then carry it without a repair lap or a new run', () => {
+    const passing = tail.slice(tail.indexOf('**A passing lap with findings**'), tail.indexOf('**A failing lap**'));
+    assert.match(passing, /`No blocking findings; <N> in all`, N >= 1/);
+    assert.match(passing, /Fix each medium and low finding, tests first/);
+    assert.match(passing, /lifecycle\.mjs check/);
+    assert.match(passing, /pr-test\/carry\.mjs <n>/);
+    assert.match(passing, /No `run-state\.mjs repair`, no dispatch/);
+    assert.match(passing, /NEXT: merge #<n> after CI/);
+  });
+  // @traces 1362-FR-009
+  it('adds the passing lap to the card\'s VII line without rewording its other clauses', () => {
+    const vii = card.slice(card.indexOf('**VII.'), card.indexOf('Gates:', card.indexOf('**VII.')));
+    assert.match(vii, /draft PR linked on its GitHub issue in Project MotorFix;/);
+    assert.match(vii, /no blocker or high ends QA, the rest fixed;/);
+    assert.match(vii, /one stage label and the type label; the main checkout holds no edits to tracked files and is fast-forwarded after each merge\./);
+  });
 });
