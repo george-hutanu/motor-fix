@@ -18,6 +18,9 @@ import {
 test('the context fixture removes every route handler once the test ends', async () => {
   const calls: string[] = [];
   const context = {
+    addInitScript: async () => {
+      calls.push('addInitScript');
+    },
     route: async () => {
       calls.push('route');
     },
