@@ -89,9 +89,9 @@ export class VerificationProgress {
     });
   }
 
-  // The form opens over the garage's saved listing.
+  // The form opens over the garage's saved listing, under the public frame's language segment.
   protected complete() {
-    void this.router.navigateByUrl('/list-your-garage');
+    void this.router.navigateByUrl(`/${this.i18n.language()}/list-your-garage`);
   }
 
   protected contact() {

@@ -509,7 +509,7 @@ describe('the verification page, on a request for more', () => {
     button(host, 'Completează')?.click();
 
     expect(navigate).toHaveBeenCalledTimes(1);
-    expect(String(navigate.mock.calls[0]?.[0])).toBe('/list-your-garage');
+    expect(String(navigate.mock.calls[0]?.[0])).toBe('/ro/list-your-garage');
   });
 
   // @traces 208-FR-002

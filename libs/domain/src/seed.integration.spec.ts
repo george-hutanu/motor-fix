@@ -374,6 +374,35 @@ describe('seed', () => {
       );
     }
   });
+
+  // @traces 208-FR-004
+  it('gives each waiting file the two legal documents a sent listing carries, once', async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const files = await prisma.verificationFile.findMany({
+      include: {
+        documents: { orderBy: { kind: 'asc' }, where: { replacedAt: null } },
+        garage: { select: { slug: true } },
+      },
+      orderBy: { garage: { slug: 'asc' } },
+      where: { status: { not: 'approved' } },
+    });
+    expect(
+      files.map((f) => [
+        f.garage.slug,
+        f.documents.map((d) => [d.kind, d.pages.length, !!d.issuedOn]),
+      ]),
+    ).toEqual(
+      ['atelier-dinamo', 'service-dobre'].map((slug) => [
+        slug,
+        [
+          ['onrc_certificate', 1, true],
+          ['rar_authorisation', 1, false],
+        ],
+      ]),
+    );
+  });
 });
 
 describe('seed of the listed garages', () => {
