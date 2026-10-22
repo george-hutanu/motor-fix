@@ -4684,6 +4684,75 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/features/{feature}": {
+      "put": {
+        "operationId": "GarageFeaturesController_set",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "feature",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetGarageFeatureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageFeaturesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: an unknown feature or a bad enabled"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "mechanics_on_team: other mechanics are still on the team"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Switch one of the garage's features on or off",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}": {
       "patch": {
         "operationId": "GarageSettingsController_update",
@@ -13930,6 +13999,55 @@
         "required": [
           "id",
           "createdAt"
+        ]
+      },
+      "SetGarageFeatureDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "GarageFeatureSwitchesDto": {
+        "type": "object",
+        "properties": {
+          "team_mechanics": {
+            "type": "boolean"
+          },
+          "lift_schedule": {
+            "type": "boolean"
+          },
+          "live_media": {
+            "type": "boolean"
+          },
+          "day_sheets": {
+            "type": "boolean"
+          },
+          "whatsapp": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "team_mechanics",
+          "lift_schedule",
+          "live_media",
+          "day_sheets",
+          "whatsapp"
+        ]
+      },
+      "GarageFeaturesDto": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "$ref": "#/components/schemas/GarageFeatureSwitchesDto"
+          }
+        },
+        "required": [
+          "features"
         ]
       },
       "PaymentMethodsDto": {

@@ -15,6 +15,9 @@ import { CatalogueJobsControllerPropose$Params } from '../fn/garages/catalogue-j
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
+import { garageFeaturesControllerSet } from '../fn/garages/garage-features-controller-set';
+import { GarageFeaturesControllerSet$Params } from '../fn/garages/garage-features-controller-set';
+import { GarageFeaturesDto } from '../models/garage-features-dto';
 import { garageInvitesControllerResend } from '../fn/garages/garage-invites-controller-resend';
 import { GarageInvitesControllerResend$Params } from '../fn/garages/garage-invites-controller-resend';
 import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-controller-revoke';
@@ -260,6 +263,39 @@ export class GaragesService extends BaseService {
   garageReportsControllerReport(params: GarageReportsControllerReport$Params, context?: HttpContext): Promise<GarageReportCreatedDto> {
     const resp = this.garageReportsControllerReport$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageReportCreatedDto>): GarageReportCreatedDto => r.body);
+  }
+
+  /** Path part for operation `garageFeaturesControllerSet()` */
+  static readonly GarageFeaturesControllerSetPath = '/api/v1/garages/{garageId}/features/{feature}';
+
+  /**
+   * Switch one of the garage's features on or off.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageFeaturesControllerSet()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageFeaturesControllerSet$Response(params: GarageFeaturesControllerSet$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageFeaturesDto>> {
+    const obs = garageFeaturesControllerSet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Switch one of the garage's features on or off.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageFeaturesControllerSet$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageFeaturesControllerSet(params: GarageFeaturesControllerSet$Params, context?: HttpContext): Promise<GarageFeaturesDto> {
+    const resp = this.garageFeaturesControllerSet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageFeaturesDto>): GarageFeaturesDto => r.body);
   }
 
   /** Path part for operation `garageSettingsControllerUpdate()` */
