@@ -155,6 +155,10 @@ export type { PlatformRuleChangesControllerRefuse$Params as PlatformRuleChangesC
 export { platformRuleChangesControllerRefuse as platformRuleChangesControllerRefuse } from './fn/admin/platform-rule-changes-controller-refuse';
 export type { PlatformRuleChangesControllerCancel$Params as PlatformRuleChangesControllerCancel$Params } from './fn/admin/platform-rule-changes-controller-cancel';
 export { platformRuleChangesControllerCancel as platformRuleChangesControllerCancel } from './fn/admin/platform-rule-changes-controller-cancel';
+export type { CopyVoicesControllerList$Params as CopyVoicesControllerList$Params } from './fn/admin/copy-voices-controller-list';
+export { copyVoicesControllerList as copyVoicesControllerList } from './fn/admin/copy-voices-controller-list';
+export type { CopyVoicesControllerChange$Params as CopyVoicesControllerChange$Params } from './fn/admin/copy-voices-controller-change';
+export { copyVoicesControllerChange as copyVoicesControllerChange } from './fn/admin/copy-voices-controller-change';
 export type { CarsControllerList$Params as CarsControllerList$Params } from './fn/cars/cars-controller-list';
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';
@@ -315,3 +319,5 @@ export type { PublicLiveControllerLive$Params as PublicLiveControllerLive$Params
 export { publicLiveControllerLive as publicLiveControllerLive } from './fn/live/public-live-controller-live';
 export type { PlatformStatusControllerStatus$Params as PlatformStatusControllerStatus$Params } from './fn/platform/platform-status-controller-status';
 export { platformStatusControllerStatus as platformStatusControllerStatus } from './fn/platform/platform-status-controller-status';
+export type { PublicCopyVoicesControllerSettings$Params as PublicCopyVoicesControllerSettings$Params } from './fn/platform/public-copy-voices-controller-settings';
+export { publicCopyVoicesControllerSettings as publicCopyVoicesControllerSettings } from './fn/platform/public-copy-voices-controller-settings';

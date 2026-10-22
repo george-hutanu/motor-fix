@@ -30,6 +30,11 @@ import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overvi
 import { adminOverviewControllerQueue } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewControllerQueue$Params } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { copyVoicesControllerChange } from '../fn/admin/copy-voices-controller-change';
+import { CopyVoicesControllerChange$Params } from '../fn/admin/copy-voices-controller-change';
+import { copyVoicesControllerList } from '../fn/admin/copy-voices-controller-list';
+import { CopyVoicesControllerList$Params } from '../fn/admin/copy-voices-controller-list';
+import { CopyVoicesDto } from '../models/copy-voices-dto';
 import { demandControllerDemand } from '../fn/admin/demand-controller-demand';
 import { DemandControllerDemand$Params } from '../fn/admin/demand-controller-demand';
 import { GarageSuspensionCreatedDto } from '../models/garage-suspension-created-dto';
@@ -786,6 +791,56 @@ export class AdminService extends BaseService {
   platformRuleChangesControllerCancel(params: PlatformRuleChangesControllerCancel$Params, context?: HttpContext): Promise<PlatformRuleChangeDto> {
     const resp = this.platformRuleChangesControllerCancel$Response(params, context);
     return resp.then((r: StrictHttpResponse<PlatformRuleChangeDto>): PlatformRuleChangeDto => r.body);
+  }
+
+  /** Path part for operation `copyVoicesControllerList()` */
+  static readonly CopyVoicesControllerListPath = '/api/v1/admin/copy-voices';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `copyVoicesControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  copyVoicesControllerList$Response(params?: CopyVoicesControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<CopyVoicesDto>> {
+    const obs = copyVoicesControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `copyVoicesControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  copyVoicesControllerList(params?: CopyVoicesControllerList$Params, context?: HttpContext): Promise<CopyVoicesDto> {
+    const resp = this.copyVoicesControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CopyVoicesDto>): CopyVoicesDto => r.body);
+  }
+
+  /** Path part for operation `copyVoicesControllerChange()` */
+  static readonly CopyVoicesControllerChangePath = '/api/v1/admin/copy-voices/{voice}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `copyVoicesControllerChange()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  copyVoicesControllerChange$Response(params: CopyVoicesControllerChange$Params, context?: HttpContext): Promise<StrictHttpResponse<CopyVoicesDto>> {
+    const obs = copyVoicesControllerChange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `copyVoicesControllerChange$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  copyVoicesControllerChange(params: CopyVoicesControllerChange$Params, context?: HttpContext): Promise<CopyVoicesDto> {
+    const resp = this.copyVoicesControllerChange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CopyVoicesDto>): CopyVoicesDto => r.body);
   }
 
 }
