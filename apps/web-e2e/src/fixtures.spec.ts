@@ -2,6 +2,7 @@ import type {
   APIRequestContext,
   Browser,
   BrowserContext,
+  Page,
 } from '@playwright/test';
 import { expect } from '@playwright/test';
 
@@ -11,6 +12,7 @@ import {
   analyticsSkipReason,
   needsAnalytics,
   routedContext,
+  routedPage,
   test,
 } from './fixtures.js';
 
@@ -36,6 +38,23 @@ test('the context fixture removes every route handler once the test ends', async
   expect(calls).toContain('route');
   expect(calls).toContain('init');
   expect(calls.slice(-2)).toEqual(['use', 'unrouteAll:ignoreErrors']);
+});
+
+// A page's own routes (page.route) are not the context's: a handler still
+// fetching when the test ends threw "Test ended" (verification-approve, 320 px).
+test('the page fixture removes its own route handlers once the test ends', async () => {
+  const calls: string[] = [];
+  const page = {
+    unrouteAll: async (options?: { behavior?: string }) => {
+      calls.push(`unrouteAll:${options?.behavior}`);
+    },
+  } as unknown as Page;
+
+  await routedPage({ page }, async () => {
+    calls.push('use');
+  });
+
+  expect(calls).toEqual(['use', 'unrouteAll:ignoreErrors']);
 });
 
 type Handler = (route: unknown) => Promise<void>;
