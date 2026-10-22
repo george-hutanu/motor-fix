@@ -498,13 +498,8 @@ function handoff(ctx, flags) {
 const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
 
 const FIXED_HEADING = "## Fixed after QA";
-const ghList = (r) => {
-  try {
-    return JSON.parse(r.stdout || "null");
-  } catch {
-    return null;
-  }
-};
+/** gh's JSON answer; an empty or unreadable one throws, so the merge never goes ahead unchecked. */
+const ghJson = (r) => JSON.parse(r.stdout);
 
 /**
  * Constitution VII step 5: a lap that passed with N medium or low findings
@@ -515,7 +510,7 @@ const ghList = (r) => {
  * this judges the list. Returns why it falls short, or null.
  */
 function fixedAfterQa(ctx, head, file) {
-  const review = latestReview(ghList(ctx.gh(...statusesArgs(head))));
+  const review = latestReview(ghJson(ctx.gh(...statusesArgs(head))));
   if (review?.state !== "success") return null;
   const kind = carryKind(review.description);
   if (kind === "docs") return null;
@@ -523,8 +518,9 @@ function fixedAfterQa(ctx, head, file) {
   let commits = null;
   if (kind === "fixes") {
     const from = carriedFrom(review.description);
-    count = findingCount(latestReview(ghList(ctx.gh(...statusesArgs(from))))?.description);
-    const compare = ghList(ctx.gh("api", `repos/{owner}/{repo}/compare/${from}...${head}`));
+    count = findingCount(latestReview(ghJson(ctx.gh(...statusesArgs(from))))?.description);
+    if (!(count >= 1)) return `head carries "QA fixes" from ${from.slice(0, 7)}, whose agent-review success reports no finding count: the carry cannot stand, so dispatch a real QA lap for head`;
+    const compare = ghJson(ctx.gh("api", `repos/{owner}/{repo}/compare/${from}...${head}`));
     commits = (compare?.commits ?? []).map((c) => String(c.sha));
   }
   if (!(count >= 1)) return null;
@@ -535,7 +531,7 @@ function fixedAfterQa(ctx, head, file) {
   const fixed = commits ? named.filter((l) => (l.match(/\b[0-9a-f]{7,40}\b/g) ?? []).some((sha) => commits.some((c) => c.startsWith(sha)))) : named;
   if (fixed.length >= count) return null;
   const each = commits ? "its severity (medium or low) and the fix commit after the lap" : "its severity (medium or low)";
-  return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}": add one list line per finding, naming ${each}, commit it to the specs repo, then the rerun`;
+  return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}": add one list line per finding, naming ${each} (the file stays in the worktree), then run the merge again`;
 }
 
 function merge(ctx, flags) {

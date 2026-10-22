@@ -66,6 +66,8 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),
     ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"status":"Planning"}\n' }],
     ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"status":"Done"}\n' }],
+    // A commit with no statuses, as REST answers it: the merge reads head's before merging.
+    [`${REST}commits/`, { stdout: '[]' }],
   ];
   const table = [...answers, ...base];
   const run = (file, args, opts = {}) => {

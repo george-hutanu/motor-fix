@@ -42,7 +42,10 @@ export const MAX_COMMITS = 10;
 const REPO = "{owner}/{repo}";
 const short = (sha) => String(sha).slice(0, 7);
 
-export const carryDescription = (from, kind = "docs") => `carried from ${from}: ${KIND_TEXT[kind]}`;
+export const carryDescription = (from, kind = "docs") => {
+  if (!Object.hasOwn(KIND_TEXT, kind)) throw new Error(`unknown carry kind: ${kind}`);
+  return `carried from ${from}: ${KIND_TEXT[kind]}`;
+};
 
 /** The commit a carried verdict names, or null when the description is not a carry. */
 export const carriedFrom = (description) => String(description ?? "").match(CARRY)?.[1] ?? null;

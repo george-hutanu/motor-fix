@@ -566,7 +566,7 @@ export function applyFixes(repo, report, { postCarry: post = postCarry, remove =
       // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
       const what = `carry #${d.pr} from ${d.carry.from.slice(0, 7)}`;
       try {
-        post({ pr: d.pr, from: d.carry.from, head: d.carry.head, kind: d.carry.kind ?? "docs" });
+        post({ pr: d.pr, from: d.carry.from, head: d.carry.head, kind: d.carry.kind });
         actions.push({ what, ok: true });
       } catch (e) {
         actions.push({ what, ok: false, error: e.message });
