@@ -1,14 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import {
-  ACCOUNTS,
-  openSignIn,
-  ownAddress,
-  ownMap,
-  ready,
-  signIn,
-} from './accounts.js';
+import { ownAddress, ownMap, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
 import { jpeg } from './listing-kept.js';
 import {
@@ -94,15 +87,15 @@ test.describe('sending the file again after a request for more @database', () =>
       timeout: 5_000,
     });
     expect(Date.now() - sent).toBeLessThan(5_000);
-    await expect(current(statusView(page))).toHaveText('Trimis');
+    // 208-FR-009: "Trimis" lit with the new sending date.
+    await expect(current(statusView(page))).toHaveText(/^Trimis · \S/);
     expect(await sideways(page)).toBe(0);
 
     const admin = await browser.newContext();
     try {
       const queue = await admin.newPage();
-      await ready(queue, '/ro/garages');
-      await openSignIn(queue);
-      await signIn(queue, ACCOUNTS.admin2);
+      // Signed in before the queue opens, or the page lands on the dialog.
+      await signInAsAdmin2(queue);
       await queue.goto('/app/admin/garages');
       const row = queue.locator('li.row').filter({ hasText: name });
       await expect(row.locator('.tag')).toHaveText('Actualizat', {
@@ -112,7 +105,12 @@ test.describe('sending the file again after a request for more @database', () =>
       const changes = queue
         .locator('mf-verification-file')
         .getByRole('region', { name: 'Ce s‑a schimbat' });
-      await expect(changes.locator('[data-area="photos"]')).toContainText('3');
+      // The photos are among what changed. The stub files are never sized by
+      // the worker, so the file counts none and the line names the change
+      // without numbers.
+      await expect(changes.locator('[data-area="photos"]')).toContainText(
+        'Fotografii',
+      );
     } finally {
       await admin.close();
     }
