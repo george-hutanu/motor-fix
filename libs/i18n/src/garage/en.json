@@ -1,4 +1,36 @@
 {
+  "features": {
+    "confirm": {
+      "cancel": "Cancel",
+      "line": {
+        "day_sheets": "The day sheet and its send disappear; the team gets no more day sheets.",
+        "lift_schedule": "Lifts disappear from the bookings, the menu and the day sheets.",
+        "live_media": "The “Photo, video, live” buttons disappear from the jobs.",
+        "team_mechanics": "The mechanics, the invitations and the choice of mechanic disappear from the menu and the bookings.",
+        "whatsapp": "WhatsApp messages to your team stop. Customers are not affected."
+      },
+      "off": "Switch off",
+      "title": "Switch off “{name}”?"
+    },
+    "description": {
+      "day_sheets": "Each mechanic's day sheet, to print or to send.",
+      "lift_schedule": "The schedule by lift and the choice of lift.",
+      "live_media": "Photos, video and live streams from the workshop for the customer.",
+      "team_mechanics": "Your mechanics, the invitations and the choice of mechanic on a booking.",
+      "whatsapp": "WhatsApp messages to your team: day sheets and alerts."
+    },
+    "intro": "Switch off what your garage does not use. What you switch off disappears from the menu and the screens for the whole team.",
+    "mechanicsOnTeam": "Remove the mechanics from the team first.",
+    "name": {
+      "day_sheets": "Day sheets",
+      "lift_schedule": "Schedule by lift",
+      "live_media": "Live photos and video",
+      "team_mechanics": "Team and mechanics",
+      "whatsapp": "WhatsApp"
+    },
+    "saveFailed": "We could not save. Try again.",
+    "title": "Features"
+  },
   "invite": {
     "canAnswerQuotes": "Can answer quote requests",
     "cancel": "Cancel",

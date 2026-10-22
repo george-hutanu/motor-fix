@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 160,
+    "count": 161,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -764,6 +764,19 @@
       "alerts": "none",
       "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-344"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-features-set",
+      "source": "libs/domain/src/garages/features/features.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/features/:feature",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each change of a switch is audited with the owner, the feature and the old and new state, and recorded as a garage.features_changed event in the same transaction; a 409 mechanics_on_team is the rule working, not a failure",
+      "story": "ST-398"
     },
     {
       "kind": "endpoint",

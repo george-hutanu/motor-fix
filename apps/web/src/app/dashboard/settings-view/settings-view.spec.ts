@@ -11,6 +11,9 @@ class PlatformRulesStub {}
 @Component({ selector: 'mf-copy-voices', template: '' })
 class CopyVoicesStub {}
 
+@Component({ selector: 'mf-feature-switches', template: '' })
+class FeatureSwitchesStub {}
+
 @Component({ selector: 'mf-push-panel', template: '' })
 class PushPanelStub {}
 
@@ -31,6 +34,7 @@ function render(me: MeDto | null) {
     set: {
       imports: [
         CopyVoicesStub,
+        FeatureSwitchesStub,
         NotificationSettingsStub,
         PlatformRulesStub,
         PrivacyPanelStub,
@@ -94,5 +98,26 @@ describe('SettingsView', () => {
     const element = await rendered(account(['garage.settings']));
 
     expect(element.lastElementChild?.tagName).toBe('MF-PRIVACY-PANEL');
+  });
+
+  // @traces 398-FR-001
+  it('shows the feature switches first, before the push, notification and privacy panels, to the owner', async () => {
+    const element = await rendered(
+      account(['garage.settings', 'garage.feature_switches']),
+    );
+
+    expect(element.firstElementChild?.tagName).toBe('MF-FEATURE-SWITCHES');
+    expect(element.children[1]?.tagName).toBe('MF-PUSH-PANEL');
+  });
+
+  // @traces 398-FR-001
+  it.each([
+    ['a receptionist', ['garage.settings', 'garage.requests']],
+    ['a mechanic', ['garage.settings', 'garage.own_jobs']],
+  ])('shows no feature switches to %s', async (_who, capabilities) => {
+    const element = await rendered(account(capabilities));
+
+    expect(element.querySelector('mf-feature-switches')).toBeNull();
+    expect(element.querySelector('mf-notification-settings')).not.toBeNull();
   });
 });

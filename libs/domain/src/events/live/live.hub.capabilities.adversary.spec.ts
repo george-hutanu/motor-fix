@@ -150,7 +150,6 @@ describe('a receptionist through the garage channel', () => {
     'member.removed',
     'mechanic.updated',
     'garage.settings_changed',
-    'garage.features_changed',
   ])('does not hear %s', async (kind) => {
     const maria = staff('maria', 'receptionist');
     expect(await heard(maria, kind)).toBe(false);
@@ -297,7 +296,6 @@ describe('a mechanic through the garage channel', () => {
     'invite',
     'price_list.updated',
     'member.removed',
-    'garage.features_changed',
     'garage.slots_changed',
   ])(
     'does not hear %s on the garage key even with every right',

@@ -1,0 +1,5 @@
+<p>{{ line | t }}</p>
+<div class="actions">
+  <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'garage.features.confirm.cancel' | t }}</button>
+  <button hlmBtn type="button" (click)="task.close(true)">{{ 'garage.features.confirm.off' | t }}</button>
+</div>

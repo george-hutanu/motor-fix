@@ -72,3 +72,41 @@ describe('the MCP endpoint while the database is down', () => {
     ).rejects.toThrow('boom');
   });
 });
+
+// @traces 398-FR-007
+describe('the tool gate', () => {
+  it('reads a feature through the one check: a stored row, or on when there is none', async () => {
+    const rows: Record<string, { enabled: boolean }> = {
+      'garage-1:lift_schedule': { enabled: false },
+    };
+    const prisma = {
+      garageFeature: {
+        findUnique: async ({
+          where,
+        }: {
+          where: { garageId_key: { garageId: string; key: string } };
+        }) =>
+          rows[`${where.garageId_key.garageId}:${where.garageId_key.key}`] ??
+          null,
+      },
+    };
+    const gate = new TransportController(
+      {} as McpActorService,
+      [],
+      { issuer: 'http://issuer.test', mcpUrl: 'http://127.0.0.1:3002/mcp' },
+      prisma as never,
+      {} as never,
+      { on: async () => false },
+      {} as never,
+    ) as unknown as {
+      ctx: { featureOn(garageId: string, key: string): Promise<boolean> };
+    };
+
+    await expect(gate.ctx.featureOn('garage-1', 'lift_schedule')).resolves.toBe(
+      false,
+    );
+    await expect(gate.ctx.featureOn('garage-1', 'whatsapp')).resolves.toBe(
+      true,
+    );
+  });
+});
