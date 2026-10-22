@@ -2,8 +2,8 @@
 export const IMAGE_WIDTHS = [320, 640, 960, 1600] as const;
 export const IMAGE_FORMATS = ['avif', 'webp'] as const;
 
-export type ImageWidth = (typeof IMAGE_WIDTHS)[number];
-export type ImageFormat = (typeof IMAGE_FORMATS)[number];
+type ImageWidth = (typeof IMAGE_WIDTHS)[number];
+type ImageFormat = (typeof IMAGE_FORMATS)[number];
 
 export const variantFile = (width: ImageWidth, format: ImageFormat) =>
   `${width}.${format}`;

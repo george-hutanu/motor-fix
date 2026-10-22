@@ -199,7 +199,9 @@ export function telemetry(
 }
 
 const wholeNumber = (value: string | undefined, fallback: number) =>
-  value && /^[1-9]\d*$/.test(value) ? Number(value) : fallback;
+  value && /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value))
+    ? Number(value)
+    : fallback;
 
 // The photo pipeline's limits. sharp's own default pixel limit is the
 // fallback; the worker defaults to one photo per core, since each photo's
@@ -225,7 +227,7 @@ export function imageBaseUrl(
 ): string {
   const value = source['IMAGE_BASE_URL'];
   if (!value) return '/api/v1/images';
-  const absolute = /^https?:\/\//.test(value) && URL.canParse(value);
+  const absolute = /^https?:\/\/[^/]/i.test(value) && URL.canParse(value);
   if (!absolute && !/^\/(?!\/)/.test(value)) {
     throw new Error(
       'IMAGE_BASE_URL must be an http(s) URL or a path starting with /',
