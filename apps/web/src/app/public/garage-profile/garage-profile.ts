@@ -6,10 +6,12 @@ import {
   computed,
   effect,
   inject,
+  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
   signal,
+  TransferState,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -62,6 +64,13 @@ const KINDS = EVENT_KINDS.filter(
 
 const GONE = [404, 410];
 
+// The answer the server render drew, handed to the browser so hydration keeps
+// the page drawn; a pair, so no slug and brand can spell another key.
+const served = (slug: string, brand: string | undefined) =>
+  makeStateKey<PublicGarageDto>(
+    `profile:${JSON.stringify([slug, brand ?? ''])}`,
+  );
+
 // The analytics name of where a profile was opened from; a direct open has none.
 const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
   home: 'home',
@@ -104,6 +113,7 @@ export class GarageProfile {
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly prefetch = inject(ProfilePrefetch);
+  private readonly state = inject(TransferState);
   private readonly saved = inject(SavedGarages);
   private readonly selection = inject(PriceSelection);
   private readonly places = inject(PlaceStore);
@@ -270,14 +280,16 @@ export class GarageProfile {
       );
   }
 
-  // A profile pre-fetched from the results, shown at once; after a server
-  // render the transfer cache answers the first read instead.
+  // The server render's answer, or a profile pre-fetched from the results,
+  // shown at once.
   private takePrefetched(): PublicGarageDto | undefined {
     if (!this.browser) return undefined;
-    this.prefetched = this.prefetch.take(
-      untracked(this.slug),
-      untracked(this.brand),
-    );
+    const slug = untracked(this.slug);
+    const brand = untracked(this.brand);
+    const key = served(slug, brand);
+    const drawn = this.state.get(key, undefined);
+    this.state.remove(key);
+    this.prefetched = drawn ?? this.prefetch.take(slug, brand);
     return this.prefetched;
   }
 
@@ -320,6 +332,7 @@ export class GarageProfile {
         (garage) => {
           if (moved()) return this.read();
           this.status.set(undefined);
+          if (!this.browser) this.state.set(served(slug, brand), garage);
           return garage;
         },
         (failure: unknown) => {
