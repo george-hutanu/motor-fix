@@ -2306,6 +2306,26 @@ describe('sending for verification', () => {
     expect(document.activeElement).toBe(note);
   });
 
+  // @traces 330-FR-002 115-FR-007
+  it('marks step 5, not ticks it, while its facilities note is too long, and ticks it again once it holds', async () => {
+    const { harness, page } = await completeCopy();
+    const note = page.querySelector<HTMLInputElement>(
+      'mf-hours-step [name="facilitiesNote"]',
+    ) as HTMLInputElement;
+    fillIn(harness, note, 'a'.repeat(201));
+    note.dispatchEvent(new Event('blur'));
+    await settle(harness);
+
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 6]);
+    expect(dotted(page)).toEqual([5]);
+
+    fillIn(harness, note, 'a'.repeat(200));
+    await settle(harness);
+
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(dotted(page)).toEqual([]);
+  });
+
   // @traces 115-FR-007
   it('ticks all six steps of a complete listing and marks none', async () => {
     const { page } = await completeCopy();
