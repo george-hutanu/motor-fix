@@ -33,7 +33,6 @@ const photos = (page: Page) => page.locator('mf-photos-step');
 // sent back from the same form: the admins' queue shows it updated, with the
 // photos among what changed.
 // @traces 208-FR-009
-// @traces 208-SC-003
 test.describe('sending the file again after a request for more @database', () => {
   let db: Client;
 

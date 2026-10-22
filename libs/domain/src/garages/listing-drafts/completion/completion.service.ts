@@ -2,6 +2,7 @@ import {
   askedSteps,
   type CompletionCopyDto,
   type FieldProblem,
+  isListingDraftData,
   type ListingDraftData,
   type ListingSubmittedDto,
   stripCui,
@@ -41,6 +42,8 @@ import {
   newestFirst,
   VerificationService,
 } from '../../verification/verification.service';
+
+const KEPT_BROWSER_KEYS = 4;
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No file to complete');
@@ -103,6 +106,7 @@ export class CompletionService {
     const file = await this.askingFile(actor);
     const copy =
       (await this.openCopy(file.id)) ?? (await this.create(actor, file));
+    await this.dropOldKeys(copy.id);
     const key = newToken();
     await this.prisma.listingDraftToken.create({
       data: {
@@ -113,7 +117,7 @@ export class CompletionService {
       },
     });
     return {
-      data: copy.data as ListingDraftData,
+      data: isListingDraftData(copy.data) ? copy.data : {},
       edited: copy.updatedAt > copy.createdAt,
       email: copy.email,
       held: await heldOf(this.prisma, file.id),
@@ -125,6 +129,24 @@ export class CompletionService {
       token: key.token,
       updatedAt: copy.updatedAt.toISOString(),
     };
+  }
+
+  // Each page load gets a key of its own; the newest few stay, enough for
+  // the owner's other open tabs.
+  private async dropOldKeys(draftId: string) {
+    const kept = await this.prisma.listingDraftToken.findMany({
+      orderBy: { sentAt: 'desc' },
+      select: { hash: true },
+      take: KEPT_BROWSER_KEYS - 1,
+      where: { draftId, kind: 'browser' },
+    });
+    await this.prisma.listingDraftToken.deleteMany({
+      where: {
+        draftId,
+        hash: { notIn: kept.map((token) => token.hash) },
+        kind: 'browser',
+      },
+    });
   }
 
   // The garage's live file, which must be asking for more.

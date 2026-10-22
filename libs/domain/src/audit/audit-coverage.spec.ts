@@ -172,6 +172,7 @@ const NOT_CHANGES = new Set([
   // is sent, and that send writes the history.
   'CompletionService.open',
   'CompletionService.create',
+  'CompletionService.dropOldKeys',
   // Runs inside the activities check's record, whose one entry carries the
   // list before and after.
   'VerificationChecksService.writeActivities',

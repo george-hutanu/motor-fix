@@ -69,7 +69,7 @@ const ownsOne = () =>
     'This account already has a garage',
   );
 
-const OWNER_PERMISSIONS = {
+export const OWNER_PERMISSIONS = {
   canAnswerQuotes: true,
   canMoveBookings: true,
   canRecordFinalPrice: true,

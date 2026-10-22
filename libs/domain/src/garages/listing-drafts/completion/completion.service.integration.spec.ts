@@ -4,11 +4,7 @@ import type { CompletionCopyDto, ListingDraftData } from '@motor-fix/contracts';
 import { HttpException, Logger } from '@nestjs/common';
 
 import { copyOf } from './completion.copy';
-import {
-  completionWorld,
-  type Listed,
-  OWNER_PERMISSIONS,
-} from './completion.testing';
+import { completionWorld, type Listed } from './completion.testing';
 import { hashToken } from '../../../auth/email-confirmation/email-confirmation';
 import type { Actor } from '../../../auth/policy';
 import { serialDatabase } from '../../../auth/serial-db.testing';
@@ -18,6 +14,7 @@ import {
 } from '../../../notifications/notifications.testing';
 import { LegalDocumentsService } from '../../documents/legal-documents/legal-documents.service';
 import { resubmission } from '../../verification/verification.service';
+import { OWNER_PERMISSIONS } from '../submit/submit.service';
 
 const { account, prisma } = fixtures();
 serialDatabase(databaseUrl);

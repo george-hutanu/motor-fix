@@ -455,7 +455,13 @@ export class ListYourGarage {
     if (role !== 'garage')
       await this.session.switchRole('garage').catch(() => undefined);
     await this.opened;
-    const copy = await this.keeper.openCopy();
+    // A copy that failed to open leaves the keeper's note on the form, and
+    // the next session load tries again.
+    const copy = await this.keeper.openCopy().catch(() => {
+      this.ownerShown = false;
+      return undefined;
+    });
+    if (copy === undefined) return;
     if (!copy) {
       this.statusView.set({ sent: null });
       return;

@@ -400,6 +400,18 @@ describe('DraftKeeper over a completion copy', () => {
     expect(kept.draft()).toEqual(entry());
   });
 
+  // @traces 208-FR-005
+  it('throws a failure that is no answer, the form left as it was with its note', async () => {
+    const kept = keeper();
+    kept.draft.set(entry());
+    const down = new HttpErrorResponse({ status: 503 });
+    api['completionControllerOpen'].mockRejectedValue(down);
+
+    await expect(kept.openCopy()).rejects.toBe(down);
+    expect(kept.draft()).toEqual(entry());
+    expect(kept.note()).toEqual({ key: 'notSaved' });
+  });
+
   // @traces 208-FR-010
   it('tells a change once something differs from the copy as opened', () => {
     const kept = keeper();

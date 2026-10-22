@@ -20,13 +20,10 @@ import { GaragePlaceService } from '../../place/garage-place.service';
 import { GaragePricesService } from '../../prices/garage-prices/garage-prices.service';
 import { VerificationService } from '../../verification/verification.service';
 import { ListingDraftsService } from '../listing-drafts.service';
-import { ListingSubmitService } from '../submit/submit.service';
-
-export const OWNER_PERMISSIONS = {
-  canAnswerQuotes: true,
-  canMoveBookings: true,
-  canRecordFinalPrice: true,
-};
+import {
+  ListingSubmitService,
+  OWNER_PERMISSIONS,
+} from '../submit/submit.service';
 
 const SURVEY: SurveySection = {
   foundVia: 'google',
@@ -38,7 +35,7 @@ const SURVEY: SurveySection = {
 
 const key = (area: string, n: number) => `${area}/${randomUUID()}/p${n}`;
 
-export interface World {
+interface World {
   dacia: string;
   tesla: string;
   brakes: string;

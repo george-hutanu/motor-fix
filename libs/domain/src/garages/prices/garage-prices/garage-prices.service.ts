@@ -210,25 +210,11 @@ export class GaragePricesService {
     actorId: string,
     given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
-    if (!isRecord(given as unknown))
-      throw refuse([{ code: 'invalid', field: 'section' }]);
-    if (!wellShaped(given.jobs)) {
-      throw refuse([{ code: 'invalid', field: 'jobs' }]);
-    }
-    const input = sameCase(given);
+    const { fromBani, input, toBani } = await this.checked(tx, garageId, given);
     const garage = await tx.garage.findUniqueOrThrow({
       select: { labourFromBani: true, labourToBani: true },
       where: { id: garageId },
     });
-    const errors = payloadErrors(input);
-    if (errors.length === 0) {
-      errors.push(...(await this.catalogueErrors(tx, garageId, input.jobs)));
-    }
-    if (errors.length > 0) throw refuse(errors);
-    const { fromBani, toBani } = input.labour as {
-      fromBani: number;
-      toBani: number;
-    };
     await tx.garage.update({
       data: { labourFromBani: fromBani, labourToBani: toBani },
       where: { id: garageId },
@@ -288,25 +274,12 @@ export class GaragePricesService {
     given: StartingPricesInput,
     worksOn?: readonly string[],
   ): Promise<StartingPricesResult> {
-    if (!isRecord(given as unknown))
-      throw refuse([{ code: 'invalid', field: 'section' }]);
-    if (!wellShaped(given.jobs)) {
-      throw refuse([{ code: 'invalid', field: 'jobs' }]);
-    }
-    const input = sameCase(given);
-    const errors = payloadErrors(input);
-    if (errors.length === 0) {
-      errors.push(
-        ...(await this.catalogueErrors(tx, garageId, input.jobs, {
-          worksOn,
-        })),
-      );
-    }
-    if (errors.length > 0) throw refuse(errors);
-    const { fromBani, toBani } = input.labour as {
-      fromBani: number;
-      toBani: number;
-    };
+    const { fromBani, input, toBani } = await this.checked(
+      tx,
+      garageId,
+      given,
+      { worksOn },
+    );
     const scope = { actorId, actorRole: 'garage' as const, garageId };
     await this.labourAgain(tx, scope, fromBani, toBani);
     const ids = await this.jobIds(tx, scope, input.jobs);
@@ -344,6 +317,33 @@ export class GaragePricesService {
         warnings: checkPriceRange(started(input.labour)).warnings,
       },
     };
+  }
+
+  // Step 3 as sent, refused unless every field and catalogue job holds.
+  private async checked(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    given: StartingPricesInput,
+    again?: { worksOn?: readonly string[] },
+  ) {
+    if (!isRecord(given as unknown))
+      throw refuse([{ code: 'invalid', field: 'section' }]);
+    if (!wellShaped(given.jobs)) {
+      throw refuse([{ code: 'invalid', field: 'jobs' }]);
+    }
+    const input = sameCase(given);
+    const errors = payloadErrors(input);
+    if (errors.length === 0) {
+      errors.push(
+        ...(await this.catalogueErrors(tx, garageId, input.jobs, again)),
+      );
+    }
+    if (errors.length > 0) throw refuse(errors);
+    const { fromBani, toBani } = input.labour as {
+      fromBani: number;
+      toBani: number;
+    };
+    return { fromBani, input, toBani };
   }
 
   // Deletes the stored rows the sending no longer lists; answers the rest.

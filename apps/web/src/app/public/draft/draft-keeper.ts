@@ -145,14 +145,18 @@ export class DraftKeeper {
   }
 
   // The owner's copy of the live garage, when its file asks for more; null
-  // otherwise, the form left as it was.
+  // when there is no file or it asks for nothing, the form left as it was.
+  // Any other failure leaves its note and is thrown.
   async openCopy(): Promise<CompletionCopyDto | null> {
     try {
       const copy = await this.api.completionControllerOpen();
       this.adoptCopy(copy);
       return copy;
-    } catch {
-      return null;
+    } catch (error) {
+      const { status } = toProblem(error);
+      if (VIEW_FOR[status]) return null;
+      this.note.set({ key: NOTE_FOR[status] ?? 'notSaved' });
+      throw error;
     }
   }
 

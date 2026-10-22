@@ -88,6 +88,11 @@ describe('opening the copy over and over', () => {
         where: { verificationFileId: garage.fileId },
       }),
     ).toBe(1);
+    expect(
+      await prisma.listingDraftToken.count({
+        where: { draftId: copies[0]?.id, kind: 'browser' },
+      }),
+    ).toBe(4);
   });
 
   it('opens a new copy for a second request, and leaves the sent one sent', async () => {
