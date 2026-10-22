@@ -379,7 +379,7 @@ export function latestLapReport(featureDir) {
 const lines = (text) => text.split("\n").map((l) => l.trim()).filter(Boolean);
 
 /** The --needed answer: {code: 0 needed | 1 not needed | 2 git failure, line?, warning?, error?}. */
-export function mergeNeeded({ cwd = process.cwd(), git = realGit(cwd), gh = (args) => ghRun(args), lapReport = () => latestLapReport(activeFeature(cwd)?.dir) } = {}) {
+export function mergeNeeded({ cwd = process.cwd(), git = realGit(cwd), gh = ghRun, lapReport = () => latestLapReport(activeFeature(cwd)?.dir) } = {}) {
   const step = (args) => {
     const r = git(args);
     if (r.status !== 0) throw new Error(`git ${args[0]}: ${(r.stderr || r.stdout || "").trim()}`);
@@ -406,7 +406,8 @@ export function mergeNeeded({ cwd = process.cwd(), git = realGit(cwd), gh = (arg
 }
 
 if (isEntryPoint(import.meta.url) && process.argv.includes("--needed")) {
-  const { code, line, warning, error } = mergeNeeded();
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+  const { code, line, warning, error } = top.status === 0 ? mergeNeeded({ cwd: top.stdout.trim() }) : { code: 2, error: "not inside a git checkout" };
   if (warning) console.error(warning);
   if (error) console.error(error);
   if (line) console.log(line);
