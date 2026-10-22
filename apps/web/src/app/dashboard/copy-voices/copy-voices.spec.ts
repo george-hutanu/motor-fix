@@ -127,6 +127,18 @@ describe('the copy voices section', () => {
     );
   });
 
+  it('keeps the switch and the pin together on one line after the name', async () => {
+    const { element } = await render();
+
+    rows(element).forEach((li, i) => {
+      const controls = li.querySelector('.controls');
+      expect(controls).not.toBeNull();
+      expect(controls?.contains(toggle(element, i + 1))).toBe(true);
+      expect(controls?.contains(pin(element, i + 1))).toBe(true);
+      expect(li.querySelector('.name')?.nextElementSibling).toBe(controls);
+    });
+  });
+
   it('reads in English', async () => {
     const { element } = await render(voices({ 2: PINNED }), 'en');
 
