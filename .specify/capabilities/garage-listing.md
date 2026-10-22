@@ -33,6 +33,7 @@ features:
   - 1359-signup-survey
   - 116-listing-verification-status
   - 208-resubmit-after-more
+  - 330-listed-facilities
 ---
 
 # Capability: Garage listing
@@ -1173,6 +1174,22 @@ _From 208-resubmit-after-more._
 ### 208-FR-018 — (from #641) Listing completeness MUST count code points (`[...value.trim()].length`) as the mechanics write does; a one-emoji name is incomplete in step 4 and refused on send, consistently (unit test).
 
 _From 208-resubmit-after-more._
+
+### 330-FR-001 — Step 5 of "List your garage" MUST show, after the facility chips and their hint, an optional single-line field "Notă despre facilități" / "Note about the facilities", holding at most 200 characters after trimming; the draft keeps it as the step-5 section's key `facilitiesNote`, saved and restored with the rest of the form; the field has a visible label, and its error is tied to the field and announced as the form's other field errors are (115-FR-006).
+
+_From 330-listed-facilities._
+
+### 330-FR-002 — A note longer than 200 characters (counted in Unicode code points after trimming) MUST show "Nota poate avea cel mult 200 de caractere" / "The note can have at most 200 characters" under the field, by the form's existing field-error rules (115-FR-006); while it shows, the draft keeps its last valid note and sending is blocked, as for an out-of-range courtesy-car price.
+
+_From 330-listed-facilities._
+
+### 330-FR-003 — The step-5 section guard in the shared contracts MUST refuse a `facilitiesNote` that is not a string, is `null`, is longer than 200 characters after trimming, or holds a control character (Unicode category Cc, which includes tab and line breaks); a draft save carrying it MUST answer 400 and change nothing.
+
+_From 330-listed-facilities._
+
+### 330-FR-004 — At send, the note MUST be saved on the garage (trimmed; no note when absent or empty) in the same transaction as the facility rows (116-FR-010), the database refusing a note over 200 characters or blank; if any write fails, the send fails whole and the draft stays open. The note's starting value is recorded in the garage's audit history as a change of the garage's `facilitiesNote` from empty to the note (no entry when there is none). The column is nullable and added without a backfill: garages that already exist have no note, and the migration is additive only.
+
+_From 330-listed-facilities._
 
 ## Retired
 

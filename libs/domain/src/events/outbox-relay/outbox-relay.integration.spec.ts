@@ -447,13 +447,13 @@ describe('purging the cached public reads', () => {
     await new OutboxRelay(prisma, redis).relay();
 
     expect(redis.dropped).toEqual([
-      `PURGE v1:tag:warm:garage:${a}`,
-      `PURGE v1:tag:garage:${a}`,
-      'PURGE v1:tag:search',
+      `PURGE v2:tag:warm:garage:${a}`,
+      `PURGE v2:tag:garage:${a}`,
+      'PURGE v2:tag:search',
       'INCR garage-search-gen:v1',
-      `PURGE v1:tag:warm:garage:${b}`,
-      `PURGE v1:tag:garage:${b}`,
-      'PURGE v1:tag:search',
+      `PURGE v2:tag:warm:garage:${b}`,
+      `PURGE v2:tag:garage:${b}`,
+      'PURGE v2:tag:search',
       'INCR garage-search-gen:v1',
     ]);
   });
@@ -466,8 +466,8 @@ describe('purging the cached public reads', () => {
     await new OutboxRelay(prisma, redis).relay();
 
     expect(redis.dropped).toEqual([
-      expect.stringMatching(/^PURGE v1:tag:warm:account:/),
-      expect.stringMatching(/^PURGE v1:tag:warm:garage:/),
+      expect.stringMatching(/^PURGE v2:tag:warm:account:/),
+      expect.stringMatching(/^PURGE v2:tag:warm:garage:/),
     ]);
   });
 
@@ -612,6 +612,6 @@ describe('dropping the cached searches', () => {
 
     await new OutboxRelay(prisma, redis).relay();
 
-    expect(redis.dropped).toEqual([`PURGE v1:tag:warm:garage:${garageId}`]);
+    expect(redis.dropped).toEqual([`PURGE v2:tag:warm:garage:${garageId}`]);
   });
 });

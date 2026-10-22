@@ -293,7 +293,8 @@ export class HoursStep {
 
   protected typeFacilitiesNote(field: HTMLInputElement) {
     this.watch.type(NOTE);
-    const note = field.value;
+    // A pasted tab or line break is spacing, not a reason to refuse the note.
+    const note = field.value.replace(/\p{Cc}/gu, ' ');
     if (!isFacilitiesNote(note)) {
       this.overLong.set(note);
       return;

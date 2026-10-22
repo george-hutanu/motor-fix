@@ -121,7 +121,7 @@ async function warmed() {
   );
 }
 
-const profileWarm = (slug: string) => other.exists(`v1:profile:${slug}:-`);
+const profileWarm = (slug: string) => other.exists(`v2:profile:${slug}:-`);
 
 // @traces 1182-FR-013
 describe('warming the cache after a deploy', () => {
@@ -142,7 +142,7 @@ describe('warming the cache after a deploy', () => {
     // Past the three with views, the most recently approved come first.
     expect(await profileWarm(slugs[202] as string)).toBe(1);
     expect(await profileWarm(slugs[3] as string)).toBe(0);
-    expect(await other.exists('v1:home:dacia:-', 'v1:home:ford:-')).toBe(2);
+    expect(await other.exists('v2:home:dacia:-', 'v2:home:ford:-')).toBe(2);
 
     const read = jest.spyOn(PublicGaragesService.prototype, 'bySlug');
     await warmCache(app, release);
@@ -173,6 +173,6 @@ describe('warming the cache after a deploy', () => {
     expect(
       warn.mock.calls.filter(([m]) => /warm-up/.test(String(m))),
     ).toHaveLength(1);
-    expect(await other.exists('v1:home:dacia:-', 'v1:home:ford:-')).toBe(2);
+    expect(await other.exists('v2:home:dacia:-', 'v2:home:ford:-')).toBe(2);
   });
 });

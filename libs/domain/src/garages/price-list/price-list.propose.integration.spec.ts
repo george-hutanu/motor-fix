@@ -469,7 +469,7 @@ describe('what the proposal leaves alone', () => {
     expect(
       await prisma.garage.findUniqueOrThrow({ where: { id: w.nord.id } }),
     ).toMatchObject({ status: 'approved' });
-    expect(await redis.exists(`v1:profile:${w.nord.slug}:-`)).toBe(0);
+    expect(await redis.exists(`v2:profile:${w.nord.slug}:-`)).toBe(0);
   });
 });
 

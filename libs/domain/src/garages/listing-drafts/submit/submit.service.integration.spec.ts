@@ -456,7 +456,7 @@ describe('a send that fails part-way', () => {
   });
 });
 
-// @traces 330-FR-004
+// @traces 330-FR-004 330-FR-008
 describe('a draft with facilities and a note', () => {
   const withFacilities = (): ListingDraftData => {
     const data = complete();

@@ -399,7 +399,7 @@ describe('Redis failing', () => {
 
     const answers = await Promise.all(
       Array.from({ length: 50 }, () =>
-        cache.read({ key: 'v1:profile:k', read, soft: 60 }),
+        cache.read({ key: 'v2:profile:k', read, soft: 60 }),
       ),
     );
 
@@ -532,7 +532,7 @@ describe('purge edge cases', () => {
 
     await purgeTags(client(), [tag]);
 
-    const ttl = await other.pttl(`v1:purged:${tag}`);
+    const ttl = await other.pttl(`v2:purged:${tag}`);
     expect(ttl).toBeGreaterThan(1_200_000);
     expect(ttl).toBeLessThanOrEqual(1_300_000);
   });

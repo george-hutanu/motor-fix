@@ -53,7 +53,7 @@ describe('purging by tag', () => {
     const purged = await purgeTags(redis, [garage]);
 
     expect(purged.sort()).toEqual([a, b].sort());
-    expect(await redis.exists(a, b, `v1:tag:${garage}`)).toBe(0);
+    expect(await redis.exists(a, b, `v2:tag:${garage}`)).toBe(0);
     expect(await redis.exists(c)).toBe(1);
     const after = await purges();
     expect((after['profile'] ?? 0) - (before['profile'] ?? 0)).toBe(1);

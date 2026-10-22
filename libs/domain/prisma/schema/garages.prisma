@@ -75,7 +75,7 @@ model Garage {
   liftCount                  Int                                    @default(0) @map("lift_count")
   closedDays                 GarageClosedDay[]
   facilities                 GarageFacility[]
-  // 1 to 200 characters, trimmed (a CHECK in the migration); public.
+  // At most 200 characters, never blank (a CHECK in the migration); public.
   facilitiesNote             String?                                @map("facilities_note")
   // CHECKs in the migration: +40 and nine digits; 1 to 160 characters; a
   // legal form only for a mobile service. Never in a public read.

@@ -1173,6 +1173,18 @@ describe('step 5, the facilities note', () => {
     );
   });
 
+  it('keeps a pasted tab as a space instead of refusing the note', async () => {
+    const { fixture, step } = await open();
+
+    await type(fixture, note(step), 'Doar\tla programare');
+    await blur(fixture, note(step));
+
+    expect(describedBy(step, note(step))).toBeNull();
+    expect(fixture.componentInstance.value().facilitiesNote).toBe(
+      'Doar la programare',
+    );
+  });
+
   it('says the label and the error in English', async () => {
     const { fixture, step } = await open('en');
     await type(fixture, note(step), 'a'.repeat(201));
