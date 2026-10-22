@@ -160,7 +160,7 @@ async function open(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: Consent, useValue: { track } },
+      { provide: Consent, useValue: { granted: () => false, track } },
       {
         provide: Session,
         useValue: {

@@ -149,3 +149,27 @@ describe('CandidateGaragesQueryDto', () => {
     ]);
   });
 });
+
+const voiceOf = (copyVoice: unknown) => {
+  const { dto, failed } = send({ ...valid, copyVoice });
+  return { failed, voice: Reflect.get(dto, 'copyVoice') };
+};
+
+// @traces 009-FR-005
+describe('the copy voice of a quote request', () => {
+  it.each([1, 2, 3, 4, 5])('keeps voice %s', (voice) => {
+    expect(voiceOf(voice)).toEqual({ failed: [], voice });
+  });
+
+  it.each([
+    ['0', 0],
+    ['7', 7],
+    ['a text', '2'],
+    ['a decimal', 2.5],
+    ['an array', []],
+    ['null', null],
+    ['nothing', undefined],
+  ])('drops %s without refusing the request', (_, copyVoice) => {
+    expect(voiceOf(copyVoice)).toEqual({ failed: [], voice: undefined });
+  });
+});

@@ -13,6 +13,7 @@ import {
   fixtures,
   redisUrlFor,
 } from '../../../notifications/notifications.testing';
+import { quotesWorld } from '../../../quotes/quotes.testing';
 import { PlatformRulesModule } from '../platform-rules.module';
 
 class NoNotifications {}
@@ -105,7 +106,51 @@ describe('GET /admin/copy-voices', () => {
     expect(res.body.voices.map((v: { voice: number }) => v.voice)).toEqual([
       1, 2, 3, 4, 5,
     ]);
-    expect(res.body.voices[0]).toEqual({ ...ON, updatedAt: null, voice: 1 });
+    expect(res.body.voices[0]).toEqual({
+      ...ON,
+      listings: 0,
+      requests: 0,
+      updatedAt: null,
+      voice: 1,
+    });
+  });
+
+  // @traces 009-FR-008
+  it('answers an admin what each voice brought in the last 30 days', async () => {
+    const world = quotesWorld(prisma);
+    const driver = await world.account('Andrei Marin');
+    const { id } = await world.request(driver);
+    await prisma.$executeRaw`
+      UPDATE quote_request SET copy_voice = 2 WHERE id = ${id}::uuid`;
+    const draft = await prisma.listingDraft.create({
+      data: {
+        email: 'owner@example.test',
+        language: 'ro',
+        step: 1,
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.$executeRaw`
+      UPDATE listing_draft SET copy_voice = 2 WHERE id = ${draft.id}::uuid`;
+
+    const res = await list(await as('admin'));
+
+    expect(res.status).toBe(200);
+    expect(
+      res.body.voices.map(
+        (v: { listings: number; requests: number; voice: number }) => [
+          v.voice,
+          v.requests,
+          v.listings,
+        ],
+      ),
+    ).toEqual([
+      [1, 0, 0],
+      [2, 1, 1],
+      [3, 0, 0],
+      [4, 0, 0],
+      [5, 0, 0],
+    ]);
   });
 
   // @traces 010-FR-002

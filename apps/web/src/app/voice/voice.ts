@@ -70,11 +70,18 @@ export class Voice {
   private readonly keys = computed(() => keysOf(this.n()));
   // Only the newest read decides.
   private reads = 0;
+  // The document loaded on Home, as the page head saw it.
+  readonly fromHome: boolean;
+  // This Home load took a new voice for the visit, rather than keeping one.
+  readonly taken: boolean;
 
   constructor() {
     // getAttribute, not dataset: the server's document has no dataset.
-    const mark = this.document.documentElement.getAttribute('data-voice') ?? '';
+    const html = this.document.documentElement;
+    const mark = html.getAttribute('data-voice') ?? '';
     this.n.set(/^[1-5]$/.test(mark) ? Number(mark) : 1);
+    this.fromHome = html.getAttribute('data-home') !== null;
+    this.taken = this.fromHome && html.getAttribute('data-voice-new') !== null;
   }
 
   get voice(): number {

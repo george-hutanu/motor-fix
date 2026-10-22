@@ -122,6 +122,8 @@ model QuoteRequest {
   expiresAt      DateTime             @map("expires_at") @db.Timestamptz(3)
   // One per send the driver means; a repeat answers the first request.
   idempotencyKey String               @map("idempotency_key")
+  // The copy voice of the visit (1-5), stored only with analytics consent.
+  copyVoice      Int?                 @map("copy_voice") @db.SmallInt
   driver         Account              @relation(fields: [driverId], references: [id], onDelete: Cascade)
   car            Car                  @relation(fields: [carId], references: [id], onDelete: NoAction)
   jobs           RequestJob[]

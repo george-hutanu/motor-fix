@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 
+import { copyVoiceOrUndefined } from './copy-voices.dto';
 import {
   DOCUMENT_KINDS,
   type DocumentKind,
@@ -48,6 +49,16 @@ export class CreateListingDraftDto extends DraftFields {
   @IsString()
   @MaxLength(254)
   email!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'The copy voice of the visit, 1-5, sent only with analytics consent',
+    maximum: 5,
+    minimum: 1,
+  })
+  @Transform(copyVoiceOrUndefined)
+  @IsOptional()
+  copyVoice?: number;
 }
 
 export class SaveListingDraftDto extends DraftFields {

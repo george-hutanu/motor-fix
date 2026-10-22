@@ -255,7 +255,7 @@ export class ListingDraftsService {
   ) {}
 
   async create(
-    body: DraftBody & { email: string },
+    body: DraftBody & { email: string; copyVoice?: number },
   ): Promise<ListingDraftCreatedDto> {
     const email = checkedEmail(body.email);
     const data = checkedData(body.data);
@@ -270,6 +270,7 @@ export class ListingDraftsService {
     const declared = declaredAt(undefined, Boolean(sentAt), at);
     const draft = await this.prisma.listingDraft.create({
       data: {
+        copyVoice: body.copyVoice ?? null,
         data: { ...rest, ...(declared && { declaredAt: declared }) },
         email,
         language: body.language,

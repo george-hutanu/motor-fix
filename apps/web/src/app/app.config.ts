@@ -24,6 +24,7 @@ import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
+import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
 
 export const appConfig: ApplicationConfig = {
@@ -40,6 +41,7 @@ export const appConfig: ApplicationConfig = {
     // Before the first render, so a visit during maintenance opens on its page.
     provideAppInitializer(() => inject(PlatformStatus).read()),
     provideVoiceRead(),
+    provideHomeVisit(),
     // Only the production build emits ngsw-worker.js.
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
     provideServiceWorkerRecovery(),

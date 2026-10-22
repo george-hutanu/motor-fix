@@ -158,3 +158,41 @@ describe('a created listing draft', () => {
     expect(documented?.required).toBe(true);
   });
 });
+
+const created = {
+  data: {},
+  email: 'owner@example.test',
+  language: 'ro',
+  step: 1,
+};
+
+const draftVoiceOf = (copyVoice: unknown) => {
+  const dto = plainToInstance(CreateListingDraftDto, {
+    ...created,
+    copyVoice,
+  });
+  const failed = validateSync(dto, {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).map((error) => error.property);
+  return { failed, voice: Reflect.get(dto, 'copyVoice') };
+};
+
+// @traces 009-FR-007
+describe('the copy voice of a new listing draft', () => {
+  it.each([1, 2, 3, 4, 5])('keeps voice %s', (voice) => {
+    expect(draftVoiceOf(voice)).toEqual({ failed: [], voice });
+  });
+
+  it.each([
+    ['0', 0],
+    ['7', 7],
+    ['a text', '2'],
+    ['a decimal', 2.5],
+    ['an array', []],
+    ['null', null],
+    ['nothing', undefined],
+  ])('drops %s without refusing the draft', (_, copyVoice) => {
+    expect(draftVoiceOf(copyVoice)).toEqual({ failed: [], voice: undefined });
+  });
+});
