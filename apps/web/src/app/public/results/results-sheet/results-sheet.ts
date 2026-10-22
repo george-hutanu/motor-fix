@@ -22,6 +22,9 @@ type SheetPosition = 'low' | 'half' | 'full';
 // The map's two 44 px zoom buttons and their 10 px margin, as 6.5rem in the
 // stylesheet: half never rests over them.
 const ZOOM_CLEAR = 104;
+// The list's first 96 px that half shows under a header taller than half the
+// stage, as 6rem in the stylesheet: half never rests where low does.
+const LIST_PEEK = 96;
 
 const NEXT: Record<SheetPosition, SheetPosition> = {
   full: 'low',
@@ -265,7 +268,11 @@ function restOffsets(
   const low = height - top;
   return {
     full: 0,
-    half: Math.min(Math.max(height / 2, ZOOM_CLEAR), low),
+    half: Math.min(
+      Math.max(height / 2, ZOOM_CLEAR),
+      Math.max(ZOOM_CLEAR, low - LIST_PEEK),
+      low,
+    ),
     low,
   };
 }
