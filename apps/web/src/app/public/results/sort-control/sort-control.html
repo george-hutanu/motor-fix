@@ -1,4 +1,5 @@
 <fieldset class="sorts" [attr.aria-label]="'public.results.sort.label' | t">
+  <span class="thumb" aria-hidden="true" [attr.data-at]="sort()"></span>
   @for (each of sorts; track each.sort) {
     <button
       type="button"

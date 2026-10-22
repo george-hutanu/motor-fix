@@ -3,52 +3,103 @@
   min-width: 0;
 }
 
+/* A framed track of three equal columns; one amber thumb slides under the
+   pressed sort (Results + map board, design.md). */
 .sorts {
-  border: 0;
-  display: flex;
-  gap: var(--mf-space-2);
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line);
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
   min-inline-size: 0;
-  padding: 0;
+  padding: var(--mf-space-1);
+  position: relative;
+}
+
+.thumb {
+  background: var(--mf-amber-tint);
+  border: 1.5px solid var(--mf-amber-ink);
+  border-radius: var(--mf-radius-chip);
+  bottom: var(--mf-space-1);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--mf-amber) 22%, transparent);
+  box-sizing: border-box;
+  inset-inline-start: var(--mf-space-1);
+  pointer-events: none;
+  position: absolute;
+  top: var(--mf-space-1);
+  transition: transform 420ms var(--mf-motion-ease);
+  width: calc((100% - 2 * var(--mf-space-1)) / 3);
+}
+
+.thumb[data-at="distance"] {
+  transform: translateX(100%);
+}
+
+.thumb[data-at="price"] {
+  transform: translateX(200%);
+}
+
+:host-context([dir="rtl"]) .thumb[data-at="distance"] {
+  transform: translateX(-100%);
+}
+
+:host-context([dir="rtl"]) .thumb[data-at="price"] {
+  transform: translateX(-200%);
 }
 
 .sort {
   background: none;
-  border: 1px solid var(--mf-line);
-  border-radius: var(--mf-radius-control);
-  color: var(--mf-text);
+  border: 0;
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text-secondary);
   cursor: pointer;
-  flex: 1 1 0;
   font: inherit;
+  font-size: var(--mf-size-body);
   font-weight: 600;
   min-height: var(--mf-tap);
   min-width: 0;
-  padding: 0 var(--mf-space-2);
+  overflow: hidden;
+  padding: 0 var(--mf-space-1);
+  position: relative;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.sort:hover:not(:disabled) {
-  border-color: var(--mf-line-strong);
+.sort:hover:not(:disabled):not([aria-pressed="true"]) {
+  color: var(--mf-text);
 }
 
-/* The pressed sort: its own border and tint, not the colour alone. */
+/* The pressed sort: amber ink over the thumb's border, not the colour alone. */
 .sort[aria-pressed="true"] {
-  background: var(--mf-amber-tint);
-  border-color: var(--mf-amber-ink);
   color: var(--mf-amber-ink);
   cursor: default;
 }
 
 .sort:disabled {
-  border-style: dashed;
   color: var(--mf-text-secondary);
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .why {
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-small);
   margin: var(--mf-space-1) 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .thumb {
+    border-color: Highlight;
+    box-shadow: none;
+  }
 }
 
 /* From a tablet up the three sit at the end of their line. */

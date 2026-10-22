@@ -88,6 +88,23 @@ describe('SortControl', () => {
     expect(fixture.componentInstance.picked).toEqual([]);
   });
 
+  it('slides one hidden thumb under the pressed sort, inside the group', () => {
+    const thumbs = () => host().querySelectorAll('fieldset .thumb');
+    expect(thumbs()).toHaveLength(1);
+    const thumb = thumbs()[0];
+    expect(thumb.getAttribute('aria-hidden')).toBe('true');
+    expect(thumb.getAttribute('data-at')).toBe('rating');
+
+    fixture.componentInstance.sort.set('price');
+    fixture.detectChanges();
+    expect(thumbs()[0]).toBe(thumb);
+    expect(thumb.getAttribute('data-at')).toBe('price');
+
+    fixture.componentInstance.sort.set('distance');
+    fixture.detectChanges();
+    expect(thumb.getAttribute('data-at')).toBe('distance');
+  });
+
   it('describes nothing while a place is known', () => {
     expect(button('Distanță')?.hasAttribute('aria-describedby')).toBe(false);
   });
