@@ -89,9 +89,7 @@ const RULES = [
   ['must exist. The `after_specify` and `before_implement` hooks write it', 'phases-close.md'],
   ['`verified` or `use a workflow`', 'phases-close.md'],
   ['CRITICAL/HIGH findings that survive the re-review block completion', 'phases-close.md'],
-  ['The active plan is not written into a tracked file', 'phases-close.md'],
-  ['retro-evidence.mjs --since <start-commit> --jev', 'phases-close.md'],
-  ['instincts.mjs triggered --since <start-commit>', 'phases-close.md'],
+  ['One read-only command, with the same `<start-commit>` the Final Report quotes', 'phases-close.md'],
   ['`--since` is not optional.', 'phases-close.md'],
   // commit-protocol.md
   ['One Conventional Commit per implementation slice', 'commit-protocol.md'],
@@ -114,7 +112,7 @@ const RULES = [
   ['A PR with no checks, or one still failing at the limit, is a Hard Stop', 'tail.md'],
   // report.md: the report's sections and the completion checklist
   ["Phases run, with each one's outcome in a line.", 'report.md'],
-  ['Retrospective evidence (unjudged): both command outputs verbatim', 'report.md'],
+  ["Retrospective evidence (unjudged): the command's output verbatim", 'report.md'],
   ['Red-first proven before implementation', 'report.md'],
   ['No Stryker disable added', 'report.md'],
 ];
@@ -172,6 +170,9 @@ const FORBIDDEN = [
   ['.git/info/exclude', 'specs/ is tracked'],
   ['Jira', 'the tracker is GitHub issues'],
   ['`mutation-runner` per touched package', 'mutation runs only in CI'],
+  ['instincts.mjs triggered', 'instincts left the auto chain'],
+  ['retro-evidence.mjs --since <start-commit> --jev', 'phase 16 runs without the Jev lane'],
+  ['`agent-context`,', 'phase 15 left the story path'],
 ];
 
 describe('speckit-auto layout', () => {
@@ -272,6 +273,18 @@ describe('ST-1360 text lands where the run reads it', () => {
       'Run `node .claude/scripts/context-refresh-gate.mjs specs/<feature>` first.',
       'append `## Refresh <UTC time>` and `gate: no change` to `context.md`, log it, and run no `speckit-context`.',
       '`dispatch <reason>`: log the reason in `auto-run.md` and invoke `speckit-context --since`.');
+  });
+
+  // @traces 1360-FR-006 1360-FR-008
+  it('phase 15 is retired to the session start and phase 16 runs one command', () => {
+    has('.claude/skills/speckit-auto/SKILL.md',
+      '| 15 | Agent context (retired) | none: the session start runs the context-file audit |',
+      'Phases 13 and 16 run beside phase 14\'s reviewers');
+    has('.claude/skills/speckit-auto/phases-close.md',
+      'Nothing runs here. The SessionStart hook (`session-context.mjs`) runs the context-file audit',
+      'node .claude/scripts/retro-evidence.mjs --since <start-commit>\n'.trim(),
+      'learn, evolve and `instincts.mjs` run by hand, outside the chain');
+    assert.ok(!at('.claude/skills/speckit-auto/phases-close.md').includes('--jev'));
   });
 
   // @traces 1360-FR-005

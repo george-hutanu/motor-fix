@@ -56,24 +56,21 @@ pre-existing or adjacent ones included, before ready: fix every verified
 finding in this PR; an owner decision is a `needs-confirmation` question
 (`speckit-tracker-sync blocked <question>`).
 
-### 15. Agent context
+### 15. Agent context (retired)
 
-The active plan is not written into a tracked file: the session start prints
-it from `.specify/feature.json`, so parallel branches never conflict on it.
-Run `node .claude/scripts/context-audit.mjs` and act on its findings
-in `CLAUDE.local.md`; the file may shrink, never grow. Add no
-`<!-- SPECKIT START/END -->` block to `CLAUDE.local.md`, `CLAUDE.md` or `AGENTS.md`.
+Nothing runs here. The SessionStart hook (`session-context.mjs`) runs the context-file audit
+and prints one `context-audit:` line when `CLAUDE.local.md` grew past its
+baseline or has findings; whoever owns the harness acts on it, outside a story.
 
 ### 16. Retrospective evidence — gather it, do not grade yourself
 
-Two read-only commands, with the same `<start-commit>` the Final Report quotes:
+One read-only command, with the same `<start-commit>` the Final Report quotes:
 
 ```
-node .claude/scripts/retro-evidence.mjs --since <start-commit> --jev
-node .claude/scripts/instincts.mjs triggered --since <start-commit>
+node .claude/scripts/retro-evidence.mjs --since <start-commit>
 ```
 
-Attach both outputs to the Final Report under **Retrospective evidence
+Attach its output to the Final Report under **Retrospective evidence
 (unjudged)**. Write nothing: not `specs/<feature>/retrospective.md`, not
 `.specify/memory/instincts/`. No verdict is recorded and no instinct is
 reinforced by this run.
@@ -85,17 +82,11 @@ the failure phase 14 spends two independent subagents avoiding. The verdict
 also carries open action items into the NEXT feature, so a self-flattering one
 damages work that has not started. Same reasoning bars `/speckit-learn`: an
 instinct recorded without a human agreeing to it is indistinguishable from a
-hallucination that got persisted, which is why `triggered` only proposes.
+hallucination that got persisted, so learn, evolve and `instincts.mjs` run by hand, outside the chain.
 
 `--since` is not optional. A feature's directory does not bound its commits
 (the start commit, merges of `origin/main` and code outside `specs/` all fall
 outside it), so the evidence report says so rather than inventing a range.
-
-`--jev` is what adds the **suggested** verdict, with a stated confidence.
-Unlike `artifact-lint` and `diff-audit` this script has no `--check` form, so
-the lane stays opt-in here rather than defaulting on with nothing to turn it
-off again. Report it as suggested, with the number, and stop there. If the
-lane was unavailable, say that — an absent suggestion is not an endorsement.
 
 ### 17. Archive
 

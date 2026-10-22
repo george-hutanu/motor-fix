@@ -122,9 +122,8 @@ Two groups need no output from each other, so run them at once:
   (the `org-researcher` agent with `run_in_background`), beside phase 4's
   `spec-challenger`. Phase 4 answers its questions only once `context.md`
   exists.
-- Phases 13, 15 and 16 run beside phase 14's reviewers: none of them reads
-  the review. Fixes from phase 14 that change code rerun phase 15 only if
-  they changed what it records.
+- Phases 13 and 16 run beside phase 14's reviewers: neither reads the
+  review.
 
 | # | Phase | Skill | Gate override | Detail |
 |---|-------|-------|---------------|--------|
@@ -143,7 +142,7 @@ Two groups need no output from each other, so run them at once:
 | 12 | Harden | `speckit-harden` | Fix every ERROR; never suppress one | `phases-build.md` |
 | 13 | Ticket refresh | `speckit-context --since` | An empty refresh is a pass | `phases-close.md` |
 | 14 | Review | `spec-reviewer` subagent | CRITICAL/HIGH block completion | `phases-close.md` |
-| 15 | Agent context | `context-audit.mjs` (the plan pointer is derived, not written) | The file may shrink, never grow | `phases-close.md` |
+| 15 | Agent context (retired) | none: the session start runs the context-file audit | — | `phases-close.md` |
 | 16 | Retrospective evidence | *(scripts, read-only)* | Gather it; the verdict stays the user's | `phases-close.md` |
 | 17 | Archive | `speckit-archive` | Phase 4 steps 1–3 on the branch, before the hand-off; the tail closes it after the merge | `phases-close.md` |
 
@@ -180,7 +179,7 @@ node .claude/scripts/run-state.mjs set --status in-progress --phase <name> --fea
 
 Use exactly these phase names: `size`, `constitution`, `specify`, `context`,
 `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `tests`, `implement`,
-`converge`, `harden`, `refresh`, `review`, `agent-context`, `retro`, `archive`,
+`converge`, `harden`, `refresh`, `review`, `retro`, `archive`,
 `hand-off`, `pr-test`, `merge`. `/speckit-watch` maps them to a stage
 (`.claude/scripts/watch.mjs`) and judges a worktree stale by that stage's
 threshold; any other name falls back to the feature's artifacts.
