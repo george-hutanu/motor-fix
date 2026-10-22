@@ -19,8 +19,13 @@ export async function signInAs(
   await page.route('**/api/v1/garage/requests*', (route) =>
     route.fulfill({ json: { items: [], nextCursor: null, total: 0 } }),
   );
-  await page.route('**/api/v1/me', (route) =>
-    route.fulfill({
+  // A language switch is saved on the account and kept on the next load.
+  let current = language;
+  await page.route('**/api/v1/me', (route) => {
+    if (route.request().method() === 'PATCH')
+      current = (route.request().postDataJSON() as { language: 'ro' | 'en' })
+        .language;
+    return route.fulfill({
       json: {
         capabilities,
         email: `${role}@example.ro`,
@@ -28,11 +33,11 @@ export async function signInAs(
         garageId: landing === '/app/garage' ? 'garage-1' : null,
         id: `${role}-1`,
         landing,
-        language,
+        language: current,
         name: `Test ${role}`,
         role,
         roles: [role],
       },
-    }),
-  );
+    });
+  });
 }
