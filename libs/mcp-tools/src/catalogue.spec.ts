@@ -106,3 +106,14 @@ describe('catalogue', () => {
     expect(FORBIDDEN.some((pattern) => pattern.test(name))).toBe(true);
   });
 });
+
+// @traces 398-FR-004
+describe('the garage feature switches', () => {
+  it('have no tool: the assistant neither reads nor changes them', () => {
+    for (const tool of catalogue) {
+      expect(`${tool.name} ${tool.description}`).not.toMatch(
+        /feature|switch|team_mechanics|lift_schedule|live_media|day_sheets|whatsapp/i,
+      );
+    }
+  });
+});

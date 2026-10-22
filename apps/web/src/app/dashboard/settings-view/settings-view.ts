@@ -9,9 +9,10 @@ import { PushPanel } from '../push-panel/push-panel';
 import { Session } from '../session';
 
 // Setări of the garage and admin dashboards: for an admin the platform rules
-// and the copy voices first, for a garage's owner its feature switches, then this device's push panel and the person's
-// staff notification choices. Both admin sections load in a chunk of their
-// own (@defer), out of the first bundle.
+// and the copy voices first, for a garage's owner its feature switches, then
+// this device's push panel and the person's staff notification choices. Both
+// admin sections load in a chunk of their own (@defer), out of the first
+// bundle.
 @Component({
   imports: [
     CopyVoices,

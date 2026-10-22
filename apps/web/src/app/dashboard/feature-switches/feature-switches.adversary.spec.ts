@@ -146,7 +146,7 @@ describe('FeatureSwitches under repeated and odd input', () => {
     expect(states(element)).toEqual(['true', 'true', 'true', 'true', 'true']);
   });
 
-  it('keeps the switch where it was when a 200 answer carries no features', async () => {
+  it('reads every switch as on when a 200 answer carries no features', async () => {
     const { element, settle } = await render({ lift_schedule: false });
 
     named(element, LIFT).click();
@@ -157,9 +157,7 @@ describe('FeatureSwitches under repeated and odd input', () => {
     await settle();
 
     expect(named(element, LIFT).disabled).toBe(false);
-    expect(['true', 'false']).toContain(
-      named(element, LIFT).getAttribute('aria-checked'),
-    );
+    expect(named(element, LIFT).getAttribute('aria-checked')).toBe('true');
   });
 
   it('saves nothing when the confirmation closes with no answer', async () => {

@@ -54,6 +54,9 @@ test.describe("the garage's feature switches @seeded", () => {
     const b = await (await browser.newContext()).newPage();
     await openDashboard(a, '/app/garage/settings');
     await openDashboard(b, '/app/garage/team');
+    await b.evaluate(() => {
+      (window as { kept?: boolean }).kept = true;
+    });
 
     const team = a.getByRole('switch', { name: 'Echipă și mecanici' });
     await expect(team).toBeChecked();
@@ -67,6 +70,9 @@ test.describe("the garage's feature switches @seeded", () => {
     await expect(team).not.toBeChecked();
 
     await expect(b).toHaveURL('/app/garage', { timeout: 5000 });
+    expect(await b.evaluate(() => (window as { kept?: boolean }).kept)).toBe(
+      true,
+    );
     await expect(
       menu(b).getByRole('link', { exact: true, name: 'Mecanici' }),
     ).toHaveCount(0, { timeout: 5000 });
