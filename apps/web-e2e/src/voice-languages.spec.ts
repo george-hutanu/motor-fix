@@ -237,6 +237,12 @@ test.describe('every voice on a 320 px phone @seeded', () => {
       const hero = visible(page, 'mf-home .hero [data-voice-of="4"]');
 
       expect(await lines(hero.locator('.label'))).toBe(2);
+      // A phone reads the label at body size, never the 12 px label type.
+      expect(
+        await hero
+          .locator('.label')
+          .evaluate((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
       for (const [brand, shown] of [
         ['BMW', 'BMW‑ul tău'],
         ['Mercedes-Benz', 'Mercedesul tău'],
