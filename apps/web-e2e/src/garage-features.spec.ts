@@ -1,51 +1,90 @@
-import { type APIRequestContext, expect, type Page } from '@playwright/test';
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
+import { expect, type Page } from '@playwright/test';
+import { Client } from 'pg';
 
-import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { ready, signIn } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
 // @traces 398-FR-009 398-FR-010 398-FR-012 398-FR-014
 
-async function teamOn(request: APIRequestContext) {
-  const signedIn = await request.post('/api/v1/auth/sign-in', {
-    data: { email: ACCOUNTS.twoRoles, password: PASSWORD, remember: false },
-  });
-  const { accessToken } = (await signedIn.json()) as { accessToken: string };
-  const headers = { Authorization: `Bearer ${accessToken}` };
-  const me = (await (await request.get('/api/v1/me', { headers })).json()) as {
-    garageId: string;
-  };
-  const res = await request.put(
-    `/api/v1/garages/${me.garageId}/features/team_mechanics`,
-    { data: { enabled: true }, headers },
+// A garage and its owner of this file's own: every approved seeded garage has
+// a mechanic, which refuses the team switch (398-FR-005), and switching a
+// seeded garage's features would reach every other spec running beside this
+// one. A deployed address, whose run has no DATABASE_URL, skips the file.
+test.describe("the garage's feature switches @seeded @database", () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its garage and owner straight to PostgreSQL, which needs DATABASE_URL',
   );
-  expect(res.status()).toBe(200);
-}
 
-async function openDashboard(page: Page, path: string) {
-  await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
-  const live = page.waitForResponse((r) => r.url().endsWith('/api/v1/live'));
-  await signIn(page, ACCOUNTS.twoRoles);
-  await expect(page).toHaveURL('/app/garage');
-  expect((await live).status()).toBe(200);
-  await page.goto(path);
-}
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const owner = {
+    email: `functii-${stamp}@example.test`,
+    password: 'proprietar-functii-2026',
+  };
+  let db: Client;
+  let garageId = '';
 
-const menu = (page: Page) => page.getByRole('navigation').first();
-
-// Service Dobre's owner: a garage with no mechanic of its own.
-test.describe("the garage's feature switches @seeded", () => {
-  test.beforeEach(async ({ request }) => {
-    await teamOn(request);
+  test.beforeAll(async ({ request }) => {
+    db = new Client({ connectionString: process.env['DATABASE_URL'] });
+    await db.connect();
+    const garage = await db.query<{ id: string }>(
+      `INSERT INTO garage (id, name, slug, status, approved_at)
+       VALUES (gen_random_uuid(), $1, $2, 'approved', now()) RETURNING id`,
+      [`Service Funcții ${stamp}`, `e2e-functii-${stamp}`],
+    );
+    garageId = garage.rows[0]?.id ?? '';
+    const signUp = await request.post('/api/v1/auth/sign-up', {
+      data: {
+        consent: CURRENT_CONSENT,
+        email: owner.email,
+        language: 'ro',
+        name: `Proprietar ${stamp}`,
+        password: owner.password,
+      },
+      headers: { 'x-forwarded-for': `203.0.113.${(Date.now() + 11) % 250}` },
+    });
+    expect(signUp.status()).toBe(201);
+    const account = await db.query<{ id: string }>(
+      'SELECT id FROM account WHERE email = $1',
+      [owner.email],
+    );
+    const accountId = account.rows[0]?.id ?? '';
+    await db.query(
+      `INSERT INTO account_role (account_id, role) VALUES ($1, 'garage')
+       ON CONFLICT DO NOTHING`,
+      [accountId],
+    );
+    await db.query(`UPDATE account SET last_role = 'garage' WHERE id = $1`, [
+      accountId,
+    ]);
+    await db.query(
+      `INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, 'owner')`,
+      [garageId, accountId],
+    );
   });
 
-  test.afterEach(async ({ request }) => {
-    await teamOn(request);
+  test.afterAll(async () => {
+    await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
+    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
+    await db.end();
   });
+
+  async function openDashboard(page: Page, path: string) {
+    await ready(page, '/ro');
+    await page
+      .getByRole('banner')
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+    const live = page.waitForResponse((r) => r.url().endsWith('/api/v1/live'));
+    await signIn(page, owner.email, { password: owner.password });
+    await expect(page).toHaveURL('/app/garage');
+    expect((await live).status()).toBe(200);
+    await page.goto(path);
+  }
+
+  const menu = (page: Page) => page.getByRole('navigation').first();
 
   test('switching the team off in one tab takes Mecanici away from another open tab, and back', async ({
     browser,
@@ -63,6 +102,10 @@ test.describe("the garage's feature switches @seeded", () => {
     await team.click();
     const confirm = a.getByRole('dialog');
     await expect(confirm).toBeVisible();
+    // The dialog fades in: axe reads its colours once every animation is done.
+    await a.waitForFunction(() =>
+      document.getAnimations().every((x) => x.playState !== 'running'),
+    );
     expect(await violations(a, {}, { include: [['[role="dialog"]']] })).toEqual(
       [],
     );
