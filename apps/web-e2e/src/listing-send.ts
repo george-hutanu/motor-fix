@@ -43,6 +43,7 @@ export async function fillListing(
   context: BrowserContext,
   page: Page,
   name: string,
+  photo: ReturnType<typeof jpeg> = jpeg('fata.jpg'),
 ) {
   const copy = structuredClone(KEPT);
   copy.data.steps['1'].name = name;
@@ -63,9 +64,7 @@ export async function fillListing(
   await page.locator('mf-brands-step .chips > li > button').first().click();
   await range(page, 'Manoperă, pe oră', '120', '200');
   for (const [job, from, to] of JOBS) await range(page, job, from, to);
-  await photos(page)
-    .locator('input[type="file"]')
-    .setInputFiles([jpeg('fata.jpg')]);
+  await photos(page).locator('input[type="file"]').setInputFiles([photo]);
   // The photo counts only once its upload has a key on the server.
   await expect(photos(page).locator('li.photo').first()).toHaveAttribute(
     'data-key',

@@ -1,9 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
+import sharp from 'sharp';
 
 import { ownAddress, ownMap, signInAsAdmin2 } from './accounts.js';
 import { test } from './fixtures.js';
-import { jpeg } from './listing-kept.js';
 import {
   answerSurvey,
   confirmation,
@@ -21,6 +21,18 @@ const NOTE = 'Adăugați trei fotografii cu atelierul din interior.';
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 const photos = (page: Page) => page.locator('mf-photos-step');
+
+// A photo the worker can decode: the file shows only photos it has copied,
+// so the store's bare header would leave the count at none.
+const jpeg = async (name: string) => ({
+  buffer: await sharp({
+    create: { background: '#8a5a2b', channels: 3, height: 480, width: 640 },
+  })
+    .jpeg()
+    .toBuffer(),
+  mimeType: 'image/jpeg',
+  name,
+});
 
 // A listing sent by a new owner, asked for photos by an admin, completed and
 // sent back from the same form: the admins' queue shows it updated, with the
@@ -46,7 +58,7 @@ test.describe('sending the file again after a request for more @database', () =>
     test.slow();
     const name = `Retrimis ${unique()}`;
     await ownAddress(page, '198.51.100');
-    await fillListing(context, page, name);
+    await fillListing(context, page, name, await jpeg('fata.jpg'));
     const email = await page.getByLabel('E‑mail').inputValue();
     await page.locator('.actions .send').click();
     await answerSurvey(page);
@@ -77,7 +89,7 @@ test.describe('sending the file again after a request for more @database', () =>
 
     await photos(page)
       .locator('input[type="file"]')
-      .setInputFiles([jpeg('a.jpg'), jpeg('b.jpg'), jpeg('c.jpg')]);
+      .setInputFiles(await Promise.all(['a.jpg', 'b.jpg', 'c.jpg'].map(jpeg)));
     await expect(photos(page).locator('li.photo[data-key]')).toHaveCount(4);
     await page.locator('.actions .send').click();
     await confirmation(page).locator('button.tell-us').click();
@@ -104,7 +116,15 @@ test.describe('sending the file again after a request for more @database', () =>
       const changes = queue
         .locator('mf-verification-file')
         .getByRole('region', { name: 'Ce s‑a schimbat' });
-      await expect(changes.locator('[data-area="photos"]')).toContainText('3');
+      // The worker copies the photos in the background: read again until
+      // all four are in the file.
+      await expect(async () => {
+        await queue.reload();
+        await expect(changes.locator('[data-area="photos"]')).toContainText(
+          'Fotografii: 1 → 4',
+          { timeout: 2_000 },
+        );
+      }).toPass({ timeout: 30_000 });
     } finally {
       await admin.close();
     }
