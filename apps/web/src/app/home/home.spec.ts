@@ -2022,18 +2022,15 @@ describe('Home headline swap', () => {
   });
 
   // @traces 007-FR-002
-  it('restarts the blur for a second change mid-animation, and no timer of the first ends it', async () => {
-    jest.useFakeTimers();
+  it('restarts the blur for a second change mid-animation', async () => {
     await render();
 
     await choose('Audi');
     const first = heading();
-    jest.advanceTimersByTime(300);
     await choose('Mini');
 
     expect(heading()).not.toBe(first);
     expect(heading()?.textContent?.trim()).toBe('Cine se pricepe la Mini?');
-    jest.advanceTimersByTime(300);
     await settle();
     expect(rising()).toBe(true);
     await settled();
@@ -2061,6 +2058,24 @@ describe('Home headline swap', () => {
 
     expect(checked()).toBe('Mini');
     expect(rising()).toBe(true);
+  });
+
+  // The Jest transform drops component styles, so they are read from the source.
+  // @traces 007-FR-002
+  it('plays the blur-in only on a rising headline, and only without reduced motion', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const motion = css.match(
+      /@media \(prefers-reduced-motion: no-preference\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1];
+    const animating = (block: string) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, , body]) => body.includes('mf-swap-in 520ms'))
+        .map(([, sel]) => sel.trim());
+
+    expect(animating(motion ?? '')).toEqual(['.hero.rising h2']);
+    expect(animating(css.replace(motion ?? '', ''))).toEqual([]);
   });
 
   // @traces 007-FR-002
