@@ -12,6 +12,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../../notifications/notifications.testing';
+import { quotesWorld } from '../../../quotes/quotes.testing';
 
 const { account, prisma, reset } = fixtures();
 const { metricReader } = inMemory();
@@ -107,7 +108,9 @@ describe('the stored settings', () => {
     expect(list.voices).toEqual(
       [1, 2, 3, 4, 5].map((voice) => ({
         enabled: true,
+        listings: 0,
         pinned: false,
+        requests: 0,
         updatedAt: null,
         voice,
       })),
@@ -278,5 +281,96 @@ describe('changing a voice', () => {
     await refusal(voices().change(ioana, 5, { ...OFF, seen: PINNED }));
 
     expect(await added()).toEqual({ disabled: 1, pinned: 1, unpinned: 1 });
+  });
+});
+
+const DAY = 86_400_000;
+const world = quotesWorld(prisma);
+const daysAgo = (days: number) => new Date(Date.now() - days * DAY);
+
+async function requestIn(voice: number | null, days = 1) {
+  const driver = await world.account('Andrei Marin');
+  const { id } = await world.request(driver, { createdAt: daysAgo(days) });
+  await prisma.$executeRaw`
+    UPDATE quote_request SET copy_voice = ${voice} WHERE id = ${id}::uuid`;
+}
+
+async function draftIn(
+  voice: number | null,
+  days = 1,
+  status: 'open' | 'submitted' = 'open',
+) {
+  const { id } = await prisma.listingDraft.create({
+    data: {
+      createdAt: daysAgo(days),
+      email: 'owner@example.test',
+      language: 'ro',
+      status,
+      step: 1,
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.$executeRaw`
+    UPDATE listing_draft SET copy_voice = ${voice} WHERE id = ${id}::uuid`;
+}
+
+// Each voice's counts, 0 where none is given.
+const tallies = (given: Record<number, object> = {}) =>
+  [1, 2, 3, 4, 5].map((voice) => ({
+    listings: 0,
+    requests: 0,
+    voice,
+    ...given[voice],
+  }));
+
+// @traces 009-FR-008
+describe('what each voice brought in the last 30 days', () => {
+  it('counts a request sent 29 days ago and not one sent 31 days ago', async () => {
+    await requestIn(2, 29);
+    await requestIn(2, 31);
+
+    const list = await voices().list(ioana);
+
+    expect(list.voices).toMatchObject(tallies({ 2: { requests: 1 } }));
+  });
+
+  it('counts the drafts started in a voice, sent or not', async () => {
+    await draftIn(4, 1);
+    await draftIn(4, 10, 'submitted');
+    await draftIn(4, 31);
+
+    const list = await voices().list(ioana);
+
+    expect(list.voices).toMatchObject(tallies({ 4: { listings: 2 } }));
+  });
+
+  it('counts a request or a draft without a voice for no voice', async () => {
+    await requestIn(null);
+    await draftIn(null);
+
+    const list = await voices().list(ioana);
+
+    expect(list.voices).toMatchObject(tallies());
+  });
+
+  it('answers a change with the same counts', async () => {
+    await requestIn(3);
+    await draftIn(3);
+
+    const list = await voices().change(ioana, 1, { ...OFF, seen: ON });
+
+    expect(list.voices).toMatchObject(
+      tallies({ 3: { listings: 1, requests: 1 } }),
+    );
+  });
+
+  it('leaves the public read without counts', async () => {
+    await requestIn(3);
+    await draftIn(3);
+
+    expect(await voices().settings()).toEqual({
+      enabled: [1, 2, 3, 4, 5],
+      pinned: null,
+    });
   });
 });

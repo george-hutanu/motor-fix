@@ -25,6 +25,18 @@ export class CopyVoiceDto extends CopyVoiceStateDto {
 
   @ApiProperty({ format: 'date-time', nullable: true, type: String })
   updatedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Quote requests sent in this voice in the last 30 days',
+    minimum: 0,
+  })
+  requests!: number;
+
+  @ApiProperty({
+    description: 'Listing drafts started in this voice in the last 30 days',
+    minimum: 0,
+  })
+  listings!: number;
 }
 
 export class CopyVoicesDto {

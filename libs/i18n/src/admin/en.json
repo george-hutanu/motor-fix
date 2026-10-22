@@ -1,7 +1,11 @@
 {
   "copyVoices": {
     "lastVoice": "At least one voice stays on",
-    "line": "Which copy visitors see on the home page",
+    "line": "Which copy visitors see on the home page · totals in the last 30 days",
+    "listings": {
+      "one": "{n} listing started",
+      "other": "{n} listings started"
+    },
     "loadFailed": "Could not load the voices",
     "name": {
       "v1": "1 · Straight to the point",
@@ -13,6 +17,10 @@
     "paused": "paused while voice {voice} is pinned",
     "pin": "Pin for everyone",
     "pinnedHint": "Remove the pin to switch it off",
+    "requests": {
+      "one": "{n} quote request",
+      "other": "{n} quote requests"
+    },
     "retry": "Try again",
     "saveFailed": "Could not save. Try again.",
     "stale": "The voice changed in the meantime. We read it again.",

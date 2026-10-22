@@ -17130,13 +17130,25 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "requests": {
+            "type": "number",
+            "description": "Quote requests sent in this voice in the last 30 days",
+            "minimum": 0
+          },
+          "listings": {
+            "type": "number",
+            "description": "Listing drafts started in this voice in the last 30 days",
+            "minimum": 0
           }
         },
         "required": [
           "enabled",
           "pinned",
           "voice",
-          "updatedAt"
+          "updatedAt",
+          "requests",
+          "listings"
         ]
       },
       "CopyVoicesDto": {
