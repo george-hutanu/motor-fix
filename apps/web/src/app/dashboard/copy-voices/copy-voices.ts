@@ -14,7 +14,7 @@ import {
   type CopyVoiceDto,
   type CopyVoicesDto,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmSwitch } from '@motor-fix/ui-cockpit';
 import { debounceTime, filter } from 'rxjs';
 
@@ -24,8 +24,9 @@ type State = Pick<CopyVoiceDto, 'enabled' | 'pinned'>;
 
 const PLACEHOLDERS = [1, 2, 3, 4, 5];
 
-// The example line shows each voice's Home headline for one brand.
-const BRAND = { brand: 'BMW' };
+// The example line shows each voice's Home headline for one brand; voice 3's
+// figures stay empty, as on Home before its answer arrives.
+const BRAND = { brand: 'BMW', figures: '' };
 
 // The refusals the section names; anything else reads as a failed save.
 const ERRORS: Record<string, string> = {
@@ -99,6 +100,17 @@ export class CopyVoices implements OnInit {
 
   protected example(v: CopyVoiceDto) {
     return `public.voice.v${v.voice}.headline`;
+  }
+
+  // What the voice brought in the last 30 days, in the language shown.
+  protected counts(v: CopyVoiceDto) {
+    const language = this.i18n.language();
+    const plural = (key: string, value: number) =>
+      this.i18n.t(`admin.copyVoices.${key}`, {
+        count: value,
+        n: formatNum(value, language),
+      });
+    return `${plural('requests', v.requests)} · ${plural('listings', v.listings)}`;
   }
 
   protected pinLabel(v: CopyVoiceDto) {

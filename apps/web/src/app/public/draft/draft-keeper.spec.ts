@@ -33,7 +33,7 @@ describe('DraftKeeper before the check', () => {
   let api: Record<string, jest.Mock>;
   let track: jest.Mock;
 
-  function keeper(draft: Partial<BrowserDraft> = {}) {
+  function keeper(draft: Partial<BrowserDraft> = {}, granted = false) {
     track = jest.fn();
     api = {
       listingDraftsControllerCheck: jest.fn().mockResolvedValue({
@@ -51,7 +51,7 @@ describe('DraftKeeper before the check', () => {
     TestBed.configureTestingModule({
       providers: [
         DraftKeeper,
-        { provide: Consent, useValue: { track } },
+        { provide: Consent, useValue: { granted: () => granted, track } },
         { provide: ListingDraftsService, useValue: api },
         { provide: I18n, useValue: { language: () => 'ro' } },
         { provide: Router, useValue: { navigate: jest.fn() } },
@@ -86,7 +86,7 @@ describe('DraftKeeper before the check', () => {
     expect(await kept.flush()).toBe(true);
 
     expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(1);
-    expect(track.mock.calls).toEqual([['listing_started']]);
+    expect(track.mock.calls.map(([name]) => name)).toEqual(['listing_started']);
   });
 
   // @traces 250-FR-005
@@ -324,6 +324,52 @@ describe('DraftKeeper before the check', () => {
       expect(await kept.submit('k-1')).toEqual({ kind: 'failed' });
       expect(kept.note()).toBeNull();
       expect(kept.view()).toBe('form');
+    });
+  });
+
+  // @traces 009-FR-002 009-FR-006
+  describe('the visit’s voice on a new listing', () => {
+    const html = document.documentElement;
+    const created = () =>
+      api['listingDraftsControllerCreate'].mock.calls[0][0].body;
+
+    async function start(marks: string[], granted: boolean) {
+      TestBed.resetTestingModule();
+      html.setAttribute('data-voice', '3');
+      for (const name of marks) html.setAttribute(name, '');
+      const kept = keeper({ dirty: true }, granted);
+      expect(await kept.flush()).toBe(true);
+    }
+
+    afterEach(() => {
+      for (const name of ['data-voice', 'data-home', 'data-voice-new'])
+        html.removeAttribute(name);
+      localStorage.removeItem('mf-copy');
+    });
+
+    it('sends the voice with the first server copy only under consent, on a page loaded on Home', async () => {
+      localStorage.setItem('mf-copy', '5');
+
+      await start(['data-home'], true);
+      expect(created()).toMatchObject({ copyVoice: 3 });
+
+      await start(['data-home'], false);
+      expect('copyVoice' in created()).toBe(false);
+
+      html.removeAttribute('data-home');
+      await start([], true);
+      expect('copyVoice' in created()).toBe(false);
+    });
+
+    it('tells a listing started with the voice only on a page loaded on Home', async () => {
+      await start(['data-home'], true);
+      expect(track.mock.calls).toEqual([['listing_started', { voice: 3 }]]);
+
+      html.removeAttribute('data-home');
+      await start([], true);
+      expect(track.mock.calls).toHaveLength(1);
+      expect(track.mock.calls[0][0]).toBe('listing_started');
+      expect(track.mock.calls[0][1] ?? {}).not.toHaveProperty('voice');
     });
   });
 });

@@ -786,3 +786,20 @@ describe('a draft bound to a file asked for more', () => {
     ).toMatchObject({ status: 'submitted', submitKey: 'key-2' });
   });
 });
+
+// @traces 009-FR-007
+describe('the copy voice of a sent draft', () => {
+  it('stays as it was stored when the draft started', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    await prisma.$executeRaw`
+      UPDATE listing_draft SET copy_voice = 3 WHERE id = ${id}::uuid`;
+
+    await service.submit(actor, id, token, 'key-1');
+
+    const [row] = await prisma.$queryRaw<
+      { copy_voice: number | null; status: string }[]
+    >`SELECT copy_voice, status::text FROM listing_draft WHERE id = ${id}::uuid`;
+    expect(row).toEqual({ copy_voice: 3, status: 'submitted' });
+  });
+});

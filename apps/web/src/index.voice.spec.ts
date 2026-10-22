@@ -399,3 +399,67 @@ describe('the settings the app hands over', () => {
     expect(mark()).toBe(moved);
   });
 });
+
+// The marks of one load: on Home, and whether it took the visit's voice.
+function marks(store: Store, options: Load = {}) {
+  const html = document.documentElement;
+  html.removeAttribute('data-home');
+  html.removeAttribute('data-voice-new');
+  load(store, options);
+  return {
+    home: html.hasAttribute('data-home'),
+    taken: html.hasAttribute('data-voice-new'),
+  };
+}
+
+// @traces 009-FR-001 009-FR-011
+describe('the marks a load leaves for the app', () => {
+  afterAll(() => {
+    document.documentElement.removeAttribute('data-home');
+    document.documentElement.removeAttribute('data-voice-new');
+  });
+
+  it('marks a Home load that took a voice', () => {
+    expect(marks(new Map())).toEqual({ home: true, taken: true });
+    expect(marks(new Map(), { path: '/en/' })).toEqual({
+      home: true,
+      taken: true,
+    });
+  });
+
+  it('marks a Home load that kept the voice as on Home only', () => {
+    const store: Store = new Map();
+    load(store);
+
+    expect(marks(store, { at: 1_001_000 })).toEqual({
+      home: true,
+      taken: false,
+    });
+  });
+
+  it('leaves no mark on another page, even one that took a voice', () => {
+    expect(marks(new Map(), { path: '/garaje' })).toEqual({
+      home: false,
+      taken: false,
+    });
+  });
+
+  it('marks a Home load that drew a voice with storage refused', () => {
+    expect(marks(new Map(), { blocked: true })).toEqual({
+      home: true,
+      taken: true,
+    });
+    expect(marks(new Map(), { blocked: true, path: '/garaje' })).toEqual({
+      home: false,
+      taken: false,
+    });
+  });
+
+  it('marks a pinned voice given to a new visit as taken', () => {
+    const store: Store = new Map([
+      ['mf-copy-voices', JSON.stringify({ enabled: [1, 4], pinned: 4 })],
+    ]);
+
+    expect(marks(store)).toEqual({ home: true, taken: true });
+  });
+});

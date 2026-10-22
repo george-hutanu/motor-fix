@@ -19,6 +19,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Consent } from '../../../consent/consent';
 import { confirmRoleHint, Session } from '../../../dashboard/session';
+import { Voice } from '../../../voice/voice';
 import type {
   RequestQuoteData,
   RequestQuoteResult,
@@ -60,6 +61,7 @@ export class RequestQuoteButton {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly consent = inject(Consent);
+  private readonly voice = inject(Voice);
   protected readonly i18n = inject(I18n);
 
   protected readonly sent = signal<RequestDto | null>(null);
@@ -85,7 +87,10 @@ export class RequestQuoteButton {
 
   protected async open() {
     const jobs = this.jobs();
-    this.consent.track('quote_request_started', { source: 'profile' });
+    this.consent.track('quote_request_started', {
+      source: 'profile',
+      voice: this.voice.voice,
+    });
     const source =
       this.route.snapshot.queryParamMap.get('src') === 'share'
         ? 'shared_link'

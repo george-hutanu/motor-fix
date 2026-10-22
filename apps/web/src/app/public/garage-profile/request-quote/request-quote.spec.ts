@@ -151,6 +151,7 @@ async function open(
     hint?: 'driver' | null;
     signsIn?: boolean;
     jobTypeIds?: string[];
+    granted?: boolean;
   } = {},
 ) {
   list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
@@ -162,7 +163,10 @@ async function open(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: Consent, useValue: { track } },
+      {
+        provide: Consent,
+        useValue: { granted: signal(options.granted ?? false), track },
+      },
       {
         provide: Session,
         useValue: {
@@ -905,8 +909,11 @@ describe('the confirmation’s answering line', () => {
 
 // @traces 250-FR-005
 describe('the quote request sent event', () => {
+  // The voice has its own tests below.
   const told = () =>
-    track.mock.calls.filter(([name]) => name === 'quote_request_sent');
+    track.mock.calls
+      .filter(([name]) => name === 'quote_request_sent')
+      .map(([name, { voice: _, ...props }]) => [name, props]);
 
   it('tells the request once it is created, from what was sent', async () => {
     await open();
@@ -970,6 +977,48 @@ describe('the quote request sent event', () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(told()).toHaveLength(1);
+  });
+});
+
+// @traces 009-FR-002 009-FR-004
+describe('the visit’s voice on a sent request', () => {
+  afterEach(() => document.documentElement.removeAttribute('data-voice'));
+
+  async function sendWith(granted: boolean) {
+    await open({ granted });
+    jobSwitch('Schimb ulei').click();
+    await settle();
+    await press();
+    return send.mock.calls[0][0];
+  }
+
+  it('tells the request sent with the voice', async () => {
+    document.documentElement.setAttribute('data-voice', '2');
+
+    await sendWith(false);
+
+    expect(track).toHaveBeenCalledWith('quote_request_sent', {
+      brand: 'dacia',
+      garages: '1',
+      jobs: 1,
+      voice: 2,
+    });
+  });
+
+  it('sends the voice in the request only under consent, the rest of the send unchanged', async () => {
+    document.documentElement.setAttribute('data-voice', '2');
+    const without = await sendWith(false);
+    TestBed.resetTestingModule();
+    document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+      n.innerHTML = '';
+    });
+
+    const consented = await sendWith(true);
+
+    expect('copyVoice' in without.body).toBe(false);
+    expect(consented.body).toEqual({ ...without.body, copyVoice: 2 });
+    expect(consented['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/);
+    expect(Object.keys(consented).sort()).toEqual(Object.keys(without).sort());
   });
 });
 

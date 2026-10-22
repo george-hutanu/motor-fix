@@ -34,6 +34,7 @@ features:
   - 116-listing-verification-status
   - 208-resubmit-after-more
   - 330-listed-facilities
+  - 009-copy-voice-analytics
 ---
 
 # Capability: Garage listing
@@ -1190,6 +1191,13 @@ _From 330-listed-facilities._
 ### 330-FR-004 — At send, the note MUST be saved on the garage (trimmed; no note when absent or empty) in the same transaction as the facility rows (116-FR-010), the database refusing a note over 200 characters or blank; if any write fails, the send fails whole and the draft stays open. The note's starting value is recorded in the garage's audit history as a change of the garage's `facilitiesNote` from empty to the note (no entry when there is none). The column is nullable and added without a backfill: garages that already exist have no note, and the migration is additive only.
 
 _From 330-listed-facilities._
+### 009-FR-006 — When the web app creates the server copy of a listing draft (114-FR-005), the body MUST carry `copyVoice` only when both hold: a valid granted consent is in force, and the form was opened from Home, meaning the document loaded on Home (the Romanian or English Home address) and the form was reached inside the app, in that same page session, by any route. A form whose document loaded by its own address (a direct link, a reload, a continue link, a copy-of-a-live-garage link) MUST send no `copyVoice`, whatever the device's stored voice.
+
+_From 009-copy-voice-analytics._
+
+### 009-FR-007 — A listing draft MUST store `copy_voice` under the same rules as FR-005: empty or 1–5, set at creation from `copyVoice` when it is an integer 1–5, otherwise empty, never refusing the call, never changed by a later save, submit, reminder or link.
+
+_From 009-copy-voice-analytics._
 
 ## Retired
 

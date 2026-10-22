@@ -9,9 +9,19 @@ export interface CopyVoiceDto {
   enabled: boolean;
 
   /**
+   * Listing drafts started in this voice in the last 30 days
+   */
+  listings: number;
+
+  /**
    * Every new visit gets this voice
    */
   pinned: boolean;
+
+  /**
+   * Quote requests sent in this voice in the last 30 days
+   */
+  requests: number;
   updatedAt: string | null;
   voice: number;
 }

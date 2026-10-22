@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
 import {
+  CreateListingDraftDto,
   checkListing,
   type ListingDraftData,
   UNNAMED_LISTING,
 } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 
 import { DRAFT_MAX_BYTES } from './listing-drafts';
 import { ListingDraftsService } from './listing-drafts.service';
@@ -1494,5 +1496,49 @@ describe('checking a draft', () => {
     expect(await prisma.listingDraft.count()).toBe(drafts);
     expect(await prisma.listingDraftToken.count()).toBe(tokens);
     expect(sent).toEqual([]);
+  });
+});
+
+const voiceOf = async (id: string) => {
+  const [row] = await prisma.$queryRaw<{ copy_voice: number | null }[]>`
+    SELECT copy_voice FROM listing_draft WHERE id = ${id}::uuid`;
+  return row?.copy_voice;
+};
+
+// The body as the API's pipe hands it to the service.
+const atEdge = (overrides: Record<string, unknown>) =>
+  plainToInstance(CreateListingDraftDto, body(overrides));
+
+// @traces 009-FR-007
+describe('the copy voice of a draft', () => {
+  it('stores the voice the draft was started in', async () => {
+    const created = await service.create(atEdge({ copyVoice: 3 }));
+
+    expect(await voiceOf(created.id)).toBe(3);
+  });
+
+  it.each([7, 0, 'x', null])(
+    'stores no voice for %p and answers as without one',
+    async (copyVoice) => {
+      const without = await service.create(atEdge({}));
+
+      const created = await service.create(atEdge({ copyVoice }));
+
+      expect(created).toEqual({
+        ...without,
+        id: created.id,
+        token: created.token,
+        updatedAt: created.updatedAt,
+      });
+      expect(await voiceOf(created.id)).toBeNull();
+    },
+  );
+
+  it('keeps the voice through a save', async () => {
+    const created = await service.create(atEdge({ copyVoice: 3 }));
+
+    await service.save(created.id, created.token, body({ step: 2 }));
+
+    expect(await voiceOf(created.id)).toBe(3);
   });
 });

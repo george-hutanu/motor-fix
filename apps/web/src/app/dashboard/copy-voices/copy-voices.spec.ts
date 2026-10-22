@@ -18,12 +18,18 @@ const ON: State = { enabled: true, pinned: false };
 const OFF: State = { enabled: false, pinned: false };
 const PINNED: State = { enabled: true, pinned: true };
 
+// The quote requests and listings started of each voice, 0 when not given.
+type Counts = Partial<Record<number, [number, number]>>;
+
 const voices = (
   states: Partial<Record<number, State>> = {},
+  counts: Counts = {},
 ): CopyVoicesDto => ({
   voices: [1, 2, 3, 4, 5].map(
     (voice): CopyVoiceDto => ({
       ...(states[voice] ?? ON),
+      listings: counts[voice]?.[1] ?? 0,
+      requests: counts[voice]?.[0] ?? 0,
       updatedAt: null,
       voice,
     }),
@@ -125,6 +131,13 @@ describe('the copy voices section', () => {
     expect(text(row(element, 5))).toContain(
       'Știi cât costă înainte să lași cheile.',
     );
+  });
+
+  it('fills every placeholder of the example headline, voice 3 included', async () => {
+    const { element } = await render();
+
+    for (const li of rows(element)) expect(text(li)).not.toMatch(/[{}]/);
+    expect(text(row(element, 3))).toContain('BMW.');
   });
 
   it('keeps the switch and the pin together on one line after the name', async () => {
@@ -363,5 +376,59 @@ describe('a change made elsewhere', () => {
     await settle();
 
     expect(list).toHaveBeenCalledTimes(2);
+  });
+});
+
+// @traces 009-FR-009
+describe('what each voice brought in', () => {
+  const COUNTS: Counts = { 1: [12, 3], 2: [1, 20], 4: [12345, 1] };
+  // The lines of a row's name column: the name, the example, the counts.
+  const lines = (element: HTMLElement, voice: number) =>
+    [...(row(element, voice).querySelector('.name')?.children ?? [])].map(text);
+
+  it('shows the counts under the example line, in Romanian plurals', async () => {
+    const { element } = await render(voices({}, COUNTS));
+
+    expect(lines(element, 1).slice(1, 3)).toEqual([
+      'Cine se pricepe la BMW?',
+      '12 cereri de ofertă · 3 înscrieri începute',
+    ]);
+    expect(lines(element, 2)[2]).toBe(
+      '1 cerere de ofertă · 20 de înscrieri începute',
+    );
+    expect(lines(element, 3)[2]).toBe(
+      '0 cereri de ofertă · 0 înscrieri începute',
+    );
+    expect(lines(element, 4)[2]).toBe(
+      '12.345 de cereri de ofertă · 1 înscriere începută',
+    );
+  });
+
+  it('shows the counts in English', async () => {
+    const { element } = await render(voices({}, COUNTS), 'en');
+
+    expect(lines(element, 1).slice(1, 3)).toEqual([
+      'Who’s tuned for your BMW?',
+      '12 quote requests · 3 listings started',
+    ]);
+    expect(lines(element, 2)[2]).toBe('1 quote request · 20 listings started');
+    expect(lines(element, 3)[2]).toBe('0 quote requests · 0 listings started');
+    expect(lines(element, 4)[2]).toBe(
+      '12,345 quote requests · 1 listing started',
+    );
+  });
+
+  it('names the 30 days once, in the section’s hint', async () => {
+    const ro = await render(voices({}, COUNTS));
+    expect(text(ro.element.querySelector('p.hint') as Element)).toBe(
+      'Ce variante de text văd vizitatorii pe prima pagină · totaluri în ultimele 30 de zile',
+    );
+    expect(text(ro.element).split('30 de zile')).toHaveLength(2);
+    TestBed.resetTestingModule();
+
+    const en = await render(voices({}, COUNTS), 'en');
+    expect(text(en.element.querySelector('p.hint') as Element)).toBe(
+      'Which copy visitors see on the home page · totals in the last 30 days',
+    );
   });
 });

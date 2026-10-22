@@ -160,10 +160,10 @@ test.describe('the launch events @seeded', () => {
       .toEqual([
         { n: 'brand_picked', p: { brand: 'dacia', source: 'home_picker' } },
         { n: 'garage_opened', p: { source: 'results' } },
-        { n: 'quote_request_started', p: { source: 'profile' } },
+        { n: 'quote_request_started', p: { source: 'profile', voice: 1 } },
         {
           n: 'quote_request_sent',
-          p: { brand: 'dacia', garages: '2–3', jobs: 1 },
+          p: { brand: 'dacia', garages: '2–3', jobs: 1, voice: 1 },
         },
       ]);
     for (const { u, p } of events) {
