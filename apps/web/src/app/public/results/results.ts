@@ -34,6 +34,8 @@ import {
   SEARCH_PINS_MAX,
   SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
+  SEARCH_SORTS,
+  type SearchSort,
 } from '@motor-fix/contracts/search-place';
 import {
   type BrandDto,
@@ -52,6 +54,7 @@ import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
 import { ResultsMemory } from './results-memory/results-memory';
 import { ResultsSheet } from './results-sheet/results-sheet';
+import { SortControl } from './sort-control/sort-control';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
@@ -115,6 +118,10 @@ type Paging = 'idle' | 'loading' | 'failed';
 const firstPage = (page: Page | undefined) =>
   page?.items.slice(0, SEARCH_IDS_MAX).map((garage) => garage.id) ?? [];
 
+// The sort the bar names; anything else is the rating order.
+const sortIn = (value: string | null): SearchSort =>
+  SEARCH_SORTS.find((sort) => sort === value) ?? 'rating';
+
 const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
@@ -128,6 +135,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
     ResultsMap,
     ResultsSheet,
     RouterLink,
+    SortControl,
     TranslatePipe,
   ],
   selector: 'mf-results',
@@ -167,6 +175,12 @@ export class Results {
   private readonly radius = computed(() =>
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
+  protected readonly sort = computed(() => sortIn(this.bar().get('sort')));
+  // The sort the control marks: distance waits for a place, the rating order
+  // showing meanwhile.
+  protected readonly sortShown = computed(() =>
+    this.sort() === 'distance' && !this.near() ? 'rating' : this.sort(),
+  );
 
   // The browser could not give a place: refused, failed, outside Romania or
   // silent for 10 s. Results then waits for one the driver gives.
@@ -178,7 +192,7 @@ export class Results {
   private keptBox = this.server
     ? undefined
     : this.memory.boxOf(
-        this.searchOf(this.brand(), this.near(), this.radius()),
+        this.searchOf(this.brand(), this.near(), this.radius(), this.sort()),
       );
   protected readonly box = linkedSignal<unknown, string | undefined>({
     computation: () => {
@@ -195,14 +209,27 @@ export class Results {
     const brand = this.brand();
     const near = this.near();
     if (this.server || !brand || !near) return undefined;
-    return this.searchOf(brand, near, this.radius(), this.box());
+    return this.searchOf(brand, near, this.radius(), this.sort(), this.box());
   });
+  // The same search for the map's pins, which have no order.
+  private readonly pinsQuery = computed(
+    () => {
+      const query = this.query();
+      if (!query) return undefined;
+      const { sort: _, ...pins } = query;
+      return pins;
+    },
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
 
   // Only a new search is logged: the opening one, another brand or place in
   // the bar, and a place chosen here; never a retry, a widening, a reload, a
   // move of the map or a step back or forward through the history.
   private logNext = false;
   private logged: string | undefined;
+  // A sort change names its sort, the rating order too, so it is counted as
+  // one and never as a search; a reload of the rating order names none.
+  private sortNext = false;
   // Where the page was scrolled to when the kept results were shown again.
   private scrollBack: { inSheet: boolean; y: number } | undefined;
   private popped = false;
@@ -210,21 +237,29 @@ export class Results {
   // The brand last picked in the search beside the chips.
   protected readonly chosenBrand = signal<BrandDto | undefined>(undefined);
 
-  // Only the brand changed in the bar, and its answer has not landed yet:
-  // the list shown waits, dimmed, for it instead of turning into skeletons.
+  // Only the brand or the sort changed in the bar, and its answer has not
+  // landed yet: the list shown waits, dimmed, for it instead of turning into
+  // skeletons.
   private readonly swap = linkedSignal<
-    { brand: string; near: string | undefined; radius: number | undefined },
+    {
+      brand: string;
+      near: string | undefined;
+      radius: number | undefined;
+      sort: SearchSort;
+    },
     boolean
   >({
     computation: (now, previous) =>
       !!previous &&
-      previous.source.brand !== now.brand &&
+      (previous.source.brand !== now.brand ||
+        previous.source.sort !== now.sort) &&
       previous.source.near === now.near &&
       previous.source.radius === now.radius,
     source: () => ({
       brand: this.brand(),
       near: this.near(),
       radius: this.radius(),
+      sort: this.sort(),
     }),
   });
   // Another brand was loading: its answer is said, and brings the list back
@@ -259,6 +294,8 @@ export class Results {
   // page is read again in place.
   protected readonly results = resource({
     loader: async ({ params }) => {
+      const sortChange = this.sortNext;
+      this.sortNext = false;
       const kept = this.memory.take(params);
       if (kept) {
         this.logged = kept.logged;
@@ -267,14 +304,15 @@ export class Results {
         this.refreshWanted = true;
         return kept.page;
       }
-      if (params.bbox)
-        return this.search.garageSearchControllerForBrand(params);
+      const asked: Query =
+        sortChange && !params.sort ? { ...params, sort: 'rating' } : params;
+      if (params.bbox) return this.search.garageSearchControllerForBrand(asked);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
       const log = this.logNext || (searched !== this.logged && !this.popped);
       this.logNext = false;
       this.logged = searched;
       return this.search.garageSearchControllerForBrand(
-        log ? { ...params, log: '1' } : params,
+        log ? { ...params, log: '1' } : asked,
       );
     },
     params: () => this.query(),
@@ -283,7 +321,7 @@ export class Results {
   // Every garage of the same search, for the map; never logged.
   protected readonly pins = resource({
     loader: ({ params }) => this.search.garageSearchControllerPins(params),
-    params: () => this.query(),
+    params: () => this.pinsQuery(),
   });
   // A box loading, or failed, leaves the pins the map shows where they are.
   protected readonly pinned = linkedSignal<
@@ -611,6 +649,7 @@ export class Results {
     brand: string,
     near: string | undefined,
     radius: 25 | 50 | undefined,
+    sort: SearchSort,
     bbox?: string,
   ): Query {
     return {
@@ -618,6 +657,8 @@ export class Results {
       ...(UUID.test(brand) ? { brandId: brand } : { brand }),
       near,
       ...(radius ? { radius } : {}),
+      // The rating order is the list's own.
+      ...(sort !== 'rating' ? { sort } : {}),
     };
   }
 
@@ -840,6 +881,14 @@ export class Results {
       return;
     this.names.update((names) => new Map(names).set(key, name));
     void this.write({ brand: key }, { push: true });
+  }
+
+  // Another order of the same list: a new entry in the history, nothing
+  // written for the rating order; the sort already shown changes nothing.
+  protected changeSort(sort: SearchSort) {
+    if (sort === untracked(this.sort)) return;
+    this.sortNext = true;
+    void this.write({ sort: sort === 'rating' ? null : sort }, { push: true });
   }
 
   protected chooseBrand(brand: BrandDto) {

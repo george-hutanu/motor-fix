@@ -2398,6 +2398,21 @@
               "pattern": "^[A-Za-z0-9_-]*$",
               "type": "string"
             }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "The order inside each group: rating, distance from near (only with near) or the lowest hourly rate first; ties fall back to the rating order",
+            "schema": {
+              "default": "rating",
+              "type": "string",
+              "enum": [
+                "rating",
+                "distance",
+                "price"
+              ]
+            }
           }
         ],
         "responses": {
@@ -2412,7 +2427,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near; invalid_cursor: not a page of this search, of another box or of another sort"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -10024,7 +10039,7 @@
             "$ref": "#/components/schemas/BrandRefDto"
           },
           "items": {
-            "description": "Garages that work on the brand first, then the rest; inside a group by rating (unrated last), then reviews, name and id; 20 at most",
+            "description": "Garages that work on the brand first, then the rest; inside a group by the sort (rating, unrated last; distance, nearest first; price, lowest hourly rate first and none last), ties by rating, then reviews, name and id; 20 at most",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ListedGarageDto"

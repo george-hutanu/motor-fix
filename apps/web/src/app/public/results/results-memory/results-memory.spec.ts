@@ -28,6 +28,8 @@ describe('ResultsMemory', () => {
     ['another place', { ...SEARCH, near: '46.77,23.62' }],
     ['the wide radius', { ...SEARCH, radius: 50 }],
     ['a box', { ...SEARCH, bbox: '44,26,45,27' }],
+    // @traces 328-FR-006
+    ['another sort', { ...SEARCH, sort: 'price' }],
   ] as [string, SearchKey][])('gives nothing for %s', (_, other) => {
     const memory = new ResultsMemory();
     memory.keep(SEARCH, {

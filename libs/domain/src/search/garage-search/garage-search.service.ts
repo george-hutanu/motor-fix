@@ -7,6 +7,7 @@ import {
   SEARCH_PAGE_SIZE,
   type SearchBbox,
   type SearchPoint,
+  type SearchSort,
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -21,7 +22,7 @@ import {
   publicGaragesSql,
 } from '../../garages/public-garages/public-garages';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
-import { countSearch } from '../../metrics/product-counters';
+import { countSearch, countSortChange } from '../../metrics/product-counters';
 import { type AreaSql, areaSql, within } from '../area/area-sql';
 import { type AreaRow, inAreaOf, placed } from '../area/search-area';
 import { SearchLogService } from '../search-log/search-log.service';
@@ -36,12 +37,18 @@ const GROUPS = ['works_on', 'other'] as const;
 // review count the last garage had when its page was answered, so a review
 // landing between two pages moves no page boundary. A page of a box names
 // the box, so it never pages on another box or the search around the place.
+// It names its sort, so it never pages another order, and carries the
+// boundary's exact distance in metres under distance, or its hourly rate in
+// bani (null for none) under price.
 interface Cursor {
   b: string;
   c: number;
+  d?: number;
   g: (typeof GROUPS)[number];
   i: string;
+  p?: number | null;
   r: string | null;
+  s: SearchSort;
   x?: string;
 }
 
@@ -49,8 +56,8 @@ interface After extends Cursor {
   name: string;
 }
 
-// Every garage after the boundary in the order of a group.
-function beyond({ c, i, name, r }: After): Prisma.Sql {
+// Every garage after the boundary in the rating order of a group.
+function beyondRating({ c, i, name, r }: After): Prisma.Sql {
   const later = Prisma.sql`(garage.name > ${name}
     OR (garage.name = ${name} AND garage.id > ${i}::uuid))`;
   if (r === null) return Prisma.sql`garage.rating IS NULL AND ${later}`;
@@ -61,10 +68,46 @@ function beyond({ c, i, name, r }: After): Prisma.Sql {
       AND ${later}))`;
 }
 
+// Every garage after the boundary in the order of its sort: by the sort's
+// value, then the rating order among equals.
+function beyond(after: After, area: AreaSql | undefined): Prisma.Sql {
+  const tie = beyondRating(after);
+  if (after.s === 'distance' && area) {
+    const d = Prisma.sql`${after.d}::float8`;
+    return Prisma.sql`(${area.distance} > ${d}
+      OR (${area.distance} = ${d} AND ${tie}))`;
+  }
+  if (after.s !== 'price') return tie;
+  if (after.p === null || after.p === undefined) {
+    return Prisma.sql`garage.labour_from_bani IS NULL AND ${tie}`;
+  }
+  return Prisma.sql`(garage.labour_from_bani IS NULL
+    OR garage.labour_from_bani > ${after.p}
+    OR (garage.labour_from_bani = ${after.p} AND ${tie}))`;
+}
+
+const RATING_ORDER = Prisma.sql`garage.rating DESC NULLS LAST,
+  garage.review_count DESC, garage.name, garage.id`;
+
+// A group's order under a sort; distance needs a place, so without one it
+// is the rating order.
+function orderOf(sort: SearchSort, area: AreaSql | undefined): Prisma.Sql {
+  if (sort === 'distance' && area) {
+    return Prisma.sql`${area.distance}, ${RATING_ORDER}`;
+  }
+  if (sort === 'price') {
+    return Prisma.sql`garage.labour_from_bani ASC NULLS LAST, ${RATING_ORDER}`;
+  }
+  return RATING_ORDER;
+}
+
 // A rating as the garage table holds it: 1.0 to 5.0, one decimal.
 const RATING = /^(?:[1-4]\.\d|5\.0)$/;
 // review_count is a PostgreSQL integer.
 const INT4_MAX = 2_147_483_647;
+// No two points on the sphere the distances are measured on (mean radius
+// 6,371,008.8 m) lie farther apart than half its circumference.
+const FARTHEST_M = Math.PI * 6_371_008.8;
 
 const invalidCursor = () =>
   refusal(
@@ -73,33 +116,60 @@ const invalidCursor = () =>
     'cursor is not a page of this search',
   );
 
-function decode(cursor: string, brandId: string, box?: string): Cursor {
+const isCount = (value: unknown) =>
+  Number.isSafeInteger(value) &&
+  (value as number) >= 0 &&
+  (value as number) <= INT4_MAX;
+
+// The boundary's value under its sort: a distance only under distance, a
+// rate (or null) only under price, neither under rating.
+function sortValueOk(parsed: Partial<Cursor>): boolean {
+  const { d, p, s } = parsed;
+  const hasD = 'd' in parsed;
+  const hasP = 'p' in parsed;
+  if (s === 'distance') {
+    return !hasP && typeof d === 'number' && d >= 0 && d <= FARTHEST_M;
+  }
+  if (s === 'price') return !hasD && (p === null || isCount(p));
+  return !hasD && !hasP;
+}
+
+function decode(
+  cursor: string,
+  brandId: string,
+  sort: SearchSort,
+  box?: string,
+): Cursor {
   let parsed: Partial<Cursor>;
   try {
     parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString());
   } catch {
     throw invalidCursor();
   }
-  const { b, c, g, i, r, x } = parsed ?? {};
+  if (typeof parsed !== 'object' || parsed === null) throw invalidCursor();
+  const { b, c, g, i, r, s, x } = parsed;
   if (
     b !== brandId ||
+    s !== sort ||
+    !sortValueOk(parsed) ||
     !GROUPS.includes(g as Cursor['g']) ||
     !isUUID(i) ||
     x !== box ||
     !(r === null || (typeof r === 'string' && RATING.test(r))) ||
-    !Number.isSafeInteger(c) ||
-    (c as number) < 0 ||
-    (c as number) > INT4_MAX
+    !isCount(c)
   ) {
     throw invalidCursor();
   }
   return parsed as Cursor;
 }
 
-// Where the page after the one ending on `last` starts.
+// Where the page after the one ending on `last` starts; `row` is its row as
+// the page read it, with its exact distance and rate.
 const cursorAfter = (
   brandId: string,
   last: ListedGarageDto,
+  row: PageRow | undefined,
+  sort: SearchSort,
   box: string | undefined,
 ) =>
   Buffer.from(
@@ -109,6 +179,9 @@ const cursorAfter = (
       g: last.stance === 'works_on' ? 'works_on' : 'other',
       i: last.id,
       r: last.rating === null ? null : last.rating.toFixed(1),
+      s: sort,
+      ...(sort === 'distance' && { d: Number(row?.distance_m) }),
+      ...(sort === 'price' && { p: row?.labour_bani ?? null }),
       ...(box && { x: box }),
     } satisfies Cursor),
   ).toString('base64url');
@@ -152,40 +225,47 @@ export async function countGroups(
   };
 }
 
-// A group's public garages in its order: rating high to low with the
-// unrated last, more reviews first, then name and id (an unrated garage has
-// no reviews, garage_rating_reviewed). In the area when there is one, after
-// the boundary or among the ids when given; each with its place in the area.
-// garage_list_order_idx holds the order of the approved garages, so a page
-// with no area reads the index instead of sorting every garage.
+// A group's public garages in its sort's order, ties in the rating order:
+// rating high to low with the unrated last, more reviews first, then name
+// and id (an unrated garage has no reviews, garage_rating_reviewed). By
+// distance from the place, a mobile mechanic by its stored position; by
+// price, the lowest hourly rate first and none last. In the area when there
+// is one, after the boundary or among the ids when given; each with its
+// place in the area and its rate. garage_list_order_idx holds the rating
+// order of the approved garages, so a page with no area reads the index
+// instead of sorting every garage.
 export function groupPageSql(
   brandId: string,
   group: Group,
   area: AreaSql | undefined,
-  { after, ids, take }: GroupPageOptions,
+  { after, ids, sort = 'rating', take }: GroupPageOptions,
 ) {
   return Prisma.sql`
     SELECT
       garage.id,
       ${area ? area.distance : Prisma.sql`NULL::float8`} AS distance_m,
+      garage.labour_from_bani AS labour_bani,
       garage.latitude,
       garage.longitude,
       garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
     FROM garage
     WHERE ${publicGaragesSql()} AND ${within(area)}
       AND ${group === 'works_on' ? takes(brandId) : Prisma.sql`NOT ${takes(brandId)}`}
-      ${after ? Prisma.sql`AND ${beyond(after)}` : Prisma.empty}
+      ${after ? Prisma.sql`AND ${beyond(after, area)}` : Prisma.empty}
       ${ids ? Prisma.sql`AND garage.id = ANY(${ids}::uuid[])` : Prisma.empty}
-    ORDER BY garage.rating DESC NULLS LAST, garage.review_count DESC,
-      garage.name, garage.id
+    ORDER BY ${orderOf(sort, area)}
     LIMIT ${take}`;
 }
 
 interface GroupPageOptions {
   after?: After;
   ids?: string[];
+  sort?: SearchSort;
   take: number;
 }
+
+// A row of a page: its place in the area and its hourly rate in bani.
+type PageRow = AreaRow & { labour_bani: number | null };
 
 export function groupPage(
   prisma: PrismaClient,
@@ -194,7 +274,7 @@ export function groupPage(
   area: AreaSql | undefined,
   options: GroupPageOptions,
 ) {
-  return prisma.$queryRaw<AreaRow[]>(
+  return prisma.$queryRaw<PageRow[]>(
     groupPageSql(brandId, group, area, options),
   );
 }
@@ -281,6 +361,8 @@ export class GarageSearchService {
   // seconds. `log` marks a new search: its row is written after the answer,
   // which never waits for it. A box is the map moved over the same search,
   // never a new one: neither logged nor counted, and the radius plays no part.
+  // A named sort on an unlogged first page is the driver changing the order
+  // of the list shown: a sort change, never a search.
   async forBrand(
     key: BrandKey,
     cursor?: string,
@@ -288,9 +370,11 @@ export class GarageSearchService {
     radiusKm?: number,
     log = false,
     bbox?: SearchBbox,
+    sort?: SearchSort,
   ): Promise<GarageSearchPageDto> {
     const brand = await brandOf(this.prisma, key);
     const box = bbox && bboxOf(bbox);
+    const order = sort ?? 'rating';
     const page = await this.cache.entry(
       {
         bbox: box,
@@ -299,11 +383,12 @@ export class GarageSearchService {
         kind: 'page',
         near: point && nearOf(point),
         radiusKm: bbox ? undefined : radiusKm,
+        sort: order,
       },
-      () => this.searched(brand, cursor, point, radiusKm, bbox),
+      () => this.searched(brand, order, cursor, point, radiusKm, bbox),
     );
     if (bbox) return page;
-    countFirstPage(cursor, page.items.length);
+    if (cursor === undefined) countFirstPage(page.items.length, log, sort);
     // Left to the next turn of the event loop: the answer goes out first.
     if (log) {
       setImmediate(() => this.searchLog.record({ brandId: brand.id, point }));
@@ -313,6 +398,7 @@ export class GarageSearchService {
 
   private async searched(
     brand: GarageSearchPageDto['brand'],
+    sort: SearchSort,
     cursor?: string,
     point?: SearchPoint,
     radiusKm?: number,
@@ -323,14 +409,15 @@ export class GarageSearchService {
     const after =
       cursor === undefined
         ? undefined
-        : await this.after(decode(cursor, brandId, box));
+        : await this.after(decode(cursor, brandId, sort, box));
     const area = areaOf(point, radiusKm, bbox);
     const found = await countGroups(this.prisma, brandId, area);
-    const rows: AreaRow[] = [];
+    const rows: PageRow[] = [];
     if (after?.g !== 'other') {
       rows.push(
         ...(await groupPage(this.prisma, brandId, 'works_on', area, {
           after,
+          sort,
           take: PAGE + 1,
         })),
       );
@@ -339,18 +426,22 @@ export class GarageSearchService {
       rows.push(
         ...(await groupPage(this.prisma, brandId, 'other', area, {
           after: after?.g === 'other' ? after : undefined,
+          sort,
           take: PAGE + 1 - rows.length,
         })),
       );
     }
     const items = await this.cards(brandId, rows.slice(0, PAGE), area);
     const last = items.at(-1);
+    const row = rows.find((one) => one.id === last?.id);
     return {
       brand,
       ...found,
       items,
       nextCursor:
-        rows.length > PAGE && last ? cursorAfter(brandId, last, box) : null,
+        rows.length > PAGE && last
+          ? cursorAfter(brandId, last, row, sort, box)
+          : null,
     };
   }
 
@@ -416,7 +507,9 @@ const areaOf = (
   bbox?: SearchBbox,
 ) => (point || bbox ? areaSql({ bbox, point, radiusKm }) : undefined);
 
-// One search per first page; the pages after it are the same search.
-function countFirstPage(cursor: string | undefined, found: number) {
-  if (cursor === undefined) countSearch(found > 0 ? 'results' : 'none');
+// One search per first page; the pages after it are the same search. An
+// unlogged first page naming a sort is the list shown put in another order.
+function countFirstPage(found: number, log: boolean, sort?: SearchSort) {
+  if (sort && !log) countSortChange(sort);
+  else countSearch(found > 0 ? 'results' : 'none');
 }

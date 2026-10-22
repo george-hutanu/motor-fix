@@ -892,6 +892,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_sort_changes_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "a count has no failure to alert on; a sort change on Results is counted here by sort and never as a search, and every other unlogged first page that names Distanță or Preț (a reload, the Reîncarcă retry, a map settle, a step through the history, the restart after an invalid cursor) counts once more, an overcount accepted in the plan",
+      "story": "ST-328"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_search_cache_total",
       "source": "libs/domain/src/search/garage-search/garage-search.metrics.ts",
       "dashboard": "motorfix-api",
@@ -1516,7 +1525,7 @@
         "api-latency",
         "api-search-latency"
       ],
-      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
+      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total",
       "story": "ST-267"
     },
     {

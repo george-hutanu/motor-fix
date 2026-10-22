@@ -6,6 +6,8 @@ import {
   type DocumentKind,
   RECHECK_RESULTS,
   type RecheckResult,
+  SEARCH_SORTS,
+  type SearchSort,
   SUSPENSION_CAUSES,
   type SuspensionCause,
   type SystemLogKind,
@@ -110,6 +112,8 @@ function counter(name: string, description: string): Counter {
 
 const searches = () =>
   counter('motorfix_searches_total', 'Garage searches, by outcome');
+const sortChanges = () =>
+  counter('motorfix_sort_changes_total', 'Sort changes on Results, by sort');
 const signIns = () => counter('motorfix_sign_ins_total', 'Sign-ins, by method');
 const garageSignUps = () =>
   counter('motorfix_garage_sign_ups_total', 'Garage listings started');
@@ -248,6 +252,10 @@ const accountChanges = () =>
 
 export function countSearch(outcome: (typeof SEARCH_OUTCOMES)[number]) {
   searches().add(1, { outcome });
+}
+
+export function countSortChange(sort: SearchSort) {
+  sortChanges().add(1, { sort });
 }
 
 export function countSignIn(method: SignInMethod) {
@@ -416,6 +424,7 @@ const STARTS: Record<
 > = {
   api: [
     [searches, each('outcome', SEARCH_OUTCOMES)],
+    [sortChanges, each('sort', SEARCH_SORTS)],
     [signIns, each('method', SIGN_IN_METHODS)],
     [garageSignUps, [{}]],
     [listingSubmissions, [{}]],

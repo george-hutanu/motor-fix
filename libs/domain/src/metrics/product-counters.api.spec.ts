@@ -39,6 +39,8 @@ const WORKER_ONLY = [
   'motorfix_support_emails_total',
 ];
 
+const SORTS = ['rating', 'distance', 'price'];
+
 async function series() {
   const { resourceMetrics } = await memory.metricReader.collect();
   return resourceMetrics.scopeMetrics
@@ -60,9 +62,10 @@ async function series() {
 // again one each; the report decisions one per outcome),
 // one per check kind and result, one per re-check result, one per booking
 // confirmation outcome, one per quote decline outcome and one per review
-// outcome.
+// outcome, and one sort change per sort.
 const API_SERIES =
   92 +
+  SORTS.length +
   BOOKING_CONFIRM_OUTCOMES.length +
   QUOTE_DECLINE_OUTCOMES.length +
   REVIEW_POSTED_OUTCOMES.length +
@@ -136,6 +139,13 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
+    // @traces 328-FR-014
+    expect(
+      named(all, 'motorfix_sort_changes_total').map((one) => one.labels),
+    ).toEqual(SORTS.map((sort) => ({ sort })));
+    expect(
+      named(all, 'motorfix_searches_total').map((one) => one.labels),
+    ).toEqual([{ outcome: 'results' }, { outcome: 'none' }]);
     expect(
       named(all, 'motorfix_support_messages_total').map(
         (one) => one.labels['outcome'],

@@ -9,7 +9,7 @@ export interface GarageSearchPageDto {
   counts: BrandCountsDto;
 
   /**
-   * Garages that work on the brand first, then the rest; inside a group by rating (unrated last), then reviews, name and id; 20 at most
+   * Garages that work on the brand first, then the rest; inside a group by the sort (rating, unrated last; distance, nearest first; price, lowest hourly rate first and none last), ties by rating, then reviews, name and id; 20 at most
    */
   items: Array<ListedGarageDto>;
   nextCursor: string | null;

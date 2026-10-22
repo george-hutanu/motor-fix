@@ -814,6 +814,13 @@
       "map": "Arată mai mult din hartă",
       "more": "Arată mai mult din listă"
     },
+    "sort": {
+      "distance": "Distanță",
+      "label": "Sortare",
+      "needsPlace": "Alege un loc",
+      "price": "Preț",
+      "rating": "Notă"
+    },
     "takers": {
       "few": "{count} lucrează pe {brand}",
       "one": "{count} lucrează pe {brand}",

@@ -3,6 +3,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   effect,
   inject,
@@ -21,6 +22,9 @@ type SheetPosition = 'low' | 'half' | 'full';
 // The map's two 44 px zoom buttons and their 10 px margin, as 6.5rem in the
 // stylesheet: half never rests over them.
 const ZOOM_CLEAR = 104;
+// The list's first 96 px that half shows under a header taller than half the
+// stage, as 6rem in the stylesheet: half never rests where low does.
+const LIST_PEEK = 96;
 
 const NEXT: Record<SheetPosition, SheetPosition> = {
   full: 'low',
@@ -36,6 +40,7 @@ const NEXT: Record<SheetPosition, SheetPosition> = {
     '(document:focusout)': 'typing.set(false)',
     '(window:popstate)': 'popped()',
     '[attr.data-position]': 'position()',
+    '[class.over-zoom]': 'overZoom()',
     '[class.typing]': 'typing()',
     '[style.--sheet-top.px]': 'top()',
     '[style.--sheet-y.px]': 'dragY()',
@@ -56,6 +61,16 @@ export class ResultsSheet {
   protected readonly takesText = takesText;
   protected readonly dragY = signal<number | null>(null);
   protected readonly top = signal<number | null>(null);
+  private readonly height = signal<number | null>(null);
+  // The sheet's top edge over the map's zoom buttons, at rest or under the
+  // finger: the stylesheet hides them, so its handle never lies across them.
+  protected readonly overZoom = computed(() => {
+    const height = this.height();
+    if (!this.phone() || height === null) return false;
+    const at =
+      this.dragY() ?? restOffsets(height, this.top() ?? 0)[this.position()];
+    return at < ZOOM_CLEAR;
+  });
 
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly host =
@@ -88,7 +103,18 @@ export class ResultsSheet {
         });
       wasPhone = phone;
     });
-    afterNextRender(() => this.measure());
+    // The header grows with its lines and the stage with the screen: the
+    // rests follow both.
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      this.measure();
+      if (typeof ResizeObserver === 'undefined') return;
+      const resized = new ResizeObserver(() => this.measure());
+      resized.observe(this.host);
+      const top = this.topBox()?.nativeElement;
+      if (top) resized.observe(top);
+      destroyRef.onDestroy(() => resized.disconnect());
+    });
     if (this.browser && history.state?.mfSheet) this.markStale();
   }
 
@@ -224,18 +250,31 @@ export class ResultsSheet {
   }
 
   private offsets(): Record<SheetPosition, number> {
-    const height = this.host.offsetHeight;
-    const low = height - (untracked(this.top) ?? 0);
-    return {
-      full: 0,
-      half: Math.min(Math.max(height / 2, ZOOM_CLEAR), low),
-      low,
-    };
+    return restOffsets(this.host.offsetHeight, untracked(this.top) ?? 0);
   }
 
   private measure() {
     this.top.set(this.topBox()?.nativeElement.offsetHeight ?? null);
+    this.height.set(this.host.offsetHeight);
   }
+}
+
+// Where each rest puts the sheet's top edge, from the top of its cell; the
+// stylesheet's --rest draws the same.
+function restOffsets(
+  height: number,
+  top: number,
+): Record<SheetPosition, number> {
+  const low = height - top;
+  return {
+    full: 0,
+    half: Math.min(
+      Math.max(height / 2, ZOOM_CLEAR),
+      Math.max(ZOOM_CLEAR, low - LIST_PEEK),
+      low,
+    ),
+    low,
+  };
 }
 
 // The Navigation API's place in the session history; undefined without it.
