@@ -681,6 +681,11 @@ test.describe('the map beside the results @seeded', () => {
     await mapSettled(page);
     await dragTo(page, 780);
     await rests(page, 'low');
+    // The sheet slides to low over 420 ms: a tap before it ends can land on
+    // its handle passing over the pin, which raises it with nothing picked.
+    await sheet(page).evaluate(async (el) => {
+      await Promise.all(el.getAnimations().map((a) => a.finished));
+    });
 
     await clickAt(page, placed[1].at);
 
