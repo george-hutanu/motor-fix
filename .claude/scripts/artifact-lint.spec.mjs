@@ -98,6 +98,29 @@ describe('artifact-lint — the semantic lane default', () => {
     assert.match(result.stdout, /switched off/);
     assert.doesNotMatch(result.stdout, /no TYPESAFE_API_KEY/);
   });
+
+  // @traces 1359-FR-008
+  it('keeps the switched-off line when no key is set either', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '0', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.match(result.stdout, /switched off/);
+    assert.doesNotMatch(result.stdout, /no TYPESAFE_API_KEY/);
+  });
+
+  // @traces 1359-FR-008
+  it('says nothing when SPECKIT_JEV=1 asks for the lane but no key is set', () => {
+    const dir = fixture();
+    const result = spawnSync(process.execPath, [script], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, TYPESAFE_API_KEY: '', JEV: '', SPECKIT_JEV: '1', CLAUDE_PROJECT_DIR: dir },
+    });
+    assert.doesNotMatch(result.stdout, /jev|TYPESAFE_API_KEY/);
+  });
 });
 
 // Each case spawns the real audit over this repository's diff: about a second

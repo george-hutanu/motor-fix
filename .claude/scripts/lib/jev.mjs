@@ -90,6 +90,18 @@ export function jevEnabled(repo = defaultRepo(), env = process.env) {
   return jevKey(repo) !== "";
 }
 
+/**
+ * Whether the lane was switched off on purpose (`SPECKIT_JEV=0|false`, or
+ * `jev:false` in `.specify/harness-settings.json`), key or no key. A deliberate
+ * setting is worth one line; a missing key is not.
+ */
+export function jevSwitchedOff(repo = defaultRepo(), env = process.env) {
+  const flag = env.SPECKIT_JEV;
+  if (flag === "0" || flag === "false") return true;
+  if (flag === "1" || flag === "true") return false;
+  return readHarnessSettings(repo).jev === false;
+}
+
 /** A yes/no question. `whenTrue`/`whenFalse` sharpen the boundary; both optional. */
 export function noul(instructions, whenTrue, whenFalse) {
   const question = { type: "noul", instructions };
@@ -146,10 +158,9 @@ export async function ask(state, questions, opts = {}) {
   // conflates them sends someone looking for a key they already have.
   const key = apiKey ?? (jevEnabled(repo) ? jevKey(repo) : "");
   if (!key) {
-    const reason =
-      jevKey(repo) === ""
-        ? "no TYPESAFE_API_KEY (or JEV) in env or .env"
-        : "switched off — SPECKIT_JEV=0, or jev:false in .specify/harness-settings.json";
+    const reason = jevSwitchedOff(repo)
+      ? "switched off — SPECKIT_JEV=0, or jev:false in .specify/harness-settings.json"
+      : "no TYPESAFE_API_KEY (or JEV) in env or .env";
     return { answers: {}, unavailable: true, reason };
   }
 

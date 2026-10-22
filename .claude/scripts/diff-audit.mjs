@@ -225,10 +225,10 @@ for (const file of sources) {
 //     every pull request — and it is the one judgement here that is not
 //     mechanical. WARN-only, like every finding this lane produces: --check
 //     still exits on the mechanical ERRORs alone.
-// No key means the lane was never set up: say nothing. A key with the lane
-// switched off still gets its one line from unavailableNote below.
+// No key means the lane was never set up: say nothing. A lane switched off
+// on purpose, key or not, still gets its one line from unavailableNote below.
 const jev = useJev ? await import("./lib/jev.mjs") : null;
-if (useJev && jev.jevKey(repo)) {
+if (useJev && (jev.jevKey(repo) || jev.jevSwitchedOff(repo))) {
   const deps = findings
     .filter((f) => f.rule === "new-dependency")
     .map((f) => ({ name: f.message.match(/`([^`]+)`/)?.[1], where: f.where }))

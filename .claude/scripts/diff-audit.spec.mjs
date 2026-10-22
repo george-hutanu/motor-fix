@@ -240,4 +240,12 @@ describe('diff-audit Jev lane: silent without a key', { timeout: 30_000 }, () =>
   it('still says so when the lane was switched off with a key present', () => {
     assert.match(lane({ TYPESAFE_API_KEY: 'present', SPECKIT_JEV: '0' }), /jev lane unavailable \(switched off/);
   });
+
+  it('still says so when the lane was switched off and no key is set', () => {
+    assert.match(lane({ SPECKIT_JEV: '0' }), /jev lane unavailable \(switched off/);
+  });
+
+  it('prints no unavailable line when SPECKIT_JEV=1 asks for the lane but no key is set', () => {
+    assert.doesNotMatch(lane({ SPECKIT_JEV: '1' }), /jev lane/);
+  });
 });
