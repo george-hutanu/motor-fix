@@ -10,6 +10,10 @@ const KEY =
 const solid = (width: number, height: number) =>
   sharp({ create: { background: '#369', channels: 3, height, width } });
 
+// Each test encodes every responsive variant (AVIF, WebP, JPEG): seconds
+// apiece on a loaded CI runner, past Jest's 5 s default.
+jest.setTimeout(60_000);
+
 describe('processing a photo, hostile inputs', () => {
   const store = new S3TestStore();
   let storage: StorageService;
@@ -179,5 +183,5 @@ describe('processing a photo, hostile inputs', () => {
     expect(await storage.metadataOf(`${KEY}.thumb`)).toEqual(
       expect.objectContaining({ height: '4000', width: '6000' }),
     );
-  }, 30_000);
+  });
 });
