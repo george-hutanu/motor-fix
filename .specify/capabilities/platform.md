@@ -99,6 +99,7 @@ features:
   - 1358-preflight-delta-archive
   - 1361-trim-dead-lanes
   - 1357-merge-when-overlapping
+  - 1360-refresh-gate-level1-handoff
 ---
 
 # Capability: Platform
@@ -295,9 +296,9 @@ _From 431-mutation-testing._
 
 _From 464-agent-watch._
 
-### 464-FR-002 — Phase MUST be one of planning, tests, development, review, qa, merging, blocked, done, decided in this order: PR merged or closed → done; run-state `status` `blocked` → blocked; PR ready with every check passed and `agent-review` success on its head → merging; PR ready with an `agent-review` result on its head or a live QA run for it → qa; PR ready → review; run-state `status` `done` → done; run-state `phase` by this table — size, constitution, specify, context, clarify, plan, checklist, tasks, analyze → planning; tests → tests; implement, converge, harden → development; refresh, review, agent-context, retro, archive, hand-off → review; pr-test, qa → qa; merge → merging; any other value falls through — then the feature's artifacts (no `spec.md`, `plan.md` or `tasks.md` → planning; open tasks → development; every task done → review); no feature → development. Checks are the PR's status rollup without `agent-review`.
+### 1360-FR-011 — (Modifies 464-FR-002) Phase MUST be one of planning, tests, development, review, qa, merging, blocked, done, decided in this order: PR merged or closed → done; run-state `status` `blocked` → blocked; PR ready with every check passed and `agent-review` success on its head → merging; any other ready PR → qa (marking it ready puts it in QA; there is no review stage between the two, owner 2026-10-04); run-state `status` `done` → done; run-state `phase` by this table — size, constitution, specify, context, clarify, plan, checklist, tasks, analyze → planning; tests → tests; implement, converge, harden → development; closer, refresh, review, retro, archive, hand-off → review; pr-test, qa → qa; merge → merging; any other value falls through — then the feature's artifacts (no `spec.md`, `plan.md` or `tasks.md` → planning; open tasks → development; every task done → review); no feature → development. Checks are the PR's status rollup without `agent-review`.
 
-_From 464-agent-watch._
+_From 1360-refresh-gate-level1-handoff._
 
 ### 464-FR-003 — Holder MUST be `owner` for the main worktree; `live` when the worktree's lock names a pid whose process is a running `claude` process (for a `claude agent` lock, which carries the pid of the session that started the subagent, only while the worktree's last activity is within its phase threshold), when its lock names no pid (a lock set by hand), when a PR-tester run for its PR is running, or when it carries a claim younger than its phase's threshold; `dead` when the lock names a pid that is not running `claude`; `none` when it has no lock.
 
@@ -2611,6 +2612,70 @@ _From 1361-trim-dead-lanes._
 
 _From 1361-trim-dead-lanes._
 
+### 1360-FR-001 — A new script `.claude/scripts/context-refresh-gate.mjs <feature-dir>` MUST print one line, `skip` or `dispatch <reason>`, and exit 0; it MUST write nothing.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-002 — The gate MUST read `context.md`'s `**Gathered**:` line (`<UTC ISO 8601 time> · specs trunk <sha>`) and MUST print `dispatch` when any of these holds: the story's issue (the Anchor's issue URL, else the `ST-<n>` in the Anchor, in george-hutanu/motor-fix-specs) or the epic (the issue labelled `epic` whose title starts `EP-<k> `, `k` from the story's `EP-<k>` label; epics do not carry their own `EP-<k>` label) has an `updated_at` after the Gathered time; an issue labelled `EP-<k>`, not a pull request, the story or the epic, was created after the Gathered time; or `git log <sha>..origin/trunk -- docs/` in the specs clone, after `git fetch origin trunk`, lists a commit. Otherwise it MUST print `skip`.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-003 — The gate MUST print `dispatch <reason>` on any read error: no `context.md`, a Gathered line without a time and a sha, no anchor issue, a failing or unparseable `gh` answer, a story labelled `EP-<k>` whose epic is not found, a missing specs clone, or a failing `git fetch` or `git log`; a `gh` or `git` call that runs longer than 30 seconds is a failing call.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-004 — `phases-close.md` §13 MUST run the gate first; on `skip` it MUST append `## Refresh <UTC time>` and `gate: no change` to `context.md` and run no `speckit-context`; on `dispatch` it MUST invoke `speckit-context --since` as before, logging the gate's reason in `auto-run.md`.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-005 — `speckit-context` MUST write `**Gathered**:` as the full UTC ISO 8601 time to the second followed by `· specs trunk <sha>` (`git -C .motor-fix-specs rev-parse origin/trunk`), passed to the `org-researcher` in its invocation; `--since` reads the baseline from that time. Its step 2 finds the epic by the `epic` label and the `EP-<k> ` title prefix and writes the issues with `gh issue view --json` (off a terminal `--comments` prints the comments without the body).
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-006 — Phase 15 MUST be retired from the story path: `SKILL.md`'s row 15 says it is retired and where the audit runs, `agent-context` leaves the phase names, `level.mjs`'s `OWED_BY_PROMOTION` and `watch.mjs`'s stage map, and `phases-close.md` §15 says the session start runs it.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-007 — The SessionStart hook `.claude/hooks/session-context.mjs` MUST run the context-file audit (`context-audit.mjs`'s size ratchet and line audit, no Jev) and print one `context-audit:` line in its never-trimmed head when the file grew past its baseline or the audit has findings, naming the growth or the finding count and `node .claude/scripts/context-audit.mjs`; it MUST print no such line otherwise, and an error in the audit MUST NOT stop the session context.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-008 — Phase 16 MUST run only `node .claude/scripts/retro-evidence.mjs --since <start-commit>`: no `--jev` and no `instincts.mjs triggered`; `report.md` MUST ask for that one output.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-009 — Instincts MUST leave the auto chain: `session-context.mjs` imports nothing from `instincts.mjs` and injects no instincts; `doctor.mjs`'s harness list drops `instincts.mjs`; `.claude/settings.json` drops the `instincts.mjs` permissions (`list`, `list --all`, `inject`, `decay`, `triggered --since`) and `context-audit.mjs --jev`; the hook registry's description and `CLAUDE.local.md`'s gate row say what the hook now prints. `/speckit-learn`, `/speckit-evolve` and `instincts.mjs` remain, run by hand.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-010 — A level-1 story's agent MUST end after phase 12: append `## Decisions for the closer` to `auto-run.md` (each gate it answered that the closer needs, deviations, open items), set `run-state.mjs set --status in-progress --phase closer`, leave the PR a draft with every commit pushed, and reply `NEXT: resume <feature>`. The section carries three sub-headings: `Gates self-answered` (every one), `Deviations`, `Open items`. A cloud session (`CLAUDE_CODE_REMOTE=true`) does not split: one agent runs through the hand-off.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-012 — `watch.mjs` MUST judge a worktree whose run-state phase is `closer`, whose run-state status is not `blocked` and that no live agent, live claim or owner holds, `stale` with the fix `resume` and the reason `handed to a closer after harden`, without waiting for the quiet threshold; a `claude agent` lock does not hold such a worktree (its pid is the session that dispatched the ended story agent), and `resume` wins over `fix-ci` (the closer owns the draft's red CI through its review).
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-013 — The closer MUST be a fresh `task-runner` dispatched on `NEXT: resume <feature>` (by the orchestrating session after `watch.mjs claim <worktree> resume`, by the owner's own session in the same way when the owner ran the story, or by `/speckit-watch`'s `resume` fix); `phases-close.md` MUST give its reading list (`auto-run.md` with its `## Decisions for the closer`, `spec.md`, `tasks.md`, `run-state.mjs show`, `git log --oneline <start>..HEAD`) and it MUST run the phases its level owes from 13 on and the hand-off, ending as the hand-off says; its first act is `run-state.mjs set --status in-progress --phase refresh`, so the watcher stops offering `resume` for the worktree once the closer has started.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-014 — Level 2 and 3 runs MUST keep one agent from preflight through the hand-off.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-015 — The text MUST match: `SKILL.md` (the level table, the phase names, row 15, the parallel groups), `report.md`, `preflight.md`'s parallel-runs paragraph, `lifecycle.md` step 4, `hand-off.md`'s lead, `speckit-watch`'s `resume` row, and `layout.spec.mjs`'s pins.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-016 — Vitest cases MUST cover FR-001 to FR-003 (skip, each dispatch cause, each read error), FR-007 and FR-009's hook (a line on growth, on findings, none when held, no instincts), FR-011 and FR-012 (the `closer` stage and its `resume`), and the `OWED_BY_PROMOTION` change.
+
+_From 1360-refresh-gate-level1-handoff._
+
+### 1360-FR-017 — Every edited gate script MUST be blessed (`doctor.mjs --bless-hooks` after reading its diff); `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST be green.
+
+_From 1360-refresh-gate-level1-handoff._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2693,3 +2758,4 @@ _From 1361-trim-dead-lanes._
 - `705-FR-001` — superseded by `1355-FR-010` (2026-10-21)
 - `1018-FR-018` — superseded by `1358-FR-009` (2026-10-22)
 - `1355-FR-002` — superseded by `1358-FR-015` (2026-10-22)
+- `464-FR-002` — superseded by `1360-FR-011` (2026-10-22)

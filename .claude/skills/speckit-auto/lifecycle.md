@@ -49,7 +49,8 @@ to `tracker-sync.md` at its next event.
      archive's status line, a retrospective if one was written and
      `specs/<feature>/tracker-sync.md` are pushed to the specs repo (see
      "Specs live in their own repo"); the `qa` line follows right after,
-     before CI is waited for and QA starts.
+     before CI is waited for and QA starts. A level-1 story's agent ends at phase 12 and a closer
+     carries it to this step (`phases-close.md`).
 
      Then the story's agent starts QA and hands off. It dispatches the PR QA
      run for the head without waiting for it

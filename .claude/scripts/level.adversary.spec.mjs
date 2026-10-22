@@ -309,7 +309,8 @@ describe('the pre-ready refusal', () => {
       const parsed = JSON.parse(run.out);
       assert.deepEqual(parsed.promoted, { from: 1, to: 2 });
       assert.deepEqual(parsed.missing, ['plan.md']);
-      assert.deepEqual(parsed.owed, ['context', 'clarify', 'plan', 'checklist', 'analyze', 'converge', 'refresh', 'agent-context', 'archive']);
+      // @traces 1360-FR-006
+      assert.deepEqual(parsed.owed, ['context', 'clarify', 'plan', 'checklist', 'analyze', 'converge', 'refresh', 'archive']);
     });
   });
 

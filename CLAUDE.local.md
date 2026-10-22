@@ -51,7 +51,7 @@ check; its Enforcement section is the authority. In short:
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
-| `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
+| `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus one `context-audit:` line when this file grew or has findings |
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
 | `.husky/pre-commit` | every real commit | identity, structure, staged Biome; typecheck + tests in `lifecycle.mjs check` |
 

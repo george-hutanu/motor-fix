@@ -8,6 +8,7 @@ log moves to `tracker-sync.md` at its next event.
 
 ## Hand-off
 
+The story's agent runs the hand-off, or on level 1 the closer (`phases-close.md`).
 When phases 14–17 are done, the review left no CRITICAL/HIGH and the last
 `typecheck`, `lint` and test runs are green, take the PR to ready and hand it
 to a fresh agent (AGENTS.md, lifecycle step 4). This run ends here: a story's

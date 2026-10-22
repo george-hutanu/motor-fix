@@ -1,6 +1,7 @@
 # speckit-auto: the report
 
 Read at the hand-off, before the reply. The envelope and where the report goes are in `SKILL.md`, "Final Report".
+A level-1 story's agent writes no report: it stops after harden with `NEXT: resume <feature>`, and the closer writes this one at the hand-off.
 
 ## Report sections
 
@@ -16,8 +17,7 @@ The report's sections:
 - Verification: the exact commands run and their result lines, quoted; and the
   feature's FR → test table, read off `tasks.md` rather than off the source.
 - `spec-reviewer` findings: fixed, and unaddressed MEDIUM/LOW.
-- Retrospective evidence (unjudged): both command outputs verbatim, with the
-  suggested verdict labelled as a suggestion and its confidence quoted.
+- Retrospective evidence (unjudged): the command's output verbatim, no verdict.
 - Follow-ups: the `needs-confirmation` questions raised for the owner; everything else noticed was fixed in this PR.
 - Anything left out, and why.
 

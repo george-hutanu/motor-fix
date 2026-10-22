@@ -262,7 +262,6 @@ export function checkCommands(repo) {
     "artifact-lint.mjs",
     "diff-audit.mjs",
     "doctor.mjs",
-    "instincts.mjs",
     "telemetry.mjs",
     "gc-scan.mjs",
     "config-scan.mjs",
