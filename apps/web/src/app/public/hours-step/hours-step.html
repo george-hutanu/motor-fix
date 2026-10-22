@@ -172,6 +172,22 @@
   }
 </ul>
 <p class="facilities-hint hint">{{ 'public.listing.hours.facilitiesHint' | t }}</p>
+<label hlmLabel class="field">
+  {{ 'public.listing.hours.facilitiesNote' | t }}
+  <input
+    hlmInput
+    type="text"
+    name="facilitiesNote"
+    data-field="steps.5.facilitiesNote"
+    autocomplete="off"
+    [value]="shownNote()"
+    (input)="typeFacilitiesNote(field($event))"
+    (blur)="leaveFacilitiesNote()"
+    [attr.aria-invalid]="failing().note ? true : null"
+    [attr.aria-describedby]="messages().note ? 'facilities-note-error' : null"
+  />
+</label>
+<p class="mf-message error" id="facilities-note-error" role="status" aria-live="polite">{{ messages().note ? (messages().note!.key | t) : '' }}</p>
 <h3>{{ 'public.listing.hours.payment.heading' | t }}</h3>
 @let paymentMessage = messages().payments;
 <div class="payment-group" data-field="steps.5.payments" tabindex="-1">

@@ -15,10 +15,10 @@ import type { Prisma } from '../generated/prisma/client';
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
 
-// Writes a garage's hours, closed days and facilities from the listing's
-// step 5 section, inside the caller's transaction. A day before `today`, past
-// the two-year window (an aged draft) or a legal holiday gets no row: the
-// calendar alone closes a holiday. What changed goes to the history as the
+// Writes a garage's hours, closed days, facilities and their note from the
+// listing's step 5 section, inside the caller's transaction. A day before
+// `today`, past the two-year window (an aged draft) or a legal holiday gets no
+// row: the calendar alone closes a holiday. What changed goes to the history as the
 // garage's own edit; the caller records the event.
 export async function writeGarageHours(
   tx: Prisma.TransactionClient,
@@ -58,20 +58,24 @@ export async function writeGarageHours(
     select: {
       closedDays: { select: { day: true, note: true } },
       facilities: { select: { facility: true } },
+      facilitiesNote: true,
       hours: true,
     },
     where: { id: garageId },
   });
   const after = await tx.garage.update({
-    data: { hours: section.hours ?? DEFAULT_HOURS },
-    select: { hours: true },
+    data: {
+      facilitiesNote: section.facilitiesNote?.trim() || null,
+      hours: section.hours ?? DEFAULT_HOURS,
+    },
+    select: { facilitiesNote: true, hours: true },
     where: { id: garageId },
   });
   await audit.recordChanges(
     tx,
     { ...change, subjectType: 'garage' },
-    { hours: before.hours },
-    { hours: after.hours },
+    { facilitiesNote: before.facilitiesNote, hours: before.hours },
+    after,
   );
   await tx.garageClosedDay.deleteMany({ where: { garageId } });
   await tx.garageClosedDay.createMany({

@@ -256,6 +256,7 @@ describe('the profile aggregates with ties and gaps', () => {
     expect(res.body).toEqual({
       brandNote: null,
       doesNotTake: [],
+      facilities: [],
       id: garage.id,
       jobTypes: [],
       name: 'Garage',

@@ -40,6 +40,16 @@ export interface PublicGarageDto {
    */
   distanceKm?: number;
   doesNotTake: Array<BrandRefDto>;
+
+  /**
+   * The facilities it lists, in catalogue order
+   */
+  facilities: Array<'courtesy_car' | 'pickup_dropoff' | 'waiting_area'>;
+
+  /**
+   * What the garage wrote about its facilities; absent when none
+   */
+  facilitiesNote?: string;
   id: string;
 
   /**

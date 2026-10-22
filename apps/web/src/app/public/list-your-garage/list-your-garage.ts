@@ -563,6 +563,12 @@ export class ListYourGarage {
       this.toSummary();
       return;
     }
+    // A facilities note past its limit stays in its step, never in the draft
+    // the check reads: the step's own error holds the send.
+    if (this.shownErrors().hours) {
+      this.goTo('steps.5.facilitiesNote');
+      return;
+    }
     // What the server judges is the copy as it stood at the press; a change
     // typed while it answers makes the answer stale.
     const of = this.judged();

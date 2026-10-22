@@ -15,6 +15,7 @@ const FIXED: PublicGarageDto = {
   address: 'Bulevardul Iuliu Maniu 100, București',
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-2',
   jobTypes: [],
   latitude: 44.43,

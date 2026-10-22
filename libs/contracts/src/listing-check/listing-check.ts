@@ -8,6 +8,7 @@ import {
   type HoursSection,
   hasOpenDay,
   isCourtesyPrice,
+  isFacilitiesNote,
   needsCourtesyPrice,
   WEEKDAYS,
   type WeeklyHours,
@@ -253,6 +254,11 @@ function hours(j: Judgement, given: HoursSection) {
   if (!hasOpenDay(section.hours)) j.error('steps.5.hours', 'required');
   if (!(Array.isArray(section.payments) && section.payments.length))
     j.error('steps.5.payments', 'required');
+  if (
+    section.facilitiesNote !== undefined &&
+    !isFacilitiesNote(section.facilitiesNote)
+  )
+    j.error('steps.5.facilitiesNote', 'invalid');
   if (!needsCourtesyPrice(section)) return;
   const price = section.courtesyCar?.pricePerDayBani;
   const field = 'steps.5.courtesyCar.pricePerDayBani';

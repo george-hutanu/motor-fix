@@ -159,9 +159,13 @@ async function militari() {
       status: 'approved',
     },
   });
-  await prisma.garageFacility.create({
-    data: { facility: 'courtesy_car', garageId: garage.id },
+  await prisma.garageFacility.createMany({
+    data: [
+      { facility: 'waiting_area', garageId: garage.id },
+      { facility: 'courtesy_car', garageId: garage.id },
+    ],
   });
+  await prisma.$executeRaw`UPDATE garage SET facilities_note = 'Mașina la schimb se cere la programare' WHERE id = ${garage.id}::uuid`;
   await prisma.garageBrand.createMany({
     data: [
       {
@@ -291,6 +295,8 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
     courtesyCar: { paid: true, pricePerDayBani: 10_000 },
     description: 'Frâne și distribuție, „rapid”.',
     doesNotTake: [ref(w.tesla)],
+    facilities: ['courtesy_car', 'waiting_area'],
+    facilitiesNote: 'Mașina la schimb se cere la programare',
     id: w.garage.id,
     jobTypes: [
       { id: w.brakes.id, nameEn: 'Brakes', nameRo: 'Frâne' },
@@ -400,6 +406,7 @@ describe('the profile read on a cache miss', () => {
       brandNote: null,
       businessKind: 'mobile',
       doesNotTake: [],
+      facilities: [],
       id: garage.id,
       jobTypes: [],
       name: 'Mecanic la domiciliu',

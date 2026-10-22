@@ -25,6 +25,7 @@ const price = (id: string, from: number, to: number) => ({
 const GARAGE = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   name: 'Service Auto Militari',

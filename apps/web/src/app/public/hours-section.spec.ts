@@ -362,3 +362,34 @@ describe('the courtesy car', () => {
     });
   });
 });
+
+// @traces 330-FR-001
+describe('the facilities note in the section', () => {
+  it('reads the note back, and a note out of shape as absent', () => {
+    expect(hoursOf(data({ facilitiesNote: 'Doar la programare' }))).toEqual({
+      facilitiesNote: 'Doar la programare',
+    });
+    expect(hoursOf(data({ facilitiesNote: 'a'.repeat(201) }))).toEqual({});
+  });
+
+  it('puts the note back, keeping it without any facility', () => {
+    expect(
+      mergeHours(
+        { facilities: ['waiting_area'] },
+        {
+          facilities: [],
+          facilitiesNote: 'Doar la programare',
+        },
+      ),
+    ).toEqual({ facilitiesNote: 'Doar la programare' });
+  });
+
+  it('drops an empty note', () => {
+    expect(
+      mergeHours(
+        { facilitiesNote: 'Doar la programare' },
+        { facilitiesNote: '  ' },
+      ),
+    ).toEqual({});
+  });
+});

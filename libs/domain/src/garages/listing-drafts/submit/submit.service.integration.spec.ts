@@ -456,6 +456,65 @@ describe('a send that fails part-way', () => {
   });
 });
 
+// @traces 330-FR-004
+describe('a draft with facilities and a note', () => {
+  const withFacilities = (): ListingDraftData => {
+    const data = complete();
+    return {
+      ...data,
+      steps: {
+        ...data.steps,
+        '5': {
+          ...data.steps?.['5'],
+          courtesyCar: { paid: true, pricePerDayBani: 10_000 },
+          facilities: ['courtesy_car', 'waiting_area'],
+          facilitiesNote: 'Mașina la schimb se cere la programare',
+        },
+      },
+    };
+  };
+
+  it('saves two listed facilities, none for pick-up, and the note', async () => {
+    const actor = await driver();
+    const { id, token } = await draft(withFacilities());
+
+    const { garageId } = await service.submit(actor, id, token, 'key-1');
+
+    expect(
+      await prisma.garageFacility.findMany({
+        orderBy: { facility: 'asc' },
+        select: { facility: true, status: true },
+        where: { garageId },
+      }),
+    ).toEqual([
+      { facility: 'courtesy_car', status: 'listed' },
+      { facility: 'waiting_area', status: 'listed' },
+    ]);
+    expect(
+      await prisma.garage.findUniqueOrThrow({
+        select: { facilitiesNote: true },
+        where: { id: garageId },
+      }),
+    ).toEqual({ facilitiesNote: 'Mașina la schimb se cere la programare' });
+  });
+
+  it('saves no facility row and no note when the send fails part-way', async () => {
+    const actor = await driver();
+    const { id, token } = await draft(withFacilities());
+    const attach = jest
+      .spyOn(legal, 'attach')
+      .mockRejectedValueOnce(new Error('connection lost'));
+
+    await expect(service.submit(actor, id, token, 'key-1')).rejects.toThrow(
+      'connection lost',
+    );
+
+    attach.mockRestore();
+    expect(await prisma.garageFacility.count()).toBe(0);
+    await nothingCreated(actor.accountId, id);
+  });
+});
+
 // @traces 116-FR-007
 describe('the re-check', () => {
   it('refuses with 422 and the field list, the survey included, creating nothing', async () => {

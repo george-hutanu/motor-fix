@@ -25,6 +25,7 @@ const row = (jobTypeId: string, nameRo: string, from: number, to: number) => ({
 const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: 'g-1',
   jobTypes: [],
   name: 'Service Auto Militari',

@@ -14,6 +14,7 @@ import { sendMeasurementsTo } from '../../telemetry/browser/measure/measure';
 const garageOf = (slug: string): PublicGarageDto => ({
   brandNote: null,
   doesNotTake: [],
+  facilities: [],
   id: `g-${slug}`,
   jobTypes: [],
   name: slug,

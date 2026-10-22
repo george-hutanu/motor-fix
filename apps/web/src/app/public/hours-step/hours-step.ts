@@ -21,6 +21,7 @@ import {
   type Interval,
   intervalsError,
   isCourtesyPrice,
+  isFacilitiesNote,
   PAYMENTS,
   type Payment,
   TIMES,
@@ -67,6 +68,7 @@ type Calendar =
 const HOURS = 'steps.5.hours';
 const PAYMENTS_FIELD = 'steps.5.payments';
 const PRICE = 'steps.5.courtesyCar.pricePerDayBani';
+const NOTE = 'steps.5.facilitiesNote';
 
 // The draft refuses a typed price outside the range, so the page's check
 // sees none and calls it missing; the step tells the price is wrong instead.
@@ -143,6 +145,12 @@ export class HoursStep {
   protected readonly shownPrice = computed(
     () => this.outOfRange() ?? this.value().courtesyCar?.pricePerDayBani,
   );
+  // A facilities note past the limit stays here with its error, as the price
+  // does; the draft keeps the last note that holds.
+  private readonly overLong = signal<string | undefined>(undefined);
+  protected readonly shownNote = computed(
+    () => this.overLong() ?? this.value().facilitiesNote ?? '',
+  );
 
   private readonly watch = new FieldWatch();
   protected readonly messages = computed(() => {
@@ -151,6 +159,16 @@ export class HoursStep {
     const typed = this.outOfRange() !== undefined;
     return {
       hours: this.watch.message(check, HOURS, { all, filled: false }),
+      note: this.watch.message(
+        this.overLong() === undefined
+          ? check
+          : {
+              ...check,
+              errors: [...check.errors, { code: 'invalid', field: NOTE }],
+            },
+        NOTE,
+        { all, filled: false },
+      ),
       payments: this.watch.message(check, PAYMENTS_FIELD, {
         all,
         filled: false,
@@ -163,10 +181,11 @@ export class HoursStep {
   });
   // The errors shown, a warning left out.
   protected readonly failing = computed(() => {
-    const { hours, payments, price } = this.messages();
+    const { hours, note, payments, price } = this.messages();
     const error = (m: typeof hours) => (m && !m.warning ? m.key : null);
     return {
       hours: error(hours),
+      note: error(note),
       payments: error(payments),
       price: error(price),
     };
@@ -270,6 +289,23 @@ export class HoursStep {
   protected join(day: Weekday) {
     this.clearError(day);
     this.setHours(setDay(this.hours(), day, removeBreak(this.hours()[day])));
+  }
+
+  protected typeFacilitiesNote(field: HTMLInputElement) {
+    this.watch.type(NOTE);
+    const note = field.value;
+    if (!isFacilitiesNote(note)) {
+      this.overLong.set(note);
+      return;
+    }
+    this.overLong.set(undefined);
+    this.value.update(({ facilitiesNote: _, ...rest }) =>
+      note.trim() ? { ...rest, facilitiesNote: note } : rest,
+    );
+  }
+
+  protected leaveFacilitiesNote() {
+    this.watch.leave(NOTE);
   }
 
   protected note(field: HTMLInputElement) {

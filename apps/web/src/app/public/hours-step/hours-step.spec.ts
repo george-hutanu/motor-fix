@@ -1119,6 +1119,74 @@ const CLOSED_WEEK = {
 const field = (step: HTMLElement, path: string) =>
   step.querySelector<HTMLElement>(`[data-field="${path}"]`);
 
+// @traces 330-FR-001
+// @traces 330-FR-002
+describe('step 5, the facilities note', () => {
+  const note = (step: HTMLElement) =>
+    step.querySelector<HTMLInputElement>('input[name="facilitiesNote"]');
+
+  it('shows an empty single-line field with its label after the facilities hint', async () => {
+    const { step } = await open();
+
+    const field = note(step);
+    expect(field?.type).toBe('text');
+    expect(field?.value).toBe('');
+    expect(text(field?.closest('label'))).toContain('Notă despre facilități');
+    const hint = step.querySelector('.facilities-hint');
+    expect(
+      hint!.compareDocumentPosition(field!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps a typed note in the value', async () => {
+    const { fixture, step } = await open();
+
+    await type(fixture, note(step), 'Mașina la schimb se cere la programare');
+
+    expect(fixture.componentInstance.value().facilitiesNote).toBe(
+      'Mașina la schimb se cere la programare',
+    );
+  });
+
+  it('shows an error tied to the field for 201 characters, keeps the last valid note and stops sending', async () => {
+    const { fixture, shown, step } = await open();
+    await type(fixture, note(step), 'Doar la programare');
+
+    await type(fixture, note(step), 'a'.repeat(201));
+    await blur(fixture, note(step));
+
+    expect(note(step)?.value).toHaveLength(201);
+    expect(text(describedBy(step, note(step)))).toBe(
+      'Nota poate avea cel mult 200 de caractere',
+    );
+    expect(note(step)?.getAttribute('aria-invalid')).toBe('true');
+    expect(fixture.componentInstance.value().facilitiesNote).toBe(
+      'Doar la programare',
+    );
+    expect(shown.at(-1)).toBe(true);
+
+    await type(fixture, note(step), 'a'.repeat(200));
+
+    expect(describedBy(step, note(step))).toBeNull();
+    expect(fixture.componentInstance.value().facilitiesNote).toBe(
+      'a'.repeat(200),
+    );
+  });
+
+  it('says the label and the error in English', async () => {
+    const { fixture, step } = await open('en');
+    await type(fixture, note(step), 'a'.repeat(201));
+    await blur(fixture, note(step));
+
+    expect(text(note(step)?.closest('label'))).toContain(
+      'Note about the facilities',
+    );
+    expect(text(describedBy(step, note(step)))).toBe(
+      'The note can have at most 200 characters',
+    );
+  });
+});
+
 describe('step 5, the page judges the hours', () => {
   // @traces 115-FR-002
   it('shows every error at once when sending is asked for', async () => {
@@ -1242,7 +1310,7 @@ describe('step 5, the page judges the hours', () => {
   });
 
   // @traces 115-FR-007
-  it('marks the week, the payments and the price with their paths', async () => {
+  it('marks the week, the price, the facilities note and the payments with their paths', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
 
@@ -1253,6 +1321,7 @@ describe('step 5, the page judges the hours', () => {
     ).toEqual([
       'steps.5.hours',
       'steps.5.courtesyCar.pricePerDayBani',
+      'steps.5.facilitiesNote',
       'steps.5.payments',
     ]);
     for (const group of ['steps.5.hours', 'steps.5.payments'])
@@ -1292,7 +1361,7 @@ describe('empty messages', () => {
     );
     const rule = stylesheet.match(/\.mf-message:empty\s*\{([^}]*)\}/)?.[1];
 
-    expect(template.match(/class="[^"]*\bmf-message\b/g)?.length).toBe(7);
+    expect(template.match(/class="[^"]*\bmf-message\b/g)?.length).toBe(8);
     expect(rule).toBeDefined();
     expect(rule).not.toMatch(/display:\s*none/);
     expect(rule).toMatch(/position:\s*absolute/);
