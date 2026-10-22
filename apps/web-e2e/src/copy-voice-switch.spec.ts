@@ -161,8 +161,8 @@ test.describe('switching copy voices off and pinning one @seeded', () => {
 
     await set(request, 4, { enabled: false, pinned: false });
 
-    // The 2 s of SC-003 run from the change reaching the page; the worker's
-    // relay of the event to the stream comes before them.
+    // The page has 2 s from the change reaching it; the worker's
+    // relay of the event to the stream comes before that.
     await expect(mark(page)).not.toHaveAttribute('data-voice', '4', {
       timeout: 5_000,
     });
