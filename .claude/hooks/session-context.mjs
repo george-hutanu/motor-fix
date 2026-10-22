@@ -17,7 +17,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { activeFeature } from "../scripts/lib/feature.mjs";
 import { readHarnessSettings } from "../scripts/lib/harness-settings.mjs";
-import { loadInstincts, selectByRelevance, selectForInjection } from "../scripts/instincts.mjs";
+import { audit, contextFileName, measure, ratchet, readBaseline } from "../scripts/context-audit.mjs";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
@@ -72,10 +72,10 @@ export function readState(repoRoot = repo) {
 /**
  * Assemble the injection within the budget. `head` and `tail` are never
  * trimmed — the branch state and the list of armed gates are the two things a
- * resumed session cannot rediscover cheaply. The mode guidance goes first when
- * something has to go, then the instincts.
+ * resumed session cannot rediscover cheaply. The mode guidance goes when it
+ * does not fit.
  */
-export function assemble({ head, mode = "", instincts = "", tail, max = 3000 }) {
+export function assemble({ head, mode = "", tail, max = 3000 }) {
   const join2 = (parts) => parts.filter(Boolean).join("\n\n");
   const fixed = join2([head, tail]).length;
   let budget = max - fixed;
@@ -89,16 +89,39 @@ export function assemble({ head, mode = "", instincts = "", tail, max = 3000 }) 
     return "";
   };
   const keptMode = fit(mode);
-  const keptInstincts = fit(instincts);
-  const trimmed = (mode && !keptMode) || (instincts && !keptInstincts);
+  const trimmed = mode && !keptMode;
 
   return join2([
     head,
     keptMode,
-    keptInstincts,
     tail,
     trimmed ? "(session context trimmed to fit SPECKIT_CONTEXT_MAX_CHARS)" : "",
   ]);
+}
+
+/**
+ * The context-file audit, once per session instead of once per story run: one
+ * line when the file grew past its baseline or has lines worth re-reading,
+ * nothing otherwise, and nothing when either cannot be read.
+ */
+export function auditLine(repoRoot = repo) {
+  try {
+    const name = contextFileName(repoRoot);
+    const baseline = name && readBaseline(repoRoot);
+    if (!baseline) return "";
+    const text = readFileSync(join(repoRoot, name), "utf8");
+    const constitutionFile = join(repoRoot, ".specify", "memory", "constitution.md");
+    const constitution = existsSync(constitutionFile) ? readFileSync(constitutionFile, "utf8") : "";
+    const verdict = ratchet(measure(text), baseline);
+    const findings = audit(text, { repo: repoRoot, constitution }).length;
+    const parts = [
+      verdict.state === "grown" ? `${name} grew from ${baseline.lines} to ${baseline.lines + verdict.delta} non-empty lines (+${verdict.delta})` : "",
+      findings > 0 ? `${verdict.state === "grown" ? "and" : name} has ${findings} line(s) worth re-reading` : "",
+    ].filter(Boolean);
+    return parts.length ? `context-audit: ${parts.join(" ")}; run node .claude/scripts/context-audit.mjs` : "";
+  } catch {
+    return "";
+  }
 }
 
 // Both of this gate's settings resolve the same way the hook profile does:
@@ -131,27 +154,10 @@ if (isEntryPoint(import.meta.url)) {
       ? `spec-kit session — branch ${state.branch}, feature ${state.feature} (${state.openTasks} open / ${state.doneTasks} done tasks), mode: ${mode}`
       : `spec-kit session — branch ${state.branch}, no active feature, mode: ${mode}`,
     state.plan ? `Active plan (stack, structure, commands): ${state.plan}` : "",
+    auditLine(),
   ]
     .filter(Boolean)
     .join("\n");
-
-  // Relevance beats confidence when only three fit: `selectByRelevance`
-  // re-orders the same shortlist for the feature and phase actually starting,
-  // and returns `selectForInjection`'s order untouched if the lane is off or
-  // slow. A session start never waits more than the lane's own short timeout.
-  const options = {
-    max: Number(process.env.SPECKIT_MAX_INSTINCTS ?? 3),
-    min: Number(process.env.SPECKIT_MIN_CONFIDENCE ?? 0.7),
-  };
-  const all = loadInstincts(repo);
-  const picked = await selectByRelevance(all, { ...options, feature: state.feature, mode, repo }).catch(() =>
-    selectForInjection(all, options),
-  );
-  const instincts = picked.length
-    ? `Instincts this repo has earned (suggestions, not rules — /speckit-learn records them):\n${picked
-        .map((i) => `- ${i.trigger}: ${i.action.split("\n")[0]}`)
-        .join("\n")}`
-    : "";
 
   const tail = [
     "Gates: node .claude/hooks/run-hook.mjs <id> runs each one; `node .claude/scripts/doctor.mjs` lists them and checks they still fire.",
@@ -163,7 +169,6 @@ if (isEntryPoint(import.meta.url)) {
     assemble({
       head,
       mode: existsSync(contextFile) ? readFileSync(contextFile, "utf8").trim() : "",
-      instincts,
       tail,
       max: contextMaxChars(),
     }),

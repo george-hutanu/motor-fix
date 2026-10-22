@@ -17,8 +17,8 @@
         "standard",
         "strict"
       ],
-      "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "2c3230fb133c"
+      "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, a context-audit line when the context file grew or has findings, and the check commands — inside a character budget",
+      "fingerprint": "7e03b8c87c54"
     },
     {
       "id": "session:start:watch-reminder",

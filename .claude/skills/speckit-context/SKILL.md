@@ -108,7 +108,7 @@ answer to it — the one changed **most recently** is the current position:
 `/speckit-context --since` re-reads the same areas and reports **only what
 changed**, instead of rewriting the digest.
 
-- **Baseline**: the existing `context.md`'s `**Gathered**:` date; `--since <ISO
+- **Baseline**: the existing `context.md`'s `**Gathered**:` time; `--since <ISO
   date>` overrides it. If no `context.md` exists, run the command normally.
 - **What counts as changed**: a page whose `updated` date (its `docs/` front
   matter) is after the baseline, a comment created after it, a story whose Status or Priority moved.
@@ -150,10 +150,15 @@ the invocation, and step 6.
 
 ```
 Feature: <FEATURE_DIR>. Anchor: <story ID | epic | terms: …>. Tracker: <FEATURE_DIR>/story.md.
-Mode: full | refresh (baseline <ISO date>).
+Mode: full | refresh (baseline <ISO time>). Gathered: <UTC time> · specs trunk <sha>.
 Write context.md per .claude/skills/speckit-context/SKILL.md
 and return the report in your Output format (envelope first, 16 lines).
 ```
+
+The calling context fills `Gathered` before the call: `date -u
++%Y-%m-%dT%H:%M:%SZ` and `git -C .motor-fix-specs rev-parse --short
+origin/trunk` after a fetch. `/speckit-auto` phase 13's model-free gate
+(`context-refresh-gate.mjs`) compares against both, so neither is a guess.
 
 Why a subagent: the documentation is large and most of what a search returns is noise
 for this feature; none of it belongs in the session that asked. And the agent
@@ -186,10 +191,15 @@ its id (`gh issue list -R $R --search "ST-<n> in:title" --state all --json
 number,title`), then write, in this order, to `FEATURE_DIR/story.md`:
 
 ```bash
-gh issue view <n> -R $R --comments                       # the story and every comment
-gh issue view <epic n> -R $R --comments                  # its epic: the issue labelled epic and EP-<k>
+F=number,title,state,labels,body,comments,createdAt,updatedAt
+gh issue view <n> -R $R --json $F                        # the story and every comment
+gh issue list -R $R --label epic --state all --search "EP-<k> in:title" --json number,title
+gh issue view <epic n> -R $R --json $F                   # its epic: labelled epic, titled `EP-<k> …`
 gh issue list -R $R --label EP-<k> --state all --limit 200 --json number,title,state,labels
 ```
+
+`k` is the story's `EP-<k>` label; an epic carries `epic`, not its own
+`EP-<k>`. `--json`, because off a terminal `--comments` prints the comments without the body.
 
 With terms and no id, `gh issue list -R $R --search "<terms>" --state all`
 picks the anchor; no confident match is a STOP, as in step 1. A story with no
@@ -257,7 +267,7 @@ dropped, not softened.
 
 - **Feature**: <NNN-slug>
 - **Anchor**: <story ID + title, or feature/epic page> — <issue URL or docs/<path>> | terms: <t1, t2, …>
-- **Gathered**: <ISO 8601 date>
+- **Gathered**: <UTC ISO 8601 time to the second> · specs trunk <sha>
 - **Source**: llms.txt + docs/ (specs repo <trunk sha7>) + the tracker (story.md)
 - **Read**: story ok | feature ok | epic ok | architecture ok | decisions ok
 - **Overall confidence**: high | medium | low
