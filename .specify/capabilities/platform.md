@@ -96,7 +96,9 @@ features:
   - 1361-watch-schedule-qa-telemetry
   - 1355-cheaper-gates-lighter-context
   - 1362-pr-qa-boot-orphan-checks
+  - 1358-preflight-delta-archive
   - 1361-trim-dead-lanes
+  - 1357-merge-when-overlapping
 ---
 
 # Capability: Platform
@@ -1293,9 +1295,9 @@ _From 893-folder-rules._
 
 _From 893-folder-rules._
 
-### 1018-FR-018 — The traceability grammar MUST accept a feature number of three or more digits wherever it reads a feature folder (`NNN-slug`) or a feature-qualified requirement id (`<feature>-FR-NNN`): the `// @traces` line (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`), the trace matrix, the capability specs and their Spec Delta, status, impact and retro evidence; the requirement number stays three digits, and a longer feature number is read whole, never as its last three digits.
+### 1358-FR-009 — The traceability grammar MUST accept a feature number of three or more digits wherever it reads a feature folder (`NNN-slug`) or a feature-qualified requirement id (`<feature>-FR-NNN`): the `// @traces` line (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`), the trace matrix, the capability specs and their Spec Delta, status, impact and retro evidence; the requirement number stays three digits, and a longer feature number is read whole, never as its last three digits. In a capability spec and its Spec Delta (`capabilities.mjs`) the requirement number MAY carry one lowercase letter (`FR-004a`, `NNN-FR-004a`), read wherever `capabilities.mjs` reads an id: requirement headings, retired entries, declared requirements, Adds (a single id; a range stays unlettered), Modifies and Removes.
 
-_From 1018-notion-docs-to-specs._
+_From 1358-preflight-delta-archive._
 
 ### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
 
@@ -2394,9 +2396,9 @@ _From 1361-watch-schedule-qa-telemetry._
 ### 1361-FR-013 — `speckit-auto`'s report MUST show the story's phases with their durations and the skills each subagent ran.
 
 _From 1361-watch-schedule-qa-telemetry._
-### 1355-FR-002 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red; `stop-test-gate.sh` checks the same things as before (only its comment naming where the full typecheck, lint and test run changes).
+### 1358-FR-015 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red, except that `lifecycle.mjs check` and `ready` MUST skip the local checks (observability inventory, folder rules, lint, the affected typecheck and unit tests) when the worktree is clean and a passing proof matches its `git write-tree` hash, its merge base with `origin/main` and `origin/main`'s sha, recording `local checks: reused proof <hash7>`; a dirty file, a different tree, merge base or origin/main, or no proof MUST run them. `lifecycle.mjs check` is the one way the slice end and a tail fix run them. `stop-test-gate.sh` checks the same things as before.
 
-_From 1355-cheaper-gates-lighter-context._
+_From 1358-preflight-delta-archive._
 
 ### 1355-FR-003 — (D2) Preflight MUST skip the full suite when `git status --porcelain` is empty, HEAD equals its merge base with `origin/main` (after `git fetch -q origin main`; a failed fetch counts as no success), and that commit carries a check run whose name ends in `CI OK` with conclusion `success`, read over REST (`.claude/scripts/lib/gh-rest.mjs`), writing `Preflight suite skipped: base <sha7> has CI OK` to `auto-run.md`; any other state (dirty tree, no such run, pending, failure, a REST error) MUST run the suite as today.
 
@@ -2442,6 +2444,121 @@ _From 1362-pr-qa-boot-orphan-checks._
 
 _From 1362-pr-qa-boot-orphan-checks._
 
+### 1358-FR-001 — `preflight.md` MUST, when `preflight-skip.mjs` answers `run`, run `npm run test` as the suite when both `DATABASE_URL` and `REDIS_URL` are set and non-empty in the run's process environment (`.env` is not read), else `npm run test:unit`; typecheck and lint run as before.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-002 — The run MUST log `Preflight suite: unit <sha7>` or `Preflight suite: full <sha7>` (the start commit) in `auto-run.md`; Hard Stop 2 in `SKILL.md` MUST name the suite that ran red; `preflight.md` MUST say a cloud session, whose environment sets both variables (`cloud.md`), runs and logs `full`.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-003 — The constitution `[PLACEHOLDER]` grep and the constitution card read MUST run in the preflight batch, and phase 1 in `phases-plan.md` MUST use that result instead of running them again, keeping its fallback for a missing or bare-template constitution.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-004 — `.specify/templates/spec-template.md` MUST carry a `## Spec Delta` block after the requirements and before the success criteria, in the form `parseDelta` reads (`### Capability:`, `**Adds**`, `**Modifies**`, `**Removes**`), marked as a project-local addition.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-005 — `phases-plan.md` §2 MUST run `node .claude/scripts/capabilities.mjs validate --check` beside `level.mjs check`, an ERROR fixed in `spec.md` before the next phase.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-006 — `capabilities.mjs validate` MUST report ERROR `delta-adds-and-modifies` when an FR is named under Adds and as a Modifies replacement anywhere in the delta, WARN `delta-all-adds` when the delta names Adds and no Modifies or Removes in any section, ERROR `delta-capability-twice` when two `### Capability:` sections name the same capability (the second merge plan would overwrite the first), and print one `<capability>: +A ~M -R` counts line per capability section; every existing ERROR rule stays.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-007 — `.claude/agents/spec-reviewer.md` MUST carry one rubric line on the Spec Delta: an FR that changes a requirement a capability already holds is a Modifies naming that requirement, not an Adds.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-008 — `speckit-specify` `SKILL.md` step 0 MUST read the story, when the description names an ST or EP id or a motor-fix-specs issue, with one `gh issue view <n> --repo george-hutanu/motor-fix-specs --comments`, replacing the Jira and Figma steps (0 and 0b) and the Done When ticket line to match, and its project-local deltas section MUST record that cut.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-010 — `capabilities.mjs` MUST read a requirement whose text continues on lines indented deeper than its own bullet (nested bullets included) as one text, and a delta's Adds, Modifies or Removes list that continues on indented lines below it as one list.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-011 — When two Modifies entries in one capability section name the same replacement, `merge` MUST write the replacement once, in the first base's place, remove the other base's block, and tombstone both bases as superseded by it.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-012 — `capabilities.mjs merge --apply` MUST check every planned capability file before writing any: each Adds and replacement token is a requirement heading exactly once; no Modifies or Removes base is still a heading; the retired list gained exactly one tombstone per Modifies and Removes base; the requirement headings after equal those before + Adds − (Modifies and Removes bases) + distinct replacements; and no FR token appears among the headings and the retired entries more often than before the merge, or twice when it was absent (a duplicate the file already held is not the merge's to refuse). On any failure it MUST print each failure, exit 1 and write no file.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-013 — `speckit-archive` `SKILL.md` MUST read, after the apply, `git diff -- .specify/capabilities/` and the merge's counts instead of whole capability files, with Phase 3 rewritten to match; its Phase 4 MUST say `/speckit-retro` is manual only in the `/speckit-auto` chain.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-014 — `lifecycle.mjs check` and `ready` MUST, after their local checks pass on a clean worktree (`git status --porcelain` empty), record a passing proof keyed by git write-tree, the merge base and origin/main's sha (`git write-tree`, `git merge-base HEAD origin/main`, `git rev-parse origin/main`) in `.specify/.cache/local-checks.json` (`.specify/` is per worktree; overwritten); a failing check, a dirty worktree or an empty tree hash, merge base or origin/main sha MUST record none.
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-016 — Vitest cases MUST cover FR-006, FR-009 to FR-012 (each post-merge failure mode its own case) and FR-014 to FR-015 (reuse, dirty file, different tree, missing proof, failing check).
+
+_From 1358-preflight-delta-archive._
+
+### 1358-FR-017 — Every edited gate script MUST be blessed (`doctor.mjs --bless-hooks` after reading its diff); `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST be green.
+
+_From 1358-preflight-delta-archive._
+
+### 1357-FR-001 — The constitution's Principle VII step on merging `main` (`constitution.md` around :582), AGENTS.md's lifecycle step 5 and the constitution card MUST state, as a PATCH (4.1.0 → 4.1.1, dated 2026-10-22, asked for by the owner), that `origin/main` is merged into a branch only when the overlap test says the merge is needed, never merely because the branch is behind; a clean behind head keeps its passed QA run and `agent-review`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-002 — `merge-main.mjs` MUST offer the overlap test as code (`merge-main.mjs --needed`): exit 0 when a merge is needed, exit 1 when it is not, with one line on stdout naming the rule that decided (the first that holds, in the order (a) to (e) of FR-003); exit 2 with the reason on stderr when it cannot compute the answer (fetch, merge-base or diff failing), which every caller treats as "needed", so an error never skips a merge; it changes nothing in the worktree.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-003 — The overlap test MUST answer "needed" when any of these holds, and "not needed" otherwise: (a) GitHub reports the PR as conflicting with `main`; (b) a file `main` changed since the merge-base is also changed by the PR; (c) `main` changed a file under the same Nx project folder (`apps/<x>` or `libs/<y>`, matched on the first two path segments exactly, so `apps/web` is not `apps/web-e2e`) as a file the PR changes; the PR's files are `git diff --name-only --no-renames <merge-base> HEAD` and main's are the same command against `origin/main`, so a rename or delete counts under both its old and new path; (d) `main` changed a path matching (repo-root patterns, full path) `docker-compose*.yml`, `package-lock.json`, `libs/domain/prisma/**`, `apps/api/openapi.json`, `.github/workflows/**`, `.claude/hooks/registry.json` or `.specify/capabilities/**`; (e) the latest lap report of the PR holds the PR QA workflow's message `the PR's docker-compose.yml has no storage service: merge main into the branch`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-004 — `tail.md` steps 1 and 4, `lifecycle.md` step 5, `speckit-pr-test/SKILL.md`'s post-merge rule and `watch.mjs`'s `merge-main` fix MUST call the overlap test and merge only on "needed"; none of them merges because the branch is behind.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-005 — No merge in the harness MUST take the `refs/pull/<n>/merge` ref; the merge source is always `origin/main`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-006 — `npm run test:harness` MUST hold a vitest case for every branch of the overlap test (each rule of FR-003 answering "needed", and the no-overlap "not needed"), and for the `--gate-only` behaviour of FR-009.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-007 — `hand-off.md` step 1 and `tail.md` step 3's no-run case MUST say how to make the live flows proof: boot the stack with `eval "$(node scripts/test-services.ts origin/main)"`, run `node .claude/scripts/pr-test/precheck.mjs --flows <file> --spec <spec> --check` until exit 0; that `dispatch.mjs` exit 64 means no proof exists for this head; that no flag skips the proof; and that a Docker-less machine is a `needs-confirmation` question on the task.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-008 — No script or skill MUST gain a way to dispatch a QA run without a live proof for the head.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-009 — `scripts/watch-schedule.sh` MUST accept `--gate-only`, under which each scheduled pass runs `watch.mjs --gate`, appends the gate's plan lines to a file named by the UTC date under the schedule's log folder when the gate reports something to do, records the pass in `passes.log` (a gate error, exit 1, writes no plan file and is logged there as today), and never claims or dispatches; `--gate-only` with `--dispatch` is a usage error.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-010 — The script's header and the watch skill MUST say how and when to turn `--dispatch` on: after a week of plan files holding no line a person would refuse.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-011 — This change MUST NOT load the launchd agent: no `install`, `launchctl load` or `bootstrap` runs from the PR, the lifecycle or a test; the owner installs it.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-012 — `tail.md` step 4's pending-check path (today it ends before the step's write is reached) MUST write `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §4, when there is something to record), committed through the specs repo, before ending with `NEXT: merge #<n> after CI`.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-013 — Every gate-script edit the change makes MUST be followed by reading its diff and `node .claude/scripts/doctor.mjs --bless-hooks`; `node .claude/scripts/harness-eval.mjs --check` and `npm run test:harness` stay green.
+
+_From 1357-merge-when-overlapping._
+
+### 1357-FR-014 — A cut from a stock spec-kit skill or template MUST be marked as a project-local override where the file records its deltas.
+
+_From 1357-merge-when-overlapping._
 ### 1361-FR-101 — `speckit-clarify` MUST no longer carry the interactive question-rendering boilerplate (the per-question presentation format, the option-table formatting rules, the "wait for the user" prose of the sequential loop) and its hook blocks (replaced by one line naming the optional `speckit.git.commit` hooks), while keeping, in its deltas record, the one-question-per-turn gate that a human-driven run still honours.
 
 _From 1361-trim-dead-lanes._
@@ -2574,3 +2691,5 @@ _From 1361-trim-dead-lanes._
 - `1324-FR-012` — superseded by `1355-FR-001` (2026-10-21)
 - `691-FR-005` — superseded by `1355-FR-009` (2026-10-21)
 - `705-FR-001` — superseded by `1355-FR-010` (2026-10-21)
+- `1018-FR-018` — superseded by `1358-FR-009` (2026-10-22)
+- `1355-FR-002` — superseded by `1358-FR-015` (2026-10-22)

@@ -204,6 +204,7 @@ describe('the pre-commit hook', () => {
   const code = () => hook().split('\n').filter((l) => !l.startsWith('#')).join('\n');
 
   // @traces 1355-FR-002
+  // @traces 1358-FR-015
   it('keeps the fast checks only: identity, the folder rules and Biome on the staged files', () => {
     const lines = code().split('\n');
     assert.ok(lines.includes('sh .husky/identity.sh check'));
@@ -212,6 +213,7 @@ describe('the pre-commit hook', () => {
   });
 
   // @traces 1355-FR-002
+  // @traces 1358-FR-015
   it('takes no heavy slot and runs no typecheck, test or full lint: lifecycle.mjs check does, per slice and at ready', () => {
     assert.doesNotMatch(code(), /scripts\/heavy\.sh|nx affected|npm run lint|npm test|jest/);
     assert.match(hook(), /lifecycle\.mjs\s*(#\s*)?check/);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -35,7 +35,7 @@ afterEach(() => rmSync(t.root, { recursive: true, force: true }));
 const run = (verb, extra = {}) => {
   const env = { PATH: `${t.bin}:/usr/bin:/bin`, HOME: t.home, CALLS: t.calls, ...extra };
   try {
-    return { status: 0, out: execFileSync('sh', [join(t.main, 'scripts', 'watch-schedule.sh'), verb], { cwd: t.root, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
+    return { status: 0, out: execFileSync('sh', [join(t.main, 'scripts', 'watch-schedule.sh'), ...[].concat(verb)], { cwd: t.root, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
   } catch (e) {
     return { status: e.status, out: `${e.stdout ?? ''}${e.stderr ?? ''}` };
   }
@@ -142,6 +142,61 @@ describe('scripts/watch-schedule.sh', () => {
     const bullet = read('AGENTS.md').match(/ - Parallel work is watched:.*?(?= - [A-Z])/)[0];
     assert.match(bullet, /scripts\/watch-schedule\.sh install/);
     assert.match(bullet, /share the claim/);
+  });
+
+  // @traces 1357-FR-009
+  // @traces 1357-FR-006
+  it('run --gate-only appends the gate\'s plan lines to the day\'s plan file and dispatches nothing', () => {
+    fake('node', `echo "node $* token=$GH_TOKEN cwd=$(pwd)" >> "$CALLS"\ncase "$*" in *--gate*) printf 'tail .worktrees/a #12\\nmerge .worktrees/b #13\\n'; exit 2;; esac\nexit 0`);
+    const r = run(['run', '--gate-only']);
+    assert.equal(r.status, 2, r.out);
+    assert.deepEqual(calls().filter((l) => l.startsWith('node ')).map((l) => l.split(' token=')[0]), ['node .claude/scripts/watch.mjs --gate']);
+    const day = new Date().toISOString().slice(0, 10);
+    const plan = readFileSync(join(t.main, '.work', 'watch-schedule', `plan-${day}.log`), 'utf8').trim().split('\n');
+    assert.equal(plan.length, 2);
+    assert.match(plan[0], /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ tail \.worktrees\/a #12$/);
+    assert.match(plan[1], /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ merge \.worktrees\/b #13$/);
+    assert.match(passes().at(-1), /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ gate 2 gate-only$/);
+    assert.ok(!existsSync(join(t.main, '.work', 'watch-dispatch')));
+  });
+
+  // @traces 1357-FR-009
+  it('run --gate-only writes no plan file when the gate finds nothing or fails', () => {
+    for (const code of ['0', '1']) {
+      const r = run(['run', '--gate-only'], { GATE_EXIT: code });
+      assert.equal(r.status, Number(code), r.out);
+      assert.match(passes().at(-1), new RegExp(` gate ${code} gate-only$`));
+    }
+    assert.deepEqual(readdirSync(join(t.main, '.work', 'watch-schedule')).filter((f) => f.startsWith('plan-')), []);
+    assert.equal(calls().filter((l) => l.includes('--dispatch')).length, 0);
+  });
+
+  // @traces 1357-FR-009
+  it('install --gate-only renders a plist that runs the pass gate-only; status names the newest plan file', () => {
+    assert.equal(run(['install', '--gate-only']).status, 0);
+    assert.match(readFileSync(join(t.home, PLIST), 'utf8'), /<string>run<\/string>\s*<string>--gate-only<\/string>/);
+    mkdirSync(join(t.main, '.work', 'watch-schedule'), { recursive: true });
+    for (const d of ['2026-10-20', '2026-10-21']) writeFileSync(join(t.main, '.work', 'watch-schedule', `plan-${d}.log`), 'x\n');
+    assert.match(run('status').out, /plan files: .*plan-2026-10-21\.log/);
+  });
+
+  // @traces 1357-FR-009
+  it('run --dispatch is today\'s pass, and --gate-only with --dispatch is a usage error that runs nothing', () => {
+    const r = run(['run', '--dispatch'], { GATE_EXIT: '2' });
+    assert.equal(r.status, 0, r.out);
+    assert.match(passes().at(-1), / gate 2 dispatch 0$/);
+    const both = run(['run', '--gate-only', '--dispatch'], { GATE_EXIT: '2' });
+    assert.equal(both.status, 64);
+    assert.match(both.out, /usage/);
+    assert.equal(calls().filter((l) => l.startsWith('node ')).length, 2, 'only the first run reached node');
+    assert.notEqual(run(['install', '--gate-only', '--dispatch']).status, 0);
+    assert.ok(!existsSync(join(t.home, PLIST)));
+  });
+
+  // @traces 1357-FR-011
+  it('run --gate-only never calls launchctl', () => {
+    run(['run', '--gate-only'], { GATE_EXIT: '2' });
+    assert.deepEqual(calls().filter((l) => l.startsWith('launchctl')), []);
   });
 
   it('refuses an unknown verb', () => {

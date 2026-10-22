@@ -92,19 +92,23 @@ The dry run prints `+added ~modified -removed` per capability and writes
 nothing. Read it before applying. If a count surprises you, the delta is wrong,
 not the tool.
 
-After applying, read the capability file end to end. It is now the document
-someone will trust; a merge that produced a requirement whose text no longer
-makes sense out of its feature's context is a merge you fix by hand before
-committing.
+`--apply` checks every planned file against the delta before it writes any;
+on a failure it prints each one, exits 1 and writes nothing. That means the
+delta (or a capability already holding a token twice) is wrong: fix it there,
+never the file by hand.
 
-## Phase 3 — what the merge buys
+After applying, read `git diff -- .specify/capabilities/` and the counts
+line, not the whole files.
 
-Retiring a requirement is not bookkeeping. `.claude/scripts/trace-matrix.mjs` reads the
-`## Retired` tombstones and drops those requirements from the coverage
-denominator, which is the **only honest way out of the traceability gate** — the
-alternative is growing `.specify/trace-baseline.json`, and the
-`pre:edit:config-protection` hook blocks that precisely because buying time is
-what the gate is for.
+## Phase 3 — check the diff
+
+The diff shows one `### <NNN>-FR-<n> —` heading added per Adds and per
+replacement, each Modifies and Removes base's heading gone, and one `## Retired`
+tombstone per base; a requirement whose text no longer makes sense out of its
+feature's context is fixed in `spec.md` and merged again. The tombstones are
+how `.claude/scripts/trace-matrix.mjs` drops a requirement from the coverage
+denominator, the **only honest way out of the traceability gate** (growing
+`.specify/trace-baseline.json` is blocked by `pre:edit:config-protection`).
 
 Check it landed:
 
@@ -124,8 +128,9 @@ in its own PR, the feature folder goes to the private specs repository
 tail agent), and commit nothing.
 
 1. Mark the feature's `spec.md` status line `Archived (<date>)`.
-2. Run `/speckit-retro` if it has not run — the acceptance verdict belongs with
-   the feature, and archiving without one loses the reason it was accepted.
+2. `/speckit-retro` is manual only in the `/speckit-auto` chain: an
+   autonomous run does not invoke it. Run by hand, run it first if it has not
+   run — the acceptance verdict belongs with the feature.
 3. Stage `.specify/capabilities/` with the branch's last slice commit (or the
    next fix commit when that slice is already pushed), never a commit of its
    own, and push; commit

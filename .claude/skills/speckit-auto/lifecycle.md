@@ -71,9 +71,12 @@ to `tracker-sync.md` at its next event.
      `general-purpose`: it denies the heavy tools those runs never use, and
      its prompt names no re-read of AGENTS.md or CLAUDE.local.md, which are
      already in its context.
-  5. Get CI green: merge `origin/main` into the branch if it is behind
-     (`node .claude/scripts/merge-main.mjs`, which resolves the capability
-     specs, the hook registry and the generated client itself) and
+  5. Get CI green: a branch behind `main` merges `origin/main` in only when
+     `node .claude/scripts/merge-main.mjs --needed` says so (exit 0, or
+     exit 2 when git cannot answer); on exit 1 nothing is merged and the head
+     keeps its QA run and `agent-review`. The merge is
+     `node .claude/scripts/merge-main.mjs`, which resolves the capability
+     specs, the hook registry and the generated client itself, then a
      push; the checks are waited for in the background (`run_in_background`),
      by the session before the merge, never in a foreground `sleep`
      loop and never by an agent that would sleep through it. A failing check
