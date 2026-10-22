@@ -31,16 +31,16 @@ const lines = (hours: unknown) =>
 describe('the opening hours as lines, under odd tables', () => {
   it('does not join a closed Monday to a closed Sunday around the week end', () => {
     expect(lines(week({ mon: [], sun: [] }))).toEqual([
-      { days: 'Luni', times: 'Închis' },
-      { days: 'Marți – sâmbătă', times: '08:00 – 19:00' },
-      { days: 'Duminică', times: 'Închis' },
+      { closed: true, days: 'Luni', times: 'Închis' },
+      { closed: false, days: 'Marți – sâmbătă', times: '08:00 – 19:00' },
+      { closed: true, days: 'Duminică', times: 'Închis' },
     ]);
   });
 
   it('writes a week of closed days as one line', () => {
     expect(
       lines({ fri: [], mon: [], sat: [], sun: [], thu: [], tue: [], wed: [] }),
-    ).toEqual([{ days: 'Luni – duminică', times: 'Închis' }]);
+    ).toEqual([{ closed: true, days: 'Luni – duminică', times: 'Închis' }]);
   });
 
   it('keeps a split day apart from a single-interval day covering the same span', () => {
@@ -54,14 +54,15 @@ describe('the opening hours as lines, under odd tables', () => {
         }),
       ),
     ).toEqual([
-      { days: 'Luni', times: '08:00 – 19:00' },
-      { days: 'Marți', times: '08:00 – 12:00, 12:00 – 19:00' },
-      { days: 'Miercuri – duminică', times: '08:00 – 19:00' },
+      { closed: false, days: 'Luni', times: '08:00 – 19:00' },
+      { closed: false, days: 'Marți', times: '08:00 – 12:00, 12:00 – 19:00' },
+      { closed: false, days: 'Miercuri – duminică', times: '08:00 – 19:00' },
     ]);
   });
 
   it('writes midnight and the last quarter-hour as two-digit times', () => {
     expect(lines(week({ sun: [['00:00', '23:45']] }))[1]).toEqual({
+      closed: false,
       days: 'Duminică',
       times: '00:00 – 23:45',
     });
@@ -76,8 +77,8 @@ describe('the opening hours as lines, under odd tables', () => {
     Object.freeze(frozen);
 
     expect(lines(frozen)).toEqual([
-      { days: 'Luni – sâmbătă', times: '08:00 – 19:00' },
-      { days: 'Duminică', times: 'Închis' },
+      { closed: false, days: 'Luni – sâmbătă', times: '08:00 – 19:00' },
+      { closed: true, days: 'Duminică', times: 'Închis' },
     ]);
   });
 

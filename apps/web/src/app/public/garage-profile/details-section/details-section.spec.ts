@@ -159,15 +159,6 @@ describe('the brands the garage takes and refuses', () => {
     expect(text(section().querySelector('.brand-note'))).toBe(NOTE);
   });
 
-  it('hides every lamp dot from assistive technology, the name staying text', () => {
-    const dots = [...section().querySelectorAll('mf-lamp .mf-lamp-dot')];
-
-    expect(dots.length).toBe(10);
-    expect(
-      dots.every((dot) => dot.getAttribute('aria-hidden') === 'true'),
-    ).toBe(true);
-  });
-
   it('writes the fuels in the fixed order, whatever order they came in', async () => {
     await show({ worksOn: [taken('BMW', ['electric', 'hybrid', 'petrol'])] });
 
@@ -242,7 +233,19 @@ describe('the brands the garage takes and refuses', () => {
     await show({ doesNotTake: [] });
 
     expect(group('refuses')).toBeNull();
-    expect(text(section().querySelector('.brand-note'))).toBe(NOTE);
+    expect(text(group('works')?.querySelector('.brand-note'))).toBe(NOTE);
+  });
+
+  it('draws each brand as a chip holding its lamp, the fuels under it', () => {
+    for (const name of ['works', 'refuses'] as const)
+      for (const li of group(name)?.querySelectorAll('li') ?? [])
+        expect(li.querySelector('.chip > mf-lamp')).not.toBeNull();
+    expect(group('works')?.querySelector('.chip .fuels')).toBeNull();
+  });
+
+  it('keeps the note in the column of the refused brands', () => {
+    expect(group('refuses')?.querySelector('.brand-note')).not.toBeNull();
+    expect(group('works')?.querySelector('.brand-note')).toBeNull();
   });
 
   it('shows no note line without a note', async () => {
@@ -289,6 +292,23 @@ describe('the facilities, the courtesy car and the payment', () => {
 
     expect(text(group('facilities')?.querySelector('h2'))).toBe('Facilități');
     expect(facilities()).toEqual(['Preluare și predare', 'Sală de așteptare']);
+  });
+
+  it('draws each facility as a chip with its own icon, hidden from assistive technology', async () => {
+    await show({
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    });
+
+    const icons = [
+      ...(group('facilities')?.querySelectorAll('li .chip > svg') ?? []),
+    ];
+    expect(icons.map((svg) => svg.getAttribute('data-icon'))).toEqual([
+      'courtesy_car',
+      'pickup_dropoff',
+      'waiting_area',
+    ]);
+    for (const svg of icons)
+      expect(svg.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('marks a free courtesy car', async () => {

@@ -37,9 +37,9 @@ const lines = (hours: unknown) =>
 describe('the opening hours as lines', () => {
   it('groups the working week, then Saturday, then a closed Sunday', () => {
     expect(lines(week({}))).toEqual([
-      { days: 'Luni – vineri', times: '08:00 – 19:00' },
-      { days: 'Sâmbătă', times: '09:00 – 14:00' },
-      { days: 'Duminică', times: 'Închis' },
+      { closed: false, days: 'Luni – vineri', times: '08:00 – 19:00' },
+      { closed: false, days: 'Sâmbătă', times: '09:00 – 14:00' },
+      { closed: true, days: 'Duminică', times: 'Închis' },
     ]);
   });
 
@@ -47,19 +47,19 @@ describe('the opening hours as lines', () => {
     await i18n.use('en');
 
     expect(lines(week({}))).toEqual([
-      { days: 'Monday – Friday', times: '08:00 – 19:00' },
-      { days: 'Saturday', times: '09:00 – 14:00' },
-      { days: 'Sunday', times: 'Closed' },
+      { closed: false, days: 'Monday – Friday', times: '08:00 – 19:00' },
+      { closed: false, days: 'Saturday', times: '09:00 – 14:00' },
+      { closed: true, days: 'Sunday', times: 'Closed' },
     ]);
   });
 
   it('writes a lunch break as two intervals and splits the run around it', () => {
     expect(lines(week({ tue: LUNCH }))).toEqual([
-      { days: 'Luni', times: '08:00 – 19:00' },
-      { days: 'Marți', times: '08:00 – 12:00, 13:00 – 19:00' },
-      { days: 'Miercuri – vineri', times: '08:00 – 19:00' },
-      { days: 'Sâmbătă', times: '09:00 – 14:00' },
-      { days: 'Duminică', times: 'Închis' },
+      { closed: false, days: 'Luni', times: '08:00 – 19:00' },
+      { closed: false, days: 'Marți', times: '08:00 – 12:00, 13:00 – 19:00' },
+      { closed: false, days: 'Miercuri – vineri', times: '08:00 – 19:00' },
+      { closed: false, days: 'Sâmbătă', times: '09:00 – 14:00' },
+      { closed: true, days: 'Duminică', times: 'Închis' },
     ]);
   });
 
@@ -67,27 +67,27 @@ describe('the opening hours as lines', () => {
     expect(
       lines(week({ fri: SHORT, sat: [], thu: SHORT, wed: SHORT })),
     ).toEqual([
-      { days: 'Luni – marți', times: '08:00 – 19:00' },
-      { days: 'Miercuri – vineri', times: '09:00 – 14:00' },
-      { days: 'Sâmbătă – duminică', times: 'Închis' },
+      { closed: false, days: 'Luni – marți', times: '08:00 – 19:00' },
+      { closed: false, days: 'Miercuri – vineri', times: '09:00 – 14:00' },
+      { closed: true, days: 'Sâmbătă – duminică', times: 'Închis' },
     ]);
   });
 
   it('writes a whole week alike as one line', () => {
     expect(lines(week({ sat: OPEN, sun: OPEN }))).toEqual([
-      { days: 'Luni – duminică', times: '08:00 – 19:00' },
+      { closed: false, days: 'Luni – duminică', times: '08:00 – 19:00' },
     ]);
   });
 
   it('keeps equal days apart when a different day stands between them', () => {
     expect(lines(week({ thu: SHORT, tue: SHORT }))).toEqual([
-      { days: 'Luni', times: '08:00 – 19:00' },
-      { days: 'Marți', times: '09:00 – 14:00' },
-      { days: 'Miercuri', times: '08:00 – 19:00' },
-      { days: 'Joi', times: '09:00 – 14:00' },
-      { days: 'Vineri', times: '08:00 – 19:00' },
-      { days: 'Sâmbătă', times: '09:00 – 14:00' },
-      { days: 'Duminică', times: 'Închis' },
+      { closed: false, days: 'Luni', times: '08:00 – 19:00' },
+      { closed: false, days: 'Marți', times: '09:00 – 14:00' },
+      { closed: false, days: 'Miercuri', times: '08:00 – 19:00' },
+      { closed: false, days: 'Joi', times: '09:00 – 14:00' },
+      { closed: false, days: 'Vineri', times: '08:00 – 19:00' },
+      { closed: false, days: 'Sâmbătă', times: '09:00 – 14:00' },
+      { closed: true, days: 'Duminică', times: 'Închis' },
     ]);
   });
 
@@ -95,6 +95,7 @@ describe('the opening hours as lines', () => {
     const { mon, ...rest } = week({ mon: SHORT });
 
     expect(lines({ ...rest, mon })[0]).toEqual({
+      closed: false,
       days: 'Luni',
       times: '09:00 – 14:00',
     });

@@ -43,12 +43,11 @@ export class WhereSection {
         })
       : '',
   );
-  protected readonly lines = computed(() => {
-    const closed = this.i18n.t('public.listing.hours.closed');
-    return hoursLines(this.garage().hours, this.i18n.language(), (key) =>
+  protected readonly lines = computed(() =>
+    hoursLines(this.garage().hours, this.i18n.language(), (key) =>
       this.i18n.t(key),
-    ).map((line) => ({ ...line, closed: line.times === closed }));
-  });
+    ),
+  );
   protected readonly empty = computed(
     () => !this.address() && !this.area() && this.lines().length === 0,
   );

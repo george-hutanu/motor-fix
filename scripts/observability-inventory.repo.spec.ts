@@ -31,9 +31,23 @@ describe('the repository inventory', () => {
     },
   );
 
-  // @traces 308-FR-017
   repoIt('counts every OpenAPI operation and misses nothing', () => {
     expect(checkInventory(root)).toEqual([]);
+  });
+
+  // The opening hours ride the profile read the inventory already counts.
+  // @traces 308-FR-017
+  it('serves the opening hours through the existing profile read', () => {
+    const openapi = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    );
+
+    expect(Object.keys(openapi.paths['/api/v1/garages/{slug}'])).toEqual([
+      'get',
+    ]);
+    expect(
+      openapi.components.schemas.PublicGarageDto.properties,
+    ).toHaveProperty('hours');
   });
 
   // @traces 115-FR-014

@@ -4,13 +4,16 @@
     <ul class="chips">
       @for (brand of worksOn(); track brand.id) {
         <li>
-          <mf-lamp state="green" [label]="brand.name" />
+          <span class="chip"><mf-lamp state="green" [label]="brand.name" /></span>
           @if (brand.fuels) {
             <span class="fuels">{{ brand.fuels }}</span>
           }
         </li>
       }
     </ul>
+    @if (!doesNotTake().length && brandNote()) {
+      <p class="brand-note">{{ brandNote() }}</p>
+    }
   </div>
 }
 @if (doesNotTake().length) {
@@ -18,21 +21,37 @@
     <h2>{{ 'public.garageProfile.details.refuses' | t }}</h2>
     <ul class="chips">
       @for (brand of doesNotTake(); track brand.id) {
-        <li><mf-lamp state="red" [label]="brand.name" /></li>
+        <li>
+          <span class="chip"><mf-lamp state="red" [label]="brand.name" /></span>
+        </li>
       }
     </ul>
+    @if (brandNote()) {
+      <p class="brand-note">{{ brandNote() }}</p>
+    }
   </div>
-}
-@if (brandNote()) {
-  <p class="brand-note">{{ brandNote() }}</p>
 }
 @if (hasFacilities()) {
   <div class="group facilities">
     <h2>{{ 'public.garageProfile.details.facilities' | t }}</h2>
     @if (facilities().length) {
-      <ul class="list">
-        @for (facility of facilities(); track facility) {
-          <li>{{ facility }}</li>
+      <ul class="chips">
+        @for (facility of facilities(); track facility.key) {
+          <li>
+            <span class="chip">
+              <svg
+                aria-hidden="true"
+                focusable="false"
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                [attr.data-icon]="facility.key"
+              >
+                <path [attr.d]="icons[facility.key]" />
+              </svg>
+              {{ facility.label }}
+            </span>
+          </li>
         }
       </ul>
     }
