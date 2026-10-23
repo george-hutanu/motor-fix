@@ -78,6 +78,8 @@ async function visiting(
 async function home(page: Page, language: Language) {
   await page.goto(`/${language}`);
   await settled(page);
+  // Line counts depend on Michroma: count them once the webfonts are in.
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
 }
 
 async function results(page: Page, voice: Voice, language: Language) {
@@ -194,7 +196,7 @@ async function switchKeepsVoice(page: Page, voice: Voice, from: Language) {
   await expect(page.locator('html')).toHaveAttribute('lang', to);
   await expect(page.locator('html')).toHaveAttribute('data-voice', voice);
   await expect.poll(() => shownSlots(page, voice, to)).toEqual(before);
-  expect(await shownSlots(page, voice, from)).toEqual([]);
+  await expect.poll(() => shownSlots(page, voice, from)).toEqual([]);
 }
 
 test.describe('every voice on a 320 px phone @seeded', () => {
@@ -243,7 +245,7 @@ test.describe('every voice on a 320 px phone @seeded', () => {
       await home(page, 'ro');
       const hero = visible(page, 'mf-home .hero [data-voice-of="4"]');
 
-      expect(await lines(hero.locator('.label'))).toBe(2);
+      await expect.poll(() => lines(hero.locator('.label'))).toBe(2);
       // A phone reads the label at body size, never the 12 px label type.
       expect(
         await hero
@@ -266,8 +268,10 @@ test.describe('every voice on a 320 px phone @seeded', () => {
       ]) {
         await choose(page, 'ro', brand);
         await expect(headline(page)).toContainText(shown);
-        expect(await lines(headline(page))).toBeLessThanOrEqual(4);
-        expect(await lines(headline(page), shown.split(' ')[0])).toBe(1);
+        await expect.poll(() => lines(headline(page))).toBeLessThanOrEqual(4);
+        await expect
+          .poll(() => lines(headline(page), shown.split(' ')[0]))
+          .toBe(1);
       }
     });
   });
@@ -290,7 +294,7 @@ test.describe('every voice on a 320 px phone @seeded', () => {
             hasText: word,
           });
           await expect(carrier).toHaveCount(1);
-          expect(await lines(carrier, word)).toBe(1);
+          await expect.poll(() => lines(carrier, word)).toBe(1);
         }
       });
   });

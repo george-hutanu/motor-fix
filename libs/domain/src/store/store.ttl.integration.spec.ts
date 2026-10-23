@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import { Redis } from 'ioredis';
 
-import { AdminAccountsService } from '../admin/admin-accounts/admin-accounts.service';
+import {
+  AdminAccountsService,
+  SUMMARY_KEY,
+} from '../admin/admin-accounts/admin-accounts.service';
 import { assistantThrottle } from '../auth/assistant/assistant.service';
 import { Attempts, AUTH_REDIS } from '../auth/attempts';
 import { ConsentThrottle } from '../auth/consents/consents.throttle';
@@ -17,6 +20,7 @@ import {
 } from '../auth/oauth/openid/openid-stub.testing';
 import { oauthSettings } from '../auth/oauth/providers';
 import { createPrisma } from '../auth/prisma';
+import { serialDatabase } from '../auth/serial-db.testing';
 import { CacheService, cacheKey, lockKey } from '../cache/cache.service';
 import { purgeTags } from '../cache/purge';
 import { warmCache } from '../cache/warm-up/warm-up';
@@ -47,6 +51,11 @@ const store = new Redis(url, { keyPrefix: PREFIX });
 const plain = new Redis(url);
 const prisma = createPrisma(databaseUrl);
 let openId: OpenIdStub;
+
+// The account totals read the account and garage tables, which other spec
+// files empty with TRUNCATE ... CASCADE while they hold the database turn;
+// reading them without it deadlocked (40P01), so this file waits its turn.
+serialDatabase(databaseUrl);
 
 // Every key under the prefix with its time to live in seconds (-1: none).
 async function lifetimes() {
@@ -221,7 +230,13 @@ const steps: [string, () => Promise<unknown>][] = [
   ],
   [
     'the account totals',
-    () => new AdminAccountsService(prisma, store).summary(new Date()),
+    async () => {
+      await new AdminAccountsService(prisma, store).summary(new Date());
+      // Counted afresh, so kept for its full minute and no longer.
+      const left = await store.ttl(SUMMARY_KEY);
+      expect(left).toBeGreaterThan(0);
+      expect(left).toBeLessThanOrEqual(60);
+    },
   ],
   [
     'the maintenance flag',
