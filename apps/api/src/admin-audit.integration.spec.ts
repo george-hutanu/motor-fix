@@ -136,6 +136,16 @@ const FIXTURES: Record<
       return `/api/v1/admin/garages/${garage}/suspend`;
     },
   },
+  'POST /api/v1/admin/legal-documents/{id}/accept': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/legal-documents/${await inReview()}/accept`,
+  },
+  'POST /api/v1/admin/legal-documents/{id}/refuse': {
+    body: () => ({ note: 'Certificatul nu se citește.', reason: 'documents' }),
+    path: async () =>
+      `/api/v1/admin/legal-documents/${await inReview()}/refuse`,
+  },
   'POST /api/v1/admin/live/test': { body: (admin) => ({ accountId: admin }) },
   'POST /api/v1/admin/news': {
     body: () => ({
@@ -227,6 +237,25 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// A yearly document an approved garage sent, waiting for an admin, with the
+// garage's document cycle the decision locks.
+async function inReview() {
+  return (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug, status, approved_at)
+         VALUES (gen_random_uuid(), 'Audit', $1, 'approved', now()) RETURNING id),
+       c AS (INSERT INTO garage_document_cycle (garage_id, due_on)
+         SELECT id, current_date + 30 FROM g),
+       f AS (INSERT INTO verification_file (id, garage_id, status)
+         SELECT gen_random_uuid(), id, 'approved' FROM g RETURNING id)
+       INSERT INTO legal_document (verification_file_id, kind, pages, status)
+       SELECT id, 'onrc_certificate', ARRAY['legal_document/audit/yearly'], 'in_review'
+       FROM f RETURNING id`,
+      [`audit-${randomUUID()}`],
+    )
+  ).rows[0].id as string;
+}
 
 // A garage's file waiting to be opened, or already decided.
 async function submitted(status = 'submitted') {
