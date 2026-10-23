@@ -162,6 +162,25 @@ describe('audienceOf', () => {
     ).toEqual(['garage:g1', 'public:garage:g1', 'public:search']);
   });
 
+  // @traces 025-FR-009
+  it("sends a mechanic's new figures to the garage, its public page, the results and the mechanic's page", () => {
+    expect(
+      audienceOf({ garageId: garage, mechanicId: mechanic, type: 'rating' }),
+    ).toEqual([
+      'garage:g1',
+      'public:garage:g1',
+      'public:search',
+      'public:mechanic:m1',
+    ]);
+  });
+
+  // @traces 025-FR-009
+  it("sends a garage's new figures to no mechanic page", () => {
+    expect(
+      audienceOf({ garageId: garage, mechanicId: null, type: 'rating' }),
+    ).toEqual(['garage:g1', 'public:garage:g1', 'public:search']);
+  });
+
   it('sends platform rules and copy voices to the admins and the system channel', () => {
     expect(audienceOf({ type: 'platform' })).toEqual(['admin', 'system']);
   });

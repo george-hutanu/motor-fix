@@ -88,9 +88,13 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
       'garage.slots_changed',
       'response_stats.updated',
       'recheck.recorded',
+      'rating.updated',
     ]),
   ],
-  [/^public:mechanic:/, new Set(['mechanic.updated', ...REVIEW_KINDS])],
+  [
+    /^public:mechanic:/,
+    new Set(['mechanic.updated', ...REVIEW_KINDS, 'rating.updated']),
+  ],
   [
     /^public:search$/,
     new Set([
@@ -98,6 +102,7 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
       'garage.suspended',
       'garage.restored',
       'garage.updated',
+      'rating.updated',
     ]),
   ],
   [/^public:search:/, new Set(['garage.updated'])],
