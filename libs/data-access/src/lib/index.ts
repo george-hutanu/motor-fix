@@ -83,6 +83,7 @@ export type { CreateSupportMessageDto } from './models/create-support-message-dt
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
 export type { DeclineRequestDto } from './models/decline-request-dto';
+export type { DeleteMeDto } from './models/delete-me-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
@@ -374,6 +375,8 @@ export type { PasswordResetControllerComplete$Params as PasswordResetControllerC
 export { passwordResetControllerComplete as passwordResetControllerComplete } from './fn/auth/password-reset-controller-complete';
 export type { PasswordChangeControllerChange$Params as PasswordChangeControllerChange$Params } from './fn/auth/password-change-controller-change';
 export { passwordChangeControllerChange as passwordChangeControllerChange } from './fn/auth/password-change-controller-change';
+export type { AccountDeletionControllerDeleteAccount$Params as AccountDeletionControllerDeleteAccount$Params } from './fn/auth/account-deletion-controller-delete-account';
+export { accountDeletionControllerDeleteAccount as accountDeletionControllerDeleteAccount } from './fn/auth/account-deletion-controller-delete-account';
 export type { PhoneSignInControllerPhoneCode$Params as PhoneSignInControllerPhoneCode$Params } from './fn/auth/phone-sign-in-controller-phone-code';
 export { phoneSignInControllerPhoneCode as phoneSignInControllerPhoneCode } from './fn/auth/phone-sign-in-controller-phone-code';
 export type { PhoneSignInControllerPhoneSignIn$Params as PhoneSignInControllerPhoneSignIn$Params } from './fn/auth/phone-sign-in-controller-phone-sign-in';

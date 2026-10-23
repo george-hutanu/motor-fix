@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 163,
+    "count": 164,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -20,7 +20,8 @@
         "api-search-latency",
         "api-profile-latency",
         "api-memory",
-        "api-rate-limit-surge"
+        "api-rate-limit-surge",
+        "api-account-deletion-failed"
       ],
       "story": "ST-881"
     },
@@ -92,7 +93,8 @@
         "api-search-latency",
         "api-profile-latency",
         "api-memory",
-        "api-rate-limit-surge"
+        "api-rate-limit-surge",
+        "api-account-deletion-failed"
       ],
       "story": "ST-881"
     },
@@ -1138,8 +1140,10 @@
       "name": "motorfix_account_deletions_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
-      "alerts": "none",
-      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); a failure also logs and answers 5xx, which the api-error-rate rule covers",
+      "alerts": [
+        "api-account-deletion-failed"
+      ],
+      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
       "story": "ST-129"
     },
     {

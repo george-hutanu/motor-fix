@@ -77,6 +77,7 @@ export type { CreateSupportMessageDto } from './models/create-support-message-dt
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
 export type { DeclineRequestDto } from './models/decline-request-dto';
+export type { DeleteMeDto } from './models/delete-me-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';

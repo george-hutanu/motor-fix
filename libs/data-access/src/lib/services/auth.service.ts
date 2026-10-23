@@ -9,6 +9,8 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { accountDeletionControllerDeleteAccount } from '../fn/auth/account-deletion-controller-delete-account';
+import { AccountDeletionControllerDeleteAccount$Params } from '../fn/auth/account-deletion-controller-delete-account';
 import { AssistantApprovalDto } from '../models/assistant-approval-dto';
 import { assistantControllerApprove } from '../fn/auth/assistant-controller-approve';
 import { AssistantControllerApprove$Params } from '../fn/auth/assistant-controller-approve';
@@ -642,6 +644,31 @@ export class AuthService extends BaseService {
    */
   passwordChangeControllerChange(params: PasswordChangeControllerChange$Params, context?: HttpContext): Promise<void> {
     const resp = this.passwordChangeControllerChange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `accountDeletionControllerDeleteAccount()` */
+  static readonly AccountDeletionControllerDeleteAccountPath = '/api/v1/auth/account';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountDeletionControllerDeleteAccount()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountDeletionControllerDeleteAccount$Response(params: AccountDeletionControllerDeleteAccount$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = accountDeletionControllerDeleteAccount(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountDeletionControllerDeleteAccount$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountDeletionControllerDeleteAccount(params: AccountDeletionControllerDeleteAccount$Params, context?: HttpContext): Promise<void> {
+    const resp = this.accountDeletionControllerDeleteAccount$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 

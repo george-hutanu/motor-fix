@@ -4,6 +4,11 @@
 export interface DriverNameDto {
 
   /**
+   * The author deleted their account
+   */
+  deleted?: boolean;
+
+  /**
    * First name and the last name’s initial
    */
   shortName: string;

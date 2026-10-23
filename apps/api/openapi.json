@@ -1498,6 +1498,47 @@
         ]
       }
     },
+    "/api/v1/auth/account": {
+      "delete": {
+        "operationId": "AccountDeletionController_deleteAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteMeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted; every session ended and the cookie cleared"
+          },
+          "400": {
+            "description": "validation_failed, also when the confirmation does not match"
+          },
+          "401": {
+            "description": "reauth_required, sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "409": {
+            "description": "deletion_not_allowed: the account owns a garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me/phone": {
       "post": {
         "operationId": "PhoneChangeController_request",
@@ -9261,6 +9302,20 @@
           "newPassword"
         ]
       },
+      "DeleteMeDto": {
+        "type": "object",
+        "properties": {
+          "confirmation": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 254,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "confirmation"
+        ]
+      },
       "PhoneChangeDto": {
         "type": "object",
         "properties": {
@@ -11104,6 +11159,10 @@
             "type": "string",
             "description": "First name and the last name’s initial"
           },
+          "deleted": {
+            "type": "boolean",
+            "description": "The author deleted their account"
+          },
           "phone": {
             "type": "string"
           }
@@ -12357,6 +12416,10 @@
           "shortName": {
             "type": "string",
             "description": "First name and the last name’s initial"
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "The author deleted their account"
           }
         },
         "required": [

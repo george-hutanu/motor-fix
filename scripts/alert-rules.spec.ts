@@ -95,6 +95,7 @@ const MEMORY = (service: string) => ({
 // or a single event is the alert.
 const ZERO_WAIT = new Set([
   'api-down',
+  'api-account-deletion-failed',
   'web-down',
   'worker-down',
   'mcp-down',
@@ -126,6 +127,15 @@ const EXPECTED: Record<
     expr: string[];
   }
 > = {
+  'api-account-deletion-failed': {
+    expr: [
+      'sum by (deployment_environment) (increase(motorfix_account_deletions_total{service_name="api", outcome="failed"}[15m]))',
+    ],
+    for: '0m',
+    from: 900,
+    type: 'gt',
+    value: 0,
+  },
   'api-cache-fallback-rate': {
     expr: [
       'motorfix_cache_total{service_name="api", outcome="fallback"}[10m]',
@@ -636,7 +646,7 @@ describe('alert rules', () => {
   // @traces 880-FR-005
   // @traces 880-FR-007
   // @traces 880-FR-009
-  it('holds exactly the twenty-nine rules, each with its threshold, window and wait', () => {
+  it('holds exactly the thirty rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
@@ -780,8 +790,8 @@ describe('alert rules', () => {
   // @traces 305-FR-009
   // @traces 304-FR-012
   // @traces 1181-FR-009
-  it('holds forty-six rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(46);
+  it('holds forty-seven rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(47);
   });
 
   // @traces 1345-FR-004
