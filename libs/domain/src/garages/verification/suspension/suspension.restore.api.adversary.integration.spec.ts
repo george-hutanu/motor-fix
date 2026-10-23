@@ -309,7 +309,7 @@ describe('POST /admin/garages/:id/restore under hostile input', () => {
     await stillSuspended();
   });
 
-  it('does not fail with a server error for a note holding half of a surrogate pair', async () => {
+  it('refuses with 400 a note holding half of a surrogate pair', async () => {
     await suspendedFor('admin');
 
     const res = await http()
@@ -318,10 +318,11 @@ describe('POST /admin/garages/:id/restore under hostile input', () => {
       .set('Content-Type', 'application/json')
       .send('{"note":"gata \\ud83d"}');
 
-    expect(res.status).toBeLessThan(500);
+    expect(res.status).toBe(400);
+    await stillSuspended();
   });
 
-  it('does not fail with a server error for a re-check dated in the year 0 of a never checked garage', async () => {
+  it('refuses with 400 a re-check dated in the year 0 of a never checked garage', async () => {
     await prisma.garage.update({
       data: { lastCheckedOn: null },
       where: { id: garage.id },
@@ -332,6 +333,7 @@ describe('POST /admin/garages/:id/restore under hostile input', () => {
       recheck: { activities: ['mechanics'], checkedOn: '0000-01-01' },
     });
 
-    expect(res.status).toBeLessThan(500);
+    expect(res.status).toBe(400);
+    await stillSuspended();
   });
 });
