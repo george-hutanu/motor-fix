@@ -462,6 +462,26 @@ describe('the drawer opened at its Documente part', () => {
       host.querySelector('[data-section="documents"] h4'),
     );
   });
+
+  it('brings the Documente part to the top, so its decisions show without a scroll', async () => {
+    const scrolled: { el: Element; arg: unknown }[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (arg?: unknown) {
+      scrolled.push({ arg, el: this });
+    };
+    try {
+      const host = await open(inReview(), 'ro', 'documents');
+
+      expect(scrolled).toEqual([
+        {
+          arg: { block: 'start' },
+          el: host.querySelector('[data-section="documents"]'),
+        },
+      ]);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
 });
 
 describe('the yearly documents in the history', () => {

@@ -802,12 +802,19 @@ export class VerificationFile {
   }
 
   // Focus moves once the drawer has rendered what changed.
-  // The Documente part, once the first read has drawn it.
+  // The Documente part, once the first read has drawn it: at the drawer's
+  // top, so its Acceptă and Refuză show without a scroll, then focused.
   private showDocuments() {
     const shown = effect(() => {
       if (this.state() !== 'ready') return;
       shown.destroy();
-      this.focus('[data-section="documents"] h4');
+      setTimeout(() => {
+        const part = this.host.nativeElement.querySelector<HTMLElement>(
+          '[data-section="documents"]',
+        );
+        part?.scrollIntoView?.({ block: 'start' });
+        part?.querySelector<HTMLElement>('h4')?.focus({ preventScroll: true });
+      });
     });
   }
 
