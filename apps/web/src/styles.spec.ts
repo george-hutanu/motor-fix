@@ -145,3 +145,18 @@ describe('the map’s zoom buttons under the Results sheet on a phone', () => {
     expect(body).toMatch(/visibility:\s*hidden/);
   });
 });
+
+// On a stage too short for the half sheet to clear the map's top (a 320 x 568
+// phone), the sheet would cut the legend's lower rows: it hides with the zoom
+// buttons and shows again at low.
+// @traces 1351-FR-001 1351-FR-007
+describe('the map’s legend under the Results sheet on a phone', () => {
+  it('hides it whole while the sheet covers the map’s top', () => {
+    const body = rule(
+      'mf-results:has(mf-results-sheet.over-zoom) mf-results-map .legend',
+    );
+
+    expect(body).toBeDefined();
+    expect(body).toMatch(/visibility:\s*hidden/);
+  });
+});

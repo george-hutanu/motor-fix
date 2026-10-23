@@ -645,6 +645,7 @@ test.describe('the map beside the results @seeded', () => {
     await rests(page, 'half');
   });
 
+  // @traces 1351-FR-008
   // @traces 1358-FR-011 1358-FR-014
   test('scrolls nothing sideways at 320 px, in English and dark too, and keeps the tablet and desktop layouts', async ({
     page,
@@ -679,6 +680,220 @@ test.describe('the map beside the results @seeded', () => {
     expect(mapBox && cardBox && mapBox.y + mapBox.height <= cardBox.y).toBe(
       true,
     );
+  });
+
+  // The boxes the phone screen is made of, in page coordinates: the legend,
+  // the zoom buttons and the sheet's top edge over the map; the results
+  // screen and the footer under it.
+  const boxes = (page: Page) =>
+    page.evaluate(() => {
+      const at = (el: Element | null | undefined) => {
+        const r = el?.getBoundingClientRect();
+        return r
+          ? {
+              bottom: r.bottom + scrollY,
+              height: r.height,
+              left: r.left,
+              right: r.right,
+              top: r.top + scrollY,
+              width: r.width,
+            }
+          : null;
+      };
+      const zoom = document.querySelector(
+        'mf-results-map .maplibregl-ctrl-top-right',
+      );
+      return {
+        buttons: [...(zoom?.querySelectorAll('button') ?? [])].map(at),
+        edge: at(document.querySelector('mf-results-sheet')),
+        footer: at(document.querySelector('mf-public-footer')),
+        legend: at(document.querySelector('mf-results-map .legend')),
+        legendHidden:
+          getComputedStyle(
+            document.querySelector('mf-results-map .legend') ?? document.body,
+          ).visibility === 'hidden',
+        map: at(document.querySelector('mf-results-map .map')),
+        screen: at(document.querySelector('mf-results')),
+        zoom: at(zoom),
+        zoomHidden: zoom
+          ? getComputedStyle(zoom).visibility === 'hidden'
+          : true,
+      };
+    });
+  // The consent bar asks again: its answer is kept in the browser.
+  const asking = (page: Page) =>
+    page.addInitScript(() => localStorage.removeItem('mf_consent'));
+  async function answer(page: Page) {
+    await page.locator('mf-consent-bar button').last().click();
+    await expect(page.locator('mf-consent-bar button')).toHaveCount(0);
+  }
+  const PHONES = [
+    [320, 568],
+    [320, 800],
+    [390, 844],
+  ] as const;
+  // Once the sheet has slid where it rests.
+  const slid = (page: Page) =>
+    sheet(page).evaluate(async (el) => {
+      while (el.getAnimations().length)
+        await Promise.all(
+          el.getAnimations().map((a) => a.finished.catch(() => undefined)),
+        );
+    });
+  // Rests the sheet by its handle, which steps half, full, low and round.
+  async function restAt(page: Page, at: 'half' | 'low' | 'full') {
+    for (let press = 0; press < 3; press++) {
+      if ((await sheet(page).getAttribute('data-position')) === at) break;
+      const from = await sheet(page).getAttribute('data-position');
+      await handleOf(page).click();
+      await expect(sheet(page)).not.toHaveAttribute(
+        'data-position',
+        from ?? '',
+      );
+      await slid(page);
+    }
+    await rests(page, at);
+    await slid(page);
+  }
+
+  // Whole above the sheet and left of the zoom buttons, or hidden with them
+  // while the sheet covers the map's top on a stage too short to clear it.
+  async function legendClear(page: Page, where: string, short: boolean) {
+    const { edge, legend, legendHidden, map, zoom } = await boxes(page);
+    if (legendHidden) {
+      expect(short, where).toBe(true);
+      await expect(sheet(page)).toHaveClass(/over-zoom/);
+      return;
+    }
+    expect(legend && edge && legend.bottom <= edge.top, where).toBe(true);
+    expect(legend && map && legend.top >= map.top, where).toBe(true);
+    expect(legend && map && legend.left >= map.left, where).toBe(true);
+    expect(legend && zoom && legend.right <= zoom.left, where).toBe(true);
+  }
+
+  // Both buttons whole above the sheet and tap-sized, or both hidden: only a
+  // stage too short to clear them (320 x 568 with the consent bar) hides them.
+  async function zoomWhole(page: Page, where: string, short: boolean) {
+    const { buttons, edge, zoomHidden } = await boxes(page);
+    expect(buttons, where).toHaveLength(2);
+    if (zoomHidden) {
+      expect(short, where).toBe(true);
+      await expect(sheet(page)).toHaveClass(/over-zoom/);
+      return;
+    }
+    for (const button of buttons) {
+      expect(button && edge && button.bottom <= edge.top, where).toBe(true);
+      expect(button?.width ?? 0, where).toBeGreaterThanOrEqual(44);
+      expect(button?.height ?? 0, where).toBeGreaterThanOrEqual(44);
+    }
+  }
+
+  async function footerBelow(page: Page, where: string) {
+    const { footer, screen } = await boxes(page);
+    expect(footer && screen && footer.top >= screen.bottom, where).toBe(true);
+  }
+
+  async function zoomAtRests(page: Page, where: string, height: number) {
+    for (const at of ['half', 'low'] as const) {
+      await restAt(page, at);
+      await zoomWhole(page, `${where} ${at}`, height < 600);
+    }
+  }
+
+  async function footerAtRests(page: Page, where: string) {
+    for (const at of ['half', 'low'] as const) {
+      await restAt(page, at);
+      await footerBelow(page, `${where} ${at}`);
+    }
+    await restAt(page, 'full');
+    await footerBelow(page, `${where} full`);
+  }
+
+  // @traces 1351-FR-001 1351-FR-007
+  test('shows the whole legend, mobile mechanic included, above the sheet and clear of the zoom buttons at 320 px and 390 px', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await asking(page);
+    for (const [[width, height], lang, scheme] of [
+      [PHONES[0], 'ro', 'light'],
+      [PHONES[0], 'en', 'dark'],
+      [PHONES[1], 'en', 'light'],
+      [PHONES[2], 'ro', 'dark'],
+      [PHONES[2], 'en', 'light'],
+    ] as const) {
+      await page.setViewportSize({ height, width });
+      await page.emulateMedia({ colorScheme: scheme });
+      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      await expect(page.locator('mf-results-map .legend .area')).toHaveCount(1);
+      await expect(page.locator('mf-consent-bar button').first()).toBeVisible();
+
+      for (const at of ['half', 'low'] as const) {
+        await restAt(page, at);
+        await legendClear(
+          page,
+          `${width} x ${height} ${lang} ${at}`,
+          height < 600,
+        );
+      }
+    }
+  });
+
+  // @traces 1351-FR-002 1351-FR-007
+  test('never lets the sheet cover part of a zoom button, with the consent bar asking and after it is answered', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await asking(page);
+    for (const [width, height] of PHONES) {
+      await page.setViewportSize({ height, width });
+      await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+      for (const bar of ['asking', 'answered'] as const) {
+        if (bar === 'answered') await answer(page);
+        await zoomAtRests(page, `${width} x ${height} ${bar}`, height);
+      }
+    }
+  });
+
+  // @traces 1351-FR-003 1351-FR-007
+  test('keeps the footer below the one-screen results, whatever the sheet, the consent bar and the tab bar do', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await asking(page);
+    for (const [width, height] of [PHONES[0], PHONES[2]]) {
+      await page.setViewportSize({ height, width });
+      await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+      for (const bar of ['asking', 'answered'] as const) {
+        if (bar === 'answered') await answer(page);
+        await footerAtRests(page, `${width} x ${height} ${bar}`);
+      }
+      await sheet(page).locator('mf-brand-search input').focus();
+      await expect(page.locator('mf-public-tab-bar')).toBeHidden();
+      await footerBelow(page, `${width} x ${height} typing`);
+    }
+  });
+
+  // @traces 1351-FR-004 1351-FR-007
+  test('reads the summary at the 16 px body size at 320 px and 390 px', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    for (const [width, lang] of [
+      [320, 'ro'],
+      [390, 'en'],
+    ] as const) {
+      await page.setViewportSize({ height: 800, width });
+      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      await expect(page.locator('header.intro .summary .tally')).toBeVisible();
+      const sizes = await page
+        .locator('header.intro .summary > *')
+        .evaluateAll((parts) =>
+          parts.map((part) => getComputedStyle(part).fontSize),
+        );
+      expect(sizes.length).toBeGreaterThan(0);
+      expect(new Set(sizes)).toEqual(new Set(['16px']));
+    }
   });
 
   // @traces 1358-FR-007

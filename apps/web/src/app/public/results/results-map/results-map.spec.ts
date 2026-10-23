@@ -201,6 +201,31 @@ describe('ResultsMap, the legend on a phone', () => {
   });
 });
 
+// @traces 1351-FR-001 1351-FR-007
+describe('ResultsMap, the legend on a phone narrower than 360 px', () => {
+  const narrow =
+    readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .match(
+        /@media \(max-width: 359\.98px\) \{ \.legend \{([^}]*)\} \}/,
+      )?.[1] ?? '';
+
+  // Four rows with the mobile mechanic's entry: at the phone's own spacing
+  // the half sheet of a 320 x 568 screen cuts the last one.
+  it('packs its rows tighter, so the whole legend clears the half sheet', () => {
+    expect(narrow).toMatch(/line-height: 1\.25;/);
+    expect(narrow).toMatch(/padding-block: var\(--mf-space-1\);/);
+    expect(narrow).toMatch(/row-gap: 0;/);
+    expect(narrow).toMatch(/top: var\(--mf-space-2\);/);
+  });
+
+  it('keeps every entry at the body size a phone reads', () => {
+    expect(narrow).not.toBe('');
+    expect(narrow).not.toMatch(/font-size/);
+  });
+});
+
 describe('ResultsMap, the legend with a mobile mechanic', () => {
   const WITH_AREA: GaragePinsDto = {
     pins: [
