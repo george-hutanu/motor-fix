@@ -1,0 +1,81 @@
+[
+  {
+    "id": "adversary-keep-refuses-a-write-dropping-a-test",
+    "hook": "pre:edit:adversary-keep",
+    "why": "1363-FR-007: an adversary spec only grows; a Write whose content lacks one of the file's test titles is refused",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "content": "describe('the gate', () => {\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 2
+    }
+  },
+  {
+    "id": "adversary-keep-passes-an-appending-edit",
+    "hook": "pre:edit:adversary-keep",
+    "why": "1363-FR-007: appending a test to an adversary spec is the way to change one, so it goes through",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "old_string": "});\n",
+        "new_string": "  it('a new probe', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "adversary-keep-leaves-other-specs-alone",
+    "hook": "pre:edit:adversary-keep",
+    "why": "1363-FR-007: the gate holds adversary specs only; the same dropping Write to an ordinary spec goes through",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.spec.ts",
+        "content": "describe('the gate', () => {\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  }
+]

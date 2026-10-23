@@ -123,6 +123,19 @@
       "fingerprint": "0e73553405a6"
     },
     {
+      "id": "pre:edit:adversary-keep",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "script": "adversary-keep-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Refuse a Write, Edit or MultiEdit that drops a describe/it/test title from an existing *.adversary.spec.* file: an adversary spec only grows (1363-FR-007)",
+      "fail_closed": true,
+      "fingerprint": "b2124d1d3718"
+    },
+    {
       "id": "pre:edit:main-checkout",
       "event": "PreToolUse",
       "matcher": "Edit|Write|MultiEdit|NotebookEdit",
