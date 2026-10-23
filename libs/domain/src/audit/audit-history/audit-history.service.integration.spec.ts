@@ -5,9 +5,9 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AuditHistoryService } from './audit-history.service';
 import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
-import { createPrisma } from '../../auth/prisma';
+import { createPrisma, prismaAdapter } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
-import type { Prisma } from '../../generated/prisma/client';
+import { type Prisma, PrismaClient } from '../../generated/prisma/client';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -646,6 +646,7 @@ describe('paging', () => {
     expect(new Set(seen).size).toBe(22);
   });
 
+  // @traces 469-FR-004
   it('refuses a cursor outside the caller’s scope', async () => {
     const g = await twoGarages();
 
@@ -661,6 +662,15 @@ describe('paging', () => {
       history.list(actor('garage', g.nord), {
         area: 'quotes',
         cursor: g.platform.id,
+        garageId: g.nord,
+      }),
+      'invalid_cursor',
+    );
+    // The Sud entry is a quote inside the window: only the garage excludes it.
+    await rejects400(
+      history.list(actor('garage', g.nord), {
+        area: 'quotes',
+        cursor: g.inSud.id,
         garageId: g.nord,
       }),
       'invalid_cursor',
@@ -730,4 +740,97 @@ describe('reading', () => {
 
     expect(await prisma.activityLog.count()).toBe(before);
   });
+});
+
+// @traces 469-FR-001 469-FR-002 469-FR-003 469-FR-005
+describe('the index the unfiltered admin read uses', () => {
+  // The admin's client, logging each statement it sends with its values.
+  const logged = new PrismaClient({
+    adapter: prismaAdapter(databaseUrl),
+    log: [{ emit: 'event', level: 'query' }],
+  });
+  const sent: { query: string; params: unknown[] }[] = [];
+  logged.$on('query', (event) =>
+    sent.push({ params: JSON.parse(event.params), query: event.query }),
+  );
+  afterAll(() => logged.$disconnect());
+
+  const admin = actor('admin', null);
+  class RolledBack extends Error {}
+
+  // A million entries over 90 days, in a transaction that is rolled back,
+  // since the history refuses DELETE and TRUNCATE.
+  const withMillion = (run: (tx: Prisma.TransactionClient) => Promise<void>) =>
+    prisma
+      .$transaction(
+        async (tx) => {
+          await tx.$executeRaw`
+            INSERT INTO activity_log
+              (id, action, subject_type, subject_id, actor_role, actor_name, at, garage_id)
+            SELECT gen_random_uuid(), 'update', 'quote', gen_random_uuid(), 'owner', 'Ion',
+              now() - n * interval '7776 milliseconds', md5((n % 300)::text)::uuid
+            FROM generate_series(1, 1000000) AS n`;
+          await tx.$executeRaw`ANALYZE activity_log`;
+          await run(tx);
+          throw new RolledBack();
+        },
+        { maxWait: 10_000, timeout: 240_000 },
+      )
+      .catch((e: unknown) => {
+        if (!(e instanceof RolledBack)) throw e;
+      })
+      // The rollback leaves a million dead rows and their statistics behind.
+      .finally(() => prisma.$executeRaw`VACUUM ANALYZE activity_log`);
+
+  it('indexes the history by time alone', async () => {
+    const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
+      SELECT indexdef FROM pg_indexes
+      WHERE schemaname = current_schema() AND indexname = 'activity_log_at_idx'`;
+
+    expect(indexes.map((i) => i.indexdef)).toEqual([
+      expect.stringMatching(/ON \S*activity_log USING btree \(at\)$/),
+    ]);
+  });
+
+  it('answers the page and its count through it, fast, with the same answer', async () => {
+    sent.length = 0;
+    await new AuditHistoryService(logged).list(admin, {});
+    const statements = sent.filter((s) => /activity_log/.test(s.query));
+    const plans: string[] = [];
+    const ms: number[] = [];
+    let indexed: unknown;
+    let unindexed: unknown;
+
+    await withMillion(async (tx) => {
+      for (const { query, params } of statements) {
+        const rows = await tx.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(
+          `EXPLAIN ${query}`,
+          ...params,
+        );
+        plans.push(rows.map((row) => row['QUERY PLAN']).join('\n'));
+      }
+      // The service on the transaction, which alone sees the million, at one
+      // instant, so the window is the same with and without the index.
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      const inTx = new AuditHistoryService(tx as unknown as PrismaClient);
+      await inTx.list(admin, {});
+      for (let call = 0; call < 100; call++) {
+        const start = performance.now();
+        indexed = await inTx.list(admin, {});
+        ms.push(performance.now() - start);
+      }
+      await tx.$executeRaw`DROP INDEX activity_log_at_idx`;
+      unindexed = await inTx.list(admin, {});
+    }).finally(() => jest.restoreAllMocks());
+
+    expect(plans).toHaveLength(2);
+    for (const plan of plans) {
+      expect(plan).toMatch(/activity_log_at_idx/);
+      expect(plan).not.toMatch(/Seq Scan on activity_log/);
+    }
+    const p95 = ms.sort((a, b) => a - b)[94] ?? Number.POSITIVE_INFINITY;
+    expect(p95).toBeLessThan(400);
+    expect(indexed).toEqual(unindexed);
+  }, 300_000);
 });
