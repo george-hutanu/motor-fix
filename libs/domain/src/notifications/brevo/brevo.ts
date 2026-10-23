@@ -52,8 +52,9 @@ export type KeyStatus =
   | { outcome: 'unreachable'; reason: string };
 
 // A call that got no answer: its own time limit ran out, or the network failed.
+// fetch rejects with a DOMException, which is not an Error in every realm.
 const unreachableReason = (error: BrevoError) =>
-  (error.cause as Error | undefined)?.name === 'TimeoutError'
+  (error.cause as { name?: unknown } | null)?.name === 'TimeoutError'
     ? 'provider_timeout'
     : 'provider_unreachable';
 
