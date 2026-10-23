@@ -27,6 +27,14 @@ const toWholeLei = (bani: unknown) =>
       gap: 4px;
       white-space: pre;
     }
+    /* A line turns only between groups, never inside an amount. */
+    .mf-odometer-group {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 4px;
+      white-space: pre;
+    }
     .mf-odometer-digit {
       display: inline-block;
       box-sizing: border-box;
@@ -73,12 +81,16 @@ const toWholeLei = (bani: unknown) =>
   `,
   template: `
     <span class="mf-odometer-value" aria-hidden="true">
-      @for (char of chars(); track $index) {
-        @if (char >= '0' && char <= '9') {
-          <span class="mf-odometer-digit" [class.mf-odometer-dim]="$index < dimmed()" [style.--mf-digit]="char">{{ char }}</span>
-        } @else {
-          <span>{{ char }}</span>
-        }
+      @for (group of groups(); track $index) {
+        <span class="mf-odometer-group">
+          @for (cell of group; track cell.at) {
+            @if (cell.char >= '0' && cell.char <= '9') {
+              <span class="mf-odometer-digit" [class.mf-odometer-dim]="cell.at < dimmed()" [style.--mf-digit]="cell.char">{{ cell.char }}</span>
+            } @else {
+              <span>{{ cell.char }}</span>
+            }
+          }
+        </span>
       }
     </span>
     @if (cells() === undefined) {
@@ -118,7 +130,14 @@ export class Odometer {
       ? formatLei(from, language)
       : formatLeiRange(from, toWholeLei(this.to()), language);
   });
-  protected readonly chars = computed(() => [...this.text()]);
+  // Each amount with the dash or unit that follows it: a range may turn only
+  // after its dash.
+  protected readonly groups = computed(() => {
+    let at = 0;
+    return this.text()
+      .split(/(?<=–)/)
+      .map((part) => [...part].map((char) => ({ at: at++, char })));
+  });
   protected readonly dimmed = computed(() => {
     if (this.cells() === undefined) return 0;
     const text = this.text();

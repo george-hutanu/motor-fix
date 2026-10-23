@@ -260,3 +260,55 @@ describe('Odometer in cells', () => {
     expect(digits()).toBe('00150');
   });
 });
+
+// @traces 466-FR-001
+// @traces 466-FR-005
+describe('the odometer breaks a line only between amounts', () => {
+  const groups = (part: HTMLElement) =>
+    [...part.querySelectorAll<HTMLElement>('.mf-odometer-group')].map((g) =>
+      g.textContent?.trim(),
+    );
+
+  it('keeps each end of a range whole, the dash after the first and the unit after the second', async () => {
+    const { fixture, part } = render(125000, 160000);
+
+    expect(groups(part())).toEqual(['1.250–', '1.600 lei']);
+
+    await TestBed.inject(I18n).use('en');
+    fixture.detectChanges();
+
+    expect(groups(part())).toEqual(['1,250–', '1,600 lei']);
+  });
+
+  it('keeps a single price and its unit in one group', () => {
+    expect(groups(render(125000, undefined).part())).toEqual(['1.250 lei']);
+  });
+
+  it('keeps a cells amount in one group', () => {
+    expect(groups(renderCells(104000).part)).toEqual(['01040']);
+  });
+
+  it('puts every digit cell inside a group, still rolling to its own digit', () => {
+    const { digits } = render(125000, 160000);
+
+    for (const digit of digits())
+      expect(digit.parentElement?.classList).toContain('mf-odometer-group');
+    expect(
+      digits().map((d) =>
+        (d as HTMLElement).style.getPropertyValue('--mf-digit'),
+      ),
+    ).toEqual(['1', '2', '5', '0', '1', '6', '0', '0']);
+  });
+
+  it('lets the value wrap between groups and never inside one', () => {
+    const odometer = readFileSync(
+      join(__dirname, 'odometer.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(odometer).toMatch(/\.mf-odometer-value \{[^}]*flex-wrap: wrap;/);
+    expect(odometer).toMatch(
+      /\.mf-odometer-group \{[^}]*display: inline-flex;[^}]*flex-wrap: nowrap;[^}]*gap: 4px;[^}]*white-space: pre;/,
+    );
+  });
+});
