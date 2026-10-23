@@ -69,7 +69,8 @@ is exempt from `projects`: record it from the issue's `type: bug` label with
 
 At level 3, or wherever it fires: a story too wide is split: more than two Nx projects (`web-e2e` and the
 generated `data-access` not counted), or more than one of `worker`, `api` and
-`web`. `level.mjs check` prints a `split: <projects>` line until spec.md
+`web`. At sizing the evidence is the surfaces the story names; from then on
+`level.mjs check` reads the diff and the `apps/`, `libs/` paths in tasks.md and prints a `split: <projects>` line until spec.md
 carries a `## Split` section with two titles, the first mergeable alone. The
 second is filed with `node .claude/scripts/tracker-sync.mjs file --type story
 --title "<second>" --body-file <f>`, its body carrying

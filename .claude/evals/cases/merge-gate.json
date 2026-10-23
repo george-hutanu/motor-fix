@@ -560,7 +560,7 @@
   {
     "id": "merge-gate-passes-a-merge-of-main-carry",
     "hook": "pre:bash:merge-gate",
-    "why": "FR-010 (ST-1363): a merge of origin/main whose own diff touches none of the PR's files keeps the tested verdict; a new QA lap would judge nothing the PR changed",
+    "why": "a merge of origin/main whose own diff touches none of the PR's files keeps the tested verdict; a new QA lap would judge nothing the PR changed",
     "payload": {
       "tool_input": {
         "command": "gh pr merge 21 --merge"
@@ -578,7 +578,7 @@
   {
     "id": "merge-gate-refuses-an-overlapping-merge-carry",
     "hook": "pre:bash:merge-gate",
-    "why": "FR-010 (ST-1363): a merge of origin/main that changes a file the PR changes needs a new QA lap, so its carried verdict is refused",
+    "why": "a merge of origin/main that changes a file the PR changes needs a new QA lap, so its carried verdict is refused",
     "payload": {
       "tool_input": {
         "command": "gh pr merge 21 --merge"

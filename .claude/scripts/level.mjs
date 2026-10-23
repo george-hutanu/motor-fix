@@ -15,8 +15,8 @@
 //
 // check's projects wire is skipped for a bug (feature.json `type: bug`): a bug stays at its level unless a
 // contract, schema or migration file is in its diff. check also prints `split: <projects>` when the diff
-// spans more than two Nx projects (web-e2e and data-access aside) or more than one of worker, api and web,
-// and the spec carries no `## Split` section yet (1363-FR-012).
+// and the task paths in tasks.md span more than two Nx projects (web-e2e and data-access aside) or more than
+// one of worker, api and web, and the spec carries no `## Split` section yet.
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -197,6 +197,13 @@ const touchedProjects = (repo, files) => [...new Set(files.map((f) => nxProject(
 const NOT_COUNTED = new Set(["web-e2e", "data-access"]);
 const SURFACES = new Set(["worker", "api", "web"]);
 
+/** The apps/ and libs/ paths tasks.md names: the split's evidence before the diff has them. */
+function taskPaths(featureDir) {
+  const tasks = featureDir && join(featureDir, "tasks.md");
+  if (!tasks || !existsSync(tasks)) return [];
+  return [...readFileSync(tasks, "utf8").matchAll(/`((?:apps|libs)\/[^`\s]+)`/g)].map((m) => m[1]);
+}
+
 /** The projects a story spanning too much touches (the split rule), or null; a spec with its `## Split` is split already. */
 function splitOf(repo, spec, files) {
   if (!files || /^## Split\b/m.test(spec ?? "")) return null;
@@ -219,7 +226,9 @@ export function checkLevel(repo, { ready = false, files = changedFiles(repo), no
   const wires = tripwires(repo, active?.dir, files, state.type);
   const tripped = wires.filter((w) => w.state === "tripped");
   const specFile = active && join(active.dir, "spec.md");
-  const split = splitOf(repo, specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null, files);
+  const planned = taskPaths(active?.dir);
+  const spans = files || planned.length ? [...(files ?? []), ...planned] : null;
+  const split = splitOf(repo, specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null, spans);
   const result = { feature, level, promoted: null, wires, split };
 
   if (level < 2 && tripped.length) {

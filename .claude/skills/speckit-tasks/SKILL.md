@@ -255,7 +255,7 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
   generating.
 - A story too wide is split before its tasks are written: more than two Nx projects (`web-e2e` and the
   generated `data-access` not counted), or more than one of `worker`, `api` and
-  `web`. `level.mjs check` prints a `split: <projects>` line until spec.md
+  `web`, counted over the task file paths. `level.mjs check` reads them and prints a `split: <projects>` line until spec.md
   carries a `## Split` section with two titles, the first mergeable alone. The
   second is filed with `node .claude/scripts/tracker-sync.mjs file --type story
   --title "<second>" --body-file <f>`, its body carrying

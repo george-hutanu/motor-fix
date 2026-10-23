@@ -70,6 +70,19 @@ describe('an adversary spec only grows', () => {
     assert.equal(gate(dir, 'Write', { file_path: 'new.adversary.spec.ts', content: "it('x', () => {});\n" }).status, 0);
   });
 
+  it('a title inside a comment is no test, and a // inside a title is no comment', () => {
+    const base = "it('first', () => {});\nit('calls http://x', () => {});\n";
+    assert.deepEqual(droppedTests(base, "it('first', () => {});\n// it('calls http://x', () => {});\n"), ['calls http://x']);
+    assert.deepEqual(droppedTests(base, "/* it('first', () => {}); */\nit('calls http://x', () => {});\n"), ['first']);
+    assert.deepEqual(droppedTests(base, base), []);
+  });
+
+  it('a retired-test line in its place lets a test whose rule was retired go, and names only that title', () => {
+    const base = "it('old rule', () => {});\nit('kept', () => {});\n";
+    assert.deepEqual(droppedTests(base, '// retired test: "old rule" the wire moved\nit(\'kept\', () => {});\n'), []);
+    assert.deepEqual(droppedTests(base, '// retired test: "other" why\nit(\'kept\', () => {});\n'), ['old rule']);
+  });
+
   it('counts titles: a duplicate title removed once is a dropped test', () => {
     const twice = "it('same', () => {});\nit('same', () => {});\n";
     assert.deepEqual(droppedTests(twice, "it('same', () => {});\n"), ['same']);

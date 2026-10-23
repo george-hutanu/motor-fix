@@ -1065,6 +1065,11 @@ describe('level.mjs check names a split when a story spans too much', () => {
     assert.doesNotMatch(two.printed, /split:/);
   });
 
+  it('reads the task file paths before the diff has them, so /speckit-tasks sees the split', () => {
+    const tasks = '# Tasks\n\n- [ ] T001 Add `apps/api/src/a.ts`\n- [ ] T002 Show it in `apps/web/src/b.ts`\n';
+    assert.deepEqual(run({ branch: { 'specs/042-small/tasks.md': tasks } }).result.split, ['api', 'web']);
+  });
+
   it('a one-project story, or one whose spec already carries its Split, has no split line', () => {
     assert.equal(run({ branch: { 'apps/api/src/a.ts': 'x\n' } }).result.split, null);
     const split = run({ spec: '# Spec\n\n- **FR-001**: one\n\n## Split\n\n1. ST-1 api\n2. ST-2 web\n', branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } });

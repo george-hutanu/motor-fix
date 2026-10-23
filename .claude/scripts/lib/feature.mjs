@@ -50,7 +50,7 @@ export const DEFAULT_LEVEL = 2;
 // What `level.mjs check` reads as a fact that contradicts a level 0 or 1.
 // Constants, not settings: tune them here once the ledger shows a number.
 // More functional requirements than this is more than one coherent unit
-// (raised from 5 by 1363-FR-004: a one-session task routinely lists 6-10).
+// (a one-session task routinely lists 6-10).
 export const FR_THRESHOLD = 10;
 // A file here changes a contract, the data or the generated client.
 export const CONTRACT_PATHS = [/^libs\/contracts\//, /^libs\/data-access\//, /^apps\/api\/openapi\.json$/, /(^|\/)schema\.prisma$/, /(^|\/)migrations\//];

@@ -489,15 +489,15 @@ async function linkPr(ctx) {
   if (claim && !prClaim) {
     const what = `claim label PR #${n}`;
     if (ctx.prWrite(["label", "create", claim, "--force"], what) && ctx.prWrite(["pr", "edit", n, "--add-label", claim], what)) ctx.log("claim", `PR #${n}`, claim);
-  } else if (prClaim && prClaim !== claim) ctx.log("claim", `PR #${n}`, mismatch(claim, prClaim));
+  } else if (claim && prClaim && prClaim !== claim) ctx.log("claim", `PR #${n}`, mismatch(claim, prClaim));
   await syncDependencies(ctx, story);
   return { pr: url };
 }
 
 const claimOf = (labels) => (labels ?? []).map((l) => (typeof l === "string" ? l : l.name)).find((l) => /^claim: /.test(l)) ?? null;
-const mismatch = (issue, pr) => `claim mismatch: issue ${issue?.slice(7) ?? "none"}, PR ${pr?.slice(7) ?? "none"}`;
+const mismatch = (issue, pr) => `claim mismatch: issue ${issue.slice(7)}, PR ${pr.slice(7)}`;
 
-/** `check`'s claim report: the feature's PR against its issue; nothing when either is missing or a read fails. */
+/** `check`'s claim report: the feature's PR against its issue; nothing when either has no claim or a read fails. */
 async function claimCheck(ctx) {
   if (!ctx.feature) return {};
   try {
@@ -506,7 +506,7 @@ async function claimCheck(ctx) {
     if (!story) return {};
     const claim = claimOf(story.labels);
     const prClaim = claimOf((await ctx.github.rest("GET", pullPath(n))).labels);
-    if (!prClaim || prClaim === claim) return {};
+    if (!claim || !prClaim || prClaim === claim) return {};
     const line = mismatch(claim, prClaim);
     ctx.log("claim", `PR #${n}`, line);
     return { claim: line };
@@ -516,19 +516,20 @@ async function claimCheck(ctx) {
   }
 }
 
-const DEPENDS = /^[ \t>*-]*\**(?:Depends on|Blocked by)\**:\**[ \t]*(.*)$/im;
+const DEPENDS = /^[ \t>*-]*\**(?:Depends on|Blocked by)\**:\**[ \t]*(.*)$/gim;
 const REF = /https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/(\d+)|\b(ST-\d+)\b|#(\d+)\b/g;
 
-/** The references a body's `Depends on:` (or `Blocked by:`) line names, in order; `none` or no line names none. */
+/** The references a body's `Depends on:` and `Blocked by:` lines name, in order, each once; `none` or no line names none. */
 export function dependsOn(body) {
-  const line = String(body ?? "").match(DEPENDS)?.[1] ?? "";
-  const out = [];
-  for (const part of line.split(/[,;]/)) {
-    const refs = [...part.matchAll(REF)].map((m) => (m[2] ? { key: m[2] } : { number: Number(m[1] ?? m[3]) }));
-    if (refs.length) out.push(...refs);
-    else if (part.trim() && !/^none\.?$/i.test(part.trim())) out.push({ text: part.trim() });
+  const out = new Map();
+  for (const [, line] of String(body ?? "").matchAll(DEPENDS)) {
+    for (const part of line.split(/[,;]/)) {
+      const refs = [...part.matchAll(REF)].map((m) => (m[2] ? { key: m[2] } : { number: Number(m[1] ?? m[3]) }));
+      if (!refs.length && part.trim() && !/^none\.?$/i.test(part.trim())) refs.push({ text: part.trim() });
+      for (const ref of refs) out.set(ref.key ?? ref.text ?? `#${ref.number}`, ref);
+    }
   }
-  return out;
+  return [...out.values()];
 }
 
 /**
@@ -541,6 +542,7 @@ async function syncDependencies(ctx, issue) {
   if (!refs.length) return;
   const item = issue.key ?? (issue.title?.match(/^((?:ST|EP)-\d+)\b/)?.[1] || `#${issue.number}`);
   const done = [];
+  const targets = new Set();
   try {
     for (const ref of refs) {
       const target = ref.text ? null : ref.key ? await ctx.t.find(ref.key) : await ctx.t.byNumber(ref.number);
@@ -548,6 +550,8 @@ async function syncDependencies(ctx, issue) {
         done.push(`unresolvable ${ref.text ?? ref.key ?? `#${ref.number}`}`);
         continue;
       }
+      if (targets.has(target.number)) continue;
+      targets.add(target.number);
       const linked = issue.blockedBy.some((b) => b.number === target.number);
       const path = `issues/${issue.number}/dependencies/blocked_by`;
       if (!target.open) {

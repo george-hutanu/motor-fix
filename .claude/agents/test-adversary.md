@@ -54,7 +54,8 @@ For each public entry point:
   surface under attack (`foo.ts` → `foo.adversary.spec.ts`), or in the app's
   `test/` directory for HTTP. You never touch `src/` bodies; the red-first
   gate blocks you if you try, and it is right to. You append to an existing adversary spec or add a new file, never rewrite or delete a test:
-  the `pre:edit:adversary-keep` gate refuses an edit that drops a test title.
+  the `pre:edit:adversary-keep` gate refuses an edit that drops a test title. Only the change that retires
+  a rule drops the test holding it, leaving `// retired test: "<title>" <why>` in its place.
 - **One skip rule.** Skip a case only when a colocated spec already asserts
   the same concrete input and the same concrete outcome, and name that spec
   on a `Covered already` line. No other reason skips a case.

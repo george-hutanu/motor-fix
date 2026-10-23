@@ -87,8 +87,9 @@ describe('the requirement count wire at its boundary', () => {
     assert.equal(levelOf(dir), 1);
   });
 
+  // retired test: "promotes at six requirements" the requirement wire moved from five to ten
   // @traces 1363-FR-004
-  it('leaves six requirements alone and promotes at eleven, the wire at ten since 1363-FR-004', () => {
+  it('leaves six requirements alone and promotes at eleven, the wire at ten', () => {
     const six = repoFixture({ spec: frs(6) });
     noEnv(() => assert.equal(checkLevel(six).promoted, null));
     assert.equal(levelOf(six), 1);
