@@ -173,6 +173,17 @@ abstract class CockpitChart {
       };
       schemeQuery.addEventListener('change', redraw);
       this.document.addEventListener('pointerdown', tapOutside);
+      // Chart.js measures its tick labels once and keeps the widths for the
+      // chart's life: a chart drawn before the web fonts arrived is drawn
+      // again, new, so its ticks and plot are laid out in them.
+      const fonts = this.document.fonts as FontFaceSet | undefined;
+      if (fonts && fonts.status !== 'loaded') {
+        fonts.ready.then(() => {
+          if (!this.chart) return;
+          this.destroyChart();
+          redraw();
+        });
+      }
       destroyRef.onDestroy(() => {
         schemeQuery.removeEventListener('change', redraw);
         this.document.removeEventListener('pointerdown', tapOutside);
