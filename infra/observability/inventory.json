@@ -1770,6 +1770,19 @@
     },
     {
       "kind": "queue",
+      "name": "car-account-deleted",
+      "source": "libs/domain/src/cars/account-deleted/account-deleted.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's account.deleted events; one CarAccountDeleted log line per event naming the account id and the plates cleared; a failed job is retried (3 tries) and worker-jobs-failed fires on the last; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-129"
+    },
+    {
+      "kind": "queue",
       "name": "review-ratings",
       "source": "libs/domain/src/reviews/ratings/ratings.module.ts",
       "dashboard": "motorfix-queues",

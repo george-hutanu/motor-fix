@@ -7,8 +7,10 @@ import {
   BOOKING_LAPSED_CONSUMER,
   BOOKING_TIMERS_CONSUMER,
   BookingTimersModule,
+  CAR_ACCOUNT_DELETED_CONSUMER,
   CAR_REMINDERS_CONSUMER,
   CATALOGUE_JOB_PENDING_CONSUMER,
+  CarAccountDeletedModule,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
@@ -91,6 +93,7 @@ export function workerModule(
           BOOKING_CONFIRMED_CONSUMER,
           BOOKING_LAPSED_CONSUMER,
           BOOKING_TIMERS_CONSUMER,
+          CAR_ACCOUNT_DELETED_CONSUMER,
           CAR_REMINDERS_CONSUMER,
           CATALOGUE_JOB_PENDING_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
@@ -118,6 +121,11 @@ export function workerModule(
       }),
       // Closes a deleted or suspended driver's requests and bookings.
       AccountClosedModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Clears a deleted account's plates.
+      CarAccountDeletedModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
       }),

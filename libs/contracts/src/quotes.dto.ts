@@ -365,6 +365,9 @@ export class RequestListDto {
 export class DriverNameDto {
   @ApiProperty({ description: 'First name and the last name’s initial' })
   shortName!: string;
+
+  @ApiPropertyOptional({ description: 'The author deleted their account' })
+  deleted?: boolean;
 }
 
 // The phone shows once the garage's quote is accepted, never to a mechanic.

@@ -40,6 +40,12 @@ const reviewOf = (review: Review): ReviewDto => ({
   text: review.text,
 });
 
+// A deleted account's name is gone; its reviews stay under a stand-in.
+const authorOf = (driver: { name: string; status: string }) =>
+  driver.status === 'deleted'
+    ? { deleted: true, shortName: 'Șofer MotorFix' }
+    : { shortName: shortName(driver.name) };
+
 const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
   jobId,
   offer,
@@ -90,7 +96,10 @@ export class ReviewsService {
     const reviews =
       skip < total
         ? await this.prisma.review.findMany({
-            include: { driver: { select: { name: true } }, garage: true },
+            include: {
+              driver: { select: { name: true, status: true } },
+              garage: true,
+            },
             orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
             skip,
             take: MECHANIC_REVIEWS_PAGE,
@@ -99,7 +108,7 @@ export class ReviewsService {
         : [];
     return {
       items: reviews.map((review) => ({
-        author: { shortName: shortName(review.driver.name) },
+        author: authorOf(review.driver),
         garage: garageRef(review.garage),
         id: review.id,
         postedAt: review.postedAt.toISOString(),
