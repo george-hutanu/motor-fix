@@ -109,6 +109,18 @@
   }
 }
 
+/* Under 360 px the legend wraps to four rows with a mobile mechanic's entry,
+   and the half sheet of a short screen rises just under the zoom buttons:
+   tighter rows keep the whole legend above it, at the same 16 px. */
+@media (max-width: 359.98px) {
+  .legend {
+    line-height: 1.25;
+    padding-block: var(--mf-space-1);
+    row-gap: 0;
+    top: var(--mf-space-2);
+  }
+}
+
 /* A mobile mechanic's area: the circle's faint fill and its outline. */
 .area {
   background: color-mix(in srgb, var(--mf-green) 12%, transparent);

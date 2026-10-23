@@ -29,6 +29,14 @@
   }
 }
 
+/* The legend at the map's top goes with them: a sheet over the zoom buttons
+   would cut its lower rows, so it hides whole and shows again at low. */
+@media (max-width: 767px) {
+  mf-results:has(mf-results-sheet.over-zoom) mf-results-map .legend {
+    visibility: hidden;
+  }
+}
+
 /* The one action an empty state holds is projected into it, so its own
    stylesheet cannot reach it. Until the driver's texts load the label is its
    key, one unbreakable word. Its tracking narrows with the viewport and, on a
