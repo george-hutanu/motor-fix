@@ -34,7 +34,7 @@ const FORMAT = /\p{Cf}/gu;
 export const visibleLength = (value: string): number =>
   [...value.trim().replace(FORMAT, '')].length;
 
-export type VisibleTextProblem = 'control' | 'required' | 'min' | 'max';
+type VisibleTextProblem = 'control' | 'required' | 'min' | 'max';
 
 export function visibleTextProblem(
   value: string,

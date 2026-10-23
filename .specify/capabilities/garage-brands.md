@@ -1,12 +1,13 @@
 ---
 capability: garage-brands
-updated: 2026-10-20
+updated: 2026-10-23
 features:
   - 039-brand-catalogue
   - 040-garage-brand-stance
   - 397-listing-ticks
   - 412-brand-job-ticks
   - 1352-catalogue-job-visibility
+  - 414-approve-catalogue-job
 ---
 
 # Capability: Garage brands
@@ -78,6 +79,10 @@ _From 412-brand-job-ticks._
 ### 1352-FR-003 — The add MUST write no brand tick: the job starts unticked for every brand the garage takes, and the owner ticks it through the brands write (OD-33, #1123; modifies 412-FR-010's "[R1]" clause).
 
 _From 1352-catalogue-job-visibility._
+
+### 414-FR-006 — The approval MUST write no brand tick: the job starts unticked for every brand the proposing garage takes, as an added job does (1352-FR-003, OD-33). Nothing else in this story changes which jobs are public, pickable, requestable or counted: an approved job is public on the proposer's profile through the existing rule (357-FR-001, computed on read, 357-FR-004), is offered by the picker's search (109-FR-006, approved jobs), and can be named in a request and counted in the figures as any approved job; the tests of FR-013 prove it.
+
+_From 414-approve-catalogue-job._
 
 ## Retired
 

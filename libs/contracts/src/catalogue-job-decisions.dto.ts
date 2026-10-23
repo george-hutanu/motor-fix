@@ -28,6 +28,11 @@ const RAR_ACTIVITY_MAX = 120;
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
+// A catalogue name is stored as it shows: format characters such as a
+// zero-width space are dropped before the trim, so none hides in the name.
+const shown = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.replace(/\p{Cf}/gu, '').trim() : value;
+
 // The shared rule the dialogs judge with too: no control characters, and a
 // length of what shows.
 const VisibleText = (rule: VisibleTextRule) =>
@@ -91,7 +96,7 @@ export class ApproveCatalogueJobDto {
     maxLength: JOB_NAME_MAX,
     minLength: PROPOSED_JOB_NAME_MIN,
   })
-  @Transform(trimmed)
+  @Transform(shown)
   @IsString()
   @VisibleText(CATALOGUE_JOB_NAME)
   nameRo!: string;
@@ -101,7 +106,7 @@ export class ApproveCatalogueJobDto {
     maxLength: JOB_NAME_MAX,
     minLength: PROPOSED_JOB_NAME_MIN,
   })
-  @Transform(trimmed)
+  @Transform(shown)
   @IsString()
   @VisibleText(CATALOGUE_JOB_NAME)
   nameEn!: string;

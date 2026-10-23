@@ -342,6 +342,8 @@ describe('an approval', () => {
     ['nameRo', { nameRo: 'SCHIMB ULEI' }],
     ['nameEn', { nameEn: 'oil change' }],
     ['nameEn', { nameEn: 'Schimb ulei' }],
+    ['nameRo', { nameRo: 'Schimb ulei\u200B' }],
+    ['nameEn', { nameEn: 'Oil\u2060 change' }],
   ] as const)(
     'refuses a %s equal to an approved job and writes nothing',
     async (field, names) => {

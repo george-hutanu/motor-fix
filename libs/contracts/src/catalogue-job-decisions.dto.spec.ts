@@ -41,6 +41,21 @@ describe('the body of an approval', () => {
     expect(await validate(dto, strict)).toEqual([]);
   });
 
+  it('stores both names without format characters such as a zero-width space', async () => {
+    const dto = plainToInstance(ApproveCatalogueJobDto, {
+      ...body,
+      nameEn: '\u200BOil\u2060 change\uFEFF',
+      nameRo: 'Schimb ulei\u200B ',
+    });
+
+    expect([dto.nameRo, dto.nameEn]).toEqual(['Schimb ulei', 'Oil change']);
+    expect(await validate(dto, strict)).toEqual([]);
+  });
+
+  it('refuses a name that is only format characters and spaces', async () => {
+    expect(await approve({ nameRo: ' \u200B\u200D ' })).toEqual(['nameRo']);
+  });
+
   it('takes a name of exactly 3 and of exactly 80 characters, counted in code points', async () => {
     expect(await approve({ nameEn: 'é'.repeat(80), nameRo: 'Abc' })).toEqual(
       [],

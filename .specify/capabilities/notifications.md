@@ -41,6 +41,7 @@ features:
   - 389-confirm-booking-lift-mechanic
   - 428-close-on-account-closed
   - 068-yearly-documents
+  - 414-approve-catalogue-job
 ---
 
 # Capability: Notifications
@@ -787,6 +788,10 @@ _From 428-close-on-account-closed._
 ### 428-FR-011 — REQUEST_CANCELLED and BOOKING_CANCELLED render through the existing templates; where the owning story (#147 for REQUEST_CANCELLED; #1258 and #203 for BOOKING_CANCELLED) has not written texts yet, the generic bell and e-mail text fills in, as 195-FR-010 allows. The garages are told at any time: quiet hours do not hold a booking change.
 
 _From 428-close-on-account-closed._
+
+### 414-FR-009 — On every `catalogue_job.decided` event, the proposing garage's owner MUST get CATALOGUE_JOB_DECIDED (already registered: e-mail, push and bell; mutable, so a muted owner keeps the bell entry only) from a template in the templates folder with two variants: approved — bell and push "Lucrarea „{job}” a fost aprobată și apare pe profilul tău." / "The job "{job}" was approved and is on your profile.", e-mail subject "Lucrarea {job} a fost aprobată" / "The job {job} was approved"; rejected — "Lucrarea „{job}” a fost respinsă: {reason}" / "The job "{job}" was rejected: {reason}", e-mail subject "Lucrarea {job} a fost respinsă" / "The job {job} was rejected". `{job}` is the catalogue's Romanian name in Romanian and English name in English (the proposed text on a rejection, where both are the same); the button and link open Prețuri; the template carries its example values. No notice goes out when the garage no longer exists; the garage's other staff get none (the staff list already says owner). The rejection reason is admin-typed text: every channel renders it as plain, escaped text and never as markup. The push body is limited to 120 characters, so the push is the short form, "„{job}” e acum pe profilul tău." / "„{job}”: motivul e în Prețuri." (and their English twins), the reason left to the bell and the e-mail, as DOCUMENT_REFUSED does. A `{job}` that would take the push body past 120 characters (UTF-16 units) is shortened with "…" there; the bell and the e-mail carry it whole.
+
+_From 414-approve-catalogue-job._
 
 ## Retired
 
