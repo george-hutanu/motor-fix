@@ -828,3 +828,29 @@ describe('the send-quote dialog: errors tied to their fields', () => {
     expect(field('până la (lei)').getAttribute('aria-invalid')).toBe('true');
   });
 });
+
+// @traces 495-FR-004
+describe('the send-quote dialog: a price the server named, then typed above the top', () => {
+  it('keeps the price announced invalid while its message shows', async () => {
+    await open();
+    await fillValid();
+    send.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'validation_failed',
+        errors: [{ code: 'price_out_of_range', field: 'fromLei' }],
+        status: 400,
+      }),
+    );
+    await press();
+    expect(field('Preț de la (lei)').getAttribute('aria-invalid')).toBe('true');
+
+    await fill('Preț de la (lei)', '900');
+    await fill('până la (lei)', '700');
+
+    expect(said('Preț de la (lei)')).toContain(
+      'Prețul de la nu poate fi mai mare decât prețul până la',
+    );
+    expect(field('Preț de la (lei)').getAttribute('aria-invalid')).toBe('true');
+    expect(field('până la (lei)').getAttribute('aria-invalid')).toBe('true');
+  });
+});

@@ -41,6 +41,17 @@ async function openForm(page: Page, language: Language = 'ro') {
   await opener.click();
   // The panel: on a phone the dialog container around the sheet has no box.
   await expect(task(page, language).locator('mf-overlay-panel')).toBeVisible();
+  // The panel's pop ends before a test reads its colours.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((a) =>
+        (
+          (a.effect as KeyframeEffect | null)?.target as Element | null
+        )?.closest('.cdk-overlay-container'),
+      )
+      .every((a) => a.playState !== 'running'),
+  );
 }
 
 const task = (page: Page, language: Language = 'ro') =>
@@ -58,6 +69,19 @@ async function answer(page: Page, key: string, language: Language = 'ro') {
 }
 
 test.describe('a small task saves once', () => {
+  // @traces 495-FR-005
+  test('opens with no field announced invalid and nothing for axe to report', async ({
+    page,
+  }) => {
+    await openForm(page);
+
+    await expect(plate(page)).not.toHaveAttribute('aria-invalid', /.*/);
+    await expect(task(page).locator('[aria-invalid="true"]')).toHaveCount(0);
+    expect(
+      await violations(page, {}, { include: [['.cdk-overlay-container']] }),
+    ).toEqual([]);
+  });
+
   test('an empty press explains the field, focuses it and saves nothing', async ({
     page,
   }) => {

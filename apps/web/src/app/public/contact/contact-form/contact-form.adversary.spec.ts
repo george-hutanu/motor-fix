@@ -205,7 +205,7 @@ describe('the contact form under hostile use', () => {
       }),
     );
     fill();
-    button('Send the message')?.click();
+    button('Send message')?.click();
     await settle();
     expect(text()).toContain('Too many messages. Try again in an hour.');
   });
@@ -215,7 +215,7 @@ describe('the contact form under hostile use', () => {
     jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     send.mockRejectedValueOnce(new HttpErrorResponse({ status: 0 }));
     fill();
-    button('Send the message')?.click();
+    button('Send message')?.click();
     await settle();
     expect(text()).toContain('You are offline. The message was not sent.');
   });

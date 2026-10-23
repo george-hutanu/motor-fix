@@ -120,6 +120,13 @@ describe('diff-audit dead-export', () => {
     write('libs/client/src/fn.ts', 'export interface Lost$Params { q: string }\n');
     assert.equal(dead().filter((l) => l.includes('Lost$Params')).length, 1);
   });
+
+  it('reads an inline type modifier in an export list as the name it exports', () => {
+    write('libs/kit/src/save.ts', 'export interface Save { ok: boolean }\n');
+    write('libs/kit/src/index.ts', "export {\n  type Save,\n} from './save';\n");
+    write('apps/web/src/use.ts', "import type { Save } from '@kit';\nexport const keep = (s: Save) => s;\n");
+    assert.deepEqual(dead().filter((l) => l.includes('libs/kit/src/index.ts')), []);
+  });
 });
 
 // Generator output is never edited by hand, so nothing in it is this
