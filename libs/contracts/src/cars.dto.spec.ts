@@ -57,6 +57,7 @@ describe('UpdateCarDto', () => {
     ['engine', 'a\nb'],
     ['plate', 'not a plate!'],
     ['itpUntil', '2027-02-30'],
+    ['itpUntil', '0000-01-01'],
     ['rcaUntil', '20.10.2026'],
     ['rovinietaUntil', 2027],
   ])('refuses %s of %j as the add dialog does', (field, value) => {

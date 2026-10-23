@@ -203,6 +203,11 @@
       "uploaded": "încărcat {day}",
       "yesterday": "emis ieri"
     },
+    "evidence": {
+      "documents": "documente anuale valabile",
+      "recheck": "reverificare RAR din {day}",
+      "recheckFound": "reverificare RAR valabilă"
+    },
     "failed": "Nu am putut deschide dosarul",
     "footer": {
       "alreadyDecided": "Deja decis de {name} la {time}",
@@ -249,7 +254,10 @@
       "reportConfirmed": "Sesizări confirmate de {name}, {when}",
       "reportUnfounded": "Sesizări închise ca nefondate de {name}, {when}",
       "resent": "Retrimis de {name}, {when}",
-      "sent": "Trimis de {name}, {when}"
+      "restored": "Repus pe hartă ({cause}) — {name}, {when}",
+      "restoredNote": "Repus pe hartă ({cause}): {note} — {name}, {when}",
+      "sent": "Trimis de {name}, {when}",
+      "suspended": "Suspendat ({cause}): {reason} — {name}, {when}"
     },
     "loading": "Se deschide dosarul",
     "manual": {
@@ -450,6 +458,11 @@
     },
     "retry": "Reîncearcă",
     "seat": "Sediu social: {seat} · rază {km} km",
+    "suspension": {
+      "ended": "Suspendat {from} – {until} · repus pe hartă de {name}",
+      "note": "Notă: {note}",
+      "open": "Suspendat din {date}"
+    },
     "title": "Dosar de verificare",
     "unnamedDraft": "o ciornă fără nume"
   },
@@ -762,6 +775,20 @@
     "save": "Salvează",
     "suspend": "Suspendă service‑ul",
     "suspends": "Service‑ul va fi suspendat și scos de pe hartă. Programările viitoare se anulează și șoferii sunt anunțați."
+  },
+  "restore": {
+    "button": "Repune pe hartă",
+    "buttonNamed": "Repune pe hartă {name}",
+    "cancel": "Renunță",
+    "close": "Închide",
+    "confirm": "Repune pe hartă",
+    "dialog": "Repune pe hartă",
+    "documentsDue": "Documente anuale valabile",
+    "documentsNotValid": "Documentele anuale nu sunt toate valabile",
+    "failed": "Nu am putut repune service‑ul pe hartă. Încearcă din nou.",
+    "note": "Ce s‑a rezolvat",
+    "noteOptional": "Ce s‑a rezolvat (opțional)",
+    "noteRequired": "Scrie ce s‑a rezolvat"
   },
   "suspended": {
     "alone": "suspendat",

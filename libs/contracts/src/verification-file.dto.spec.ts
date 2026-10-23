@@ -4,7 +4,9 @@ import { validate } from 'class-validator';
 
 import {
   ReportDecisionDto,
+  VerificationFileDto,
   VerificationFileGarageDto,
+  VerificationFileSuspensionDto,
 } from './verification-file.dto';
 import { VerificationQueueRowDto } from './verification-queue';
 
@@ -104,5 +106,52 @@ describe('the stored CUI warning in the contract', () => {
     ['the queue row', VerificationQueueRowDto.prototype],
   ])('names the marker a client replaces on %s', (_, dto) => {
     expect(description(dto, 'cuiWarning')).toContain('U+FFFC');
+  });
+});
+
+// @traces 067-FR-010
+describe("the file's latest suspension in the contract", () => {
+  const property = (dto: object, name: string) =>
+    Reflect.getMetadata('swagger/apiModelProperties', dto, name) as
+      | { nullable?: boolean; type?: unknown; enum?: unknown }
+      | undefined;
+
+  it('carries the cause, reason, start, end, lifter and note', () => {
+    const fields = Reflect.getMetadata(
+      'swagger/apiModelPropertiesArray',
+      VerificationFileSuspensionDto.prototype,
+    ) as string[];
+
+    expect(fields.map((field) => field.replace(/^:/, '')).sort()).toEqual([
+      'cause',
+      'fromTime',
+      'liftedBy',
+      'note',
+      'rarVerdict',
+      'reason',
+      'untilTime',
+    ]);
+    for (const open of ['untilTime', 'liftedBy', 'note']) {
+      expect(
+        property(VerificationFileSuspensionDto.prototype, open)?.nullable,
+      ).toBe(true);
+    }
+    expect(
+      property(VerificationFileSuspensionDto.prototype, 'cause')?.enum,
+    ).toEqual([
+      'recheck_failed',
+      'documents_overdue',
+      'admin',
+      'report_confirmed',
+    ]);
+    expect(
+      property(VerificationFileSuspensionDto.prototype, 'rarVerdict')?.enum,
+    ).toEqual(['expired', 'suspended', 'withdrawn']);
+  });
+
+  it('is null on a file whose garage was never suspended', () => {
+    expect(property(VerificationFileDto.prototype, 'suspension')).toMatchObject(
+      { nullable: true, type: VerificationFileSuspensionDto },
+    );
   });
 });

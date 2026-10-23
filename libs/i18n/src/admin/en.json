@@ -198,6 +198,11 @@
       "uploaded": "uploaded {day}",
       "yesterday": "issued yesterday"
     },
+    "evidence": {
+      "documents": "yearly documents valid",
+      "recheck": "RAR re-check of {day}",
+      "recheckFound": "valid RAR re-check"
+    },
     "failed": "Could not open the file",
     "footer": {
       "alreadyDecided": "Already decided by {name} at {time}",
@@ -244,7 +249,10 @@
       "reportConfirmed": "Reports confirmed by {name}, {when}",
       "reportUnfounded": "Reports closed as unfounded by {name}, {when}",
       "resent": "Sent again by {name}, {when}",
-      "sent": "Sent by {name}, {when}"
+      "restored": "Put back on the map ({cause}) — {name}, {when}",
+      "restoredNote": "Put back on the map ({cause}): {note} — {name}, {when}",
+      "sent": "Sent by {name}, {when}",
+      "suspended": "Suspended ({cause}): {reason} — {name}, {when}"
     },
     "loading": "Opening the file",
     "manual": {
@@ -443,6 +451,11 @@
     },
     "retry": "Retry",
     "seat": "Registered seat: {seat} · {km} km radius",
+    "suspension": {
+      "ended": "Suspended {from} – {until} · put back on the map by {name}",
+      "note": "Note: {note}",
+      "open": "Suspended since {date}"
+    },
     "title": "Verification file",
     "unnamedDraft": "an unnamed draft"
   },
@@ -745,6 +758,20 @@
     "save": "Save",
     "suspend": "Suspend the garage",
     "suspends": "The garage will be suspended and taken off the map. Future bookings are cancelled and the drivers are told."
+  },
+  "restore": {
+    "button": "Put back on the map",
+    "buttonNamed": "Put back on the map {name}",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Put back on the map",
+    "dialog": "Put back on the map",
+    "documentsDue": "Yearly documents valid",
+    "documentsNotValid": "The yearly documents are not all valid",
+    "failed": "Could not put the garage back on the map. Try again.",
+    "note": "What was fixed",
+    "noteOptional": "What was fixed (optional)",
+    "noteRequired": "Say what was fixed"
   },
   "suspended": {
     "alone": "suspended",

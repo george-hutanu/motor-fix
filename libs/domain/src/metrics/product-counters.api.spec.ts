@@ -35,6 +35,7 @@ const WORKER_ONLY = [
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
   'motorfix_garage_suspended_notices_total',
+  'motorfix_garage_restored_notices_total',
   'motorfix_garage_report_decided_notices_total',
   'motorfix_support_emails_total',
 ];
@@ -146,6 +147,10 @@ describe("the API's product counters at start", () => {
         (one) => one.labels['step'],
       ),
     ).toEqual(['uploaded', 'accepted', 'refused']);
+    // @traces 067-FR-013
+    // A handful of restores a month: the series start on their first count,
+    // which keeps the instance inside its 150-series budget.
+    expect(named(all, 'motorfix_garage_restores_total')).toEqual([]);
     // @traces 328-FR-014
     expect(
       named(all, 'motorfix_sort_changes_total').map((one) => one.labels),

@@ -17,6 +17,7 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { VerificationFile } from './verification-file';
+import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
 import { DocumentRefuse } from '../document-refuse/document-refuse';
 import { Live } from '../live';
 
@@ -438,7 +439,7 @@ describe('a decided yearly document in the drawer', () => {
     expect(refused?.querySelector('[data-part="refuse"]')).toBeNull();
   });
 
-  it('shows the suspension line after an acceptance on a suspended garage, and no way back yet', async () => {
+  it('shows the suspension line after an acceptance on a suspended garage while documents are still missing, and no way back', async () => {
     const host = await open();
     api.documentReviewControllerAccept.mockResolvedValue(
       decision({ suspendedFor: 'documents_overdue' }),
@@ -451,6 +452,52 @@ describe('a decided yearly document in the drawer', () => {
       text(host.querySelector('[data-section="documents"] .suspended')),
     ).toBe('Service‑ul este suspendat: documente anuale neîncărcate');
     expect(text(host)).not.toContain('Repune pe hartă');
+  });
+
+  it('offers the way back on the map once the last missing document is accepted', async () => {
+    const host = await open();
+    overlays.open.mockResolvedValueOnce('cancelled');
+    api.documentReviewControllerAccept.mockResolvedValue(
+      decision({
+        cycle: {
+          canUpload: false,
+          dueOn: '2027-10-01',
+          graceUntil: null,
+          inReview: false,
+          refusal: null,
+          row: 'valid',
+          state: 'due',
+        } as DocumentDecisionDto['cycle'],
+        suspendedFor: 'documents_overdue',
+      }),
+    );
+
+    press(reviewOf(host, 'onrc_certificate'), 'Acceptă');
+    await settle();
+
+    expect(
+      host.querySelector('[data-section="documents"] .suspended'),
+    ).toBeNull();
+    const restore = host.querySelector<HTMLButtonElement>(
+      '[data-section="documents"] [data-part="restore-documents"]',
+    );
+    expect(text(restore)).toBe('Repune pe hartă');
+
+    restore?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      AdminRestoreGarage,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cause: 'documents_overdue',
+          documentsDue: true,
+          garageId: 'garage-1',
+        }),
+        shape: 'dialog',
+        title: 'admin.restore.dialog',
+      }),
+    );
   });
 });
 

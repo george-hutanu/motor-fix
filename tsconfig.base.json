@@ -84,6 +84,9 @@
       "@motor-fix/contracts/support": [
         "./libs/contracts/src/support/support.ts"
       ],
+      "@motor-fix/contracts/suspension-limits": [
+        "./libs/contracts/src/suspension-limits.ts"
+      ],
       "@motor-fix/contracts/system-log": [
         "./libs/contracts/src/system-log/system-log.ts"
       ],

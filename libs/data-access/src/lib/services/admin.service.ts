@@ -44,6 +44,7 @@ import { documentReviewControllerAccept } from '../fn/admin/document-review-cont
 import { DocumentReviewControllerAccept$Params } from '../fn/admin/document-review-controller-accept';
 import { documentReviewControllerRefuse } from '../fn/admin/document-review-controller-refuse';
 import { DocumentReviewControllerRefuse$Params } from '../fn/admin/document-review-controller-refuse';
+import { GarageRestoredDto } from '../models/garage-restored-dto';
 import { GarageSuspensionCreatedDto } from '../models/garage-suspension-created-dto';
 import { jobDecisionsControllerApprove } from '../fn/admin/job-decisions-controller-approve';
 import { JobDecisionsControllerApprove$Params } from '../fn/admin/job-decisions-controller-approve';
@@ -77,6 +78,8 @@ import { RecheckDueListDto } from '../models/recheck-due-list-dto';
 import { RecheckRecordedDto } from '../models/recheck-recorded-dto';
 import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
 import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
+import { suspensionControllerRestore } from '../fn/admin/suspension-controller-restore';
+import { SuspensionControllerRestore$Params } from '../fn/admin/suspension-controller-restore';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
 import { SuspensionControllerSuspend$Params } from '../fn/admin/suspension-controller-suspend';
 import { systemLogControllerList } from '../fn/admin/system-log-controller-list';
@@ -554,6 +557,39 @@ export class AdminService extends BaseService {
   suspensionControllerSuspend(params: SuspensionControllerSuspend$Params, context?: HttpContext): Promise<GarageSuspensionCreatedDto> {
     const resp = this.suspensionControllerSuspend$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageSuspensionCreatedDto>): GarageSuspensionCreatedDto => r.body);
+  }
+
+  /** Path part for operation `suspensionControllerRestore()` */
+  static readonly SuspensionControllerRestorePath = '/api/v1/admin/garages/{id}/restore';
+
+  /**
+   * Put a suspended garage back on the map once its cause's evidence holds.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `suspensionControllerRestore()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  suspensionControllerRestore$Response(params: SuspensionControllerRestore$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageRestoredDto>> {
+    const obs = suspensionControllerRestore(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Put a suspended garage back on the map once its cause's evidence holds.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `suspensionControllerRestore$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  suspensionControllerRestore(params: SuspensionControllerRestore$Params, context?: HttpContext): Promise<GarageRestoredDto> {
+    const resp = this.suspensionControllerRestore$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageRestoredDto>): GarageRestoredDto => r.body);
   }
 
   /** Path part for operation `verificationChecksControllerRecord()` */

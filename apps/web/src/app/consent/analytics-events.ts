@@ -29,7 +29,10 @@ export const ANALYTICS_EVENTS = {
     jobs: 'count',
     voice: 'voice',
   },
-  quote_request_started: { source: ['profile', 'results'], voice: 'voice' },
+  quote_request_started: {
+    source: ['profile', 'results', 'saved'],
+    voice: 'voice',
+  },
   request_answered: { action: ['quote', 'decline'] },
   review_posted: { has_text: ['yes', 'no'], rating: 'rating' },
   sign_up_completed: {

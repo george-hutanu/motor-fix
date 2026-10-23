@@ -17,11 +17,13 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { VerificationFile } from './verification-file';
+import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
 import { Live } from '../live';
 import { ReportDecision } from '../report-decision/report-decision';
 
 // @traces 203-FR-006 203-FR-008
 // @traces 204-FR-007 204-FR-009
+// @traces 067-FR-007 067-FR-009 067-FR-010 067-FR-012
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -3714,4 +3716,240 @@ describe('a file after a rejection', () => {
       ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     },
   );
+});
+
+describe("the garage's suspension in the file", () => {
+  const OPEN = {
+    cause: 'admin' as const,
+    fromTime: '2026-09-12T08:00:00.000Z',
+    liftedBy: null,
+    note: null,
+    reason: 'Plângeri repetate de la clienți',
+    untilTime: null,
+  };
+  const ENDED = {
+    ...OPEN,
+    liftedBy: { name: 'Ana P.' },
+    note: 'Discutat cu proprietarul.',
+    untilTime: '2026-10-03T09:00:00.000Z',
+  };
+  const restoreButton = (host: HTMLElement) =>
+    section(host, 'header')?.querySelector<HTMLButtonElement>(
+      '[data-part="restore"]',
+    ) ?? null;
+  const line = (host: HTMLElement) =>
+    text(section(host, 'header')?.querySelector('[data-part="suspension"]'));
+
+  it('reads "Suspendat din {date}" and offers the restore while it is open', async () => {
+    const host = await open(fileOf({ suspension: OPEN }));
+
+    expect(line(host)).toBe('Suspendat din 12 sept. 2026');
+    expect(text(restoreButton(host))).toBe('Repune pe hartă');
+  });
+
+  it('reads the ended suspension with who lifted it, the year once, and the note', async () => {
+    const host = await open(fileOf({ suspension: ENDED }));
+
+    expect(line(host)).toBe(
+      'Suspendat 12 sept. – 3 oct. 2026 · repus pe hartă de Ana P.',
+    );
+    expect(
+      text(section(host, 'header')?.querySelector('[data-part="lift-note"]')),
+    ).toBe('Notă: Discutat cu proprietarul.');
+    expect(restoreButton(host)).toBeNull();
+  });
+
+  it('writes both years when the suspension crossed one', async () => {
+    const host = await open(
+      fileOf({
+        suspension: {
+          ...ENDED,
+          fromTime: '2025-12-20T08:00:00.000Z',
+          untilTime: '2026-01-05T09:00:00.000Z',
+        },
+      }),
+    );
+
+    expect(line(host)).toBe(
+      'Suspendat 20 dec. 2025 – 5 ian. 2026 · repus pe hartă de Ana P.',
+    );
+  });
+
+  it('reads both lines in English', async () => {
+    const opened = await open(fileOf({ suspension: OPEN }), 'en');
+    expect(line(opened)).toBe('Suspended since 12 Sep 2026');
+    expect(text(restoreButton(opened))).toBe('Put back on the map');
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+
+    const ended = await open(fileOf({ suspension: ENDED }), 'en');
+    expect(line(ended)).toBe(
+      'Suspended 12 Sep – 3 Oct 2026 · put back on the map by Ana P.',
+    );
+    expect(
+      text(section(ended, 'header')?.querySelector('[data-part="lift-note"]')),
+    ).toBe('Note: Discutat cu proprietarul.');
+  });
+
+  it('says nothing for a garage never suspended', async () => {
+    const host = await open(fileOf({ suspension: null }));
+
+    expect(
+      section(host, 'header')?.querySelector('[data-part="suspension"]'),
+    ).toBeNull();
+    expect(restoreButton(host)).toBeNull();
+  });
+
+  it("opens the dialog with the file's suspension, activities and documents", async () => {
+    const host = await open(
+      fileOf({
+        activities: [{ code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' }],
+        documentCycle: {
+          canUpload: false,
+          dueOn: '2027-10-01',
+          graceUntil: null,
+          inReview: false,
+          refusal: null,
+          row: 'valid',
+          state: 'due',
+        },
+        suspension: { ...OPEN, cause: 'documents_overdue' },
+      }),
+    );
+    overlays.open.mockResolvedValueOnce('cancelled');
+
+    restoreButton(host)?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(AdminRestoreGarage, {
+      data: {
+        activities: [{ code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' }],
+        cause: 'documents_overdue',
+        documentsDue: true,
+        fromTime: OPEN.fromTime,
+        garageId: 'garage-1',
+        name: 'Atelier Dinamo',
+        rarVerdict: null,
+        reason: OPEN.reason,
+        today: daysAgo(0),
+      },
+      shape: 'dialog',
+      title: 'admin.restore.dialog',
+    });
+    expect(document.activeElement).toBe(restoreButton(host));
+  });
+
+  it("passes a failed re-check's verdict, so the dialog reads the cause as the list does", async () => {
+    const host = await open(
+      fileOf({
+        suspension: {
+          ...OPEN,
+          cause: 'recheck_failed',
+          rarVerdict: 'expired',
+        },
+      }),
+    );
+    overlays.open.mockResolvedValueOnce('cancelled');
+
+    restoreButton(host)?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      AdminRestoreGarage,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cause: 'recheck_failed',
+          rarVerdict: 'expired',
+        }),
+      }),
+    );
+  });
+
+  it.each(['restored', 'stale'])(
+    'reads the file again once %s',
+    async (end) => {
+      const host = await open(fileOf({ suspension: OPEN }));
+      overlays.open.mockResolvedValueOnce(end);
+      const before = api.verificationFileControllerRead.mock.calls.length;
+
+      restoreButton(host)?.click();
+      await settle();
+
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        before + 1,
+      );
+    },
+  );
+
+  it.each(['garage.restored', 'garage.suspended'] as const)(
+    "reads the file again on %s for the file's garage only",
+    async (kind) => {
+      await open(fileOf({ suspension: OPEN }));
+      const before = api.verificationFileControllerRead.mock.calls.length;
+
+      events.next({ at: NOW.toISOString(), id: 'garage-2', kind });
+      await settle();
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(before);
+
+      events.next({ at: NOW.toISOString(), id: 'garage-1', kind });
+      await settle();
+
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        before + 1,
+      );
+    },
+  );
+
+  it('names the suspension and the restore in the history, with the cause, the evidence and the note', async () => {
+    const garageEntry = { subjectId: 'garage-1', subjectType: 'garage' };
+    const host = await open(
+      fileOf({
+        timeline: {
+          entries: [
+            entry({
+              ...garageEntry,
+              field: 'status',
+              kind: 'garage_restored',
+              newValue: {
+                cause: 'recheck_failed',
+                evidence: { checkedOn: '2026-10-02', recheckId: 'r-1' },
+                note: 'A refăcut autorizația',
+                status: 'approved',
+              },
+              text: 'A refăcut autorizația',
+            }),
+            entry({
+              ...garageEntry,
+              field: 'status',
+              kind: 'garage_restored',
+              newValue: {
+                cause: 'documents_overdue',
+                evidence: { documents: 'due' },
+                note: null,
+                status: 'approved',
+              },
+            }),
+            entry({
+              ...garageEntry,
+              field: 'status',
+              kind: 'garage_suspended',
+              newValue: 'suspended',
+              text: 'recheck_failed: Autorizație RAR expirată',
+            }),
+          ],
+          total: 3,
+        },
+      }),
+    );
+    const when = appliedAt(NOW.toISOString(), 'ro', new Date());
+
+    const lines = [
+      ...(section(host, 'history')?.querySelectorAll('li') ?? []),
+    ].map((li) => text(li));
+    expect(lines).toEqual([
+      `Repus pe hartă (autorizație RAR nevalidă · reverificare RAR din 2 oct. 2026): A refăcut autorizația — Ioana, ${when}`,
+      `Repus pe hartă (documente anuale neîncărcate · documente anuale valabile) — Ioana, ${when}`,
+      `Suspendat (autorizație RAR nevalidă): Autorizație RAR expirată — Ioana, ${when}`,
+    ]);
+  });
 });

@@ -43,6 +43,9 @@
               @if (row.link) {
                 <a class="open" [routerLink]="row.link" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>
               }
+              @if (row.restore; as action) {
+                <button type="button" class="restore" data-part="restore" [attr.aria-label]="action.label" (click)="openRestore(action.data, $event)">{{ 'admin.restore.button' | t }}</button>
+              }
             </li>
           }
         </ul>

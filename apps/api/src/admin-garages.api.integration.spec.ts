@@ -142,6 +142,7 @@ describe('GET /admin/garages?status=suspended', () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBeGreaterThanOrEqual(res.body.items.length);
     expect(res.body.items[0]).toEqual({
+      activities: [],
       area: { kind: 'town', name: 'Pantelimon' },
       cancelledBookings: 0,
       cause: 'recheck_failed',

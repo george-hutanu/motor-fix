@@ -93,4 +93,8 @@ describe('capabilities by role', () => {
       capabilitiesOf('receptionist', none),
     );
   });
+
+  it("gives a role outside the five, the system's own actor, nothing", () => {
+    expect(capabilitiesOf('system' as never, none)).toEqual([]);
+  });
 });

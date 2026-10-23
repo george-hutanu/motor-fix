@@ -1,5 +1,6 @@
 import type {
   AdminGaragesDto,
+  RarActivityNameDto,
   RarVerdict,
   SuspendedGarageRowDto,
   SuspensionCause,
@@ -44,6 +45,7 @@ type Row = {
   reason: string | null;
   fromTime: Date | null;
   cancelledBookings: number | null;
+  activities: RarActivityNameDto[] | null;
 };
 
 // Every suspended garage with its open suspension, the most recent first; a
@@ -63,7 +65,13 @@ export async function suspendedGarages(
           SELECT count(*)::int FROM booking b
           WHERE b.garage_id = g.id AND b.cancel_reason = 'garage_suspended'
             AND b.cancelled_at >= s.from_time
-        ) END AS "cancelledBookings"
+        ) END AS "cancelledBookings",
+        CASE WHEN s.cause = 'recheck_failed' THEN (
+          SELECT coalesce(json_agg(json_build_object('code', a.code,
+            'nameEn', a.name_en, 'nameRo', a.name_ro)
+            ORDER BY array_position(g.rar_activities, a.code)), '[]'::json)
+          FROM rar_activity a WHERE a.code = ANY(g.rar_activities)
+        ) END AS activities
       FROM garage g
       LEFT JOIN LATERAL (
         SELECT id, cause, reason, from_time FROM garage_suspension
@@ -98,5 +106,6 @@ function row(r: Row): SuspendedGarageRowDto {
     ...(area && { area }),
     ...open,
     ...(verdict && { rarVerdict: verdict }),
+    ...(open && r.activities && { activities: r.activities }),
   };
 }

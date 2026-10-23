@@ -15,6 +15,7 @@ import {
   type VerificationFileDocumentDto,
   type VerificationFileDocumentReviewDto,
   type VerificationFileDto,
+  type VerificationFileSuspensionDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -33,6 +34,7 @@ import { StorageService } from '../../../storage/storage.service';
 import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
+import { rarVerdict } from '../suspension/suspended-garages';
 import { resubmission } from '../verification.service';
 
 const SYSTEM_NAME = 'MotorFix';
@@ -110,7 +112,10 @@ export function timelineWhere(
           ]
         : []),
       {
-        field: { in: CYCLE_FIELDS },
+        OR: [
+          { field: { in: CYCLE_FIELDS } },
+          { kind: { in: SUSPENSION_KINDS } },
+        ],
         subjectId: garageId,
         subjectType: 'garage',
       },
@@ -120,6 +125,9 @@ export function timelineWhere(
 
 // The garage's lines a cycle writes: turned overdue, and reset.
 const CYCLE_FIELDS = ['documents_state', 'documents_due_on'];
+
+// The garage's lines a suspension writes: taken off the map, and put back.
+const SUSPENSION_KINDS = ['garage_suspended', 'garage_restored'];
 
 // A yearly upload, as opposed to a document the listing was sent with.
 const yearly = (d: { decidedAt: Date | null; status: string }) =>
@@ -314,6 +322,7 @@ export class VerificationFileService {
       photos,
       shared,
       documentCycle,
+      suspension,
     ] = await Promise.all([
       this.names([
         file.openedBy,
@@ -354,6 +363,7 @@ export class VerificationFileService {
       this.publicGarages.photos(garage.photos),
       this.cuiAlsoUsedBy(garage.id, garage.cui),
       this.cycles.documentCycleOf(garage.id),
+      this.suspensionOf(garage.id),
     ]);
     const actor = (
       accountId: string | null,
@@ -464,6 +474,7 @@ export class VerificationFileService {
       })),
       reportsOpen,
       storageReady: await storageReady,
+      suspension,
       timeline: {
         entries: entries.map((row) => {
           const entry = auditEntryOf(row, true);
@@ -584,6 +595,37 @@ export class VerificationFileService {
       }
     }
     return named;
+  }
+
+  // The garage's latest suspension, open or ended, with the first name and
+  // initial of the admin who lifted it (as the 409 garage_already_restored
+  // names them); null for a garage never suspended.
+  private async suspensionOf(
+    garageId: string,
+  ): Promise<VerificationFileSuspensionDto | null> {
+    const latest = await this.prisma.garageSuspension.findFirst({
+      orderBy: [{ fromTime: 'desc' }, { createdAt: 'desc' }],
+      where: { garageId },
+    });
+    if (!latest) return null;
+    const lifter = latest.liftedBy
+      ? await this.prisma.account.findUnique({
+          select: { name: true },
+          where: { id: latest.liftedBy },
+        })
+      : null;
+    const verdict = rarVerdict(latest.cause, latest.reason);
+    return {
+      cause: latest.cause,
+      fromTime: latest.fromTime.toISOString(),
+      liftedBy: latest.liftedBy
+        ? { name: lifter ? shortName(lifter.name) : '' }
+        : null,
+      note: latest.liftNote,
+      ...(verdict && { rarVerdict: verdict }),
+      reason: latest.reason,
+      untilTime: iso(latest.untilTime),
+    };
   }
 
   // First names by account; the system, which has none, is MotorFix.

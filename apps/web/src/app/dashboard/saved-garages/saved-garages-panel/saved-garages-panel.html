@@ -24,7 +24,7 @@
     <ul class="rows">
       @for (row of shown; track row.garageId; let index = $index) {
         <li>
-          <mf-saved-garage-row [item]="row" [hasCar]="hasCar()" (removed)="remove(row, index)" />
+          <mf-saved-garage-row [item]="row" [hasCar]="hasCar()" [quote]="limit() === undefined" (removed)="remove(row, index)" />
         </li>
       }
     </ul>

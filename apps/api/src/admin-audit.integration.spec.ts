@@ -138,6 +138,23 @@ const FIXTURES: Record<
       return `/api/v1/admin/garages/${garage}/rechecks`;
     },
   },
+  // A garage an admin suspended, put back with a note.
+  'POST /api/v1/admin/garages/{id}/restore': {
+    body: () => ({ note: 'Discutat cu proprietarul, problema e rezolvată.' }),
+    path: async () => {
+      const garage = (
+        await db.query(
+          `WITH g AS (INSERT INTO garage (id, name, slug, status, approved_at)
+             VALUES (gen_random_uuid(), 'Audit', $1, 'suspended', now()) RETURNING id)
+           INSERT INTO garage_suspension (garage_id, cause, reason, from_time)
+           SELECT id, 'admin', 'Verificare la cererea echipei', now() FROM g
+           RETURNING garage_id`,
+          [`audit-${randomUUID()}`],
+        )
+      ).rows[0].garage_id as string;
+      return `/api/v1/admin/garages/${garage}/restore`;
+    },
+  },
   'POST /api/v1/admin/garages/{id}/suspend': {
     body: () => ({ cause: 'admin', reason: 'Verificare la cererea echipei' }),
     path: async () => {

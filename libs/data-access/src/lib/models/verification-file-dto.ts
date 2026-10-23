@@ -10,6 +10,7 @@ import { VerificationFileJobDto } from '../models/verification-file-job-dto';
 import { VerificationFileRejectionDto } from '../models/verification-file-rejection-dto';
 import { VerificationFileReportDto } from '../models/verification-file-report-dto';
 import { VerificationFileStateDto } from '../models/verification-file-state-dto';
+import { VerificationFileSuspensionDto } from '../models/verification-file-suspension-dto';
 import { VerificationFileTimelineDto } from '../models/verification-file-timeline-dto';
 export interface VerificationFileDto {
 
@@ -62,5 +63,11 @@ export interface VerificationFileDto {
    * Whether the document store answers
    */
   storageReady: boolean;
+
+  /**
+   * The garage's latest suspension, open or ended; null for a garage never suspended
+   */
+  suspension: (VerificationFileSuspensionDto & {
+}) | null;
   timeline: VerificationFileTimelineDto;
 }

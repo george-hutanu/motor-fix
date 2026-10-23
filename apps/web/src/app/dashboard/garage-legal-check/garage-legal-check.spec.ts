@@ -105,6 +105,20 @@ describe('the yearly documents on the owner’s legal check, live', () => {
   });
 });
 
+// @traces 067-FR-007
+describe('the legal check after the garage is put back on the map', () => {
+  it('reads the panel again on garage.restored for the garage', async () => {
+    const fixture = await render();
+    expect(read).toHaveBeenCalledTimes(1);
+
+    live.emit('garage.restored', 'garage-1');
+    await wait(350);
+    await settle(fixture);
+
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+});
+
 // @traces 068-FR-006
 describe('the upload dialog from the Documente row', () => {
   it('opens for the garage', async () => {

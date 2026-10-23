@@ -1,0 +1,16 @@
+@if (state() === 'unavailable') {
+  <span class="unavailable" role="status">{{ 'driver.saved.unavailable' | t }}</span>
+} @else {
+  <button
+    hlmBtn
+    variant="secondary"
+    type="button"
+    data-quote
+    [attr.aria-busy]="state() === 'pending' || null"
+    [attr.aria-disabled]="state() === 'pending' || null"
+    [attr.aria-label]="'driver.saved.quoteFrom' | t: { garage: name() }"
+    (click)="open()"
+  >
+    {{ 'driver.saved.quote' | t }}
+  </button>
+}

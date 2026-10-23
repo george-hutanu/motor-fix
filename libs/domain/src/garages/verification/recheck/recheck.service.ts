@@ -8,15 +8,18 @@ import {
   type RecordRecheckDto,
   SUSPENSION_REASON_MAX,
 } from '@motor-fix/contracts';
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
+import {
+  checkedOnRule,
+  invalid,
+  type Language,
+  type Locked,
+  languageOf,
+  OK_SAID,
+  recordOk,
+} from './recheck-ok';
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
@@ -28,7 +31,6 @@ import { countRecheck } from '../../../metrics/product-counters';
 import { shortName } from '../../../quotes/reads';
 import { SuspensionService } from '../suspension/suspension.service';
 
-type Language = 'ro' | 'en';
 type Said = Record<Language, string>;
 
 const notFound = () =>
@@ -37,27 +39,7 @@ const notFound = () =>
 const conflict = (code: string, message: string) =>
   refusal(HttpStatus.CONFLICT, code, message);
 
-// The dialog marks the control the refusal names.
-const invalid = (code: string, field: string, message: string) =>
-  new HttpException({ code, field, message }, HttpStatus.UNPROCESSABLE_ENTITY);
-
 const SAID = {
-  activitiesEmpty: {
-    en: 'Tick at least one activity; an authorisation that covers nothing is recorded as failed',
-    ro: 'Bifează cel puțin o activitate; o autorizație care nu acoperă nimic se înregistrează ca eșuată',
-  },
-  activitiesWider: {
-    en: 'A wider authorisation is recorded through a change of details',
-    ro: 'O autorizație mai largă se înregistrează printr-o modificare a datelor',
-  },
-  activityUnknown: {
-    en: 'Unknown RAR activity',
-    ro: 'Activitate RAR necunoscută',
-  },
-  date: {
-    en: 'The date checked must be after the last check and no later than today',
-    ro: 'Data verificării trebuie să fie după ultima verificare și cel mult azi',
-  },
   detail: {
     en: `A failed re-check needs a detail of at most ${RECHECK_DETAIL_MAX} characters; a valid one takes none`,
     ro: `O reverificare eșuată cere un detaliu de cel mult ${RECHECK_DETAIL_MAX} de caractere; una valabilă nu are detaliu`,
@@ -112,13 +94,6 @@ function alreadyChecked(
   return language === 'en'
     ? `Already re-checked by ${name}${day ? ` on ${day}` : ''} at ${time}`
     : `Deja reverificat de ${name}${day ? ` pe ${day}` : ''} la ${time}`;
-}
-
-interface Locked {
-  language: string;
-  status: string;
-  lastCheckedOn: string | null;
-  activities: string[];
 }
 
 const isDue = (garage: Locked, today: string) =>
@@ -217,7 +192,7 @@ export class RecheckService {
           FOR UPDATE`;
         if (!garage) throw notFound();
         // The admin's language rides the locked read: only a refusal uses it.
-        const language: Language = garage.language === 'en' ? 'en' : 'ro';
+        const language = languageOf(garage.language);
         const today = localDay(new Date());
         // The moved date first, so the second of two admins learns who
         // recorded before learning that the garage is no longer due.
@@ -235,7 +210,15 @@ export class RecheckService {
         }
         this.validate(body, garage, today, language);
         return body.result === 'ok'
-          ? this.recordOk(tx, actor, garageId, garage, body, language)
+          ? recordOk(
+              tx,
+              { audit: this.audit, events: this.events },
+              actor,
+              garageId,
+              garage,
+              { activities: body.activities ?? [], checkedOn: body.checkedOn },
+              language,
+            )
           : this.recordFailed(tx, actor, garageId, garage, body);
       })
       .catch(async (error: unknown) => {
@@ -303,12 +286,7 @@ export class RecheckService {
     today: string,
     language: Language,
   ) {
-    if (
-      body.checkedOn > today ||
-      (garage.lastCheckedOn !== null && body.checkedOn <= garage.lastCheckedOn)
-    ) {
-      throw invalid('recheck_date_invalid', 'checkedOn', SAID.date[language]);
-    }
+    checkedOnRule(body.checkedOn, garage.lastCheckedOn, today, language);
     const detail = body.detail ?? '';
     const detailFits =
       body.result === 'ok'
@@ -321,94 +299,9 @@ export class RecheckService {
       throw invalid(
         'recheck_activities_empty',
         'activities',
-        SAID.activitiesEmpty[language],
+        OK_SAID.activitiesEmpty[language],
       );
     }
-  }
-
-  private async recordOk(
-    tx: Prisma.TransactionClient,
-    actor: Actor,
-    garageId: string,
-    garage: Locked,
-    body: RecordRecheckDto,
-    language: Language,
-  ): Promise<RecheckRecordedDto> {
-    const after = [...new Set(body.activities)];
-    const known = await tx.rarActivity.count({
-      where: { code: { in: after } },
-    });
-    if (known !== after.length) {
-      throw invalid(
-        'recheck_activity_unknown',
-        'activities',
-        SAID.activityUnknown[language],
-      );
-    }
-    if (after.some((code) => !garage.activities.includes(code))) {
-      throw invalid(
-        'recheck_activities_wider',
-        'activities',
-        SAID.activitiesWider[language],
-      );
-    }
-
-    const row = await tx.recheck.create({
-      data: {
-        checkedOn: new Date(body.checkedOn),
-        garageId,
-        rarActivities: after,
-        recordedBy: actor.accountId,
-        result: 'ok',
-      },
-    });
-    await tx.garage.update({
-      data: { lastCheckedOn: new Date(body.checkedOn), rarActivities: after },
-      where: { id: garageId },
-    });
-    await this.audit.record(tx, {
-      action: 'update',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      field: 'last_checked_on',
-      garageId,
-      kind: 'recheck_recorded',
-      newValue: {
-        activities: after,
-        checkedOn: body.checkedOn,
-        result: 'ok',
-      },
-      oldValue: {
-        activities: garage.activities,
-        checkedOn: garage.lastCheckedOn,
-      },
-      subjectId: garageId,
-      subjectType: 'garage',
-    });
-    await this.events.record(tx, {
-      audience: { garageId, published: true, type: 'verification' },
-      kind: 'recheck.recorded',
-      payload: { garageId, result: 'ok' },
-      subjectId: garageId,
-    });
-    // The price list hides the jobs a narrower set no longer covers on its
-    // own reads; its readers only need telling.
-    if (after.length < garage.activities.length) {
-      await this.events.record(tx, {
-        audience: { garageId, results: false, type: 'public_garage' },
-        kind: 'price_list.updated',
-        payload: {},
-        subjectId: garageId,
-      });
-    }
-    return {
-      checkedOn: body.checkedOn,
-      garageId,
-      id: row.id,
-      lastCheckedOn: body.checkedOn,
-      result: 'ok',
-      status: 'approved',
-    };
   }
 
   // The garage leaves the map in the same transaction: the date and the

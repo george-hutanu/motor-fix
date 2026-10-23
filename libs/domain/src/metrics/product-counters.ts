@@ -87,6 +87,7 @@ const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 const REQUEST_RECEIVED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
 const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
 const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
+const RESTORED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const REPORT_DECISION_OUTCOMES = [
   'unfounded',
   'confirmed',
@@ -168,6 +169,12 @@ const suspensions = () =>
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
   );
+// Not started at 0: a handful a month, and the API stays under 150 series.
+const restores = () =>
+  counter(
+    'motorfix_garage_restores_total',
+    'Suspended garages an admin put back on the map, by the cause lifted',
+  );
 const verificationChecks = () =>
   counter(
     'motorfix_verification_checks_total',
@@ -248,6 +255,11 @@ const suspendedNotices = () =>
     'motorfix_garage_suspended_notices_total',
     'Garage suspensions told to garage owners, by outcome',
   );
+const restoredNotices = () =>
+  counter(
+    'motorfix_garage_restored_notices_total',
+    'Garage restores told to garage owners, by outcome',
+  );
 const documentCycle = () =>
   counter(
     'motorfix_document_cycle_total',
@@ -320,6 +332,10 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
 
 export function countGarageSuspension(cause: SuspensionCause) {
   suspensions().add(1, { cause });
+}
+
+export function countGarageRestore(cause: SuspensionCause) {
+  restores().add(1, { cause });
 }
 
 export function countVerificationCheck(
@@ -414,6 +430,13 @@ export function countGarageSuspendedNotice(
   outcome: (typeof SUSPENDED_NOTICE_OUTCOMES)[number],
 ) {
   suspendedNotices().add(1, { outcome });
+}
+
+// A restore told to the garage's owners, or one with nobody to tell.
+export function countGarageRestoredNotice(
+  outcome: (typeof RESTORED_NOTICE_OUTCOMES)[number],
+) {
+  restoredNotices().add(1, { outcome });
 }
 
 export function countDocumentUploaded(kind: DocumentKind) {
@@ -529,6 +552,7 @@ const STARTS: Record<
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
     [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
+    [restoredNotices, each('outcome', RESTORED_NOTICE_OUTCOMES)],
     [reportDecidedNotices, each('outcome', REPORT_DECIDED_NOTICE_OUTCOMES)],
     [quotesReceived, each('outcome', QUOTE_RECEIVED_OUTCOMES)],
     [

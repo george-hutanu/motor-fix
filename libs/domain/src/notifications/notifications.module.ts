@@ -56,6 +56,11 @@ import {
   GarageReportDecidedFanOut,
 } from './garage-report-decided/garage-report-decided.fan-out';
 import {
+  GARAGE_RESTORED_QUEUE,
+  type GarageRestoredEvent,
+  GarageRestoredFanOut,
+} from './garage-restored/garage-restored.fan-out';
+import {
   GARAGE_SUSPENDED_QUEUE,
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
@@ -147,6 +152,7 @@ const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
 const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
+const GARAGE_RESTORED_WORKER = Symbol('GARAGE_RESTORED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
 const CATALOGUE_JOB_PENDING_WORKER = Symbol('CATALOGUE_JOB_PENDING_WORKER');
 const CATALOGUE_JOB_DECIDED_WORKER = Symbol('CATALOGUE_JOB_DECIDED_WORKER');
@@ -214,6 +220,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(GARAGE_SUSPENDED_WORKER)
     private readonly garageSuspendedWorker?: Worker | null,
+    @Optional()
+    @Inject(GARAGE_RESTORED_WORKER)
+    private readonly garageRestoredWorker?: Worker | null,
     @Optional()
     @Inject(GARAGE_REPORT_DECIDED_WORKER)
     private readonly garageReportDecidedWorker?: Worker | null,
@@ -643,6 +652,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        GarageRestoredFanOut,
+        {
+          inject: [GarageRestoredFanOut],
+          provide: GARAGE_RESTORED_WORKER,
+          useFactory: (fanOut: GarageRestoredFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('GarageRestored').error(
+                'PUBLIC_WEB_URL missing; restore notices wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<GarageRestoredEvent>(
+              GARAGE_RESTORED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('GarageRestored'));
+            return worker;
+          },
+        },
         DocumentRefusedFanOut,
         {
           inject: [DocumentRefusedFanOut],
@@ -767,6 +803,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.bookingCancelledWorker?.close();
     await this.verificationResultWorker?.close();
     await this.garageSuspendedWorker?.close();
+    await this.garageRestoredWorker?.close();
     await this.garageReportDecidedWorker?.close();
     await this.catalogueJobPendingWorker?.close();
     await this.catalogueJobDecidedWorker?.close();

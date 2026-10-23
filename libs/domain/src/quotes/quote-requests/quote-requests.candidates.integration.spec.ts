@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { AuditService } from '../../audit/audit.service';
+import { outbox } from '../../events/event.port';
+import { SuspensionService } from '../../garages/verification/suspension/suspension.service';
 import { Prisma } from '../../generated/prisma/client';
 import { quotesApp } from '../quotes-api.testing';
 
@@ -156,6 +159,37 @@ describe('GET /quote-requests/garages', () => {
     );
 
     expect(names(res)).toEqual(['Ulei Berceni']);
+  });
+
+  // @traces 067-FR-006
+  it('lists a suspended garage again once an admin restored it', async () => {
+    const { auth, car } = await scene();
+    const garage = await placed('Atelier Repus', car.brandId, [44.42, 26.12]);
+    const suspensions = new SuspensionService(
+      prisma,
+      new AuditService(),
+      outbox,
+    );
+    const admin = {
+      accountId: await world.account('Ana Popescu', ['admin']),
+      garageId: null,
+      permissions: {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      },
+      role: 'admin' as const,
+      roles: ['admin' as const],
+    };
+    await suspensions.suspend(admin, garage.id, 'admin', 'Plângeri repetate');
+    const query = `carId=${car.id}&near=${BUCHAREST}`;
+    expect(names(await candidates(query, auth))).toEqual([]);
+
+    await suspensions.restore(admin, garage.id, {
+      note: 'Plângerile au fost lămurite.',
+    });
+
+    expect(names(await candidates(query, auth))).toEqual(['Atelier Repus']);
   });
 
   it('skips the job check when no job is switched on', async () => {

@@ -43,6 +43,7 @@ features:
   - 389-confirm-booking-lift-mechanic
   - 1192-photo-variants
   - 068-yearly-documents
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Observability
@@ -866,6 +867,10 @@ _From 1192-photo-variants._
 ### 068-FR-016 — Observability ships with the change: the compliance step logs one line per run (day, reminders sent per stage, cycles turned overdue) and one on its final failure, counts `motorfix_document_cycle_total{step ∈ reminded_30, reminded_7, reminded_0, overdue, uploaded, accepted, refused}` and a gauge `motorfix_documents_overdue` (cycles `overdue`, refreshed each run), the four routes report through the API's request duration by route, each accept and refuse logs one line (document id, kind, admin role, outcome); the worker dashboard gains a "Documente anuale" panel (counters by step and the overdue gauge) and no alert of its own: the step runs inside the reminders daily job, so a failed run fires the existing `worker-jobs-failed` within 15 minutes; `infra/observability/inventory.json` lists the step, the four endpoints, the three notification types and the five events with that panel and `worker-jobs-failed` (`scripts/observability-inventory.ts` passes). Decision (owner, taken by the run): no worker-compliance-failed alert; worker-jobs-failed already fires on reminders failures within 15 min, and the free tier's rule cap is spent once.
 
 _From 068-yearly-documents._
+
+### 067-FR-013 — Observability ships with the change: the restore use case MUST log one line per restore (garage id, cause, actor role, whether a re-check was recorded inline) and count `motorfix_garage_restores_total{cause}` beside the suspensions counter; the endpoint reports through the API's request duration by route; the fan-out logs one line per event (garage id, owners told, never the note) and counts `motorfix_garage_restored_notices_total{outcome ∈ built, skipped}`; the suspensions panel of the dashboard gains the restores; no new alert: the api-error-rate rule covers the endpoint and the failed-job rule the fan-out's queue. `infra/observability/inventory.json` MUST list the endpoint, the fan-out consumer and the two counters with that panel and those rules (`scripts/observability-inventory.ts` passes).
+
+_From 067-restore-suspended-garage._
 
 ## Retired
 
