@@ -144,7 +144,8 @@ describe('the contact form', () => {
       'Listing my garage',
       'Something else',
     ]);
-    expect(button('Send the message')).toBeDefined();
+    // Short enough to sit on one line of the button at 320 px.
+    expect(button('Send message')).toBeDefined();
   });
 
   it('sends nothing for an empty form, shows each field’s error and focuses the first', async () => {
@@ -233,7 +234,7 @@ describe('the contact form', () => {
     await open({ language: 'en' });
     fill();
 
-    button('Send the message')?.click();
+    button('Send message')?.click();
     await settle();
 
     expect(send.mock.calls[0][0].body.language).toBe('en');
@@ -381,7 +382,7 @@ describe('the contact form', () => {
     await open({ inTask: true, language: 'en' });
     fill();
 
-    button('Send the message')?.click();
+    button('Send message')?.click();
     await settle();
 
     expect(button('Close')?.getAttribute('aria-label')).toBe('Close the form');

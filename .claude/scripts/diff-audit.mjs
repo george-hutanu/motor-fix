@@ -90,7 +90,8 @@ for (const file of sources) {
   const names = [
     ...[...text.matchAll(/^export\s+(?:async\s+)?(?:const|function|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]),
     ...[...text.matchAll(/^export\s*\{([^}]+)\}/gm)].flatMap((m) =>
-      m[1].split(",").map((n) => n.trim().split(/\s+as\s+/).pop()).filter(Boolean),
+      // An inline `type` modifier (`export { type Foo }`) is not the name.
+      m[1].split(",").map((n) => n.trim().replace(/^type\s+/, "").split(/\s+as\s+/).pop()).filter(Boolean),
     ),
   ];
   for (const name of new Set(names)) {

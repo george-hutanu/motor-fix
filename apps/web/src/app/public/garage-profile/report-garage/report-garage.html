@@ -6,7 +6,7 @@
       id="mf-report-garage-text"
       rows="5"
       formControlName="text"
-      [attr.aria-invalid]="save.fieldError(form.controls.text) ? 'true' : null"
+      [aria-invalid]="!!save.fieldError(form.controls.text)"
       aria-describedby="mf-report-garage-rule mf-report-garage-error"
     ></textarea>
     <div class="under">

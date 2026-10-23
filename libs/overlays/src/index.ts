@@ -22,8 +22,9 @@
 //     <button type="submit" [mfTaskSubmit]="save">…</button>
 //   </form>
 //
-// Fields use the kit's `hlmInput`, which marks an invalid field `aria-invalid`
-// and paints its border once the press has touched it.
+// Fields use the kit's `hlmInput`, which paints an invalid field's border once
+// the press has touched it and marks it `aria-invalid` only while a press or
+// a server error has revealed it (`fieldRevealed(control)`).
 // Nothing is sent before the press. An invalid press shows each field's
 // message and focuses the first. A failure keeps the text, shows the code's
 // message next to the button and server field errors under their fields;
@@ -40,6 +41,7 @@ export {
   toProblem,
 } from './form/form';
 export { FieldError, TaskDone, TaskError, TaskSubmit } from './form/form-parts';
+export { fieldRevealed } from './form/reveal';
 export { focusMain, Overlays } from './overlays';
 export {
   injectOverlayTask,

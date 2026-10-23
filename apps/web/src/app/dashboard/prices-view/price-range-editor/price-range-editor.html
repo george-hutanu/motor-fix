@@ -11,7 +11,7 @@
         (blur)="left(f.name)"
         [attr.disabled]="sending() ? '' : null"
         aria-describedby="mf-range-name-said"
-        [attr.aria-invalid]="problem(f.name) ? 'true' : null"
+        [aria-invalid]="!!problem(f.name)"
       />
       <p class="said mf-message" [class.error]="problem(f.name)" id="mf-range-name-said" role="status">{{ problem(f.name) }}</p>
     </div>
@@ -30,7 +30,7 @@
           (blur)="left(f.from)"
           [attr.disabled]="sending() ? '' : null"
           aria-describedby="mf-range-from-said"
-          [attr.aria-invalid]="problem(f.from) ? 'true' : null"
+          [aria-invalid]="!!problem(f.from)"
         />
         <span class="unit" aria-hidden="true">{{ 'public.listing.prices.lei' | t }}</span>
       </div>
@@ -49,7 +49,7 @@
           (blur)="left(f.to)"
           [attr.disabled]="sending() ? '' : null"
           aria-describedby="mf-range-to-said"
-          [attr.aria-invalid]="problem(f.to) ? 'true' : null"
+          [aria-invalid]="!!problem(f.to)"
         />
         <span class="unit" aria-hidden="true">{{ 'public.listing.prices.lei' | t }}</span>
       </div>
@@ -78,7 +78,7 @@
           (blur)="left(f.duration)"
           [attr.disabled]="sending() ? '' : null"
           aria-describedby="mf-range-duration-said"
-          [attr.aria-invalid]="problem(f.duration) ? 'true' : null"
+          [aria-invalid]="!!problem(f.duration)"
         />
         <span class="unit" aria-hidden="true">{{ 'garage.prices.editor.minutes' | t }}</span>
       </div>
