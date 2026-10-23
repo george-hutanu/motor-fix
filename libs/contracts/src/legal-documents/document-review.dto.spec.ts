@@ -112,4 +112,25 @@ describe('the documents row of the legal check, by the yearly cycle', () => {
     expect(documentsRow('overdue')?.state).toBe('failed');
     expect(documentsRow('refused')?.state).toBe('failed');
   });
+
+  it('is a warning, never ok, while a kind has no valid document', () => {
+    const row = legalCheckRows({
+      checks: [],
+      cycleRow: 'valid',
+      documents: [{ kind: 'onrc_certificate', status: 'valid' }],
+      lastCheckedOn: '2026-10-01',
+    })[3];
+    expect(row?.state).toBe('warning');
+    expect(row?.missing).toEqual(['rar_authorisation']);
+  });
+
+  it('stays failed when overdue with a kind missing', () => {
+    const row = legalCheckRows({
+      checks: [],
+      cycleRow: 'overdue',
+      documents: [],
+      lastCheckedOn: '2026-10-01',
+    })[3];
+    expect(row?.state).toBe('failed');
+  });
 });

@@ -191,8 +191,8 @@ const failedRecheckRow = (recheck: LegalCheckRecheckDto): LegalCheckRowDto => ({
 });
 
 // The panel's four rows from a file's checks and documents: the documents
-// row follows the yearly cycle when the garage has one, else it is in order
-// only with both documents valid, and a failed re-check that
+// row follows the yearly cycle when the garage has one, and is in order only
+// with both documents valid either way, and a failed re-check that
 // suspended the garage stands in for the RAR row.
 export function legalCheckRows({
   checks,
@@ -216,16 +216,14 @@ export function legalCheckRows({
   const missing = DOCUMENT_KINDS.filter(
     (kind) => !documents.some((d) => d.kind === kind && d.status === 'valid'),
   );
+  // Green only with both documents valid, whatever the cycle says.
+  const cycleState = cycleRow ? CYCLE_ROW_STATE[cycleRow] : 'ok';
   rows.push({
     checkedOn: lastCheckedOn,
     detail: null,
     kind: 'documents',
     missing,
-    state: cycleRow
-      ? CYCLE_ROW_STATE[cycleRow]
-      : missing.length
-        ? 'warning'
-        : 'ok',
+    state: cycleState === 'ok' && missing.length ? 'warning' : cycleState,
   });
   return rows;
 }
