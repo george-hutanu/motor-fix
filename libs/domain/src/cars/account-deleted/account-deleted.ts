@@ -41,7 +41,12 @@ export class CarAccountDeleted {
 
   async onEvent(job: Pick<Job<CarAccountDeletedEvent>, 'data'>) {
     const { kind, payload } = job.data;
-    if (!KINDS.includes(kind as EventKind) || !payload.accountId) return;
+    if (
+      !KINDS.includes(kind as EventKind) ||
+      typeof payload.accountId !== 'string' ||
+      !payload.accountId
+    )
+      return;
     const { count } = await this.prisma.car.updateMany({
       data: { plate: null },
       where: { ownerId: payload.accountId, plate: { not: null } },

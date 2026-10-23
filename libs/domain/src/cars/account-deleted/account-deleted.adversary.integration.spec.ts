@@ -103,14 +103,13 @@ describe('the plates of a deleted account, attacked', () => {
     ['an empty id', ''],
     ['a null id', null],
     ['a number', 7],
+    ['an object', { id: 'x' }],
   ])('leaves every plate alone for %s', async (_, accountId) => {
     const driver = await world.account('Andrei Ion Marin', ['driver']);
     await world.car(driver, 'B123ABC');
     const handler = await start();
 
-    await handler
-      .onEvent(event('account.deleted', { accountId } as never))
-      .catch(() => undefined);
+    await handler.onEvent(event('account.deleted', { accountId } as never));
 
     expect(await platesOf(driver)).toEqual(['B123ABC']);
   });
@@ -155,7 +154,7 @@ describe('the plates of a deleted account, attacked', () => {
     }
   });
 
-  it('clears the plates of ten thousand cars of one account', async () => {
+  it('clears the plates of two thousand and one cars of one account', async () => {
     const driver = await world.account('Andrei Ion Marin', ['driver']);
     const one = await world.car(driver, 'B000AAA');
     await prisma.car.createMany({

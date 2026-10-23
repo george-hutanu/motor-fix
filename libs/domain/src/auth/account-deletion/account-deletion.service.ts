@@ -170,12 +170,16 @@ export class AccountDeletionService {
     this.signIns.revokeSessionsLive(accountId, at);
   }
 
-  // A missing or spent cookie is a sign-in too old to trust.
+  // A missing or spent cookie is a sign-in too old to trust; a store that
+  // fails to answer is a failure, not a refusal.
   private async recentSignIn(token: string | undefined, accountId: string) {
     const openedAt = await this.signIns
       .sessionFamily(token, accountId)
       .then(({ openedAt }) => openedAt)
-      .catch(() => null);
+      .catch((error: unknown) => {
+        if (error instanceof HttpException) return null;
+        throw error;
+      });
     if (!openedAt || Date.now() - openedAt.getTime() >= RECENT_MS) {
       throw this.refused(
         'reauth_required',

@@ -26,6 +26,7 @@ import { hashPassword } from '../password/password';
 import { PasswordResetModule } from '../password/password-reset/password-reset.module';
 import { PhoneSignInModule } from '../phone-sign-in/phone-sign-in.module';
 import { serialDatabase } from '../serial-db.testing';
+import { SignInService } from '../sign-in.service';
 
 const redisUrl = redisUrlFor(11);
 const tokenSecret = 'test-secret';
@@ -608,6 +609,24 @@ describe('every refusal leaves the account as it was', () => {
     expect(res.status).toBe(500);
     expect(await snapshot(id)).toEqual(before);
     expect((await accountOf(id)).email).toBe(EMAIL);
+    expect(await deletions('failed')).toBe(failed + 1);
+  });
+
+  it('answers 500 and counts failed when the token lookup throws', async () => {
+    const id = await person();
+    const phone = await device();
+    const before = await snapshot(id);
+    const failed = await deletions('failed');
+    jest
+      .spyOn(SignInService.prototype, 'sessionFamily')
+      .mockRejectedValue(new Error('store down'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+    const res = await remove(phone, { confirmation: EMAIL });
+
+    expect(res.status).toBe(500);
+    expect(res.body.code).not.toBe('reauth_required');
+    expect(await snapshot(id)).toEqual(before);
     expect(await deletions('failed')).toBe(failed + 1);
   });
 });

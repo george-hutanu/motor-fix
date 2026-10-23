@@ -43,7 +43,7 @@ const reviewOf = (review: Review): ReviewDto => ({
 // A deleted account's name is gone; its reviews stay under a stand-in.
 const authorOf = (driver: { name: string; status: string }) =>
   driver.status === 'deleted'
-    ? { deleted: true, shortName: 'Șofer MotorFix' }
+    ? { shortName: 'Șofer MotorFix' }
     : { shortName: shortName(driver.name) };
 
 const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
