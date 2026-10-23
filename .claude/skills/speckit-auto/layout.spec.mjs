@@ -103,9 +103,9 @@ const RULES = [
   ['Start the QA run, beside CI, and do not wait for it.', 'hand-off.md'],
   ['A run that ends on a Hard Stop before the hand-off does none of this', 'hand-off.md'],
   // tail.md: the wait and the tail
-  ['No agent is alive while CI and the QA run work.', 'tail.md'],
+  ['The tail holds its own waits; the session holds none.', 'tail.md'],
   ['it stays on Opus', 'tail.md'],
-  ['it never waits on either', 'tail.md'],
+  ['it never sleeps in the foreground', 'tail.md'],
   ['**An unusable run**', 'tail.md'],
   ['**A failing lap**', 'tail.md'],
   ['None of these steps asks the user.', 'tail.md'],
@@ -275,14 +275,14 @@ describe('the refresh gate and closer text lands where the run reads it', () => 
       '`dispatch <reason>`: log the reason in `auto-run.md` and invoke `speckit-context --since`.');
   });
 
-  // @traces 1360-FR-010 1360-FR-014 1360-FR-015
-  it('stops a level-1 story after harden and keeps levels 2 and 3 in one agent', () => {
+  // @traces 1360-FR-010 1360-FR-014 1360-FR-015 1363-FR-004
+  it('stops a level-1 story after implement and keeps levels 2 and 3 in one agent', () => {
     has('.claude/skills/speckit-auto/SKILL.md',
-      '| 1 one-session | 2, 7, 9, 10, 12, then a closer: 14, 16',
+      '| 1 one-session | 2, 7, 9, 10, then a closer: 14, 16',
       'Levels 2 and 3 keep one agent from preflight through the hand-off',
       '`converge`, `harden`, `closer`, `refresh`');
     has('.claude/skills/speckit-auto/phases-close.md',
-      '## Level 1: the stop after harden',
+      '## Level 1: the stop after implement',
       '`## Decisions for the closer`', '`### Gates self-answered`', '`### Deviations`', '`### Open items`',
       'node .claude/scripts/run-state.mjs set --status in-progress --phase closer',
       'the PR stays a draft', '`NEXT: resume <feature>`',
@@ -297,7 +297,7 @@ describe('the refresh gate and closer text lands where the run reads it', () => 
       '`auto-run.md` with its `## Decisions for the closer`, `spec.md`, `tasks.md`, `node .claude/scripts/run-state.mjs show`, `git log --oneline <start>..HEAD`',
       'the phases the level owes from 13 on and the hand-off');
     has('.claude/skills/speckit-auto/preflight.md', '`watch.mjs claim <worktree> resume`', 'as the closer');
-    has('.claude/skills/speckit-auto/lifecycle.md', "A level-1 story's agent ends at phase 12 and a closer");
+    has('.claude/skills/speckit-auto/lifecycle.md', "A level-1 story's agent ends at phase 10 and a closer");
     has('.claude/skills/speckit-auto/hand-off.md', 'runs the hand-off, or on level 1 the closer');
     has('.claude/skills/speckit-watch/SKILL.md', 'At run-state phase `closer`');
     has('.claude/skills/speckit-auto/report.md', '`NEXT: resume <feature>`');
@@ -322,5 +322,102 @@ describe('the refresh gate and closer text lands where the run reads it', () => 
       'Gathered: <UTC time> · specs trunk <sha>.',
       'gh issue list -R $R --label epic --state all --search "EP-<k> in:title" --json number,title',
       'an epic carries `epic`, not its own `EP-<k>`');
+  });
+});
+
+describe('the throughput rules land where the run reads them', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+  const has = (path, ...phrases) => {
+    const text = at(path);
+    for (const phrase of phrases) assert.ok(text.includes(phrase), `${path} lacks: ${phrase}`);
+  };
+  const lacks = (path, ...phrases) => {
+    const text = at(path);
+    for (const phrase of phrases) assert.ok(!text.includes(phrase), `${path} still says: ${phrase}`);
+  };
+
+  // @traces 1363-FR-001
+  it('builds one task per session while any number wait on QA and CI', () => {
+    for (const path of ['AGENTS.md', '.claude/skills/speckit-auto/SKILL.md']) {
+      has(path, 'one task *being built* per session, plus any number waiting on QA and CI');
+      lacks(path, 'one task per session at a time');
+    }
+  });
+});
+
+describe('a bug starts by reproducing it on main', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+
+  // @traces 1363-FR-002
+  it('opens bug-assess with the reproduce step and names the issue comment in its Done When', () => {
+    const text = at('.claude/skills/speckit-bug-assess/SKILL.md');
+    const execution = text.slice(text.indexOf('## Execution'), text.indexOf('## Guardrails'));
+    const reproduce = execution.indexOf('**Reproduce on `origin/main`**');
+    assert.ok(reproduce !== -1, 'no reproduce step');
+    assert.ok(reproduce < execution.indexOf('**Ingest the bug report**'), 'the reproduce step comes first');
+    for (const phrase of ['at most about five minutes', '`reproduced | not reproduced | already fixed (<sha>)`', 'node .claude/scripts/tracker-sync.mjs log', 'an asserting test only'])
+      assert.ok(execution.includes(phrase), `the step lacks: ${phrase}`);
+    const done = text.slice(text.indexOf('## Done When'), text.indexOf('## Agent Execution Rules'));
+    assert.match(done, /issue comment/);
+  });
+
+  // @traces 1363-FR-002
+  it('routes a bug or a left-open task through that step first in speckit-auto', () => {
+    const skill = at('.claude/skills/speckit-auto/SKILL.md');
+    assert.ok(skill.includes('A bug or a "left open by" task starts with `/speckit-bug-assess`'));
+    assert.ok(skill.includes('Reproduce on `origin/main`'));
+  });
+});
+
+describe('level 1 skips harden and the wires are named', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+
+  // @traces 1363-FR-004
+  it('lists level 1 without harden and ends its agent after implement', () => {
+    const skill = at('.claude/skills/speckit-auto/SKILL.md');
+    assert.ok(skill.includes('| 1 one-session | 2, 7, 9, 10, then a closer: 14, 16'));
+    assert.ok(!skill.includes('10, 12, then a closer'));
+    assert.ok(skill.includes('ends after phase 10'));
+    assert.ok(!skill.includes('ends after phase 12'));
+    assert.ok(at('.claude/skills/speckit-auto/phases-close.md').includes('on level 1 right after phase 10'));
+  });
+
+  // @traces 1363-FR-004
+  it('has speckit-size name the four wires, the bug exemption and how a bug is recorded', () => {
+    const size = at('.claude/skills/speckit-size/SKILL.md');
+    for (const phrase of ['`fr-count` (more than 10 FRs)', '`clarification`', '`contract`', '`projects` (more than one Nx project', 'A bug is exempt from `projects`', '`type: bug` label', 'node .claude/scripts/level.mjs set <n> --type bug'])
+      assert.ok(size.includes(phrase), `speckit-size lacks: ${phrase}`);
+  });
+});
+
+describe('a story too wide is split, and the tracker keeps links and claims', () => {
+  const root = join(dir, '..', '..', '..');
+  const at = (path) => flat(readFileSync(join(root, path), 'utf8'));
+
+  // @traces 1363-FR-012
+  it('has speckit-size and speckit-tasks name the split rule and the Split section', () => {
+    for (const path of ['.claude/skills/speckit-size/SKILL.md', '.claude/skills/speckit-tasks/SKILL.md']) {
+      const text = at(path);
+      for (const phrase of ['`## Split`', 'more than two Nx projects', '`web-e2e` and the generated `data-access` not counted', 'more than one of `worker`, `api` and `web`', 'the first mergeable alone', 'node .claude/scripts/tracker-sync.mjs file', '`Depends on: ST-<first>`', '`split: <projects>`'])
+        assert.ok(text.includes(phrase), `${path} lacks: ${phrase}`);
+    }
+  });
+
+  // @traces 1363-FR-013
+  it('has speckit-tracker-sync keep the blocked-by links in step with the Depends on line', () => {
+    const text = at('.claude/skills/speckit-tracker-sync/SKILL.md');
+    for (const phrase of ['`start`, `pr`, `finish` and `file`', '`Depends on:`', '`#n`, `ST-n` or issue URLs, or `none`', 'a missing link to an open target is added', 'a link to a closed target is dropped', 'a circular one is refused', 'one `deps` line'])
+      assert.ok(text.includes(phrase), `speckit-tracker-sync lacks: ${phrase}`);
+  });
+
+  // @traces 1363-FR-014
+  it('has speckit-tracker-sync copy the claim label to the PR and report a mismatch', () => {
+    const text = at('.claude/skills/speckit-tracker-sync/SKILL.md');
+    assert.ok(text.includes('`claim: chief-N`'));
+    assert.ok(text.includes('`claim mismatch: issue chief-1, PR chief-2`'));
+    assert.match(text, /`pr` and `check` log/);
   });
 });

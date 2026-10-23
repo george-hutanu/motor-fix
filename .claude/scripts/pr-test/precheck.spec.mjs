@@ -204,7 +204,7 @@ describe('precheck --check: the flows against the app and API already serving', 
     assert.deepEqual(checkDefaults({}), { baseURL: 'http://localhost:4200', apiURL: 'http://localhost:3000' });
   });
 
-  // @traces 1363-throughput-fixes-FR-005
+  // @traces 1363-FR-005
   it('defaults to the worktree\'s own port set when one is exported', () => {
     assert.deepEqual(checkDefaults({ WEB_PORT: '4231', API_PORT: '3031' }), { baseURL: 'http://localhost:4231', apiURL: 'http://localhost:3031' });
   });

@@ -159,7 +159,7 @@ else if (a === 'run' && b === 'list') say([{ databaseId: 77, displayTitle: 'PR Q
     assert.equal(r.workflowRuns.length, 1);
   });
 
-  // @traces 1363-throughput-fixes-FR-005
+  // @traces 1363-FR-005
   it('dispatches without --proof though code changed since the proof, and says the proof was skipped', () => {
     const t = checkout();
     const proved = t.commit({ 'apps/api/src/a.ts': 'export const a = 1;\n' });

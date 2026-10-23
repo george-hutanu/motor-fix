@@ -1,4 +1,4 @@
-// @traces 1230-FR-002 1230-FR-003 1230-FR-005 1363-throughput-fixes-FR-008
+// @traces 1230-FR-002 1230-FR-003 1230-FR-005 1363-FR-008
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

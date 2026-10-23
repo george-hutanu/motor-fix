@@ -584,7 +584,7 @@ describe('down and sweep, against fake docker, git and gh', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('freePorts', () => {
   const probes = (...ports: number[]) => {
     let i = 0;
@@ -611,7 +611,7 @@ describe('freePorts', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('portEnv', () => {
   it('gives each app its own port variable and points the web at its own api', () => {
     expect(portEnv({ api: 50002, web: 50004, worker: 50003 })).toEqual({
@@ -626,7 +626,7 @@ describe('portEnv', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('ports and restart, in two worktrees of one clone', () => {
   const script = join(__dirname, 'test-services.ts');
   const vars = [
@@ -819,7 +819,7 @@ describe('ports and restart, in two worktrees of one clone', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('the end-to-end config and the port set', () => {
   const load = (extra: Record<string, string>) => {
     const loader = `import('./apps/web-e2e/playwright.config.mts').then(({ default: c }) =>

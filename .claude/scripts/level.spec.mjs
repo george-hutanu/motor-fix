@@ -984,7 +984,7 @@ describe('level.mjs public surface', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-004
+// @traces 1363-FR-004
 describe('the FR wire counts past ten, and a bug is not sized by its projects', () => {
   const check = (opts) => {
     const dir = gitFixture(opts);
@@ -1040,7 +1040,7 @@ it('pointing at another feature drops the type with the level it was sized with'
   assert.equal(pointTo({ feature_directory: 'specs/1-a', level: 1, level_for: 'specs/1-a', type: 'bug' }, 'specs/2-b').type, undefined);
 });
 
-// @traces 1363-throughput-fixes-FR-012
+// @traces 1363-FR-012
 describe('level.mjs check names a split when a story spans too much', () => {
   const PROJECTS = { 'apps/worker/project.json': '{"name":"worker"}', 'libs/domain/project.json': '{"name":"domain"}', 'apps/web-e2e/project.json': '{"name":"web-e2e"}' };
   const run = (opts) => {

@@ -83,6 +83,11 @@ Do not attempt to validate the URL by issuing a preflight `HEAD` (or any other) 
 
 ## Execution
 
+0. **Reproduce on `origin/main`**
+   - Before anything else, check each problem the issue lists against a fresh `origin/main` (`git fetch -q origin`): at most about five minutes per problem, its own steps or the closest test.
+   - Record one result per problem, `reproduced | not reproduced | already fixed (<sha>)`, with `node .claude/scripts/tracker-sync.mjs log reproduce <item> "<problem>: <result>"`, and post the same list as an issue comment (`gh issue comment <n> --repo george-hutanu/motor-fix-specs --body-file <file>`).
+   - A problem already fixed gets an asserting test only, no fix; the steps below cover the ones still reproduced or not yet known.
+
 1. **Ingest the bug report**
    - If a URL is present, first apply the **URL Trust Policy** above to decide whether to fetch, prompt, or refuse. If the policy permits the fetch, retrieve the page and extract the relevant content (title, description, stack traces, reproduction steps, comments).
    - Capture the verbatim source (URL or pasted block) so it can be quoted in the report.
@@ -185,6 +190,7 @@ Do not attempt to validate the URL by issuing a preflight `HEAD` (or any other) 
 
 ## Done When
 
+- [ ] Each listed problem checked on `origin/main` and its result posted in an issue comment
 - [ ] Reproduced, or the reason it could not be reproduced recorded with what was tried
 - [ ] Root cause traced to a file and line, distinguished from the symptom
 - [ ] Remediation options given with their risk; no fix applied in this step

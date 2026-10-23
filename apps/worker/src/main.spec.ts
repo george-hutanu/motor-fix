@@ -46,7 +46,7 @@ async function serve(env: Record<string, string | undefined>) {
 // The first import compiles main.ts and what it imports.
 jest.setTimeout(30_000);
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('worker entry point', () => {
   beforeEach(() => jest.clearAllMocks());
 

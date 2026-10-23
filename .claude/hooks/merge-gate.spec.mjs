@@ -911,7 +911,7 @@ describe('merge gate — an orphaned earlier attempt of a check', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-010
+// @traces 1363-FR-010
 describe('merge gate — a verdict carried over a merge of main is verified, not trusted', () => {
   const FROM = 'f'.repeat(40);
   const HEAD = 'abc1234def5678';

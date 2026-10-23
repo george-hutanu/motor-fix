@@ -66,3 +66,20 @@ describe('the phase agents of /speckit-auto', () => {
     assert.match(lead, /pin miss/);
   });
 });
+
+describe('the review phase runs the adversary beside both reviewers', () => {
+  // @traces 1363-FR-006
+  it('dispatches test-adversary, spec-reviewer and code-reviewer in one message at every level from 1', () => {
+    const review = phase(14).replace(/\s+/g, ' ');
+    assert.match(review, /Invoke the `test-adversary`, `spec-reviewer` and `code-reviewer` subagents \*\*in one message\*\*/);
+    assert.match(review, /at every level from 1/);
+    assert.match(review, /through the same loop as the reviewers'/);
+  });
+
+  // @traces 1363-FR-006
+  it('leaves the adversary out of phase 12', () => {
+    const harden = phase(12).replace(/\s+/g, ' ');
+    assert.doesNotMatch(harden, /and the `test-adversary` subagent/);
+    assert.match(harden, /phase 14/);
+  });
+});

@@ -350,7 +350,7 @@ describe('ci workflow', () => {
   // test made deterministic is proven by twenty runs in a row; with no file
   // named, every suite runs as before. Each step's script runs here under
   // bash with a stand-in npx that records what it was asked.
-  // @traces 1363-throughput-fixes-FR-011
+  // @traces 1363-FR-011
   describe('a dispatch that names spec files', () => {
     const dispatch = workflow.slice(
       workflow.indexOf('\n  workflow_dispatch:\n'),

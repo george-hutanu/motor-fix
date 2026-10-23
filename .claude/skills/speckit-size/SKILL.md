@@ -60,6 +60,21 @@ when more than one feature or epic must not diverge.
 When unsure between two levels, take the higher one. A spare plan.md costs a
 few minutes; a missing one costs a rewrite.
 
+A level 0 or 1 is checked after phases 2, 4 and 7 by `level.mjs check`, which
+raises it to 2 on any of four wires: `fr-count` (more than 10 FRs),
+`clarification` (a `[NEEDS CLARIFICATION]` marker left), `contract` (a contract, schema or migration
+file in the diff) and `projects` (more than one Nx project in the diff). A bug
+is exempt from `projects`: record it from the issue's `type: bug` label with
+`node .claude/scripts/level.mjs set <n> --type bug`.
+
+At level 3, or wherever it fires: a story too wide is split: more than two Nx projects (`web-e2e` and the
+generated `data-access` not counted), or more than one of `worker`, `api` and
+`web`. `level.mjs check` prints a `split: <projects>` line until spec.md
+carries a `## Split` section with two titles, the first mergeable alone. The
+second is filed with `node .claude/scripts/tracker-sync.mjs file --type story
+--title "<second>" --body-file <f>`, its body carrying
+`Depends on: ST-<first>`; tracker-sync adds the native blocked-by link.
+
 ## Phase 2 — where it lands
 
 `set` binds the level to the work it was sized for (`level_for` in

@@ -23,7 +23,7 @@ const tree = (files) => {
 };
 const gate = (cwd, tool_name, tool_input) => spawnSync('node', [HOOK], { cwd, input: JSON.stringify({ tool_name, tool_input }), encoding: 'utf8' });
 
-// @traces 1363-throughput-fixes-FR-007
+// @traces 1363-FR-007
 describe('an adversary spec only grows', () => {
   it('a Write lacking an old test is refused, naming the file and the test', () => {
     const dir = tree({ 'a.adversary.spec.ts': OLD });

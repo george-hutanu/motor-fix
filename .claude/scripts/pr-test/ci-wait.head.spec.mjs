@@ -1,4 +1,4 @@
-// @traces 1363-throughput-fixes-FR-003
+// @traces 1363-FR-003
 // The tail runs `ci-wait.mjs <n>` itself (tail.md "The wait"): the wait reads
 // the PR's head from the PR on every poll and judges only that commit's checks,
 // keeping the one started last of each, so an older head's green never reads

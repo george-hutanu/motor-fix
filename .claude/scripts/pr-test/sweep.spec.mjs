@@ -582,7 +582,7 @@ describe('settling web fonts before the shot', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-008
+// @traces 1363-FR-008
 describe('a route checked against the router (app.routes.ts and dashboard/views.ts)', () => {
   const table = routerTable(join(import.meta.dirname, '..', '..', '..'));
 

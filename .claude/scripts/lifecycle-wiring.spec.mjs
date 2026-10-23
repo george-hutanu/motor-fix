@@ -33,7 +33,7 @@ describe('the skills name one lifecycle.mjs call per step', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-014
+// @traces 1363-FR-014
 describe('the draft carries the claim label through tracker-sync pr', () => {
   const lifecycle = read('.claude/scripts/lifecycle.mjs');
   const sync = read('.claude/scripts/tracker-sync.mjs');

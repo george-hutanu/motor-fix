@@ -49,7 +49,7 @@ to `tracker-sync.md` at its next event.
      archive's status line, a retrospective if one was written and
      `specs/<feature>/tracker-sync.md` are pushed to the specs repo (see
      "Specs live in their own repo"); the `qa` line follows right after,
-     before CI is waited for and QA starts. A level-1 story's agent ends at phase 12 and a closer
+     before CI is waited for and QA starts. A level-1 story's agent ends at phase 10 and a closer
      carries it to this step (`phases-close.md`).
 
      Then the story's agent starts QA and hands off. It dispatches the PR QA
@@ -57,12 +57,15 @@ to `tracker-sync.md` at its next event.
      (`.claude/scripts/pr-test/dispatch.mjs <n> --no-wait`), writes
      `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the story's
      issue, the `QA run:` line, open decisions; git ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
-     action. No agent is alive while CI and the run work: a context that
-     sleeps past the 5-minute prompt cache is written again in full. The
-     session holds one background wait for the QA run only, then
-     dispatches a fresh **tail agent** whatever CI's state, given only the
-     PR number, the worktree and that path, which runs steps 5–7 and the finish. The
-     orchestrating session does this on that NEXT (a story run in the owner's
+     action: a context that sleeps past the 5-minute prompt cache is
+     written again in full. On that NEXT the session dispatches a fresh
+     **tail agent** at once, whatever the run's and CI's state, given only
+     the PR number, the worktree and that path; the session waits for
+     nothing and relays nothing, and starts the next task's build: one task
+     being built per session, any number waiting on QA and CI. The tail
+     holds the waits itself, in the background (`ci-wait.mjs <n> --run <id>`,
+     then `ci-wait.mjs <n>`), and runs steps 5–7 and the finish. The
+     orchestrating session dispatches it (a story run in the owner's
      own session does its own); `/speckit-watch` shows such a PR `waiting`,
      with no fix, until the run has finished, and then dispatches one (its
      `tail` fix) when nobody holds it. It implements
@@ -78,10 +81,12 @@ to `tracker-sync.md` at its next event.
      keeps its QA run and `agent-review`. The merge is
      `node .claude/scripts/merge-main.mjs`, which resolves the capability
      specs, the hook registry and the generated client itself, then a
-     push; the checks are waited for in the background (`run_in_background`),
-     by the session before the merge, never in a foreground `sleep`
-     loop and never by an agent that would sleep through it. A failing check
-     is fixed on the branch like a failing QA lap (step 6).
+     push. It runs also at hand-off, before ready and the QA dispatch
+     (`hand-off.md` step 1): the story's agent merges only on an overlap and
+     reaches green CI first. The checks are waited for in the background
+     (`run_in_background`), by the tail before the merge, never in a
+     foreground `sleep` loop. A failing check is fixed on the branch like a
+     failing QA lap (step 6).
   6. QA, started as soon as the PR is ready, beside step 5 rather than after
      it: its run is dispatched at ready, and the PR tester
      (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
@@ -98,14 +103,18 @@ to `tracker-sync.md` at its next event.
      the `agent-review` status on the head commit (`--local` boots on the
      laptop instead, behind the heavy lock, when Actions is unavailable).
      Its routes are `path[?query][@role][:status]` (`/:lang` first only,
-     `@role` required under `/app/`), and its flows are proven first with
-     `precheck.mjs --flows <f> --check` against a running app (the skill's
-     "Routes and flows"). A blocker or high finding fails the lap: fix every
+     `@role` required under `/app/`, each served by the router), and its
+     flows are pre-checked statically; a live proof
+     (`precheck.mjs --flows <f> --check`, then `dispatch.mjs --proof`) is
+     taken only when the story changed flows (the skill's "Routes and
+     flows"). A blocker or high finding fails the lap: fix every
      finding (tests first), push, dispatch the new head's run with `--no-wait` and
      end, as at ready; each such lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the cap the task goes to
      Blocked and the PR stays unmerged. A head that differs from the last
-     tested commit by documentation only (`scripts/docs-only.ts`) carries that verdict instead of a new lap
+     tested commit by documentation only (`scripts/docs-only.ts`), or by a
+     merge of `origin/main` that changes none of the PR's files (`merge of
+     main`), carries that verdict instead of a new lap
      (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
      A lap with no blocker or high finding ends QA: its medium and low
      findings are fixed (tests first), listed under "Fixed after QA" in
@@ -113,9 +122,8 @@ to `tracker-sync.md` at its next event.
      (`carried from <sha>: QA fixes`), with no lap counted (tail.md step 3).
   7. Merge on `agent-review` success with every other check green, at once
      (`node .claude/scripts/lifecycle.mjs merge --pr <n>`, which also checks
-     the "Fixed after QA" list; a check still pending ends the tail with
-     `NEXT: merge #<n> after CI`, and the session waits for CI and dispatches
-     the `merge`); a PR with a failing, pending or missing check
+     the "Fixed after QA" list; with a check still pending the tail holds
+     the CI wait itself and merges when it is green); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-tracker-sync finish`, which closes its issue).
      The orchestrating session then fast-forwards the main checkout
      (`git -C <main> merge --ff-only origin/main`); when the watch reports it
@@ -218,6 +226,10 @@ there for one that will.
   `scripts/mutation-shards.json`), against the floor in each project's
   `stryker.config.json`, which only rises. The root `test:mutation` and
   `test:mutation:affected` scripts stay (431-FR-006), never for a laptop.
+  The waits for a handed-off PR are the tail's own, in the background
+  inside its run: `node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>`
+  for the QA run, then `ci-wait.mjs <n>` for CI before the merge
+  (`tail.md` "The wait"); the session waits for nothing and relays nothing.
   Mutation is never part of a task's lifecycle: no task dispatches, reads or
   waits for a Mutation run, and no wait or gate counts its check on a PR head
   (`.claude/scripts/lib/mutation-check.mjs`). Its schedule on `main` and

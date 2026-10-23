@@ -122,7 +122,7 @@ describe('api entry point', () => {
     expect(mockApp.listen).toHaveBeenCalledWith(4000);
   });
 
-  // @traces 1363-throughput-fixes-FR-005
+  // @traces 1363-FR-005
   it("serves on API_PORT over PORT, which a worktree's port set gives the web dev server", async () => {
     await run([], '50004', '50002');
 

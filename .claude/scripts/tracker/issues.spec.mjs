@@ -19,7 +19,7 @@ const world = () =>
 
 const trackerOf = (gh) => tracker(githubClient({ token: "t", fetchImpl: gh.fetchImpl, paceMs: 0, sleep: async () => {} }));
 
-// @traces 1363-throughput-fixes-FR-013
+// @traces 1363-FR-013
 describe("an issue as the tracker reads it carries its body and its blocked-by links", () => {
   it("find gives the body and each blocker's number, id and state", async () => {
     const story = await trackerOf(world()).find("ST-60");

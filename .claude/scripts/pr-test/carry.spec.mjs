@@ -335,7 +335,7 @@ describe('the QA fixes carry', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-010
+// @traces 1363-FR-010
 describe('the merge-of-main carry', () => {
   const MAIN = 'd'.repeat(40);
   const MERGE_MESSAGE = "Merge remote-tracking branch 'origin/main' into 9-x";

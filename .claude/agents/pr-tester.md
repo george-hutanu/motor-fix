@@ -113,10 +113,13 @@ the text), `openSheet(page, trigger)` (clicks, then waits for the open sheet's
 content, never the overlay's own box), `stepButton(page, label)` (the step's
 button visible at this viewport, the hidden phone or desktop copy skipped) and
 `accounts` (the seeded role-to-e-mail map). Await every promise: one left
-unhandled is a `high` finding. Before dispatching, run the flows once against
-a running app: `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check
-[--base-url http://localhost:4200] [--api-url http://localhost:3000]` (the
-same arguments, a real `signIn`; one line per finding, throw or rejection).
+unhandled is a `high` finding. When the story changed flows, run them once
+against a running app before dispatching with `--proof`:
+`node .claude/scripts/pr-test/precheck.mjs --flows <file> --check` (the
+same arguments, a real `signIn`; one line per finding, throw or rejection),
+on `http://localhost:$WEB_PORT` and `http://localhost:$API_PORT` from
+`node scripts/test-services.ts ports` (4200 and 3000 without a port set), or
+`--base-url` and `--api-url`.
 The file imports
 nothing but Node built-ins and what `repoRoot` resolves: on GitHub Actions it
 runs from a temporary directory beside the PR's checkout.

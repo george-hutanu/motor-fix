@@ -219,7 +219,7 @@ describe('the signed-in cookie', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-008
+// @traces 1363-FR-008
 describe('route rule: the router decides what is known, read afresh from the checkout', () => {
   const real = join(import.meta.dirname, '..', '..', '..', 'apps', 'web', 'src', 'app');
   const checkout = () => {

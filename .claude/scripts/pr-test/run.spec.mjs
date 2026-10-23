@@ -184,7 +184,7 @@ describe('run: what each app is launched with', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('run: a worktree port set never overrides the run\'s own ports', () => {
   it('names the api and worker ports under the names they read first', () => {
     const env = appLaunchEnv({ apiPort: 3100, webPort: 4100, workerPort: 3200, apiURL: 'http://127.0.0.1:3100', webURL: 'http://127.0.0.1:4100' });

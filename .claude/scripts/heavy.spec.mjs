@@ -199,7 +199,7 @@ describe('heavy.sh environment', () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-005
+// @traces 1363-FR-005
 describe('heavy.sh and the worktree port set', () => {
   // A copy of heavy.sh in a scratch checkout: the set it reads is its own checkout's.
   const checkout = (portsEnv) => {

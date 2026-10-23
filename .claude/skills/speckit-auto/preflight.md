@@ -53,7 +53,7 @@ the tools a run uses, and
 AGENTS.md and CLAUDE.local.md are already in its context, so the prompt names
 the task, the worktree and "run `/speckit-auto` to its hand-off", never a
 re-read of those files. A level-1 run returns `NEXT: resume <feature>` after
-harden: the session runs `watch.mjs claim <worktree> resume` and dispatches a
+implement (phase 10): the session runs `watch.mjs claim <worktree> resume` and dispatches a
 fresh `task-runner` as the closer (`phases-close.md`, "The closer").
 
 Then create the run log `specs/<feature>/auto-run.md` as soon as the feature

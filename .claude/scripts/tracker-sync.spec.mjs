@@ -767,7 +767,7 @@ describe("the log's time stamp", () => {
   });
 });
 
-// @traces 1363-throughput-fixes-FR-013
+// @traces 1363-FR-013
 describe("the Depends on line and the native blocked-by links stay in step", () => {
   const withBody = (gh, number, body) => {
     issueOf(gh, number).body = body;
@@ -842,7 +842,7 @@ describe("the Depends on line and the native blocked-by links stay in step", () 
   });
 });
 
-// @traces 1363-throughput-fixes-FR-014
+// @traces 1363-FR-014
 describe("the claim label rides from the issue to its PR", () => {
   const claimed = (gh, label) => {
     issueOf(gh, 60).labels.push({ name: label });
