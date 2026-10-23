@@ -598,7 +598,7 @@ describe("the garage's latest suspension on the file", () => {
     });
   });
 
-  it('carries an ended suspension with the name of the admin who lifted it and the note', async () => {
+  it('carries an ended suspension with the first name and initial of the admin who lifted it and the note', async () => {
     await suspend({
       liftedBy: ioana,
       liftNote: 'A trimis autorizația reînnoită.',
@@ -609,7 +609,7 @@ describe("the garage's latest suspension on the file", () => {
     expect((await service().read(file.id)).suspension).toEqual({
       cause: 'recheck_failed',
       fromTime: '2026-10-20T08:00:00.000Z',
-      liftedBy: { name: 'Ioana' },
+      liftedBy: { name: 'Ioana P.' },
       note: 'A trimis autorizația reînnoită.',
       rarVerdict: 'expired',
       reason: 'Autorizație RAR expirată',

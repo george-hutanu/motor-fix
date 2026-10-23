@@ -597,8 +597,9 @@ export class VerificationFileService {
     return named;
   }
 
-  // The garage's latest suspension, open or ended, with the first name of the
-  // admin who lifted it; null for a garage never suspended.
+  // The garage's latest suspension, open or ended, with the first name and
+  // initial of the admin who lifted it (as the 409 garage_already_restored
+  // names them); null for a garage never suspended.
   private async suspensionOf(
     garageId: string,
   ): Promise<VerificationFileSuspensionDto | null> {
@@ -608,13 +609,18 @@ export class VerificationFileService {
     });
     if (!latest) return null;
     const lifter = latest.liftedBy
-      ? (await this.names([latest.liftedBy]))(latest.liftedBy)
+      ? await this.prisma.account.findUnique({
+          select: { name: true },
+          where: { id: latest.liftedBy },
+        })
       : null;
     const verdict = rarVerdict(latest.cause, latest.reason);
     return {
       cause: latest.cause,
       fromTime: latest.fromTime.toISOString(),
-      liftedBy: lifter === null ? null : { name: lifter },
+      liftedBy: latest.liftedBy
+        ? { name: lifter ? shortName(lifter.name) : '' }
+        : null,
       note: latest.liftNote,
       ...(verdict && { rarVerdict: verdict }),
       reason: latest.reason,
