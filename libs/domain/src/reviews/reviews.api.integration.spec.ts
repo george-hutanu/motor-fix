@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 
 import { ReviewsModule } from './reviews.module';
+import { mechanicReviews } from './reviews.testing';
 import { outbox } from '../events/event.port';
 import type { JobStatus, ReviewStatus } from '../generated/prisma/enums';
 import { quotesApp } from '../quotes/quotes-api.testing';
@@ -574,48 +575,7 @@ describe('the mechanic a review names', () => {
   });
 });
 
-// One finished job of Andrei's at the garage, done by the mechanic, and its
-// review posted `minutesAgo` minutes ago.
-async function reviewed(
-  driverId: string,
-  garageId: string,
-  mechanicId: string,
-  minutesAgo: number,
-  status: ReviewStatus = 'published',
-) {
-  const { booking } = await world.chain(driverId, garageId);
-  const job = await world.job(booking.id, 'done', { mechanicId });
-  return prisma.review.create({
-    data: {
-      driverId,
-      garageId,
-      jobId: job.id,
-      mechanicId,
-      postedAt: new Date(Date.now() - minutesAgo * 60_000),
-      rating: (minutesAgo % 5) + 1,
-      status,
-      text: minutesAgo % 2 ? null : `Recenzia ${minutesAgo}`,
-    },
-  });
-}
-
-// Elena worked at Atelier Dinamo, then moved to Service Nord; she is on
-// Service Nord's profile.
-async function elena() {
-  const dinamo = await world.garage('Atelier Dinamo');
-  const nord = await world.garage('Service Nord');
-  const account = await world.account('Elena Pop', ['mechanic']);
-  const mechanic = await prisma.mechanic.create({
-    data: {
-      accountId: account,
-      garageId: nord.id,
-      name: 'Elena',
-      onProfile: true,
-    },
-  });
-  const driver = await world.account('Andrei Ion Marin', ['driver']);
-  return { account, dinamo, driver, mechanic, nord };
-}
+const { elena, reviewed } = mechanicReviews(world);
 
 const listOf = (mechanicId: string, page?: unknown) =>
   get(
@@ -623,7 +583,6 @@ const listOf = (mechanicId: string, page?: unknown) =>
   );
 
 // @traces 025-FR-011 025-FR-012 025-FR-013 025-FR-015
-// @traces 025-FR-013
 describe("reading a mechanic's reviews", () => {
   it('lists 20 a page, newest first, each with its garage, to a visitor', async () => {
     const e = await elena();
@@ -696,7 +655,7 @@ describe("reading a mechanic's reviews", () => {
       'removed',
       'deleted_by_author',
     ] as const) {
-      await reviewed(e.driver, e.nord.id, e.mechanic.id, 2, status);
+      await reviewed(e.driver, e.nord.id, e.mechanic.id, 2, { status });
     }
 
     const read = await listOf(e.mechanic.id);

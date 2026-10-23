@@ -52,7 +52,11 @@ interface Figures {
 
 // The row's figures under the advisory lock, so a second run for the same
 // row waits and then reads what the first wrote; null when the row is gone.
-async function lock(tx: Prisma.TransactionClient, table: string, id: string) {
+async function lock(
+  tx: Prisma.TransactionClient,
+  table: 'garage' | 'mechanic',
+  id: string,
+) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('review_rating'), hashtext(${id}))`;
   return table === 'garage'
     ? tx.$queryRaw<(Figures & { garageId: string })[]>`

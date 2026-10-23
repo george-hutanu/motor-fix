@@ -1,9 +1,10 @@
 ---
 capability: reviews
-updated: 2026-10-21
+updated: 2026-10-23
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
+  - 025-review-mechanic
 ---
 
 # Capability: Reviews
@@ -80,9 +81,9 @@ _From 022-review-drawer._
 
 _From 022-review-drawer._
 
-### 022-FR-016 — The service MUST save the review with source `job`, the job, its driver, its garage, the rating, the text (null when empty or whitespace), paid_bani (null when not given), status `published` and posted_at = now; the mechanic link stays empty (ST-25 sets it).
+### 025-FR-001 — When a job review is posted, the system MUST set the review's mechanic to the job's mechanic at that moment, in the same transaction as the review row, its audit entry and its `review.posted` event (022-FR-024), so no review exists with a stale or missing link where the job had a mechanic.
 
-_From 022-review-drawer._
+_From 025-review-mechanic._
 
 ### 022-FR-017 — The amount MUST convert to bani exactly: "4.200" → 420000, "4.200,50" → 420050 (the shared contracts parser the drawer uses); the service takes the integer `paidBani` and MUST answer 422 for 0, a negative value, more than 100000000 bani (1.000.000 lei) ; a `paidBani` that is not an integer is refused earlier, with 400 `validation_failed`.
 
@@ -168,6 +169,58 @@ _From 023-review-confirmed-job._
 
 _From 023-review-confirmed-job._
 
+### 025-FR-002 — A review with source `profile` MUST have no mechanic and MUST NOT change any mechanic's figures; it counts in its garage's figures only. No profile-review path exists in release 1 (OD-32) and the schema does not change for one: this is a guard, tested by seeding a `profile` row on an existing job.
+
+_From 025-review-mechanic._
+
+### 025-FR-003 — The `review.posted` event payload MUST carry `mechanicId` (null for a profile review), and the event's audience MUST include `public:mechanic:{mechanicId}` when it is set (as 419-FR-006 already states).
+
+_From 025-review-mechanic._
+
+### 025-FR-004 — A review MUST keep its mechanic when the mechanic leaves the garage, moves to another, is hidden from the profile or has its account deleted; the link is removed only when the mechanic row itself is deleted (then it becomes empty and the review stays).
+
+_From 025-review-mechanic._
+
+### 025-FR-005 — Each mechanic MUST carry a rating (one decimal, between 1,0 and 5,0, empty until reviewed) and a review count (0 or more), kept under the same rules as the garage's: a rating exactly when the count is above 0.
+
+_From 025-review-mechanic._
+
+### 025-FR-006 — A mechanic's rating MUST be the average of the ratings of their `published` reviews across every garage, to one decimal, rounding half up (computed in PostgreSQL as `round(avg(rating), 1)` over numeric, which rounds half away from zero); the count is the number of those reviews. A garage's rating and count MUST follow the same rule over its own reviews, profile reviews included. A `reported`, `removed` or `deleted_by_author` review counts in neither.
+
+_From 025-review-mechanic._
+
+### 025-FR-007 — A background job, a new outbox-relay consumer queue `review-ratings` in the worker, MUST recompute the figures after `review.posted`, `review.edited`, `review.deleted`, `review.reported`, `review.decided` and `review.appeal_decided` (only `review.posted` exists today; the others come from later stories and are consumed by name now): it reads the review named by the event, then recomputes its garage's figures and, when the review names a mechanic, that mechanic's figures, from the review rows alone.
+
+_From 025-review-mechanic._
+
+### 025-FR-008 — The recalculation MUST be idempotent and safe under concurrency: run twice for one event it writes the same figures; two runs for one garage or mechanic at the same time MUST serialise on a lock per row so neither overwrites the other with an older computation.
+
+_From 025-review-mechanic._
+
+### 025-FR-010 — A recalculation whose review row no longer exists MUST log it and end without writing.
+
+_From 025-review-mechanic._
+
+### 025-FR-011 — The system MUST expose `GET /api/v1/reviews/mechanic/{mechanicId}?page=` to anyone, signed in or not (a public route, joining the public-routes list), listing that mechanic's `published` reviews across every garage, newest first (posted date, then id), 20 per page, each with the review's rating, text (null when the author wrote none), posted date, author display name as the garage profile shows it (first name and surname initial, 022-FR-007), and its garage's name and slug; the answer carries `page`, `pageSize` 20, `total` and the items.
+
+_From 025-review-mechanic._
+
+### 025-FR-012 — The read MUST answer 404 `not_found` with one body for every case when the mechanic does not exist, is not on the profile (`on_profile` false) or its account is deleted; `page` below 1 or not an integer MUST answer 400 `validation_failed`; a missing `page` is page 1; a `page` past the last answers 200 with an empty `items` and the real `total`.
+
+_From 025-review-mechanic._
+
+### 025-FR-013 — The read MUST never expose the author's plate, phone, e-mail or account id, nor any review that is not `published`.
+
+_From 025-review-mechanic._
+
+### 025-FR-014 — The recalculation's queue and the new read MUST ship with their metrics (the worker's job and queue metrics by queue and job name, the API's request metrics by route template), their logs, a dashboard panel and an alert (the queue's failed jobs and oldest waiting age; the read's 5xx rate, as the other API operations' alerts), each listed in `infra/observability/inventory.json`; metric labels carry no id.
+
+_From 025-review-mechanic._
+
+### 025-FR-015 — Tests MUST be written first and cover, in Jest on real PostgreSQL: the mechanic set from the job including a changed mechanic and the owner's row when team mechanics is off; no mechanic for a profile review; the rating maths and rounding (4,45 → 4,5; 4,44 → 4,4; none → empty and 0); a move between garages; a reported review out of both figures until decided, then back in or out; a deleted mechanic account keeping the link; idempotent and concurrent recalculation; the event recorded only on change with its audience; the query's order, page size, garage label, 404 cases and 400 page. End to end (Playwright): none of its own. Every test file names its requirements in a `// @traces` line.
+
+_From 025-review-mechanic._
+
 ## Retired
 
 - `022-FR-012` — superseded by `023-FR-015` (2026-10-21)
@@ -176,3 +229,4 @@ _From 023-review-confirmed-job._
 - `022-FR-021` — superseded by `023-FR-006` (2026-10-21)
 - `022-FR-022` — superseded by `023-FR-009` (2026-10-21)
 - `022-FR-026` — superseded by `023-FR-002` (2026-10-21)
+- `022-FR-016` — superseded by `025-FR-001` (2026-10-23)

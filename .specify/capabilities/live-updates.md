@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 253-live-connection
   - 254-live-audience
@@ -23,6 +23,7 @@ features:
   - 173-price-range-in-place
   - 1190-live-reconnects
   - 398-garage-feature-switches
+  - 025-review-mechanic
 ---
 
 # Capability: Live updates
@@ -90,10 +91,6 @@ _From 253-live-connection._
 ### 256-FR-011 — Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the epic's test update on the status line under its header, "Actualizare de test în direct · <time>" / "Live test update · <time>", changed in place in the person's language, and MUST raise no toast for it.
 
 _From 256-live-in-place._
-
-### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author and the public channels of 419-FR-006; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules → `admin`, and `system` too only for `maintenance_mode` (258-FR-006); copy voices → `admin` and `system`; account → that `account:`.
-
-_From 254-live-audience._
 
 ### 419-FR-006 — The audience resolver MUST name the public channels with their ids: a review's audience is the garage, the author, `public:garage:{garageId}` and `public:mechanic:{mechanicId}` when the review names a mechanic (today it names bare `public:garage` and `public:mechanic`); an approval's published audience is `public:garage:{garageId}` and `public:search` (today it carries an empty brand list); a garage's public change (`garage.updated`, `garage.suspended`, `garage.restored`, `price_list.updated`, `facility.removed`, `facility.re_add_decided`, `mechanic.updated`, `garage.slots_changed`) is the garage's staff channel, `public:garage:{garageId}` and, for `garage.updated`, `garage.suspended` and `garage.restored`, `public:search`; a brand-stance change keeps `public:search:{brandId}` for each changed brand (254-FR-001 modified; the `garage_brands` subject unchanged).
 
@@ -163,9 +160,9 @@ _From 257-live-events._
 
 _From 257-live-events._
 
-### 257-FR-006 — Every event kind of the Backend architecture events list, plus `account.signed_out_everywhere` and `live.test`, MUST be named in one typed catalogue in the shared contracts library; recording or subscribing to a kind outside it MUST fail to compile.
+### 025-FR-009 — When a recalculation changed a garage's or a mechanic's figures, it MUST record, in the same transaction as that write, one event per changed subject of a new kind `rating.updated` (added to the typed catalogue, 257-FR-006) whose payload names the garage and the mechanic whose figures changed, and whose audience is `garage:{garageId}`, `public:garage:{garageId}`, `public:search` and, when a mechanic changed, `public:mechanic:{mechanicId}`, and which joins the live hub's public allow-lists for those three channel kinds; the open pages on those channels re-read and the cached public reads and searches of the garage are purged through the existing purge by audience (1182-FR-007). When nothing changed, no event is recorded.
 
-_From 257-live-events._
+_From 025-review-mechanic._
 
 ### 257-FR-007 — The relay MUST delete relayed rows older than 7 days, and MUST log an error when the oldest waiting row is older than 30 seconds, at most once every 30 seconds.
 
@@ -435,3 +432,5 @@ _From 1190-live-reconnects._
 - `574-FR-001` — superseded by `398-FR-008` (2026-10-22)
 - `574-FR-002` — superseded by `398-FR-008` (2026-10-22)
 - `574-FR-003` — superseded by `398-FR-008` (2026-10-22)
+- `257-FR-006` — superseded by `025-FR-009` (2026-10-23)
+- `254-FR-001` — superseded by `025-FR-009` (2026-10-23)

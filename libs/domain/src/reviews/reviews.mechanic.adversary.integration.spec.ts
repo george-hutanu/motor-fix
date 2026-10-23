@@ -1,52 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { ReviewsModule } from './reviews.module';
-import type { ReviewStatus } from '../generated/prisma/enums';
+import { mechanicReviews } from './reviews.testing';
 import { quotesApp } from '../quotes/quotes-api.testing';
 
 const { get, world } = quotesApp([ReviewsModule]);
 const { prisma } = world;
 
-async function setting() {
-  const dinamo = await world.garage('Atelier Dinamo');
-  const nord = await world.garage('Service Nord');
-  const account = await world.account('Elena Pop', ['mechanic']);
-  const mechanic = await prisma.mechanic.create({
-    data: {
-      accountId: account,
-      garageId: nord.id,
-      name: 'Elena',
-      onProfile: true,
-    },
-  });
-  const driver = await world.account('Andrei Ion Marin', ['driver']);
-  return { dinamo, driver, mechanic, nord };
-}
-
-async function reviewed(
-  driverId: string,
-  garageId: string,
-  mechanicId: string | null,
-  minutesAgo: number,
-  extra: { status?: ReviewStatus; text?: string | null } = {},
-) {
-  const { booking } = await world.chain(driverId, garageId);
-  const job = await world.job(booking.id, 'done', {
-    mechanicId: mechanicId ?? undefined,
-  });
-  return prisma.review.create({
-    data: {
-      driverId,
-      garageId,
-      jobId: job.id,
-      mechanicId,
-      postedAt: new Date(Date.now() - minutesAgo * 60_000),
-      rating: 4,
-      status: extra.status ?? 'published',
-      text: extra.text === undefined ? null : extra.text,
-    },
-  });
-}
+const { elena: setting, reviewed } = mechanicReviews(world);
 
 const listOf = (mechanicId: string, query = '') =>
   get(`/reviews/mechanic/${mechanicId}${query}`);

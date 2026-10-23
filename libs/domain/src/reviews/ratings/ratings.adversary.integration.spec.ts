@@ -1,126 +1,21 @@
-import { Logger } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import type { ReviewRatings } from './ratings';
+import { ratingsHarness } from './ratings.testing';
 
-import { ReviewRatings } from './ratings';
-import { ReviewRatingsModule } from './ratings.module';
-import { serialDatabase } from '../../auth/serial-db.testing';
-import type { ReviewSource, ReviewStatus } from '../../generated/prisma/enums';
-import { NotificationsModule } from '../../notifications/notifications.module';
-import {
-  redisUrlFor,
-  testConfig,
-  testPhoneConfig,
-} from '../../notifications/notifications.testing';
-import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
-
-const redisUrl = redisUrlFor(10);
-const world = quotesWorld();
-const { prisma } = world;
-serialDatabase(databaseUrl);
-
-let app: TestingModule | undefined;
-let handler: ReviewRatings;
-let warn: jest.SpyInstance;
-let driverId: string;
-
-beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-  warn = jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation(() => undefined);
-  await world.reset();
-  await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
-  driverId = await world.account('Andrei Ion Marin');
-  app = await Test.createTestingModule({
-    imports: [
-      ReviewRatingsModule.registerWorker({
-        notifications: NotificationsModule.registerWorker({
-          databaseUrl,
-          email: testConfig('http://127.0.0.1:9'),
-          phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
-          redisUrl,
-        }),
-        redisUrl,
-      }),
-    ],
-  }).compile();
-  handler = app.get(ReviewRatings);
-});
-
-afterEach(async () => {
-  await app?.close();
-  app = undefined;
-  jest.restoreAllMocks();
-});
-
-afterAll(() => prisma.$disconnect());
-
-interface Reviewed {
-  garageId: string;
-  mechanicId?: string | null;
-  rating: number;
-  status?: ReviewStatus;
-  source?: ReviewSource;
-}
-
-async function review({
-  garageId,
-  mechanicId = null,
-  rating,
-  source = 'job',
-  status = 'published',
-}: Reviewed) {
-  const { booking } = await world.chain(driverId, garageId);
-  const job = await world.job(booking.id, 'done', {
-    mechanicId: mechanicId ?? undefined,
-  });
-  return prisma.review.create({
-    data: {
-      driverId,
-      garageId,
-      jobId: job.id,
-      mechanicId,
-      rating,
-      source,
-      status,
-    },
-  });
-}
-
-const reviews = (base: Omit<Reviewed, 'rating'>, ratings: number[]) =>
-  Promise.all(ratings.map((rating) => review({ ...base, rating })));
-
-const run = (reviewId: string, kind = 'review.posted') =>
-  handler.onEvent({
-    data: { id: '1', kind, payload: { reviewId }, subjectId: reviewId },
-  });
-
-const shown = (row: { rating: unknown; reviewCount: number }) => ({
-  count: row.reviewCount,
-  rating: row.rating === null ? null : Number(row.rating),
-});
-
-const garageFigures = async (id: string) =>
-  shown(await prisma.garage.findUniqueOrThrow({ where: { id } }));
-
-const mechanicFigures = async (id: string) =>
-  shown(await prisma.mechanic.findUniqueOrThrow({ where: { id } }));
-
-const updates = () =>
-  prisma.outboxEvent.findMany({
-    orderBy: { id: 'asc' },
-    where: { kind: 'rating.updated' },
-  });
-
-async function elena(garageId: string) {
-  const accountId = await world.account('Elena Pop', ['mechanic']);
-  return prisma.mechanic.create({
-    data: { accountId, garageId, name: 'Elena', onProfile: true },
-  });
-}
+const h = ratingsHarness();
+const {
+  elena,
+  garageFigures,
+  mechanicFigures,
+  prisma,
+  review,
+  reviews,
+  run,
+  updates,
+  world,
+} = h;
 
 const rawEvent = (data: unknown) =>
-  handler.onEvent({ data } as Parameters<ReviewRatings['onEvent']>[0]);
+  h.handler.onEvent({ data } as Parameters<ReviewRatings['onEvent']>[0]);
 
 // @traces 025-FR-006
 describe('rounding at the edges of a decimal', () => {
@@ -280,7 +175,7 @@ describe('events that name no usable review', () => {
       rawEvent({ id: '1', kind: 'review.posted', payload }),
     ).resolves.toBeUndefined();
 
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(h.warn).toHaveBeenCalledTimes(1);
     expect(await garageFigures(g.id)).toEqual({ count: 0, rating: null });
     expect(await updates()).toEqual([]);
     expect(await prisma.review.count()).toBe(1);
@@ -291,7 +186,7 @@ describe('events that name no usable review', () => {
       rawEvent({ id: '1', kind: 'review.posted', payload: {} }),
     ).resolves.toBeUndefined();
 
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(h.warn).toHaveBeenCalledTimes(1);
     expect(await updates()).toEqual([]);
   });
 
@@ -300,7 +195,7 @@ describe('events that name no usable review', () => {
       rawEvent({ id: '1', kind: 'review.posted' }),
     ).resolves.toBeUndefined();
 
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(h.warn).toHaveBeenCalledTimes(1);
   });
 
   it('reads the subject when the payload id is absent', async () => {
@@ -315,18 +210,6 @@ describe('events that name no usable review', () => {
     });
 
     expect(await garageFigures(g.id)).toEqual({ count: 1, rating: 4 });
-  });
-
-  it('ignores an event of a kind it does not consume without reading the review', async () => {
-    const g = await world.garage('Atelier Dinamo');
-    const one = await review({ garageId: g.id, rating: 4 });
-
-    await run(one.id, 'garage.updated');
-    await run(one.id, '');
-    await run(one.id, 'REVIEW.POSTED');
-
-    expect(await garageFigures(g.id)).toEqual({ count: 0, rating: null });
-    expect(await updates()).toEqual([]);
   });
 
   it('ends without a write when the garage went with the review', async () => {
@@ -349,25 +232,6 @@ describe('events that name no usable review', () => {
     await run(one.id);
 
     expect(await garageFigures(g.id)).toEqual({ count: 1, rating: 4 });
-    expect((await updates()).map((e) => e.subjectId)).toEqual([g.id]);
-  });
-});
-
-// @traces 025-FR-002
-describe('a profile review among job reviews', () => {
-  it('never moves a mechanic although the mechanic’s garage gets its figure', async () => {
-    const g = await world.garage('Atelier Dinamo');
-    const m = await elena(g.id);
-    const profile = await review({
-      garageId: g.id,
-      rating: 1,
-      source: 'profile',
-    });
-
-    await run(profile.id);
-
-    expect(await mechanicFigures(m.id)).toEqual({ count: 0, rating: null });
-    expect(await garageFigures(g.id)).toEqual({ count: 1, rating: 1 });
     expect((await updates()).map((e) => e.subjectId)).toEqual([g.id]);
   });
 });

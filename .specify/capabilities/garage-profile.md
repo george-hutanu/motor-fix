@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -21,6 +21,7 @@ features:
   - 330-listed-facilities
   - 1192-photo-variants
   - 308-profile-details
+  - 025-review-mechanic
 ---
 
 # Capability: Garage profile
@@ -484,9 +485,9 @@ _From 308-profile-details._
 
 _From 308-profile-details._
 
-### 308-FR-006 — Under each "Lucrează pe" chip the page MUST show a second line with the brand's fuel types (the four fuel ticks; there is no other car-type field) in the fixed order petrol, diesel, hybrid, electric, separated by " · " (a middle dot between ordinary spaces): "benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", showing only the ticked ones; a brand left as it was shows all four. "Nu lucrează pe" chips carry no fuel line.
+### 025-FR-016 — On the public garage profile, below 768 px wide, the fuel line under each "Lucrează pe" chip MUST render at the body text size (at least 16 px); at 768 px and above it keeps today's small size. A Jest spec reading the section's stylesheet MUST pin the phone override, and no other text of the section changes size.
 
-_From 308-profile-details._
+_From 025-review-mechanic._
 
 ### 308-FR-007 — After the two lists the page MUST show the garage's brand note as written when the answer carries one, and no note line when it does not. "Nu lucrează pe" MUST be hidden when `doesNotTake` is empty, and "Lucrează pe" when `worksOn` is empty; with both empty the brands slot shows nothing.
 
@@ -548,3 +549,4 @@ _From 308-profile-details._
 - `1183-FR-001` — superseded by `330-FR-007` (2026-10-22)
 - `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)
 - `307-FR-005` — superseded by `308-FR-002` (2026-10-22)
+- `308-FR-006` — superseded by `025-FR-016` (2026-10-23)
