@@ -1,8 +1,11 @@
+import { setTimeout as wait } from 'node:timers/promises';
+
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { Brevo, BrevoError } from './brevo/brevo';
 import { notificationType } from './catalogue';
 import { blockedReason, type EmailConfig, emailEnvelope } from './email-config';
+import { keyRetryDelay } from './key-retry/key-retry';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
@@ -56,6 +59,9 @@ const CLAIM_MS = retryDelay(0);
 export class NotificationsProcessor {
   private readonly logger = new Logger('Notifications');
   now = () => new Date();
+  // Between two start-up key checks; a shutdown ends the wait.
+  sleep = (ms: number, signal?: AbortSignal): Promise<unknown> =>
+    wait(ms, undefined, { signal }).catch(() => undefined);
 
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
@@ -68,8 +74,12 @@ export class NotificationsProcessor {
     private readonly pushSender: PushSender | null = null,
   ) {}
 
-  async ready(): Promise<boolean> {
+  async ready(signal?: AbortSignal): Promise<boolean> {
     if (!this.config.sending && !this.phone.sending) return true;
+    return this.configured() && this.keyAccepted(signal);
+  }
+
+  private configured(): boolean {
     if (
       !this.config.apiKey ||
       (this.config.sending && !this.config.from.email)
@@ -86,13 +96,29 @@ export class NotificationsProcessor {
       );
       return false;
     }
-    if (!(await this.brevo.checkKey().catch(() => false))) {
-      this.logger.error(
-        'Brevo refused the API key; the notifications queue is not processed',
-      );
-      return false;
-    }
     return true;
+  }
+
+  // A Brevo that cannot be reached is asked again, ever less often, until it
+  // answers or the signal (the worker's shutdown) ends the wait.
+  private async keyAccepted(signal?: AbortSignal): Promise<boolean> {
+    for (let attempt = 1; !signal?.aborted; attempt++) {
+      const key = await this.brevo.keyStatus(signal);
+      if (key.outcome === 'passed') return true;
+      if (key.outcome === 'refused') {
+        this.logger.error(
+          `Brevo refused the API key (${key.status}); the notifications queue is not processed`,
+        );
+        return false;
+      }
+      if (signal?.aborted) break;
+      const delay = keyRetryDelay(attempt);
+      this.logger.warn(
+        `Brevo unreachable at start-up (attempt ${attempt}, ${key.reason}); checking the key again in ${delay / 1000} s, the notifications queue waits`,
+      );
+      await this.sleep(delay, signal);
+    }
+    return false;
   }
 
   handle(job: NotificationJob): Promise<void> {

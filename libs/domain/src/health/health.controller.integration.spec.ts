@@ -1,10 +1,11 @@
 import { createServer, type Server, type Socket } from 'node:net';
 
-import { INestApplication } from '@nestjs/common';
+import { type DynamicModule, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { HealthModule } from './health.module';
+import { READINESS } from './health.service';
 import { S3TestStore } from '../storage/s3-test-store';
 import { StorageModule } from '../storage/storage.module';
 import { timersArmedBy } from '../waits.testing';
@@ -15,12 +16,23 @@ const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const deadUrl = (scheme: string) => `${scheme}://localhost:1/x`;
 const store = new S3TestStore();
 
+@Module({})
+class Consumer {}
+
+// Another module's readiness, as the worker's notifications consumer gives it.
+const consuming = (ready: boolean): DynamicModule => ({
+  module: Consumer,
+  providers: [{ provide: READINESS, useValue: { ready: () => ready } }],
+});
+
 async function start(
   urls: { databaseUrl: string; redisUrl: string },
   storageEndpoint = store.env().STORAGE_ENDPOINT,
+  others: DynamicModule[] = [],
 ) {
   const moduleRef = await Test.createTestingModule({
     imports: [
+      ...others,
       StorageModule.register({
         ...store.env(),
         STORAGE_ENDPOINT: storageEndpoint,
@@ -99,6 +111,26 @@ describe('health', () => {
         status: 'error',
         version: 'abc123',
       });
+  });
+
+  // @traces 520-FR-004
+  it('answers 503 while the worker is not consuming, its dependencies all up', async () => {
+    app = await start({ databaseUrl, redisUrl }, undefined, [consuming(false)]);
+
+    await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503, {
+        checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
+        status: 'error',
+        version: 'abc123',
+      });
+  });
+
+  // @traces 520-FR-004
+  it('is ready once the worker is consuming', async () => {
+    app = await start({ databaseUrl, redisUrl }, undefined, [consuming(true)]);
+
+    await request(app.getHttpServer()).get('/health/ready').expect(200);
   });
 
   describe('with a dependency that accepts connections and never answers', () => {

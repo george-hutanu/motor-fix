@@ -65,6 +65,7 @@ import {
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
 } from './garage-suspended/garage-suspended.fan-out';
+import { NotificationsConsumer } from './key-retry/key-retry';
 import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,
@@ -126,6 +127,7 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import { READINESS } from '../health/health.service';
 import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
 import { borrowStore, returnStore } from '../store/store';
@@ -186,7 +188,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Queue,
     @Inject(LIVE_PUBLISHER) private readonly publisher: Redis,
-    @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
+    @Optional()
+    @Inject(WORKER)
+    private readonly worker?: NotificationsConsumer,
     @Optional()
     @Inject(NEWS_WORKER)
     private readonly newsWorker?: Worker | null,
@@ -315,41 +319,56 @@ export class NotificationsModule implements OnApplicationShutdown {
             NOTIFICATIONS_JOBS,
           ],
           provide: WORKER,
-          useFactory: async (
+          // The check may wait out a Brevo outage, so it runs behind the boot.
+          useFactory: (
             processor: NotificationsProcessor,
             service: NotificationsService,
             jobs: Queue,
           ) => {
-            if (!(await processor.ready())) return null;
-            observeQueue(jobs);
-            await service
-              .scheduleRequeue()
-              .catch((error) =>
-                new Logger('Notifications').error(
-                  `the re-queue sweep is not scheduled: ${String(error)}`,
-                ),
-              );
-            const worker = new Worker(
-              NOTIFICATIONS_QUEUE,
-              (job) => inJob(job, () => processor.handle(job)),
-              {
-                concurrency: 10,
-                connection: {
-                  maxRetriesPerRequest: null,
-                  url: options.redisUrl,
-                },
-                settings: {
-                  backoffStrategy: (attemptsMade) =>
-                    retryDelay(attemptsMade - 1),
-                },
-                telemetry: queueTelemetry(),
+            const logger = new Logger('Notifications');
+            const consumer = new NotificationsConsumer(
+              (signal) => processor.ready(signal),
+              async () => {
+                observeQueue(jobs);
+                await service
+                  .scheduleRequeue()
+                  .catch((error) =>
+                    logger.error(
+                      `the re-queue sweep is not scheduled: ${String(error)}`,
+                    ),
+                  );
+                const worker = new Worker(
+                  NOTIFICATIONS_QUEUE,
+                  (job) => inJob(job, () => processor.handle(job)),
+                  {
+                    concurrency: 10,
+                    connection: {
+                      maxRetriesPerRequest: null,
+                      url: options.redisUrl,
+                    },
+                    settings: {
+                      backoffStrategy: (attemptsMade) =>
+                        retryDelay(attemptsMade - 1),
+                    },
+                    telemetry: queueTelemetry(),
+                  },
+                );
+                observeWorker(worker);
+                logFinalFailure(worker, logger);
+                return worker;
               },
             );
-            observeWorker(worker);
-            logFinalFailure(worker, new Logger('Notifications'));
-            return worker;
+            consumer
+              .start()
+              .catch((error) =>
+                logger.error(
+                  `the notifications queue is not processed: ${String(error)}`,
+                ),
+              );
+            return consumer;
           },
         },
+        { provide: READINESS, useExisting: WORKER },
         NewsFanOut,
         { provide: NEWS_TOKEN_SECRET, useValue: options.tokenSecret ?? '' },
         {

@@ -46,6 +46,11 @@ const logFailure = (
   });
 };
 
+export type KeyStatus =
+  | { outcome: 'passed' }
+  | { outcome: 'refused'; status: number }
+  | { outcome: 'unreachable'; reason: string };
+
 export class BrevoError extends Error {
   constructor(
     readonly reason: string,
@@ -102,10 +107,20 @@ export class Brevo {
 
   // An aborted signal gives up on the check, which then answers false.
   async checkKey(signal?: AbortSignal): Promise<boolean> {
+    return (await this.keyStatus(signal)).outcome === 'passed';
+  }
+
+  // Whether Brevo accepts the key, refuses it, or could not be asked: no
+  // answer, a 5xx or a 429 may pass on a later try; any other refusal will not.
+  async keyStatus(signal?: AbortSignal): Promise<KeyStatus> {
     const res = await this.call('/account', { method: 'GET' }, signal).catch(
       () => null,
     );
-    return res?.ok ?? false;
+    if (!res) return { outcome: 'unreachable', reason: 'provider_unreachable' };
+    if (res.ok) return { outcome: 'passed' };
+    if (res.status >= 500 || res.status === 429)
+      return { outcome: 'unreachable', reason: `provider_${res.status}` };
+    return { outcome: 'refused', status: res.status };
   }
 
   // Answers Brevo's message id. Accepted without one, the message may have
