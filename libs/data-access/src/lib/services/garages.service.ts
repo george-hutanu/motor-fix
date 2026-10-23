@@ -12,6 +12,8 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { BrandRangeSavedDto } from '../models/brand-range-saved-dto';
 import { catalogueJobsControllerPropose } from '../fn/garages/catalogue-jobs-controller-propose';
 import { CatalogueJobsControllerPropose$Params } from '../fn/garages/catalogue-jobs-controller-propose';
+import { DocumentCycleDto } from '../models/document-cycle-dto';
+import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
@@ -38,6 +40,10 @@ import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
 import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckDto } from '../models/legal-check-dto';
+import { ownerDocumentsControllerSubmit } from '../fn/garages/owner-documents-controller-submit';
+import { OwnerDocumentsControllerSubmit$Params } from '../fn/garages/owner-documents-controller-submit';
+import { ownerDocumentsControllerUploadUrl } from '../fn/garages/owner-documents-controller-upload-url';
+import { OwnerDocumentsControllerUploadUrl$Params } from '../fn/garages/owner-documents-controller-upload-url';
 import { priceListControllerAdd } from '../fn/garages/price-list-controller-add';
 import { PriceListControllerAdd$Params } from '../fn/garages/price-list-controller-add';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
@@ -678,6 +684,56 @@ export class GaragesService extends BaseService {
   verificationStatusControllerRead(params: VerificationStatusControllerRead$Params, context?: HttpContext): Promise<VerificationStatusDto> {
     const resp = this.verificationStatusControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationStatusDto>): VerificationStatusDto => r.body);
+  }
+
+  /** Path part for operation `ownerDocumentsControllerUploadUrl()` */
+  static readonly OwnerDocumentsControllerUploadUrlPath = '/api/v1/garages/{garageId}/legal-documents/upload-url';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerDocumentsControllerUploadUrl()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerDocumentsControllerUploadUrl$Response(params: OwnerDocumentsControllerUploadUrl$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentUploadAddressDto>> {
+    const obs = ownerDocumentsControllerUploadUrl(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerDocumentsControllerUploadUrl$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerDocumentsControllerUploadUrl(params: OwnerDocumentsControllerUploadUrl$Params, context?: HttpContext): Promise<DocumentUploadAddressDto> {
+    const resp = this.ownerDocumentsControllerUploadUrl$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentUploadAddressDto>): DocumentUploadAddressDto => r.body);
+  }
+
+  /** Path part for operation `ownerDocumentsControllerSubmit()` */
+  static readonly OwnerDocumentsControllerSubmitPath = '/api/v1/garages/{garageId}/legal-documents';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerDocumentsControllerSubmit()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerDocumentsControllerSubmit$Response(params: OwnerDocumentsControllerSubmit$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentCycleDto>> {
+    const obs = ownerDocumentsControllerSubmit(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerDocumentsControllerSubmit$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerDocumentsControllerSubmit(params: OwnerDocumentsControllerSubmit$Params, context?: HttpContext): Promise<DocumentCycleDto> {
+    const resp = this.ownerDocumentsControllerSubmit$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentCycleDto>): DocumentCycleDto => r.body);
   }
 
 }

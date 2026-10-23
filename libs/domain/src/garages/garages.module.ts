@@ -6,6 +6,9 @@ import {
   OBSERVABILITY_URL,
 } from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
+import { DocumentCycleService } from './documents/document-cycle/document-cycle.service';
+import { DocumentReviewController } from './documents/document-review/document-review.controller';
+import { DocumentReviewService } from './documents/document-review/document-review.service';
 import { LegalDocumentsController } from './documents/legal-documents/legal-documents.controller';
 import { LegalDocumentsService } from './documents/legal-documents/legal-documents.service';
 import { GarageFeaturesController } from './features/features.controller';
@@ -83,6 +86,7 @@ export class GaragesModule {
       controllers: [
         AdminOverviewController,
         CatalogueJobsController,
+        DocumentReviewController,
         GarageBrandsController,
         GarageInvitesController,
         GarageReportsController,
@@ -104,6 +108,7 @@ export class GaragesModule {
         VerificationStatusController,
       ],
       exports: [
+        DocumentCycleService,
         ListingDraftsService,
         GarageDetailsService,
         GarageMechanicsService,
@@ -115,6 +120,8 @@ export class GaragesModule {
       imports: [CacheModule, notifications],
       module: GaragesModule,
       providers: [
+        DocumentCycleService,
+        DocumentReviewService,
         GarageBrandsService,
         GarageDetailsService,
         GarageMechanicsService,

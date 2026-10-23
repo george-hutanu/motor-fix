@@ -1,6 +1,6 @@
 ---
 capability: tracker
-updated: 2026-10-21
+updated: 2026-10-23
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
@@ -10,6 +10,7 @@ features:
   - 1323-rest-not-graphql
   - 1324-retire-debt-and-ready
   - 1360-tracker-unblock-dependent
+  - 1363-throughput-fixes
 ---
 
 # Capability: Tracker
@@ -125,6 +126,10 @@ _From 1360-tracker-unblock-dependent._
 ### 1360-FR-005 — The feature's own story behaves as before: `unblock` returns to its run-state prior.
 
 _From 1360-tracker-unblock-dependent._
+
+### 1363-FR-013 — (Item 13) `speckit-tracker-sync` on every write (`start`, `pr`, `finish`, `file`) MUST compare the issue body's "Depends on" line with the issue's native blocked-by links: add a missing link to an open target, drop a link to a closed target, and refuse (with a line) a link whose target depends on the issue itself. *Done when*: specs cover the four cases and the log line each writes to `tracker-sync.md`.
+
+_From 1363-throughput-fixes._
 
 ## Retired
 

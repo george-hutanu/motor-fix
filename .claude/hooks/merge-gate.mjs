@@ -17,14 +17,17 @@
 // does not imply CI finished: the gate also refuses while any other check is
 // failing or still running, or while CI OK has not reported at all.
 //
-// A carried success (`carried from <sha>: docs-only change` or `...: QA fixes`,
-// set by .claude/scripts/pr-test/carry.mjs) is verified, not trusted: the
+// A carried success (`carried from <sha>: docs-only change`, `...: QA fixes`
+// or `...: merge of main`, set by .claude/scripts/pr-test/carry.mjs) is
+// verified, not trusted: the
 // named commit must be one of the PR's own commits with a success of its own,
 // an ancestor of head, with no real failing lap after it; a docs carry differs
 // from it by documentation only (scripts/docs-only.ts), a QA-fixes carry
 // names a lap that reported medium or low findings and adds only single-parent
-// fix, test, docs, style or refactor commits (Constitution VII step 5);
-// otherwise the merge is refused as if there were no verdict. A carry the
+// fix, test, docs, style or refactor commits (Constitution VII step 5); a
+// merge-of-main carry adds only merges of main whose own diff shares no file
+// with the PR's (Constitution VII step 6), and a fixes carry may ride over one
+// too; otherwise the merge is refused as if there were no verdict. A carry the
 // gate cannot verify is refused too. SPECKIT_CARRY_STATE replaces those reads for the eval cases.
 //
 // Fail-closed where the gate cannot see. A PR it cannot read is refused, and

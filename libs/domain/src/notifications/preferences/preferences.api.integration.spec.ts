@@ -643,7 +643,7 @@ describe('the staff lists a person reads', () => {
       garageName: 'Dinamo',
       role: 'owner',
     });
-    expect(typesIn(mine)).toHaveLength(29);
+    expect(typesIn(mine)).toHaveLength(30);
     expect(theirs.role).toBe('receptionist');
     expect(typesIn(theirs)).not.toContain('REVIEW_POSTED');
     expect(typesIn(theirs)).not.toContain('DOCUMENT_DUE');
@@ -803,41 +803,6 @@ describe('a staff save', () => {
     ).toHaveLength(1);
   });
 
-  it('accepts a document reminder moved from e-mail to push in one save', async () => {
-    const { id: garageId } = await garage('Dinamo');
-    const owner = await staff('ion', garageId, 'owner');
-    await save(
-      { preferences: [choice(garageId, 'DOCUMENT_DUE', 'push', false)] },
-      bearer(owner, 'garage'),
-    );
-    const res = await save(
-      {
-        preferences: [
-          choice(garageId, 'DOCUMENT_DUE', 'push', true),
-          choice(garageId, 'DOCUMENT_DUE', 'email', false),
-        ],
-      },
-      bearer(owner, 'garage'),
-    );
-    expect(res.status).toBe(200);
-  });
-
-  it('refuses the second of two saves at once that would leave a document reminder with no channel', async () => {
-    const { id: garageId } = await garage('Dinamo');
-    const owner = await staff('ion', garageId, 'owner');
-    const statuses = (
-      await Promise.all(
-        (['email', 'push'] as const).map((channel) =>
-          save(
-            { preferences: [choice(garageId, 'DOCUMENT_DUE', channel, false)] },
-            bearer(owner, 'garage'),
-          ),
-        ),
-      )
-    ).map((res) => res.status);
-    expect(statuses.sort()).toEqual([200, 422]);
-  });
-
   it('lets a receptionist mute only their own channels', async () => {
     const { id: garageId } = await garage('Dinamo');
     const owner = await staff('ion', garageId, 'owner');
@@ -957,18 +922,19 @@ describe('a staff save', () => {
       );
     });
 
-    it('for a document reminder left with no channel', async () => {
+    // @traces 068-FR-004
+    it.each([
+      ['DOCUMENT_DUE', 'push'],
+      ['DOCUMENT_OVERDUE', 'email'],
+    ] as const)('for %s muted on %s', async (type, channel) => {
       const { id: garageId } = await garage('Dinamo');
       const owner = await staff('ion', garageId, 'owner');
       await refusedFor(
         owner,
         'garage',
-        [
-          choice(garageId, 'DOCUMENT_DUE', 'email', false),
-          choice(garageId, 'DOCUMENT_DUE', 'push', false),
-        ],
+        [choice(garageId, type, channel, false)],
         422,
-        'last_channel',
+        'channel_locked',
       );
     });
 

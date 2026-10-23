@@ -20,6 +20,7 @@ import {
   ListingPhotosModule,
   ListingSubmitModule,
   NotificationsModule,
+  OwnerDocumentsModule,
   oauthSettings,
   observabilityUrl,
   PasswordResetModule,
@@ -119,6 +120,7 @@ export class AppModule {
         garages,
         photos,
         ListingDocumentsModule.register(garages),
+        OwnerDocumentsModule.register(garages, notifications, email.webUrl),
         ListingSubmitModule.register(garages, photos, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
         SystemLogModule.register({

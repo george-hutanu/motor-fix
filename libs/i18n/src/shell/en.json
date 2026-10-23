@@ -370,6 +370,7 @@
       "DAY_SHEET_OUTDATED": "Day sheet out of date",
       "DOCUMENT_DUE": "Document expiring soon",
       "DOCUMENT_OVERDUE": "Document expired",
+      "DOCUMENT_REFUSED": "Document refused",
       "FACILITY_RE_ADD_DECIDED": "Decision on adding a facility back",
       "FACILITY_REMOVED": "Facility removed",
       "GARAGE_REPORT_DECIDED": "What became of your report",

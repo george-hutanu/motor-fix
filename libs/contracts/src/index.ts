@@ -31,6 +31,7 @@ export * from './images';
 export * from './job-types.dto';
 export * from './jobs.dto';
 export * from './legal-check.dto';
+export * from './legal-documents/document-cycle.dto';
 export * from './legal-documents/legal-documents';
 export * from './legal-documents/legal-documents.dto';
 export * from './lei-text';

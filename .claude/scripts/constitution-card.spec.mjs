@@ -95,6 +95,28 @@ describe('the constitution card', () => {
     assert.match(readFileSync(CARD, 'utf8'), /\*\*II\. Test Discipline\*\*[^\n]*no mutation run in a task/);
   });
 
+  // @traces 1363-FR-003
+  it('has the tail own the wait under principle VII step 4, at 5.1 or later, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start));
+    const step4 = seventh.slice(seventh.indexOf('\n4. '), seventh.indexOf('\n5. ')).replace(/\s+/g, ' ');
+    assert.match(step4, /the tail agent waits for CI and the QA run itself/);
+    assert.match(step4, /one task being built per session/);
+    const cardLine = card.split('\n').find((line) => line.startsWith('- **VII.'));
+    assert.match(cardLine, /the tail waits for CI and QA itself/);
+    assert.match(cardLine, /one task being built per session/);
+    assert.ok(atLeast(full, 5, 1));
+    assert.match(full, /^\*\*Version\*\*: 5\.1\.0 \| \*\*Ratified\*\*: 2026-10-03 \| \*\*Last Amended\*\*: 2026-10-23$/m);
+  });
+
+  // @traces 1363-FR-007 1363-FR-010
+  it('lists the adversary-keep gate and the merge-of-main carry in the Enforcement table', () => {
+    const table = full.slice(full.indexOf('## Enforcement'), full.indexOf('## Agent Execution Rules'));
+    assert.match(table, /\| [^|\n]*\| `adversary-keep-gate\.mjs` \(PreToolUse, `pre:edit:adversary-keep`\) \|[^\n]*`\*\.adversary\.spec\.\*`/);
+    assert.match(table, /\| VII QA before merge \|[^\n]*merge of `origin\/main`[^\n]*\(`merge of main`, `carry\.mjs`\)/);
+  });
+
   it('names the spec that keeps it in step with the constitution', () => {
     assert.match(readFileSync(CARD, 'utf8').replace(/\s+/g, ' '), /`constitution-card\.spec\.mjs` checks it/);
   });

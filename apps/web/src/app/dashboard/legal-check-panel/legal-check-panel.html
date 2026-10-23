@@ -19,6 +19,9 @@
           </div>&ngsp;
           <div class="when"><span class="lamp" aria-hidden="true"></span>{{ row.checked }}</div>&ngsp;
           <strong class="state" data-legal-state>{{ row.state }}</strong>
+          @if (row.kind === 'documents' && canUpload()) {
+            &ngsp;<button hlmBtn variant="secondary" type="button" class="upload" data-documents-upload (click)="upload.emit()">{{ 'garage.legal.documents.upload' | t }}</button>
+          }
         </li>
       }
     </ul>

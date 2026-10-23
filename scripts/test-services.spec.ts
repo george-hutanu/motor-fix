@@ -1,22 +1,32 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import {
+  type ChildProcess,
+  execFileSync,
+  spawn,
+  spawnSync,
+} from 'node:child_process';
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
   composeProject,
+  freePorts,
   needsServices,
   noDockerMessage,
   parsePort,
   parseStacks,
   parseWorktrees,
+  portEnv,
   projectName,
   schemaDrift,
   serviceEnv,
@@ -571,5 +581,283 @@ describe('down and sweep, against fake docker, git and gh', () => {
       expect(result.stderr).toMatch(/docker/i);
       expect(calls().some((c) => c.includes(' down'))).toBe(false);
     });
+  });
+});
+
+// @traces 1363-FR-005
+describe('freePorts', () => {
+  const probes = (...ports: number[]) => {
+    let i = 0;
+    return async () => ports[i++ % ports.length];
+  };
+
+  it('picks three distinct ports, none another worktree holds', async () => {
+    const set = await freePorts(
+      new Set([50001]),
+      probes(50001, 50002, 50002, 50003, 50004),
+    );
+    expect(set).toEqual({ api: 50002, web: 50004, worker: 50003 });
+  });
+
+  it('stops with one line naming the cause when no port is free', async () => {
+    await expect(
+      freePorts(new Set([50001, 50002]), probes(50001, 50002)),
+    ).rejects.toThrow(/^no free port: .*not held by another worktree$/);
+    await expect(
+      freePorts(new Set(), async () => {
+        throw new Error('EMFILE: too many open files');
+      }),
+    ).rejects.toThrow('no free port: EMFILE: too many open files');
+  });
+});
+
+// @traces 1363-FR-005
+describe('portEnv', () => {
+  it('gives each app its own port variable and points the web at its own api', () => {
+    expect(portEnv({ api: 50002, web: 50004, worker: 50003 })).toEqual({
+      API_INTERNAL_URL: 'http://localhost:50002',
+      API_PORT: '50002',
+      // Angular's dev server reads PORT; the api and the worker read theirs.
+      PORT: '50004',
+      PUBLIC_WEB_URL: 'http://localhost:50004',
+      WEB_PORT: '50004',
+      WORKER_PORT: '50003',
+    });
+  });
+});
+
+// @traces 1363-FR-005
+describe('ports and restart, in two worktrees of one clone', () => {
+  const script = join(__dirname, 'test-services.ts');
+  const vars = [
+    'API_PORT',
+    'WORKER_PORT',
+    'WEB_PORT',
+    'PORT',
+    'API_INTERNAL_URL',
+    'PUBLIC_WEB_URL',
+  ];
+  let dir: string;
+  let a: string;
+  let b: string;
+  let bin: string;
+  const others: ChildProcess[] = [];
+  const held: Server[] = [];
+
+  // No GIT_* from a hook, and no port set of the checkout running the tests.
+  const env = () => {
+    const out: NodeJS.ProcessEnv = { PATH: `${bin}:${process.env.PATH}` };
+    for (const [key, value] of Object.entries(process.env))
+      if (!key.startsWith('GIT_') && !vars.includes(key) && key !== 'PATH')
+        out[key] = value;
+    return out;
+  };
+  const cli = (cwd: string, ...args: string[]) =>
+    spawnSync('node', [script, ...args], { cwd, encoding: 'utf8', env: env() });
+  const git = (cwd: string, ...args: string[]) =>
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'core.hooksPath=/dev/null',
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@example.test',
+        ...args,
+      ],
+      { cwd, encoding: 'utf8', env: env() },
+    );
+  const cache = (root: string, file: string) =>
+    join(root, '.specify', '.cache', file);
+  const set = (root: string) =>
+    JSON.parse(readFileSync(cache(root, 'ports.json'), 'utf8')) as {
+      api: number;
+      web: number;
+      worker: number;
+    };
+  const pid = (root: string, app: string) =>
+    Number(readFileSync(cache(root, `${app}.pid`), 'utf8').trim());
+  const alive = (n: number) => {
+    try {
+      process.kill(n, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const until = async (done: () => boolean) => {
+    for (let i = 0; i < 100 && !done(); i++)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    return done();
+  };
+
+  beforeAll(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), 'port-sets-')));
+    bin = join(dir, 'bin');
+    a = join(dir, 'a');
+    b = join(dir, 'b');
+    mkdirSync(bin);
+    mkdirSync(a);
+    // The fake `npx nx serve <app>`: records what it was started with, then
+    // stays up as the dev server would.
+    writeFileSync(
+      join(bin, 'npx'),
+      '#!/bin/sh\necho "$PORT $API_PORT $WORKER_PORT $WEB_PORT $API_INTERNAL_URL $PUBLIC_WEB_URL $*" > "$PWD/.specify/.cache/$3.started"\nexec sleep 300\n',
+    );
+    chmodSync(join(bin, 'npx'), 0o755);
+    git(a, 'init', '-q');
+    git(a, 'commit', '-q', '--allow-empty', '-m', 'first');
+    git(a, 'worktree', 'add', '-q', b);
+  });
+
+  // Whatever the restarts left running, by their pid files.
+  const started = () =>
+    [a, b].flatMap((root) =>
+      ['api', 'worker', 'web']
+        .filter((app) => existsSync(cache(root, `${app}.pid`)))
+        .map((app) => pid(root, app)),
+    );
+
+  afterAll(() => {
+    for (const n of started().filter(alive)) process.kill(n, 'SIGKILL');
+    for (const child of others) child.kill('SIGKILL');
+    for (const server of held) server.close();
+    rmSync(dir, { force: true, recursive: true });
+  });
+
+  it('ports prints the exports of three free ports and keeps them for the worktree', () => {
+    const first = cli(a, 'ports');
+    expect(first.status).toBe(0);
+    for (const name of vars)
+      expect(first.stdout).toMatch(new RegExp(`^export ${name}='`, 'm'));
+    const ports = set(a);
+    expect(new Set([ports.api, ports.worker, ports.web]).size).toBe(3);
+    expect(first.stdout).toContain(`export API_PORT='${ports.api}'`);
+    expect(first.stdout).toContain(
+      `export API_INTERNAL_URL='http://localhost:${ports.api}'`,
+    );
+    expect(readFileSync(cache(a, 'ports.env'), 'utf8').trim()).toBe(
+      first.stdout.trim(),
+    );
+    expect(cli(a, 'ports').stdout).toBe(first.stdout);
+    expect(set(a)).toEqual(ports);
+  });
+
+  it('gives a second worktree a set disjoint from the first', () => {
+    expect(cli(b, 'ports').status).toBe(0);
+    const one = Object.values(set(a));
+    const two = Object.values(set(b));
+    expect(two.filter((port) => one.includes(port))).toEqual([]);
+    for (const port of [3000, 3001, 4200]) expect(two).not.toContain(port);
+  });
+
+  it('restart stops only the process this worktree started, never one by its name', async () => {
+    // Another program whose command line reads like the api dev server.
+    const decoy = spawn('sh', ['-c', 'sleep 300; true', 'nx serve api'], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    others.push(decoy);
+    expect(cli(a, 'restart', 'api').status).toBe(0);
+    expect(cli(b, 'restart', 'api').status).toBe(0);
+    const oldA = pid(a, 'api');
+    const oldB = pid(b, 'api');
+    expect(await until(() => existsSync(cache(a, 'api.started')))).toBe(true);
+    const ports = set(a);
+    expect(readFileSync(cache(a, 'api.started'), 'utf8').trim()).toBe(
+      `${ports.api} ${ports.api} ${ports.worker} ${ports.web} http://localhost:${ports.api} http://localhost:${ports.web} nx serve api`,
+    );
+
+    const again = cli(a, 'restart', 'api');
+    expect(again.status).toBe(0);
+    expect(pid(a, 'api')).not.toBe(oldA);
+    expect(await until(() => !alive(oldA))).toBe(true);
+    expect(alive(pid(a, 'api'))).toBe(true);
+    expect(alive(oldB)).toBe(true);
+    expect(alive(decoy.pid as number)).toBe(true);
+    expect(readFileSync(script, 'utf8')).not.toMatch(/pkill|killall/);
+  }, 30000);
+
+  it('restart starts the worker and the web on their own ports', async () => {
+    expect(cli(b, 'restart', 'worker').status).toBe(0);
+    expect(cli(b, 'restart', 'web').status).toBe(0);
+    const ports = set(b);
+    expect(await until(() => existsSync(cache(b, 'web.started')))).toBe(true);
+    expect(await until(() => existsSync(cache(b, 'worker.started')))).toBe(
+      true,
+    );
+    expect(readFileSync(cache(b, 'worker.started'), 'utf8')).toMatch(
+      new RegExp(`^${ports.worker} .* nx serve worker$`, 'm'),
+    );
+    expect(readFileSync(cache(b, 'web.started'), 'utf8')).toMatch(
+      new RegExp(`^${ports.web} .* nx serve web$`, 'm'),
+    );
+  }, 30000);
+
+  it('restart stops with one line and starts nothing when its port is taken', async () => {
+    const server = createServer();
+    held.push(server);
+    await new Promise<void>((resolve) =>
+      server.listen(set(a).web, () => resolve()),
+    );
+    const result = cli(a, 'restart', 'web');
+    expect(result.status).toBe(1);
+    expect(result.stderr.trim().split('\n')).toEqual([
+      `test-services: port ${set(a).web} for web is held by another process; web not started`,
+    ]);
+    expect(existsSync(cache(a, 'web.pid'))).toBe(false);
+    expect(existsSync(cache(a, 'web.started'))).toBe(false);
+  });
+
+  it('refuses restart without an app it knows, with the usage', () => {
+    for (const args of [['restart'], ['restart', 'mcp'], ['ports', 'x']]) {
+      const result = cli(a, ...args);
+      expect(result.status).toBe(2);
+      expect(result.stderr).toMatch(/restart <api\|worker\|web>/);
+    }
+  });
+});
+
+// @traces 1363-FR-005
+describe('the end-to-end config and the port set', () => {
+  const load = (extra: Record<string, string>) => {
+    const loader = `import('./apps/web-e2e/playwright.config.mts').then(({ default: c }) =>
+      console.log(JSON.stringify({ baseURL: c.use.baseURL, urls: c.webServer.map((s) => s.url) })))`;
+    const { API_PORT, BASE_URL, WEB_PORT, WORKER_PORT, ...rest } = process.env;
+    const out = execFileSync(process.execPath, ['-e', loader], {
+      cwd: join(__dirname, '..'),
+      encoding: 'utf8',
+      env: { ...rest, ...extra },
+    });
+    return JSON.parse(out.trim().split('\n').at(-1) ?? '{}');
+  };
+
+  it('waits for the servers on the worktree ports', () => {
+    const { baseURL, urls } = load({
+      API_PORT: '50002',
+      WEB_PORT: '50004',
+      WORKER_PORT: '50003',
+    });
+    expect(baseURL).toBe('http://localhost:50004');
+    expect(urls).toEqual(
+      expect.arrayContaining([
+        'http://localhost:50002/health/live',
+        'http://localhost:50003/health/live',
+        'http://localhost:50004',
+      ]),
+    );
+  });
+
+  it('keeps 3000, 3001 and 4200 without a set', () => {
+    const { baseURL, urls } = load({});
+    expect(baseURL).toBe('http://localhost:4200');
+    expect(urls).toEqual(
+      expect.arrayContaining([
+        'http://localhost:3000/health/live',
+        'http://localhost:3001/health/live',
+        'http://localhost:4200',
+      ]),
+    );
   });
 });

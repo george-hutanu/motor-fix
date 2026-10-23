@@ -1,4 +1,4 @@
-// @traces 1230-FR-002 1230-FR-003 1230-FR-005
+// @traces 1230-FR-002 1230-FR-003 1230-FR-005 1363-FR-008
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -69,13 +69,13 @@ describe('dispatch refuses before it asks GitHub anything', () => {
     });
 
   it('names every refused route on a line of its own and no accepted one', () => {
-    const r = dispatch('--routes', '/app/a,/ok?x=1,/app/b,/bad route');
+    const r = dispatch('--routes', '/app/a,/cockpit?x=1,/app/b,/bad route');
     assert.equal(r.code, 64);
     const lines = r.stderr.trim().split('\n');
     assert.ok(lines.some((l) => l.includes('/app/a')));
     assert.ok(lines.some((l) => l.includes('/app/b')));
     assert.ok(lines.some((l) => l.includes('/bad route')));
-    assert.ok(!lines.some((l) => l.includes('/ok?x=1')), r.stderr);
+    assert.ok(!lines.some((l) => l.includes('/cockpit?x=1')), r.stderr);
   });
 
   it('refuses an empty route between commas', () => {
@@ -99,14 +99,14 @@ describe('dispatch refuses before it asks GitHub anything', () => {
 
 describe('dispatch sends accepted routes exactly as written', () => {
   for (const routes of [
-    '/results?brand=dacia&sort=near',
+    '/:lang/garages?brand=dacia&sort=near',
     '/:lang',
     '/:lang/',
     '/:lang/x:404',
-    '/app',
-    '/apple-pay',
+    '/admin',
+    '/cockpit',
     '/app/driver@driver:401',
-    '/results?q=100%25,/:lang/list-your-garage,/app/driver@driver',
+    '/:lang/garages?q=100%25,/:lang/list-your-garage,/app/driver@driver',
   ])
     it(`sends ${routes}`, () => {
       const r = dispatch('--routes', routes);

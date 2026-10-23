@@ -330,7 +330,7 @@ describe('NotificationSettings', () => {
     await settle();
     save.mockRejectedValueOnce(
       new HttpErrorResponse({
-        error: { code: 'last_channel' },
+        error: { code: 'channel_locked' },
         status: 422,
       }),
     );

@@ -1,7 +1,7 @@
 import { TEMPLATES } from './registry';
 import { NOTIFICATION_TYPES } from '../catalogue';
 import { checkTemplates } from '../template-check';
-import { render } from '../templates';
+import { render, templateName } from '../templates';
 
 const KIND = 'ADMIN_VERIFICATION_QUEUED';
 const dashboard = 'https://motorfix.test/app/admin';
@@ -38,4 +38,35 @@ describe('the alert for a file waiting for verification', () => {
     expect(push.title).toBe(line);
     expect(push.link).toBe(dashboard);
   });
+});
+
+// @traces 068-FR-011
+describe('the alert for yearly documents waiting for an admin', () => {
+  const yearly = { ...params, item: 'documents' };
+  const name = templateName(KIND, yearly);
+
+  it('is a text of its own of the same type, passing the template check', () => {
+    expect(name).toBe(`${KIND}.documents`);
+    expect(templateName(KIND, params)).toBe(KIND);
+    expect(checkTemplates({ [name]: TEMPLATES[name] })).toEqual([]);
+  });
+
+  it.each([
+    [
+      'ro',
+      'Documente anuale de verificat: Auto Vest Motors',
+      'Deschide panoul',
+    ],
+    ['en', 'Yearly documents to check: Auto Vest Motors', 'Open the dashboard'],
+  ])(
+    'names the garage and the yearly documents in %s',
+    (language, line, button) => {
+      expect(render(name, 'bell', language, yearly)).toBe(line);
+      const mail = render(name, 'email', language, yearly);
+      expect(mail.subject).toBe(line);
+      expect(mail.text).toContain(button);
+      expect(mail.text).toContain(dashboard);
+      expect(render(name, 'push', language, yearly).link).toBe(dashboard);
+    },
+  );
 });

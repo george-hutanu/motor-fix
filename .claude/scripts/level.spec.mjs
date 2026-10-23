@@ -701,7 +701,7 @@ describe('classifyLevel', () => {
 
 // A git repository with an origin/main to diff against: `base` is committed and
 // becomes origin/main, `branch` is committed on top of it.
-function gitFixture({ level = 1, spec = '# Spec\n\n- **FR-001**: one\n', base = {}, branch = {}, feature = true } = {}) {
+function gitFixture({ level = 1, spec = '# Spec\n\n- **FR-001**: one\n', base = {}, branch = {}, feature = true, type } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'taskr-wire-'));
   const write = (files) => {
     for (const [rel, body] of Object.entries(files)) {
@@ -731,12 +731,13 @@ function gitFixture({ level = 1, spec = '# Spec\n\n- **FR-001**: one\n', base = 
   mkdirSync(join(dir, '.specify'), { recursive: true });
   writeFileSync(
     join(dir, '.specify/feature.json'),
-    JSON.stringify(feature ? { feature_directory: 'specs/042-small', level, level_for: 'specs/042-small' } : { level, level_for: 'next', level_at: new Date().toISOString() }),
+    JSON.stringify({ ...(feature ? { feature_directory: 'specs/042-small', level, level_for: 'specs/042-small' } : { level, level_for: 'next', level_at: new Date().toISOString() }), ...(type ? { type } : {}) }),
   );
   return dir;
 }
 
-const manyFrs = `# Spec\n\n${Array.from({ length: 6 }, (_, i) => `- **FR-00${i + 1}**: r${i}\n`).join('')}`;
+const frs = (n) => `# Spec\n\n${Array.from({ length: n }, (_, i) => `- **FR-${String(i + 1).padStart(3, '0')}**: r${i}\n`).join('')}`;
+const manyFrs = frs(11);
 const WIRES = {
   'fr-count': { trip: { spec: manyFrs }, clear: {} },
   clarification: { trip: { spec: '# Spec\n\n- **FR-001**: [NEEDS CLARIFICATION: which cap?]\n' }, clear: { spec: '# Spec\n\nthe `[NEEDS CLARIFICATION]` marker is named, not used\n' } },
@@ -980,5 +981,99 @@ describe('level.mjs public surface', () => {
   it('exports only what another module or spec imports', async () => {
     const exported = Object.keys(await import('./level.mjs')).sort();
     assert.deepEqual(exported, ['checkLevel', 'classifyLevel', 'levelTarget', 'main', 'pointFeature', 'resolveLevel', 'setLevel', 'suggestCommand', 'suggestLevel', 'suggestText']);
+  });
+});
+
+// @traces 1363-FR-004
+describe('the FR wire counts past ten, and a bug is not sized by its projects', () => {
+  const check = (opts) => {
+    const dir = gitFixture(opts);
+    try {
+      return withLevelEnv(() => ({ result: checkLevel(dir), level: featureLevel(dir, 'specs/042-small') }));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const wireOf = (result, name) => result.wires.find((w) => w.name === name);
+
+  it('nine or ten FRs stay clear, eleven trip the FR wire', () => {
+    for (const n of [9, 10]) assert.equal(wireOf(check({ spec: frs(n) }).result, 'fr-count').state, 'clear', `${n} FRs`);
+    assert.equal(wireOf(check({ spec: frs(11) }).result, 'fr-count').state, 'tripped');
+  });
+
+  it('a level 1 bug touching the api and the web stays at 1, its projects wire skipped', () => {
+    const { result, level } = check({ type: 'bug', spec: frs(7), branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } });
+    assert.equal(wireOf(result, 'projects').state, 'skipped');
+    assert.equal(result.promoted, null);
+    assert.equal(level, 1);
+  });
+
+  it('a contract file still promotes a bug to 2', () => {
+    const { result, level } = check({ type: 'bug', branch: { 'libs/contracts/src/dto.ts': 'x\n' } });
+    assert.deepEqual(result.promoted, { from: 1, to: 2 });
+    assert.equal(level, 2);
+  });
+
+  it('set --type writes the type beside the level, and refuses one it does not know', () => {
+    const dir = gitFixture();
+    try {
+      withLevelEnv(() => {
+        assert.equal(capture(() => main(['set', '1', '--type', 'bug'], dir)).status, 0);
+        const state = JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8'));
+        assert.equal(state.type, 'bug');
+        assert.equal(state.level, 1);
+        assert.equal(capture(() => main(['set', '1', '--type', 'story'], dir)).status, 0);
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).type, 'story');
+        assert.equal(capture(() => main(['set', '--type', 'bug', '1'], dir)).status, 0, 'the type may come first');
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 1);
+        const bad = capture(() => main(['set', '1', '--type', 'chore'], dir));
+        assert.equal(bad.status, 1);
+        assert.match(bad.err, /--type must be bug or story/);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+it('pointing at another feature drops the type with the level it was sized with', () => {
+  assert.equal(pointTo({ feature_directory: 'specs/1-a', level: 1, level_for: 'specs/1-a', type: 'bug' }, 'specs/2-b').type, undefined);
+});
+
+// @traces 1363-FR-012
+describe('level.mjs check names a split when a story spans too much', () => {
+  const PROJECTS = { 'apps/worker/project.json': '{"name":"worker"}', 'libs/domain/project.json': '{"name":"domain"}', 'apps/web-e2e/project.json': '{"name":"web-e2e"}' };
+  const run = (opts) => {
+    const dir = gitFixture({ level: 2, ...opts, base: { ...PROJECTS, ...(opts.base ?? {}) } });
+    try {
+      return withLevelEnv(() => ({ result: checkLevel(dir), printed: capture(() => main(['check'], dir)).out }));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('more than one of worker, api and web is a split', () => {
+    const { result, printed } = run({ branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } });
+    assert.deepEqual(result.split, ['api', 'web']);
+    assert.match(printed, /^ {2}split: api, web /m);
+  });
+
+  it('more than two projects is a split, web-e2e not counted', () => {
+    assert.deepEqual(run({ branch: { 'apps/api/src/a.ts': 'x\n', 'libs/contracts/src/c.ts': 'x\n', 'libs/domain/src/d.ts': 'x\n' } }).result.split, ['api', 'contracts', 'domain']);
+    const two = run({ branch: { 'apps/api/src/a.ts': 'x\n', 'libs/domain/src/d.ts': 'x\n', 'apps/web-e2e/src/e.ts': 'x\n' } });
+    assert.equal(two.result.split, null);
+    assert.doesNotMatch(two.printed, /split:/);
+  });
+
+  it('reads the task file paths before the diff has them, so /speckit-tasks sees the split', () => {
+    const tasks = '# Tasks\n\n- [ ] T001 Add `apps/api/src/a.ts`\n- [ ] T002 Show it in `apps/web/src/b.ts`\n';
+    assert.deepEqual(run({ branch: { 'specs/042-small/tasks.md': tasks } }).result.split, ['api', 'web']);
+  });
+
+  it('a one-project story, or one whose spec already carries its Split, has no split line', () => {
+    assert.equal(run({ branch: { 'apps/api/src/a.ts': 'x\n' } }).result.split, null);
+    const split = run({ spec: '# Spec\n\n- **FR-001**: one\n\n## Split\n\n1. ST-1 api\n2. ST-2 web\n', branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } });
+    assert.equal(split.result.split, null);
+    assert.doesNotMatch(split.printed, /split:/);
   });
 });

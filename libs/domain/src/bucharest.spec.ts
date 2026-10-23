@@ -1,5 +1,6 @@
 import {
   addLocalDays,
+  addMonths,
   atLocal,
   isoWeek,
   localDay,
@@ -101,5 +102,19 @@ describe('isoWeek', () => {
     ['2020-12-31', '2020-W53'],
   ])('labels %s as %s', (day, week) => {
     expect(isoWeek(day)).toBe(week);
+  });
+});
+
+// @traces 068-FR-001
+describe('addMonths', () => {
+  it.each([
+    ['2026-10-23', 12, '2027-10-23'],
+    ['2026-01-31', 1, '2026-02-28'],
+    ['2028-01-31', 1, '2028-02-29'],
+    ['2028-02-29', 12, '2029-02-28'],
+    ['2026-12-15', 1, '2027-01-15'],
+    ['2026-03-31', -1, '2026-02-28'],
+  ])('moves %s by %i months to %s, clamped to the month', (day, n, moved) => {
+    expect(addMonths(day, n)).toBe(moved);
   });
 });

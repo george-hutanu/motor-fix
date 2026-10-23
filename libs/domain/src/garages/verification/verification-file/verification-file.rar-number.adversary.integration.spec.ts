@@ -15,6 +15,7 @@ import {
   fixtures,
 } from '../../../notifications/notifications.testing';
 import type { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { VerificationService } from '../verification.service';
 
@@ -76,6 +77,7 @@ const controller = () =>
         {} as CacheService,
         storage as unknown as StorageService,
       ),
+      new DocumentCycleService(prisma),
     ),
     verification(),
   );

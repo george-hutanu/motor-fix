@@ -4325,7 +4325,7 @@
     {
       "id": 149,
       "type": "row",
-      "title": "Account deletions",
+      "title": "Yearly document steps",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -4338,7 +4338,7 @@
     {
       "id": 150,
       "type": "stat",
-      "title": "Account deletions, last hour",
+      "title": "Yearly document steps, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -4348,6 +4348,113 @@
         "w": 6,
         "x": 0,
         "y": 197
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step) (increase(motorfix_document_cycle_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{step}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 151,
+      "type": "stat",
+      "title": "Yearly document steps, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 197
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step) (increase(motorfix_document_cycle_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{step}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 152,
+      "type": "timeseries",
+      "title": "Yearly document steps per hour, by step",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 197
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step) (increase(motorfix_document_cycle_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{step}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 153,
+      "type": "row",
+      "title": "Account deletions",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 201
+      },
+      "panels": []
+    },
+    {
+      "id": 154,
+      "type": "stat",
+      "title": "Account deletions, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 202
       },
       "targets": [
         {
@@ -4368,7 +4475,7 @@
       }
     },
     {
-      "id": 151,
+      "id": 155,
       "type": "stat",
       "title": "Account deletions, last 24 hours",
       "datasource": {
@@ -4379,7 +4486,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 197
+        "y": 202
       },
       "targets": [
         {
@@ -4400,7 +4507,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 156,
       "type": "timeseries",
       "title": "Account deletions per hour, by outcome",
       "datasource": {
@@ -4411,7 +4518,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 197
+        "y": 202
       },
       "targets": [
         {

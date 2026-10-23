@@ -75,21 +75,27 @@ function fileOf(
     checks: KINDS.map((kind) => check(kind)),
     documents: [
       {
+        decidedAt: null,
+        decidedBy: null,
         id: 'doc-onrc',
         issuedOn: daysAgo(6),
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
         replaced: [],
+        review: null,
         stale: false,
       },
       {
+        decidedAt: null,
+        decidedBy: null,
         id: 'doc-rar',
         issuedOn: null,
         kind: 'rar_authorisation',
         pages: 1,
         present: true,
         replaced: [],
+        review: null,
         stale: null,
       },
     ],
@@ -389,12 +395,15 @@ describe('the sections with missing parts', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: 'doc-onrc',
             issuedOn: daysAgo(3),
             kind: 'onrc_certificate',
             pages: 60,
             present: true,
             replaced: [],
+            review: null,
             stale: false,
           },
         ],
@@ -411,12 +420,15 @@ describe('the sections with missing parts', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: null,
             issuedOn: null,
             kind: 'rar_authorisation',
             pages: 0,
             present: false,
             replaced: [],
+            review: null,
             stale: null,
           },
         ],
@@ -436,12 +448,15 @@ describe('the issue date', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: 'doc-onrc',
             issuedOn: daysAgo(-1),
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
             replaced: [],
+            review: null,
             stale: false,
           },
         ],
@@ -458,12 +473,15 @@ describe('the issue date', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: 'doc-onrc',
             issuedOn: daysAgo(2),
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
             replaced: [],
+            review: null,
             stale: false,
           },
         ],
@@ -481,12 +499,15 @@ describe('the issue date', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: 'doc-onrc',
             issuedOn: null,
             kind: 'onrc_certificate',
             pages: 1,
             present: true,
             replaced: [],
+            review: null,
             stale: false,
           },
         ],
@@ -679,12 +700,15 @@ describe('ticking', () => {
       fileOf({
         documents: [
           {
+            decidedAt: null,
+            decidedBy: null,
             id: null,
             issuedOn: null,
             kind: 'rar_authorisation',
             pages: 0,
             present: false,
             replaced: [],
+            review: null,
             stale: null,
           },
         ],

@@ -43,6 +43,14 @@ export function localDay(at: Date): string {
 export const addDays = (day: string, n: number) =>
   iso(Date.parse(day) + n * DAY);
 
+// `n` calendar months on, kept within the month: 31 January plus one month
+// is the last day of February.
+export function addMonths(day: string, n: number): string {
+  const [year, month, date] = day.split('-').map(Number);
+  const last = new Date(Date.UTC(year, month - 1 + n + 1, 0)).getUTCDate();
+  return iso(Date.UTC(year, month - 1 + n, Math.min(date, last)));
+}
+
 export const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / DAY);
 

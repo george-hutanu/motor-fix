@@ -25,17 +25,24 @@ and QA lap is where most of a story's cost went.
    names a module that does not load, a `networkidle` wait and every
    acceptance scenario no flow names (`US<k> scenario <m>`, or a
    `// not a flow: US<k> scenario <m> — <reason>` line); fix each until it
-   exits 0. These were most of the failed first laps measured. Then prove
-   them live, the proof `dispatch.mjs --flows` requires: boot the stack with
-   `eval "$(node scripts/test-services.ts origin/main)"`, start the API and
-   web dev servers on it, and run
+   exits 0. These were most of the failed first laps measured. The live
+   proof is optional: pass `--proof` only when the story changed flows and
+   a proof exists. To take one, boot the stack with
+   `eval "$(node scripts/test-services.ts origin/main)"` and this worktree's
+   own port set, `eval "$(node scripts/test-services.ts ports)"`, start each
+   server the flows need with
+   `node scripts/test-services.ts restart <api|worker|web>` (it stops only
+   this worktree's pid), and run
    `node .claude/scripts/pr-test/precheck.mjs --flows .specify/.cache/qa-flows-<n>.mjs --spec specs/<feature>/spec.md --check`
-   until it exits 0; a clean run leaves the proof for the head. A dispatch
-   exit 64 naming no live proof for this head means the check was not run on
-   it, or the head moved since: run it again on this head. There is no flag
-   that dispatches without the proof. A machine without Docker cannot boot
-   the stack: that is a needs-confirmation question on the task
-   (`speckit-tracker-sync blocked <question>`), never a dispatch without it.
+   (on `WEB_PORT` and `API_PORT`) until it exits 0; a clean run leaves the
+   proof for the head.
+
+   Then bring main in only if it is needed:
+   `node .claude/scripts/merge-main.mjs --needed`. Exit 1 merges nothing.
+   On exit 0 or 2, merge `origin/main` in with
+   `node .claude/scripts/merge-main.mjs` (never a rebase), run
+   `node .claude/scripts/lifecycle.mjs check`, push, and reach green CI
+   (`ci-wait.mjs <n>` in the background) before step 2.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    runs `lifecycle.mjs check`'s CI-only checks, lint and the affected
    typecheck and unit tests, commits and pushes the feature records (phase
@@ -51,13 +58,13 @@ and QA lap is where most of a story's cost went.
    missing an owed artifact stops with the phases that write it. Run them,
    commit, and run `ready` again.
 3. Start the QA run, beside CI, and do not wait for it. The flows are step
-   1's: `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`:
+   1's: `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs [--proof]`:
    it dispatches the PR QA workflow for the head, prints one line,
    `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
    run appeared) the note records no run and the tail dispatches one; on
-   exit 64 the flows failed the pre-check or have no live proof for the
-   head, and nothing was dispatched: fix what it named (step 1's `--check`
-   for a missing proof) and run it again.
+   exit 64 the flows failed the pre-check, name a route the router does not
+   serve, or (with `--proof`) have no live proof for the head, and nothing was dispatched: fix what it named (step 1's `--check`
+   for a missing proof asked with `--proof`) and run it again.
 4. Add that line, as printed, to `specs/<feature>/handoff.md` (step 2 wrote
    the rest; git ignores it; the tail deletes it), then post the note again
    with `node .claude/scripts/lifecycle.mjs handoff --pr <n>` (a cloud
@@ -77,10 +84,11 @@ and QA lap is where most of a story's cost went.
    (`NEXT: tail #<n>` when no run was recorded). That reply is this agent's
    last action: it starts no CI wait and waits on no run, since a context
    that sleeps past the 5-minute prompt cache is written again in full when
-   it wakes. Run by the owner in their own session rather than dispatched,
-   nobody reads that NEXT: hold the wait (`tail.md`) in that session and, when
-   it reports, claim the worktree and dispatch the tail yourself, so the
-   merge never waits on the owner.
+   it wakes. The session dispatches the tail at once, which holds both
+   waits itself (`tail.md`); the session waits for nothing and relays
+   nothing. Run by the owner in their own session rather than dispatched,
+   nobody reads that NEXT: claim the worktree and dispatch the tail yourself
+   at once, so the merge never waits on the owner.
 
 A run that ends on a Hard Stop before the hand-off does none of this but the
 Blocked write: the PR stays a draft.

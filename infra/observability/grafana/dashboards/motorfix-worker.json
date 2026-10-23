@@ -923,6 +923,47 @@
       }
     },
     {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Documente anuale",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step) (increase(motorfix_document_cycle_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{step}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(motorfix_documents_overdue{deployment_environment=\"$env\"})",
+          "legendFormat": "overdue"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
       "id": 26,
       "type": "row",
       "title": "Logs and traces",
@@ -931,7 +972,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 65
       },
       "panels": []
     },
@@ -947,7 +988,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 66
       },
       "targets": [
         {
@@ -989,7 +1030,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 66
       },
       "targets": [
         {

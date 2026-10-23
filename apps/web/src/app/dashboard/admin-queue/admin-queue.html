@@ -25,13 +25,16 @@
                 @if (row.updated) {
                   <span class="tag">{{ 'admin.queue.updated' | t }}</span>
                 }
+                @if (row.kind) {
+                  <span class="tag">{{ row.kind }}</span>
+                }
                 <span class="area">{{ row.area }}</span>
               </span>
               <span class="state">
                 @if (row.decided; as decided) {
                   <span class="outcome" [class]="decided.status">{{ decided.line }}</span>
                 } @else {
-                  <mf-lamp [state]="row.lamp" [label]="row.summary" />
+                  <mf-lamp [state]="row.lamp" [label]="row.documents ?? row.summary" />
                   @if (row.waiting) {
                     <span class="waiting">{{ row.waiting }}</span>
                   }
@@ -43,7 +46,7 @@
               @if (!row.decided) {
                 <span class="applied">{{ row.applied }}</span>
               }
-              <a class="open" [routerLink]="row.link" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>
+              <a class="open" [routerLink]="row.link" [fragment]="row.fragment" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>
             </li>
           }
         </ul>

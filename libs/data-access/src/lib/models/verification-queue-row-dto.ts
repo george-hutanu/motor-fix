@@ -21,6 +21,11 @@ export interface VerificationQueueRowDto {
   cuiWarning?: string;
 
   /**
+   * The yearly document uploaded first among those in review; null for a verification row
+   */
+  documentId: string | null;
+
+  /**
    * Waited more than the 2 working days
    */
   flagged: boolean;
@@ -33,7 +38,12 @@ export interface VerificationQueueRowDto {
   id: string;
 
   /**
-   * Red on a failed check, amber when flagged or on a warning
+   * A file sent for verification, or an approved garage's yearly documents waiting for an admin
+   */
+  item: 'verification' | 'documents';
+
+  /**
+   * Red on a failed check, amber when flagged or on a warning; a documents row is amber, red once its grace has ended or the garage is suspended
    */
   lamp: 'green' | 'amber' | 'red' | 'grey';
 
@@ -54,7 +64,7 @@ export interface VerificationQueueRowDto {
   status: 'submitted' | 'in_review';
 
   /**
-   * The latest sending
+   * The latest sending; for a documents row, its oldest upload
    */
   submittedAt: string;
   summary: CheckSummaryDto;

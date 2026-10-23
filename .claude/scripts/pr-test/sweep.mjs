@@ -12,9 +12,13 @@
 // leading `/:lang` segment, and only there, becomes `/ro` or `/en` per
 // language (the public frame mounts under `:lang`). routeProblem refuses, before
 // any run, what the PR QA workflow's own check refuses, any other `:`, and a
-// route under /app/ with no role (it would sweep the sign-in screen).
+// route under /app/ with no role (it would sweep the sign-in screen). Given the
+// checkout's router (routerTable: the `path:` literals of app.routes.ts and
+// dashboard/views.ts), it also refuses a route the router does not serve, and a
+// public page written without its `/:lang` prefix; a route that expects an
+// error status (`:404`) is meant to miss and is not looked up.
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,15 +88,85 @@ export function parseRoute(spec) {
   return { path: (lang ? "/:lang" : "") + path || "/", role: role ?? null, expect: status ? Number(status) : null, lang };
 }
 
-/** Why the run cannot sweep a route, in one line naming it, or null when it can. */
-export function routeProblem(route) {
+/**
+ * The routes the web app serves, read from the checkout's source without
+ * booting Angular: each a list of segments, `:x` matching any one segment
+ * (`:lang` only the literal `/:lang` the sweep fills in), a trailing `**` any
+ * rest. app.routes.ts gives the top level and the language node's children
+ * (keys are sorted, so a parent's `children` come before its `path`);
+ * dashboard/views.ts gives `/app/<area>/<view>` for every released view, which
+ * owns its sub-paths. Null when the checkout has no app.routes.ts.
+ */
+export function routerTable(root) {
+  const app = join(root, "apps", "web", "src", "app");
+  if (!existsSync(join(app, "app.routes.ts"))) return null;
+  const text = readFileSync(join(app, "app.routes.ts"), "utf8").replace(/^\s*\/\/.*$/gm, "");
+  const lists = {};
+  const token = /\(\[([^\]]*)\] as const\)\.map\(\((\w+)\)|path:\s*(?:'([^']*)'|`([^`]*)`|(\w+))|placeholder\('([^']*)'|matcher:|\[|\]/g;
+  const patterns = [];
+  const children = [];
+  let depth = 0;
+  for (const m of text.matchAll(token)) {
+    if (m[2]) lists[m[2]] = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]);
+    else if (m[0] === "[") depth++;
+    else if (m[0] === "]") depth--;
+    else {
+      const raw = m[3] ?? m[6] ?? (m[0] === "matcher:" ? "" : null);
+      const paths = raw !== null ? [raw] : m[4] !== undefined ? expand(m[4], lists) : lists[m[5]] ?? [];
+      if (depth === 2) children.push(...paths);
+      else if (depth === 1)
+        for (const top of paths) {
+          if (top === "**") continue;
+          const kids = children.splice(0);
+          for (const kid of kids.length ? kids : [""]) patterns.push(segments(`${top}/${kid}`));
+        }
+    }
+  }
+  const views = join(app, "dashboard", "views.ts");
+  if (existsSync(views)) {
+    const dashboards = readFileSync(views, "utf8").split(/^export const DASHBOARDS\b/m)[1]?.split(/^};/m)[0] ?? "";
+    for (const [, area, body] of dashboards.matchAll(/^ {2}(\w+): \{([\s\S]*?)(?=^ {2}\w+: \{|$(?![\s\S]))/gm)) {
+      const released = [];
+      for (const v of (body.split(/\bviews: \[/)[1] ?? "").matchAll(/path: '([^']*)'|garageView\('([^']*)'|unreleased: true/g)) {
+        if (v[0] === "unreleased: true") released.pop();
+        else released.push(v[1] ?? v[2]);
+      }
+      for (const view of released) if (view) patterns.push(["app", area, view, "**"]);
+    }
+  }
+  return patterns;
+}
+
+const segments = (path) => path.split("/").filter(Boolean);
+const expand = (template, lists) => {
+  const name = template.match(/\$\{(\w+)\}/)?.[1];
+  return name ? (lists[name] ?? []).map((value) => template.replace(`\${${name}}`, value)) : [template];
+};
+const matches = (pattern, route) => {
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] === "**") return true;
+    if (i >= route.length) return false;
+    if (pattern[i] === ":lang" ? route[i] !== ":lang" : !pattern[i].startsWith(":") && pattern[i] !== route[i]) return false;
+  }
+  return pattern.length === route.length;
+};
+const served = (table, path) => table.some((pattern) => matches(pattern, segments(path.split("?")[0])));
+
+/**
+ * Why the run cannot sweep a route, in one line naming it, or null when it can.
+ * With the checkout's routerTable, a route the router does not serve is refused too.
+ */
+export function routeProblem(route, table = null) {
   if (!ROUTE_PATTERN.test(route) || route.includes(",")) return `${route}: not a route the PR QA workflow accepts (path[?query][@role][:status], letters, digits and /_.@:?=&%- only)`;
   const rest = route.replace(LANG, "");
   if (!SHAPE.test(rest)) return `${route}: a ':' belongs only in a leading /:lang segment or a trailing :<status>`;
-  const { path, role } = parseRoute(route);
+  const { path, role, expect } = parseRoute(route);
   if (role && !Object.hasOwn(SEEDED, role)) return `${route}: no seeded account has the role ${role} (${Object.keys(SEEDED).join(", ")})`;
   if (path.startsWith("/app/") && !role) return `${route}: a route under /app/ needs @role, or the sweep opens the sign-in screen`;
-  return null;
+  if (!table || expect >= 400 || served(table, path)) return null;
+  const local = `/:lang${path === "/" ? "" : path}`;
+  if (served(table, local)) return `${route}: a public page is served under the language node; write ${local}${route.slice(path.length)}`;
+  return `${route}: not a route of app.routes.ts or dashboard/views.ts`;
 }
 
 export function matrix({ routes, schemes = ["light", "dark"], langs = ["ro", "en"] }) {

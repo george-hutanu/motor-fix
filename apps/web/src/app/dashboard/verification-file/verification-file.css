@@ -108,6 +108,32 @@ h4 {
 .replaced .line {
   color: var(--mf-text-secondary);
 }
+/* A yearly upload under its kind's current document: amber while it waits,
+   red once refused; the status line says which in words. */
+.review {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  padding-left: var(--mf-space-3);
+  border-left: 2px solid var(--mf-amber);
+}
+.review[data-status="refused"] {
+  border-left-color: var(--mf-red-ink);
+}
+.review .status,
+.decided {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.refusal,
+.suspended {
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
+}
+.suspended {
+  margin: var(--mf-space-2) 0 0;
+  font-weight: 600;
+}
 .document[data-missing] .line {
   color: var(--mf-red-ink);
 }
@@ -218,7 +244,8 @@ h4 {
   justify-content: space-between;
   gap: var(--mf-space-3);
 }
-h3:focus {
+h3:focus,
+h4:focus {
   outline: none;
 }
 .refused {

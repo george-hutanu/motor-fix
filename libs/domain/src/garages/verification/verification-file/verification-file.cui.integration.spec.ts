@@ -8,6 +8,7 @@ import {
   fixtures,
 } from '../../../notifications/notifications.testing';
 import type { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 
 // @traces 303-FR-007 303-FR-012
@@ -31,6 +32,7 @@ const service = () =>
       {} as CacheService,
       storage as unknown as StorageService,
     ),
+    new DocumentCycleService(prisma),
   );
 
 const garage = (
