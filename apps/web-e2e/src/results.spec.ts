@@ -18,7 +18,8 @@ test.describe('the Results page @seeded', () => {
   );
   test.describe.configure({ mode: 'serial' });
 
-  const stamp = Date.now().toString(36);
+  // Unique per worker: two workers can load this file in the same millisecond.
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const brand = { name: `Marca E2E ${stamp}`, slug: `marca-e2e-${stamp}` };
   const garages = [
     {
@@ -369,7 +370,8 @@ test.describe('the map beside the results @seeded', () => {
   // One worker seeds the brand once: parallel workers share the stamp.
   test.describe.configure({ mode: 'serial' });
 
-  const stamp = `${Date.now().toString(36)}m`;
+  // Unique per worker: two workers can load this file in the same millisecond.
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}m`;
   const brand = { name: `Marca Harta ${stamp}`, slug: `marca-harta-${stamp}` };
   // Far from the other describe's empty place, which runs beside it.
   const near = '45.350,22.850';
@@ -592,6 +594,22 @@ test.describe('the map beside the results @seeded', () => {
   const handleOf = (page: Page) => sheet(page).locator('button.handle');
   const rests = (page: Page, at: 'low' | 'half' | 'full') =>
     expect(sheet(page)).toHaveAttribute('data-position', at);
+  // Once the sheet has slid where it rests.
+  const slid = (page: Page) =>
+    sheet(page).evaluate(async (el) => {
+      // A slide ending can start the next (the rest's transform after the
+      // entry): a few rounds, never an endless wait.
+      for (let round = 0; round < 3 && el.getAnimations().length; round++)
+        await Promise.all(
+          el.getAnimations().map((a) => a.finished.catch(() => undefined)),
+        );
+    });
+  // Rested and still: a click or a drag on the handle while the sheet slides
+  // misses it, and Playwright then scrolls the page to find it.
+  async function still(page: Page, at: 'low' | 'half' | 'full') {
+    await rests(page, at);
+    await slid(page);
+  }
   async function dragTo(page: Page, y: number) {
     const box = await handleOf(page).boundingBox();
     if (!box) throw new Error('the sheet has no handle');
@@ -614,7 +632,7 @@ test.describe('the map beside the results @seeded', () => {
     const map = page.getByRole('region', { name: 'Harta service‑urilor' });
     const first = page.locator('mf-result-card').first();
 
-    await rests(page, 'half');
+    await still(page, 'half');
     await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
     await expect(map).toBeInViewport();
     await expect(first).toBeInViewport();
@@ -624,17 +642,17 @@ test.describe('the map beside the results @seeded', () => {
     expect(handle?.height ?? 0).toBeGreaterThanOrEqual(44);
 
     await dragTo(page, 780);
-    await rests(page, 'low');
+    await still(page, 'low');
     await expect(sheet(page).locator('mf-brand-chips')).toBeInViewport();
 
     await dragTo(page, 80);
-    await rests(page, 'full');
+    await still(page, 'full');
     await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
 
     await handleOf(page).click();
-    await rests(page, 'low');
+    await still(page, 'low');
     await handleOf(page).click();
-    await rests(page, 'half');
+    await still(page, 'half');
 
     await sheet(page)
       .locator(':scope > .body')
@@ -642,7 +660,7 @@ test.describe('the map beside the results @seeded', () => {
         body.scrollTop = 400;
       });
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
-    await rests(page, 'half');
+    await still(page, 'half');
   });
 
   // @traces 1351-FR-008
@@ -732,16 +750,6 @@ test.describe('the map beside the results @seeded', () => {
     [320, 800],
     [390, 844],
   ] as const;
-  // Once the sheet has slid where it rests.
-  const slid = (page: Page) =>
-    sheet(page).evaluate(async (el) => {
-      // A slide ending can start the next (the rest's transform after the
-      // entry): a few rounds, never an endless wait.
-      for (let round = 0; round < 3 && el.getAnimations().length; round++)
-        await Promise.all(
-          el.getAnimations().map((a) => a.finished.catch(() => undefined)),
-        );
-    });
   // Rests the sheet by its handle, which steps half, full, low and round.
   async function restAt(page: Page, at: 'half' | 'low' | 'full') {
     for (let press = 0; press < 3; press++) {
@@ -796,6 +804,11 @@ test.describe('the map beside the results @seeded', () => {
   }
 
   async function zoomAtRests(page: Page, where: string, height: number) {
+    // MapLibre adds its zoom buttons once its script has loaded, after the
+    // page hydrates: measure them only when they are there.
+    await expect(
+      page.locator('mf-results-map .maplibregl-ctrl-top-right button'),
+    ).toHaveCount(2);
     for (const at of ['half', 'low'] as const) {
       await restAt(page, at);
       await zoomWhole(page, `${where} ${at}`, height < 600);

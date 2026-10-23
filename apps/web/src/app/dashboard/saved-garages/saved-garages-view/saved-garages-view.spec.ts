@@ -4,15 +4,19 @@ import { provideRouter } from '@angular/router';
 import {
   type CarDto,
   CarsService,
+  GaragesService,
   type MeDto,
   PlacesService,
   type SavedGaragesPageDto,
   SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { SavedGaragesView } from './saved-garages-view';
+import { Consent } from '../../../consent/consent';
 import { SavedGarages } from '../../../public/saved-garages/saved-garages';
+import { Voice } from '../../../voice/voice';
 import {
   fakeLive,
   fakeObservers,
@@ -86,6 +90,13 @@ async function render({
         provide: PlacesService,
         useValue: { placesControllerSearch: async () => ({ items: [] }) },
       },
+      {
+        provide: GaragesService,
+        useValue: { publicGaragesControllerBySlug: jest.fn() },
+      },
+      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Voice, useValue: { voice: 1 } },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -218,6 +229,21 @@ describe('Service-uri salvate: the rows', () => {
     });
 
     expect(control(element, 'Vezi toate')).toBeUndefined();
+  });
+});
+
+// @traces 292-FR-001
+// @traces 292-FR-003
+describe('Service-uri salvate: Cere ofertă', () => {
+  it('offers Cere ofertă on each available row of the view', async () => {
+    const { element } = await render({
+      answers: [pageOf(savedItems(3), { total: 3 })],
+    });
+
+    const rowsWithQuote = [
+      ...element.querySelectorAll('mf-saved-garage-row'),
+    ].filter((row) => row.querySelector('button[data-quote]'));
+    expect(rowsWithQuote).toHaveLength(3);
   });
 });
 

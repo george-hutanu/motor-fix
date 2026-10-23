@@ -218,3 +218,13 @@ describe('the saved garages panel under attack: states', () => {
     ).toBe('/ro/garages?brand=brand-dacia');
   });
 });
+
+// @traces 292-FR-003
+describe('the saved garages panel on Panou: no Cere ofertă', () => {
+  it('keeps its limited rows without the quote button', async () => {
+    const { element } = await render({ answers: [pageOf(savedItems(3))] });
+
+    expect(names(element)).toHaveLength(3);
+    expect(element.querySelector('button[data-quote]')).toBeNull();
+  });
+});

@@ -580,6 +580,25 @@ describe('the garage picker', () => {
     });
   });
 
+  // @traces 292-FR-005
+  // @traces 292-FR-006
+  it('names the garage saved and the ticked ones search when it opened from the saved list', async () => {
+    await open({
+      candidates: [candidate('g-mobil', 'Mecanic Mobil', null)],
+      source: 'saved',
+    });
+
+    tick('Mecanic Mobil').click();
+    await settle();
+    type('Scârțâie la frânare');
+    await press();
+
+    expect(send.mock.calls[0][0].body).toMatchObject({
+      garageIds: [GARAGE.id, 'g-mobil'],
+      sources: ['saved', 'search'],
+    });
+  });
+
   it('refuses a sixth tick with the limit text', async () => {
     const five = ['A', 'B', 'C', 'D', 'E'].map((letter) =>
       candidate(`g-${letter}`, `Atelier ${letter}`),
