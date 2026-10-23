@@ -12,7 +12,10 @@ import {
 } from './admin-outage-alert';
 import { ADMIN_RECHECK_DUE } from './admin-recheck-due';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
-import { ADMIN_VERIFICATION_QUEUED } from './admin-verification-queued';
+import {
+  ADMIN_VERIFICATION_QUEUED,
+  ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
+} from './admin-verification-queued';
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
@@ -64,6 +67,7 @@ export const TEMPLATES: Registry = {
   ADMIN_RECHECK_DUE,
   ADMIN_RULE_APPROVAL_NEEDED,
   ADMIN_VERIFICATION_QUEUED,
+  'ADMIN_VERIFICATION_QUEUED.documents': ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
   BOOKING_CONFIRM_REMINDER,
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,

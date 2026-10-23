@@ -6735,6 +6735,132 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/legal-documents/upload-url": {
+      "post": {
+        "operationId": "OwnerDocumentsController_uploadUrl",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadAddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "not_owner"
+          },
+          "404": {
+            "description": "No such approved garage of yours"
+          },
+          "409": {
+            "description": "document_in_review"
+          },
+          "422": {
+            "description": "file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/legal-documents": {
+      "post": {
+        "operationId": "OwnerDocumentsController_submit",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentsSubmitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentCycleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed body"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "not_owner"
+          },
+          "404": {
+            "description": "No such approved garage of yours"
+          },
+          "409": {
+            "description": "document_in_review, file_missing"
+          },
+          "422": {
+            "description": "both_documents_required, certificate_too_old, file_type_mismatch, file_too_large"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/submit": {
       "post": {
         "operationId": "ListingSubmitController_submit",
@@ -16848,6 +16974,88 @@
         "required": [
           "kind",
           "pages"
+        ]
+      },
+      "RenewedDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "pages": {
+            "description": "The keys the upload addresses gave, in page order",
+            "maxItems": 10,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issuedOn": {
+            "type": "string",
+            "example": "2026-10-20",
+            "format": "date"
+          }
+        },
+        "required": [
+          "kind",
+          "pages",
+          "issuedOn"
+        ]
+      },
+      "DocumentsSubmitDto": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "maxItems": 2,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RenewedDocumentDto"
+            }
+          }
+        },
+        "required": [
+          "documents"
+        ]
+      },
+      "DocumentCycleDto": {
+        "type": "object",
+        "properties": {
+          "dueOn": {
+            "type": "string",
+            "description": "The Europe/Bucharest day both documents are due",
+            "example": "2027-01-15",
+            "format": "date"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "due",
+              "overdue"
+            ]
+          },
+          "graceUntil": {
+            "type": "string",
+            "description": "The last day of the grace; set once the cycle is overdue",
+            "example": "2027-01-29",
+            "format": "date",
+            "nullable": true
+          },
+          "inReview": {
+            "type": "boolean",
+            "description": "Whether a yearly upload waits for an admin"
+          }
+        },
+        "required": [
+          "dueOn",
+          "state",
+          "graceUntil",
+          "inReview"
         ]
       },
       "ListingSubmittedDto": {

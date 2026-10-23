@@ -83,7 +83,9 @@ export type { CreateSupportMessageDto } from './models/create-support-message-dt
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
 export type { DeclineRequestDto } from './models/decline-request-dto';
+export type { DocumentCycleDto } from './models/document-cycle-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
+export type { DocumentsSubmitDto } from './models/documents-submit-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';
@@ -216,6 +218,7 @@ export type { RecordConsentDto } from './models/record-consent-dto';
 export type { RecordRecheckDto } from './models/record-recheck-dto';
 export type { RecordVerificationCheckDto } from './models/record-verification-check-dto';
 export type { RefreshDto } from './models/refresh-dto';
+export type { RenewedDocumentDto } from './models/renewed-document-dto';
 export type { ReorderJobStepsDto } from './models/reorder-job-steps-dto';
 export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto';
 export type { ReportDecisionDto } from './models/report-decision-dto';
@@ -600,6 +603,10 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
+export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
+export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
+export { ownerDocumentsControllerSubmit as ownerDocumentsControllerSubmit } from './fn/garages/owner-documents-controller-submit';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';

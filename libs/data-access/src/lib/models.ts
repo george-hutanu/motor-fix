@@ -77,7 +77,9 @@ export type { CreateSupportMessageDto } from './models/create-support-message-dt
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
 export type { DeclineRequestDto } from './models/decline-request-dto';
+export type { DocumentCycleDto } from './models/document-cycle-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
+export type { DocumentsSubmitDto } from './models/documents-submit-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';
@@ -210,6 +212,7 @@ export type { RecordConsentDto } from './models/record-consent-dto';
 export type { RecordRecheckDto } from './models/record-recheck-dto';
 export type { RecordVerificationCheckDto } from './models/record-verification-check-dto';
 export type { RefreshDto } from './models/refresh-dto';
+export type { RenewedDocumentDto } from './models/renewed-document-dto';
 export type { ReorderJobStepsDto } from './models/reorder-job-steps-dto';
 export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto';
 export type { ReportDecisionDto } from './models/report-decision-dto';

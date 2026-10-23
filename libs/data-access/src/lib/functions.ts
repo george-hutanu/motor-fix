@@ -279,6 +279,10 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
+export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
+export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
+export { ownerDocumentsControllerSubmit as ownerDocumentsControllerSubmit } from './fn/garages/owner-documents-controller-submit';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';
