@@ -403,11 +403,15 @@ async function holdingGarage(
     async (tx) => {
       await tx.$queryRaw`
         SELECT id FROM garage WHERE id = ${w.nord.id}::uuid FOR UPDATE`;
+      const [{ holder }] = await tx.$queryRaw<{ holder: number }[]>`
+        SELECT pg_backend_pid() AS holder`;
       await meanwhile(tx);
       answer = then();
+      // Only a backend this transaction blocks: other suites' waits share the database.
       for (let waited = 0; waited < 5_000; waited += 25) {
         const [{ n }] = await prisma.$queryRaw<{ n: number }[]>`
-          SELECT count(*)::int AS n FROM pg_locks WHERE NOT granted`;
+          SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE ${holder}::int = ANY (pg_blocking_pids(pid))`;
         if (n > 0) break;
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
@@ -520,7 +524,7 @@ describe('what the removal leaves alone', () => {
     await profile();
     await profile(w.bmw.slug);
     await profile(w.mini.slug);
-    const entry = (slug: string) => `v3:profile:${w.nord.slug}:${slug}`;
+    const entry = (slug: string) => `v4:profile:${w.nord.slug}:${slug}`;
 
     await remove(w);
 

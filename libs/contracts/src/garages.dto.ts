@@ -6,7 +6,12 @@ import {
   GarageBrandAnswerDto,
   PublicBrandDto,
 } from './garage-brands.dto';
-import { FACILITIES, FACILITIES_NOTE_MAX, type Facility } from './garage-hours';
+import {
+  FACILITIES,
+  FACILITIES_NOTE_MAX,
+  type Facility,
+  type WeeklyHours,
+} from './garage-hours';
 import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
@@ -234,6 +239,22 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     maxLength: FACILITIES_NOTE_MAX,
   })
   facilitiesNote?: string;
+
+  @ApiProperty({
+    additionalProperties: {
+      items: {
+        items: { type: 'string' },
+        maxItems: 2,
+        minItems: 2,
+        type: 'array',
+      },
+      type: 'array',
+    },
+    description:
+      'Each weekday (mon…sun) to its intervals as "HH:MM" pairs, an empty list on a closed day; empty when the garage never sent its hours',
+    type: 'object',
+  })
+  hours!: WeeklyHours | Record<string, never>;
 
   @ApiProperty({
     description:

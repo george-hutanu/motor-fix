@@ -106,6 +106,7 @@ describe('reading a garage by its public slug', () => {
       brandNote: null,
       doesNotTake: [],
       facilities: [],
+      hours: {},
       id: approved.id,
       jobTypes: [],
       name: 'Atelier Dinamo',
@@ -146,6 +147,7 @@ describe('reading a garage by its public slug', () => {
       'description',
       'doesNotTake',
       'facilities',
+      'hours',
       'id',
       'jobTypes',
       'name',
@@ -898,6 +900,7 @@ const PUBLIC_FIELDS = new Set([
   'doesNotTake',
   'facilities',
   'facilitiesNote',
+  'hours',
   'id',
   'jobTypes',
   'labour',
@@ -1302,11 +1305,11 @@ describe('the price list a profile carries', () => {
     const redis = app.get(AUTH_REDIS);
 
     expect(
-      (await redis.zrange(`v3:tag:garage:${approved.id}`, '0', '-1')).sort(),
+      (await redis.zrange(`v4:tag:garage:${approved.id}`, '0', '-1')).sort(),
     ).toEqual(
       [
-        `v3:profile:${approved.slug}:-`,
-        `v3:profile:${approved.slug}:${bmw.slug}`,
+        `v4:profile:${approved.slug}:-`,
+        `v4:profile:${approved.slug}:${bmw.slug}`,
       ].sort(),
     );
 
@@ -1457,5 +1460,279 @@ describe('a garage suspended through the use case', () => {
 
     const res = await read(approved.slug);
     expect([res.status, res.body.code]).toEqual([410, 'gone']);
+  });
+});
+
+// @traces 308-FR-001
+// @traces 308-FR-002
+// @traces 308-FR-003
+describe('the opening hours a profile carries', () => {
+  const WEEK = {
+    fri: [['08:00', '19:00']],
+    mon: [['08:00', '19:00']],
+    sat: [['09:00', '14:00']],
+    sun: [],
+    thu: [['08:00', '19:00']],
+    tue: [
+      ['08:00', '12:00'],
+      ['13:00', '19:00'],
+    ],
+    wed: [['08:00', '19:00']],
+  };
+
+  it('carries the week as the garage entered it, a lunch break and a closed day included', async () => {
+    const approved = await prisma.garage.update({
+      data: { hours: WEEK },
+      where: { id: (await garage('approved')).id },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body.hours).toEqual(WEEK);
+  });
+
+  it('carries the hours of a mobile mechanic too', async () => {
+    const mobile = await prisma.garage.create({
+      data: {
+        businessKind: 'mobile',
+        hours: WEEK,
+        mobileLegalForm: 'pfa',
+        name: 'Mecanic Mobil Ilfov',
+        slug: `mobil-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(mobile.slug);
+
+    expect(res.body.hours).toEqual(WEEK);
+  });
+
+  it('carries an empty table for a garage that never sent its hours', async () => {
+    const approved = await garage('approved');
+
+    const res = await read(approved.slug);
+
+    expect(res.body.hours).toEqual({});
+  });
+
+  it.each([
+    ['a missing day', { mon: [['08:00', '19:00']] }],
+    [
+      'an interval ending before it starts',
+      { ...WEEK, mon: [['19:00', '08:00']] },
+    ],
+    [
+      'overlapping intervals',
+      {
+        ...WEEK,
+        mon: [
+          ['08:00', '13:00'],
+          ['12:00', '19:00'],
+        ],
+      },
+    ],
+    ['a list in place of a table', [['08:00', '19:00']]],
+    ['a string', 'luni-vineri'],
+  ])('carries an empty table for stored hours with %s', async (_, hours) => {
+    const approved = await prisma.garage.update({
+      data: { hours },
+      where: { id: (await garage('approved')).id },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body.hours).toEqual({});
+  });
+
+  it('keeps the hours with a brand in context and still writes nothing', async () => {
+    const dacia = await catalogueBrand('Dacia');
+    const approved = await prisma.garage.update({
+      data: { hours: WEEK },
+      where: { id: (await garage('approved')).id },
+    });
+    const before = await Promise.all([
+      prisma.outboxEvent.count(),
+      prisma.activityLog.count(),
+    ]);
+
+    const res = await readWith(approved.slug, { brand: dacia.slug });
+
+    expect(res.body.hours).toEqual(WEEK);
+    expect(
+      Object.keys(res.body).filter((key) => !PUBLIC_FIELDS.has(key)),
+    ).toEqual([]);
+    expect(
+      await Promise.all([
+        prisma.outboxEvent.count(),
+        prisma.activityLog.count(),
+      ]),
+    ).toEqual(before);
+  });
+});
+
+// @traces 308-FR-004
+// @traces 308-FR-006
+// @traces 308-FR-016
+describe('the brands a profile lists', () => {
+  it('lists the taken and the refused brands apart, an unmarked brand in neither', async () => {
+    const approved = await garage('approved');
+    const brand = (name: string, popularity: number) => {
+      const key = `${name.toLowerCase()}-${randomUUID()}`;
+      return prisma.brand.create({
+        data: { key, name, popularity, slug: key },
+      });
+    };
+    const bmw = await brand('BMW', 1);
+    const dacia = await brand('Dacia', 2);
+    const fiat = await brand('Fiat', 3);
+    const tesla = await brand('Tesla', 4);
+    await prisma.garageBrand.createMany({
+      data: [
+        {
+          brandId: bmw.id,
+          electric: false,
+          garageId: approved.id,
+          stance: 'works_on',
+        },
+        { brandId: dacia.id, garageId: approved.id, stance: 'works_on' },
+        {
+          brandId: tesla.id,
+          diesel: false,
+          electric: false,
+          garageId: approved.id,
+          hybrid: false,
+          petrol: false,
+          stance: 'does_not_take',
+        },
+      ],
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.worksOn).toEqual([
+      {
+        fuels: ['petrol', 'diesel', 'hybrid'],
+        id: bmw.id,
+        name: 'BMW',
+        slug: bmw.slug,
+      },
+      {
+        fuels: ['petrol', 'diesel', 'hybrid', 'electric'],
+        id: dacia.id,
+        name: 'Dacia',
+        slug: dacia.slug,
+      },
+    ]);
+    expect(res.body.doesNotTake).toEqual([
+      { id: tesla.id, name: 'Tesla', slug: tesla.slug },
+    ]);
+    expect(JSON.stringify(res.body)).not.toContain(fiat.id);
+  });
+});
+
+// @traces 308-FR-002
+// @traces 308-FR-011
+// @traces 308-FR-013
+// @traces 308-FR-016
+describe('where a profile says the garage is', () => {
+  it("serves a workshop's stored address column as written", async () => {
+    const address = 'Str. Atelierului 14, Militari, Sector 6, București';
+    const approved = await prisma.garage.update({
+      data: { address, businessKind: 'company' },
+      where: { id: (await garage('approved')).id },
+    });
+
+    const res = await read(approved.slug);
+    const [stored] = await prisma.$queryRaw<{ address: string }[]>`
+      SELECT address FROM garage WHERE id = ${approved.id}::uuid`;
+
+    expect(res.body.address).toBe(stored.address);
+    expect(res.body.address).toBe(address);
+  });
+
+  // A garage stores an address or a seat, never both.
+  it.each([
+    [
+      'an address and its position',
+      { address: 'Strada Atelierului 9, Otopeni' },
+    ],
+    ['a seat and a position', { seatAddress: 'Strada Sediului 3, Otopeni' }],
+  ])(
+    'gives a mobile mechanic no address of any kind, even %s stored',
+    async (_, stored) => {
+      const mobile = await prisma.garage.create({
+        data: {
+          ...stored,
+          businessKind: 'mobile',
+          latitude: 44.55,
+          longitude: 26.07,
+          mobileLegalForm: 'pfa',
+          name: 'Mecanic Mobil Ilfov',
+          slug: `mobil-${randomUUID()}`,
+          status: 'approved',
+        },
+      });
+
+      const res = await read(mobile.slug);
+
+      for (const key of ['address', 'seatAddress', 'latitude', 'longitude']) {
+        expect(res.body).not.toHaveProperty(key);
+      }
+      expect(JSON.stringify(res.body)).not.toMatch(
+        /Atelierului|Sediului|44\.55/,
+      );
+      expect(res.body.serviceRadiusKm).toBe(20);
+    },
+  );
+});
+
+// @traces 308-FR-008
+// @traces 308-FR-009
+// @traces 308-FR-010
+// @traces 308-FR-016
+describe('the facilities and payment a profile lists', () => {
+  it('leaves out a facility the garage holds no listed row for', async () => {
+    const approved = await garage('approved');
+    await prisma.garageFacility.create({
+      data: { facility: 'waiting_area', garageId: approved.id },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.facilities).toEqual(['waiting_area']);
+  });
+
+  it('carries the courtesy car terms only while the courtesy car is listed', async () => {
+    const approved = await garage('approved');
+    await prisma.$executeRaw`UPDATE garage SET courtesy_car_paid = true, courtesy_car_price_per_day_bani = 15000 WHERE id = ${approved.id}::uuid`;
+
+    const unlisted = await read(approved.slug);
+    await prisma.garageFacility.create({
+      data: { facility: 'courtesy_car', garageId: approved.id },
+    });
+    await purgeAudience(app.get(AUTH_REDIS), [`public:garage:${approved.id}`]);
+    const listed = await read(approved.slug);
+
+    expect(unlisted.body).not.toHaveProperty('courtesyCar');
+    expect(listed.body.courtesyCar).toEqual({
+      paid: true,
+      pricePerDayBani: 15000,
+    });
+  });
+
+  it.each([
+    ['one method', { card: true, cash: false, transfer: false }],
+    ['two methods', { card: true, cash: true, transfer: false }],
+    ['no method', { card: false, cash: false, transfer: false }],
+  ])('carries the payment methods with %s ticked', async (_, methods) => {
+    const approved = await garage('approved');
+    await prisma.$executeRaw`UPDATE garage SET payment_card = ${methods.card}, payment_cash = ${methods.cash}, payment_transfer = ${methods.transfer} WHERE id = ${approved.id}::uuid`;
+
+    const res = await read(approved.slug);
+
+    expect(res.body.paymentMethods).toEqual(methods);
   });
 });

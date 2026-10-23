@@ -22,6 +22,7 @@ const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-1',
   jobTypes: [],
   name: 'Atelier Dinamo',

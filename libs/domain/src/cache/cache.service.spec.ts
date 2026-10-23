@@ -38,11 +38,12 @@ describe('cache lifetimes', () => {
 });
 
 // @traces 1192-FR-008
+// @traces 308-FR-003
 describe('cache keys', () => {
   it('names the version and the read kind first', () => {
     expect(cacheKey('profile', 'service-auto', '-')).toBe(
-      'v3:profile:service-auto:-',
+      'v4:profile:service-auto:-',
     );
-    expect(cacheKey('popular-brands', '8')).toBe('v3:popular-brands:8');
+    expect(cacheKey('popular-brands', '8')).toBe('v4:popular-brands:8');
   });
 });

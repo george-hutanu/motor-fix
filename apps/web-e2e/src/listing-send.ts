@@ -12,7 +12,7 @@ import { JOBS, jpeg, KEPT } from './listing-kept.js';
 // the steps the listing specs share.
 
 // A fake password for the accounts these tests create; never a real one.
-const NEW_PASSWORD = 'parola-noua-de-test';
+export const NEW_PASSWORD = 'parola-noua-de-test';
 
 const prices = (page: Page) => page.locator('mf-prices-step');
 const photos = (page: Page) => page.locator('mf-photos-step');

@@ -50,6 +50,13 @@ export interface PublicGarageDto {
    * What the garage wrote about its facilities; absent when none
    */
   facilitiesNote?: string;
+
+  /**
+   * Each weekday (mon…sun) to its intervals as "HH:MM" pairs, an empty list on a closed day; empty when the garage never sent its hours
+   */
+  hours: {
+[key: string]: Array<Array<string>>;
+};
   id: string;
 
   /**

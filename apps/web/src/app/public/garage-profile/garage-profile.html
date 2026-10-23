@@ -92,7 +92,7 @@
   <div class="sections">
     <div class="main">
       <section data-slot="photos" mf-photos-section [garage]="garage" [reads]="profile.reads()" (reread)="profile.reload()"></section>
-      <section data-slot="brands"></section>
+      <section data-slot="brands" mf-details-section [garage]="garage"></section>
       <section data-slot="mechanics"></section>
       <section data-slot="prices" mf-prices-section [garage]="garage"></section>
       <section data-slot="reviews"></section>
@@ -101,7 +101,7 @@
       @if (garage.prices.length) {
         <section mf-estimate-section [garage]="garage"></section>
       }
-      <section data-slot="where"></section>
+      <section data-slot="where" mf-where-section [garage]="garage"></section>
     </div>
   </div>
   <mf-report-garage-link class="report" [garage]="garage" />

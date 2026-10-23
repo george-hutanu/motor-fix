@@ -16,6 +16,7 @@ const FIXED: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-2',
   jobTypes: [],
   latitude: 44.43,

@@ -154,7 +154,11 @@ describe('the profile read by status', () => {
   });
 
   it('answers a slug of SQL syntax as an unknown garage', async () => {
-    const { res, sent } = await counted(encodeURIComponent(`x' OR '1'='1`));
+    // Its own each run: a fixed slug's remembered 404 would answer a rerun
+    // within the minute without a statement.
+    const { res, sent } = await counted(
+      encodeURIComponent(`x' OR '1'='1' -- ${randomUUID()}`),
+    );
 
     expect(res.status).toBe(404);
     expect(sent).toHaveLength(1);
@@ -257,6 +261,7 @@ describe('the profile aggregates with ties and gaps', () => {
       brandNote: null,
       doesNotTake: [],
       facilities: [],
+      hours: {},
       id: garage.id,
       jobTypes: [],
       name: 'Garage',

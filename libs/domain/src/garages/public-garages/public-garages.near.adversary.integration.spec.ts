@@ -275,14 +275,14 @@ describe('a profile read with a near that cannot be a place in Romania', () => {
 
     await read(garage.slug, { near: '0,0' });
 
-    expect(await other.exists(`v3:profile:${garage.slug}:-`)).toBe(0);
+    expect(await other.exists(`v4:profile:${garage.slug}:-`)).toBe(0);
   });
 });
 
 // @traces 271-FR-014
 describe('the profile cache beside near', () => {
   const entries = async (slug: string) => {
-    const keys = await other.keys(`v3:profile:${slug}:*`);
+    const keys = await other.keys(`v4:profile:${slug}:*`);
     return Promise.all(keys.map(async (key) => [key, await other.get(key)]));
   };
 
@@ -309,7 +309,7 @@ describe('the profile cache beside near', () => {
       await read(garage.slug, { near: `${45 + i / 100},24` });
     }
 
-    expect(await other.keys(`v3:profile:${garage.slug}:*`)).toHaveLength(1);
+    expect(await other.keys(`v4:profile:${garage.slug}:*`)).toHaveLength(1);
   });
 
   it('gives the next read without near no distance, whoever filled the cache', async () => {

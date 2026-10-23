@@ -2,6 +2,7 @@ import {
   FACILITIES,
   type Facility,
   imageBaseUrl,
+  isWeeklyHours,
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
   PUBLIC_IMAGE_URL_MINUTES,
   type PublicGarageBrandDto,
@@ -95,6 +96,7 @@ type ProfileRow = {
   service_radius_km: number | null;
   slug: string;
   status: string;
+  hours: unknown;
 };
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
@@ -300,7 +302,7 @@ export class PublicGaragesService {
         g.payment_cash, g.payment_transfer, g.rar_activities,
         g.rating::float8 AS rating, g.review_count, g.service_radius_km,
         rs.lifetime_requests, rs.rate,
-        g.facilities_note,
+        g.facilities_note, g.hours,
         ARRAY(
           SELECT f.facility::text FROM garage_facility f
           WHERE f.garage_id = g.id AND f.status = 'listed'
@@ -397,6 +399,8 @@ export class PublicGaragesService {
       },
       photos: await this.photos(row.photos ?? []),
       ...facilitiesOf(row),
+      // A stored table the editor would refuse reads as none.
+      hours: isWeeklyHours(row.hours) ? row.hours : {},
       ...placeOf(row),
       ...present({ businessKind: row.business_kind }),
       ...(row.known_for?.trim() ? { description: row.known_for } : {}),

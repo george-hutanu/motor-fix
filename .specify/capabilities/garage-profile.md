@@ -20,6 +20,7 @@ features:
   - 1353-verified-badge-last-check
   - 330-listed-facilities
   - 1192-photo-variants
+  - 308-profile-details
 ---
 
 # Capability: Garage profile
@@ -40,9 +41,9 @@ _From 1353-verified-badge-last-check._
 
 _From 307-public-garage-profile._
 
-### 307-FR-005 — The answer MUST never contain the garage's phone, CUI, a mobile mechanic's seat address or position, or any personal data; a test MUST pin the answer's keys with one allow-list, asserted as a superset over a fixed and a mobile garage each read with and without `brand` and `near`, and a forbidden list (`phone`, `cui`, `seatAddress`, a mobile mechanic's `latitude`/`longitude`), so a new field is a deliberate change. A fixed garage keeps `address`, `latitude` and `longitude` (207).
+### 308-FR-002 — The answer's key allow-list test (307-FR-005) MUST gain `hours` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; a mobile mechanic's answer MUST carry no `address`, the seat included, and a workshop's MUST carry its one `address` string as the garage wrote it. The `worksOn`, `doesNotTake`, `brandNote`, `refusalPhrase`, `paymentMethods`, `courtesyCar`, `facilities`, `facilitiesNote`, `businessKind` and `serviceRadiusKm` fields stay as they are (modifies 307-FR-005: one more allowed key).
 
-_From 307-public-garage-profile._
+_From 308-profile-details._
 
 ### 1182-FR-007 — The public garage profile read MUST go through the cache service in place of its own Redis hash, slug pointer and generation: one entry per garage and brand in context (and one for none), found from the slug, tagged with the garage, a soft lifetime of 10 minutes, keeping every rule of 307-FR-001 and 307-FR-006 that the reader sees (the one public scope, the 404/410 verdicts of garages that exist read fresh every time, the brand-in-context variants, the drop on every event relayed to `public:garage:{id}`, PostgreSQL the only truth). The old keys, generation and per-module fail-open wrapper are removed, not kept beside the new service.
 
@@ -467,6 +468,70 @@ _From 1192-photo-variants._
 
 _From 1192-photo-variants._
 
+### 308-FR-001 — The public profile read (`GET /api/v1/garages/{slug}`, with its optional `brand`) MUST carry the garage's weekly opening hours as entered — for each weekday Monday to Sunday the list of its intervals, each a start and an end on the 24-hour Europe/Bucharest clock, at most two a day, an empty list for a closed day — present for every approved garage, workshop or mobile mechanic, and empty when the garage never sent its hours (the profile renders an empty table as no hours lines, never as the default week the booking rule assumes). No new endpoint is added; the shared contract's hours type is reused; the generated client is regenerated.
+
+_From 308-profile-details._
+
+### 308-FR-003 — The hours MUST be read in the profile's one PostgreSQL statement and served from the profile's existing cache per brand in context (307-FR-006, 1182-FR-007), dropped on the events already relayed to `public:garage:{garageId}`; the answer's shape version in the cache key MUST be bumped, so no older cached answer without hours is read back (as 355-FR-005 and 310-FR-013 did). The read performs no write, emits no event and records no audit history.
+
+_From 308-profile-details._
+
+### 308-FR-004 — The profile page MUST fill its brands slot with "Lucrează pe" / "Works on": one chip per brand of `worksOn`, each a green lamp carrying the brand's name as text, and "Nu lucrează pe" / "Does not work on": one chip per brand of `doesNotTake`, each a red lamp carrying the name. A brand with no row (unstated) is in neither list. The stance is carried by the section heading, with the brand's name as the chip's visible text and the lamp `aria-hidden`, as the header lamp does (307-FR-016); no per-chip screen-reader string; never by colour alone.
+
+_From 308-profile-details._
+
+### 308-FR-005 — The brand in context (the `brand` of the answer, when its id is in a list) MUST be the first chip of its list; every other chip keeps the answer's order (the catalogue's: popularity rank, unranked after, then name). The page sorts nothing else.
+
+_From 308-profile-details._
+
+### 308-FR-006 — Under each "Lucrează pe" chip the page MUST show a second line with the brand's fuel types (the four fuel ticks; there is no other car-type field) in the fixed order petrol, diesel, hybrid, electric, separated by " · " (a middle dot between ordinary spaces): "benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", showing only the ticked ones; a brand left as it was shows all four. "Nu lucrează pe" chips carry no fuel line.
+
+_From 308-profile-details._
+
+### 308-FR-007 — After the two lists the page MUST show the garage's brand note as written when the answer carries one, and no note line when it does not. "Nu lucrează pe" MUST be hidden when `doesNotTake` is empty, and "Lucrează pe" when `worksOn` is empty; with both empty the brands slot shows nothing.
+
+_From 308-profile-details._
+
+### 308-FR-008 — The page MUST show a "Facilități" / "Facilities" section listing, in the answer's catalogue order, each facility of `facilities` with its label: `courtesy_car` "Mașină la schimb" / "Courtesy car", `pickup_dropoff` "Preluare și predare" / "Pick-up and drop-off", `waiting_area` "Sală de așteptare" / "Waiting area". Only facilities the answer carries (status `listed`) are shown; a facility an admin removed, or that the garage never declared, is absent.
+
+_From 308-profile-details._
+
+### 308-FR-009 — The courtesy car's label MUST carry its terms: " · gratuit" / " · free" when `courtesyCar.paid` is false, and " · {price} / zi" / " · {price} / day" when true, with the price in whole lei formatted by the money rule (019-FR-001: "150 lei", "1.500 lei" in Romanian, "1,500 lei" in English) from `pricePerDayBani`; a paid car with no price shows the bare label.
+
+_From 308-profile-details._
+
+### 308-FR-010 — The section MUST show one line "Plată: {methods}" / "Payment: {methods}" listing the ticked methods of `paymentMethods` in the fixed order cash, card, transfer, named "numerar", "card", "transfer" / "cash", "card", "transfer" and separated by ", "; the line is hidden when none is ticked. The facilities note MUST be shown as written after the facilities and the payment line when the answer carries one. The whole section MUST be hidden when there is no listed facility, no payment method and no facilities note; a facilities note alone still shows the section (autonomous default: the garage wrote it, so it is not dropped).
+
+_From 308-profile-details._
+
+### 308-FR-011 — The page MUST fill its "where" slot, titled "Unde" / "Where", for a workshop (`businessKind` other than `mobile`) with the address as the garage wrote it, as one wrapping text, then the hours lines of FR-012; for a mobile mechanic with the one line "Vine la tine în zona de {r} km" / "Comes to you within {r} km", where `r` is `serviceRadiusKm` or 20 when the answer has none, and no address, map or pin; the registered seat is never shown because it is never sent (FR-002). The existing header area line of 271-FR-015 is unchanged.
+
+_From 308-profile-details._
+
+### 308-FR-012 — The hours MUST be shown Monday first, one line per run of one or more consecutive days with identical intervals: a run of two or more days reads "{first} – {last}" ("Luni – vineri", "Monday – Friday"), a single day its name ("Sâmbătă", "Saturday"), day names in the language's full form with Romanian in lower case after the first word; the intervals follow as "{start} – {end}" in 24-hour two-digit times (019-FR-006), two intervals joined by ", " ("08:00 – 12:00, 13:00 – 19:00"); a day with no interval reads "Închis" / "Closed". Empty or malformed hours show no hours line.
+
+_From 308-profile-details._
+
+### 308-FR-013 — When the public read answers a garage whose address change waits for an admin, the answer and "Unde" MUST carry the last approved address: the public read serves the garage record's address, which is the approved one (207-FR-007 makes an address change a new approval, and the editing story keeps the pending value apart from it); a test MUST pin that the read serves the garage record's stored `address` column; no pending-address model is built here (#18 owns it).
+
+_From 308-profile-details._
+
+### 308-FR-014 — The three sections MUST re-read with the profile on the messages it already reacts to on `public:garage:{garageId}` — `garage.updated`, `facility.removed`, `facility.re_add_decided` among them — and show the new values in place with the brand, the place and the scroll position kept (307-FR-018), with no reload and no polling of their own; the swap is silent for assistive technology, like the price list's (355-FR-012).
+
+_From 308-profile-details._
+
+### 308-FR-015 — The sections MUST render at 320 px and 390 px (stacked, "Unde" after the main column), tablet and desktop ("Unde" in the side column), light and dark, Romanian and English, with no sideways scroll; every label of this story MUST live in the public texts for both languages and switch with the language without a reload; text the garage wrote (the address, the brand note, the facilities note) is shown as written in both languages (307-FR-016). Chips and lines are plain text, with no control inside them, so no touch-target rule applies beyond the page's.
+
+_From 308-profile-details._
+
+### 308-FR-016 — Tests MUST cover, in Jest: the public read's two brand lists from each stance and a brand with no row in neither; the fuels per taken brand (three ticked, and all four by default); `hours` in the answer with the key allow-list; a facility that is not `listed` left out; the courtesy car's wording free and paid, and the payment line with one, two and no methods; a mobile mechanic's answer without any address field, the seat included, and its area text with and without a radius; the hours grouping (the scenarios of User Story 2, a two-day run, a whole week, a lunch break, closed days, empty and malformed hours); the brand in context first; the read serving the stored address. End to end (Playwright): list a garage with two taken brands, one refused brand, a paid courtesy car and card payment, enter explicit opening hours (not the default week), approve it, and the profile shows exactly what was entered. Every test file names its requirements in a `// @traces` line.
+
+_From 308-profile-details._
+
+### 308-FR-017 — The feature adds no service, queue, outside call, endpoint or product action: the observability inventory is unchanged, and this is recorded in the PR.
+
+_From 308-profile-details._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -482,3 +547,4 @@ _From 1192-photo-variants._
 - `307-FR-018` — superseded by `1353-FR-003` (2026-10-20)
 - `1183-FR-001` — superseded by `330-FR-007` (2026-10-22)
 - `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)
+- `307-FR-005` — superseded by `308-FR-002` (2026-10-22)

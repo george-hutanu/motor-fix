@@ -15250,6 +15250,21 @@
             "description": "What the garage wrote about its facilities; absent when none",
             "maxLength": 200
           },
+          "hours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
+          },
           "jobTypes": {
             "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
@@ -15294,6 +15309,7 @@
           "responseRate",
           "paymentMethods",
           "facilities",
+          "hours",
           "jobTypes",
           "prices",
           "photos"
