@@ -148,6 +148,8 @@ export type { ListingPhotoDto } from './models/listing-photo-dto';
 export type { ListingPhotosDto } from './models/listing-photos-dto';
 export type { ListingSubmittedDto } from './models/listing-submitted-dto';
 export type { LiveTestDto } from './models/live-test-dto';
+export type { MechanicReviewDto } from './models/mechanic-review-dto';
+export type { MechanicReviewsPageDto } from './models/mechanic-reviews-page-dto';
 export type { MeDto } from './models/me-dto';
 export type { MyConsentsDto } from './models/my-consents-dto';
 export type { NewsConsentDto } from './models/news-consent-dto';

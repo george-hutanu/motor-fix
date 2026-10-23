@@ -67,13 +67,22 @@ const ALLOWED: Record<string, string[]> = {
     'response_stats.updated',
     // @traces 1351-FR-013
     'recheck.recorded',
+    // @traces 025-FR-009
+    'rating.updated',
   ],
-  [`public:mechanic:${MECHANIC}`]: ['mechanic.updated', ...REVIEW_KINDS],
+  [`public:mechanic:${MECHANIC}`]: [
+    'mechanic.updated',
+    ...REVIEW_KINDS,
+    // @traces 025-FR-009
+    'rating.updated',
+  ],
   'public:search': [
     'verification.decided',
     'garage.suspended',
     'garage.restored',
     'garage.updated',
+    // @traces 025-FR-009
+    'rating.updated',
   ],
   [`public:search:${BRAND}`]: ['garage.updated'],
   system: [

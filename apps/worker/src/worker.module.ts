@@ -31,7 +31,9 @@ import {
   QUOTE_RECEIVED_CONSUMER,
   REQUEST_CANCELLED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
+  REVIEW_RATINGS_CONSUMER,
   RemindersModule,
+  ReviewRatingsModule,
   reminderDayMs,
   StatusModule,
   StorageModule,
@@ -102,6 +104,7 @@ export function workerModule(
           QUOTE_DECLINED_CONSUMER,
           REQUEST_CANCELLED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
+          REVIEW_RATINGS_CONSUMER,
           supportMessagesConsumer(support),
           VERIFICATION_RESULT_CONSUMER,
         ],
@@ -117,6 +120,11 @@ export function workerModule(
       }),
       // Closes a deleted or suspended driver's requests and bookings.
       AccountClosedModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Writes a garage's and a mechanic's rating from their published reviews.
+      ReviewRatingsModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
       }),

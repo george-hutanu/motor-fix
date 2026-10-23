@@ -10,12 +10,15 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { JobReviewContextDto } from '../models/job-review-context-dto';
+import { MechanicReviewsPageDto } from '../models/mechanic-reviews-page-dto';
 import { ReviewDto } from '../models/review-dto';
 import { ReviewEligibilityDto } from '../models/review-eligibility-dto';
 import { reviewsControllerEligibility } from '../fn/reviews/reviews-controller-eligibility';
 import { ReviewsControllerEligibility$Params } from '../fn/reviews/reviews-controller-eligibility';
 import { reviewsControllerForJob } from '../fn/reviews/reviews-controller-for-job';
 import { ReviewsControllerForJob$Params } from '../fn/reviews/reviews-controller-for-job';
+import { reviewsControllerForMechanic } from '../fn/reviews/reviews-controller-for-mechanic';
+import { ReviewsControllerForMechanic$Params } from '../fn/reviews/reviews-controller-for-mechanic';
 import { reviewsControllerPublish } from '../fn/reviews/reviews-controller-publish';
 import { ReviewsControllerPublish$Params } from '../fn/reviews/reviews-controller-publish';
 
@@ -56,6 +59,39 @@ export class ReviewsService extends BaseService {
   reviewsControllerEligibility(params: ReviewsControllerEligibility$Params, context?: HttpContext): Promise<Array<ReviewEligibilityDto>> {
     const resp = this.reviewsControllerEligibility$Response(params, context);
     return resp.then((r: StrictHttpResponse<Array<ReviewEligibilityDto>>): Array<ReviewEligibilityDto> => r.body);
+  }
+
+  /** Path part for operation `reviewsControllerForMechanic()` */
+  static readonly ReviewsControllerForMechanicPath = '/api/v1/reviews/mechanic/{mechanicId}';
+
+  /**
+   * A mechanic’s published reviews at every garage, 20 a page.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewsControllerForMechanic()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reviewsControllerForMechanic$Response(params: ReviewsControllerForMechanic$Params, context?: HttpContext): Promise<StrictHttpResponse<MechanicReviewsPageDto>> {
+    const obs = reviewsControllerForMechanic(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * A mechanic’s published reviews at every garage, 20 a page.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewsControllerForMechanic$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reviewsControllerForMechanic(params: ReviewsControllerForMechanic$Params, context?: HttpContext): Promise<MechanicReviewsPageDto> {
+    const resp = this.reviewsControllerForMechanic$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MechanicReviewsPageDto>): MechanicReviewsPageDto => r.body);
   }
 
   /** Path part for operation `reviewsControllerForJob()` */

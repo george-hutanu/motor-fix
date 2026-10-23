@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 
 import { ReviewsModule } from './reviews.module';
+import { mechanicReviews } from './reviews.testing';
 import { outbox } from '../events/event.port';
 import type { JobStatus, ReviewStatus } from '../generated/prisma/enums';
 import { quotesApp } from '../quotes/quotes-api.testing';
@@ -18,7 +19,11 @@ const confirmed = (accountId: string) =>
 
 // Andrei's job at Atelier Dinamo, its accepted quote holding the one asked
 // work, and his e-mail confirmed.
-async function setting(status: JobStatus = 'done') {
+async function setting(
+  status: JobStatus = 'done',
+  pick: (dinamo: Awaited<ReturnType<typeof team>>) => string | undefined = () =>
+    undefined,
+) {
   const andrei = await world.account('Andrei Marin', ['driver']);
   await confirmed(andrei);
   const dinamo = await team('Atelier Dinamo');
@@ -32,7 +37,9 @@ async function setting(status: JobStatus = 'done') {
   await prisma.quoteJob.create({
     data: { included: true, quoteId: quote.id, requestJobId: asked.id },
   });
-  const job = await world.job(booking.id, status);
+  const job = await world.job(booking.id, status, {
+    mechanicId: pick(dinamo),
+  });
   return { andrei, as: bearer(andrei, 'driver'), asked, dinamo, job };
 }
 
@@ -185,6 +192,7 @@ describe('publishing a review', () => {
       driverId: s.andrei,
       garageId: s.dinamo.garage.id,
       jobId: s.job.id,
+      mechanicId: null,
       rating: 5,
       reviewId: posted.body.id,
     });
@@ -458,5 +466,265 @@ describe('an e-mail that is not confirmed', () => {
     expect(refused.status).toBe(409);
     expect(refused.body.code).toBe('email_not_confirmed');
     expect(await reviews(s.job.id)).toEqual([]);
+  });
+});
+
+const posting = (subjectId: string) =>
+  prisma.outboxEvent.findFirstOrThrow({
+    where: { kind: 'review.posted', subjectId },
+  });
+
+// @traces 025-FR-001 025-FR-003
+// @traces 025-FR-004
+describe('the mechanic a review names', () => {
+  it('names the job’s mechanic, in the row, the event and its audience', async () => {
+    const s = await setting('done', (d) => d.plainMechanic.id);
+
+    const posted = await publish(s.as, { jobId: s.job.id, rating: 5 });
+
+    expect(posted.status).toBe(201);
+    const [row] = await reviews(s.job.id);
+    expect(row.mechanicId).toBe(s.dinamo.plainMechanic.id);
+    const event = await posting(posted.body.id);
+    expect(event.payload).toEqual({
+      driverId: s.andrei,
+      garageId: s.dinamo.garage.id,
+      jobId: s.job.id,
+      mechanicId: s.dinamo.plainMechanic.id,
+      rating: 5,
+      reviewId: posted.body.id,
+    });
+    expect(event.audience).toContain(
+      `public:mechanic:${s.dinamo.plainMechanic.id}`,
+    );
+  });
+
+  it('names the mechanic the job moved to before the review', async () => {
+    const s = await setting('done', (d) => d.plainMechanic.id);
+    await prisma.job.update({
+      data: { mechanicId: s.dinamo.answeringMechanic.id },
+      where: { id: s.job.id },
+    });
+
+    await publish(s.as, { jobId: s.job.id, rating: 4 });
+
+    expect((await reviews(s.job.id))[0].mechanicId).toBe(
+      s.dinamo.answeringMechanic.id,
+    );
+  });
+
+  it('names the owner’s own row when the garage has no team', async () => {
+    const s = await setting();
+    const own = await prisma.mechanic.create({
+      data: {
+        accountId: s.dinamo.owner,
+        garageId: s.dinamo.garage.id,
+        name: 'Owner',
+      },
+    });
+    await prisma.job.update({
+      data: { mechanicId: own.id },
+      where: { id: s.job.id },
+    });
+
+    await publish(s.as, { jobId: s.job.id, rating: 4 });
+
+    expect((await reviews(s.job.id))[0].mechanicId).toBe(own.id);
+  });
+
+  it('names none for a job with no mechanic, and no mechanic page hears it', async () => {
+    const s = await setting();
+
+    const posted = await publish(s.as, { jobId: s.job.id, rating: 4 });
+
+    expect((await reviews(s.job.id))[0].mechanicId).toBeNull();
+    const event = await posting(posted.body.id);
+    expect(event.payload).toMatchObject({ mechanicId: null });
+    expect(
+      event.audience.some((key) => key.startsWith('public:mechanic:')),
+    ).toBe(false);
+  });
+
+  it('keeps the mechanic hidden from the profile or whose account was deleted', async () => {
+    const s = await setting('done', (d) => d.plainMechanic.id);
+    await publish(s.as, { jobId: s.job.id, rating: 4 });
+
+    await prisma.mechanic.update({
+      data: { onProfile: false },
+      where: { id: s.dinamo.plainMechanic.id },
+    });
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: s.dinamo.plain },
+    });
+
+    expect((await reviews(s.job.id))[0].mechanicId).toBe(
+      s.dinamo.plainMechanic.id,
+    );
+  });
+
+  it('keeps the review and empties its mechanic when the mechanic row goes', async () => {
+    const s = await setting('done', (d) => d.plainMechanic.id);
+    await publish(s.as, { jobId: s.job.id, rating: 4 });
+
+    await prisma.mechanic.delete({ where: { id: s.dinamo.plainMechanic.id } });
+
+    expect(await reviews(s.job.id)).toEqual([
+      expect.objectContaining({ mechanicId: null, status: 'published' }),
+    ]);
+  });
+});
+
+const { elena, reviewed } = mechanicReviews(world);
+
+const listOf = (mechanicId: string, page?: unknown) =>
+  get(
+    `/reviews/mechanic/${mechanicId}${page === undefined ? '' : `?page=${page}`}`,
+  );
+
+// @traces 025-FR-011 025-FR-012 025-FR-013 025-FR-015
+describe("reading a mechanic's reviews", () => {
+  it('lists 20 a page, newest first, each with its garage, to a visitor', async () => {
+    const e = await elena();
+    const written = [];
+    for (let i = 0; i < 25; i++) {
+      written.push(
+        await reviewed(
+          e.driver,
+          i < 10 ? e.dinamo.id : e.nord.id,
+          e.mechanic.id,
+          i,
+        ),
+      );
+    }
+
+    const first = await listOf(e.mechanic.id);
+    const second = await listOf(e.mechanic.id, 2);
+
+    expect(first.status).toBe(200);
+    expect(first.body).toMatchObject({ page: 1, pageSize: 20, total: 25 });
+    expect(first.body.items.map((r: { id: string }) => r.id)).toEqual(
+      written.slice(0, 20).map((r) => r.id),
+    );
+    expect(second.body.items.map((r: { id: string }) => r.id)).toEqual(
+      written.slice(20).map((r) => r.id),
+    );
+    expect(first.body.items[0]).toEqual({
+      author: { shortName: 'Andrei M.' },
+      garage: { id: e.dinamo.id, name: 'Atelier Dinamo', slug: e.dinamo.slug },
+      id: written[0].id,
+      postedAt: written[0].postedAt.toISOString(),
+      rating: written[0].rating,
+      text: 'Recenzia 0',
+    });
+    expect(first.body.items[1].text).toBeNull();
+    expect(first.body.items[19].garage.name).toBe('Service Nord');
+  });
+
+  it('orders reviews posted at the same moment by id', async () => {
+    const e = await elena();
+    const a = await reviewed(e.driver, e.nord.id, e.mechanic.id, 3);
+    const b = await reviewed(e.driver, e.nord.id, e.mechanic.id, 3);
+    await prisma.review.updateMany({
+      data: { postedAt: a.postedAt },
+      where: { id: b.id },
+    });
+
+    const read = await listOf(e.mechanic.id);
+
+    expect(read.body.items.map((r: { id: string }) => r.id)).toEqual(
+      [a.id, b.id].sort().reverse(),
+    );
+  });
+
+  it('answers a page past the last with no items and the real total', async () => {
+    const e = await elena();
+    await reviewed(e.driver, e.nord.id, e.mechanic.id, 1);
+
+    const read = await listOf(e.mechanic.id, 3);
+
+    expect(read.status).toBe(200);
+    expect(read.body).toEqual({ items: [], page: 3, pageSize: 20, total: 1 });
+  });
+
+  it('lists only the published reviews', async () => {
+    const e = await elena();
+    const shown = await reviewed(e.driver, e.nord.id, e.mechanic.id, 1);
+    for (const status of [
+      'reported',
+      'removed',
+      'deleted_by_author',
+    ] as const) {
+      await reviewed(e.driver, e.nord.id, e.mechanic.id, 2, { status });
+    }
+
+    const read = await listOf(e.mechanic.id);
+
+    expect(read.body.total).toBe(1);
+    expect(read.body.items.map((r: { id: string }) => r.id)).toEqual([
+      shown.id,
+    ]);
+  });
+
+  it('shows no plate, phone, e-mail or account id of the author', async () => {
+    const e = await elena();
+    await prisma.account.update({
+      data: { email: 'andrei@example.ro', phone: '+40722123456' },
+      where: { id: e.driver },
+    });
+    await reviewed(e.driver, e.nord.id, e.mechanic.id, 1);
+
+    const body = JSON.stringify((await listOf(e.mechanic.id)).body);
+
+    for (const kept of [
+      'B123ABC',
+      '+40722123456',
+      'andrei@example.ro',
+      e.driver,
+    ]) {
+      expect(body).not.toContain(kept);
+    }
+  });
+
+  it('answers 404, alike, for a mechanic unknown, off the profile or whose account was deleted', async () => {
+    const e = await elena();
+    const hidden = await prisma.mechanic.create({
+      data: { garageId: e.nord.id, name: 'Ionuț' },
+    });
+    const gone = await world.account('Costel Dan', ['mechanic']);
+    const deleted = await prisma.mechanic.create({
+      data: {
+        accountId: gone,
+        garageId: e.nord.id,
+        name: 'Costel',
+        onProfile: true,
+      },
+    });
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: gone },
+    });
+
+    const answers = await Promise.all(
+      [randomUUID(), hidden.id, deleted.id].map((id) => listOf(id)),
+    );
+
+    expect(answers.map((a) => a.status)).toEqual([404, 404, 404]);
+    expect(new Set(answers.map((a) => JSON.stringify(a.body))).size).toBe(1);
+    expect(answers[0].body.code).toBe('not_found');
+  });
+
+  // The code, validation_failed, is the API's ProblemFilter's: see
+  // apps/api/src/public-routes.integration.spec.ts.
+  it.each(['0', '-1', '1.5', 'x'])('refuses page %p with 400', async (page) => {
+    const e = await elena();
+
+    const refused = await listOf(e.mechanic.id, page);
+
+    expect(refused.status).toBe(400);
+  });
+
+  it('refuses an id that is not a UUID', async () => {
+    expect((await listOf('not-a-mechanic')).status).toBe(400);
   });
 });

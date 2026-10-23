@@ -354,3 +354,47 @@ describe('the garage feature switch route', () => {
     },
   );
 });
+
+// @traces 025-FR-014
+describe("the mechanic's reviews read and the review-ratings queue", () => {
+  const inventory = () => {
+    const parsed = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      kind?: string;
+      name?: string;
+      metric?: string;
+      source?: string;
+      alerts?: string[];
+    }[] = Object.values(parsed).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    return entries;
+  };
+
+  it('lists the public read with its route metric and alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/reviews/mechanic/{mechanicId}'];
+    const entry = inventory().find((each) => each.name === 'mechanic-reviews');
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(entry?.metric).toMatch(
+      /\/api\/v1\/reviews\/mechanic\/\{mechanicId\}$/,
+    );
+    expect(entry?.alerts).toEqual(['api-error-rate', 'api-latency']);
+  });
+
+  it('lists the queue with its failed-job and backlog alerts', () => {
+    const entry = inventory().find((each) => each.name === 'review-ratings');
+
+    expect(entry?.kind).toBe('queue');
+    expect(entry?.source).toBe(
+      'libs/domain/src/reviews/ratings/ratings.module.ts',
+    );
+    expect(entry?.alerts).toEqual(
+      expect.arrayContaining(['worker-jobs-failed', 'worker-queue-backlog']),
+    );
+  });
+});

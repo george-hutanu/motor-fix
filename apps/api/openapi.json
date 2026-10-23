@@ -3384,6 +3384,58 @@
         ]
       }
     },
+    "/api/v1/reviews/mechanic/{mechanicId}": {
+      "get": {
+        "operationId": "ReviewsController_forMechanic",
+        "parameters": [
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+          },
+          "404": {
+            "description": "not_found: no such mechanic on a garage’s profile"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A mechanic’s published reviews at every garage, 20 a page",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/job/{jobId}": {
       "get": {
         "operationId": "ReviewsController_forJob",
@@ -12530,6 +12582,68 @@
         },
         "required": [
           "shortName"
+        ]
+      },
+      "MechanicReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "garage"
+        ]
+      },
+      "MechanicReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MechanicReviewDto"
+            }
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "items"
         ]
       },
       "ReviewJobDto": {

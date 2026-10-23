@@ -1,5 +1,7 @@
 import {
   JobReviewContextDto,
+  MechanicReviewsPageDto,
+  MechanicReviewsQueryDto,
   PublishReviewDto,
   ReviewDto,
   ReviewEligibilityDto,
@@ -32,7 +34,7 @@ import {
 } from '@nestjs/swagger';
 
 import { ReviewsService } from './reviews.service';
-import { CurrentActor, Requires } from '../auth/actor.guard';
+import { CurrentActor, Public, Requires } from '../auth/actor.guard';
 import { JsonOnly } from '../auth/auth.controller';
 import type { Actor } from '../auth/policy';
 
@@ -58,6 +60,26 @@ export class ReviewsController {
     @Query() query: ReviewEligibilityQueryDto,
   ): Promise<ReviewEligibilityDto[]> {
     return this.service.eligibility(actor, query.jobIds);
+  }
+
+  @Get('mechanic/:mechanicId')
+  @Public()
+  @ApiOperation({
+    summary: 'A mechanic’s published reviews at every garage, 20 a page',
+  })
+  @ApiOkResponse({ type: MechanicReviewsPageDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: a bad id, or a page not a whole number from 1',
+  })
+  @ApiNotFoundResponse({
+    description: 'not_found: no such mechanic on a garage’s profile',
+  })
+  forMechanic(
+    @Param('mechanicId', new ParseUUIDPipe()) mechanicId: string,
+    @Query() query: MechanicReviewsQueryDto,
+  ): Promise<MechanicReviewsPageDto> {
+    return this.service.mechanicReviews(mechanicId, query.page);
   }
 
   @Get('job/:jobId')
