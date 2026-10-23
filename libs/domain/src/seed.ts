@@ -964,8 +964,7 @@ async function seed(db: Client, secret: string) {
     [[...LISTED.map(({ slug }) => slug), 'atelier-test']],
   );
   // An approval opens the garage's yearly documents cycle, due 12 months after
-  // its Bucharest day, which the seed's SQL approval skips; the same rule as
-  // the cycle migration's.
+  // its Bucharest day, which the seed's SQL approval skips.
   await db.query(
     `INSERT INTO garage_document_cycle (garage_id, due_on)
      SELECT id, ((approved_at AT TIME ZONE 'Europe/Bucharest')::date + INTERVAL '12 months')::date

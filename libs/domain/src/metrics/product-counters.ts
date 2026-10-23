@@ -101,6 +101,8 @@ const DOCUMENT_CYCLE_STEPS = [
 ] as const;
 // The steps the worker's compliance step counts.
 const WORKER_DOCUMENT_CYCLE_STEPS = DOCUMENT_CYCLE_STEPS.slice(0, 4);
+// The steps the API's upload and review routes count.
+const API_DOCUMENT_CYCLE_STEPS = DOCUMENT_CYCLE_STEPS.slice(4);
 
 const SUPPORT_MESSAGE_OUTCOMES = [
   'stored',
@@ -495,7 +497,7 @@ const STARTS: Record<
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
     [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
-    [documentCycle, each('step', DOCUMENT_CYCLE_STEPS.slice(4))],
+    [documentCycle, each('step', API_DOCUMENT_CYCLE_STEPS)],
   ],
   worker: [
     [
