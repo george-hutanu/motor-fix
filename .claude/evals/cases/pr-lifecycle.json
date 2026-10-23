@@ -153,7 +153,7 @@
   {
     "id": "pr-lifecycle-refuses-two-stage-labels-through-a-symlink",
     "hook": "stop:pr-lifecycle",
-    "why": "a gate started through a symlinked path must judge as it does through its real path; PR #38 found the gate exiting 0 there on a ready PR carrying two stage labels",
+    "why": "a gate started through a symlinked path must judge as it does through its real path: a ready PR carrying two stage labels is refused with exit 2 either way",
     "symlink": true,
     "payload": {},
     "env": {
