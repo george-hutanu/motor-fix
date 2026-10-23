@@ -1,9 +1,10 @@
 ---
 capability: garage-team
-updated: 2026-10-21
+updated: 2026-10-23
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
+  - 129-delete-account
 ---
 
 # Capability: Garage team
@@ -71,3 +72,7 @@ _From 131-invite-garage-staff._
 ### 389-FR-005 — With `team_mechanics` off, `mechanicId` MUST be refused (400 `validation_failed` naming it), the booking MUST store no `mechanic_id` of its own (the owner counts as every booking's mechanic, and no mechanic overlap is checked), and the JOB MUST carry the owner's own MECHANIC row, looked up by the owner's account (`mechanic.account_id` is unique; one garage per account at launch, X20) and created in the same transaction at this garage's first confirmation when none exists (`account_id` the owner's account, `name` the account's display name, not on the profile); the booking DTO's `mechanic` MUST read that row, so every read sees the owner as the mechanic. A row for the owner's account at another garage answers 409 `mechanic_unavailable`, nothing written.
 
 _From 389-confirm-booking-lift-mechanic._
+
+### 129-FR-009 — The same transaction MUST detach the account's MECHANIC row (`account_id` cleared, `on_profile` false) and delete its receptionist GARAGE_MEMBER rows; the mechanic row, its reviews and its future bookings' mechanic reference are kept, so the garage's and the mechanic's figures are unchanged (025-FR) and the owner reassigns through the existing mechanic change.
+
+_From 129-delete-account._

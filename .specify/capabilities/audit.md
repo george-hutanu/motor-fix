@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-20
+updated: 2026-10-23
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -11,6 +11,7 @@ features:
   - 304-request-garage-details
   - 176-price-change-activity-log
   - 1352-catalogue-job-visibility
+  - 129-delete-account
 ---
 
 # Capability: Audit history
@@ -214,6 +215,10 @@ _From 176-price-change-activity-log._
 ### 1352-FR-013 — Each write MUST record its audit entries through the shared writer, in the same transaction, in ST-176's format (kind `price_list`, actor role `owner`, the actor's first name, grant and request id as the actor carries them, `is_key_change` and `internal` false): an add, one `create` entry on `garage_price` (the default row) in the shape the listing's prices write already records for a new row, written through the same function; a hide or show, one `update` entry on the row, field `visible`, old and new boolean; a removal, one `delete` entry on the default row, its old value the same shape as the add's, plus one `brand_range` `delete` entry per brand row (176-FR-005) and one `garage_brand_job` `delete` entry per tick (412-FR-007's shape); a proposal, the catalogue row's `create` entry on `job_type` as the listing writes it and the price row's `create` entry as the add writes it. A write that changes nothing writes no entry.
 
 _From 1352-catalogue-job-visibility._
+
+### 129-FR-013 — The transaction MUST write one audit entry through the audit writer (390-FR-001): action `delete`, subject `account` = the account, kind `account_deleted`, actor the holder's account id in the role in use with the actor name "Cont șters" (no personal value), old value `{ status: 'active' }`, new value `{ status: 'deleted' }` and nothing else.
+
+_From 129-delete-account._
 
 ## Retired
 

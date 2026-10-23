@@ -5,6 +5,7 @@ features:
   - 022-review-drawer
   - 023-review-confirmed-job
   - 025-review-mechanic
+  - 129-delete-account
 ---
 
 # Capability: Reviews
@@ -220,6 +221,10 @@ _From 025-review-mechanic._
 ### 025-FR-015 — Tests MUST be written first and cover, in Jest on real PostgreSQL: the mechanic set from the job including a changed mechanic and the owner's row when team mechanics is off; no mechanic for a profile review; the rating maths and rounding (4,45 → 4,5; 4,44 → 4,4; none → empty and 0); a move between garages; a reported review out of both figures until decided, then back in or out; a deleted mechanic account keeping the link; idempotent and concurrent recalculation; the event recorded only on change with its audience; the query's order, page size, garage label, 404 cases and 400 page. End to end (Playwright): none of its own. Every test file names its requirements in a `// @traces` line.
 
 _From 025-review-mechanic._
+
+### 129-FR-010 — A published review whose driver account is `deleted` MUST show the author "Șofer MotorFix" in place of the first name and surname initial of 022-FR-007 and 025-FR-011, wherever reviews are rendered (garage profile, the mechanic's list, the garage's dashboard list), with counts and ratings unchanged. The API renders the author's short name as "Șofer MotorFix", with no other mark on the author; an English rendering belongs to the first web screen that shows other people's review authors (none exists today).
+
+_From 129-delete-account._
 
 ## Retired
 
