@@ -72,8 +72,9 @@ test('the rules open in a new tab from the review drawer and the draft stays', a
   );
   await expect(rules.locator('ol > li')).toHaveCount(8);
   await rules.close();
+  await page.bringToFront();
 
-  await expect(drawer).toBeVisible();
+  await expect(drawer.locator('#mf-review-comment')).toBeVisible();
   await expect(drawer.locator('input[type="radio"][value="5"]')).toBeChecked();
   await expect(drawer.locator('#mf-review-paid')).toHaveValue('890');
   await expect(drawer.locator('#mf-review-comment')).toHaveValue(
