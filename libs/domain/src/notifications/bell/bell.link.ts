@@ -2,9 +2,10 @@
 // notification carries the request's address its e-mail links to, since its
 // subject is a quote or a recipient; a review's opens the reviews; a
 // suspension or a yearly documents notice opens the garage dashboard; a decision on a driver's report
-// opens the reported garage's public profile its e-mail links to. Any other
+// opens the reported garage's public profile its e-mail links to; a decision
+// on a job the garage proposed opens its Prețuri. Any other
 // kind opens nothing: the bell only marks it read.
-type View = 'cars' | 'garage' | 'profile' | 'requests' | 'reviews';
+type View = 'cars' | 'garage' | 'prices' | 'profile' | 'requests' | 'reviews';
 
 export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   BOOKING_CANCELLED: 'requests',
@@ -17,6 +18,7 @@ export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   BOOKING_REMINDER: 'requests',
   BOOKING_TIME_PROPOSED: 'requests',
   CAR_TRANSFER_ACCEPTED: 'cars',
+  CATALOGUE_JOB_DECIDED: 'prices',
   DOCUMENT_DUE: 'garage',
   DOCUMENT_OVERDUE: 'garage',
   DOCUMENT_REFUSED: 'garage',
@@ -90,6 +92,7 @@ export function bellLink(row: Row): string | null {
   if (!Object.hasOwn(VIEW_OF_KIND, row.kind)) return null;
   const view = VIEW_OF_KIND[row.kind];
   if (view === 'garage') return '/app/garage';
+  if (view === 'prices') return '/app/garage/prices';
   if (view === 'profile') return profileOf(row.params);
   if (view === 'cars') {
     return row.subjectId ? `${ROOT}/cars/${row.subjectId}` : `${ROOT}/cars`;
