@@ -34,6 +34,11 @@ export interface PriceListItemDto {
   reason?: 'rejected' | 'awaiting_approval' | 'not_authorised' | 'hidden_by_garage' | 'no_top_price';
 
   /**
+   * What the admin wrote when rejecting the job; only with reason 'rejected'
+   */
+  rejectionReason?: string;
+
+  /**
    * The default range's top price, when set
    */
   toBani?: number;

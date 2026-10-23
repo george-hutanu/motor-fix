@@ -15656,6 +15656,11 @@
               "no_top_price"
             ]
           },
+          "rejectionReason": {
+            "type": "string",
+            "description": "What the admin wrote when rejecting the job; only with reason 'rejected'",
+            "maxLength": 500
+          },
           "priceId": {
             "type": "string",
             "description": "The default row's id, what a range change names; absent without one",

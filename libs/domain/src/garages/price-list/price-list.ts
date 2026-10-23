@@ -25,6 +25,7 @@ export interface PriceRow {
     nameEn: string;
     status: JobTypeStatus;
     rarActivity: string | null;
+    rejectionReason?: string | null;
   };
 }
 
@@ -42,6 +43,7 @@ export const PRICE_ROW_SELECT = {
       nameEn: true,
       nameRo: true,
       rarActivity: true,
+      rejectionReason: true,
       status: true,
     },
   },
@@ -115,7 +117,7 @@ export function priceListJobs(
     })
     .sort((a, b) => before(a.place, b.place))
     .map(({ brandRanges, defaultRow, place }) => {
-      const { id, nameEn, nameRo } = place.jobType;
+      const { id, nameEn, nameRo, rejectionReason } = place.jobType;
       const reason = reasonOf(place, defaultRow, rarActivities);
       return {
         jobTypeId: id,
@@ -123,6 +125,7 @@ export function priceListJobs(
         nameRo,
         public: reason === undefined,
         ...(reason && { reason }),
+        ...(reason === 'rejected' && rejectionReason && { rejectionReason }),
         ...(defaultRow && { visible: defaultRow.visible }),
         ...(defaultRow?.durationMinutes != null && {
           durationMinutes: defaultRow.durationMinutes,

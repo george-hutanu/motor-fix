@@ -166,3 +166,13 @@ describe('the proposal of a job in the OpenAPI document', () => {
     expect(body.required).toEqual(['name']);
   });
 });
+
+// @traces 414-FR-010
+describe("the rejection reason on the owner's price list in the OpenAPI document", () => {
+  it('may give an item the reason its job was rejected', () => {
+    const item = doc.components.schemas.PriceListItemDto;
+
+    expect(item.properties.rejectionReason).toMatchObject({ type: 'string' });
+    expect(item.required).not.toContain('rejectionReason');
+  });
+});
