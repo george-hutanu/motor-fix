@@ -1463,6 +1463,104 @@ describe('a garage suspended through the use case', () => {
   });
 });
 
+// @traces 067-FR-006 067-FR-007
+describe('a garage restored through the use case', () => {
+  const uncached = {
+    entry: (_key, read) => read(),
+  } satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
+  const search = () =>
+    new GarageSearchService(prisma, uncached, new SearchLogService(prisma));
+  const today = () => localDay(new Date());
+
+  async function admin() {
+    return {
+      accountId: await account('Ana Popescu', ['admin']),
+      garageId: null,
+      permissions: {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      },
+      role: 'admin' as const,
+      roles: ['admin' as const],
+    };
+  }
+
+  // A listed garage suspended for a failed re-check, its profile read
+  // (and cached) while it was off the map.
+  async function suspendedListed() {
+    const approved = await garage('approved');
+    await prisma.garage.update({
+      data: {
+        lastCheckedOn: new Date(addDays(today(), -40)),
+        rarActivities: ['mechanics', 'brakes'],
+      },
+      where: { id: approved.id },
+    });
+    const brand = await catalogueBrand('Bmw');
+    await prisma.garageBrand.create({
+      data: { brandId: brand.id, garageId: approved.id, stance: 'works_on' },
+    });
+    expect((await read(approved.slug)).status).toBe(200);
+    await app
+      .get(SuspensionService)
+      .suspend(
+        { accountId: null, role: 'system' },
+        approved.id,
+        'recheck_failed',
+        'Autorizație RAR expirată',
+      );
+    const suspended = await prisma.outboxEvent.findFirstOrThrow({
+      where: { kind: 'garage.suspended', subjectId: approved.id },
+    });
+    await purgeAudience(app.get(AUTH_REDIS), suspended.audience);
+    expect((await read(approved.slug)).status).toBe(410);
+    return { approved, brand };
+  }
+
+  // The relay purges the event's audience before it publishes it.
+  async function restore(garageId: string) {
+    await app.get(SuspensionService).restore(await admin(), garageId, {
+      recheck: { activities: ['mechanics', 'brakes'], checkedOn: today() },
+    });
+    const event = await prisma.outboxEvent.findFirstOrThrow({
+      where: { kind: 'garage.restored', subjectId: garageId },
+    });
+    await purgeAudience(app.get(AUTH_REDIS), event.audience);
+  }
+
+  it('comes back in both counts of the brand search', async () => {
+    const { approved, brand } = await suspendedListed();
+    expect((await search().forBrand(brand.id)).total).toBe(0);
+
+    await restore(approved.id);
+
+    const page = await search().forBrand(brand.id);
+    expect(page.total).toBe(1);
+    expect(page.counts).toEqual({ doesNotTake: 0, worksOn: 1 });
+    expect(page.items.map((item) => item.id)).toEqual([approved.id]);
+  });
+
+  it('comes back on the brand page counts', async () => {
+    const { approved, brand } = await suspendedListed();
+
+    await restore(approved.id);
+
+    const shown = await new HomeService(prisma).forBrand(brand.slug);
+    expect(shown).toMatchObject({ takers: 1, total: 1 });
+  });
+
+  it('answers 200 on a profile cached as gone, dated by the new re-check', async () => {
+    const { approved } = await suspendedListed();
+
+    await restore(approved.id);
+
+    const res = await read(approved.slug);
+    expect(res.status).toBe(200);
+    expect(res.body.verifiedAt.slice(0, 10)).toBe(today());
+  });
+});
+
 // @traces 308-FR-001
 // @traces 308-FR-002
 // @traces 308-FR-003

@@ -22,7 +22,7 @@
 }
 @media (min-width: 900px) {
   .list {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto auto;
     column-gap: var(--mf-space-3);
   }
   .row {
@@ -32,6 +32,9 @@
   }
   .open {
     grid-column: 4;
+  }
+  .restore {
+    grid-column: 5;
   }
   .skeleton-row {
     grid-column: 1 / -1;
@@ -75,6 +78,7 @@ mf-lamp {
   }
 }
 .open,
+.restore,
 .retry {
   display: inline-flex;
   align-items: center;
@@ -91,11 +95,13 @@ mf-lamp {
   border-radius: var(--mf-radius-control);
   cursor: pointer;
 }
-.open {
+.open,
+.restore {
   width: 100%;
 }
 @media (min-width: 900px) {
-  .open {
+  .open,
+  .restore {
     width: auto;
     white-space: nowrap;
   }
@@ -104,6 +110,7 @@ mf-lamp {
   margin-top: var(--mf-space-3);
 }
 .open:focus-visible,
+.restore:focus-visible,
 .retry:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
   outline-offset: var(--mf-focus-offset);

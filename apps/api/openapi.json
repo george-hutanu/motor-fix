@@ -6153,6 +6153,67 @@
         ]
       }
     },
+    "/api/v1/admin/garages/{id}/restore": {
+      "post": {
+        "operationId": "SuspensionController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageRestoredDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a malformed body, or no note for a garage suspended by an admin or for a confirmed report"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no garage"
+          },
+          "409": {
+            "description": "garage_not_suspended, garage_already_restored, recheck_missing or documents_not_valid"
+          },
+          "422": {
+            "description": "recheck_not_expected, recheck_date_invalid, recheck_activity_unknown or recheck_activities_wider"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Put a suspended garage back on the map once its cause's evidence holds",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/checks/{kind}": {
       "put": {
         "operationId": "VerificationChecksController_record",
@@ -14023,6 +14084,28 @@
           "suspended"
         ]
       },
+      "RarActivityNameDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "brakes"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
       "SuspendedGarageRowDto": {
         "type": "object",
         "properties": {
@@ -14077,6 +14160,13 @@
               "suspended",
               "withdrawn"
             ]
+          },
+          "activities": {
+            "description": "Only for a failed re-check: the garage's RAR activities, in its order, for the restore dialog",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
           }
         },
         "required": [
@@ -14802,28 +14892,6 @@
           "kind",
           "name",
           "email"
-        ]
-      },
-      "RarActivityNameDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "brakes"
-          },
-          "nameRo": {
-            "type": "string",
-            "example": "frâne"
-          },
-          "nameEn": {
-            "type": "string",
-            "example": "brakes"
-          }
-        },
-        "required": [
-          "code",
-          "nameRo",
-          "nameEn"
         ]
       },
       "LegalCheckRecheckDto": {
@@ -16834,6 +16902,78 @@
           "total"
         ]
       },
+      "SuspensionLifterDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name and the family name's initial"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "VerificationFileSuspensionDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reason as stored"
+          },
+          "rarVerdict": {
+            "type": "string",
+            "description": "Only for a failed re-check whose reason names the verdict",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "untilTime": {
+            "type": "string",
+            "description": "When it ended; null while it is open",
+            "format": "date-time",
+            "nullable": true
+          },
+          "liftedBy": {
+            "description": "The admin who put the garage back on the map, by first name and initial; null while open or when it ended otherwise",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SuspensionLifterDto"
+              }
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "The admin's note on putting it back; null when none",
+            "nullable": true
+          }
+        },
+        "required": [
+          "cause",
+          "reason",
+          "fromTime",
+          "untilTime",
+          "liftedBy",
+          "note"
+        ]
+      },
       "VerificationFileDto": {
         "type": "object",
         "properties": {
@@ -16914,6 +17054,16 @@
                 "$ref": "#/components/schemas/DocumentCycleDto"
               }
             ]
+          },
+          "suspension": {
+            "description": "The garage's latest suspension, open or ended; null for a garage never suspended",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileSuspensionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16929,7 +17079,8 @@
           "reportsOpen",
           "previousRejection",
           "timeline",
-          "documentCycle"
+          "documentCycle",
+          "suspension"
         ]
       },
       "SuspendGarageDto": {
@@ -16990,6 +17141,99 @@
           "cause",
           "reason",
           "fromTime"
+        ]
+      },
+      "RestoreRecheckDto": {
+        "type": "object",
+        "properties": {
+          "checkedOn": {
+            "type": "string",
+            "description": "The Bucharest day of the look-up: after the garage's last check, not after today",
+            "format": "date"
+          },
+          "activities": {
+            "description": "The rar_activity codes the authorisation covers, a non-empty part of the garage's current set",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "checkedOn",
+          "activities"
+        ]
+      },
+      "RestoreGarageDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Trimmed; line breaks allowed; required when the cause is admin or report_confirmed",
+            "maxLength": 1000,
+            "minLength": 1
+          },
+          "recheck": {
+            "description": "A valid RAR re-check; only for the cause recheck_failed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestoreRecheckDto"
+              }
+            ]
+          }
+        }
+      },
+      "GarageRestoredDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "untilTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "liftedBy": {
+            "$ref": "#/components/schemas/SuspensionLifterDto"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastCheckedOn": {
+            "type": "string",
+            "description": "The inline re-check's day, else the garage's current one; null when never checked",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "garageId",
+          "cause",
+          "fromTime",
+          "untilTime",
+          "liftedBy",
+          "note",
+          "lastCheckedOn"
         ]
       },
       "RecordCheckEvidenceDto": {

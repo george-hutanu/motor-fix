@@ -558,6 +558,116 @@ describe('reading a file', () => {
   });
 });
 
+// @traces 067-FR-009 067-FR-010
+describe("the garage's latest suspension on the file", () => {
+  const suspend = (
+    data: Partial<Prisma.GarageSuspensionUncheckedCreateInput> = {},
+  ) =>
+    prisma.garageSuspension.create({
+      data: {
+        cause: 'recheck_failed',
+        fromTime: new Date('2026-10-20T08:00:00.000Z'),
+        garageId,
+        reason: 'Autorizație RAR expirată',
+        ...data,
+      },
+    });
+
+  it('is null for a garage never suspended', async () => {
+    const file = await sent();
+
+    expect((await service().read(file.id)).suspension).toBeNull();
+  });
+
+  it('carries an open suspension with no lifter and no note', async () => {
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: garageId },
+    });
+    await suspend();
+    const file = await sent({ status: 'approved' });
+
+    expect((await service().read(file.id)).suspension).toEqual({
+      cause: 'recheck_failed',
+      fromTime: '2026-10-20T08:00:00.000Z',
+      liftedBy: null,
+      note: null,
+      rarVerdict: 'expired',
+      reason: 'Autorizație RAR expirată',
+      untilTime: null,
+    });
+  });
+
+  it('carries an ended suspension with the first name and initial of the admin who lifted it and the note', async () => {
+    await suspend({
+      liftedBy: ioana,
+      liftNote: 'A trimis autorizația reînnoită.',
+      untilTime: new Date('2026-10-23T10:15:03.120Z'),
+    });
+    const file = await sent({ status: 'approved' });
+
+    expect((await service().read(file.id)).suspension).toEqual({
+      cause: 'recheck_failed',
+      fromTime: '2026-10-20T08:00:00.000Z',
+      liftedBy: { name: 'Ioana P.' },
+      note: 'A trimis autorizația reînnoită.',
+      rarVerdict: 'expired',
+      reason: 'Autorizație RAR expirată',
+      untilTime: '2026-10-23T10:15:03.120Z',
+    });
+  });
+
+  it('carries the latest of two suspensions', async () => {
+    await suspend({
+      cause: 'admin',
+      fromTime: new Date('2026-09-01T08:00:00.000Z'),
+      liftedBy: ioana,
+      liftNote: 'Rezolvat.',
+      untilTime: new Date('2026-09-05T08:00:00.000Z'),
+    });
+    await suspend({ cause: 'documents_overdue', reason: 'Documente lipsă' });
+    const file = await sent({ status: 'approved' });
+
+    expect((await service().read(file.id)).suspension).toMatchObject({
+      cause: 'documents_overdue',
+      liftedBy: null,
+      reason: 'Documente lipsă',
+      untilTime: null,
+    });
+  });
+
+  it("lists the garage's suspension and restore in the timeline, not its other changes", async () => {
+    const file = await sent({ status: 'approved' });
+    const at = (minute: number) => new Date(Date.UTC(2026, 9, 20, 8, minute));
+    const log = (kind: string | null, minute: number) =>
+      prisma.activityLog.create({
+        data: {
+          action: 'update',
+          actorId: ioana,
+          actorName: 'Ioana',
+          actorRole: 'admin',
+          at: at(minute),
+          field: kind === null ? 'name' : 'status',
+          garageId,
+          kind,
+          subjectId: garageId,
+          subjectType: 'garage',
+        },
+      });
+    await log('garage_suspended', 0);
+    await log('garage_restored', 1);
+    await log(null, 2);
+
+    const { timeline } = await service().read(file.id);
+
+    expect(
+      timeline.entries
+        .filter((e) => e.subjectType === 'garage')
+        .map((e) => e.kind),
+    ).toEqual(['garage_restored', 'garage_suspended']);
+  });
+});
+
 describe('the timeline', () => {
   const entry = (
     data: Partial<Prisma.ActivityLogUncheckedCreateInput> & {

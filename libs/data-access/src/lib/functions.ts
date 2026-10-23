@@ -131,6 +131,8 @@ export type { ReportDecisionControllerDecide$Params as ReportDecisionControllerD
 export { reportDecisionControllerDecide as reportDecisionControllerDecide } from './fn/admin/report-decision-controller-decide';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';
 export { suspensionControllerSuspend as suspensionControllerSuspend } from './fn/admin/suspension-controller-suspend';
+export type { SuspensionControllerRestore$Params as SuspensionControllerRestore$Params } from './fn/admin/suspension-controller-restore';
+export { suspensionControllerRestore as suspensionControllerRestore } from './fn/admin/suspension-controller-restore';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { VerificationFileControllerRead$Params as VerificationFileControllerRead$Params } from './fn/admin/verification-file-controller-read';

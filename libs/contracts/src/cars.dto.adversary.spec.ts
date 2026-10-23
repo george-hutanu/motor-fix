@@ -124,7 +124,7 @@ describe('CreateCarDto under hostile input', () => {
     [' 2026-11-13', ['itpUntil']],
     ['2026-11-13\n', ['itpUntil']],
     ['', ['itpUntil']],
-    ['0000-01-01', []],
+    ['0000-01-01', ['itpUntil']],
     ['١٢٣٤-١١-١٣', ['itpUntil']],
   ])('itp date %p', (itpUntil, expected) => {
     expect(problems(car({ itpUntil }))).toEqual(expected);

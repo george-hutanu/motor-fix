@@ -525,7 +525,7 @@
     {
       "id": 17,
       "type": "stat",
-      "title": "Suspension notices, last hour",
+      "title": "Suspension and restore notices, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -545,6 +545,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -557,7 +566,7 @@
     {
       "id": 18,
       "type": "stat",
-      "title": "Suspension notices, last 24 hours",
+      "title": "Suspension and restore notices, last 24 hours",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -577,6 +586,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -589,7 +607,7 @@
     {
       "id": 19,
       "type": "timeseries",
-      "title": "Suspension notices per hour",
+      "title": "Suspension and restore notices per hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -609,6 +627,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {

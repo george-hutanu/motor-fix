@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 168,
+    "count": 169,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -325,6 +325,19 @@
       ],
       "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
       "story": "ST-49"
+    },
+    {
+      "kind": "queue",
+      "name": "garage-restored",
+      "source": "libs/domain/src/notifications/garage-restored/garage-restored.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_garage_restored_notices_total (built, skipped) on motorfix-queues; one GarageRestored log line per event with the garage id and the owners told, never the admin's note; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
+      "story": "ST-67"
     },
     {
       "kind": "queue",
@@ -746,6 +759,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_garage_restored_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each restore told to its garage's owners by outcome (built, skipped: no owner or a bad payload), with the fan-out's log line naming the garage id; also on motorfix-product; a count has no failure to alert on, the garage-restored queue entry owns the failed-job alert",
+      "story": "ST-67"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_report_decided_notices_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
@@ -761,6 +783,15 @@
       "alerts": "none",
       "reason": "counts each garage suspension by cause (recheck_failed, documents_overdue, admin, report_confirmed); the audit holds who and why; a count has no failure to alert on, the admin-garage-suspension endpoint entry owns the error and latency alerts",
       "story": "ST-49"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_garage_restores_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each suspended garage an admin put back on the map, by the cause lifted; not started at 0, so the API stays under its 150 series; the audit holds who, the evidence and the note; a count has no failure to alert on, the admin-garage-restore endpoint entry owns the error and latency alerts",
+      "story": "ST-67"
     },
     {
       "kind": "product-counter",
@@ -805,6 +836,19 @@
       ],
       "reason": "each suspension and each refused one is audited with the admin, the cause and the reason; the count by cause is the motorfix_garage_suspensions_total entry",
       "story": "ST-49"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garage-restore",
+      "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/restore",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each restore is audited with the admin, the cause lifted, its evidence and the note, and logged once with the garage, the cause and whether a re-check rode with it (never the note); the count by cause is the motorfix_garage_restores_total entry",
+      "story": "ST-67"
     },
     {
       "kind": "endpoint",

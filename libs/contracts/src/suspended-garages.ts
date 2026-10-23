@@ -6,13 +6,14 @@ import {
   SUSPENSION_CAUSES,
   type SuspensionCause,
 } from './garage-suspension.dto';
+import { RarActivityNameDto } from './legal-check.dto';
 import { toQueryNumber, VerificationQueueAreaDto } from './verification-queue';
 import {
   VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
 
-const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
+export const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
 export type RarVerdict = (typeof RAR_VERDICTS)[number];
 
 export class AdminGaragesSummaryDto {
@@ -110,6 +111,13 @@ export class SuspendedGarageRowDto {
     enum: RAR_VERDICTS,
   })
   rarVerdict?: RarVerdict;
+
+  @ApiPropertyOptional({
+    description:
+      "Only for a failed re-check: the garage's RAR activities, in its order, for the restore dialog",
+    type: [RarActivityNameDto],
+  })
+  activities?: RarActivityNameDto[];
 }
 
 export class AdminGaragesDto {

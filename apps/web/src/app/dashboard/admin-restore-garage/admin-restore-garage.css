@@ -1,0 +1,100 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.garage {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+.name {
+  font-weight: 700;
+}
+.state {
+  font-weight: 600;
+}
+.reason,
+.since,
+.count,
+.none {
+  color: var(--mf-text-secondary);
+}
+.result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-3);
+}
+.result .label,
+.ticks legend,
+.field > label {
+  font-weight: 700;
+}
+.ticks {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ticks legend,
+.field > label {
+  width: 100%;
+  margin-bottom: var(--mf-space-2);
+  padding: 0;
+}
+.field {
+  display: grid;
+}
+input[type="date"],
+textarea {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+textarea {
+  resize: vertical;
+}
+.count {
+  margin-top: var(--mf-space-1);
+  text-align: end;
+}
+.tick {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+}
+.tick input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-green);
+}
+.documents {
+  font-weight: 600;
+}
+.error,
+.documents.invalid {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+/* The actions stack at the dialog's width at every size, the one that sends
+   on top as on the phone's bottom sheet: the primary's label is too long to
+   sit beside Cancel, and two wrapped rows would not share their edges. */
+.actions {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}

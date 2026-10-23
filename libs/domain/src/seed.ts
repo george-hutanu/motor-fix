@@ -917,6 +917,13 @@ async function seed(db: Client, secret: string) {
     `UPDATE garage SET status = 'approved', approved_at = '2026-01-15T09:00:00Z'
      WHERE slug = 'atelier-test' AND status = 'draft'`,
   );
+  // An approved garage has had its activities check: every RAR activity,
+  // which covers every job as an empty list does. Set once: a re-check's or
+  // an admin's later list is never put back.
+  await db.query(
+    `UPDATE garage SET rar_activities = (SELECT array_agg(code ORDER BY code) FROM rar_activity)
+     WHERE slug = 'atelier-test' AND rar_activities = '{}'`,
+  );
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
     await db.query(

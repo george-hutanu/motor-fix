@@ -134,6 +134,27 @@ h4 {
   margin: var(--mf-space-2) 0 0;
   font-weight: 600;
 }
+/* The header's suspension: red text while open, plain once ended. */
+.suspension {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin-top: var(--mf-space-2);
+  overflow-wrap: anywhere;
+}
+.suspension p {
+  margin: 0;
+}
+.suspension.open p {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+.lift-note {
+  color: var(--mf-text-secondary);
+  white-space: pre-line;
+}
+[data-section="documents"] > .restore {
+  margin-top: var(--mf-space-2);
+}
 .document[data-missing] .line {
   color: var(--mf-red-ink);
 }

@@ -3038,7 +3038,7 @@
     {
       "id": 90,
       "type": "stat",
-      "title": "Garage suspensions, last hour",
+      "title": "Garage suspensions and restores, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3058,6 +3058,15 @@
           },
           "expr": "sum by (cause) (increase(motorfix_garage_suspensions_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{cause}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (cause) (increase(motorfix_garage_restores_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{cause}}"
         }
       ],
       "fieldConfig": {
@@ -3070,7 +3079,7 @@
     {
       "id": 91,
       "type": "stat",
-      "title": "Garage suspensions, last 24 hours",
+      "title": "Garage suspensions and restores, last 24 hours",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3090,6 +3099,15 @@
           },
           "expr": "sum by (cause) (increase(motorfix_garage_suspensions_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{cause}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (cause) (increase(motorfix_garage_restores_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "restored {{cause}}"
         }
       ],
       "fieldConfig": {
@@ -3102,7 +3120,7 @@
     {
       "id": 92,
       "type": "timeseries",
-      "title": "Garage suspensions per hour",
+      "title": "Garage suspensions and restores per hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3122,6 +3140,15 @@
           },
           "expr": "sum by (cause) (increase(motorfix_garage_suspensions_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{cause}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (cause) (increase(motorfix_garage_restores_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{cause}}"
         }
       ],
       "fieldConfig": {
@@ -3132,7 +3159,7 @@
     {
       "id": 93,
       "type": "stat",
-      "title": "Suspension notices, last hour",
+      "title": "Suspension and restore notices, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3152,6 +3179,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -3164,7 +3200,7 @@
     {
       "id": 94,
       "type": "stat",
-      "title": "Suspension notices, last 24 hours",
+      "title": "Suspension and restore notices, last 24 hours",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3184,6 +3220,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -3196,7 +3241,7 @@
     {
       "id": 95,
       "type": "timeseries",
-      "title": "Suspension notices per hour",
+      "title": "Suspension and restore notices per hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -3216,6 +3261,15 @@
           },
           "expr": "sum by (outcome) (increase(motorfix_garage_suspended_notices_total{deployment_environment=\"$env\"}[1h]))",
           "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_garage_restored_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "restored {{outcome}}"
         }
       ],
       "fieldConfig": {

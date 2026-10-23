@@ -30,7 +30,7 @@ describe('certificateStale', () => {
 
 describe('timelineWhere', () => {
   // @traces 204-FR-001 259-FR-006
-  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes, RAR number corrections and refused approvals, its checks' records and its documents' openings", () => {
+  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes, RAR number corrections and refused approvals, its checks' records, its documents' openings and its suspensions and restores", () => {
     expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'], [])).toEqual({
       garageId: 'g',
       OR: [
@@ -51,7 +51,10 @@ describe('timelineWhere', () => {
           subjectType: 'legal_document',
         },
         {
-          field: { in: ['documents_state', 'documents_due_on'] },
+          OR: [
+            { field: { in: ['documents_state', 'documents_due_on'] } },
+            { kind: { in: ['garage_suspended', 'garage_restored'] } },
+          ],
           subjectId: 'g',
           subjectType: 'garage',
         },

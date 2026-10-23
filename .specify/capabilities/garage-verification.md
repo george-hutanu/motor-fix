@@ -27,6 +27,7 @@ features:
   - 101-verification-progress
   - 208-resubmit-after-more
   - 068-yearly-documents
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Garage verification
@@ -179,9 +180,9 @@ _From 068-yearly-documents._
 
 _From 206-documents-declaration._
 
-### 049-FR-001 — The system MUST store a SUSPENSION per suspension with: id, garage, cause (`recheck_failed`, `documents_overdue`, `admin`, `report_confirmed`), reason (text, 1 to 200 characters), `from_time` (UTC, the commit's time), `until_time` (empty while open; #106 sets it), who suspended (an admin's account, or none for `system`) and creation time. At most one open suspension (empty `until_time`) MUST exist per garage, enforced by the database.
+### 067-FR-001 — The SUSPENSION record (049-FR-001) MUST also hold who lifted it (`lifted_by`, an admin's account; empty while open) and the lift note (`lift_note`, 1 to 1,000 characters or empty), added by a migration that leaves every existing row open; `until_time` is set by the restore and only by it. The database rule of at most one open suspension per garage stays; an ended suspension keeps `until_time` ≥ `from_time`, an invariant of the single writer asserted by tests, not a new database constraint.
 
-_From 049-garage-suspension._
+_From 067-restore-suspended-garage._
 
 ### 049-FR-002 — The system MUST provide one domain use case in the verification module, `suspend(garageId, cause, reason, actor)`, that in a single transaction: creates the SUSPENSION, sets the garage's status `approved` → `suspended`, writes one audit entry on subject `garage` (actor, actor role, old and new status, the cause and the reason) and one outbox row `garage.suspended` whose payload carries `garageId` and `cause`. A failed audit or outbox write MUST fail the transaction. Two concurrent calls for one garage MUST end with exactly one committed (the row lock on the garage, as the verification transitions use).
 
@@ -222,9 +223,9 @@ _From 301-verification-queue._
 
 _From 301-verification-queue._
 
-### 068-FR-012 — The drawer's "Documente" part (302-FR-005) MUST show, under each kind's current document, the document under review with "încărcat <zi>" / "uploaded <day>", its issue date and pages openable through the existing page addresses (206-FR-014, each opening logged), and two buttons, "Acceptă" / "Accept" and "Refuză" / "Refuse"; refusing opens a dialog with the two reasons and the note; a decided document shows its decision and who took it; a `refused` document shows the reason and the note. When the garage is `suspended` with cause `documents_overdue` and the acceptance leaves both kinds `valid`, the answer's cycle lets the drawer offer "Repune pe hartă" / "Put back on the map" in the same step once #106 has shipped its action; until then the drawer shows the suspension line only. Every text lives in the shared i18n files in Romanian and English; the part MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, and every state conveyed by text, not colour alone.
+### 067-FR-009 — The admin MUST reach the restore from two places, both opening the same dialog: the button "Repune pe hartă" / "Put back on the map" (text alternative "Repune pe hartă {name}") on every row of the "Service-uri suspendate" panel that carries an open suspension (066-FR-007, which left the button to this story), beside "Deschide dosarul"; and in the file drawer's header when the garage is `suspended`, which needs the file read (302-FR-001) to carry the garage's latest suspension (`suspension`: cause, reason, fromTime, untilTime, liftedBy name, note; absent when the garage never was suspended). The dialog (the overlays' dialog pattern, as the re-check record dialog) MUST name the garage, the cause's state text as the list reads it (066-FR-004), the reason and "din {date}"; show, for `recheck_failed`, the admin re-check form (1351-FR-011) with the result fixed to "Valabilă", the date filled with today and the activities pre-ticked from the garage's current set, and no failure choice; for `documents_overdue`, the documents' state line ("Documente anuale valabile" / "Yearly documents valid" when the accept answer or the file's cycle reads `due`, else "Documentele anuale nu sunt toate valabile" with the confirm button disabled); for every cause a note field with a 1,000-character counter, required for `admin` and `report_confirmed` ("Scrie ce s-a rezolvat" / "Say what was fixed" when empty) and labelled optional otherwise; and the buttons "Repune pe hartă" and "Renunță" / "Cancel". While the call is in flight the confirm button is disabled and shows a busy state, so a double press sends one restore; a network failure or a 5xx is shown in the dialog as "Nu am putut repune service-ul pe hartă. Încearcă din nou." / "Could not put the garage back on the map. Try again." with the input kept and the call retryable (a retry after a commit the answer never reached ends in `garage_already_restored` naming the same admin, shown as in the next sentence). A 409 or 422 MUST be shown in the dialog with the server's message, the dialog staying open with the admin's input kept, except `garage_already_restored` and `garage_not_suspended`, which close it after showing the message and make the list or the file re-read. On 200 the dialog closes, the list and the counts re-read (the live event also re-reads them), and the drawer's header reads the ended suspension. After an acceptance in the drawer's "Documente" part (068-FR-012) whose answer carries `suspendedFor: documents_overdue` and a cycle in state `due`, the part MUST offer "Repune pe hartă" in the same step, opening this dialog; the suspension line stays otherwise.
 
-_From 068-yearly-documents._
+_From 067-restore-suspended-garage._
 
 ### 301-FR-007 — With no file waiting the panel and the view MUST read "Niciun service nu așteaptă verificarea" / "No garage is waiting for verification"; the panel and the view read 0, the menu counter is hidden and the header reads its existing "none waiting" line, as the shell does today.
 
@@ -257,10 +258,6 @@ _From 066-suspended-garages._
 ### 1351-FR-010 — The admin view "Service-uri" MUST show the list "Reverificări RAR" / "RAR re-checks" between the verification queue and the suspended garages: each row the garage's name, its RAR number, the date of last check in the language's format and the days since ("28 de zile" / "28 days"); overdue rows show the days in red with "depășit" / "overdue"; an empty list shows "Nicio reverificare de făcut azi" / "No re-checks to do today". The list MUST re-read on `recheck.recorded`, `garage.suspended` and `garage.restored` over the `admin` channel so a recorded row leaves every admin's open list without a reload.
 
 _From 1351-rar-monthly-recheck._
-
-### 066-FR-003 — Each row MUST carry the garage id and name, the id of the garage's newest verification file (absent when it has none; the "Deschide dosarul" link opens it, as the queue's rows link a file), its area (the town recorded for the garage, or for a mobile mechanic its service radius in km; absent when none, as 301-FR-002), and, from the open suspension: the cause, the reason as stored, `fromTime` (UTC), and `cancelledBookings`, the number of the garage's bookings cancelled with the reason `garage_suspended` at or after `fromTime` (0 until #204 cancels them); a garage with no open suspension carries none of these four.
-
-_From 066-suspended-garages._
 
 ### 1351-FR-007 — A `failed` record MUST, in one transaction: store the re-check and suspend the garage through the existing suspension use case (049-FR-002) with cause `recheck_failed` and the reason "Autorizație RAR expirată · {detail}" (or "suspendată", "retrasă"), trimmed to 200 characters, so its SUSPENSION, status change, audit entry, `garage.suspended` row and everything downstream (#97, #204) happen as defined there; write the re-check's own audit entry and `recheck.recorded` row. It MUST NOT move the date of last check or the activities. A refusal by the suspension (409) MUST roll back the re-check, while the suspension's own refused-attempt audit entry is still written, as #97 defines.
 
@@ -403,9 +400,9 @@ _From 204-rar-activities-check._
 
 _From 204-rar-activities-check._
 
-### 069-FR-008 — The file read (302-FR-001) MUST include the file's reports, newest first: id, text, creation time, status, reporter (id, first name and the initial of the family name) and, when decided, the deciding admin's first name, `decided_at` and `decision_note`; the drawer MUST show them in a "Sesizări" / "Reports" part above "Documente", titled with the count of open reports ("Sesizări · <n> deschise" / "Reports · <n> open"), each row with the text, the date and time in the admin's locale and the reporter's name as a link to the admin's accounts view for that account; a file with no report shows no part. The report text and the notes MUST be shown as plain text, never as markup. A reporter whose account is deleted is shown as "Cont șters" / "Deleted account" with no link.
+### 067-FR-010 — The record of the suspension MUST say when it ended and who lifted it: the file header reads "Suspendat din {date}" / "Suspended since {date}" while open and "Suspendat {from} – {until} · repus pe hartă de {name}" / "Suspended {from} – {until} · put back on the map by {name}" (dates in the admin's language, Europe/Bucharest; the year once when both dates share it) once ended, with the note under it when there is one; the timeline (302-FR-010) shows the `garage_restored` entry with the cause lifted, the evidence, the note and the admin, beside the suspension's own entry; the audit entry is the record's source and the header its summary.
 
-_From 069-report-decision._
+_From 067-restore-suspended-garage._
 
 ### 204-FR-011 — The result and detail rules of a check MUST live in one layer: the relationship rules (a detail required for `warning` and `failed` and refused with `not_run`; a list, evidence or ticks only on their kind and never with `not_run`; `ok` only with its ticks, number or covered jobs; the fixed `ok` details) in the verification-checks service, and the per-field shape (types, enums, lengths, no control characters) in the DTO; the one rule checked in both is the 200-character detail length, which the service keeps for the detail it stores, so a direct caller that skips the DTO gets a 400 and never the database's 500 (Principle V); one suite covers the service's rules (#591).
 
@@ -817,6 +814,30 @@ _From 068-yearly-documents._
 
 _From 068-yearly-documents._
 
+### 067-FR-002 — The system MUST provide one domain use case in the verification module beside `suspend`, `restore(actor, garageId, body)`, that in a single transaction behind the garage's row lock (the lock `suspend` takes): reads the garage and its open suspension; refuses a garage that is not `suspended` with 409 `garage_not_suspended` ("Service‑ul nu este suspendat" / "The garage is not suspended"); checks the cause's evidence (FR-003); sets the open suspension's `until_time` (the commit's time), `lifted_by` (the admin) and `lift_note`; sets the garage's status `suspended` → `approved`; writes one audit entry on subject `garage` (kind `garage_restored`: actor, actor role, old and new status, the cause lifted, the evidence — the re-check's id and date, or the documents' acceptance, or the note — and the note) and one outbox row `garage.restored` whose payload carries `garageId` and `cause`; and answers the lifted suspension. A failed audit or outbox write MUST fail the transaction. Two concurrent calls for one garage MUST end with exactly one committed; the second answers 409 `garage_already_restored` (decided under the lock: the garage is `approved` and its latest suspension carries `lifted_by`, however long ago; a garage never suspended or not `approved`/`suspended` answers `garage_not_suspended`) ("Deja repus pe hartă de {name}." / "Already put back on the map by {name}.", the first admin's first name and initial as the audit history shows names, 390-FR-006), nothing written. An unknown garage id answers 404 `not_found`.
+
+_From 067-restore-suspended-garage._
+
+### 067-FR-003 — The evidence MUST follow the open suspension's cause, checked inside FR-002's transaction: `recheck_failed` needs a valid RAR re-check: when the body carries one (`recheck: { checkedOn, activities }`), it MUST be recorded in the same transaction with the `ok` record's effects (1351-FR-006: the RECHECK row with result `ok`, the garage's date of last check and authorised activities set, the `recheck_recorded` audit entry, the `recheck.recorded` outbox row and `price_list.updated` on a narrowing) under the record call's date and activities rules (1351-FR-004: the date not after today in Europe/Bucharest and strictly after the garage's date of last check, else 422 naming `checkedOn`; the activities a subset of the garage's current set and known codes, else 422) but not its due rule, since a suspended garage is never due (1351-FR-001); when the body carries none, a RECHECK with result `ok` recorded at or after the suspension's `from_time` MUST exist, else 409 `recheck_missing` ("Lipsește o reverificare RAR valabilă" / "A valid RAR re-check is missing"); a re-check in the body for any other cause answers 422 `recheck_not_expected`. `documents_overdue` needs the garage's yearly document cycle in state `due` (068-FR-009: both kinds accepted since the cycle was last reset), else 409 `documents_not_valid` ("Documentele anuale nu sunt toate valabile" / "The yearly documents are not all valid"). `admin` and `report_confirmed` need the note (1 to 1,000 characters counted by code point, not blank after trimming, no control character other than tab, LF and CR — the rule of #226's refusal note), else 400 `validation_failed`; for the other two causes the note is optional under the same limits. A 409 or 422 writes nothing.
+
+_From 067-restore-suspended-garage._
+
+### 067-FR-004 — The use case MUST accept an actor whose role is `admin` and refuse every other actor with 404, as the capability policy answers on admin routes (207-FR-010); there is no `system` restore. The verification file is not reopened and its status does not change.
+
+_From 067-restore-suspended-garage._
+
+### 067-FR-005 — `POST /api/v1/admin/garages/{id}/restore` MUST take `{ note?, recheck?: { checkedOn, activities } }` through a DTO in the contracts library validated at the edge (400 `validation_failed` for a note outside FR-003's limits, a `checkedOn` that is not a calendar date, or `recheck.activities` not a non-empty array of strings of 1 to 40 characters — the shape `RecordRecheckDto.activities` accepts; a code that is not a known RAR activity or not in the garage's current set is the use case's 422 `recheck_activity_unknown` / `recheck_activities_wider`, as the record call answers), call the use case with the signed-in admin as actor, and answer 200 with `{ id, garageId, cause, fromTime, untilTime, liftedBy: { name }, note, lastCheckedOn }`; a non-admin session gets 404 with no garage data, no session 401 `sign_in_required`. The OpenAPI document and the generated client MUST be regenerated, and the web MUST call it through the generated client.
+
+_From 067-restore-suspended-garage._
+
+### 067-FR-011 — The restore MUST write nothing to the bookings the suspension cancelled, the requests it closed or the quotes it withdrew, and send their drivers nothing: they keep their states and reasons. The suspended list's `cancelledBookings` (066-FR-003) is not shown for an ended suspension since the row leaves the list.
+
+_From 067-restore-suspended-garage._
+
+### 067-FR-014 — Tests MUST exist before the code (Principle II), tagged with this feature's ids. In Jest on real PostgreSQL and Redis: each cause's evidence accepted and refused (the inline re-check with its row, date, activities, audit entry and outbox rows; an existing valid re-check after `from_time` and one before it; the cycle `due` and `overdue`; the note present, missing, blank and 1,001 characters); the restore's transaction (until_time, lifted_by, note, status, audit entry, `garage.restored` row) and its rollback on a failed audit write; the 409s of FR-002 and FR-003 and the 422s, each writing nothing; exactly one restore under two concurrent calls, the loser naming the winner; 404 for a driver, an owner, a receptionist and a mechanic; the DTO's 400s; the public scope including the garage again in the search, the brand counts, the profile (with the new date) and the routing; the cancelled booking, closed request and withdrawn quote unchanged and no notification built for their drivers; GARAGE_RESTORED built once per owner with every channel muted, in each owner's language, once for a replayed event, and skipped for a garage without an owner; the file read's `suspension` while open, once ended and for a garage never suspended; the migration leaving existing rows open. Web unit tests MUST cover the button on the row and in the header (present only for an open suspension), the dialog per cause (the form, the state line, the note's requirement and counter), a 409 kept in the dialog with the input, the drawer offering the action after a `documents_overdue` acceptance with the cycle `due` and not otherwise, the header's two lines, in both languages. Playwright MUST, as the seeded admin: suspend a test garage by recording a failed re-check, restore it from "Suspendate" recording a valid re-check in the dialog, and see it back in the results for its brand with the new date on its profile; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 067-restore-suspended-garage._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -871,3 +892,7 @@ _From 068-yearly-documents._
 - `301-FR-006` — superseded by `068-FR-011` (2026-10-23)
 - `302-FR-003` — superseded by `068-FR-012` (2026-10-23)
 - `206-FR-012` — superseded by `068-FR-014` (2026-10-23)
+- `049-FR-001` — superseded by `067-FR-001` (2026-10-23)
+- `068-FR-012` — superseded by `067-FR-009` (2026-10-23)
+- `066-FR-003` — superseded by `067-FR-009` (2026-10-23)
+- `069-FR-008` — superseded by `067-FR-010` (2026-10-23)

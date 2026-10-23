@@ -24,6 +24,7 @@ features:
   - 1190-live-reconnects
   - 398-garage-feature-switches
   - 025-review-mechanic
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Live updates
@@ -367,9 +368,9 @@ _From 1175-valkey._
 ### 290-FR-008 — In the same transaction the system MUST hand `saved_garage.added` and `saved_garage.removed` (both already in the contracts' event kinds) to the event port with `{ accountId, garageId, savedAt }`; an idempotent save and a removal of nothing emit nothing. Their audience MUST be `account:{accountId}` alone (the live-updates audience resolver learns the two kinds); no garage, mechanic or public channel ever receives them, and nobody is notified.
 
 _From 290-save-garage._
-### 049-FR-007 — The `garage.suspended` event MUST reach, through the existing audience resolver (419-FR-006): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, the all-brands results channel `public:search` (which every open results page and brand page joins beside its brand's channel, 419-FR-003) and `admin`; and the relay MUST drop the garage's cached public answers (its profile entries, the search and brand-page entries) as it does for every public garage change (267-FR-010, 1182-FR-007). An open results page re-reads and drops the card without a reload; an open profile re-reads, gets 410 and switches to the "no longer available" view (307-FR-018). Both behaviours exist; this story proves them end to end for a suspension.
+### 067-FR-007 — The `garage.restored` event MUST reach, through the existing audience resolver (049-FR-007's audience for the pair): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, `public:search` and `admin`. On it: an open results page re-reads its counts and map pins without a reload, as it does today for any garage it has not loaded (`results.ts` `heard`: a card is added only by a new search, never pushed into the shown list), so the restored garage's card shows on the next search; the Service-uri counts line, the suspended panel and the re-check list re-read (066-FR-008, 1351-FR-010, existing) and an open file drawer re-reads the file; the garage dashboard MUST re-read the session's garage and drop the red suspension banner without a reload (049-FR-012 names `garage.suspended` only; `garage.restored` joins its list) and the legal panel re-reads its date.
 
-_From 049-garage-suspension._
+_From 067-restore-suspended-garage._
 
 ### 270-FR-006 — When the selected garage's card fades out (267-FR-019) the selection MUST pass to the first card left in the list (none when the list is empty); a pointed garage whose card fades out MUST stop being pointed.
 
@@ -434,3 +435,4 @@ _From 1190-live-reconnects._
 - `574-FR-003` — superseded by `398-FR-008` (2026-10-22)
 - `257-FR-006` — superseded by `025-FR-009` (2026-10-23)
 - `254-FR-001` — superseded by `025-FR-009` (2026-10-23)
+- `049-FR-007` — superseded by `067-FR-007` (2026-10-23)

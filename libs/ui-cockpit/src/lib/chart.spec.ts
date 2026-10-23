@@ -285,6 +285,51 @@ describe('the bar and line charts', () => {
   });
 });
 
+// Chart.js measures its tick labels once and keeps the widths for the chart's
+// life, so a chart drawn in the fallback font keeps the fallback's ticks.
+describe('the charts and the web fonts', () => {
+  const fontsAre = (status: 'loaded' | 'loading') => {
+    let loaded = () => {};
+    const ready = new Promise<void>((resolve) => {
+      loaded = resolve;
+      if (status === 'loaded') resolve();
+    });
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: { ready, status },
+    });
+    return () => loaded();
+  };
+
+  afterEach(() => {
+    delete (document as { fonts?: unknown }).fonts;
+  });
+
+  it('draw the chart again once the fonts arrive, measured in them', async () => {
+    const loaded = fontsAre('loading');
+    const [fixture, el] = await render();
+    const first = chartOf(el);
+
+    loaded();
+    await (document.fonts as FontFaceSet).ready;
+    await settle(fixture);
+
+    expect(first).toBeDefined();
+    expect(chartOf(el)).toBeDefined();
+    expect(chartOf(el)).not.toBe(first);
+  });
+
+  it('keep the chart when the fonts were already in', async () => {
+    fontsAre('loaded');
+    const [fixture, el] = await render();
+    const first = chartOf(el);
+
+    await settle(fixture);
+
+    expect(chartOf(el)).toBe(first);
+  });
+});
+
 describe('the charts under reduced motion', () => {
   const reduced = signal(false);
   let queries: string[] = [];

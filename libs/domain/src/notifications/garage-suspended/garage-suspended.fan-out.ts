@@ -1,6 +1,7 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
+import { isUUID } from 'class-validator';
 
 import type { PrismaClient } from '../../generated/prisma/client';
 import { countGarageSuspendedNotice } from '../../metrics/product-counters';
@@ -55,7 +56,7 @@ export class GarageSuspendedFanOut {
   async handle(job: Pick<Job<GarageSuspendedEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
     const { garageId } = payload;
-    if (typeof garageId !== 'string') {
+    if (typeof garageId !== 'string' || !isUUID(garageId)) {
       this.untold(garageId);
       return;
     }
@@ -63,7 +64,9 @@ export class GarageSuspendedFanOut {
       select: { cause: true, garage: { select: { name: true } }, reason: true },
       where: { garageId, untilTime: null },
     });
-    const owners = suspension ? await this.owners(garageId) : new Map();
+    const owners = suspension
+      ? await ownersByLanguage(this.prisma, garageId)
+      : new Map();
     if (!suspension || owners.size === 0) {
       this.untold(garageId);
       return;
@@ -97,20 +100,23 @@ export class GarageSuspendedFanOut {
       `garage ${typeof garageId === 'string' ? garageId : '?'} suspended: nobody told`,
     );
   }
+}
 
-  // The garage's owners whose accounts still stand, by language.
-  private async owners(garageId: string): Promise<Map<string, string[]>> {
-    const accounts = await this.prisma.account.findMany({
-      select: { id: true, language: true },
-      where: {
-        memberships: { some: { garageId, role: 'owner' } },
-        status: { not: 'deleted' },
-      },
-    });
-    const groups = new Map<string, string[]>();
-    for (const { id, language } of accounts) {
-      groups.set(language, [...(groups.get(language) ?? []), id]);
-    }
-    return groups;
+// The garage's owners whose accounts still stand, by language.
+export async function ownersByLanguage(
+  prisma: PrismaClient,
+  garageId: string,
+): Promise<Map<string, string[]>> {
+  const accounts = await prisma.account.findMany({
+    select: { id: true, language: true },
+    where: {
+      memberships: { some: { garageId, role: 'owner' } },
+      status: { not: 'deleted' },
+    },
+  });
+  const groups = new Map<string, string[]>();
+  for (const { id, language } of accounts) {
+    groups.set(language, [...(groups.get(language) ?? []), id]);
   }
+  return groups;
 }

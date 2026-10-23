@@ -28,6 +28,7 @@ import {
   GARAGE_REPORT_CONFIRMED,
   GARAGE_REPORT_UNFOUNDED,
 } from './garage-report-decided';
+import { GARAGE_RESTORED } from './garage-restored';
 import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
@@ -80,6 +81,7 @@ export const TEMPLATES: Registry = {
   DUE_ITP,
   'GARAGE_REPORT_DECIDED.confirmed': GARAGE_REPORT_CONFIRMED,
   'GARAGE_REPORT_DECIDED.unfounded': GARAGE_REPORT_UNFOUNDED,
+  GARAGE_RESTORED,
   GARAGE_SUSPENDED,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,

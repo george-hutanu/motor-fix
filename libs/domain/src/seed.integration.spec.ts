@@ -742,6 +742,38 @@ describe('seed of the listed garages', () => {
     ).toEqual(new Date('2027-01-15'));
   });
 
+  // An approved garage has had its activities check: the staff's garage
+  // holds every RAR activity, which covers every job as an empty list does,
+  // so a re-check (and the restore after a failed one) can be recorded on it.
+  it("gives the staff's garage every RAR activity, and keeps an edited list", async () => {
+    expect(seed('test').status).toBe(0);
+    const codes = (
+      await prisma.rarActivity.findMany({ select: { code: true } })
+    )
+      .map(({ code }) => code)
+      .sort();
+    const staff = () =>
+      prisma.garage.findUniqueOrThrow({
+        select: { rarActivities: true },
+        where: { slug: 'atelier-test' },
+      });
+
+    expect(codes).not.toHaveLength(0);
+    expect([...(await staff()).rarActivities].sort()).toEqual(codes);
+
+    await prisma.garage.update({
+      data: { rarActivities: ['brakes'] },
+      where: { slug: 'atelier-test' },
+    });
+    expect(seed('test').status).toBe(0);
+
+    expect((await staff()).rarActivities).toEqual(['brakes']);
+    await prisma.garage.update({
+      data: { rarActivities: codes },
+      where: { slug: 'atelier-test' },
+    });
+  });
+
   it('changes nothing in the listed garages when run twice', async () => {
     expect(seed('test').status).toBe(0);
     const once = await listed();

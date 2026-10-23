@@ -41,6 +41,7 @@ features:
   - 389-confirm-booking-lift-mechanic
   - 428-close-on-account-closed
   - 068-yearly-documents
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Notifications
@@ -787,6 +788,10 @@ _From 428-close-on-account-closed._
 ### 428-FR-011 — REQUEST_CANCELLED and BOOKING_CANCELLED render through the existing templates; where the owning story (#147 for REQUEST_CANCELLED; #1258 and #203 for BOOKING_CANCELLED) has not written texts yet, the generic bell and e-mail text fills in, as 195-FR-010 allows. The garages are told at any time: quiet hours do not hold a booking change.
 
 _From 428-close-on-account-closed._
+
+### 067-FR-008 — The notifications worker MUST consume `garage.restored` and build one GARAGE_RESTORED per garage owner through the notifications service, keyed by the outbox event id so a retry or a second relay never doubles it, following the GARAGE_SUSPENDED fan-out's shape (049-FR-010). The catalogue entry already exists (event; e-mail, push, WhatsApp; always sent) and is unchanged: the e-mail and the bell entry go whatever the owner muted (194-FR-004), push and WhatsApp follow the existing routing, and the settings keep showing the type locked on. The system MUST carry a Romanian and an English GARAGE_RESTORED template for the e-mail, the push, the WhatsApp and the bell reading "Profilul tău este din nou pe hartă." / "Your profile is back on the map.", naming the garage, linking to the garage dashboard, holding no other personal data and passing the existing template checks; the bell entry opens `/app/garage`. The owner's language decides the template.
+
+_From 067-restore-suspended-garage._
 
 ## Retired
 
