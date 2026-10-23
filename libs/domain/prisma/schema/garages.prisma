@@ -216,6 +216,10 @@ model Mechanic {
   canMoveBookings     Boolean   @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean   @default(false) @map("can_answer_quotes")
   canRecordFinalPrice Boolean   @default(false) @map("can_record_final_price")
+  // Over the published reviews naming the mechanic, at every garage; the
+  // garage's rules (migration CHECKs).
+  rating              Decimal?  @db.Decimal(2, 1)
+  reviewCount         Int       @default(0) @map("review_count")
   garage              Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
   account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]

@@ -34,6 +34,11 @@ describe('the event kinds', () => {
     expect(EVENT_KINDS).toContain(kind);
   });
 
+  // @traces 025-FR-009
+  it('names rating.updated, the figures a review moved', () => {
+    expect(EVENT_KINDS).toContain('rating.updated');
+  });
+
   it('names each kind once, as area.verb_past', () => {
     expect(new Set(EVENT_KINDS).size).toBe(EVENT_KINDS.length);
     for (const kind of EVENT_KINDS) expect(kind).toMatch(/^[a-z_]+\.[a-z_]+$/);
