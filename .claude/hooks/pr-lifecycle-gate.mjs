@@ -45,7 +45,7 @@
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { branchFeatureDir, locateFeature } from "../scripts/lib/feature.mjs";
@@ -61,8 +61,17 @@ const STAGES = [...DRAFT_LABELS, ...READY_LABELS];
 const RETIRED = ["in review"];
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
+/**
+ * The gh a fix hint names: in a cloud session (CLAUDE_CODE_REMOTE=true) plain
+ * gh has no credentials, so `pr edit` and `pr create` go through gh.mjs, which
+ * answers them over REST (766-FR-004); on the laptop, gh itself.
+ */
+function ghFor(env) {
+  return env.CLAUDE_CODE_REMOTE === "true" ? "node .claude/scripts/gh.mjs" : "gh";
+}
+
 /** The `gh pr edit` that leaves an open PR one stage label fitting its draft state, or null when it has that. */
-function stageFix(pr) {
+function stageFix(pr, gh) {
   const fits = pr.isDraft ? DRAFT_LABELS : READY_LABELS;
   const has = (name) => pr.labels.some((l) => l.name === name);
   const present = STAGES.filter(has);
@@ -72,7 +81,7 @@ function stageFix(pr) {
   const keep = fitting.at(-1) ?? (pr.isDraft ? IN_DEVELOPMENT : QA);
   const args = [...retired, ...present.filter((stage) => stage !== keep)].map((label) => `--remove-label "${label}"`);
   if (fitting.length === 0) args.push(`--add-label "${keep}"`);
-  return { present, retired, fitting, keep, edit: `gh pr edit ${pr.number} ${args.join(" ")}` };
+  return { present, retired, fitting, keep, edit: `${gh} pr edit ${pr.number} ${args.join(" ")}` };
 }
 
 /** Every check concluded green; an empty rollup is not green. */
@@ -169,8 +178,12 @@ export function typeLabel(title = "") {
   return TYPE_LABELS[type] ?? null;
 }
 
-/** The refusal for this state, or null when the session may end. */
-export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinked = true, blocked = false, handedOff = false }) {
+/** The refusal for this state, or null when the session may end. `env` decides which gh the hints name. */
+export function decide(
+  { branch, ahead, unpushed, specsUnpushed = 0, pr, prLinked = true, blocked = false, handedOff = false },
+  { env = process.env } = {},
+) {
+  const gh = ghFor(env);
   if (!branch || branch === "HEAD" || branch === "main" || ahead === 0)
     return null;
   if (unpushed > 0)
@@ -178,12 +191,12 @@ export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinke
   if (specsUnpushed > 0)
     return `${specsUnpushed} commit(s) in specs/ (motor-fix-specs) are not pushed to trunk. Push them (node .claude/scripts/specs-repo.mjs commit "<message>", which rebases and pushes); a feature's records live there, not in its PR.`;
   if (pr === null)
-    return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
+    return `${branch} has no PR. Open it as a draft (${gh} pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state === "OPEN" && !prLinked && /^\d+-/.test(branch))
     return `PR #${pr.number} is not linked from its story's tracker issue. Write it to the issue's PR field (speckit-tracker-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
   if (pr.state === "OPEN" && pr.labels) {
     const has = (name) => pr.labels.some((l) => l.name === name);
-    const fix = stageFix(pr);
+    const fix = stageFix(pr, gh);
     if (fix?.retired.length)
       return `PR #${pr.number} carries the retired "${fix.retired.join('", "')}" label: in review was folded into QA, so a ready PR is "${QA}" and a draft "planning" or "${IN_DEVELOPMENT}". Swap it (${fix.edit}); every open PR shows its one stage on GitHub.`;
     if (fix?.fitting.length)
@@ -194,9 +207,9 @@ export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinke
       return `PR #${pr.number} is ready but has no "${QA}" label: a ready PR is in QA. Swap it in (${fix.edit}); every open PR shows its stage on GitHub.`;
     const type = typeLabel(pr.title);
     if (type && !has(type))
-      return `PR #${pr.number} has no "${type}" label for its title's type. Add it (gh pr edit ${pr.number} --add-label "${type}"); every open PR shows its type on GitHub.`;
+      return `PR #${pr.number} has no "${type}" label for its title's type. Add it (${gh} pr edit ${pr.number} --add-label "${type}"); every open PR shows its type on GitHub.`;
     if (/^\w+(\([^)]*\))?!:/.test(pr.title ?? "") && !has("breaking"))
-      return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (gh pr edit ${pr.number} --add-label "breaking").`;
+      return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (${gh} pr edit ${pr.number} --add-label "breaking").`;
   }
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = (pr.statusCheckRollup ?? []).filter((c) => !isMutationCheck(c));
@@ -222,9 +235,17 @@ function runBlocked(cwd) {
   }
 }
 
+function isFolder(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The branch's feature folder, relative to cwd: the `.specify/feature.json`
- * pointer when its folder exists, else the folder the branch names
+ * pointer when it names a folder (a file, or nothing, falls back), else the folder the branch names
  * (lib/feature.mjs `branchFeatureDir`, which activeFeature shares, so branch
  * `83-x` finds `specs/083-x` here and in every other gate). Either specs
  * layout: a pointer to `specs/<feature>` finds `specs/specs/<feature>` in an
@@ -234,9 +255,9 @@ export function featureDir(cwd, branch) {
   try {
     const pointer = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory;
     if (typeof pointer === "string" && pointer) {
-      if (existsSync(join(cwd, pointer))) return pointer;
+      if (isFolder(join(cwd, pointer))) return pointer;
       const found = locateFeature(cwd, pointer);
-      if (existsSync(found)) return relative(cwd, found);
+      if (isFolder(found)) return relative(cwd, found);
     }
   } catch {
     // no pointer: the branch names the feature

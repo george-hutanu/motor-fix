@@ -28,8 +28,19 @@ afterEach(() => rmSync(repo, { recursive: true, force: true }));
 describe('branchFeatureDir', () => {
   it('takes specs/<branch> when it exists', () => {
     spec('83-sign-in');
-    spec('083-sign-in');
     assert.equal(branchFeatureDir(repo, '83-sign-in'), join('specs', '83-sign-in'));
+    spec('486-x');
+    spec('0486-x');
+    assert.equal(branchFeatureDir(repo, '486-x'), join('specs', '486-x'));
+  });
+
+  // @traces 486-FR-005
+  it('takes the padded folder over specs/<branch> when the branch number has fewer than three digits', () => {
+    spec('83-sign-in');
+    spec('083-sign-in');
+    assert.equal(branchFeatureDir(repo, '83-sign-in'), join('specs', '083-sign-in'));
+    checkout('83-sign-in');
+    assert.equal(activeFeature(repo)?.name, '083-sign-in');
   });
 
   it('finds the zero-padded folder with the same number and slug', () => {
