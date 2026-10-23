@@ -34,13 +34,14 @@
 //   node .claude/scripts/watch.mjs --dispatch [--stale …]
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
 import { execFileSync, spawn as nodeSpawn } from "node:child_process";
-import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
-import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
+import { WAIT_RECORD, commonDir, defaultCommandOf, liveWaiter, waitHolder } from "./lib/watch-wait.mjs";
 import { ffMainCommand, lockPid, mainCheckoutState, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
 import { branchFeatureDir, locateFeature } from "./lib/feature.mjs";
@@ -321,8 +322,44 @@ function artifactsOf(path, feature) {
   };
 }
 
-function activityOf(path, runState) {
+const listDir = (dir) => {
+  try {
+    return readdirSync(dir);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * The newest modification time of the transcript of the subagent a `claude agent <name>` lock names, or 0.
+ * Claude Code writes it at <claude dir>/projects/<cwd slug>/<session>/subagents/<name>.jsonl, the slug being
+ * the session's cwd with every character outside [A-Za-z0-9] turned into '-'. A project folder of this
+ * repository counts: one named after a worktree's path, or below a dot folder of the main checkout
+ * (`<slug>--worktrees-x`), so a session started in a worktree is found too; a sibling repository whose
+ * name only begins like this one's (`<slug>-specs`, `<slug>2`) is not read.
+ * A subagent waiting on CI writes no file in its worktree, but its transcript keeps growing.
+ */
+function transcriptAt(lock, paths, claudeDir) {
+  const name = lock?.match(/^claude agent ([A-Za-z0-9_-]+) /)?.[1];
+  if (!name || !paths[0] || !claudeDir) return 0;
+  const projects = join(claudeDir, "projects");
+  const slugs = new Set(paths.map((p) => p.replace(/[^A-Za-z0-9]/g, "-")));
+  const below = `${paths[0].replace(/[^A-Za-z0-9]/g, "-")}--`;
+  let newest = 0;
+  for (const project of listDir(projects).filter((p) => slugs.has(p) || p.startsWith(below))) {
+    for (const session of listDir(join(projects, project))) {
+      try {
+        const file = statSync(join(projects, project, session, "subagents", `${name}.jsonl`));
+        if (file.isFile()) newest = Math.max(newest, file.mtimeMs);
+      } catch {}
+    }
+  }
+  return newest;
+}
+
+function activityOf(path, runState, transcript) {
   const candidates = [{ at: Date.parse((git(path, ["log", "-1", "--format=%cI"]) ?? "").trim()) || 0, source: "commit" }];
+  if (transcript > 0) candidates.push({ at: transcript, source: "transcript" });
   const status = git(path, ["status", "--porcelain", "-z", "--untracked-files=all"]);
   for (const entry of (status ?? "").split("\0").filter(Boolean)) {
     if (!/^[ MADRCU?!]{2} /.test(entry)) continue;
@@ -423,7 +460,7 @@ function qaRunOf(path, feature) {
 
 // The carry lookup reads the same GitHub the PR list came from: a PR list
 // given by a caller (a test) gets no lookup unless it gives one too.
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null, actionsRuns = gh === defaultGh ? defaultActionsRuns : null } = {}) {
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null, actionsRuns = gh === defaultGh ? defaultActionsRuns : null, claudeDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude") } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -453,7 +490,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature) });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
-    const { activity, clean, gitFailed } = activityOf(w.path, runState);
+    const { activity, clean, gitFailed } = activityOf(w.path, runState, transcriptAt(w.lock, worktrees.map((t) => t.path), claudeDir));
     const ahead = git(w.path, ["rev-list", "--count", "HEAD", "--not", "--remotes"]);
     const unpushed = ahead !== null && /^\d+$/.test(ahead.trim()) ? Number(ahead.trim()) : null;
     const closer = runState.phase === "closer" && runState.status !== "blocked";
@@ -873,12 +910,40 @@ function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
       throw e;
     }
   };
-  try {
-    let taken = take();
-    if (!taken && waitHolder(cwd, { commandOf }) === null) {
-      rmSync(record, { force: true });
-      taken = take();
+  // A record judged stale is moved aside and removed only if it still holds what was judged: another
+  // wait may have replaced it meanwhile, and that one is put back (a link never overwrites).
+  const takeOver = () => {
+    let judged;
+    try {
+      judged = readFileSync(record, "utf8");
+    } catch (e) {
+      if (e.code === "ENOENT") return take();
+      throw e;
     }
+    if (liveWaiter(Number(judged.trim()), commandOf)) return false;
+    const aside = `${record}.${process.pid}.stale`;
+    try {
+      renameSync(record, aside);
+    } catch (e) {
+      if (e.code === "ENOENT") return take();
+      throw e;
+    }
+    let moved = null;
+    try {
+      moved = readFileSync(aside, "utf8");
+    } catch {}
+    if (moved !== judged) {
+      try {
+        linkSync(aside, record);
+      } catch {}
+      rmSync(aside, { force: true });
+      return false;
+    }
+    rmSync(aside, { force: true });
+    return take();
+  };
+  try {
+    const taken = take() || takeOver();
     if (!taken) {
       console.log(`watch: a wait is already armed (pid ${waitHolder(cwd, { commandOf }) ?? "unknown"})`);
       return 0;

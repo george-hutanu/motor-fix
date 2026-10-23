@@ -33,7 +33,12 @@ export function waitHolder(repo, { commandOf = defaultCommandOf } = {}) {
   } catch {
     return null;
   }
-  if (!Number.isInteger(pid) || pid <= 0) return null;
+  return liveWaiter(pid, commandOf) ? pid : null;
+}
+
+/** Whether pid is a running `watch.mjs --wait`: a dead or recycled pid is not. */
+export function liveWaiter(pid, commandOf = defaultCommandOf) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
   const command = commandOf(pid);
-  return command && /watch\.mjs/.test(command) && /(^|\s)--wait(\s|$)/.test(command) ? pid : null;
+  return Boolean(command && /watch\.mjs/.test(command) && /(^|\s)--wait(\s|$)/.test(command));
 }
