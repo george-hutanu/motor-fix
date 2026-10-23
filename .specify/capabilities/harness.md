@@ -1,9 +1,10 @@
 ---
 capability: harness
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 1359-red-first-harden-precision
   - 1362-lap-verdict-merge
+  - 1363-throughput-fixes
 ---
 
 # Capability: Spec-kit harness
@@ -36,9 +37,9 @@ _From 1359-red-first-harden-precision._
 
 _From 1359-red-first-harden-precision._
 
-### 1359-FR-007 — `/speckit-tests` 4b MUST name adversary files `<subject>.adversary.spec.ts`; `speckit-harden` step 2 MUST be a delta run: the prompt lists the adversary spec files added on the branch (`git diff --name-only --diff-filter=A <merge-base> -- '*.adversary.spec.*'`) and asks the adversary for the public surface those files do not cover; with none on the branch it is today's full run.
+### 1363-FR-006 — (Item 6) `/speckit-auto` MUST dispatch `test-adversary`, `code-reviewer` and `spec-reviewer` in one message so they run at the same time, and `speckit-harden` MUST consume the adversary's result instead of dispatching it after implement and before review. *Done when*: the auto skill's review dispatch names the three in one message, harden's step 2 reads the result, and a harness spec reads both.
 
-_From 1359-red-first-harden-precision._
+_From 1363-throughput-fixes._
 
 ### 1359-FR-008 — The harden audits (`artifact-lint.mjs` and `diff-audit.mjs` as step 1 runs them) MUST run the Jev lane only when a key is set and print no "jev lane unavailable" line otherwise; the switched-off reason (`SPECKIT_JEV=0`, `jev:false`) keeps its line, since that is a deliberate setting worth seeing.
 
@@ -80,15 +81,11 @@ _From 1362-lap-verdict-merge._
 
 _From 1362-lap-verdict-merge._
 
-### 1362-FR-003 — A fixes carry holds only when the named commit is one of the PR's commits and an ancestor of head within `MAX_COMMITS` commits and 299 files, its own `agent-review` is a success the tester wrote (not carried) whose description reads `No blocking findings; <N> in all` with N ≥ 1, every commit after it has one parent and a Conventional Commit type of `fix`, `test`, `docs`, `style` or `refactor`, no path is a `deferred.md`, and no real lap failed on a commit after it or on head. The gate verifies the commits' shape, not their content: the tie between each finding and its commit is the FR-007 list.
+### 1363-FR-010 — (Item 10) A merge of `origin/main` MUST be carried by `carry.mjs` and accepted by `judgeCarry` on the merge gate when the merge commit changes no file the PR changes (its diff against its first parent and the PR's changed files are disjoint; the commit and file caps apply only to the PR-side first-parent walk); a merge touching a file the PR changes still needs a new lap (owner decision, recorded). *Done when*: specs and the merge-gate eval case cover a disjoint merge carried, an overlapping merge refused, and the single-parent rule for fix commits unchanged.
 
-_From 1362-lap-verdict-merge._
+_From 1363-throughput-fixes._
 
 ### 1362-FR-004 — `carry.mjs` picks the kind itself from the named commit's success: `QA fixes` when it reports N ≥ 1 findings (FR-003), `docs-only change` when it reports none or no count and the diff is documentation only (`scripts/docs-only.ts`); a docs carry from a success reporting N ≥ 1 is refused, so findings never merge through it. Otherwise it exits 1 with the reason.
-
-_From 1362-lap-verdict-merge._
-
-### 1362-FR-005 — The merge gate verifies a fixes carry with the same `judgeCarry` it uses for a docs carry, and refuses one it cannot verify; CI green on head and the provenance of the named commit's success are still required.
 
 _From 1362-lap-verdict-merge._
 
@@ -108,4 +105,12 @@ _From 1362-lap-verdict-merge._
 
 _From 1362-lap-verdict-merge._
 
+### 1363-FR-007 — (Item 7) An edit-time gate, registered in `.claude/hooks/registry.json` with an eval case under `.claude/evals/cases/`, MUST refuse a Write or Edit to an existing `*.adversary.spec.ts` whose result lacks any `it(`/`test(` title of the old file, naming the file and the dropped test; `.claude/agents/test-adversary.md` MUST tell the agent to append to an existing adversary spec or create a new file, never to rewrite one. *Done when*: the eval case shows a dropping Write refused and an appending one allowed, the gate is blessed, and the agent text carries the rule.
+
+_From 1363-throughput-fixes._
+
 ## Retired
+
+- `1359-FR-007` — superseded by `1363-FR-006` (2026-10-23)
+- `1362-FR-003` — superseded by `1363-FR-010` (2026-10-23)
+- `1362-FR-005` — superseded by `1363-FR-010` (2026-10-23)

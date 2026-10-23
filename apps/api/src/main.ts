@@ -41,7 +41,11 @@ async function bootstrap() {
   await app.get(BrandLoader).load(BRANDS);
   await app.get(JobTypeLoader).load(JOB_TYPES);
   app.enableShutdownHooks();
-  await app.listen(Number(process.env['PORT'] ?? 3000));
+  // API_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
+  // PORT to the web dev server, which reads nothing else.
+  await app.listen(
+    Number(process.env['API_PORT'] ?? process.env['PORT'] ?? 3000),
+  );
   // Not awaited: the instance serves while the warm-up fills the cache.
   void warmCache(app, env.RELEASE_SHA);
 }

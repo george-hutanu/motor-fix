@@ -7,11 +7,16 @@
 //
 // Usage:
 //   node .claude/scripts/level.mjs                 what level is active, and why
-//   node .claude/scripts/level.mjs set 1           write it to .specify/feature.json
+//   node .claude/scripts/level.mjs set 1 [--type bug|story]   write it (and the work type) to .specify/feature.json
 //   node .claude/scripts/level.mjs --json
 //   node .claude/scripts/level.mjs suggest "<work>" [--set]   classify; --set records a confident answer
 //   node .claude/scripts/level.mjs point specs/NNN-x            point feature.json at a new feature, keeping its level
 //   node .claude/scripts/level.mjs check [--ready] [--json]    raise a level 0/1 to 2 when a fact contradicts it
+//
+// check's projects wire is skipped for a bug (feature.json `type: bug`): a bug stays at its level unless a
+// contract, schema or migration file is in its diff. check also prints `split: <projects>` when the diff
+// and the task paths in tasks.md span more than two Nx projects (web-e2e and data-access aside) or more than
+// one of worker, api and web, and the spec carries no `## Split` section yet.
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -101,7 +106,7 @@ export function setLevel(repo, value, options = {}) {
   const active = activeFeature(repo);
   const current = active ? featureKey(repo, active.dir) : state.feature_directory;
   const level_for = levelTarget(repo, { ...state, feature_directory: current }, options);
-  const next = { ...state, level, level_for };
+  const next = { ...state, level, level_for, ...(options.type ? { type: options.type } : {}) };
   if (level_for === "next") next.level_at = new Date(options.now ?? Date.now()).toISOString();
   else delete next.level_at;
   writeState(repo, next);
@@ -162,7 +167,7 @@ function nxProject(repo, file) {
 }
 
 /** The four wires, each tripped, clear or not checked, with the fact it read. */
-function tripwires(repo, featureDir, files) {
+function tripwires(repo, featureDir, files, type) {
   const specFile = featureDir ? join(featureDir, "spec.md") : null;
   const spec = specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null;
   const wire = (name, state, fact) => ({ name, state, fact });
@@ -181,10 +186,29 @@ function tripwires(repo, featureDir, files) {
   } else {
     const contract = files.find((f) => CONTRACT_PATHS.some((p) => p.test(f)));
     wires.push(wire("contract", contract ? "tripped" : "clear", contract ?? "no contract, schema or migration file"));
-    const projects = [...new Set(files.map((f) => nxProject(repo, f)).filter(Boolean))].sort();
-    wires.push(wire("projects", projects.length > 1 ? "tripped" : "clear", projects.join(", ") || "no Nx project"));
+    const projects = touchedProjects(repo, files);
+    if (type === "bug") wires.push(wire("projects", "skipped", `a bug (${projects.join(", ") || "no Nx project"})`));
+    else wires.push(wire("projects", projects.length > 1 ? "tripped" : "clear", projects.join(", ") || "no Nx project"));
   }
   return wires;
+}
+
+const touchedProjects = (repo, files) => [...new Set(files.map((f) => nxProject(repo, f)).filter(Boolean))].sort();
+const NOT_COUNTED = new Set(["web-e2e", "data-access"]);
+const SURFACES = new Set(["worker", "api", "web"]);
+
+/** The apps/ and libs/ paths tasks.md names: the split's evidence before the diff has them. */
+function taskPaths(featureDir) {
+  const tasks = featureDir && join(featureDir, "tasks.md");
+  if (!tasks || !existsSync(tasks)) return [];
+  return [...readFileSync(tasks, "utf8").matchAll(/`((?:apps|libs)\/[^`\s]+)`/g)].map((m) => m[1]);
+}
+
+/** The projects a story spanning too much touches (the split rule), or null; a spec with its `## Split` is split already. */
+function splitOf(repo, spec, files) {
+  if (!files || /^## Split\b/m.test(spec ?? "")) return null;
+  const counted = touchedProjects(repo, files).filter((p) => !NOT_COUNTED.has(p));
+  return counted.length > 2 || counted.filter((p) => SURFACES.has(p)).length > 1 ? counted : null;
 }
 
 /**
@@ -199,9 +223,13 @@ export function checkLevel(repo, { ready = false, files = changedFiles(repo), no
   const active = activeFeature(repo);
   const feature = active ? featureKey(repo, active.dir) : null;
   const level = feature ? featureLevel(repo, feature) : state.level_for === "next" ? (parseLevel(state.level) ?? DEFAULT_LEVEL) : DEFAULT_LEVEL;
-  const wires = tripwires(repo, active?.dir, files);
+  const wires = tripwires(repo, active?.dir, files, state.type);
   const tripped = wires.filter((w) => w.state === "tripped");
-  const result = { feature, level, promoted: null, wires };
+  const specFile = active && join(active.dir, "spec.md");
+  const planned = taskPaths(active?.dir);
+  const spans = files || planned.length ? [...(files ?? []), ...planned] : null;
+  const split = splitOf(repo, specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null, spans);
+  const result = { feature, level, promoted: null, wires, split };
 
   if (level < 2 && tripped.length) {
     setLevel(repo, 2, { for: feature ? "current" : "next", now });
@@ -249,6 +277,7 @@ function checkCommand(argv, repo) {
   const head = result.promoted ? `level ${result.promoted.from} → 2 (promoted)` : `level ${result.level}, unchanged`;
   console.log(`${head}${result.feature ? ` for ${result.feature}` : ""}`);
   for (const w of result.wires) console.log(`  ${w.name}: ${w.state} (${w.fact})`);
+  if (result.split) console.log(`  split: ${result.split.join(", ")} — two stories, the first mergeable alone, the second filed with Depends on: <first>`);
   if (result.too_heavy) console.log(`  too heavy: a level 2 whose diff is one file (${result.too_heavy.file}), recorded in the ledger`);
   if (refused) {
     const fix = result.feature
@@ -260,13 +289,19 @@ function checkCommand(argv, repo) {
 }
 
 export function main(argv, repo, env = process.env) {
-  const [command, value] = argv.filter((a) => !a.startsWith("--"));
+  const [command, value] = argv.filter((a, i) => !a.startsWith("--") && argv[i - 1] !== "--type");
 
   if (command === "check") return checkCommand(argv, repo);
 
   if (command === "set") {
     const target = argv.includes("--next") ? "next" : argv.includes("--current") ? "current" : undefined;
-    const result = setLevel(repo, value, { for: target });
+    const typeAt = argv.indexOf("--type");
+    const type = typeAt === -1 ? undefined : argv[typeAt + 1];
+    if (typeAt !== -1 && type !== "bug" && type !== "story") {
+      console.error(`level: --type must be bug or story — got "${type ?? ""}"`);
+      return 1;
+    }
+    const result = setLevel(repo, value, { for: target, type });
     if (result.error) {
       console.error(`level: ${result.error}`);
       return 1;

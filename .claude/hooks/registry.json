@@ -82,7 +82,7 @@
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
       "timeout_ms": 45000,
-      "fingerprint": "73e996433e30"
+      "fingerprint": "9ebb3217e637"
     },
     {
       "id": "pre:tool:agent-model",
@@ -121,6 +121,19 @@
       "description": "Block src/ edits on a feature branch with FRs and open tasks until the branch adds or modifies a *.spec.* / *.test.* file",
       "fail_closed": true,
       "fingerprint": "0e73553405a6"
+    },
+    {
+      "id": "pre:edit:adversary-keep",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "script": "adversary-keep-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Refuse a Write, Edit or MultiEdit that drops a describe/it/test title from an existing *.adversary.spec.* file: an adversary spec only grows, a retired-test line excusing the title it names",
+      "fail_closed": true,
+      "fingerprint": "1538fa36f849"
     },
     {
       "id": "pre:edit:main-checkout",

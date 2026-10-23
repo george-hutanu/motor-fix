@@ -8,7 +8,11 @@ name: CI
 # demand: `gh workflow run ci.yml --ref <branch>` runs every job, those two
 # included, on every project. A release asks for the integration suite
 # (input `integration`) and runs the core flows against staging instead of
-# the end-to-end suite (release.yml). The PR title has
+# the end-to-end suite (release.yml). A dispatch can name spec files
+# (input `specs`, space-separated paths) and a run count (`repeat`): the
+# integration and E2E jobs then run only those files, each `repeat` times
+# with no retry, to prove a fixed flaky test (`gh workflow run ci.yml --ref
+# <branch> -f specs='<paths>' -f repeat=20`). The PR title has
 # its own workflow (pr-title.yml), so an edited title is re-checked without
 # re-running these jobs. Mutation testing has its own workflow (mutation.yml)
 # and never runs here.
@@ -20,6 +24,15 @@ on:
         type: boolean
         default: false
   workflow_dispatch:
+    inputs:
+      specs:
+        description: Spec files to run alone, space-separated (empty runs every suite)
+        type: string
+        default: ''
+      repeat:
+        description: Runs of each named spec file
+        type: number
+        default: 1
 
 permissions:
   contents: read
@@ -237,10 +250,24 @@ jobs:
         run: docker compose up -d --wait storage
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      # Named spec files run alone, one Jest run after another.
       - name: Integration tests
         env:
           JEST_SUITE: integration
-        run: npx nx $NX_SCOPE -t test --passWithNoTests
+          SPECS: ${{ inputs.specs }}
+          REPEAT: ${{ inputs.repeat }}
+        run: |
+          if [ -z "$SPECS" ]; then
+            npx nx $NX_SCOPE -t test --passWithNoTests
+            exit
+          fi
+          [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
+          files=$(printf '%s\n' $SPECS | grep '\.integration\.spec\.ts$' || true)
+          [ -n "$files" ] || exit 0
+          for run in $(seq "$REPEAT"); do
+            echo "Run $run of $REPEAT"
+            npx jest --ci --runInBand $files
+          done
 
   # The full end-to-end suite, on demand only (workflow_dispatch): neither a
   # PR nor a release runs it here. Its report is uploaded whatever the result.
@@ -355,7 +382,20 @@ jobs:
           fi
           exit 1
       # Playwright starts the api, the worker and the web dev server itself (playwright.config.mts).
-      - run: npx nx $NX_SCOPE -t e2e
+      # Named spec files run alone, each test repeated, with no retry to pass it.
+      - name: E2E tests
+        env:
+          SPECS: ${{ inputs.specs }}
+          REPEAT: ${{ inputs.repeat }}
+        run: |
+          if [ -z "$SPECS" ]; then
+            npx nx $NX_SCOPE -t e2e
+            exit
+          fi
+          [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
+          files=$(printf '%s\n' $SPECS | grep '^apps/web-e2e/.*\.spec\.ts$' || true)
+          [ -n "$files" ] || exit 0
+          npx nx run web-e2e:e2e -- --repeat-each "$REPEAT" --retries 0 --trace retain-on-failure $files
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:

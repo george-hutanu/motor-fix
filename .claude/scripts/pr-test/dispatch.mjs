@@ -13,7 +13,7 @@
 // --local. The workflow runs only for people with write access, with read-only
 // permissions and no secret, so the flows code it imports can reach nothing.
 //
-//   node .claude/scripts/pr-test/dispatch.mjs <pr> [--flows <file.mjs> [--spec <spec.md>]] [--routes /,/cockpit]
+//   node .claude/scripts/pr-test/dispatch.mjs <pr> [--flows <file.mjs> [--spec <spec.md>] [--proof]] [--routes /,/cockpit]
 //        (each route path[?query][@role][:status]; one the run would refuse is refused here, exit 64)
 //        [--lap <n>] [--out <dir>] [--ref main] [--no-wait | --run <id>]
 //
@@ -23,10 +23,14 @@
 // run as a dispatched lap would, exiting 2 while it has not completed. With
 // neither, it dispatches and watches the run, for a lap run by hand.
 //
-// --flows dispatches only flows a clean `precheck.mjs --flows <f> --check`
-// proved for the PR head, read from the proof it left in this checkout; a
-// proof for an earlier commit holds while every commit since changes
-// documentation only (scripts/docs-only.ts) or no file at all. Anything else is refused, exit 64.
+// --flows dispatches flows that load and cover the spec's scenarios
+// (precheck.mjs's static check), with every --routes entry served by the
+// checkout's router (sweep.mjs routerTable); the run itself is the proof.
+// --proof, for a story that changed the flows' ground, also asks for a clean
+// `precheck.mjs --flows <f> --check` for the PR head, read from the proof it
+// left in this checkout; a proof for an earlier commit holds while every
+// commit since changes documentation only (scripts/docs-only.ts) or no file at
+// all. Anything else is refused, exit 64.
 //
 // The PR is read over REST everywhere (GraphQL is a budget every session
 // shares). A head gets one QA run: on the laptop the dispatched one, so the PR
@@ -52,7 +56,7 @@ import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { activeFeature } from "../lib/feature.mjs";
 import { checkFlows, flowsHash, PROOF_DIR, proofPath } from "./precheck.mjs";
 import { qaRunLine } from "./qa-run.mjs";
-import { routeProblem } from "./sweep.mjs";
+import { routeProblem, routerTable } from "./sweep.mjs";
 
 export const WORKFLOW = "pr-qa.yml";
 const ON_PUSH_LABEL = "qa: on-push";
@@ -77,6 +81,7 @@ export function parseArgs(argv) {
     out: flag("out"),
     ref: flag("ref", "main"),
     noWait: argv.includes("--no-wait"),
+    proof: argv.includes("--proof"),
     run: flag("run"),
   };
 }
@@ -254,7 +259,7 @@ async function awaitPrRun(opt, sha) {
 async function main(argv) {
   const opt = parseArgs(argv);
   if (!opt.pr) {
-    console.error("usage: dispatch.mjs <pr> [--flows file.mjs [--spec spec.md]] [--routes …] [--lap n] [--out dir] [--ref main] [--no-wait | --run <id>]");
+    console.error("usage: dispatch.mjs <pr> [--flows file.mjs [--spec spec.md] [--proof]] [--routes …] [--lap n] [--out dir] [--ref main] [--no-wait | --run <id>]");
     return 64;
   }
   if (opt.run !== undefined && !/^\d+$/.test(opt.run)) {
@@ -266,7 +271,8 @@ async function main(argv) {
     return 64;
   }
   // The workflow's own check, and the sweep's, before a run is spent on a route either would refuse.
-  const refused = opt.routes.split(",").map(routeProblem).filter(Boolean);
+  const table = routerTable(repoRoot);
+  const refused = opt.routes.split(",").map((route) => routeProblem(route, table)).filter(Boolean);
   if (refused.length) {
     for (const line of refused) console.error(`dispatch: ${line}`);
     console.error("dispatch: nothing was dispatched");
@@ -298,11 +304,14 @@ async function main(argv) {
       console.error("dispatch: the flows fail the pre-check; nothing was dispatched");
       return 64;
     }
-    const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
-    const { refused } = top.status === 0 ? proofFor({ root: top.stdout.trim(), sha, hash: flowsHash(opt.flows) }) : { refused: "not in a git checkout, where precheck.mjs --check leaves its proof" };
-    if (refused) {
-      console.error(`dispatch: ${refused}; nothing was dispatched`);
-      return 64;
+    if (!opt.proof) console.error("dispatch: flows: proof skipped (no --proof)");
+    else {
+      const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+      const { refused } = top.status === 0 ? proofFor({ root: top.stdout.trim(), sha, hash: flowsHash(opt.flows) }) : { refused: "not in a git checkout, where precheck.mjs --check leaves its proof" };
+      if (refused) {
+        console.error(`dispatch: ${refused}; nothing was dispatched`);
+        return 64;
+      }
     }
   }
   const flows = opt.flows ? encodeFlows(readFileSync(opt.flows, "utf8")) : null;

@@ -46,12 +46,20 @@ jest.mock('./bootstrap', () => ({
   openApiDocument: () => ({ openapi: '3.0.0' }),
 }));
 
-async function run(args: string[], port?: string) {
+function setEnv(values: Record<string, string | undefined>) {
+  for (const [key, value] of Object.entries(values))
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+}
+
+async function run(args: string[], port?: string, apiPort?: string) {
   const argv = process.argv;
-  const before = process.env['PORT'];
+  const before = {
+    API_PORT: process.env['API_PORT'],
+    PORT: process.env['PORT'],
+  };
   process.argv = ['node', 'main.js', ...args];
-  if (port === undefined) delete process.env['PORT'];
-  else process.env['PORT'] = port;
+  setEnv({ API_PORT: apiPort, PORT: port });
   try {
     await jest.isolateModulesAsync(async () => {
       await import('./main');
@@ -60,8 +68,7 @@ async function run(args: string[], port?: string) {
       await new Promise((resolve) => setImmediate(resolve));
   } finally {
     process.argv = argv;
-    if (before === undefined) delete process.env['PORT'];
-    else process.env['PORT'] = before;
+    setEnv(before);
   }
 }
 
@@ -113,6 +120,13 @@ describe('api entry point', () => {
     await run([], '4000');
 
     expect(mockApp.listen).toHaveBeenCalledWith(4000);
+  });
+
+  // @traces 1363-FR-005
+  it("serves on API_PORT over PORT, which a worktree's port set gives the web dev server", async () => {
+    await run([], '50004', '50002');
+
+    expect(mockApp.listen).toHaveBeenCalledWith(50002);
   });
 
   it('writes the OpenAPI document to the file named, then stops', async () => {

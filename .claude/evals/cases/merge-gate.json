@@ -556,5 +556,41 @@
       "exit": 2,
       "stderr": "no medium or low finding"
     }
+  },
+  {
+    "id": "merge-gate-passes-a-merge-of-main-carry",
+    "hook": "pre:bash:merge-gate",
+    "why": "a merge of origin/main whose own diff touches none of the PR's files keeps the tested verdict; a new QA lap would judge nothing the PR changed",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":2,\"commits\":[{\"sha\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"parents\":[{\"sha\":\"9999999999999999999999999999999999999999\"}],\"commit\":{\"message\":\"feat(api): ST-1 another story\"}},{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"sha\":\"dddddddddddddddddddddddddddddddddddddddd\"}],\"commit\":{\"message\":\"Merge remote-tracking branch 'origin/main'\"}}],\"files\":[{\"filename\":\"apps/api/src/other.ts\"}]},\"merges\":{\"abc1234def5678\":{\"main\":[\"apps/api/src/other.ts\"],\"pr\":[\"apps/web/src/mine.ts\"]}},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-an-overlapping-merge-carry",
+    "hook": "pre:bash:merge-gate",
+    "why": "a merge of origin/main that changes a file the PR changes needs a new QA lap, so its carried verdict is refused",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":2,\"commits\":[{\"sha\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"parents\":[{\"sha\":\"9999999999999999999999999999999999999999\"}],\"commit\":{\"message\":\"feat(api): ST-1 another story\"}},{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"sha\":\"dddddddddddddddddddddddddddddddddddddddd\"}],\"commit\":{\"message\":\"Merge remote-tracking branch 'origin/main'\"}}],\"files\":[{\"filename\":\"apps/web/src/mine.ts\"}]},\"merges\":{\"abc1234def5678\":{\"main\":[\"apps/web/src/mine.ts\"],\"pr\":[\"apps/web/src/mine.ts\"]}},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2
+    }
   }
 ]

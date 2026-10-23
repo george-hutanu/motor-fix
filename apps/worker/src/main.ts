@@ -18,7 +18,11 @@ async function bootstrap() {
     { logger: new JsonLogger() },
   );
   app.enableShutdownHooks();
-  await app.listen(Number(process.env['PORT'] ?? 3001));
+  // WORKER_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
+  // PORT to the web dev server, which reads nothing else.
+  await app.listen(
+    Number(process.env['WORKER_PORT'] ?? process.env['PORT'] ?? 3001),
+  );
 }
 
 // `inbox-test` and `email-dns-check` run and exit; anything else boots.

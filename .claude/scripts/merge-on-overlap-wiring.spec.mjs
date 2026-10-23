@@ -99,17 +99,18 @@ describe('the live flows proof is written down where a dispatch is made', () => 
   const one = step(handoff, 1, 2);
 
   for (const [where, text] of [['hand-off step 1', one], ["the tail's no-run case", noRun]]) {
-    it(`${where}: boot the stack, check until exit 0, exit 64, no escape, Docker-less blocks`, () => {
+    // @traces 1363-FR-005
+    it(`${where}: the proof is optional; taken, it boots on the worktree's ports and checks until exit 0`, () => {
       assert.ok(text.includes('eval "$(node scripts/test-services.ts origin/main)"'), text);
+      assert.ok(text.includes('eval "$(node scripts/test-services.ts ports)"'), text);
+      assert.ok(text.includes('node scripts/test-services.ts restart <api|worker|web>'), text);
       assert.match(text, /precheck\.mjs --flows [^`]* --spec [^`]* --check/);
       assert.match(text, /until it exits 0/);
-      assert.match(text, /exit 64[^.]*no (live )?proof[^.]*head/i);
-      assert.match(text, /no flag/i);
-      assert.match(text, /Docker[^.]*needs-confirmation/);
+      assert.match(text, /`--proof` only when the story changed flows/);
     });
   }
 
-  it('offers no way to dispatch without the proof', () => {
+  it('offers no skip flag: a dispatch without `--proof` is the default', () => {
     for (const text of [handoff, tail, read('.claude/agents/pr-tester.md'), prTest])
       assert.doesNotMatch(text, /--no-proof|--skip-proof|SPECKIT_SKIP_PROOF/);
   });

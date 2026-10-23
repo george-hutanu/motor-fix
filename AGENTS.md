@@ -53,8 +53,11 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      (`lifecycle.mjs ready`); there is no In review stage. The story's agent
      then dispatches the PR QA run with `--no-wait`, writes
      `specs/<feature>/handoff.md` and returns `NEXT: tail #<n> after QA run
-     <id>`. The session waits for that run in the background and dispatches
-     a fresh **tail agent**. The story's agent, the tail and every
+     <id>`. The session dispatches a fresh **tail agent** at once, which
+     waits for the QA run and CI itself (`ci-wait.mjs`, in the background);
+     the session waits for nothing and relays nothing: one task *being
+     built* per session, plus any number waiting on QA and CI. The story's
+     agent, the tail and every
      `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
      `general-purpose`.
   5. Get CI green: merge `origin/main` only when
@@ -67,7 +70,9 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      cap the task is Blocked. A lap with neither ends the testing: fix its
      medium and low findings tests first, push, carry its verdict
      (`pr-test/carry.mjs`) and merge on green CI, the finish comment listing
-     them under "Fixed after QA"; no lap is counted.
+     them under "Fixed after QA"; no lap is counted. A merge of
+     `origin/main` that changes none of the PR's files carries the verdict
+     too (`merge of main`).
   7. Merge on `agent-review` success with every other check green, at once;
      a failing, pending or missing check is never merged. Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session

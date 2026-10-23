@@ -11,6 +11,11 @@ in the worktree your prompt names. The prompt says which part: a story through
 "Phase agents"), "The tail" (`.claude/skills/speckit-auto/tail.md` alone)
 for a handed-off PR, or one `/speckit-watch` fix.
 
+A tail holds its own waits: `node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>`
+for the QA run, then `ci-wait.mjs <n>` for CI, each through Bash
+`run_in_background`, never a foreground sleep. The session that dispatched
+you waits for nothing and relays nothing.
+
 ## What you already have
 
 - **AGENTS.md and CLAUDE.local.md are in your context**, loaded from the

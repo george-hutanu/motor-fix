@@ -101,30 +101,34 @@ describe('no agent holds its context across the CI and QA wait', () => {
     assert.doesNotMatch(handoff, /--watch|gh run watch/);
   });
 
-  it('lets the session, not an agent, hold the one background wait before the tail', () => {
+  // @traces 1363-FR-003
+  it('has the session dispatch the tail at once, and the tail hold its own background wait', () => {
     const wait = section(auto, '## The wait');
     assert.match(wait, /run_in_background/);
     // gh pr checks --watch ends at once on a head whose checks have not started.
     assert.match(wait, /ci-wait\.mjs <n> --run <id>/);
     assert.doesNotMatch(wait, /gh pr checks <n> --watch/);
     assert.match(wait, /watch\.mjs claim <worktree> tail/);
+    assert.match(wait, /The tail holds its own waits; the session holds none\./);
+    assert.match(wait, /dispatches the tail \(below\) at once/);
   });
 
-  // @traces 1171-FR-001 1171-FR-002
-  it('waits for the QA run only before the tail, and for CI only before the merge', () => {
+  // @traces 1171-FR-001 1171-FR-002 1363-FR-003
+  it('waits for the QA run only before the review, and for CI only before the merge', () => {
     const wait = section(auto, '## The wait');
     assert.match(wait, /QA run only/);
-    assert.match(wait, /NEXT: merge #<n> after CI/);
     assert.match(wait, /ci-wait\.mjs <n>(?! --run)/);
     assert.match(wait, /watch\.mjs claim <worktree> merge/);
+    assert.doesNotMatch(wait, /The session then holds the CI wait/);
   });
 
-  // @traces 1171-FR-002
-  it('reviews the run while a check is pending, and hands the merge to the session after a passing lap', () => {
+  // @traces 1171-FR-002 1363-FR-003
+  it('reviews the run while a check is pending, and holds the CI wait itself after a passing lap', () => {
     const read = steps(section(auto, '## The tail')).find((s) => s.includes('Read CI'));
     assert.match(read, /pending/);
     assert.match(read, /does not hold the review/);
-    assert.match(section(auto, '## The tail'), /NEXT: merge #<n> after CI/);
+    assert.doesNotMatch(section(auto, '## The tail'), /the session's CI wait/);
+    assert.match(read, /ci-wait\.mjs <n>/);
   });
 
   // @traces 1171-FR-006
@@ -183,5 +187,123 @@ describe('the cloud how-to (moved from AGENTS.md to speckit-auto/cloud.md) says 
     assert.match(cloud, /Workflow/);
     assert.match(cloud, /Artifact/);
     assert.match(read('.claude/skills/speckit-review/SKILL.md'), /Workflow tool is not available/);
+  });
+});
+
+// The tail owns both waits; the session that received the hand-off waits for and relays nothing.
+describe('the tail, not the session, waits for CI and the QA run', () => {
+  const flat = (text) => text.replace(/\s+/g, ' ');
+
+  // @traces 1363-FR-003
+  it('says so in tail.md, hand-off.md, lifecycle.md, task-runner.md and AGENTS.md', () => {
+    for (const rel of ['.claude/skills/speckit-auto/tail.md', '.claude/skills/speckit-auto/hand-off.md', '.claude/skills/speckit-auto/lifecycle.md', '.claude/agents/task-runner.md', 'AGENTS.md'])
+      assert.match(flat(read(rel)), /waits for nothing and relays nothing/, rel);
+  });
+
+  // @traces 1363-FR-003
+  it('has the tail run ci-wait.mjs itself, and the hand-off keep its NEXT and drop the session wait', () => {
+    const tail = flat(read('.claude/skills/speckit-auto/tail.md'));
+    assert.match(tail, /ci-wait\.mjs <n> --run <id>/);
+    assert.match(tail, /ci-wait\.mjs <n>(?! --run)/);
+    const handoff = flat(section(auto, '## Hand-off'));
+    assert.match(handoff, /NEXT: tail #<n> after QA run <id>/);
+    assert.doesNotMatch(handoff, /hold the wait/);
+    const runner = flat(read('.claude/agents/task-runner.md'));
+    assert.match(runner, /ci-wait\.mjs <n> --run <id>/);
+    assert.match(runner, /run_in_background/);
+  });
+
+  // @traces 1363-FR-003
+  it('drops the session wait from lifecycle.md and AGENTS.md step 4', () => {
+    const lifecycle = flat(read('.claude/skills/speckit-auto/lifecycle.md'));
+    assert.doesNotMatch(lifecycle, /session holds one background wait/);
+    assert.doesNotMatch(lifecycle, /the session waits for CI/);
+    const ci = flat(section(read('.claude/skills/speckit-auto/lifecycle.md'), '## CI, tests and release'));
+    assert.match(ci, /ci-wait\.mjs <n> --run <id>/);
+    const agents = flat(read('AGENTS.md'));
+    assert.doesNotMatch(agents, /The session waits for that run in the background/);
+    assert.match(agents, /dispatches a fresh \*\*tail agent\*\* at once/);
+  });
+});
+
+describe('the hand-off brings main in first, only when needed', () => {
+  const flat = (text) => text.replace(/\s+/g, ' ');
+
+  // @traces 1363-FR-009
+  it('runs merge-main.mjs --needed before ready and the QA dispatch', () => {
+    const handoff = flat(section(auto, '## Hand-off'));
+    const needed = handoff.indexOf('merge-main.mjs --needed');
+    assert.notEqual(needed, -1);
+    assert.ok(needed < handoff.indexOf('lifecycle.mjs ready --body-file'), 'before ready');
+    assert.ok(needed < handoff.indexOf('dispatch.mjs <n> --no-wait'), 'before the QA dispatch');
+    assert.match(handoff, /never a rebase/);
+    assert.match(handoff, /green CI/);
+  });
+
+  // @traces 1363-FR-009
+  it('has lifecycle step 5 say it also runs at hand-off', () => {
+    const lifecycle = read('.claude/skills/speckit-auto/lifecycle.md');
+    const five = flat(lifecycle.slice(lifecycle.indexOf('  5. Get CI green'), lifecycle.indexOf('  6. QA')));
+    assert.match(five, /also at hand-off/);
+  });
+});
+
+describe('a merge of main touching none of the PR\'s files keeps the verdict', () => {
+  const flat = (text) => text.replace(/\s+/g, ' ');
+
+  // @traces 1363-FR-010
+  it('has tail step 1 carry the verdict over a disjoint merge of main', () => {
+    const one = flat(section(auto, '## The tail').split(/\n(?=\d+\. )/).find((s) => s.startsWith('1. ')));
+    assert.match(one, /node \.claude\/scripts\/pr-test\/carry\.mjs <n>/);
+    assert.match(one, /merge of main/);
+  });
+
+  // @traces 1363-FR-010
+  it('states the carry in AGENTS.md step 6 and constitution VII step 6', () => {
+    const agents = read('AGENTS.md');
+    const six = flat(agents.slice(agents.indexOf('  6. QA'), agents.indexOf('  7. Merge')));
+    assert.match(six, /merge of `origin\/main`/);
+    assert.match(six, /carry/);
+    const constitution = read('.specify/memory/constitution.md');
+    const start = constitution.indexOf('### VII.');
+    const vii = constitution.slice(start, constitution.indexOf('\n## ', start));
+    const step6 = flat(vii.slice(vii.indexOf('\n6. '), vii.indexOf('\n\nThe tracker is GitHub')));
+    assert.match(step6, /merge of `origin\/main`/);
+    assert.match(step6, /merge of main/);
+  });
+});
+
+describe('the flows proof is optional and local boots use the worktree\'s ports', () => {
+  const flat = (text) => text.replace(/\s+/g, ' ');
+  const numbered = (text, n) => flat(text.split(/\n(?=\s*\d+\. )/).find((s) => s.trimStart().startsWith(`${n}. `)) ?? '');
+
+  // @traces 1363-FR-005
+  it('makes the proof opt-in in hand-off step 1 and tail step 3, booting on the port set', () => {
+    for (const text of [numbered(section(auto, '## Hand-off'), 1), numbered(section(auto, '## The tail'), 3)]) {
+      assert.match(text, /`--proof` only when the story changed flows/);
+      assert.match(text, /eval "\$\(node scripts\/test-services\.ts ports\)"/);
+      assert.match(text, /node scripts\/test-services\.ts restart <api\|worker\|web>/);
+      assert.doesNotMatch(text, /There is no flag that dispatches without the proof/);
+    }
+  });
+
+  // @traces 1363-FR-005
+  it('names WEB_PORT and API_PORT instead of fixed localhost ports', () => {
+    for (const rel of ['.claude/skills/speckit-auto/hand-off.md', '.claude/skills/speckit-auto/tail.md', '.claude/skills/speckit-pr-test/SKILL.md', '.claude/agents/pr-tester.md']) {
+      const text = read(rel);
+      assert.doesNotMatch(text, /localhost:4200|localhost:3000/, rel);
+    }
+    for (const rel of ['.claude/skills/speckit-pr-test/SKILL.md', '.claude/agents/pr-tester.md']) {
+      const text = read(rel);
+      assert.match(text, /WEB_PORT/, rel);
+      assert.match(text, /API_PORT/, rel);
+    }
+  });
+
+  // @traces 1363-FR-007
+  it('tells the test-adversary to append or add a file, never rewrite or delete a test', () => {
+    const text = flat(read('.claude/agents/test-adversary.md'));
+    assert.match(text, /append to an existing adversary spec or add a new file, never rewrite or delete a test/);
+    assert.match(text, /pre:edit:adversary-keep/);
   });
 });
