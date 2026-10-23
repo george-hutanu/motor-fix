@@ -30,12 +30,12 @@ import {
 // The days an overdue garage keeps its place on the map after its due date.
 export const DOCUMENT_GRACE_DAYS = 14;
 
-export const DOCUMENT_CYCLE_STATES = ['due', 'overdue'] as const;
+const DOCUMENT_CYCLE_STATES = ['due', 'overdue'] as const;
 export type DocumentCycleState = (typeof DOCUMENT_CYCLE_STATES)[number];
 
 // What the documents row shows: valid, near its due date, waiting for an
 // admin, refused, or overdue.
-export const DOCUMENT_ROWS = [
+const DOCUMENT_ROWS = [
   'valid',
   'due',
   'in_review',

@@ -59,10 +59,6 @@ const drawerDocument = (page: Page, kind: string) =>
   drawer(page).locator(`li.document[data-kind="${kind}"]`);
 
 test.describe('the yearly documents, from the owner’s row to the admin’s decision @seeded @database', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its garages and owners straight to PostgreSQL, which needs DATABASE_URL',
-  );
   test.describe.configure({ mode: 'serial' });
 
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;

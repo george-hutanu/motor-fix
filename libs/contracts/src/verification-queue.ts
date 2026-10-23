@@ -60,8 +60,8 @@ export class VerificationQueueAreaDto {
   radiusKm?: number;
 }
 
-export const VERIFICATION_QUEUE_ITEMS = ['verification', 'documents'] as const;
-export type VerificationQueueItem = (typeof VERIFICATION_QUEUE_ITEMS)[number];
+const VERIFICATION_QUEUE_ITEMS = ['verification', 'documents'] as const;
+type VerificationQueueItem = (typeof VERIFICATION_QUEUE_ITEMS)[number];
 
 export class VerificationQueueRowDto {
   @ApiProperty({
