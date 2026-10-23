@@ -1,0 +1,33 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: 44px;
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+button {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
+.destructive:not(:disabled) {
+  border-color: var(--mf-red-ink);
+  background: var(--mf-red-ink);
+  color: var(--mf-bg);
+}

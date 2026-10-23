@@ -5,6 +5,7 @@ features:
   - 022-review-drawer
   - 023-review-confirmed-job
   - 025-review-mechanic
+  - 129-delete-account
   - 182-review-rules
 ---
 
@@ -222,6 +223,9 @@ _From 025-review-mechanic._
 
 _From 025-review-mechanic._
 
+### 129-FR-010 — A published review whose driver account is `deleted` MUST show the author "Șofer MotorFix" in place of the first name and surname initial of 022-FR-007 and 025-FR-011, wherever reviews are rendered (garage profile, the mechanic's list, the garage's dashboard list), with counts and ratings unchanged. The API renders the author's short name as "Șofer MotorFix", with no other mark on the author; an English rendering belongs to the first web screen that shows other people's review authors (none exists today).
+
+_From 129-delete-account._
 ### 182-FR-001 — The review drawer's form MUST show, under the "Comentariul tău" field and above the privacy line, the summary "Fără insulte, date personale sau reclame. Scrie doar despre această reparație." followed by the link "Regulile recenziilor" (English: "No insults, personal data or ads. Write only about this repair." and "Review rules"), on every path that shows the form: today the write path; the profile path (dropped from release 1 by OD-32) and edit mode (ST-408) inherit it when they ship, since the summary is part of the form. It is one paragraph placed after the comment field's block (after its count and error) and before the privacy line, with the link inline. A state that replaces the form shows no summary.
 
 _From 182-review-rules._

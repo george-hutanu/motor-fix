@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-17
+updated: 2026-10-23
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -9,6 +9,7 @@ features:
   - 290-save-garage
   - 029-overview-panels-own-data
   - 291-saved-garages
+  - 129-delete-account
 ---
 
 # Capability: Cars
@@ -211,6 +212,10 @@ _From 291-saved-garages._
 ### 291-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the brand line with a `works_on` brand with the fuel ticked, a `does_not_take` brand, an unmarked brand and an unticked fuel; two cars of one brand named once; a removed car not counting; empty `brands` with no car; the order of the brands; `distanceKm` with `near` and neither field without; a mobile mechanic inside and outside its area; `available` for `suspended` and `draft`; `total` and `workingCount` over the whole list; the order and the cursor (21 rows: 20 then 1; a cursor that does not decode 400; a cursor whose row was removed still pages); 403 without the driver role; 401 for a visitor; 400 for a `near` outside Romania. In Jest for the web app: the lamp line in every state and language, the subtitle's forms (1, 0, 2–19 and the "de" form from 20), the panel's 3-row cut and "Vezi toate", the skeletons, the error with retry, the empty state, the remove with undo and with a failed removal, the re-read on a live event. End to end (Playwright): as a driver with two cars, save two garages, open Service-uri salvate, check both lines and the subtitle, remove one and undo.
 
 _From 291-saved-garages._
+
+### 129-FR-011 — The worker MUST, on `account.deleted`, clear the plates of the account's cars in the cars module, idempotently; other modules' rows that hold no personal field are kept under the retention config (#1156).
+
+_From 129-delete-account._
 
 ## Retired
 

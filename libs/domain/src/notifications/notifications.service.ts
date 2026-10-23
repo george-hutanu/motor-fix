@@ -17,6 +17,7 @@ import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
 import { locked, STAFF_TYPES } from './staff-lists';
+import { farewell } from './templates';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { publishLive } from '../events/live/live.hub';
@@ -85,6 +86,10 @@ interface NotifyInput {
   subjectId?: string | null;
   params?: Record<string, unknown>;
 }
+
+// A deleted account gets nothing but its farewell e-mail.
+const reachable = (status: string, input: NotifyInput) =>
+  status !== 'deleted' || farewell(input.kind, input.params ?? {});
 
 interface NextJob {
   name: 'send' | 'flush';
@@ -174,7 +179,8 @@ export class NotificationsService {
       | 'email_check'
       | 'email_change_notice'
       | 'password_reset'
-      | 'password_changed';
+      | 'password_changed'
+      | 'account_deleted';
     link: string;
     to?: string;
   }): Promise<void> {
@@ -632,7 +638,7 @@ export class NotificationsService {
       select: { email: true, phone: true, phoneVerifiedAt: true, status: true },
       where: { id: accountId },
     });
-    if (!account || account.status === 'deleted') return null;
+    if (!account || !reachable(account.status, input)) return null;
     const duplicate = await tx.notification.findUnique({
       where: {
         kind_accountId_channel_eventId: {

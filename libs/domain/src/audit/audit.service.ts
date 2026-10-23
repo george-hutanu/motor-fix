@@ -76,7 +76,7 @@ export class AuditService implements AuditPort {
     const names = new Map<string, string>();
     const data = [];
     for (const entry of entries) {
-      const key = `${entry.actorRole}:${entry.actorId ?? ''}:${entry.actorName ?? ''}`;
+      const key = `${entry.actorRole}:${entry.actorId ?? ''}:${entry.actorLabel ?? ''}:${entry.actorName ?? ''}`;
       const name = names.get(key) ?? (await this.actorName(tx, entry));
       names.set(key, name);
       data.push(row(entry, name));
@@ -105,6 +105,7 @@ export class AuditService implements AuditPort {
 
   private async actorName(tx: Prisma.TransactionClient, entry: AuditEntry) {
     if (entry.actorRole === 'system') return 'MotorFix';
+    if (entry.actorLabel !== undefined) return entry.actorLabel;
     if (entry.actorName !== undefined) return firstName(entry.actorName);
     if (!entry.actorId) return '';
     const account = await tx.account.findUnique({

@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 079-account-model
   - 082-sign-in
@@ -40,6 +40,7 @@ features:
   - 116-listing-verification-status
   - 101-verification-progress
   - 009-copy-voice-analytics
+  - 129-delete-account
 ---
 
 # Capability: Accounts
@@ -1064,6 +1065,58 @@ _From 009-copy-voice-analytics._
 ### 009-FR-003 — Without a valid granted consent, no event and no voice property MUST leave the browser, and nothing else about the visit changes: no new storage, no new call, no new prompt. The existing one wrapper of the consent service is the only path an event takes.
 
 _From 009-copy-voice-analytics._
+
+### 129-FR-001 — `DELETE /api/v1/auth/account` MUST delete the signed-in account holder's own account, in one transaction: `ACCOUNT.status` → `deleted` by a conditional write that changes the row only while it is `active` (a request that changes no row rolls back and answers 401 `sign_in_required`); name, e-mail, phone, city, `email_verified_at`, `phone_verified_at` and `email_bounced_at` cleared; every ACCOUNT_IDENTITY, REFRESH_TOKEN, PUSH_SUBSCRIPTION, NOTIFICATION_PREFERENCE, ACCOUNT_TOKEN, PHONE_CHANGE, ASSISTANT_GRANT, ASSISTANT_SIGN_IN_CODE and ACCOUNT_ROLE row of the account deleted; then answer 204.
+
+_From 129-delete-account._
+
+### 129-FR-002 — The request MUST carry a confirmation: the account's e-mail (case-insensitive) or phone (as normalised at sign-in), or, for an account holding neither, the word `ȘTERGE` or `DELETE`; a mismatch answers 400 `validation_failed` and changes nothing.
+
+_From 129-delete-account._
+
+### 129-FR-003 — The deletion MUST require a sign-in at most 15 minutes old: when the current session's sign-in is older, the API answers 401 `reauth_required` and changes nothing; the web dialog then opens the sign-in and retries once the person is signed in again.
+
+_From 129-delete-account._
+
+### 129-FR-004 — An account holding an owner membership of any garage MUST be refused with 409 `deletion_not_allowed`, whichever role is in use and whatever the garage's status; the checks run in the order 403 `forbidden` (FR-005), 409 `deletion_not_allowed`, 401 `reauth_required` (FR-003), 400 `validation_failed` (FR-002).
+
+_From 129-delete-account._
+
+### 129-FR-005 — A session opened for an AI assistant MUST be refused with 403 `forbidden`.
+
+_From 129-delete-account._
+
+### 129-FR-006 — After deletion, sign-in by password, phone code, Apple or Google with the account's former e-mail, phone or identity MUST answer as for an unknown account (the existing unknown-account responses, with no hint that the account existed), and sign-up with the former e-mail or phone MUST create a new account; the deleted-account clauses of 393-FR-007 (`phone_taken`) and 083-FR-006 (`provider_failed`) become unreachable, since a deleted account holds no phone, e-mail or identity, and a former number or provider identity signs up a new account as those stories do for a new one.
+
+_From 129-delete-account._
+
+### 129-FR-007 — The deletion's transaction MUST record the outbox events `account.deleted` (payload `{ accountId }`, audience `account:{accountId}`) and, through the garages module, `mechanic.updated` for a detached mechanic and `member.removed` for a removed receptionist (audience `garage:{garageId}`), so that the quotes module's closed-account clean-up (428-FR-001–FR-012) runs, the live hub evicts the account's streams and the garage's open screens re-read their team.
+
+_From 129-delete-account._
+
+### 129-FR-008 — After the deletion commits, the API MUST publish one `session.revoked` live message to `account:{accountId}` through the sign-in service's one method that the password reset and sign-out everywhere call (569-FR-003, now with a third caller; a failed publish is logged and does not change the answer), so every open tab of the deleted account signs out as 128-FR-009 says, without a reload, and lands on Home as a visitor; the deleting tab forgets its push subscription, its session and its live connection as 128-FR-008 does.
+
+_From 129-delete-account._
+
+### 129-FR-012 — When the account held an e-mail, the API MUST, after the transaction commits, queue one ACCOUNT_EMAIL message with purpose `account_deleted`, subject "Contul tău a fost șters" / "Your account was deleted", in the account's language, addressed to the e-mail the account held (read before it was cleared and carried by the message, since the account no longer holds it), as the `password_changed` notice is queued (139-FR-014: the notifications module writes through its own client; a notice that fails to queue is logged and does not undo the deletion); no preference can switch it off.
+
+_From 129-delete-account._
+
+### 129-FR-014 — Setări MUST show, for every signed-in role, a row "Șterge contul" in its account area that opens a dialog saying what is removed (details, sign-in methods, sessions, notification settings, plates) and what stays (reviews as "Șofer MotorFix", bookings history, legal records), with the confirmation field, a destructive confirm button disabled until the field is filled, and a cancel; for a garage owner the row's button is disabled with the owner message and links to the contact form and the support e-mail; while the request runs the confirm button is disabled (no second submit), and on a 500 or a lost connection the dialog stays open, keeps the typed text and shows an error message with a retry; after 204 the tab signs out and lands on Home with a toast "Contul tău a fost șters".
+
+_From 129-delete-account._
+
+### 129-FR-015 — The dialog MUST work at 320 px, 390 px, tablet and desktop, light and dark, in Romanian and English, with no sideways scroll, and MUST pass the axe checks; the row and the dialog's texts live in the i18n catalogue.
+
+_From 129-delete-account._
+
+### 129-FR-016 — The endpoint MUST be listed in `infra/observability/inventory.json` with a counter of outcomes (`deleted`, `forbidden`, `refused_owner`, `reauth_required`, `mismatch`, `failed`), a log line without personal values, a panel and an alert on `failed`.
+
+_From 129-delete-account._
+
+### 129-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Valkey where rows are written: FR-001–FR-013 (personal fields cleared and every named row gone; sign-in by each method fails as unknown and sign-up succeeds; the review shows "Șofer MotorFix"; the owner refused; the assistant refused; the stale sign-in refused; the mismatch refused; a mechanic and a receptionist leave the team and the mechanic's reviews and bookings stay; `account.deleted` recorded and the quotes clean-up run once for it, twice idempotent; plates cleared; the e-mail queued with the held address; the audit entry without personal values); and in Playwright: delete a driver account through the dialog, land on Home, fail to sign in with it again, at 390 px and on desktop, in RO and EN.
+
+_From 129-delete-account._
 
 ## Retired
 

@@ -1,0 +1,27 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <p>{{ 'shell.deleteAccount.removed' | t }}</p>
+  <p>{{ 'shell.deleteAccount.kept' | t }}</p>
+  <div class="field">
+    <label for="mf-delete-confirmation">{{ label | t }}</label>
+    <input
+      hlmInput
+      id="mf-delete-confirmation"
+      type="text"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      formControlName="confirmation"
+      aria-describedby="mf-delete-confirmation-error"
+    />
+    <mf-field-error id="mf-delete-confirmation-error" [save]="save" [control]="form.controls.confirmation" />
+  </div>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" class="destructive" [mfTaskSubmit]="save" [disabled]="!filled()">
+      {{ 'shell.deleteAccount.button' | t }}
+    </button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'shell.deleteAccount.cancel' | t }}
+    </button>
+  </div>
+</form>

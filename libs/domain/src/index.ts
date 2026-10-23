@@ -35,6 +35,8 @@ export { createPrisma, PRISMA } from './auth/prisma';
 export { signInLimitConfig } from './auth/qa-sign-in-limit';
 export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
+export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';
+export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
   CAR_REMINDERS_CONSUMER,

@@ -55,6 +55,26 @@
     },
     "trap": "Do not fill in this field"
   },
+  "deleteAccount": {
+    "button": "Delete account",
+    "cancel": "Cancel",
+    "contactLink": "Contact form",
+    "dialogTitle": "Delete your account?",
+    "done": "Your account was deleted",
+    "field": {
+      "mismatch": "This does not match the account"
+    },
+    "fieldEmailOrPhone": "Type the e‑mail or phone of the account",
+    "fieldPhrase": "Type DELETE",
+    "kept": "Published reviews stay, signed “Șofer MotorFix”, and so do bookings and the records the law asks for, for as long as the privacy notice says.",
+    "ownerText": "Your account owns a garage. Write to us through the contact form or by e‑mail so we close the garage; then you can delete the account.",
+    "problem": {
+      "deletion_not_allowed": "Your account owns a garage, so it cannot be deleted yet."
+    },
+    "removed": "We delete the account's details, its sign‑in methods, its sessions on every device, its notification settings and the plates of its cars.",
+    "text": "Delete your account and your details from MotorFix. It cannot be undone.",
+    "title": "Deleting your account"
+  },
   "emailBanner": {
     "failed": "We could not send the link. Try again.",
     "resend": "Send again",
