@@ -84,16 +84,19 @@ export class ReviewsService {
       throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such mechanic');
     }
     const where = { mechanicId, status: 'published' as const };
-    const [total, reviews] = await Promise.all([
-      this.prisma.review.count({ where }),
-      this.prisma.review.findMany({
-        include: { driver: { select: { name: true } }, garage: true },
-        orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * MECHANIC_REVIEWS_PAGE,
-        take: MECHANIC_REVIEWS_PAGE,
-        where,
-      }),
-    ]);
+    const total = await this.prisma.review.count({ where });
+    const skip = (page - 1) * MECHANIC_REVIEWS_PAGE;
+    // A page past the last reads nothing, however large its number.
+    const reviews =
+      skip < total
+        ? await this.prisma.review.findMany({
+            include: { driver: { select: { name: true } }, garage: true },
+            orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
+            skip,
+            take: MECHANIC_REVIEWS_PAGE,
+            where,
+          })
+        : [];
     return {
       items: reviews.map((review) => ({
         author: { shortName: shortName(review.driver.name) },

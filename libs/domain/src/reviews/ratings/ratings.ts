@@ -8,6 +8,8 @@ import { NOTIFICATIONS_PRISMA } from '../../notifications/notifications.service'
 
 export const REVIEW_RATINGS_QUEUE = 'review-ratings';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // A failed job is tried twice more, 1 and 2 minutes later; each try
 // recomputes from the review rows alone.
 const REVIEW_RATINGS_RUN: JobsOptions = {
@@ -37,7 +39,7 @@ export const REVIEW_RATINGS_CONSUMER = {
 export interface ReviewRatingsEvent {
   id: string;
   kind: string;
-  payload: { reviewId?: string } & Record<string, unknown>;
+  payload?: { reviewId?: unknown } & Record<string, unknown>;
   subjectId?: string;
 }
 
@@ -94,13 +96,16 @@ export class ReviewRatings {
   async onEvent(job: Pick<Job<ReviewRatingsEvent>, 'data'>): Promise<void> {
     const { kind, payload, subjectId } = job.data;
     if (!KINDS.includes(kind as EventKind)) return;
-    const reviewId = payload.reviewId ?? subjectId;
-    const review = reviewId
-      ? await this.prisma.review.findUnique({
-          select: { garageId: true, mechanicId: true },
-          where: { id: reviewId },
-        })
-      : null;
+    const reviewId = payload?.reviewId ?? subjectId;
+    // An id that is not a UUID names no row either, and a retry cannot change
+    // that.
+    const review =
+      typeof reviewId === 'string' && UUID.test(reviewId)
+        ? await this.prisma.review.findUnique({
+            select: { garageId: true, mechanicId: true },
+            where: { id: reviewId },
+          })
+        : null;
     if (!review) {
       this.logger.warn(`${kind} ${reviewId}: review gone, nothing written`);
       return;
