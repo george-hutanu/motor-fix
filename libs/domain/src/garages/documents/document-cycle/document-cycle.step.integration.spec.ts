@@ -447,4 +447,49 @@ describe('the notices the compliance step sends', () => {
 
     expect(await notices(ownerOf(cycle.garageId))).toEqual([]);
   });
+
+  // The notice commits on its own; the cycle's change after it is lost.
+  const loseTheCommitAfterTheNotice = () => {
+    const notify = notifications.notify.bind(notifications);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest
+      .spyOn(notifications, 'notify')
+      .mockImplementationOnce(async (input) => {
+        await notify(input);
+        throw new Error('commit lost');
+      });
+  };
+
+  it('sends DOCUMENT_DUE once per channel when the run after a lost commit sends it again', async () => {
+    const cycle = await cycleDue('2026-11-22');
+    loseTheCommitAfterTheNotice();
+
+    await expect(step.run(NOW)).rejects.toThrow('commit lost');
+    expect(await marks(cycle.id)).toEqual([false, false, false]);
+    await step.run(NOW);
+
+    expect(await marks(cycle.id)).toEqual([true, false, false]);
+    const sent = await notices(ownerOf(cycle.garageId));
+    expect(sent.map((n) => [n.kind, n.channel, n.eventId])).toEqual([
+      ['DOCUMENT_DUE', 'email', `document-30-${cycle.garageId}-2026-11-22`],
+      ['DOCUMENT_DUE', 'in_app', `document-30-${cycle.garageId}-2026-11-22`],
+    ]);
+  });
+
+  it('sends DOCUMENT_OVERDUE once per channel when the run after a lost commit sends it again', async () => {
+    const cycle = await cycleDue('2026-10-22');
+    loseTheCommitAfterTheNotice();
+
+    await expect(step.run(NOW)).rejects.toThrow('commit lost');
+    expect((await cycleOf(cycle.id)).state).toBe('due');
+    await step.run(NOW);
+
+    expect((await cycleOf(cycle.id)).state).toBe('overdue');
+    expect(
+      (await notices(ownerOf(cycle.garageId))).map((n) => [n.kind, n.channel]),
+    ).toEqual([
+      ['DOCUMENT_OVERDUE', 'email'],
+      ['DOCUMENT_OVERDUE', 'in_app'],
+    ]);
+  });
 });

@@ -83,7 +83,7 @@ describe("the worker's product counters at start", () => {
       ]),
     ).toEqual(SUPPORT_EMAILS);
     expect(named(all, 'motorfix_support_messages_total')).toEqual([]);
-    // 1345-FR-012: each instance stays under 150 series.
+    // Each instance stays under 150 series.
     expect(all.length).toBeLessThan(150);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
   });
