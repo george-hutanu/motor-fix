@@ -735,7 +735,9 @@ test.describe('the map beside the results @seeded', () => {
   // Once the sheet has slid where it rests.
   const slid = (page: Page) =>
     sheet(page).evaluate(async (el) => {
-      while (el.getAnimations().length)
+      // A slide ending can start the next (the rest's transform after the
+      // entry): a few rounds, never an endless wait.
+      for (let round = 0; round < 3 && el.getAnimations().length; round++)
         await Promise.all(
           el.getAnimations().map((a) => a.finished.catch(() => undefined)),
         );

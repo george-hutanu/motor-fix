@@ -176,6 +176,9 @@ describe('the public site bar', () => {
       /@media \(min-width: 768px\) and \(max-width: 1023\.98px\) \{[^@]*\.links \.wide \{\s*display: none/,
     );
     expect(css).toMatch(
+      /@media \(min-width: 768px\) and \(max-width: 1023\.98px\) \{\s*\.bar \{\s*padding-inline: var\(--mf-space-4\)/,
+    );
+    expect(css).toMatch(
       /@media \(min-width: 1024px\) \{\s*\.account \{\s*display: none/,
     );
     const wide = [...bar().querySelectorAll('nav .wide')].map((e) =>

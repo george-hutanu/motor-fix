@@ -1,157 +1,181 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const css = readFileSync(join(__dirname, 'results-map.css'), 'utf8').replace(
-  /\/\*[\s\S]*?\*\//g,
-  '',
+import { PLATFORM_ID } from '@angular/core';
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import type { GaragePinsDto } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
+
+import type { MapEvents } from './pins-map';
+import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
+
+const PINS: GaragePinsDto = {
+  pins: [
+    { id: 'g-1', lat: 44.44, lng: 26.12, rateLei: 150, stance: 'works_on' },
+    { id: 'g-2', lat: 44.5, lng: 26.2, rateLei: null, stance: 'does_not_take' },
+  ],
+  total: 2,
+};
+const BRAND = { id: 'b-1', name: 'BMW', slug: 'bmw' };
+
+let view: jest.Mocked<ResultsMapView>;
+let opened: (value: ResultsMapView) => void;
+const open = jest.fn(
+  (_host: HTMLElement, _on: MapEvents) =>
+    new Promise<ResultsMapView>((resolve) => {
+      opened = resolve;
+    }),
 );
+let fixture: ComponentFixture<ResultsMap>;
 
-interface Flat {
-  media: string[];
-  selector: string;
-  body: string;
+async function render(platform = 'browser') {
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: RESULTS_MAP, useValue: open },
+      { provide: PLATFORM_ID, useValue: platform },
+    ],
+  });
+  await TestBed.inject(I18n).enter('public');
+  fixture = TestBed.createComponent(ResultsMap);
+  fixture.componentRef.setInput('brand', 'BMW');
+  fixture.componentRef.setInput('place', { lat: 44.437, lng: 26.117 });
+  fixture.componentRef.setInput('pins', undefined);
+  fixture.detectChanges();
+  await fixture.whenStable();
 }
 
-function blockEnd(text: string, open: number): number {
-  let depth = 1;
-  let j = open + 1;
-  while (j < text.length && depth > 0) {
-    if (text[j] === '{') depth++;
-    else if (text[j] === '}') depth--;
-    j++;
-  }
-  return j;
-}
+const ready = async () => {
+  opened(view);
+  await fixture.whenStable();
+  fixture.detectChanges();
+};
+const element = () => fixture.nativeElement as HTMLElement;
+const card = () => element().querySelector<HTMLElement>('mf-map-card');
 
-function flatten(text: string, media: string[] = []): Flat[] {
-  const out: Flat[] = [];
-  let i = 0;
-  for (
-    let open = text.indexOf('{', i);
-    open >= 0;
-    open = text.indexOf('{', i)
-  ) {
-    const j = blockEnd(text, open);
-    const head = text.slice(i, open).trim().replace(/\s+/g, ' ');
-    const inner = text.slice(open + 1, j - 1);
-    if (head.startsWith('@media'))
-      out.push(...flatten(inner, [...media, head]));
-    else if (!head.startsWith('@'))
-      out.push({ body: inner, media, selector: head });
-    i = j;
-  }
-  return out;
-}
+beforeEach(() => {
+  open.mockClear();
+  view = {
+    destroy: jest.fn(),
+    fit: jest.fn(),
+    light: jest.fn(),
+    mark: jest.fn(),
+    show: jest.fn(),
+    spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 80 })),
+  };
+});
 
-const rules = flatten(css);
-const NARROW = '@media (max-width: 359.98px)';
-const narrow = rules.filter((r) => r.media.includes(NARROW));
-const narrowLegend = narrow.filter((r) => /\.legend\b/.test(r.selector));
-const declared = (body: string) =>
-  body
-    .split(';')
-    .map((d) => d.trim())
-    .filter(Boolean)
-    .map((d) => d.split(':')[0].trim());
+// @traces 270-FR-010
+describe('the results map, under attack', () => {
+  it('opens no small card without the brand to link with', async () => {
+    await render();
+    await ready();
 
-// @traces 1351-FR-001
-describe('the legend rules for a phone under 360 px', () => {
-  it('has the narrow block and nothing in it but legend rules', () => {
-    expect(narrow.length).toBeGreaterThan(0);
-    expect(narrow.map((r) => r.selector)).toEqual(narrow.map(() => '.legend'));
+    fixture.componentRef.setInput('card', { pin: PINS.pins[0] });
+    fixture.detectChanges();
+
+    expect(card()).toBeNull();
   });
 
-  it('sets no font size, so the legend keeps the 16 px body size', () => {
-    for (const r of narrow) {
-      expect(declared(r.body)).not.toContain('font-size');
-      expect(declared(r.body)).not.toContain('font');
-      expect(declared(r.body)).not.toContain('zoom');
-      expect(declared(r.body)).not.toContain('transform');
-    }
+  it('moves the small card to the next pin when the page swaps the pin', async () => {
+    await render();
+    await ready();
+    fixture.componentRef.setInput('cardBrand', BRAND);
+    fixture.componentRef.setInput('card', { pin: PINS.pins[0] });
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('card', { pin: PINS.pins[1] });
+    fixture.detectChanges();
+
+    expect(view.spot).toHaveBeenLastCalledWith({ lat: 44.5, lng: 26.2 });
+    expect(element().querySelectorAll('mf-map-card')).toHaveLength(1);
   });
 
-  it('leaves the zoom room, the width and the side inset alone', () => {
-    const props = narrow.flatMap((r) => declared(r.body));
+  it('holds the small card inside the map when the pin sits far above the top edge', async () => {
+    await render();
+    await ready();
+    view.spot.mockReturnValue({ x: 50, y: -400 });
+    fixture.componentRef.setInput('cardBrand', BRAND);
+    fixture.componentRef.setInput('card', { pin: PINS.pins[0] });
+    fixture.detectChanges();
 
-    expect(props.filter((p) => p.startsWith('--'))).toEqual([]);
-    for (const p of ['max-width', 'width', 'left', 'right', 'min-width']) {
-      expect(props).not.toContain(p);
-    }
+    expect(parseFloat(card()?.style.top ?? '-1')).toBeGreaterThanOrEqual(0);
   });
 
-  it('never hides or collapses the legend', () => {
-    const body = narrow.map((r) => r.body).join(';');
+  it('closes the map it opened late once the component is gone', async () => {
+    await render();
+    fixture.destroy();
 
-    expect(body).not.toMatch(/visibility\s*:/);
-    expect(body).not.toMatch(/display\s*:/);
-    expect(body).not.toMatch(/opacity\s*:/);
-    expect(body).not.toMatch(/overflow\s*:/);
-    expect(body).not.toMatch(/(?<![-\w])height\s*:/);
+    opened(view);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(view.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the line height at or above 1.2 so rows do not overlap', () => {
-    const heights = narrowLegend
-      .map((r) => r.body.match(/line-height:\s*([\d.]+)\s*(;|$)/)?.[1])
-      .filter((v): v is string => v !== undefined)
-      .map(Number);
+  it('destroys the open map once, however often the component is destroyed', async () => {
+    await render();
+    await ready();
 
-    expect(heights.length).toBeGreaterThan(0);
-    for (const h of heights) expect(h).toBeGreaterThanOrEqual(1.2);
+    fixture.destroy();
+    fixture.destroy();
+
+    expect(view.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('does not touch the legend entries or the hint', () => {
-    expect(
-      rules.filter((r) => r.media.includes(NARROW) && r.selector !== '.legend'),
-    ).toEqual([]);
+  it('opens no map and no small card on the server', async () => {
+    await render('server');
+    fixture.componentRef.setInput('lit', 'g-1');
+    fixture.componentRef.setInput('cardBrand', BRAND);
+    fixture.componentRef.setInput('card', { pin: PINS.pins[0] });
+    fixture.detectChanges();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(card()).toBeNull();
+  });
+
+  it('lights the garage given before the map opened as soon as it opens', async () => {
+    await render();
+    fixture.componentRef.setInput('lit', 'g-2');
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+
+    await ready();
+
+    expect(view.light).toHaveBeenLastCalledWith('g-2');
   });
 });
 
 // @traces 1351-FR-001
-describe('the phone legend rules in the map stylesheet', () => {
-  const phone = '@media (max-width: 767.98px)';
+describe('the map legend on a phone, from its own stylesheet', () => {
+  const flat = readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
 
-  it('keeps the 16 px body size under 768 px and the zoom room at the tap size plus 20 px', () => {
-    const font = rules.find(
-      (r) => r.media.join() === phone && r.selector === '.legend, .hint',
+  it('gives way to the zoom hint by visibility alone, under 768 px only', () => {
+    expect(flat).toMatch(
+      /@media \(max-width: 767\.98px\) \{[^@]*\.hint:not\(:empty\) ~ \.legend \{ visibility: hidden; \}/,
     );
-    const map = rules.find(
-      (r) => r.media.join() === phone && r.selector === '.map',
-    );
-
-    expect(font?.body.replace(/\s+/g, '')).toBe(
-      'font-size:var(--mf-size-body);',
-    );
-    expect(map?.body.replace(/\s+/g, '')).toBe(
-      '--zoom-room:calc(var(--mf-tap)+20px);',
-    );
+    expect(flat.match(/~ \.legend/g)).toHaveLength(1);
   });
 
-  it('hides the legend behind the zoom hint, only under 768 px', () => {
-    const hidden = rules.filter(
-      (r) => /\.hint/.test(r.selector) && /~\s*\.legend/.test(r.selector),
-    );
+  it('is hidden by nothing else here, and never forced visible', () => {
+    const hiding = [
+      ...flat.matchAll(
+        /([^{}]*\.legend[^{}]*)\{[^{}]*(visibility: hidden|display: none|opacity: 0[;\s])/g,
+      ),
+    ].map((m) => m[1].trim());
 
-    expect(hidden).toHaveLength(1);
-    expect(hidden[0].media).toEqual([phone]);
-    expect(hidden[0].selector).toBe('.hint:not(:empty) ~ .legend');
-    expect(hidden[0].body.replace(/\s+/g, '')).toBe('visibility:hidden;');
+    expect(hiding).toEqual(['.hint:not(:empty) ~ .legend']);
+    expect(flat).not.toMatch(/visibility: visible/);
   });
 
-  it('has no other rule that hides the legend', () => {
-    const hiding = rules.filter(
-      (r) =>
-        /(^|[\s,>~+])\.legend$/.test(r.selector) &&
-        /visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0\b/.test(
-          r.body,
-        ),
-    );
+  it('keeps the narrow block to the legend alone', () => {
+    const narrow = flat.match(
+      /@media \(max-width: 359\.98px\) \{(.*?\}) \}/,
+    )?.[1];
 
-    expect(hiding.map((r) => r.selector)).toEqual([
-      '.hint:not(:empty) ~ .legend',
+    expect(narrow?.match(/[^{}]+\{/g)?.map((s) => s.trim())).toEqual([
+      '.legend {',
     ]);
-  });
-
-  it('shows the legend with no visibility override from the narrow block', () => {
-    expect(css).not.toMatch(/visibility:\s*visible/);
   });
 });

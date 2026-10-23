@@ -1,100 +1,159 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const css = readFileSync(join(__dirname, 'styles.css'), 'utf8').replace(
-  /\/\*[\s\S]*?\*\//g,
-  '',
-);
+const root = __dirname;
+const styles = readFileSync(join(root, 'styles.css'), 'utf8');
 
-interface Flat {
-  media: string[];
-  selector: string;
-  body: string;
+const rule = (selector: string) => {
+  const start = styles.indexOf(`${selector} {`);
+  if (start < 0) return '';
+  return styles.slice(start, styles.indexOf('}', start) + 1);
+};
+
+let sheet: HTMLStyleElement;
+const nodes: HTMLElement[] = [];
+
+beforeEach(() => {
+  sheet = document.createElement('style');
+  sheet.textContent = styles;
+  document.head.append(sheet);
+});
+
+afterEach(() => {
+  sheet.remove();
+  for (const n of nodes.splice(0)) n.remove();
+});
+
+function region(html: string) {
+  const el = document.createElement('p');
+  el.className = 'mf-message';
+  el.innerHTML = html;
+  document.body.append(el);
+  nodes.push(el);
+  return el;
 }
 
-function blockEnd(text: string, open: number): number {
-  let depth = 1;
-  let j = open + 1;
-  while (j < text.length && depth > 0) {
-    if (text[j] === '{') depth++;
-    else if (text[j] === '}') depth--;
-    j++;
-  }
-  return j;
-}
+const hidden = (el: Element) => {
+  const s = getComputedStyle(el);
+  return s.width === '1px' && s.height === '1px' && s.position === 'absolute';
+};
 
-function flatten(text: string, media: string[] = []): Flat[] {
-  const out: Flat[] = [];
-  let i = 0;
-  for (
-    let open = text.indexOf('{', i);
-    open >= 0;
-    open = text.indexOf('{', i)
-  ) {
-    const j = blockEnd(text, open);
-    const head = text.slice(i, open).trim().replace(/\s+/g, ' ');
-    const inner = text.slice(open + 1, j - 1);
-    if (head.startsWith('@media'))
-      out.push(...flatten(inner, [...media, head]));
-    else if (!head.startsWith('@'))
-      out.push({ body: inner, media, selector: head });
-    i = j;
-  }
-  return out;
-}
+// @traces 248-FR-009
+describe('the empty message region rule', () => {
+  it('hides a region with no child visually and never with display none', () => {
+    const el = region('');
 
-const rules = flatten(css);
-const legendRules = rules.filter((r) => /\.legend\b/.test(r.selector));
+    expect(hidden(el)).toBe(true);
+    expect(getComputedStyle(el).display).not.toBe('none');
+    expect(getComputedStyle(el).visibility).not.toBe('hidden');
+  });
+
+  it('keeps a region that holds only a comment hidden', () => {
+    expect(hidden(region('<!---->'))).toBe(true);
+  });
+
+  // A whitespace text node defeats :empty; the templates never render one in
+  // a region (message-regions.spec.ts checks their content), so the rule only
+  // has to hold for a region that is truly empty, as above.
+
+  it('shows the region once text arrives', () => {
+    const el = region('');
+    el.textContent = 'Parola e greșită';
+
+    expect(hidden(el)).toBe(false);
+    expect(getComputedStyle(el).width).not.toBe('1px');
+  });
+
+  it('hides it again when the text is cleared', () => {
+    const el = region('x');
+    el.textContent = '';
+
+    expect(hidden(el)).toBe(true);
+  });
+
+  it('shows a region holding only an element', () => {
+    expect(hidden(region('<span>!</span>'))).toBe(false);
+  });
+
+  it('is the shape of sr-only, so the region stays in the accessibility tree', () => {
+    const body = rule('.mf-message:empty');
+
+    expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
+    expect(body).toMatch(/overflow:\s*hidden/);
+    expect(body).not.toMatch(/display:\s*none/);
+  });
+});
+
+// @traces 248-FR-004
+describe('the focusable scroll margin', () => {
+  const body = rule(
+    ':where(a, button, input, select, textarea, summary, [tabindex])',
+  );
+
+  it('clears the public bar above and the tab bar and consent bar below', () => {
+    expect(body).toMatch(/scroll-margin-top:[^;]*--public-site-bar/);
+    expect(body).toMatch(/scroll-margin-bottom:[^;]*--tab-bar/);
+    expect(body).toMatch(/scroll-margin-bottom:[^;]*--consent-bar/);
+  });
+
+  it('defaults each bar to 0px so a page without the bar still resolves a length', () => {
+    expect(body).toMatch(/var\(--public-site-bar,\s*0px\)/);
+    expect(body).toMatch(/var\(--tab-bar,\s*0px\)/);
+    expect(body).toMatch(/var\(--consent-bar,\s*0px\)/);
+  });
+
+  it('is zero specificity, so a component can override it', () => {
+    expect(styles).toMatch(
+      /^:where\(a, button, input, select, textarea, summary, \[tabindex\]\) \{/m,
+    );
+  });
+
+  it('exempts the controls that live inside the bars themselves', () => {
+    const exempt = styles.slice(styles.indexOf('mf-public-frame > .bar'));
+
+    for (const host of [
+      'mf-public-tab-bar',
+      'mf-dashboard-tab-bar',
+      'mf-consent-bar',
+    ]) {
+      expect(exempt).toContain(host);
+    }
+    expect(exempt).toMatch(/scroll-margin:\s*0/);
+  });
+});
+
+// @traces 248-FR-013
+describe('the end-to-end axe loader', () => {
+  it('is named by the one helper only', () => {
+    const e2e = join(root, '..', '..', 'web-e2e', 'src');
+    const users = readdirSync(e2e)
+      .filter((f) => f.endsWith('.ts'))
+      .filter((f) => /axe\.min\.js/.test(readFileSync(join(e2e, f), 'utf8')));
+
+    expect(users).toEqual(['axe.ts']);
+  });
+});
 
 // @traces 1351-FR-001
-describe('the map legend hiding rule in the global stylesheet', () => {
-  it('has exactly one rule that targets the legend', () => {
-    expect(legendRules).toHaveLength(1);
-  });
+describe('the map legend hidden while the sheet covers the map top', () => {
+  const flat = styles.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+  const hide =
+    'mf-results:has(mf-results-sheet.over-zoom) mf-results-map .legend';
 
-  it('applies only below 768 px', () => {
-    for (const r of legendRules) {
-      expect(r.media).toEqual(['@media (max-width: 767px)']);
-    }
-  });
-
-  it('hides the legend only while the sheet carries over-zoom', () => {
-    const [r] = legendRules;
-
-    expect(r.selector).toMatch(/mf-results-sheet\.over-zoom/);
-    expect(r.selector).not.toMatch(/:not\(\.over-zoom\)/);
-    expect(r.selector).not.toContain(',');
-  });
-
-  it('hides it with visibility alone, keeping its box', () => {
-    const [r] = legendRules;
-
-    expect(r.body.replace(/\s+/g, '')).toBe('visibility:hidden;');
-  });
-
-  it('never shows the legend again with an override', () => {
-    expect(css).not.toMatch(/\.legend[^{}]*\{[^{}]*visibility:\s*visible/);
-  });
-
-  it('never hides the legend from 768 px up', () => {
-    const wide = legendRules.filter(
-      (r) => r.media.length === 0 || r.media.some((m) => /min-width/.test(m)),
+  it('is the one legend rule here, inside the phone block only', () => {
+    expect(flat.match(/\.legend\b/g)).toHaveLength(1);
+    expect(flat).toContain(
+      `@media (max-width: 767px) { ${hide} { visibility: hidden; } }`,
     );
-
-    expect(wide).toEqual([]);
   });
 
-  it('pairs the legend rule with the zoom buttons rule on the same trigger', () => {
-    const zoom = rules.find(
-      (r) =>
-        /over-zoom/.test(r.selector) &&
-        /maplibregl-ctrl-top-right/.test(r.selector),
+  it('rides the same trigger as the zoom buttons', () => {
+    expect(flat).toContain(
+      hide.replace('.legend', '.maplibregl-ctrl-top-right'),
     );
-    const [legend] = legendRules;
+  });
 
-    expect(zoom?.media).toEqual(legend.media);
-    expect(
-      zoom?.selector.replace(/\.maplibregl-ctrl-top-right/, '.legend'),
-    ).toBe(legend.selector);
+  it('is never undone by a visible override', () => {
+    expect(flat).not.toMatch(/\.legend[^{}]*\{[^{}]*visibility: visible/);
   });
 });
