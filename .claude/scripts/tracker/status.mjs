@@ -24,6 +24,7 @@
 //   events: start | implement | review | qa | finish | blocked | unblock
 // Prints { write, story, prior, note, stage, labels } as JSON.
 import { readState, writeState } from "../run-state.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 export const LADDER = ["To do", "Planning", "Implementing", "QA", "Done"];
 const TARGET = { start: "Planning", implement: "Implementing", review: "QA", qa: "QA", finish: "Done" };
@@ -94,6 +95,6 @@ export function main(argv, repo) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main(process.argv.slice(2), process.env.CLAUDE_PROJECT_DIR ?? process.cwd()));
 }

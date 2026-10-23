@@ -100,7 +100,8 @@ describe('pre-compact flush', () => {
     setup('Archived');
     const started = Date.now();
     assert.equal(run().status, 0);
-    assert.ok(Date.now() - started < 3000);
+    const took = Date.now() - started;
+    assert.ok(took < 1000, `took ${took} ms`);
     appended();
   });
 
@@ -148,11 +149,23 @@ describe('pre-compact flush', () => {
     assert.match(log(), /^ {2}- {2}M b\.txt$/m);
   });
 
+  // @traces 486-FR-006
   it('says the working tree is clean when only the spec folder differs', () => {
     setup('Draft');
-    git('add', '.');
-    git('commit', '-q', '-m', 'all');
+    git('add', '.specify');
+    git('commit', '-q', '-m', 'pointer');
     run();
     assert.match(log(), /- working tree clean/);
+    assert.doesNotMatch(log(), /specs\//);
+  });
+
+  // @traces 486-FR-006
+  it('still lists a change beside the spec folder', () => {
+    setup('Draft');
+    git('add', '.specify');
+    git('commit', '-q', '-m', 'pointer');
+    writeFileSync(join(repo, 'a.txt'), 'changed');
+    run();
+    assert.match(log(), /- uncommitted \(1\):\n {2}- {2}M a\.txt\n/);
   });
 });

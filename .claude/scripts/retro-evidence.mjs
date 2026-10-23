@@ -22,6 +22,7 @@ import { execFileSync } from "node:child_process";
 import { basename, join } from "node:path";
 import { activeFeature, featureLevel, featuresRoot, LEVELS } from "./lib/feature.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const git = (repo, args) => {
   try {
@@ -267,7 +268,7 @@ export function main(argv, repo, out = {}) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const argv = process.argv.slice(2);
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const out = {};

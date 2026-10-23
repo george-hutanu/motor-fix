@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { isEntryPoint } from './entry.mjs';
@@ -69,6 +69,59 @@ describe('the hooks find their entry point by real path', () => {
     const guarded = sources.filter(([, s]) => /isEntryPoint\(import\.meta\.url\)/.test(s)).map(([f]) => f);
     for (const f of ['merge-gate.mjs', 'pr-lifecycle-gate.mjs', 'config-protection.mjs', 'session-context.mjs', 'agent-model-router.mjs', 'session-watch-reminder.mjs']) {
       assert.ok(guarded.includes(f), `${f} does not use isEntryPoint`);
+    }
+  });
+});
+
+describe('the scripts find their entry point by real path', () => {
+  const claude = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
+  const walk = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.name === 'node_modules' ? [] : e.isDirectory() ? walk(join(dir, e.name)) : /\.(mjs|cjs|js)$/.test(e.name) && !/\.spec\./.test(e.name) ? [join(dir, e.name)] : [],
+    );
+  const sources = walk(claude).map((f) => [relative(claude, f), readFileSync(f, 'utf8')]);
+
+  // @traces 486-FR-001
+  it('leaves process.argv[1] to lib/entry.mjs alone', () => {
+    const raw = sources.filter(([, s]) => /process\.argv\[1\]/.test(s)).map(([f]) => f);
+    assert.deepEqual(raw, [join('scripts', 'lib', 'entry.mjs')]);
+  });
+
+  // @traces 486-FR-001
+  it('guards every main block with isEntryPoint(import.meta.url)', () => {
+    for (const f of ['scripts/status.mjs', 'scripts/watch.mjs', 'scripts/pr-test/carry.mjs', 'scripts/pr-test/dispatch.mjs', 'skills/design-audit/scripts/scan.mjs']) {
+      const source = sources.find(([name]) => name === join(...f.split('/')))?.[1] ?? '';
+      assert.match(source, /isEntryPoint\(import\.meta\.url\)/, `${f} does not use isEntryPoint`);
+    }
+  });
+
+  // @traces 486-FR-001
+  it('runs each main block through a symlinked .claude as through the real one', () => {
+    const root = mkdtempSync(join(tmpdir(), 'entry-claude-'));
+    dirs.push(root);
+    const link = join(root, 'claude');
+    symlinkSync(claude, link);
+    const cwd = join(root, 'cwd');
+    mkdirSync(cwd);
+    const run = (base, script) => {
+      const r = spawnSync(process.execPath, [join(base, script)], { cwd, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: cwd } });
+      return { status: r.status, stdout: r.stdout.replaceAll(link, claude), stderr: r.stderr.replaceAll(link, claude) };
+    };
+    for (const script of [
+      'scripts/status.mjs',
+      'scripts/level.mjs',
+      'scripts/lib/feature.mjs',
+      'scripts/run-state.mjs',
+      'scripts/impact.mjs',
+      'scripts/watch.mjs',
+      'scripts/pr-test/carry.mjs',
+      'scripts/pr-test/packet.mjs',
+      'scripts/pr-test/baseline.mjs',
+      'skills/design-audit/scripts/contrast.mjs',
+    ]) {
+      const real = run(claude, script);
+      assert.ok(real.status !== 0 || real.stdout || real.stderr, `${script} did nothing through its real path`);
+      assert.deepEqual(run(link, script), real, `${script} through a symlink`);
     }
   });
 });

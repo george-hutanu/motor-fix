@@ -43,6 +43,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { activeFeature } from "./lib/feature.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 export const capabilitiesDir = (repo) => join(repo, ".specify", "capabilities");
 
@@ -543,7 +544,7 @@ function main() {
   return 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   mkdirSync(capabilitiesDir(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()), { recursive: true });
   process.exit(main());
 }

@@ -17,9 +17,10 @@
 //   node .claude/scripts/harness-eval.mjs --check   fail below .claude/evals/baseline.json
 //   node .claude/scripts/harness-eval.mjs --json    machine form
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 // evals/ lives inside .claude here: the whole harness is git-excluded in this
 // repo, and a tracked top-level evals/ would be the one piece that was not.
@@ -78,8 +79,13 @@ function buildPayload(testCase, scratch) {
  * and commits it happened to name. Each commit maps a path to its content, or
  * to null to delete it.
  */
-function buildFixture(repo, testCase, scratch) {
-  const dir = join(scratch, `fixture-${testCase.id}`);
+/** A scratch folder name for the case at `index`: unique, and one path segment whatever its id holds. */
+function scratchName(kind, testCase, index) {
+  return `${kind}-${index}-${String(testCase.id).replace(/[^\w.-]/g, "_")}`;
+}
+
+function buildFixture(repo, testCase, scratch, index) {
+  const dir = join(scratch, scratchName("fixture", testCase, index));
   mkdirSync(dir, { recursive: true });
   for (const part of ["hooks", "scripts"]) cpSync(join(repo, ".claude", part), join(dir, ".claude", part), { recursive: true });
   const git = (...args) =>
@@ -106,14 +112,23 @@ function buildFixture(repo, testCase, scratch) {
 }
 
 export function runCases(repo, cases = loadCases(repo)) {
-  const runner = join(repo, ".claude", "hooks", "run-hook.mjs");
   // Resolved: on macOS the temp dir is a symlink (/var → /private/var), and a
   // gate started through one never sees its own path as the one it was run by.
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), "harness-eval-")));
   try {
-    return cases.map((testCase) => {
+    return cases.map((testCase, index) => {
       const started = Date.now();
-      const root = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
+      const built = testCase.fixture ? buildFixture(repo, testCase, scratch, index) : repo;
+      // A case that declares `"symlink": true` starts run-hook.mjs and the gate
+      // through a symlink to its root, the way a checkout under a symlinked
+      // folder starts them, so a gate that compares the path it was started by
+      // with its own URL instead of using isEntryPoint is caught.
+      let root = built;
+      if (testCase.symlink) {
+        root = join(scratch, scratchName("link", testCase, index));
+        symlinkSync(built, root);
+      }
+      const runner = join(root, ".claude", "hooks", "run-hook.mjs");
       const result = spawnSync(process.execPath, [runner, testCase.hook], {
         input: JSON.stringify(buildPayload(testCase, scratch)),
         encoding: "utf8",
@@ -138,7 +153,7 @@ export const baselineFor = (repo) => {
   }
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const cases = loadCases(repo);
   const results = runCases(repo, cases);

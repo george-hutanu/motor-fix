@@ -37,7 +37,7 @@ import { execFileSync, spawn as nodeSpawn } from "node:child_process";
 import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "./lib/entry.mjs";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
@@ -969,11 +969,4 @@ function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
   }
 }
 
-const invoked = (() => {
-  try {
-    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false;
-  }
-})();
-if (invoked) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));

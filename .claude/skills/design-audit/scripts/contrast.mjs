@@ -13,6 +13,7 @@
 // A translucent foreground is composited over its background before measuring.
 
 import { readFileSync } from 'node:fs';
+import { isEntryPoint } from "../../../scripts/lib/entry.mjs";
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
@@ -140,4 +141,4 @@ function main(argv) {
   return failed.length > 0 || rows.some((r) => r.error) ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));

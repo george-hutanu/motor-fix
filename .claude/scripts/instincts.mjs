@@ -18,6 +18,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 export const instinctsDir = (repo) => join(repo, ".specify", "memory", "instincts");
 
@@ -183,7 +184,7 @@ const arg = (name, fallback = null) => {
 };
 const today = (now = new Date()) => now.toISOString().slice(0, 10);
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const [command, positional] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   const instincts = loadInstincts(repo);

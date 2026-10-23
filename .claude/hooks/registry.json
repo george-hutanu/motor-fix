@@ -183,7 +183,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head, unless it was handed off to a tail agent), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "ccbda11dd57f"
+      "fingerprint": "78ce4b3aed00"
     },
     {
       "id": "stop:telemetry",
@@ -207,7 +207,7 @@
         "strict"
       ],
       "description": "Append branch, HEAD, task counts and the dirty tree to auto-run.md before context is summarised",
-      "fingerprint": "2f41cbddf35c"
+      "fingerprint": "46dbd01938ce"
     },
     {
       "id": "subagent:verdict",

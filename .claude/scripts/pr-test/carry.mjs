@@ -32,10 +32,10 @@
 // picks the kind from the named lap, and exits 0 when it carried (or would, on
 // --dry-run), 1 when the head needs a real lap (the reason on stderr), 2 when
 // gh failed.
-import { fileURLToPath } from "node:url";
 
 import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { STATUS_CONTEXT, realGh, replaceSection } from "./post.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 const CARRY = /^carried from ([0-9a-f]{7,40}): (docs-only change|QA fixes|merge of main)/;
 const KIND_TEXT = { docs: "docs-only change", fixes: "QA fixes", merge: "merge of main" };
@@ -295,4 +295,4 @@ function main(argv) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));

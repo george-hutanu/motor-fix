@@ -323,6 +323,16 @@ describe('run-hook.mjs — a gate that crashes', () => {
     assert.doesNotMatch(r.stderr, /refused/);
   });
 
+  // @traces 659-FR-004
+  it('refuses a fail-closed gate stopped by a signal before its limit, naming the signal', () => {
+    hook('bash-guard.mjs', 'process.kill(process.pid, "SIGTERM");\nsetTimeout(() => {}, 5000);\n');
+    const started = Date.now();
+    const r = run('pre:bash:guard');
+    assert.equal(r.status, 2, 'a gate killed mid-check has not approved the request');
+    assert.match(r.stderr, /pre:bash:guard refused: the gate was stopped by SIGTERM/);
+    assert.ok(Date.now() - started < 4000, 'refused at the signal, not at a timeout');
+  });
+
   it('passes an advisory hook\'s exit 1 through unchanged', () => {
     hook('session-telemetry.mjs', 'process.stderr.write("ledger broke\\n"); process.exit(1);\n');
     const r = run('stop:telemetry');
