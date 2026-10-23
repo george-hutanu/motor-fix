@@ -334,3 +334,104 @@ describe('the QA fixes carry', () => {
     assert.match(edit.input, /Fixed after QA/);
   });
 });
+
+// @traces 1363-FR-010
+describe('the merge-of-main carry', () => {
+  const MAIN = 'd'.repeat(40);
+  const MERGE_MESSAGE = "Merge remote-tracking branch 'origin/main' into 9-x";
+  const merge = (sha, first, second = MAIN) => ({ sha, parents: [{ sha: first }, { sha: second }], commit: { message: MERGE_MESSAGE } });
+  // Main brought in more commits and files than any cap allows: none of them is the PR's.
+  const fromMain = Array.from({ length: MAX_COMMITS + 3 }, (_, i) => ({ sha: `9${i}`.padEnd(40, '0'), parents: [{ sha: '8'.repeat(40) }], commit: { message: 'feat(web): ST-1 another story' } }));
+  const mainFiles = Array.from({ length: 40 }, (_, i) => ({ filename: `apps/api/src/other-${i}.ts` }));
+  const mergeCompare = (commits = [...fromMain, merge(HEAD, FROM)]) => ({ status: 'ahead', base_commit: { sha: FROM }, total_commits: commits.length, commits, files: mainFiles });
+  const sides = (over = {}) => ({ main: mainFiles.map((f) => f.filename), pr: ['apps/web/src/mine.ts', 'apps/web/src/mine.spec.ts'], ...over });
+  const merged = (over = {}) => ({ from: FROM, head: HEAD, kind: 'merge', fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' }, compare: mergeCompare(), merges: { [HEAD]: sides() }, between: [], headReviews: [], ...over });
+
+  it('names the commit and its kind, apart from the other two', () => {
+    assert.equal(carryDescription(FROM, 'merge'), `carried from ${FROM}: merge of main`);
+    assert.equal(carriedFrom(carryDescription(FROM, 'merge')), FROM);
+    assert.equal(carryKind(carryDescription(FROM, 'merge')), 'merge');
+    assert.equal(carryKind(carryDescription(FROM, 'fixes')), 'fixes');
+  });
+
+  it('carries a merge whose own diff touches none of the PR\'s files, however much main brought in', () => {
+    assert.equal(judgeCarry(merged()), null);
+  });
+
+  it('refuses a merge that changes a file the PR changes, naming it', () => {
+    const why = judgeCarry(merged({ merges: { [HEAD]: sides({ main: ['apps/api/src/other-1.ts', 'apps/web/src/mine.ts'] }) } }));
+    assert.match(why, /ccccccc is a merge commit that changes apps\/web\/src\/mine\.ts/);
+  });
+
+  it('refuses a merge whose two sides were not read, or were too large to read whole', () => {
+    assert.match(judgeCarry(merged({ merges: {} })), /ccccccc is a merge commit/);
+    assert.match(judgeCarry(merged({ merges: { [HEAD]: sides({ main: Array.from({ length: 300 }, (_, i) => `f${i}`) }) } })), /too large/);
+  });
+
+  it('counts the caps over the PR\'s own first-parent commits only', () => {
+    const many = [];
+    let parent = FROM;
+    for (let i = 0; i <= MAX_COMMITS; i++) {
+      const sha = i === MAX_COMMITS ? HEAD : `7${i}`.padEnd(40, '0');
+      many.push(merge(sha, parent));
+      parent = sha;
+    }
+    const merges = Object.fromEntries(many.map((c) => [c.sha, sides()]));
+    assert.match(judgeCarry(merged({ compare: mergeCompare([...fromMain, ...many]), merges })), /too large/);
+  });
+
+  it('rides on merges alone, and not over a lap whose fixes are owed', () => {
+    const withFix = mergeCompare([...fromMain, { ...fix(MID, 'fix: a'), parents: [{ sha: FROM }] }, merge(HEAD, MID)]);
+    assert.match(judgeCarry(merged({ compare: withFix })), /bbbbbbb is not a merge of main/);
+    assert.match(judgeCarry(merged({ fromReview: { state: 'success', description: FINDINGS } })), /fixes are owed/);
+  });
+
+  it('lets a QA-fixes carry ride over a disjoint merge of main, and still refuses an overlapping one or a feature commit', () => {
+    const compare = mergeCompare([...fromMain, { ...fix(MID, 'fix(api): a'), parents: [{ sha: FROM }] }, merge(HEAD, MID)]);
+    const base = { ...merged({ compare }), kind: 'fixes', fromReview: { state: 'success', description: FINDINGS } };
+    assert.equal(judgeCarry(base), null);
+    assert.match(judgeCarry({ ...base, merges: { [HEAD]: sides({ main: ['apps/web/src/mine.ts'] }) } }), /changes apps\/web\/src\/mine\.ts/);
+    const feat = mergeCompare([...fromMain, { ...fix(MID, 'feat(api): a'), parents: [{ sha: FROM }] }, merge(HEAD, MID)]);
+    assert.match(judgeCarry({ ...base, compare: feat }), /bbbbbbb is not a lap fix/);
+  });
+
+  it('reads both sides of each merge and the statuses of the PR\'s own commits only', () => {
+    const { calls, gh } = fakeGh([
+      [/compare\/a{40}\.\.\.c{40}/, ok(mergeCompare())],
+      [/compare\/d{40}\.\.\.c{40}/, ok({ status: 'ahead', files: sides().pr.map((filename) => ({ filename })) })],
+      [/commits\/a{40}\/statuses/, ok([status('success', 'No blocking findings; 0 in all.')])],
+      [/commits\/c{40}\/statuses/, ok([])],
+    ]);
+    const state = readCarryState({ from: FROM, head: HEAD, gh });
+    assert.deepEqual(state.merges[HEAD].pr, sides().pr);
+    assert.equal(calls.filter((c) => /statuses/.test(c.args.join(' '))).length, 2);
+    assert.equal(judgeCarry({ from: FROM, head: HEAD, kind: 'merge', ...state }), null);
+  });
+
+  it('reads the same state at once for the merge gate', async () => {
+    const { gh } = fakeGh([
+      [/compare\/a{40}\.\.\.c{40}/, ok(mergeCompare())],
+      [/compare\/d{40}\.\.\.c{40}/, ok({ status: 'ahead', files: sides().pr.map((filename) => ({ filename })) })],
+      [/commits\/a{40}\/statuses/, ok([status('success', 'No blocking findings; 0 in all.')])],
+      [/commits\/c{40}\/statuses/, ok([])],
+    ]);
+    const state = await fetchCarryState({ from: FROM, head: HEAD, gh: async (a) => gh(a) });
+    assert.deepEqual(state, readCarryState({ from: FROM, head: HEAD, gh }));
+  });
+
+  it('finds a merge-of-main carry when the lap reported nothing and head merged main in', () => {
+    const statuses = [/commits\/([0-9a-f]{40})\/statuses/, (args) => ok(args.join(' ').includes(FROM) ? [status('success', 'No blocking findings; 0 in all.')] : [])];
+    const { gh } = fakeGh([
+      [/pr view/, viewOf([FROM, HEAD])],
+      [/compare\/a{40}\.\.\.c{40}/, ok(mergeCompare())],
+      [/compare\/d{40}\.\.\.c{40}/, ok({ status: 'ahead', files: [{ filename: 'apps/web/src/mine.ts' }] })],
+      statuses,
+    ]);
+    assert.deepEqual(findCarry({ pr: 21, gh }), { from: FROM, head: HEAD, kind: 'merge' });
+  });
+
+  it('keeps the single-parent rule for the fix commits themselves', () => {
+    const compare = fixesCompare({ commits: [fix(MID, 'test: a'), fix(HEAD, 'feat: b')] });
+    assert.match(judgeCarry(fixes({ compare })), /ccccccc is not a lap fix/);
+  });
+});

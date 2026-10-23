@@ -58,6 +58,8 @@ describe('search engine rules under hostile input', () => {
         'https://motorfix.ro:8443/en/list-your-garage',
         'https://motorfix.ro:8443/ro/contact',
         'https://motorfix.ro:8443/en/contact',
+        'https://motorfix.ro:8443/ro/review-rules',
+        'https://motorfix.ro:8443/en/review-rules',
       ]);
     });
 
@@ -86,14 +88,14 @@ describe('search engine rules under hostile input', () => {
 
       expect(xml).not.toContain('/app');
       expect(xml).not.toContain('cockpit');
-      expect(locs(xml)).toHaveLength(10);
+      expect(locs(xml)).toHaveLength(12);
     });
 
     it('answers the sitemap with a query string', async () => {
       const answer = await fetch(`${base}/sitemap.xml?cache=1`);
 
       expect(answer.status).toBe(200);
-      expect(locs(await answer.text())).toHaveLength(10);
+      expect(locs(await answer.text())).toHaveLength(12);
     });
 
     it('answers a HEAD request for the sitemap without a body', async () => {
@@ -197,6 +199,8 @@ describe('search engine rules under hostile input', () => {
           '/en/list-your-garage',
           '/ro/contact',
           '/en/contact',
+          '/ro/review-rules',
+          '/en/review-rules',
         ].map((path) => `${base}${path}`),
       );
     });

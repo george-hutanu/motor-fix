@@ -1,5 +1,20 @@
 <!--
-Sync Impact Report (v5.0.0)
+Sync Impact Report (v5.1.0)
+- Version change: 5.0.0 → 5.1.0 (MINOR: Principle VII step 4 has the tail
+  agent wait for CI and the QA run itself, so a session holds one task being
+  built plus any number waiting on QA and CI; `origin/main` is merged on an
+  overlap at the hand-off too; step 6 carries a verdict over a merge of
+  `origin/main` that changes none of the PR's files (`merge of main`). The
+  Enforcement table adds `pre:edit:adversary-keep` and names the new carry)
+- Source: ST-1363, 2026-10-23.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line, VII, gates
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — lifecycle steps 4 and 6
+  - ✅ .claude/skills/speckit-auto/tail.md, hand-off.md, lifecycle.md,
+    .claude/agents/task-runner.md, test-adversary.md
+
+Previous report (v5.0.0)
 - Version change: 4.1.1 → 5.0.0 (MAJOR: a rule of Principle VII step 5
   changes. The tester no longer runs again on every new head: a lap with no
   blocker or high finding ends the testing, its medium and low findings are
@@ -611,9 +626,13 @@ waits for the owner:
 3. When the work is done (tests, typecheck and lint green, review with no
    CRITICAL/HIGH left), mark the PR ready, swap its label to `QA`, and set
    the task QA. There is no In review stage: a ready PR is in QA.
-4. Wait for CI, in the background. A branch behind `main` merges
+4. Wait for CI, in the background: the tail agent waits for CI and the QA run itself,
+   and the session that dispatched it waits for nothing, so a session holds
+   one task being built per session, plus any number waiting on QA and CI.
+   A branch behind `main` merges
    `origin/main` in only when `node .claude/scripts/merge-main.mjs --needed`
-   finds an overlap (exit 0, or exit 2 when git cannot answer); a clean
+   finds an overlap (exit 0, or exit 2 when git cannot answer), at the
+   hand-off before ready and after; a clean
    behind head keeps its QA run. A failing check is fixed on the branch and waited for
    again.
 5. Beside step 4, as soon as the PR is ready and with the task and the PR's
@@ -633,7 +652,9 @@ waits for the owner:
    commits), no repair lap is counted and no lap runs again; its verdict is
    carried to the fixed head (`carried from <sha>: QA fixes`), and the finish
    comment lists each fix under "Fixed after QA".
-6. Merge the PR when `agent-review` is success on its head commit and every
+6. Merge the PR when `agent-review` is success on its head commit (its own
+   or carried; a merge of `origin/main` that changes none of the PR's files
+   carries it, `carried from <sha>: merge of main`) and every
    other check passes; a pending, failing or missing check is never merged.
    Then set the task Done and close its issue. A PR opened by Dependabot (read from its author on
    GitHub) whose every commit Dependabot wrote skips step 5 and merges on every other check green with no
@@ -720,8 +741,9 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
+| VII adversary tests kept | `adversary-keep-gate.mjs` (PreToolUse, `pre:edit:adversary-keep`) | refuses a Write, Edit or MultiEdit to an existing `*.adversary.spec.*` that drops a describe, it or test title (a commented-out one counts as dropped), unless a `// retired test: "<title>"` line, for a rule the spec retired, takes its place |
 | VII main checkout | `main-checkout-gate.mjs` (PreToolUse); `watch.mjs` main row, `session-watch-reminder.mjs` | refuses an Edit, Write or NotebookEdit of a file git tracks in the main checkout, whichever session asks (worktrees, untracked and ignored paths and other repositories pass; `SPECKIT_ALLOW_MAIN_EDIT=1` overrides; a git failure lets it through); the watch reports the main checkout `behind` (safe fix `ff-main`) or `dirty: <files>`, and the session-start reminder names it |
-| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester (its own, or one it verifies was carried from the PR's tested commit over a documentation-only change or over a passing lap's QA fixes), or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
+| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester (its own, or one it verifies was carried from the PR's tested commit over a documentation-only change, over a passing lap's QA fixes, or over a merge of `origin/main` that changes none of the PR's files (`merge of main`, `carry.mjs`)), or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
 | Full verification | `.husky/pre-commit`; `lifecycle.mjs check` and `ready` | the commit hook runs identity, the folder rules and Biome on the staged files only; the CI-only checks, `npm run lint` and the affected `typecheck` and unit `test` (`JEST_SUITE=unit`, in a `scripts/heavy.sh` slot, no Docker) run at each slice end, before every tail fix push and at ready, refusing on red |
@@ -800,4 +822,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 5.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-22
+**Version**: 5.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-23

@@ -113,6 +113,10 @@
           <p class="error" role="alert">{{ fieldError(why) | t }}</p>
         }
       </div>
+      <p class="rules">
+        {{ 'driver.review.rules.summary' | t }}
+        <a [href]="'/' + language() + '/review-rules'" target="_blank" rel="noopener">{{ 'driver.review.rules.link' | t }}<span class="sr-only"> {{ 'driver.review.rules.newTab' | t }}</span></a>
+      </p>
       <p class="privacy">{{ 'driver.review.privacy' | t: { name: context()?.author?.shortName ?? '' } }}</p>
       @if (problem(); as code) {
         <p class="error" role="alert">{{ code }}</p>

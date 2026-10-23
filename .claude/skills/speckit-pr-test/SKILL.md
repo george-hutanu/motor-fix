@@ -145,10 +145,12 @@ without a status, so the test runs again.
   `ready`, the shared helpers `waitForText`, `openSheet`, `stepButton` and
   `accounts` (`.claude/scripts/pr-test/flow-helpers.mjs`); an unhandled
   rejection it leaves is a `high` finding.
-- Prove the flows before dispatching them:
+- When the story changed flows, prove them before dispatching with `--proof`:
   `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check` against
   the app and API already serving (`--base-url`, default
-  http://localhost:4200; `--api-url`, default http://localhost:3000); flows
+  `http://localhost:$WEB_PORT`; `--api-url`, default
+  `http://localhost:$API_PORT`; the port set from
+  `node scripts/test-services.ts ports`, 4200 and 3000 without one); flows
   still running after ten minutes are one line and exit 1.
 
 ## Evidence

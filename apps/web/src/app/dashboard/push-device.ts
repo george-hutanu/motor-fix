@@ -143,6 +143,21 @@ export class PushDevice {
     this.state.set('off');
   }
 
+  // The account is gone, and the server removed its devices with it: this
+  // browser unsubscribes too, so the next person to sign in here does not
+  // save it again as theirs. No call to the server, which would ask for a
+  // sign-in.
+  async dropped(): Promise<void> {
+    if (this.state() !== 'on') return;
+    this.id = null;
+    this.state.set('off');
+    try {
+      await this.sw?.unsubscribe();
+    } catch {
+      // The browser keeps an address no server holds; nothing is sent to it.
+    }
+  }
+
   private async save(subscription: PushSubscription) {
     const json = subscription.toJSON();
     const { id } = await this.api.pushSubscriptionsControllerSave({

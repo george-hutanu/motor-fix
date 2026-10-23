@@ -637,6 +637,7 @@ describe('the product dashboard', () => {
       'motorfix_verification_checks_total',
       'motorfix_verification_result_total',
       'motorfix_account_changes_total',
+      'motorfix_account_deletions_total',
       'motorfix_garage_suspensions_total',
       'motorfix_garage_restores_total',
       'motorfix_garage_restored_notices_total',

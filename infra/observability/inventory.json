@@ -20,7 +20,8 @@
         "api-search-latency",
         "api-profile-latency",
         "api-memory",
-        "api-rate-limit-surge"
+        "api-rate-limit-surge",
+        "api-account-deletion-failed"
       ],
       "story": "ST-881"
     },
@@ -92,7 +93,8 @@
         "api-search-latency",
         "api-profile-latency",
         "api-memory",
-        "api-rate-limit-surge"
+        "api-rate-limit-surge",
+        "api-account-deletion-failed"
       ],
       "story": "ST-881"
     },
@@ -1191,6 +1193,30 @@
       "story": "ST-139"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_account_deletions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "api-account-deletion-failed"
+      ],
+      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
+      "story": "ST-129"
+    },
+    {
+      "kind": "endpoint",
+      "name": "auth-account-delete",
+      "source": "libs/domain/src/auth/account-deletion/account-deletion.controller.ts",
+      "metric": "http.server.request.duration by http.route DELETE /api/v1/auth/account",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each refusal logs one 'account deletion refused: <outcome>' line, a deletion logs 'account deleted <id>' and a failed farewell e-mail logs 'account deleted e-mail not sent'; outcomes count on motorfix_account_deletions_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-129"
+    },
+    {
       "kind": "endpoint",
       "name": "garage-reports",
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.controller.ts",
@@ -1802,6 +1828,19 @@
       ],
       "reason": "carries the relay's account.deleted and account.suspended events; one AccountClosed log line per event naming the account id and the requests closed, skipped and failed and the bookings cancelled and skipped; a request that fails is retried with the job (3 tries) and worker-jobs-failed fires on the last; the outcomes are counted by motorfix_account_closed_cleanups_total; BullMQ's queue metrics cover depth and failures",
       "story": "ST-428"
+    },
+    {
+      "kind": "queue",
+      "name": "car-account-deleted",
+      "source": "libs/domain/src/cars/account-deleted/account-deleted.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's account.deleted events; one CarAccountDeleted log line per event naming the account id and the plates cleared; a failed job is retried (3 tries) and worker-jobs-failed fires on the last; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-129"
     },
     {
       "kind": "queue",

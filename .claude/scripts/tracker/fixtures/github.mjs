@@ -102,7 +102,7 @@ export function fakeGitHub(seed = {}) {
   for (const pr of seed.pulls ?? []) {
     const number = pr.number ?? state.nextNumber;
     state.nextNumber = Math.max(state.nextNumber, number + 1);
-    state.pulls.set(number, { number, state: pr.state ?? "open", body: pr.body ?? "", merged_at: pr.merged_at ?? null });
+    state.pulls.set(number, { number, state: pr.state ?? "open", body: pr.body ?? "", merged_at: pr.merged_at ?? null, labels: (pr.labels ?? []).map((name) => ({ name })) });
   }
 
   const issueBy = (number) => state.issues.find((i) => i.number === Number(number));
@@ -201,6 +201,12 @@ export function fakeGitHub(seed = {}) {
       state.subIssues.set(Number(m[1]), list);
       return json(issueBy(m[1]), 201);
     }
+    if ((m = repo.match(/^issues\/(\d+)\/dependencies\/blocked_by\/(\d+)$/)) && method === "DELETE") {
+      const list = state.blockedBy.get(Number(m[1])) ?? [];
+      if (!list.includes(Number(m[2]))) return json({ message: "Not Found" }, 404);
+      state.blockedBy.set(Number(m[1]), list.filter((id) => id !== Number(m[2])));
+      return json(issueBy(m[1]));
+    }
     if ((m = repo.match(/^issues\/(\d+)\/dependencies\/blocked_by$/))) {
       const list = state.blockedBy.get(Number(m[1])) ?? [];
       // listLag hides the newest links, as a listing taken before another writer filled the parent would.
@@ -229,6 +235,7 @@ export function fakeGitHub(seed = {}) {
     title: issue.title,
     url: `https://github.com/george-hutanu/motor-fix-specs/issues/${issue.number}`,
     state: issue.state.toUpperCase(),
+    body: issue.body,
     labels: { nodes: issue.labels.map(({ name }) => ({ name })) },
     projectItems: {
       nodes: state.projects.flatMap((p) =>

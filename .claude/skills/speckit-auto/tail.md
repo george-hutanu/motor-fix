@@ -8,12 +8,16 @@ log moves to `tracker-sync.md` at its next event.
 
 ## The wait
 
-No agent is alive while CI and the QA run work. Neither waits for the other:
-the review starts on the QA run, and CI is waited for only before the merge.
-The session that receives `NEXT: tail #<n> after QA run <id>` (the
-orchestrating one, or the owner's own session for a story run there) starts
-one background command (`run_in_background`) that waits for the QA run only
-and prints `QA run: <conclusion>`:
+The tail holds its own waits; the session holds none. The session that
+receives `NEXT: tail #<n> after QA run <id>` (the orchestrating one, or the
+owner's own session for a story run there) runs
+`node .claude/scripts/watch.mjs claim <worktree> tail` and
+dispatches the tail (below) at once, whatever the run's and CI's state: it
+waits for nothing and relays nothing, and goes on to the next task.
+
+The tail's first act after reading the note is one background command
+(`run_in_background`) that waits for the QA run only and prints
+`QA run: <conclusion>`; it never sleeps in the foreground:
 
 ```bash
 node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>
@@ -21,33 +25,29 @@ node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>
 
 Exit 1 (the run still not completed after 120 minutes) is the Hard Stop
 below. Exit 3, printing `conflict: merge origin/main`, means the PR conflicts
-with `main` (GitHub runs no CI on it), and is not a Hard Stop: claim the
-worktree for `merge-main` and dispatch it (speckit-watch's fix table), which
-merges `origin/main` in with `merge-main.mjs`, pushes, dispatches the new
-head's run with `--no-wait` and returns a new `NEXT: tail`, whose wait starts
-again.
+with `main` (GitHub runs no CI on it), and is not a Hard Stop: the tail runs
+step 1's merge, pushes, dispatches the new head's run with `--no-wait` and
+ends with a new `NEXT: tail`. Neither wait holds the other: the review starts
+on the QA run, and CI is waited for only before the merge.
 
-When it reports, `node .claude/scripts/watch.mjs claim <worktree> tail` and
-dispatch the tail (below), whatever CI's state.
-
-A tail whose lap passed while a check was still pending ends with
-`NEXT: merge #<n> after CI`. The session then holds the CI wait in the
-background, which keeps waiting while the head has no checks yet and prints
-only what did not pass (empty output means green):
+Once a lap has passed with a check still pending, the tail holds the CI wait
+in the background too, which keeps waiting while the head has no checks yet
+and prints only what did not pass (empty output means green):
 
 ```bash
 node .claude/scripts/pr-test/ci-wait.mjs <n>
 ```
 
-Green: `node .claude/scripts/watch.mjs claim <worktree> merge` and dispatch the
-`merge` fix (speckit-watch's fix table: this file's steps 5–6) at once. A
-failing check: claim and dispatch `fix-ci`. Exit 1, no checks after 10
-minutes or CI still pending after 120, is the Hard Stop below.
+Green: step 4's merge at once. A failing check: a failing lap (step 3).
+Exit 1, no checks after 10 minutes or CI still pending after 120, is the Hard
+Stop below.
 
-Should the session end first, the watcher holds the same rule: it shows the
-PR `waiting`, with no fix, until that run has completed, then offers `tail`
-at once whatever CI's state; once the head has `agent-review` success it
-shows `waiting` for CI and offers `merge` the moment every check is green.
+Should the tail's run end first, the watcher holds the same rule: it shows
+the PR `waiting`, with no fix, until that run has completed, then offers
+`tail` at once whatever CI's state; once the head has `agent-review` success
+it shows `waiting` for CI and offers `merge` the moment every check is green
+(`node .claude/scripts/watch.mjs claim <worktree> merge`, then the `merge`
+fix: this file's steps 4–5).
 
 ## The tail
 
@@ -79,9 +79,10 @@ and runs lifecycle steps 5–7. It first runs
 `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>`: a note that
 is missing (a cloud session resumed on a fresh VM) is written from the PR's
 newest `<!-- speckit-handoff -->` comment, and one that exists is left as it
-is. With neither, the PR has no recorded QA run (step 3). It starts on a finished QA run, whatever
-CI's state, and it never waits on either: a lap that needs a new run
-dispatches it and ends, and a pending check is left to the session's CI wait.
+is. With neither, the PR has no recorded QA run (step 3). It reviews a finished QA run, whatever
+CI's state, its own background wait having reported it (The wait): a lap
+that needs a new run dispatches it and ends, and a pending check is waited
+for by the tail itself before the merge.
 
 1. Ask whether main has to come in at all:
    `node .claude/scripts/merge-main.mjs --needed` (Constitution VII: main
@@ -93,14 +94,17 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    lists the paths left for you: resolve them, `git add`, run it again; a
    name under `bless` is a gate script both sides changed: read its diff,
    then `node .claude/scripts/doctor.mjs --bless-hooks`). Run
-   `node .claude/scripts/lifecycle.mjs check` and push: the new head needs a
-   new run (step 3's "no run" case). Merge `origin/main` itself, never a
-   pull request's merge ref.
+   `node .claude/scripts/lifecycle.mjs check` and push. A merge that changes
+   none of the PR's files keeps a verdict already given:
+   `node .claude/scripts/pr-test/carry.mjs <n>` carries it to the new head
+   (`carried from <sha>: merge of main`). With no verdict yet, or on its exit
+   1, the new head needs a new run (step 3's "no run" case). Merge
+   `origin/main` itself, never a pull request's merge ref.
 2. Read CI: `gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
    lists what did not pass (`agent-review` aside). A pending check
-   does not hold the review: the tail goes on to step 3 on the finished run, never
-   waits on CI, and after a passing lap with a check still pending ends with
-   `NEXT: merge #<n> after CI` for the session's CI wait. For a failing check read
+   does not hold the review: the tail goes on to step 3 on the finished run,
+   and after a passing lap with a check still pending holds the CI wait itself
+   (`ci-wait.mjs <n>` in the background, The wait). For a failing check read
    `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A
    failing check is a repair, fixed as step 3's failing lap is.
 3. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII) on the
@@ -111,17 +115,17 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    line (`gh pr edit --body-file`) and sets `agent-review` on the head commit;
    the story and the PR's stage label stay QA.
    - **No run for the head** (none recorded, or one about an older head):
-     write the flows to `.specify/.cache/qa-flows-<n>.mjs` and prove them
-     live, the proof `dispatch.mjs --flows` requires: boot the stack with
-     `eval "$(node scripts/test-services.ts origin/main)"`, start the API and
-     web dev servers on it, and run
+     write the flows to `.specify/.cache/qa-flows-<n>.mjs`; `dispatch.mjs`
+     checks that they load, cover the spec and name only routes the router
+     serves, and the run itself is the proof. Pass `--proof` only when the
+     story changed flows and a live proof exists: boot the stack with
+     `eval "$(node scripts/test-services.ts origin/main)"` and this
+     worktree's own port set, `eval "$(node scripts/test-services.ts ports)"`,
+     start each server the flows need with
+     `node scripts/test-services.ts restart <api|worker|web>` (it stops only
+     this worktree's pid), and run
      `node .claude/scripts/pr-test/precheck.mjs --flows .specify/.cache/qa-flows-<n>.mjs --spec specs/<feature>/spec.md --check`
-     until it exits 0; a clean run leaves the proof for the head. A dispatch
-     exit 64 naming no live proof for this head means the check was not run on
-     it, or the head moved since: run it again on this head. There is no flag
-     that dispatches without the proof. A machine without Docker cannot boot
-     the stack: that is a needs-confirmation question on the task
-     (`speckit-tracker-sync blocked <question>`), never a dispatch without it. Then run
+     (on `WEB_PORT` and `API_PORT`) until it exits 0. Then run
      `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`,
      replace the note's `QA run:` line with the one it prints, post the note
      with `node .claude/scripts/lifecycle.mjs handoff --pr <n>`, and end with
@@ -142,8 +146,8 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      run `node .claude/scripts/lifecycle.mjs check`,
      push, then `node .claude/scripts/pr-test/carry.mjs <n>`, which carries
      the lap's verdict to the fixed head (`carried from <sha>: QA fixes`).
-     No `run-state.mjs repair`, no dispatch: end with
-     `NEXT: merge #<n> after CI`. If `carry.mjs` exits 1 (a cloud lap's
+     No `run-state.mjs repair`, no dispatch: go on to step 4, holding the CI
+     wait there instead of ending with `NEXT: merge #<n> after CI`. If `carry.mjs` exits 1 (a cloud lap's
      status has no count, or a commit is not a lap fix), the head needs a
      real lap: dispatch it as a failing lap's is, counting `repair`.
    - **A failing lap** (a blocker or high finding, or a failing check: fix
@@ -171,11 +175,13 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    the feature's records with
    `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
    `finish-comment.md` itself is git-ignored and stays in the worktree, as
-   `handoff.md` does, for the merge to read. A check still pending: end with
-   `NEXT: merge #<n> after CI`. Otherwise ask
+   `handoff.md` does, for the merge to read. A check still pending: hold the
+   CI wait (`ci-wait.mjs <n>`, The wait) instead of ending with
+   `NEXT: merge #<n> after CI`, then go on. Ask
    `node .claude/scripts/merge-main.mjs --needed` again; on exit 0 or 2
-   merge `origin/main` in with `merge-main.mjs` (a new head needs a new tester
-   run), on exit 1 merge nothing. Then
+   merge `origin/main` in with `merge-main.mjs` and carry the verdict as in
+   step 1 (otherwise the new head needs a new tester run), on exit 1 merge
+   nothing. Then
    `node .claude/scripts/lifecycle.mjs merge --pr <n>`
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's

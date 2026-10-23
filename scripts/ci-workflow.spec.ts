@@ -4,7 +4,15 @@
 // @traces 1170-FR-001 1170-FR-002 1170-FR-003
 // @traces 1176-FR-002 1176-FR-004
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // The PR workflow's jobs, read as indented text like release-workflow.spec.ts:
@@ -336,6 +344,129 @@ describe('ci workflow', () => {
     expect(block.indexOf('- name: Object storage')).toBeLessThan(
       block.indexOf('- name: Migrate the test database'),
     );
+  });
+
+  // One dispatch runs the named spec files alone, each `repeat` times, so a
+  // test made deterministic is proven by twenty runs in a row; with no file
+  // named, every suite runs as before. Each step's script runs here under
+  // bash with a stand-in npx that records what it was asked.
+  // @traces 1363-FR-011
+  describe('a dispatch that names spec files', () => {
+    const dispatch = workflow.slice(
+      workflow.indexOf('\n  workflow_dispatch:\n'),
+      workflow.indexOf('\npermissions:'),
+    );
+    const input = (name: string) => {
+      const at = dispatch.indexOf(`\n      ${name}:\n`);
+      if (at < 0) throw new Error(`workflow_dispatch has no ${name} input`);
+      return dispatch.slice(at + 1).split(/\n {6}\w/)[0];
+    };
+
+    // The step's `run: |` script, dedented, after the env it is given.
+    function script(id: string, name: string) {
+      const block = step(job(id), name);
+      const at = block.indexOf('run: |\n');
+      if (at < 0) throw new Error(`${name} has no run: | script`);
+      const body = block.slice(at + 'run: |\n'.length);
+      return body
+        .split('\n')
+        .filter((line) => line === '' || line.startsWith(' '.repeat(10)))
+        .map((line) => line.slice(10))
+        .join('\n');
+    }
+
+    function run(id: string, name: string, env: Record<string, string>) {
+      const dir = mkdtempSync(join(tmpdir(), 'ci-specs-'));
+      try {
+        const calls = join(dir, 'calls');
+        writeFileSync(join(dir, 'npx'), `#!/bin/sh\necho "$*" >> "${calls}"\n`);
+        chmodSync(join(dir, 'npx'), 0o755);
+        writeFileSync(join(dir, 'step.sh'), script(id, name));
+        execFileSync(
+          'bash',
+          ['--noprofile', '--norc', '-eo', 'pipefail', join(dir, 'step.sh')],
+          {
+            env: {
+              NX_SCOPE: 'run-many',
+              PATH: `${dir}:${process.env['PATH']}`,
+              ...env,
+            },
+          },
+        );
+        return existsSync(calls)
+          ? readFileSync(calls, 'utf8').trim().split('\n')
+          : [];
+      } finally {
+        rmSync(dir, { force: true, recursive: true });
+      }
+    }
+
+    const SPECS = [
+      'apps/web-e2e/src/voice-languages.spec.ts',
+      'libs/domain/src/store/store.ttl.integration.spec.ts',
+      'apps/web-e2e/src/garage-views.spec.ts',
+    ].join(' ');
+
+    it('takes a list of spec files, empty by default, and a run count of one', () => {
+      expect(input('specs')).toMatch(/\n {8}type: string\n {8}default: ''/);
+      expect(input('repeat')).toMatch(/\n {8}type: number\n {8}default: 1/);
+    });
+
+    it.each([
+      ['integration', 'Integration tests'],
+      ['e2e', 'E2E tests'],
+    ])("hands both inputs to the %s job's %s step", (id, name) => {
+      const block = step(job(id), name);
+
+      expect(setting(block, 'SPECS')).toBe(gh('inputs.specs'));
+      expect(setting(block, 'REPEAT')).toBe(gh('inputs.repeat'));
+    });
+
+    it('runs every suite as before when no file is named', () => {
+      expect(run('integration', 'Integration tests', {})).toEqual([
+        'nx run-many -t test --passWithNoTests',
+      ]);
+      expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
+    });
+
+    it('runs the named integration specs alone, one Jest run after another', () => {
+      expect(
+        run('integration', 'Integration tests', { REPEAT: '3', SPECS }),
+      ).toEqual(
+        Array(3).fill(
+          'jest --ci --runInBand libs/domain/src/store/store.ttl.integration.spec.ts',
+        ),
+      );
+    });
+
+    it('repeats each named end-to-end spec with no retry to pass it', () => {
+      expect(run('e2e', 'E2E tests', { REPEAT: '20', SPECS })).toEqual([
+        'nx run web-e2e:e2e -- --repeat-each 20 --retries 0 --trace retain-on-failure apps/web-e2e/src/voice-languages.spec.ts apps/web-e2e/src/garage-views.spec.ts',
+      ]);
+    });
+
+    it('refuses a repeat below one rather than pass having run nothing', () => {
+      for (const REPEAT of ['0', '-1', 'x']) {
+        expect(() =>
+          run('integration', 'Integration tests', { REPEAT, SPECS }),
+        ).toThrow();
+        expect(() => run('e2e', 'E2E tests', { REPEAT, SPECS })).toThrow();
+      }
+    });
+
+    it('runs nothing in a suite none of the named files belongs to', () => {
+      const one = 'apps/web-e2e/src/garage-views.spec.ts';
+
+      expect(
+        run('integration', 'Integration tests', { REPEAT: '2', SPECS: one }),
+      ).toEqual([]);
+      expect(
+        run('e2e', 'E2E tests', {
+          REPEAT: '2',
+          SPECS: 'libs/domain/src/store/store.ttl.integration.spec.ts',
+        }),
+      ).toEqual([]);
+    });
   });
 
   it('CI OK needs every job and fails on anything but success or skipped', () => {

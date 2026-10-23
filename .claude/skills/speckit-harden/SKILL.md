@@ -107,19 +107,20 @@ the line reads "Design audit: skipped, no web file changed".
 
 ### 2. Adversarial tests
 
-A delta run. List the adversary specs already on the branch:
+A delta run, dispatched once per change beside the two reviewers, in
+`/speckit-auto` phase 14's one message; at levels 2–3 harden reads the
+adversary's result there and does not dispatch it here. That dispatch passes
+the adversary specs already on the branch:
 
 ```bash
 git diff --name-only --diff-filter=A <merge-base> -- '*.adversary.spec.*'
 ```
 
-Invoke the `test-adversary` subagent (Agent tool,
-`subagent_type: test-adversary`) with the feature directory, the diff's
-public surface and that list, asking for the surface those files do not
-cover yet. An empty list means a full run over the whole surface. It has not seen the implementation and must not; it writes the
+with the feature directory and the diff's public surface, asking for the
+surface those files do not cover yet. An empty list means a full run over the whole surface. The adversary has not seen the implementation and must not; it writes the
 tests the author's model of the code did not suggest. Every failing test it
 leaves is either a defect or a spec gap — you decide which, and a defect is
-fixed here while a spec gap goes to "Needs you". Its report is not shown to the
+fixed under step 4's rules while a spec gap goes to "Needs you". Its report is not shown to the
 user; relay the failing rows.
 
 ### 3. No durability read here

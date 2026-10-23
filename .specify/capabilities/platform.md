@@ -100,6 +100,7 @@ features:
   - 1361-trim-dead-lanes
   - 1357-merge-when-overlapping
   - 1360-refresh-gate-level1-handoff
+  - 1363-throughput-fixes
   - 068-yearly-documents
 ---
 
@@ -495,17 +496,13 @@ _From 688-qa-wait-handoff._
 
 _From 688-qa-wait-handoff._
 
-### 688-FR-007 — The hand-off (speckit-auto) MUST write the QA flows, dispatch the run with `--no-wait`, record its line in `handoff.md`, and end with `NEXT: tail #<n> after QA run <id>`; it starts no wait.
+### 1363-FR-009 — (Item 9) The hand-off MUST run `merge-main.mjs --needed` before `lifecycle.mjs ready` and the QA dispatch, and on an overlap merge `origin/main`, push and reach green CI first; `hand-off.md` steps 1–4 MUST say so. *Done when*: `hand-off.md` names the call before `ready` and the dispatch, and a harness spec reads it.
 
-_From 688-qa-wait-handoff._
+_From 1363-throughput-fixes._
 
-### 688-FR-008 — The session that receives that NEXT (or the owner-run story itself) MUST wait with one background command until CI and the QA run have finished, printing only what did not pass, then claim the worktree and dispatch the tail.
+### 1363-FR-003 — (Item 3) The tail agent MUST run `ci-wait.mjs <n>` and `ci-wait.mjs <n> --run <id>` itself, in the background inside its own run, and act on the result; the session MUST NOT wait for or relay CI or QA results for a handed-off PR (owner decision, recorded). `tail.md`, `lifecycle.md` ("CI, tests and release"), `hand-off.md` and `.claude/agents/task-runner.md` MUST say so, AGENTS.md lifecycle step 4 MUST drop the session's wait and relay; and `ci-wait.mjs` MUST decide each check name on a head (a rule it already states, `ci-wait.mjs` header; a spec pins it) by its last-started check run, so a stale head's result never reads as green for a newer head. *Done when*: the four texts carry the rule, `ci-wait.mjs` has a spec for the last-started rule, and a head pushed after an older green head is reported from its own checks only.
 
-_From 688-qa-wait-handoff._
-
-### 688-FR-009 — The tail MUST start the pr-tester on the finished run (`RUN`), never dispatch and wait itself; with no run for the PR's head it dispatches one with `--no-wait` and ends; an unusable run is dispatched again once per head without counting a lap, and a second one is posted `--missing` and blocks the run; after a fix it MUST push, count the lap with `run-state.mjs repair`, dispatch a run for the new head with `--no-wait`, rewrite the note's `QA run:` line and end with the same NEXT.
-
-_From 688-qa-wait-handoff._
+_From 1363-throughput-fixes._
 
 ### 688-FR-010 — The pr-tester given `RUN` MUST skip writing flows and dispatching, download that run with `--run`, read the flows file that was sent, and raise a `high` "flow not run" finding for each flow from its own list (the spec's scenarios and the diff) that file does not drive.
 
@@ -587,9 +584,9 @@ _From 704-auto-phase-model-pins._
 
 _From 704-auto-phase-model-pins._
 
-### 696-FR-001 — `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the tracker `start` and `pr <n>` events.
+### 1363-FR-014 — (Item 14) At draft, `lifecycle.mjs` MUST read the issue's `claim:` label and put the same label on the PR beside `planning`, the type, `breaking` and `scope: <s>` (today's line 296); `tracker-sync pr <n>` and `check` MUST report a PR whose claim label differs from its issue's. *Done when*: specs cover a claimed issue's draft carrying the label, an unclaimed one carrying none, and the mismatch report.
 
-_From 696-lifecycle-script._
+_From 1363-throughput-fixes._
 
 ### 1355-FR-001 — (B) `scripts/observability-inventory.ts`, `scripts/pr-body-check.ts` (the draft rules before ready, every section at ready) and `scripts/structure-check.ts --base origin/main` MUST run locally before a push in the commit protocol's slice end (`commit-protocol.md`), in `lifecycle.mjs ready` (before `pr-body-check.ts`'s existing place, so 1324-FR-012's order gains these checks first) and in `tail.md` step 3's fix path (as the one command `lifecycle.mjs check`, which also runs FR-002's affected typecheck and unit tests, before every push of a fix); a failing check MUST stop the push or the ready with that check's output, and a harness spec MUST cover each check's refusal in `lifecycle.mjs ready`.
 
@@ -759,9 +756,9 @@ _From 678-measurable-sizing._
 
 _From 678-measurable-sizing._
 
-### 678-FR-005 — A check command on `level.mjs` MUST evaluate four tripwires for the active feature: (a) the count of functional requirements in `spec.md` above a threshold (more than 5, see Assumptions); (b) a `[NEEDS CLARIFICATION]` marker in `spec.md`; (c) a file under the contracts library, a Prisma schema or a migration in the branch's diff against `origin/main`; (d) files in more than one Nx project in that diff. Any tripped wire MUST raise the recorded level to at least 2; no wire MUST ever lower a level or touch a level already at 2 or 3.
+### 1363-FR-004 — (Item 4) Level 0–1 runs MUST skip clarify, checklist, analyze and harden and keep tests first and both reviewers; the test-adversary runs beside both reviewers at every level from 1 (FR-006); `level.mjs` MUST raise the FR-count wire above today's 5 (`FR_THRESHOLD` in `lib/feature.mjs`) to 10 (Assumptions) and MUST NOT count the more-than-one-Nx-project wire for a bug, so a bug stays at its level unless a contract, schema or migration file is in its diff (owner decision, recorded); "a bug" is the `type` field `/speckit-size` records in `.specify/feature.json` from the issue's `type: bug` label. `level.mjs`, `SKILL.md`'s level table and `speckit-size` MUST be updated together. *Done when*: harness specs show a level-1 bug with two projects and more FRs than 5 unpromoted, a contract file still promoting, harden absent from level 1 in the table, and `speckit-size` describing the wires.
 
-_From 678-measurable-sizing._
+_From 1363-throughput-fixes._
 
 ### 678-FR-006 — Every promotion of a feature with a directory MUST append one line to its `auto-run.md` naming the old level, the new level and the fact that caused it (the count, the marker, the file or the projects), creating the file when it does not exist; a check that trips nothing MUST write nothing; the same promotion MUST NOT be logged twice.
 
@@ -783,9 +780,9 @@ _From 678-measurable-sizing._
 
 _From 678-measurable-sizing._
 
-### 678-FR-012 — The sizing rules MUST be: the free word classifier runs on the story's text first; a Bug with no Design boards and every Build brief section filled is level 1 with no Jev or model call, unless the classifier answered 2 or more, which stands; a story with Design boards, an empty or missing Build brief section, or Story points above the threshold is never below 2; any other combination is `unsure` and continues with today's path on the story's text. Labels and Design are read and printed as facts but decide nothing. A rule MUST only ever raise the answer above what the text path would give, never lower it.
+### 1363-FR-012 — (Item 12) `/speckit-size` at level 3 and `/speckit-tasks` MUST emit a split into two stories, the first mergeable alone, when a story touches more than two Nx projects (`web-e2e` and the generated `data-access` not counted) or more than one of the scheduler (`worker`), API and web surfaces; `speckit-tracker-sync file` MUST create the second story blocked by the first. *Done when*: a harness spec shows the split emitted for such a story and not for a one-project one, and `file` records the dependency.
 
-_From 678-measurable-sizing._
+_From 1363-throughput-fixes._
 
 ### 678-FR-014 — The `speckit-size`, `speckit-auto` and `speckit-review` skill texts MUST describe the new check points, the promotion log line, the pre-ready refusal and `suggest` with a story id, in the lines that describe sizing and ready only.
 
@@ -1873,14 +1870,6 @@ _From 1168-chief-mods._
 
 _From 1168-chief-mods._
 
-### 1171-FR-001 — `ci-wait.mjs <n> --run <id>` waits for that QA run only (and still ends with exit 3 on a PR that conflicts with `main`); it no longer waits for CI first. `ci-wait.mjs <n>` without `--run` waits for CI, as today. A run that finishes before CI therefore ends the wait before CI does.
-
-_From 1171-qa-latency._
-
-### 1171-FR-002 — The tail starts on a finished QA run whatever CI's state. It reviews the run, and fixes a check that has already failed in the same lap; a pending check does not hold the review. After a passing lap with CI still pending it ends with `NEXT: merge #<n> after CI`; the session then holds `ci-wait.mjs <n>` in the background and, when it reports green, claims and dispatches the `merge` fix at once (a failing check: `fix-ci`).
-
-_From 1171-qa-latency._
-
 ### 1171-FR-003 — `watch.mjs` shows a handed-off ready PR `waiting` only while its recorded QA run (testing its head) has not completed; once it has, the row is `stale` with the `tail` fix, whatever CI's state. A ready PR whose head already has `agent-review` success and whose CI is still pending is `waiting` for CI, with no fix.
 
 _From 1171-qa-latency._
@@ -1993,13 +1982,9 @@ _From 1182-cache-service._
 
 _From 1230-qa-harness-laps._
 
-### 1230-FR-003 — `dispatch.mjs` MUST refuse, before dispatching anything, every route the workflow's own check would refuse, with the same rule, one line per route naming it and why, exit non-zero. (Item 2.)
+### 1363-FR-008 — (Item 8) `routeProblem` in `sweep.mjs` (and so `dispatch.mjs`'s exit 64 and `precheck.mjs`) MUST resolve each route against `apps/web/src/app/app.routes.ts` (and, for `/app/<area>/<view>`, `dashboard/views.ts`): the `/:lang` prefix is required for every page route the router serves under its language node, the path (static segments and parameters) must match a route of the router, and a comma or any unknown route is refused with one line naming the offending route. *Done when*: specs cover a route without the prefix, an unknown path, a parameterised path that matches, a comma, and a known path with `@role` and `:status`; `/garages` is refused and `/:lang/garages` accepted.
 
-_From 1230-qa-harness-laps._
-
-### 1230-FR-004 — A route MAY start with a `/:lang` segment, and only there: the sweep MUST substitute the language under test into it (`ro` for Romanian, `en` for English) before parsing the rest, report the route as written, and still read a trailing `:<status>` (`/:lang/x:404`); the route parser and the shared route rule MUST accept it, and refuse a `:` anywhere else in the path. (Item 3.)
-
-_From 1230-qa-harness-laps._
+_From 1363-throughput-fixes._
 
 ### 1230-FR-005 — `dispatch.mjs` and `run.mjs` MUST refuse, before any run is dispatched or any browser started, a route whose path is under `/app/` and carries no `@role`, with one line naming the route; `/app` itself and paths merely starting with `/app` (`/apple-pay`) are not under `/app/`. (Item 4.)
 
@@ -2530,13 +2515,9 @@ _From 1357-merge-when-overlapping._
 
 _From 1357-merge-when-overlapping._
 
-### 1357-FR-007 — `hand-off.md` step 1 and `tail.md` step 3's no-run case MUST say how to make the live flows proof: boot the stack with `eval "$(node scripts/test-services.ts origin/main)"`, run `node .claude/scripts/pr-test/precheck.mjs --flows <file> --spec <spec> --check` until exit 0; that `dispatch.mjs` exit 64 means no proof exists for this head; that no flag skips the proof; and that a Docker-less machine is a `needs-confirmation` question on the task.
+### 1363-FR-005 — (Item 5) `dispatch.mjs` MUST accept a run without a local proof when the flows file parses and every route passes the router check of FR-008; the local proof run (`precheck.mjs --check` against a booted stack) MUST stay available as opt-in `--proof` (owner decision, recorded). The dev servers' fixed ports (`apps/api/src/main.ts` 3000, `apps/worker/src/main.ts` 3001, the web dev server 4200) MUST be replaced for test boots by a free port set chosen per worktree by `scripts/test-services.ts` and `scripts/heavy.sh` and exported to the processes they start, and a restart MUST stop only processes started from the same worktree path, never one matched on `nx serve api`. *Done when*: `dispatch.mjs` has specs for the proof-less accept, the refusal of a non-parsing file or an unresolved route, and `--proof`; two worktrees boot side by side on different ports and a restart in one leaves the other's API running.
 
-_From 1357-merge-when-overlapping._
-
-### 1357-FR-008 — No script or skill MUST gain a way to dispatch a QA run without a live proof for the head.
-
-_From 1357-merge-when-overlapping._
+_From 1363-throughput-fixes._
 
 ### 1357-FR-009 — `scripts/watch-schedule.sh` MUST accept `--gate-only`, under which each scheduled pass runs `watch.mjs --gate`, appends the gate's plan lines to a file named by the UTC date under the schedule's log folder when the gate reports something to do, records the pass in `passes.log` (a gate error, exit 1, writes no plan file and is logged there as today), and never claims or dispatches; `--gate-only` with `--dispatch` is a usage error.
 
@@ -2677,6 +2658,17 @@ _From 1360-refresh-gate-level1-handoff._
 
 _From 1360-refresh-gate-level1-handoff._
 
+### 1363-FR-001 — (Item 1) The session MUST start the next task's build as soon as a PR is handed off to QA (ready, QA run dispatched, `handoff.md` written): only one task is ever being built per session, and any number wait on QA and CI. AGENTS.md lifecycle step 4 and `.claude/skills/speckit-auto/SKILL.md` MUST state the rule as "one task *being built* per session, plus any number waiting on QA and CI", replacing "one task per session at a time" (owner decision, recorded). *Done when*: both texts carry the rule and a harness spec reads it.
+
+_From 1363-throughput-fixes._
+
+### 1363-FR-002 — (Item 2) Before `/speckit-auto` starts a bug or a "left open by" task, its first step MUST be a check of at most about five minutes that reproduces each listed problem on `origin/main` and records each result on the issue (reproduced, or already fixed with the commit); a problem already fixed on main MUST get an asserting test only and no further phase work. The step MUST be the first step of the bug route in `.claude/skills/speckit-auto/SKILL.md` and of `speckit-bug-assess`. *Done when*: both skills open the bug route with the check, and ST-1351's three already-fixed problems would have ended in asserting tests.
+
+_From 1363-throughput-fixes._
+
+### 1363-FR-011 — (Item 11) `apps/web-e2e/src/voice-languages.spec.ts` (lines 239 and 255), `libs/domain/src/store/store.ttl.integration.spec.ts` ("the account totals carry a time to live") and `apps/web-e2e/src/garage-views.spec.ts:262` MUST be made deterministic: each waits on the state it needs rather than on time, the TTL is asserted as a range, the account is seeded rather than shared, and any retry that hid a failure is removed. *Done when*: the three specs pass 20 runs in a row on CI (SC-006).
+
+_From 1363-throughput-fixes._
 ### 068-FR-015 — The DTOs (the upload-url request and answer, the upload body, the accept answer, the refuse body, the cycle, the queue row's `item`, the file read's documents) live in the contracts library, the four routes are REST with OpenAPI, the OpenAPI document and the generated client are regenerated, and the document kinds stay the contracts list (a new yearly kind is one entry there, #835).
 
 _From 068-yearly-documents._
@@ -2764,3 +2756,15 @@ _From 068-yearly-documents._
 - `1018-FR-018` — superseded by `1358-FR-009` (2026-10-22)
 - `1355-FR-002` — superseded by `1358-FR-015` (2026-10-22)
 - `464-FR-002` — superseded by `1360-FR-011` (2026-10-22)
+- `688-FR-008` — superseded by `1363-FR-003` (2026-10-23)
+- `688-FR-009` — superseded by `1363-FR-003` (2026-10-23)
+- `1171-FR-001` — superseded by `1363-FR-003` (2026-10-23)
+- `1171-FR-002` — superseded by `1363-FR-003` (2026-10-23)
+- `678-FR-005` — superseded by `1363-FR-004` (2026-10-23)
+- `1357-FR-007` — superseded by `1363-FR-005` (2026-10-23)
+- `1357-FR-008` — superseded by `1363-FR-005` (2026-10-23)
+- `1230-FR-003` — superseded by `1363-FR-008` (2026-10-23)
+- `1230-FR-004` — superseded by `1363-FR-008` (2026-10-23)
+- `688-FR-007` — superseded by `1363-FR-009` (2026-10-23)
+- `678-FR-012` — superseded by `1363-FR-012` (2026-10-23)
+- `696-FR-001` — superseded by `1363-FR-014` (2026-10-23)

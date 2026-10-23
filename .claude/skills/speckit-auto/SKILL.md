@@ -44,7 +44,7 @@ once when the run reaches it:
 | `phases-close.md` | phases 13–17 |
 | `commit-protocol.md` | before the first commit |
 | `hand-off.md` | after phase 17 |
-| `tail.md` | the session holding the wait, and the tail agent |
+| `tail.md` | the session dispatching the tail, and the tail agent |
 | `report.md` | at the hand-off, before the reply |
 
 ## Autonomy Contract
@@ -141,24 +141,26 @@ Two groups need no output from each other, so run them at once:
 | 11 | Converge | `speckit-converge` | Loop back into 9–10 for new work | `phases-build.md` |
 | 12 | Harden | `speckit-harden` | Fix every ERROR; never suppress one | `phases-build.md` |
 | 13 | Ticket refresh | `speckit-context --since` | An empty refresh is a pass | `phases-close.md` |
-| 14 | Review | `spec-reviewer` subagent | CRITICAL/HIGH block completion | `phases-close.md` |
+| 14 | Review | `test-adversary`, `spec-reviewer`, `code-reviewer` subagents | CRITICAL/HIGH block completion | `phases-close.md` |
 | 15 | Agent context (retired) | none: the session start runs the context-file audit | — | `phases-close.md` |
 | 16 | Retrospective evidence | *(scripts, read-only)* | Gather it; the verdict stays the user's | `phases-close.md` |
 | 17 | Archive | `speckit-archive` | Phase 4 steps 1–3 on the branch, before the hand-off; the tail closes it after the merge | `phases-close.md` |
 
 ### 0. Size — decide how much of this to run
 
-Run `/speckit-size` first and record the level. It decides which of the phases
+A bug or a "left open by" task starts with `/speckit-bug-assess` step 0,
+Reproduce on `origin/main`: a problem already fixed there gets an asserting
+test only. Then run `/speckit-size` and record the level. It decides which of the phases
 below actually run:
 
 | Level | Phases |
 |---|---|
 | 0 trivial | none of this — change, verify, commit. Say so and stop. |
-| 1 one-session | 2, 7, 9, 10, 12, then a closer: 14, 16 — no org context, plan, checklist or analyze |
+| 1 one-session | 2, 7, 9, 10, then a closer: 14, 16 — no org context, plan, checklist or analyze |
 | 2 feature | all of them (the default) |
 | 3 project | all of them, per feature, against the shared brief |
 
-A level-1 story's agent ends after phase 12 with `NEXT: resume <feature>`, and
+A level-1 story's agent ends after phase 10 with `NEXT: resume <feature>`, and
 a fresh closer runs the rest (`phases-close.md`). Levels 2 and 3 keep one agent from preflight through the hand-off; a cloud session never splits.
 
 A level chooses phases, never gates. Phase 9 runs at every level above 0: the
@@ -259,7 +261,8 @@ FILES: <paths written, comma-separated> | none
 
 Then up to six lines: commits and test counts, review verdicts, decisions
 taken on the owner's behalf, follow-ups. A clean run ends at the hand-off
-with `PR: #<n> ready <sha7>` and `NEXT: tail #<n>`. Run by the owner in their own
+with `PR: #<n> ready <sha7>` and `NEXT: tail #<n>`: one task *being built*
+per session, plus any number waiting on QA and CI. Run by the owner in their own
 session, the same envelope opens the report. Its sections and the
 Completion Checklist are in `report.md`.
 

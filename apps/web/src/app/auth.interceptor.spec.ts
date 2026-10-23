@@ -124,6 +124,17 @@ describe('authInterceptor', () => {
     call.flush({});
   });
 
+  // @traces 129-FR-014
+  it('sends the token with the account deletion, a signed-in call under auth', () => {
+    const { http, server } = setup('abc');
+
+    http.delete('/api/v1/auth/account', { body: {} }).subscribe();
+    const call = server.expectOne('/api/v1/auth/account');
+
+    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+    call.flush(null);
+  });
+
   // @traces 139-FR-015
   it('passes a wrong password on without renewing, so it is not sent and counted twice', async () => {
     const { http, server, session } = setup('abc');

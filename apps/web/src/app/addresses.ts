@@ -35,6 +35,7 @@ export const PUBLIC_PATHS: readonly string[] = [
   'privacy',
   'list-your-garage',
   'contact',
+  'review-rules',
 ];
 
 // The server provides PUBLIC_WEB_URL's origin: behind the host's proxy the

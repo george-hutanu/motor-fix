@@ -136,6 +136,16 @@ const FIXTURES: Record<
       return `/api/v1/admin/garages/${garage}/suspend`;
     },
   },
+  'POST /api/v1/admin/legal-documents/{id}/accept': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/legal-documents/${await yearlyUpload()}/accept`,
+  },
+  'POST /api/v1/admin/legal-documents/{id}/refuse': {
+    body: () => ({ note: 'Certificatul este ilizibil', reason: 'documents' }),
+    path: async () =>
+      `/api/v1/admin/legal-documents/${await yearlyUpload()}/refuse`,
+  },
   'POST /api/v1/admin/live/test': { body: (admin) => ({ accountId: admin }) },
   'POST /api/v1/admin/news': {
     body: () => ({
@@ -237,6 +247,23 @@ async function submitted(status = 'submitted') {
        INSERT INTO verification_file (id, garage_id, status)
        SELECT gen_random_uuid(), id, $2::verification_file_status FROM g RETURNING id`,
       [`audit-${randomUUID()}`, status],
+    )
+  ).rows[0].id as string;
+}
+
+// An approved garage's yearly document, uploaded and waiting for an admin.
+async function yearlyUpload() {
+  return (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug, status, approved_at)
+         VALUES (gen_random_uuid(), 'Audit', $1, 'approved', now()) RETURNING id),
+       f AS (INSERT INTO verification_file (id, garage_id, status)
+         SELECT gen_random_uuid(), id, 'approved' FROM g RETURNING id)
+       INSERT INTO legal_document (verification_file_id, kind, pages, status, issued_on)
+       SELECT id, 'onrc_certificate', ARRAY['legal_document/audit/yearly'],
+         'in_review', CURRENT_DATE
+       FROM f RETURNING id`,
+      [`audit-${randomUUID()}`],
     )
   ).rows[0].id as string;
 }

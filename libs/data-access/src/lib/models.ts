@@ -78,6 +78,7 @@ export type { DecidedDocumentDto } from './models/decided-document-dto';
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
 export type { DeclineRequestDto } from './models/decline-request-dto';
+export type { DeleteMeDto } from './models/delete-me-dto';
 export type { DocumentCycleDto } from './models/document-cycle-dto';
 export type { DocumentCycleRefusalDto } from './models/document-cycle-refusal-dto';
 export type { DocumentDecisionDto } from './models/document-decision-dto';

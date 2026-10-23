@@ -1,0 +1,48 @@
+import type { EventPort } from '../../events/event.port';
+import type { Prisma } from '../../generated/prisma/client';
+
+// A deleted account leaves every team it works on. Its mechanic card stays,
+// detached and off the profile, so its reviews, rating and bookings keep a
+// name; its memberships go. An owner never reaches here: the deletion
+// refuses an account that owns a garage.
+export async function leaveTeams(
+  tx: Prisma.TransactionClient,
+  events: EventPort,
+  accountId: string,
+) {
+  const mechanic = await tx.mechanic.findUnique({
+    select: { garageId: true, id: true },
+    where: { accountId },
+  });
+  if (mechanic) {
+    await tx.mechanic.update({
+      data: { accountId: null, onProfile: false },
+      where: { id: mechanic.id },
+    });
+    await events.record(tx, {
+      audience: { garageIds: [mechanic.garageId], type: 'garage' },
+      kind: 'mechanic.updated',
+      payload: {
+        from: 'account_deleted',
+        garageId: mechanic.garageId,
+        mechanicId: mechanic.id,
+      },
+      subjectId: mechanic.id,
+    });
+  }
+  const memberships = await tx.garageMember.findMany({
+    select: { garageId: true },
+    where: { accountId, role: { not: 'owner' } },
+  });
+  await tx.garageMember.deleteMany({
+    where: { accountId, role: { not: 'owner' } },
+  });
+  for (const { garageId } of memberships) {
+    await events.record(tx, {
+      audience: { garageIds: [garageId], type: 'garage' },
+      kind: 'member.removed',
+      payload: { accountId, garageId },
+      subjectId: garageId,
+    });
+  }
+}

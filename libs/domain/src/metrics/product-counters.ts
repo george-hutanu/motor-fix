@@ -59,6 +59,14 @@ const SEARCH_OUTCOMES = ['results', 'none'] as const;
 const SIGN_IN_METHODS = ['password', 'phone', 'google', 'apple'] as const;
 export type SignInMethod = (typeof SIGN_IN_METHODS)[number];
 const APPROVAL_OUTCOMES = ['approved', 'rejected'] as const;
+// Not started at 0: the API's start set is at its series cap.
+export type AccountDeletionOutcome =
+  | 'deleted'
+  | 'forbidden'
+  | 'refused_owner'
+  | 'reauth_required'
+  | 'mismatch'
+  | 'failed';
 export type NotificationChannel = 'push' | 'in-app';
 const STEP_ACTIONS = [
   'added',
@@ -145,6 +153,11 @@ const completions = () =>
   counter(
     'motorfix_listing_completions_total',
     'Completion copies opened to answer a request for more',
+  );
+const accountDeletions = () =>
+  counter(
+    'motorfix_account_deletions_total',
+    'Account deletions asked for, by outcome',
   );
 const approvals = () =>
   counter(
@@ -307,6 +320,10 @@ export function countListingSubmission() {
 
 export function countCompletionOpened() {
   completions().add(1);
+}
+
+export function countAccountDeletion(outcome: AccountDeletionOutcome) {
+  accountDeletions().add(1, { outcome });
 }
 
 export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {

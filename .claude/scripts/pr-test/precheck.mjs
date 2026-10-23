@@ -18,9 +18,9 @@
 //   node .claude/scripts/pr-test/precheck.mjs --flows <file.mjs> --check [--base-url <url>] [--api-url <url>]
 //
 // --check also runs the flows, once, against the app and API already serving
-// there (by default the dev server, http://localhost:4200, and the API,
-// http://localhost:3000), with the arguments the run gives them and a real
-// signIn as the seeded accounts. It prints one line per finding, thrown error
+// there (by default the dev server and the API on the worktree's port set,
+// WEB_PORT and API_PORT, else http://localhost:4200 and :3000), with the
+// arguments the run gives them and a real signIn as the seeded accounts. It prints one line per finding, thrown error
 // and unhandled rejection, exit 1 on any; an address that does not answer is
 // one line and exit 1, and the flows are not run; flows still running after
 // ten minutes are one line too. It starts no server and dispatches nothing.
@@ -38,7 +38,8 @@ import { seededSession } from "./endpoints.mjs";
 import { collectRejections, flowArgs } from "./run.mjs";
 import { HEALTH } from "./services.mjs";
 
-export const CHECK_DEFAULTS = { baseURL: "http://localhost:4200", apiURL: "http://localhost:3000" };
+/** The dev server and API --check reads by default: the worktree's port set when exported (scripts/test-services.ts ports), else 4200 and 3000. */
+export const checkDefaults = (env = process.env) => ({ baseURL: `http://localhost:${env.WEB_PORT || 4200}`, apiURL: `http://localhost:${env.API_PORT || 3000}` });
 // A flow awaiting what never settles would hold the check for ever; a lap's own bound is the job's 60 minutes.
 const CHECK_MS = 10 * 60_000;
 
@@ -131,7 +132,7 @@ async function unreachable(url) {
 }
 
 /** Runs the flows once against the app and API at these addresses; one line per problem, empty when clean. */
-export async function checkLive({ flows, baseURL = CHECK_DEFAULTS.baseURL, apiURL = CHECK_DEFAULTS.apiURL }) {
+export async function checkLive({ flows, baseURL = checkDefaults().baseURL, apiURL = checkDefaults().apiURL }) {
   const lines = [];
   for (const [name, url] of [
     ["app", `${baseURL}/`],

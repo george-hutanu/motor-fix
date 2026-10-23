@@ -72,7 +72,7 @@ export function keep(res: Response, issued: Issued) {
   });
 }
 
-const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
+export const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
 
 const refused = (error: unknown) =>
   error instanceof HttpException &&

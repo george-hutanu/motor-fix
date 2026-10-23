@@ -51,6 +51,8 @@ export type { PasswordResetControllerComplete$Params as PasswordResetControllerC
 export { passwordResetControllerComplete as passwordResetControllerComplete } from './fn/auth/password-reset-controller-complete';
 export type { PasswordChangeControllerChange$Params as PasswordChangeControllerChange$Params } from './fn/auth/password-change-controller-change';
 export { passwordChangeControllerChange as passwordChangeControllerChange } from './fn/auth/password-change-controller-change';
+export type { AccountDeletionControllerDeleteAccount$Params as AccountDeletionControllerDeleteAccount$Params } from './fn/auth/account-deletion-controller-delete-account';
+export { accountDeletionControllerDeleteAccount as accountDeletionControllerDeleteAccount } from './fn/auth/account-deletion-controller-delete-account';
 export type { PhoneSignInControllerPhoneCode$Params as PhoneSignInControllerPhoneCode$Params } from './fn/auth/phone-sign-in-controller-phone-code';
 export { phoneSignInControllerPhoneCode as phoneSignInControllerPhoneCode } from './fn/auth/phone-sign-in-controller-phone-code';
 export type { PhoneSignInControllerPhoneSignIn$Params as PhoneSignInControllerPhoneSignIn$Params } from './fn/auth/phone-sign-in-controller-phone-sign-in';

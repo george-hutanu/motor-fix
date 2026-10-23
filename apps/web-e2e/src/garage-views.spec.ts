@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage, savedLanguage } from './seeded-language.js';
 
@@ -259,15 +259,19 @@ test.describe('garage views @seeded', () => {
   });
 
   // @traces 097-FR-009
+  // A driver of its own: the seeded one is signed in and out by many specs
+  // running beside this one.
   test('a driver who opens the garage dashboard lands on their own', async ({
     page,
+    request,
   }) => {
+    const driver = await signUpDriver(request, 'fara-atelier');
     await ready(page, '/ro');
     await page
       .getByRole('banner')
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
-    await signIn(page, ACCOUNTS.driver);
+    await signIn(page, driver);
     await expect(page).toHaveURL('/app/driver');
 
     for (const address of ['/app/garage', '/app/garage/prices']) {
