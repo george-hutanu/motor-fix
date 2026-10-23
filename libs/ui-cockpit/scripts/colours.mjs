@@ -4,10 +4,11 @@
 // --check it writes nothing and exits 1 when the file is out of date.
 import { readFileSync, writeFileSync } from 'node:fs';
 
+// Comments go first: a brace or a token inside one is not the stylesheet's.
 const css = readFileSync(
   new URL('../src/styles/cockpit.css', import.meta.url),
   'utf8',
-);
+).replace(/\/\*[\s\S]*?\*\//g, '');
 const out = new URL('../src/generated/colours.ts', import.meta.url);
 
 function tokens(pattern) {

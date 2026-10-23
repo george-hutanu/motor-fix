@@ -1,12 +1,13 @@
 ---
 capability: cockpit-theme
-updated: 2026-10-11
+updated: 2026-10-23
 features:
   - 050-cockpit-theme
   - 158-small-action-sheet
   - 953-ui-review-checks
   - 954-input-border-contrast
   - 975-type-scale
+  - 517-cockpit-colours-one-source
 ---
 
 # Capability: Cockpit theme
@@ -134,6 +135,30 @@ _From 975-type-scale._
 ### 975-FR-009 — No new token MUST be added to the scale and no token value MUST change (cockpit-theme 953-FR-021); an off-scale size moves to the nearest token that keeps the screen's hierarchy (18 → 20 px subheading; 14 → 16 px body or 13 px small, by role).
 
 _From 975-type-scale._
+
+### 517-FR-001 — The `theme-color` tags `provideCockpitTheme()` writes MUST take their values from each scheme's `--mf-bg` in `cockpit.css` through the generated colours module; `provide-cockpit-theme.ts` MUST hold no colour literal.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-002 — The e-mail palette (`@motor-fix/ui-cockpit/email`) MUST take its values from the light set of the generated colours module, and MUST still carry no Angular code.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-003 — A generator in `libs/ui-cockpit` MUST write `libs/ui-cockpit/src/generated/colours.ts` from the dark and light token blocks of `cockpit.css`, holding every token whose value is a colour, by scheme; run with `--check` it MUST exit non-zero when the file differs from what it would write, and a unit test MUST run that check.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-004 — A check in the test suite MUST fail when a `.ts`, `.html`, `.css` or `.scss` file under `libs/ui-cockpit/src` (test files excluded) holds a colour literal, by 050-FR-016's pattern, outside the token blocks of `cockpit.css` and the generated colours module.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-005 — The Cockpit theme MUST define `--mf-radius-md` as the control radius (12 px), and no stylesheet MAY write `var(--mf-radius-md, …)` with a fallback.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-006 — The change MUST add no service, endpoint, queue, outside call or product action, and so no observability entry.
+
+_From 517-cockpit-colours-one-source._
 
 ## Retired
 
