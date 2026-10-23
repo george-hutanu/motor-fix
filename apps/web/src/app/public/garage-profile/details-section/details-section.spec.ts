@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
@@ -433,5 +436,21 @@ describe('the facilities, the courtesy car and the payment', () => {
     expect(text(section().querySelector('.facilities-note'))).toBe(
       FACILITIES_NOTE,
     );
+  });
+});
+
+// @traces 025-FR-016
+describe('the fuel line on a phone', () => {
+  const css = readFileSync(join(__dirname, 'details-section.css'), 'utf8');
+
+  it('writes the small text at body size below 768 px', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\) \{\s*:host \{\s*--mf-size-small: var\(--mf-size-body\);\s*\}\s*\}/,
+    );
+  });
+
+  it('keeps the fuel line on the small size, the one text that reads it', () => {
+    expect(css).toMatch(/\.fuels \{[^}]*font-size: var\(--mf-size-small\)/);
+    expect(css.match(/var\(--mf-size-small\)/g)).toHaveLength(1);
   });
 });
