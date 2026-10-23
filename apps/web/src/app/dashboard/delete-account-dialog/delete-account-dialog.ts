@@ -1,11 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -60,7 +55,10 @@ export class DeleteAccountDialog {
   protected readonly form = new FormGroup({
     confirmation: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required],
+      // Blank counts as empty: Enter in the field must not send it.
+      validators: [
+        ({ value }) => (value.trim() === '' ? { required: true } : null),
+      ],
     }),
   });
 
