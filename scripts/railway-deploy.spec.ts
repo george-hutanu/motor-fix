@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   API_PRE_DEPLOY,
   deploy,
+  railwayEndpoint,
   type Service,
   servicesFor,
 } from './railway-deploy.ts';
@@ -548,6 +549,36 @@ const ALL = {
 };
 
 const REALM_HEALTH = '/realms/master';
+
+describe('the Railway endpoint', () => {
+  // @traces 506-FR-001
+  it("is Railway's own when RAILWAY_API_ENDPOINT is unset or empty", () => {
+    const railway = 'https://backboard.railway.com/graphql/v2';
+    expect(railwayEndpoint({})).toBe(railway);
+    expect(railwayEndpoint({ RAILWAY_API_ENDPOINT: '' })).toBe(railway);
+  });
+
+  // @traces 506-FR-001
+  it.each([
+    'http://127.0.0.1:4010/graphql/v2',
+    'http://localhost:4010',
+    'https://[::1]:4010/graphql',
+  ])('takes the loopback address %s as given', (address) => {
+    expect(railwayEndpoint({ RAILWAY_API_ENDPOINT: address })).toBe(address);
+  });
+
+  // @traces 506-FR-002
+  it.each([
+    'https://example.com/graphql/v2',
+    'http://127.0.0.1.example.com/',
+    'file:///tmp/railway',
+    'not a url',
+  ])('refuses %s, naming the variable', (address) => {
+    expect(() => railwayEndpoint({ RAILWAY_API_ENDPOINT: address })).toThrow(
+      'RAILWAY_API_ENDPOINT',
+    );
+  });
+});
 
 describe('the services each environment deploys', () => {
   let notices: string[];
