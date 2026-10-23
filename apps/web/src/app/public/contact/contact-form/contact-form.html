@@ -35,7 +35,7 @@
         type="text"
         autocomplete="name"
         formControlName="name"
-        [attr.aria-invalid]="save.fieldError(form.controls.name) ? 'true' : null"
+        [aria-invalid]="!!save.fieldError(form.controls.name)"
         aria-describedby="mf-contact-name-error"
       />
       <mf-field-error id="mf-contact-name-error" [save]="save" [control]="form.controls.name" />
@@ -50,7 +50,7 @@
         autocomplete="email"
         spellcheck="false"
         formControlName="email"
-        [attr.aria-invalid]="save.fieldError(form.controls.email) ? 'true' : null"
+        [aria-invalid]="!!save.fieldError(form.controls.email)"
         aria-describedby="mf-contact-email-error"
       />
       <mf-field-error id="mf-contact-email-error" [save]="save" [control]="form.controls.email" />
@@ -61,7 +61,7 @@
         hlmInput
         id="mf-contact-topic"
         formControlName="topic"
-        [attr.aria-invalid]="save.fieldError(form.controls.topic) ? 'true' : null"
+        [aria-invalid]="!!save.fieldError(form.controls.topic)"
         aria-describedby="mf-contact-topic-error"
       >
         <option value="" disabled>{{ 'shell.contact.choose' | t }}</option>
@@ -78,7 +78,7 @@
         id="mf-contact-message"
         rows="6"
         formControlName="message"
-        [attr.aria-invalid]="save.fieldError(form.controls.message) ? 'true' : null"
+        [aria-invalid]="!!save.fieldError(form.controls.message)"
         aria-describedby="mf-contact-rule mf-contact-message-error"
       ></textarea>
       <div class="under">
