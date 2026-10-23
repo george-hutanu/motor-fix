@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
 
 import { PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
@@ -18,6 +19,7 @@ import {
   RequestJobDto,
 } from './quotes.dto';
 import { JOB_STATUSES, type JobStatus } from './request-status';
+import { toQueryNumber } from './verification-queue';
 
 export { REVIEW_TEXT_MAX };
 
@@ -161,4 +163,51 @@ export class JobReviewContextDto {
 
   @ApiProperty({ type: ReviewEligibilityDto })
   eligibility!: ReviewEligibilityDto;
+}
+
+export const MECHANIC_REVIEWS_PAGE = 20;
+
+export class MechanicReviewsQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1, type: 'integer' })
+  @IsOptional()
+  @Transform(toQueryNumber)
+  @IsInt()
+  @Min(1)
+  page?: number;
+}
+
+// A published review on a mechanic's page: the author by short name only.
+export class MechanicReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ maximum: 5, minimum: 1 })
+  rating!: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  text!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ type: DriverNameDto })
+  author!: DriverNameDto;
+
+  // The garage the job was done at, which may not be the mechanic's now.
+  @ApiProperty({ type: GarageRefDto })
+  garage!: GarageRefDto;
+}
+
+export class MechanicReviewsPageDto {
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty({ type: [MechanicReviewDto] })
+  items!: MechanicReviewDto[];
 }

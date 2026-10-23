@@ -130,6 +130,8 @@ export { QuotesModule } from './quotes/quotes.module';
 export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
+export { REVIEW_RATINGS_CONSUMER } from './reviews/ratings/ratings';
+export { ReviewRatingsModule } from './reviews/ratings/ratings.module';
 export { ReviewsModule } from './reviews/reviews.module';
 export { dailyTasks } from './scheduler/tasks';
 export { SearchModule } from './search/search.module';

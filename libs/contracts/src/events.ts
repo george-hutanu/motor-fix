@@ -100,6 +100,7 @@ export const EVENT_KINDS = [
   'quote.expired',
   'quote.sent',
   'quote.withdrawn',
+  'rating.updated',
   'recheck.recorded',
   'repair.deleted',
   'repair.logged',

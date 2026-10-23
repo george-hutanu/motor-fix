@@ -18,7 +18,7 @@ export const LIVE = ['published', 'reported', 'removed'] as const;
 type EligibilityFacts = {
   job: { status: string } | null;
   staff: boolean;
-  // The job's review, if any; only one in a LIVE status blocks (FR-008).
+  // The job's review, if any; only one in a LIVE status blocks.
   review: { status: string } | null;
   emailConfirmed: boolean;
 };

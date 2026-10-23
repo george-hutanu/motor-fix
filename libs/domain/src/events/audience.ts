@@ -16,6 +16,9 @@ export type LiveSubject =
       authorAccountId: string;
       mechanicId: string | null;
     }
+  // A garage's or a mechanic's new rating: its staff, its public page, the
+  // results, and the mechanic's page when a mechanic's moved.
+  | { type: 'rating'; garageId: string; mechanicId: string | null }
   | { type: 'car'; ownerAccountId: string }
   | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
   | {
@@ -68,6 +71,13 @@ export function audienceOf(subject: LiveSubject): string[] {
         garage(subject.garageId),
         account(subject.authorAccountId),
         `public:garage:${subject.garageId}`,
+        ...when(subject.mechanicId, `public:mechanic:${subject.mechanicId}`),
+      ];
+    case 'rating':
+      return [
+        garage(subject.garageId),
+        `public:garage:${subject.garageId}`,
+        'public:search',
         ...when(subject.mechanicId, `public:mechanic:${subject.mechanicId}`),
       ];
     case 'car':

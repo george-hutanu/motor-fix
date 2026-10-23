@@ -84,3 +84,9 @@ p {
 .facilities-note {
   color: var(--mf-text-secondary);
 }
+
+@media (max-width: 767.98px) {
+  :host {
+    --mf-size-small: var(--mf-size-body);
+  }
+}

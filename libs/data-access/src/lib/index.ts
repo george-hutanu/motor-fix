@@ -148,6 +148,8 @@ export type { ListingPhotoDto } from './models/listing-photo-dto';
 export type { ListingPhotosDto } from './models/listing-photos-dto';
 export type { ListingSubmittedDto } from './models/listing-submitted-dto';
 export type { LiveTestDto } from './models/live-test-dto';
+export type { MechanicReviewDto } from './models/mechanic-review-dto';
+export type { MechanicReviewsPageDto } from './models/mechanic-reviews-page-dto';
 export type { MeDto } from './models/me-dto';
 export type { MyConsentsDto } from './models/my-consents-dto';
 export type { NewsConsentDto } from './models/news-consent-dto';
@@ -540,6 +542,8 @@ export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
+export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
+export { reviewsControllerForMechanic as reviewsControllerForMechanic } from './fn/reviews/reviews-controller-for-mechanic';
 export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
 export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
 export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';

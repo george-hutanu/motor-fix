@@ -757,6 +757,9 @@ describe('seed of a request through to a job', () => {
         },
         status: true,
       },
+      // The requester's own car; the reviewed job's request is another
+      // driver's.
+      where: { car: { idempotencyKey: 'seed' } },
     });
 
   it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job in work", async () => {
@@ -836,6 +839,63 @@ describe('seed of a request through to a job', () => {
     expect(ticked).toEqual([
       { garageBrand: { brand: { key: 'dacia' } }, jobTypeId: oil.id },
     ]);
+  });
+
+  // The mechanic's public page (GET /reviews/mechanic/:id) answers 200 only
+  // for a mechanic on the profile, and QA needs one review there to read.
+  it("gives the staff's mechanic a handed-over job and the second driver's published review naming him, once, the requester's one car left alone", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const mechanic = await prisma.mechanic.findFirstOrThrow({
+      select: { id: true, onProfile: true, rating: true, reviewCount: true },
+      where: { account: { email: 'mecanic@example.test' } },
+    });
+    const reviews = await prisma.review.findMany({
+      select: {
+        driver: { select: { email: true } },
+        garage: { select: { slug: true } },
+        job: {
+          select: {
+            handedOverAt: true,
+            mechanicId: true,
+            status: true,
+          },
+        },
+        rating: true,
+        source: true,
+        status: true,
+        text: true,
+      },
+      where: { mechanicId: mechanic.id },
+    });
+    expect(reviews).toEqual([
+      {
+        driver: { email: 'sofer2@example.test' },
+        garage: { slug: 'atelier-test' },
+        job: {
+          handedOverAt: expect.any(Date),
+          mechanicId: mechanic.id,
+          status: 'done',
+        },
+        rating: 5,
+        source: 'job',
+        status: 'published',
+        text: expect.any(String),
+      },
+    ]);
+    expect({ ...mechanic, rating: Number(mechanic.rating) }).toEqual({
+      id: mechanic.id,
+      onProfile: true,
+      rating: 5,
+      reviewCount: 1,
+    });
+    // The requester keeps one car, so the request dialog chooses it.
+    const cars = await prisma.car.findMany({
+      select: { plate: true },
+      where: { owner: { email: 'cerere@example.test' } },
+    });
+    expect(cars).toEqual([{ plate: 'B101QAT' }]);
   });
 
   it('adds no second request when run twice', async () => {
