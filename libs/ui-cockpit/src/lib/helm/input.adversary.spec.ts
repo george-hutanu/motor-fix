@@ -106,9 +106,27 @@ const shared = new FormControl('', {
   validators: [Validators.required],
 });
 
+// A form that reveals the shared control with its press, then goes away.
 @Component({
   imports: [HlmInput, ReactiveFormsModule],
-  template: '<input hlmInput id="gone" [formControl]="control" />',
+  template: `
+    <input hlmInput id="gone" aria-label="g" [formControl]="control" />
+    <button id="save" type="button" (click)="save.submit()">Salvează</button>
+  `,
+})
+class Pressed {
+  control = shared;
+  readonly save = taskSave({
+    form: new FormGroup({ shared }),
+    send: () => answer(),
+  });
+}
+
+// A fresh input on the same control, outside any save.
+@Component({
+  imports: [HlmInput, ReactiveFormsModule],
+  template:
+    '<input hlmInput id="gone" aria-label="g" [formControl]="control" />',
 })
 class Gone {
   control = shared;
@@ -279,9 +297,10 @@ describe('kit input reveal rule under hostile control states', () => {
   });
 
   it('does not announce a fresh input on a control a destroyed form had revealed', async () => {
-    const first = await render(Gone);
+    const first = await render(Pressed);
+    await press(first.page);
+    expect(fieldRevealed(shared)).toBe(true);
     first.fixture.destroy();
-    shared.markAsTouched();
     const second = await render(Gone);
 
     expect(invalid(second.field('gone'))).toBeNull();

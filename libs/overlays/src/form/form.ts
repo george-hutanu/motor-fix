@@ -78,8 +78,11 @@ export function taskSave<F extends AbstractControl, R>(
   const i18n = inject(I18n);
   const task = inject(OVERLAY_TASK, { optional: true });
   let destroyed = false;
+  // A control can outlive its form: one this form revealed stops being
+  // announced once the form is gone.
   inject(DestroyRef).onDestroy(() => {
     destroyed = true;
+    for (const control of revealed) setRevealed(control, false);
   });
 
   const changes = signal(0);
