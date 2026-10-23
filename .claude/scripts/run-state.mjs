@@ -27,6 +27,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { activeFeature } from "./lib/feature.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 export const STATUSES = ["draft", "ready", "in-progress", "in-review", "blocked", "done"];
 
@@ -195,6 +196,6 @@ export function main(argv, repo, env = process.env) {
   return 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main(process.argv.slice(2), process.env.CLAUDE_PROJECT_DIR ?? process.cwd()));
 }

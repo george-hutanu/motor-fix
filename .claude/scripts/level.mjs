@@ -35,6 +35,7 @@ import {
   pendingTtlMinutes,
   pointTo,
 } from "./lib/feature.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const statePath = (repo) => join(repo, ".specify", "feature.json");
 
@@ -516,7 +517,7 @@ export async function suggestCommand(argv, { repo, fetchImpl, out = console.log 
   return suggestText(description, { repo, argv, out, fetchImpl });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const argv = process.argv.slice(2);
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   if (argv[0] === "suggest") process.exit(await suggestCommand(argv.slice(1), { repo }));

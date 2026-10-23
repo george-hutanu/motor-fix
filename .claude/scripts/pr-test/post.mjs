@@ -21,6 +21,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { isBlocking, reportMarkdown, stepFinding, verdict } from "./findings.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 export const STATUS_CONTEXT = "agent-review";
 const SECTION = "Agent review";
@@ -152,7 +153,7 @@ export function missingReport({ pr, repo, sha, lap, reason: given }) {
   return { pr: Number(pr), repo, sha, lap, verdict: "failure", summary, findings, booted: [], notes: [summary], markdown };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const argv = process.argv.slice(2);
   const file = flag(argv, "report");
   const missing = flag(argv, "missing");

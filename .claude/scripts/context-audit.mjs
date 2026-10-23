@@ -37,6 +37,7 @@
 // this change what the agent does — which is the one thing no regex can read.
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 // The agent context file, most specific first. This repository keeps its rules
 // in CLAUDE.md; the sibling repository sharing this harness keeps them in the
@@ -308,7 +309,7 @@ export function main(argv, repo) {
   return argv.includes("--check") && verdict.state === "grown" ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const argv = process.argv.slice(2);
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const code = main(argv, repo);

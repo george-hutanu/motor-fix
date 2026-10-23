@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { ledgerDir, ranked, summarize, tokenTotal } from "./lib/telemetry.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 export function loadRecords(repo) {
   const dir = ledgerDir(repo);
@@ -111,7 +112,7 @@ export function unused(repo, records = loadRecords(repo)) {
 
 const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const records = loadRecords(repo);
   const total = summarize(records);

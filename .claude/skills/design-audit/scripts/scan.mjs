@@ -17,6 +17,7 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
+import { isEntryPoint } from "../../../scripts/lib/entry.mjs";
 
 const EXTENSIONS = new Set([
   '.css', '.scss', '.sass', '.less', '.styl', '.html', '.svelte', '.vue', '.astro',
@@ -247,4 +248,4 @@ function main(argv) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));

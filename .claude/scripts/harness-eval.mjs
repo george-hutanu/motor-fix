@@ -17,9 +17,10 @@
 //   node .claude/scripts/harness-eval.mjs --check   fail below .claude/evals/baseline.json
 //   node .claude/scripts/harness-eval.mjs --json    machine form
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 // evals/ lives inside .claude here: the whole harness is git-excluded in this
 // repo, and a tracked top-level evals/ would be the one piece that was not.
@@ -105,15 +106,29 @@ function buildFixture(repo, testCase, scratch) {
   return dir;
 }
 
+/**
+ * A symlink to `root` in scratch, for a case that declares `"symlink": true`:
+ * run-hook.mjs and the gate are then started through it, the way a checkout
+ * under a symlinked folder starts them, so a gate that compares
+ * the path it was started by with its own URL instead of using isEntryPoint
+ * is caught.
+ */
+export function linkTo(root, scratch, id) {
+  const link = join(scratch, `link-${id}`);
+  symlinkSync(root, link);
+  return link;
+}
+
 export function runCases(repo, cases = loadCases(repo)) {
-  const runner = join(repo, ".claude", "hooks", "run-hook.mjs");
   // Resolved: on macOS the temp dir is a symlink (/var → /private/var), and a
   // gate started through one never sees its own path as the one it was run by.
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), "harness-eval-")));
   try {
     return cases.map((testCase) => {
       const started = Date.now();
-      const root = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
+      const built = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
+      const root = testCase.symlink ? linkTo(built, scratch, testCase.id) : built;
+      const runner = join(root, ".claude", "hooks", "run-hook.mjs");
       const result = spawnSync(process.execPath, [runner, testCase.hook], {
         input: JSON.stringify(buildPayload(testCase, scratch)),
         encoding: "utf8",
@@ -138,7 +153,7 @@ export const baselineFor = (repo) => {
   }
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const cases = loadCases(repo);
   const results = runCases(repo, cases);

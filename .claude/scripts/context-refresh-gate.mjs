@@ -10,6 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnRun } from "./lib/gh-rest.mjs";
 import { cloneDir, SPECS_SLUG, TRUNK } from "./specs-repo.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const TIMEOUT_MS = 30_000;
 
@@ -94,7 +95,7 @@ export function gate({ featureDir, root = process.cwd(), run = spawnRun({ cwd: r
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const dir = process.argv[2];
   console.log(dir ? gate({ featureDir: resolve(dir) }) : "dispatch no feature directory given");
 }

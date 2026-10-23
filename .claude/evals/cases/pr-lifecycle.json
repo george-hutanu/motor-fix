@@ -149,5 +149,19 @@
       "exit": 2,
       "stderr": "gh pr edit 42 --remove-label \"in review\" --add-label \"QA\"\\)"
     }
+  },
+  {
+    "id": "pr-lifecycle-refuses-two-stage-labels-through-a-symlink",
+    "hook": "stop:pr-lifecycle",
+    "why": "a gate started through a symlinked path must judge as it does through its real path; PR #38 found the gate exiting 0 there on a ready PR carrying two stage labels",
+    "symlink": true,
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"486-entry-point-symlink\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 38, \"title\": \"fix(harness): ST-474 x\", \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [{\"name\": \"in development\"}, {\"name\": \"QA\"}, {\"name\": \"bug\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "more than one stage label"
+    }
   }
 ]

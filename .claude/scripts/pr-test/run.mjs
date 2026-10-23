@@ -65,6 +65,7 @@ import {
 } from "./services.mjs";
 import { VIEWPORTS, flowSignIn, routeProblem, routerTable, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const self = fileURLToPath(import.meta.url);
@@ -509,7 +510,7 @@ async function main(argv) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   const code = await main(process.argv.slice(2));
   process.exit(code);
 }

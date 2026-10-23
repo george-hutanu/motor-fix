@@ -20,6 +20,7 @@ import { basename, join } from "node:path";
 import { activeFeature, locateFeature } from "./lib/feature.mjs";
 import { testsFor } from "./lib/tests.mjs";
 import { loadCapabilities } from "./capabilities.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 /**
  * Everything that rests on one requirement. `token` is the feature-qualified
@@ -109,6 +110,6 @@ export function main(argv, repo) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main(process.argv.slice(2), process.env.CLAUDE_PROJECT_DIR ?? process.cwd()));
 }
