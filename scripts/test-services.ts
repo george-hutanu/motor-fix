@@ -31,10 +31,40 @@
 // or whose branch's newest PR merged or closed (volumes kept), and prints one
 // line. `/speckit-watch` runs it on each `--fix` pass. Neither ever exits
 // non-zero for Docker: no Docker, or a down it refuses, is one stderr line.
+//
+//   node scripts/test-services.ts ports
+//
+// Gives this worktree its own free ports for the api, the worker and the web
+// dev server, so two worktrees boot side by side. The first call probes three
+// ports free now and held by no other worktree of the clone, and keeps them in
+// `.specify/.cache/ports.json`; every call prints the same `export API_PORT=…
+// WORKER_PORT=… WEB_PORT=… PORT=… API_INTERNAL_URL=… PUBLIC_WEB_URL=…` to
+// eval and writes them to `.specify/.cache/ports.env`, which scripts/heavy.sh
+// sources. PORT is the web port: Angular's dev server reads PORT, the api and
+// the worker read API_PORT and WORKER_PORT first. No set: 3000, 3001, 4200.
+//
+//   node scripts/test-services.ts restart <api|worker|web>
+//
+// Stops the dev server this worktree started for that app (the pid in
+// `.specify/.cache/<app>.pid`, only while that process still runs in this
+// worktree; never a process found by its name), then starts `npx nx serve
+// <app>` on the worktree's port, detached, logging to `.specify/.cache/<app>.log`.
+// A port held by another process is one line and exit 1, nothing started.
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { type AddressInfo, createServer } from 'node:net';
 import { basename, dirname, join, resolve } from 'node:path';
 
 type Project = { name: string; root: string };
@@ -157,6 +187,54 @@ export function shellExports(env: Record<string, string>): string {
   return Object.entries(env)
     .map(([key, value]) => `export ${key}='${value.replaceAll("'", `'\\''`)}'`)
     .join('\n');
+}
+
+export type PortSet = { api: number; web: number; worker: number };
+
+// What a boot of this worktree's apps reads. Angular's dev server takes PORT
+// over its own option, so PORT is the web's; the api and the worker read
+// API_PORT and WORKER_PORT before PORT.
+export function portEnv(set: PortSet): Record<string, string> {
+  return {
+    API_INTERNAL_URL: `http://localhost:${set.api}`,
+    API_PORT: String(set.api),
+    PORT: String(set.web),
+    PUBLIC_WEB_URL: `http://localhost:${set.web}`,
+    WEB_PORT: String(set.web),
+    WORKER_PORT: String(set.worker),
+  };
+}
+
+// A port free now: listened on, then let go (0: any the system has).
+export function probePort(port = 0): Promise<number> {
+  return new Promise((done, fail) => {
+    const server = createServer();
+    server.once('error', fail);
+    server.listen(port, () => {
+      const { port: got } = server.address() as AddressInfo;
+      server.close(() => done(got));
+    });
+  });
+}
+
+export async function freePorts(
+  taken: Set<number>,
+  probe: () => Promise<number> = probePort,
+  tries = 30,
+): Promise<PortSet> {
+  const got: number[] = [];
+  for (let i = 0; i < tries && got.length < 3; i++) {
+    const port = await probe().catch((error: Error) => {
+      throw new Error(`no free port: ${error.message}`);
+    });
+    if (!taken.has(port) && !got.includes(port)) got.push(port);
+  }
+  if (got.length < 3)
+    throw new Error(
+      `no free port: ${tries} probes found ${got.length} not held by another worktree`,
+    );
+  const [api, worker, web] = got;
+  return { api, web, worker };
 }
 
 export function noDockerMessage(project: string): string {
@@ -488,6 +566,123 @@ function sweep() {
   console.log(`test-services: ${parts.join('; ') || 'nothing to stop'}`);
 }
 
+const apps = ['api', 'worker', 'web'] as const;
+type App = (typeof apps)[number];
+const cached = (root: string, file: string) =>
+  join(root, '.specify', '.cache', file);
+
+function readSet(root: string): PortSet | null {
+  const file = cached(root, 'ports.json');
+  if (!existsSync(file)) return null;
+  const set = readJson(() => JSON.parse(readFileSync(file, 'utf8')) as PortSet);
+  return set && apps.every((app) => Number.isInteger(set[app])) ? set : null;
+}
+
+// This worktree's set: the one kept, or three ports no other worktree holds.
+async function ensurePorts(root: string): Promise<PortSet> {
+  let set = readSet(root);
+  if (!set) {
+    const listed = tryRun('git', ['worktree', 'list', '--porcelain']);
+    const taken = parseWorktrees(listed.stdout)
+      .filter((w) => w.path !== root)
+      .flatMap((w) => {
+        const other = readSet(w.path);
+        return other ? apps.map((app) => other[app]) : [];
+      });
+    set = await freePorts(new Set(taken));
+    mkdirSync(cached(root, ''), { recursive: true });
+    writeFileSync(cached(root, 'ports.json'), `${JSON.stringify(set)}\n`);
+  }
+  writeFileSync(cached(root, 'ports.env'), `${shellExports(portEnv(set))}\n`);
+  return set;
+}
+
+function processCwd(pid: number): string | undefined {
+  try {
+    return readlinkSync(`/proc/${pid}/cwd`);
+  } catch {
+    const out = tryRun('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
+    return out.stdout
+      .split('\n')
+      .find((line) => line.startsWith('n'))
+      ?.slice(1);
+  }
+}
+
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// The process and everything under it, listed before any is stopped.
+function tree(pid: number): number[] {
+  const rows = tryRun('ps', ['-A', '-o', 'pid=,ppid='])
+    .stdout.split('\n')
+    .map((line) => line.trim().split(/\s+/).map(Number));
+  const out = [pid];
+  for (let i = 0; i < out.length; i++)
+    for (const [child, parent] of rows) if (parent === out[i]) out.push(child);
+  return out;
+}
+
+const signal = (pids: number[], name: NodeJS.Signals) => {
+  for (const pid of pids)
+    try {
+      process.kill(pid, name);
+    } catch {}
+};
+
+// Stops what `restart` started here before, and only while that pid is still
+// a process running in this worktree (a pid the system reused is left alone).
+async function stopOwn(root: string, app: App) {
+  const file = cached(root, `${app}.pid`);
+  if (!existsSync(file)) return;
+  const pid = Number(readFileSync(file, 'utf8').trim());
+  rmSync(file);
+  if (!(pid > 1) || !alive(pid)) return;
+  const cwd = processCwd(pid);
+  if (!cwd || realpathSync(cwd) !== realpathSync(root)) {
+    console.error(
+      `test-services: pid ${pid} is not ${app} of ${root} any more; left running`,
+    );
+    return;
+  }
+  const pids = tree(pid);
+  signal(pids, 'SIGTERM');
+  for (let i = 0; i < 100 && pids.some(alive); i++)
+    await new Promise((done) => setTimeout(done, 100));
+  signal(pids.filter(alive), 'SIGKILL');
+}
+
+async function restart(root: string, app: App) {
+  const set = await ensurePorts(root);
+  await stopOwn(root, app);
+  const port = set[app];
+  await probePort(port).catch(() => {
+    throw new Error(
+      `port ${port} for ${app} is held by another process; ${app} not started`,
+    );
+  });
+  const log = cached(root, `${app}.log`);
+  const out = openSync(log, 'a');
+  const child = spawn('npx', ['nx', 'serve', app], {
+    cwd: root,
+    detached: true,
+    env: { ...process.env, ...portEnv(set), PORT: String(port) },
+    stdio: ['ignore', out, out],
+  });
+  if (!child.pid) throw new Error(`npx nx serve ${app} did not start`);
+  writeFileSync(cached(root, `${app}.pid`), `${child.pid}\n`);
+  child.unref();
+  console.error(
+    `test-services: ${app} of ${root} starting on http://localhost:${port} (pid ${child.pid}, log ${log})`,
+  );
+}
+
 // Outside a checkout, the folder it runs in.
 function currentCheckout(): string {
   try {
@@ -501,11 +696,31 @@ const usage = [
   'Usage: node scripts/test-services.ts <base-ref>',
   '       node scripts/test-services.ts down [<worktree>] [--volumes]',
   '       node scripts/test-services.ts sweep',
+  '       node scripts/test-services.ts ports',
+  '       node scripts/test-services.ts restart <api|worker|web>',
 ].join('\n');
 
 if (process.argv[1]?.endsWith('test-services.ts')) {
   const [command, ...rest] = process.argv.slice(2);
-  if (command === 'down' || command === 'sweep') {
+  if (command === 'ports' || command === 'restart') {
+    const app = rest[0] as App;
+    const ok =
+      command === 'ports'
+        ? rest.length === 0
+        : rest.length === 1 && apps.includes(app);
+    if (!ok) {
+      console.error(usage);
+      process.exit(2);
+    }
+    const root = currentCheckout();
+    (command === 'ports'
+      ? ensurePorts(root).then((set) => console.log(shellExports(portEnv(set))))
+      : restart(root, app)
+    ).catch((error: Error) => {
+      console.error(`test-services: ${error.message}`);
+      process.exitCode = 1;
+    });
+  } else if (command === 'down' || command === 'sweep') {
     const volumes = command === 'down' && rest.includes('--volumes');
     const args = rest.filter((arg) => !(volumes && arg === '--volumes'));
     if (
@@ -518,26 +733,27 @@ if (process.argv[1]?.endsWith('test-services.ts')) {
     if (command === 'sweep') sweep();
     else down(resolve(args[0] ?? currentCheckout()), volumes);
     process.exit(0);
-  }
-  // Anything else is the base ref, alone: a word that names no commit is an
-  // unknown subcommand, not a ref to diff against.
-  const isCommit =
-    command !== undefined &&
-    spawnSync(
-      'git',
-      ['rev-parse', '--verify', '--quiet', `${command}^{commit}`],
-      {
-        stdio: 'ignore',
-      },
-    ).status === 0;
-  if (!isCommit || rest.length > 0) {
-    console.error(usage);
-    process.exit(2);
-  }
-  try {
-    main();
-  } catch (error) {
-    console.error(`test-services: ${(error as Error).message}`);
-    process.exit(1);
+  } else {
+    // Anything else is the base ref, alone: a word that names no commit is an
+    // unknown subcommand, not a ref to diff against.
+    const isCommit =
+      command !== undefined &&
+      spawnSync(
+        'git',
+        ['rev-parse', '--verify', '--quiet', `${command}^{commit}`],
+        {
+          stdio: 'ignore',
+        },
+      ).status === 0;
+    if (!isCommit || rest.length > 0) {
+      console.error(usage);
+      process.exit(2);
+    }
+    try {
+      main();
+    } catch (error) {
+      console.error(`test-services: ${(error as Error).message}`);
+      process.exit(1);
+    }
   }
 }

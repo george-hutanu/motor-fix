@@ -184,6 +184,15 @@ describe('run: what each app is launched with', () => {
   });
 });
 
+// @traces 1363-throughput-fixes-FR-005
+describe('run: a worktree port set never overrides the run\'s own ports', () => {
+  it('names the api and worker ports under the names they read first', () => {
+    const env = appLaunchEnv({ apiPort: 3100, webPort: 4100, workerPort: 3200, apiURL: 'http://127.0.0.1:3100', webURL: 'http://127.0.0.1:4100' });
+    assert.equal(env.api.API_PORT, '3100');
+    assert.equal(env.worker.WORKER_PORT, '3200');
+  });
+});
+
 // @traces 1230-FR-006
 describe('run: the shared flow helpers', () => {
   it('hands the flows waitForText, openSheet, stepButton and the seeded accounts, next to the rest', () => {

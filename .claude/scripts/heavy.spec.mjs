@@ -199,6 +199,33 @@ describe('heavy.sh environment', () => {
   });
 });
 
+// @traces 1363-throughput-fixes-FR-005
+describe('heavy.sh and the worktree port set', () => {
+  // A copy of heavy.sh in a scratch checkout: the set it reads is its own checkout's.
+  const checkout = (portsEnv) => {
+    const dir = scratch();
+    mkdirSync(join(dir, 'scripts'));
+    writeFileSync(join(dir, 'scripts', 'heavy.sh'), readFileSync(heavy));
+    if (portsEnv) {
+      mkdirSync(join(dir, '.specify', '.cache'), { recursive: true });
+      writeFileSync(join(dir, '.specify', '.cache', 'ports.env'), portsEnv);
+    }
+    return dir;
+  };
+  const ports = (dir) => {
+    const { API_PORT, WEB_PORT, ...rest } = env(dir);
+    return spawnSync('sh', [join(dir, 'scripts', 'heavy.sh'), 'sh', '-c', 'echo "$API_PORT|$WEB_PORT"'], { encoding: 'utf8', env: rest }).stdout.trim();
+  };
+
+  it('runs the command with the checkout ports.env when there is one', () => {
+    assert.equal(ports(checkout("export API_PORT='54002'\nexport WEB_PORT='54004'\n")), '54002|54004');
+  });
+
+  it('adds no port variable when the checkout has no set', () => {
+    assert.equal(ports(checkout()), '|');
+  });
+});
+
 describe('the pre-commit hook', () => {
   const hook = () => readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
   const code = () => hook().split('\n').filter((l) => !l.startsWith('#')).join('\n');

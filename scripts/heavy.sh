@@ -24,6 +24,10 @@
 # Dev servers (nx serve) must not run under heavy.sh: a slot held for as long
 # as a server lives starves every other session.
 #
+# The command sees its checkout's port set: .specify/.cache/ports.env next to
+# this script's checkout, written by `node scripts/test-services.ts ports`, is
+# sourced when present, so an e2e run boots on that worktree's own ports.
+#
 # A command already holding a slot (HEAVY_HELD=1) runs a nested call at once
 # rather than taking a second slot. Free memory is read with macOS
 # `memory_pressure`; where it does not exist (Linux CI) the floor is not checked.
@@ -33,6 +37,9 @@ default_slots=4
 SLOTS="${HEAVY_SLOTS:-$default_slots}"
 export NX_DAEMON=false NX_PARALLEL="${NX_PARALLEL:-2}" JEST_MAX_WORKERS="${JEST_MAX_WORKERS:-2}"
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=3072}"
+ports_env="$(cd "$(dirname "$0")/.." && pwd)/.specify/.cache/ports.env"
+# shellcheck disable=SC1090
+[ -f "$ports_env" ] && . "$ports_env"
 
 [ $# -gt 0 ] || { echo "usage: heavy.sh <command...>" >&2; exit 64; }
 [ "${HEAVY_HELD:-}" = 1 ] && exec "$@"

@@ -143,9 +143,10 @@ export async function collectRejections(findings, fn) {
  * notification or an e-mail links to it (the worker's consumers stay off without it).
  */
 export const appLaunchEnv = ({ apiPort, webPort, workerPort, apiURL, webURL }) => ({
-  api: { PORT: String(apiPort), PUBLIC_WEB_URL: webURL },
+  // API_PORT and WORKER_PORT too: each app reads them before PORT, and a worktree's port set exports them.
+  api: { PORT: String(apiPort), API_PORT: String(apiPort), PUBLIC_WEB_URL: webURL },
   web: { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL },
-  worker: { PORT: String(workerPort), PUBLIC_WEB_URL: webURL },
+  worker: { PORT: String(workerPort), WORKER_PORT: String(workerPort), PUBLIC_WEB_URL: webURL },
 });
 
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */

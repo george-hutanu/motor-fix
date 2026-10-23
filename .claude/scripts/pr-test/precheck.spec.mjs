@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CHECK_DEFAULTS, PROOF_DIR, checkFlows, flowsHash, precheck, proofPath, scenarios } from './precheck.mjs';
+import { checkDefaults, PROOF_DIR, checkFlows, flowsHash, precheck, proofPath, scenarios } from './precheck.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./precheck.mjs', import.meta.url));
 
@@ -201,7 +201,12 @@ describe('precheck --check: the flows against the app and API already serving', 
   });
 
   it('defaults to the dev server and the local API', () => {
-    assert.deepEqual(CHECK_DEFAULTS, { baseURL: 'http://localhost:4200', apiURL: 'http://localhost:3000' });
+    assert.deepEqual(checkDefaults({}), { baseURL: 'http://localhost:4200', apiURL: 'http://localhost:3000' });
+  });
+
+  // @traces 1363-throughput-fixes-FR-005
+  it('defaults to the worktree\'s own port set when one is exported', () => {
+    assert.deepEqual(checkDefaults({ WEB_PORT: '4231', API_PORT: '3031' }), { baseURL: 'http://localhost:4231', apiURL: 'http://localhost:3031' });
   });
 });
 
