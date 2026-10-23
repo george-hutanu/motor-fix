@@ -12,6 +12,9 @@
 // RAILWAY_SERVICE_MCP skips that service with a notice, until the owner has
 // created it. RAILWAY_TOKEN_KIND=project sends the token as a project token;
 // unset, a bearer token Railway refuses is retried once as a project token.
+// RAILWAY_API_ENDPOINT points the run at a fake Railway API on this machine
+// (the specs set it); only a loopback address is accepted, since the token
+// goes with every call. The release sets none, so Railway's own is used.
 
 export interface Service {
   name: string;
@@ -330,6 +333,25 @@ export function servicesFor(
   });
 }
 
+const RAILWAY_ENDPOINT = 'https://backboard.railway.com/graphql/v2';
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+export function railwayEndpoint(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const value = env['RAILWAY_API_ENDPOINT'];
+  if (!value) return RAILWAY_ENDPOINT;
+  const url = URL.parse(value);
+  if (
+    !url ||
+    !['http:', 'https:'].includes(url.protocol) ||
+    !LOOPBACK.has(url.hostname)
+  ) {
+    throw new Error('RAILWAY_API_ENDPOINT must be a loopback http(s) URL');
+  }
+  return value;
+}
+
 async function main() {
   const services = servicesFor(process.argv[2] ?? '');
   // A cancelled run gets SIGINT, then SIGTERM a few seconds later. Both stay
@@ -343,7 +365,7 @@ async function main() {
     });
   }
   return deploy({
-    endpoint: 'https://backboard.railway.com/graphql/v2',
+    endpoint: railwayEndpoint(),
     environmentId: required('RAILWAY_ENVIRONMENT_ID'),
     // Railway's own health check (HEALTH_TIMEOUT_S, counted from container
     // start) decides; this limit only stops a run whose deployment never ends.
