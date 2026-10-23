@@ -53,7 +53,12 @@ process.stdin.on("end", () => {
   const tasks = existsSync(join(feature.dir, "tasks.md")) ? readFileSync(join(feature.dir, "tasks.md"), "utf8") : "";
   const open = (tasks.match(/^\s*- \[ \]/gm) ?? []).length;
   const done = (tasks.match(/^\s*- \[[Xx]\]/gm) ?? []).length;
-  const dirty = git(["status", "--porcelain"]).split("\n").filter(Boolean);
+  // The feature's own records (this very log among them) live under specs/,
+  // the specs repository's clone: the block reports the code's state only.
+  const dirty = git(["status", "--porcelain"])
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => !/^"?specs(\/|"?$)/.test(line.slice(3)));
   const stamp = new Date().toISOString();
 
   appendFileSync(
