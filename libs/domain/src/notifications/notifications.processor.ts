@@ -5,7 +5,6 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Brevo, BrevoError } from './brevo/brevo';
 import { notificationType } from './catalogue';
 import { blockedReason, type EmailConfig, emailEnvelope } from './email-config';
-import { keyRetryDelay } from './key-retry/key-retry';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
@@ -54,6 +53,10 @@ export const retryDelay = (failedBefore: number) =>
 // A send job's hold on its row lapses by the time the first retry runs, so a
 // worker that dies holding one cannot keep the row from being sent.
 const CLAIM_MS = retryDelay(0);
+
+// The wait after the n-th start-up key check that could not reach Brevo.
+export const keyRetryDelay = (failed: number) =>
+  Math.min(1_000 * 2 ** (failed - 1), 60_000);
 
 @Injectable()
 export class NotificationsProcessor {

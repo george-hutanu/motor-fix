@@ -43,6 +43,7 @@ features:
   - 068-yearly-documents
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
+  - 520-brevo-key-check-retry
 ---
 
 # Capability: Notifications
@@ -111,9 +112,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-016 — With sending switched on, the worker MUST check the Brevo key at start-up; a missing key or one Brevo refuses MUST stop it from processing the `notifications` queue and log an error, while its health check keeps answering.
+### 520-FR-003 — The `notifications` queue consumer MUST start as soon as a check passes (at the first attempt as today, or after any number of retries) without a restart; a refused key, or sending on with `BREVO_API_KEY`, `EMAIL_FROM` or `PUBLIC_WEB_URL` missing, MUST keep the consumer off and log one error with no retry, as today; with sending off the consumer runs as today.
 
-_From 194-email-sending._
+_From 520-brevo-key-check-retry._
 
 ### 194-FR-017 — The queue MUST process up to 10 jobs at once.
 
@@ -797,6 +798,18 @@ _From 414-approve-catalogue-job._
 
 _From 067-restore-suspended-garage._
 
+### 520-FR-001 — The worker's start-up Brevo key check MUST tell a refused key from an unreachable Brevo: a network error, a timeout, any 5xx and 429 are *unreachable*; 401, 403 and any other non-2xx answer are *refused*; 2xx passes.
+
+_From 520-brevo-key-check-retry._
+
+### 520-FR-002 — While the check is unreachable the worker MUST retry it in place, never crash and never block its boot: the first retry after 1 s, each next delay double the previous up to a cap of 60 s, counted from the end of the failed attempt, until an attempt passes or the worker shuts down; the HTTP listener MUST be up while it waits, and a shutdown MUST cancel the pending retry and start no consumer afterwards.
+
+_From 520-brevo-key-check-retry._
+
+### 520-FR-005 — Each failed unreachable attempt MUST log one warning naming the attempt number, the reason (network error, timeout or the status) and the delay before the next attempt, never the key; no new metric or alert is added and `infra/observability/inventory.json` is unchanged, because the health check (Railway's and ST-294's `api` probe path) and the existing `motorfix_queue_waiting` and `motorfix_queue_oldest_waiting_seconds` gauges for the `notifications` queue already surface a worker that is not consuming.
+
+_From 520-brevo-key-check-retry._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -812,3 +825,4 @@ _From 067-restore-suspended-garage._
 - `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)
 - `198-FR-010` — superseded by `068-FR-004` (2026-10-23)
 - `196-FR-012` — superseded by `068-FR-004` (2026-10-23)
+- `194-FR-016` — superseded by `520-FR-003` (2026-10-23)

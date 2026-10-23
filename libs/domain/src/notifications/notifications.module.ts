@@ -44,6 +44,7 @@ import {
   type CatalogueJobPendingEvent,
   CatalogueJobPendingFanOut,
 } from './catalogue-job-pending/catalogue-job-pending.fan-out';
+import { NotificationsConsumer } from './consumer/consumer';
 import {
   DOCUMENT_REFUSED_QUEUE,
   type DocumentRefusedEvent,
@@ -65,7 +66,6 @@ import {
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
 } from './garage-suspended/garage-suspended.fan-out';
-import { NotificationsConsumer } from './key-retry/key-retry';
 import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,

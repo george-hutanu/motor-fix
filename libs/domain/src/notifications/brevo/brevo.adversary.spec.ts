@@ -144,3 +144,114 @@ describe('the key check', () => {
     expect(mock.emails()).toHaveLength(0);
   });
 });
+
+// @traces 520-FR-001
+describe('the start-up key status against odd answers', () => {
+  it.each([200, 201, 204])('passes a %i', async (status) => {
+    mock.answer({ status });
+    await expect(brevo().keyStatus()).resolves.toEqual({ outcome: 'passed' });
+  });
+
+  it('passes a 200 whose body is not JSON', async () => {
+    mock.answer({ body: undefined, status: 200 });
+    await expect(brevo().keyStatus()).resolves.toEqual({ outcome: 'passed' });
+  });
+
+  it.each([400, 401, 403, 404, 410, 422])(
+    'refuses a %i and names the status',
+    async (status) => {
+      mock.answer({ status });
+      await expect(brevo().keyStatus()).resolves.toEqual({
+        outcome: 'refused',
+        status,
+      });
+    },
+  );
+
+  it.each([500, 502, 503, 504, 599, 429])(
+    'finds Brevo unreachable on a %i',
+    async (status) => {
+      mock.answer({ status });
+      await expect(brevo().keyStatus()).resolves.toEqual({
+        outcome: 'unreachable',
+        reason: `provider_${status}`,
+      });
+    },
+  );
+
+  it('finds Brevo unreachable when it never answers', async () => {
+    mock.answer({ hang: true, status: 200 });
+    await expect(brevo(150).keyStatus()).resolves.toEqual({
+      outcome: 'unreachable',
+      reason: 'provider_unreachable',
+    });
+  });
+
+  it('finds Brevo unreachable when nothing listens', async () => {
+    await expect(
+      brevo(1000, 'http://127.0.0.1:1/v3').keyStatus(),
+    ).resolves.toEqual({
+      outcome: 'unreachable',
+      reason: 'provider_unreachable',
+    });
+  });
+
+  it('finds Brevo unreachable when the host does not resolve', async () => {
+    await expect(
+      brevo(1000, 'http://no-such-host.invalid/v3').keyStatus(),
+    ).resolves.toEqual({
+      outcome: 'unreachable',
+      reason: 'provider_unreachable',
+    });
+  });
+
+  it('asks GET /account once and never puts the key in the outcome', async () => {
+    mock.answer({ status: 503 });
+    const status = await brevo().keyStatus();
+    expect(mock.calls).toHaveLength(1);
+    expect(mock.calls[0]).toMatchObject({ method: 'GET', path: '/v3/account' });
+    expect(JSON.stringify(status)).not.toContain('test-key');
+  });
+
+  it('answers the same on a second ask after a failure', async () => {
+    mock.answer({ status: 503 }, { status: 401 }, { status: 200 });
+    const b = brevo();
+    expect(await b.keyStatus()).toMatchObject({ outcome: 'unreachable' });
+    expect(await b.keyStatus()).toEqual({ outcome: 'refused', status: 401 });
+    expect(await b.keyStatus()).toEqual({ outcome: 'passed' });
+  });
+
+  it('gives up on an already aborted signal without passing', async () => {
+    const stop = new AbortController();
+    stop.abort();
+    const status = await brevo().keyStatus(stop.signal);
+    expect(status.outcome).not.toBe('passed');
+    await expect(brevo().checkKey(stop.signal)).resolves.toBe(false);
+  });
+
+  it('gives up promptly when the signal aborts an ask in flight', async () => {
+    mock.answer({ hang: true, status: 200 });
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(), 30);
+    const started = Date.now();
+    const status = await brevo(5000).keyStatus(stop.signal);
+    expect(status.outcome).toBe('unreachable');
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  it('answers checkKey true only for a passing key', async () => {
+    mock.answer({ status: 200 }, { status: 401 }, { status: 503 });
+    const b = brevo();
+    expect(await b.checkKey()).toBe(true);
+    expect(await b.checkKey()).toBe(false);
+    expect(await b.checkKey()).toBe(false);
+  });
+
+  it('refuses a redirect it cannot follow instead of passing it', async () => {
+    mock.answer({ status: 304 });
+    await expect(brevo().keyStatus()).resolves.toEqual({
+      outcome: 'refused',
+      status: 304,
+    });
+  });
+});

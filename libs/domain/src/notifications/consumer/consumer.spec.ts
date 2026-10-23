@@ -1,14 +1,17 @@
 // @traces 520-FR-001 520-FR-002 520-FR-003 520-FR-005
 import { Logger } from '@nestjs/common';
 
-import { keyRetryDelay, NotificationsConsumer } from './key-retry';
+import { NotificationsConsumer } from './consumer';
 import type { PrismaClient } from '../../generated/prisma/client';
-import type { Brevo } from '../brevo/brevo';
-import { NotificationsProcessor } from '../notifications.processor';
+import type { Brevo, KeyStatus } from '../brevo/brevo';
+import {
+  keyRetryDelay,
+  NotificationsProcessor,
+} from '../notifications.processor';
 import type { NotificationsService } from '../notifications.service';
 import { testConfig, testPhoneConfig } from '../notifications.testing';
 
-type Outcome = Awaited<ReturnType<Brevo['keyStatus']>>;
+type Outcome = KeyStatus;
 
 const unreachable: Outcome = {
   outcome: 'unreachable',
@@ -164,6 +167,30 @@ describe('the notifications consumer', () => {
     pass(true);
     await running;
 
+    expect(consumer.ready()).toBe(false);
+  });
+
+  it('closes a consumer that finished opening during shutdown', async () => {
+    let opened!: (w: ReturnType<typeof worker>) => void;
+    let opening!: () => void;
+    const asked = new Promise<void>((resolve) => (opening = resolve));
+    const late = worker();
+    const consumer = new NotificationsConsumer(
+      async () => true,
+      () =>
+        new Promise((resolve) => {
+          opened = resolve;
+          opening();
+        }),
+    );
+
+    const running = consumer.start();
+    await asked;
+    await consumer.close();
+    opened(late);
+    await running;
+
+    expect(late.close).toHaveBeenCalledTimes(1);
     expect(consumer.ready()).toBe(false);
   });
 });
