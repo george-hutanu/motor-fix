@@ -152,13 +152,21 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
   };
 
   // The queue lists yearly documents by their oldest upload: an upload of
-  // the distant past heads it, ahead of every other spec's rows.
-  const headTheQueue = (fileId: string) =>
-    db.query(
+  // the distant past heads it, ahead of every other spec's rows. The drawer
+  // shows an upload only beside an older current document, so the documents
+  // it would replace move further back first.
+  const headTheQueue = async (fileId: string) => {
+    await db.query(
+      `UPDATE legal_document SET created_at = '1999-01-01T08:00:00Z'
+       WHERE verification_file_id = $1 AND status = 'valid'`,
+      [fileId],
+    );
+    await db.query(
       `UPDATE legal_document SET created_at = '2000-01-01T08:00:00Z'
        WHERE verification_file_id = $1 AND status = 'in_review'`,
       [fileId],
     );
+  };
 
   test.beforeAll(async ({ request }) => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
