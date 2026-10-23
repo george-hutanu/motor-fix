@@ -1,9 +1,10 @@
 ---
 capability: cockpit-gauges
-updated: 2026-10-04
+updated: 2026-10-23
 features:
   - 051-cockpit-gauges
   - 053-motion
+  - 466-odometer-digit-wrap
 ---
 
 # Capability: cockpit-gauges
@@ -60,9 +61,9 @@ _From 051-cockpit-gauges._
 
 _From 053-motion._
 
-### 051-FR-013 — The three parts MUST take every colour, font, radius and spacing from the Cockpit `--mf-*` tokens, in dark and light (part-specific geometry — stroke widths, the dot size, the odometer digit cell's 8 px radius and 2 px gap from the mock, and the large dial's 40 px display numeral, none of which a token matches — stays in the part's own styles), and MUST fit a 320 px wide screen. In forced-colours mode the lamp dot keeps a visible outline.
+### 466-FR-002 — At 200 % text size, the range odometer on the `/cockpit` sample page MUST show each amount whole on one line at 320 px and 390 px wide, in light and dark, in Romanian and English; no screenshot shows a split amount such as "1,250–1,60" / "0 lei".
 
-_From 051-cockpit-gauges._
+_From 466-odometer-digit-wrap._
 
 ### 051-FR-014 — The component catalogue (the `/cockpit` sample page) MUST show every state of the three parts, with its texts through i18n keys in Romanian and English.
 
@@ -72,6 +73,15 @@ _From 051-cockpit-gauges._
 
 _From 051-cockpit-gauges._
 
+### 466-FR-001 — The odometer MUST render each amount, together with the unit that follows it, as one unbreakable group, so that a line can break only between the groups of a range (after the first amount's en dash), never between the digits of one amount or between an amount and its unit.
+
+_From 466-odometer-digit-wrap._
+
+### 466-FR-005 — A colocated spec in `libs/ui-cockpit/src/lib/odometer.spec.ts` MUST assert the grouping — a range renders exactly two amount groups and a single price exactly one, each digit inside its group — and MUST fail on today's one-item-per-character markup.
+
+_From 466-odometer-digit-wrap._
+
 ## Retired
 
 - `051-FR-012` — superseded by `053-FR-012` (2026-10-04)
+- `051-FR-013` — superseded by `466-FR-002` (2026-10-23)

@@ -86,6 +86,18 @@ describe('CockpitSamplePage', () => {
     );
   });
 
+  // @traces 466-FR-002
+  it('wraps a sample button label wider than a phone at 200 % text, never scrolling the page sideways', () => {
+    const source = readFileSync(
+      join(__dirname, 'sample-page.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(source).toMatch(
+      /\.row > button \{[^}]*white-space: normal;[^}]*overflow-wrap: anywhere;[^}]*text-align: center;/,
+    );
+  });
+
   it('offers controls that open a dialog, a drawer, a toast and a popover', async () => {
     const page = await render();
 
