@@ -1,5 +1,7 @@
 import {
   DOCUMENT_KINDS,
+  type DocumentKind,
+  type DocumentRefusalReason,
   issuedWithinWindow,
   VERIFICATION_CHANGES_MAX,
   VERIFICATION_CHECK_KINDS,
@@ -10,6 +12,8 @@ import {
   type VerificationChangeJobDto,
   type VerificationCheckEvidenceDto,
   type VerificationFileChangesDto,
+  type VerificationFileDocumentDto,
+  type VerificationFileDocumentReviewDto,
   type VerificationFileDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -19,9 +23,14 @@ import { firstName } from '../../../audit/audit.service';
 import { auditEntryOf } from '../../../audit/audit-history/audit-history.service';
 import { PRISMA } from '../../../auth/prisma';
 import { localDay } from '../../../bucharest';
-import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import type {
+  AuditAction,
+  Prisma,
+  PrismaClient,
+} from '../../../generated/prisma/client';
 import { shortName } from '../../../quotes/reads';
 import { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
 import { resubmission } from '../verification.service';
@@ -61,14 +70,16 @@ export function certificateStale(issuedOn: Date | null, sentAt: Date) {
 }
 
 // The file's own lines: its sending, status changes, RAR number corrections
-// and refused approvals, its checks' records
-// and its documents' openings. A document upload and the declaration stay out.
+// and refused approvals, its checks' records and its documents' openings;
+// the yearly uploads, their decisions and the cycle's moves on the garage. A
+// listing's document upload and the declaration stay out.
 // Every one of them carries the garage, so the (garageId, at) index reads it.
 export function timelineWhere(
   garageId: string,
   fileId: string,
   checkIds: string[],
   documentIds: string[],
+  renewalIds: string[] = [],
 ): Prisma.ActivityLogWhereInput {
   return {
     garageId,
@@ -89,11 +100,117 @@ export function timelineWhere(
         subjectId: { in: documentIds },
         subjectType: 'legal_document',
       },
+      ...(renewalIds.length
+        ? [
+            {
+              action: { in: ['create', 'update'] as AuditAction[] },
+              subjectId: { in: renewalIds },
+              subjectType: 'legal_document',
+            },
+          ]
+        : []),
+      {
+        field: { in: CYCLE_FIELDS },
+        subjectId: garageId,
+        subjectType: 'garage',
+      },
     ],
   };
 }
 
+// The garage's lines a cycle writes: turned overdue, and reset.
+const CYCLE_FIELDS = ['documents_state', 'documents_due_on'];
+
+// A yearly upload, as opposed to a document the listing was sent with.
+const yearly = (d: { decidedAt: Date | null; status: string }) =>
+  d.status !== 'valid' || d.decidedAt !== null;
+
 const iso = (at: Date | null) => at?.toISOString() ?? null;
+
+type FileDocumentRow = Prisma.LegalDocumentGetPayload<true>;
+type ActorOf = (
+  accountId: string | null,
+  at: Date | null,
+) => VerificationActorDto | null;
+
+// The kind's yearly upload beside its current document: the one in review,
+// else the newest refused since the current one was stored.
+function reviewOf(
+  documents: readonly FileDocumentRow[],
+  kind: DocumentKind,
+  held: FileDocumentRow | undefined,
+  actor: ActorOf,
+): VerificationFileDocumentReviewDto | null {
+  const review = documents
+    .filter(
+      (d) =>
+        d.kind === kind &&
+        d.status !== 'valid' &&
+        (!held || d.createdAt > held.createdAt),
+    )
+    .sort(
+      (a, b) =>
+        Number(b.status === 'in_review') - Number(a.status === 'in_review') ||
+        b.createdAt.getTime() - a.createdAt.getTime(),
+    )[0];
+  if (!review) return null;
+  return {
+    decidedAt: iso(review.decidedAt),
+    decidedBy: actor(review.decidedBy, review.decidedAt),
+    id: review.id,
+    issuedOn: review.issuedOn && calendarDay(review.issuedOn),
+    pages: review.pages.length,
+    refusal:
+      review.status === 'refused'
+        ? {
+            note: review.refusalNote ?? '',
+            reason: review.refusalReason as DocumentRefusalReason,
+          }
+        : null,
+    status: review.status as 'in_review' | 'refused',
+    uploadedAt: review.createdAt.toISOString(),
+  };
+}
+
+// One kind on the file: its current valid document, the ones it replaced,
+// and the yearly upload beside it.
+function fileDocument(
+  kind: DocumentKind,
+  documents: readonly FileDocumentRow[],
+  submittedAt: Date,
+  actor: ActorOf,
+): VerificationFileDocumentDto {
+  const held = documents.find(
+    (d) => d.kind === kind && d.status === 'valid' && !d.replacedAt,
+  );
+  const issuedOn = held?.issuedOn ?? null;
+  // A yearly document, decided on its own, is judged against its upload; a
+  // listing's documents against the file's sending.
+  return {
+    decidedAt: iso(held?.decidedAt ?? null),
+    decidedBy: held ? actor(held.decidedBy, held.decidedAt) : null,
+    id: held?.id ?? null,
+    issuedOn: issuedOn && calendarDay(issuedOn),
+    kind,
+    pages: held?.pages.length ?? 0,
+    present: Boolean(held),
+    replaced: documents
+      .flatMap(({ id, pages, kind: of, replacedAt }) =>
+        of === kind && replacedAt
+          ? [{ at: replacedAt.toISOString(), id, pages: pages.length }]
+          : [],
+      )
+      .sort((a, b) => b.at.localeCompare(a.at)),
+    review: reviewOf(documents, kind, held, actor),
+    stale:
+      held && kind === 'onrc_certificate'
+        ? certificateStale(
+            issuedOn,
+            held.decidedAt ? held.createdAt : submittedAt,
+          )
+        : null,
+  };
+}
 
 // Where each of the garage's own records shows among a returned file's
 // changes. The file, its checks, notifications and accounts are none of them.
@@ -123,6 +240,7 @@ export class VerificationFileService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly storage: StorageService,
     private readonly publicGarages: PublicGaragesService,
+    private readonly cycles: DocumentCycleService,
   ) {}
 
   // The other garages holding the same stored CUI, of any status: a fact
@@ -183,6 +301,7 @@ export class VerificationFileService {
       file.id,
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
+      file.documents.filter(yearly).map((d) => d.id),
     );
     const [
       names,
@@ -194,12 +313,14 @@ export class VerificationFileService {
       total,
       photos,
       shared,
+      documentCycle,
     ] = await Promise.all([
       this.names([
         file.openedBy,
         file.decidedBy,
         file.reopenedBy,
         ...file.checks.map((c) => c.recordedBy),
+        ...file.documents.map((d) => d.decidedBy),
       ]),
       this.prisma.rarActivity.findMany({
         orderBy: { code: 'asc' },
@@ -232,6 +353,7 @@ export class VerificationFileService {
       this.prisma.activityLog.count({ where }),
       this.publicGarages.photos(garage.photos),
       this.cuiAlsoUsedBy(garage.id, garage.cui),
+      this.cycles.documentCycleOf(garage.id),
     ]);
     const actor = (
       accountId: string | null,
@@ -276,30 +398,10 @@ export class VerificationFileService {
             result,
           }),
         ),
-      documents: DOCUMENT_KINDS.map((kind) => {
-        const held = file.documents.find(
-          (d) => d.kind === kind && !d.replacedAt,
-        );
-        const issuedOn = held?.issuedOn ?? null;
-        return {
-          id: held?.id ?? null,
-          issuedOn: issuedOn && calendarDay(issuedOn),
-          kind,
-          pages: held?.pages.length ?? 0,
-          present: Boolean(held),
-          replaced: file.documents
-            .flatMap(({ id, pages, kind: of, replacedAt }) =>
-              of === kind && replacedAt
-                ? [{ at: replacedAt.toISOString(), id, pages: pages.length }]
-                : [],
-            )
-            .sort((a, b) => b.at.localeCompare(a.at)),
-          stale:
-            held && kind === 'onrc_certificate'
-              ? certificateStale(issuedOn, file.submittedAt)
-              : null,
-        };
-      }),
+      documentCycle,
+      documents: DOCUMENT_KINDS.map((kind) =>
+        fileDocument(kind, file.documents, file.submittedAt, actor),
+      ),
       file: {
         decidedAt: iso(file.decidedAt),
         decidedBy: actor(file.decidedBy, file.decidedAt),

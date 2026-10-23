@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
+  DocumentCycleDto,
+  type DocumentRow,
+} from './legal-documents/document-cycle.dto';
+import {
   DOCUMENT_KINDS,
   type DocumentKind,
 } from './legal-documents/legal-documents';
@@ -118,6 +122,14 @@ export class LegalCheckDto {
   latestRecheck!: LegalCheckRecheckDto | null;
 
   @ApiProperty({
+    description:
+      "The garage's yearly documents cycle; null for a garage without one",
+    nullable: true,
+    type: DocumentCycleDto,
+  })
+  documents!: DocumentCycleDto | null;
+
+  @ApiProperty({
     description: 'company, caen, rar and documents, in that order',
     isArray: true,
     type: LegalCheckRowDto,
@@ -136,7 +148,18 @@ interface LegalCheckSource {
   lastCheckedOn: string | null;
   latestRecheck?: LegalCheckRecheckDto | null;
   recheckFailed?: boolean;
+  // The yearly cycle's row; without one the row follows the documents held.
+  cycleRow?: DocumentRow;
 }
+
+// The documents row's state by the yearly cycle's row.
+const CYCLE_ROW_STATE: Record<DocumentRow, VerificationCheckResult> = {
+  due: 'warning',
+  in_review: 'warning',
+  overdue: 'failed',
+  refused: 'failed',
+  valid: 'ok',
+};
 
 // A check row is its result; the RAR row is dated by the stored day of last
 // check, which a valid re-check moves.
@@ -168,10 +191,12 @@ const failedRecheckRow = (recheck: LegalCheckRecheckDto): LegalCheckRowDto => ({
 });
 
 // The panel's four rows from a file's checks and documents: the documents
-// row is in order only with both documents valid, and a failed re-check that
+// row follows the yearly cycle when the garage has one, else it is in order
+// only with both documents valid, and a failed re-check that
 // suspended the garage stands in for the RAR row.
 export function legalCheckRows({
   checks,
+  cycleRow,
   documents,
   lastCheckedOn,
   latestRecheck,
@@ -196,7 +221,11 @@ export function legalCheckRows({
     detail: null,
     kind: 'documents',
     missing,
-    state: missing.length ? 'warning' : 'ok',
+    state: cycleRow
+      ? CYCLE_ROW_STATE[cycleRow]
+      : missing.length
+        ? 'warning'
+        : 'ok',
   });
   return rows;
 }

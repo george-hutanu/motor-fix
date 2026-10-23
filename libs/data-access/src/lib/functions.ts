@@ -117,6 +117,10 @@ export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGa
 export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { DocumentReviewControllerAccept$Params as DocumentReviewControllerAccept$Params } from './fn/admin/document-review-controller-accept';
+export { documentReviewControllerAccept as documentReviewControllerAccept } from './fn/admin/document-review-controller-accept';
+export type { DocumentReviewControllerRefuse$Params as DocumentReviewControllerRefuse$Params } from './fn/admin/document-review-controller-refuse';
+export { documentReviewControllerRefuse as documentReviewControllerRefuse } from './fn/admin/document-review-controller-refuse';
 export type { RecheckControllerDue$Params as RecheckControllerDue$Params } from './fn/admin/recheck-controller-due';
 export { recheckControllerDue as recheckControllerDue } from './fn/admin/recheck-controller-due';
 export type { RecheckControllerRecord$Params as RecheckControllerRecord$Params } from './fn/admin/recheck-controller-record';

@@ -175,9 +175,12 @@ describe('the yearly document cycle', () => {
     });
 
     expect(await cycles.documentCycleOf(id)).toEqual({
+      canUpload: true,
       dueOn: '2026-10-01',
       graceUntil: '2026-10-15',
       inReview: false,
+      refusal: null,
+      row: 'overdue',
       state: 'overdue',
     });
 
@@ -194,6 +197,88 @@ describe('the yearly document cycle', () => {
       },
     });
     expect(await cycles.documentCycleOf(id)).toMatchObject({ inReview: true });
+  });
+
+  // @traces 068-FR-005
+  // @traces 068-FR-010
+  it('answers the row to show, whether an upload is open and the newest refusal', async () => {
+    const { id } = await garage('approved', '2025-10-01T10:00:00Z');
+    const dueOn = addDays(localDay(new Date()), 90);
+    await prisma.documentCycle.create({
+      data: { dueOn: new Date(dueOn), garageId: id },
+    });
+    const file = await prisma.verificationFile.create({
+      data: {
+        documents: {
+          create: KINDS.map((kind) => ({
+            createdAt: new Date('2025-09-25T09:00:00Z'),
+            kind,
+            pages: ['p1'],
+          })),
+        },
+        garageId: id,
+        status: 'approved',
+      },
+    });
+
+    expect(await cycles.documentCycleOf(id)).toMatchObject({
+      canUpload: true,
+      refusal: null,
+      row: 'valid',
+    });
+
+    const decidedAt = new Date('2026-10-20T08:00:00Z');
+    await prisma.legalDocument.create({
+      data: {
+        createdAt: new Date('2026-10-19T08:00:00Z'),
+        decidedAt,
+        kind: 'rar_authorisation',
+        pages: ['r1'],
+        refusalNote: 'Autorizația a expirat',
+        refusalReason: 'documents',
+        status: 'refused',
+        verificationFileId: file.id,
+      },
+    });
+    expect(await cycles.documentCycleOf(id)).toMatchObject({
+      canUpload: true,
+      refusal: {
+        decidedAt: decidedAt.toISOString(),
+        kind: 'rar_authorisation',
+        note: 'Autorizația a expirat',
+        reason: 'documents',
+      },
+      row: 'refused',
+    });
+
+    const again = await prisma.legalDocument.create({
+      data: {
+        kind: 'rar_authorisation',
+        pages: ['r2'],
+        status: 'in_review',
+        verificationFileId: file.id,
+      },
+    });
+    expect(await cycles.documentCycleOf(id)).toMatchObject({
+      canUpload: false,
+      inReview: true,
+      refusal: null,
+      row: 'in_review',
+    });
+
+    await prisma.legalDocument.updateMany({
+      data: { replacedAt: new Date() },
+      where: { kind: 'rar_authorisation', status: 'valid' },
+    });
+    await prisma.legalDocument.update({
+      data: { decidedAt: new Date(), status: 'valid' },
+      where: { id: again.id },
+    });
+    expect(await cycles.documentCycleOf(id)).toMatchObject({
+      canUpload: true,
+      refusal: null,
+      row: 'valid',
+    });
   });
 
   it('answers nothing for a garage never approved', async () => {

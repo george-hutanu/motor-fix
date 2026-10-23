@@ -60,9 +60,28 @@ export class VerificationQueueAreaDto {
   radiusKm?: number;
 }
 
+export const VERIFICATION_QUEUE_ITEMS = ['verification', 'documents'] as const;
+export type VerificationQueueItem = (typeof VERIFICATION_QUEUE_ITEMS)[number];
+
 export class VerificationQueueRowDto {
+  @ApiProperty({
+    description:
+      "A file sent for verification, or an approved garage's yearly documents waiting for an admin",
+    enum: VERIFICATION_QUEUE_ITEMS,
+  })
+  item!: VerificationQueueItem;
+
   @ApiProperty({ description: 'The verification file', format: 'uuid' })
   id!: string;
+
+  @ApiProperty({
+    description:
+      'The yearly document uploaded first among those in review; null for a verification row',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  documentId!: string | null;
 
   @ApiProperty({ enum: ['submitted', 'in_review'] })
   status!: 'submitted' | 'in_review';
@@ -103,12 +122,16 @@ export class VerificationQueueRowDto {
   cuiWarning?: string;
 
   @ApiProperty({
-    description: 'Red on a failed check, amber when flagged or on a warning',
+    description:
+      'Red on a failed check, amber when flagged or on a warning; a documents row is amber, red once its grace has ended or the garage is suspended',
     enum: ['green', 'amber', 'red', 'grey'],
   })
   lamp!: Lamp;
 
-  @ApiProperty({ description: 'The latest sending', format: 'date-time' })
+  @ApiProperty({
+    description: 'The latest sending; for a documents row, its oldest upload',
+    format: 'date-time',
+  })
   submittedAt!: Date;
 
   @ApiProperty({
@@ -139,7 +162,8 @@ export class VerificationQueueDto {
   items!: VerificationQueueRowDto[];
 
   @ApiProperty({
-    description: 'Every file waiting, as the overview counts them',
+    description:
+      'Every file and yearly documents row waiting, as the overview counts them',
     minimum: 0,
     type: 'integer',
   })

@@ -9,6 +9,7 @@ import {
   fixtures,
 } from '../../../notifications/notifications.testing';
 import type { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 
 const { account, prisma, reset } = fixtures();
@@ -20,6 +21,7 @@ const service = () =>
     prisma,
     storage,
     new PublicGaragesService(prisma, {} as CacheService, storage),
+    new DocumentCycleService(prisma),
   );
 
 const SENT = new Date('2026-10-12T10:00:00+03:00');

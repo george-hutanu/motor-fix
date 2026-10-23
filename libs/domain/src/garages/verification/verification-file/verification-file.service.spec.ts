@@ -50,7 +50,23 @@ describe('timelineWhere', () => {
           subjectId: { in: ['d1'] },
           subjectType: 'legal_document',
         },
+        {
+          field: { in: ['documents_state', 'documents_due_on'] },
+          subjectId: 'g',
+          subjectType: 'garage',
+        },
       ],
     });
+  });
+
+  // @traces 068-FR-013
+  it('also keeps the yearly uploads and their decisions, given them', () => {
+    expect(timelineWhere('g', 'f', [], ['d1', 'd2'], ['d2']).OR).toContainEqual(
+      {
+        action: { in: ['create', 'update'] },
+        subjectId: { in: ['d2'] },
+        subjectType: 'legal_document',
+      },
+    );
   });
 });

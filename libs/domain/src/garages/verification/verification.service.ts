@@ -140,27 +140,29 @@ export class VerificationService {
     @Inject(VERIFICATION_CONFIG) private readonly config: VerificationConfig,
   ) {}
 
-  // Every garage on the platform, or only those placed in one city.
+  // Every garage on the platform, or only those placed in one city: a file
+  // waiting, or an approved garage's yearly document in review.
   countWaiting(
     db: Prisma.TransactionClient,
     cityKey?: string,
   ): Promise<number> {
     return db.verificationFile.count({
       where: {
-        status: { in: WAITING },
+        OR: [{ status: { in: WAITING } }, RENEWING],
         ...(cityKey !== undefined && { garage: { cityKey } }),
       },
     });
   }
 
-  // The admins' queue, oldest sending first; `total` is the waiting count
-  // the overview, the menu and the header show.
+  // The admins' queue, oldest sending first, a garage's yearly documents in
+  // review among the files by their oldest upload; `total` is the waiting
+  // count the overview, the menu and the header show.
   async queue(
     db: Prisma.TransactionClient,
     { limit, offset }: { limit: number; offset: number },
     now: Date,
   ): Promise<VerificationQueueDto> {
-    const [files, total] = await Promise.all([
+    const [files, renewals, total] = await Promise.all([
       db.verificationFile.findMany({
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
@@ -174,25 +176,55 @@ export class VerificationService {
           status: true,
           submittedAt: true,
         },
-        skip: offset,
-        take: limit,
+        take: offset + limit,
         where: { status: { in: WAITING } },
+      }),
+      db.verificationFile.findMany({
+        select: {
+          documents: {
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            select: { createdAt: true, id: true },
+            where: { status: 'in_review' },
+          },
+          garage: { select: RENEWAL_GARAGE },
+          id: true,
+        },
+        where: { ...RENEWING, status: { notIn: WAITING } },
       }),
       this.countWaiting(db),
     ]);
-    const holidays = files.length
+    const rows: QueueEntry[] = [
+      ...files.map((file) => ({ at: file.submittedAt, file, id: file.id })),
+      ...renewals.flatMap((renewal) => {
+        const first = renewal.documents[0];
+        return first
+          ? [{ at: first.createdAt, first, id: renewal.id, renewal }]
+          : [];
+      }),
+    ]
+      .sort((a, b) => a.at.getTime() - b.at.getTime() || (a.id < b.id ? 1 : -1))
+      .slice(offset, offset + limit);
+    const oldest = rows[0]?.at;
+    const holidays = oldest
       ? await db.publicHoliday.findMany({
           select: { day: true },
           where: {
             day: {
-              gte: new Date(localDay(files[0].submittedAt)),
+              gte: new Date(localDay(oldest)),
               lte: new Date(localDay(now)),
             },
           },
         })
       : [];
     const days = new Set(holidays.map(({ day }) => isoDay(day)));
-    return { items: files.map((file) => queueRow(file, now, days)), total };
+    return {
+      items: rows.map((row) =>
+        'file' in row
+          ? queueRow(row.file, now, days)
+          : renewalRow(row.renewal, row.first, now, days),
+      ),
+      total,
+    };
   }
 
   // Who may submit is the submitting story's rule; here only the files count.
@@ -843,6 +875,35 @@ const QUEUE_GARAGE = {
   serviceRadiusKm: true,
 } satisfies Prisma.GarageSelect;
 
+// A file whose garage sent its yearly documents and waits for an admin.
+const RENEWING = {
+  documents: { some: { status: 'in_review' } },
+} satisfies Prisma.VerificationFileWhereInput;
+
+const RENEWAL_GARAGE = {
+  ...QUEUE_GARAGE,
+  documentCycle: { select: { graceUntil: true, state: true } },
+  status: true,
+} satisfies Prisma.GarageSelect;
+
+type RenewalFile = Prisma.VerificationFileGetPayload<{
+  select: {
+    garage: { select: typeof RENEWAL_GARAGE };
+    id: true;
+  };
+}>;
+
+type QueueEntry =
+  | { at: Date; id: string; file: QueueFile }
+  | {
+      at: Date;
+      id: string;
+      first: { createdAt: Date; id: string };
+      renewal: RenewalFile;
+    };
+
+const RENEWAL_SUMMARY = { en: 'Yearly documents', ro: 'Documente anuale' };
+
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
@@ -895,10 +956,12 @@ function queueRow(
     ...(area && { area }),
     brands: garage._count.brands,
     ...(cuiWarning && { cuiWarning }),
+    documentId: null,
     flagged,
     garageId: garage.id,
     garageName: garage.name,
     id,
+    item: 'verification',
     lamp: queueLamp(checks, flagged),
     ...(team && { mechanics: garage._count.mechanics }),
     ...(resubmitted && decidedAt && { requestedAt: decidedAt }),
@@ -909,6 +972,41 @@ function queueRow(
       en: checkSummary(checks, 'en', kinds),
       ro: checkSummary(checks, 'ro', kinds),
     },
+    workingDays,
+  };
+}
+
+// A garage's yearly documents waiting for an admin: amber, red once its
+// grace has ended or while the garage is suspended.
+function renewalRow(
+  { garage, id }: RenewalFile,
+  first: { createdAt: Date; id: string },
+  now: Date,
+  holidays: ReadonlySet<string>,
+): VerificationQueueRowDto {
+  const workingDays = workingDaysWaited(first.createdAt, now, holidays);
+  const cycle = garage.documentCycle;
+  const graceEnded =
+    cycle?.state === 'overdue' &&
+    cycle.graceUntil !== null &&
+    isoDay(cycle.graceUntil) < localDay(now);
+  const area = garageArea(garage);
+  const team = garage.features[0]?.enabled !== false;
+  return {
+    ...(area && { area }),
+    brands: garage._count.brands,
+    documentId: first.id,
+    flagged: workingDays > VERIFICATION_TARGET_WORKING_DAYS,
+    garageId: garage.id,
+    garageName: garage.name,
+    id,
+    item: 'documents',
+    lamp: graceEnded || garage.status === 'suspended' ? 'red' : 'amber',
+    ...(team && { mechanics: garage._count.mechanics }),
+    resubmitted: false,
+    status: 'in_review',
+    submittedAt: first.createdAt,
+    summary: RENEWAL_SUMMARY,
     workingDays,
   };
 }

@@ -18,6 +18,11 @@ import {
 } from './garage-status';
 import { PublicGaragePhotoDto } from './garages.dto';
 import {
+  DOCUMENT_REFUSAL_REASONS,
+  DocumentCycleDto,
+  type DocumentRefusalReason,
+} from './legal-documents/document-cycle.dto';
+import {
   DOCUMENT_KINDS,
   type DocumentKind,
 } from './legal-documents/legal-documents';
@@ -321,6 +326,46 @@ export class VerificationFileReplacedDocumentDto {
   at!: string;
 }
 
+export class VerificationFileDocumentRefusalDto {
+  @ApiProperty({ enum: DOCUMENT_REFUSAL_REASONS })
+  reason!: DocumentRefusalReason;
+
+  @ApiProperty()
+  note!: string;
+}
+
+// A yearly upload of the kind beside its current document: waiting for an
+// admin, or the latest one refused.
+export class VerificationFileDocumentReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: ['in_review', 'refused'] })
+  status!: 'in_review' | 'refused';
+
+  @ApiProperty({ format: 'date', nullable: true, type: String })
+  issuedOn!: string | null;
+
+  @ApiProperty({ minimum: 1, type: 'integer' })
+  pages!: number;
+
+  @ApiProperty({ format: 'date-time' })
+  uploadedAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  decidedAt!: string | null;
+
+  @ApiProperty({ nullable: true, type: VerificationActorDto })
+  decidedBy!: VerificationActorDto | null;
+
+  @ApiProperty({
+    description: 'The reason and the note; refused only',
+    nullable: true,
+    type: VerificationFileDocumentRefusalDto,
+  })
+  refusal!: VerificationFileDocumentRefusalDto | null;
+}
+
 export class VerificationFileDocumentDto {
   @ApiProperty({ enum: DOCUMENT_KINDS })
   kind!: DocumentKind;
@@ -351,6 +396,29 @@ export class VerificationFileDocumentDto {
     type: () => [VerificationFileReplacedDocumentDto],
   })
   replaced!: VerificationFileReplacedDocumentDto[];
+
+  @ApiProperty({
+    description: 'When an admin accepted it as a yearly upload; else null',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  decidedAt!: string | null;
+
+  @ApiProperty({
+    description: 'The admin who accepted it as a yearly upload; else null',
+    nullable: true,
+    type: VerificationActorDto,
+  })
+  decidedBy!: VerificationActorDto | null;
+
+  @ApiProperty({
+    description:
+      'The yearly upload in review, or the latest refused one not sent again; else null',
+    nullable: true,
+    type: VerificationFileDocumentReviewDto,
+  })
+  review!: VerificationFileDocumentReviewDto | null;
 }
 
 export class VerificationFileReporterDto {
@@ -547,4 +615,12 @@ export class VerificationFileDto {
 
   @ApiProperty({ type: VerificationFileTimelineDto })
   timeline!: VerificationFileTimelineDto;
+
+  @ApiProperty({
+    description:
+      "The garage's yearly documents cycle; null for a garage never approved",
+    nullable: true,
+    type: DocumentCycleDto,
+  })
+  documentCycle!: DocumentCycleDto | null;
 }

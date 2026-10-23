@@ -68,9 +68,12 @@ describe('sending the yearly documents', () => {
 
     expect(answer.status).toBe(201);
     expect(answer.body).toEqual({
+      canUpload: false,
       dueOn: '2026-11-01',
       graceUntil: null,
       inReview: true,
+      refusal: null,
+      row: 'in_review',
       state: 'due',
     });
     const rows = await rowsOf(people.file.id);
