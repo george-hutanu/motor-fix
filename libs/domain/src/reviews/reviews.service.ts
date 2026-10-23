@@ -1,5 +1,7 @@
 import {
   type JobReviewContextDto,
+  MECHANIC_REVIEWS_PAGE,
+  type MechanicReviewsPageDto,
   PAID_BANI_MAX,
   type PublishReviewDto,
   REVIEW_TEXT_MAX,
@@ -61,6 +63,50 @@ export class ReviewsService {
   ): Promise<ReviewEligibilityDto[]> {
     const verdicts = await this.eligible.judge(actor, [...new Set(jobIds)]);
     return verdicts.map(dtoOf);
+  }
+
+  // A mechanic's published reviews at every garage, newest first. A mechanic
+  // off the profile or whose account was deleted is as unknown as no
+  // mechanic at all.
+  async mechanicReviews(
+    mechanicId: string,
+    page = 1,
+  ): Promise<MechanicReviewsPageDto> {
+    const mechanic = await this.prisma.mechanic.findFirst({
+      select: { id: true },
+      where: {
+        id: mechanicId,
+        OR: [{ accountId: null }, { account: { status: { not: 'deleted' } } }],
+        onProfile: true,
+      },
+    });
+    if (!mechanic) {
+      throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such mechanic');
+    }
+    const where = { mechanicId, status: 'published' as const };
+    const [total, reviews] = await Promise.all([
+      this.prisma.review.count({ where }),
+      this.prisma.review.findMany({
+        include: { driver: { select: { name: true } }, garage: true },
+        orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * MECHANIC_REVIEWS_PAGE,
+        take: MECHANIC_REVIEWS_PAGE,
+        where,
+      }),
+    ]);
+    return {
+      items: reviews.map((review) => ({
+        author: { shortName: shortName(review.driver.name) },
+        garage: garageRef(review.garage),
+        id: review.id,
+        postedAt: review.postedAt.toISOString(),
+        rating: review.rating,
+        text: review.text,
+      })),
+      page,
+      pageSize: MECHANIC_REVIEWS_PAGE,
+      total,
+    };
   }
 
   async read(actor: Actor, jobId: string): Promise<JobReviewContextDto> {

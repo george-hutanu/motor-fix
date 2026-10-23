@@ -219,6 +219,8 @@ export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
+export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
+export { reviewsControllerForMechanic as reviewsControllerForMechanic } from './fn/reviews/reviews-controller-for-mechanic';
 export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
 export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
 export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';

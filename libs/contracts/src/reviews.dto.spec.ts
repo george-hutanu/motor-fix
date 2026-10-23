@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { PublishReviewDto } from './reviews.dto';
+import { MechanicReviewsQueryDto, PublishReviewDto } from './reviews.dto';
 
 const jobId = '3f2b8c1e-5d4a-4b6f-8a7c-1d2e3f4a5b6c';
 const publish = (over: Record<string, unknown> = {}) =>
@@ -51,5 +51,30 @@ describe('PublishReviewDto', () => {
     expect(
       problems(publish({ paidBani: 0, rating: 9, text: 'x'.repeat(2001) })),
     ).toEqual([]);
+  });
+});
+
+const query = (page?: unknown) =>
+  plainToInstance(MechanicReviewsQueryDto, page === undefined ? {} : { page });
+
+// @traces 025-FR-012
+describe('MechanicReviewsQueryDto', () => {
+  it('reads a missing page as none, the first', () => {
+    const dto = query();
+    expect(problems(dto)).toEqual([]);
+    expect(dto.page).toBeUndefined();
+  });
+
+  it.each([
+    ['1', 1],
+    ['2', 2],
+  ])('accepts page %p as %p', (page, read) => {
+    const dto = query(page);
+    expect(problems(dto)).toEqual([]);
+    expect(dto.page).toBe(read);
+  });
+
+  it.each(['0', '-1', '1.5', 'x', '', '0x2'])('refuses page %p', (page) => {
+    expect(problems(query(page))).toEqual(['page']);
   });
 });

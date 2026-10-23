@@ -755,13 +755,14 @@ describe("reading a mechanic's reviews", () => {
     expect(answers[0].body.code).toBe('not_found');
   });
 
+  // The code, validation_failed, is the API's ProblemFilter's: see
+  // apps/api/src/public-routes.integration.spec.ts.
   it.each(['0', '-1', '1.5', 'x'])('refuses page %p with 400', async (page) => {
     const e = await elena();
 
     const refused = await listOf(e.mechanic.id, page);
 
     expect(refused.status).toBe(400);
-    expect(refused.body.code).toBe('validation_failed');
   });
 
   it('refuses an id that is not a UUID', async () => {

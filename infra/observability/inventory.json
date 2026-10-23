@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 162,
+    "count": 163,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1832,6 +1832,19 @@
       ],
       "reason": "a read of whether the caller may review each of up to 50 jobs; it writes nothing and counts nothing on the review counter, so its failures and latency are the route metric alone",
       "story": "ST-23"
+    },
+    {
+      "kind": "endpoint",
+      "name": "mechanic-reviews",
+      "source": "libs/domain/src/reviews/reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/mechanic/{mechanicId}",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a public read of a mechanic's published reviews, 20 a page; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-25"
     },
     {
       "kind": "product-counter",
