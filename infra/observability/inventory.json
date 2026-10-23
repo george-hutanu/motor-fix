@@ -339,6 +339,19 @@
     },
     {
       "kind": "queue",
+      "name": "document-refused",
+      "source": "libs/domain/src/notifications/document-refused/document-refused.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one DOCUMENT_REFUSED per garage owner for each document.refused event, keyed by the event id; one log line per event with the document and garage ids and how many owners were told, never a name or the note; no counter of its own: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
+      "story": "ST-68"
+    },
+    {
+      "kind": "queue",
       "name": "garage-report-decided",
       "source": "libs/domain/src/notifications/garage-report-decided/garage-report-decided.fan-out.ts",
       "dashboard": "motorfix-queues",

@@ -22,7 +22,7 @@ export const dailyTasks = (webUrl: string | undefined): Provider => ({
     storage: StorageService,
   ) => [
     new ListingDraftSweep(prisma, notifications, storage, webUrl),
-    new DocumentCycleStep(prisma),
+    new DocumentCycleStep(prisma, notifications, webUrl),
     new RecheckDueTask(prisma, notifications, webUrl),
   ],
 });

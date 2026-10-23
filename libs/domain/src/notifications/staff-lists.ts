@@ -61,6 +61,7 @@ const SECTIONS: readonly { key: StaffSectionKey; types: readonly string[] }[] =
         'GARAGE_RESTORED',
         'DOCUMENT_DUE',
         'DOCUMENT_OVERDUE',
+        'DOCUMENT_REFUSED',
         'STAFF_JOINED',
         'CATALOGUE_JOB_DECIDED',
         'FACILITY_REMOVED',
@@ -92,6 +93,7 @@ const OWNER_ONLY = new Set([
   'GARAGE_RESTORED',
   'DOCUMENT_DUE',
   'DOCUMENT_OVERDUE',
+  'DOCUMENT_REFUSED',
   'CATALOGUE_JOB_DECIDED',
   'FACILITY_REMOVED',
   'FACILITY_RE_ADD_DECIDED',
@@ -102,6 +104,8 @@ const QUOTING = new Set(['REQUEST_RECEIVED', 'MESSAGE_RECEIVED']);
 // Besides the e-mail of every always-sent type.
 const ALSO_LOCKED: Readonly<Record<string, readonly OutsideChannel[]>> = {
   ADMIN_OUTAGE_ALERT: ['email', 'push'],
+  DOCUMENT_DUE: ['email', 'push'],
+  DOCUMENT_OVERDUE: ['email', 'push'],
 };
 
 function gets(
@@ -238,11 +242,7 @@ export function staffEntries(input: StaffInput): StaffNotificationsDto[] {
 type StaffChoice = UpdateNotificationPreferenceDto;
 
 interface Refusal {
-  code:
-    | 'type_not_in_list'
-    | 'channel_locked'
-    | 'whatsapp_unavailable'
-    | 'last_channel';
+  code: 'type_not_in_list' | 'channel_locked' | 'whatsapp_unavailable';
   type: string;
 }
 
@@ -276,30 +276,15 @@ function refusal(
 }
 
 // The first reason a save of staff choices is refused, judged against what
-// the person may choose; a type kept to one channel is judged on the state
-// the whole save leaves.
+// the person may choose.
 export function staffChecks(
   entries: readonly StaffNotificationsDto[],
   choices: readonly StaffChoice[],
 ): Refusal | null {
-  const mine = choices.filter((c) => !isDriverChoice(c.type, c.garageId));
-  for (const choice of mine) {
+  for (const choice of choices) {
+    if (isDriverChoice(choice.type, choice.garageId)) continue;
     const code = refusal(entries, choice);
     if (code) return { code, type: choice.type };
   }
-  const after = new Map<string, { type: string; on: Map<string, boolean> }>();
-  for (const choice of mine.filter((c) => notificationType(c.type).keepOne)) {
-    const key = `${choice.garageId}:${choice.type}`;
-    const channels = listed(entries, choice)?.found.channels ?? [];
-    const state = after.get(key) ?? {
-      on: new Map(channels.map((c) => [c.channel, c.enabled])),
-      type: choice.type,
-    };
-    state.on.set(choice.channel, choice.enabled);
-    after.set(key, state);
-  }
-  const off = [...after.values()].find(
-    (state) => ![...state.on.values()].some(Boolean),
-  );
-  return off ? { code: 'last_channel', type: off.type } : null;
+  return null;
 }

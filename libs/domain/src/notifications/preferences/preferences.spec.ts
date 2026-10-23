@@ -266,14 +266,14 @@ describe('the channels muted for a staff message about a garage', () => {
   });
 
   // @traces 198-FR-010
-  it('skip a garage document reminder’s muted e-mail', () => {
+  it('skip a garage type’s muted e-mail', () => {
     const muted = mutedChannels(
-      'DOCUMENT_DUE',
-      [row('DOCUMENT_DUE', 'email', false, GARAGE)],
+      'STAFF_JOINED',
+      [row('STAFF_JOINED', 'email', false, GARAGE)],
       GARAGE,
     );
     expect(muted).toEqual(new Set(['email', 'whatsapp']));
-    expect(sendsEmail(notificationType('DOCUMENT_DUE'), muted)).toBe(false);
+    expect(sendsEmail(notificationType('STAFF_JOINED'), muted)).toBe(false);
   });
 });
 

@@ -12,6 +12,7 @@ import type {
   PrismaClient,
 } from '../../../generated/prisma/client';
 import { countDocumentCycle } from '../../../metrics/product-counters';
+import type { NotificationsService } from '../../../notifications/notifications.service';
 import type { DailyTask } from '../../../scheduler/daily';
 
 // The reminders, earliest first, each with its mark and how many days
@@ -32,13 +33,20 @@ type Done = Stage | 'overdue' | null;
 // caught up, and each cycle is locked while it moves, so a second run, at
 // once or later, does nothing again. Only the latest reminder a pass reaches
 // is written; the earlier marks are set with it. Nothing is said while a
-// document is in review, though the cycle still turns overdue. Taking the
-// garage off the map at the end of the grace is not this step's.
+// document is in review, though the cycle still turns overdue. Each move
+// tells the garage's owners before its cycle is committed, keyed by the
+// stage, so a pass that fails after telling, once run again, builds nothing
+// twice. Taking the garage off the map at the end of the grace is not this
+// step's.
 export class DocumentCycleStep implements DailyTask {
   private readonly logger = new Logger('DocumentCycle');
   private readonly audit = new AuditService();
 
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly notifications: NotificationsService,
+    private readonly webUrl: string | undefined,
+  ) {}
 
   async run(now: Date): Promise<void> {
     const today = localDay(now);
@@ -121,6 +129,11 @@ export class DocumentCycleStep implements DailyTask {
       payload: { dueOn, garageId: cycle.garageId, stage: stage.days },
       subjectId: id,
     });
+    await this.tell(tx, cycle.garageId, {
+      eventId: `document-${stage.days}-${cycle.garageId}-${dueOn}`,
+      kind: 'DOCUMENT_DUE',
+      params: { dueOn },
+    });
     return stage.days;
   }
 
@@ -156,6 +169,47 @@ export class DocumentCycleStep implements DailyTask {
         kind: 'document.overdue',
         payload: { dueOn, garageId, graceUntil },
         subjectId: cycle.id,
+      });
+    }
+    if (await tx.legalDocument.count({ where: inReviewWhere(garageId) })) {
+      return;
+    }
+    await this.tell(tx, garageId, {
+      eventId: `document-overdue-${garageId}-${dueOn}`,
+      kind: 'DOCUMENT_OVERDUE',
+      params: { dueOn, suspendOn: addDays(graceUntil, 1) },
+    });
+  }
+
+  // Tells the garage's owners, each in their own language.
+  private async tell(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    notice: {
+      eventId: string;
+      kind: 'DOCUMENT_DUE' | 'DOCUMENT_OVERDUE';
+      params: Record<string, string>;
+    },
+  ) {
+    if (!this.webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    const owners = await tx.account.findMany({
+      select: { id: true, language: true },
+      where: {
+        memberships: { some: { garageId, role: 'owner' } },
+        status: { not: 'deleted' },
+      },
+    });
+    for (const language of ['ro', 'en'] as const) {
+      const recipients = owners
+        .filter((owner) => (owner.language === 'en') === (language === 'en'))
+        .map(({ id }) => id);
+      if (recipients.length === 0) continue;
+      await this.notifications.notify({
+        ...notice,
+        garageId,
+        params: { dashboard: `${this.webUrl}/app/garage`, ...notice.params },
+        recipients,
+        subjectId: garageId,
       });
     }
   }

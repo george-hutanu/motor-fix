@@ -2,12 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { DocumentCycleStep } from './document-cycle.step';
 import { serialDatabase } from '../../../auth/serial-db.testing';
+import { NotificationsModule } from '../../../notifications/notifications.module';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
+  redisUrlFor,
+  testConfig,
+  testPhoneConfig,
 } from '../../../notifications/notifications.testing';
 
 // @traces 068-FR-003
@@ -21,21 +27,48 @@ const counted = (step: string) =>
   counterTotal(reader, 'motorfix_document_cycle_total', { step });
 const overdueGauge = () => counterTotal(reader, 'motorfix_documents_overdue');
 
-const { prisma, reset } = fixtures();
+const redisUrl = redisUrlFor(1);
+const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 // 09:00 in Bucharest on 23 October 2026.
 const NOW = new Date('2026-10-23T06:00:00Z');
-const step = new DocumentCycleStep(prisma);
+const WEB = 'https://motorfix.test';
 
-afterAll(() => prisma.$disconnect());
+let app: TestingModule;
+let notifications: NotificationsService;
+let step: DocumentCycleStep;
+
+beforeAll(async () => {
+  app = await Test.createTestingModule({
+    imports: [
+      NotificationsModule.registerWorker({
+        databaseUrl,
+        email: testConfig('http://127.0.0.1:9'),
+        phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+        redisUrl,
+      }),
+    ],
+  }).compile();
+  notifications = app.get(NotificationsService);
+  step = new DocumentCycleStep(prisma, notifications, WEB);
+});
+
+afterAll(async () => {
+  await app.close();
+  await prisma.$disconnect();
+});
 beforeEach(async () => {
   jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  notifications.now = () => NOW;
   await reset();
 });
 afterEach(() => jest.restoreAllMocks());
 
 const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
+
+const owners = new Map<string, { owner: string; receptionist: string }>();
+const ownerOf = (garageId: string) => owners.get(garageId)?.owner ?? '';
 
 async function cycleDue(
   dueOn: string,
@@ -53,6 +86,16 @@ async function cycleDue(
       status: 'approved',
     },
   });
+  const tag = garage.id.slice(0, 8);
+  const owner = await account(`Mihai ${tag}`, ['garage']);
+  const receptionist = await account(`Ana ${tag}`, ['receptionist']);
+  await prisma.garageMember.createMany({
+    data: [
+      { accountId: owner, garageId: garage.id, role: 'owner' },
+      { accountId: receptionist, garageId: garage.id, role: 'receptionist' },
+    ],
+  });
+  owners.set(garage.id, { owner, receptionist });
   await prisma.verificationFile.create({
     data: {
       documents: {
@@ -97,6 +140,14 @@ const events = (subjectId: string, kind?: string) =>
     orderBy: { id: 'asc' },
     where: { subjectId, ...(kind && { kind }) },
   });
+
+// By channel name: the enum's own order is not the alphabet's.
+const notices = async (accountId: string, kind?: string) =>
+  (
+    await prisma.notification.findMany({
+      where: { accountId, fallbackOf: null, ...(kind && { kind }) },
+    })
+  ).sort((a, b) => a.channel.localeCompare(b.channel));
 
 describe('the daily compliance step', () => {
   it('sends the 30-day reminder once from 30 days before the due date', async () => {
@@ -271,5 +322,131 @@ describe('the daily compliance step', () => {
     expect(log).toHaveBeenCalledWith(
       '2026-10-23: reminders 30=1 7=0 0=0, overdue 1',
     );
+  });
+});
+
+describe('the notices the compliance step sends', () => {
+  it('sends DOCUMENT_DUE to the owner alone, keyed by its stage, with the due date and the dashboard', async () => {
+    const cycle = await cycleDue('2026-11-22');
+    const { owner, receptionist } = owners.get(cycle.garageId) ?? {};
+
+    await step.run(NOW);
+    await step.run(new Date('2026-10-23T14:00:00Z'));
+
+    const sent = await notices(owner ?? '');
+    expect(sent.map((n) => [n.kind, n.channel])).toEqual([
+      ['DOCUMENT_DUE', 'email'],
+      ['DOCUMENT_DUE', 'in_app'],
+    ]);
+    for (const notice of sent) {
+      expect(notice).toMatchObject({
+        eventId: `document-30-${cycle.garageId}-2026-11-22`,
+        subjectId: cycle.garageId,
+      });
+    }
+    expect(sent[0].params).toEqual({
+      dashboard: `${WEB}/app/garage`,
+      dueOn: '2026-11-22',
+    });
+    expect(await notices(receptionist ?? '')).toEqual([]);
+  });
+
+  it('sends one DOCUMENT_DUE per stage reached, across overlapping runs', async () => {
+    const week = await cycleDue('2026-10-25');
+    const today = await cycleDue('2026-10-23');
+
+    await Promise.all([step.run(NOW), step.run(NOW), step.run(NOW)]);
+
+    expect(
+      (await notices(ownerOf(week.garageId), 'DOCUMENT_DUE')).map(
+        (n) => n.eventId,
+      ),
+    ).toEqual([
+      `document-7-${week.garageId}-2026-10-25`,
+      `document-7-${week.garageId}-2026-10-25`,
+    ]);
+    expect(
+      (await notices(ownerOf(today.garageId), 'DOCUMENT_DUE')).map(
+        (n) => n.eventId,
+      ),
+    ).toEqual([
+      `document-0-${today.garageId}-2026-10-23`,
+      `document-0-${today.garageId}-2026-10-23`,
+    ]);
+  });
+
+  it('sends DOCUMENT_OVERDUE once, naming the day after the grace as the suspension day', async () => {
+    const cycle = await cycleDue('2026-10-22');
+
+    await step.run(NOW);
+    await step.run(new Date('2026-10-24T06:00:00Z'));
+
+    const sent = await notices(ownerOf(cycle.garageId));
+    expect(sent.map((n) => [n.kind, n.channel])).toEqual([
+      ['DOCUMENT_OVERDUE', 'email'],
+      ['DOCUMENT_OVERDUE', 'in_app'],
+    ]);
+    expect(sent[0]).toMatchObject({
+      eventId: `document-overdue-${cycle.garageId}-2026-10-22`,
+      params: {
+        dashboard: `${WEB}/app/garage`,
+        dueOn: '2026-10-22',
+        suspendOn: '2026-11-06',
+      },
+    });
+  });
+
+  it('sends the e-mail whatever the owner muted', async () => {
+    const cycle = await cycleDue('2026-11-22');
+    const owner = ownerOf(cycle.garageId);
+    await prisma.notificationPreference.createMany({
+      data: (['email', 'push'] as const).map((channel) => ({
+        accountId: owner,
+        channel,
+        enabled: false,
+        garageId: cycle.garageId,
+        type: 'DOCUMENT_DUE',
+      })),
+    });
+
+    await step.run(NOW);
+
+    expect((await notices(owner)).map((n) => n.channel)).toEqual([
+      'email',
+      'in_app',
+    ]);
+  });
+
+  it('holds a notice built in quiet hours until 08:00', async () => {
+    const cycle = await cycleDue('2026-10-22');
+    // 23:30 in Bucharest.
+    const night = new Date('2026-10-23T20:30:00Z');
+    notifications.now = () => night;
+
+    await step.run(night);
+
+    const email = (await notices(ownerOf(cycle.garageId))).find(
+      (n) => n.channel === 'email',
+    );
+    expect(email?.status).toBe('held');
+    expect(email?.sendAfter?.toISOString()).toBe('2026-10-24T05:00:00.000Z');
+  });
+
+  it('sends nothing while a document is in review', async () => {
+    const waiting = await cycleDue('2026-10-25', { inReview: true });
+    const late = await cycleDue('2026-10-22', { inReview: true });
+
+    await step.run(NOW);
+
+    expect(await notices(ownerOf(waiting.garageId))).toEqual([]);
+    expect(await notices(ownerOf(late.garageId))).toEqual([]);
+  });
+
+  it('sends nothing once the cycle is overdue', async () => {
+    const cycle = await cycleDue('2026-10-10', { state: 'overdue' });
+
+    await step.run(NOW);
+
+    expect(await notices(ownerOf(cycle.garageId))).toEqual([]);
   });
 });
