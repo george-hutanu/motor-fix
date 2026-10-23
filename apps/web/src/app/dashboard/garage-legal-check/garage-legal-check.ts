@@ -5,15 +5,21 @@ import {
   inject,
 } from '@angular/core';
 import { GaragesService } from '@motor-fix/data-access/services/garages.service';
+import { Overlays } from '@motor-fix/overlays';
 
 import { liveView } from '../../live/view';
+import {
+  DocumentsUpload,
+  type DocumentsUploadData,
+} from '../documents-upload/documents-upload';
 import { LegalCheckPanel } from '../legal-check-panel/legal-check-panel';
 import { Live } from '../live';
 import { garageOf, Session } from '../session';
 
 // The owner's legal check on the Panou, read again whenever the garage's
-// verification changes, an admin re-checks it or it is suspended; a 404 (no
-// file) shows nothing.
+// verification changes, an admin re-checks it, it is suspended, or its yearly
+// documents change; a 404 (no file) shows nothing. The Documente row's button
+// opens the upload dialog, and a sent upload reads the panel again.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LegalCheckPanel],
@@ -24,6 +30,7 @@ export class GarageLegalCheck {
   private readonly api = inject(GaragesService);
   private readonly session = inject(Session);
   private readonly live = inject(Live);
+  private readonly overlays = inject(Overlays);
   private readonly garageId = computed(
     () => garageOf(this.session.shown())?.garageId ?? '',
   );
@@ -36,10 +43,26 @@ export class GarageLegalCheck {
         'verification.reopened',
         'recheck.recorded',
         'garage.suspended',
+        'document.uploaded',
+        'document.overdue',
+        'document.accepted',
+        'document.refused',
       ]),
       goneOn: [404],
       resync: this.live.resync,
       retryAfter: 60_000,
     },
   );
+
+  async upload() {
+    const sent = await this.overlays.open<unknown, DocumentsUploadData>(
+      DocumentsUpload,
+      {
+        data: { garageId: this.garageId() },
+        shape: 'dialog',
+        title: 'garage.legal.upload.title',
+      },
+    );
+    if (sent !== 'cancelled') this.view.reload();
+  }
 }

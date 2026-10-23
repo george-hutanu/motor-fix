@@ -1,0 +1,77 @@
+<form (submit)="submit($event)" novalidate>
+  @for (kind of kinds; track kind) {
+    @let dateSaid = dateProblem()[kind];
+    <section class="area" [attr.data-kind]="kind">
+      <h3>{{ kindSaid[kind].label | t }}</h3>
+      <p class="hint">{{ kindSaid[kind].hint | t }}</p>
+      <p class="hint">{{ 'garage.legal.upload.rules' | t }}</p>
+      <input #picker type="file" hidden multiple [accept]="types" (change)="choose(kind, $event)" />
+      <button hlmBtn variant="secondary" type="button" class="choose" (click)="picker.click()">{{ 'garage.legal.upload.choose' | t }}</button>
+      @if (full()[kind]) {
+        <p class="error" role="status">{{ 'garage.legal.upload.full' | t }}</p>
+      }
+      @if (pages()[kind].length) {
+        <ol class="pages">
+          @for (row of numbered(kind); track row.page.id) {
+            <li class="page" [attr.data-page]="row.page.id" [attr.data-status]="row.page.status">
+              <div class="label">
+                @if (row.n) {
+                  <span class="name">{{ 'garage.legal.upload.page' | t: { n: row.n } }}</span>&ngsp;
+                }
+                <span class="file">{{ row.page.file.name }}</span>&ngsp;
+                @switch (row.page.status) {
+                  @case ('uploading') {
+                    <progress max="100" [value]="row.page.progress ?? 0" [attr.aria-label]="row.page.file.name"></progress>
+                  }
+                  @case ('ready') {
+                    <span class="state">{{ 'garage.legal.upload.ready' | t }}</span>
+                  }
+                  @case ('failed') {
+                    <span class="error">{{ 'garage.legal.upload.failed' | t }}</span>
+                  }
+                  @case ('refused') {
+                    <span class="error">{{ 'garage.legal.upload.refused' | t }}</span>
+                  }
+                }
+              </div>&ngsp;
+              <div class="tools">
+                @if (row.page.status === 'failed') {
+                  <button hlmBtn variant="secondary" type="button" data-retry (click)="retry(kind, row.page.id)">{{ 'garage.legal.upload.retry' | t }}</button>&ngsp;
+                }
+                <button hlmBtn variant="secondary" type="button" [attr.aria-label]="'garage.legal.upload.removeLabel' | t: { name: row.page.file.name }" (click)="remove(kind, row.page.id)">{{ 'garage.legal.upload.remove' | t }}</button>
+              </div>
+            </li>
+          }
+        </ol>
+      }
+      <div class="field">
+        <label>
+          <span>{{ 'garage.legal.upload.issuedOn' | t }}</span>
+          <input
+            #date
+            hlmInput
+            type="date"
+            [id]="'documents-issued-' + kind"
+            [attr.min]="kind === 'onrc_certificate' ? earliest : null"
+            [max]="today"
+            [value]="dates()[kind]"
+            [attr.aria-invalid]="dateSaid ? 'true' : null"
+            [attr.aria-describedby]="dateSaid ? 'documents-issued-' + kind + '-error' : null"
+            (input)="typeDate(kind, date.value)"
+          />
+        </label>
+        @if (dateSaid) {
+          <p class="error" role="status" [id]="'documents-issued-' + kind + '-error'">{{ said[dateSaid] | t }}</p>
+        }
+      </div>
+    </section>
+  }
+  <p class="hint">{{ 'garage.legal.upload.note' | t }}</p>
+  @if (problem(); as shown) {
+    <p class="error" role="alert">{{ said[shown] | t }}</p>
+  }
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'garage.legal.upload.cancel' | t }}</button>
+    <button hlmBtn type="submit" [disabled]="!sendable()">{{ 'garage.legal.upload.send' | t }}</button>
+  </div>
+</form>

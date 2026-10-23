@@ -4,5 +4,6 @@
     [loading]="view.isLoading()"
     [failed]="view.error() !== undefined"
     (retry)="view.reload()"
+    (upload)="upload()"
   />
 }

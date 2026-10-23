@@ -7,9 +7,15 @@ import {
   output,
 } from '@angular/core';
 import { recheckedSince } from '@motor-fix/contracts/verification-target';
+import type { DocumentCycleDto } from '@motor-fix/data-access/models/document-cycle-dto';
 import type { LegalCheckDto } from '@motor-fix/data-access/models/legal-check-dto';
 import type { LegalCheckRowDto } from '@motor-fix/data-access/models/legal-check-row-dto';
-import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
+import {
+  formatDay,
+  formatShortMonthYear,
+  I18n,
+  TranslatePipe,
+} from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 const LAMPS: Record<LegalCheckRowDto['state'], string> = {
@@ -19,9 +25,16 @@ const LAMPS: Record<LegalCheckRowDto['state'], string> = {
   warning: 'amber',
 };
 
+// The calendar day after a YYYY-MM-DD day.
+const dayAfter = (day: string) =>
+  new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
 // "Verificare legală": the four rows of the garage's legal check, each with
 // its state in words and colour, the "Suspendat" tag and the failed re-check
-// while the garage is suspended, and the note on monthly re-checks; or a
+// while the garage is suspended, the yearly documents' cycle and the button
+// that asks for their upload, and the note on monthly re-checks; or a
 // skeleton while it loads, or the error and a retry. It shows what it is given; its host reads and refreshes it.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +49,11 @@ export class LegalCheckPanel {
   readonly loading = input(false);
   readonly failed = input(false);
   readonly retry = output<void>();
+  readonly upload = output<void>();
   protected readonly skeletons = [1, 2, 3, 4];
+  protected readonly canUpload = computed(
+    () => this.data()?.documents?.canUpload === true,
+  );
   protected readonly suspended = computed(
     () => this.data()?.status === 'suspended',
   );
@@ -94,7 +111,34 @@ export class LegalCheckPanel {
           : this.i18n.t('garage.legal.rar.register');
       }
       case 'documents':
-        return this.i18n.t('garage.legal.documents.detail');
+        return this.documentsDetail(data.documents);
+    }
+  }
+
+  private documentsDetail(cycle: DocumentCycleDto | null): string {
+    const said = this.i18n.t('garage.legal.documents.detail');
+    return cycle ? `${said} · ${this.cycle(cycle)}` : said;
+  }
+
+  private cycle(cycle: DocumentCycleDto): string {
+    const key = 'garage.legal.documents.cycle';
+    switch (cycle.row) {
+      case 'valid':
+      case 'due':
+        return this.i18n.t(`${key}.renew`, {
+          month: formatShortMonthYear(cycle.dueOn, this.i18n.language()),
+        });
+      case 'in_review':
+        return this.i18n.t(`${key}.in_review`);
+      case 'overdue':
+        return this.i18n.t(`${key}.overdue`, {
+          off: this.day(dayAfter(cycle.graceUntil ?? cycle.dueOn)),
+          since: this.day(dayAfter(cycle.dueOn)),
+        });
+      case 'refused':
+        return this.i18n.t(`${key}.refused`, {
+          note: cycle.refusal?.note ?? '',
+        });
     }
   }
 
