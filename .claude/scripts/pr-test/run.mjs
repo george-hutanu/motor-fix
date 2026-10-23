@@ -63,7 +63,7 @@ import {
   runDirPrefix,
   waitForHttp,
 } from "./services.mjs";
-import { VIEWPORTS, flowSignIn, routeProblem, runSweep, toFindings } from "./sweep.mjs";
+import { VIEWPORTS, flowSignIn, routeProblem, routerTable, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -169,7 +169,8 @@ async function main(argv) {
     console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--tests] [--tree dir --sha <40-hex sha>]");
     return 64;
   }
-  const refused = opt.routes.map(routeProblem).filter(Boolean);
+  const table = routerTable(opt.tree ? resolve(opt.tree) : repoRoot);
+  const refused = opt.routes.map((route) => routeProblem(route, table)).filter(Boolean);
   if (refused.length) {
     for (const line of refused) console.error(`run: ${line}`);
     return 64;

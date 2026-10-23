@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, LAUNCH_OPTIONS, launchBrowser, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, settleFonts, toFindings } from './sweep.mjs';
+import { VIEWPORTS, LAUNCH_OPTIONS, launchBrowser, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, routerTable, runSweep, sessionCookie, settleCanvases, settleFonts, toFindings } from './sweep.mjs';
 
 describe('a sweep page\'s browser context', () => {
   it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
@@ -579,5 +579,46 @@ describe('settling web fonts before the shot', () => {
     const body = source.slice(source.indexOf('export async function runSweep'));
     assert.ok(body.indexOf('await settleFonts(page)') > 0);
     assert.ok(body.indexOf('await settleFonts(page)') < body.indexOf('await page.screenshot('));
+  });
+});
+
+// @traces 1363-throughput-fixes-FR-008
+describe('a route checked against the router (app.routes.ts and dashboard/views.ts)', () => {
+  const table = routerTable(join(import.meta.dirname, '..', '..', '..'));
+
+  it('refuses a public page written without its /:lang prefix, saying so', () => {
+    const problem = routeProblem('/garages', table);
+    assert.match(problem ?? '', /^\/garages: .*\/:lang\/garages/);
+    assert.ok(!problem.includes('\n'), problem);
+  });
+
+  it('accepts a public page under /:lang, its parameter matching one segment', () => {
+    for (const ok of ['/:lang', '/:lang/', '/:lang/garages', '/:lang/garages?brand=dacia&sort=near', '/:lang/garages/x', '/:lang/terms', '/:lang/reset-password/abc']) assert.equal(routeProblem(ok, table), null, ok);
+  });
+
+  it('accepts the routes the router serves outside the language node as they are', () => {
+    for (const ok of ['/', '/admin', '/cockpit', '/app/garage@garage', '/app/garage/prices@garage', '/app/garage/prices/x@garage', '/app/driver/cars@driver', '/app/assistant/connect@driver']) assert.equal(routeProblem(ok, table), null, ok);
+  });
+
+  it('refuses an unknown path with one line naming it', () => {
+    for (const bad of ['/app/garage/nope@garage', '/nope', '/:lang/no-such', '/app', '/:lang/garages/x/y', '/app/driver/prices@driver', '/app/admin/reviews@admin']) {
+      const problem = routeProblem(bad, table);
+      assert.equal(typeof problem, 'string', bad);
+      assert.ok(problem.startsWith(`${bad}: `), problem);
+      assert.ok(!problem.includes('\n'), problem);
+    }
+  });
+
+  it('still refuses a comma in a route', () => {
+    assert.match(routeProblem('/:lang/garages,/admin', table) ?? '', /not a route the PR QA workflow accepts/);
+  });
+
+  it('accepts a known path with @role and :status, and leaves a route expecting an error status unresolved', () => {
+    assert.equal(routeProblem('/app/driver@driver:401', table), null);
+    assert.equal(routeProblem('/:lang/x:404', table), null);
+  });
+
+  it('has no table, and so checks only the shape, where the checkout holds no app.routes.ts', () => {
+    assert.equal(routerTable(mkdtempSync(join(tmpdir(), 'no-router-'))), null);
   });
 });

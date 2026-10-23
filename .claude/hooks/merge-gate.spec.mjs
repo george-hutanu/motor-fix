@@ -910,3 +910,36 @@ describe('merge gate — an orphaned earlier attempt of a check', () => {
     assert.match(red.stderr, /119285437128/);
   });
 });
+
+// @traces 1363-throughput-fixes-FR-010
+describe('merge gate — a verdict carried over a merge of main is verified, not trusted', () => {
+  const FROM = 'f'.repeat(40);
+  const HEAD = 'abc1234def5678';
+  const MAIN = 'd'.repeat(40);
+  const carried = () => ({ ...review('SUCCESS'), description: `carried from ${FROM}: merge of main` });
+  const prc = (rollup) => ({ ...pr(rollup), commits: [{ oid: FROM }, { oid: HEAD }] });
+  const state = (mainSide = ['apps/api/src/other.ts']) => ({
+    fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' },
+    compare: {
+      status: 'ahead',
+      total_commits: 2,
+      commits: [
+        { sha: 'e'.repeat(40), parents: [{ sha: '9'.repeat(40) }], commit: { message: 'feat(api): ST-1 another story' } },
+        { sha: HEAD, parents: [{ sha: FROM }, { sha: MAIN }], commit: { message: "Merge remote-tracking branch 'origin/main'" } },
+      ],
+      files: mainSide.map((filename) => ({ filename })),
+    },
+    merges: { [HEAD]: { main: mainSide, pr: ['apps/web/src/mine.ts'] } },
+    between: [],
+    headReviews: [],
+  });
+  const lookup = (s) => ({ description: () => null, state: () => s });
+
+  it('passes the merge kind to judgeCarry and lets a disjoint merge merge on green CI', () => {
+    assert.equal(decideMerge(prc([...green, carried()]), lookup(state())), null);
+  });
+
+  it('refuses a merge carry whose merge changes a file the PR changes', () => {
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state(['apps/web/src/mine.ts']))), /carried from fffffff.*changes apps\/web\/src\/mine\.ts/);
+  });
+});

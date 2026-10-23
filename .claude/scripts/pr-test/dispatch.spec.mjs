@@ -34,11 +34,11 @@ const SHA = 'a'.repeat(40);
 describe('dispatch: arguments', () => {
   it('reads the PR, the flows, the routes, the lap, the output and the ref', () => {
     const o = parseArgs(['62', '--flows', 'f.mjs', '--spec', 's.md', '--routes', '/,/cockpit,/app', '--lap', '2', '--out', '/tmp/x', '--ref', 'chore-x']);
-    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', spec: 's.md', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x', noWait: false, run: undefined });
+    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', spec: 's.md', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x', noWait: false, proof: false, run: undefined });
   });
 
   it('dispatches on main, lap 1, the default routes, without flows', () => {
-    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, spec: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main', noWait: false, run: undefined });
+    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, spec: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main', noWait: false, proof: false, run: undefined });
   });
 
   it('reads the start-only form and the read-a-finished-run form', () => {
@@ -413,7 +413,7 @@ describe('dispatch --routes: a route the run cannot sweep is refused before anyt
   });
 
   it('dispatches query, /:lang and signed-in routes as written', () => {
-    const r = fakeGh()('--no-wait', '--routes', '/results?brand=dacia,/:lang/list-your-garage,/app/driver@driver');
+    const r = fakeGh()('--no-wait', '--routes', '/:lang/garages?brand=dacia,/:lang/list-your-garage,/app/driver@driver');
     assert.equal(r.code, 0, r.stderr);
     assert.equal(called(r.calls, 'workflow run').length, 1);
   });
@@ -520,12 +520,12 @@ describe('dispatch --flows: the flows must have been proven against the head', (
   it('dispatches nothing and exits 64 on an unproven flows file, then dispatches once the head is proven', () => {
     const t = provenRepo();
     const run = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo });
-    const refused = run('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    const refused = run('--no-wait', '--proof', '--flows', t.flows, '--spec', t.spec);
     assert.equal(refused.code, 64, refused.stderr);
     assert.match(refused.stderr, new RegExp(`no flows proof for ${t.c3.slice(0, 7)}`));
     assert.deepEqual(called(refused.calls, 'workflow run'), []);
     t.stamp(t.c3);
-    const r = run('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    const r = run('--no-wait', '--proof', '--flows', t.flows, '--spec', t.spec);
     assert.equal(r.code, 0, r.stderr);
     assert.equal(called(r.calls, 'workflow run').length, 1);
   });
@@ -590,5 +590,40 @@ describe('dispatch on the laptop: the dispatched run is the head\'s one run', ()
       ],
     };
     assert.equal(decideMerge(pr), null);
+  });
+});
+
+// @traces 1363-throughput-fixes-FR-005
+describe('dispatch --flows without --proof: the flows parse and the routes resolve, and that is enough', () => {
+  it('dispatches a parsing flows file with no proof, saying the proof was skipped', () => {
+    const t = provenRepo();
+    const r = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo })('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stderr, /flows: proof skipped \(no --proof\)/);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+  });
+
+  it('refuses a flows file that does not parse, exit 64, naming the reason', () => {
+    const t = provenRepo();
+    writeFileSync(t.flows, 'export default async (\n');
+    const r = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo })('--no-wait', '--flows', t.flows, '--spec', t.spec);
+    assert.equal(r.code, 64, r.stderr);
+    assert.match(r.stderr, /does not load/);
+    assert.deepEqual(called(r.calls, 'workflow run'), []);
+  });
+
+  it('refuses a route the router does not serve, exit 64, naming it', () => {
+    const t = provenRepo();
+    const r = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo })('--no-wait', '--flows', t.flows, '--spec', t.spec, '--routes', '/,/garages');
+    assert.equal(r.code, 64, r.stderr);
+    assert.match(r.stderr, /\/garages: .*\/:lang\/garages/);
+    assert.deepEqual(r.calls, []);
+  });
+
+  it('keeps the missing-proof refusal under --proof', () => {
+    const t = provenRepo();
+    const r = fakeGh({ FAKE_HEAD: t.c3 }, { cwd: t.repo })('--no-wait', '--proof', '--flows', t.flows, '--spec', t.spec);
+    assert.equal(r.code, 64, r.stderr);
+    assert.match(r.stderr, new RegExp(`no flows proof for ${t.c3.slice(0, 7)}`));
   });
 });

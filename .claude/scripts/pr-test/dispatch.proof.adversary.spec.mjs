@@ -143,7 +143,7 @@ else if (a === 'run' && b === 'list') say([{ databaseId: 77, displayTitle: 'PR Q
     const proved = t.commit({ 'apps/api/src/a.ts': 'export const a = 1;\n' });
     const head = t.commit({ 'apps/api/src/b.ts': 'export const b = 1;\n' });
     t.stamp(proved);
-    const r = run(t, ['--flows', t.flows, '--spec', t.spec], { head });
+    const r = run(t, ['--proof', '--flows', t.flows, '--spec', t.spec], { head });
     assert.equal(r.code, 64, r.stderr);
     assert.match(r.stderr, /apps\/api\/src\/b\.ts/);
     assert.deepEqual(r.workflowRuns, []);
@@ -154,8 +154,20 @@ else if (a === 'run' && b === 'list') say([{ databaseId: 77, displayTitle: 'PR Q
     const t = checkout();
     const head = t.commit({ 'apps/api/src/a.ts': 'export const a = 1;\n' });
     t.stamp(head);
-    const r = run(t, ['--flows', t.flows, '--spec', t.spec], { head, cwd: join(t.repo, 'apps', 'api', 'src') });
+    const r = run(t, ['--proof', '--flows', t.flows, '--spec', t.spec], { head, cwd: join(t.repo, 'apps', 'api', 'src') });
     assert.equal(r.code, 0, r.stderr);
+    assert.equal(r.workflowRuns.length, 1);
+  });
+
+  // @traces 1363-throughput-fixes-FR-005
+  it('dispatches without --proof though code changed since the proof, and says the proof was skipped', () => {
+    const t = checkout();
+    const proved = t.commit({ 'apps/api/src/a.ts': 'export const a = 1;\n' });
+    const head = t.commit({ 'apps/api/src/b.ts': 'export const b = 1;\n' });
+    t.stamp(proved);
+    const r = run(t, ['--flows', t.flows, '--spec', t.spec], { head });
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stderr, /proof skipped/);
     assert.equal(r.workflowRuns.length, 1);
   });
 
