@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -19,6 +19,7 @@ features:
   - 228-how-it-works-list-garage
   - 101-verification-progress
   - 208-resubmit-after-more
+  - 1351-results-phone-layout
 ---
 
 # Capability: Phone layout and installable web app
@@ -271,9 +272,9 @@ _From 305-reject-garage-reason._
 
 _From 304-request-garage-details._
 
-### 228-FR-001 — The public header MUST show, in order, the logo, "Găsește un mecanic", "Cum funcționează", "Autentificare", "Înscrie-ți service-ul" and the RO / EN switch; the existing phone behaviour (links hidden under 640 px, the bottom tab bar on public pages) MUST hold.
+### 1351-FR-005 — The public header MUST show, in order, the logo, "Găsește un mecanic", "Cum funcționează", "Autentificare", "Înscrie-ți service-ul" and the RO / EN switch; below 768 px the links are hidden and the bottom tab bar carries them (the existing phone behaviour holds). On a tablet (768–1023 px) the bar MUST keep what it keeps today (the find or new-search link, "Înscrie-ți service-ul", the switch and the account button) and hide the `.wide` links (the existing rule), and the language switch's two labels MUST read whole in both languages, light and dark, at 768, 834 and 1023 px: each label's box lies wholly inside its control and inside the bar, nothing overlaps it, and nothing in the bar scrolls sideways. From 1024 px the bar is unchanged. (Replaces 228-FR-001, whose "links hidden under 640 px" predates the 768 px tab-bar rule.)
 
-_From 228-how-it-works-list-garage._
+_From 1351-results-phone-layout._
 
 ### 228-FR-002 — "Cum funcționează" MUST scroll Home to the section of that name and move focus to it; from any other public page it MUST open Home at that section in the current language.
 
@@ -325,3 +326,4 @@ _From 208-resubmit-after-more._
 - `097-FR-004` — superseded by `343-FR-006` (2026-10-09)
 - `343-FR-007` — superseded by `344-FR-014` (2026-10-09)
 - `097-FR-008` — superseded by `101-FR-001` (2026-10-21)
+- `228-FR-001` — superseded by `1351-FR-005` (2026-10-23)

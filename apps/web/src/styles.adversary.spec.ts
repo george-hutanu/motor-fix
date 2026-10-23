@@ -133,3 +133,27 @@ describe('the end-to-end axe loader', () => {
     expect(users).toEqual(['axe.ts']);
   });
 });
+
+// @traces 1351-FR-001
+describe('the map legend hidden while the sheet covers the map top', () => {
+  const flat = styles.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+  const hide =
+    'mf-results:has(mf-results-sheet.over-zoom) mf-results-map .legend';
+
+  it('is the one legend rule here, inside the phone block only', () => {
+    expect(flat.match(/\.legend\b/g)).toHaveLength(1);
+    expect(flat).toContain(
+      `@media (max-width: 767px) { ${hide} { visibility: hidden; } }`,
+    );
+  });
+
+  it('rides the same trigger as the zoom buttons', () => {
+    expect(flat).toContain(
+      hide.replace('.legend', '.maplibregl-ctrl-top-right'),
+    );
+  });
+
+  it('is never undone by a visible override', () => {
+    expect(flat).not.toMatch(/\.legend[^{}]*\{[^{}]*visibility: visible/);
+  });
+});

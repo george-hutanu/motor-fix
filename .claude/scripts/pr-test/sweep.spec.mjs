@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, settleFonts, toFindings } from './sweep.mjs';
+import { VIEWPORTS, LAUNCH_OPTIONS, launchBrowser, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, contextOptions, dropExpected, flowSignIn, keepBrowser, loadProblem, matrix, openContext, openPage, parseRoute, routeProblem, runSweep, sessionCookie, settleCanvases, settleFonts, toFindings } from './sweep.mjs';
 
 describe('a sweep page\'s browser context', () => {
   it('asks for reduced motion, so no chart is shot mid-animation, at the run\'s size, scheme and language', () => {
@@ -455,6 +455,23 @@ describe('the sweep measures the layout', async () => {
 });
 
 describe('the sweep\'s screenshots', () => {
+  // The headless shell leaves a WebGL map blank under a sticky bar that reaches past the viewport (ST-1351 QA
+  // laps 1 and 3: the results map at 390 x 844 with the consent bar); Chromium's own headless mode draws it whole.
+  it('runs in Chromium\'s own headless mode, not the headless shell', () => {
+    assert.deepEqual(LAUNCH_OPTIONS, { channel: 'chromium' });
+  });
+
+  it('falls back to the headless shell, saying so, only where Chromium is not installed', async () => {
+    const calls = [];
+    const logged = [];
+    const missing = { launch: async (o) => { calls.push(o); if (o) throw new Error("browserType.launch: Executable doesn't exist at /x"); return 'shell'; } };
+    assert.equal(await launchBrowser(missing, (line) => logged.push(line)), 'shell');
+    assert.deepEqual(calls, [{ channel: 'chromium' }, undefined]);
+    assert.equal(logged.length, 1);
+    const broken = { launch: async () => { throw new Error('crashed'); } };
+    await assert.rejects(launchBrowser(broken, () => {}), /crashed/);
+  });
+
   // A dial's needle caught mid-transition shows as changed pixels on a page the PR never touched.
   it('finish every transition and animation before the shot, of the whole page', () => {
     assert.deepEqual(SHOT_OPTIONS, { animations: 'disabled', fullPage: true });

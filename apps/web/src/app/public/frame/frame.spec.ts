@@ -167,12 +167,16 @@ describe('the public site bar', () => {
     expect(css).toMatch(/overflow-x: clip/);
   });
 
+  // @traces 1351-FR-005 1351-FR-007
   it('keeps a tablet bar to the two main links and the account button, so the language switch is never cut off', async () => {
     await open('/ro');
     const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
 
     expect(css).toMatch(
       /@media \(min-width: 768px\) and \(max-width: 1023\.98px\) \{[^@]*\.links \.wide \{\s*display: none/,
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) and \(max-width: 1023\.98px\) \{\s*\.bar \{\s*padding-inline: var\(--mf-space-4\)/,
     );
     expect(css).toMatch(
       /@media \(min-width: 1024px\) \{\s*\.account \{\s*display: none/,
