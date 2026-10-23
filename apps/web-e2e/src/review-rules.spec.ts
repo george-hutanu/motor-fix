@@ -142,6 +142,14 @@ test('the summary in the drawer fits a 320 px phone', async ({ page }) => {
   await settled(page);
   await expect(page.getByRole('dialog').locator('p.rules')).toBeVisible();
 
+  // The rules link is a 44 px tap target on a phone, on every line it takes.
+  const lines = await page
+    .getByRole('dialog')
+    .getByRole('link', { name: /Regulile recenziilor/ })
+    .evaluate((link) => [...link.getClientRects()].map((r) => r.height));
+  expect(lines.length).toBeGreaterThan(0);
+  for (const height of lines) expect(height).toBeGreaterThanOrEqual(44);
+
   const report = await fits(page);
   expect(report.width).toBeLessThanOrEqual(320);
   expect(report.cut).toEqual([]);
