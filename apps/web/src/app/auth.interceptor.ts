@@ -23,9 +23,10 @@ import { PUBLIC_READ } from './public-read';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
-// Approving an assistant and changing the password are the auth calls made
-// as the signed-in person.
+// Approving an assistant, changing the password and deleting the account are
+// the auth calls made as the signed-in person.
 const AS_THE_PERSON = new Set([
+  '/api/v1/auth/account',
   '/api/v1/auth/assistant/approve',
   '/api/v1/auth/password',
 ]);

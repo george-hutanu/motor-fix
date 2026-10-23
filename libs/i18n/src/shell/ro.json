@@ -56,6 +56,26 @@
     },
     "trap": "Nu completa acest câmp"
   },
+  "deleteAccount": {
+    "button": "Șterge contul",
+    "cancel": "Renunță",
+    "contactLink": "Formularul de contact",
+    "dialogTitle": "Ștergi contul?",
+    "done": "Contul tău a fost șters",
+    "field": {
+      "mismatch": "Nu se potrivește cu contul"
+    },
+    "fieldEmailOrPhone": "Scrie e‑mailul sau telefonul contului",
+    "fieldPhrase": "Scrie ȘTERGE",
+    "kept": "Rămân recenziile publicate, semnate „Șofer MotorFix”, și programările și înregistrările cerute de lege, cât timp spune nota de informare.",
+    "ownerText": "Contul tău deține un service. Scrie‑ne prin formularul de contact sau pe e‑mail ca să închidem service‑ul; apoi poți șterge contul.",
+    "problem": {
+      "deletion_not_allowed": "Contul tău deține un service, așa că nu poate fi șters încă."
+    },
+    "removed": "Ștergem datele contului, metodele de autentificare, sesiunile de pe toate dispozitivele, setările de notificări și numerele de înmatriculare ale mașinilor.",
+    "text": "Ștergi contul și datele tale din MotorFix. Nu se poate anula.",
+    "title": "Ștergerea contului"
+  },
   "emailBanner": {
     "failed": "Nu am putut trimite linkul. Încearcă din nou.",
     "resend": "Retrimite",

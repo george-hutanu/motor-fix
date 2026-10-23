@@ -23,6 +23,9 @@ class NotificationSettingsStub {}
 @Component({ selector: 'mf-privacy-panel', template: '' })
 class PrivacyPanelStub {}
 
+@Component({ selector: 'mf-delete-account', template: '' })
+class DeleteAccountStub {}
+
 const account = (capabilities: string[]) =>
   ({ capabilities, id: 'account-1' }) as unknown as MeDto;
 
@@ -34,6 +37,7 @@ function render(me: MeDto | null) {
     set: {
       imports: [
         CopyVoicesStub,
+        DeleteAccountStub,
         FeatureSwitchesStub,
         NotificationSettingsStub,
         PlatformRulesStub,
@@ -93,11 +97,14 @@ describe('SettingsView', () => {
     expect(element.querySelector('mf-notification-settings')).not.toBeNull();
   });
 
-  // @traces 244-FR-006
-  it('ends with the privacy panel and its cookie settings', async () => {
+  // @traces 244-FR-006 129-FR-014
+  it('ends with the privacy panel, then the delete-account row', async () => {
     const element = await rendered(account(['garage.settings']));
 
-    expect(element.lastElementChild?.tagName).toBe('MF-PRIVACY-PANEL');
+    expect(element.lastElementChild?.previousElementSibling?.tagName).toBe(
+      'MF-PRIVACY-PANEL',
+    );
+    expect(element.lastElementChild?.tagName).toBe('MF-DELETE-ACCOUNT');
   });
 
   // @traces 398-FR-001

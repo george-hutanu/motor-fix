@@ -1,0 +1,26 @@
+<section aria-labelledby="delete-account-title">
+  <h2 id="delete-account-title">{{ 'shell.deleteAccount.title' | t }}</h2>
+  <p>{{ 'shell.deleteAccount.text' | t }}</p>
+  @if (owner()) {
+    <p id="delete-account-owner">{{ 'shell.deleteAccount.ownerText' | t }}</p>
+    <div class="links">
+      <a [routerLink]="['/', language(), 'contact']">{{ 'shell.deleteAccount.contactLink' | t }}</a>
+      @if (address(); as email) {
+        <a [href]="'mailto:' + email">{{ email }}</a>
+      }
+    </div>
+  }
+  <div class="actions">
+    <button
+      hlmBtn
+      variant="ghost"
+      type="button"
+      class="destructive"
+      [disabled]="owner()"
+      [attr.aria-describedby]="owner() ? 'delete-account-owner' : null"
+      (click)="open()"
+    >
+      {{ 'shell.deleteAccount.button' | t }}
+    </button>
+  </div>
+</section>
