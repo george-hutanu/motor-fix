@@ -297,4 +297,24 @@ describe('Lucrări propuse: the jobs garages proposed', () => {
     expect(css).toMatch(/@media \(max-width: 767px\)/);
     expect(css).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   });
+
+  it("keeps the header's gutter at both sides, so the line and the panel start under the title", () => {
+    const css = readFileSync(
+      join(__dirname, 'admin-proposed-jobs.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(/^:host \{[^}]*margin-inline: var\(--mf-space-4\);/m);
+  });
+
+  it('breaks a job or garage name only between words while a whole word fits, so the table never splits one mid-word', () => {
+    const css = readFileSync(
+      join(__dirname, 'admin-proposed-jobs.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(/^\.job \{[^}]*overflow-wrap: break-word;/m);
+    expect(css).toMatch(/^\.meta \{[^}]*overflow-wrap: break-word;/m);
+    expect(css).not.toMatch(/^\.(job|meta) \{[^}]*overflow-wrap: anywhere;/m);
+  });
 });

@@ -1,7 +1,10 @@
+/* Inset as far as the header's gutter at both sides: the line and the panel
+   start under the title and end under the bell. */
 :host {
   display: grid;
   grid-column: 1 / -1;
   gap: var(--mf-space-3);
+  margin-inline: var(--mf-space-4);
   min-width: 0;
 }
 .line {
@@ -30,15 +33,17 @@ th:last-child,
 td:last-child {
   padding-inline-end: 0;
 }
+/* break-word, not anywhere: a whole word counts toward the column's
+   minimum width, so the table splits a name only between words. */
 .job {
   font-weight: 700;
   color: var(--mf-text);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .meta {
   font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .decide {
   white-space: nowrap;
