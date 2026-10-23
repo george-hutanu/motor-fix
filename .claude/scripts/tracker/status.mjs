@@ -15,7 +15,8 @@
 //
 // The PR mirrors the story with exactly one stage label: `stage` names it
 // (a Blocked story keeps the one it left, with `blocked` beside it; To do and
-// Done carry none) and `labels` is the `gh pr edit` arguments that leave the PR
+// Done carry none, so a story Blocked from To do, or with no recorded status
+// it left, carries `blocked` alone) and `labels` is the `gh pr edit` arguments that leave the PR
 // with exactly that, whatever it carried before. They come with every
 // decision, written or not, so a late, repeated or catch-up event converges
 // instead of stacking a second stage label.
@@ -32,9 +33,7 @@ const STAGE = { Planning: "planning", Implementing: "in development", QA: "QA" }
 function stageLabels(story, prior) {
   const blocked = story === "Blocked";
   const stage = STAGE[blocked ? prior : story] ?? null;
-  // Blocked with no known stage: the stage labels it has are the best guess left.
-  if (blocked && !stage) return { stage, labels: '--add-label "blocked"' };
-  const add = blocked ? [stage, "blocked"] : [stage].filter(Boolean);
+  const add = [stage, blocked && "blocked"].filter(Boolean);
   const remove = [...Object.values(STAGE), "blocked"].filter((label) => !add.includes(label));
   return { stage, labels: [...add.map((l) => `--add-label "${l}"`), ...remove.map((l) => `--remove-label "${l}"`)].join(" ") };
 }
