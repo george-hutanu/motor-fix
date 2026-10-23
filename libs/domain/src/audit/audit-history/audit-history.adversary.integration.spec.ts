@@ -664,3 +664,275 @@ describe('entries', () => {
     });
   });
 });
+
+describe('a cursor beyond the caller scope or filters', () => {
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
+
+  async function nordAndSud() {
+    const nord = await garage('Nord');
+    const sud = await garage('Sud');
+    const ion = await owner(nord.id);
+    return { ion, nord, sud };
+  }
+
+  // @traces 469-FR-004
+  it.each([
+    [
+      'the area and the own garage',
+      (n: string) => ({ area: 'quotes', garageId: n }),
+    ],
+    ['only the own garage', (n: string) => ({ garageId: n })],
+    [
+      'the own garage in capitals',
+      (n: string) => ({ garageId: n.toUpperCase() }),
+    ],
+    ['the area alone', () => ({ area: 'quotes' })],
+    [
+      'a wide period',
+      (n: string) => ({
+        area: 'quotes',
+        from: daysAgo(30).toISOString(),
+        garageId: n,
+      }),
+    ],
+  ])(
+    'answers 400 invalid_cursor to staff for another garage entry with %s',
+    async (_, build) => {
+      const { ion, nord, sud } = await nordAndSud();
+      const theirs = await entry({ at: minutesAgo(5), garageId: sud.id });
+
+      const res = await get({ ...build(nord.id), cursor: theirs.id }, ion.auth);
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('invalid_cursor');
+      expect(res.body.items).toBeUndefined();
+    },
+  );
+
+  it('answers 400 invalid_cursor to staff for the capitals id of another garage entry', async () => {
+    const { ion, nord, sud } = await nordAndSud();
+    const theirs = await entry({ at: minutesAgo(5), garageId: sud.id });
+
+    const res = await get(
+      { area: 'quotes', cursor: theirs.id.toUpperCase(), garageId: nord.id },
+      ion.auth,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('answers 400 invalid_cursor to staff for a platform entry with the filters set', async () => {
+    const { ion, nord } = await nordAndSud();
+    const platform = await entry({ at: minutesAgo(5), garageId: null });
+
+    const res = await get(
+      { area: 'quotes', cursor: platform.id, garageId: nord.id },
+      ion.auth,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('answers 400 invalid_cursor to staff for an own entry older than the default window', async () => {
+    const { ion, nord } = await nordAndSud();
+    const old = await entry({ at: daysAgo(10), garageId: nord.id });
+
+    const res = await get({ cursor: old.id }, ion.auth);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('answers 400 invalid_cursor to the admin for an entry older than the default window', async () => {
+    const boss = await admin();
+    const old = await entry({ at: daysAgo(10) });
+
+    const res = await get({ cursor: old.id }, boss.auth);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('answers 400 invalid_cursor to the admin for a cursor of an entry of another garage than the one filtered', async () => {
+    const boss = await admin();
+    const nord = await garage('Nord');
+    const sud = await garage('Sud');
+    await entry({ garageId: nord.id });
+    const theirs = await entry({ garageId: sud.id });
+
+    const res = await get({ cursor: theirs.id, garageId: nord.id }, boss.auth);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('answers 400 invalid_cursor for an entry that matches the area but not the person', async () => {
+    const { ion, nord } = await nordAndSud();
+    const other = await entry({
+      actorId: randomUUID(),
+      at: minutesAgo(3),
+      garageId: nord.id,
+    });
+
+    const res = await get(
+      { actorId: randomUUID(), cursor: other.id },
+      ion.auth,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+});
+
+describe('the unfiltered admin read', () => {
+  const total = async (auth: string) => (await get({}, auth)).body.total;
+
+  // @traces 469-FR-005
+  it('walks 45 entries of one instant across pages once each, newest id first', async () => {
+    const boss = await admin();
+    const mine = await garage();
+    const at = new Date();
+    const rows = [];
+    for (let i = 0; i < 45; i++) {
+      rows.push(await entry({ at, garageId: i % 2 ? mine.id : null }));
+    }
+    const expected = rows
+      .map((r) => r.id)
+      .sort()
+      .reverse();
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < 3; page++) {
+      const res: {
+        body: { items: { id: string }[]; nextCursor: string | null };
+        status: number;
+      } = await get(cursor ? { cursor } : {}, boss.auth);
+      expect(res.status).toBe(200);
+      seen.push(...res.body.items.map((i) => i.id));
+      cursor = res.body.nextCursor;
+      expect(cursor).not.toBeNull();
+    }
+
+    expect(seen.slice(0, 45)).toEqual(expected);
+  });
+
+  // @traces 469-FR-005
+  it('counts an entry just inside seven days and not one just outside', async () => {
+    const boss = await admin();
+    const before = await total(boss.auth);
+    await entry({ at: new Date(Date.now() - 7 * 86_400_000 + 3_600_000) });
+    await entry({ at: new Date(Date.now() - 7 * 86_400_000 - 3_600_000) });
+
+    expect(await total(boss.auth)).toBe(before + 1);
+  });
+
+  // @traces 469-FR-005
+  it('gives the same total to the same call twice', async () => {
+    const boss = await admin();
+    await entry({ at: minutesAgo(1) });
+
+    expect(await total(boss.auth)).toBe(await total(boss.auth));
+  });
+});
+
+describe('the time index and the append-only rule', () => {
+  const rolledBack = Symbol('rolledBack');
+
+  // @traces 469-FR-001
+  it('has one valid, non-unique, non-partial index on the time alone', async () => {
+    const rows = await prisma.$queryRaw<
+      {
+        indisunique: boolean;
+        indisvalid: boolean;
+        indpred: string | null;
+        cols: string;
+      }[]
+    >`
+      SELECT i.indisunique, i.indisvalid, pg_get_expr(i.indpred, i.indrelid) AS indpred,
+             (SELECT string_agg(a.attname, ',') FROM pg_attribute a
+              WHERE a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)) AS cols
+      FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+      WHERE c.relname = 'activity_log_at_idx'`;
+
+    expect(rows).toEqual([
+      { cols: 'at', indisunique: false, indisvalid: true, indpred: null },
+    ]);
+  });
+
+  // @traces 469-FR-001
+  it('keeps the four scoped indexes beside the time index', async () => {
+    const rows = await prisma.$queryRaw<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'activity_log' AND indexname <> 'activity_log_pkey'
+      ORDER BY indexname`;
+
+    const names = rows.map((r) => r.indexname);
+    expect(names).toContain('activity_log_at_idx');
+    expect(names.filter((n) => n !== 'activity_log_at_idx')).toHaveLength(4);
+  });
+
+  // @traces 469-FR-001
+  it.each([
+    ['an update', "UPDATE activity_log SET actor_name = 'x'"],
+    ['a delete', 'DELETE FROM activity_log'],
+    ['a truncate', 'TRUNCATE activity_log'],
+  ])('still refuses %s of an entry', async (_, sql) => {
+    const row = await entry({ at: minutesAgo(1) });
+    const before = await prisma.activityLog.count();
+
+    await expect(prisma.$executeRawUnsafe(sql)).rejects.toThrow(/append-only/);
+    expect(await prisma.activityLog.count()).toBe(before);
+    expect(
+      (await prisma.activityLog.findUnique({ where: { id: row.id } }))
+        ?.actorName,
+    ).toBe('Ion');
+  });
+
+  // @traces 469-FR-002
+  it('can answer the window count through the time index when a scan is not allowed', async () => {
+    await entry({ at: minutesAgo(1) });
+    let plan = '';
+
+    await prisma
+      .$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET LOCAL enable_seqscan = off');
+        const rows = await tx.$queryRaw<{ 'QUERY PLAN': string }[]>`
+          EXPLAIN SELECT count(*) FROM activity_log
+          WHERE at >= now() - interval '7 days'`;
+        plan = rows.map((r) => r['QUERY PLAN']).join('\n');
+        throw rolledBack;
+      })
+      .catch((e: unknown) => {
+        if (e !== rolledBack) throw e;
+      });
+
+    expect(plan).toMatch(/Index (Only )?Scan using activity_log_\w*idx/);
+    expect(plan).not.toMatch(/Seq Scan on activity_log/);
+  });
+
+  // @traces 469-FR-002
+  it('can answer the newest-first page through the time index when a scan is not allowed', async () => {
+    await entry({ at: minutesAgo(1) });
+    let plan = '';
+
+    await prisma
+      .$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET LOCAL enable_seqscan = off');
+        const rows = await tx.$queryRaw<{ 'QUERY PLAN': string }[]>`
+          EXPLAIN SELECT * FROM activity_log
+          WHERE at >= now() - interval '7 days'
+          ORDER BY at DESC, id DESC LIMIT 21`;
+        plan = rows.map((r) => r['QUERY PLAN']).join('\n');
+        throw rolledBack;
+      })
+      .catch((e: unknown) => {
+        if (e !== rolledBack) throw e;
+      });
+
+    expect(plan).toMatch(/activity_log_at_idx/);
+    expect(plan).not.toMatch(/Seq Scan on activity_log/);
+  });
+});
