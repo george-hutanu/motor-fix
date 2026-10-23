@@ -123,7 +123,7 @@ describe('a yearly documents row in the queue', () => {
     const el = await open();
 
     const [first] = rows(el);
-    expect(text(first).split('Documente anuale')).toHaveLength(2);
+    expect(text(first)?.split('Documente anuale')).toHaveLength(2);
   });
 
   it('says in words why a red row is urgent', async () => {
