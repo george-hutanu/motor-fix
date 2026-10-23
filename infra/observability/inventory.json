@@ -71,6 +71,7 @@
         "worker-queue-backlog",
         "worker-queue-growing",
         "worker-jobs-failed",
+        "worker-compliance-failed",
         "worker-cdn-purge-failed",
         "worker-memory"
       ],
@@ -107,6 +108,7 @@
         "worker-queue-backlog",
         "worker-queue-growing",
         "worker-jobs-failed",
+        "worker-compliance-failed",
         "worker-cdn-purge-failed",
         "worker-memory"
       ],
@@ -247,10 +249,11 @@
       "alerts": [
         "worker-queue-backlog",
         "worker-queue-growing",
-        "worker-jobs-failed"
+        "worker-jobs-failed",
+        "worker-compliance-failed"
       ],
       "story": "ST-881",
-      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run"
+      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run; since ST-68 the same daily job runs the yearly documents compliance step before the RAR re-check: it sends DOCUMENT_DUE at 30, 7 and 0 days and turns a cycle overdue the day after its due date with DOCUMENT_OVERDUE (both always e-mail and push), writes document.due and document.overdue events, counts motorfix_document_cycle_total{step} and refreshes the motorfix_documents_overdue gauge, logs one DocumentCycle line per run (day, reminders per stage, cycles turned overdue) and one on its final failure; shown on the worker dashboard's Documente anuale panel, and a failed run fires worker-compliance-failed"
     },
     {
       "kind": "queue",
@@ -1852,7 +1855,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each sending counts motorfix_document_cycle_total{step=uploaded} and writes one history entry per document",
+      "reason": "each sending counts motorfix_document_cycle_total{step=uploaded}, writes one history entry per document and one document.uploaded event, and tells the admins through ADMIN_VERIFICATION_QUEUED",
       "story": "ST-68"
     },
     {
@@ -1875,6 +1878,17 @@
       "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "counts each step of the yearly document cycle (reminders, overdue, uploads, acceptances, refusals); a count has no failure to alert on; the api-error-rate and worker-jobs-failed rules cover the services that report it",
+      "story": "ST-68"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_documents_overdue",
+      "source": "libs/domain/src/garages/documents/document-cycle/document-cycle.gauge.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-compliance-failed"
+      ],
+      "reason": "a gauge of yearly document cycles in the overdue state, refreshed by each run of the compliance step and shown on the Documente anuale panel; a run that fails for good leaves it stale and fires worker-compliance-failed",
       "story": "ST-68"
     }
   ]
