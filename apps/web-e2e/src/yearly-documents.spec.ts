@@ -99,9 +99,11 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
        FROM unnest(ARRAY['company', 'caen', 'rar', 'documents']) AS k`,
       [into.fileId],
     );
+    // Stored before the date headTheQueue gives the uploads: the drawer shows
+    // an upload for review only when it is newer than the kind's document.
     await db.query(
       `INSERT INTO legal_document (verification_file_id, kind, pages, status, created_at)
-       SELECT $1::uuid, k, ARRAY['legal_document/' || $1::text || '/e2e-' || k || '-1'], 'valid', now() - interval '1 year'
+       SELECT $1::uuid, k, ARRAY['legal_document/' || $1::text || '/e2e-' || k || '-1'], 'valid', TIMESTAMPTZ '1999-01-01T08:00:00Z'
        FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']) AS k`,
       [into.fileId],
     );
