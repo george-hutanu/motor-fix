@@ -47,6 +47,7 @@ const history = () =>
 
 // @traces 1357-FR-001
 // @traces 1357-FR-007
+// @traces 245-FR-004
 describe('the job catalogue file', () => {
   it('holds the six jobs of the listing wizard, named in Romanian and English, each with its kind of work', () => {
     expect(JOB_TYPES).toEqual([
@@ -91,6 +92,7 @@ describe('the job catalogue file', () => {
 });
 
 describe('JobTypeLoader', () => {
+  // @traces 245-FR-005
   it('stores the six jobs once, approved, with both names', async () => {
     const result = await loader.load(JOB_TYPES);
 
@@ -119,6 +121,7 @@ describe('JobTypeLoader', () => {
     }
   });
 
+  // @traces 245-FR-005
   it('changes nothing and records nothing when the same file runs again', async () => {
     await loader.load(JOB_TYPES);
     const before = await prisma.jobType.findMany({ orderBy: { key: 'asc' } });

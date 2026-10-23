@@ -56,17 +56,10 @@ export class BrandLoader {
     const byKey = new Map(stored.map((brand) => [brand.key, brand]));
     let changed = 0;
     for (const record of records) {
-      const after = {
-        active: true,
-        name: record.name,
-        roPossessive: record.roPossessive ?? null,
-        slug: slugOf(record.name),
-      };
       const brand = byKey.get(record.key);
-      // The file's rank seeds a brand it inserts; a stored brand keeps the
-      // rank the nightly ranking gave it.
+      const after = fileFields(record);
       const wrote = brand
-        ? await this.update(tx, brand, after)
+        ? await this.update(tx, brand, withRankIfUnranked(after, brand, record))
         : await this.create(tx, record.key, {
             ...after,
             popularity: record.popularity ?? null,
@@ -145,4 +138,25 @@ function refuseHeldNames(
       );
     }
   }
+}
+
+function fileFields(record: BrandRecord) {
+  return {
+    active: true,
+    name: record.name,
+    roPossessive: record.roPossessive ?? null,
+    slug: slugOf(record.name),
+  };
+}
+
+// The file's rank seeds a brand it inserts or a stored one with no rank; a
+// rank already held is the nightly ranking's and stays.
+function withRankIfUnranked(
+  after: ReturnType<typeof fileFields>,
+  brand: Brand,
+  record: BrandRecord,
+) {
+  return brand.popularity === null && record.popularity !== undefined
+    ? { ...after, popularity: record.popularity }
+    : after;
 }

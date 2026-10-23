@@ -121,24 +121,49 @@ describe('GET /brands', () => {
 
     const res = await search({ q: '   ' });
 
-    expect(res.body.total).toBe(15);
+    expect(res.body.total).toBe(64);
   });
 
-  // @traces 405-FR-005
-  it('ships Alfa Romeo, Citroën and Opel unranked, after every ranked brand', async () => {
+  // @traces 245-FR-002
+  // @traces 245-FR-006
+  it('lists the twelve brands of the mock first, in the mock order, when nothing is typed', async () => {
     await loader.load(BRANDS);
 
     const res = await search();
-    const listed = names(res.body);
 
-    expect(listed.slice(-3)).toEqual(['Alfa Romeo', 'Citroën', 'Opel']);
+    expect(names(res.body).slice(0, 12)).toEqual([
+      'BMW',
+      'Mini',
+      'Mercedes-Benz',
+      'Audi',
+      'Volkswagen',
+      'Škoda',
+      'Dacia',
+      'Renault',
+      'Ford',
+      'Toyota',
+      'Hyundai',
+      'Tesla',
+    ]);
     expect(
-      res.body.items
-        .filter((b: { name: string }) =>
-          ['Alfa Romeo', 'Citroën', 'Opel'].includes(b.name),
-        )
-        .map((b: { popularity: number | null }) => b.popularity),
-    ).toEqual([null, null, null]);
+      res.body.items.filter(
+        (b: { popularity: number | null }) => b.popularity === null,
+      ),
+    ).toEqual([]);
+  });
+
+  // @traces 245-FR-006
+  it.each([
+    ['skoda', 'Škoda'],
+    ['citroen', 'Citroën'],
+    ['Lada', 'Lada'],
+  ])('finds %s first over the shipped file', async (q, name) => {
+    await loader.load(BRANDS);
+
+    const res = await search({ q });
+
+    expect(res.status).toBe(200);
+    expect(names(res.body)[0]).toBe(name);
   });
 
   it('pages 20 brands at a time with a cursor to the next page', async () => {
@@ -178,7 +203,7 @@ describe('GET /brands', () => {
     const res = await search({ q: 'tesla' });
 
     expect(res.body.items).toEqual([]);
-    expect((await search()).body.total).toBe(14);
+    expect((await search()).body.total).toBe(63);
   });
 
   it.each([

@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { BrandLoader } from './brand-loader';
-import { BrandFileError, type BrandRecord } from './brands';
+import { BRANDS, BrandFileError, type BrandRecord } from './brands';
 import { AuditService } from '../audit/audit.service';
 import { foreignEntries } from '../audit/audit.testing';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -245,6 +245,7 @@ describe('BrandLoader', () => {
   });
 
   // @traces 228-FR-015
+  // @traces 245-FR-002
   it('keeps the rank of a brand it already holds, so a reload never undoes the nightly ranking', async () => {
     await loader.load(FILE);
     await prisma.brand.update({
@@ -255,7 +256,7 @@ describe('BrandLoader', () => {
     const result = await loader.load([
       { key: 'bmw', name: 'BMW', popularity: 1 },
       FILE[1],
-      { key: 'dacia', name: 'Dacia', popularity: 3 },
+      FILE[2],
     ]);
 
     expect(result.changed).toBe(0);
@@ -269,6 +270,40 @@ describe('BrandLoader', () => {
     expect(
       (await history()).filter((entry) => entry.action === 'update'),
     ).toEqual([]);
+  });
+
+  // @traces 245-FR-002
+  it('gives a stored brand with no rank the rank the file holds, recorded once', async () => {
+    await loader.load(FILE);
+    const dacia = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'dacia' },
+    });
+
+    const result = await loader.load([
+      FILE[0],
+      FILE[1],
+      { key: 'dacia', name: 'Dacia', popularity: 3 },
+    ]);
+
+    expect(result.changed).toBe(1);
+    expect(
+      (await stored()).map(({ key, popularity }) => [key, popularity]),
+    ).toEqual([
+      ['bmw', 1],
+      ['dacia', 3],
+      ['skoda', 2],
+    ]);
+    expect(
+      (await history()).filter((entry) => entry.action === 'update'),
+    ).toEqual([
+      expect.objectContaining({
+        actorRole: 'system',
+        field: 'popularity',
+        newValue: 3,
+        oldValue: null,
+        subjectId: dacia.id,
+      }),
+    ]);
   });
 
   // @traces 228-FR-015
@@ -419,5 +454,108 @@ describe('BrandLoader', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe('the shipped file', () => {
+  const loaded = () =>
+    prisma.brand.findMany({
+      orderBy: { popularity: 'asc' },
+      select: {
+        active: true,
+        key: true,
+        name: true,
+        popularity: true,
+        roPossessive: true,
+        slug: true,
+      },
+    });
+
+  const asFile = BRANDS.map((record) => ({
+    active: true,
+    key: record.key,
+    name: record.name,
+    popularity: record.popularity ?? null,
+    roPossessive: record.roPossessive ?? null,
+    slug: record.key,
+  }));
+
+  // @traces 245-FR-005
+  it('creates every brand of the file, active, with its name, slug, rank and your form', async () => {
+    const result = await loader.load(BRANDS);
+
+    expect(result.changed).toBe(BRANDS.length);
+    expect(await loaded()).toEqual(asFile);
+    expect(
+      (await history()).filter((entry) => entry.action === 'create'),
+    ).toHaveLength(BRANDS.length);
+  });
+
+  // @traces 245-FR-005
+  it('changes no row and records nothing when the file loads a second time', async () => {
+    await loader.load(BRANDS);
+    const before = await prisma.brand.findMany({ orderBy: { key: 'asc' } });
+    const entries = (await history()).length;
+
+    const result = await loader.load(BRANDS);
+
+    expect(result.changed).toBe(0);
+    expect(await prisma.brand.findMany({ orderBy: { key: 'asc' } })).toEqual(
+      before,
+    );
+    expect(await history()).toHaveLength(entries);
+  });
+
+  // @traces 245-FR-002
+  // @traces 245-FR-005
+  it('over the brands shipped before, inserts the new ones, ranks the unranked and keeps a ranked one', async () => {
+    const shippedKeys = [
+      'bmw',
+      'mini',
+      'mercedes-benz',
+      'audi',
+      'volkswagen',
+      'skoda',
+      'dacia',
+      'renault',
+      'ford',
+      'toyota',
+      'hyundai',
+      'tesla',
+      'alfa-romeo',
+      'citroen',
+      'opel',
+    ];
+    const unranked = new Set(['alfa-romeo', 'citroen', 'opel']);
+    await loader.load(
+      BRANDS.filter((record) => shippedKeys.includes(record.key)).map(
+        (record) =>
+          unranked.has(record.key)
+            ? { ...record, popularity: undefined }
+            : record,
+      ),
+    );
+    await prisma.brand.update({
+      data: { popularity: 40 },
+      where: { key: 'tesla' },
+    });
+
+    const result = await loader.load(BRANDS);
+
+    expect(result.changed).toBe(BRANDS.length - shippedKeys.length + 3);
+    expect(await prisma.brand.count({ where: { active: true } })).toBe(
+      BRANDS.length,
+    );
+    const ranks = Object.fromEntries(
+      (await loaded()).map(({ key, popularity }) => [key, popularity]),
+    );
+    expect(ranks).toMatchObject({
+      'alfa-romeo': 29,
+      bmw: 1,
+      citroen: 22,
+      lada: 35,
+      opel: 13,
+      tesla: 40,
+    });
   });
 });
