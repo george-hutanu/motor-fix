@@ -622,7 +622,7 @@ const listOf = (mechanicId: string, page?: unknown) =>
     `/reviews/mechanic/${mechanicId}${page === undefined ? '' : `?page=${page}`}`,
   );
 
-// @traces 025-FR-011 025-FR-012
+// @traces 025-FR-011 025-FR-012 025-FR-013 025-FR-015
 // @traces 025-FR-013
 describe("reading a mechanic's reviews", () => {
   it('lists 20 a page, newest first, each with its garage, to a visitor', async () => {

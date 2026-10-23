@@ -122,6 +122,7 @@ async function elena(garageId: string) {
   });
 }
 
+// @traces 025-FR-015
 // @traces 025-FR-005 025-FR-006 025-FR-007
 describe('the figures a review moves', () => {
   it('averages the published reviews of the mechanic and of the garage', async () => {
