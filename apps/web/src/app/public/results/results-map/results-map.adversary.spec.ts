@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { PLATFORM_ID } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
@@ -139,5 +142,40 @@ describe('the results map, under attack', () => {
     await ready();
 
     expect(view.light).toHaveBeenLastCalledWith('g-2');
+  });
+});
+
+// @traces 1351-FR-001
+describe('the map legend on a phone, from its own stylesheet', () => {
+  const flat = readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+
+  it('gives way to the zoom hint by visibility alone, under 768 px only', () => {
+    expect(flat).toMatch(
+      /@media \(max-width: 767\.98px\) \{[^@]*\.hint:not\(:empty\) ~ \.legend \{ visibility: hidden; \}/,
+    );
+    expect(flat.match(/~ \.legend/g)).toHaveLength(1);
+  });
+
+  it('is hidden by nothing else here, and never forced visible', () => {
+    const hiding = [
+      ...flat.matchAll(
+        /([^{}]*\.legend[^{}]*)\{[^{}]*(visibility: hidden|display: none|opacity: 0[;\s])/g,
+      ),
+    ].map((m) => m[1].trim());
+
+    expect(hiding).toEqual(['.hint:not(:empty) ~ .legend']);
+    expect(flat).not.toMatch(/visibility: visible/);
+  });
+
+  it('keeps the narrow block to the legend alone', () => {
+    const narrow = flat.match(
+      /@media \(max-width: 359\.98px\) \{(.*?\}) \}/,
+    )?.[1];
+
+    expect(narrow?.match(/[^{}]+\{/g)?.map((s) => s.trim())).toEqual([
+      '.legend {',
+    ]);
   });
 });

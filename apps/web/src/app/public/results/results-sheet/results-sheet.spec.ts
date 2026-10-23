@@ -156,6 +156,7 @@ describe('ResultsSheet on a phone', () => {
     pointer(handle(), 'pointerup', 301);
   });
 
+  // @traces 1351-FR-002 1351-FR-007
   // The map's zoom buttons sit in the top 104 px of the stage: whenever the
   // sheet's top edge is over them, at rest or under the finger, they hide, so
   // its handle never lies across the zoom-out button (ST-328 QA lap 4).

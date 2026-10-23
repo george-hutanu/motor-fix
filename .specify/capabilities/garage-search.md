@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -22,6 +22,7 @@ features:
   - 1356-results-load-more
   - 328-sort-results
   - 330-listed-facilities
+  - 1351-results-phone-layout
 ---
 
 # Capability: Garage search
@@ -234,9 +235,9 @@ _From 269-map-price-pins._
 
 _From 269-map-price-pins._
 
-### 269-FR-015 — A legend MUST sit on the map in both languages, with the mock's words (Results.dc.html, `mf-legend-d`): the green lamp "primește {brand}" ("takes {brand}"), the red lamp "nu primește" ("doesn't"), and "lei pe oră" ("lei per hour") for the number on a pin; when a circle is on the map, a fourth entry explains it ("Mecanic mobil · zona deservită" / "Mobile mechanic · service area").
+### 1351-FR-001 — On a phone (below 768 px) at 320 px and 390 px, with the sheet at low or half, the map legend (269-FR-015's entries, the mobile-mechanic entry included when a circle is drawn) MUST be wholly visible: its box lies above the sheet's top edge and does not overlap the zoom buttons' column, and every entry reads whole in Romanian and English, in light and dark, with the default brand and with "Mercedes-Benz", and its box is never clipped by the map's edge; the number of rows is not a requirement. From 768 px the legend is unchanged. The legend's placement at the map's top on a phone (the existing rule) stays; a box that would reach the sheet at half is what the story makes impossible. Where the half sheet rises over the zoom buttons (the sheet's `over-zoom`, a short phone such as 320 × 568, where only about 42–66 px of map stay above it), the legend MUST hide whole together with the zoom buttons and show again when the sheet rests at low; a cut legend is never shown. Under 360 px its rows are tightened at the same 16 px.
 
-_From 269-map-price-pins._
+_From 1351-results-phone-layout._
 
 ### 269-FR-016 — The map MUST NOT be the accessible path: the map region carries a text label ("Harta service-urilor" / "Map of garages"), the map canvas, its pins, clusters and controls are hidden from assistive technology and skipped by the keyboard order, and every garage stays in the list.
 
@@ -432,13 +433,13 @@ _From 1358-results-phone-map-list._
 
 _From 1358-results-phone-map-list._
 
-### 1358-FR-004 — The map MUST stay visible, and usable (drag, zoom, pin taps, the visible-area search), in the low and half positions; the public tab bar MUST stay visible at every position, the sheet ending above it, except while a field is focused, when the bar hides by its existing rule and the sheet rests on the screen's bottom edge; the sheet's full position ends under the summary bar, which stays visible.
+### 1351-FR-002 — On a phone, at every rest position of the sheet and whether the consent bar shows or not, the map's zoom buttons MUST be either both wholly visible above the sheet's top edge and tappable (44 px targets, nothing covering them), or both hidden, as the existing "sheet over the zoom buttons" rule hides them; never partly covered. Where the sheet's top edge at low or half lies below the zoom column (320 × 800, 390 × 844, consent bar showing or not), the buttons MUST be visible and tappable; where it lies over the column (320 × 568 with the consent bar), both hidden is the answer (1358-FR-004 keeps the rest of its text: the map stays visible and usable in low and half; the tab bar stays visible at every position, the sheet ending above it, except while a field is focused; the sheet's full position ends under the summary bar).
 
-_From 1358-results-phone-map-list._
+_From 1351-results-phone-layout._
 
-### 1358-FR-005 — The list MUST scroll inside the sheet at half and full; the page behind the sheet MUST NOT scroll on a phone, and scrolling the list MUST NOT move the sheet. Only the handle and the header's free space drag the sheet; the chip rows scroll sideways on their own. The results screen is exactly one screen tall, so scrolling the list never scrolls the page; the site footer stays below that screen.
+### 1351-FR-003 — On a phone the results screen MUST be exactly one screen tall between the site bar and the tab bar (less the consent bar while it has room to push the stage, as today), and the site footer MUST lie wholly below that screen at every rest position of the sheet, with and without the consent bar, and while the tab bar hides for a focused field: measured in document coordinates (`getBoundingClientRect` plus `scrollY`), the footer's top lies at or below the results screen's bottom; whether the footer can be scrolled to stays as it is today. The rest of 1358-FR-005 stays: the list scrolls inside the sheet at half and full; the page behind the sheet does not scroll on a phone; scrolling the list never moves the sheet; only the handle and the header's free space drag the sheet; the chip rows scroll sideways on their own.
 
-_From 1358-results-phone-map-list._
+_From 1351-results-phone-layout._
 
 ### 1358-FR-006 — The sheet's header, under the handle, MUST hold the brand chip row and the brand search of ST-268 (1355-FR-010, 1355-FR-013), and nothing else: the sort and the facility chips of ST-328 and ST-329 join the header when those stories land, and this story adds no placeholder or code for them; every control in the header is at least 44 px tall and reachable with one thumb at every position (the header is the sheet's top in all three).
 
@@ -608,6 +609,22 @@ _From 330-listed-facilities._
 
 _From 330-listed-facilities._
 
+### 1351-FR-004 — On a phone the summary bar's place line and total MUST read at the Cockpit body size (`--mf-size-body`, 16 px), the phone size of running text (975-FR-003), never the small size (13 px) the board drew; nothing in the summary is under 12 px (286-FR-004). This records the owner's decision: `main` already reads body since ST-273 (9bb05e66a); the story keeps it and asserts it, and changes the size nowhere. From 768 px the summary's sizes are unchanged.
+
+_From 1351-results-phone-layout._
+
+### 1351-FR-006 — The story's PR QA flows (`specs/1351-results-phone-layout/qa-flows.mjs`, sent with each QA run as `dispatch.mjs --flows`) MUST assert FR-001, FR-002, FR-003 and FR-005 on the results page at 320 px and 390 px (FR-005 on a tablet width as well), in light and dark, Romanian and English, with the sheet at half and, for FR-002 and FR-003, with the consent bar showing: the legend's box against the sheet's top edge and the zoom column; each zoom button either wholly above the sheet or hidden; the footer's box against the results screen's box; each language label's box inside the switch and the bar. A failing assertion is a finding the tester reports. The flows travel with the QA run, not in the product; no screenshot is added to the repo (the run's artifact is the evidence).
+
+_From 1351-results-phone-layout._
+
+### 1351-FR-007 — Tests before code (Principle II): web unit tests (Jest, colocated) MUST cover each stylesheet rule the story changes by its computed result where a unit test can hold it (the legend's width budget against the zoom column at 320 px; the results screen's height formula with and without the consent bar; the summary's phone size; the site bar's tablet rule), and the end-to-end suite (Playwright, `apps/web-e2e`) MUST cover FR-001 to FR-003 at 320 × 568 and 390 × 844 and FR-005 at 768 × 1024, each as a measured box, not a screenshot. Each test file carries its whole-line `// @traces` comment naming the `1351-FR-<n>` ids it proves.
+
+_From 1351-results-phone-layout._
+
+### 1351-FR-008 — The story MUST hold at 320 px, 390 px, tablet (768–1023 px) and desktop, in light and dark, Romanian and English, in the PR QA sweep, with no sideways scroll at 320 px (286-FR-002), no text under 12 px, every control 44 px; it adds no new text, no new component, no service, endpoint, queue, outside call or product action (the PR's Observability section says so and the inventory is unchanged), and it changes the sheet's behaviour, the summary's content and the header's links nowhere beyond FR-001 to FR-005 (Principle I: the smallest stylesheet change that makes each item impossible, confirmed by a measurement, not a screenshot read by eye).
+
+_From 1351-results-phone-layout._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -635,3 +652,6 @@ _From 330-listed-facilities._
 - `267-FR-001` — superseded by `328-FR-003` (2026-10-22)
 - `1356-FR-009` — superseded by `328-FR-006` (2026-10-22)
 - `1355-FR-006` — superseded by `328-FR-012` (2026-10-22)
+- `269-FR-015` — superseded by `1351-FR-001` (2026-10-23)
+- `1358-FR-004` — superseded by `1351-FR-002` (2026-10-23)
+- `1358-FR-005` — superseded by `1351-FR-003` (2026-10-23)

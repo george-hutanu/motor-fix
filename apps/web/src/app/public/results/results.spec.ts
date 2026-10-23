@@ -3233,6 +3233,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 });
 
 // @traces 1358-FR-001 1358-FR-005 1358-FR-011
+// @traces 1351-FR-003 1351-FR-004 1351-FR-007
 describe('the phone results screen in the stylesheet', () => {
   const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')

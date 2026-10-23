@@ -143,3 +143,61 @@ test.describe('on a phone', () => {
     await expect(section(page)).toBeInViewport();
   });
 });
+
+// @traces 1351-FR-005 1351-FR-007
+test.describe('the site bar on a tablet', () => {
+  for (const [width, height] of [
+    [768, 1024],
+    [834, 1194],
+    [1023, 768],
+  ] as const) {
+    test(`reads both language labels whole at ${width} px, in Romanian and English`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      for (const language of ['ro', 'en'] as const) {
+        await ready(page, `/${language}/garages?brand=dacia`);
+
+        const cut = await page.evaluate(() => {
+          const bar = document.querySelector('header.bar');
+          const inside = (a: DOMRect, b: DOMRect) =>
+            a.left >= b.left - 0.5 &&
+            a.right <= b.right + 0.5 &&
+            a.top >= b.top - 0.5 &&
+            a.bottom <= b.bottom + 0.5;
+          const barBox = bar?.getBoundingClientRect();
+          return [...(bar?.querySelectorAll('mf-language-switch button') ?? [])]
+            .filter((label) => {
+              const box = label.getBoundingClientRect();
+              const text = document.createRange();
+              text.selectNodeContents(label);
+              const words = text.getBoundingClientRect();
+              const others = [...(bar?.children ?? [])]
+                .filter((part) => !part.contains(label))
+                .map((part) => part.getBoundingClientRect())
+                .filter((other) => other.width > 0);
+              const overlapped = others.some(
+                (o) =>
+                  o.left < box.right &&
+                  box.left < o.right &&
+                  o.top < box.bottom &&
+                  box.top < o.bottom,
+              );
+              return (
+                overlapped ||
+                !barBox ||
+                !inside(box, barBox) ||
+                !inside(words, box) ||
+                label.scrollWidth > label.clientWidth
+              );
+            })
+            .map((label) => label.textContent?.trim());
+        });
+        expect(cut, `${width} px ${language}`).toEqual([]);
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(width);
+      }
+    });
+  }
+});

@@ -33,6 +33,19 @@ export const VIEWPORTS = {
 // Every shot is of the whole page, its transitions and animations run to their end first: a dial's
 // needle caught halfway is a pixel change the PR never made.
 export const SHOT_OPTIONS = { animations: "disabled", fullPage: true };
+// Chromium's own headless mode, not the headless shell, which leaves a WebGL map blank under a sticky bar that
+// reaches past the viewport (the results map at 390 x 844 with the consent bar asking) where a browser draws it whole.
+export const LAUNCH_OPTIONS = { channel: "chromium" };
+// A machine with only the shell installed (a --local run on a laptop) still sweeps, and says which browser it used.
+export async function launchBrowser(chromium, log = console.warn) {
+  try {
+    return await chromium.launch(LAUNCH_OPTIONS);
+  } catch (error) {
+    if (!/Executable doesn't exist/.test(String(error?.message))) throw error;
+    log("sweep: Chromium is not installed, so the headless shell runs instead; a WebGL map may show blank under a sticky bar");
+    return chromium.launch();
+  }
+}
 // What a page marks as moving with today's date (a 12-month chart): painted one flat colour in the shot, so the visual diff never reads it as a change.
 export const VOLATILE = "[data-qa-volatile]";
 export const shotOptions = (page, path) => ({ ...SHOT_OPTIONS, path, mask: [page.locator(VOLATILE)], maskColor: "#808080" });
@@ -317,7 +330,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   const screenshots = [];
   // route|viewport|scheme|lang -> the layout rules measured there in full (layout.mjs), saved as the report's layoutCoverage.
   const coverage = {};
-  const browser = await chromium.launch();
+  const browser = await launchBrowser(chromium);
   try {
     for (const run of matrix({ routes, schemes, langs })) {
       const vp = VIEWPORTS[run.viewport];
