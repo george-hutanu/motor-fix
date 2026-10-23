@@ -140,3 +140,145 @@ describe('Odometer in cells, at the edges', () => {
     ).toEqual(['0', '0', '0', '0', '0']);
   });
 });
+
+@Component({
+  imports: [Odometer],
+  template: `<mf-odometer [from]="from()" [to]="to()" [cells]="cells()" />`,
+})
+class GroupHost {
+  readonly from = signal<unknown>(125000);
+  readonly to = signal<unknown>(160000);
+  readonly cells = signal<number | undefined>(undefined);
+}
+
+function renderGroups(from: unknown, to?: unknown, cells?: number) {
+  const fixture = TestBed.createComponent(GroupHost);
+  fixture.componentInstance.from.set(from);
+  fixture.componentInstance.to.set(to);
+  fixture.componentInstance.cells.set(cells);
+  fixture.detectChanges();
+  const part = (fixture.nativeElement as HTMLElement).querySelector(
+    'mf-odometer',
+  ) as HTMLElement;
+  return {
+    fixture,
+    groups: () =>
+      [...part.querySelectorAll<HTMLElement>('.mf-odometer-group')].map((g) =>
+        g.textContent?.trim(),
+      ),
+    part,
+    spoken: () => part.querySelector('[aria-live]')?.textContent?.trim(),
+  };
+}
+
+// @traces 466-FR-001
+describe('the odometer groups at the edges', () => {
+  it('collapses equal ends to one group', () => {
+    expect(renderGroups(125000, 125000).groups()).toEqual(['1.250 lei']);
+  });
+
+  it('keeps a reversed range as two whole groups', () => {
+    expect(renderGroups(160000, 125000).groups()).toEqual([
+      '1.600–',
+      '1.250 lei',
+    ]);
+  });
+
+  it('keeps a seven-digit range as two groups', () => {
+    expect(renderGroups(100_000_000, 250_000_000).groups()).toEqual([
+      '1.000.000–',
+      '2.500.000 lei',
+    ]);
+  });
+
+  it('keeps a zero start and a zero end whole', () => {
+    expect(renderGroups(0, 0).groups()).toEqual(['0 lei']);
+    expect(renderGroups(0, 160000).groups()).toEqual(['0–', '1.600 lei']);
+  });
+
+  it('shows one dash and no group when nothing is a number', () => {
+    const { groups, part } = renderGroups(undefined, undefined);
+
+    expect(groups()).toEqual(['—']);
+    expect(part.textContent).toContain('—');
+  });
+
+  it('never nests a group inside a group', () => {
+    const { part } = renderGroups(125000, 160000);
+
+    expect(
+      part.querySelectorAll('.mf-odometer-group .mf-odometer-group'),
+    ).toHaveLength(0);
+  });
+
+  it('keeps every digit cell in exactly one group and the groups inside the value', () => {
+    const { part } = renderGroups(125000, 160000);
+
+    for (const group of part.querySelectorAll('.mf-odometer-group'))
+      expect(group.parentElement?.classList).toContain('mf-odometer-value');
+    expect(part.querySelectorAll('.mf-odometer-digit')).toHaveLength(8);
+  });
+});
+
+// @traces 466-FR-004
+describe('the odometer groups beside the other modes', () => {
+  it('leaves the spoken text a single complete value after the groups are in', () => {
+    const { part, spoken } = renderGroups(125000, 160000);
+
+    expect(spoken()).toBe('1.250–1.600 lei');
+    expect(part.querySelectorAll('[aria-live]')).toHaveLength(1);
+    expect(
+      part.querySelector('.mf-odometer-value')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
+  it('shows one cells group with no unit even when an end is also given', () => {
+    const { groups, part } = renderGroups(125000, 160000, 5);
+
+    expect(groups().length).toBeGreaterThan(0);
+    expect(part.textContent).not.toContain('lei');
+  });
+
+  it('regroups when a single price becomes a range and back', () => {
+    const { fixture, groups } = renderGroups(125000, undefined);
+
+    expect(groups()).toEqual(['1.250 lei']);
+    fixture.componentInstance.to.set(160000);
+    fixture.detectChanges();
+    expect(groups()).toEqual(['1.250–', '1.600 lei']);
+    fixture.componentInstance.to.set(undefined);
+    fixture.detectChanges();
+    expect(groups()).toEqual(['1.250 lei']);
+  });
+
+  it('rolls the same digit cells in place when the range changes', () => {
+    const { fixture, part } = renderGroups(125000, 160000);
+    const before = [...part.querySelectorAll('.mf-odometer-digit')];
+
+    fixture.componentInstance.from.set(135000);
+    fixture.detectChanges();
+    const after = [...part.querySelectorAll('.mf-odometer-digit')];
+
+    expect(after).toEqual(before);
+    expect(
+      after.map((d) => (d as HTMLElement).style.getPropertyValue('--mf-digit')),
+    ).toEqual(['1', '3', '5', '0', '1', '6', '0', '0']);
+  });
+
+  it('shows no group for infinity and no Infinity text', () => {
+    const { part } = renderGroups(Number.POSITIVE_INFINITY, 160000);
+
+    expect(part.textContent).not.toMatch(/infinity|nan|undefined/i);
+  });
+
+  it('shows no NaN or undefined for a hostile range', () => {
+    for (const [a, b] of [
+      ['abc', {}],
+      [[], '1'],
+      [125000, Number.NaN],
+    ] as const)
+      expect(renderGroups(a, b).part.textContent).not.toMatch(
+        /nan|undefined|\[object/i,
+      );
+  });
+});

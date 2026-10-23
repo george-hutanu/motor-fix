@@ -54,6 +54,13 @@ import { SAMPLE_GARAGES } from './sample-text';
       align-items: center;
       gap: var(--mf-space-3);
     }
+    /* At 200 % text a label wider than a phone wraps, inside a word if it
+       must, instead of the page scrolling sideways. */
+    .row > button {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
     .field {
       display: grid;
       gap: var(--mf-space-2);
