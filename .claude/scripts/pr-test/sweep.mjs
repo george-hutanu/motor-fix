@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { SEEDED } from "./endpoints.mjs";
 import { coverageKey, layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
 import { measureLayout } from "./layout.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 export const VIEWPORTS = {
   desktop: { width: 1440, height: 900, isMobile: false, hasTouch: false, deviceScaleFactor: 1 },
@@ -453,7 +454,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   return { observations: dropExpected(observations), screenshots, coverage };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const arg = (n, d) => {
     const i = process.argv.indexOf(`--${n}`);
     return i === -1 ? d : process.argv[i + 1];

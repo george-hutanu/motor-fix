@@ -170,10 +170,59 @@ describe('the stage label: exactly one on an open PR, whatever it carried before
     assert.deepEqual(apply(unblocked.labels, ['QA', 'blocked']), ['QA']);
   });
 
-  it('only adds blocked when the stage it left is unknown', () => {
-    for (const r of [go('blocked', 'Blocked', null), go('blocked', 'To do')]) {
-      assert.equal(r.stage, null);
-      assert.equal(r.labels, '--add-label "blocked"');
+  // @traces 485-FR-001
+  it('leaves blocked alone when the status it left carries no stage label', () => {
+    const noStage = [
+      ['blocked', 'To do', null],
+      ['blocked', 'Blocked', null],
+      ['qa', 'Blocked', null],
+      ['start', 'Blocked', null],
+      ['finish', 'Blocked', 'To do'],
+    ];
+    for (const [event, current, prior] of noStage) {
+      const r = go(event, current, prior);
+      assert.equal(r.stage, null, `${event} ${current}`);
+      assert.equal(
+        r.labels,
+        '--add-label "blocked" --remove-label "planning" --remove-label "in development" --remove-label "QA"',
+        `${event} ${current}`,
+      );
+      assert.deepEqual(apply(r.labels, [...STAGE_LABELS, 'feature']), ['blocked', 'feature'], `${event} ${current}`);
+      assert.deepEqual(apply(r.labels, []), ['blocked'], `${event} ${current}`);
+    }
+  });
+
+  // @traces 485-FR-002
+  it('keeps the stage it left beside blocked, retired statuses read as their stage', () => {
+    const left = [
+      ['Planning', 'planning'],
+      ['Implementing', 'in development'],
+      ['QA', 'QA'],
+      ['In progress', 'in development'],
+      ['In review', 'QA'],
+    ];
+    for (const [current, stage] of left) {
+      const r = go('blocked', current);
+      assert.equal(r.stage, stage, current);
+      assert.deepEqual(apply(r.labels, [...STAGE_LABELS, 'feature']), [stage, 'blocked', 'feature'].sort(), current);
+    }
+  });
+
+  // @traces 485-FR-003
+  it('leaves at most one stage label after any event from any status and labels', () => {
+    const events = ['start', 'implement', 'review', 'qa', 'finish', 'blocked', 'unblock'];
+    const statuses = ['To do', 'Planning', 'Implementing', 'QA', 'Done', 'Blocked', 'In progress', 'In review'];
+    const priors = [null, 'To do', 'Planning', 'Implementing', 'QA'];
+    const subsets = [[], ['planning', 'QA'], [...STAGE_LABELS, 'blocked']];
+    for (const event of events) {
+      for (const current of statuses) {
+        for (const prior of priors) {
+          for (const before of subsets) {
+            const after = apply(go(event, current, prior).labels, before);
+            assert.ok(after.filter((l) => STAGE_LABELS.includes(l)).length <= 1, `${event} ${current} ${prior} ${before}`);
+          }
+        }
+      }
     }
   });
 

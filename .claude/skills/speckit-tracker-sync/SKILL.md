@@ -109,7 +109,8 @@ never its title or text.
 
 Exactly one **stage** label on an open PR, set by every event: Planning →
 `planning`, Implementing → `in development`, QA → `QA`; a Blocked story keeps
-the stage it left plus `blocked`; a merged PR carries none. The decision's
+the stage it left plus `blocked` (from To do, or with no recorded status it
+left, `blocked` alone); a merged PR carries none. The decision's
 `labels` adds the one and removes the others, so a late or repeated event
 converges.
 

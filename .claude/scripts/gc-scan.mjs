@@ -13,6 +13,7 @@ import { loadInstincts } from "./instincts.mjs";
 import { loadRecords, unused } from "./telemetry.mjs";
 import { ledgerDir } from "./lib/telemetry.mjs";
 import { loadRegistry } from "./lib/hooks.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const DAY = 86400000;
 const candidate = (channel, path, why, action) => ({ channel, path, why, action });
@@ -164,7 +165,7 @@ export async function rankCandidates(candidates, { repo, fetchImpl } = {}) {
   };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   let candidates = gcScan(repo);
   let laneNote = null;

@@ -103,6 +103,7 @@ features:
   - 1363-throughput-fixes
   - 068-yearly-documents
   - 482-watch-transcript-holder
+  - 486-entry-point-symlink
 ---
 
 # Capability: Platform
@@ -409,9 +410,9 @@ _From 450-pr-tester-env-gaps._
 
 _From 600-merge-gate-symlink._
 
-### 600-FR-002 — Every hook in `.claude/hooks/` that runs only as the entry point MUST use that check; no hook may compare `process.argv[1]` with its module URL directly.
+### 486-FR-001 — Every script and hook under `.claude/` (hooks, scripts and skill scripts) that runs only as the entry point MUST decide so with `isEntryPoint(import.meta.url)` from `.claude/scripts/lib/entry.mjs`; none may compare `process.argv[1]` with its module URL or path directly, and each MUST run its main block when started through a symlinked path.
 
-_From 600-merge-gate-symlink._
+_From 486-entry-point-symlink._
 
 ### 600-FR-003 — The merge gate started through a symlinked path MUST refuse a merge it refuses through the real path (exit 2).
 
@@ -1041,9 +1042,9 @@ _From 457-diff-audit-tsconfig-imports._
 
 _From 457-diff-audit-tsconfig-imports._
 
-### 728-FR-001 — `activeFeature`'s branch step MUST take `specs/<branch>` when it exists, else the one `specs/` folder whose number equals the branch's number (leading zeros ignored) and whose slug equals the branch's slug.
+### 486-FR-005 — `branchFeatureDir` MUST, for a branch whose number has fewer than three digits, take the one `specs/` folder of three or more digits with the same number (leading zeros ignored) and slug when it exists, else `specs/<branch>` when it exists, else the folder with the same number and slug; for any other branch, `specs/<branch>` first as today.
 
-_From 728-active-feature-padded-fallback._
+_From 486-entry-point-symlink._
 
 ### 728-FR-002 — The PR lifecycle gate's `featureDir` MUST use that same lookup from `.claude/scripts/lib/feature.mjs`, with its own branch, not a copy of it.
 
@@ -2682,6 +2683,22 @@ _From 482-watch-transcript-holder._
 
 _From 482-watch-transcript-holder._
 
+### 486-FR-002 — A harness eval case MAY declare `"symlink": true`; `harness-eval.mjs` then starts `run-hook.mjs` and the gate through a symlink to the case's root, as cwd and `CLAUDE_PROJECT_DIR`. A case MUST run `stop:pr-lifecycle` so on a ready PR carrying two stage labels and expect exit 2.
+
+_From 486-entry-point-symlink._
+
+### 486-FR-003 — The PR lifecycle gate's `featureDir` MUST take the `.specify/feature.json` pointer, and a pointer found under an old clone's layout, only when it names a folder; a pointer naming a file falls back as a missing pointer does (725-FR-001).
+
+_From 486-entry-point-symlink._
+
+### 486-FR-004 — With `CLAUDE_CODE_REMOTE=true`, every `gh pr edit` and `gh pr create` fix hint the PR lifecycle gate prints MUST name `node .claude/scripts/gh.mjs pr edit …` (`… pr create …`); elsewhere it names `gh pr edit …` (`gh pr create …`).
+
+_From 486-entry-point-symlink._
+
+### 486-FR-006 — The pre-compact flush MUST leave entries under `specs/` out of the Compaction block's uncommitted list.
+
+_From 486-entry-point-symlink._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2779,3 +2796,5 @@ _From 482-watch-transcript-holder._
 - `696-FR-001` — superseded by `1363-FR-014` (2026-10-23)
 - `464-FR-003` — superseded by `482-FR-001` (2026-10-23)
 - `703-FR-006` — superseded by `482-FR-004` (2026-10-23)
+- `600-FR-002` — superseded by `486-FR-001` (2026-10-23)
+- `728-FR-001` — superseded by `486-FR-005` (2026-10-23)

@@ -17,6 +17,7 @@ import { basename, join, relative } from "node:path";
 import { LEVELS, activeFeature, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { resolveLevel } from "./level.mjs";
 import { fingerprint, loadRegistry, registryPath, scriptPath } from "./lib/hooks.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const OK = "ok";
 const WARN = "warn";
@@ -358,7 +359,7 @@ export function blessHooks(repo) {
   return changed;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   if (process.argv.includes("--bless-hooks")) {
     const changed = blessHooks(repo);

@@ -50,13 +50,14 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { activeFeature } from "../lib/feature.mjs";
 import { checkFlows, flowsHash, PROOF_DIR, proofPath } from "./precheck.mjs";
 import { qaRunLine } from "./qa-run.mjs";
 import { routeProblem, routerTable } from "./sweep.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 export const WORKFLOW = "pr-qa.yml";
 const ON_PUSH_LABEL = "qa: on-push";
@@ -352,7 +353,7 @@ async function main(argv) {
   return readRun({ pr: opt.pr, sha, out, run, conclusion, nonce });
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   try {
     process.exit(await main(process.argv.slice(2)));
   } catch (error) {

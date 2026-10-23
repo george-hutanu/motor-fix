@@ -22,9 +22,9 @@ import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, rea
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { artifactName, WORKFLOW } from "./dispatch.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 /** PR QA runs read when looking for a baseline, newest first. */
 const RUN_LIMIT = 100;
@@ -324,4 +324,4 @@ async function main(argv) {
   return 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(await main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(await main(process.argv.slice(2)));

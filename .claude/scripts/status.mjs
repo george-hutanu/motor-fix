@@ -27,6 +27,7 @@ import { featureLevel, featuresRoot, grandfathered, LEVELS } from "./lib/feature
 import { coveredTokens } from "./lib/tests.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
 import { parseDeferred } from "./retro-evidence.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 export const DEFAULT_STALE_DAYS = 14;
 
@@ -192,6 +193,6 @@ export function main(argv, repo) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main(process.argv.slice(2), process.env.CLAUDE_PROJECT_DIR ?? process.cwd()));
 }

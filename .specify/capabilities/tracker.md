@@ -11,6 +11,7 @@ features:
   - 1324-retire-debt-and-ready
   - 1360-tracker-unblock-dependent
   - 1363-throughput-fixes
+  - 485-blocked-strips-stage
 ---
 
 # Capability: Tracker
@@ -130,6 +131,18 @@ _From 1360-tracker-unblock-dependent._
 ### 1363-FR-013 — (Item 13) `speckit-tracker-sync` on every write (`start`, `pr`, `finish`, `file`) MUST compare the issue body's "Depends on" line with the issue's native blocked-by links: add a missing link to an open target, drop a link to a closed target, and refuse (with a line) a link whose target depends on the issue itself. *Done when*: specs cover the four cases and the log line each writes to `tracker-sync.md`.
 
 _From 1363-throughput-fixes._
+
+### 485-FR-001 — A status decision whose story is Blocked and whose stage cannot be named (the status it left is To do, or is unknown) MUST yield label arguments that add `blocked` and remove every stage label (`planning`, `in development`, `QA`), so that after they are applied the PR carries `blocked` and no stage label, whatever it carried before; its named stage stays none.
+
+_From 485-blocked-strips-stage._
+
+### 485-FR-002 — A status decision whose story is Blocked from a status with a stage label (Planning, Implementing, QA, or a retired alias of one) MUST keep yielding arguments that add that stage label and `blocked` and remove the other stage labels, as today.
+
+_From 485-blocked-strips-stage._
+
+### 485-FR-003 — The rule of FR-001 and FR-002 MUST be stated in the status decision file's header where the label rules are described today, and the status decision's tests MUST cover both cases, the FR-001 case failing against today's behaviour.
+
+_From 485-blocked-strips-stage._
 
 ## Retired
 

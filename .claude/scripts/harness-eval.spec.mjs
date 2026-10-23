@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { baselineFor, evaluate, loadCases, passRate, runCases } from './harness-eval.mjs';
@@ -134,5 +134,38 @@ describe('harness-eval — cases and baseline on disk', () => {
       },
     ]);
     assert.equal(result.pass, true, result.detail);
+  });
+});
+
+describe('harness-eval — a case run through a symlinked path', () => {
+  const symlinked = () => loadCases(REPO).find((c) => c.id === 'pr-lifecycle-refuses-two-stage-labels-through-a-symlink');
+
+  // @traces 486-FR-002
+  it('holds a case that runs the PR lifecycle gate through a symlink on a ready PR with two stage labels', () => {
+    const testCase = symlinked();
+    assert.ok(testCase, 'the case is in .claude/evals/cases');
+    assert.equal(testCase.symlink, true);
+    assert.equal(testCase.hook, 'stop:pr-lifecycle');
+    assert.equal(testCase.expect.exit, 2);
+    const pr = JSON.parse(testCase.env.SPECKIT_PR_STATE).pr;
+    assert.equal(pr.isDraft, false);
+    assert.equal(pr.labels.filter((l) => ['planning', 'in development', 'QA'].includes(l.name)).length, 2);
+    const [result] = runCases(REPO, [testCase]);
+    assert.equal(result.pass, true, result.detail);
+  });
+
+  // @traces 486-FR-002
+  it('fails that case against a gate that compares process.argv[1] with its URL', () => {
+    const copy = realpathSync(mkdtempSync(join(tmpdir(), 'eval-raw-guard-')));
+    try {
+      for (const part of ['hooks', 'scripts']) cpSync(join(REPO, '.claude', part), join(copy, '.claude', part), { recursive: true });
+      const gate = join(copy, '.claude', 'hooks', 'pr-lifecycle-gate.mjs');
+      writeFileSync(gate, readFileSync(gate, 'utf8').replace('if (isEntryPoint(import.meta.url)) {', 'if (import.meta.url === `file://${process.argv[1]}`) {'));
+      const [raw] = runCases(copy, [symlinked()]);
+      assert.equal(raw.pass, false, 'through a symlink the raw comparison never runs the gate');
+      assert.match(raw.detail, /expected exit 2, got 0/);
+    } finally {
+      rmSync(copy, { recursive: true, force: true });
+    }
   });
 });

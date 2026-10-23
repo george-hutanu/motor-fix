@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { featuresRoot } from "./lib/feature.mjs";
+import { isEntryPoint } from "./lib/entry.mjs";
 
 const HIGH = "high";
 const MEDIUM = "medium";
@@ -186,7 +187,7 @@ export function scan(repo) {
   return findings.sort((a, b) => rank[a.severity] - rank[b.severity] || a.file.localeCompare(b.file));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const findings = scan(repo);
   const high = findings.filter((f) => f.severity === HIGH);

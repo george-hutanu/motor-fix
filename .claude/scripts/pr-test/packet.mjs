@@ -18,12 +18,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { chooseBaseline, parseRunName, readReport } from "./baseline.mjs";
 import { findingKey as keyOf, isBlocking, touchesWeb } from "./findings.mjs";
 import { realGh } from "./post.mjs";
 import { SPECS_SLUG, TRUNK } from "../specs-repo.mjs";
+import { isEntryPoint } from "../lib/entry.mjs";
 
 export { parseRunName };
 
@@ -289,4 +289,4 @@ function main(argv) {
   return res.code;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));

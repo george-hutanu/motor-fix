@@ -21,6 +21,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join, basename, isAbsolute } from "node:path";
+import { isEntryPoint } from "./entry.mjs";
 
 // How much process a change gets. Borrowed from BMAD's scale-adaptive routing,
 // which asks one question — "is the intent already well defined?" — and routes
@@ -86,7 +87,7 @@ export function featureKey(repo, dir) {
   return key === "" ? undefined : key;
 }
 
-const isDir = (path) => {
+export const isDir = (path) => {
   try {
     return statSync(path).isDirectory();
   } catch {
@@ -288,15 +289,20 @@ export function activeFeature(repo) {
 
 /**
  * The feature folder a NNN-slug branch names, relative to the repo, under
- * featuresRoot: `<root>/<branch>` when it exists, else the folder with the same
- * number (leading zeros ignored) and the same slug, so branch `83-x` finds
- * `specs/083-x`. null when there is none.
+ * featuresRoot. A branch numbered with three digits or more takes
+ * `<root>/<branch>` when it exists. A shorter number (`83-x`) takes the folder
+ * of three digits or more with the same number and slug first (`specs/083-x`,
+ * the one activeFeature can read a number from), then `<root>/<branch>`. Else
+ * any folder with the same number (leading zeros ignored) and slug; null when
+ * there is none.
  */
 export function branchFeatureDir(repo, branch) {
+  if (!branch) return null;
   const root = featuresRoot(repo);
   const exact = join(root, branch);
-  if (existsSync(join(repo, exact))) return exact;
   const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];
+  const short = number !== undefined && number.length < 3;
+  if (!short && existsSync(join(repo, exact))) return exact;
   if (number === undefined) return null;
   let names;
   try {
@@ -304,11 +310,13 @@ export function branchFeatureDir(repo, branch) {
   } catch {
     return null;
   }
-  const padded = names.find((name) => {
+  const same = names.filter((name) => {
     const [, n, s] = /^(\d+)-(.+)$/.exec(name) ?? [];
     return n !== undefined && Number(n) === Number(number) && s === slug;
   });
-  return padded ? join(root, padded) : null;
+  const padded = same.find((name) => /^\d{3,}-/.test(name));
+  if (padded) return join(root, padded);
+  return same.length ? join(root, same[0]) : null;
 }
 
 /** Feature dirs exempted from the traceability gate (.specify/trace-baseline.json). */
@@ -322,7 +330,7 @@ export function grandfathered(repo) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const f = activeFeature(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
   if (!f) process.exit(1);
   console.log(`${f.name}\t${f.num}\t${f.level}`);

@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { activeFeature } from '../scripts/lib/feature.mjs';
 import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, readPr, specsUnpushed, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
@@ -206,6 +207,29 @@ describe('PR lifecycle gate — the feature folder', () => {
       assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
       point(dir, 51);
       assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+    }));
+
+  // @traces 486-FR-003
+  it('passes over a pointer that names a file, as over a missing one', () =>
+    withRepo((dir) => {
+      folder(dir, '083-sign-in-apple-google', { 'spec.md': '# Spec\n' });
+      point(dir, 'specs/083-sign-in-apple-google/spec.md');
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+      point(dir, 'specs/083-sign-in-apple-google');
+      writeFileSync(join(dir, 'specs', '050-file'), 'not a folder\n');
+      point(dir, 'specs/050-file');
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+    }));
+
+  // @traces 486-FR-005
+  it('reads the padded folder when specs/<branch> exists beside it, as activeFeature does', () =>
+    withRepo((dir) => {
+      folder(dir, '83-sign-in-apple-google');
+      folder(dir, '083-sign-in-apple-google', { 'spec.md': '# Spec\n' });
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+      execFileSync('git', ['init', '-q', '-b', '83-sign-in-apple-google'], { cwd: dir });
+      execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: dir });
+      assert.equal(activeFeature(dir)?.dir, join(dir, featureDir(dir, '83-sign-in-apple-google')));
     }));
 
   it('finds the feature under specs/specs in an old clone past the move, by pointer or branch', () =>
@@ -545,5 +569,39 @@ describe('PR lifecycle gate — reading the PR', () => {
       assert.equal(read.pr.mergeable, 'MERGEABLE');
       assert.match(decide({ branch: BRANCH, ahead: 1, unpushed: 0, pr: read.pr }), /no agent-review status/);
     }
+  });
+});
+
+describe('PR lifecycle gate — fix hints in a cloud session', () => {
+  const cloud = { env: { CLAUDE_CODE_REMOTE: 'true' } };
+  const laptop = { env: {} };
+  const refusals = [
+    task({ branch: 'chore-x', pr: ready({ labels: [{ name: 'in development' }, { name: 'QA' }, { name: 'feature' }], statusCheckRollup: [{ state: 'PENDING' }] }) }),
+    task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'feature' }] }) }),
+    task({ branch: 'chore-x', pr: ready({ labels: [{ name: 'in review' }, { name: 'feature' }] }) }),
+    task({ branch: 'chore-x', pr: ready({ labels: [{ name: 'QA' }] }) }),
+    task({ branch: 'chore-x', pr: ready({ title: 'feat(web)!: ST-9 x', labels: [{ name: 'QA' }, { name: 'feature' }] }) }),
+  ];
+
+  // @traces 486-FR-004
+  it('names gh.mjs for every pr edit hint in a cloud session, and plain gh on the laptop', () => {
+    for (const state of refusals) {
+      const there = decide(state, cloud);
+      assert.match(there, /\(node \.claude\/scripts\/gh\.mjs pr edit 6 /);
+      assert.doesNotMatch(there, /\(gh pr edit/);
+      const here = decide(state, laptop);
+      assert.match(here, /\(gh pr edit 6 /);
+      assert.doesNotMatch(here, /gh\.mjs/);
+    }
+  });
+
+  // @traces 486-FR-004
+  it('names gh.mjs for the pr create hint in a cloud session, and plain gh on the laptop', () => {
+    assert.match(decide(task({ pr: null }), cloud), /\(node \.claude\/scripts\/gh\.mjs pr create --draft /);
+    assert.match(decide(task({ pr: null }), laptop), /\(gh pr create --draft /);
+  });
+
+  it('takes anything but CLAUDE_CODE_REMOTE=true for the laptop', () => {
+    assert.match(decide(refusals[0], { env: { CLAUDE_CODE_REMOTE: '1' } }), /\(gh pr edit 6 /);
   });
 });
