@@ -161,7 +161,7 @@ describe('the daily compliance step', () => {
     const due = await events(cycle.id);
     expect(due).toHaveLength(1);
     expect(due[0]).toMatchObject({
-      audience: [`garage:${cycle.garageId}`],
+      audience: ['admin', `garage:${cycle.garageId}`],
       kind: 'document.due',
       payload: { dueOn: '2026-11-22', garageId: cycle.garageId, stage: 30 },
     });
@@ -247,17 +247,15 @@ describe('the daily compliance step', () => {
       subjectType: 'garage',
     });
     const overdue = await events(cycle.id, 'document.overdue');
-    expect(overdue.map((e) => e.audience)).toEqual([
-      [`garage:${cycle.garageId}`],
-      ['admin'],
-    ]);
-    for (const event of overdue) {
-      expect(event.payload).toEqual({
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0]).toMatchObject({
+      audience: ['admin', `garage:${cycle.garageId}`],
+      payload: {
         dueOn: '2026-10-22',
         garageId: cycle.garageId,
         graceUntil: '2026-11-05',
-      });
-    }
+      },
+    });
     expect(await events(cycle.id, 'document.due')).toEqual([]);
     expect((await counted('overdue')) - before).toBe(1);
   });
@@ -271,7 +269,7 @@ describe('the daily compliance step', () => {
 
     expect(await cycleOf(cycle.id)).toEqual(first);
     expect(day(first.graceUntil)).toBe('2026-10-24');
-    expect(await events(cycle.id)).toHaveLength(2);
+    expect(await events(cycle.id)).toHaveLength(1);
     expect(
       await prisma.garageSuspension.count({
         where: { garageId: cycle.garageId },
@@ -306,7 +304,7 @@ describe('the daily compliance step', () => {
       '2026-11-05',
     ]);
     expect(await events(late.id, 'document.due')).toEqual([]);
-    expect(await events(late.id, 'document.overdue')).toHaveLength(2);
+    expect(await events(late.id, 'document.overdue')).toHaveLength(1);
   });
 
   it('reports the overdue cycles and logs one line for the run', async () => {

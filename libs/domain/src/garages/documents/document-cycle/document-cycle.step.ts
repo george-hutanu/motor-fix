@@ -124,7 +124,7 @@ export class DocumentCycleStep implements DailyTask {
       where: { id },
     });
     await outbox.record(tx, {
-      audience: { garageIds: [cycle.garageId], type: 'garage' },
+      audience: { garageId: cycle.garageId, type: 'verification' },
       kind: 'document.due',
       payload: { dueOn, garageId: cycle.garageId, stage: stage.days },
       subjectId: id,
@@ -160,17 +160,12 @@ export class DocumentCycleStep implements DailyTask {
       subjectId: garageId,
       subjectType: 'garage',
     });
-    for (const audience of [
-      { garageIds: [garageId], type: 'garage' },
-      { adminOnly: true, type: 'platform' },
-    ] as const) {
-      await outbox.record(tx, {
-        audience,
-        kind: 'document.overdue',
-        payload: { dueOn, garageId, graceUntil },
-        subjectId: cycle.id,
-      });
-    }
+    await outbox.record(tx, {
+      audience: { garageId, type: 'verification' },
+      kind: 'document.overdue',
+      payload: { dueOn, garageId, graceUntil },
+      subjectId: cycle.id,
+    });
     if (await tx.legalDocument.count({ where: inReviewWhere(garageId) })) {
       return;
     }
