@@ -485,7 +485,7 @@ describe('what the add leaves alone', () => {
       where: { id: w.nord.id },
     });
     expect(garage.status).toBe('approved');
-    expect(await redis.exists(`v3:profile:${w.nord.slug}:-`)).toBe(0);
+    expect(await redis.exists(`v4:profile:${w.nord.slug}:-`)).toBe(0);
     const res = await profile();
     expect(res.body.prices).toContainEqual(
       expect.objectContaining({

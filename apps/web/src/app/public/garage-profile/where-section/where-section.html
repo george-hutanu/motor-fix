@@ -1,0 +1,19 @@
+@if (!empty()) {
+  <h2>{{ 'public.garageProfile.where.title' | t }}</h2>
+  @if (address()) {
+    <p class="address">{{ address() }}</p>
+  }
+  @if (area()) {
+    <p class="area">{{ area() }}</p>
+  }
+  @if (lines().length) {
+    <dl class="hours">
+      @for (line of lines(); track line.days) {
+        <div class="row">
+          <dt class="days">{{ line.days }}</dt>
+          <dd class="times" [class.closed]="line.closed">{{ line.times }}</dd>
+        </div>
+      }
+    </dl>
+  }
+}

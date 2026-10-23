@@ -30,6 +30,7 @@ const GARAGE: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-1',
   jobTypes: [],
   labour: { fromBani: 18_000, toBani: 24_000 },

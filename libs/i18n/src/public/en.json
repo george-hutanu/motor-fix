@@ -35,6 +35,19 @@
     "backBrand": "Garages for {brand}",
     "backHome": "Home",
     "badge": "Verified · RAR authorisation",
+    "details": {
+      "facilities": "Facilities",
+      "free": "free",
+      "payment": "Payment: {methods}",
+      "payments": {
+        "card": "card",
+        "cash": "cash",
+        "transfer": "transfer"
+      },
+      "perDay": "{price} / day",
+      "refuses": "Does not work on",
+      "worksOn": "Works on"
+    },
     "distance": "{km} away",
     "estimate": {
       "anyMechanic": "Any mechanic",
@@ -78,6 +91,10 @@
       "other": "{count} reviews"
     },
     "verified": "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}.",
+    "where": {
+      "mobile": "Comes to you within {km}",
+      "title": "Where"
+    },
     "works": "Works on {brand}"
   },
   "gone": {

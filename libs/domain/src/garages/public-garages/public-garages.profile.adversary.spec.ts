@@ -155,6 +155,7 @@ describe('the profile answer of a bare garage', () => {
       brandNote: null,
       doesNotTake: [],
       facilities: [],
+      hours: {},
       id: 'g1',
       jobTypes: [],
       name: 'Garage',

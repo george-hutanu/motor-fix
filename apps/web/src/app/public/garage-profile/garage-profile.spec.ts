@@ -3,7 +3,12 @@ import { join } from 'node:path';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { type HttpContext, HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
+import {
+  makeStateKey,
+  PLATFORM_ID,
+  RESPONSE_INIT,
+  TransferState,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -25,6 +30,7 @@ const MOBILE: PublicGarageDto = {
   description: 'Diagnoză și reparații la domiciliu',
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-1',
   jobTypes: [],
   name: 'Mecanic Mobil Ilfov',
@@ -46,6 +52,7 @@ const FIXED: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   facilities: [],
+  hours: {},
   id: 'g-2',
   jobTypes: [],
   latitude: 44.43,
@@ -271,7 +278,11 @@ describe('the garage profile', () => {
     await reads[0]?.answer(FIXED);
 
     expect(text()).toContain('Service Auto Militari');
-    expect(text()).not.toContain('Bulevardul Iuliu Maniu');
+    // The address is the Where section's alone, never a header line.
+    expect(text().split('Bulevardul Iuliu Maniu')).toHaveLength(2);
+    expect(
+      page().querySelector('section[data-slot="where"]')?.textContent,
+    ).toContain('Bulevardul Iuliu Maniu');
     expect(text()).not.toContain('Ultima verificare');
     expect(page().querySelector('.description')).toBeNull();
     expect(page().querySelector('.place')).toBeNull();
@@ -298,7 +309,7 @@ describe('the garage profile', () => {
 
     const slots = [
       ...page().querySelectorAll<HTMLElement>(
-        'section[data-slot]:not([data-slot="prices"])',
+        'section[data-slot]:not([data-slot="prices"]):not([data-slot="where"])',
       ),
     ];
     expect(slots.length).toBeGreaterThan(0);
@@ -515,6 +526,97 @@ describe('the price list on the profile', () => {
   });
 });
 
+// @traces 308-FR-004
+// @traces 308-FR-011
+// @traces 308-FR-014
+describe('the brands, facilities and where sections kept live', () => {
+  const HOURS = {
+    fri: [['08:00', '19:00']],
+    mon: [['08:00', '19:00']],
+    sat: [],
+    sun: [],
+    thu: [['08:00', '19:00']],
+    tue: [['08:00', '19:00']],
+    wed: [['08:00', '19:00']],
+  };
+  const BMW = {
+    fuels: ['petrol', 'diesel'] as ('petrol' | 'diesel')[],
+    id: 'b-2',
+    name: 'BMW',
+    slug: 'bmw',
+  };
+  const SHOWN: PublicGarageDto = {
+    ...FIXED,
+    facilities: ['pickup_dropoff'],
+    hours: HOURS,
+    paymentMethods: { card: true, cash: false, transfer: false },
+    worksOn: [BMW],
+  };
+  const brands = () =>
+    page().querySelector<HTMLElement>('section[data-slot="brands"]');
+  const where = () =>
+    page().querySelector<HTMLElement>('section[data-slot="where"]');
+  const said = (el: Element | null | undefined) =>
+    el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  const send = (kind: string) =>
+    messages.next({ at: '2026-10-08T12:00:00.000Z', id: 'x', kind });
+
+  it('fills the brands slot and the where slot from the answer', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(SHOWN);
+
+    expect(said(brands())).toContain('Lucrează pe');
+    expect(said(brands())).toContain('BMW');
+    expect(said(brands())).toContain('Preluare și predare');
+    expect(said(brands())).toContain('Plată: card');
+    expect(said(where())).toContain('Bulevardul Iuliu Maniu 100, București');
+    expect(said(where())).toContain('Luni – vineri');
+  });
+
+  it.each(['garage.updated', 'facility.removed', 'facility.re_add_decided'])(
+    'shows the new values in the same sections on %s, the brand kept',
+    async (kind) => {
+      jest.useFakeTimers();
+      await open('/ro/garages/service-auto-militari?brand=bmw');
+      await reads[0]?.answer(SHOWN);
+      const before = { brands: brands(), where: where() };
+      const registered = live.register.mock.calls.length;
+
+      send(kind);
+      jest.advanceTimersByTime(300);
+      await settle();
+      await reads[1]?.answer({
+        ...SHOWN,
+        doesNotTake: [{ id: BMW.id, name: BMW.name, slug: BMW.slug }],
+        facilities: [],
+        hours: { ...HOURS, fri: [['08:00', '14:00']] },
+        worksOn: [],
+      });
+
+      expect(reads[1]?.query).toEqual({
+        brand: 'bmw',
+        slug: 'service-auto-militari',
+      });
+      expect(brands()).toBe(before.brands);
+      expect(where()).toBe(before.where);
+      expect(said(brands())).toContain('Nu lucrează pe');
+      expect(said(brands())).not.toContain('Lucrează pe BMW');
+      expect(said(brands())).not.toContain('Preluare și predare');
+      expect(
+        [...(where()?.querySelectorAll('.row') ?? [])].map((row) => [
+          said(row.querySelector('.days')),
+          said(row.querySelector('.times')),
+        ]),
+      ).toEqual([
+        ['Luni – joi', '08:00 – 19:00'],
+        ['Vineri', '08:00 – 14:00'],
+        ['Sâmbătă – duminică', 'Închis'],
+      ]);
+      expect(live.register.mock.calls.length).toBe(registered);
+    },
+  );
+});
+
 // @traces 356-FR-001 356-FR-009 356-FR-010
 describe('the estimate box on the profile', () => {
   const DIAGNOSIS = {
@@ -680,6 +782,52 @@ describe('the profile read the server render hands over', () => {
     const [query, context] = api.publicGaragesControllerBySlug.mock.calls[0];
     expect(query).toEqual({ brand: 'bmw', slug: 'service-auto-militari' });
     expect(context?.get(PUBLIC_READ)).toBe(true);
+  });
+});
+
+// The server render's answer rides the page, so hydration keeps the drawn
+// profile instead of clearing it for a read of its own.
+describe('the answer the server render drew', () => {
+  const SERVED = makeStateKey<PublicGarageDto>(
+    'profile:["service-auto-militari","bmw"]',
+  );
+
+  it('draws the served answer on hydration, with no skeleton and no read', async () => {
+    const state = TestBed.inject(TransferState);
+    state.set(SERVED, FIXED);
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    expect(page().querySelector('[aria-busy="true"]')).toBeNull();
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+    expect(reads).toHaveLength(0);
+    expect(state.hasKey(SERVED)).toBe(false);
+  });
+
+  it('hands the answer over from the server render', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { component: GarageProfile, path: ':lang/garages/:garage' },
+        ]),
+        { provide: GaragesService, useValue: api },
+        { provide: PublicLive, useValue: live },
+        { provide: Consent, useValue: consent },
+        { provide: ProfilePrefetch, useValue: prefetch },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: RESPONSE_INIT, useValue: response },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    harness = await RouterTestingHarness.create();
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    await reads[0]?.answer(FIXED);
+
+    expect(TestBed.inject(TransferState).get(SERVED, null)).toEqual(FIXED);
   });
 });
 

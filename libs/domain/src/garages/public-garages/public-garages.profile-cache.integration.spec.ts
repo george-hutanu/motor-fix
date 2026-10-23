@@ -91,7 +91,7 @@ const garageOf = (status: 'approved' | 'suspended' = 'approved') =>
 const rename = (id: string, name: string) =>
   prisma.garage.update({ data: { name }, where: { id } });
 
-const entry = (slug: string, brand = '-') => `v3:profile:${slug}:${brand}`;
+const entry = (slug: string, brand = '-') => `v4:profile:${slug}:${brand}`;
 
 async function counts(kind: 'profile' | 'brands' = 'profile') {
   const { resourceMetrics } = await metricReader.collect();
@@ -123,10 +123,31 @@ describe('the profile through the cache service', () => {
       id: garage.id,
       name: 'Service Auto Militari',
     });
-    expect(await other.zrange(`v3:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
     expect((await counts()).miss - before.miss).toBe(1);
+  });
+
+  // @traces 308-FR-003
+  it('never reads back an answer stored under the older shape version', async () => {
+    const garage = await garageOf();
+    await read(garage.slug);
+    const stored = JSON.parse((await other.get(entry(garage.slug))) ?? 'null');
+    expect(stored).not.toBeNull();
+    const { hours: _, ...older } = stored.v;
+    await other.set(
+      `v3:profile:${garage.slug}:-`,
+      JSON.stringify({ ...stored, v: { ...older, name: 'Răspuns vechi' } }),
+      'PX',
+      600_000,
+    );
+    await other.del(entry(garage.slug));
+
+    const res = await read(garage.slug);
+
+    expect(res.body.name).toBe('Service Auto Militari');
+    expect(res.body.hours).toEqual({});
   });
 
   it('answers the second read from the cache', async () => {
@@ -157,7 +178,7 @@ describe('the profile through the cache service', () => {
       stance: 'does_not_take',
     });
     expect(
-      (await other.zrange(`v3:tag:garage:${garage.id}`, '0', '-1')).sort(),
+      (await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).sort(),
     ).toEqual([entry(garage.slug), entry(garage.slug, slug)].sort());
   });
 
@@ -349,7 +370,7 @@ describe('the profile read from a place', () => {
     expect([first.body.distanceKm, second.body.distanceKm]).toEqual([2.4, 2.4]);
     expect(plain.body.distanceKm).toBeUndefined();
     expect((await counts()).hit - before.hit).toBe(2);
-    expect(await other.zrange(`v3:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
     const stored = await other.get(entry(garage.slug));
@@ -367,7 +388,7 @@ describe('the profile read from a place', () => {
     expect(res.body).not.toHaveProperty('distanceKm');
     expect(res.body).not.toHaveProperty('latitude');
     expect(res.body.serviceRadiusKm).toBe(20);
-    expect(await other.zrange(`v3:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
   });

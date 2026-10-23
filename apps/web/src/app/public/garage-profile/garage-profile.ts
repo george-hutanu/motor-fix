@@ -6,10 +6,12 @@ import {
   computed,
   effect,
   inject,
+  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
   signal,
+  TransferState,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -28,6 +30,7 @@ import {
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
+import { DetailsSection } from './details-section/details-section';
 import { EstimateBar } from './estimate-bar/estimate-bar';
 import { EstimateSection } from './estimate-section/estimate-section';
 import { Gone } from './gone/gone';
@@ -37,6 +40,7 @@ import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { sourceOf } from './view-source';
+import { WhereSection } from './where-section/where-section';
 import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import { PlaceStore } from '../../home/place/place-store';
@@ -60,6 +64,13 @@ const KINDS = EVENT_KINDS.filter(
 
 const GONE = [404, 410];
 
+// The answer the server render drew, handed to the browser so hydration keeps
+// the page drawn; a pair, so no slug and brand can spell another key.
+const served = (slug: string, brand: string | undefined) =>
+  makeStateKey<PublicGarageDto>(
+    `profile:${JSON.stringify([slug, brand ?? ''])}`,
+  );
+
 // The analytics name of where a profile was opened from; a direct open has none.
 const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
   home: 'home',
@@ -71,6 +82,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
 @Component({
   imports: [
     DayPipe,
+    DetailsSection,
     EstimateBar,
     EstimateSection,
     Gone,
@@ -85,6 +97,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     SaveGarageButton,
     RouterLink,
     TranslatePipe,
+    WhereSection,
   ],
   providers: [PriceSelection],
   selector: 'mf-garage-profile',
@@ -100,6 +113,7 @@ export class GarageProfile {
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly prefetch = inject(ProfilePrefetch);
+  private readonly state = inject(TransferState);
   private readonly saved = inject(SavedGarages);
   private readonly selection = inject(PriceSelection);
   private readonly places = inject(PlaceStore);
@@ -266,14 +280,16 @@ export class GarageProfile {
       );
   }
 
-  // A profile pre-fetched from the results, shown at once; after a server
-  // render the transfer cache answers the first read instead.
+  // The server render's answer, or a profile pre-fetched from the results,
+  // shown at once.
   private takePrefetched(): PublicGarageDto | undefined {
     if (!this.browser) return undefined;
-    this.prefetched = this.prefetch.take(
-      untracked(this.slug),
-      untracked(this.brand),
-    );
+    const slug = untracked(this.slug);
+    const brand = untracked(this.brand);
+    const key = served(slug, brand);
+    const drawn = this.state.get(key, undefined);
+    this.state.remove(key);
+    this.prefetched = drawn ?? this.prefetch.take(slug, brand);
     return this.prefetched;
   }
 
@@ -316,6 +332,7 @@ export class GarageProfile {
         (garage) => {
           if (moved()) return this.read();
           this.status.set(undefined);
+          if (!this.browser) this.state.set(served(slug, brand), garage);
           return garage;
         },
         (failure: unknown) => {
