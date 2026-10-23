@@ -1,0 +1,88 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.area {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  padding-top: var(--mf-space-3);
+  border-top: 1px solid var(--mf-line);
+}
+h3 {
+  margin: 0;
+  font-size: var(--mf-size-body);
+  font-weight: 700;
+}
+.hint {
+  color: var(--mf-text-secondary);
+}
+.choose {
+  justify-self: start;
+}
+button {
+  min-height: var(--mf-tap);
+}
+.pages {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-2);
+  min-width: 0;
+}
+.file {
+  min-width: 0;
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.state {
+  color: var(--mf-green-ink);
+}
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+.field > label {
+  display: grid;
+  gap: var(--mf-space-1);
+  font-weight: 700;
+}
+.field input {
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-2);
+}

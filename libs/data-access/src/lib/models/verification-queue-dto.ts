@@ -10,7 +10,7 @@ export interface VerificationQueueDto {
   items: Array<VerificationQueueRowDto>;
 
   /**
-   * Every file waiting, as the overview counts them
+   * Every file and yearly documents row waiting, as the overview counts them
    */
   total: number;
 }

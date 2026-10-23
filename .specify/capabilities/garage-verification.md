@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -26,6 +26,7 @@ features:
   - 116-listing-verification-status
   - 101-verification-progress
   - 208-resubmit-after-more
+  - 068-yearly-documents
 ---
 
 # Capability: Garage verification
@@ -166,13 +167,13 @@ _From 312-report-garage._
 
 _From 312-report-garage._
 
-### 206-FR-012 — This story MUST provide one domain operation the sending story (ST-116) calls inside its transaction with the draft's data, the new verification file and the actor: for each document present it creates one legal document row (file, kind, page keys in order, issue date when given, status `valid`), sets the file's `declared_at` and `declared_by_name` from the draft, writes one audit entry per row (action `create`, subject `legal_document`, the garage id) and one for the declaration (subject `verification_file`, field `declared_at`), and emits `document.uploaded` (documentId, garageId, kind) once per document through the outbox to the `admin` audience; a draft without the declaration is refused with a stable code and nothing is written; a missing document creates no row and is not an error (X20f); a failure fails the caller's transaction, and so does a second attach for the same file (one document per kind per file, FR-013). The files are not moved. Wiring this operation to the send button is ST-116.
+### 068-FR-014 — The outbox events `document.due` (one per reminder sent: garageId, stage ∈ 30, 7, 0, dueOn), `document.overdue`, `document.uploaded`, `document.accepted` and `document.refused` MUST be written with their change (Constitution VI) and reach, through the audience resolver, `garage:{garageId}` and `admin` (`document.uploaded` keeps its admin-only audience for a listing's documents and gains the garage channel for a renewal). `garage.suspended` stays #209's and #97's.
 
-_From 206-documents-declaration._
+_From 068-yearly-documents._
 
-### 206-FR-013 — The system MUST store legal documents in a table with id, verification file, kind (text from FR-004's list, not an enum), page keys (ordered), issue date (nullable), status (`valid`), created at (the attach's time; no separate upload time); and the verification file MUST gain nullable `declared_at` and `declared_by_name`. A file's documents MUST be readable by kind so a missing kind can be shown as "lipsește" / "missing" by the admin's file story.
+### 068-FR-008 — A `LEGAL_DOCUMENT` row's status MUST be one of `valid`, `in_review`, `refused` (`valid` stays the default the listing attach writes, 206-FR-013), and the rows MUST also hold `decided_by`, `decided_at`, `refusal_reason` and `refusal_note` (empty for a listing document). At most one `in_review` row and at most one `valid` unreplaced row MUST exist per kind and file (the existing one-current index is kept for `valid` rows and a second partial index covers `in_review`). The verification file read (302-FR-005) MUST list, per kind, the current `valid` document as today and, when present, the `in_review` or latest `refused` document with its issue date, page count, upload time and decision.
 
-_From 206-documents-declaration._
+_From 068-yearly-documents._
 
 ### 206-FR-014 — `GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url` MUST answer a MotorFix admin an address signed for 5 minutes (422-FR-006, `DOWNLOAD_URL_MINUTES`), inline, for page `n` (a whole number from 1 to the number of pages the document holds) of that document, with a file name `<kind>-<n>.<ext>` and its expiry; a signed-in staff member (owner, receptionist, mechanic) of the file's garage MUST get 403 with a stable code; any other actor, an unknown file, document or page, MUST get 404 (no session: 401 `sign_in_required`, as every route); no address is issued on 403 or 404. Every issued address MUST write one audit entry with action `open`, subject `legal_document`, the document id, the page number, the actor and the garage id, in the same transaction as the read that resolved the document.
 
@@ -205,9 +206,9 @@ _From 049-garage-suspension._
 ### 049-FR-015 — Tests MUST cover, on real PostgreSQL and Redis: each of the four causes writing the SUSPENSION, the status, the audit entry and the outbox row in one transaction; the 409s of FR-003 (with the refused attempt's audit entry) and the 404 of FR-004 and FR-005 for a driver, an owner, a receptionist and a mechanic; the DTO's 400s; exactly one suspension under two concurrent calls; the public scope excluding a garage suspended through the use case in the search, the brand pages, the profile (410) and the routing; the 409s of FR-008 and FR-009; GARAGE_SUSPENDED built once per owner with every channel muted, in each owner's language, and once for a replayed event. Web unit tests MUST cover the banner's presence, texts and next step per cause in both languages and its absence for `approved` and `draft`. Playwright MUST show an admin suspending Atelier Dinamo while a visitor has its BMW results open: the card leaves the list without a reload, and the owner signs in and sees the banner.
 
 _From 049-garage-suspension._
-### 301-FR-001 — The system MUST expose an admin-only read of the verification queue, platform-wide whatever city the overview has chosen: every file whose status is `submitted` or `in_review`, oldest first by the time of its latest sending, for one page of 20 rows by default (the panel asks for 5), `offset` 0 to 10000 and `limit` 1 to 200 (a live re-read asks for every loaded row), a value outside those bounds answering 400 `validation_failed`, with the total number waiting; anyone who is not a MotorFix admin gets 404, no token 401.
+### 068-FR-011 — The admin verification queue (301-FR-001) MUST also list every garage with a legal document `in_review`, as a row of kind "Documente anuale" / "Yearly documents" (the row DTO gains `item: 'verification' | 'documents'`), oldest upload first among the files waiting, lamp amber, red when the garage's cycle is `overdue` and its grace has ended or the garage is `suspended`; the one count of files waiting (301-FR-006) MUST include them (a garage whose verification file is itself waiting shows as that file's row only); the row opens the garage's drawer (302-FR-003) at the "Documente" part. Every active admin MUST be notified once per upload with ADMIN_VERIFICATION_QUEUED naming the garage and "documente anuale" (301-FR-010's type and channels, one event id per upload). The queue and the drawer MUST re-read on `document.uploaded`, `document.accepted`, `document.refused` and `document.overdue` arriving on the `admin` stream.
 
-_From 301-verification-queue._
+_From 068-yearly-documents._
 
 ### 301-FR-002 — Each row MUST carry the file id and status, the garage id and name, its area (the town recorded for the garage, or for a mobile mechanic its service radius in km), the count of brands the garage works on, the count of its mechanics (absent when the garage's team-mechanics switch is off), the checks' summary line in Romanian and English and its lamp colour (from 300-FR-008 and 300-FR-009: red when any check failed, amber when any check is a warning, green when at least one check is ok and none is a warning or failure, grey when nothing is recorded), the time of its latest sending, the working days it has waited and whether it is flagged; when flagged, the server's `lamp` is amber unless a check failed (red wins).
 
@@ -221,13 +222,9 @@ _From 301-verification-queue._
 
 _From 301-verification-queue._
 
-### 302-FR-003 — The drawer MUST open at the address `/app/admin/garages/{fileId}` under the admin shell's "Service-uri" view, through the overlay service's `drawer-wide` shape (a full-height bottom sheet under 768 px, 158-FR-001), titled "Dosar de verificare" / "Verification file" with the garage's name as its subtitle; the queue row's "Deschide dosarul" navigates there (modifies 301-FR-005: the link opens the drawer, not a separate page). Opening calls FR-002 once; closing by X, Escape, outside click or Back returns to `/app/admin/garages` with the view's scroll kept. While the call is on its way the body shows skeleton sections marked busy (157-FR-012); a failed call shows "Nu am putut deschide dosarul" / "Could not open the file" with "Reîncearcă" / "Retry".
+### 068-FR-012 — The drawer's "Documente" part (302-FR-005) MUST show, under each kind's current document, the document under review with "încărcat <zi>" / "uploaded <day>", its issue date and pages openable through the existing page addresses (206-FR-014, each opening logged), and two buttons, "Acceptă" / "Accept" and "Refuză" / "Refuse"; refusing opens a dialog with the two reasons and the note; a decided document shows its decision and who took it; a `refused` document shows the reason and the note. When the garage is `suspended` with cause `documents_overdue` and the acceptance leaves both kinds `valid`, the answer's cycle lets the drawer offer "Repune pe hartă" / "Put back on the map" in the same step once #106 has shipped its action; until then the drawer shows the suspension line only. Every text lives in the shared i18n files in Romanian and English; the part MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, and every state conveyed by text, not colour alone.
 
-_From 302-garage-verification-file._
-
-### 301-FR-006 — The four counts — the panel's, the view's, the menu item "Service-uri" and the header line — MUST come from one count of the files waiting (`garagesWaiting`, 163-FR-007), so they agree; the queue read's total MUST be that same count. With a city chosen the header keeps its 163 rule (that city's count); the other three stay platform-wide.
-
-_From 301-verification-queue._
+_From 068-yearly-documents._
 
 ### 301-FR-007 — With no file waiting the panel and the view MUST read "Niciun service nu așteaptă verificarea" / "No garage is waiting for verification"; the panel and the view read 0, the menu counter is hidden and the header reads its existing "none waiting" line, as the shell does today.
 
@@ -290,10 +287,6 @@ _From 303-approve-publish-garage._
 ### 204-FR-007 — In the drawer, the `rar` row MUST read "Autorizație RAR găsită în registru" / "RAR authorisation found in the register", and "Autorizația RAR nu apare în registru" / "RAR authorisation not found in the register" while its result is `failed`; the `activities` row "Activitățile autorizate acoperă lista de prețuri" / "Authorised activities cover the price list" (modifies the labels of 302-FR-004 and 203-FR-006); each grey "neverificat" / "not checked" until recorded. The `rar` row MUST show the file's RAR number as stored, or "număr lipsă" / "number missing", a "Corectează" / "Correct" action on an undecided file that opens a one-field form calling FR-001, and one link "Registrul RAR" / "RAR register" opening `https://portal.rarom.ro/` in a new tab and copying the number to the clipboard with a toast "Număr RAR copiat" / "RAR number copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The link is a plain link to a fixed public address with no number in it; MotorFix sends nothing to that site.
 
 _From 204-rar-activities-check._
-
-### 302-FR-005 — Each document kind of the contracts list MUST be one row: label from the kind's shared labels (206-FR-004); when present, "· emis acum <n> zile" / "· issued <n> days ago" ("emis azi" / "issued today", "emis ieri" / "issued yesterday") from its issue date, else "· <n> pagini" / "· <n> pages" (singular "1 pagină" / "1 page"); a second line in the warning colour "Mai vechi de 30 de zile la data trimiterii" / "Older than 30 days at the time of sending" or "Data emiterii lipsește" / "Issue date missing" for the certificate when so; one "Deschide" / "Open" button for a one-page document, else "Deschide pagina <n>" / "Open page <n>" per page; when missing, "· lipsește" / "· missing" in the failed colour and no button; when the store is unreachable, "indisponibil" / "unavailable" in place of the buttons. Pressing a button MUST ask the existing page address (206-FR-014) and open it in a new tab; a failed request shows "Nu am putut deschide documentul" / "Could not open the document" with "Reîncearcă" / "Retry" on that row only. This story adds no address route and no audit write of its own: every opening is the one 206-FR-014 already logs.
-
-_From 302-garage-verification-file._
 
 ### 302-FR-006 — The manual checks MUST be four rows, in this order and mapped to these kinds: `address` "Adresa din documente e cea de pe profil" / "The address in the documents matches the profile" (mobile mechanic: "Adresa din documente e sediul social de pe profil" / "The address in the documents is the registered seat on the profile"); `photos` "Fotografiile sunt ale atelierului" / "The photos show the actual workshop" (mobile mechanic: "Fotografiile arată duba sau trusa mobilă și sculele principale" / "The photos show the van or mobile kit and main tools"); `representative` "Telefon confirmat prin apel" / "Phone confirmed by call"; `documents` "Documentele sunt complete și lizibile" / "The documents are complete and readable". Each row is a checkbox (checked when the result is `ok`), a "Marchează o problemă" / "Mark a problem" button, and, when the result is `warning` or `failed`, its lamp and detail; the `documents` checkbox is disabled with "Lipsește un document" / "A document is missing" while a kind is missing; every control is at least 44 px tall and reachable by keyboard.
 
@@ -490,9 +483,9 @@ _From 1354-garage-legal-checks._
 
 _From 1354-garage-legal-checks._
 
-### 210-FR-004 — A check row's state MUST be its check's result; the documents row's state MUST be `ok` when both document kinds (ONRC company certificate, RAR authorisation) are present with status `valid`, and `warning` otherwise, the answer naming each kind that is missing or not valid; the `documents` verification check is not read.
+### 068-FR-005 — The documents row of the legal panel (210-FR-004) MUST read, by the cycle: `due` with both documents `valid` and nothing in review — green, "de reîncărcat o dată pe an, până în <lună an>" / "upload again once a year, by <Mon yyyy>" ("ian. 2027" / "Jan 2027"; amber when the due date is 30 days or fewer away); a document `in_review` — amber, "în verificare" / "under review"; `overdue` with nothing in review — red, "restante din <zi>, profilul iese de pe hartă pe <zi>" / "overdue since <day>, the profile leaves the map on <day>" (the day after `grace_until`); a kind `refused` and not re-uploaded — red, "refuzat: <notă>" / "refused: <note>". The owner MUST see the button "Încarcă documentele" / "Upload the documents" on the row whenever no document is `in_review`; the legal panel stays owner-only (210-FR-001), so a receptionist or mechanic sees neither. Every state of the row is conveyed by text, not colour alone, and the row and its button read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll (as FR-012 requires of the drawer). `document.overdue`, `document.accepted` and `document.refused` (and `document.uploaded`, so another device of the owner shows the review) arriving on `garage:{garageId}` MUST make the panel read again without a reload, as the verification events do today (210-FR-011).
 
-_From 210-legal-check-panel._
+_From 068-yearly-documents._
 
 ### 1354-FR-005 — The "Profil verificat" strip (owner and receptionist of an `approved` garage, 210-FR-005) MUST show under its tag the line "Autorizația RAR, reverificată pe {day}" / "RAR authorisation, re-checked on {day}" (or "verificată pe" / "checked on" by FR-003's rule), the day as day and short month without the year, "1 oct." / "1 Oct", in Europe/Bucharest; no line when the stored date is empty. The signed-in person's garage entry in the session MUST carry the stored date of last check and whether a valid re-check has been recorded since it was set, so the strip needs no second read and the receptionist sees the same line. While the garage is `suspended` the strip stays hidden and the banner of 049-FR-012 carries the reason. Modifies 210-FR-005 (the strip gains the date line).
 
@@ -792,6 +785,38 @@ _From 208-resubmit-after-more._
 
 _From 208-resubmit-after-more._
 
+### 068-FR-001 — The system MUST keep one yearly document cycle per garage that has ever been approved, stored in PostgreSQL with: the due date (a Europe/Bucharest calendar day), the state (`due` or `overdue`), the grace end date (`grace_until`, empty while `due`), the three reminder marks (`reminded_30_at`, `reminded_7_at`, `reminded_0_at`) and when it was last reset. Approval (303-FR-005) MUST create it with the due date = the acceptance day plus 12 months; a migration MUST create one for every garage already `approved` or `suspended` with due date = the later of `approved_at` plus 12 months and the migration day plus 30 days, so every existing owner gets the full reminder sequence and FR-003's grace rule is the only one. Both documents share the one due date.
+
+_From 068-yearly-documents._
+
+### 068-FR-002 — The state and the grace date MUST be readable by other code and by the API: one domain read in the verification module, `documentCycleOf(garageId)`, answering the due date, state, grace end and whether a document is `in_review`, which #209 will call; the owner's legal check read (`GET /api/v1/garages/{garageId}/legal-check`) and the admin's verification file read (302-FR-001) MUST both carry the cycle (`dueOn`, `state`, `graceUntil`, `inReview`).
+
+_From 068-yearly-documents._
+
+### 068-FR-003 — The worker's daily run (200-FR-007) MUST include a compliance step that, for every cycle in state `due`, sends DOCUMENT_DUE to the garage's owner when the due date is 8 to 30 days away and `reminded_30_at` is unset, when it is 1 to 7 days away and `reminded_7_at` is unset, and on the due day when `reminded_0_at` is unset, each one setting its mark (a later mark also sets the earlier ones it skipped); and, for every cycle whose due date is before the run's day, in one transaction: sets the state `overdue` and `grace_until` = due date + 14 days (`DOCUMENT_GRACE_DAYS`), writes one audit entry on the garage by `system` (old and new state, the grace date), one `document.overdue` outbox row (garageId, dueOn, graceUntil) and sends DOCUMENT_OVERDUE to the owner once. The step MUST be idempotent: a second run the same day, or a concurrent one, sends nothing again and changes nothing (the row is locked while it changes). Each notice is sent once-only by its event id, not by the marks' transaction: DOCUMENT_DUE carries `document-<stage>-<garageId>-<dueOn>` and DOCUMENT_OVERDUE `document-overdue-<garageId>-<dueOn>`, the notice is committed by the notifications pipeline's own transaction, and its unique (kind, account, channel, event id) means a run that sends it again after the commit of the `reminded_*` marks or the `overdue` change failed sends nothing twice. An `overdue` cycle MUST get no further reminder. While a document of the garage is `in_review`, the step MUST still set `overdue` and `grace_until` (so #209 and the queue lamp read it) but send no DOCUMENT_DUE or DOCUMENT_OVERDUE and write no `document.due`; the skipped marks stay unset.
+
+_From 068-yearly-documents._
+
+### 068-FR-007 — `POST /api/v1/garages/{garageId}/legal-documents` MUST take, through a DTO in the contracts library validated at the edge, one entry per kind (`onrc_certificate`, `rar_authorisation`; both required, except that a kind may be sent alone when the other kind already has a `valid` row accepted since the cycle was last reset (or `in_review`), else 422 `both_documents_required`), each with its ordered page keys (1 to 10) and issue date (the certificate's within 30 days, else 422 `certificate_too_old`); confirm each page with storage (409 `file_missing`, 422 `file_too_large`, `file_type_mismatch` for bytes that are not the declared type; an upload refused by these rules keeps its uploaded pages for a retry); and in one transaction create one `LEGAL_DOCUMENT` row per kind with status `in_review` on the garage's current verification file, leaving the kind's `valid` row untouched, write one audit entry per row (action `create`, subject `legal_document`, by the owner), one `document.uploaded` outbox row per document to `admin` and `garage:{garageId}`, and answer 201 with the garage's cycle (`DocumentCycleDto`, `inReview` true). A kind already `in_review` answers 409 `document_in_review` and stores nothing. The caller MUST be the garage's `owner` (403 `not_owner` for its receptionist or mechanic, 404 for everyone else and for a `draft` garage); the route MUST be rate-limited as the listing uploads are.
+
+_From 068-yearly-documents._
+
+### 068-FR-009 — `POST /api/v1/admin/legal-documents/{id}/accept` MUST, for a MotorFix admin, in one transaction, locking the garage's cycle row as the worker's step does so an accept and a run on the same day cannot interleave: set the document `valid`, `decided_by` and `decided_at`; set `replaced_at` on the kind's earlier `valid` row; write one audit entry (action `update`, field `status`, subject `legal_document`) and one `document.accepted` outbox row (garageId, documentId, kind) to `admin` and `garage:{garageId}`; and, when after this both kinds' current documents are `valid` rows accepted since the cycle was last reset, reset the cycle: due date = the acceptance day plus 12 months, state `due`, `grace_until` empty, the three marks cleared, one audit entry on the garage (field `documents_due_on`, old and new) in the same transaction. A document not `in_review` answers 409 `document_not_in_review`; an unknown id or a non-admin, 404. It MUST answer 200 with the document and the cycle.
+
+_From 068-yearly-documents._
+
+### 068-FR-010 — `POST /api/v1/admin/legal-documents/{id}/refuse` MUST take `{ reason, note }` (reason ∈ `documents`, `other`; note 1 to 500 characters, trimmed, no control characters; else 400 `validation_failed`) and, in one transaction: set the document `refused` with the reason, the note, `decided_by` and `decided_at`; leave the kind's earlier `valid` row and the cycle (state, due date, grace) unchanged; write one audit entry and one `document.refused` outbox row (garageId, documentId, kind, reason) to `admin` and `garage:{garageId}`; and have the notifications worker build one DOCUMENT_REFUSED for the owner (e-mail and push; mutable like the owner's other account types; Romanian and English templates carrying the kind's label and, in the e-mail and the bell, the note as escaped plain text (the push, held to the template checks' 120 characters, names the kind and points to the dashboard), linking to the dashboard; bell entry opens the legal panel) keyed by the outbox event id. The same 409 and 404 rules as FR-009 apply.
+
+_From 068-yearly-documents._
+
+### 068-FR-013 — The audit history MUST hold, in the same transaction as each change: each upload (per document, by the owner), each acceptance and refusal (by the admin, with reason and note), each change to `overdue` and each cycle reset (actor `system` for the worker, written "MotorFix", 390-FR-006), on the garage's scope so the drawer's timeline (302-FR-010) shows them with the file's own entries. Opening a page stays logged as today.
+
+_From 068-yearly-documents._
+
+### 068-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the due date from approval and from the migration (29 February included); reminders at 30, 7 and 0 days each sent once across repeated and concurrent runs, a missed window, and none once `overdue`; `overdue` on the day after the due date with `grace_until` = due + 14, its audit entry and outbox row in one transaction, and no suspension; DOCUMENT_DUE and DOCUMENT_OVERDUE built in quiet hours held until 08:00, sent on e-mail and push whatever the owner's settings, and none while a document is `in_review`; the upload's 201 and rows, the 409 for a kind in review, the 422s, the 403 for a receptionist and a mechanic and the 404s; accept moving the due date only when both kinds are valid, the `replaced_at`, the cycle reset and its audit entry; refuse keeping the earlier document and the grace, DOCUMENT_REFUSED built once with the note; the queue listing the garage, its lamp after the grace and the count; `documentCycleOf` answering state, grace and `inReview`; and the legal-check row's five texts. Web unit tests cover the row's texts and lamps by state, the button by role and the dialog's limits in both languages. Playwright MUST, with the clock on the due date, sign the owner in to the amber row, upload both documents, have an admin accept them from the drawer, and read the row green with the next year's month.
+
+_From 068-yearly-documents._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -839,3 +864,10 @@ _From 208-resubmit-after-more._
 - `210-FR-011` — superseded by `1354-FR-007` (2026-10-20)
 - `116-FR-015` — superseded by `101-FR-002` (2026-10-21)
 - `116-FR-014` — superseded by `208-FR-001` (2026-10-22)
+- `210-FR-004` — superseded by `068-FR-005` (2026-10-23)
+- `206-FR-013` — superseded by `068-FR-008` (2026-10-23)
+- `302-FR-005` — superseded by `068-FR-008` (2026-10-23)
+- `301-FR-001` — superseded by `068-FR-011` (2026-10-23)
+- `301-FR-006` — superseded by `068-FR-011` (2026-10-23)
+- `302-FR-003` — superseded by `068-FR-012` (2026-10-23)
+- `206-FR-012` — superseded by `068-FR-014` (2026-10-23)

@@ -13,6 +13,13 @@ export const CERTIFICATE_WINDOW_DAYS = 30;
 export const DECLARED_NAME_MIN = 2;
 export const DECLARED_NAME_MAX = 80;
 
+// Why an admin refuses a yearly document: the documents themselves, or
+// something the note explains.
+export const DOCUMENT_REFUSAL_REASONS = ['documents', 'other'] as const;
+export type DocumentRefusalReason = (typeof DOCUMENT_REFUSAL_REASONS)[number];
+
+export const DOCUMENT_REFUSAL_NOTE_MAX = 500;
+
 // Pages are storage keys in page order; `issuedOn` is YYYY-MM-DD. A type,
 // not an interface, so it stays assignable to Prisma's JSON values.
 type DraftDocument = {

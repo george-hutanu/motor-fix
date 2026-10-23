@@ -80,8 +80,6 @@ export class NotificationPreferencesService {
     await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`preferences:${actor.accountId}`}))`;
       const rows = await this.rows(tx, actor.accountId);
-      // Judged after the lock, so two saves at once never both pass the
-      // last-channel check on the same rows.
       const refused = staffChecks(await this.staff(actor, rows, tx), choices);
       if (refused) {
         throw refuse(

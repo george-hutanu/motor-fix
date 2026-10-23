@@ -193,6 +193,7 @@ describe('the legal check, for the owner', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       companyName: 'ATELIER DINAMO SRL',
+      documents: null,
       isMobile: false,
       lastCheckedOn: APPROVED_ON,
       latestRecheck: null,
@@ -478,5 +479,145 @@ describe('the RAR row day after a monthly re-check', () => {
       result: 'ok',
     });
     expect(res.body.rows[2]).toMatchObject({ checkedOn: '2026-11-01' });
+  });
+});
+
+// The garage's yearly cycle, due `inDays` from today.
+async function cycleOf(
+  w: World,
+  inDays: number,
+  over: { graceUntil?: string; state?: 'due' | 'overdue' } = {},
+) {
+  const today = localDay(new Date());
+  await prisma.documentCycle.create({
+    data: {
+      dueOn: new Date(addDays(today, inDays)),
+      garageId: w.dinamo.id,
+      graceUntil: over.graceUntil ? new Date(over.graceUntil) : null,
+      state: over.state ?? 'due',
+    },
+  });
+  return addDays(today, inDays);
+}
+
+const upload = (
+  fileId: string,
+  kind: string,
+  status: 'in_review' | 'refused',
+  extra: { refusalNote?: string; refusalReason?: string } = {},
+) =>
+  prisma.legalDocument.create({
+    data: {
+      kind,
+      pages: [`legal_document/${fileId}/new-${kind}`],
+      status,
+      verificationFileId: fileId,
+      ...(status === 'refused' && { decidedAt: new Date(), ...extra }),
+    },
+  });
+
+const documentsRow = (body: { rows: { kind: string }[] }) =>
+  body.rows.find((row) => row.kind === 'documents');
+
+// @traces 068-FR-002
+// @traces 068-FR-005
+// @traces 068-FR-017
+describe('the yearly documents on the legal check', () => {
+  it('carries the cycle, valid and green while the due date is more than 30 days away', async () => {
+    const w = await world();
+    await file(w);
+    const dueOn = await cycleOf(w, 60);
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents).toEqual({
+      canUpload: true,
+      dueOn,
+      graceUntil: null,
+      inReview: false,
+      refusal: null,
+      row: 'valid',
+      state: 'due',
+    });
+    expect(documentsRow(res.body)).toMatchObject({ state: 'ok' });
+  });
+
+  it('reads due, a warning, from 30 days before the due date', async () => {
+    const w = await world();
+    await file(w);
+    await cycleOf(w, 30);
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents.row).toBe('due');
+    expect(documentsRow(res.body)).toMatchObject({ state: 'warning' });
+  });
+
+  it('reads in review, with no upload, while a document waits for an admin', async () => {
+    const w = await world();
+    const f = await file(w);
+    await cycleOf(w, -3, {
+      graceUntil: addDays(localDay(new Date()), 11),
+      state: 'overdue',
+    });
+    await upload(f.id, 'onrc_certificate', 'in_review');
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents).toMatchObject({
+      canUpload: false,
+      inReview: true,
+      row: 'in_review',
+      state: 'overdue',
+    });
+    expect(documentsRow(res.body)).toMatchObject({ state: 'warning' });
+  });
+
+  it('reads overdue, failed, with the grace date, once nothing is in review', async () => {
+    const w = await world();
+    await file(w);
+    const graceUntil = addDays(localDay(new Date()), 11);
+    await cycleOf(w, -3, { graceUntil, state: 'overdue' });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents).toMatchObject({
+      graceUntil,
+      row: 'overdue',
+      state: 'overdue',
+    });
+    expect(documentsRow(res.body)).toMatchObject({ state: 'failed' });
+  });
+
+  it('reads refused, failed, with the note, until the kind is sent again', async () => {
+    const w = await world();
+    const f = await file(w);
+    await cycleOf(w, 20);
+    await upload(f.id, 'rar_authorisation', 'refused', {
+      refusalNote: 'Autorizația a expirat',
+      refusalReason: 'documents',
+    });
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents).toMatchObject({
+      canUpload: true,
+      refusal: {
+        kind: 'rar_authorisation',
+        note: 'Autorizația a expirat',
+        reason: 'documents',
+      },
+      row: 'refused',
+    });
+    expect(documentsRow(res.body)).toMatchObject({ state: 'failed' });
+  });
+
+  it('has no cycle for a garage that has none yet', async () => {
+    const w = await world();
+    await file(w);
+
+    const res = await read(w.dinamo.id, w.owner);
+
+    expect(res.body.documents).toBeNull();
   });
 });

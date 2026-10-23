@@ -37,6 +37,11 @@ import { CopyVoicesControllerList$Params } from '../fn/admin/copy-voices-control
 import { CopyVoicesDto } from '../models/copy-voices-dto';
 import { demandControllerDemand } from '../fn/admin/demand-controller-demand';
 import { DemandControllerDemand$Params } from '../fn/admin/demand-controller-demand';
+import { DocumentDecisionDto } from '../models/document-decision-dto';
+import { documentReviewControllerAccept } from '../fn/admin/document-review-controller-accept';
+import { DocumentReviewControllerAccept$Params } from '../fn/admin/document-review-controller-accept';
+import { documentReviewControllerRefuse } from '../fn/admin/document-review-controller-refuse';
+import { DocumentReviewControllerRefuse$Params } from '../fn/admin/document-review-controller-refuse';
 import { GarageSuspensionCreatedDto } from '../models/garage-suspension-created-dto';
 import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
 import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
@@ -292,6 +297,56 @@ export class AdminService extends BaseService {
   adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
     const resp = this.adminOverviewControllerGrowth$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
+  }
+
+  /** Path part for operation `documentReviewControllerAccept()` */
+  static readonly DocumentReviewControllerAcceptPath = '/api/v1/admin/legal-documents/{id}/accept';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `documentReviewControllerAccept()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  documentReviewControllerAccept$Response(params: DocumentReviewControllerAccept$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentDecisionDto>> {
+    const obs = documentReviewControllerAccept(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `documentReviewControllerAccept$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  documentReviewControllerAccept(params: DocumentReviewControllerAccept$Params, context?: HttpContext): Promise<DocumentDecisionDto> {
+    const resp = this.documentReviewControllerAccept$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentDecisionDto>): DocumentDecisionDto => r.body);
+  }
+
+  /** Path part for operation `documentReviewControllerRefuse()` */
+  static readonly DocumentReviewControllerRefusePath = '/api/v1/admin/legal-documents/{id}/refuse';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `documentReviewControllerRefuse()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  documentReviewControllerRefuse$Response(params: DocumentReviewControllerRefuse$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentDecisionDto>> {
+    const obs = documentReviewControllerRefuse(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `documentReviewControllerRefuse$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  documentReviewControllerRefuse(params: DocumentReviewControllerRefuse$Params, context?: HttpContext): Promise<DocumentDecisionDto> {
+    const resp = this.documentReviewControllerRefuse$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentDecisionDto>): DocumentDecisionDto => r.body);
   }
 
   /** Path part for operation `recheckControllerDue()` */

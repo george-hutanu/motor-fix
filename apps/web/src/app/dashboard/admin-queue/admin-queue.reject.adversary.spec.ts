@@ -22,10 +22,12 @@ const row = (
 ): VerificationQueueRowDto => ({
   area: { kind: 'town', name: 'București' },
   brands: 7,
+  documentId: null,
   flagged: false,
   garageId: `garage-${n}`,
   garageName: `Service ${n}`,
   id: `file-${n}`,
+  item: 'verification',
   lamp: 'green',
   mechanics: 3,
   resubmitted: false,

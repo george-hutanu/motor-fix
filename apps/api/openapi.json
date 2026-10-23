@@ -4466,6 +4466,101 @@
         ]
       }
     },
+    "/api/v1/admin/legal-documents/{id}/accept": {
+      "post": {
+        "operationId": "DocumentReviewController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDecisionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no document"
+          },
+          "409": {
+            "description": "document_not_in_review"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/legal-documents/{id}/refuse": {
+      "post": {
+        "operationId": "DocumentReviewController_refuse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRefusalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDecisionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no document"
+          },
+          "409": {
+            "description": "document_not_in_review"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/brands": {
       "put": {
         "operationId": "GarageBrandsController_replace",
@@ -6784,6 +6879,132 @@
         },
         "tags": [
           "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/legal-documents/upload-url": {
+      "post": {
+        "operationId": "OwnerDocumentsController_uploadUrl",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadAddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "not_owner"
+          },
+          "404": {
+            "description": "No such approved garage of yours"
+          },
+          "409": {
+            "description": "document_in_review"
+          },
+          "422": {
+            "description": "file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/legal-documents": {
+      "post": {
+        "operationId": "OwnerDocumentsController_submit",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentsSubmitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentCycleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed body"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "not_owner"
+          },
+          "404": {
+            "description": "No such approved garage of yours"
+          },
+          "409": {
+            "description": "document_in_review, file_missing"
+          },
+          "422": {
+            "description": "both_documents_required, certificate_too_old, file_type_mismatch, file_too_large"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
         ]
       }
     },
@@ -13593,10 +13814,24 @@
       "VerificationQueueRowDto": {
         "type": "object",
         "properties": {
+          "item": {
+            "type": "string",
+            "description": "A file sent for verification, or an approved garage's yearly documents waiting for an admin",
+            "enum": [
+              "verification",
+              "documents"
+            ]
+          },
           "id": {
             "type": "string",
             "description": "The verification file",
             "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "description": "The yearly document uploaded first among those in review; null for a verification row",
+            "format": "uuid",
+            "nullable": true
           },
           "status": {
             "type": "string",
@@ -13639,7 +13874,7 @@
           },
           "lamp": {
             "type": "string",
-            "description": "Red on a failed check, amber when flagged or on a warning",
+            "description": "Red on a failed check, amber when flagged or on a warning; a documents row is amber, red once its grace has ended or the garage is suspended",
             "enum": [
               "green",
               "amber",
@@ -13650,7 +13885,7 @@
           "submittedAt": {
             "format": "date-time",
             "type": "string",
-            "description": "The latest sending"
+            "description": "The latest sending; for a documents row, its oldest upload"
           },
           "workingDays": {
             "type": "integer",
@@ -13672,7 +13907,9 @@
           }
         },
         "required": [
+          "item",
           "id",
+          "documentId",
           "status",
           "garageId",
           "garageName",
@@ -13697,7 +13934,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Every file waiting, as the overview counts them",
+            "description": "Every file and yearly documents row waiting, as the overview counts them",
             "minimum": 0
           }
         },
@@ -13938,6 +14175,188 @@
           "fromBani",
           "updatedAt",
           "warnings"
+        ]
+      },
+      "DecidedDocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "refused"
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "decidedAt"
+        ]
+      },
+      "DocumentCycleRefusalDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "documents",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "The admin's note, shown to the garage"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "reason",
+          "note",
+          "decidedAt"
+        ]
+      },
+      "DocumentCycleDto": {
+        "type": "object",
+        "properties": {
+          "dueOn": {
+            "type": "string",
+            "description": "The Europe/Bucharest day both documents are due",
+            "example": "2027-01-15",
+            "format": "date"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "due",
+              "overdue"
+            ]
+          },
+          "graceUntil": {
+            "type": "string",
+            "description": "The last day of the grace; set once the cycle is overdue",
+            "example": "2027-01-29",
+            "format": "date",
+            "nullable": true
+          },
+          "inReview": {
+            "type": "boolean",
+            "description": "Whether a yearly upload waits for an admin"
+          },
+          "row": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "due",
+              "in_review",
+              "refused",
+              "overdue"
+            ]
+          },
+          "canUpload": {
+            "type": "boolean",
+            "description": "Whether the garage may send its documents now"
+          },
+          "refusal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCycleRefusalDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "dueOn",
+          "state",
+          "graceUntil",
+          "inReview",
+          "row",
+          "canUpload",
+          "refusal"
+        ]
+      },
+      "DocumentDecisionDto": {
+        "type": "object",
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DecidedDocumentDto"
+          },
+          "cycle": {
+            "description": "The garage's cycle after the decision",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCycleDto"
+              }
+            ]
+          },
+          "suspendedFor": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "document",
+          "cycle",
+          "suspendedFor"
+        ]
+      },
+      "DocumentRefusalDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "documents",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed; shown to the garage as written",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "reason",
+          "note"
         ]
       },
       "GarageBrandStanceDto": {
@@ -14492,6 +14911,16 @@
               }
             ]
           },
+          "documents": {
+            "description": "The garage's yearly documents cycle; null for a garage without one",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCycleDto"
+              }
+            ]
+          },
           "rows": {
             "description": "company, caen, rar and documents, in that order",
             "type": "array",
@@ -14507,6 +14936,7 @@
           "lastCheckedOn",
           "status",
           "latestRecheck",
+          "documents",
           "rows"
         ]
       },
@@ -16064,6 +16494,88 @@
           "at"
         ]
       },
+      "VerificationFileDocumentRefusalDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "documents",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "note"
+        ]
+      },
+      "VerificationFileDocumentReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_review",
+              "refused"
+            ]
+          },
+          "issuedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decidedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "refusal": {
+            "description": "The reason and the note; refused only",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileDocumentRefusalDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "issuedOn",
+          "pages",
+          "uploadedAt",
+          "decidedAt",
+          "decidedBy",
+          "refusal"
+        ]
+      },
       "VerificationFileDocumentDto": {
         "type": "object",
         "properties": {
@@ -16102,6 +16614,32 @@
             "items": {
               "$ref": "#/components/schemas/VerificationFileReplacedDocumentDto"
             }
+          },
+          "decidedAt": {
+            "type": "string",
+            "description": "When an admin accepted it as a yearly upload; else null",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decidedBy": {
+            "description": "The admin who accepted it as a yearly upload; else null",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "review": {
+            "description": "The yearly upload in review, or the latest refused one not sent again; else null",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileDocumentReviewDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16111,7 +16649,10 @@
           "pages",
           "issuedOn",
           "stale",
-          "replaced"
+          "replaced",
+          "decidedAt",
+          "decidedBy",
+          "review"
         ]
       },
       "VerificationFileReporterDto": {
@@ -16308,6 +16849,16 @@
           },
           "timeline": {
             "$ref": "#/components/schemas/VerificationFileTimelineDto"
+          },
+          "documentCycle": {
+            "description": "The garage's yearly documents cycle; null for a garage never approved",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCycleDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16322,7 +16873,8 @@
           "reports",
           "reportsOpen",
           "previousRejection",
-          "timeline"
+          "timeline",
+          "documentCycle"
         ]
       },
       "SuspendGarageDto": {
@@ -16962,6 +17514,53 @@
         "required": [
           "kind",
           "pages"
+        ]
+      },
+      "RenewedDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "pages": {
+            "description": "The keys the upload addresses gave, in page order",
+            "maxItems": 10,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issuedOn": {
+            "type": "string",
+            "example": "2026-10-20",
+            "format": "date"
+          }
+        },
+        "required": [
+          "kind",
+          "pages",
+          "issuedOn"
+        ]
+      },
+      "DocumentsSubmitDto": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "maxItems": 2,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RenewedDocumentDto"
+            }
+          }
+        },
+        "required": [
+          "documents"
         ]
       },
       "ListingSubmittedDto": {

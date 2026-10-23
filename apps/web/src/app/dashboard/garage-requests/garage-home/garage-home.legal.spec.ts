@@ -26,6 +26,7 @@ const CAPABILITIES: Record<Role, string[]> = {
 
 const ANSWER: LegalCheckDto = {
   companyName: 'ATELIER DINAMO SRL',
+  documents: null,
   isMobile: false,
   lastCheckedOn: '2026-10-01',
   latestRecheck: null,

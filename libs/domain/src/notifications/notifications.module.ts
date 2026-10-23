@@ -39,6 +39,11 @@ import {
   type CatalogueJobPendingEvent,
   CatalogueJobPendingFanOut,
 } from './catalogue-job-pending/catalogue-job-pending.fan-out';
+import {
+  DOCUMENT_REFUSED_QUEUE,
+  type DocumentRefusedEvent,
+  DocumentRefusedFanOut,
+} from './document-refused/document-refused.fan-out';
 import type { EmailConfig } from './email-config';
 import {
   GARAGE_REPORT_DECIDED_QUEUE,
@@ -139,6 +144,7 @@ const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
 const CATALOGUE_JOB_PENDING_WORKER = Symbol('CATALOGUE_JOB_PENDING_WORKER');
+const DOCUMENT_REFUSED_WORKER = Symbol('DOCUMENT_REFUSED_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -208,6 +214,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(CATALOGUE_JOB_PENDING_WORKER)
     private readonly catalogueJobPendingWorker?: Worker | null,
+    @Optional()
+    @Inject(DOCUMENT_REFUSED_WORKER)
+    private readonly documentRefusedWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -625,6 +634,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        DocumentRefusedFanOut,
+        {
+          inject: [DocumentRefusedFanOut],
+          provide: DOCUMENT_REFUSED_WORKER,
+          useFactory: (fanOut: DocumentRefusedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('DocumentRefused').error(
+                'PUBLIC_WEB_URL missing; refused documents wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<DocumentRefusedEvent>(
+              DOCUMENT_REFUSED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('DocumentRefused'));
+            return worker;
+          },
+        },
         GarageReportDecidedFanOut,
         {
           inject: [GarageReportDecidedFanOut],
@@ -697,6 +733,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.garageSuspendedWorker?.close();
     await this.garageReportDecidedWorker?.close();
     await this.catalogueJobPendingWorker?.close();
+    await this.documentRefusedWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     await returnStore(this.publisher);

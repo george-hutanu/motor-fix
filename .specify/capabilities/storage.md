@@ -1,11 +1,12 @@
 ---
 capability: storage
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 422-private-file-storage
   - 110-workshop-photos
   - 1191-resilient-uploads
   - 1192-photo-variants
+  - 068-yearly-documents
 ---
 
 # Capability: Storage
@@ -22,9 +23,9 @@ _From 1191-resilient-uploads._
 
 _From 422-private-file-storage._
 
-### 1191-FR-006 — Every upload address storage issues (every caller of `createUpload`: listing photos and listing documents today) MUST be a presigned PUT, signed for 15 minutes for one key under `incoming/` (422-FR-004), bound to the declared content type, the exact declared length and a CRC32 checksum (base64) the caller declares; the store MUST accept only that key and MUST refuse a body whose type, length or checksum differs (supersedes 422-FR-003's form bound to type and at most the declared size). The address request DTOs MUST gain a required `checksum` (base64 CRC32, refused with 400 `validation_failed` when missing or malformed), and the address DTO MUST become `{ url, key, expiresAt, headers }`, where `headers` are the headers the browser sends with the PUT; the form `fields` go. The browser upload helper MUST compute the CRC32 of the bytes it sends, ask for the address with it, PUT the body with the given headers, report progress, retry a dropped connection a number of times its caller passes (3 by default, the documents step; 0 for the queued photos, whose drain owns the backoff), ask for a new address once when the store refuses an expired one, then call the owning confirm and return its result, or fail with an error (supersedes 422-FR-012's form post). `apps/api/openapi.json` and the generated client MUST be regenerated. An integration test against the compose store MUST prove the matching body is accepted and a wrong checksum, length and type each refused.
+### 068-FR-006 — The upload dialog MUST reuse the document step of "List your garage" (ListGarage step 6: one picker per kind, PDF, JPG or PNG, at most 10 MB per file and 10 pages per document, the issue date for each, the certificate's within 30 days), opened from the row for the signed-in owner; each page goes to the object store through a signed upload address for the purpose `legal_document` (422-FR-002, 1191-FR-006) obtained from `POST /api/v1/garages/{garageId}/legal-documents/upload-url` (owner only: 403 `not_owner` for a receptionist or mechanic, 404 for anyone else and for a `draft` garage; 409 `document_in_review` while both kinds are `in_review`, since nothing is left to send), and a page the store refuses (type, size) is shown with its message and kept out. The browser MUST keep the chosen pages across a failed confirm and retry; with the store unreachable it reads "Încărcarea nu e disponibilă acum" / "Upload is not available right now". Nothing is stored on the garage until the confirm of FR-007 succeeds.
 
-_From 1191-resilient-uploads._
+_From 068-yearly-documents._
 
 ### 422-FR-004 — Every key storage issues for an upload MUST be `incoming/<purpose>/<owner id>/<random id>`, and its final key `<purpose>/<owner id>/<random id>` with the same random id; neither MUST contain the original file name or any other personal data.
 
@@ -61,3 +62,4 @@ _From 1192-photo-variants._
 - `422-FR-003` — superseded by `1191-FR-006` (2026-10-18)
 - `422-FR-012` — superseded by `1191-FR-006` (2026-10-18)
 - `110-FR-003` — superseded by `1192-FR-004` (2026-10-22)
+- `1191-FR-006` — superseded by `068-FR-006` (2026-10-23)

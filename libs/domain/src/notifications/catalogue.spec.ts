@@ -11,6 +11,8 @@ const NOT_URGENT = [
   'BOOKING_REMINDER',
   'REQUEST_REMINDER',
   'DOCUMENT_DUE',
+  'DOCUMENT_OVERDUE',
+  'DOCUMENT_REFUSED',
   'LISTING_REMINDER',
   'NEWS',
   'REVIEW_INVITE',
@@ -28,6 +30,8 @@ const ALWAYS_SENT = [
   'GARAGE_SUSPENDED_NOTICE',
   'BOOKING_MOVE_REFUSED',
   'BOOKING_MOVE_LAPSED',
+  'DOCUMENT_DUE',
+  'DOCUMENT_OVERDUE',
 ];
 
 const TRANSACTIONAL = [
@@ -127,16 +131,37 @@ describe('the notification catalogue', () => {
     expect(NOTIFICATION_TYPES['QUOTE_RECEIVED'].alwaysSent).toBe(false);
   });
 
-  // @traces 198-FR-006 198-FR-010
-  it('sends a garage document reminder by the channels left on, at least one', () => {
+  // @traces 198-FR-006
+  // @traces 068-FR-004
+  // @traces 068-FR-017
+  it('always sends a garage document reminder on exactly e-mail and push, waiting out the night', () => {
     for (const name of ['DOCUMENT_DUE', 'DOCUMENT_OVERDUE']) {
-      const type = NOTIFICATION_TYPES[name];
-      expect(type.alwaysSent).toBe(false);
-      expect(type.groupable).toBe(false);
-      expect(type.keepOne).toBe(true);
-      expect(sendsEmail(type, new Set(['email']))).toBe(false);
+      expect(NOTIFICATION_TYPES[name]).toMatchObject({
+        alwaysSent: true,
+        channels: ['email', 'push'],
+        groupable: false,
+        trigger: 'event',
+        urgent: false,
+      });
+      expect(sendsEmail(NOTIFICATION_TYPES[name], new Set(['email']))).toBe(
+        true,
+      );
     }
-    expect(NOTIFICATION_TYPES['REQUEST_RECEIVED'].keepOne).toBe(false);
+  });
+
+  // @traces 068-FR-010
+  it('sends a refused document by e-mail and push, and lets the owner mute it', () => {
+    expect(NOTIFICATION_TYPES['DOCUMENT_REFUSED']).toMatchObject({
+      alwaysSent: false,
+      channels: ['email', 'push'],
+      group: null,
+      transactional: false,
+      trigger: 'event',
+      urgent: false,
+    });
+    expect(
+      sendsEmail(NOTIFICATION_TYPES['DOCUMENT_REFUSED'], new Set(['email'])),
+    ).toBe(false);
   });
 
   it('sends each reminder to finish a garage listing as its own e-mail', () => {

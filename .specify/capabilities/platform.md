@@ -101,6 +101,7 @@ features:
   - 1357-merge-when-overlapping
   - 1360-refresh-gate-level1-handoff
   - 1363-throughput-fixes
+  - 068-yearly-documents
 ---
 
 # Capability: Platform
@@ -2668,6 +2669,9 @@ _From 1363-throughput-fixes._
 ### 1363-FR-011 — (Item 11) `apps/web-e2e/src/voice-languages.spec.ts` (lines 239 and 255), `libs/domain/src/store/store.ttl.integration.spec.ts` ("the account totals carry a time to live") and `apps/web-e2e/src/garage-views.spec.ts:262` MUST be made deterministic: each waits on the state it needs rather than on time, the TTL is asserted as a range, the account is seeded rather than shared, and any retry that hid a failure is removed. *Done when*: the three specs pass 20 runs in a row on CI (SC-006).
 
 _From 1363-throughput-fixes._
+### 068-FR-015 — The DTOs (the upload-url request and answer, the upload body, the accept answer, the refuse body, the cycle, the queue row's `item`, the file read's documents) live in the contracts library, the four routes are REST with OpenAPI, the OpenAPI document and the generated client are regenerated, and the document kinds stay the contracts list (a new yearly kind is one entry there, #835).
+
+_From 068-yearly-documents._
 
 ## Retired
 

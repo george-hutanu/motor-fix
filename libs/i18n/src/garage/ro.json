@@ -117,12 +117,19 @@
     "documents": {
       "checked": "verificate",
       "checkedOn": "verificate pe {day}",
+      "cycle": {
+        "in_review": "în verificare",
+        "overdue": "restante din {since}, profilul iese de pe hartă pe {off}",
+        "refused": "refuzat: {note}",
+        "renew": "de reîncărcat o dată pe an, până în {month}"
+      },
       "detail": "certificat constatator și autorizație RAR",
       "label": "Documente",
       "missing": {
         "onrc_certificate": "lipsește certificatul constatator",
         "rar_authorisation": "lipsește autorizația RAR"
-      }
+      },
+      "upload": "Încarcă documentele"
     },
     "error": "Nu am putut încărca verificarea",
     "notChecked": "neverificat",
@@ -151,7 +158,40 @@
     },
     "tag": "Verificat",
     "tagSuspended": "Suspendat",
-    "title": "Verificare legală"
+    "title": "Verificare legală",
+    "upload": {
+      "bothRequired": "Încarcă ambele documente",
+      "cancel": "Renunță",
+      "choose": "Alege fișiere",
+      "failed": "nu s‑a încărcat",
+      "full": "Cel mult 10 pagini pe document",
+      "inReview": "Documentele sunt deja în verificare",
+      "issuedOn": "Data emiterii",
+      "issuedOnFuture": "Data emiterii nu poate fi în viitor",
+      "issuedOnOld": "Certificatul trebuie să fie emis în ultimele 30 de zile",
+      "kinds": {
+        "onrc_certificate": {
+          "hint": "Emis în ultimele 30 de zile, cu punctul de lucru al atelierului",
+          "label": "Certificat constatator ONRC"
+        },
+        "rar_authorisation": {
+          "hint": "Scan sau fotografie lizibilă, toate paginile",
+          "label": "Autorizația tehnică RAR"
+        }
+      },
+      "note": "Documentele le vede doar echipa MotorFix.",
+      "page": "Pagina {n}",
+      "ready": "încărcată",
+      "refused": "Nu e acceptat: doar PDF, JPG sau PNG, cel mult 10 MB",
+      "remove": "Scoate",
+      "removeLabel": "Scoate {name}",
+      "retry": "Încearcă din nou",
+      "rules": "PDF, JPG sau PNG, cel mult 10 MB fiecare, până la 10 pagini",
+      "send": "Trimite documentele",
+      "sendFailed": "Nu am putut trimite documentele. Încearcă din nou.",
+      "title": "Încarcă documentele",
+      "unavailable": "Încărcarea nu e disponibilă acum"
+    }
   },
   "prices": {
     "add": "Adaugă o lucrare",

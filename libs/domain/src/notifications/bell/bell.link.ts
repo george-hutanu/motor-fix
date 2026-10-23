@@ -1,7 +1,7 @@
 // The view a bell row opens. A car reminder names its car; a request's
 // notification carries the request's address its e-mail links to, since its
 // subject is a quote or a recipient; a review's opens the reviews; a
-// suspension opens the garage dashboard; a decision on a driver's report
+// suspension or a yearly documents notice opens the garage dashboard; a decision on a driver's report
 // opens the reported garage's public profile its e-mail links to. Any other
 // kind opens nothing: the bell only marks it read.
 type View = 'cars' | 'garage' | 'profile' | 'requests' | 'reviews';
@@ -17,6 +17,9 @@ export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   BOOKING_REMINDER: 'requests',
   BOOKING_TIME_PROPOSED: 'requests',
   CAR_TRANSFER_ACCEPTED: 'cars',
+  DOCUMENT_DUE: 'garage',
+  DOCUMENT_OVERDUE: 'garage',
+  DOCUMENT_REFUSED: 'garage',
   DUE_ITP: 'cars',
   DUE_RCA: 'cars',
   DUE_ROVINIETA: 'cars',
