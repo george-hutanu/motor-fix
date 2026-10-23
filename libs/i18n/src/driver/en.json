@@ -405,6 +405,8 @@
     "loading": "Loading your saved garages",
     "noCar": "Add a car to see whether it works on it",
     "outsideArea": "outside its area",
+    "quote": "Request a quote",
+    "quoteFrom": "Request a quote from {garage}",
     "remove": "Remove from saved",
     "retry": "Try again",
     "seeAll": "See all",

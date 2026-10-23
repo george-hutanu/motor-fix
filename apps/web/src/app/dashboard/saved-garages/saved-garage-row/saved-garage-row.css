@@ -10,6 +10,8 @@
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
+  flex-wrap: wrap;
+  container-type: inline-size;
 }
 .profile {
   display: flex;
@@ -86,4 +88,16 @@ mf-rating-dial {
 }
 [data-unavailable] {
   color: var(--mf-text-secondary);
+}
+mf-request-saved-quote {
+  flex: none;
+}
+/* A narrow row puts the quote button on its own line, under the name. */
+@container (max-width: 359px) {
+  mf-request-saved-quote {
+    order: 1;
+    flex-basis: 100%;
+    padding-inline-start: calc(56px + var(--mf-space-3));
+    padding-block-end: var(--mf-space-2);
+  }
 }

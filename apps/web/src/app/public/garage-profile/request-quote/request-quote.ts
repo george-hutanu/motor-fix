@@ -57,8 +57,9 @@ import { Voice } from '../../../voice/voice';
 
 export interface RequestQuoteData {
   garage: PublicGarageDto;
-  // Where the profile was opened from; every garage ticked here is `search`.
-  source: 'profile_direct' | 'shared_link';
+  // Where the dialog was opened from: the profile, the profile by a shared
+  // link, or the driver's saved list; every garage ticked here is `search`.
+  source: 'profile_direct' | 'shared_link' | 'saved';
   // Told the request as soon as it is sent, whether or not the dialog is
   // then closed by its X.
   sent?: (request: RequestDto) => void;

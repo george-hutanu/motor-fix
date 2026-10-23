@@ -3,10 +3,16 @@ import { join } from 'node:path';
 
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { SavedGarageItemDto } from '@motor-fix/data-access';
+import {
+  GaragesService,
+  type SavedGarageItemDto,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { SavedGarageRow } from './saved-garage-row';
+import { Consent } from '../../../consent/consent';
+import { Voice } from '../../../voice/voice';
 import { savedItem } from '../saved-garages.testing';
 
 async function render(
@@ -326,5 +332,91 @@ describe('the saved garages texts', () => {
       expect(said.trim()).not.toBe('');
       expect(said).not.toBe(romanian.get(key));
     }
+  });
+});
+
+async function renderQuoting(
+  item: SavedGarageItemDto,
+  quote: boolean,
+  language: 'ro' | 'en' = 'ro',
+) {
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      {
+        provide: GaragesService,
+        useValue: { publicGaragesControllerBySlug: jest.fn() },
+      },
+      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Voice, useValue: { voice: 1 } },
+    ],
+  });
+  const i18n = TestBed.inject(I18n);
+  await i18n.enter('driver');
+  await i18n.enter('public');
+  if (language === 'en') await i18n.use('en');
+  const fixture = TestBed.createComponent(SavedGarageRow);
+  fixture.componentRef.setInput('item', item);
+  fixture.componentRef.setInput('hasCar', true);
+  fixture.componentRef.setInput('quote', quote);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  fixture.detectChanges();
+  return { element: fixture.nativeElement as HTMLElement, fixture };
+}
+
+const quoteButton = (element: HTMLElement) =>
+  element.querySelector<HTMLButtonElement>('button[data-quote]');
+
+// @traces 292-FR-001
+// @traces 292-FR-008
+describe('Cere ofertă in a saved garage’s row', () => {
+  it('sits in the row of an available garage, beside the link and not inside it', async () => {
+    const { element } = await renderQuoting(savedItem(), true);
+
+    const quote = quoteButton(element);
+    expect(text(quote)).toBe('Cere ofertă');
+    expect(quote?.getAttribute('aria-label')).toBe(
+      'Cere ofertă de la Auto Service Popescu',
+    );
+    expect(quote?.closest('a')).toBeNull();
+    expect(element.querySelector('a[data-profile]')).not.toBeNull();
+    expect(element.querySelector('button[data-remove]')).not.toBeNull();
+  });
+
+  it('is named in English for an English reader', async () => {
+    const { element } = await renderQuoting(savedItem(), true, 'en');
+
+    expect(text(quoteButton(element))).toBe('Request a quote');
+  });
+
+  it('is not offered where the row is not asked to quote', async () => {
+    const { element } = await renderQuoting(savedItem(), false);
+
+    expect(quoteButton(element)).toBeNull();
+  });
+});
+
+// @traces 292-FR-002
+describe('Cere ofertă for an unavailable saved garage', () => {
+  it('is not offered on a row already marked Indisponibil', async () => {
+    const { element } = await renderQuoting(
+      savedItem({ available: false }),
+      true,
+    );
+
+    expect(quoteButton(element)).toBeNull();
+    expect(line(element)).toBe('Indisponibil');
+  });
+
+  it('goes away when the garage becomes unavailable while the list is open', async () => {
+    const { element, fixture } = await renderQuoting(savedItem(), true);
+    expect(quoteButton(element)).not.toBeNull();
+
+    fixture.componentRef.setInput('item', savedItem({ available: false }));
+    fixture.detectChanges();
+
+    expect(quoteButton(element)).toBeNull();
   });
 });

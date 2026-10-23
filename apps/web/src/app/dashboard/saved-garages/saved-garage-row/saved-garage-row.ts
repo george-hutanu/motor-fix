@@ -11,12 +11,15 @@ import type { SavedGarageItemDto } from '@motor-fix/data-access';
 import { formatKm, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, type LampState, RatingDial } from '@motor-fix/ui-cockpit';
 
+import { RequestSavedQuote } from '../request-saved-quote/request-saved-quote';
+
 // One saved garage: a link to its profile with the small rating dial, its
 // name and a lamp line (does it work on the driver's cars, and how far), and
-// beside the link its own remove button.
+// beside the link its own remove button; on the full list, a quote button for
+// a garage still available.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Lamp, RatingDial, RouterLink, TranslatePipe],
+  imports: [Lamp, RatingDial, RequestSavedQuote, RouterLink, TranslatePipe],
   selector: 'mf-saved-garage-row',
   styleUrl: './saved-garage-row.css',
   templateUrl: './saved-garage-row.html',
@@ -26,6 +29,8 @@ export class SavedGarageRow {
   // False once the driver is known to have no car; undefined while the cars
   // are not known, when an empty brand list says nothing either way.
   readonly hasCar = input<boolean | undefined>(true);
+  // The full list offers "Cere ofertă" on each row; Panou's short list not.
+  readonly quote = input(false);
   readonly removed = output<string>();
   private readonly i18n = inject(I18n);
   protected readonly language = this.i18n.language;

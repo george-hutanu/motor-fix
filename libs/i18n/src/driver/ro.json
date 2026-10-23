@@ -410,6 +410,8 @@
     "loading": "Se încarcă service‑urile salvate",
     "noCar": "Adaugă o mașină ca să vezi dacă lucrează pe ea",
     "outsideArea": "în afara zonei",
+    "quote": "Cere ofertă",
+    "quoteFrom": "Cere ofertă de la {garage}",
     "remove": "Scoate din salvate",
     "retry": "Reîncearcă",
     "seeAll": "Vezi toate",
