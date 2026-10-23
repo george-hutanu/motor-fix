@@ -1,14 +1,12 @@
-import { expect, type Page } from '@playwright/test';
-import { Client } from 'pg';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { ready, signIn } from './accounts.js';
+import { PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The seeded driver with a Dacia Logan saves the seeded Service Auto Militari,
 // which works on Dacia and has an oil change on its price list, then asks it
-// for a quote straight from Service-uri salvate. Each test starts and ends
-// without the saved row; a deployed address, whose run has no DATABASE_URL,
-// skips it.
+// for a quote straight from Service-uri salvate. The save and its removal go
+// through the API, so each test starts and ends without the saved row.
 const DRIVER = 'cerere@example.test';
 const SLUG = 'service-auto-militari';
 const GARAGE = 'Service Auto Militari';
@@ -27,50 +25,32 @@ async function signedInDriver(page: Page) {
   await expect(page).toHaveURL('/app/driver');
 }
 
-test.describe('a quote request from a saved garage @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'saves the garage straight in PostgreSQL, which needs DATABASE_URL',
-  );
-  let db: Client;
-  let driverId = '';
-  let garageId = '';
-  let savedBefore = false;
+async function driverHeaders(request: APIRequestContext) {
+  const res = await request.post('/api/v1/auth/sign-in', {
+    data: { email: DRIVER, password: PASSWORD, remember: false },
+  });
+  expect(res.ok()).toBe(true);
+  const { accessToken } = (await res.json()) as { accessToken: string };
+  return { Authorization: `Bearer ${accessToken}` };
+}
 
-  test.beforeAll(async () => {
-    db = new Client({ connectionString: process.env['DATABASE_URL'] });
-    await db.connect();
-    const driver = await db.query<{ id: string }>(
-      'SELECT id FROM account WHERE email = $1',
-      [DRIVER],
-    );
-    driverId = driver.rows[0]?.id ?? '';
-    const garage = await db.query<{ id: string }>(
-      'SELECT id FROM garage WHERE slug = $1',
-      [SLUG],
-    );
-    garageId = garage.rows[0]?.id ?? '';
-    const saved = await db.query(
-      'SELECT 1 FROM saved_garage WHERE account_id = $1 AND garage_id = $2',
-      [driverId, garageId],
-    );
-    savedBefore = (saved.rowCount ?? 0) > 0;
+test.describe('a quote request from a saved garage @seeded', () => {
+  let garageId = '';
+
+  test.beforeEach(async ({ request }) => {
+    const profile = await request.get(`/api/v1/garages/${SLUG}`);
+    expect(profile.ok()).toBe(true);
+    garageId = ((await profile.json()) as { id: string }).id;
+    const saved = await request.put(`/api/v1/me/saved-garages/${garageId}`, {
+      headers: await driverHeaders(request),
+    });
+    expect(saved.ok()).toBe(true);
   });
-  test.beforeEach(async () => {
-    await db.query(
-      `INSERT INTO saved_garage (account_id, garage_id, saved_at)
-       VALUES ($1, $2, now()) ON CONFLICT DO NOTHING`,
-      [driverId, garageId],
-    );
+  test.afterEach(async ({ request }) => {
+    await request.delete(`/api/v1/me/saved-garages/${garageId}`, {
+      headers: await driverHeaders(request),
+    });
   });
-  test.afterEach(async () => {
-    if (savedBefore) return;
-    await db.query(
-      'DELETE FROM saved_garage WHERE account_id = $1 AND garage_id = $2',
-      [driverId, garageId],
-    );
-  });
-  test.afterAll(() => db.end());
 
   // @traces 292-FR-001 292-FR-004 292-FR-006 292-FR-009
   test('goes out from the saved row to the garage, named saved, and shows in Cererile mele', async ({
