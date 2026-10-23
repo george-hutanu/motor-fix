@@ -326,6 +326,19 @@
     },
     {
       "kind": "queue",
+      "name": "garage-restored",
+      "source": "libs/domain/src/notifications/garage-restored/garage-restored.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_garage_restored_notices_total (built, skipped) on motorfix-queues; one GarageRestored log line per event with the garage id and the owners told, never the admin's note; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
+      "story": "ST-67"
+    },
+    {
+      "kind": "queue",
       "name": "catalogue-job-pending",
       "source": "libs/domain/src/notifications/catalogue-job-pending/catalogue-job-pending.fan-out.ts",
       "dashboard": "motorfix-queues",
@@ -741,6 +754,15 @@
       "alerts": "none",
       "reason": "counts each suspension told to its garage's owners by outcome (built, skipped: no owner or no open suspension), with the fan-out's log line naming the garage id; a count has no failure to alert on, the garage-suspended queue entry owns the failed-job alert",
       "story": "ST-49"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_garage_restored_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each restore told to its garage's owners by outcome (built, skipped: no owner or a bad payload), with the fan-out's log line naming the garage id; also on motorfix-product; a count has no failure to alert on, the garage-restored queue entry owns the failed-job alert",
+      "story": "ST-67"
     },
     {
       "kind": "product-counter",

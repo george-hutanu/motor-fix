@@ -79,6 +79,7 @@ const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 const REQUEST_RECEIVED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
 const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
 const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
+const RESTORED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const REPORT_DECISION_OUTCOMES = [
   'unfounded',
   'confirmed',
@@ -240,6 +241,11 @@ const suspendedNotices = () =>
   counter(
     'motorfix_garage_suspended_notices_total',
     'Garage suspensions told to garage owners, by outcome',
+  );
+const restoredNotices = () =>
+  counter(
+    'motorfix_garage_restored_notices_total',
+    'Garage restores told to garage owners, by outcome',
   );
 const documentCycle = () =>
   counter(
@@ -409,6 +415,13 @@ export function countGarageSuspendedNotice(
   suspendedNotices().add(1, { outcome });
 }
 
+// A restore told to the garage's owners, or one with nobody to tell.
+export function countGarageRestoredNotice(
+  outcome: (typeof RESTORED_NOTICE_OUTCOMES)[number],
+) {
+  restoredNotices().add(1, { outcome });
+}
+
 export function countDocumentUploaded(kind: DocumentKind) {
   documentsUploaded().add(1, { kind });
 }
@@ -522,6 +535,7 @@ const STARTS: Record<
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
     [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
+    [restoredNotices, each('outcome', RESTORED_NOTICE_OUTCOMES)],
     [reportDecidedNotices, each('outcome', REPORT_DECIDED_NOTICE_OUTCOMES)],
     [quotesReceived, each('outcome', QUOTE_RECEIVED_OUTCOMES)],
     [
