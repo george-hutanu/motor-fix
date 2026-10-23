@@ -511,9 +511,14 @@ interface Requester {
   mechanic: string;
 }
 
-// The requester's car and the staff's garage and mechanic; null when one is
-// missing, as on a database seeded before them.
-async function requester(db: Client): Promise<Requester | null> {
+// The requester's car (the seed's own, or another by its key and plate) and
+// the staff's garage and mechanic; null when one is missing, as on a database
+// seeded before them.
+async function requester(
+  db: Client,
+  key = 'seed',
+  plate = 'B101QAT',
+): Promise<Requester | null> {
   // The API's catalogue loader reconciles this row by key when it boots.
   await db.query(
     `INSERT INTO job_type (id, key, name_ro, name_en, status, updated_at)
@@ -523,10 +528,11 @@ async function requester(db: Client): Promise<Requester | null> {
   );
   const car = await db.query<{ id: string; owner_id: string }>(
     `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, engine, odometer_km, plate, idempotency_key)
-     SELECT gen_random_uuid(), a.id, b.id, 'Logan', 2018, 'petrol', '1.0 TCe', 98000, 'B101QAT', 'seed'
+     SELECT gen_random_uuid(), a.id, b.id, 'Logan', 2018, 'petrol', '1.0 TCe', 98000, $2, $1
      FROM account a, brand b WHERE a.email = 'cerere@example.test' AND b.key = 'dacia'
      ON CONFLICT (owner_id, idempotency_key) DO UPDATE SET plate = car.plate
      RETURNING id, owner_id`,
+    [key, plate],
   );
   const garage = await db.query<{ id: string; mechanic: string }>(
     `SELECT g.id, m.id AS mechanic FROM garage g
@@ -582,20 +588,21 @@ async function send(
 }
 
 // The garage's accepted quote on it, its confirmed booking for the mechanic,
-// and the mechanic's job.
+// and the mechanic's job, whose id is returned; the slot is `days` from now.
 async function book(
   db: Client,
   who: Requester,
   sent: { recipientId?: string; requestId?: string },
+  days = 2,
 ) {
   const quote = await db.query<{ id: string; slot: Date }>(
     `INSERT INTO quote (id, request_id, recipient_id, garage_id, from_bani, to_bani, duration_minutes,
                         slot, status, accepted_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, $3, 45000, 60000, 90,
-             now() + interval '2 days', 'accepted', now(), now() + interval '7 days',
+             now() + make_interval(days => $4), 'accepted', now(), now() + interval '7 days',
              gen_random_uuid()::text)
      RETURNING id, slot`,
-    [sent.requestId, sent.recipientId, who.garageId],
+    [sent.requestId, sent.recipientId, who.garageId, days],
   );
   const booking = await db.query<{ id: string }>(
     `INSERT INTO booking (id, quote_id, request_id, garage_id, driver_id, starts_at, duration_minutes,
@@ -620,6 +627,7 @@ async function book(
     [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
   );
   await recordStart(db, job.rows[0]?.id);
+  return job.rows[0]?.id;
 }
 
 // The job's history as its mechanic started it: made to do, then in work.
@@ -649,6 +657,52 @@ async function requests(db: Client) {
   if (!who) return;
   await send(db, who, 2, false);
   await book(db, who, await send(db, who, 1, true));
+}
+
+// The mechanic's public page (GET /reviews/mechanic/:id) shows a mechanic on
+// the garage's profile and their published reviews: a request the requester
+// sent ten days ago, from a car of its own so the in-work chain above stays
+// as it is, booked, done and handed over by the staff's mechanic, and the
+// requester's review naming him, his rating set to match. Once: a database
+// with the requester's review keeps what the app wrote since.
+async function reviewed(db: Client) {
+  const done = await db.query(
+    `SELECT 1 FROM review r JOIN account a ON a.id = r.driver_id
+     WHERE a.email = 'cerere@example.test'`,
+  );
+  if (done.rowCount) return;
+  const who = await requester(db, 'seed-reviewed', 'B102QAT');
+  if (!who) return;
+  const sent = await send(db, who, 240, true);
+  const jobId = await book(db, who, sent, -9);
+  await db.query(
+    `UPDATE job SET status = 'done', finished_at = now(), handed_over_at = now()
+     WHERE id = $1`,
+    [jobId],
+  );
+  await db.query(
+    `INSERT INTO job_stage_entry (id, job_id, from_status, to_status, actor_id, actor_role, at)
+     SELECT gen_random_uuid(), j.id, 'in_work', 'done', m.account_id, 'mechanic', now() + interval '2 milliseconds'
+     FROM job j JOIN mechanic m ON m.id = j.mechanic_id WHERE j.id = $1`,
+    [jobId],
+  );
+  await db.query(
+    `UPDATE booking SET status = 'completed', completed_at = now() WHERE id = (SELECT booking_id FROM job WHERE id = $1)`,
+    [jobId],
+  );
+  await db.query(`UPDATE quote_request SET status = 'done' WHERE id = $1`, [
+    sent.requestId,
+  ]);
+  await db.query(
+    `INSERT INTO review (id, source, job_id, driver_id, garage_id, mechanic_id, rating, text, status)
+     VALUES (gen_random_uuid(), 'job', $1, $2, $3, $4, 5,
+             'Schimb de ulei făcut repede, mașina predată la timp.', 'published')`,
+    [jobId, who.driverId, who.garageId, who.mechanic],
+  );
+  await db.query(
+    `UPDATE mechanic SET on_profile = true, rating = 5.0, review_count = 1 WHERE id = $1`,
+    [who.mechanic],
+  );
 }
 
 // A driver sends at most 20 requests a day (quotes-config.ts), and the
@@ -935,6 +989,7 @@ async function seed(db: Client, secret: string) {
   );
   await clearDay(db);
   await requests(db);
+  await reviewed(db);
   await startOlderJob(db);
   await quoteable(db);
   // The checks a test run may switch off; production refused the seed above.
