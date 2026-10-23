@@ -6,6 +6,7 @@ import {
   ArrayUnique,
   IsArray,
   IsIn,
+  IsObject,
   IsString,
   Length,
   Matches,
@@ -185,6 +186,7 @@ export class DocumentsSubmitDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(DOCUMENT_KINDS.length)
   @ArrayUnique((document: RenewedDocumentDto) => document?.kind)
+  @IsObject({ each: true })
   @ValidateNested({ each: true })
   @Type(() => RenewedDocumentDto)
   documents!: RenewedDocumentDto[];
