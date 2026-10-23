@@ -782,7 +782,9 @@ describe('the index the unfiltered admin read uses', () => {
       )
       .catch((e: unknown) => {
         if (!(e instanceof RolledBack)) throw e;
-      });
+      })
+      // The rollback leaves a million dead rows for every later scan.
+      .finally(() => prisma.$executeRaw`VACUUM activity_log`);
 
   it('indexes the history by time alone', async () => {
     const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
