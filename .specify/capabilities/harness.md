@@ -5,6 +5,7 @@ features:
   - 1359-red-first-harden-precision
   - 1362-lap-verdict-merge
   - 1363-throughput-fixes
+  - 482-watch-transcript-holder
 ---
 
 # Capability: Spec-kit harness
@@ -108,6 +109,10 @@ _From 1362-lap-verdict-merge._
 ### 1363-FR-007 — (Item 7) An edit-time gate, registered in `.claude/hooks/registry.json` with an eval case under `.claude/evals/cases/`, MUST refuse a Write or Edit to an existing `*.adversary.spec.ts` whose result lacks any `it(`/`test(` title of the old file, naming the file and the dropped test; `.claude/agents/test-adversary.md` MUST tell the agent to append to an existing adversary spec or create a new file, never to rewrite one. *Done when*: the eval case shows a dropping Write refused and an appending one allowed, the gate is blessed, and the agent text carries the rule.
 
 _From 1363-throughput-fixes._
+
+### 482-FR-005 — The `--gate` cases of `.claude/scripts/watch.spec.mjs` MUST judge only the injected `NOW` and modification times the case sets, carry no per-case timeout, and run each state of the gate-versus-full-pass comparison as its own case.
+
+_From 482-watch-transcript-holder._
 
 ## Retired
 

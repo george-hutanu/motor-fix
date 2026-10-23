@@ -102,6 +102,7 @@ features:
   - 1360-refresh-gate-level1-handoff
   - 1363-throughput-fixes
   - 068-yearly-documents
+  - 482-watch-transcript-holder
 ---
 
 # Capability: Platform
@@ -302,9 +303,9 @@ _From 464-agent-watch._
 
 _From 1360-refresh-gate-level1-handoff._
 
-### 464-FR-003 — Holder MUST be `owner` for the main worktree; `live` when the worktree's lock names a pid whose process is a running `claude` process (for a `claude agent` lock, which carries the pid of the session that started the subagent, only while the worktree's last activity is within its phase threshold), when its lock names no pid (a lock set by hand), when a PR-tester run for its PR is running, or when it carries a claim younger than its phase's threshold; `dead` when the lock names a pid that is not running `claude`; `none` when it has no lock.
+### 482-FR-001 — Holder MUST be `owner` for the main worktree; `live` when the worktree's lock names a pid whose process is a running `claude` process (for a `claude agent` lock, which carries the pid of the session that started the subagent, only while the worktree's last activity — the newest of its commit, its changed files, its run state and the subagent's own transcript — is within its phase threshold), when its lock names no pid (a lock set by hand), when a PR-tester run for its PR is running, or when it carries a claim younger than its phase's threshold; `dead` when the lock names a pid that is not running `claude`; `none` when it has no lock.
 
-_From 464-agent-watch._
+_From 482-watch-transcript-holder._
 
 ### 464-FR-004 — Last activity MUST be the newest of the branch head's commit time, the modification time of each file `git status` reports changed or untracked, and run-state's `updated`, with the source of the newest named.
 
@@ -636,9 +637,9 @@ _From 703-idle-watch-gate._
 
 _From 703-idle-watch-gate._
 
-### 703-FR-006 — Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once printing `watch: a wait is already armed (pid <pid>)`, and a record whose process is gone (no such process, or its command line is not a `watch.mjs --wait`) MUST be taken over; the wait MUST remove its own record when it ends.
+### 482-FR-004 — Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once printing `watch: a wait is already armed (pid <pid>)`, and a record whose process is gone (no such process, or its command line is not a `watch.mjs --wait`) MUST be taken over; the takeover MUST remove only the record it judged gone (it moves the record aside and checks it still names that process, putting back one another wait took meanwhile), so two waits racing over a stale record end with exactly one armed; the wait MUST remove its own record when it ends.
 
-_From 703-idle-watch-gate._
+_From 482-watch-transcript-holder._
 
 ### 703-FR-007 — `speckit-watch/SKILL.md` MUST describe arming the wait as a background command within the background limit, what each ending means keyed on the printed line, not the exit code alone (exit 2: run a full pass, then re-arm; `re-arm the wait`: re-arm; `already armed`: nothing; exit 1: report the error), that an existing `/speckit-watch` cron job is deleted once the wait is armed, and that a pass with nothing to do ends in one line; it MUST NOT instruct `CronCreate` for the watch.
 
@@ -2673,6 +2674,14 @@ _From 1363-throughput-fixes._
 
 _From 068-yearly-documents._
 
+### 482-FR-002 — For a `claude agent <name>` lock whose name matches `^[A-Za-z0-9_-]+$`, `watch.mjs` MUST read the subagent's transcript as `<claude dir>/projects/<project>/<session>/subagents/<name>.jsonl`, where `<claude dir>` is `CLAUDE_CONFIG_DIR` or `~/.claude` and `<project>` is a project folder named after one of the repository's worktree paths, or one below a dot folder of the main checkout (`<slug>--…`, e.g. `.worktrees/x`), a slug being the path with every character outside `[A-Za-z0-9]` replaced by `-`; a sibling repository whose slug only begins with this one's (`<slug>-specs`, `<slug>2`) is not read. The newest such regular file's modification time joins the activity candidates with the source `transcript`. No transcript, or an unreadable folder, adds no candidate and never fails the pass.
+
+_From 482-watch-transcript-holder._
+
+### 482-FR-003 — A worktree whose `claude agent` lock's session runs and whose transcript, files, commit and run state are all quiet past the phase threshold MUST still read holder `none` with its fix, as today; one whose transcript is within the threshold MUST get no entry in the dispatch plan.
+
+_From 482-watch-transcript-holder._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2768,3 +2777,5 @@ _From 068-yearly-documents._
 - `688-FR-007` — superseded by `1363-FR-009` (2026-10-23)
 - `678-FR-012` — superseded by `1363-FR-012` (2026-10-23)
 - `696-FR-001` — superseded by `1363-FR-014` (2026-10-23)
+- `464-FR-003` — superseded by `482-FR-001` (2026-10-23)
+- `703-FR-006` — superseded by `482-FR-004` (2026-10-23)

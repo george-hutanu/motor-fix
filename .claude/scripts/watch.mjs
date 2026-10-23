@@ -333,27 +333,31 @@ const listDir = (dir) => {
 /**
  * The newest modification time of the transcript of the subagent a `claude agent <name>` lock names, or 0.
  * Claude Code writes it at <claude dir>/projects/<cwd slug>/<session>/subagents/<name>.jsonl, the slug being
- * the session's cwd with every character outside [A-Za-z0-9] turned into '-'; any project folder of this
- * repository counts (the main checkout's slug as prefix), so a session started in a worktree is found too.
+ * the session's cwd with every character outside [A-Za-z0-9] turned into '-'. A project folder of this
+ * repository counts: one named after a worktree's path, or below a dot folder of the main checkout
+ * (`<slug>--worktrees-x`), so a session started in a worktree is found too; a sibling repository whose
+ * name only begins like this one's (`<slug>-specs`, `<slug>2`) is not read.
  * A subagent waiting on CI writes no file in its worktree, but its transcript keeps growing.
  */
-function transcriptAt(lock, mainPath, claudeDir) {
+function transcriptAt(lock, paths, claudeDir) {
   const name = lock?.match(/^claude agent ([A-Za-z0-9_-]+) /)?.[1];
-  if (!name || !mainPath || !claudeDir) return 0;
+  if (!name || !paths[0] || !claudeDir) return 0;
   const projects = join(claudeDir, "projects");
-  const prefix = mainPath.replace(/[^A-Za-z0-9]/g, "-");
+  const slugs = new Set(paths.map((p) => p.replace(/[^A-Za-z0-9]/g, "-")));
+  const below = `${paths[0].replace(/[^A-Za-z0-9]/g, "-")}--`;
   let newest = 0;
-  for (const project of listDir(projects).filter((p) => p.startsWith(prefix))) {
+  for (const project of listDir(projects).filter((p) => slugs.has(p) || p.startsWith(below))) {
     for (const session of listDir(join(projects, project))) {
       try {
-        newest = Math.max(newest, statSync(join(projects, project, session, "subagents", `${name}.jsonl`)).mtimeMs);
+        const file = statSync(join(projects, project, session, "subagents", `${name}.jsonl`));
+        if (file.isFile()) newest = Math.max(newest, file.mtimeMs);
       } catch {}
     }
   }
   return newest;
 }
 
-function activityOf(path, runState, transcript = 0) {
+function activityOf(path, runState, transcript) {
   const candidates = [{ at: Date.parse((git(path, ["log", "-1", "--format=%cI"]) ?? "").trim()) || 0, source: "commit" }];
   if (transcript > 0) candidates.push({ at: transcript, source: "transcript" });
   const status = git(path, ["status", "--porcelain", "-z", "--untracked-files=all"]);
@@ -486,7 +490,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature) });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
-    const { activity, clean, gitFailed } = activityOf(w.path, runState, transcriptAt(w.lock, worktrees[0]?.path, claudeDir));
+    const { activity, clean, gitFailed } = activityOf(w.path, runState, transcriptAt(w.lock, worktrees.map((t) => t.path), claudeDir));
     const ahead = git(w.path, ["rev-list", "--count", "HEAD", "--not", "--remotes"]);
     const unpushed = ahead !== null && /^\d+$/.test(ahead.trim()) ? Number(ahead.trim()) : null;
     const closer = runState.phase === "closer" && runState.status !== "blocked";
@@ -924,7 +928,11 @@ function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
       if (e.code === "ENOENT") return take();
       throw e;
     }
-    if (readFileSync(aside, "utf8") !== judged) {
+    let moved = null;
+    try {
+      moved = readFileSync(aside, "utf8");
+    } catch {}
+    if (moved !== judged) {
       try {
         linkSync(aside, record);
       } catch {}
