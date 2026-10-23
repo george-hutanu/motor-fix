@@ -45,12 +45,14 @@ td:last-child {
   color: var(--mf-text-secondary);
   overflow-wrap: break-word;
 }
-.decide {
-  white-space: nowrap;
-  text-align: end;
+/* From 768 px the two buttons stack in their cell, so the Decision column
+   is one button wide and the five columns fit a tablet. */
+.decide button {
+  display: flex;
+  width: 100%;
 }
 .decide button + button {
-  margin-inline-start: var(--mf-space-2);
+  margin-top: var(--mf-space-2);
 }
 /* Phones and narrow tablets: each row is a card of one column, the
    decision buttons last; the column names stay for screen readers. */
@@ -85,15 +87,19 @@ td:last-child {
   .meta {
     font-size: var(--mf-size-body);
   }
+  /* Side by side while both labels fit, one under the other when not. */
   .decide {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--mf-space-2);
     margin-top: var(--mf-space-2);
-    white-space: normal;
+  }
+  .decide button {
+    flex: 1 1 auto;
+    width: auto;
   }
   .decide button + button {
-    margin-inline-start: 0;
+    margin-top: 0;
   }
 }
 .skeletons {

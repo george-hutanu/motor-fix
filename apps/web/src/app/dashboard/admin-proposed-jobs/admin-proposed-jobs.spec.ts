@@ -317,4 +317,30 @@ describe('Lucrări propuse: the jobs garages proposed', () => {
     expect(css).toMatch(/^\.meta \{[^}]*overflow-wrap: break-word;/m);
     expect(css).not.toMatch(/^\.(job|meta) \{[^}]*overflow-wrap: anywhere;/m);
   });
+
+  it('stacks the two buttons in the Decision cell from 768 px, so the five columns fit a tablet without sideways scroll', () => {
+    const css = readFileSync(
+      join(__dirname, 'admin-proposed-jobs.css'),
+      'utf8',
+    );
+
+    expect(css).not.toMatch(/white-space: nowrap;\s*text-align: end;/);
+    expect(css).toMatch(
+      /^\.decide button \{[^}]*display: flex;[^}]*width: 100%;/m,
+    );
+    expect(css).toMatch(/^\.decide button \+ button \{[^}]*margin-top:/m);
+  });
+
+  it('lets the buttons wrap on a phone instead of squeezing a label past its box', () => {
+    const css = readFileSync(
+      join(__dirname, 'admin-proposed-jobs.css'),
+      'utf8',
+    );
+    const phone = css.slice(css.indexOf('@media (max-width: 767px)'));
+
+    expect(phone).toMatch(
+      /\.decide \{[^}]*display: flex;[^}]*flex-wrap: wrap;/,
+    );
+    expect(phone).toMatch(/\.decide button \{[^}]*flex: 1 1 auto;/);
+  });
 });
