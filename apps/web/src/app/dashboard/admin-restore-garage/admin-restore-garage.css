@@ -85,21 +85,16 @@ textarea {
   color: var(--mf-red-ink);
   font-weight: 600;
 }
+/* The actions stack at the dialog's width at every size, the one that sends
+   on top as on the phone's bottom sheet: the primary's label is too long to
+   sit beside Cancel, and two wrapped rows would not share their edges. */
 .actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-direction: column-reverse;
+  align-items: stretch;
   gap: var(--mf-space-3);
 }
 .actions button {
   min-height: var(--mf-tap);
   white-space: normal;
-}
-/* On a phone the dialog is a bottom sheet: the actions stack at its width,
-   the one that sends nearest the thumb. */
-@media (max-width: 767px) {
-  .actions {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
 }
