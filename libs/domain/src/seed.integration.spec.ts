@@ -757,7 +757,8 @@ describe('seed of a request through to a job', () => {
         },
         status: true,
       },
-      // The seed's own car; the reviewed job's request rides another.
+      // The requester's own car; the reviewed job's request is another
+      // driver's.
       where: { car: { idempotencyKey: 'seed' } },
     });
 
@@ -842,7 +843,7 @@ describe('seed of a request through to a job', () => {
 
   // The mechanic's public page (GET /reviews/mechanic/:id) answers 200 only
   // for a mechanic on the profile, and QA needs one review there to read.
-  it("gives the staff's mechanic a handed-over job and its published review naming him, once", async () => {
+  it("gives the staff's mechanic a handed-over job and the second driver's published review naming him, once, the requester's one car left alone", async () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);
 
@@ -870,7 +871,7 @@ describe('seed of a request through to a job', () => {
     });
     expect(reviews).toEqual([
       {
-        driver: { email: 'cerere@example.test' },
+        driver: { email: 'sofer2@example.test' },
         garage: { slug: 'atelier-test' },
         job: {
           handedOverAt: expect.any(Date),
@@ -889,6 +890,12 @@ describe('seed of a request through to a job', () => {
       rating: 5,
       reviewCount: 1,
     });
+    // The requester keeps one car, so the request dialog chooses it.
+    const cars = await prisma.car.findMany({
+      select: { plate: true },
+      where: { owner: { email: 'cerere@example.test' } },
+    });
+    expect(cars).toEqual([{ plate: 'B101QAT' }]);
   });
 
   it('adds no second request when run twice', async () => {
