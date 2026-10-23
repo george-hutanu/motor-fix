@@ -718,6 +718,19 @@ describe('Frame', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 067-FR-007
+  it('reads the account again when its garage is put back on the map, so the banner goes at once', async () => {
+    await render('garage', '/app/garage', []);
+
+    live.events.next({
+      at: '2026-10-23T09:00:00.000Z',
+      id: 'garage-1',
+      kind: 'garage.restored',
+    });
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   // @traces 1354-FR-007
   it('reads the account again when its garage is re-checked, so the RAR line follows', async () => {
     await render('garage', '/app/garage', []);

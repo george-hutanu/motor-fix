@@ -40,6 +40,7 @@ import {
   appliedAt,
   daysUntil,
   formatDay,
+  formatDayMonth,
   formatNum,
   I18n,
   TranslatePipe,
@@ -47,6 +48,12 @@ import {
 import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
+import {
+  AdminRestoreGarage,
+  type AdminRestoreGarageData,
+  type RestoreCause,
+  type RestoreResult,
+} from '../admin-restore-garage/admin-restore-garage';
 import {
   type DocumentRefusal,
   DocumentRefuse,
@@ -164,6 +171,8 @@ const DOCUMENT_EVENTS = [
   'document.refused',
   'document.overdue',
 ] as const;
+// A suspension or a restore of the file's garage.
+const GARAGE_EVENTS = ['garage.suspended', 'garage.restored'] as const;
 type SuspendedFor = NonNullable<DocumentDecisionDto['suspendedFor']>;
 // A suspension's cause in words; a failed RAR re-check reads as the
 // authorisation found not valid.
@@ -248,8 +257,41 @@ export class VerificationFile {
   private readonly correctBusy = signal(false);
   // The yearly document whose decision is on its way.
   protected readonly deciding = signal<string | null>(null);
-  // The garage's suspension, as the last decision on a document answered it.
-  protected readonly suspended = signal<string | null>(null);
+  // The garage's suspension, as the last decision on a document answered it:
+  // restorable once the documents that suspended it are all valid again.
+  protected readonly suspended = signal<{
+    line: string;
+    restorable: boolean;
+  } | null>(null);
+
+  // The garage's latest suspension: since when while open, then until when
+  // and who put it back, with the note; the restore offered while open.
+  protected readonly suspension = computed(() => {
+    const value = this.data()?.suspension;
+    if (!value) return null;
+    const language = this.i18n.language();
+    if (value.untilTime === null)
+      return {
+        line: this.t('suspension.open', {
+          date: formatDay(value.fromTime, language),
+        }),
+        note: null,
+        open: true,
+      };
+    const from = formatDay(value.fromTime, language);
+    const until = formatDay(value.untilTime, language);
+    // The year once when both days share it.
+    const sameYear = from.slice(-4) === until.slice(-4);
+    return {
+      line: this.t('suspension.ended', {
+        from: sameYear ? formatDayMonth(value.fromTime, language) : from,
+        name: value.liftedBy?.name || SYSTEM_NAME,
+        until,
+      }),
+      note: value.note ? this.t('suspension.note', { note: value.note }) : null,
+      open: false,
+    };
+  });
 
   protected readonly decided = computed(() =>
     DECIDED.includes(this.data()?.file.status ?? ''),
@@ -783,6 +825,50 @@ export class VerificationFile {
     }
   }
 
+  // The restore dialog, from the header or from the Documente part once its
+  // last missing document is accepted; the file reads again once the garage
+  // is back on the map or moved under the admin.
+  async restore(from: 'header' | 'documents') {
+    const value = this.data();
+    if (!value) return;
+    const suspension = value.suspension;
+    const cause = (suspension?.cause ??
+      (from === 'documents'
+        ? 'documents_overdue'
+        : null)) as RestoreCause | null;
+    if (!cause) return;
+    const data: AdminRestoreGarageData = {
+      activities: value.activities,
+      cause,
+      documentsDue:
+        from === 'documents' ? true : value.documentCycle?.state === 'due',
+      fromTime: suspension?.fromTime ?? null,
+      garageId: value.garage.id,
+      name: value.garage.name,
+      rarVerdict: null,
+      reason: suspension?.reason ?? null,
+      today: bucharestToday(),
+    };
+    const result = await this.overlays.open<
+      RestoreResult,
+      AdminRestoreGarageData
+    >(AdminRestoreGarage, {
+      data,
+      shape: 'dialog',
+      title: 'admin.restore.dialog',
+    });
+    if (result === 'restored' || result === 'stale') {
+      this.suspended.set(null);
+      this.file.reload();
+      return;
+    }
+    this.focus(
+      from === 'header'
+        ? '[data-section="header"] [data-part="restore"]'
+        : '[data-part="restore-documents"]',
+    );
+  }
+
   private refusal(error: unknown) {
     const problem = toProblem(error);
     const known = REFUSALS[problem.code ?? ''];
@@ -1041,12 +1127,16 @@ export class VerificationFile {
     if (this.deciding()) return;
     this.deciding.set(id);
     try {
-      const { suspendedFor } = await call();
+      const { cycle, suspendedFor } = await call();
       this.suspended.set(
         suspendedFor
-          ? this.t('documents.suspended', {
-              cause: this.i18n.t(SUSPENSION_CAUSES[suspendedFor]),
-            })
+          ? {
+              line: this.t('documents.suspended', {
+                cause: this.i18n.t(SUSPENSION_CAUSES[suspendedFor]),
+              }),
+              restorable:
+                suspendedFor === 'documents_overdue' && cycle?.state === 'due',
+            }
           : null,
       );
     } catch (error) {
@@ -1279,6 +1369,8 @@ export class VerificationFile {
       return this.documentEntry(entry, next, name, when);
     const cycle = this.cycleLine(entry, name, when);
     if (cycle) return cycle;
+    const suspension = this.suspensionLine(entry, next, name, when);
+    if (suspension) return suspension;
     if (entry.subjectType === 'verification_check')
       return this.t('lines.check', {
         check: this.t(`checks.${entry.field}`),
@@ -1333,6 +1425,63 @@ export class VerificationFile {
         when,
       });
     return null;
+  }
+
+  // The garage taken off the map ("<cause>: <reason>" as the suspension
+  // writes it), or put back with the cause, its proof and the note.
+  private suspensionLine(
+    entry: AuditEntryDto,
+    next: unknown,
+    name: string,
+    when: string,
+  ) {
+    if (entry.subjectType !== 'garage') return null;
+    if (entry.kind === 'garage_suspended')
+      return this.suspendedLine(entry.text ?? '', name, when);
+    if (entry.kind !== 'garage_restored') return null;
+    const lifted = (next ?? {}) as { cause?: string; note?: string | null };
+    const cause = [this.causeText(lifted.cause ?? ''), this.evidence(next)]
+      .filter(Boolean)
+      .join(' · ');
+    return lifted.note
+      ? this.t('lines.restoredNote', { cause, name, note: lifted.note, when })
+      : this.t('lines.restored', { cause, name, when });
+  }
+
+  private suspendedLine(text: string, name: string, when: string) {
+    const colon = text.indexOf(': ');
+    return this.t('lines.suspended', {
+      cause: this.causeText(colon < 0 ? '' : text.slice(0, colon)),
+      name,
+      reason: colon < 0 ? text : text.slice(colon + 2),
+      when,
+    });
+  }
+
+  // What proved the garage fit again: the re-check recorded with the
+  // restore, one found since the suspension, or the yearly documents.
+  private evidence(next: unknown) {
+    const proof =
+      (
+        next as {
+          evidence?: {
+            checkedOn?: string;
+            documents?: string;
+            recheckId?: string;
+          };
+        } | null
+      )?.evidence ?? {};
+    if (proof.checkedOn)
+      return this.t('evidence.recheck', {
+        day: formatDay(proof.checkedOn, this.i18n.language()),
+      });
+    if (proof.recheckId) return this.t('evidence.recheckFound');
+    return proof.documents ? this.t('evidence.documents') : null;
+  }
+
+  private causeText(cause: string) {
+    const key = SUSPENSION_CAUSES[cause as SuspendedFor];
+    return key ? this.i18n.t(key) : cause;
   }
 
   // A decision on the file's reports, by its outcome.
@@ -1443,6 +1592,12 @@ export class VerificationFile {
       .on(DOCUMENT_EVENTS)
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.file.reload());
+    inject(Live)
+      .on(GARAGE_EVENTS)
+      .pipe(takeUntilDestroyed())
+      .subscribe((message) => {
+        if (message.id === this.data()?.garage.id) this.file.reload();
+      });
     if (this.task.data.part === 'documents') this.showDocuments();
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -1458,4 +1613,11 @@ function serverMissing(error: unknown) {
     (body as { missing?: unknown } | null)?.missing,
   );
   return gaps?.length ? gaps : null;
+}
+
+// Today's calendar day in Bucharest, as the server dates a re-check.
+function bucharestToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
 }

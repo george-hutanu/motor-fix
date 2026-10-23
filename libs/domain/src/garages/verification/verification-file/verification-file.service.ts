@@ -111,7 +111,10 @@ export function timelineWhere(
           ]
         : []),
       {
-        field: { in: CYCLE_FIELDS },
+        OR: [
+          { field: { in: CYCLE_FIELDS } },
+          { kind: { in: SUSPENSION_KINDS } },
+        ],
         subjectId: garageId,
         subjectType: 'garage',
       },
@@ -121,6 +124,9 @@ export function timelineWhere(
 
 // The garage's lines a cycle writes: turned overdue, and reset.
 const CYCLE_FIELDS = ['documents_state', 'documents_due_on'];
+
+// The garage's lines a suspension writes: taken off the map, and put back.
+const SUSPENSION_KINDS = ['garage_suspended', 'garage_restored'];
 
 // A yearly upload, as opposed to a document the listing was sent with.
 const yearly = (d: { decidedAt: Date | null; status: string }) =>

@@ -7,9 +7,16 @@ import {
   type SuspendedGarageRowDto,
 } from '@motor-fix/data-access';
 import { formatDay, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { Lamp, Panel } from '@motor-fix/ui-cockpit';
 
 import { GARAGES_KINDS } from '../admin-garages/kinds';
+import {
+  AdminRestoreGarage,
+  type AdminRestoreGarageData,
+  type RestoreResult,
+  suspensionState,
+} from '../admin-restore-garage/admin-restore-garage';
 import { liveResource, pagedRead } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
@@ -26,6 +33,7 @@ const SKELETON_ROWS = [0, 1, 2];
 export class AdminSuspended {
   private readonly api = inject(AdminService);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
   private readonly pages = signal(1);
   private readonly list = liveResource(
     () => this.read(this.pages() * VERIFICATION_QUEUE_PAGE),
@@ -69,6 +77,22 @@ export class AdminSuspended {
     this.list.reload();
   }
 
+  // The restore dialog over the row: the list reads again once the garage
+  // left it or moved under the admin; a cancel hands the focus back.
+  async openRestore(data: AdminRestoreGarageData, event: Event) {
+    const button = event.currentTarget as HTMLButtonElement;
+    const result = await this.overlays.open<
+      RestoreResult,
+      AdminRestoreGarageData
+    >(AdminRestoreGarage, {
+      data,
+      shape: 'dialog',
+      title: 'admin.restore.dialog',
+    });
+    if (result === 'restored' || result === 'stale') this.list.reload();
+    else button.focus();
+  }
+
   private read(wanted: number): Promise<AdminGaragesDto> {
     return pagedRead(wanted, (page) =>
       this.api.adminOverviewControllerGarages({ ...page, status: 'suspended' }),
@@ -77,15 +101,6 @@ export class AdminSuspended {
 
   private t(key: string, params?: Record<string, string | number>) {
     return this.i18n.t(`admin.${key}`, params);
-  }
-
-  private stateText(row: SuspendedGarageRowDto) {
-    if (!row.cause) return this.t('suspended.alone');
-    const text =
-      row.cause === 'recheck_failed'
-        ? this.t(`suspended.rar.${row.rarVerdict ?? 'none'}`)
-        : this.t(`suspended.cause.${row.cause}`);
-    return this.t('suspended.state', { text });
   }
 
   private row(row: SuspendedGarageRowDto) {
@@ -110,14 +125,37 @@ export class AdminSuspended {
       name: row.name,
       open: this.t('queue.openNamed', { name: row.name }),
       reason: row.reason,
+      restore: row.cause
+        ? {
+            data: {
+              activities: row.activities ?? [],
+              cause: row.cause,
+              documentsDue: null,
+              fromTime: row.fromTime ?? null,
+              garageId: row.id,
+              name: row.name,
+              rarVerdict: row.rarVerdict ?? null,
+              reason: row.reason ?? null,
+              today: bucharestToday(),
+            } satisfies AdminRestoreGarageData,
+            label: this.t('restore.buttonNamed', { name: row.name }),
+          }
+        : undefined,
       since: row.fromTime
         ? this.t('suspended.since', { date: formatDay(row.fromTime, language) })
         : undefined,
-      state: this.stateText(row),
+      state: suspensionState(this.i18n, row.cause, row.rarVerdict),
     };
   }
 
   constructor() {
     void this.i18n.enter('admin');
   }
+}
+
+// Today's calendar day in Bucharest, as the server dates a re-check.
+function bucharestToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
 }

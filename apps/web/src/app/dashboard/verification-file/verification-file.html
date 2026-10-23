@@ -23,7 +23,18 @@
           @if (decided()) {
             <button type="button" class="action reopen" data-part="reopen" [disabled]="busy()" (click)="reopen()">{{ 'admin.file.reopen.button' | t }}</button>
           }
+          @if (suspension()?.open) {
+            <button type="button" class="action restore" data-part="restore" (click)="restore('header')">{{ 'admin.restore.button' | t }}</button>
+          }
         </div>
+        @if (suspension(); as s) {
+          <div class="suspension" [class.open]="s.open">
+            <p data-part="suspension">{{ s.line }}</p>
+            @if (s.note) {
+              <p class="lift-note" data-part="lift-note">{{ s.note }}</p>
+            }
+          </div>
+        }
         <div class="facts">
           @if (h.kind) {
             <p>{{ h.kind }}</p>
@@ -309,7 +320,11 @@
         }
       </ul>
       @if (suspended(); as line) {
-        <p class="suspended" role="status">{{ line }}</p>
+        @if (line.restorable) {
+          <button type="button" class="action restore" data-part="restore-documents" (click)="restore('documents')">{{ 'admin.restore.button' | t }}</button>
+        } @else {
+          <p class="suspended" role="status">{{ line.line }}</p>
+        }
       }
     </section>
 

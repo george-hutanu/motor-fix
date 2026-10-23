@@ -14,17 +14,19 @@ import {
 
 import { calendarDay } from './cars.dto';
 import { NOTE_TEXT } from './note-text';
+import {
+  SUSPENSION_CAUSES,
+  SUSPENSION_LIFT_NOTE_MAX,
+  SUSPENSION_REASON_MAX,
+  type SuspensionCause,
+} from './suspension-limits';
 
-export const SUSPENSION_CAUSES = [
-  'recheck_failed',
-  'documents_overdue',
-  'admin',
-  'report_confirmed',
-] as const;
-export type SuspensionCause = (typeof SUSPENSION_CAUSES)[number];
-
-export const SUSPENSION_REASON_MAX = 200;
-export const SUSPENSION_LIFT_NOTE_MAX = 1000;
+export {
+  SUSPENSION_CAUSES,
+  SUSPENSION_LIFT_NOTE_MAX,
+  SUSPENSION_REASON_MAX,
+  type SuspensionCause,
+} from './suspension-limits';
 
 const NO_CONTROL = /^\P{Cc}*$/u;
 

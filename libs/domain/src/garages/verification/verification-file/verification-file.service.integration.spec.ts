@@ -633,6 +633,37 @@ describe("the garage's latest suspension on the file", () => {
       untilTime: null,
     });
   });
+
+  it("lists the garage's suspension and restore in the timeline, not its other changes", async () => {
+    const file = await sent({ status: 'approved' });
+    const at = (minute: number) => new Date(Date.UTC(2026, 9, 20, 8, minute));
+    const log = (kind: string | null, minute: number) =>
+      prisma.activityLog.create({
+        data: {
+          action: 'update',
+          actorId: ioana,
+          actorName: 'Ioana',
+          actorRole: 'admin',
+          at: at(minute),
+          field: kind === null ? 'name' : 'status',
+          garageId,
+          kind,
+          subjectId: garageId,
+          subjectType: 'garage',
+        },
+      });
+    await log('garage_suspended', 0);
+    await log('garage_restored', 1);
+    await log(null, 2);
+
+    const { timeline } = await service().read(file.id);
+
+    expect(
+      timeline.entries
+        .filter((e) => e.subjectType === 'garage')
+        .map((e) => e.kind),
+    ).toEqual(['garage_restored', 'garage_suspended']);
+  });
 });
 
 describe('the timeline', () => {

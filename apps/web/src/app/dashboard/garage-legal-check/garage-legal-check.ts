@@ -43,6 +43,7 @@ export class GarageLegalCheck {
         'verification.reopened',
         'recheck.recorded',
         'garage.suspended',
+        'garage.restored',
         'document.uploaded',
         'document.overdue',
         'document.accepted',

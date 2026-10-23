@@ -1,0 +1,93 @@
+<form (submit)="submit($event)" novalidate>
+  <div class="garage">
+    <p class="name" data-part="name">{{ data.name }}</p>
+    <p class="state" data-part="state">{{ state() }}</p>
+    @if (data.reason) {
+      <p class="reason" data-part="reason">{{ data.reason }}</p>
+    }
+    @if (since(); as since) {
+      <p class="since" data-part="since">{{ since }}</p>
+    }
+  </div>
+
+  @if (recheck) {
+    <p class="result" data-part="result">
+      <span class="label">{{ 'admin.rechecks.result' | t }}</span>
+      <span>{{ 'admin.rechecks.results.ok' | t }}</span>
+    </p>
+
+    <div class="field">
+      <label for="mf-restore-date">{{ 'admin.rechecks.date' | t }}</label>
+      <input
+        hlmInput
+        id="mf-restore-date"
+        type="date"
+        required
+        [value]="checkedOn()"
+        [max]="data.today"
+        [attr.aria-invalid]="faulty('checkedOn') ? 'true' : null"
+        [attr.aria-describedby]="faulty('checkedOn') ? 'mf-restore-error' : null"
+        (input)="typedDate($event)"
+      />
+    </div>
+
+    <fieldset class="ticks">
+      <legend>{{ 'admin.rechecks.activities' | t }}</legend>
+      @for (a of activities(); track a.code) {
+        <label class="tick">
+          <input
+            type="checkbox"
+            [value]="a.code"
+            [checked]="ticked().has(a.code)"
+            [attr.aria-invalid]="faulty('activities') ? 'true' : null"
+            [attr.aria-describedby]="faulty('activities') ? 'mf-restore-error' : null"
+            (change)="toggle(a.code, $event)"
+          />
+          <span>{{ a.name }}</span>
+        </label>
+      } @empty {
+        <p class="none">{{ 'admin.rechecks.noActivities' | t }}</p>
+      }
+    </fieldset>
+  }
+
+  @if (documents && data.documentsDue !== null) {
+    @if (data.documentsDue) {
+      <p class="documents" data-part="documents">{{ 'admin.restore.documentsDue' | t }}</p>
+    } @else {
+      <p class="documents invalid" data-part="documents">{{ 'admin.restore.documentsNotValid' | t }}</p>
+    }
+  }
+
+  <div class="field">
+    @if (noteRequired) {
+      <label for="mf-restore-note">{{ 'admin.restore.note' | t }}</label>
+    } @else {
+      <label for="mf-restore-note">{{ 'admin.restore.noteOptional' | t }}</label>
+    }
+    <textarea
+      hlmInput
+      id="mf-restore-note"
+      rows="3"
+      [attr.required]="noteRequired ? '' : null"
+      [value]="note()"
+      [attr.aria-invalid]="faulty('note') ? 'true' : null"
+      [attr.aria-describedby]="'mf-restore-count' + (faulty('note') ? ' mf-restore-error' : '')"
+      (input)="typedNote($event)"
+    ></textarea>
+    <p class="count" id="mf-restore-count" data-part="count">{{ 'admin.rechecks.count' | t: { n: count(), max: noteMax } }}</p>
+  </div>
+
+  @if (error(); as e) {
+    <p class="error" id="mf-restore-error" role="alert">{{ e.text }}</p>
+  }
+
+  <div class="actions">
+    @if (stale()) {
+      <button hlmBtn type="button" (click)="close('stale')">{{ 'admin.restore.close' | t }}</button>
+    } @else {
+      <button hlmBtn variant="secondary" type="button" (click)="close('cancelled')">{{ 'admin.restore.cancel' | t }}</button>
+      <button hlmBtn type="submit" [disabled]="!ready() || busy()" [attr.aria-busy]="busy()">{{ 'admin.restore.confirm' | t }}</button>
+    }
+  </div>
+</form>

@@ -8,12 +8,15 @@ import {
   type SuspendedGarageRowDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { AdminSuspended } from './admin-suspended';
+import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
 import { Live } from '../live';
 
 // @traces 066-FR-004 066-FR-007 066-FR-008 066-FR-009
+// @traces 067-FR-009 067-FR-012
 
 const row = (
   n: number,
@@ -37,6 +40,7 @@ const listOf = (count: number, total = count): AdminGaragesDto => ({
 });
 
 let events: Subject<LiveMessage>;
+let overlays: { open: jest.Mock };
 let resync: Subject<void>;
 let asked: { status: string; offset?: number; limit?: number }[];
 let answer: (read: {
@@ -55,9 +59,11 @@ async function open(language: 'ro' | 'en' = 'ro') {
   events = new Subject();
   resync = new Subject();
   asked = [];
+  overlays = { open: jest.fn(async () => 'cancelled') };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      { provide: Overlays, useValue: overlays },
       {
         provide: Live,
         useValue: {
@@ -438,5 +444,98 @@ describe('live', () => {
     await settle();
 
     expect(asked.at(-1)).toEqual({ limit: 40, offset: 0, status: 'suspended' });
+  });
+});
+
+describe('putting a suspended garage back on the map from its row', () => {
+  const restoreOf = (el: HTMLElement) =>
+    rows(el)[0].querySelector<HTMLButtonElement>('[data-part="restore"]');
+
+  it('offers "Repune pe hartă" beside the file link, named for the garage', async () => {
+    answer = one({});
+    const el = await open();
+
+    const restore = restoreOf(el);
+    expect(text(restore)).toBe('Repune pe hartă');
+    expect(restore?.getAttribute('aria-label')).toBe(
+      'Repune pe hartă Service 1',
+    );
+    expect(restore?.previousElementSibling?.matches('a.open')).toBe(true);
+  });
+
+  it('reads it in English', async () => {
+    answer = one({});
+    const el = await open('en');
+
+    expect(text(restoreOf(el))).toBe('Put back on the map');
+    expect(restoreOf(el)?.getAttribute('aria-label')).toBe(
+      'Put back on the map Service 1',
+    );
+  });
+
+  it('offers nothing on a row without an open suspension', async () => {
+    answer = one({ cause: undefined, rarVerdict: undefined });
+    const el = await open();
+
+    expect(restoreOf(el)).toBeNull();
+  });
+
+  it("opens the dialog with the row's suspension and today's Bucharest day", async () => {
+    answer = one({
+      activities: [
+        { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+      ],
+    });
+    const el = await open();
+
+    restoreOf(el)?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(AdminRestoreGarage, {
+      data: {
+        activities: [
+          { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+        ],
+        cause: 'recheck_failed',
+        documentsDue: null,
+        fromTime: '2026-09-12T08:00:00.000Z',
+        garageId: 'garage-1',
+        name: 'Service 1',
+        rarVerdict: 'expired',
+        reason: 'Autorizație RAR expirată pe 12 sept. 2026',
+        today: new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/Bucharest',
+        }).format(new Date()),
+      },
+      shape: 'dialog',
+      title: 'admin.restore.dialog',
+    });
+  });
+
+  it.each(['restored', 'stale'])(
+    'reads the list again once %s',
+    async (end) => {
+      answer = one({});
+      const el = await open();
+      overlays.open.mockResolvedValueOnce(end);
+      const before = asked.length;
+
+      restoreOf(el)?.click();
+      await settle();
+
+      expect(asked.length).toBe(before + 1);
+    },
+  );
+
+  it('hands the focus back to the button on cancel, reading nothing', async () => {
+    answer = one({});
+    const el = await open();
+    const before = asked.length;
+
+    restoreOf(el)?.click();
+    await settle();
+
+    expect(asked.length).toBe(before);
+    expect(document.activeElement).toBe(restoreOf(el));
   });
 });
