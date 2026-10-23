@@ -79,7 +79,7 @@ export function timelineWhere(
   fileId: string,
   checkIds: string[],
   documentIds: string[],
-  renewalIds: string[] = [],
+  renewalIds: string[],
 ): Prisma.ActivityLogWhereInput {
   return {
     garageId,

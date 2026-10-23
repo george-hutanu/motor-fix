@@ -55,23 +55,20 @@ describe('yearly documents observability', () => {
     ]);
   });
 
-  it('alerts when the daily run that carries the step fails for good', () => {
-    const rule = rules.find((r) => r.uid === 'worker-compliance-failed');
+  it('adds no alert of its own: a failed daily run already fires worker-jobs-failed', () => {
+    const jobs = rules.find((r) => r.uid === 'worker-jobs-failed');
 
-    expect(rule?.data[0]?.model.expr).toContain(
-      'increase(motorfix_jobs_total{queue="reminders", job_name="daily", outcome="failed"}[1d])',
+    expect(rules.map((r) => r.uid)).not.toContain('worker-compliance-failed');
+    expect(jobs?.data[0]?.model.expr).toContain(
+      'increase(motorfix_jobs_total{outcome="failed", queue!="verification-result"}[15m])',
     );
-    expect(rule?.data[1]?.model.conditions).toEqual([
-      { evaluator: { params: [0], type: 'gt' } },
-    ]);
-    expect(rule?.for).toBe('0s');
-    expect(rule?.annotations['dashboard_uid']).toBe('motorfix-worker');
   });
 
-  it('the inventory lists the step with its panel and alert', () => {
+  it('the inventory lists the step with its panel and the failed-jobs alert', () => {
     const queue = entry('queue', 'reminders');
 
-    expect(queue?.alerts).toContain('worker-compliance-failed');
+    expect(queue?.alerts).toContain('worker-jobs-failed');
+    expect(queue?.alerts).not.toContain('worker-compliance-failed');
     expect(queue?.reason).toMatch(/compliance step/);
     expect(queue?.reason).toMatch(/Documente anuale/);
   });
@@ -79,7 +76,7 @@ describe('yearly documents observability', () => {
   it('the inventory lists the overdue gauge and the cycle counter', () => {
     expect(entry('product-counter', 'motorfix_documents_overdue')).toEqual(
       expect.objectContaining({
-        alerts: ['worker-compliance-failed'],
+        alerts: ['worker-jobs-failed'],
         dashboard: 'motorfix-worker',
       }),
     );

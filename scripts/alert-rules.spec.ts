@@ -102,7 +102,6 @@ const ZERO_WAIT = new Set([
   'web-error-rate',
   'mcp-tool-errors',
   'worker-jobs-failed',
-  'worker-compliance-failed',
   'verification-result-failed',
   'profile-views-job-failed',
   'profile-views-lost',
@@ -328,16 +327,6 @@ const EXPECTED: Record<
     ],
     for: '15m',
     from: 300,
-    type: 'gt',
-    value: 0,
-  },
-  'worker-compliance-failed': {
-    expr: [
-      'by (deployment_environment)',
-      'increase(motorfix_jobs_total{queue="reminders", job_name="daily", outcome="failed"}[1d])',
-    ],
-    for: '0s',
-    from: 86400,
     type: 'gt',
     value: 0,
   },
@@ -647,8 +636,7 @@ describe('alert rules', () => {
   // @traces 880-FR-005
   // @traces 880-FR-007
   // @traces 880-FR-009
-  // @traces 068-FR-016
-  it('holds exactly the thirty rules, each with its threshold, window and wait', () => {
+  it('holds exactly the twenty-nine rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
@@ -792,9 +780,8 @@ describe('alert rules', () => {
   // @traces 305-FR-009
   // @traces 304-FR-012
   // @traces 1181-FR-009
-  // @traces 068-FR-016
-  it('holds forty-seven rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(47);
+  it('holds forty-six rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(46);
   });
 
   // @traces 1345-FR-004

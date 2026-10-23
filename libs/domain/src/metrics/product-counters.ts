@@ -495,6 +495,7 @@ const STARTS: Record<
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
     [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
+    [documentCycle, each('step', DOCUMENT_CYCLE_STEPS.slice(4))],
   ],
   worker: [
     [

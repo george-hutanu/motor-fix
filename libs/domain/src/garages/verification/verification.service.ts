@@ -179,18 +179,7 @@ export class VerificationService {
         take: offset + limit,
         where: { status: { in: WAITING } },
       }),
-      db.verificationFile.findMany({
-        select: {
-          documents: {
-            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-            select: { createdAt: true, id: true },
-            where: { status: 'in_review' },
-          },
-          garage: { select: RENEWAL_GARAGE },
-          id: true,
-        },
-        where: { ...RENEWING, status: { notIn: WAITING } },
-      }),
+      this.renewals(db, offset + limit),
       this.countWaiting(db),
     ]);
     const rows: QueueEntry[] = [
@@ -225,6 +214,33 @@ export class VerificationService {
       ),
       total,
     };
+  }
+
+  // The first `take` renewals by their oldest upload in review, in the
+  // queue's order, so a page never reads every renewing file.
+  private async renewals(db: Prisma.TransactionClient, take: number) {
+    const firsts = await db.legalDocument.groupBy({
+      _min: { createdAt: true },
+      by: ['verificationFileId'],
+      orderBy: [{ _min: { createdAt: 'asc' } }, { verificationFileId: 'desc' }],
+      take,
+      where: {
+        status: 'in_review',
+        verificationFile: { status: { notIn: WAITING } },
+      },
+    });
+    return db.verificationFile.findMany({
+      select: {
+        documents: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: { createdAt: true, id: true },
+          where: { status: 'in_review' },
+        },
+        garage: { select: RENEWAL_GARAGE },
+        id: true,
+      },
+      where: { id: { in: firsts.map((one) => one.verificationFileId) } },
+    });
   }
 
   // Who may submit is the submitting story's rule; here only the files count.

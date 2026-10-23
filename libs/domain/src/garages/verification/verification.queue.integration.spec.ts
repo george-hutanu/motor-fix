@@ -548,6 +548,39 @@ describe('a garage whose yearly documents wait for an admin', () => {
     expect(two.items.map((row) => row.id)).toEqual([third.id]);
   });
 
+  it('reads no more renewals than the page reaches, still oldest upload first', async () => {
+    const first = await renewing(new Date('2026-10-12T09:00:00+03:00'));
+    const second = await renewing(new Date('2026-10-13T09:00:00+03:00'));
+    await renewing(new Date('2026-10-14T09:00:00+03:00'));
+    await renewing(new Date('2026-10-15T09:00:00+03:00'));
+    const reads: number[] = [];
+    const counted = new Proxy(prisma, {
+      get(client, model) {
+        const delegate = Reflect.get(client, model);
+        if (model !== 'verificationFile' && model !== 'legalDocument')
+          return delegate;
+        return new Proxy(delegate, {
+          get(target, method) {
+            const call = Reflect.get(target, method);
+            if (method !== 'findMany' && method !== 'groupBy') return call;
+            return async (args: unknown) => {
+              const rows = await call.call(target, args);
+              reads.push(rows.length);
+              return rows;
+            };
+          },
+        });
+      },
+    });
+
+    const one = await service().queue(counted, page(0, 1), NOW);
+    const two = await service().queue(counted, page(1, 1), NOW);
+
+    expect(one.items.map((row) => row.id)).toEqual([first.file.id]);
+    expect(two.items.map((row) => row.id)).toEqual([second.file.id]);
+    expect(Math.max(...reads)).toBeLessThanOrEqual(2);
+  });
+
   it('turns red once the grace has ended, or while the garage is suspended', async () => {
     const inGrace = await renewing(MONDAY, {
       graceUntil: '2026-10-15',
