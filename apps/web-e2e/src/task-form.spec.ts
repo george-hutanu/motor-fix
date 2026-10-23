@@ -41,6 +41,17 @@ async function openForm(page: Page, language: Language = 'ro') {
   await opener.click();
   // The panel: on a phone the dialog container around the sheet has no box.
   await expect(task(page, language).locator('mf-overlay-panel')).toBeVisible();
+  // The panel's pop ends before a test reads its colours.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((a) =>
+        (
+          (a.effect as KeyframeEffect | null)?.target as Element | null
+        )?.closest('.cdk-overlay-container'),
+      )
+      .every((a) => a.playState !== 'running'),
+  );
 }
 
 const task = (page: Page, language: Language = 'ro') =>
