@@ -1,5 +1,9 @@
+/* The footer's centred column, so the page and the footer share a left edge. */
 :host {
   display: block;
+  box-sizing: border-box;
+  max-width: 1280px;
+  margin-inline: auto;
   padding: var(--mf-space-4);
 }
 article {
