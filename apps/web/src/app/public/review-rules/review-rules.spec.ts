@@ -78,9 +78,7 @@ describe('the review rules page', () => {
         expect(squash(item).length).toBeGreaterThan(
           squash(item.querySelector('strong')).length,
         );
-      expect(squash(page.querySelector('.replies'))).toBe(
-        PAGE[language].replies,
-      );
+      expect(squash(page.querySelector('ol + p'))).toBe(PAGE[language].replies);
     },
   );
 

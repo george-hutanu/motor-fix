@@ -846,6 +846,34 @@ describe('the content rules under the comment', () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it('follows a language switch while the drawer is open', async () => {
+    await open();
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(rulesLink()?.getAttribute('href')).toBe('/en/review-rules');
+    expect(rules()?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'No insults, personal data or ads. Write only about this repair. Review rules (opens in a new tab)',
+    );
+  });
+
+  it('stays when the comment runs over its limit', async () => {
+    await open();
+    type(field<HTMLTextAreaElement>('Comentariul tău'), 'x'.repeat(5000));
+    await settle();
+
+    expect(rules()).not.toBeNull();
+  });
+
+  it.each([
+    ['loading', () => new Promise<JobReviewContextDto>(() => undefined)],
+    ['load failure', () => Promise.reject(new Error('down'))],
+  ])('shows no summary while %s', async (_, answer) => {
+    await open({ answer });
+
+    expect(rules()).toBeNull();
+  });
+
   it('stays with the form while the e-mail waits for its confirmation', async () => {
     await open({ answer: async () => context({ emailConfirmed: false }) });
 
@@ -869,6 +897,18 @@ describe('the content rules under the comment', () => {
         }),
     ],
     ['already reviewed', () => context({ existing: review() })],
+    [
+      'removed review',
+      () =>
+        context({
+          eligibility: { jobId: JOB, offer: false, reason: 'review_removed' },
+          existing: review({ status: 'removed' }),
+        }),
+    ],
+    [
+      'reported review',
+      () => context({ existing: review({ status: 'reported', text: 'Hm.' }) }),
+    ],
   ])(
     'shows no summary on the %s view, which replaces the form',
     async (_, answer) => {

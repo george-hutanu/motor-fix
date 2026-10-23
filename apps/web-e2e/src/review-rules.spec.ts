@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 
 import { settled } from './accounts.js';
+import { fits } from './fits.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -110,4 +111,38 @@ test('the footer links to the review rules', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Regulile recenziilor',
   );
+});
+
+// @traces 182-FR-009
+for (const language of ['ro', 'en'] as const)
+  for (const colorScheme of ['light', 'dark'] as const)
+    test(`the rules page fits a 320 px phone, ${language}, ${colorScheme}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await page.goto(`/${language}/review-rules`);
+      await settled(page);
+
+      const report = await fits(page);
+      expect(report.width).toBeLessThanOrEqual(320);
+      expect(report.cut).toEqual([]);
+      expect(report.small).toEqual([]);
+    });
+
+// @traces 182-FR-009
+test('the summary in the drawer fits a 320 px phone', async ({ page }) => {
+  await page.setViewportSize({ height: 640, width: 320 });
+  await signInAs(page, 'driver', '/app/driver');
+  await page.route('**/api/v1/reviews/job/*', (route) =>
+    route.fulfill({ json: CONTEXT }),
+  );
+  await page.goto(`/app/driver?review=${JOB}`);
+  await settled(page);
+  await expect(page.getByRole('dialog').locator('p.rules')).toBeVisible();
+
+  const report = await fits(page);
+  expect(report.width).toBeLessThanOrEqual(320);
+  expect(report.cut).toEqual([]);
+  expect(report.small).toEqual([]);
 });
