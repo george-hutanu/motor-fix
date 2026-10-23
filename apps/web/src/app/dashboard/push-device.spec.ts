@@ -266,6 +266,26 @@ describe('PushDevice', () => {
     expect(d.state()).toBe('off');
   });
 
+  // @traces 129-FR-008
+  it('drops the device in the browser only once its account is gone', async () => {
+    const d = device();
+    await d.refresh();
+    await d.enable();
+    await d.dropped();
+    expect(sw.unsubscribe).toHaveBeenCalledTimes(1);
+    expect(api.pushSubscriptionsControllerRemove).not.toHaveBeenCalled();
+    expect(d.state()).toBe('off');
+  });
+
+  it('stays quiet when the browser cannot unsubscribe after the account is gone', async () => {
+    const d = device();
+    await d.refresh();
+    await d.enable();
+    sw.unsubscribe.mockRejectedValue(new Error('x'));
+    await expect(d.dropped()).resolves.toBeUndefined();
+    expect(d.state()).toBe('off');
+  });
+
   it('does nothing on forget when push is not on', async () => {
     const d = device();
     await d.refresh();

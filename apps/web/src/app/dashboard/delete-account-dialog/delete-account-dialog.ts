@@ -21,6 +21,7 @@ import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Live } from '../live';
+import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
 // "Ștergi contul?": confirmed by typing the account's e-mail or phone, or the
@@ -45,6 +46,7 @@ export class DeleteAccountDialog {
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
   private readonly live = inject(Live);
+  private readonly push = inject(PushDevice);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<undefined, true | 'cancelled'>();
@@ -84,6 +86,7 @@ export class DeleteAccountDialog {
       // The account and its sessions are gone: nothing is asked of the server
       // any more, which would only answer with a sign-in.
       this.live.close();
+      await this.push.dropped();
       this.session.revoked();
       await this.router.navigateByUrl('/');
       toast(this.i18n.t('shell.deleteAccount.done'));

@@ -10,6 +10,7 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { DeleteAccountDialog } from './delete-account-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Live } from '../live';
+import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -36,6 +37,7 @@ let remove: jest.Mock;
 let gate: jest.Mock;
 let revoked: jest.Mock;
 let close: jest.Mock;
+let dropped: jest.Mock;
 let navigate: jest.SpyInstance;
 let result: Promise<OverlayResult<true>>;
 
@@ -56,6 +58,7 @@ async function open(
   gate = jest.fn(async () => true);
   revoked = jest.fn();
   close = jest.fn();
+  dropped = jest.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -75,6 +78,7 @@ async function open(
       },
       { provide: SignInDialog, useValue: { gate } },
       { provide: Live, useValue: { close } },
+      { provide: PushDevice, useValue: { dropped } },
       provideRouter([]),
     ],
   });
@@ -177,6 +181,22 @@ describe('the delete-account dialog', () => {
     expect(navigate).toHaveBeenCalledWith('/');
     expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
     expect(await result).toBe(true);
+  });
+
+  // @traces 129-FR-008
+  it("forgets this browser's push device once deleted, and not before", async () => {
+    await open({}, [
+      async () => {
+        throw problem(500, 'internal_error');
+      },
+    ]);
+
+    await confirm();
+    expect(dropped).not.toHaveBeenCalled();
+
+    button('Șterge contul').click();
+    await settle();
+    expect(dropped).toHaveBeenCalledTimes(1);
   });
 
   it('shows a mismatch under the field and stays open', async () => {
