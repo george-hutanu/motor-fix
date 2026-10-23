@@ -80,6 +80,7 @@ model Account {
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
   reviews                 Review[]                 @relation("ReviewDriver")
   supportMessages         SupportMessage[]
+  decidedJobTypes         JobType[]                @relation("JobTypeDecider")
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
   // The admin's search. The migration also holds account_fold(text) and a

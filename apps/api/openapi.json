@@ -2252,6 +2252,152 @@
         ]
       }
     },
+    "/api/v1/admin/catalogue-jobs": {
+      "get": {
+        "operationId": "JobDecisionsController_queue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCatalogueJobsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalogue-jobs/{id}/approve": {
+      "post": {
+        "operationId": "JobDecisionsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveCatalogueJobDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueJobDecisionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no job"
+          },
+          "409": {
+            "description": "already_decided"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          },
+          "422": {
+            "description": "exists: a name of an approved job (jobTypeId, nameRo); unknown_activity"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalogue-jobs/{id}/reject": {
+      "post": {
+        "operationId": "JobDecisionsController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectCatalogueJobDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueJobDecisionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no job"
+          },
+          "409": {
+            "description": "already_decided"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/job-types": {
       "get": {
         "operationId": "JobTypesController_search",
@@ -10263,6 +10409,222 @@
           "total"
         ]
       },
+      "AdminCatalogueJobGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Atelier Dinamo"
+          },
+          "slug": {
+            "type": "string",
+            "example": "atelier-dinamo"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "AdminCatalogueJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Recondiționare injectoare"
+          },
+          "proposedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/AdminCatalogueJobGarageDto"
+          },
+          "fromBani": {
+            "type": "number",
+            "example": 18000
+          },
+          "toBani": {
+            "type": "number",
+            "example": 42000
+          },
+          "durationMinutes": {
+            "type": "number",
+            "example": 90
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "proposedAt"
+        ]
+      },
+      "RarActivityNameDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "brakes"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "AdminCatalogueJobsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogueJobDto"
+            }
+          },
+          "rarActivities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "rarActivities"
+        ]
+      },
+      "ApproveCatalogueJobDto": {
+        "type": "object",
+        "properties": {
+          "nameRo": {
+            "type": "string",
+            "example": "Recondiționare injectoare",
+            "maxLength": 80,
+            "minLength": 3
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Injector reconditioning",
+            "maxLength": 80,
+            "minLength": 3
+          },
+          "carSystem": {
+            "type": "string",
+            "enum": [
+              "engine",
+              "transmission",
+              "brakes",
+              "suspension_steering",
+              "electrical",
+              "air_con",
+              "body",
+              "tyres_wheels",
+              "general"
+            ],
+            "example": "engine"
+          },
+          "rarActivity": {
+            "type": "string",
+            "description": "A code of the RAR activity list; absent when none is needed",
+            "example": "mechanics",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "nameRo",
+          "nameEn",
+          "carSystem"
+        ]
+      },
+      "CatalogueJobDecisionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Recondiționare injectoare"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Injector reconditioning"
+          },
+          "carSystem": {
+            "type": "string",
+            "enum": [
+              "engine",
+              "transmission",
+              "brakes",
+              "suspension_steering",
+              "electrical",
+              "air_con",
+              "body",
+              "tyres_wheels",
+              "general"
+            ]
+          },
+          "rarActivity": {
+            "type": "string",
+            "example": "mechanics",
+            "nullable": true
+          },
+          "rejectionReason": {
+            "type": "string"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "nameRo",
+          "nameEn",
+          "decidedAt"
+        ]
+      },
+      "RejectCatalogueJobDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Este o reparație generică, nu o lucrare de catalog.",
+            "maxLength": 500,
+            "minLength": 10
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "JobTypeDto": {
         "type": "object",
         "properties": {
@@ -14802,28 +15164,6 @@
           "kind",
           "name",
           "email"
-        ]
-      },
-      "RarActivityNameDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "brakes"
-          },
-          "nameRo": {
-            "type": "string",
-            "example": "frâne"
-          },
-          "nameEn": {
-            "type": "string",
-            "example": "brakes"
-          }
-        },
-        "required": [
-          "code",
-          "nameRo",
-          "nameEn"
         ]
       },
       "LegalCheckRecheckDto": {

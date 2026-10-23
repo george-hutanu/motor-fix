@@ -40,7 +40,10 @@ export type LiveSubject =
   // them, never the garage.
   | { type: 'garage_report'; reporterIds: readonly string[] }
   // A rule only the admins act on stays off the system channel.
-  | { type: 'platform'; adminOnly?: boolean };
+  | { type: 'platform'; adminOnly?: boolean }
+  // An admin's decision on a proposed job: the admins and the proposing
+  // garage's staff (null when the garage is gone).
+  | { type: 'catalogue_job'; garageId: string | null };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
@@ -115,5 +118,7 @@ export function audienceOf(subject: LiveSubject): string[] {
       return ['admin', ...new Set(subject.reporterIds.map(account))];
     case 'platform':
       return subject.adminOnly ? ['admin'] : ['admin', 'system'];
+    case 'catalogue_job':
+      return subject.garageId ? ['admin', garage(subject.garageId)] : ['admin'];
   }
 }

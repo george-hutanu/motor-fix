@@ -15,6 +15,7 @@ import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-contr
 import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-accounts-controller-summary';
 import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
 import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
+import { AdminCatalogueJobsDto } from '../models/admin-catalogue-jobs-dto';
 import { AdminDemandDto } from '../models/admin-demand-dto';
 import { AdminGaragesDto } from '../models/admin-garages-dto';
 import { AdminGaragesSummaryDto } from '../models/admin-garages-summary-dto';
@@ -30,6 +31,7 @@ import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overvi
 import { adminOverviewControllerQueue } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewControllerQueue$Params } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { CatalogueJobDecisionDto } from '../models/catalogue-job-decision-dto';
 import { copyVoicesControllerChange } from '../fn/admin/copy-voices-controller-change';
 import { CopyVoicesControllerChange$Params } from '../fn/admin/copy-voices-controller-change';
 import { copyVoicesControllerList } from '../fn/admin/copy-voices-controller-list';
@@ -43,6 +45,12 @@ import { DocumentReviewControllerAccept$Params } from '../fn/admin/document-revi
 import { documentReviewControllerRefuse } from '../fn/admin/document-review-controller-refuse';
 import { DocumentReviewControllerRefuse$Params } from '../fn/admin/document-review-controller-refuse';
 import { GarageSuspensionCreatedDto } from '../models/garage-suspension-created-dto';
+import { jobDecisionsControllerApprove } from '../fn/admin/job-decisions-controller-approve';
+import { JobDecisionsControllerApprove$Params } from '../fn/admin/job-decisions-controller-approve';
+import { jobDecisionsControllerQueue } from '../fn/admin/job-decisions-controller-queue';
+import { JobDecisionsControllerQueue$Params } from '../fn/admin/job-decisions-controller-queue';
+import { jobDecisionsControllerReject } from '../fn/admin/job-decisions-controller-reject';
+import { JobDecisionsControllerReject$Params } from '../fn/admin/job-decisions-controller-reject';
 import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
 import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
 import { PlatformRuleChangesControllerApprove$Params } from '../fn/admin/platform-rule-changes-controller-approve';
@@ -147,6 +155,81 @@ export class AdminService extends BaseService {
   adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
     const resp = this.adminAccountsControllerSummary$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
+  }
+
+  /** Path part for operation `jobDecisionsControllerQueue()` */
+  static readonly JobDecisionsControllerQueuePath = '/api/v1/admin/catalogue-jobs';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobDecisionsControllerQueue()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobDecisionsControllerQueue$Response(params?: JobDecisionsControllerQueue$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminCatalogueJobsDto>> {
+    const obs = jobDecisionsControllerQueue(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobDecisionsControllerQueue$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobDecisionsControllerQueue(params?: JobDecisionsControllerQueue$Params, context?: HttpContext): Promise<AdminCatalogueJobsDto> {
+    const resp = this.jobDecisionsControllerQueue$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminCatalogueJobsDto>): AdminCatalogueJobsDto => r.body);
+  }
+
+  /** Path part for operation `jobDecisionsControllerApprove()` */
+  static readonly JobDecisionsControllerApprovePath = '/api/v1/admin/catalogue-jobs/{id}/approve';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobDecisionsControllerApprove()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobDecisionsControllerApprove$Response(params: JobDecisionsControllerApprove$Params, context?: HttpContext): Promise<StrictHttpResponse<CatalogueJobDecisionDto>> {
+    const obs = jobDecisionsControllerApprove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobDecisionsControllerApprove$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobDecisionsControllerApprove(params: JobDecisionsControllerApprove$Params, context?: HttpContext): Promise<CatalogueJobDecisionDto> {
+    const resp = this.jobDecisionsControllerApprove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CatalogueJobDecisionDto>): CatalogueJobDecisionDto => r.body);
+  }
+
+  /** Path part for operation `jobDecisionsControllerReject()` */
+  static readonly JobDecisionsControllerRejectPath = '/api/v1/admin/catalogue-jobs/{id}/reject';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobDecisionsControllerReject()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobDecisionsControllerReject$Response(params: JobDecisionsControllerReject$Params, context?: HttpContext): Promise<StrictHttpResponse<CatalogueJobDecisionDto>> {
+    const obs = jobDecisionsControllerReject(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobDecisionsControllerReject$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobDecisionsControllerReject(params: JobDecisionsControllerReject$Params, context?: HttpContext): Promise<CatalogueJobDecisionDto> {
+    const resp = this.jobDecisionsControllerReject$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CatalogueJobDecisionDto>): CatalogueJobDecisionDto => r.body);
   }
 
   /** Path part for operation `demandControllerDemand()` */
