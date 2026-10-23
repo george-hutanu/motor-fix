@@ -64,8 +64,8 @@ export default defineConfig({
       ? /@mailbox|@openid|@assistants|@reset|@database/
       : /@seeded|@mailbox|@openid|@assistants|@reset|@database/
     : undefined,
-  // The price edit and manage flows change the seeded price list the other
-  // flows read: they run after them. The photo flows add an approved garage,
+  // The price edit, manage and decide flows change the seeded price lists and
+  // the catalogue the other flows read: they run after them. The photo flows add an approved garage,
   // which Home's counts would take in: they run after everything else. The platform rules
   // and maintenance flows switch maintenance on, which refuses every non-admin
   // call platform-wide, and the copy voice switch flows change the voices the
@@ -74,13 +74,13 @@ export default defineConfig({
     {
       name: 'chromium',
       testIgnore:
-        /(platform-rules|copy-voice-switch|garage-photos|garage-prices-(edit|manage)|maintenance)\.spec\.ts$/,
+        /(platform-rules|copy-voice-switch|garage-photos|garage-prices-(edit|manage|decide)|maintenance)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       dependencies: ['chromium'],
       name: 'garage-prices',
-      testMatch: /garage-prices-(edit|manage)\.spec\.ts$/,
+      testMatch: /garage-prices-(edit|manage|decide)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

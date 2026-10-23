@@ -800,6 +800,27 @@ async function dinamoForms(db: Client) {
       [job, position],
     );
   }
+  // A job Dinamo proposed, waiting in the admins' queue as ST-174's propose
+  // leaves one: pending, named as typed, last on its list. The flows never
+  // decide it; once an admin has, a later run leaves it as decided.
+  await db.query(
+    `INSERT INTO job_type (id, key, name_ro, name_en, status, proposed_by_garage_id, updated_at)
+     SELECT gen_random_uuid(), 'reconditionare-injectoare', 'Recondiționare injectoare',
+            'Recondiționare injectoare', 'pending', g.id, now()
+     FROM garage g WHERE g.slug = 'atelier-dinamo'
+     ON CONFLICT (key) DO NOTHING`,
+  );
+  await db.query(
+    `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
+     SELECT gen_random_uuid(), g.id, j.id, 18000, 42000, 90, 2, now(), a.id
+     FROM garage g
+     JOIN job_type j ON j.key = 'reconditionare-injectoare' AND j.proposed_by_garage_id = g.id
+     JOIN account a ON a.email = 'comutare@example.test'
+     WHERE g.slug = 'atelier-dinamo'
+       AND NOT EXISTS (
+         SELECT 1 FROM garage_price p WHERE p.garage_id = g.id AND p.job_type_id = j.id
+       )`,
+  );
 }
 
 // Service Auto Militari's price list as the mock shows it: six jobs, the

@@ -315,7 +315,55 @@ describe('seed', () => {
     expect(garage.prices.map((p) => p.jobType.key)).toEqual([
       'oil-service',
       'front-brakes',
+      'reconditionare-injectoare',
     ]);
+  });
+
+  // @traces 414-FR-014
+  it("gives Atelier Dinamo one pending proposal, 180–420 lei and 90 min, once, so the admins' queue has a row", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const jobs = await prisma.jobType.findMany({
+      include: { prices: true, proposedBy: { select: { slug: true } } },
+      where: { key: 'reconditionare-injectoare' },
+    });
+    expect(jobs).toHaveLength(1);
+    const [job] = jobs;
+    expect(job).toMatchObject({
+      decidedAt: null,
+      decidedBy: null,
+      nameEn: 'Recondiționare injectoare',
+      nameRo: 'Recondiționare injectoare',
+      proposedBy: { slug: 'atelier-dinamo' },
+      rejectionReason: null,
+      status: 'pending',
+    });
+    expect(
+      job?.prices.map(({ brandId, durationMinutes, fromBani, toBani }) => ({
+        brandId,
+        durationMinutes,
+        fromBani,
+        toBani,
+      })),
+    ).toEqual([
+      { brandId: null, durationMinutes: 90, fromBani: 18_000, toBani: 42_000 },
+    ]);
+  });
+
+  it('leaves the proposal as an admin decided it when run again', async () => {
+    expect(seed('test').status).toBe(0);
+    await prisma.jobType.update({
+      data: { rejectionReason: 'Nu este clar ce lucrare.', status: 'rejected' },
+      where: { key: 'reconditionare-injectoare' },
+    });
+
+    expect(seed('test').status).toBe(0);
+
+    const job = await prisma.jobType.findUniqueOrThrow({
+      where: { key: 'reconditionare-injectoare' },
+    });
+    expect(job.status).toBe('rejected');
   });
 
   // @traces 301-FR-004
