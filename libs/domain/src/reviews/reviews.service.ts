@@ -113,6 +113,9 @@ export class ReviewsService {
             driverId: job.driverId,
             garageId: job.garageId,
             jobId: job.id,
+            // The job's mechanic as it stands at posting; a finished job's
+            // mechanic no longer changes.
+            mechanicId: job.mechanicId,
             paidBani: dto.paidBani ?? null,
             rating: dto.rating,
             text: dto.text ?? null,
@@ -132,7 +135,7 @@ export class ReviewsService {
           audience: {
             authorAccountId: job.driverId,
             garageId: job.garageId,
-            mechanicId: null,
+            mechanicId: job.mechanicId,
             type: 'review',
           },
           kind: 'review.posted',
@@ -140,6 +143,7 @@ export class ReviewsService {
             driverId: job.driverId,
             garageId: job.garageId,
             jobId: job.id,
+            mechanicId: job.mechanicId,
             rating: review.rating,
             reviewId: review.id,
           },
