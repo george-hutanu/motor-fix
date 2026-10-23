@@ -6,7 +6,9 @@ import { isValidCui } from '@motor-fix/contracts';
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
+import { addMonths, localDay } from './bucharest';
 import { BRANDS } from './catalogue/brands';
+import { dayOf } from './garages/documents/document-cycle/document-cycle.service';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -706,6 +708,38 @@ describe('seed of the listed garages', () => {
       ['service-marasti', 4.4, 22, 13000],
       ['service-titan', null, 0, null],
     ]);
+  });
+
+  // @traces 068-FR-001
+  it('gives each approved garage its yearly documents cycle, due a year after its approval, once', async () => {
+    expect(seed('test').status).toBe(0);
+    const cycles = () =>
+      prisma.documentCycle.findMany({
+        orderBy: { garage: { slug: 'asc' } },
+        select: {
+          dueOn: true,
+          garage: { select: { approvedAt: true, slug: true } },
+          id: true,
+          state: true,
+        },
+      });
+    const once = await cycles();
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await cycles()).toEqual(once);
+    expect(once).toHaveLength(9);
+    for (const { dueOn, garage, state } of once) {
+      const approvedAt = garage.approvedAt ?? new Date(Number.NaN);
+      expect([garage.slug, dayOf(dueOn), state]).toEqual([
+        garage.slug,
+        addMonths(localDay(approvedAt), 12),
+        'due',
+      ]);
+    }
+    expect(
+      once.find(({ garage }) => garage.slug === 'atelier-test')?.dueOn,
+    ).toEqual(new Date('2027-01-15'));
   });
 
   it('changes nothing in the listed garages when run twice', async () => {

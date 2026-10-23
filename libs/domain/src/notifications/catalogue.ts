@@ -9,8 +9,6 @@ export interface NotificationType {
   alwaysSent: boolean;
   transactional: boolean;
   groupable: boolean;
-  // Sent by the channels the person left on, of which at least one must stay.
-  keepOne: boolean;
   urgent: boolean;
   group: DriverGroup | null;
   templateKey: string;
@@ -26,6 +24,8 @@ const NOT_URGENT = new Set([
   'BOOKING_REMINDER',
   'REQUEST_REMINDER',
   'DOCUMENT_DUE',
+  'DOCUMENT_OVERDUE',
+  'DOCUMENT_REFUSED',
   'LISTING_REMINDER',
   'NEWS',
   'REVIEW_INVITE',
@@ -38,7 +38,7 @@ type Entry = [
   NotificationType['trigger'],
   readonly OutsideChannel[],
   DriverGroup | null,
-  ('always' | 'transactional' | 'single' | 'keep_one')?,
+  ('always' | 'transactional' | 'single')?,
 ];
 
 const ENTRIES: Record<string, Entry> = {
@@ -73,8 +73,9 @@ const ENTRIES: Record<string, Entry> = {
   DAY_SHEET_NOT_SENT: ['event', ['email'], null],
   DAY_SHEET_OUTDATED: ['event', [], null],
   DIRECT_REQUEST: ['event', EPW, null],
-  DOCUMENT_DUE: ['event', EPW, null, 'keep_one'],
-  DOCUMENT_OVERDUE: ['event', EPW, null, 'keep_one'],
+  DOCUMENT_DUE: ['event', ['email', 'push'], null, 'always'],
+  DOCUMENT_OVERDUE: ['event', ['email', 'push'], null, 'always'],
+  DOCUMENT_REFUSED: ['event', ['email', 'push'], null],
   DUE_ITP: ['timer', EPSW, 'due_dates'],
   DUE_RCA: ['timer', EPSW, 'due_dates'],
   DUE_ROVINIETA: ['timer', EPSW, 'due_dates'],
@@ -137,7 +138,6 @@ export const NOTIFICATION_TYPES: Readonly<Record<string, NotificationType>> =
         channels,
         group,
         groupable: kind === undefined && channels.length > 0,
-        keepOne: kind === 'keep_one',
         templateKey: `notifications.${name.toLowerCase()}`,
         transactional: kind === 'transactional',
         trigger,

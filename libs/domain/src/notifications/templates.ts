@@ -264,11 +264,14 @@ function renderText(
   }
 }
 
-// The kinds whose wording follows the decision they carry.
-const BY_DECISION: Record<string, ReadonlySet<unknown>> = {
-  GARAGE_REPORT_DECIDED: REPORT_DECISION_SET,
-  VERIFICATION_RESULT: DECISIONS,
-};
+// The kinds whose wording follows a param: one text per value it names,
+// the kind's own text for any other.
+const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
+  {
+    ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
+    GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],
+    VERIFICATION_RESULT: ['decision', DECISIONS],
+  };
 
 // A type with two texts: the param's one value picks the first, any other
 // value the second.
@@ -285,10 +288,10 @@ export function templateName(kind: string, params: Params): string {
     const [param, first, second] = twoWay;
     return `${kind}.${params[param] === first ? first : second}`;
   }
-  const decisions = BY_DECISION[kind];
-  if (decisions) {
-    const decision = params['decision'];
-    return decisions.has(decision) ? `${kind}.${decision}` : kind;
+  const byParam = BY_PARAM[kind];
+  if (byParam) {
+    const value = params[byParam[0]];
+    return byParam[1].has(value) ? `${kind}.${value}` : kind;
   }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];

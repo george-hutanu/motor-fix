@@ -55,16 +55,17 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 92 (the decision refusals include
+// Every series the API starts: its own 95 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
 // no_open_report; the rejections one per reason; the listings sent, the
 // requests for more, the copies opened to answer one and the files sent
-// again one each; the report decisions one per outcome),
+// again one each; the report decisions one per outcome; the yearly
+// documents' uploaded, accepted and refused steps),
 // one per check kind and result, one per re-check result, one per booking
 // confirmation outcome, one per quote decline outcome and one per review
 // outcome, and one sort change per sort.
 const API_SERIES =
-  92 +
+  95 +
   SORTS.length +
   BOOKING_CONFIRM_OUTCOMES.length +
   QUOTE_DECLINE_OUTCOMES.length +
@@ -139,6 +140,12 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
+    // @traces 068-FR-016
+    expect(
+      named(all, 'motorfix_document_cycle_total').map(
+        (one) => one.labels['step'],
+      ),
+    ).toEqual(['uploaded', 'accepted', 'refused']);
     // @traces 328-FR-014
     expect(
       named(all, 'motorfix_sort_changes_total').map((one) => one.labels),

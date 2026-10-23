@@ -120,6 +120,7 @@ model Garage {
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]
   suspensions                GarageSuspension[]
+  documentCycle              DocumentCycle?
 
   @@index([cityKey])
   @@index([position], map: "garage_position_idx", type: Gist)
@@ -489,15 +490,49 @@ model LegalDocument {
   kind               String
   pages              String[]
   issuedOn           DateTime?        @map("issued_on") @db.Date
+  // valid, in_review (a yearly upload waiting for an admin) or refused: a
+  // CHECK in the migration. A listing's documents are valid from the start.
   status             String           @default("valid")
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  // Set when a resend brought a newer row of the kind. One row per kind is
-  // current: the partial unique index legal_document_one_current, in SQL.
+  // Set when a resend or an accepted yearly upload brought a newer valid row
+  // of the kind. Per file and kind, one valid row is current and one at most
+  // is in review: the partial unique indexes legal_document_one_valid and
+  // legal_document_one_in_review, in SQL.
   replacedAt         DateTime?        @map("replaced_at") @db.Timestamptz(3)
+  // The admin's decision on a yearly upload; empty for a listing's documents.
+  // The reason is documents or other, a CHECK in the migration.
+  decidedBy          String?          @map("decided_by") @db.Uuid
+  decidedAt          DateTime?        @map("decided_at") @db.Timestamptz(3)
+  refusalReason      String?          @map("refusal_reason")
+  refusalNote        String?          @map("refusal_note")
   verificationFile   VerificationFile @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
 
   @@index([verificationFileId])
+  @@index([status, createdAt])
   @@map("legal_document")
+}
+
+// When an approved garage owes its documents again: a Europe/Bucharest day a
+// year after the last acceptance. The state is due or overdue (a CHECK in the
+// migration); the grace runs from the day after the due date and is set with
+// overdue. The reminder marks are each set once per cycle; an acceptance of
+// both documents resets the cycle and clears them.
+model DocumentCycle {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId     String    @unique @map("garage_id") @db.Uuid
+  dueOn        DateTime  @map("due_on") @db.Date
+  state        String    @default("due")
+  graceUntil   DateTime? @map("grace_until") @db.Date
+  reminded30At DateTime? @map("reminded_30_at") @db.Timestamptz(3)
+  reminded7At  DateTime? @map("reminded_7_at") @db.Timestamptz(3)
+  reminded0At  DateTime? @map("reminded_0_at") @db.Timestamptz(3)
+  resetAt      DateTime  @default(now()) @map("reset_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  garage       Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@index([state, dueOn])
+  @@map("garage_document_cycle")
 }
 
 enum ListingDraftStatus {

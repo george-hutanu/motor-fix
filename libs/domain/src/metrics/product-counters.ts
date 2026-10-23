@@ -88,6 +88,22 @@ export type ReportDecisionOutcome = (typeof REPORT_DECISION_OUTCOMES)[number];
 const REPORT_DECIDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const QUOTE_RECEIVED_OUTCOMES = ['built', 'muted'] as const;
 
+// The yearly documents: what the compliance step did, and the owner's and
+// the admin's moves.
+const DOCUMENT_CYCLE_STEPS = [
+  'reminded_30',
+  'reminded_7',
+  'reminded_0',
+  'overdue',
+  'uploaded',
+  'accepted',
+  'refused',
+] as const;
+// The steps the worker's compliance step counts.
+const WORKER_DOCUMENT_CYCLE_STEPS = DOCUMENT_CYCLE_STEPS.slice(0, 4);
+// The steps the API's upload and review routes count.
+const API_DOCUMENT_CYCLE_STEPS = DOCUMENT_CYCLE_STEPS.slice(4);
+
 const SUPPORT_MESSAGE_OUTCOMES = [
   'stored',
   'refused_limit',
@@ -218,6 +234,11 @@ const suspendedNotices = () =>
   counter(
     'motorfix_garage_suspended_notices_total',
     'Garage suspensions told to garage owners, by outcome',
+  );
+const documentCycle = () =>
+  counter(
+    'motorfix_document_cycle_total',
+    'Yearly document cycle steps: reminders, overdue, uploads, decisions',
   );
 const documentsUploaded = () =>
   counter(
@@ -382,6 +403,12 @@ export function countDocumentUploaded(kind: DocumentKind) {
   documentsUploaded().add(1, { kind });
 }
 
+export function countDocumentCycle(
+  step: (typeof DOCUMENT_CYCLE_STEPS)[number],
+) {
+  documentCycle().add(1, { step });
+}
+
 export function countDeclarationSigned() {
   declarationsSigned().add(1);
 }
@@ -470,6 +497,7 @@ const STARTS: Record<
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
     [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
+    [documentCycle, each('step', API_DOCUMENT_CYCLE_STEPS)],
   ],
   worker: [
     [
@@ -508,6 +536,7 @@ const STARTS: Record<
         each('outcome', SUPPORT_EMAIL_OUTCOMES),
       ),
     ],
+    [documentCycle, each('step', WORKER_DOCUMENT_CYCLE_STEPS)],
   ],
 };
 

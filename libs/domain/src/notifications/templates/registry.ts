@@ -12,10 +12,16 @@ import {
 } from './admin-outage-alert';
 import { ADMIN_RECHECK_DUE } from './admin-recheck-due';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
-import { ADMIN_VERIFICATION_QUEUED } from './admin-verification-queued';
+import {
+  ADMIN_VERIFICATION_QUEUED,
+  ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
+} from './admin-verification-queued';
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
+import { DOCUMENT_DUE } from './document-due';
+import { DOCUMENT_OVERDUE } from './document-overdue';
+import { DOCUMENT_REFUSED } from './document-refused';
 import { DUE_ITP } from './due-itp';
 import {
   GARAGE_REPORT_CONFIRMED,
@@ -61,10 +67,14 @@ export const TEMPLATES: Registry = {
   ADMIN_RECHECK_DUE,
   ADMIN_RULE_APPROVAL_NEEDED,
   ADMIN_VERIFICATION_QUEUED,
+  'ADMIN_VERIFICATION_QUEUED.documents': ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
   BOOKING_CONFIRM_REMINDER,
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
+  DOCUMENT_DUE,
+  DOCUMENT_OVERDUE,
+  DOCUMENT_REFUSED,
   DUE_ITP,
   'GARAGE_REPORT_DECIDED.confirmed': GARAGE_REPORT_CONFIRMED,
   'GARAGE_REPORT_DECIDED.unfounded': GARAGE_REPORT_UNFOUNDED,

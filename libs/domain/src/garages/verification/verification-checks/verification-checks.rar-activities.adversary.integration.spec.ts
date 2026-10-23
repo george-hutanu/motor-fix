@@ -15,6 +15,7 @@ import {
   fixtures,
 } from '../../../notifications/notifications.testing';
 import type { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { VerificationService } from '../verification.service';
 import { VerificationFileService } from '../verification-file/verification-file.service';
@@ -456,6 +457,7 @@ describe('the file read beside the record', () => {
         {} as CacheService,
         storage as unknown as StorageService,
       ),
+      new DocumentCycleService(prisma),
     ).read(fileId);
 
   it('lists every job an activities record reported uncovered, hidden and pending ones included', async () => {

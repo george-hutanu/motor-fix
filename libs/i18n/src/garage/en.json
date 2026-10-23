@@ -117,12 +117,19 @@
     "documents": {
       "checked": "checked",
       "checkedOn": "checked on {day}",
+      "cycle": {
+        "in_review": "under review",
+        "overdue": "overdue since {since}, the profile leaves the map on {off}",
+        "refused": "refused: {note}",
+        "renew": "upload again once a year, by {month}"
+      },
       "detail": "company certificate and RAR authorisation",
       "label": "Documents",
       "missing": {
         "onrc_certificate": "company certificate missing",
         "rar_authorisation": "RAR authorisation missing"
-      }
+      },
+      "upload": "Upload the documents"
     },
     "error": "We could not load the check",
     "notChecked": "not checked",
@@ -151,7 +158,40 @@
     },
     "tag": "Verified",
     "tagSuspended": "Suspended",
-    "title": "Legal check"
+    "title": "Legal check",
+    "upload": {
+      "bothRequired": "Upload both documents",
+      "cancel": "Cancel",
+      "choose": "Choose files",
+      "failed": "not uploaded",
+      "full": "At most 10 pages per document",
+      "inReview": "The documents are already under review",
+      "issuedOn": "Issue date",
+      "issuedOnFuture": "The issue date cannot be in the future",
+      "issuedOnOld": "The certificate must be issued in the last 30 days",
+      "kinds": {
+        "onrc_certificate": {
+          "hint": "Issued in the last 30 days, with the workshop address",
+          "label": "ONRC company certificate"
+        },
+        "rar_authorisation": {
+          "hint": "A readable scan or photo, every page",
+          "label": "RAR technical authorisation"
+        }
+      },
+      "note": "Only the MotorFix team sees the documents.",
+      "page": "Page {n}",
+      "ready": "uploaded",
+      "refused": "Not accepted: only PDF, JPG or PNG, up to 10 MB",
+      "remove": "Remove",
+      "removeLabel": "Remove {name}",
+      "retry": "Try again",
+      "rules": "PDF, JPG or PNG, up to 10 MB each, at most 10 pages",
+      "send": "Send the documents",
+      "sendFailed": "We could not send the documents. Try again.",
+      "title": "Upload the documents",
+      "unavailable": "Upload is not available right now"
+    }
   },
   "prices": {
     "add": "Add a job",

@@ -61,6 +61,7 @@ export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { observabilityUrl } from './garages/admin-overview.controller';
 export { GarageDetailsService } from './garages/details/garage-details.service';
 export { ListingDocumentsModule } from './garages/documents/listing-documents/listing-documents.module';
+export { OwnerDocumentsModule } from './garages/documents/owner-documents/owner-documents.module';
 export { featureOn } from './garages/features/feature-on';
 export { writeGarageBrands } from './garages/garage-brands/write-garage-brands';
 export { writeGarageHours } from './garages/garage-hours';
@@ -93,6 +94,7 @@ export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/bo
 export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
+export { DOCUMENT_REFUSED_CONSUMER } from './notifications/document-refused/document-refused.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
 export {
   checkEmailDns,

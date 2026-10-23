@@ -19,6 +19,7 @@ const OWNER_ONLY = [
   'GARAGE_RESTORED',
   'DOCUMENT_DUE',
   'DOCUMENT_OVERDUE',
+  'DOCUMENT_REFUSED',
   'CATALOGUE_JOB_DECIDED',
   'FACILITY_REMOVED',
   'FACILITY_RE_ADD_DECIDED',
@@ -50,6 +51,7 @@ const OWNER = [
   'GARAGE_RESTORED',
   'DOCUMENT_DUE',
   'DOCUMENT_OVERDUE',
+  'DOCUMENT_REFUSED',
   'STAFF_JOINED',
   'CATALOGUE_JOB_DECIDED',
   'FACILITY_REMOVED',
@@ -169,10 +171,17 @@ describe('a locked channel', () => {
     expect(locked('ADMIN_OUTAGE_ALERT', 'push')).toBe(true);
   });
 
-  it('is never a document reminder’s channel or a plain type’s', () => {
+  // @traces 068-FR-004
+  it('is e-mail and push of a document reminder', () => {
+    for (const type of ['DOCUMENT_DUE', 'DOCUMENT_OVERDUE']) {
+      expect(locked(type, 'email')).toBe(true);
+      expect(locked(type, 'push')).toBe(true);
+    }
+  });
+
+  it('is never a refused document’s channel or a plain type’s', () => {
     for (const channel of ['email', 'push', 'whatsapp'] as const) {
-      expect(locked('DOCUMENT_DUE', channel)).toBe(false);
-      expect(locked('DOCUMENT_OVERDUE', channel)).toBe(false);
+      expect(locked('DOCUMENT_REFUSED', channel)).toBe(false);
       expect(locked('REQUEST_RECEIVED', channel)).toBe(false);
     }
   });
@@ -414,31 +423,13 @@ describe('the checks on a staff save', () => {
     ).toBeNull();
   });
 
-  it('refuse a document reminder left with no channel on', () => {
+  // @traces 068-FR-004
+  it('refuse a document reminder’s e-mail or push turned off', () => {
     expect(
-      staffChecks(entries(), [
-        choice('DOCUMENT_DUE', 'email', false),
-        choice('DOCUMENT_DUE', 'push', false),
-      ]),
-    ).toEqual({ code: 'last_channel', type: 'DOCUMENT_DUE' });
-  });
-
-  it('judge the last channel on the state the whole save leaves', () => {
-    const pushOnly = entries({
-      rows: [row('DOCUMENT_OVERDUE', 'push', false)],
-    });
+      staffChecks(entries(), [choice('DOCUMENT_DUE', 'push', false)]),
+    ).toEqual({ code: 'channel_locked', type: 'DOCUMENT_DUE' });
     expect(
-      staffChecks(pushOnly, [
-        choice('DOCUMENT_OVERDUE', 'push', true),
-        choice('DOCUMENT_OVERDUE', 'email', false),
-      ]),
-    ).toBeNull();
-    expect(
-      staffChecks(entries(), [
-        choice('DOCUMENT_DUE', 'email', false),
-        choice('DOCUMENT_DUE', 'email', true),
-        choice('DOCUMENT_DUE', 'push', false),
-      ]),
-    ).toBeNull();
+      staffChecks(entries(), [choice('DOCUMENT_OVERDUE', 'email', false)]),
+    ).toEqual({ code: 'channel_locked', type: 'DOCUMENT_OVERDUE' });
   });
 });

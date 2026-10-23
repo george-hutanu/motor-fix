@@ -27,6 +27,7 @@ export {
   formatNum,
   formatPct,
   formatRating,
+  formatShortMonthYear,
   formatSlot,
   formatWholeLeiRange,
   relativeTime,

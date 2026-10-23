@@ -16,7 +16,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
-import { BehaviorSubject, filter, Subject } from 'rxjs';
+import { BehaviorSubject, filter, of, Subject } from 'rxjs';
 
 import { AdminQueue } from './admin-queue';
 import { Live } from '../live';
@@ -29,10 +29,12 @@ const row = (
 ): VerificationQueueRowDto => ({
   area: { kind: 'town', name: 'București' },
   brands: 7,
+  documentId: null,
   flagged: false,
   garageId: `garage-${n}`,
   garageName: `Service ${n}`,
   id: `file-${n}`,
+  item: 'verification',
   lamp: 'green',
   mechanics: 3,
   resubmitted: false,
@@ -447,7 +449,7 @@ describe('the file named in the address', () => {
     };
     return [
       { provide: Overlays, useValue: overlays },
-      { provide: ActivatedRoute, useValue: { url } },
+      { provide: ActivatedRoute, useValue: { fragment: of(null), url } },
     ];
   }
 

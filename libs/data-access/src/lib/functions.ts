@@ -117,6 +117,10 @@ export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGa
 export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { DocumentReviewControllerAccept$Params as DocumentReviewControllerAccept$Params } from './fn/admin/document-review-controller-accept';
+export { documentReviewControllerAccept as documentReviewControllerAccept } from './fn/admin/document-review-controller-accept';
+export type { DocumentReviewControllerRefuse$Params as DocumentReviewControllerRefuse$Params } from './fn/admin/document-review-controller-refuse';
+export { documentReviewControllerRefuse as documentReviewControllerRefuse } from './fn/admin/document-review-controller-refuse';
 export type { RecheckControllerDue$Params as RecheckControllerDue$Params } from './fn/admin/recheck-controller-due';
 export { recheckControllerDue as recheckControllerDue } from './fn/admin/recheck-controller-due';
 export type { RecheckControllerRecord$Params as RecheckControllerRecord$Params } from './fn/admin/recheck-controller-record';
@@ -281,6 +285,10 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
+export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
+export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
+export { ownerDocumentsControllerSubmit as ownerDocumentsControllerSubmit } from './fn/garages/owner-documents-controller-submit';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
 export { supportContactControllerContact as supportContactControllerContact } from './fn/support/support-contact-controller-contact';
 export type { SupportMessagesControllerCreate$Params as SupportMessagesControllerCreate$Params } from './fn/support/support-messages-controller-create';

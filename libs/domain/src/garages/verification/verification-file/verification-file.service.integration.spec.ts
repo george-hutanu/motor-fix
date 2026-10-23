@@ -11,6 +11,7 @@ import {
   fixtures,
 } from '../../../notifications/notifications.testing';
 import type { StorageService } from '../../../storage/storage.service';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 
 // @traces 302-FR-001 302-FR-010
@@ -35,6 +36,7 @@ const service = () =>
       {} as CacheService,
       storage as unknown as StorageService,
     ),
+    new DocumentCycleService(prisma),
   );
 
 async function statusOf(promise: Promise<unknown>) {
@@ -227,21 +229,27 @@ describe('reading a file', () => {
 
     expect(documents).toEqual([
       {
+        decidedAt: null,
+        decidedBy: null,
         id: certificate.id,
         issuedOn: '2026-09-01',
         kind: 'onrc_certificate',
         pages: 2,
         present: true,
         replaced: [],
+        review: null,
         stale: true,
       },
       {
+        decidedAt: null,
+        decidedBy: null,
         id: null,
         issuedOn: null,
         kind: 'rar_authorisation',
         pages: 0,
         present: false,
         replaced: [],
+        review: null,
         stale: null,
       },
     ]);
@@ -998,6 +1006,8 @@ describe('a file whose documents were replaced', () => {
     const { documents } = await service().read(file.id);
 
     expect(documents[0]).toEqual({
+      decidedAt: null,
+      decidedBy: null,
       id: current.id,
       issuedOn: '2026-10-10',
       kind: 'onrc_certificate',
@@ -1007,6 +1017,7 @@ describe('a file whose documents were replaced', () => {
         { at: SECOND.toISOString(), id: older.id, pages: 2 },
         { at: FIRST.toISOString(), id: oldest.id, pages: 1 },
       ],
+      review: null,
       stale: false,
     });
     expect(documents[1]).toMatchObject({ present: false, replaced: [] });
@@ -1033,5 +1044,214 @@ describe('a file whose documents were replaced', () => {
     const { timeline } = await service().read(file.id);
 
     expect(timeline.entries.map((e) => e.subjectId)).toEqual([replaced.id]);
+  });
+});
+
+// @traces 068-FR-002
+// @traces 068-FR-008
+// @traces 068-FR-012
+// @traces 068-FR-017
+describe('a file whose yearly documents were sent again', () => {
+  const UPLOADED = new Date('2026-10-20T08:00:00Z');
+  const DECIDED = new Date('2026-10-21T08:00:00Z');
+
+  // An approved file with its listing's two documents, a renewed certificate
+  // waiting for an admin, an authorisation refused by Ioana, and the cycle.
+  async function renewed() {
+    const file = await sent({ status: 'approved' });
+    const listed = await Promise.all(
+      (['onrc_certificate', 'rar_authorisation'] as const).map((kind) =>
+        prisma.legalDocument.create({
+          data: {
+            createdAt: new Date('2025-10-14T09:00:00Z'),
+            issuedOn: new Date('2025-10-01'),
+            kind,
+            pages: ['old'],
+            verificationFileId: file.id,
+          },
+        }),
+      ),
+    );
+    const waiting = await prisma.legalDocument.create({
+      data: {
+        createdAt: UPLOADED,
+        issuedOn: new Date('2026-10-18'),
+        kind: 'onrc_certificate',
+        pages: ['n1', 'n2'],
+        status: 'in_review',
+        verificationFileId: file.id,
+      },
+    });
+    const refused = await prisma.legalDocument.create({
+      data: {
+        createdAt: UPLOADED,
+        decidedAt: DECIDED,
+        decidedBy: ioana,
+        issuedOn: new Date('2026-01-10'),
+        kind: 'rar_authorisation',
+        pages: ['r1'],
+        refusalNote: 'Autorizația a expirat',
+        refusalReason: 'documents',
+        status: 'refused',
+        verificationFileId: file.id,
+      },
+    });
+    await prisma.documentCycle.create({
+      data: { dueOn: new Date('2026-11-01'), garageId },
+    });
+    return { file, listed, refused, waiting };
+  }
+
+  it('keeps the valid document of each kind current and shows the one in review beside it', async () => {
+    const { file, listed, waiting } = await renewed();
+
+    const { documents } = await service().read(file.id);
+
+    expect(documents[0]).toMatchObject({
+      decidedAt: null,
+      decidedBy: null,
+      id: listed[0]?.id,
+      issuedOn: '2025-10-01',
+      present: true,
+      replaced: [],
+    });
+    expect(documents[0]?.review).toEqual({
+      decidedAt: null,
+      decidedBy: null,
+      id: waiting.id,
+      issuedOn: '2026-10-18',
+      pages: 2,
+      refusal: null,
+      status: 'in_review',
+      uploadedAt: UPLOADED.toISOString(),
+    });
+  });
+
+  it('shows a refused document with its reason, its note and who refused it', async () => {
+    const { file, listed, refused } = await renewed();
+
+    const { documents } = await service().read(file.id);
+
+    expect(documents[1]?.id).toBe(listed[1]?.id);
+    expect(documents[1]?.review).toEqual({
+      decidedAt: DECIDED.toISOString(),
+      decidedBy: { id: ioana, name: 'Ioana' },
+      id: refused.id,
+      issuedOn: '2026-01-10',
+      pages: 1,
+      refusal: { note: 'Autorizația a expirat', reason: 'documents' },
+      status: 'refused',
+      uploadedAt: UPLOADED.toISOString(),
+    });
+  });
+
+  it('shows who accepted the current document, and nothing under it once decided', async () => {
+    const { file, waiting } = await renewed();
+    await prisma.legalDocument.updateMany({
+      data: { replacedAt: DECIDED },
+      where: { kind: 'onrc_certificate', status: 'valid' },
+    });
+    await prisma.legalDocument.update({
+      data: { decidedAt: DECIDED, decidedBy: ioana, status: 'valid' },
+      where: { id: waiting.id },
+    });
+
+    const { documents } = await service().read(file.id);
+
+    expect(documents[0]).toMatchObject({
+      decidedAt: DECIDED.toISOString(),
+      decidedBy: { id: ioana, name: 'Ioana' },
+      id: waiting.id,
+      review: null,
+      stale: false,
+    });
+    expect(documents[0]?.replaced).toHaveLength(1);
+  });
+
+  it('carries the cycle', async () => {
+    const { file } = await renewed();
+
+    const read = await service().read(file.id);
+
+    expect(read.documentCycle).toMatchObject({
+      dueOn: '2026-11-01',
+      graceUntil: null,
+      inReview: true,
+      row: 'in_review',
+      state: 'due',
+    });
+  });
+
+  it('has no cycle for a garage never approved', async () => {
+    const file = await sent();
+
+    expect((await service().read(file.id)).documentCycle).toBeNull();
+  });
+
+  it("lists the yearly uploads, their decisions and the cycle's moves in the timeline, not the listing's upload", async () => {
+    const { file, listed, refused, waiting } = await renewed();
+    const log = (
+      data: Partial<Prisma.ActivityLogUncheckedCreateInput> & {
+        subjectId: string;
+        subjectType: string;
+      },
+      minute: number,
+    ) =>
+      prisma.activityLog.create({
+        data: {
+          action: 'update',
+          actorId: ioana,
+          actorName: 'Ioana',
+          actorRole: 'admin',
+          at: new Date(UPLOADED.getTime() + minute * 60_000),
+          garageId,
+          ...data,
+        },
+      });
+    await log(
+      {
+        action: 'create',
+        subjectId: listed[0]?.id ?? '',
+        subjectType: 'legal_document',
+      },
+      0,
+    );
+    await log(
+      {
+        action: 'create',
+        subjectId: waiting.id,
+        subjectType: 'legal_document',
+      },
+      1,
+    );
+    await log(
+      { field: 'status', subjectId: refused.id, subjectType: 'legal_document' },
+      2,
+    );
+    await log(
+      {
+        actorId: null,
+        actorName: 'MotorFix',
+        actorRole: 'system',
+        field: 'documents_state',
+        subjectId: garageId,
+        subjectType: 'garage',
+      },
+      3,
+    );
+    await log(
+      { field: 'documents_due_on', subjectId: garageId, subjectType: 'garage' },
+      4,
+    );
+    await log({ field: 'name', subjectId: garageId, subjectType: 'garage' }, 5);
+
+    const { timeline } = await service().read(file.id);
+
+    expect(timeline.entries.map((e) => [e.subjectId, e.field])).toEqual([
+      [garageId, 'documents_due_on'],
+      [garageId, 'documents_state'],
+      [refused.id, 'status'],
+      [waiting.id, null],
+    ]);
   });
 });

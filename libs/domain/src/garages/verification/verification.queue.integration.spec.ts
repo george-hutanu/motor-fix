@@ -444,3 +444,172 @@ describe('whether a file came back', () => {
     },
   );
 });
+
+// An approved garage whose yearly upload of `kinds` waits for an admin since
+// `uploadedAt`, beside its listing's valid documents.
+async function renewing(
+  uploadedAt: Date,
+  cycle: { state?: 'due' | 'overdue'; graceUntil?: string } = {},
+  data: Partial<Prisma.GarageUncheckedCreateInput> = {},
+) {
+  const { id: garageId } = await garage({ status: 'approved', ...data });
+  const file = await prisma.verificationFile.create({
+    data: {
+      garageId,
+      status: 'approved',
+      submittedAt: new Date('2025-11-01T09:00:00Z'),
+    },
+  });
+  for (const kind of ['onrc_certificate', 'rar_authorisation']) {
+    await prisma.legalDocument.create({
+      data: {
+        kind,
+        pages: [`legal_document/${kind}`],
+        verificationFileId: file.id,
+      },
+    });
+  }
+  const certificate = await prisma.legalDocument.create({
+    data: {
+      createdAt: uploadedAt,
+      kind: 'onrc_certificate',
+      pages: ['legal_document/new'],
+      status: 'in_review',
+      verificationFileId: file.id,
+    },
+  });
+  await prisma.legalDocument.create({
+    data: {
+      createdAt: new Date(uploadedAt.getTime() + 1000),
+      kind: 'rar_authorisation',
+      pages: ['legal_document/new-rar'],
+      status: 'in_review',
+      verificationFileId: file.id,
+    },
+  });
+  await prisma.documentCycle.create({
+    data: {
+      dueOn: new Date('2026-10-01'),
+      garageId,
+      graceUntil: cycle.graceUntil ? new Date(cycle.graceUntil) : null,
+      state: cycle.state ?? 'due',
+    },
+  });
+  return { certificate, file, garageId };
+}
+
+// @traces 068-FR-011
+// @traces 068-FR-017
+describe('a garage whose yearly documents wait for an admin', () => {
+  it('is listed as a documents row among the files, by its oldest upload', async () => {
+    const before = await waiting(new Date('2026-10-12T09:00:00+03:00'));
+    const renewal = await renewing(new Date('2026-10-13T09:00:00+03:00'));
+    const after = await waiting(new Date('2026-10-14T09:00:00+03:00'));
+
+    const queue = await service().queue(prisma, page(), NOW);
+
+    expect(queue.items.map((row) => [row.id, row.item])).toEqual([
+      [before.id, 'verification'],
+      [renewal.file.id, 'documents'],
+      [after.id, 'verification'],
+    ]);
+    expect(queue.items[1]).toMatchObject({
+      documentId: renewal.certificate.id,
+      garageId: renewal.garageId,
+      lamp: 'amber',
+      status: 'in_review',
+      submittedAt: new Date('2026-10-13T09:00:00+03:00'),
+    });
+    expect(queue.items[0]?.documentId).toBeNull();
+    expect(queue.total).toBe(3);
+  });
+
+  it('is counted with the files waiting, on the platform and in its city', async () => {
+    const cluj = { cityKey: 'cluj', cityName: 'Cluj-Napoca' };
+    await waiting(MONDAY, 'submitted', cluj);
+    await renewing(MONDAY, {}, cluj);
+    await renewing(MONDAY, {}, { cityKey: 'iasi', cityName: 'Iași' });
+    const verification = service();
+
+    expect(await verification.countWaiting(prisma)).toBe(3);
+    expect(await verification.countWaiting(prisma, 'cluj')).toBe(2);
+  });
+
+  it('pages through files and documents rows as one list', async () => {
+    const first = await waiting(new Date('2026-10-12T09:00:00+03:00'));
+    const second = await renewing(new Date('2026-10-13T09:00:00+03:00'));
+    const third = await waiting(new Date('2026-10-14T09:00:00+03:00'));
+    const verification = service();
+
+    const one = await verification.queue(prisma, page(0, 2), NOW);
+    const two = await verification.queue(prisma, page(2, 2), NOW);
+
+    expect(one.items.map((row) => row.id)).toEqual([first.id, second.file.id]);
+    expect(two.items.map((row) => row.id)).toEqual([third.id]);
+  });
+
+  it('reads no more renewals than the page reaches, still oldest upload first', async () => {
+    const first = await renewing(new Date('2026-10-12T09:00:00+03:00'));
+    const second = await renewing(new Date('2026-10-13T09:00:00+03:00'));
+    await renewing(new Date('2026-10-14T09:00:00+03:00'));
+    await renewing(new Date('2026-10-15T09:00:00+03:00'));
+    const reads: number[] = [];
+    const counted = new Proxy(prisma, {
+      get(client, model) {
+        const delegate = Reflect.get(client, model);
+        if (model !== 'verificationFile' && model !== 'legalDocument')
+          return delegate;
+        return new Proxy(delegate, {
+          get(target, method) {
+            const call = Reflect.get(target, method);
+            if (method !== 'findMany' && method !== 'groupBy') return call;
+            return async (args: unknown) => {
+              const rows = await call.call(target, args);
+              reads.push(rows.length);
+              return rows;
+            };
+          },
+        });
+      },
+    });
+
+    const one = await service().queue(counted, page(0, 1), NOW);
+    const two = await service().queue(counted, page(1, 1), NOW);
+
+    expect(one.items.map((row) => row.id)).toEqual([first.file.id]);
+    expect(two.items.map((row) => row.id)).toEqual([second.file.id]);
+    expect(Math.max(...reads)).toBeLessThanOrEqual(2);
+  });
+
+  it('turns red once the grace has ended, or while the garage is suspended', async () => {
+    const inGrace = await renewing(MONDAY, {
+      graceUntil: '2026-10-15',
+      state: 'overdue',
+    });
+    const ended = await renewing(MONDAY, {
+      graceUntil: '2026-10-14',
+      state: 'overdue',
+    });
+    const suspended = await renewing(MONDAY, {}, { status: 'suspended' });
+
+    const queue = await service().queue(prisma, page(), NOW);
+
+    const lamp = new Map(queue.items.map((row) => [row.garageId, row.lamp]));
+    expect(lamp.get(inGrace.garageId)).toBe('amber');
+    expect(lamp.get(ended.garageId)).toBe('red');
+    expect(lamp.get(suspended.garageId)).toBe('red');
+  });
+
+  it('leaves the queue once nothing of the garage is in review', async () => {
+    const renewal = await renewing(MONDAY);
+    await prisma.legalDocument.updateMany({
+      data: { status: 'refused' },
+      where: { status: 'in_review', verificationFileId: renewal.file.id },
+    });
+
+    const queue = await service().queue(prisma, page(), NOW);
+
+    expect(queue.items).toEqual([]);
+    expect(queue.total).toBe(0);
+  });
+});

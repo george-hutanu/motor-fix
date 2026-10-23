@@ -963,6 +963,16 @@ async function seed(db: Client, secret: string) {
        AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
     [[...LISTED.map(({ slug }) => slug), 'atelier-test']],
   );
+  // An approval opens the garage's yearly documents cycle, due 12 months after
+  // its Bucharest day, which the seed's SQL approval skips.
+  await db.query(
+    `INSERT INTO garage_document_cycle (garage_id, due_on)
+     SELECT id, ((approved_at AT TIME ZONE 'Europe/Bucharest')::date + INTERVAL '12 months')::date
+     FROM garage
+     WHERE slug = ANY($1) AND status = 'approved' AND approved_at IS NOT NULL
+     ON CONFLICT (garage_id) DO NOTHING`,
+    [[...LISTED.map(({ slug }) => slug), 'atelier-test']],
+  );
   // Every seeded garage has a fiscal code, as a sent listing does, with its
   // control digit right so an admin can pass its company check: seven digits
   // from the slug, weighted 7 5 3 2 1 7 5 3 2 from the left once padded to nine.

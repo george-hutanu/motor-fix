@@ -31,7 +31,7 @@ describe('certificateStale', () => {
 describe('timelineWhere', () => {
   // @traces 204-FR-001 259-FR-006
   it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes, RAR number corrections and refused approvals, its checks' records and its documents' openings", () => {
-    expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'])).toEqual({
+    expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'], [])).toEqual({
       garageId: 'g',
       OR: [
         {
@@ -50,7 +50,23 @@ describe('timelineWhere', () => {
           subjectId: { in: ['d1'] },
           subjectType: 'legal_document',
         },
+        {
+          field: { in: ['documents_state', 'documents_due_on'] },
+          subjectId: 'g',
+          subjectType: 'garage',
+        },
       ],
     });
+  });
+
+  // @traces 068-FR-013
+  it('also keeps the yearly uploads and their decisions, given them', () => {
+    expect(timelineWhere('g', 'f', [], ['d1', 'd2'], ['d2']).OR).toContainEqual(
+      {
+        action: { in: ['create', 'update'] },
+        subjectId: { in: ['d2'] },
+        subjectType: 'legal_document',
+      },
+    );
   });
 });
