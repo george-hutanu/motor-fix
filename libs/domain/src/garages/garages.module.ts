@@ -6,6 +6,7 @@ import {
   OBSERVABILITY_URL,
 } from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
+import { DocumentCycleService } from './documents/document-cycle/document-cycle.service';
 import { LegalDocumentsController } from './documents/legal-documents/legal-documents.controller';
 import { LegalDocumentsService } from './documents/legal-documents/legal-documents.service';
 import { GarageFeaturesController } from './features/features.controller';
@@ -104,6 +105,7 @@ export class GaragesModule {
         VerificationStatusController,
       ],
       exports: [
+        DocumentCycleService,
         ListingDraftsService,
         GarageDetailsService,
         GarageMechanicsService,
@@ -115,6 +117,7 @@ export class GaragesModule {
       imports: [CacheModule, notifications],
       module: GaragesModule,
       providers: [
+        DocumentCycleService,
         GarageBrandsService,
         GarageDetailsService,
         GarageMechanicsService,

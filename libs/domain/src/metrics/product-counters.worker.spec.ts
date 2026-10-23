@@ -47,9 +47,15 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    // Its own 33, one per e-mailed template, and one per support e-mail kind
+    // Its own 37, one per e-mailed template, and one per support e-mail kind
     // and outcome.
-    expect(all).toHaveLength(emails.length + 33 + SUPPORT_EMAILS.length);
+    expect(all).toHaveLength(emails.length + 37 + SUPPORT_EMAILS.length);
+    // @traces 068-FR-016
+    expect(
+      named(all, 'motorfix_document_cycle_total').map(
+        (one) => one.labels['step'],
+      ),
+    ).toEqual(['reminded_30', 'reminded_7', 'reminded_0', 'overdue']);
     // @traces 428-FR-012
     expect(
       named(all, 'motorfix_account_closed_cleanups_total').map((one) => [

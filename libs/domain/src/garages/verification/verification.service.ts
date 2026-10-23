@@ -49,6 +49,7 @@ import {
   countReopening,
   countResubmission,
 } from '../../metrics/product-counters';
+import { ensureDocumentCycle } from '../documents/document-cycle/document-cycle.service';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
@@ -561,7 +562,7 @@ export class VerificationService {
 
   // The garage's entries: the status, or approved_at when a reopened file of
   // a published garage is approved again; the Bucharest day of the check;
-  // and what the approval passed over.
+  // what the approval passed over; and its yearly document cycle.
   private async publish(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
@@ -605,6 +606,7 @@ export class VerificationService {
         verificationMissing: missing,
       },
     );
+    await ensureDocumentCycle(tx, before.garageId, decidedAt);
   }
 
   // The file's move when its reports are decided: the garage stays as it is,
