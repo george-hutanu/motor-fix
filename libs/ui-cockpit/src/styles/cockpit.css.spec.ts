@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -149,6 +150,31 @@ describe('cockpit.css tokens', () => {
     const spaces = [...dark].filter(([n]) => n.startsWith('--mf-space-'));
     expect(spaces.length).toBeGreaterThanOrEqual(6);
     for (const [, value] of spaces) expect(px(value) % 4).toBe(0);
+  });
+
+  // @traces 517-FR-005
+  it('defines the medium radius as the control radius', () => {
+    expect(dark.get('--mf-radius-md')).toBe('var(--mf-radius-control)');
+  });
+
+  // @traces 517-FR-005
+  it('is never read with a fallback radius', () => {
+    const grep = spawnSync(
+      'git',
+      [
+        'grep',
+        '-n',
+        '-F',
+        'var(--mf-radius-md,',
+        '--',
+        ':!*.md',
+        ':!*.spec.ts',
+      ],
+      { cwd: join(__dirname, '../../../..'), encoding: 'utf8' },
+    );
+
+    expect(grep.stdout).toBe('');
+    expect(grep.status).toBe(1);
   });
 
   it('keeps every text size at 12 px or more, body at 16, fields at 16', () => {

@@ -46,6 +46,7 @@
 
   --mf-radius-panel: 20px;
   --mf-radius-control: 12px;
+  --mf-radius-md: var(--mf-radius-control);
   --mf-radius-chip: 10px;
 
   --mf-focus-width: 3px;
