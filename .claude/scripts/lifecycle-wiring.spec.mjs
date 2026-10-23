@@ -32,3 +32,18 @@ describe('the skills name one lifecycle.mjs call per step', () => {
     for (const f of ['commit-protocol.md', 'tail.md']) assert.match(read(`.claude/skills/speckit-auto/${f}`), /node \.claude\/scripts\/lifecycle\.mjs check/, f);
   });
 });
+
+// @traces 1363-throughput-fixes-FR-014
+describe('the draft carries the claim label through tracker-sync pr', () => {
+  const lifecycle = read('.claude/scripts/lifecycle.mjs');
+  const sync = read('.claude/scripts/tracker-sync.mjs');
+
+  it('lifecycle.mjs open runs tracker-sync pr right after opening the draft', () => {
+    assert.match(lifecycle, /ctx\.track\(\[\["start", "--pr", String\(pr\)\], \["pr", String\(pr\)\]\], rerun\)/);
+    assert.match(lifecycle, /const labels = \["planning", typeLabel\(title\), bang && "breaking", `scope: \$\{scope\}`\]/);
+  });
+
+  it('tracker-sync pr copies the claim label onto the PR', () => {
+    assert.match(sync, /"--add-label", claim/);
+  });
+});

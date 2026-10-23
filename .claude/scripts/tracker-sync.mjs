@@ -21,6 +21,9 @@
 // The token never reaches output or the log. Every gh call carries george-hutanu's GH_TOKEN
 // (tracker/token.mjs ghEnv), never gh's active account. `--story` for a story not this feature's
 // own (a dependent being unblocked) writes only that story: no run-state prior, no PR unless `--pr`.
+// `start`, `pr`, `finish` and `file` bring the issue's native blocked-by links in step with its body's
+// `Depends on:` line (syncDependencies); `pr` copies the issue's `claim: chief-N` label to the PR, and `pr`
+// and `check` log a PR whose claim differs from its issue's.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -239,7 +242,7 @@ export async function main(argv, io = {}) {
     const login = await assertProjectScope(github);
     if (event === "check") {
       const { number } = await t.project();
-      return done({ check: "ok", login, project: number });
+      return done({ check: "ok", login, project: number, ...(await claimCheck(ctx)) });
     }
     if (event === "file") return done({ event, ...(await fileIssue(ctx)) });
     if (io.replay !== false) await replayPending(logFile, date, { ...io, gh }, stderr);
@@ -352,6 +355,7 @@ async function statusEvent(ctx) {
     if (ctx.prWrite(["pr", "comment", blockedPr, "--body", `Blocked: ${reason}`], `blocked PR #${blockedPr}`)) log("pr-comment", `PR #${blockedPr}`, `Blocked: ${reason}`);
   }
 
+  if (event === "start" || event === "finish") await syncDependencies(ctx, story);
   const epic = await epicOf(ctx);
   if (epic && (event === "start" || event === "finish")) await moveEpic(ctx, epic, event);
   if (event === "finish") await finishComment(ctx);
@@ -480,7 +484,87 @@ async function linkPr(ctx) {
     if (ctx.prWrite(["label", "create", code, "--force"], what)) ctx.prWrite(["pr", "edit", n, "--add-label", code], what);
   }
   ctx.log("pr", st, text);
+  const claim = claimOf(story.labels);
+  const prClaim = claimOf(pull.labels);
+  if (claim && !prClaim) {
+    const what = `claim label PR #${n}`;
+    if (ctx.prWrite(["label", "create", claim, "--force"], what) && ctx.prWrite(["pr", "edit", n, "--add-label", claim], what)) ctx.log("claim", `PR #${n}`, claim);
+  } else if (prClaim && prClaim !== claim) ctx.log("claim", `PR #${n}`, mismatch(claim, prClaim));
+  await syncDependencies(ctx, story);
   return { pr: url };
+}
+
+const claimOf = (labels) => (labels ?? []).map((l) => (typeof l === "string" ? l : l.name)).find((l) => /^claim: /.test(l)) ?? null;
+const mismatch = (issue, pr) => `claim mismatch: issue ${issue?.slice(7) ?? "none"}, PR ${pr?.slice(7) ?? "none"}`;
+
+/** `check`'s claim report: the feature's PR against its issue; nothing when either is missing or a read fails. */
+async function claimCheck(ctx) {
+  if (!ctx.feature) return {};
+  try {
+    const n = ctx.prNumber();
+    const story = n && (await ctx.t.find(ctx.st));
+    if (!story) return {};
+    const claim = claimOf(story.labels);
+    const prClaim = claimOf((await ctx.github.rest("GET", pullPath(n))).labels);
+    if (!prClaim || prClaim === claim) return {};
+    const line = mismatch(claim, prClaim);
+    ctx.log("claim", `PR #${n}`, line);
+    return { claim: line };
+  } catch (error) {
+    if (!(error instanceof GitHubError)) throw error;
+    return {};
+  }
+}
+
+const DEPENDS = /^[ \t>*-]*\**(?:Depends on|Blocked by)\**:\**[ \t]*(.*)$/im;
+const REF = /https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/(\d+)|\b(ST-\d+)\b|#(\d+)\b/g;
+
+/** The references a body's `Depends on:` (or `Blocked by:`) line names, in order; `none` or no line names none. */
+export function dependsOn(body) {
+  const line = String(body ?? "").match(DEPENDS)?.[1] ?? "";
+  const out = [];
+  for (const part of line.split(/[,;]/)) {
+    const refs = [...part.matchAll(REF)].map((m) => (m[2] ? { key: m[2] } : { number: Number(m[1] ?? m[3]) }));
+    if (refs.length) out.push(...refs);
+    else if (part.trim() && !/^none\.?$/i.test(part.trim())) out.push({ text: part.trim() });
+  }
+  return out;
+}
+
+/**
+ * Brings `issue`'s native blocked-by links in step with its Depends on line: a missing link to an open target is
+ * added, a link to a closed target dropped, a target that depends on the issue itself refused. One line to the
+ * log; a GitHub failure is logged and left for the next event, never stopping this one.
+ */
+async function syncDependencies(ctx, issue) {
+  const refs = dependsOn(issue.body);
+  if (!refs.length) return;
+  const item = issue.key ?? (issue.title?.match(/^((?:ST|EP)-\d+)\b/)?.[1] || `#${issue.number}`);
+  const done = [];
+  try {
+    for (const ref of refs) {
+      const target = ref.text ? null : ref.key ? await ctx.t.find(ref.key) : await ctx.t.byNumber(ref.number);
+      if (!target || target.number === issue.number) {
+        done.push(`unresolvable ${ref.text ?? ref.key ?? `#${ref.number}`}`);
+        continue;
+      }
+      const linked = issue.blockedBy.some((b) => b.number === target.number);
+      const path = `issues/${issue.number}/dependencies/blocked_by`;
+      if (!target.open) {
+        if (linked) await ctx.github.rest("DELETE", `${path}/${target.id}`);
+        done.push(linked ? `dropped #${target.number} (closed)` : `closed #${target.number}`);
+      } else if (linked) done.push(`kept #${target.number}`);
+      else if (target.blockedBy.some((b) => b.number === issue.number)) done.push(`refused #${target.number} (it depends on ${item})`);
+      else {
+        await ctx.github.rest("POST", path, { issue_id: target.id });
+        done.push(`linked #${target.number}`);
+      }
+    }
+  } catch (error) {
+    if (!(error instanceof GitHubError)) throw error;
+    done.push(`failed: ${String(error.message).split("\n")[0]}`);
+  }
+  ctx.log("deps", item, done.join("; "));
 }
 
 async function fileIssue(ctx) {
@@ -496,6 +580,7 @@ async function fileIssue(ctx) {
     fields: { Status: "To do", "Work type": kind, Priority: flags.priority ?? "Medium", ...(flags.epic ? { Epic: flags.epic } : {}) },
     parent: epic,
   });
+  await syncDependencies(ctx, { ...made, body: readFileSync(flags["body-file"], "utf8"), blockedBy: [] });
   return { issue: made.number, url: made.url };
 }
 

@@ -766,3 +766,121 @@ describe("the log's time stamp", () => {
     assert.equal(gh.itemValues(62).Status, "Implementing", r.err.join("\n"));
   });
 });
+
+// @traces 1363-throughput-fixes-FR-013
+describe("the Depends on line and the native blocked-by links stay in step", () => {
+  const withBody = (gh, number, body) => {
+    issueOf(gh, number).body = body;
+    return gh;
+  };
+  const linksOf = (gh, number) => (gh.state.blockedBy.get(number) ?? []).map((id) => id - 1000);
+  const depsLine = (r) => r.lines.find((l) => l.includes(" · deps · "));
+
+  it("start adds a missing link to an open target, keeps a present one, and reads #n, ST-n and issue URLs", async () => {
+    const gh = withBody(world({ blockedBy: { 60: [63] } }), 60, `## Why\n\nx\n\nDepends on: #63, ST-290, ${ISSUES}61\n`);
+    const r = await run(["start", "--pr", "335"], { gh });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.deepEqual(linksOf(gh, 60), [63, 62, 61]);
+    assert.ok(depsLine(r)?.endsWith("· deps · ST-1036 · kept #63; linked #62; linked #61"), r.log);
+  });
+
+  it("finish drops a link to a closed target", async () => {
+    const gh = withBody(world({ story: "QA", blockedBy: { 60: [64] } }), 60, "Depends on: ST-12\n");
+    const r = await run(["finish", "--pr", "335", "--no-comment"], { gh });
+    assert.deepEqual(linksOf(gh, 60), []);
+    assert.ok(depsLine(r)?.endsWith("· deps · ST-1036 · dropped #64 (closed)"), r.log);
+  });
+
+  it("pr refuses a link whose target depends on the issue itself, with a line, and goes on", async () => {
+    const gh = withBody(world({ blockedBy: { 61: [62, 60] } }), 60, "**Depends on:** #61\n");
+    const r = await run(["pr", "335"], { gh });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.deepEqual(linksOf(gh, 60), []);
+    assert.ok(depsLine(r)?.endsWith("· deps · ST-1036 · refused #61 (it depends on ST-1036)"), r.log);
+    assert.equal(gh.itemValues(60).PR, PR_URL, "the PR is still linked");
+  });
+
+  it("logs a reference it cannot resolve, and still links the rest", async () => {
+    const gh = withBody(world(), 60, "Blocked by: ST-9999, the login work; #63\n");
+    const r = await run(["start", "--pr", "335"], { gh });
+    assert.deepEqual(linksOf(gh, 60), [63]);
+    assert.ok(depsLine(r)?.endsWith("· deps · ST-1036 · unresolvable ST-9999; unresolvable the login work; linked #63"), r.log);
+  });
+
+  it("Depends on: none, or no line, adds nothing and logs nothing", async () => {
+    for (const body of ["Depends on: none\n", "## Why\n\nx\n"]) {
+      const gh = withBody(world(), 60, body);
+      const r = await run(["start", "--pr", "335"], { gh });
+      assert.deepEqual(linksOf(gh, 60), []);
+      assert.equal(depsLine(r), undefined, r.log);
+    }
+  });
+
+  it("file links the new issue to the issues its Depends on line names", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, "body.md"), "## Goal\n\nThe second half.\n\nDepends on: ST-290\n");
+    const r = await run(["file", "--type", "story", "--title", "Second half", "--body-file", join(repo, "body.md")], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.deepEqual(linksOf(gh, r.json.issue), [62]);
+    assert.ok(depsLine(r)?.endsWith(`· deps · ST-${r.json.issue} · linked #62`), r.log);
+  });
+
+  it("a failed link write is logged and the event goes on; the next event retries it", async () => {
+    const gh = withBody(world(), 60, "Depends on: #63\n");
+    const fetchImpl = async (url, init) =>
+      String(url).includes("/dependencies/blocked_by") && init?.method === "POST" ? new Response(JSON.stringify({ message: "Validation Failed" }), { status: 422 }) : gh.fetchImpl(url, init);
+    const repo = repoWith();
+    const r = await run(["start", "--pr", "335"], { gh, repo, fetchImpl });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(gh.itemValues(60).Status, "Planning");
+    assert.match(depsLine(r) ?? "", /· deps · ST-1036 · failed: /, r.log);
+    await run(["implement", "--pr", "335"], { gh, repo });
+    assert.deepEqual(linksOf(gh, 60), []);
+    await run(["finish", "--pr", "335", "--no-comment"], { gh, repo });
+    assert.deepEqual(linksOf(gh, 60), [63], "finish syncs again");
+  });
+});
+
+// @traces 1363-throughput-fixes-FR-014
+describe("the claim label rides from the issue to its PR", () => {
+  const claimed = (gh, label) => {
+    issueOf(gh, 60).labels.push({ name: label });
+    return gh;
+  };
+  const claimAdds = (r) => prEdits(r).filter((a) => a.includes("--add-label") && a.some((x) => String(x).startsWith("claim: ")));
+
+  it("pr copies the issue's claim label to the PR", async () => {
+    const r = await run(["pr", "335"], { gh: claimed(world(), "claim: chief-1") });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.deepEqual(claimAdds(r), [["pr", "edit", "335", "--add-label", "claim: chief-1"]]);
+  });
+
+  it("an unclaimed issue adds no claim label", async () => {
+    const r = await run(["pr", "335"], { gh: world() });
+    assert.deepEqual(claimAdds(r), []);
+  });
+
+  it("a PR already carrying the same claim is left alone", async () => {
+    const r = await run(["pr", "335"], { gh: claimed(world({ pr: { labels: ["claim: chief-1"] } }), "claim: chief-1") });
+    assert.deepEqual(claimAdds(r), []);
+    assert.ok(!r.log.includes("claim mismatch"), r.log);
+  });
+
+  it("pr reports a PR whose claim differs from its issue's, and goes on", async () => {
+    const gh = claimed(world({ pr: { labels: ["claim: chief-2"] } }), "claim: chief-1");
+    const r = await run(["pr", "335"], { gh });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.deepEqual(claimAdds(r), []);
+    assert.ok(r.lines.some((l) => l.endsWith("· claim · PR #335 · claim mismatch: issue chief-1, PR chief-2")), r.log);
+    assert.equal(gh.itemValues(60).PR, PR_URL);
+  });
+
+  it("check reports the mismatch too, and still passes", async () => {
+    const r = await run(["check"], { gh: claimed(world({ pr: { labels: ["claim: chief-2"] } }), "claim: chief-1") });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(r.json.check, "ok");
+    assert.equal(r.json.claim, "claim mismatch: issue chief-1, PR chief-2");
+    assert.ok(r.lines.some((l) => l.endsWith("· claim · PR #335 · claim mismatch: issue chief-1, PR chief-2")), r.log);
+  });
+});

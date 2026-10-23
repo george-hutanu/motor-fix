@@ -26,7 +26,8 @@ const fieldName = "field { ... on ProjectV2FieldCommon { name } }";
 const values = (n) =>
   `fieldValues(first: ${n}) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name ${fieldName} } ... on ProjectV2ItemFieldDateValue { date ${fieldName} } ... on ProjectV2ItemFieldTextValue { text ${fieldName} } ... on ProjectV2ItemFieldNumberValue { number ${fieldName} } } }`;
 const DETAIL = `id databaseId number title url state labels(first: 50) { nodes { name } } projectItems(first: 5) { nodes { id project { id } ${values(30)} } }`;
-const ISSUE_DETAIL = `query IssueDetail($id: ID!) { node(id: $id) { ... on Issue { ${DETAIL} } } }`;
+/** One issue read alone also carries its body and blocked-by links (tracker-sync.mjs syncDependencies); a label scan does not. */
+const ISSUE_DETAIL = `query IssueDetail($id: ID!) { node(id: $id) { ... on Issue { ${DETAIL} body blockedBy(first: 50) { nodes { databaseId number state } } } } }`;
 const LABEL_ISSUES = `query LabelIssues($owner: String!, $repo: String!, $label: String!, $after: String) { repository(owner: $owner, name: $repo) { issues(first: 50, after: $after, states: OPEN, labels: [$label]) { pageInfo { hasNextPage endCursor } nodes { ${DETAIL} } } } }`;
 const MAX_LABEL_PAGES = 20;
 
@@ -58,6 +59,8 @@ function shape(node, projectId) {
     labels: labelNames(node),
     itemId: item?.id ?? null,
     values: item?.values ?? {},
+    body: node.body ?? "",
+    blockedBy: (node.blockedBy?.nodes ?? []).map((b) => ({ id: b.databaseId, number: b.number, open: b.state === "OPEN" })),
   };
   out.key = idOf(out);
   return out;
@@ -99,6 +102,12 @@ export function tracker(github) {
         `${key}: issues ${hits.map((i) => `#${i.number}`).join(", ")} all start with it; retitle the ones that are not the story`,
       );
     return hits.length ? detail(hits[0].node_id) : null;
+  }
+
+  /** The issue numbered `number`, read as find reads one; null when the repository has none. */
+  async function byNumber(number) {
+    const hit = (await allIssues()).find((i) => i.number === Number(number));
+    return hit ? detail(hit.node_id) : null;
   }
 
   async function detail(nodeId) {
@@ -180,5 +189,5 @@ export function tracker(github) {
     return { ...issue, placed };
   }
 
-  return { project: theProject, find, labelled, setFields, comment, close, create };
+  return { project: theProject, find, byNumber, labelled, setFields, comment, close, create };
 }
