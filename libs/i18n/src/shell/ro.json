@@ -186,6 +186,7 @@
         "catalogue": "Mărci și lucrări",
         "garages": "Service‑uri",
         "log": "Jurnal de sistem",
+        "proposedJobs": "Lucrări propuse",
         "reviews": "Recenzii raportate",
         "settings": "Setări",
         "users": "Utilizatori"
@@ -254,6 +255,7 @@
       "overview": "Panou",
       "prices": "Prețuri",
       "profile": "Profil",
+      "proposed": "Propuse",
       "reported": "Raportate",
       "requests": "Cereri",
       "reviews": "Recenzii",

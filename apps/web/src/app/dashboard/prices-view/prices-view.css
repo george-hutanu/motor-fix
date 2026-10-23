@@ -118,6 +118,13 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: var(--mf-space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+/* An admin's rejection reason can be long: it wraps, never widens the row. */
+.said {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .lamp {
   flex: none;

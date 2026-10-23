@@ -1,0 +1,55 @@
+<p class="line">{{ 'admin.proposedJobs.line' | t }}</p>
+<mf-panel>
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="skeletons" aria-busy="true" [attr.aria-label]="'admin.proposedJobs.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'shell.form.problem.error' | t }}</p>
+        <button type="button" hlmBtn variant="secondary" (click)="retry()">{{ 'admin.proposedJobs.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty">{{ 'admin.proposedJobs.empty' | t }}</p>
+      } @else {
+        <table class="jobs" [attr.aria-label]="'admin.proposedJobs.table' | t">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'admin.proposedJobs.column.job' | t }}</th>
+              <th scope="col">{{ 'admin.proposedJobs.column.garage' | t }}</th>
+              <th scope="col">{{ 'admin.proposedJobs.column.range' | t }}</th>
+              <th scope="col">{{ 'admin.proposedJobs.column.proposed' | t }}</th>
+              <th scope="col">{{ 'admin.proposedJobs.column.decision' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr data-row>
+                <td class="job" data-job>{{ row.job.name }}</td>
+                <td class="meta" data-garage>{{ row.garage }}</td>
+                <td class="meta" data-interval>{{ row.interval }}</td>
+                <td class="meta" data-day>{{ row.day }}</td>
+                <td class="decide">
+                  <button type="button" hlmBtn (click)="approve(row.job)" [attr.aria-label]="'admin.proposedJobs.approveNamed' | t: { name: row.job.name }">{{ 'admin.proposedJobs.approve.submit' | t }}</button>
+                  <button type="button" hlmBtn variant="secondary" (click)="reject(row.job)" [attr.aria-label]="'admin.proposedJobs.rejectNamed' | t: { name: row.job.name }">{{ 'admin.proposedJobs.reject.submit' | t }}</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+      @if (queue.failed()) {
+        <div class="failed" role="alert">
+          <p>{{ 'shell.form.problem.error' | t }}</p>
+          <button type="button" hlmBtn variant="secondary" (click)="retry()">{{ 'admin.proposedJobs.retry' | t }}</button>
+        </div>
+      }
+    }
+  }
+</mf-panel>

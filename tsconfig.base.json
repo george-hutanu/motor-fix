@@ -16,6 +16,9 @@
       "@motor-fix/contracts/account-search": [
         "./libs/contracts/src/account-search.ts"
       ],
+      "@motor-fix/contracts/car-systems": [
+        "./libs/contracts/src/car-systems.ts"
+      ],
       "@motor-fix/contracts/consent": ["./libs/contracts/src/consent.ts"],
       "@motor-fix/contracts/demand-order": [
         "./libs/contracts/src/demand-order.ts"

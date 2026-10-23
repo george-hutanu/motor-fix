@@ -625,6 +625,57 @@
     "waiting": "Waiting for another admin's approval",
     "withdraw": "Withdraw the request"
   },
+  "proposedJobs": {
+    "approve": {
+      "cancel": "Cancel",
+      "exists": "Already in the catalogue: {name}",
+      "field": {
+        "unknown": "Choose an activity from the list."
+      },
+      "nameEn": "English name",
+      "nameRo": "Romanian name",
+      "problem": {
+        "exists": "Choose another name.",
+        "unknown_activity": "That RAR activity no longer exists. Choose another."
+      },
+      "rar": "RAR activity",
+      "rarNone": "No specific activity",
+      "submit": "Approve",
+      "system": "System",
+      "systemPick": "Choose the system",
+      "title": "Approve the job \"{name}\"?"
+    },
+    "approveNamed": "Approve \"{name}\"",
+    "column": {
+      "decision": "Decision",
+      "garage": "Garage",
+      "job": "Job",
+      "proposed": "Proposed",
+      "range": "Range"
+    },
+    "decided": {
+      "close": "Close",
+      "named": "Already decided by {name}.",
+      "unnamed": "Already decided."
+    },
+    "empty": "No jobs waiting.",
+    "line": "Jobs garages added that wait for approval",
+    "loading": "Loading the proposed jobs",
+    "minutes": "{n} min",
+    "range": "{from} – {to} lei",
+    "rangeFrom": "{from} lei",
+    "reject": {
+      "cancel": "Cancel",
+      "count": "{n}/500",
+      "note": "The garage gets the reason.",
+      "reason": "Reason",
+      "submit": "Reject",
+      "title": "Reject the job \"{name}\"?"
+    },
+    "rejectNamed": "Reject \"{name}\"",
+    "retry": "Try again",
+    "table": "Proposed jobs"
+  },
   "queue": {
     "all": "See all",
     "approved": "Approved, on the map",

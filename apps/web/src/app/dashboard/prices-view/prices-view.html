@@ -28,7 +28,7 @@
             <span class="line meta">
               <span class="state" data-state>
                 <span class="lamp" data-lamp aria-hidden="true"></span>
-                {{ state(row) | t }}
+                <span class="said">{{ state(row) | t: { reason: row.rejectionReason ?? '' } }}</span>
               </span>
               <span class="price" data-price>{{ price(row) }}</span>
             </span>

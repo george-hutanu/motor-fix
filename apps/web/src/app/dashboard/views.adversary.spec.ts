@@ -87,19 +87,29 @@ const ALL = AREAS.flatMap((a) =>
 );
 
 describe('dashboard view lists under hostile input', () => {
-  // A dashboard's settings capability is the one shared gate: it also opens
-  // the screens whose endpoints require it (the admin's system log). Every
-  // other capability gates one released view.
-  it('has unique paths, and unique capabilities apart from its settings one among the released views, in every dashboard', () => {
+  // A dashboard's settings capability is a shared gate: it also opens the
+  // screens whose endpoints require it (the admin's system log). So is the
+  // admin's catalogue one, which opens the catalogue and the jobs proposed
+  // to it. Every other capability gates one released view.
+  const SHARED = new Set(['admin.catalogue']);
+  it('has unique paths, and unique capabilities apart from its shared ones among the released views, in every dashboard', () => {
     for (const area of AREAS) {
       const paths = DASHBOARDS[area].views.map((v) => v.path);
       const caps = DASHBOARDS[area].views
         .filter((v) => !v.unreleased)
         .map((v) => v.capability)
-        .filter((cap) => cap && cap !== `${area}.settings`);
+        .filter((cap) => cap && cap !== `${area}.settings` && !SHARED.has(cap));
       expect(new Set(paths).size).toBe(paths.length);
       expect(new Set(caps).size).toBe(caps.length);
     }
+  });
+
+  it('opens exactly the catalogue and the proposed jobs with the admin catalogue capability', () => {
+    expect(
+      DASHBOARDS.admin.views
+        .filter((v) => !v.unreleased && v.capability === 'admin.catalogue')
+        .map((v) => v.path),
+    ).toEqual(['catalogue', 'proposed-jobs']);
   });
 
   it('starts every dashboard with the capability-free dashboard view at the empty path', () => {

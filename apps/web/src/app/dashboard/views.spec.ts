@@ -19,6 +19,7 @@ import { AdminDemand } from './admin-demand/admin-demand';
 import { AdminLogView } from './admin-log-view/admin-log-view';
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
+import { AdminProposedJobs } from './admin-proposed-jobs/admin-proposed-jobs';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverHome } from './driver-home/driver-home';
@@ -212,6 +213,7 @@ describe('the dashboard view lists', () => {
       'users',
       'reviews',
       'catalogue',
+      'proposed-jobs',
       'assistant',
       'log',
       'settings',
@@ -256,6 +258,13 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.brands',
       },
       {
+        capability: 'admin.catalogue',
+        label: 'shell.frame.nav.admin.proposedJobs',
+        load: expect.any(Function),
+        path: 'proposed-jobs',
+        tab: 'shell.frame.tab.proposed',
+      },
+      {
         capability: 'admin.settings',
         label: 'shell.frame.nav.admin.assistant',
         path: 'assistant',
@@ -291,6 +300,15 @@ describe('the dashboard view lists', () => {
     const users = DASHBOARDS.admin.views.find((view) => view.path === 'users');
 
     await expect(users?.load?.()).resolves.toBe(AdminUsers);
+  });
+
+  // @traces 414-FR-011
+  it('downloads the proposed jobs view when it is opened, not with the first page', async () => {
+    const proposed = DASHBOARDS.admin.views.find(
+      (view) => view.path === 'proposed-jobs',
+    );
+
+    await expect(proposed?.load?.()).resolves.toBe(AdminProposedJobs);
   });
 
   // @traces 103-FR-006
@@ -428,7 +446,15 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'users', 'catalogue', 'log', 'settings']);
+    ).toEqual([
+      '',
+      'garages',
+      'users',
+      'catalogue',
+      'proposed-jobs',
+      'log',
+      'settings',
+    ]);
   });
 
   it('hides an unreleased view even from a role that may open it', () => {

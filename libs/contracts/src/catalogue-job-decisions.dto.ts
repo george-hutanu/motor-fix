@@ -11,10 +11,13 @@ import {
 
 import { CAR_SYSTEMS, type CarSystem } from './car-systems';
 import { RarActivityNameDto } from './legal-check.dto';
-import { JOB_NAME_MAX, PROPOSED_JOB_NAME_MIN } from './price-range';
+import {
+  JOB_NAME_MAX,
+  PROPOSED_JOB_NAME_MIN,
+  REJECTION_REASON_MAX,
+  REJECTION_REASON_MIN,
+} from './price-range';
 
-export const REJECTION_REASON_MIN = 10;
-export const REJECTION_REASON_MAX = 500;
 const RAR_ACTIVITY_MAX = 120;
 
 const trimmed = ({ value }: { value: unknown }) =>

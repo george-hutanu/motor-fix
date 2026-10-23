@@ -1,0 +1,60 @@
+@if (decided(); as decided) {
+  <div class="decided">
+    <p role="alert">
+      @if (decided.by) {
+        {{ 'admin.proposedJobs.decided.named' | t: { name: decided.by } }}
+      } @else {
+        {{ 'admin.proposedJobs.decided.unnamed' | t }}
+      }
+    </p>
+    <div class="actions">
+      <button hlmBtn type="button" (click)="task.close('decided')">{{ 'admin.proposedJobs.decided.close' | t }}</button>
+    </div>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+    <div class="field">
+      <label for="mf-approve-ro">{{ 'admin.proposedJobs.approve.nameRo' | t }}</label>
+      <input hlmInput id="mf-approve-ro" formControlName="nameRo" autocomplete="off" aria-describedby="mf-approve-ro-error" />
+      @if (collided('nameRo'); as name) {
+        <p class="error" id="mf-approve-ro-error">{{ 'admin.proposedJobs.approve.exists' | t: { name } }}</p>
+      } @else {
+        <mf-field-error id="mf-approve-ro-error" [save]="save" [control]="form.controls.nameRo" />
+      }
+    </div>
+    <div class="field">
+      <label for="mf-approve-en">{{ 'admin.proposedJobs.approve.nameEn' | t }}</label>
+      <input hlmInput id="mf-approve-en" formControlName="nameEn" autocomplete="off" lang="en" aria-describedby="mf-approve-en-error" />
+      @if (collided('nameEn'); as name) {
+        <p class="error" id="mf-approve-en-error">{{ 'admin.proposedJobs.approve.exists' | t: { name } }}</p>
+      } @else {
+        <mf-field-error id="mf-approve-en-error" [save]="save" [control]="form.controls.nameEn" />
+      }
+    </div>
+    <div class="field">
+      <label for="mf-approve-system">{{ 'admin.proposedJobs.approve.system' | t }}</label>
+      <select hlmInput id="mf-approve-system" formControlName="carSystem" aria-describedby="mf-approve-system-error">
+        <option value="" disabled>{{ 'admin.proposedJobs.approve.systemPick' | t }}</option>
+        @for (system of systems(); track system.value) {
+          <option [value]="system.value">{{ system.label }}</option>
+        }
+      </select>
+      <mf-field-error id="mf-approve-system-error" [save]="save" [control]="form.controls.carSystem" />
+    </div>
+    <div class="field">
+      <label for="mf-approve-rar">{{ 'admin.proposedJobs.approve.rar' | t }}</label>
+      <select hlmInput id="mf-approve-rar" formControlName="rarActivity" aria-describedby="mf-approve-rar-error">
+        <option value="">{{ 'admin.proposedJobs.approve.rarNone' | t }}</option>
+        @for (activity of activities(); track activity.value) {
+          <option [value]="activity.value">{{ activity.label }}</option>
+        }
+      </select>
+      <mf-field-error id="mf-approve-rar-error" [save]="save" [control]="form.controls.rarActivity" />
+    </div>
+    <mf-task-error [save]="save" />
+    <div class="actions">
+      <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!valid()">{{ 'admin.proposedJobs.approve.submit' | t }}</button>
+      <button hlmBtn variant="ghost" type="button" [disabled]="save.state() === 'sending'" (click)="task.close('cancelled')">{{ 'admin.proposedJobs.approve.cancel' | t }}</button>
+    </div>
+  </form>
+}
