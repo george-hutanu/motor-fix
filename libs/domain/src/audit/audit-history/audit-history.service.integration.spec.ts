@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 import { AuditHistoryService } from './audit-history.service';
 import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
-import type { Prisma } from '../../generated/prisma/client';
+import { type Prisma, PrismaClient } from '../../generated/prisma/client';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -646,6 +647,7 @@ describe('paging', () => {
     expect(new Set(seen).size).toBe(22);
   });
 
+  // @traces 469-FR-004
   it('refuses a cursor outside the caller’s scope', async () => {
     const g = await twoGarages();
 
@@ -661,6 +663,15 @@ describe('paging', () => {
       history.list(actor('garage', g.nord), {
         area: 'quotes',
         cursor: g.platform.id,
+        garageId: g.nord,
+      }),
+      'invalid_cursor',
+    );
+    // The Sud entry is a quote inside the window: only the garage excludes it.
+    await rejects400(
+      history.list(actor('garage', g.nord), {
+        area: 'quotes',
+        cursor: g.inSud.id,
         garageId: g.nord,
       }),
       'invalid_cursor',
@@ -730,4 +741,78 @@ describe('reading', () => {
 
     expect(await prisma.activityLog.count()).toBe(before);
   });
+});
+
+// @traces 469-FR-001 469-FR-002
+describe('the index the unfiltered admin read uses', () => {
+  // The admin's client, logging each statement it sends with its values.
+  const logged = new PrismaClient({
+    adapter: new PrismaPg({
+      connectionString: databaseUrl,
+      options: '-c TimeZone=UTC',
+    }),
+    log: [{ emit: 'event', level: 'query' }],
+  });
+  const sent: { query: string; params: unknown[] }[] = [];
+  logged.$on('query', (event) =>
+    sent.push({ params: JSON.parse(event.params), query: event.query }),
+  );
+  afterAll(() => logged.$disconnect());
+
+  class RolledBack extends Error {}
+
+  // The page and the count the read sends, planned over a year of entries
+  // that are rolled back, since the history refuses DELETE and TRUNCATE.
+  const plans = async () => {
+    sent.length = 0;
+    await new AuditHistoryService(logged).list(actor('admin', null), {});
+    const statements = sent.filter((s) => /activity_log/.test(s.query));
+    let planned: string[] = [];
+    await prisma
+      .$transaction(
+        async (tx) => {
+          await tx.$executeRaw`
+            INSERT INTO activity_log
+              (id, action, subject_type, subject_id, actor_role, actor_name, at, garage_id)
+            SELECT gen_random_uuid(), 'update', 'quote', gen_random_uuid(), 'owner', 'Ion',
+              now() - n * interval '5 minutes', gen_random_uuid()
+            FROM generate_series(1, 100000) AS n`;
+          await tx.$executeRaw`ANALYZE activity_log`;
+          planned = [];
+          for (const { query, params } of statements) {
+            const rows = await tx.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(
+              `EXPLAIN ${query}`,
+              ...params,
+            );
+            planned.push(rows.map((row) => row['QUERY PLAN']).join('\n'));
+          }
+          throw new RolledBack();
+        },
+        { timeout: 60_000 },
+      )
+      .catch((e: unknown) => {
+        if (!(e instanceof RolledBack)) throw e;
+      });
+    return planned;
+  };
+
+  it('indexes the history by time alone', async () => {
+    const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
+      SELECT indexdef FROM pg_indexes
+      WHERE schemaname = current_schema() AND indexname = 'activity_log_at_idx'`;
+
+    expect(indexes.map((i) => i.indexdef)).toEqual([
+      expect.stringMatching(/ON \S*activity_log USING btree \(at\)$/),
+    ]);
+  });
+
+  it('reads the page and its count through it, not the whole table', async () => {
+    const planned = await plans();
+
+    expect(planned).toHaveLength(2);
+    for (const plan of planned) {
+      expect(plan).toMatch(/activity_log_at_idx/);
+      expect(plan).not.toMatch(/Seq Scan on activity_log/);
+    }
+  }, 120_000);
 });
