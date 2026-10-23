@@ -1000,7 +1000,7 @@ describe('the QA cap with live claims and live runs, with real worktrees', () =>
     assert.equal(report.qaRuns.length, QA_CAP);
     assert.equal(report.plan.filter((p) => p.fix === 'rerun-qa').length, 0);
     assert.deepEqual(report.plan.map((p) => p.path), [r3, r2]);
-  });
+  }, 60_000);
 
   it('plans no more than 2 other agents when 2 claims are live, and plans QA regardless', () => {
     const f = fixture();
