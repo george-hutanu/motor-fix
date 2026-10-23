@@ -34,9 +34,9 @@ _From 022-review-drawer._
 
 _From 022-review-drawer._
 
-### 182-FR-001 — The review drawer's form MUST show, under the "Comentariul tău" field and above the privacy line, the summary "Fără insulte, date personale sau reclame. Scrie doar despre această reparație." followed by the link "Regulile recenziilor" (English: "No insults, personal data or ads. Write only about this repair." and "Review rules"), on every path that shows the form: today the write path; the profile path (dropped from release 1 by OD-32) and edit mode (ST-408) inherit it when they ship, since the summary is part of the form. It is one paragraph placed after the comment field's block (after its count and error) and before the privacy line, with the link inline. A state that replaces the form shows no summary.
+### 022-FR-006 — Comentariul tău MUST be optional, up to 2,000 characters, with a hint that suggests: was the price the quoted one, was it ready on time, would you go back. Over 2,000 characters the publish button MUST be disabled and the count shown.
 
-_From 182-review-rules._
+_From 022-review-drawer._
 
 ### 022-FR-007 — The drawer MUST show the privacy line: only the driver's first name and surname initial (e.g. "Andrei M."), the car and the job are shown; never the plate or the phone.
 
@@ -222,6 +222,10 @@ _From 025-review-mechanic._
 
 _From 025-review-mechanic._
 
+### 182-FR-001 — The review drawer's form MUST show, under the "Comentariul tău" field and above the privacy line, the summary "Fără insulte, date personale sau reclame. Scrie doar despre această reparație." followed by the link "Regulile recenziilor" (English: "No insults, personal data or ads. Write only about this repair." and "Review rules"), on every path that shows the form: today the write path; the profile path (dropped from release 1 by OD-32) and edit mode (ST-408) inherit it when they ship, since the summary is part of the form. It is one paragraph placed after the comment field's block (after its count and error) and before the privacy line, with the link inline. A state that replaces the form shows no summary.
+
+_From 182-review-rules._
+
 ### 182-FR-002 — The link MUST open the rules page of the driver's current language in a new tab, and the drawer in the opening tab MUST keep its state: open, with the rating, the amount and the comment as typed, and no API request sent from the drawer's tab (the new tab's own page load is not counted). The link carries a visually hidden "(opens in a new tab)" / "(se deschide într-o filă nouă)" text.
 
 _From 182-review-rules._
@@ -267,4 +271,3 @@ _From 182-review-rules._
 - `022-FR-022` — superseded by `023-FR-009` (2026-10-21)
 - `022-FR-026` — superseded by `023-FR-002` (2026-10-21)
 - `022-FR-016` — superseded by `025-FR-001` (2026-10-23)
-- `022-FR-006` — superseded by `182-FR-001` (2026-10-23)
