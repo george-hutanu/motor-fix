@@ -44,7 +44,11 @@ const headline = (page: Page) => visible(page, 'mf-home .hero h2');
 
 // A phone-sized visit of its own, in the voice under test from the first
 // load, near Bucharest so Results has garages to list. The voice is set once:
-// a later load keeps whatever the app itself stored.
+// a later load keeps whatever the app itself stored. Home takes the next
+// voice of the round unless the visit's was taken under 2.5 s before
+// (index.html), and a walk that measures Home and loads it again for Results
+// passes that on a loaded runner: every load stamps the voice as just taken,
+// so the visit keeps it.
 async function visiting(
   browser: Browser,
   voice: Voice,
@@ -57,15 +61,17 @@ async function visiting(
   });
   await context.addInitScript((voice) => {
     try {
-      if (localStorage.getItem('mf-copy') !== null) return;
-      localStorage.setItem('mf-copy', voice);
+      if (localStorage.getItem('mf-copy') === null)
+        localStorage.setItem('mf-copy', voice);
       localStorage.setItem('mf-copy-at', String(Date.now()));
     } catch {}
   }, voice);
   try {
     await body(await context.newPage());
   } finally {
-    await context.close();
+    // At a timeout Playwright has closed the context already: a failing close
+    // must not stand in for the step that was still waiting.
+    await context.close().catch(() => undefined);
   }
 }
 
