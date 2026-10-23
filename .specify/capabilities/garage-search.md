@@ -23,6 +23,7 @@ features:
   - 328-sort-results
   - 330-listed-facilities
   - 1351-results-phone-layout
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Garage search
@@ -261,9 +262,9 @@ _From 269-map-price-pins._
 ### 290-FR-010 — Each result card on the results page, list and map (267-FR-014), MUST show the same control as an icon-only bookmark button (accessible name "Salvează" / "Salvat", outline or filled), for a signed-in driver or a visitor, absent in the other roles; tapping it MUST not open the card's profile link.
 
 _From 290-save-garage._
-### 049-FR-006 — Every public read MUST keep going through the one public scope (`status = approved`), so a suspended garage is in neither group and neither count of the brand search (043-FR-002), absent from the brand pages' counts and dials, answers 410 `gone` on its profile (307-FR-001) and is never a recipient of request routing (221-FR-007). This story adds no new read and MUST prove the rule with tests on a garage suspended through the use case.
+### 067-FR-006 — The restore MUST make the garage public again through the one public scope and nothing else (049-FR-006): after the commit the garage is in its brand's search results and counts, its profile answers 200 with its reviews and rating and the badge's date is the new date of last check (1353-FR-001), and it is a recipient of request routing again; the relay MUST drop the garage's cached public answers on `garage.restored` as it does on `garage.suspended` (049-FR-007). This story adds no new public read and MUST prove the rule with tests on a garage restored through the use case.
 
-_From 049-garage-suspension._
+_From 067-restore-suspended-garage._
 
 ### 270-FR-001 — Results MUST hold, in the page only (no address bar entry, no storage, no request), one **selected** garage id or none and one **pointed** garage id or none; the lit pin (or circle) is the pointed garage's while there is one, else the selected garage's; the card in the amber state is the selected garage's; never two cards or two pins at once.
 
@@ -655,3 +656,4 @@ _From 1351-results-phone-layout._
 - `269-FR-015` — superseded by `1351-FR-001` (2026-10-23)
 - `1358-FR-004` — superseded by `1351-FR-002` (2026-10-23)
 - `1358-FR-005` — superseded by `1351-FR-003` (2026-10-23)
+- `049-FR-006` — superseded by `067-FR-006` (2026-10-23)

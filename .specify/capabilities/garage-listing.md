@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -36,6 +36,7 @@ features:
   - 330-listed-facilities
   - 009-copy-voice-analytics
   - 1192-photo-variants
+  - 067-restore-suspended-garage
 ---
 
 # Capability: Garage listing
@@ -906,9 +907,9 @@ _From 1204-hours-row-live-regions._
 
 _From 1204-hours-row-live-regions._
 
-### 049-FR-012 — The garage dashboard MUST show every staff member (owner, receptionist, mechanic), when the signed-in garage's status is `suspended`, a red banner above the overview reading "Profil suspendat · {reason}. Profilul nu apare pe hartă până se rezolvă." / "Profile suspended · {reason}. The profile is off the map until this is fixed." followed by the next step for the cause (FR-011's three), as a `role="alert"` region, in the signed-in language, with no horizontal scroll at 320 px; the garage's session data MUST carry the open suspension's cause and reason for it. No banner for an `approved` or `draft` garage. On `garage.suspended` arriving on the staff stream, the dashboard MUST re-read the session's garage and show the banner without a reload.
+### 067-FR-007 — The `garage.restored` event MUST reach, through the existing audience resolver (049-FR-007's audience for the pair): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, `public:search` and `admin`. On it: an open results page re-reads its counts and map pins without a reload, as it does today for any garage it has not loaded (`results.ts` `heard`: a card is added only by a new search, never pushed into the shown list), so the restored garage's card shows on the next search; the Service-uri counts line, the suspended panel and the re-check list re-read (066-FR-008, 1351-FR-010, existing) and an open file drawer re-reads the file; the garage dashboard MUST re-read the session's garage and drop the red suspension banner without a reload (049-FR-012 names `garage.suspended` only; `garage.restored` joins its list) and the legal panel re-reads its date.
 
-_From 049-garage-suspension._
+_From 067-restore-suspended-garage._
 
 ### 049-FR-013 — A suspended garage's owner, receptionists and mechanics MUST still sign in and reach the dashboard's views: the cars in the workshop, the documents, the history, the requests list (where the closed-for-suspension reason already shows). The suspension MUST delete or detach nothing: the account, the members, the reviews, the rating and the history stay, so #106 can show them again.
 
@@ -1245,3 +1246,4 @@ _From 1192-photo-variants._
 - `885-FR-001` — superseded by `1359-FR-008` (2026-10-20)
 - `885-FR-004` — superseded by `1359-FR-008` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
+- `049-FR-012` — superseded by `067-FR-007` (2026-10-23)
