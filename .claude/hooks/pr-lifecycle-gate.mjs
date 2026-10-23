@@ -45,10 +45,10 @@
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
-import { branchFeatureDir, locateFeature } from "../scripts/lib/feature.mjs";
+import { branchFeatureDir, isDir, locateFeature } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
 import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { cloneAt } from "../scripts/specs-repo.mjs";
@@ -235,14 +235,6 @@ function runBlocked(cwd) {
   }
 }
 
-function isFolder(path) {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 /**
  * The branch's feature folder, relative to cwd: the `.specify/feature.json`
  * pointer when it names a folder (a file, or nothing, falls back), else the folder the branch names
@@ -255,9 +247,9 @@ export function featureDir(cwd, branch) {
   try {
     const pointer = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory;
     if (typeof pointer === "string" && pointer) {
-      if (isFolder(join(cwd, pointer))) return pointer;
+      if (isDir(join(cwd, pointer))) return pointer;
       const found = locateFeature(cwd, pointer);
-      if (isFolder(found)) return relative(cwd, found);
+      if (isDir(found)) return relative(cwd, found);
     }
   } catch {
     // no pointer: the branch names the feature

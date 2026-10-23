@@ -106,19 +106,6 @@ function buildFixture(repo, testCase, scratch) {
   return dir;
 }
 
-/**
- * A symlink to `root` in scratch, for a case that declares `"symlink": true`:
- * run-hook.mjs and the gate are then started through it, the way a checkout
- * under a symlinked folder starts them, so a gate that compares
- * the path it was started by with its own URL instead of using isEntryPoint
- * is caught.
- */
-export function linkTo(root, scratch, id) {
-  const link = join(scratch, `link-${id}`);
-  symlinkSync(root, link);
-  return link;
-}
-
 export function runCases(repo, cases = loadCases(repo)) {
   // Resolved: on macOS the temp dir is a symlink (/var → /private/var), and a
   // gate started through one never sees its own path as the one it was run by.
@@ -127,7 +114,15 @@ export function runCases(repo, cases = loadCases(repo)) {
     return cases.map((testCase) => {
       const started = Date.now();
       const built = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
-      const root = testCase.symlink ? linkTo(built, scratch, testCase.id) : built;
+      // A case that declares `"symlink": true` starts run-hook.mjs and the gate
+      // through a symlink to its root, the way a checkout under a symlinked
+      // folder starts them, so a gate that compares the path it was started by
+      // with its own URL instead of using isEntryPoint is caught.
+      let root = built;
+      if (testCase.symlink) {
+        root = join(scratch, `link-${testCase.id}`);
+        symlinkSync(built, root);
+      }
       const runner = join(root, ".claude", "hooks", "run-hook.mjs");
       const result = spawnSync(process.execPath, [runner, testCase.hook], {
         input: JSON.stringify(buildPayload(testCase, scratch)),

@@ -87,7 +87,7 @@ export function featureKey(repo, dir) {
   return key === "" ? undefined : key;
 }
 
-const isDir = (path) => {
+export const isDir = (path) => {
   try {
     return statSync(path).isDirectory();
   } catch {
@@ -315,7 +315,6 @@ export function branchFeatureDir(repo, branch) {
   });
   const padded = same.find((name) => /^\d{3,}-/.test(name));
   if (padded) return join(root, padded);
-  if (existsSync(join(repo, exact))) return exact;
   return same.length ? join(root, same[0]) : null;
 }
 
