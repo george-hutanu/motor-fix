@@ -116,9 +116,14 @@ describe('a yearly documents row in the queue', () => {
     expect(text(first.querySelector('.tag'))).toBe('Documente anuale');
     const lamp = first.querySelector('mf-lamp');
     expect(lamp?.getAttribute('data-state')).toBe('amber');
-    expect(text(first.querySelector('.documents'))).toBe(
-      'documente noi de verificat',
-    );
+    expect(text(lamp)).toBe('documente noi de verificat');
+  });
+
+  it('names the kind once, as the tag beside the garage', async () => {
+    const el = await open();
+
+    const [first] = rows(el);
+    expect(text(first).split('Documente anuale')).toHaveLength(2);
   });
 
   it('says in words why a red row is urgent', async () => {
@@ -128,7 +133,7 @@ describe('a yearly documents row in the queue', () => {
     expect(red.querySelector('mf-lamp')?.getAttribute('data-state')).toBe(
       'red',
     );
-    expect(text(red.querySelector('.documents'))).toBe(
+    expect(text(red.querySelector('mf-lamp'))).toBe(
       'urgent: peste termen sau suspendat',
     );
   });
@@ -138,10 +143,10 @@ describe('a yearly documents row in the queue', () => {
 
     const [amber, red] = rows(el);
     expect(text(amber.querySelector('.tag'))).toBe('Yearly documents');
-    expect(text(amber.querySelector('.documents'))).toBe(
+    expect(text(amber.querySelector('mf-lamp'))).toBe(
       'new documents to review',
     );
-    expect(text(red.querySelector('.documents'))).toBe(
+    expect(text(red.querySelector('mf-lamp'))).toBe(
       'urgent: overdue or suspended',
     );
     expect(amber.querySelector('a.open')?.getAttribute('aria-label')).toBe(

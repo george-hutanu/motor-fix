@@ -34,10 +34,7 @@
                 @if (row.decided; as decided) {
                   <span class="outcome" [class]="decided.status">{{ decided.line }}</span>
                 } @else {
-                  <mf-lamp [state]="row.lamp" [label]="row.summary" />
-                  @if (row.documents) {
-                    <span class="documents">{{ row.documents }}</span>
-                  }
+                  <mf-lamp [state]="row.lamp" [label]="row.documents ?? row.summary" />
                   @if (row.waiting) {
                     <span class="waiting">{{ row.waiting }}</span>
                   }
