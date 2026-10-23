@@ -8,6 +8,7 @@ features:
   - 954-input-border-contrast
   - 975-type-scale
   - 517-cockpit-colours-one-source
+  - 495-hlm-input-aria-reveal
 ---
 
 # Capability: Cockpit theme
@@ -159,6 +160,13 @@ _From 517-cockpit-colours-one-source._
 ### 517-FR-006 — The change MUST add no service, endpoint, queue, outside call or product action, and so no observability entry.
 
 _From 517-cockpit-colours-one-source._
+### 495-FR-002 — The kit input MUST NOT take `aria-invalid` from the control's raw invalid state (Spartan `BrnInput`'s binding) any longer — `HlmInput` drops `BrnInput` and hosts `BrnFieldControl` itself; the red border (`data-matches-spartan-invalid`, error-state matcher: touched or submitted) and the other `data-*` attributes the brain writes MUST stay as today.
+
+_From 495-hlm-input-aria-reveal._
+
+### 495-FR-003 — The kit input MUST NOT write over an `aria-invalid` its host's own template sets: it writes the attribute only when its own rule's value changes (never a first-render `null`), so a template that sets `aria-invalid="true"` on the first render keeps it, and a template that binds the attribute from its own rule is never overwritten by a value whose rule did not change. A kit input with no form control, or with a control no `taskSave` reveals, sets no `aria-invalid` of its own.
+
+_From 495-hlm-input-aria-reveal._
 
 ## Retired
 

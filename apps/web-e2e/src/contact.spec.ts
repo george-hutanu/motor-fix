@@ -11,7 +11,7 @@ const REFERENCE = /MF-\d{4}-\d{6}/;
 
 const TEXT = {
   en: {
-    send: 'Send the message',
+    send: 'Send message',
     sent: 'We have your message. We will answer by e‑mail.',
   },
   ro: {

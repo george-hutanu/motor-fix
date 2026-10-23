@@ -774,3 +774,26 @@ describe('the range editor: proposing a job the catalogue lacks', () => {
     expect(said('Numele lucrării')).toBe('');
   });
 });
+
+// @traces 495-FR-004
+describe('the range editor: a field the server named, then typed wrong', () => {
+  it('keeps the field announced invalid while its message shows, and drops it with the message', async () => {
+    await open();
+    setRange.mockRejectedValueOnce(
+      refusal(422, {
+        code: 'validation_failed',
+        errors: [{ code: 'max', field: 'durationMinutes' }],
+      }),
+    );
+    await press();
+    expect(field('Durată').getAttribute('aria-invalid')).toBe('true');
+
+    await fill('Durată', '50');
+    expect(said('Durată')).toBe('În pași de 15 minute');
+    expect(field('Durată').getAttribute('aria-invalid')).toBe('true');
+
+    await fill('Durată', '60');
+    expect(said('Durată')).toBe('1 h');
+    expect(field('Durată').getAttribute('aria-invalid')).toBeNull();
+  });
+});

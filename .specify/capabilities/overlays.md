@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-18
+updated: 2026-10-23
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -10,6 +10,7 @@ features:
   - 492-task-load-error
   - 496-task-done-close-name
   - 1181-rate-limits
+  - 495-hlm-input-aria-reveal
 ---
 
 # Capability: overlays
@@ -82,9 +83,9 @@ _From 157-dialog-drawer._
 
 _From 159-form-saving._
 
-### 159-FR-002 — On a press with an invalid form, the helper MUST send nothing, show each invalid field's message under it in the person's language (one message per field, the first error in the order `server`, `required`, `email`, `minlength`, `maxlength`, `pattern`, else the general one), mark that field invalid (red border; `aria-invalid="true"` from the kit's input), and move the focus to the first invalid field in the form's order.
+### 495-FR-001 — A kit input (`hlmInput`) bound to a control of a `taskSave` form MUST carry `aria-invalid="true"` exactly while `taskSave` shows that control's message (the control is invalid and `taskSave` has revealed it by the press or by a server field error), and MUST carry no `aria-invalid` otherwise: on open, after the control becomes valid, after a server error clears on change, and after a successful save clears what was revealed. (Replaces the "`aria-invalid="true"` from the kit's input" clause of 159-FR-002: the attribute comes from the same reveal rule as the message, not from the control's raw invalid state.)
 
-_From 159-form-saving._
+_From 495-hlm-input-aria-reveal._
 
 ### 159-FR-003 — After a press, a field that showed an error MUST re-check as its value changes and hide the message once valid; a field valid at the press shows no message until the next press.
 
@@ -246,6 +247,14 @@ _From 1181-rate-limits._
 
 _From 1181-rate-limits._
 
+### 495-FR-004 — The two rules MUST agree where both exist: a template binding `aria-invalid` from `save.fieldError(control)` and the kit's own rule for the same control produce the same attribute at every moment, so the 22 templates that already bind it need no change and the 20 that rely on the kit get the same behaviour.
+
+_From 495-hlm-input-aria-reveal._
+
+### 495-FR-005 — Tests MUST come first (Constitution II): a ui-cockpit spec (the library that imports both `taskSave` and `HlmInput`; `libs/overlays` imports nothing from `libs/ui-cockpit`) opens a form with an empty required field under `taskSave` and asserts no `aria-invalid` before the press and `"true"` after it, and one with a server field error; a colocated ui-cockpit spec renders a kit input whose template sets `aria-invalid="true"` on the first render and asserts it is kept; both fail on today's code. The end-to-end suite's accessibility check of a form dialog on open MUST assert no violation and no field with `aria-invalid="true"` in the dialog.
+
+_From 495-hlm-input-aria-reveal._
+
 ## Retired
 
 - `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
@@ -256,3 +265,4 @@ _From 1181-rate-limits._
 - `157-FR-011` — superseded by `491-FR-002` (2026-10-07)
 - `159-FR-005` — superseded by `496-FR-001` (2026-10-07)
 - `159-FR-006` — superseded by `496-FR-002` (2026-10-07)
+- `159-FR-002` — superseded by `495-FR-001` (2026-10-23)

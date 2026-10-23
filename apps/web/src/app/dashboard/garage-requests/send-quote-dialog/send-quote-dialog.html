@@ -22,7 +22,7 @@
             step="1"
             formControlName="fromLei"
             aria-describedby="mf-send-quote-from-error"
-            [attr.aria-invalid]="message(form.controls.fromLei) ? 'true' : null"
+            [aria-invalid]="!!message(form.controls.fromLei)"
             (keydown.enter)="enter($event)"
           />
           <p class="error mf-message" id="mf-send-quote-from-error" role="status">{{ message(form.controls.fromLei) }}</p>
@@ -38,7 +38,7 @@
             step="1"
             formControlName="toLei"
             aria-describedby="mf-send-quote-to-error"
-            [attr.aria-invalid]="message(form.controls.toLei) ? 'true' : null"
+            [aria-invalid]="!!message(form.controls.toLei)"
             (keydown.enter)="enter($event)"
           />
           <p class="error mf-message" id="mf-send-quote-to-error" role="status">{{ message(form.controls.toLei) }}</p>
@@ -61,13 +61,13 @@
               step="1"
               formControlName="hours"
               aria-describedby="mf-send-quote-duration-error"
-              [attr.aria-invalid]="message(duration) ? 'true' : null"
+              [aria-invalid]="!!message(duration)"
               (keydown.enter)="enter($event)"
             />
           </div>
           <div class="field">
             <label for="mf-send-quote-minutes">{{ 'garage.quotes.send.minutes' | t }}</label>
-            <select hlmInput id="mf-send-quote-minutes" formControlName="minutes" aria-describedby="mf-send-quote-duration-error" [attr.aria-invalid]="message(duration) ? 'true' : null">
+            <select hlmInput id="mf-send-quote-minutes" formControlName="minutes" aria-describedby="mf-send-quote-duration-error" [aria-invalid]="!!message(duration)">
               <option value="0">0</option>
               <option value="15">15</option>
               <option value="30">30</option>
@@ -89,7 +89,7 @@
               [min]="today"
               formControlName="day"
               aria-describedby="mf-send-quote-slot-error"
-              [attr.aria-invalid]="message(slot) ? 'true' : null"
+              [aria-invalid]="!!message(slot)"
               (keydown.enter)="enter($event)"
             />
           </div>
@@ -103,7 +103,7 @@
               [attr.min]="minTime()"
               formControlName="time"
               aria-describedby="mf-send-quote-slot-error"
-              [attr.aria-invalid]="message(slot) ? 'true' : null"
+              [aria-invalid]="!!message(slot)"
               (keydown.enter)="enter($event)"
             />
           </div>
@@ -118,7 +118,7 @@
           rows="3"
           formControlName="note"
           aria-describedby="mf-send-quote-note-error"
-          [attr.aria-invalid]="message(form.controls.note) ? 'true' : null"
+          [aria-invalid]="!!message(form.controls.note)"
         ></textarea>
         <div class="under">
           <p class="error mf-message" id="mf-send-quote-note-error" role="status">{{ message(form.controls.note) }}</p>
