@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -298,6 +301,43 @@ describe('Prețuri: every job with its state', () => {
     expect([...element.querySelectorAll('button, a')].map(text)).toEqual([
       'Modifică prețurile',
     ]);
+  });
+});
+
+// @traces 414-FR-010
+describe('Prețuri: a job an admin rejected', () => {
+  const REASON =
+    'Nu este clar ce lucrare este; există deja Diagnoză în catalog.';
+  const rejected = async () => ({
+    items: [
+      item({
+        jobTypeId: 'chestii',
+        public: false,
+        reason: 'rejected' as const,
+        rejectionReason: REASON,
+      }),
+    ],
+  });
+
+  it('reads "respins · {reason}" with the reason in full', async () => {
+    const { element, settle } = await render(rejected);
+    await settle();
+
+    expect(cell(rows(element)[0], 'state')).toBe(`respins · ${REASON}`);
+  });
+
+  it('reads "rejected · {reason}" in English', async () => {
+    const { element, settle } = await render(rejected, 'en');
+    await settle();
+
+    expect(cell(rows(element)[0], 'state')).toBe(`rejected · ${REASON}`);
+  });
+
+  it('wraps the reason inside the row on a 320 px phone', () => {
+    const css = readFileSync(join(__dirname, 'prices-view.css'), 'utf8');
+
+    expect(css).toMatch(/\.said\s*\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(css).toMatch(/\.said\s*\{[^}]*min-width:\s*0/);
   });
 });
 

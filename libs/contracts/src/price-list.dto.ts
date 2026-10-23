@@ -59,6 +59,13 @@ export class PriceListItemDto {
 
   @ApiPropertyOptional({
     description:
+      "What the admin wrote when rejecting the job; only with reason 'rejected'",
+    maxLength: 500,
+  })
+  rejectionReason?: string;
+
+  @ApiPropertyOptional({
+    description:
       "The default row's id, what a range change names; absent without one",
     format: 'uuid',
   })

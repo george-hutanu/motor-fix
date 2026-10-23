@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 169,
+    "count": 172,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -351,6 +351,19 @@
       ],
       "reason": "one ADMIN_CATALOGUE_JOB_PENDING per active admin for each catalogue_job.proposed event, keyed by the event id; one log line per event with the job id and how many admins were told, never a name; no counter of its own, as the admins' verification-queued notice has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
       "story": "ST-174"
+    },
+    {
+      "kind": "queue",
+      "name": "catalogue-job-decided",
+      "source": "libs/domain/src/notifications/catalogue-job-decided/catalogue-job-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one CATALOGUE_JOB_DECIDED to the proposing garage's owner for each catalogue_job.decided event, keyed by the event id; one log line per event with the job id, the decision and how many owners were told, never the reason; no counter of its own, as its pending twin has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
+      "story": "ST-414"
     },
     {
       "kind": "queue",
@@ -875,6 +888,19 @@
       ],
       "reason": "one log line per decision naming the file id, the decision and the reports closed, never the note or the reason; each decision and each refused one is audited with the admin; the count by outcome is the motorfix_report_decisions_total entry and the refusals are on motorfix_verification_decision_refusals_total; no alert of its own, as the …/:id/decision endpoint: a refusal is the rule working, and the API error-rate and latency rules cover the route",
       "story": "ST-69"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-catalogue-job-decisions",
+      "source": "libs/domain/src/catalogue/job-decisions/job-decisions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/catalogue-jobs, /api/v1/admin/catalogue-jobs/:id/approve and /api/v1/admin/catalogue-jobs/:id/reject",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the queue read and the two decisions; one log line per decision naming the job id, the decision and the admin's account id, never the rejection reason; each decision is audited with the admin; the approvals and rejections are told apart by the route on the request metric, so no product counter of their own; a 409 or 422 is the rule working, and the API error-rate and latency rules cover the routes",
+      "story": "ST-414"
     },
     {
       "kind": "endpoint",

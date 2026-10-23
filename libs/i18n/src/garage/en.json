@@ -266,7 +266,8 @@
       "no_top_price": "hidden · no top price set",
       "not_authorised": "hidden · not in your RAR authorisation",
       "public": "on the profile",
-      "rejected": "rejected"
+      "rejected": "rejected",
+      "rejectedWith": "rejected · {reason}"
     },
     "title": "Price list"
   },

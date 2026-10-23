@@ -1,0 +1,135 @@
+/* Inset as far as the header's gutter at both sides: the line and the panel
+   start under the title and end under the bell. */
+:host {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--mf-space-3);
+  margin-inline: var(--mf-space-4);
+  min-width: 0;
+}
+.line {
+  margin: 0;
+  font-size: var(--mf-size-body);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.jobs {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  padding: 0 var(--mf-space-3) var(--mf-space-2) 0;
+  text-align: start;
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+  color: var(--mf-text-secondary);
+}
+td {
+  padding: var(--mf-space-3) var(--mf-space-3) var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+  vertical-align: middle;
+}
+th:last-child,
+td:last-child {
+  padding-inline-end: 0;
+}
+/* break-word, not anywhere: a whole word counts toward the column's
+   minimum width, so the table splits a name only between words. */
+.job {
+  font-weight: 700;
+  color: var(--mf-text);
+  overflow-wrap: break-word;
+}
+.meta {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  overflow-wrap: break-word;
+}
+/* From 768 px the two buttons stack in their cell, so the Decision column
+   is one button wide and the five columns fit a tablet. */
+.decide button {
+  display: flex;
+  width: 100%;
+}
+.decide button + button {
+  margin-top: var(--mf-space-2);
+}
+/* Phones and narrow tablets: each row is a card of one column, the
+   decision buttons last; the column names stay for screen readers. */
+@media (max-width: 767px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .jobs,
+  tbody {
+    display: block;
+  }
+  tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mf-space-1);
+    padding: var(--mf-space-3) 0;
+    border-top: 1px solid var(--mf-line);
+  }
+  tr:first-child {
+    border-top: 0;
+  }
+  td {
+    display: block;
+    padding: 0;
+    border-top: 0;
+  }
+  .meta {
+    font-size: var(--mf-size-body);
+  }
+  /* Side by side while both labels fit, one under the other when not. */
+  .decide {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mf-space-2);
+    margin-top: var(--mf-space-2);
+  }
+  .decide button {
+    flex: 1 1 auto;
+    width: auto;
+  }
+  .decide button + button {
+    margin-top: 0;
+  }
+}
+.skeletons {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skeleton-row {
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+}
+.skeleton-row:first-child {
+  border-top: 0;
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 70%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.empty,
+.failed p {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-3);
+  padding-top: var(--mf-space-3);
+}

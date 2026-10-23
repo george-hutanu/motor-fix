@@ -35,6 +35,11 @@ import {
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import {
+  CATALOGUE_JOB_DECIDED_QUEUE,
+  type CatalogueJobDecidedEvent,
+  CatalogueJobDecidedFanOut,
+} from './catalogue-job-decided/catalogue-job-decided.fan-out';
+import {
   CATALOGUE_JOB_PENDING_QUEUE,
   type CatalogueJobPendingEvent,
   CatalogueJobPendingFanOut,
@@ -150,6 +155,7 @@ const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 const GARAGE_RESTORED_WORKER = Symbol('GARAGE_RESTORED_WORKER');
 const GARAGE_REPORT_DECIDED_WORKER = Symbol('GARAGE_REPORT_DECIDED_WORKER');
 const CATALOGUE_JOB_PENDING_WORKER = Symbol('CATALOGUE_JOB_PENDING_WORKER');
+const CATALOGUE_JOB_DECIDED_WORKER = Symbol('CATALOGUE_JOB_DECIDED_WORKER');
 const DOCUMENT_REFUSED_WORKER = Symbol('DOCUMENT_REFUSED_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
@@ -223,6 +229,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(CATALOGUE_JOB_PENDING_WORKER)
     private readonly catalogueJobPendingWorker?: Worker | null,
+    @Optional()
+    @Inject(CATALOGUE_JOB_DECIDED_WORKER)
+    private readonly catalogueJobDecidedWorker?: Worker | null,
     @Optional()
     @Inject(DOCUMENT_REFUSED_WORKER)
     private readonly documentRefusedWorker?: Worker | null,
@@ -751,6 +760,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        CatalogueJobDecidedFanOut,
+        {
+          inject: [CatalogueJobDecidedFanOut],
+          provide: CATALOGUE_JOB_DECIDED_WORKER,
+          useFactory: (fanOut: CatalogueJobDecidedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('CatalogueJobs').error(
+                'PUBLIC_WEB_URL missing; decided jobs wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<CatalogueJobDecidedEvent>(
+              CATALOGUE_JOB_DECIDED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('CatalogueJobs'));
+            return worker;
+          },
+        },
       ],
     };
   }
@@ -770,6 +806,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.garageRestoredWorker?.close();
     await this.garageReportDecidedWorker?.close();
     await this.catalogueJobPendingWorker?.close();
+    await this.catalogueJobDecidedWorker?.close();
     await this.documentRefusedWorker?.close();
     await this.worker?.close();
     await this.jobs.close();

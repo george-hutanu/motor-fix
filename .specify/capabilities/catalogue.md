@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -17,6 +17,7 @@ features:
   - 1352-catalogue-job-visibility
   - 1357-rar-covered-jobs
   - 007-brand-headline
+  - 414-approve-catalogue-job
 ---
 
 # Capability: Catalogue
@@ -77,9 +78,9 @@ _From 039-brand-catalogue._
 
 _From 112-opening-hours._
 
-### 109-FR-021 — (Replaces 354-FR-001.) The system MUST keep one job catalogue for the whole product, maintained by MotorFix, with one row per job holding an id, a stable key, a Romanian name, an English name, a status among `approved`, `pending` and `rejected`, an optional car system and an optional RAR activity code (both empty for the first six, filled by the stories that own them), an optional proposing garage (`proposed_by_garage_id`, empty for the shipped jobs and set for a job a garage proposed through its listing), created and updated times.
+### 414-FR-001 — The catalogue job row MUST gain three decision columns, added by a migration and empty for every existing row: `decided_by` (the deciding admin's account; set to null when that account is deleted, the row kept), `decided_at` (a time) and `rejection_reason` (text, at most 500 characters, set only on a rejection). The six shipped jobs stay `approved` with all three empty.
 
-_From 109-garage-details-prices._
+_From 414-approve-catalogue-job._
 
 ### 354-FR-002 — The product MUST ship the six jobs of the mock as approved catalogue data, keyed stably, and load them in every environment, production included, when the product starts or its data load runs; the load MUST mirror the brand load: the file wins on names, each created or changed row is audited once by `system`, rows outside the file are left alone; it MUST be idempotent (a second run with an unchanged file creates, renames and re-ids nothing and writes no audit entry) and atomic (a failed load leaves the catalogue as it was), and two loads at once MUST still leave exactly one row per key.
 
@@ -157,9 +158,9 @@ _From 173-price-range-in-place._
 
 _From 173-price-range-in-place._
 
-### 1352-FR-008 — The owner's read (`GET /api/v1/garages/{garageId}/prices`) MUST carry on each item `visible` (the default row's flag; absent for a job with no default row), so the view knows the owner's own choice when another reason comes first in the state's order (modifies 173-FR-007's read, whose "nothing else changes" clause this extends; 357-FR-001's rule and the reason order are unchanged).
+### 414-FR-010 — The owner's price-list item (`GET /api/v1/garages/{garageId}/prices`) MUST carry `rejectionReason` beside `reason`, present only when `reason` is `rejected` (1352-FR-008's item gains the field). Prețuri MUST show the rejected row's state as "respins · {reason}" / "rejected · {reason}", the reason in full, wrapping on a 320 px phone with no sideways scroll; the stale comment on the view's `catalogue_job.decided` subscription is removed, the subscription itself stays as it is.
 
-_From 1352-catalogue-job-visibility._
+_From 414-approve-catalogue-job._
 
 ### 173-FR-010 — A price or labour change MUST never start or change a MotorFix review: the garage's verification status, its listing and its approval are untouched by these writes, and the profile shows the new range at once (acceptance criterion; unlike the changes of #127). A quote keeps the range it was sent with: `QUOTE.from_bani`/`to_bani` are never read from or written by these writes (220-FR-005 already stores them).
 
@@ -277,6 +278,42 @@ _From 1357-rar-covered-jobs._
 
 _From 007-brand-headline._
 
+### 414-FR-002 — The API MUST serve `GET /api/v1/admin/catalogue-jobs` to admins alone, with the other admin routes' refusals (160-FR, 298-FR-002: every other signed-in role 404 `not_found`, no session 401 `sign_in_required`, a suspended admin 403 `account_suspended`), answering `{ items, rarActivities }`: `rarActivities` every row of the RAR activity list `{ code, nameRo, nameEn }` by Romanian name (the approve dialog's choices); `items` every `pending` catalogue job, oldest proposal first (`created_at`, then id), each `{ id, name, garage, fromBani, toBani, durationMinutes, proposedAt }`: `name` the Romanian text as proposed, `garage` `{ id, name, slug }` of the proposing garage or absent when it no longer exists, `fromBani`, `toBani` and `durationMinutes` from the proposing garage's default price row of the job (each absent when unset or when the row is gone), `proposedAt` the row's creation time. No paging: the queue is read whole (ST-174 caps each garage at 50 jobs; no number in the repo says the queue grows past one page).
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-003 — The API MUST serve `POST /api/v1/admin/catalogue-jobs/{id}/approve` with a body `{ nameRo, nameEn, carSystem, rarActivity }` from a DTO in the contracts library: `nameRo` and `nameEn` 3 to 80 visible characters after trimming, format characters not counted, and no control character (else 400 `validation_failed`), `carSystem` one of the `CAR_SYSTEMS` keys the contracts library defines (`engine`, `transmission`, `brakes`, `suspension_steering`, `electrical`, `air_con`, `body`, `tyres_wheels`, `general`; else 400), `rarActivity` optional, a code the RAR activity list holds (else 422 `unknown_activity`), absent meaning no specific activity is needed (`null` is refused with 400 `validation_failed`). Approvals take one name lock before the name check, so two approvals of the same folded name at once leave one approved and answer the other 422 `exists`. A `nameRo` or `nameEn` equal, accents and case ignored, to either name of an approved job (the proposal's own `approvedNames` rule) answers 422 `exists` on that field with that job's id and Romanian name. The job's `key` never changes. In one transaction it MUST set the job `approved` with the names, the system, the activity, `decided_by` the admin and `decided_at` now; write the audit entry (FR-007); record `catalogue_job.decided` (FR-008); and, when the proposing garage still holds the job's default row, record `price_list.updated` for that garage naming the job (ST-174's shape), so the owner's Prețuri and the public profile re-read. It answers the decided job `{ id, status, nameRo, nameEn, carSystem, rarActivity, decidedAt }`.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-004 — The API MUST serve `POST /api/v1/admin/catalogue-jobs/{id}/reject` with a body `{ reason }` (10 to 500 visible characters after trimming, format characters not counted, no control character but line breaks and tabs; else 400 `validation_failed`). In one transaction it MUST set the job `rejected` with `rejection_reason`, `decided_by` and `decided_at`; write the audit entry (FR-007); and record `catalogue_job.decided` (FR-008). No `price_list.updated` is written (nothing became public). It answers the decided job as FR-003 does, with `rejectionReason`.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-005 — A decision on a job that is not `pending` MUST be refused with 409 `already_decided` and the message "Already approved by {first name}" / "Already rejected by {first name}" (the platform-rule requests' shape), or "Already decided" when the deciding account is gone, the dialog's "Deja decis de {name}." being built from that first name (FR-012), without a second write, event, audit entry or notification; the refusal MUST hold when two decisions arrive at once (the status check and the write are one atomic step, as the verification file's decision is). An unknown id answers 404 `not_found`, a malformed one 400.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-007 — Each decision MUST record one audit entry through the shared writer, in the same transaction, on the job (`subjectType` `job_type`, `subjectId` the job, the proposal's entry's sibling): `action` `update`, the admin as actor (`actorRole` `admin`), `oldValue` `{ status: 'pending' }` and `newValue` `{ status: 'approved', name_ro, name_en, car_system, rar_activity }` or `{ status: 'rejected', rejection_reason }`; the audit history lists it as any `job_type` entry, no new rendering is owed.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-008 — Each decision MUST record `catalogue_job.decided` in the same transaction, payload `{ jobTypeId, garageId, decision }` (`decision` `approved` or `rejected`; `garageId` absent when the proposing garage is gone), subject the job, with an audience that reaches every admin's live connection (the queue, as `catalogue_job.proposed` does) and the proposing garage's channel (the owner's Prețuri, which the hub already routes to `garage.prices` staff). No new event kind is added.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-013 — The three routes MUST be described in the API's OpenAPI document with their DTOs in the contracts library and the generated client regenerated (Principle V); they are not public routes. Observability ships with the change: one entry in `infra/observability/inventory.json` for the three routes with the API's request count, duration and error metrics by route and status, the existing API dashboard panel and error-rate alert, and a structured log line per decision (job id, decision, admin id; never the reason's text); no new service, queue or outside call, so nothing else is owed.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-014 — Outside production, the seed MUST add once (a second run changes nothing) one pending proposal by the seeded Atelier Dinamo, "Recondiționare injectoare" with 180 – 420 lei and 90 min, so the queue has a row in development and in the PR QA run; the end-to-end flows never decide it (each proposes its own name).
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-015 — Tests MUST exist before the code (Principle II), tagged with this feature's ids. In Jest, on a real database: the three routes answer 404 to an owner, a receptionist, a mechanic and a driver, 401 with no session, 403 to a suspended admin; the queue lists only pending jobs, oldest first, with the garage, the default row's range and duration, a gone garage as absent and a gone row's figures absent; the queue read carries the RAR activity list; approve refuses a name under 3 or over 80 characters, a missing or unknown system, an unknown RAR activity and either name equal to an approved job's (`exists`), and writes status, names, system, activity, `decided_by`, `decided_at`, the audit entry, `catalogue_job.decided` and `price_list.updated` in one transaction (none when it fails), and no brand tick; reject refuses a reason under 10 or over 500 characters and writes status, reason, `decided_by`, `decided_at`, the audit entry and the event; a second decision answers 409 `already_decided` and writes nothing, two at once leave one decision; after approval the job is offered by the picker's search to another garage, is public on the proposer's profile with its range and `rejectionReason` is absent, after rejection the owner's item carries `reason` `rejected` and the reason; a suspended proposer's job can be decided; CATALOGUE_JOB_DECIDED is queued once for the owner with the right variant and wording, not for the receptionist, not when the garage is gone, and renders in both languages from the template's example (the templates' shared spec); the price-list item DTO and the admin DTOs validate as above. In Jest for the web: the view renders the rows, the empty state, the skeleton and the error line, re-reads on the two events, and each dialog enables its button by the rules above and shows the `exists` and `already_decided` messages. In Playwright (the serial price-list project): signed in as a garage owner, propose a name unique to the run; as an admin, open "Lucrări propuse", find it and approve it with both names and a system; back as the owner, the row turns "pe profil" without a reload; as a second garage's owner, the picker offers the job; the admin rejects a second unique proposal with a reason and the owner's row reads "respins · {reason}".
+
+_From 414-approve-catalogue-job._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
@@ -285,3 +322,5 @@ _From 007-brand-headline._
 - `039-FR-004` — superseded by `228-FR-015` (2026-10-20)
 - `173-FR-007` — superseded by `1352-FR-008` (2026-10-20)
 - `039-FR-003` — superseded by `007-FR-004` (2026-10-22)
+- `109-FR-021` — superseded by `414-FR-001` (2026-10-23)
+- `1352-FR-008` — superseded by `414-FR-010` (2026-10-23)

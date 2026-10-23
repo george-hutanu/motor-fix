@@ -8,6 +8,17 @@ const garage = 'g1';
 const mechanic = 'm1';
 
 describe('audienceOf', () => {
+  // @traces 414-FR-008
+  it("sends a decided catalogue job to the admins and the proposing garage's staff, and to no public key", () => {
+    expect(audienceOf({ garageId: garage, type: 'catalogue_job' })).toEqual([
+      'admin',
+      'garage:g1',
+    ]);
+    expect(audienceOf({ garageId: null, type: 'catalogue_job' })).toEqual([
+      'admin',
+    ]);
+  });
+
   it("sends a garage's brand change to its staff, its public page and each changed brand's search", () => {
     expect(
       audienceOf({

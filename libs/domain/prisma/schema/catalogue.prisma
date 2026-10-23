@@ -47,6 +47,12 @@ model JobType {
   proposedByGarageId String?          @map("proposed_by_garage_id") @db.Uuid
   proposedBy         Garage?          @relation(fields: [proposedByGarageId], references: [id], onDelete: SetNull)
   requestJobs        RequestJob[]
+  // The admin's decision on a proposal; empty for the shipped jobs. The
+  // reason is set only by a rejection (CHECK in the migration).
+  decidedBy          String?          @map("decided_by") @db.Uuid
+  decider            Account?         @relation("JobTypeDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+  decidedAt          DateTime?        @map("decided_at") @db.Timestamptz(3)
+  rejectionReason    String?          @map("rejection_reason") @db.VarChar(500)
 
   @@index([proposedByGarageId])
   @@map("job_type")

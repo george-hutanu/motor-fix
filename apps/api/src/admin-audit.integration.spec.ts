@@ -35,6 +35,8 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // @traces 414-FR-002
+  'GET /api/v1/admin/catalogue-jobs': {},
   'GET /api/v1/admin/garages': {
     path: async () => '/api/v1/admin/garages?status=suspended',
   },
@@ -99,6 +101,20 @@ const FIXTURES: Record<
       );
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
+  },
+  // @traces 414-FR-003 414-FR-004 414-FR-007
+  'POST /api/v1/admin/catalogue-jobs/{id}/approve': {
+    body: () => {
+      const name = `Lucrare audit ${randomUUID().slice(0, 8)}`;
+      return { carSystem: 'engine', nameEn: name, nameRo: name };
+    },
+    path: async () =>
+      `/api/v1/admin/catalogue-jobs/${await proposedJob()}/approve`,
+  },
+  'POST /api/v1/admin/catalogue-jobs/{id}/reject': {
+    body: () => ({ reason: 'Nu este o lucrare de catalog.' }),
+    path: async () =>
+      `/api/v1/admin/catalogue-jobs/${await proposedJob()}/reject`,
   },
   'POST /api/v1/admin/garages/{id}/rechecks': {
     body: () => ({
@@ -254,6 +270,22 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// A garage's job waiting for an admin's decision, under a name of its own.
+async function proposedJob() {
+  const name = `Propusă audit ${randomUUID()}`;
+  return (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug)
+         VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
+       INSERT INTO job_type (id, key, name_ro, name_en, status,
+         proposed_by_garage_id, updated_at)
+       SELECT gen_random_uuid(), $1, $2, $2, 'pending', id, now() FROM g
+       RETURNING id`,
+      [`audit-${randomUUID()}`, name],
+    )
+  ).rows[0].id as string;
+}
 
 // A garage's file waiting to be opened, or already decided.
 async function submitted(status = 'submitted') {

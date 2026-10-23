@@ -651,6 +651,57 @@
     "waiting": "Așteaptă aprobarea altui admin",
     "withdraw": "Retrage cererea"
   },
+  "proposedJobs": {
+    "approve": {
+      "cancel": "Renunță",
+      "exists": "Există deja în catalog: {name}",
+      "field": {
+        "unknown": "Alege o activitate din listă."
+      },
+      "nameEn": "Nume în engleză",
+      "nameRo": "Nume în română",
+      "problem": {
+        "exists": "Alege alt nume.",
+        "unknown_activity": "Activitatea RAR nu mai există. Alege alta."
+      },
+      "rar": "Activitate RAR",
+      "rarNone": "Nicio activitate anume",
+      "submit": "Aprobă",
+      "system": "Sistem",
+      "systemPick": "Alege sistemul",
+      "title": "Aprobi lucrarea „{name}”?"
+    },
+    "approveNamed": "Aprobă „{name}”",
+    "column": {
+      "decision": "Decizie",
+      "garage": "Service",
+      "job": "Lucrare",
+      "proposed": "Propusă",
+      "range": "Interval"
+    },
+    "decided": {
+      "close": "Închide",
+      "named": "Deja decis de {name}.",
+      "unnamed": "Deja decisă."
+    },
+    "empty": "Nicio lucrare în așteptare.",
+    "line": "Lucrări adăugate de service‑uri care așteaptă aprobarea",
+    "loading": "Se încarcă lucrările propuse",
+    "minutes": "{n} min",
+    "range": "{from} – {to} lei",
+    "rangeFrom": "{from} lei",
+    "reject": {
+      "cancel": "Renunță",
+      "count": "{n}/500",
+      "note": "Service‑ul primește motivul.",
+      "reason": "Motivul",
+      "submit": "Respinge",
+      "title": "Respingi lucrarea „{name}”?"
+    },
+    "rejectNamed": "Respinge „{name}”",
+    "retry": "Reîncearcă",
+    "table": "Lucrări propuse"
+  },
   "queue": {
     "all": "Vezi toate",
     "approved": "Aprobat, e pe hartă",

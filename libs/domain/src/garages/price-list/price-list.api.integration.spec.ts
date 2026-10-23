@@ -245,6 +245,48 @@ describe('GET /garages/:garageId/prices', () => {
     });
   });
 
+  // @traces 414-FR-010
+  it('gives a rejected job the reason an admin wrote, and no other job a reason', async () => {
+    const w = await world();
+    const oil = await jobType('Schimb ulei');
+    const pending = await jobType('Reglaj faruri', 'pending');
+    const rejected = await prisma.jobType.create({
+      data: {
+        decidedAt: new Date(),
+        key: `job-${randomUUID()}`,
+        nameEn: 'Spălare motor',
+        nameRo: 'Spălare motor',
+        rejectionReason: 'Există deja ca „Curățare motor”.',
+        status: 'rejected',
+      },
+    });
+    await price(w, oil.id, 0);
+    await price(w, pending.id, 1);
+    await price(w, rejected.id, 2, { visible: false });
+
+    const { body } = await read(w);
+
+    const [oilItem, pendingItem, rejectedItem] = body.items;
+    expect(rejectedItem).toMatchObject({
+      jobTypeId: rejected.id,
+      reason: 'rejected',
+      rejectionReason: 'Există deja ca „Curățare motor”.',
+    });
+    expect(oilItem).not.toHaveProperty('rejectionReason');
+    expect(pendingItem).not.toHaveProperty('rejectionReason');
+  });
+
+  it('gives a rejected job with no reason stored none', async () => {
+    const w = await world();
+    const rejected = await jobType('Spălare motor', 'rejected');
+    await price(w, rejected.id, 0);
+
+    const [item] = (await read(w)).body.items;
+
+    expect(item.reason).toBe('rejected');
+    expect(item).not.toHaveProperty('rejectionReason');
+  });
+
   it('gives a job listed only with a brand range no choice of its own', async () => {
     const w = await world();
     const bmw = await prisma.brand.create({

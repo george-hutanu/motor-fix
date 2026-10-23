@@ -25,6 +25,8 @@ export interface Problem {
   // ("MotorFix" for the system) and when, in UTC.
   decidedBy?: string;
   decidedAt?: string;
+  // A name already in the catalogue (`exists`): that job's Romanian name.
+  nameRo?: string;
 }
 
 export interface FieldProblem {

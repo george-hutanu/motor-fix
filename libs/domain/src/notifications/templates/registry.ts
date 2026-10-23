@@ -20,6 +20,10 @@ import {
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
+import {
+  CATALOGUE_JOB_APPROVED,
+  CATALOGUE_JOB_REJECTED,
+} from './catalogue-job-decided';
 import { DOCUMENT_DUE } from './document-due';
 import { DOCUMENT_OVERDUE } from './document-overdue';
 import { DOCUMENT_REFUSED } from './document-refused';
@@ -75,6 +79,8 @@ export const TEMPLATES: Registry = {
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
+  'CATALOGUE_JOB_DECIDED.approved': CATALOGUE_JOB_APPROVED,
+  'CATALOGUE_JOB_DECIDED.rejected': CATALOGUE_JOB_REJECTED,
   DOCUMENT_DUE,
   DOCUMENT_OVERDUE,
   DOCUMENT_REFUSED,

@@ -113,14 +113,14 @@ describe('bellLink under hostile input', () => {
   });
 
   // @traces 032-FR-001
-  it('maps only kinds named in the table and every address is a driver view or the garage dashboard', () => {
+  it('maps only kinds named in the table and every address is a driver view, the garage dashboard or its Prețuri', () => {
     for (const kind of Object.keys(VIEW_OF_KIND)) {
       const link = bellLink({ kind, params: {}, subjectId: CAR } as never);
       // A public profile is opened only from the profile its row carries.
       if (VIEW_OF_KIND[kind] === 'profile') expect(link).toBeNull();
       else
         expect(link).toMatch(
-          /^\/app\/(driver\/(cars|requests|reviews)|garage$)/,
+          /^\/app\/(driver\/(cars|requests|reviews)|garage(\/prices)?$)/,
         );
     }
   });

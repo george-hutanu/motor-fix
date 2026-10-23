@@ -35,6 +35,34 @@ describe('the template check', () => {
     expect(checkTemplates(TEMPLATES)).toEqual([]);
   });
 
+  // A push's `shorten` is read only when its body runs long, so a misspelt
+  // key would pass every short example: each one names a value of its own
+  // template that the body shows.
+  it('finds every push shorten among its template values and in its body', () => {
+    const shortens = Object.entries(TEMPLATES).flatMap(([name, template]) =>
+      Object.entries(template.push ?? {}).flatMap(([language, push]) =>
+        push?.shorten === undefined
+          ? []
+          : [{ language, name, push, values: template.values }],
+      ),
+    );
+
+    expect(shortens.length).toBeGreaterThan(0);
+    for (const { language, name, push, values } of shortens) {
+      const key = push.shorten as string;
+      expect([name, language, Object.hasOwn(values, key)]).toEqual([
+        name,
+        language,
+        true,
+      ]);
+      expect([name, language, push.body]).toEqual([
+        name,
+        language,
+        expect.stringContaining(`{${key}}`),
+      ]);
+    }
+  });
+
   it('passes a template that keeps every rule on every channel', () => {
     expect(only('QUOTE_RECEIVED', good)).toEqual([]);
   });

@@ -107,6 +107,12 @@ export type { AdminAccountsControllerList$Params as AdminAccountsControllerList$
 export { adminAccountsControllerList as adminAccountsControllerList } from './fn/admin/admin-accounts-controller-list';
 export type { AdminAccountsControllerSummary$Params as AdminAccountsControllerSummary$Params } from './fn/admin/admin-accounts-controller-summary';
 export { adminAccountsControllerSummary as adminAccountsControllerSummary } from './fn/admin/admin-accounts-controller-summary';
+export type { JobDecisionsControllerQueue$Params as JobDecisionsControllerQueue$Params } from './fn/admin/job-decisions-controller-queue';
+export { jobDecisionsControllerQueue as jobDecisionsControllerQueue } from './fn/admin/job-decisions-controller-queue';
+export type { JobDecisionsControllerApprove$Params as JobDecisionsControllerApprove$Params } from './fn/admin/job-decisions-controller-approve';
+export { jobDecisionsControllerApprove as jobDecisionsControllerApprove } from './fn/admin/job-decisions-controller-approve';
+export type { JobDecisionsControllerReject$Params as JobDecisionsControllerReject$Params } from './fn/admin/job-decisions-controller-reject';
+export { jobDecisionsControllerReject as jobDecisionsControllerReject } from './fn/admin/job-decisions-controller-reject';
 export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';

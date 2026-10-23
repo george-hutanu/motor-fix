@@ -23,6 +23,7 @@ features:
   - 1351-rar-monthly-recheck
   - 010-copy-voice-switch
   - 009-copy-voice-analytics
+  - 414-approve-catalogue-job
   - 067-restore-suspended-garage
 ---
 
@@ -831,6 +832,13 @@ _From 009-copy-voice-analytics._
 
 _From 009-copy-voice-analytics._
 
+### 414-FR-011 — The admin dashboard MUST get a view "Lucrări propuse" / "Proposed jobs" at the path `proposed-jobs` of the admin area, capability `admin.catalogue`, tab "Propuse" / "Proposed", in the side menu and the tab bar after "Mărci și lucrări" (the other admin views' pattern, 404-FR-007), with no counter. It reads FR-002 once on open and again when `catalogue_job.proposed` or `catalogue_job.decided` arrives on the admin's live connection (keeping the rows shown until the new ones arrive, as 298-FR-015), and shows: the heading and the line "Lucrări adăugate de service-uri care așteaptă aprobarea" / "Jobs garages added that wait for approval"; a table with the columns "Lucrare" (the text as typed), "Service" (the garage's name, "—" when gone), "Interval" ("{from} – {to} lei · {min} min", a missing end or duration left out), "Propusă" (the day in the admin's language) and the two buttons "Aprobă" / "Approve" and "Respinge" / "Reject"; below 768 px each row stacks in one column with the buttons last; the empty state "Nicio lucrare în așteptare." / "No jobs waiting."; the shared skeleton for the first read and the shared error line with "Reîncearcă" / "Try again" when a read fails. It MUST read at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, every control reachable by keyboard with a visible focus ring.
+
+_From 414-approve-catalogue-job._
+
+### 414-FR-012 — The two dialogs MUST open in the shared overlay (a dialog from 768 px, a sheet below, 157-dialog-drawer). Approve: title "Aprobi lucrarea „{name}”?" / "Approve the job "{name}"?", fields "Nume în română" / "Romanian name" (prefilled with the text as typed), "Nume în engleză" / "English name", "Sistem" / "System" (a select over `CAR_SYSTEMS` with Romanian and English labels, none chosen at first) and "Activitate RAR" / "RAR activity" (a select over the queue read's `rarActivities`, "Nicio activitate anume" / "No specific activity" chosen at first); the primary button "Aprobă" is enabled only when both names have 3 to 80 visible characters and no control character (the API's own rule, FR-003) and a system is chosen; 422 `exists` shows "Există deja în catalog: {name}" / "Already in the catalogue: {name}" under the Romanian name. Reject: title "Respingi lucrarea „{name}”?" / "Reject the job "{name}"?", the textarea "Motivul" / "Reason" with a "{n}/500" counter and the line "Service-ul primește motivul." / "The garage gets the reason.", the primary button "Respinge" enabled from 10 visible characters with no control character (FR-004). Both: "Renunță" / "Cancel"; while saving, the shared saving state (159-form-saving); on success the dialog closes and the row leaves the list; on 409 `already_decided` the dialog shows "Deja decis de {name}." / "Already decided by {name}." ("Deja decisă." / "Already decided." when no name comes back) with "Închide" / "Close" and the list re-reads; another failure shows the shared error line and keeps the dialog open.
+
+_From 414-approve-catalogue-job._
 ### 067-FR-012 — Every new text MUST exist in the shared i18n files in Romanian and English; the garage's name, the reason and the note MUST never be rendered as markup; the button, the dialog and the header line MUST read at 320 px, 390 px, tablet and desktop, in light and dark, with no sideways scroll; the documents' state and the ended suspension MUST be conveyed by text, not by colour alone; the button and the dialog MUST be reachable and operable by keyboard with the queue's touch-target size and focus ring, the dialog trapping focus and returning it to the button on close; switching the language re-renders every text and date without a reload.
 
 _From 067-restore-suspended-garage._

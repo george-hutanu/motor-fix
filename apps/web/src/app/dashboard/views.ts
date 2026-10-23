@@ -133,6 +133,16 @@ export const DASHBOARDS: Record<
         tab: 'shell.frame.tab.brands',
       },
       {
+        capability: 'admin.catalogue',
+        label: 'shell.frame.nav.admin.proposedJobs',
+        load: () =>
+          import('./admin-proposed-jobs/admin-proposed-jobs').then(
+            (m) => m.AdminProposedJobs,
+          ),
+        path: 'proposed-jobs',
+        tab: 'shell.frame.tab.proposed',
+      },
+      {
         capability: 'admin.settings',
         label: 'shell.frame.nav.admin.assistant',
         path: 'assistant',

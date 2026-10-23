@@ -183,6 +183,7 @@
         "catalogue": "Brands and jobs",
         "garages": "Garages",
         "log": "System log",
+        "proposedJobs": "Proposed jobs",
         "reviews": "Reported reviews",
         "settings": "Settings",
         "users": "Users"
@@ -251,6 +252,7 @@
       "overview": "Dashboard",
       "prices": "Prices",
       "profile": "Profile",
+      "proposed": "Proposed",
       "reported": "Reported",
       "requests": "Requests",
       "reviews": "Reviews",

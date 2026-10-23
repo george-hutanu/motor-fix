@@ -87,8 +87,6 @@ export class PricesView {
   protected readonly failed = signal<string | null>(null);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
-  // TODO: nothing emits catalogue_job.decided until the admin's catalogue
-  // decision story lands; the hub already routes it to the owner.
   protected readonly view = liveView(
     () => this.api.priceListControllerRead({ garageId: this.garageId() }),
     {
@@ -116,8 +114,14 @@ export class PricesView {
     return formatDuration(row.durationMinutes, this.i18n.language());
   }
 
-  protected state({ public: shown, reason }: PriceListItemDto) {
+  protected state({
+    public: shown,
+    reason,
+    rejectionReason,
+  }: PriceListItemDto) {
     if (shown) return 'garage.prices.state.public';
+    if (reason === 'rejected' && rejectionReason)
+      return 'garage.prices.state.rejectedWith';
     return reason && Object.hasOwn(REASONS, reason)
       ? `garage.prices.state.${reason}`
       : 'garage.prices.state.hidden';

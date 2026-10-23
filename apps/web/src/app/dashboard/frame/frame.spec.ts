@@ -350,6 +350,7 @@ describe('Frame', () => {
       'Service‑uri',
       'Utilizatori',
       'Mărci și lucrări',
+      'Lucrări propuse',
       'Jurnal de sistem',
       'Setări',
     ]);
@@ -567,6 +568,7 @@ describe('Frame', () => {
       'Garages',
       'Users',
       'Brands and jobs',
+      'Proposed jobs',
       'System log',
       'Settings',
     ]);
@@ -575,6 +577,7 @@ describe('Frame', () => {
       'Garages',
       'Users',
       'Brands',
+      'Proposed',
       'Log',
       'Settings',
     ]);

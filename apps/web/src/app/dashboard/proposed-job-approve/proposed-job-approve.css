@@ -1,0 +1,36 @@
+form,
+.decided {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.field > label {
+  font-weight: 700;
+}
+input,
+select {
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  white-space: normal;
+}

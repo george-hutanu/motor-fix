@@ -38,6 +38,9 @@ interface PushText {
   title: string;
   body: string;
   link: string;
+  // A value the body shortens with "…" when it would run past its limit,
+  // such as a name a person typed; the bell and the e-mail carry it whole.
+  shorten?: string;
 }
 
 export interface WhatsAppText {
@@ -244,7 +247,7 @@ function renderText(
     case 'push': {
       const push = text as PushText;
       const title = fill(push.title);
-      const body = fill(push.body);
+      const body = pushBody(push, fill, value);
       const link = value(push.link);
       if (title.length > PUSH_TITLE) fail('push title over 50 characters');
       if (body.length > PUSH_BODY) fail('push body over 120 characters');
@@ -264,6 +267,31 @@ function renderText(
   }
 }
 
+// The push body, its `shorten` value cut at a whole character and closed
+// with "…" when the body would pass its limit, counted in UTF-16 units as
+// the limit is.
+function pushBody(
+  push: PushText,
+  fill: (source: string) => string,
+  value: (key: string) => string,
+): string {
+  const body = fill(push.body);
+  const key = push.shorten;
+  if (body.length <= PUSH_BODY || !key) return body;
+  const fillWith = (text: string) =>
+    push.body.replace(PLACEHOLDER, (_, name: string) =>
+      name === key ? text : value(name),
+    );
+  let room = PUSH_BODY - fillWith('…').length;
+  let short = '';
+  for (const character of value(key)) {
+    room -= character.length;
+    if (room < 0) break;
+    short += character;
+  }
+  return fillWith(`${short}…`);
+}
+
 // The kinds whose wording follows a param: one text per value it names,
 // the kind's own text for any other.
 const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
@@ -279,6 +307,7 @@ const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
   [
     ['ADMIN_OUTAGE_ALERT', ['state', 'back', 'down']],
     ['BOOKING_LAPSED', ['side', 'garage', 'driver']],
+    ['CATALOGUE_JOB_DECIDED', ['decision', 'approved', 'rejected']],
   ],
 );
 

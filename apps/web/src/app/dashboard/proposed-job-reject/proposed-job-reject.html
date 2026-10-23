@@ -1,0 +1,37 @@
+@if (decided(); as decided) {
+  <div class="decided">
+    <p role="alert">
+      @if (decided.by) {
+        {{ 'admin.proposedJobs.decided.named' | t: { name: decided.by } }}
+      } @else {
+        {{ 'admin.proposedJobs.decided.unnamed' | t }}
+      }
+    </p>
+    <div class="actions">
+      <button hlmBtn type="button" (click)="task.close('decided')">{{ 'admin.proposedJobs.decided.close' | t }}</button>
+    </div>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+    <div class="field">
+      <label for="mf-reject-reason">{{ 'admin.proposedJobs.reject.reason' | t }}</label>
+      <textarea
+        hlmInput
+        id="mf-reject-reason"
+        rows="4"
+        formControlName="reason"
+        aria-describedby="mf-reject-reason-note mf-reject-reason-count mf-reject-reason-error"
+      ></textarea>
+      <div class="under">
+        <p class="note" id="mf-reject-reason-note">{{ 'admin.proposedJobs.reject.note' | t }}</p>
+        <p class="count" id="mf-reject-reason-count" data-count [class.over]="count() > max">{{ 'admin.proposedJobs.reject.count' | t: { n: count() } }}</p>
+      </div>
+      <mf-field-error id="mf-reject-reason-error" [save]="save" [control]="form.controls.reason" />
+    </div>
+    <mf-task-error [save]="save" />
+    <div class="actions">
+      <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="valid() !== 'VALID'">{{ 'admin.proposedJobs.reject.submit' | t }}</button>
+      <button hlmBtn variant="ghost" type="button" [disabled]="save.state() === 'sending'" (click)="task.close('cancelled')">{{ 'admin.proposedJobs.reject.cancel' | t }}</button>
+    </div>
+  </form>
+}
