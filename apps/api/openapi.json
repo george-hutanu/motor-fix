@@ -14446,28 +14446,6 @@
           "suspended"
         ]
       },
-      "RarActivityNameDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "brakes"
-          },
-          "nameRo": {
-            "type": "string",
-            "example": "frâne"
-          },
-          "nameEn": {
-            "type": "string",
-            "example": "brakes"
-          }
-        },
-        "required": [
-          "code",
-          "nameRo",
-          "nameEn"
-        ]
-      },
       "SuspendedGarageRowDto": {
         "type": "object",
         "properties": {
