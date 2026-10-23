@@ -20,6 +20,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { firstValueFrom, isObservable, type Observable } from 'rxjs';
 
+import { setRevealed } from './reveal';
 import { OVERLAY_TASK } from '../task';
 
 export type TaskSaveState = 'idle' | 'invalid' | 'sending' | 'done' | 'failed';
@@ -128,6 +129,7 @@ export function taskSave<F extends AbstractControl, R>(
   const reveal = (controls: AbstractControl[]) => {
     for (const control of controls) {
       revealed.add(control);
+      setRevealed(control, true);
       control.markAsTouched();
     }
     touch();
@@ -136,6 +138,7 @@ export function taskSave<F extends AbstractControl, R>(
   const succeed = (value: R) => {
     if (destroyed) return;
     key = null;
+    for (const control of revealed) setRevealed(control, false);
     revealed.clear();
     problem.set(null);
     result.set(value);

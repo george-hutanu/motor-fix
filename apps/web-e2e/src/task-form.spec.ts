@@ -58,6 +58,19 @@ async function answer(page: Page, key: string, language: Language = 'ro') {
 }
 
 test.describe('a small task saves once', () => {
+  // @traces 495-FR-005
+  test('opens with no field announced invalid and nothing for axe to report', async ({
+    page,
+  }) => {
+    await openForm(page);
+
+    await expect(plate(page)).not.toHaveAttribute('aria-invalid', /.*/);
+    await expect(task(page).locator('[aria-invalid="true"]')).toHaveCount(0);
+    expect(
+      await violations(page, {}, { include: [['.cdk-overlay-container']] }),
+    ).toEqual([]);
+  });
+
   test('an empty press explains the field, focuses it and saves nothing', async ({
     page,
   }) => {
