@@ -114,8 +114,28 @@ export class LegalDocumentsService {
     return created;
   }
 
+  // In the yearly upload's transaction: each document waits for an admin
+  // beside the kind's valid one, which stays current until it is accepted.
+  async renew(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    documents: readonly {
+      kind: DocumentKind;
+      issuedOn: string;
+      pages: string[];
+    }[],
+    file: { id: string; garageId: string },
+  ): Promise<LegalDocument[]> {
+    const created: LegalDocument[] = [];
+    for (const { kind, ...document } of documents) {
+      created.push(await this.add(tx, actor, file, kind, document, null, true));
+    }
+    return created;
+  }
+
   // One document's row, the mark on the one it replaces if any, its audit
-  // entry and the admins' event.
+  // entry and its event: a listing's to the admins alone, a yearly upload's
+  // to the garage too.
   private async add(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
@@ -123,6 +143,7 @@ export class LegalDocumentsService {
     kind: DocumentKind,
     document: { issuedOn?: string; pages: string[] },
     old: LegalDocument | null,
+    renewal = false,
   ): Promise<LegalDocument> {
     if (old) {
       await tx.legalDocument.update({
@@ -135,6 +156,7 @@ export class LegalDocumentsService {
         issuedOn: document.issuedOn ? new Date(document.issuedOn) : null,
         kind,
         pages: document.pages,
+        ...(renewal && { status: 'in_review' }),
         verificationFileId: file.id,
       },
     });
@@ -153,7 +175,9 @@ export class LegalDocumentsService {
       subjectType: 'legal_document',
     });
     await this.events.record(tx, {
-      audience: { adminOnly: true, type: 'platform' },
+      audience: renewal
+        ? { garageId: file.garageId, type: 'verification' }
+        : { adminOnly: true, type: 'platform' },
       kind: 'document.uploaded',
       payload: { documentId: row.id, garageId: file.garageId, kind },
       subjectId: row.id,

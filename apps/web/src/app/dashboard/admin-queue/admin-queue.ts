@@ -8,6 +8,7 @@ import {
   inject,
   PLATFORM_ID,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -30,6 +31,8 @@ import { Live, liveResource, pagedRead } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
 const LIST = '/app/admin/garages';
+// The drawer's part a yearly documents row opens at, as the address's fragment.
+const DOCUMENTS_PART = 'documents';
 // How often a page left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
@@ -69,6 +72,10 @@ export class AdminQueue {
       'verification.decided',
       'verification.reopened',
       'garage_report.decided',
+      'document.uploaded',
+      'document.accepted',
+      'document.refused',
+      'document.overdue',
     ],
   );
 
@@ -177,6 +184,9 @@ export class AdminQueue {
     const language = this.i18n.language();
     const counted = (key: string, n: number) =>
       this.t(key, { count: n, n: formatNum(n, language) });
+    // A garage's yearly documents: its kind beside the name, why it waits in
+    // words, and a link to the drawer's Documente part.
+    const documents = row.item === 'documents';
     const area =
       row.area?.kind === 'mobile'
         ? this.t('mobile', { km: formatNum(row.area.radiusKm, language) })
@@ -201,11 +211,18 @@ export class AdminQueue {
           })
         : undefined,
       decided: undefined as { line: string; status: KeptStatus } | undefined,
+      documents: documents
+        ? this.t(row.lamp === 'red' ? 'documents.red' : 'documents.amber')
+        : undefined,
+      fragment: documents ? DOCUMENTS_PART : undefined,
       id: row.id,
+      kind: documents ? this.t('documents.kind') : undefined,
       lamp: row.lamp,
       link: [LIST, row.id],
       name: row.garageName,
-      open: this.t('openNamed', { name: row.garageName }),
+      open: this.t(documents ? 'documents.openNamed' : 'openNamed', {
+        name: row.garageName,
+      }),
       summary: row.summary[language],
       updated: row.resubmitted,
       waiting: row.flagged ? counted('waiting', row.workingDays) : undefined,
@@ -249,10 +266,12 @@ export class AdminQueue {
   private shown: string | null = null;
   private drawer?: AbortController;
   private openFiles() {
+    const route = inject(ActivatedRoute);
     const fileId = toSignal(
-      inject(ActivatedRoute).url.pipe(map((url) => url[0]?.path ?? null)),
+      route.url.pipe(map((url) => url[0]?.path ?? null)),
       { initialValue: null },
     );
+    const fragment = toSignal(route.fragment, { initialValue: null });
     const overlays = inject(Overlays);
     const router = inject(Router);
     effect(() => {
@@ -262,6 +281,7 @@ export class AdminQueue {
       this.drawer?.abort();
       this.drawer = undefined;
       if (!id) return;
+      const part = untracked(fragment) === DOCUMENTS_PART;
       const drawer = new AbortController();
       this.drawer = drawer;
       void overlays
@@ -273,7 +293,7 @@ export class AdminQueue {
           {
             // Each tick saves at once: there is nothing to discard on close.
             confirmDiscard: false,
-            data: { fileId: id },
+            data: part ? { fileId: id, part: DOCUMENTS_PART } : { fileId: id },
             shape: 'drawer-wide',
             signal: drawer.signal,
             title: 'admin.file.title',

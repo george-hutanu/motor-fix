@@ -6,6 +6,7 @@ import { PRISMA } from '../../../auth/prisma';
 import { refusal } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
 import type { PrismaClient } from '../../../generated/prisma/client';
+import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
@@ -21,13 +22,16 @@ const day = (at: Date | null) => (at ? dayOf(at) : null);
 
 // The owner's view of the garage's legal check: the newest verification
 // file's company, CAEN and RAR checks and its two documents, with the latest
-// re-check, read only while the garage is approved or suspended. Notes,
+// re-check and the yearly documents cycle, read only while the garage is approved or suspended. Notes,
 // reviewers, evidence and pages stay out.
 @Injectable()
 export class LegalCheckService {
   private readonly logger = new Logger('LegalCheck');
 
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly cycles: DocumentCycleService,
+  ) {}
 
   // One line per refusal: its code and the actor's role, no account,
   // garage or request detail.
@@ -87,10 +91,13 @@ export class LegalCheckService {
     ) {
       throw this.refuse(actor, 'not_found');
     }
-    const activities = await this.prisma.rarActivity.findMany({
-      select: { code: true, nameEn: true, nameRo: true },
-      where: { code: { in: garage.rarActivities } },
-    });
+    const [activities, documents] = await Promise.all([
+      this.prisma.rarActivity.findMany({
+        select: { code: true, nameEn: true, nameRo: true },
+        where: { code: { in: garage.rarActivities } },
+      }),
+      this.cycles.documentCycleOf(garageId),
+    ]);
     const lastCheckedOn = day(garage.lastCheckedOn);
     const recheck = garage.rechecks[0];
     const latestRecheck = recheck
@@ -103,6 +110,7 @@ export class LegalCheckService {
       : null;
     return {
       companyName: garage.name,
+      documents,
       isMobile: garage.businessKind === 'mobile',
       lastCheckedOn,
       latestRecheck,
@@ -117,6 +125,7 @@ export class LegalCheckService {
           kind: check.kind,
           result: check.result,
         })),
+        ...(documents && { cycleRow: documents.row }),
         documents: file.documents,
         lastCheckedOn,
         latestRecheck,

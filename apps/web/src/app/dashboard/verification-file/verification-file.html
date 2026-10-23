@@ -209,7 +209,7 @@
     }
 
     <section data-section="documents">
-      <h4>{{ 'admin.file.documents.heading' | t }}</h4>
+      <h4 tabindex="-1">{{ 'admin.file.documents.heading' | t }}</h4>
       <ul class="rows">
         @for (row of documents(); track row.doc.kind) {
           <li class="document" [attr.data-kind]="row.doc.kind" [attr.data-missing]="row.doc.present ? null : ''">
@@ -219,6 +219,9 @@
             }
             @if (row.unavailable) {
               <span class="unavailable">{{ 'admin.file.documents.unavailable' | t }}</span>
+            }
+            @if (row.decided) {
+              <span class="decided">{{ row.decided }}</span>
             }
             @if (row.buttons.length) {
               <span class="pages">
@@ -232,6 +235,57 @@
                 <span>{{ 'admin.file.documents.failed' | t }}</span>
                 <button type="button" class="action" (click)="openPage(row.doc, row.failed)">{{ 'admin.file.retry' | t }}</button>
               </span>
+            }
+            @if (row.review; as r) {
+              <div class="review" [attr.data-status]="r.status">
+                <span class="line">{{ r.line }}</span>
+                <span class="status">{{ r.statusLine }}</span>
+                @if (r.refusal) {
+                  <span class="refusal">{{ r.refusal }}</span>
+                }
+                @if (r.unavailable) {
+                  <span class="unavailable">{{ 'admin.file.documents.unavailable' | t }}</span>
+                }
+                @if (r.buttons.length) {
+                  <span class="pages">
+                    @for (button of r.buttons; track button.n) {
+                      <button type="button" class="action" [attr.aria-label]="button.named + ', ' + r.line" (click)="openPage(r.doc, button.n)">{{ button.label }}</button>
+                    }
+                  </span>
+                }
+                @if (r.failed !== null) {
+                  <span class="page-failed" role="alert">
+                    <span>{{ 'admin.file.documents.failed' | t }}</span>
+                    <button type="button" class="action" (click)="openPage(r.doc, r.failed)">{{ 'admin.file.retry' | t }}</button>
+                  </span>
+                }
+                @if (r.open) {
+                  <span class="decisions">
+                    <button
+                      type="button"
+                      class="action primary"
+                      data-part="accept"
+                      [attr.data-document]="r.id"
+                      [attr.aria-label]="r.acceptNamed"
+                      [disabled]="deciding() !== null"
+                      (click)="accept(r.id)"
+                    >
+                      {{ 'admin.file.documents.accept' | t }}
+                    </button>
+                    <button
+                      type="button"
+                      class="action ghost danger"
+                      data-part="refuse"
+                      [attr.data-document]="r.id"
+                      [attr.aria-label]="r.refuseNamed"
+                      [disabled]="deciding() !== null"
+                      (click)="refuse(r.id, row.doc.kind)"
+                    >
+                      {{ 'admin.file.documents.refuseButton' | t }}
+                    </button>
+                  </span>
+                }
+              </div>
             }
             @for (older of row.replaced; track older.doc.id) {
               <div class="replaced">
@@ -254,6 +308,9 @@
           </li>
         }
       </ul>
+      @if (suspended(); as line) {
+        <p class="suspended" role="status">{{ line }}</p>
+      }
     </section>
 
     <section data-section="manual">

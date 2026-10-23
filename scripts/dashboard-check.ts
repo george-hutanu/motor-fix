@@ -38,6 +38,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_documents_uploaded_total',
   'motorfix_declarations_signed_total',
   'motorfix_documents_opened_total',
+  'motorfix_document_cycle_total',
   'motorfix_quote_received_total',
   'motorfix_consent_records_total',
   'motorfix_verification_checks_total',

@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -100,6 +100,7 @@ features:
   - 1361-trim-dead-lanes
   - 1357-merge-when-overlapping
   - 1360-refresh-gate-level1-handoff
+  - 068-yearly-documents
 ---
 
 # Capability: Platform
@@ -2675,6 +2676,10 @@ _From 1360-refresh-gate-level1-handoff._
 ### 1360-FR-017 — Every edited gate script MUST be blessed (`doctor.mjs --bless-hooks` after reading its diff); `npm run test:harness` and `node .claude/scripts/harness-eval.mjs --check` MUST be green.
 
 _From 1360-refresh-gate-level1-handoff._
+
+### 068-FR-015 — The DTOs (the upload-url request and answer, the upload body, the accept answer, the refuse body, the cycle, the queue row's `item`, the file read's documents) live in the contracts library, the four routes are REST with OpenAPI, the OpenAPI document and the generated client are regenerated, and the document kinds stay the contracts list (a new yearly kind is one entry there, #835).
+
+_From 068-yearly-documents._
 
 ## Retired
 

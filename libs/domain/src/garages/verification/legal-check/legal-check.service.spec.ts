@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { LegalCheckService } from './legal-check.service';
 import type { Actor } from '../../../auth/policy';
 import type { PrismaClient } from '../../../generated/prisma/client';
+import type { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 
 const garageId = '11111111-1111-4111-8111-111111111111';
 const otherId = '22222222-2222-4222-8222-222222222222';
@@ -17,10 +18,15 @@ const actor = (role: Actor['role'], garage: string | null = garageId): Actor =>
   }) as unknown as Actor;
 
 const service = (garage: unknown = null) =>
-  new LegalCheckService({
-    garage: { findUnique: jest.fn().mockResolvedValue(garage) },
-    rarActivity: { findMany: jest.fn().mockResolvedValue([]) },
-  } as unknown as PrismaClient);
+  new LegalCheckService(
+    {
+      garage: { findUnique: jest.fn().mockResolvedValue(garage) },
+      rarActivity: { findMany: jest.fn().mockResolvedValue([]) },
+    } as unknown as PrismaClient,
+    {
+      documentCycleOf: jest.fn().mockResolvedValue(null),
+    } as unknown as DocumentCycleService,
+  );
 
 // @traces 210-FR-013
 describe('a refused legal check read', () => {

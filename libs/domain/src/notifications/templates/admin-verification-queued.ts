@@ -46,3 +46,46 @@ export const ADMIN_VERIFICATION_QUEUED: Template = {
   },
   values: { dashboard: 'link', garage: 'text' },
 };
+
+// An approved garage sent its yearly documents again.
+export const ADMIN_VERIFICATION_QUEUED_DOCUMENTS: Template = {
+  audience: 'admin',
+  bell: {
+    en: 'Yearly documents to check: {garage}',
+    ro: 'Documente anuale de verificat: {garage}',
+  },
+  email: {
+    en: {
+      button: { label: 'Open the dashboard', link: 'dashboard' },
+      lines: [
+        '{garage} sent its yearly documents.',
+        'Open the queue from the admin dashboard.',
+      ],
+      reason: 'You get this e-mail because you are a MotorFix admin.',
+      subject: 'Yearly documents to check: {garage}',
+    },
+    ro: {
+      button: { label: 'Deschide panoul', link: 'dashboard' },
+      lines: [
+        '{garage} a trimis documentele anuale.',
+        'Deschide coada din panoul de administrare.',
+      ],
+      reason: 'Primești acest e-mail pentru că ești administrator MotorFix.',
+      subject: 'Documente anuale de verificat: {garage}',
+    },
+  },
+  example: ADMIN_VERIFICATION_QUEUED.example,
+  push: {
+    en: {
+      body: '{garage}. Open the queue from the admin dashboard.',
+      link: 'dashboard',
+      title: 'Yearly documents to check',
+    },
+    ro: {
+      body: '{garage}. Deschide coada din panoul de administrare.',
+      link: 'dashboard',
+      title: 'Documente anuale de verificat',
+    },
+  },
+  values: ADMIN_VERIFICATION_QUEUED.values,
+};

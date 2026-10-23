@@ -176,15 +176,22 @@ function dayMonth(value: unknown, language: Language) {
   const { day, month, year } = Object.fromEntries(
     dayParts.formatToParts(date).map((p) => [p.type, p.value]),
   );
-  return {
-    dm: `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]}`,
-    year,
-  };
+  const short = MONTHS_SHORT[language][Number(month) - 1];
+  return { dm: `${Number(day)} ${short}`, short, year };
 }
 
 export function formatDay(value: unknown, language: Language): string {
   const parts = dayMonth(value, language);
   return parts ? `${parts.dm} ${parts.year}` : MISSING;
+}
+
+// The Bucharest day's month and year: "ian. 2027" / "Jan 2027".
+export function formatShortMonthYear(
+  value: unknown,
+  language: Language,
+): string {
+  const parts = dayMonth(value, language);
+  return parts ? `${parts.short} ${parts.year}` : MISSING;
 }
 
 // The same Bucharest day without its year: "1 oct." / "1 Oct".

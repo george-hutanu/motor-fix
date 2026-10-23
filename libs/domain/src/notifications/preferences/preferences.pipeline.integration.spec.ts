@@ -291,23 +291,20 @@ describe('a garage’s own staff choices', () => {
     ]);
   });
 
-  // @traces 198-FR-010
-  it('send a document reminder by the channels left on, skipping a muted e-mail', async () => {
+  // @traces 068-FR-004
+  it('send a document reminder by e-mail whatever the owner muted', async () => {
     const { garageId, owner } = await staffOf();
-    await prefer(owner, 'DOCUMENT_DUE', 'email', false, garageId);
-    await hand('DOCUMENT_DUE', owner, garageId);
-    expect(await channelsOf(owner, 'DOCUMENT_DUE')).toEqual(['in_app']);
-    await hand('DOCUMENT_OVERDUE', owner, garageId);
-    expect(await channelsOf(owner, 'DOCUMENT_OVERDUE')).toEqual([
-      'in_app',
-      'email',
-    ]);
+    for (const kind of ['DOCUMENT_DUE', 'DOCUMENT_OVERDUE']) {
+      await prefer(owner, kind, 'email', false, garageId);
+      await prefer(owner, kind, 'push', false, garageId);
+      await hand(kind, owner, garageId);
+      expect(await channelsOf(owner, kind)).toEqual(['in_app', 'email']);
+    }
   });
 
-  // @traces 198-FR-010
   it('goes by the garage’s rows when the garage staff cannot be read', async () => {
     const { garageId, owner } = await staffOf();
-    await prefer(owner, 'DOCUMENT_DUE', 'email', false, garageId);
+    await prefer(owner, 'STAFF_JOINED', 'email', false, garageId);
     const failing = new Proxy(prisma, {
       get(target, key, receiver) {
         if (key === 'garageMember') {
@@ -318,8 +315,8 @@ describe('a garage’s own staff choices', () => {
       },
     });
     service = serviceOn(failing);
-    expect(await hand('DOCUMENT_DUE', owner, garageId)).toBe(0);
-    expect(await channelsOf(owner, 'DOCUMENT_DUE')).toEqual(['in_app']);
+    expect(await hand('STAFF_JOINED', owner, garageId)).toBe(0);
+    expect(await channelsOf(owner, 'STAFF_JOINED')).toEqual(['in_app']);
   });
 });
 

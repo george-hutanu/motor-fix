@@ -6,11 +6,13 @@ import {
   computed,
   DestroyRef,
   ElementRef,
+  effect,
   inject,
   linkedSignal,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   rarNumberRefused,
@@ -25,6 +27,7 @@ import {
 import {
   AdminService,
   type AuditEntryDto,
+  type DocumentDecisionDto,
   type VerificationCheckRecordedDto,
   type VerificationDecisionDto,
   VerificationDocumentsService,
@@ -44,7 +47,12 @@ import {
 import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
-import { liveResource } from '../live';
+import {
+  type DocumentRefusal,
+  DocumentRefuse,
+  type DocumentRefuseData,
+} from '../document-refuse/document-refuse';
+import { Live, liveResource } from '../live';
 import {
   ReportDecision,
   type ReportDecisionData,
@@ -144,7 +152,27 @@ const TICK_MS = 60_000;
 
 interface VerificationFileData {
   fileId: string;
+  // The part to show first: a yearly documents row opens at "Documente".
+  part?: 'documents';
 }
+
+// A yearly document's messages name the document or the cycle, not the
+// file: any of them reads the open file again.
+const DOCUMENT_EVENTS = [
+  'document.uploaded',
+  'document.accepted',
+  'document.refused',
+  'document.overdue',
+] as const;
+type SuspendedFor = NonNullable<DocumentDecisionDto['suspendedFor']>;
+// A suspension's cause in words; a failed RAR re-check reads as the
+// authorisation found not valid.
+const SUSPENSION_CAUSES: Record<SuspendedFor, string> = {
+  admin: 'admin.suspended.cause.admin',
+  documents_overdue: 'admin.suspended.cause.documents_overdue',
+  recheck_failed: 'admin.suspended.rar.none',
+  report_confirmed: 'admin.suspended.cause.report_confirmed',
+};
 
 // "Dosar de verificare": everything an admin reads to decide one garage's
 // file, opened once (the file moves to "in review") and read again on every
@@ -171,8 +199,8 @@ export class VerificationFile {
   private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  protected readonly fileId =
-    injectOverlayTask<VerificationFileData>().data.fileId;
+  private readonly task = injectOverlayTask<VerificationFileData>();
+  protected readonly fileId = this.task.data.fileId;
 
   // The first read that succeeds opens the file; every later one only reads.
   private opened = false;
@@ -218,6 +246,10 @@ export class VerificationFile {
   protected readonly correcting = signal<string | null>(null);
   protected readonly correctError = signal<string | null>(null);
   private readonly correctBusy = signal(false);
+  // The yearly document whose decision is on its way.
+  protected readonly deciding = signal<string | null>(null);
+  // The garage's suspension, as the last decision on a document answered it.
+  protected readonly suspended = signal<string | null>(null);
 
   protected readonly decided = computed(() =>
     DECIDED.includes(this.data()?.file.status ?? ''),
@@ -402,6 +434,12 @@ export class VerificationFile {
     const failed = this.pageFailed();
     return value.documents.map((doc) => ({
       buttons: doc.present && value.storageReady ? this.pageButtons(doc) : [],
+      decided: doc.decidedAt
+        ? this.t('documents.accepted', {
+            name: doc.decidedBy?.name || SYSTEM_NAME,
+            when: this.when(doc.decidedAt),
+          })
+        : null,
       doc,
       failed: failed?.id === doc.id ? failed.n : null,
       line: this.documentLine(doc),
@@ -417,6 +455,7 @@ export class VerificationFile {
           }),
         };
       }),
+      review: this.review(doc, value.storageReady, failed),
       stale: this.staleLine(doc),
       unavailable: doc.present && !value.storageReady,
     }));
@@ -763,6 +802,22 @@ export class VerificationFile {
   }
 
   // Focus moves once the drawer has rendered what changed.
+  // The Documente part, once the first read has drawn it: at the drawer's
+  // top, so its Acceptă and Refuză show without a scroll, then focused.
+  private showDocuments() {
+    const shown = effect(() => {
+      if (this.state() !== 'ready') return;
+      shown.destroy();
+      setTimeout(() => {
+        const part = this.host.nativeElement.querySelector<HTMLElement>(
+          '[data-section="documents"]',
+        );
+        part?.scrollIntoView?.({ block: 'start' });
+        part?.querySelector<HTMLElement>('h4')?.focus({ preventScroll: true });
+      });
+    });
+  }
+
   private focus(selector: string) {
     setTimeout(() =>
       this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
@@ -949,6 +1004,60 @@ export class VerificationFile {
     }));
   }
 
+  accept(id: string) {
+    void this.decideDocument(id, () =>
+      this.api.documentReviewControllerAccept({ id }),
+    );
+  }
+
+  // Asks for a reason and a note, then refuses the one document.
+  async refuse(id: string, kind: string) {
+    if (this.asking || this.deciding()) return;
+    this.asking = true;
+    const answer = await this.overlays
+      .open<DocumentRefusal, DocumentRefuseData>(DocumentRefuse, {
+        data: { document: this.documentName(kind) },
+        shape: 'dialog',
+        title: 'admin.file.documents.refuse.title',
+      })
+      .finally(() => {
+        this.asking = false;
+      });
+    if (answer === 'cancelled') {
+      this.focus(`[data-part="refuse"][data-document="${id}"]`);
+      return;
+    }
+    await this.decideDocument(id, () =>
+      this.api.documentReviewControllerRefuse({ body: answer, id }),
+    );
+  }
+
+  // A document decided elsewhere meanwhile is only read again; any other
+  // failure is told. Either way the file is read again.
+  private async decideDocument(
+    id: string,
+    call: () => Promise<DocumentDecisionDto>,
+  ) {
+    if (this.deciding()) return;
+    this.deciding.set(id);
+    try {
+      const { suspendedFor } = await call();
+      this.suspended.set(
+        suspendedFor
+          ? this.t('documents.suspended', {
+              cause: this.i18n.t(SUSPENSION_CAUSES[suspendedFor]),
+            })
+          : null,
+      );
+    } catch (error) {
+      if (toProblem(error).code !== 'document_not_in_review')
+        toast(this.t('documents.decisionFailed'));
+    } finally {
+      this.deciding.set(null);
+      this.file.reload();
+    }
+  }
+
   // A page of the RAR authorisation, asked for by the activities form.
   openAuthorisation(n: number) {
     const doc = this.authorisation()?.doc;
@@ -1024,6 +1133,56 @@ export class VerificationFile {
   private staleLine(doc: VerificationFileDocumentDto) {
     if (!doc.stale) return null;
     return this.t(doc.issuedOn ? 'documents.stale' : 'documents.noDate');
+  }
+
+  // The yearly upload of a kind waiting for a decision, or refused: when it
+  // came, its issue date, its pages, and its decision or the two buttons.
+  private review(
+    doc: VerificationFileDocumentDto,
+    storageReady: boolean,
+    failed: { id: string; n: number } | null,
+  ) {
+    const review = doc.review;
+    if (!review) return null;
+    const language = this.i18n.language();
+    const document = this.documentName(doc.kind);
+    const kept = { ...doc, id: review.id, pages: review.pages };
+    const refused = review.status === 'refused';
+    return {
+      acceptNamed: this.t('documents.acceptNamed', { document }),
+      buttons: storageReady ? this.pageButtons(kept) : [],
+      doc: kept,
+      failed: failed?.id === review.id ? failed.n : null,
+      id: review.id,
+      line: [
+        this.t('documents.new'),
+        this.t('documents.uploaded', {
+          day: formatDay(review.uploadedAt, language),
+        }),
+        review.issuedOn
+          ? this.t('documents.issued', {
+              day: formatDay(review.issuedOn, language),
+            })
+          : this.t('documents.noDate'),
+      ].join(' · '),
+      open: !refused,
+      refusal:
+        refused && review.refusal
+          ? this.t('documents.refusal', {
+              note: review.refusal.note,
+              reason: this.t(`documents.reasons.${review.refusal.reason}`),
+            })
+          : null,
+      refuseNamed: this.t('documents.refuseNamed', { document }),
+      status: review.status,
+      statusLine: refused
+        ? this.t('documents.refused', {
+            name: review.decidedBy?.name || SYSTEM_NAME,
+            when: this.when(review.decidedAt),
+          })
+        : this.t('documents.inReview'),
+      unavailable: !storageReady,
+    };
   }
 
   // "Deschide" for one page, "Deschide pagina n" for each of several.
@@ -1117,12 +1276,9 @@ export class VerificationFile {
     // (a document's { page }, a check's { result }), read here defensively.
     const next = entry.newValue as unknown;
     if (entry.subjectType === 'legal_document')
-      return this.t('lines.page', {
-        document: this.documentName(entry.kind ?? ''),
-        n: (next as { page?: number } | null)?.page ?? 1,
-        name,
-        when,
-      });
+      return this.documentEntry(entry, next, name, when);
+    const cycle = this.cycleLine(entry, name, when);
+    if (cycle) return cycle;
     if (entry.subjectType === 'verification_check')
       return this.t('lines.check', {
         check: this.t(`checks.${entry.field}`),
@@ -1140,6 +1296,43 @@ export class VerificationFile {
         when,
       });
     return this.statusLine(entry, name, when);
+  }
+
+  // A document's page opened, a yearly upload, or its acceptance or refusal.
+  private documentEntry(
+    entry: AuditEntryDto,
+    next: unknown,
+    name: string,
+    when: string,
+  ) {
+    const document = this.documentName(entry.kind ?? '');
+    if (entry.action === 'open')
+      return this.t('lines.page', {
+        document,
+        n: (next as { page?: number } | null)?.page ?? 1,
+        name,
+        when,
+      });
+    if (entry.field !== 'status')
+      return this.t('lines.documentUploaded', { document, name, when });
+    return this.t(
+      next === 'valid' ? 'lines.documentAccepted' : 'lines.documentRefused',
+      { document, name, when },
+    );
+  }
+
+  // The garage's yearly documents cycle: overdue, or a new due date.
+  private cycleLine(entry: AuditEntryDto, name: string, when: string) {
+    if (entry.subjectType !== 'garage') return null;
+    if (entry.field === 'documents_state')
+      return this.t('lines.documentsOverdue', { name, when });
+    if (entry.field === 'documents_due_on')
+      return this.t('lines.documentsDue', {
+        day: formatDay(entry.newValue, this.i18n.language()),
+        name,
+        when,
+      });
+    return null;
   }
 
   // A decision on the file's reports, by its outcome.
@@ -1246,6 +1439,11 @@ export class VerificationFile {
     void this.i18n.enter('admin');
     void this.i18n.enter('public');
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    inject(Live)
+      .on(DOCUMENT_EVENTS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.file.reload());
+    if (this.task.data.part === 'documents') this.showDocuments();
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
