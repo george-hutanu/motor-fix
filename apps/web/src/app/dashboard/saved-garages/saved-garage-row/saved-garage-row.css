@@ -91,6 +91,7 @@ mf-rating-dial {
 }
 mf-request-saved-quote {
   flex: none;
+  box-sizing: border-box;
 }
 /* A narrow row puts the quote button on its own line, under the name. */
 @container (max-width: 359px) {
