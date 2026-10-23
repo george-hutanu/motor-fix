@@ -460,7 +460,8 @@ const quietCommit = (path, minutesAgo, { push = true } = {}) => {
   if (push) git(path, 'push', '-q', 'origin', 'HEAD');
 };
 
-const env = (over = {}) => ({ now: NOW, gh: () => [], alive: () => false, pidAlive: () => false, remove: (path) => ({ path, removed: false, reason: 'not run in tests' }), ...over });
+// claudeDir points nowhere, so no case reads the transcripts of the machine running it.
+const env = (over = {}) => ({ now: NOW, gh: () => [], alive: () => false, pidAlive: () => false, claudeDir: '/nonexistent/claude', remove: (path) => ({ path, removed: false, reason: 'not run in tests' }), ...over });
 
 describe('collect', () => {
   it('lists every worktree with its fields and counts a live PR-tester run instead of listing it', () => {
@@ -552,6 +553,92 @@ describe('collect', () => {
       assert.equal(r.verdict, 'stale');
       assert.deepEqual(report.plan, []);
       assert.equal(report.rows.length, 2);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('a live subagent read from its own transcript', () => {
+  // Claude Code keeps a subagent's transcript at <claude dir>/projects/<slug>/<session>/subagents/<agent>.jsonl,
+  // the slug being the session's cwd with every character outside [A-Za-z0-9] turned into '-'.
+  const slug = (path) => path.replace(/[^A-Za-z0-9]/g, '-');
+  const transcript = (claudeDir, project, agent, minutesAgo) => {
+    const dir = join(claudeDir, 'projects', project, 'session-1', 'subagents');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, `${agent}.jsonl`);
+    writeFileSync(file, '{}\n');
+    utimesSync(file, new Date(NOW - minutesAgo * MIN), new Date(NOW - minutesAgo * MIN));
+  };
+  const quietAgent = (f) => {
+    const a = f.add('agent-tx', '911-tx');
+    quietCommit(a, 120);
+    git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-tx (pid 4242 start Sun Oct  4 08:07:18 2026)', a);
+    return a;
+  };
+  const deps = (claudeDir) => env({ alive: (pid) => pid === 4242, claudeDir });
+
+  // @traces 482-FR-001
+  // @traces 482-FR-002
+  it('holds a worktree whose files are quiet while its subagent\'s transcript moved within the threshold, and plans nothing for it', () => {
+    const f = fixture();
+    try {
+      const a = quietAgent(f);
+      const claudeDir = join(f.root, 'claude');
+      transcript(claudeDir, slug(f.repo), 'agent-tx', 5);
+      const report = collect(f.repo, deps(claudeDir));
+      const r = report.rows.find((x) => x.path === a);
+      assert.equal(r.holder, 'live');
+      assert.equal(r.activity.source, 'transcript');
+      assert.equal(r.fix, null);
+      assert.deepEqual(report.plan.filter((p) => p.path === a), []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('finds the transcript of a session started in a worktree below the main checkout', () => {
+    const f = fixture();
+    try {
+      const a = quietAgent(f);
+      const claudeDir = join(f.root, 'claude');
+      transcript(claudeDir, slug(join(f.repo, '.worktrees', 'x')), 'agent-tx', 5);
+      assert.equal(collect(f.repo, deps(claudeDir)).rows.find((x) => x.path === a).holder, 'live');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 482-FR-003
+  it('still reads none when the transcript is as quiet as the worktree, or missing, or under another repository', () => {
+    const cases = {
+      stale: (claudeDir, f) => transcript(claudeDir, slug(f.repo), 'agent-tx', 120),
+      otherAgent: (claudeDir, f) => transcript(claudeDir, slug(f.repo), 'agent-other', 5),
+      otherRepo: (claudeDir) => transcript(claudeDir, slug('/elsewhere/repo'), 'agent-tx', 5),
+      noFolder: () => {},
+    };
+    for (const [name, arrange] of Object.entries(cases)) {
+      const f = fixture();
+      try {
+        const a = quietAgent(f);
+        const claudeDir = join(f.root, 'claude');
+        arrange(claudeDir, f);
+        const r = collect(f.repo, deps(claudeDir)).rows.find((x) => x.path === a);
+        assert.equal(r.holder, 'none', name);
+        assert.equal(r.fix, 'resume', name);
+      } finally {
+        rmSync(f.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('never revives a lock whose session is gone', () => {
+    const f = fixture();
+    try {
+      const a = quietAgent(f);
+      const claudeDir = join(f.root, 'claude');
+      transcript(claudeDir, slug(f.repo), 'agent-tx', 5);
+      assert.equal(collect(f.repo, env({ claudeDir })).rows.find((x) => x.path === a).holder, 'dead');
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
@@ -1258,20 +1345,27 @@ describe('--gate', () => {
     }
   });
 
-  it('fires exactly when the full pass would dispatch or apply something', () => {
-    const states = {
-      idle: () => {},
-      stale: (f) => quietCommit(f.add('agent-a', '901-a'), 120),
-      claimed: (f) => {
-        const a = f.add('agent-a', '901-a');
-        quietCommit(a, 120);
-        writeClaim(a, 'resume', NOW - 5 * MIN);
-      },
-      dead: (f) => deadLock(f, f.add('agent-a', '901-a')),
-      dirtyDone: (f) => writeFileSync(join(f.add('agent-a', '901-a'), 'wip.txt'), 'x\n'),
-      gone: (f) => rmSync(f.add('agent-gone', '904-d'), { recursive: true, force: true }),
-    };
-    for (const [name, arrange] of Object.entries(states)) {
+  // One case per state, each judging only NOW and modification times it sets: no case does
+  // several fixtures' work inside one timeout, so none needs a longer one under a loaded machine.
+  // @traces 482-FR-005
+  const states = {
+    idle: () => {},
+    stale: (f) => quietCommit(f.add('agent-a', '901-a'), 120),
+    claimed: (f) => {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120);
+      writeClaim(a, 'resume', NOW - 5 * MIN);
+    },
+    dead: (f) => deadLock(f, f.add('agent-a', '901-a')),
+    dirtyDone: (f) => {
+      const wip = join(f.add('agent-a', '901-a'), 'wip.txt');
+      writeFileSync(wip, 'x\n');
+      utimesSync(wip, new Date(NOW), new Date(NOW));
+    },
+    gone: (f) => rmSync(f.add('agent-gone', '904-d'), { recursive: true, force: true }),
+  };
+  for (const [name, arrange] of Object.entries(states)) {
+    it(`fires exactly when the full pass would dispatch or apply something: ${name}`, () => {
       const f = fixture();
       try {
         arrange(f);
@@ -1282,14 +1376,13 @@ describe('--gate', () => {
         io.out.length = 0;
         assert.equal(main(['--fix', '--json'], deps), 0);
         const full = JSON.parse(io.out.join('\n'));
-        vi.restoreAllMocks();
         assert.equal(gate === 2, full.plan.length > 0 || full.actions.length > 0, name);
         assert.ok(gate === 0 || gate === 2, name);
       } finally {
         rmSync(f.root, { recursive: true, force: true });
       }
-    }
-  }, 180_000);
+    });
+  }
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
@@ -1471,6 +1564,33 @@ describe('--wait', () => {
       } finally {
         rmSync(f.root, { recursive: true, force: true });
       }
+    }
+  });
+
+  // @traces 482-FR-004
+  it('leaves the record to a second wait that took it over while this one judged the stale record', () => {
+    const f = fixture();
+    try {
+      writeFileSync(record(f), '999999\n');
+      const io = captured();
+      let slept = false;
+      // Asked about the gone pid, the other taker removes the stale record and takes its own, as a
+      // second `watch.mjs --wait` started at the same moment would between this wait's read and its removal.
+      const commandOf = (pid) => {
+        if (pid === 999999) {
+          rmSync(record(f));
+          writeFileSync(record(f), '4243\n', { flag: 'wx' });
+          return null;
+        }
+        return pid === 4243 ? waitCommand : null;
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: () => (slept = true), commandOf }) }), 0);
+      assert.deepEqual(io.out, ['watch: a wait is already armed (pid 4243)']);
+      assert.equal(slept, false);
+      assert.equal(readFileSync(record(f), 'utf8').trim(), '4243');
+      assert.deepEqual(readdirSync(commonDir(f)).filter((n) => n.startsWith('speckit-watch-wait')), ['speckit-watch-wait.pid']);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
     }
   });
 

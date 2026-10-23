@@ -45,6 +45,8 @@ model ActivityLog {
   kind             String?
   text             String?
 
+  // The admin's unfiltered read and its count walk the time alone.
+  @@index([at])
   @@index([garageId, at])
   @@index([carId, at])
   @@index([jobId, at])

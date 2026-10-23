@@ -12,7 +12,8 @@ export function serialDatabase(databaseUrl: string) {
       'serialDatabase needs testEnvironment database-turn.environment.cjs',
     );
   const turn = databaseTurn(databaseUrl);
-  beforeAll(turn.take, 120_000);
+  // Waits out the longest holder: the audit history's million-row case.
+  beforeAll(turn.take, 360_000);
   // Given back after every afterAll of the spec, not before them.
   releaseLast(turn.release);
 }
