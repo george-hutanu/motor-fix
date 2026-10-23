@@ -232,6 +232,27 @@ describe('telling a restored garage’s owners', () => {
     expect(await counted('skipped')).toBe(before + 1);
   });
 
+  it('tells nobody and counts a skip when the garage was suspended again before the job ran', async () => {
+    const { garage, job } = await restored();
+    await new SuspensionService(prisma, new AuditService(), outbox).suspend(
+      SYSTEM,
+      garage.id,
+      'admin',
+      REASON,
+    );
+    const fanOut = await start();
+    const before = await counted('skipped');
+
+    await fanOut.handle(job);
+
+    expect(
+      await prisma.notification.count({
+        where: { kind: 'GARAGE_RESTORED', subjectId: garage.id },
+      }),
+    ).toBe(0);
+    expect(await counted('skipped')).toBe(before + 1);
+  });
+
   it.each([
     ['no garage id', {}],
     ['a garage id that is not text', { garageId: 42 }],

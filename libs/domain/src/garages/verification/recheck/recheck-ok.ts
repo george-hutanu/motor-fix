@@ -44,7 +44,7 @@ export interface Locked {
   activities: string[];
 }
 
-export interface Ports {
+interface Ports {
   audit: AuditPort;
   events: EventPort;
 }

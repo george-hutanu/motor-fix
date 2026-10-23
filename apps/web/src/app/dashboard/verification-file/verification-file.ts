@@ -51,7 +51,7 @@ import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 import {
   AdminRestoreGarage,
   type AdminRestoreGarageData,
-  type RestoreCause,
+  bucharestToday,
   type RestoreResult,
 } from '../admin-restore-garage/admin-restore-garage';
 import {
@@ -832,10 +832,8 @@ export class VerificationFile {
     const value = this.data();
     if (!value) return;
     const suspension = value.suspension;
-    const cause = (suspension?.cause ??
-      (from === 'documents'
-        ? 'documents_overdue'
-        : null)) as RestoreCause | null;
+    const cause =
+      suspension?.cause ?? (from === 'documents' ? 'documents_overdue' : null);
     if (!cause) return;
     const data: AdminRestoreGarageData = {
       activities: value.activities,
@@ -1613,11 +1611,4 @@ function serverMissing(error: unknown) {
     (body as { missing?: unknown } | null)?.missing,
   );
   return gaps?.length ? gaps : null;
-}
-
-// Today's calendar day in Bucharest, as the server dates a re-check.
-function bucharestToday() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Bucharest',
-  }).format(new Date());
 }

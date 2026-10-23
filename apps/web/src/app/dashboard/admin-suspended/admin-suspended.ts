@@ -14,6 +14,7 @@ import { GARAGES_KINDS } from '../admin-garages/kinds';
 import {
   AdminRestoreGarage,
   type AdminRestoreGarageData,
+  bucharestToday,
   type RestoreResult,
   suspensionState,
 } from '../admin-restore-garage/admin-restore-garage';
@@ -151,11 +152,4 @@ export class AdminSuspended {
   constructor() {
     void this.i18n.enter('admin');
   }
-}
-
-// Today's calendar day in Bucharest, as the server dates a re-check.
-function bucharestToday() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Bucharest',
-  }).format(new Date());
 }

@@ -6,17 +6,14 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { SUSPENSION_LIFT_NOTE_MAX } from '@motor-fix/contracts/suspension-limits';
+import {
+  SUSPENSION_LIFT_NOTE_MAX,
+  type SuspensionCause,
+} from '@motor-fix/contracts/suspension-limits';
 import { AdminService, type RestoreGarageDto } from '@motor-fix/data-access';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
-
-export type RestoreCause =
-  | 'admin'
-  | 'documents_overdue'
-  | 'recheck_failed'
-  | 'report_confirmed';
 
 // How the dialog ended: put back, given up, or found already moved (the
 // list or the file reads again).
@@ -25,7 +22,7 @@ export type RestoreResult = 'restored' | 'cancelled' | 'stale';
 export interface AdminRestoreGarageData {
   // The garage's current RAR activities, pre-ticked for the re-check.
   activities: readonly { code: string; nameEn: string; nameRo: string }[];
-  cause: RestoreCause;
+  cause: SuspensionCause;
   // The yearly documents' cycle reads `due`; null when the opener does not
   // know (the list), the server then judging alone.
   documentsDue: boolean | null;
@@ -42,12 +39,19 @@ type Field = 'checkedOn' | 'activities' | 'note';
 
 // The codes after which the garage is no longer the one the admin opened.
 const STALE = new Set(['garage_already_restored', 'garage_not_suspended']);
-const NOTE_REQUIRED = new Set<RestoreCause>(['admin', 'report_confirmed']);
+const NOTE_REQUIRED = new Set<SuspensionCause>(['admin', 'report_confirmed']);
+
+// Today's calendar day in Bucharest, as the server dates a re-check.
+export function bucharestToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
+}
 
 // "suspendat · <why>", as the suspended list reads a row.
 export function suspensionState(
   i18n: I18n,
-  cause: RestoreCause | null | undefined,
+  cause: SuspensionCause | null | undefined,
   rarVerdict: string | null | undefined,
 ) {
   if (!cause) return i18n.t('admin.suspended.alone');

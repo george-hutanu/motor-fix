@@ -58,9 +58,11 @@ export class GarageRestoredFanOut {
       this.untold(garageId);
       return;
     }
-    const garage = await this.prisma.garage.findUnique({
+    // Suspended again before this job ran: the suspended notice is the last
+    // word, never a late "back on the map".
+    const garage = await this.prisma.garage.findFirst({
       select: { name: true },
-      where: { id: garageId },
+      where: { id: garageId, status: 'approved' },
     });
     const people = garage
       ? await ownersByLanguage(this.prisma, garageId)
