@@ -183,7 +183,7 @@ describe('the start-up key status against odd answers', () => {
     mock.answer({ hang: true, status: 200 });
     await expect(brevo(150).keyStatus()).resolves.toEqual({
       outcome: 'unreachable',
-      reason: 'provider_unreachable',
+      reason: 'provider_timeout',
     });
   });
 

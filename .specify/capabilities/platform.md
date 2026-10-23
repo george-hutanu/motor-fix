@@ -162,9 +162,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 520-FR-004 — The worker's `GET /health/ready` MUST report status `error` with 503 while the `notifications` queue consumer is not running (waiting on Brevo, refused, missing configuration), and follow the dependency checks alone once it runs; its `checks` fields and the public health contract stay as they are, and the API's `/health/ready` MUST be unchanged.
+### 422-FR-009 — `api` and `worker` MUST answer `GET /health/ready` with `checks` for `postgres`, `redis` and `storage` (the bucket answers; the storage check gives up after 2 seconds on its own too), each limited to 2 seconds and run in parallel, the deployed commit SHA as `version`, 200 when all are `ok` and 503 naming each failed check otherwise.
 
-_From 520-brevo-key-check-retry._
+_From 422-private-file-storage._
 
 ### 421-FR-014 — The `web` server MUST answer `GET /health/ready` with 200 `{"status":"ok"}` from the process that renders; answering is the check.
 
@@ -2713,6 +2713,10 @@ _From 506-railway-deploy-signal-spec._
 
 _From 506-railway-deploy-signal-spec._
 
+### 520-FR-004 — The worker's `GET /health/ready` MUST report status `error` with 503 while the `notifications` queue consumer is not running (waiting on Brevo, refused, missing configuration), and follow the dependency checks alone once it runs; its `checks` fields and the public health contract stay as they are, and the API's `/health/ready` MUST be unchanged.
+
+_From 520-brevo-key-check-retry._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2812,4 +2816,3 @@ _From 506-railway-deploy-signal-spec._
 - `703-FR-006` — superseded by `482-FR-004` (2026-10-23)
 - `600-FR-002` — superseded by `486-FR-001` (2026-10-23)
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
-- `422-FR-009` — superseded by `520-FR-004` (2026-10-23)

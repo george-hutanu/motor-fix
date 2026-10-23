@@ -11,14 +11,12 @@ import {
 import type { NotificationsService } from '../notifications.service';
 import { testConfig, testPhoneConfig } from '../notifications.testing';
 
-type Outcome = KeyStatus;
-
-const unreachable: Outcome = {
+const unreachable: KeyStatus = {
   outcome: 'unreachable',
   reason: 'provider_503',
 };
 
-function processorAnswering(...outcomes: Outcome[]) {
+function processorAnswering(...outcomes: KeyStatus[]) {
   const keyStatus = jest.fn(async () => outcomes.shift() ?? unreachable);
   const processor = new NotificationsProcessor(
     {} as PrismaClient,
@@ -80,7 +78,7 @@ describe('the start-up key check', () => {
 
   it('keeps retrying a minute apart once the delay reaches its cap', async () => {
     const { delays, processor } = processorAnswering(
-      ...Array<Outcome>(9).fill(unreachable),
+      ...Array<KeyStatus>(9).fill(unreachable),
       { outcome: 'passed' },
     );
 

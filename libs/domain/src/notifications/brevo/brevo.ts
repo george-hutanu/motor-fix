@@ -51,12 +51,19 @@ export type KeyStatus =
   | { outcome: 'refused'; status: number }
   | { outcome: 'unreachable'; reason: string };
 
+// A call that got no answer: its own time limit ran out, or the network failed.
+const unreachableReason = (error: BrevoError) =>
+  (error.cause as Error | undefined)?.name === 'TimeoutError'
+    ? 'provider_timeout'
+    : 'provider_unreachable';
+
 export class BrevoError extends Error {
   constructor(
     readonly reason: string,
     readonly retryable: boolean,
+    cause?: unknown,
   ) {
-    super(`Brevo refused the message: ${reason}`);
+    super(`Brevo refused the message: ${reason}`, { cause });
   }
 }
 
@@ -114,9 +121,10 @@ export class Brevo {
   // answer, a 5xx or a 429 may pass on a later try; any other refusal will not.
   async keyStatus(signal?: AbortSignal): Promise<KeyStatus> {
     const res = await this.call('/account', { method: 'GET' }, signal).catch(
-      () => null,
+      (error: BrevoError) => error,
     );
-    if (!res) return { outcome: 'unreachable', reason: 'provider_unreachable' };
+    if (res instanceof BrevoError)
+      return { outcome: 'unreachable', reason: unreachableReason(res) };
     if (res.ok) return { outcome: 'passed' };
     if (res.status >= 500 || res.status === 429)
       return { outcome: 'unreachable', reason: `provider_${res.status}` };
@@ -167,8 +175,8 @@ export class Brevo {
           ? AbortSignal.any([AbortSignal.timeout(this.timeoutMs), signal])
           : AbortSignal.timeout(this.timeoutMs),
       });
-    } catch {
-      throw new BrevoError('provider_unreachable', true);
+    } catch (cause) {
+      throw new BrevoError('provider_unreachable', true, cause);
     }
   }
 }

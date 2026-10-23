@@ -147,7 +147,7 @@ describe('the Brevo key check outcome', () => {
     mock.answer({ hang: true, status: 0 });
     await expect(brevo(200).keyStatus()).resolves.toEqual({
       outcome: 'unreachable',
-      reason: 'provider_unreachable',
+      reason: 'provider_timeout',
     });
   });
 

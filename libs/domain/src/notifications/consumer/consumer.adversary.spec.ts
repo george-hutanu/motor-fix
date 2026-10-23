@@ -11,8 +11,7 @@ import {
 import type { NotificationsService } from '../notifications.service';
 import { testConfig, testPhoneConfig } from '../notifications.testing';
 
-type Outcome = KeyStatus;
-const unreachable = (reason = 'provider_503'): Outcome => ({
+const unreachable = (reason = 'provider_503'): KeyStatus => ({
   outcome: 'unreachable',
   reason,
 });
@@ -31,7 +30,7 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 const build = (
-  keyStatus: (signal?: AbortSignal) => Promise<Outcome>,
+  keyStatus: (signal?: AbortSignal) => Promise<KeyStatus>,
   email: Record<string, string> = {},
   phone: Record<string, string> = { PHONE_SENDING: 'off', WHATSAPP_SENDER: '' },
 ) => {
@@ -146,12 +145,12 @@ describe('the start-up key check through the processor', () => {
   });
 
   it('follows the doubling then the cap, one warning per failed attempt', async () => {
-    const outcomes: Outcome[] = [
+    const outcomes: KeyStatus[] = [
       ...Array.from({ length: 10 }, () => unreachable()),
       { outcome: 'passed' },
     ];
     const { delays, keyStatus, processor } = build(
-      async () => outcomes.shift() as Outcome,
+      async () => outcomes.shift() as KeyStatus,
     );
     await expect(processor.ready()).resolves.toBe(true);
     expect(keyStatus).toHaveBeenCalledTimes(11);
@@ -169,10 +168,10 @@ describe('the start-up key check through the processor', () => {
 
   it('waits only after an attempt has ended, never before the first', async () => {
     const events: string[] = [];
-    const outcomes: Outcome[] = [unreachable(), { outcome: 'passed' }];
+    const outcomes: KeyStatus[] = [unreachable(), { outcome: 'passed' }];
     const { processor } = build(async () => {
       events.push('ask');
-      return outcomes.shift() as Outcome;
+      return outcomes.shift() as KeyStatus;
     });
     processor.sleep = async () => {
       events.push('sleep');
@@ -183,8 +182,8 @@ describe('the start-up key check through the processor', () => {
 
   it('hands the shutdown signal to every wait', async () => {
     const stop = new AbortController();
-    const outcomes: Outcome[] = [unreachable(), { outcome: 'passed' }];
-    const { processor } = build(async () => outcomes.shift() as Outcome);
+    const outcomes: KeyStatus[] = [unreachable(), { outcome: 'passed' }];
+    const { processor } = build(async () => outcomes.shift() as KeyStatus);
     const seen: (AbortSignal | undefined)[] = [];
     processor.sleep = async (_ms, signal) => {
       seen.push(signal);
@@ -194,14 +193,14 @@ describe('the start-up key check through the processor', () => {
   });
 
   it('stops at a refusal that follows unreachable attempts', async () => {
-    const outcomes: Outcome[] = [
+    const outcomes: KeyStatus[] = [
       unreachable(),
       unreachable('provider_429'),
       { outcome: 'refused', status: 403 },
       { outcome: 'passed' },
     ];
     const { keyStatus, processor } = build(
-      async () => outcomes.shift() as Outcome,
+      async () => outcomes.shift() as KeyStatus,
     );
     await expect(processor.ready()).resolves.toBe(false);
     expect(keyStatus).toHaveBeenCalledTimes(3);
@@ -210,11 +209,11 @@ describe('the start-up key check through the processor', () => {
   });
 
   it('never logs the API key, refused or unreachable', async () => {
-    const outcomes: Outcome[] = [
+    const outcomes: KeyStatus[] = [
       unreachable(),
       { outcome: 'refused', status: 401 },
     ];
-    const { processor } = build(async () => outcomes.shift() as Outcome);
+    const { processor } = build(async () => outcomes.shift() as KeyStatus);
     await processor.ready();
     for (const line of loggedLines()) expect(line).not.toContain('test-key');
   });
@@ -283,7 +282,7 @@ describe('the start-up key check against a real Brevo stand-in', () => {
     const lines = warn.mock.calls.map(([line]) => String(line));
     expect(lines[0]).toContain('provider_503');
     expect(lines[1]).toContain('provider_429');
-    expect(lines[2]).toContain('provider_unreachable');
+    expect(lines[2]).toContain('provider_timeout');
   });
 
   it.each([400, 401, 403, 404])(
@@ -410,12 +409,12 @@ describe('the notifications consumer at its edges', () => {
   });
 
   it('runs through the processor: outage then recovery gives a ready consumer', async () => {
-    const outcomes: Outcome[] = [
+    const outcomes: KeyStatus[] = [
       unreachable(),
       unreachable('provider_unreachable'),
       { outcome: 'passed' },
     ];
-    const { processor } = build(async () => outcomes.shift() as Outcome);
+    const { processor } = build(async () => outcomes.shift() as KeyStatus);
     const w = worker();
     const consumer = new NotificationsConsumer(
       (signal) => processor.ready(signal),
@@ -431,7 +430,7 @@ describe('the notifications consumer at its edges', () => {
     const stop = { release: () => undefined as unknown };
     const { processor } = build(
       () =>
-        new Promise<Outcome>((resolve) => {
+        new Promise<KeyStatus>((resolve) => {
           stop.release = () => resolve({ outcome: 'passed' });
         }),
     );
