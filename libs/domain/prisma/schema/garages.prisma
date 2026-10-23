@@ -475,6 +475,10 @@ model GarageSuspension {
   untilTime   DateTime?             @map("until_time") @db.Timestamptz(3)
   // The admin's account; empty when MotorFix itself suspended.
   suspendedBy String?               @map("suspended_by") @db.Uuid
+  // The admin who put the garage back on the map; empty while open.
+  liftedBy    String?               @map("lifted_by") @db.Uuid
+  // The trimmed lift note, 1-1,000 code points, or null.
+  liftNote    String?               @map("lift_note")
   createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   garage      Garage                @relation(fields: [garageId], references: [id], onDelete: Cascade)
 

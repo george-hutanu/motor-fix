@@ -27,6 +27,7 @@ import {
   SUSPENSION_CAUSES,
   type SuspensionCause,
 } from '../garage-suspension.dto';
+import { NOTE_TEXT } from '../note-text';
 
 // The days an overdue garage keeps its place on the map after its due date.
 export const DOCUMENT_GRACE_DAYS = 14;
@@ -44,9 +45,6 @@ const DOCUMENT_ROWS = [
   'overdue',
 ] as const;
 export type DocumentRow = (typeof DOCUMENT_ROWS)[number];
-
-// Line breaks are the only control characters a note may hold.
-const NOTE_TEXT = /^(?:[\t\n\r]|\P{Cc})*$/u;
 
 // The newest refusal of a kind whose newest upload was refused.
 export class DocumentCycleRefusalDto {

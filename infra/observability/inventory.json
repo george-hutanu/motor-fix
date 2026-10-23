@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 167,
+    "count": 168,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -762,6 +762,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_garage_restores_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each suspended garage an admin put back on the map, by the cause lifted; not started at 0, so the API stays under its 150 series; the audit holds who, the evidence and the note; a count has no failure to alert on, the admin-garage-restore endpoint entry owns the error and latency alerts",
+      "story": "ST-67"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_rechecks_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
@@ -803,6 +812,19 @@
       ],
       "reason": "each suspension and each refused one is audited with the admin, the cause and the reason; the count by cause is the motorfix_garage_suspensions_total entry",
       "story": "ST-49"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garage-restore",
+      "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/restore",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each restore is audited with the admin, the cause lifted, its evidence and the note, and logged once with the garage, the cause and whether a re-check rode with it (never the note); the count by cause is the motorfix_garage_restores_total entry",
+      "story": "ST-67"
     },
     {
       "kind": "endpoint",

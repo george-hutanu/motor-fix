@@ -155,6 +155,12 @@ const suspensions = () =>
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
   );
+// Not started at 0: a handful a month, and the API stays under 150 series.
+const restores = () =>
+  counter(
+    'motorfix_garage_restores_total',
+    'Suspended garages an admin put back on the map, by the cause lifted',
+  );
 const verificationChecks = () =>
   counter(
     'motorfix_verification_checks_total',
@@ -303,6 +309,10 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
 
 export function countGarageSuspension(cause: SuspensionCause) {
   suspensions().add(1, { cause });
+}
+
+export function countGarageRestore(cause: SuspensionCause) {
+  restores().add(1, { cause });
 }
 
 export function countVerificationCheck(
