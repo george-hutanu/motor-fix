@@ -57,13 +57,18 @@ export class BrandLoader {
     let changed = 0;
     for (const record of records) {
       const brand = byKey.get(record.key);
-      const after = fileFields(record);
+      // The file's rank seeds a new brand or a stored one with no rank; a rank
+      // already held is the nightly ranking's and stays.
+      const after = {
+        active: true,
+        name: record.name,
+        popularity: brand?.popularity ?? record.popularity ?? null,
+        roPossessive: record.roPossessive ?? null,
+        slug: slugOf(record.name),
+      };
       const wrote = brand
-        ? await this.update(tx, brand, withRankIfUnranked(after, brand, record))
-        : await this.create(tx, record.key, {
-            ...after,
-            popularity: record.popularity ?? null,
-          });
+        ? await this.update(tx, brand, after)
+        : await this.create(tx, record.key, after);
       if (wrote) changed++;
     }
     const keys = new Set(records.map((record) => record.key));
@@ -138,25 +143,4 @@ function refuseHeldNames(
       );
     }
   }
-}
-
-function fileFields(record: BrandRecord) {
-  return {
-    active: true,
-    name: record.name,
-    roPossessive: record.roPossessive ?? null,
-    slug: slugOf(record.name),
-  };
-}
-
-// The file's rank seeds a brand it inserts or a stored one with no rank; a
-// rank already held is the nightly ranking's and stays.
-function withRankIfUnranked(
-  after: ReturnType<typeof fileFields>,
-  brand: Brand,
-  record: BrandRecord,
-) {
-  return brand.popularity === null && record.popularity !== undefined
-    ? { ...after, popularity: record.popularity }
-    : after;
 }

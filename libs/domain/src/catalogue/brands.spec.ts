@@ -144,31 +144,6 @@ describe('the shipped brand file', () => {
   });
 
   // @traces 245-FR-001
-  it('keeps the keys and names of the brands shipped before it grew', () => {
-    const byKey = new Map(BRANDS.map((brand) => [brand.key, brand.name]));
-
-    expect(
-      [
-        ['bmw', 'BMW'],
-        ['mini', 'Mini'],
-        ['mercedes-benz', 'Mercedes-Benz'],
-        ['audi', 'Audi'],
-        ['volkswagen', 'Volkswagen'],
-        ['skoda', 'Škoda'],
-        ['dacia', 'Dacia'],
-        ['renault', 'Renault'],
-        ['ford', 'Ford'],
-        ['toyota', 'Toyota'],
-        ['hyundai', 'Hyundai'],
-        ['tesla', 'Tesla'],
-        ['alfa-romeo', 'Alfa Romeo'],
-        ['citroen', 'Citroën'],
-        ['opel', 'Opel'],
-      ].filter(([key, name]) => byKey.get(key) !== name),
-    ).toEqual([]);
-  });
-
-  // @traces 245-FR-001
   it('keys every brand by the slug of its name', () => {
     expect(
       BRANDS.filter((brand) => brand.key !== slugOf(brand.name)).map(

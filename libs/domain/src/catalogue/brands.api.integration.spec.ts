@@ -121,7 +121,7 @@ describe('GET /brands', () => {
 
     const res = await search({ q: '   ' });
 
-    expect(res.body.total).toBe(64);
+    expect(res.body.total).toBe(BRANDS.length);
   });
 
   // @traces 245-FR-002
@@ -203,7 +203,7 @@ describe('GET /brands', () => {
     const res = await search({ q: 'tesla' });
 
     expect(res.body.items).toEqual([]);
-    expect((await search()).body.total).toBe(63);
+    expect((await search()).body.total).toBe(BRANDS.length - 1);
   });
 
   it.each([
