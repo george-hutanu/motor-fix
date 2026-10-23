@@ -9,15 +9,10 @@ import { test } from './fixtures.js';
 // restoring a seeded garage would move it for every spec running beside this
 // one. The seeded admin suspends it by recording a failed re-check, then puts
 // it back from "Service-uri suspendate" with a valid one, while a visitor's
-// results and the owner's dashboard stay open. A deployed address, whose run
-// has no DATABASE_URL, skips the file.
+// results and the owner's dashboard stay open. The @database tag keeps the
+// file out of a deployed run, which has no database.
 // @traces 067-FR-014 067-FR-007 067-FR-009 067-FR-010
 test.describe('putting a suspended garage back on the map @seeded @database', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its brand, garage and owner straight to PostgreSQL, which needs DATABASE_URL',
-  );
-
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const brand = { name: `Marca Rep ${stamp}`, slug: `marca-rep-${stamp}` };
   const name = `Atelier Repus ${stamp}`;
