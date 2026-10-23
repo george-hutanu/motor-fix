@@ -891,8 +891,10 @@ describe('the time index and the append-only rule', () => {
     ).toBe('Ion');
   });
 
+  // On a small table the planner may count through any index that holds
+  // `at`; the million-row case in the service spec requires the time index.
   // @traces 469-FR-002
-  it('can answer the window count through the time index when a scan is not allowed', async () => {
+  it('can answer the window count from an index when a scan is not allowed', async () => {
     await entry({ at: minutesAgo(1) });
     let plan = '';
 
