@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -70,7 +73,7 @@ describe('the contact page', () => {
     const page = await render(async () => ({ email: null }), 'en');
 
     expect(page.querySelector('h1')?.textContent?.trim()).toBe('Contact');
-    expect(page.textContent).toContain('Send the message');
+    expect(page.textContent).toContain('Send message');
   });
 
   it('is a public address in both languages', () => {
@@ -79,5 +82,17 @@ describe('the contact page', () => {
     expect(language?.children?.some((route) => route.path === 'contact')).toBe(
       true,
     );
+  });
+});
+
+describe('the contact page on a wide screen', () => {
+  // The footer's and the other public pages' content column: the page's own
+  // left edge lines up with the footer's wordmark.
+  it('sits in the same centred 1280 px column as the footer', () => {
+    const css = readFileSync(join(__dirname, 'contact-page.css'), 'utf8');
+    const host = css.match(/:host\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(host).toMatch(/max-width:\s*1280px/);
+    expect(host).toMatch(/margin-inline:\s*auto/);
+    expect(host).toMatch(/box-sizing:\s*border-box/);
   });
 });
