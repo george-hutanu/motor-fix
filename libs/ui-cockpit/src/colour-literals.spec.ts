@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 
 const root = join(__dirname, '../../..');
 
-const skipped = [
+const skippedOutside = [
   'libs/ui-cockpit',
   'libs/data-access/src/lib',
   'libs/domain/src/generated',
@@ -12,12 +12,12 @@ const skipped = [
 const colourLiteral =
   /(?<![&\w])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?!\w)|\b(?:rgba?|hsla?)\(/gi;
 
-function sources(dir: string): string[] {
+function sources(dir: string, skipped = skippedOutside): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     const rel = relative(root, path);
     if (skipped.some((s) => rel === s || rel.startsWith(`${s}/`))) return [];
-    if (entry.isDirectory()) return sources(path);
+    if (entry.isDirectory()) return sources(path, skipped);
     if (/\.spec\.ts$/.test(entry.name)) return [];
     return /\.(ts|html|css|scss)$/.test(entry.name) ? [path] : [];
   });
@@ -35,6 +35,14 @@ function frontEndSources(): string[] {
     }
   });
 }
+
+// The token blocks are the dark :root and the light one inside its media query.
+const outsideTokenBlocks = (file: string) => {
+  const text = readFileSync(file, 'utf8');
+  return file.endsWith('cockpit.css')
+    ? text.replace(/:root\s*\{[^}]*\}/g, '')
+    : text;
+};
 
 describe('colour literals', () => {
   it('recognises hex and functional colours but not ids or entities', () => {
@@ -55,6 +63,21 @@ describe('colour literals', () => {
     );
 
     expect(frontEndSources().length).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
+  });
+
+  // @traces 517-FR-004
+  it('appear in the theme library only in the token blocks and the generated colours', () => {
+    const files = sources(join(root, 'libs/ui-cockpit/src'), [
+      'libs/ui-cockpit/src/generated',
+    ]);
+    const offenders = files.flatMap((file) =>
+      (outsideTokenBlocks(file).match(colourLiteral) ?? []).map(
+        (hit) => `${relative(root, file)}: ${hit}`,
+      ),
+    );
+
+    expect(files.some((file) => file.endsWith('cockpit.css'))).toBe(true);
     expect(offenders).toEqual([]);
   });
 });

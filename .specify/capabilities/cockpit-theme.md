@@ -7,6 +7,7 @@ features:
   - 953-ui-review-checks
   - 954-input-border-contrast
   - 975-type-scale
+  - 517-cockpit-colours-one-source
   - 495-hlm-input-aria-reveal
 ---
 
@@ -136,6 +137,29 @@ _From 975-type-scale._
 
 _From 975-type-scale._
 
+### 517-FR-001 — The `theme-color` tags `provideCockpitTheme()` writes MUST take their values from each scheme's `--mf-bg` in `cockpit.css` through the generated colours module; `provide-cockpit-theme.ts` MUST hold no colour literal.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-002 — The e-mail palette (`@motor-fix/ui-cockpit/email`) MUST take its values from the light set of the generated colours module, and MUST still carry no Angular code.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-003 — A generator in `libs/ui-cockpit` MUST write `libs/ui-cockpit/src/generated/colours.ts` from the dark and light token blocks of `cockpit.css`, holding every token whose value is a colour, by scheme; run with `--check` it MUST exit non-zero when the file differs from what it would write, and a unit test MUST run that check.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-004 — A check in the test suite MUST fail when a `.ts`, `.html`, `.css` or `.scss` file under `libs/ui-cockpit/src` (test files excluded) holds a colour literal, by 050-FR-016's pattern, outside the token blocks of `cockpit.css` and the generated colours module.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-005 — The Cockpit theme MUST define `--mf-radius-md` as the control radius (12 px), and no stylesheet MAY write `var(--mf-radius-md, …)` with a fallback.
+
+_From 517-cockpit-colours-one-source._
+
+### 517-FR-006 — The change MUST add no service, endpoint, queue, outside call or product action, and so no observability entry.
+
+_From 517-cockpit-colours-one-source._
 ### 495-FR-002 — The kit input MUST NOT take `aria-invalid` from the control's raw invalid state (Spartan `BrnInput`'s binding) any longer — `HlmInput` drops `BrnInput` and hosts `BrnFieldControl` itself; the red border (`data-matches-spartan-invalid`, error-state matcher: touched or submitted) and the other `data-*` attributes the brain writes MUST stay as today.
 
 _From 495-hlm-input-aria-reveal._

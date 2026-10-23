@@ -10,6 +10,7 @@ const token = (name: string) =>
   light.match(new RegExp(`--mf-${name}:\\s*([^;]+);`))?.[1].trim();
 
 describe('the e-mail palette', () => {
+  // @traces 517-FR-002
   it.each([
     ['amber', 'amber'],
     ['bg', 'bg'],

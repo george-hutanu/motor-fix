@@ -7,8 +7,13 @@ import {
 } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 
-// --mf-bg of each set in cockpit.css; a meta tag cannot read a CSS variable.
-const BROWSER_BAR = { dark: '#0b0c0e', light: '#f4f4f1' };
+import { COCKPIT_COLOURS } from '../generated/colours';
+
+// A meta tag cannot read a CSS variable, so the bar takes --mf-bg generated from cockpit.css.
+const BROWSER_BAR = {
+  dark: COCKPIT_COLOURS.dark['--mf-bg'],
+  light: COCKPIT_COLOURS.light['--mf-bg'],
+};
 
 // The colour scheme follows the device in cockpit.css alone. Overlays stay
 // out of the browser top layer so the toaster is drawn above dialogs.

@@ -32,6 +32,7 @@ describe('provideCockpitTheme', () => {
     });
   });
 
+  // @traces 517-FR-001
   it('colours the browser bar with the page background of each scheme', () => {
     TestBed.configureTestingModule({ providers: [provideCockpitTheme()] });
     const head = TestBed.inject(DOCUMENT).head;
