@@ -64,7 +64,7 @@ const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 /**
  * The gh a fix hint names: in a cloud session (CLAUDE_CODE_REMOTE=true) plain
  * gh has no credentials, so `pr edit` and `pr create` go through gh.mjs, which
- * answers them over REST (766-FR-004); on the laptop, gh itself.
+ * answers them over REST; on the laptop, gh itself.
  */
 function ghFor(env) {
   return env.CLAUDE_CODE_REMOTE === "true" ? "node .claude/scripts/gh.mjs" : "gh";

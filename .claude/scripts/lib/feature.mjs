@@ -297,6 +297,7 @@ export function activeFeature(repo) {
  * there is none.
  */
 export function branchFeatureDir(repo, branch) {
+  if (!branch) return null;
   const root = featuresRoot(repo);
   const exact = join(root, branch);
   const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];

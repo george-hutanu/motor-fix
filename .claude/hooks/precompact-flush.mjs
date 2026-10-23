@@ -58,7 +58,7 @@ process.stdin.on("end", () => {
   const dirty = git(["status", "--porcelain"])
     .split("\n")
     .filter(Boolean)
-    .filter((line) => !/^"?specs(\/|"?$)/.test(line.slice(3)));
+    .filter((line) => !line.slice(3).split(" -> ").every((path) => /^"?specs(\/|"?$)/.test(path)));
   const stamp = new Date().toISOString();
 
   appendFileSync(

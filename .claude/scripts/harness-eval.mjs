@@ -79,8 +79,13 @@ function buildPayload(testCase, scratch) {
  * and commits it happened to name. Each commit maps a path to its content, or
  * to null to delete it.
  */
-function buildFixture(repo, testCase, scratch) {
-  const dir = join(scratch, `fixture-${testCase.id}`);
+/** A scratch folder name for the case at `index`: unique, and one path segment whatever its id holds. */
+function scratchName(kind, testCase, index) {
+  return `${kind}-${index}-${String(testCase.id).replace(/[^\w.-]/g, "_")}`;
+}
+
+function buildFixture(repo, testCase, scratch, index) {
+  const dir = join(scratch, scratchName("fixture", testCase, index));
   mkdirSync(dir, { recursive: true });
   for (const part of ["hooks", "scripts"]) cpSync(join(repo, ".claude", part), join(dir, ".claude", part), { recursive: true });
   const git = (...args) =>
@@ -111,16 +116,16 @@ export function runCases(repo, cases = loadCases(repo)) {
   // gate started through one never sees its own path as the one it was run by.
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), "harness-eval-")));
   try {
-    return cases.map((testCase) => {
+    return cases.map((testCase, index) => {
       const started = Date.now();
-      const built = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
+      const built = testCase.fixture ? buildFixture(repo, testCase, scratch, index) : repo;
       // A case that declares `"symlink": true` starts run-hook.mjs and the gate
       // through a symlink to its root, the way a checkout under a symlinked
       // folder starts them, so a gate that compares the path it was started by
       // with its own URL instead of using isEntryPoint is caught.
       let root = built;
       if (testCase.symlink) {
-        root = join(scratch, `link-${testCase.id}`);
+        root = join(scratch, scratchName("link", testCase, index));
         symlinkSync(built, root);
       }
       const runner = join(root, ".claude", "hooks", "run-hook.mjs");
