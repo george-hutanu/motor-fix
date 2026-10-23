@@ -150,14 +150,21 @@
     "cuiShared": "CUI folosit și de alt service: {names}",
     "cuiWarning": "CUI folosit deja de: {names}",
     "documents": {
+      "accept": "Acceptă",
+      "accepted": "Acceptat de {name}, {when}",
+      "acceptNamed": "Acceptă {document}",
       "ago": {
         "few": "emis acum {n} zile",
         "one": "emis acum {n} zi",
         "other": "emis acum {n} de zile"
       },
+      "decisionFailed": "Decizia nu a putut fi salvată. Încearcă din nou.",
       "failed": "Nu am putut deschide documentul",
       "heading": "DOCUMENTE",
+      "inReview": "în verificare",
+      "issued": "emis pe {day}",
       "missing": "lipsește",
+      "new": "Document nou",
       "noDate": "Data emiterii lipsește",
       "open": "Deschide",
       "openNamed": "Deschide {document}",
@@ -168,10 +175,32 @@
         "one": "{n} pagină",
         "other": "{n} de pagini"
       },
+      "reasons": {
+        "documents": "Documente necorespunzătoare",
+        "other": "Alt motiv"
+      },
+      "refusal": "Motiv: {reason} — {note}",
+      "refuse": {
+        "cancel": "Renunță",
+        "confirm": "Refuză",
+        "count": "{n}/500",
+        "note": "Mesaj pentru service",
+        "noteHint": "Service‑ul primește mesajul cuvânt cu cuvânt.",
+        "noteRequired": "Scrie un mesaj pentru service.",
+        "noteTooLong": "Mesajul are cel mult 500 de caractere.",
+        "reason": "Motivul",
+        "reasonRequired": "Alege un motiv.",
+        "title": "Refuză documentul"
+      },
+      "refuseButton": "Refuză",
+      "refused": "Refuzat de {name}, {when}",
+      "refuseNamed": "Refuză {document}",
       "replacedOn": "înlocuit la {date}",
       "stale": "Mai vechi de 30 de zile la data trimiterii",
+      "suspended": "Service‑ul este suspendat: {cause}",
       "today": "emis azi",
       "unavailable": "indisponibil",
+      "uploaded": "încărcat {day}",
       "yesterday": "emis ieri"
     },
     "failed": "Nu am putut deschide dosarul",
@@ -205,6 +234,11 @@
       "approved": "Aprobat de {name}, {when}",
       "changed": "Modificat de {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
+      "documentAccepted": "{document}: acceptat de {name}, {when}",
+      "documentRefused": "{document}: refuzat de {name}, {when}",
+      "documentsDue": "Documente anuale: termen nou {day} — {name}, {when}",
+      "documentsOverdue": "Documente anuale restante — {name}, {when}",
+      "documentUploaded": "{document}: încărcat de {name}, {when}",
       "more_requested": "Completări cerute de {name}, {when}",
       "opened": "Deschis de {name}, {when}",
       "page": "{document}, pagina {n} deschisă de {name}, {when}",
@@ -613,6 +647,12 @@
       "other": "{n} de mărci"
     },
     "cuiWarning": "CUI folosit deja de: {names}",
+    "documents": {
+      "amber": "documente noi de verificat",
+      "kind": "Documente anuale",
+      "openNamed": "Deschide documentele anuale {name}",
+      "red": "urgent: peste termen sau suspendat"
+    },
     "empty": "Niciun service nu așteaptă verificarea",
     "failed": "Lista nu a putut fi citită",
     "heading": "Service‑uri de verificat",

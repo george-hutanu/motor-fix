@@ -16,7 +16,10 @@ import {
 import {
   DOCUMENT_KINDS,
   DOCUMENT_PAGES_MAX,
+  DOCUMENT_REFUSAL_NOTE_MAX,
+  DOCUMENT_REFUSAL_REASONS,
   type DocumentKind,
+  type DocumentRefusalReason,
 } from './legal-documents';
 import { calendarDay } from '../cars.dto';
 import {
@@ -40,13 +43,6 @@ export const DOCUMENT_ROWS = [
   'overdue',
 ] as const;
 export type DocumentRow = (typeof DOCUMENT_ROWS)[number];
-
-// Why an admin refuses a yearly document: the documents themselves, or
-// something the note explains.
-export const DOCUMENT_REFUSAL_REASONS = ['documents', 'other'] as const;
-export type DocumentRefusalReason = (typeof DOCUMENT_REFUSAL_REASONS)[number];
-
-export const DOCUMENT_REFUSAL_NOTE_MAX = 500;
 
 // Line breaks are the only control characters a note may hold.
 const NOTE_TEXT = /^(?:[\t\n\r]|\P{Cc})*$/u;

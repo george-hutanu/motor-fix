@@ -1,0 +1,59 @@
+<form (submit)="confirm($event)" novalidate>
+  <p class="document">{{ task.data.document }}</p>
+  <fieldset
+    #group
+    class="choice"
+    [attr.aria-invalid]="reasonRefused() ? 'true' : null"
+    [attr.aria-describedby]="reasonRefused() ? 'mf-refuse-reason-error' : null"
+  >
+    <legend>{{ 'admin.file.documents.refuse.reason' | t }}</legend>
+    @for (option of options; track option.code) {
+      <label class="option">
+        <input
+          type="radio"
+          name="mf-refuse-reason"
+          required
+          [value]="option.code"
+          [checked]="reason() === option.code"
+          (change)="pick(option.code)"
+        />
+        <span>{{ option.label | t }}</span>
+      </label>
+    }
+    @if (reasonRefused()) {
+      <p class="error" id="mf-refuse-reason-error" role="alert">{{ 'admin.file.documents.refuse.reasonRequired' | t }}</p>
+    }
+  </fieldset>
+  <div class="field">
+    <label for="mf-refuse-note">{{ 'admin.file.documents.refuse.note' | t }}</label>
+    <textarea
+      #field
+      class="spartan-input"
+      data-slot="input"
+      id="mf-refuse-note"
+      rows="4"
+      required
+      [value]="note()"
+      [attr.aria-invalid]="noteRefused() ? 'true' : null"
+      [attr.aria-describedby]="noteRefused() ? 'mf-refuse-note-hint mf-refuse-note-count mf-refuse-note-error' : 'mf-refuse-note-hint mf-refuse-note-count'"
+      (input)="input($event)"
+    ></textarea>
+    <div class="under">
+      <p class="hint" id="mf-refuse-note-hint">{{ 'admin.file.documents.refuse.noteHint' | t }}</p>
+      <p class="count" id="mf-refuse-note-count">{{ 'admin.file.documents.refuse.count' | t: { n: count() } }}</p>
+    </div>
+    @if (noteRefused()) {
+      <p class="error" id="mf-refuse-note-error" role="alert">
+        @if (refused() === 'noteTooLong') {
+          {{ 'admin.file.documents.refuse.noteTooLong' | t }}
+        } @else {
+          {{ 'admin.file.documents.refuse.noteRequired' | t }}
+        }
+      </p>
+    }
+  </div>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.file.documents.refuse.cancel' | t }}</button>
+    <button hlmBtn variant="secondary" class="danger" type="submit">{{ 'admin.file.documents.refuse.confirm' | t }}</button>
+  </div>
+</form>

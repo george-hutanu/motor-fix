@@ -17,14 +17,12 @@ import {
   type VerificationFileStatus,
 } from './garage-status';
 import { PublicGaragePhotoDto } from './garages.dto';
-import {
-  DOCUMENT_REFUSAL_REASONS,
-  DocumentCycleDto,
-  type DocumentRefusalReason,
-} from './legal-documents/document-cycle.dto';
+import { DocumentCycleDto } from './legal-documents/document-cycle.dto';
 import {
   DOCUMENT_KINDS,
+  DOCUMENT_REFUSAL_REASONS,
   type DocumentKind,
+  type DocumentRefusalReason,
 } from './legal-documents/legal-documents';
 import {
   VerificationActorDto,

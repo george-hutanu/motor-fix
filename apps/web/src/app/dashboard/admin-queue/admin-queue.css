@@ -62,12 +62,14 @@
 .area,
 .applied,
 .waiting,
+.documents,
 .cui {
   font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
-.waiting {
+.waiting,
+.documents {
   color: var(--mf-text);
   font-weight: 600;
 }
@@ -79,6 +81,7 @@ mf-lamp {
   .area,
   .applied,
   .waiting,
+  .documents,
   .cui,
   mf-lamp {
     font-size: var(--mf-size-small);

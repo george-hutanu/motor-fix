@@ -147,13 +147,20 @@
     "cuiShared": "CUI also used by another garage: {names}",
     "cuiWarning": "CUI already used by: {names}",
     "documents": {
+      "accept": "Accept",
+      "accepted": "Accepted by {name}, {when}",
+      "acceptNamed": "Accept {document}",
       "ago": {
         "one": "issued {n} day ago",
         "other": "issued {n} days ago"
       },
+      "decisionFailed": "The decision could not be saved. Try again.",
       "failed": "Could not open the document",
       "heading": "DOCUMENTS",
+      "inReview": "under review",
+      "issued": "issued on {day}",
       "missing": "missing",
+      "new": "New document",
       "noDate": "Issue date missing",
       "open": "Open",
       "openNamed": "Open {document}",
@@ -163,10 +170,32 @@
         "one": "{n} page",
         "other": "{n} pages"
       },
+      "reasons": {
+        "documents": "Documents not acceptable",
+        "other": "Other reason"
+      },
+      "refusal": "Reason: {reason} — {note}",
+      "refuse": {
+        "cancel": "Cancel",
+        "confirm": "Refuse",
+        "count": "{n}/500",
+        "note": "Message for the garage",
+        "noteHint": "The garage receives the message word for word.",
+        "noteRequired": "Write a message for the garage.",
+        "noteTooLong": "The message has at most 500 characters.",
+        "reason": "Reason",
+        "reasonRequired": "Choose a reason.",
+        "title": "Refuse the document"
+      },
+      "refuseButton": "Refuse",
+      "refused": "Refused by {name}, {when}",
+      "refuseNamed": "Refuse {document}",
       "replacedOn": "replaced on {date}",
       "stale": "Older than 30 days at the time of sending",
+      "suspended": "The garage is suspended: {cause}",
       "today": "issued today",
       "unavailable": "unavailable",
+      "uploaded": "uploaded {day}",
       "yesterday": "issued yesterday"
     },
     "failed": "Could not open the file",
@@ -200,6 +229,11 @@
       "approved": "Approved by {name}, {when}",
       "changed": "Changed by {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
+      "documentAccepted": "{document}: accepted by {name}, {when}",
+      "documentRefused": "{document}: refused by {name}, {when}",
+      "documentsDue": "Yearly documents: new due date {day} — {name}, {when}",
+      "documentsOverdue": "Yearly documents overdue — {name}, {when}",
+      "documentUploaded": "{document}: uploaded by {name}, {when}",
       "more_requested": "More requested by {name}, {when}",
       "opened": "Opened by {name}, {when}",
       "page": "{document}, page {n} opened by {name}, {when}",
@@ -599,6 +633,12 @@
       "other": "{n} brands"
     },
     "cuiWarning": "CUI already used by: {names}",
+    "documents": {
+      "amber": "new documents to review",
+      "kind": "Yearly documents",
+      "openNamed": "Open the yearly documents of {name}",
+      "red": "urgent: overdue or suspended"
+    },
     "empty": "No garage is waiting for verification",
     "failed": "The list could not be read",
     "heading": "Garages to verify",

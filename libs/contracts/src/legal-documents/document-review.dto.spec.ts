@@ -1,11 +1,11 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
+import { DocumentRefusalDto } from './document-cycle.dto';
 import {
   DOCUMENT_REFUSAL_NOTE_MAX,
   DOCUMENT_REFUSAL_REASONS,
-  DocumentRefusalDto,
-} from './document-cycle.dto';
+} from './legal-documents';
 import { legalCheckRows } from '../legal-check.dto';
 
 // As the API's ValidationPipe checks a body: unknown fields refused.
