@@ -1,12 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   inject,
   input,
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { GaragesService } from '@motor-fix/data-access';
+import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, toast } from '@motor-fix/ui-cockpit';
@@ -43,6 +44,14 @@ export class RequestSavedQuote {
   private readonly i18n = inject(I18n);
 
   protected readonly state = signal<'idle' | 'pending' | 'unavailable'>('idle');
+  // A row removed by a live update while its profile is read opens nothing.
+  private destroyed = false;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+    });
+  }
 
   protected async open() {
     if (this.state() !== 'idle') return;
@@ -51,9 +60,22 @@ export class RequestSavedQuote {
       source: 'saved',
       voice: this.voice.voice,
     });
-    let garage: RequestQuoteData['garage'];
+    const garage = await this.read();
+    if (!garage) return;
+    // Pending until the dialog has closed, so a second tap opens nothing.
     try {
-      garage = await this.garages.publicGaragesControllerBySlug(
+      await this.show(garage);
+    } catch {
+      this.say('failed');
+    } finally {
+      this.state.set('idle');
+    }
+  }
+
+  // The garage's profile, or null once the failure is said.
+  private async read(): Promise<PublicGarageDto | null> {
+    try {
+      return await this.garages.publicGaragesControllerBySlug(
         { slug: this.slug() },
         publicRead(),
       );
@@ -61,23 +83,21 @@ export class RequestSavedQuote {
       const status = httpStatus(error);
       if (GONE.includes(status)) {
         this.state.set('unavailable');
-        return;
+        return null;
       }
       this.state.set('idle');
-      toast(
-        this.i18n.t(
-          status === 0
-            ? 'public.saveGarage.noConnection'
-            : 'public.saveGarage.failed',
-        ),
-      );
-      return;
+      this.say(status === 0 ? 'noConnection' : 'failed');
+      return null;
     }
-    this.state.set('idle');
+  }
+
+  private async show(garage: PublicGarageDto) {
+    if (this.destroyed) return;
     // Loaded on the first tap: the dialog stays out of the list's bundle.
     const { RequestQuote } = await import(
       '../../../public/garage-profile/request-quote/request-quote'
     );
+    if (this.destroyed) return;
     const result = await this.overlays.open<
       RequestQuoteResult,
       RequestQuoteData
@@ -88,5 +108,9 @@ export class RequestSavedQuote {
     });
     if (typeof result === 'object' && 'go' in result)
       await this.router.navigateByUrl(result.go);
+  }
+
+  private say(text: 'noConnection' | 'failed') {
+    toast(this.i18n.t(`public.saveGarage.${text}`));
   }
 }

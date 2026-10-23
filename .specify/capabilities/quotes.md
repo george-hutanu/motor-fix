@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -19,6 +19,7 @@ features:
   - 314-accept-quote
   - 009-copy-voice-analytics
   - 428-close-on-account-closed
+  - 292-saved-garage-quote
 ---
 
 # Capability: Quotes
@@ -151,9 +152,9 @@ _From 030-new-account-empty-states._
 
 _From 030-new-account-empty-states._
 
-### 221-FR-016 — `source` MUST be stored per recipient: `profile_direct` for the garage whose profile the dialog was opened from, `shared_link` for that garage when the profile's address carries `?src=share`, `search` for every garage ticked in the picker; the API MUST accept only the contracts' source values and MUST refuse a garage id given twice. `home`, `map`, `saved` and `unknown` are not produced by this story. The source is a recorded fact for later statistics, never an input to routing or the limit.
+### 292-FR-006 — A request sent from the dialog opened on a saved row MUST record the saved garage's recipient source as `saved` (a value the contracts already allow) and every garage ticked in the picker as `search`, through the existing send; nothing else about the request, its routing checks, its limits, its events, notifications or audit changes.
 
-_From 221-quote-request._
+_From 292-saved-garage-quote._
 
 ### 221-FR-017 — States: while the cars and jobs load, the dialog shows them from the profile's data at once and the picker behind a skeleton; offline, Trimite is disabled with "Fără conexiune" / "No connection" and every typed value stays; while the send is in flight Trimite is disabled and shows the form-saving helper's busy state; a failed send keeps the form and shows the shared error with a retry carrying the same key; a 429 shows "Ai trimis deja 20 de cereri azi. Încearcă mâine." / "You already sent 20 requests today. Try again tomorrow." Every new text MUST exist in Romanian and English, Romanian words joined by a hyphen using U+2011; every control at least 44 px tall; the dialog MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll.
 
@@ -759,6 +760,10 @@ _From 428-close-on-account-closed._
 
 _From 428-close-on-account-closed._
 
+### 292-FR-005 — The dialog opened from a saved row MUST be the profile's request dialog itself, not a copy: the car Select, the job switches, the description and its counter, the garage picker and its 5-garage cap, the no-car prompt, the offline and error states, the send, the confirmation and the place the confirmation leads to are those of ST-221 (221-FR-002..009, 221-FR-017), unchanged by this story apart from accepting `saved` as its entry source.
+
+_From 292-saved-garage-quote._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -782,3 +787,4 @@ _From 428-close-on-account-closed._
 - `221-FR-007` — superseded by `049-FR-008` (2026-10-17)
 - `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
+- `221-FR-016` — superseded by `292-FR-006` (2026-10-23)

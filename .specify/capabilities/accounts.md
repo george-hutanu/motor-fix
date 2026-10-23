@@ -41,6 +41,7 @@ features:
   - 101-verification-progress
   - 009-copy-voice-analytics
   - 129-delete-account
+  - 292-saved-garage-quote
 ---
 
 # Capability: Accounts
@@ -948,9 +949,9 @@ _From 366-assistant-privacy._
 
 _From 291-saved-garages._
 
-### 291-FR-007 — Each row MUST show: the rating dial (the shared dial the result cards and Home cards use, with its unrated state), the garage's name, the lamp line of FR-008, a remove control (icon only, accessible name "Scoate din salvate" / "Remove from saved"), and an arrow; the name and the arrow open the garage's public profile `/<lang>/garages/<slug>` in the person's language (the profile opened from here reports its source as `saved`, as today). Rows are helm cards, in the order the API gives.
+### 292-FR-001 — Each row of the view "Service-uri salvate" at `/app/driver/saved` whose garage is available MUST carry a secondary button "Cere ofertă" / "Request a quote", accessible name "Cere ofertă de la {garage}" / "Request a quote from {garage}", placed as a sibling of the row's existing controls (never inside the profile link), at least as tall as the app's tap size (`--mf-tap`, 44 px), and wrapping under the name on a narrow row; the row's name and arrow keep opening the profile, and the remove control is unchanged.
 
-_From 291-saved-garages._
+_From 292-saved-garage-quote._
 
 ### 291-FR-008 — The lamp line MUST be composed from the item: with `brands` not empty, a green lamp (the shared `mf-lamp`) and "Lucrează pe {brands}" / "Works on {brands}", the names joined with ", " and the last with " și " / " and "; with `brands` empty and the driver owning at least one car, a red lamp and "Nu lucrează pe mașinile tale" / "Does not work on your cars"; with no car, a grey lamp and "Adaugă o mașină ca să vezi dacă lucrează pe ea" / "Add a car to see whether it works on it". After it, separated by " · ", the distance when the item has one, in the language's format with one decimal and " km" (019-FR-004); for a mobile mechanic "vine la tine" / "comes to you" when `comesToYou` is true and "în afara zonei" / "outside its area" when false; nothing, and no separator, without a place. The colour is never the only signal: the text states the case and the dot is hidden from assistive technology. An `available: false` item is drawn greyed with "Indisponibil" / "Unavailable" in place of the lamp line (its name and arrow still open the profile, which shows the "no longer available" page, A34) and keeps its remove control; its dial shows the garage's stored rating, or the unrated state, like any other row.
 
@@ -1118,6 +1119,34 @@ _From 129-delete-account._
 
 _From 129-delete-account._
 
+### 292-FR-002 — A row whose garage is not available (`available` false, the row that shows "Indisponibil" today) MUST render no "Cere ofertă" button, including when the row turns unavailable through a live update (291-FR-013).
+
+_From 292-saved-garage-quote._
+
+### 292-FR-003 — The rows of the "Service-uri salvate" panel on Panou (the limited list with "Vezi toate", 291-FR-009) MUST NOT carry the button; they stay as 291-FR-007 describes them.
+
+_From 292-saved-garage-quote._
+
+### 292-FR-004 — Tapping the button MUST read the garage's current public profile (the same details the profile page reads for that garage) and then open the request dialog of 221-FR-002 for it, with that garage ticked in the picker, the driver's cars in the Select (221-FR-003), the garage's priced jobs as switches all off, and the picker of 221-FR-006 behaving as from the profile. While the read is open the button is disabled and shows its pending state; a second tap does nothing. The pending state is exposed to assistive technology (`aria-busy`), and when the dialog closes focus returns to the button that opened it (the overlays service's behaviour, unchanged).
+
+_From 292-saved-garage-quote._
+
+### 292-FR-007 — When the profile read of FR-004 fails because the garage is gone or no longer available (404 or 410), the dialog MUST NOT open, the row MUST show "Indisponibil" / "Unavailable" in the button's place with no toast, as 290-FR-012 (a status text announced politely, so keyboard focus lost with the removed button is not silent); on a failed connection the button returns to idle and a toast shows "Fără conexiune" / "No connection"; on any other error the button returns to idle and a toast shows the shared error text.
+
+_From 292-saved-garage-quote._
+
+### 292-FR-008 — Every new text MUST live in the dashboard's texts in Romanian and English, and the row with its button MUST render well at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll at 320 px.
+
+_From 292-saved-garage-quote._
+
+### 292-FR-009 — Tests MUST cover, in Jest: the button on an available row and its absence on an unavailable row and on the Panou panel's rows; a tap reads the garage's profile and opens the request dialog with that garage ticked, its jobs and the source `saved`; the 404, offline and other-error outcomes of FR-007. End to end, in Playwright: as a driver, from Service-uri salvate, send a request to a saved garage and see it under Cererile mele.
+
+_From 292-saved-garage-quote._
+
+### 292-FR-010 — Tapping the button MUST send the existing `quote_request_started` analytics event with source `saved` (added to that event's allowed sources); no other telemetry is added, as no endpoint, queue or event is new.
+
+_From 292-saved-garage-quote._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1142,3 +1171,4 @@ _From 129-delete-account._
 - `1203-FR-010` — superseded by `005-FR-014` (2026-10-17)
 - `250-FR-006` — superseded by `1359-FR-011` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
+- `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
