@@ -548,6 +548,26 @@ describe('ResultsSheet holding the pointer', () => {
 
     expect(holders).toEqual([handle(), host().querySelector('.top')]);
   });
+
+  // A press the page took before it hydrated is replayed with no release
+  // after it (the finger let go over the map): the next press still holds
+  // the pointer, so its drag reaches the sheet wherever it is let go.
+  it('takes a new press of a pointer whose release it never saw', async () => {
+    const holders: Element[] = [];
+    Element.prototype.setPointerCapture = function (this: Element) {
+      holders.push(this);
+    };
+    await render();
+
+    pointer(handle(), 'pointerdown', 400);
+    pointer(handle(), 'pointerdown', 400);
+    pointer(handle(), 'pointermove', 180);
+    pointer(handle(), 'pointerup', 180);
+    await settle();
+
+    expect(holders).toEqual([handle(), handle()]);
+    expect(position()).toBe('full');
+  });
 });
 
 describe('ResultsSheet forced full across 768 px', () => {

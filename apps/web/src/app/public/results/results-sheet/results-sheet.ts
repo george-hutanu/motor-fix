@@ -153,8 +153,11 @@ export class ResultsSheet {
     const own =
       handle ||
       !target.closest('button, a, input, mf-brand-chips, mf-brand-search');
-    if (event.button !== 0 || this.grabbed || !own || !untracked(this.phone))
-      return;
+    // Another pointer holding the sheet keeps it. The same pointer pressed
+    // again was let go where the sheet never heard (a press replayed after
+    // hydration, its release over the map): this press replaces it.
+    const held = this.grabbed && this.grabbed.pointer !== event.pointerId;
+    if (event.button !== 0 || held || !own || !untracked(this.phone)) return;
     // The click after a held pointer goes to the holder: the handle holds its
     // own, so a press still reaches it.
     (handle ?? (event.currentTarget as HTMLElement)).setPointerCapture(
