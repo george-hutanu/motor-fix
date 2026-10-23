@@ -133,7 +133,7 @@
       ],
       "description": "Refuse a Write, Edit or MultiEdit that drops a describe/it/test title from an existing *.adversary.spec.* file: an adversary spec only grows, a retired-test line excusing the title it names",
       "fail_closed": true,
-      "fingerprint": "a70dc0af8d61"
+      "fingerprint": "1538fa36f849"
     },
     {
       "id": "pre:edit:main-checkout",

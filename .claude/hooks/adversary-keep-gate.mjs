@@ -22,12 +22,26 @@ const TITLE = /\b(?:describe|it|test)(?:\.\w+)*\(\s*(['"`])((?:\\.|(?!\1)[^\\])*
 
 const RETIRED = /^[ \t]*\/\/ retired test: "((?:\\.|[^"\\])*)"/gm;
 
-/** `text` with its line and block comments blanked, strings left as they are. */
+/** `text` with its line and block comments blanked, strings and regex literals left as they are. */
 export function uncommented(text) {
   let out = "";
   let quote = null;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
+    if (!quote && c === "/" && text[i + 1] !== "/" && text[i + 1] !== "*" && /(?:^|[(,=:[!&|?{};])\s*$/.test(out.slice(-80))) {
+      // A regex literal: copied through its closing slash, a class's brackets and escapes included.
+      let inClass = false;
+      out += c;
+      while (++i < text.length && text[i] !== "\n") {
+        out += text[i];
+        if (text[i] === "\\") out += text[++i] ?? "";
+        else if (text[i] === "[") inClass = true;
+        else if (text[i] === "]") inClass = false;
+        else if (text[i] === "/" && !inClass) break;
+      }
+      if (text[i] === "\n") out += "\n";
+      continue;
+    }
     if (quote) {
       out += c;
       if (c === "\\") out += text[++i] ?? "";

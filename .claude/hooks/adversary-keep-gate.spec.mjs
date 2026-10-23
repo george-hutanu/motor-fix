@@ -77,6 +77,14 @@ describe('an adversary spec only grows', () => {
     assert.deepEqual(droppedTests(base, base), []);
   });
 
+  it('reads a regex literal as code: a quote or // inside one neither hides a comment nor blanks a title', () => {
+    const base = "it('a', () => assert.match(x, /can't/));\nit('b', () => {});\n";
+    assert.deepEqual(droppedTests(base, "it('a', () => assert.match(x, /can't/));\n// it('b', () => {});\n"), ['b']);
+    const slashes = "const u = /x\\/\\//; it('a', () => {}); it('b', () => {});\n";
+    assert.deepEqual(droppedTests(slashes, slashes), []);
+    assert.deepEqual(droppedTests(slashes, "const u = /x\\/\\//; it('a', () => {});\n"), ['b']);
+  });
+
   it('a retired-test line in its place lets a test whose rule was retired go, and names only that title', () => {
     const base = "it('old rule', () => {});\nit('kept', () => {});\n";
     assert.deepEqual(droppedTests(base, '// retired test: "old rule" the wire moved\nit(\'kept\', () => {});\n'), []);
