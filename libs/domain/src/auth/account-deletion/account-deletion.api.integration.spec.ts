@@ -11,12 +11,14 @@ import request from 'supertest';
 import { AccountDeletionService } from './account-deletion.service';
 import { AuditService } from '../../audit/audit.service';
 import { noEvents } from '../../events/event.port';
+import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { until } from '../../waits.testing';
 import { AccountsService } from '../accounts.service';
@@ -24,6 +26,7 @@ import { AuthModule } from '../auth.module';
 import type { Role } from '../capabilities';
 import { hashPassword } from '../password/password';
 import { PasswordResetModule } from '../password/password-reset/password-reset.module';
+import { PhoneSignInModule } from '../phone-sign-in/phone-sign-in.module';
 import type { Actor } from '../policy';
 import { serialDatabase } from '../serial-db.testing';
 
@@ -32,11 +35,13 @@ const tokenSecret = 'test-secret';
 const webUrl = 'https://motorfix.test';
 const PASSWORD = 'parola-de-test';
 const EMAIL = 'andrei@example.test';
+const PHONE = '+40710000001';
 const MINUTE = 60_000;
 const { prisma, reset } = fixtures();
 const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
+const brevo = new BrevoMock();
 const subscriber = new Redis(redisUrl);
 const redis = new Redis(redisUrl);
 const published: string[] = [];
@@ -45,6 +50,7 @@ let hash: string;
 
 beforeAll(async () => {
   hash = await hashPassword(PASSWORD);
+  await brevo.start();
   await subscriber.subscribe('live:events');
   subscriber.on('message', (_channel, message) => published.push(message));
   const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
@@ -57,6 +63,14 @@ beforeAll(async () => {
       auth,
       notifications,
       PasswordResetModule.register({ webUrl }, notifications),
+      PhoneSignInModule.register({
+        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
+        phone: testPhoneConfig({
+          PHONE_ALLOWLIST: '+407*',
+          WHATSAPP_TEMPLATES:
+            'motorfix_sign_in_code_ro=21,motorfix_sign_in_code_en=22',
+        }),
+      }),
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
@@ -73,6 +87,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+  await brevo.stop();
   redis.disconnect();
   subscriber.disconnect();
   await prisma.$disconnect();
@@ -81,6 +96,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   await redis.flushdb();
+  brevo.reset();
   published.length = 0;
   jest.restoreAllMocks();
 });
@@ -356,6 +372,40 @@ describe('deleting my account', () => {
       where: { email: EMAIL },
     });
     expect(fresh.id).not.toBe(id);
+  });
+
+  it('frees the phone: a WhatsApp code with it signs up a new account, never phone_taken', async () => {
+    const id = await person();
+    await prisma.accountIdentity.create({
+      data: { accountId: id, method: 'whatsapp_phone', subject: PHONE },
+    });
+
+    expect((await remove(await device(), { confirmation: EMAIL })).status).toBe(
+      204,
+    );
+
+    await http()
+      .post('/auth/phone-code')
+      .set('X-Forwarded-For', address())
+      .send({ phone: PHONE })
+      .expect(202);
+    const body = brevo.whatsapp().at(-1)?.body as { params: string[] };
+    const res = await http()
+      .post('/auth/phone-sign-in')
+      .set('X-Forwarded-For', address())
+      .send({
+        code: String(body.params[0]),
+        consent: CURRENT_CONSENT,
+        name: 'Ion Popescu',
+        phone: PHONE,
+      });
+
+    expect(res.status).toBe(200);
+    const fresh = await prisma.account.findUniqueOrThrow({
+      where: { phone: PHONE },
+    });
+    expect(fresh.id).not.toBe(id);
+    expect(fresh.status).toBe('active');
   });
 
   it.each([

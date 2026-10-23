@@ -457,6 +457,43 @@ describe('a new person', () => {
     expect(await prisma.activityLog.count()).toBeGreaterThan(auditEntries);
   });
 
+  // @traces 129-FR-006
+  it.each([
+    ['google', ELENA],
+    ['apple', { ...ELENA, sub: 'apple-elena' }],
+  ] as const)(
+    'signs up a new %s account with the identity and e-mail of an account its holder deleted',
+    async (provider, person) => {
+      const id = await existing('elena@example.test', ['driver'], {
+        method: provider,
+        subject: person.sub,
+      });
+      // What a deletion leaves (129-FR-001): the row, deleted, holding no
+      // e-mail, phone, name or identity.
+      await prisma.account.update({
+        data: {
+          email: null,
+          emailVerifiedAt: null,
+          name: '',
+          phone: null,
+          status: 'deleted',
+        },
+        where: { id },
+      });
+      await prisma.accountIdentity.deleteMany({ where: { accountId: id } });
+
+      const res = await complete(await pendingFrom(person, provider), {});
+
+      expect(res.status).toBe(201);
+      const fresh = await prisma.account.findUniqueOrThrow({
+        include: { identities: true },
+        where: { email: 'elena@example.test' },
+      });
+      expect(fresh.id).not.toBe(id);
+      expect(fresh.identities.map((i) => i.subject)).toEqual([person.sub]);
+    },
+  );
+
   it("takes the name the person typed over the provider's", async () => {
     const pending = await pendingFrom(ELENA);
 
