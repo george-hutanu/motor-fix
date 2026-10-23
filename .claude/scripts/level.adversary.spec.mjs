@@ -87,10 +87,24 @@ describe('the requirement count wire at its boundary', () => {
     assert.equal(levelOf(dir), 1);
   });
 
-  it('promotes at six requirements', () => {
-    const dir = repoFixture({ spec: frs(6) });
+  // @traces 1363-FR-004
+  it('leaves six requirements alone and promotes at eleven, the wire at ten since 1363-FR-004', () => {
+    const six = repoFixture({ spec: frs(6) });
+    noEnv(() => assert.equal(checkLevel(six).promoted, null));
+    assert.equal(levelOf(six), 1);
+    const dir = repoFixture({ spec: frs(11) });
     noEnv(() => assert.deepEqual(checkLevel(dir).promoted, { from: 1, to: 2 }));
     assert.equal(levelOf(dir), 2);
+  });
+
+  it('leaves a spec with exactly ten requirements alone', () => {
+    const dir = repoFixture({ spec: frs(10) });
+    noEnv(() => {
+      const result = checkLevel(dir);
+      assert.equal(wire(result, 'fr-count').state, 'clear');
+      assert.equal(result.promoted, null);
+    });
+    assert.equal(levelOf(dir), 1);
   });
 
   it('counts a requirement once however often the prose mentions its id', () => {
@@ -206,7 +220,7 @@ describe('no wire lowers or touches a level at 2 or 3', () => {
 
 describe('promotion log', () => {
   it('appends to an existing auto-run.md without dropping its content', () => {
-    const dir = repoFixture({ spec: frs(6), branch: { 'specs/042-small/auto-run.md': '# Auto run\n\n- earlier line\n' } });
+    const dir = repoFixture({ spec: frs(11), branch: { 'specs/042-small/auto-run.md': '# Auto run\n\n- earlier line\n' } });
     noEnv(() => checkLevel(dir));
     const text = autoRun(dir);
     assert.match(text, /^# Auto run/);
@@ -222,7 +236,7 @@ describe('promotion log', () => {
   });
 
   it('does not log twice when the check runs three times', () => {
-    const dir = repoFixture({ spec: frs(7) });
+    const dir = repoFixture({ spec: frs(11) });
     noEnv(() => {
       checkLevel(dir);
       checkLevel(dir);
@@ -246,7 +260,7 @@ describe('a diff that cannot be computed', () => {
   });
 
   it('still promotes on the spec wires when the diff is unavailable', () => {
-    const dir = repoFixture({ origin: false, spec: frs(6) });
+    const dir = repoFixture({ origin: false, spec: frs(11) });
     noEnv(() => {
       const result = checkLevel(dir);
       assert.equal(wire(result, 'projects').state, 'not checked');
@@ -332,7 +346,7 @@ describe('the pre-ready refusal', () => {
   });
 
   it('refuses a promoted level 0 feature with a directory and tripped spec wires too', () => {
-    const dir = repoFixture({ level: 0, spec: frs(6) });
+    const dir = repoFixture({ level: 0, spec: frs(11) });
     noEnv(() => assert.equal(capture(() => main(['check', '--ready'], dir)).status, 2));
     assert.equal(levelOf(dir), 2);
   });
