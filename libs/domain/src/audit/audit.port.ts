@@ -10,6 +10,8 @@ export interface AuditEntry {
   actorRole: Role | 'system';
   // Shown to others as the first name; read from the account when absent.
   actorName?: string;
+  // Stored as given in place of a name, for an actor who has no name to show.
+  actorLabel?: string;
   assistantGrantId?: string;
   // The call that made the change; set for assistant calls.
   requestId?: string;

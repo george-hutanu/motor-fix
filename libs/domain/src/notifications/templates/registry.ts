@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_DELETED,
   EMAIL_CHANGE_NOTICE,
   EMAIL_CHECK,
   PASSWORD_CHANGED,
@@ -50,6 +51,7 @@ import type { Registry } from '../templates';
 // Keyed by notification type, or `<type>.<variant>`; GENERIC fills in for a
 // type with no e-mail or bell text.
 export const TEMPLATES: Registry = {
+  'ACCOUNT_EMAIL.account_deleted': ACCOUNT_DELETED,
   'ACCOUNT_EMAIL.email_change_notice': EMAIL_CHANGE_NOTICE,
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,

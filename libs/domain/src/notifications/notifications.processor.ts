@@ -22,7 +22,7 @@ import {
 } from './push/push';
 import { MAX_DEVICES } from './push/push-subscriptions/push-subscriptions.service';
 import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
-import { render, TemplateError, templateName } from './templates';
+import { farewell, render, TemplateError, templateName } from './templates';
 import type {
   Account,
   Language,
@@ -172,7 +172,7 @@ export class NotificationsProcessor {
   // Whether the claimed row goes now: a deleted account fails it, a held one
   // is released through the grouping rule.
   private async due(row: AccountRow) {
-    if (row.account.status === 'deleted') {
+    if (row.account.status === 'deleted' && !farewell(row.kind, params(row))) {
       await this.service.fail([row], 'account_deleted', false);
       return false;
     }

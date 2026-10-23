@@ -54,6 +54,16 @@ export class UpdateMeDto {
   city?: string | null;
 }
 
+// The account's e-mail or phone, or the word ȘTERGE / DELETE for an account
+// with neither; the server compares it with the account.
+export class DeleteMeDto {
+  @ApiProperty({ description: 'Trimmed', maxLength: 254, minLength: 1 })
+  @Transform(trimmed)
+  @IsString()
+  @Length(1, 254)
+  confirmation!: string;
+}
+
 const GARAGE_STATUS = ['draft', 'approved', 'suspended'] as const;
 const GARAGE_ROLE = ['owner', 'receptionist', 'mechanic'] as const;
 

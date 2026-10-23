@@ -113,3 +113,35 @@ export const EMAIL_CHANGE_NOTICE: Template = {
   example,
   values,
 };
+
+// Sent to the address the account held, after the account is deleted; the
+// button opens MotorFix's Home.
+export const ACCOUNT_DELETED: Template = {
+  audience: 'any',
+  bell: {
+    en: 'Your account was deleted.',
+    ro: 'Contul tău a fost șters.',
+  },
+  email: {
+    en: {
+      button: { label: 'Open MotorFix', link: 'link' },
+      lines: [
+        'Your MotorFix account was deleted. Your personal details were removed and you can no longer sign in with it.',
+      ],
+      reason:
+        'You get this e-mail because it was the address of this MotorFix account. If it was not you, write to us through the contact form.',
+      subject: 'Your account was deleted',
+    },
+    ro: {
+      button: { label: 'Deschide MotorFix', link: 'link' },
+      lines: [
+        'Contul tău MotorFix a fost șters. Datele tale personale au fost eliminate și nu mai poți intra în cont.',
+      ],
+      reason:
+        'Primești acest e-mail pentru că aceasta era adresa contului MotorFix. Dacă nu ai fost tu, scrie-ne prin formularul de contact.',
+      subject: 'Contul tău a fost șters',
+    },
+  },
+  example: { link: 'https://motorfix.example/ro' },
+  values,
+};

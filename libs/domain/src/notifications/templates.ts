@@ -279,6 +279,13 @@ const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
   ],
 );
 
+// The last e-mail to a deleted account, to the address it held: the one
+// message a deleted account still gets.
+export const farewell = (kind: string, params: Params) =>
+  kind === 'ACCOUNT_EMAIL' &&
+  params['purpose'] === 'account_deleted' &&
+  typeof params['to'] === 'string';
+
 export function templateName(kind: string, params: Params): string {
   const twoWay = TWO_WAY.get(kind);
   if (twoWay) {
@@ -294,7 +301,8 @@ export function templateName(kind: string, params: Params): string {
   const purpose = params['purpose'];
   return purpose === 'password_reset' ||
     purpose === 'password_changed' ||
-    purpose === 'email_change_notice'
+    purpose === 'email_change_notice' ||
+    purpose === 'account_deleted'
     ? `ACCOUNT_EMAIL.${purpose}`
     : 'ACCOUNT_EMAIL.email_check';
 }
