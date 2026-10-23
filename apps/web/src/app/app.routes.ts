@@ -148,6 +148,14 @@ export const routes: Routes = [
         path: text,
       })),
       {
+        loadComponent: () =>
+          import('./public/review-rules/review-rules').then(
+            (m) => m.ReviewRules,
+          ),
+        path: 'review-rules',
+        title: () => inject(I18n).t('public.reviewRules.title'),
+      },
+      {
         ...placeholder('account', 'public.placeholder.account'),
         canActivate: [signedInToDashboard],
       },

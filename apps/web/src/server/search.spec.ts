@@ -64,6 +64,8 @@ describe('search engine rules', () => {
         'https://motorfix.ro/en/list-your-garage',
         'https://motorfix.ro/ro/contact',
         'https://motorfix.ro/en/contact',
+        'https://motorfix.ro/ro/review-rules',
+        'https://motorfix.ro/en/review-rules',
       ]);
       for (const [hreflang, href] of [
         ['ro', 'https://motorfix.ro/ro/'],

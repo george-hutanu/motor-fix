@@ -92,7 +92,7 @@ describe('the footer links', () => {
       [...root.querySelectorAll('nav.legal a')].map((a) =>
         a.getAttribute('href'),
       ),
-    ).toEqual(['/ro/terms', '/ro/privacy', '/ro/contact']);
+    ).toEqual(['/ro/terms', '/ro/review-rules', '/ro/privacy', '/ro/contact']);
   });
 
   it('keeps every font size at 12 px or more and targets at 44 px', () => {

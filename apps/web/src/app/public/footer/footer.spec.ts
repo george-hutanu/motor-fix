@@ -50,12 +50,14 @@ const links = (host: HTMLElement) =>
   ]);
 
 // @traces 244-FR-006 244-FR-014
+// @traces 182-FR-007
 describe('the public footer', () => {
   it('holds the terms, the privacy notice and "Setări cookie"', async () => {
     const host = await render();
 
     expect(links(host)).toEqual([
       ['Termeni de utilizare', '/ro/terms'],
+      ['Regulile recenziilor', '/ro/review-rules'],
       ['Nota de informare', '/ro/privacy'],
       ['Contact', '/ro/contact'],
     ]);
@@ -64,11 +66,21 @@ describe('the public footer', () => {
     );
   });
 
+  it('opens the review rules in the same tab', async () => {
+    const host = await render();
+
+    const rules = [...legal(host).querySelectorAll('a')].find(
+      (a) => a.getAttribute('href') === '/ro/review-rules',
+    );
+    expect(rules?.getAttribute('target')).toBeNull();
+  });
+
   it('reads English', async () => {
     const host = await render('en');
 
     expect(links(host)).toEqual([
       ['Terms of use', '/en/terms'],
+      ['Review rules', '/en/review-rules'],
       ['Privacy notice', '/en/privacy'],
       ['Contact', '/en/contact'],
     ]);
@@ -93,7 +105,7 @@ describe('the public footer', () => {
     expect(host.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
     expect(
       legal(host).querySelectorAll(':scope > a, :scope > button'),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 
   it('opens the cookie settings dialog', async () => {

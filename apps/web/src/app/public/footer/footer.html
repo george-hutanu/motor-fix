@@ -13,6 +13,7 @@
   </div>
   <nav class="legal" [attr.aria-label]="'consent.footer.label' | t">
     <a [routerLink]="['/', i18n.language(), 'terms']">{{ 'consent.footer.terms' | t }}</a>
+    <a [routerLink]="['/', i18n.language(), 'review-rules']">{{ 'consent.footer.reviewRules' | t }}</a>
     <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
     <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
     <a [routerLink]="['/', i18n.language(), 'contact']">{{ 'consent.footer.contact' | t }}</a>

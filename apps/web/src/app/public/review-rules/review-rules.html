@@ -1,0 +1,18 @@
+<article>
+  <h1>{{ 'public.reviewRules.title' | t }}</h1>
+  <p>{{ 'public.reviewRules.intro' | t }}</p>
+  <ol>
+    @for (rule of rules; track rule.name) {
+      <li><strong>{{ rule.name | t }}</strong> {{ rule.why | t }}</li>
+    }
+  </ol>
+  <p>{{ 'public.reviewRules.replies' | t }}</p>
+  <section aria-labelledby="mf-review-rules-moderation">
+    <h2 id="mf-review-rules-moderation">{{ 'public.reviewRules.moderation.title' | t }}</h2>
+    <p>{{ 'public.reviewRules.moderation.report' | t }}</p>
+    <p>{{ 'public.reviewRules.moderation.hidden' | t }}</p>
+    <p>{{ 'public.reviewRules.moderation.told' | t }}</p>
+    <p>{{ 'public.reviewRules.moderation.appeal' | t }}</p>
+    <p>{{ 'public.reviewRules.moderation.again' | t }}</p>
+  </section>
+</article>
