@@ -829,6 +829,53 @@
     },
     "widen": "Search within {km} km"
   },
+  "reviewRules": {
+    "intro": "A review helps other drivers choose a garage. To stay published, it follows the rules below.",
+    "moderation": {
+      "again": "A removed review cannot be written again for the same job.",
+      "appeal": "A removed review can be appealed once, within 14 days of its removal, and a different admin decides.",
+      "hidden": "A reported review or reply is hidden until an admin decides, within 48 hours. Meanwhile the review does not count in the rating.",
+      "report": "A garage can report a review, and the review’s author can report the garage’s reply.",
+      "title": "How moderation works",
+      "told": "Once decided, the author and the garage are told."
+    },
+    "replies": "The same rules apply to garages’ replies.",
+    "rule": {
+      "1": {
+        "name": "No insults.",
+        "why": "Say what went wrong without insulting anyone."
+      },
+      "2": {
+        "name": "No personal data.",
+        "why": "No full names, phone numbers, addresses, e‑mails or number plates."
+      },
+      "3": {
+        "name": "No ads.",
+        "why": "No links, discount codes or announcements."
+      },
+      "4": {
+        "name": "No promotion of other services.",
+        "why": "Do not recommend another garage, mechanic or business."
+      },
+      "5": {
+        "name": "Only about this repair and this garage.",
+        "why": "Write about the work done, the price, the time and how you were treated."
+      },
+      "6": {
+        "name": "No hate or discrimination.",
+        "why": "Nothing about anyone’s origin, religion, gender or other traits."
+      },
+      "7": {
+        "name": "No fake or conflicted reviews.",
+        "why": "No paid reviews, none by staff or competitors, and none about a job that did not happen."
+      },
+      "8": {
+        "name": "No threats or legal accusations stated as fact.",
+        "why": "For a dispute, write to support."
+      }
+    },
+    "title": "Review rules"
+  },
   "saveGarage": {
     "failed": "That did not work. Try again.",
     "noConnection": "No connection",

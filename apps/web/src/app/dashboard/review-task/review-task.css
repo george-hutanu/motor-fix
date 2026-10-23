@@ -114,12 +114,22 @@ textarea {
 }
 .count,
 .privacy,
+.rules,
 .note {
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-small);
 }
 .count {
   justify-self: end;
+}
+.rules {
+  margin: 0;
+}
+/* Inline, so the padding grows the target to 44 px without moving a line.
+   An inline box is its font's content area (over 1em) plus the padding, not
+   the line height. */
+.rules a {
+  padding-block: calc((44px - 1em) / 2);
 }
 .count.over,
 .error {

@@ -6,6 +6,7 @@ features:
   - 023-review-confirmed-job
   - 025-review-mechanic
   - 129-delete-account
+  - 182-review-rules
 ---
 
 # Capability: Reviews
@@ -225,6 +226,45 @@ _From 025-review-mechanic._
 ### 129-FR-010 — A published review whose driver account is `deleted` MUST show the author "Șofer MotorFix" in place of the first name and surname initial of 022-FR-007 and 025-FR-011, wherever reviews are rendered (garage profile, the mechanic's list, the garage's dashboard list), with counts and ratings unchanged. The API renders the author's short name as "Șofer MotorFix", with no other mark on the author; an English rendering belongs to the first web screen that shows other people's review authors (none exists today).
 
 _From 129-delete-account._
+### 182-FR-001 — The review drawer's form MUST show, under the "Comentariul tău" field and above the privacy line, the summary "Fără insulte, date personale sau reclame. Scrie doar despre această reparație." followed by the link "Regulile recenziilor" (English: "No insults, personal data or ads. Write only about this repair." and "Review rules"), on every path that shows the form: today the write path; the profile path (dropped from release 1 by OD-32) and edit mode (ST-408) inherit it when they ship, since the summary is part of the form. It is one paragraph placed after the comment field's block (after its count and error) and before the privacy line, with the link inline. A state that replaces the form shows no summary.
+
+_From 182-review-rules._
+
+### 182-FR-002 — The link MUST open the rules page of the driver's current language in a new tab, and the drawer in the opening tab MUST keep its state: open, with the rating, the amount and the comment as typed, and no API request sent from the drawer's tab (the new tab's own page load is not counted). The link carries a visually hidden "(opens in a new tab)" / "(se deschide într-o filă nouă)" text.
+
+_From 182-review-rules._
+
+### 182-FR-003 — The rules page MUST be a public page of its own component (not the versioned terms/privacy `Legal` page; no version line), with an `<h1>` and a route title, at `/ro/review-rules` and `/en/review-rules`: no sign-in, rendered on the server in the language of its address, with the canonical and alternate links and the sitemap entries every public page carries (021-FR-001, 021-FR-005, 021-FR-006), and a language switch that moves to the other language's address (021-FR-004).
+
+_From 182-review-rules._
+
+### 182-FR-004 — The page MUST list the eight rules of ST-181, each as one entry, in this order: no insults; no personal data; no ads; no promotion of other services; nothing off the topic of this repair or garage; no hate or discrimination; no fake or conflicted reviews (paid, by staff or competitors, or about a job that did not happen); no threats or legal accusations stated as fact (disputes go to support). The rules themselves are fixed; each entry's one-line explanation is proposed wording the owner may change.
+
+_From 182-review-rules._
+
+### 182-FR-005 — The page MUST say the eight rules also apply to the garage's replies, which the review's author can report: "Aceleași reguli se aplică și răspunsurilor service-urilor." / "The same rules apply to garages' replies."
+
+_From 182-review-rules._
+
+### 182-FR-006 — The page MUST carry a moderation section stating, in plain words: a garage can report a review and the review's author can report the garage's reply; a reported review or reply is hidden until an admin decides, within 48 hours, and a hidden review does not count in the rating meanwhile; the author and the garage are told of the decision; a removed review can be appealed once, within 14 days, and a different admin decides; a removed review cannot be written again. The wording is proposed; the facts are not.
+
+_From 182-review-rules._
+
+### 182-FR-007 — The site footer's legal links MUST include "Regulile recenziilor" / "Review rules", placed right after the terms link, opening the rules page of the current language in the same tab, on every page that shows the footer.
+
+_From 182-review-rules._
+
+### 182-FR-008 — Every text of the summary, the link and the page MUST exist in Romanian and English in the interface translation files (the drawer's in the driver area, the page's in the public area, the footer link beside its siblings under `consent.footer`) and follow the current language; the Romanian summary, link and replies line are the owner-approved wording above and MUST be used verbatim.
+
+_From 182-review-rules._
+
+### 182-FR-009 — On a 320 px phone, in light and dark, Romanian and English, the page and the summary MUST use no text under 12 px and MUST NOT scroll sideways; the page uses the Cockpit theme's plain text page layout, as the terms page does. The link's tap target is at least 44 px high on phones, its text and the page's text meet WCAG AA contrast (4.5:1) in both themes, the rules are an ordered list, and the page reads in one column with no sideways scroll at tablet and desktop widths too.
+
+_From 182-review-rules._
+
+### 182-FR-010 — Tests MUST be written first: component tests for the page rendering in both languages with all eight rules, the replies line and the moderation section, for the summary on the write path and its absence when the form is replaced, and for the footer link; one end-to-end test that opens the rules page from the drawer, returns and finds the draft kept. Every test file names its requirements in a `// @traces` line.
+
+_From 182-review-rules._
 
 ## Retired
 

@@ -385,6 +385,11 @@
     "resend": "Send the link again",
     "resent": "We sent the link again.",
     "retry": "Try again",
+    "rules": {
+      "link": "Review rules",
+      "newTab": "(opens in a new tab)",
+      "summary": "No insults, personal data or ads. Write only about this repair."
+    },
     "voices": {
       "v1": "How did the repair go?",
       "v2": "How was it at the garage?",

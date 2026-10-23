@@ -390,6 +390,11 @@
     "resend": "Trimite din nou linkul",
     "resent": "Ți‑am trimis din nou linkul.",
     "retry": "Încearcă din nou",
+    "rules": {
+      "link": "Regulile recenziilor",
+      "newTab": "(se deschide într‑o filă nouă)",
+      "summary": "Fără insulte, date personale sau reclame. Scrie doar despre această reparație."
+    },
     "voices": {
       "v1": "Cum a mers reparația?",
       "v2": "Cum a fost la service?",
