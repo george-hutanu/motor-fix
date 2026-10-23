@@ -445,6 +445,15 @@ describe('ci workflow', () => {
       ]);
     });
 
+    it('refuses a repeat below one rather than pass having run nothing', () => {
+      for (const REPEAT of ['0', '-1', 'x']) {
+        expect(() =>
+          run('integration', 'Integration tests', { REPEAT, SPECS }),
+        ).toThrow();
+        expect(() => run('e2e', 'E2E tests', { REPEAT, SPECS })).toThrow();
+      }
+    });
+
     it('runs nothing in a suite none of the named files belongs to', () => {
       const one = 'apps/web-e2e/src/garage-views.spec.ts';
 

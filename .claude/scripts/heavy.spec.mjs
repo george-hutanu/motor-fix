@@ -212,13 +212,19 @@ describe('heavy.sh and the worktree port set', () => {
     }
     return dir;
   };
-  const ports = (dir) => {
+  const ports = (dir, name = 'e2e') => {
     const { API_PORT, WEB_PORT, ...rest } = env(dir);
-    return spawnSync('sh', [join(dir, 'scripts', 'heavy.sh'), 'sh', '-c', 'echo "$API_PORT|$WEB_PORT"'], { encoding: 'utf8', env: rest }).stdout.trim();
+    return spawnSync('sh', [join(dir, 'scripts', 'heavy.sh'), 'sh', '-c', 'echo "$API_PORT|$WEB_PORT"', name], { encoding: 'utf8', env: rest }).stdout.trim();
   };
+  const SET = "export API_PORT='54002'\nexport WEB_PORT='54004'\n";
 
-  it('runs the command with the checkout ports.env when there is one', () => {
-    assert.equal(ports(checkout("export API_PORT='54002'\nexport WEB_PORT='54004'\n")), '54002|54004');
+  it('runs an e2e or playwright command with the checkout ports.env when there is one', () => {
+    assert.equal(ports(checkout(SET)), '54002|54004');
+    assert.equal(ports(checkout(SET), 'playwright'), '54002|54004');
+  });
+
+  it('keeps the set from every other command, so a unit run reads the defaults', () => {
+    assert.equal(ports(checkout(SET), 'jest'), '|');
   });
 
   it('adds no port variable when the checkout has no set', () => {

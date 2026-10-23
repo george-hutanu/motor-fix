@@ -261,6 +261,7 @@ jobs:
             npx nx $NX_SCOPE -t test --passWithNoTests
             exit
           fi
+          [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
           files=$(printf '%s\n' $SPECS | grep '\.integration\.spec\.ts$' || true)
           [ -n "$files" ] || exit 0
           for run in $(seq "$REPEAT"); do
@@ -391,6 +392,7 @@ jobs:
             npx nx $NX_SCOPE -t e2e
             exit
           fi
+          [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
           files=$(printf '%s\n' $SPECS | grep '^apps/web-e2e/.*\.spec\.ts$' || true)
           [ -n "$files" ] || exit 0
           npx nx run web-e2e:e2e -- --repeat-each "$REPEAT" --retries 0 --trace retain-on-failure $files

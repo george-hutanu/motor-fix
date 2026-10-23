@@ -189,7 +189,7 @@ export function shellExports(env: Record<string, string>): string {
     .join('\n');
 }
 
-export type PortSet = { api: number; web: number; worker: number };
+type PortSet = { api: number; web: number; worker: number };
 
 // What a boot of this worktree's apps reads. Angular's dev server takes PORT
 // over its own option, so PORT is the web's; the api and the worker read
@@ -206,7 +206,7 @@ export function portEnv(set: PortSet): Record<string, string> {
 }
 
 // A port free now: listened on, then let go (0: any the system has).
-export function probePort(port = 0): Promise<number> {
+function probePort(port = 0): Promise<number> {
   return new Promise((done, fail) => {
     const server = createServer();
     server.once('error', fail);
@@ -668,7 +668,7 @@ async function restart(root: string, app: App) {
     );
   });
   const log = cached(root, `${app}.log`);
-  const out = openSync(log, 'a');
+  const out = openSync(log, 'w');
   const child = spawn('npx', ['nx', 'serve', app], {
     cwd: root,
     detached: true,

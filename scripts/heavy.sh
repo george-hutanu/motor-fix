@@ -26,7 +26,8 @@
 #
 # The command sees its checkout's port set: .specify/.cache/ports.env next to
 # this script's checkout, written by `node scripts/test-services.ts ports`, is
-# sourced when present, so an e2e run boots on that worktree's own ports.
+# sourced when present for a command naming e2e or playwright, so an e2e run
+# boots on that worktree's own ports and nothing else sees them.
 #
 # A command already holding a slot (HEAVY_HELD=1) runs a nested call at once
 # rather than taking a second slot. Free memory is read with macOS
@@ -39,7 +40,9 @@ export NX_DAEMON=false NX_PARALLEL="${NX_PARALLEL:-2}" JEST_MAX_WORKERS="${JEST_
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=3072}"
 ports_env="$(cd "$(dirname "$0")/.." && pwd)/.specify/.cache/ports.env"
 # shellcheck disable=SC1090
-[ -f "$ports_env" ] && . "$ports_env"
+case " $* " in
+*e2e* | *playwright*) [ -f "$ports_env" ] && . "$ports_env" ;;
+esac
 
 [ $# -gt 0 ] || { echo "usage: heavy.sh <command...>" >&2; exit 64; }
 [ "${HEAVY_HELD:-}" = 1 ] && exec "$@"
