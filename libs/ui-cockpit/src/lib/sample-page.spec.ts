@@ -86,6 +86,7 @@ describe('CockpitSamplePage', () => {
     );
   });
 
+  // @traces 466-FR-002
   it('wraps a sample button label wider than a phone at 200 % text, never scrolling the page sideways', () => {
     const source = readFileSync(
       join(__dirname, 'sample-page.ts'),

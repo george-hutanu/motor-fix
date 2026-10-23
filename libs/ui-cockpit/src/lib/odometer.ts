@@ -27,13 +27,12 @@ const toWholeLei = (bani: unknown) =>
       gap: 4px;
       white-space: pre;
     }
-    /* A line turns only between groups, never inside an amount. */
+    /* A line turns only between groups, never inside an amount: a group's
+       flex line does not wrap, and it inherits white-space: pre. */
     .mf-odometer-group {
       display: inline-flex;
-      flex-wrap: nowrap;
       align-items: center;
       gap: 4px;
-      white-space: pre;
     }
     .mf-odometer-digit {
       display: inline-block;

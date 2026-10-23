@@ -288,6 +288,7 @@ describe('the odometer breaks a line only between amounts', () => {
     expect(groups(renderCells(104000).part)).toEqual(['01040']);
   });
 
+  // @traces 466-FR-003
   it('puts every digit cell inside a group, still rolling to its own digit', () => {
     const { digits } = render(125000, 160000);
 
@@ -306,9 +307,12 @@ describe('the odometer breaks a line only between amounts', () => {
       'utf8',
     ).replace(/\s+/g, ' ');
 
-    expect(odometer).toMatch(/\.mf-odometer-value \{[^}]*flex-wrap: wrap;/);
     expect(odometer).toMatch(
-      /\.mf-odometer-group \{[^}]*display: inline-flex;[^}]*flex-wrap: nowrap;[^}]*gap: 4px;[^}]*white-space: pre;/,
+      /\.mf-odometer-value \{[^}]*flex-wrap: wrap;[^}]*white-space: pre;/,
     );
+    expect(odometer).toMatch(
+      /\.mf-odometer-group \{[^}]*display: inline-flex;[^}]*gap: 4px;[^}]*\}/,
+    );
+    expect(odometer).not.toMatch(/\.mf-odometer-group \{[^}]*flex-wrap: wrap/);
   });
 });
