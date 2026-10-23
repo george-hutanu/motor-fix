@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
 
 import { AuditHistoryService } from './audit-history.service';
 import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
-import { createPrisma } from '../../auth/prisma';
+import { createPrisma, prismaAdapter } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { type Prisma, PrismaClient } from '../../generated/prisma/client';
 
@@ -747,10 +746,7 @@ describe('reading', () => {
 describe('the index the unfiltered admin read uses', () => {
   // The admin's client, logging each statement it sends with its values.
   const logged = new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: databaseUrl,
-      options: '-c TimeZone=UTC',
-    }),
+    adapter: prismaAdapter(databaseUrl),
     log: [{ emit: 'event', level: 'query' }],
   });
   const sent: { query: string; params: unknown[] }[] = [];
@@ -783,8 +779,8 @@ describe('the index the unfiltered admin read uses', () => {
       .catch((e: unknown) => {
         if (!(e instanceof RolledBack)) throw e;
       })
-      // The rollback leaves a million dead rows for every later scan.
-      .finally(() => prisma.$executeRaw`VACUUM activity_log`);
+      // The rollback leaves a million dead rows and their statistics behind.
+      .finally(() => prisma.$executeRaw`VACUUM ANALYZE activity_log`);
 
   it('indexes the history by time alone', async () => {
     const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`

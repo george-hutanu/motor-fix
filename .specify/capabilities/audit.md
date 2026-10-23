@@ -12,6 +12,7 @@ features:
   - 176-price-change-activity-log
   - 1352-catalogue-job-visibility
   - 129-delete-account
+  - 469-activity-log-at-index
 ---
 
 # Capability: Audit history
@@ -76,9 +77,9 @@ _From 390-audit-history._
 
 _From 390-audit-history._
 
-### 390-FR-015 — The history MUST be indexed by garage, car, job and actor, each with the time (no read API in this story). The time is the database clock at the insert, so entries of one change keep the order they were written.
+### 469-FR-001 — The history MUST be indexed by time alone, in addition to the four scoped indexes (garage, car, job and actor, each with the time) of 390-FR-015, through one schema migration that leaves every existing entry and the append-only rule (390-FR-011) untouched.
 
-_From 390-audit-history._
+_From 469-activity-log-at-index._
 
 ### 391-FR-001 — The system MUST serve `GET /api/v1/audit-history` to signed-in callers; without a valid token it answers 401 `sign_in_required`.
 
@@ -116,9 +117,9 @@ _From 391-audit-history-api._
 
 _From 391-audit-history-api._
 
-### 391-FR-010 — A `cursor` MUST be the id of the last entry of the previous page; one that is not an existing entry inside the caller's scope and matching the current filters MUST answer 400 `invalid_cursor`.
+### 469-FR-004 — (Restates 391-FR-010 with its coverage.) A cursor that is not an existing entry inside the caller's scope and matching the current filters MUST answer 400 `invalid_cursor`; the service integration case "refuses a cursor outside the caller's scope" MUST also assert this for a cursor of another garage's entry passed with `{ area, garageId }` filters by garage staff, pass on today's code, and fail when the scope check is removed.
 
-_From 391-audit-history-api._
+_From 469-activity-log-at-index._
 
 ### 391-FR-011 — Each entry MUST carry id, time (UTC), action, subject type and id, field, old and new value as stored, the actor (id, first name, stored role), `viaAssistant`, garage, car and job ids, `internal`, kind and text; absent values are null.
 
@@ -220,7 +221,21 @@ _From 1352-catalogue-job-visibility._
 
 _From 129-delete-account._
 
+### 469-FR-002 — The admin's unfiltered history read (391-FR-004, 391-FR-007: no filter, the default seven-day window) and its total (391-FR-009) MUST be answered through the time index: the database's plan for each shows the index and no scan of the whole table, and the PR records both plans.
+
+_From 469-activity-log-at-index._
+
+### 469-FR-003 — Against a history of at least one million entries spread over 90 days, the admin's unfiltered history read MUST answer under 400 ms for 95 of 100 calls (the "Any other read" target of `docs/explanation/architecture/security-performance-and-operations.md`), with the same page and total as before this story; checked by the service integration spec over a million entries in a rolled-back transaction, and by a recorded run on a throwaway database named in the PR.
+
+_From 469-activity-log-at-index._
+
+### 469-FR-005 — The story MUST change no API, contract, screen or answer: the endpoint, its parameters, its page shape, the masking and the ordering stay as 391 states them.
+
+_From 469-activity-log-at-index._
+
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
 - `173-FR-008` — superseded by `176-FR-001` (2026-10-19)
+- `390-FR-015` — superseded by `469-FR-001` (2026-10-23)
+- `391-FR-010` — superseded by `469-FR-004` (2026-10-23)
