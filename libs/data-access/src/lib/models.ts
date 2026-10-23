@@ -293,6 +293,7 @@ export type { VerificationFileReplacedDocumentDto } from './models/verification-
 export type { VerificationFileReportDto } from './models/verification-file-report-dto';
 export type { VerificationFileReporterDto } from './models/verification-file-reporter-dto';
 export type { VerificationFileStateDto } from './models/verification-file-state-dto';
+export type { VerificationFileSuspensionDto } from './models/verification-file-suspension-dto';
 export type { VerificationFileTimelineDto } from './models/verification-file-timeline-dto';
 export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
 export type { VerificationQueueDto } from './models/verification-queue-dto';

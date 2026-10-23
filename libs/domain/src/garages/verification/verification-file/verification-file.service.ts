@@ -15,6 +15,7 @@ import {
   type VerificationFileDocumentDto,
   type VerificationFileDocumentReviewDto,
   type VerificationFileDto,
+  type VerificationFileSuspensionDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -314,6 +315,7 @@ export class VerificationFileService {
       photos,
       shared,
       documentCycle,
+      suspension,
     ] = await Promise.all([
       this.names([
         file.openedBy,
@@ -354,6 +356,7 @@ export class VerificationFileService {
       this.publicGarages.photos(garage.photos),
       this.cuiAlsoUsedBy(garage.id, garage.cui),
       this.cycles.documentCycleOf(garage.id),
+      this.suspensionOf(garage.id),
     ]);
     const actor = (
       accountId: string | null,
@@ -464,6 +467,7 @@ export class VerificationFileService {
       })),
       reportsOpen,
       storageReady: await storageReady,
+      suspension,
       timeline: {
         entries: entries.map((row) => {
           const entry = auditEntryOf(row, true);
@@ -584,6 +588,29 @@ export class VerificationFileService {
       }
     }
     return named;
+  }
+
+  // The garage's latest suspension, open or ended, with the first name of the
+  // admin who lifted it; null for a garage never suspended.
+  private async suspensionOf(
+    garageId: string,
+  ): Promise<VerificationFileSuspensionDto | null> {
+    const latest = await this.prisma.garageSuspension.findFirst({
+      orderBy: [{ fromTime: 'desc' }, { createdAt: 'desc' }],
+      where: { garageId },
+    });
+    if (!latest) return null;
+    const lifter = latest.liftedBy
+      ? (await this.names([latest.liftedBy]))(latest.liftedBy)
+      : null;
+    return {
+      cause: latest.cause,
+      fromTime: latest.fromTime.toISOString(),
+      liftedBy: lifter === null ? null : { name: lifter },
+      note: latest.liftNote,
+      reason: latest.reason,
+      untilTime: iso(latest.untilTime),
+    };
   }
 
   // First names by account; the system, which has none, is MotorFix.

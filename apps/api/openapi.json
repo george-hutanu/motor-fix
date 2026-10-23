@@ -14029,6 +14029,28 @@
           "suspended"
         ]
       },
+      "RarActivityNameDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "brakes"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
       "SuspendedGarageRowDto": {
         "type": "object",
         "properties": {
@@ -14083,6 +14105,13 @@
               "suspended",
               "withdrawn"
             ]
+          },
+          "activities": {
+            "description": "Only for a failed re-check: the garage's RAR activities, in its order, for the restore dialog",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RarActivityNameDto"
+            }
           }
         },
         "required": [
@@ -14808,28 +14837,6 @@
           "kind",
           "name",
           "email"
-        ]
-      },
-      "RarActivityNameDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "brakes"
-          },
-          "nameRo": {
-            "type": "string",
-            "example": "frâne"
-          },
-          "nameEn": {
-            "type": "string",
-            "example": "brakes"
-          }
-        },
-        "required": [
-          "code",
-          "nameRo",
-          "nameEn"
         ]
       },
       "LegalCheckRecheckDto": {
@@ -16840,6 +16847,69 @@
           "total"
         ]
       },
+      "SuspensionLifterDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name and the family name's initial"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "VerificationFileSuspensionDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reason as stored"
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "untilTime": {
+            "type": "string",
+            "description": "When it ended; null while it is open",
+            "format": "date-time",
+            "nullable": true
+          },
+          "liftedBy": {
+            "description": "The admin who put the garage back on the map, by first name; null while open or when it ended otherwise",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SuspensionLifterDto"
+              }
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "The admin's note on putting it back; null when none",
+            "nullable": true
+          }
+        },
+        "required": [
+          "cause",
+          "reason",
+          "fromTime",
+          "untilTime",
+          "liftedBy",
+          "note"
+        ]
+      },
       "VerificationFileDto": {
         "type": "object",
         "properties": {
@@ -16920,6 +16990,16 @@
                 "$ref": "#/components/schemas/DocumentCycleDto"
               }
             ]
+          },
+          "suspension": {
+            "description": "The garage's latest suspension, open or ended; null for a garage never suspended",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileSuspensionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16935,7 +17015,8 @@
           "reportsOpen",
           "previousRejection",
           "timeline",
-          "documentCycle"
+          "documentCycle",
+          "suspension"
         ]
       },
       "SuspendGarageDto": {
@@ -17037,18 +17118,6 @@
             ]
           }
         }
-      },
-      "SuspensionLifterDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "First name and the family name's initial"
-          }
-        },
-        "required": [
-          "name"
-        ]
       },
       "GarageRestoredDto": {
         "type": "object",

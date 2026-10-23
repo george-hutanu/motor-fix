@@ -6,6 +6,7 @@ import {
   SUSPENSION_CAUSES,
   type SuspensionCause,
 } from './garage-suspension.dto';
+import { RarActivityNameDto } from './legal-check.dto';
 import { toQueryNumber, VerificationQueueAreaDto } from './verification-queue';
 import {
   VERIFICATION_QUEUE_MAX,
@@ -110,6 +111,13 @@ export class SuspendedGarageRowDto {
     enum: RAR_VERDICTS,
   })
   rarVerdict?: RarVerdict;
+
+  @ApiPropertyOptional({
+    description:
+      "Only for a failed re-check: the garage's RAR activities, in its order, for the restore dialog",
+    type: [RarActivityNameDto],
+  })
+  activities?: RarActivityNameDto[];
 }
 
 export class AdminGaragesDto {

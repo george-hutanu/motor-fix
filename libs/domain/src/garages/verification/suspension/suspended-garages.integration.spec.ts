@@ -120,6 +120,7 @@ describe('the list of suspended garages', () => {
     const [row] = (await page()).items;
 
     expect(row).toEqual({
+      activities: [],
       area: { kind: 'town', name: 'Pantelimon' },
       cancelledBookings: 0,
       cause: 'recheck_failed',
@@ -129,6 +130,36 @@ describe('the list of suspended garages', () => {
       rarVerdict: 'expired',
       reason: 'Autorizație RAR expirată pe 12 sept. 2026',
     });
+  });
+
+  // @traces 067-FR-009
+  it("names a failed re-check row's activities in the garage's order, and no other row's", async () => {
+    const failed = await suspended(
+      'Auto Expres',
+      new Date('2026-09-12T08:00:00Z'),
+      'recheck_failed',
+    );
+    await prisma.garage.update({
+      data: { rarActivities: ['brakes', 'mechanics'] },
+      where: { id: failed.id },
+    });
+    const byAdmin = await suspended(
+      'Atelier Dinamo',
+      new Date('2026-09-11T08:00:00Z'),
+    );
+    await prisma.garage.update({
+      data: { rarActivities: ['mechanics'] },
+      where: { id: byAdmin.id },
+    });
+
+    const [first, second] = (await page()).items;
+
+    expect(first?.activities).toEqual([
+      { code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
+      { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+    ]);
+    expect(second?.id).toBe(byAdmin.id);
+    expect(second).not.toHaveProperty('activities');
   });
 
   it('gives a mobile mechanic its radius and a garage with no town no area', async () => {

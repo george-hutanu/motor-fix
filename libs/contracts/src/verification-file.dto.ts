@@ -16,6 +16,11 @@ import {
   VERIFICATION_FILE_STATUSES,
   type VerificationFileStatus,
 } from './garage-status';
+import {
+  SUSPENSION_CAUSES,
+  type SuspensionCause,
+  SuspensionLifterDto,
+} from './garage-suspension.dto';
 import { PublicGaragePhotoDto } from './garages.dto';
 import { DocumentCycleDto } from './legal-documents/document-cycle.dto';
 import {
@@ -557,6 +562,40 @@ export class VerificationFileChangesDto {
   total!: number;
 }
 
+export class VerificationFileSuspensionDto {
+  @ApiProperty({ enum: SUSPENSION_CAUSES })
+  cause!: SuspensionCause;
+
+  @ApiProperty({ description: 'The reason as stored' })
+  reason!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  fromTime!: string;
+
+  @ApiProperty({
+    description: 'When it ended; null while it is open',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  untilTime!: string | null;
+
+  @ApiProperty({
+    description:
+      'The admin who put the garage back on the map, by first name; null while open or when it ended otherwise',
+    nullable: true,
+    type: SuspensionLifterDto,
+  })
+  liftedBy!: SuspensionLifterDto | null;
+
+  @ApiProperty({
+    description: "The admin's note on putting it back; null when none",
+    nullable: true,
+    type: String,
+  })
+  note!: string | null;
+}
+
 export class VerificationFileDto {
   @ApiProperty({ type: VerificationFileStateDto })
   file!: VerificationFileStateDto;
@@ -621,4 +660,12 @@ export class VerificationFileDto {
     type: DocumentCycleDto,
   })
   documentCycle!: DocumentCycleDto | null;
+
+  @ApiProperty({
+    description:
+      "The garage's latest suspension, open or ended; null for a garage never suspended",
+    nullable: true,
+    type: VerificationFileSuspensionDto,
+  })
+  suspension!: VerificationFileSuspensionDto | null;
 }
