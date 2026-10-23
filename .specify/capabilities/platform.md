@@ -104,6 +104,7 @@ features:
   - 068-yearly-documents
   - 482-watch-transcript-holder
   - 486-entry-point-symlink
+  - 506-railway-deploy-signal-spec
 ---
 
 # Capability: Platform
@@ -2698,6 +2699,18 @@ _From 486-entry-point-symlink._
 ### 486-FR-006 — The pre-compact flush MUST leave entries under `specs/` out of the Compaction block's uncommitted list.
 
 _From 486-entry-point-symlink._
+
+### 506-FR-001 — `scripts/railway-deploy.ts` MUST send its Railway calls to `RAILWAY_API_ENDPOINT` when that variable is set and non-empty, and to `https://backboard.railway.com/graphql/v2` otherwise.
+
+_From 506-railway-deploy-signal-spec._
+
+### 506-FR-002 — A set `RAILWAY_API_ENDPOINT` whose `URL.hostname` is not `127.0.0.1`, `localhost` or `[::1]`, or that is not an `http:` or `https:` URL, MUST fail the run before any call with exit code 1 and a stderr message naming the variable.
+
+_From 506-railway-deploy-signal-spec._
+
+### 506-FR-003 — A spec in the `scripts` project's unit suite MUST spawn `scripts/railway-deploy.ts` as a child process against a fake Railway API on 127.0.0.1, send SIGINT when the first deployment poll arrives and SIGTERM while the restore request is unanswered, and assert that the api's restore request reaches the fake API and the process exits with code 1 (not by a signal) with `deploy cancelled` on stderr; it MUST fail when either signal handler in `main()` is removed, and MUST make no call outside loopback.
+
+_From 506-railway-deploy-signal-spec._
 
 ## Retired
 

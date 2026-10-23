@@ -78,7 +78,6 @@ describe('the deploy script as a process, cancelled mid-deploy', () => {
           IMAGE_API: 'ghcr.io/x/api@sha256:new',
           IMAGE_WEB: 'ghcr.io/x/web@sha256:new',
           IMAGE_WORKER: 'ghcr.io/x/worker@sha256:new',
-          PATH: process.env['PATH'],
           RAILWAY_API_ENDPOINT: `http://127.0.0.1:${port}/graphql/v2`,
           RAILWAY_API_TOKEN: 'fake-token',
           RAILWAY_ENVIRONMENT_ID: 'env-fake',
@@ -86,7 +85,7 @@ describe('the deploy script as a process, cancelled mid-deploy', () => {
           RAILWAY_SERVICE_WEB: 'svc-web',
           RAILWAY_SERVICE_WORKER: 'svc-worker',
         },
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['ignore', 'ignore', 'pipe'],
       });
       let stderr = '';
       child.stderr?.on('data', (chunk) => {
@@ -96,7 +95,7 @@ describe('the deploy script as a process, cancelled mid-deploy', () => {
         code: number | null;
         signal: NodeJS.Signals | null;
       }>((resolve) =>
-        child?.on('exit', (code, signal) => resolve({ code, signal })),
+        child?.on('close', (code, signal) => resolve({ code, signal })),
       );
       let gone = false;
       void exited.then(() => {
@@ -115,6 +114,7 @@ describe('the deploy script as a process, cancelled mid-deploy', () => {
       expect(gone).toBe(false);
       if (held) reply(held, { serviceInstanceUpdate: true });
 
+      await until(() => gone, 'the exit');
       const { code, signal } = await exited;
       expect({ code, signal }).toEqual({ code: 1, signal: null });
       expect(stderr).toContain(
