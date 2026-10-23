@@ -99,9 +99,11 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
        FROM unnest(ARRAY['company', 'caen', 'rar', 'documents']) AS k`,
       [into.fileId],
     );
+    // Stored before the date headTheQueue gives the uploads: the drawer shows
+    // an upload for review only when it is newer than the kind's document.
     await db.query(
       `INSERT INTO legal_document (verification_file_id, kind, pages, status, created_at)
-       SELECT $1::uuid, k, ARRAY['legal_document/' || $1::text || '/e2e-' || k || '-1'], 'valid', now() - interval '1 year'
+       SELECT $1::uuid, k, ARRAY['legal_document/' || $1::text || '/e2e-' || k || '-1'], 'valid', TIMESTAMPTZ '1999-01-01T08:00:00Z'
        FROM unnest(ARRAY['onrc_certificate', 'rar_authorisation']) AS k`,
       [into.fileId],
     );
@@ -152,21 +154,13 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
   };
 
   // The queue lists yearly documents by their oldest upload: an upload of
-  // the distant past heads it, ahead of every other spec's rows. The drawer
-  // shows an upload only beside an older current document, so the documents
-  // it would replace move further back first.
-  const headTheQueue = async (fileId: string) => {
-    await db.query(
-      `UPDATE legal_document SET created_at = '1999-01-01T08:00:00Z'
-       WHERE verification_file_id = $1 AND status = 'valid'`,
-      [fileId],
-    );
-    await db.query(
+  // the distant past heads it, ahead of every other spec's rows.
+  const headTheQueue = (fileId: string) =>
+    db.query(
       `UPDATE legal_document SET created_at = '2000-01-01T08:00:00Z'
        WHERE verification_file_id = $1 AND status = 'in_review'`,
       [fileId],
     );
-  };
 
   test.beforeAll(async ({ request }) => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
