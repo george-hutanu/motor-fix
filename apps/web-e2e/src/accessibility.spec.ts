@@ -258,6 +258,7 @@ const PUBLIC: readonly Screen[] = [
   },
   { name: 'list your garage', path: '/ro/list-your-garage' },
   { name: 'contact', path: '/ro/contact' },
+  { name: 'the review rules', path: '/ro/review-rules' },
 ];
 
 const inLanguage = (path: string, language: Language) =>

@@ -275,6 +275,20 @@ describe('language addresses', () => {
     expect(robots()).toEqual([]);
   });
 
+  // @traces 182-FR-003
+  it('gives the review rules one address per language, with its search engine links', async () => {
+    await open('/en/review-rules');
+
+    expect(url()).toBe('/en/review-rules');
+    expect(PUBLIC_PATHS).toContain('review-rules');
+    expect(href('link[rel="canonical"]')).toBe(`${ORIGIN}/en/review-rules`);
+    expect(href('link[hreflang="ro"]')).toBe(`${ORIGIN}/ro/review-rules`);
+    expect(href('link[hreflang="x-default"]')).toBe(
+      `${ORIGIN}/ro/review-rules`,
+    );
+    expect(robots()).toEqual([]);
+  });
+
   it('marks a page that is not public noindex, and replaces the tags on the next page', async () => {
     const harness = await open('/de');
 

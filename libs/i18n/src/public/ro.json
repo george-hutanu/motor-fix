@@ -847,6 +847,53 @@
     },
     "widen": "Caută în {km} km"
   },
+  "reviewRules": {
+    "intro": "O recenzie ajută alți șoferi să aleagă un service. Ca să rămână publicată, respectă regulile de mai jos.",
+    "moderation": {
+      "again": "O recenzie eliminată nu mai poate fi scrisă din nou pentru aceeași lucrare.",
+      "appeal": "O recenzie eliminată poate primi o singură contestație, în 14 zile de la eliminare, iar alt administrator decide.",
+      "hidden": "O recenzie sau un răspuns raportat rămâne ascuns până decide un administrator, în cel mult 48 de ore. Între timp, recenzia nu se pune la calculul notei.",
+      "report": "Un service poate raporta o recenzie, iar autorul recenziei poate raporta răspunsul service‑ului.",
+      "title": "Cum funcționează moderarea",
+      "told": "După decizie, autorul și service‑ul sunt anunțați."
+    },
+    "replies": "Aceleași reguli se aplică și răspunsurilor service‑urilor.",
+    "rule": {
+      "1": {
+        "name": "Fără insulte.",
+        "why": "Spune ce nu a mers, fără jigniri la adresa nimănui."
+      },
+      "2": {
+        "name": "Fără date personale.",
+        "why": "Nu scrie nume complete, numere de telefon, adrese, e‑mailuri sau numere de înmatriculare."
+      },
+      "3": {
+        "name": "Fără reclame.",
+        "why": "Nu pune linkuri, coduri de reducere sau anunțuri."
+      },
+      "4": {
+        "name": "Fără promovarea altor servicii.",
+        "why": "Nu recomanda alt service, alt mecanic sau altă afacere."
+      },
+      "5": {
+        "name": "Doar despre această reparație și acest service.",
+        "why": "Scrie despre lucrarea făcută, preț, timp și cum ai fost tratat."
+      },
+      "6": {
+        "name": "Fără ură sau discriminare.",
+        "why": "Nimic despre originea, religia, genul sau alte trăsături ale cuiva."
+      },
+      "7": {
+        "name": "Fără recenzii false sau în conflict de interese.",
+        "why": "Nu scrie o recenzie plătită, ca angajat ori concurent, sau despre o lucrare care nu a avut loc."
+      },
+      "8": {
+        "name": "Fără amenințări sau acuzații legale prezentate ca fapte.",
+        "why": "Pentru o dispută, scrie‑ne la suport."
+      }
+    },
+    "title": "Regulile recenziilor"
+  },
   "saveGarage": {
     "failed": "Nu a mers. Încearcă din nou.",
     "noConnection": "Fără conexiune",
