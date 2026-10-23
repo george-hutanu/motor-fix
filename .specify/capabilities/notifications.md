@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 194-email-sending
   - 195-message-templates
@@ -40,6 +40,7 @@ features:
   - 1352-catalogue-job-visibility
   - 389-confirm-booking-lift-mechanic
   - 428-close-on-account-closed
+  - 068-yearly-documents
 ---
 
 # Capability: Notifications
@@ -264,10 +265,6 @@ _From 196-push-notifications._
 
 _From 196-push-notifications._
 
-### 196-FR-012 — A push row of a type that is not urgent, built in quiet hours, MUST wait until 08:00.
-
-_From 196-push-notifications._
-
 ### 196-FR-013 — A type with no push text MUST fail its push row with `template_failed` and fall back to e-mail.
 
 _From 196-push-notifications._
@@ -376,9 +373,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 198-FR-010 — A DOCUMENT_DUE or DOCUMENT_OVERDUE MUST go by the channels the owner left on, never by none; a muted channel of theirs is skipped like any other staff type's.
+### 068-FR-004 — DOCUMENT_DUE and DOCUMENT_OVERDUE MUST go through the notifications pipeline by e-mail and push: both not urgent, so one built in quiet hours (22:00 to 08:00 Europe/Bucharest) waits until 08:00 (194-FR-010, 196-FR-012; DOCUMENT_OVERDUE joins the not-urgent set); both become `always` sent on exactly e-mail and push (WhatsApp dropped from their channels), so the owner cannot mute them and the settings show them locked as GARAGE_SUSPENDED is (198-FR-010 changes for these two types from `keep_one` to `always`). The Romanian and English templates for e-mail, push and the bell MUST name the due date ("Reîncarcă documentele anuale până pe 15 ian. 2027" / "Upload your yearly documents again by 15 Jan 2027") and, for DOCUMENT_OVERDUE, the suspension day = `grace_until` + 1 ("…altfel profilul va fi suspendat pe 30 ian. 2027" / "…otherwise the profile will be suspended on 30 Jan 2027"), link to the garage dashboard, hold no other personal data and pass the existing template checks; the bell entry opens the dashboard's legal panel.
 
-_From 198-staff-notification-preferences._
+_From 068-yearly-documents._
 
 ### 198-FR-011 — The garage dashboard MUST gain a Setări (settings) view with no capability of its own (a view with none is shown to every role of its area), reachable by every garage role (owner, receptionist, mechanic), holding this device's push panel (which leaves the home view) and, beneath it, the Notificări panel; the admin dashboard's Setări view MUST show the Notificări panel under its push panel. The driver dashboard is unchanged.
 
@@ -804,3 +801,5 @@ _From 428-close-on-account-closed._
 - `194-FR-001` — superseded by `1351-FR-008` (2026-10-19)
 - `199-FR-003` — superseded by `1190-FR-005` (2026-10-19)
 - `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)
+- `198-FR-010` — superseded by `068-FR-004` (2026-10-23)
+- `196-FR-012` — superseded by `068-FR-004` (2026-10-23)

@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-22
+updated: 2026-10-23
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -42,6 +42,7 @@ features:
   - 1190-live-reconnects
   - 389-confirm-booking-lift-mechanic
   - 1192-photo-variants
+  - 068-yearly-documents
 ---
 
 # Capability: Observability
@@ -861,6 +862,10 @@ _From 1192-photo-variants._
 ### 1192-FR-013 — The image policy (sizes, formats, addresses, caching, placeholder, what stays signed) MUST be written in the specs repo's documentation, where no page describes it today.
 
 _From 1192-photo-variants._
+
+### 068-FR-016 — Observability ships with the change: the compliance step logs one line per run (day, reminders sent per stage, cycles turned overdue) and one on its final failure, counts `motorfix_document_cycle_total{step ∈ reminded_30, reminded_7, reminded_0, overdue, uploaded, accepted, refused}` and a gauge `motorfix_documents_overdue` (cycles `overdue`, refreshed each run), the four routes report through the API's request duration by route, each accept and refuse logs one line (document id, kind, admin role, outcome); the worker dashboard gains a "Documente anuale" panel (counters by step and the overdue gauge) and no alert of its own: the step runs inside the reminders daily job, so a failed run fires the existing `worker-jobs-failed` within 15 minutes; `infra/observability/inventory.json` lists the step, the four endpoints, the three notification types and the five events with that panel and `worker-jobs-failed` (`scripts/observability-inventory.ts` passes). Decision (owner, taken by the run): no worker-compliance-failed alert; worker-jobs-failed already fires on reminders failures within 15 min, and the free tier's rule cap is spent once.
+
+_From 068-yearly-documents._
 
 ## Retired
 
