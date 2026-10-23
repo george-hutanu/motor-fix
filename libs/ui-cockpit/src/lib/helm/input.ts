@@ -1,13 +1,16 @@
 import {
   computed,
   Directive,
+  type DoCheck,
   ElementRef,
   effect,
   forwardRef,
   inject,
   input,
   Renderer2,
+  signal,
 } from '@angular/core';
+import type { AbstractControl } from '@angular/forms';
 import { fieldRevealed } from '@motor-fix/overlays';
 import {
   BrnFieldControl,
@@ -22,8 +25,10 @@ let nextId = 0;
 // template sets on the first render. This input keeps the brain's field
 // state and data attributes, and announces a field invalid while a save has
 // revealed it (`fieldRevealed`) and its control is still invalid, or while
-// the template's own rule says so: `[aria-invalid]` as an input, or
-// `aria-invalid` / `[attr.aria-invalid]` as an attribute it leaves alone.
+// the template's own rule, bound as `[aria-invalid]`, says so. It writes only
+// when its answer changes, so a static `aria-invalid` stays; a field under a
+// save binds its own rule to the input, never `[attr.aria-invalid]`, or the
+// input's removal would not be undone.
 @Directive({
   host: {
     '[attr.data-dirty]': 'field.dirty() ? "true" : null',
@@ -46,26 +51,31 @@ let nextId = 0;
   ],
   selector: '[hlmInput]',
 })
-export class HlmInput {
+export class HlmInput implements DoCheck {
   protected readonly field = inject(BrnFieldControl);
 
   readonly id = input(`hlm-input-${++nextId}`);
   readonly labelableId = this.id;
 
   // The field's own rule, for a field whose rule is wider than its control's
-  // validity. `aria-invalid="false"` reads as not invalid.
+  // validity: `true`, or an ARIA token (`grammar`, `spelling`) written as
+  // given. `false`, `null` and `'false'` read as not invalid.
   readonly ownInvalid = input<boolean | string | null | undefined>(false, {
     alias: 'aria-invalid',
   });
 
-  private readonly announced = computed(() => {
+  // The control the brain resolved, followed on every check: a rebound
+  // `[formControl]` is another control with its own reveal.
+  private readonly control = signal<AbstractControl | null>(null);
+
+  private readonly announced = computed((): string | null => {
     const own = this.ownInvalid();
-    if (own !== false && own !== null && own !== undefined && own !== 'false')
-      return true;
-    // Reading `invalid` first wakes this when the brain resolves the control.
-    if (!this.field.invalid()) return false;
-    const control = this.field.ngControl?.control;
-    return !!control && fieldRevealed(control);
+    if (own === true || own === '') return 'true';
+    if (typeof own === 'string' && own !== 'false') return own;
+    const control = this.control();
+    return control && this.field.invalid() && fieldRevealed(control)
+      ? 'true'
+      : null;
   });
 
   constructor() {
@@ -73,13 +83,17 @@ export class HlmInput {
     const renderer = inject(Renderer2);
     // Written only when the answer changes, so an attribute the template
     // sets on the first render stays until the field's own rule moves it.
-    let last = false;
+    let last: string | null = null;
     effect(() => {
       const now = this.announced();
       if (now === last) return;
       last = now;
-      if (now) renderer.setAttribute(element, 'aria-invalid', 'true');
-      else renderer.removeAttribute(element, 'aria-invalid');
+      if (now === null) renderer.removeAttribute(element, 'aria-invalid');
+      else renderer.setAttribute(element, 'aria-invalid', now);
     });
+  }
+
+  ngDoCheck() {
+    this.control.set(this.field.ngControl?.control ?? null);
   }
 }
