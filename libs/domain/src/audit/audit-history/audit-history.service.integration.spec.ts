@@ -743,7 +743,7 @@ describe('reading', () => {
   });
 });
 
-// @traces 469-FR-001 469-FR-002
+// @traces 469-FR-001 469-FR-002 469-FR-003 469-FR-005
 describe('the index the unfiltered admin read uses', () => {
   // The admin's client, logging each statement it sends with its values.
   const logged = new PrismaClient({
@@ -759,42 +759,30 @@ describe('the index the unfiltered admin read uses', () => {
   );
   afterAll(() => logged.$disconnect());
 
+  const admin = actor('admin', null);
   class RolledBack extends Error {}
 
-  // The page and the count the read sends, planned over a year of entries
-  // that are rolled back, since the history refuses DELETE and TRUNCATE.
-  const plans = async () => {
-    sent.length = 0;
-    await new AuditHistoryService(logged).list(actor('admin', null), {});
-    const statements = sent.filter((s) => /activity_log/.test(s.query));
-    let planned: string[] = [];
-    await prisma
+  // A million entries over 90 days, in a transaction that is rolled back,
+  // since the history refuses DELETE and TRUNCATE.
+  const withMillion = (run: (tx: Prisma.TransactionClient) => Promise<void>) =>
+    prisma
       .$transaction(
         async (tx) => {
           await tx.$executeRaw`
             INSERT INTO activity_log
               (id, action, subject_type, subject_id, actor_role, actor_name, at, garage_id)
             SELECT gen_random_uuid(), 'update', 'quote', gen_random_uuid(), 'owner', 'Ion',
-              now() - n * interval '5 minutes', gen_random_uuid()
-            FROM generate_series(1, 100000) AS n`;
+              now() - n * interval '7776 milliseconds', md5((n % 300)::text)::uuid
+            FROM generate_series(1, 1000000) AS n`;
           await tx.$executeRaw`ANALYZE activity_log`;
-          planned = [];
-          for (const { query, params } of statements) {
-            const rows = await tx.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(
-              `EXPLAIN ${query}`,
-              ...params,
-            );
-            planned.push(rows.map((row) => row['QUERY PLAN']).join('\n'));
-          }
+          await run(tx);
           throw new RolledBack();
         },
-        { timeout: 60_000 },
+        { maxWait: 10_000, timeout: 240_000 },
       )
       .catch((e: unknown) => {
         if (!(e instanceof RolledBack)) throw e;
       });
-    return planned;
-  };
 
   it('indexes the history by time alone', async () => {
     const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
@@ -806,13 +794,45 @@ describe('the index the unfiltered admin read uses', () => {
     ]);
   });
 
-  it('reads the page and its count through it, not the whole table', async () => {
-    const planned = await plans();
+  it('answers the page and its count through it, fast, with the same answer', async () => {
+    sent.length = 0;
+    await new AuditHistoryService(logged).list(admin, {});
+    const statements = sent.filter((s) => /activity_log/.test(s.query));
+    const plans: string[] = [];
+    const ms: number[] = [];
+    let indexed: unknown;
+    let unindexed: unknown;
 
-    expect(planned).toHaveLength(2);
-    for (const plan of planned) {
+    await withMillion(async (tx) => {
+      for (const { query, params } of statements) {
+        const rows = await tx.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(
+          `EXPLAIN ${query}`,
+          ...params,
+        );
+        plans.push(rows.map((row) => row['QUERY PLAN']).join('\n'));
+      }
+      // The service on the transaction, which alone sees the million, at one
+      // instant, so the window is the same with and without the index.
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      const inTx = new AuditHistoryService(tx as unknown as PrismaClient);
+      await inTx.list(admin, {});
+      for (let call = 0; call < 100; call++) {
+        const start = performance.now();
+        indexed = await inTx.list(admin, {});
+        ms.push(performance.now() - start);
+      }
+      await tx.$executeRaw`DROP INDEX activity_log_at_idx`;
+      unindexed = await inTx.list(admin, {});
+    }).finally(() => jest.restoreAllMocks());
+
+    expect(plans).toHaveLength(2);
+    for (const plan of plans) {
       expect(plan).toMatch(/activity_log_at_idx/);
       expect(plan).not.toMatch(/Seq Scan on activity_log/);
     }
-  }, 120_000);
+    const p95 = ms.sort((a, b) => a - b)[94] ?? Number.POSITIVE_INFINITY;
+    expect(p95).toBeLessThan(400);
+    expect(indexed).toEqual(unindexed);
+  }, 300_000);
 });
