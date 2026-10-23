@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import {
   type APIRequestContext,
   type BrowserContext,
@@ -91,6 +92,28 @@ export async function signIn(
   await dialog.getByLabel('Parolă').fill(password);
   if (!remember) await dialog.getByLabel('Ține‑mă autentificat').uncheck();
   await dialog.getByRole('button', { name: 'Intră în cont' }).click();
+}
+
+// A driver of the caller's own, signed up with the seeded password, for a
+// flow that must not share a seeded driver another spec signs in with at the
+// same time. Each sign-up comes from an address of its own (the API admits 10
+// an hour from one), so a test repeated twenty times never meets the limit.
+export async function signUpDriver(request: APIRequestContext, tag: string) {
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const email = `${tag}-${stamp}@example.test`;
+  const address = `198.19.${Math.floor(Math.random() * 250)}.${Date.now() % 250}`;
+  const res = await request.post('/api/v1/auth/sign-up', {
+    data: {
+      consent: CURRENT_CONSENT,
+      email,
+      language: 'ro',
+      name: `Șofer ${stamp}`,
+      password: PASSWORD,
+    },
+    headers: { 'x-forwarded-for': address },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  return email;
 }
 
 // A bearer header for one seeded account, for the API calls a flow sets up with.

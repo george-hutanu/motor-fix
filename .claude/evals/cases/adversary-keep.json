@@ -1,0 +1,133 @@
+[
+  {
+    "id": "adversary-keep-refuses-a-write-dropping-a-test",
+    "hook": "pre:edit:adversary-keep",
+    "why": "an adversary spec only grows; a Write whose content lacks one of the file's test titles is refused",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "content": "describe('the gate', () => {\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 2
+    }
+  },
+  {
+    "id": "adversary-keep-passes-an-appending-edit",
+    "hook": "pre:edit:adversary-keep",
+    "why": "appending a test to an adversary spec is the way to change one, so it goes through",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "old_string": "});\n",
+        "new_string": "  it('a new probe', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "adversary-keep-leaves-other-specs-alone",
+    "hook": "pre:edit:adversary-keep",
+    "why": "the gate holds adversary specs only; the same dropping Write to an ordinary spec goes through",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.spec.ts",
+        "content": "describe('the gate', () => {\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "adversary-keep-refuses-a-test-commented-out",
+    "hook": "pre:edit:adversary-keep",
+    "why": "a test commented out is a test dropped, so a Write that comments one out is refused",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "content": "describe('the gate', () => {\n  // it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 2
+    }
+  },
+  {
+    "id": "adversary-keep-passes-a-retired-test-line",
+    "hook": "pre:edit:adversary-keep",
+    "why": "a test whose rule the spec retired goes with a retired-test line in its place, visible in the diff",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/api/src/gate.adversary.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n",
+            "apps/api/src/gate.spec.ts": "describe('the gate', () => {\n  it('refuses a dropped test', () => {});\n  it('keeps the rest', () => {});\n});\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "apps/api/src/gate.adversary.spec.ts",
+        "content": "describe('the gate', () => {\n  // retired test: \"refuses a dropped test\" the rule it held was retired\n  it('keeps the rest', () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  }
+]

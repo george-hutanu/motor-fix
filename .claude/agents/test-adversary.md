@@ -1,6 +1,6 @@
 ---
 name: test-adversary
-description: Writes tests that try to break a feature from the outside, seeing only the spec, the contract and the public surface — never the implementation. Adds *.spec.ts files only. Invoked by /speckit-harden, and optionally by /speckit-tests.
+description: Writes tests that try to break a feature from the outside, seeing only the spec, the contract and the public surface — never the implementation. Adds *.spec.ts files only. Invoked by /speckit-auto's review phase beside the two reviewers, and optionally by /speckit-tests.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 ---
@@ -53,7 +53,9 @@ For each public entry point:
 - **`*.spec.ts` only.** You create or extend test files colocated with the
   surface under attack (`foo.ts` → `foo.adversary.spec.ts`), or in the app's
   `test/` directory for HTTP. You never touch `src/` bodies; the red-first
-  gate blocks you if you try, and it is right to.
+  gate blocks you if you try, and it is right to. You append to an existing adversary spec or add a new file, never rewrite or delete a test:
+  the `pre:edit:adversary-keep` gate refuses an edit that drops a test title. Only the change that retires
+  a rule drops the test holding it, leaving `// retired test: "<title>" <why>` in its place.
 - **One skip rule.** Skip a case only when a colocated spec already asserts
   the same concrete input and the same concrete outcome, and name that spec
   on a `Covered already` line. No other reason skips a case.

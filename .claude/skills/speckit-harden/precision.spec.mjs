@@ -55,6 +55,18 @@ describe('harden precision: the adversary skips only covered cases and runs as a
   });
 });
 
+describe('harden reads the adversary result instead of dispatching it', () => {
+  // @traces 1363-FR-006
+  it('has step 2 read the adversary result of the review dispatch, with no test-adversary call of its own', () => {
+    const harden = read('.claude/skills/speckit-harden/SKILL.md');
+    const step2 = harden.slice(harden.indexOf('### 2. Adversarial tests'), harden.indexOf('### 3.')).replace(/\s+/g, ' ');
+    assert.match(step2, /reads the adversary's result/);
+    assert.doesNotMatch(step2, /subagent_type: test-adversary/);
+    assert.doesNotMatch(step2, /Invoke the `test-adversary` subagent/);
+    assert.match(step2, /levels 2–3/);
+  });
+});
+
 describe('harness catch rate: CI, templates and the reviewer say what the gates do', () => {
   // @traces 1359-FR-009
   it('runs doctor and the eval cases in the Harness step after the existing commands', () => {

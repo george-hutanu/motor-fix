@@ -1,10 +1,10 @@
 # speckit-auto: phases 13–17
 
-Read at phase 13, and on level 1 right after phase 12.
+Read at phase 13, and on level 1 right after phase 10.
 
-## Level 1: the stop after harden
+## Level 1: the stop after implement
 
-A level-1 story's agent ends after phase 12 and a fresh agent, the closer,
+A level-1 story's agent ends after phase 10 and a fresh agent, the closer,
 runs the rest. A cloud session (`CLAUDE_CODE_REMOTE=true`) does not split: one
 agent runs through the hand-off, as on levels 2 and 3.
 
@@ -72,12 +72,18 @@ adversarially checked by independent refuters before you act on it. It drives
 the Workflow tool, and those words in the user's own message are the opt-in
 that tool requires — a skill cannot grant it on the user's behalf. Otherwise:
 
-Invoke the `spec-reviewer` and `code-reviewer` subagents **in one message**
-(Agent tool, `subagent_type: spec-reviewer` and `code-reviewer`), each with the
-feature directory and the diff range `<start-commit>..HEAD`. They answer
-different questions — conformance to the spec, and durability of the code —
-and run in parallel. This is the only `code-reviewer` run on the change (phase
-12 has none); log it in `auto-run.md` with its range and verdict. Merge both tables. Fix every CRITICAL and HIGH finding,
+Invoke the `test-adversary`, `spec-reviewer` and `code-reviewer` subagents **in one message**
+(Agent tool, `subagent_type: test-adversary`, `spec-reviewer` and `code-reviewer`),
+at every level from 1. The reviewers get the feature directory and the diff
+range `<start-commit>..HEAD`; the adversary gets the feature directory, the
+diff's public surface and the adversary specs already on the branch
+(`speckit-harden` step 2, which at levels 2–3 reads its result here). They
+answer different questions — conformance to the spec, durability of the
+code, and what breaks from outside — and run in parallel. This is the only
+`code-reviewer` and `test-adversary` run on the change (phase 12 has
+neither); log it in `auto-run.md` with its range and verdict. Each failing
+adversary test is a finding, a defect or a spec gap, fixed through the same loop as the reviewers'.
+Merge the tables. Fix every CRITICAL and HIGH finding,
 then re-run whichever reviewer raised them, once. CRITICAL/HIGH findings that survive the re-review block completion —
 report them as a Hard Stop. MEDIUM/LOW findings are fixed on the branch too,
 pre-existing or adjacent ones included, before ready: fix every verified

@@ -1,10 +1,11 @@
 // @traces 1230-FR-002 1230-FR-003 1230-FR-004 1230-FR-005 1230-FR-011
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { ROUTE_PATTERN, contextCookies, dropExpected, matrix, parseRoute, routeProblem } from './sweep.mjs';
+import { ROUTE_PATTERN, contextCookies, dropExpected, matrix, parseRoute, routeProblem, routerTable } from './sweep.mjs';
 
 const WORKFLOW = join(import.meta.dirname, '..', '..', '..', '.github', 'workflows', 'pr-qa.yml');
 
@@ -215,5 +216,33 @@ describe('the signed-in cookie', () => {
 
   it('refuses a role with no way to sign in', async () => {
     await assert.rejects(contextCookies({ role: 'driver', lang: 'en' }, { baseURL }), /driver/);
+  });
+});
+
+// @traces 1363-FR-008
+describe('route rule: the router decides what is known, read afresh from the checkout', () => {
+  const real = join(import.meta.dirname, '..', '..', '..', 'apps', 'web', 'src', 'app');
+  const checkout = () => {
+    const root = mkdtempSync(join(tmpdir(), 'router-fixture-'));
+    cpSync(join(real, 'app.routes.ts'), join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts'), { recursive: true });
+    cpSync(join(real, 'dashboard', 'views.ts'), join(root, 'apps', 'web', 'src', 'app', 'dashboard', 'views.ts'), { recursive: true });
+    return root;
+  };
+
+  it('knows a view added to a dashboard in views.ts without a change to the check', () => {
+    const root = checkout();
+    const views = join(root, 'apps', 'web', 'src', 'app', 'dashboard', 'views.ts');
+    assert.match(routeProblem('/app/garage/invoices@garage', routerTable(root)) ?? '', /^\/app\/garage\/invoices@garage: /);
+    writeFileSync(views, readFileSync(views, 'utf8').replace("garageView('history', 'garage.audit_history'),", "garageView('history', 'garage.audit_history'),\n      garageView('invoices', 'garage.invoices'),"));
+    assert.equal(routeProblem('/app/garage/invoices@garage', routerTable(root)), null);
+    assert.match(routeProblem('/app/driver/invoices@driver', routerTable(root)) ?? '', /^\/app\/driver\/invoices@driver: /);
+  });
+
+  it('knows a public page added under the language node', () => {
+    const root = checkout();
+    const routes = join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts');
+    writeFileSync(routes, readFileSync(routes, 'utf8').replace("path: 'list-your-garage',", "path: 'list-your-garage',\n      },\n      {\n        component: Home,\n        path: 'how-it-works',"));
+    assert.equal(routeProblem('/:lang/how-it-works', routerTable(root)), null);
+    assert.match(routeProblem('/how-it-works', routerTable(root)) ?? '', /\/:lang\/how-it-works/);
   });
 });

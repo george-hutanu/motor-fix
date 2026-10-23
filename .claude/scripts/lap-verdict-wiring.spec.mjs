@@ -19,11 +19,11 @@ const trackerSync = read('.claude/skills/speckit-tracker-sync/SKILL.md');
 
 describe('the constitution ends QA on a lap with no blocker or high finding', () => {
   // @traces 1362-FR-009
-  it('is at 5.0.0, a MAJOR amendment with its Sync Impact Report', () => {
-    assert.match(constitution, /\*\*Version\*\*: 5\.0\.0 \|/);
-    assert.match(constitution, /Sync Impact Report \(v5\.0\.0\) - Version change: 4\.1\.1 → 5\.0\.0 \(MAJOR/);
-    assert.match(card, /^# Constitution card — v5\.0\.0/);
-    assert.match(read('CLAUDE.local.md'), /Constitution v5\.0\.0/);
+  it('is at 5.0.0 or a later 5.x, the MAJOR amendment kept in its Sync Impact Report', () => {
+    assert.match(constitution, /\*\*Version\*\*: 5\.\d+\.\d+ \|/);
+    assert.match(constitution, /(?:Sync Impact Report|Previous report) \(v5\.0\.0\) - Version change: 4\.1\.1 → 5\.0\.0 \(MAJOR/);
+    assert.match(card, /^# Constitution card — v5\.\d+\.\d+/);
+    assert.match(read('CLAUDE.local.md'), /Constitution v5\.\d+\.\d+/);
   });
 
   // @traces 1362-FR-009

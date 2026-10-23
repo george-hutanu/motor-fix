@@ -63,7 +63,7 @@ import {
   runDirPrefix,
   waitForHttp,
 } from "./services.mjs";
-import { VIEWPORTS, flowSignIn, routeProblem, runSweep, toFindings } from "./sweep.mjs";
+import { VIEWPORTS, flowSignIn, routeProblem, routerTable, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -143,9 +143,10 @@ export async function collectRejections(findings, fn) {
  * notification or an e-mail links to it (the worker's consumers stay off without it).
  */
 export const appLaunchEnv = ({ apiPort, webPort, workerPort, apiURL, webURL }) => ({
-  api: { PORT: String(apiPort), PUBLIC_WEB_URL: webURL },
+  // API_PORT and WORKER_PORT too: each app reads them before PORT, and a worktree's port set exports them.
+  api: { PORT: String(apiPort), API_PORT: String(apiPort), PUBLIC_WEB_URL: webURL },
   web: { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL },
-  worker: { PORT: String(workerPort), PUBLIC_WEB_URL: webURL },
+  worker: { PORT: String(workerPort), WORKER_PORT: String(workerPort), PUBLIC_WEB_URL: webURL },
 });
 
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */
@@ -169,7 +170,8 @@ async function main(argv) {
     console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--tests] [--tree dir --sha <40-hex sha>]");
     return 64;
   }
-  const refused = opt.routes.map(routeProblem).filter(Boolean);
+  const table = routerTable(opt.tree ? resolve(opt.tree) : repoRoot);
+  const refused = opt.routes.map((route) => routeProblem(route, table)).filter(Boolean);
   if (refused.length) {
     for (const line of refused) console.error(`run: ${line}`);
     return 64;

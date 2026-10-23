@@ -137,6 +137,14 @@ the labels: `gh pr edit <n> <labels>`.
   the `Closes george-hutanu/motor-fix-specs#<n>` line (or appends it), and
   adds the epic label `EP-<n>`. The line `- <date> · pr · ST-<n> · PR #<n>
   <url>` is what `stop:pr-lifecycle` reads.
+- **Claim label.** `pr` copies the issue's `claim: chief-N` label to the PR;
+  `pr` and `check` log a PR whose claim differs, as
+  `claim mismatch: issue chief-1, PR chief-2`.
+- **Dependencies.** `start`, `pr`, `finish` and `file` sync the issue's native
+  blocked-by links with its body's `Depends on:` line, which names `#n`,
+  `ST-n` or issue URLs, or `none`: a missing link to an open target is added,
+  a link to a closed target is dropped, and a circular one is refused. Each
+  sync writes one `deps` line to `tracker-sync.md`.
 
 ## 4. Finish comment (hard rule)
 

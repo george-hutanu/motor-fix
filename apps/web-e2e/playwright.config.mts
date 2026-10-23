@@ -31,6 +31,12 @@ const WORKERS = 4;
 // `assistants`) run only when MCP_URL and ASSISTANT_ISSUER are set, as in
 // CI's E2E job; without them the @assistants flows skip.
 const MCP = process.env['MCP_URL'];
+// The api, worker and web addresses: this worktree's port set when it has one
+// (scripts/test-services.ts ports, sourced by scripts/heavy.sh), the apps'
+// defaults otherwise. The apps read the same variables (PORT is the web's).
+const API = `http://localhost:${process.env['API_PORT'] ?? 3000}`;
+const WORKER = `http://localhost:${process.env['WORKER_PORT'] ?? 3001}`;
+const WEB = `http://localhost:${process.env['WEB_PORT'] ?? 4200}`;
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
@@ -97,7 +103,7 @@ export default defineConfig({
     },
   ],
   use: {
-    baseURL: deployed ?? 'http://localhost:4200',
+    baseURL: deployed ?? WEB,
     // A service worker's requests bypass page.route stubs; pwa.spec allows it.
     serviceWorkers: 'block',
     trace: 'on-first-retry',
@@ -119,20 +125,20 @@ export default defineConfig({
           command: 'npx nx run api:serve',
           reuseExistingServer: true,
           timeout: SERVER_START,
-          url: 'http://localhost:3000/health/live',
+          url: `${API}/health/live`,
         },
         // The worker relays the outbox's events to the live streams.
         {
           command: 'npx nx run worker:serve',
           reuseExistingServer: true,
           timeout: SERVER_START,
-          url: 'http://localhost:3001/health/live',
+          url: `${WORKER}/health/live`,
         },
         {
           command: 'npx nx run web:serve',
           reuseExistingServer: true,
           timeout: SERVER_START,
-          url: 'http://localhost:4200',
+          url: WEB,
         },
         ...(MCP
           ? [

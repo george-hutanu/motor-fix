@@ -49,8 +49,9 @@ export const DEFAULT_LEVEL = 2;
 
 // What `level.mjs check` reads as a fact that contradicts a level 0 or 1.
 // Constants, not settings: tune them here once the ledger shows a number.
-// More functional requirements than this is more than one coherent unit.
-export const FR_THRESHOLD = 5;
+// More functional requirements than this is more than one coherent unit
+// (a one-session task routinely lists 6-10).
+export const FR_THRESHOLD = 10;
 // A file here changes a contract, the data or the generated client.
 export const CONTRACT_PATHS = [/^libs\/contracts\//, /^libs\/data-access\//, /^apps\/api\/openapi\.json$/, /(^|\/)schema\.prisma$/, /(^|\/)migrations\//];
 
@@ -241,6 +242,8 @@ export function pointTo(state, featureDirectory, { now = Date.now(), existing = 
   } else if (base.level === undefined || base.level_for !== featureDirectory) {
     delete next.level;
     delete next.level_for;
+    // The work type was sized with the level (level.mjs set --type): it leaves with it.
+    delete next.type;
   }
   return next;
 }

@@ -51,6 +51,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:edit:red-first"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:edit:adversary-keep"
           }
         ]
       },
