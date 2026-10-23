@@ -3839,6 +3839,32 @@ describe("the garage's suspension in the file", () => {
     expect(document.activeElement).toBe(restoreButton(host));
   });
 
+  it("passes a failed re-check's verdict, so the dialog reads the cause as the list does", async () => {
+    const host = await open(
+      fileOf({
+        suspension: {
+          ...OPEN,
+          cause: 'recheck_failed',
+          rarVerdict: 'expired',
+        },
+      }),
+    );
+    overlays.open.mockResolvedValueOnce('cancelled');
+
+    restoreButton(host)?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      AdminRestoreGarage,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cause: 'recheck_failed',
+          rarVerdict: 'expired',
+        }),
+      }),
+    );
+  });
+
   it.each(['restored', 'stale'])(
     'reads the file again once %s',
     async (end) => {

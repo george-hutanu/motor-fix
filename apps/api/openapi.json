@@ -16875,6 +16875,15 @@
             "type": "string",
             "description": "The reason as stored"
           },
+          "rarVerdict": {
+            "type": "string",
+            "description": "Only for a failed re-check whose reason names the verdict",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
+          },
           "fromTime": {
             "type": "string",
             "format": "date-time"

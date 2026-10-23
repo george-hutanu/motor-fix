@@ -18,6 +18,11 @@ export interface VerificationFileSuspensionDto {
   note: string | null;
 
   /**
+   * Only for a failed re-check whose reason names the verdict
+   */
+  rarVerdict?: 'expired' | 'suspended' | 'withdrawn';
+
+  /**
    * The reason as stored
    */
   reason: string;

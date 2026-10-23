@@ -835,16 +835,21 @@ export class VerificationFile {
     const cause =
       suspension?.cause ?? (from === 'documents' ? 'documents_overdue' : null);
     if (!cause) return;
+    const {
+      fromTime = null,
+      rarVerdict = null,
+      reason = null,
+    } = suspension ?? {};
     const data: AdminRestoreGarageData = {
       activities: value.activities,
       cause,
       documentsDue:
         from === 'documents' ? true : value.documentCycle?.state === 'due',
-      fromTime: suspension?.fromTime ?? null,
+      fromTime,
       garageId: value.garage.id,
       name: value.garage.name,
-      rarVerdict: null,
-      reason: suspension?.reason ?? null,
+      rarVerdict,
+      reason,
       today: bucharestToday(),
     };
     const result = await this.overlays.open<

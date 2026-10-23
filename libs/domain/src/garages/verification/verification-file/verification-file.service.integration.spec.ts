@@ -592,6 +592,7 @@ describe("the garage's latest suspension on the file", () => {
       fromTime: '2026-10-20T08:00:00.000Z',
       liftedBy: null,
       note: null,
+      rarVerdict: 'expired',
       reason: 'Autorizație RAR expirată',
       untilTime: null,
     });
@@ -610,6 +611,7 @@ describe("the garage's latest suspension on the file", () => {
       fromTime: '2026-10-20T08:00:00.000Z',
       liftedBy: { name: 'Ioana' },
       note: 'A trimis autorizația reînnoită.',
+      rarVerdict: 'expired',
       reason: 'Autorizație RAR expirată',
       untilTime: '2026-10-23T10:15:03.120Z',
     });

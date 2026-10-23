@@ -34,7 +34,8 @@ const notAfterNextYear = () =>
     },
   });
 
-// YYYY-MM-DD naming a day the calendar has.
+// YYYY-MM-DD naming a day the calendar has: no year 0, which Date takes for
+// 1 BC and the database cannot store.
 export const calendarDay = () =>
   ValidateBy({
     name: 'calendarDay',
@@ -42,7 +43,10 @@ export const calendarDay = () =>
       defaultMessage: (args) => `${args?.property} must be a YYYY-MM-DD day`,
       // Month 13 or day 00 make no Date at all; 30 February makes 2 March.
       validate: (value) => {
-        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        if (
+          typeof value !== 'string' ||
+          !/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)
+        ) {
           return false;
         }
         const day = new Date(`${value}T00:00:00Z`);

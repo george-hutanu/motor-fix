@@ -13,7 +13,7 @@ import {
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
 
-const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
+export const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
 export type RarVerdict = (typeof RAR_VERDICTS)[number];
 
 export class AdminGaragesSummaryDto {

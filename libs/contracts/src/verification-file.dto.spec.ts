@@ -127,6 +127,7 @@ describe("the file's latest suspension in the contract", () => {
       'fromTime',
       'liftedBy',
       'note',
+      'rarVerdict',
       'reason',
       'untilTime',
     ]);
@@ -143,6 +144,9 @@ describe("the file's latest suspension in the contract", () => {
       'admin',
       'report_confirmed',
     ]);
+    expect(
+      property(VerificationFileSuspensionDto.prototype, 'rarVerdict')?.enum,
+    ).toEqual(['expired', 'suspended', 'withdrawn']);
   });
 
   it('is null on a file whose garage was never suspended', () => {

@@ -66,11 +66,11 @@ const RESTORE_SAID = {
   },
   noteRequired: {
     en: 'Write what the garage fixed',
-    ro: 'Scrie ce a rezolvat service-ul',
+    ro: 'Scrie ce a rezolvat service‑ul',
   },
   notSuspended: {
     en: 'The garage is not suspended',
-    ro: 'Service-ul nu este suspendat',
+    ro: 'Service‑ul nu este suspendat',
   },
   recheckMissing: {
     en: 'A valid RAR re-check is missing',
@@ -350,7 +350,7 @@ export class SuspensionService {
       );
     }
 
-    const note = body.note ?? null;
+    const note = body.note?.trim() || null;
     const evidence = await this.evidence(
       tx,
       actor,
@@ -458,7 +458,7 @@ export class SuspensionService {
         };
       }
       default:
-        if (body.note === undefined) {
+        if (!body.note?.trim()) {
           throw new HttpException(
             {
               code: 'validation_failed',

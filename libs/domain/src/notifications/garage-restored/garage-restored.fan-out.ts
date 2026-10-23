@@ -1,6 +1,7 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
+import { isUUID } from 'class-validator';
 
 import type { PrismaClient } from '../../generated/prisma/client';
 import { countGarageRestoredNotice } from '../../metrics/product-counters';
@@ -54,7 +55,7 @@ export class GarageRestoredFanOut {
   async handle(job: Pick<Job<GarageRestoredEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
     const garageId = payload?.garageId;
-    if (typeof garageId !== 'string') {
+    if (typeof garageId !== 'string' || !isUUID(garageId)) {
       this.untold(garageId);
       return;
     }

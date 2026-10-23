@@ -29,6 +29,7 @@ import {
   type DocumentKind,
   type DocumentRefusalReason,
 } from './legal-documents/legal-documents';
+import { RAR_VERDICTS, type RarVerdict } from './suspended-garages';
 import {
   VerificationActorDto,
   VerificationFileCheckDto,
@@ -568,6 +569,12 @@ export class VerificationFileSuspensionDto {
 
   @ApiProperty({ description: 'The reason as stored' })
   reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Only for a failed re-check whose reason names the verdict',
+    enum: RAR_VERDICTS,
+  })
+  rarVerdict?: RarVerdict;
 
   @ApiProperty({ format: 'date-time' })
   fromTime!: string;

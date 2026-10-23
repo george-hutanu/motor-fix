@@ -256,6 +256,7 @@ describe('telling a restored garage’s owners', () => {
   it.each([
     ['no garage id', {}],
     ['a garage id that is not text', { garageId: 42 }],
+    ['a garage id that is not a uuid', { garageId: 'not-a-uuid' }],
   ])('tells nobody and counts a skip for %s', async (_, payload) => {
     const { garage, job } = await restored();
     const fanOut = await start();

@@ -1,3 +1,3 @@
 // A note an admin writes: line breaks are the only control characters it
-// may hold.
-export const NOTE_TEXT = /^(?:[\t\n\r]|\P{Cc})*$/u;
+// may hold, and half of a surrogate pair, which the database refuses, none.
+export const NOTE_TEXT = /^(?:[\t\n\r]|[^\p{Cc}\p{Cs}])*$/u;

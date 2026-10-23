@@ -34,6 +34,7 @@ import { StorageService } from '../../../storage/storage.service';
 import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
 import { pricedJobs } from '../priced-jobs';
+import { rarVerdict } from '../suspension/suspended-garages';
 import { resubmission } from '../verification.service';
 
 const SYSTEM_NAME = 'MotorFix';
@@ -609,11 +610,13 @@ export class VerificationFileService {
     const lifter = latest.liftedBy
       ? (await this.names([latest.liftedBy]))(latest.liftedBy)
       : null;
+    const verdict = rarVerdict(latest.cause, latest.reason);
     return {
       cause: latest.cause,
       fromTime: latest.fromTime.toISOString(),
       liftedBy: lifter === null ? null : { name: lifter },
       note: latest.liftNote,
+      ...(verdict && { rarVerdict: verdict }),
       reason: latest.reason,
       untilTime: iso(latest.untilTime),
     };
