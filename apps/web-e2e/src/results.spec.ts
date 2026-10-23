@@ -898,6 +898,49 @@ test.describe('the map beside the results @seeded', () => {
     }
   });
 
+  // @traces 1351-FR-008
+  test('scrolls nothing sideways and shows no text under 12 px at 320 x 568 and 390 x 844, in Romanian and English', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    for (const [width, height] of [PHONES[0], PHONES[2]]) {
+      for (const lang of ['ro', 'en'] as const) {
+        await page.setViewportSize({ height, width });
+        await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+        await expect(page.locator('mf-result-card').first()).toBeAttached();
+        const where = `${width} x ${height} ${lang}`;
+        const widths = await page.evaluate(() => ({
+          client: document.documentElement.clientWidth,
+          scroll: document.documentElement.scrollWidth,
+        }));
+        expect(widths.scroll, where).toBeLessThanOrEqual(widths.client);
+        // Every element that shows text of its own, wherever it is on the page.
+        const small = await page.evaluate(() =>
+          [...document.querySelectorAll('body *')]
+            .filter((el) => {
+              const style = getComputedStyle(el);
+              const box = el.getBoundingClientRect();
+              return (
+                style.visibility === 'visible' &&
+                box.width > 0 &&
+                box.height > 0 &&
+                [...el.childNodes].some(
+                  (node) =>
+                    node.nodeType === Node.TEXT_NODE &&
+                    node.textContent?.trim(),
+                ) &&
+                Number.parseFloat(style.fontSize) < 12
+              );
+            })
+            .map(
+              (el) => `${el.tagName} ${el.textContent?.trim().slice(0, 30)}`,
+            ),
+        );
+        expect(small, where).toEqual([]);
+      }
+    }
+  });
+
   // @traces 1358-FR-007
   test('raises a low sheet to half and shows the card of a tapped pin, the map still in view', async ({
     page,
