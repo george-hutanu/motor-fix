@@ -23,7 +23,11 @@ import {
   approvedNames,
   nameOf,
 } from '../../garages/prices/garage-prices/garage-prices.service';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import type {
+  JobType,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 
 const byRomanianName = new Intl.Collator('ro');
 
@@ -31,8 +35,6 @@ type Decision = 'approved' | 'rejected';
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such catalogue job');
-
-type Decided = Prisma.JobTypeGetPayload<object>;
 
 // An admin's decision on a job a garage proposed: approved into the
 // catalogue with its names and system, or rejected with the reason the
@@ -163,7 +165,7 @@ export class JobDecisionsService {
     fields: Prisma.JobTypeUncheckedUpdateInput,
     newValue: { status: Decision } & Record<string, string | null>,
     check?: (tx: Prisma.TransactionClient) => Promise<void>,
-  ): Promise<Decided> {
+  ): Promise<JobType> {
     const decision = newValue.status;
     const job = await this.prisma.$transaction(async (tx) => {
       await this.pending(tx, id);
@@ -247,11 +249,16 @@ export class JobDecisionsService {
   }
 
   // Neither name may be either name of an approved job, accents and case
-  // ignored, as a proposal's may not.
+  // ignored, as a proposal's may not. The approvals take the catalogue's
+  // name lock before they read, so two of one name run one after the other
+  // and the second sees the first. Only an approval makes a name approved
+  // (the loader writes keys it owns), so a proposal, which stays pending,
+  // does not take it.
   private async unique(
     tx: Prisma.TransactionClient,
     names: { nameEn: string; nameRo: string },
   ) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('job_type_names'))`;
     const approved = await approvedNames(tx);
     for (const field of ['nameRo', 'nameEn'] as const) {
       const jobTypeId = approved.get(nameOf(names[field]));
@@ -275,7 +282,7 @@ export class JobDecisionsService {
 
   // The proposer's Prețuri and public profile re-read when the job's default
   // row is still theirs.
-  private async republish(tx: Prisma.TransactionClient, job: Decided) {
+  private async republish(tx: Prisma.TransactionClient, job: JobType) {
     const garageId = job.proposedByGarageId;
     if (!garageId) return;
     const row = await tx.garagePrice.findFirst({

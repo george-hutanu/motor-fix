@@ -7,9 +7,9 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
-  REJECTION_REASON_MAX,
-  REJECTION_REASON_MIN,
-} from '@motor-fix/contracts/price-range';
+  REJECTION_REASON,
+  visibleLength,
+} from '@motor-fix/contracts/visible-text';
 import {
   type AdminCatalogueJobDto,
   AdminService,
@@ -26,7 +26,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { characters } from '../../characters';
+import { visibleText } from '../../characters';
 
 export interface ProposedJobRejectData {
   job: AdminCatalogueJobDto;
@@ -64,16 +64,14 @@ export class ProposedJobReject {
   protected readonly form = new FormGroup({
     reason: new FormControl('', {
       nonNullable: true,
-      validators: [
-        characters(REJECTION_REASON_MIN, REJECTION_REASON_MAX, true),
-      ],
+      validators: [visibleText(REJECTION_REASON)],
     }),
   });
   private readonly reason = toSignal(this.form.controls.reason.valueChanges, {
     initialValue: '',
   });
-  protected readonly max = REJECTION_REASON_MAX;
-  protected readonly count = computed(() => [...this.reason().trim()].length);
+  protected readonly max = REJECTION_REASON.max;
+  protected readonly count = computed(() => visibleLength(this.reason()));
   protected readonly valid = toSignal(this.form.statusChanges, {
     initialValue: this.form.status,
   });

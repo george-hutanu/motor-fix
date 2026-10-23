@@ -558,8 +558,41 @@ describe('a second decision', () => {
       'fulfilled',
       'rejected',
     ]);
+    const refused = outcomes.find((o) => o.status === 'rejected');
+    const reason = (refused as PromiseRejectedResult).reason;
+    expect(reason).toBeInstanceOf(HttpException);
+    expect([
+      (reason as HttpException).getStatus(),
+      ((reason as HttpException).getResponse() as { code?: string }).code,
+    ]).toEqual([409, 'already_decided']);
     expect(await entriesOf(job.id)).toHaveLength(1);
     expect(await eventsOf('catalogue_job.decided', job.id)).toHaveLength(1);
+  });
+
+  it('approves only one of two proposals of the same name approved at once', async () => {
+    const first = await proposal({ name: 'Diagnoză' });
+    const second = await proposal({
+      garageId: (await garageOf('Atelier Titan')).id,
+      name: 'diagnoza',
+    });
+    const names = { ...APPROVAL, nameEn: 'Diagnosis', nameRo: 'Diagnoză' };
+
+    const outcomes = await Promise.allSettled([
+      service().approve(ana, first.job.id, names),
+      service().approve(mihai, second.job.id, names),
+    ]);
+
+    const refused = outcomes.filter((o) => o.status === 'rejected');
+    expect(refused).toHaveLength(1);
+    const reason = (refused[0] as PromiseRejectedResult).reason;
+    expect(reason).toBeInstanceOf(HttpException);
+    expect([
+      (reason as HttpException).getStatus(),
+      ((reason as HttpException).getResponse() as { code?: string }).code,
+    ]).toEqual([422, 'exists']);
+    expect(await prisma.jobType.count({ where: { status: 'approved' } })).toBe(
+      1,
+    );
   });
 
   it('answers 404 for an unknown job', async () => {

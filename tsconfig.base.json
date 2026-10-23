@@ -90,6 +90,9 @@
       "@motor-fix/contracts/verification-target": [
         "./libs/contracts/src/verification-target.ts"
       ],
+      "@motor-fix/contracts/visible-text": [
+        "./libs/contracts/src/visible-text.ts"
+      ],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
       "@motor-fix/data-access/*": ["./libs/data-access/src/lib/*"],
       "@motor-fix/domain": ["./libs/domain/src/index.ts"],

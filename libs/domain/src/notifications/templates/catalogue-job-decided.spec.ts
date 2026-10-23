@@ -151,4 +151,19 @@ describe('the message telling a garage owner what became of a proposed job', () 
       }
     },
   );
+
+  it('shortens a name too long for the push with "…", and keeps it whole in the bell', () => {
+    const params = approved('\u{1F600}'.repeat(80));
+    const name = templateName(KIND, params);
+
+    const push = render(name, 'push', 'ro', params);
+
+    // An emoji is two units and never split, so the body may stop at 119.
+    expect(push.body.length).toBeGreaterThanOrEqual(119);
+    expect(push.body.length).toBeLessThanOrEqual(120);
+    expect(push.body).toMatch(/^„(\u{1F600})+…” e acum pe profilul tău\.$/u);
+    expect(render(name, 'bell', 'ro', params)).toContain(
+      '\u{1F600}'.repeat(80),
+    );
+  });
 });

@@ -2,7 +2,8 @@ import type { Template } from '../templates';
 
 // To the owner of the garage that proposed a job, once an admin decides it:
 // one variant per decision. The reason is the admin's, shown as plain text;
-// the push leaves it out, as it may run to 500 characters.
+// the push leaves it out, as it may run to 500 characters, and shortens the
+// job's name with "…" to fit its 120.
 
 const REASON = {
   en: 'You get this e-mail because you own a garage on MotorFix and proposed a job for the catalogue.',
@@ -39,8 +40,18 @@ function decided(
     email: { en: language('en'), ro: language('ro') },
     example: reason ? { ...EXAMPLE, reason } : EXAMPLE,
     push: {
-      en: { body: push.body.en, link: 'prices', title: push.title.en },
-      ro: { body: push.body.ro, link: 'prices', title: push.title.ro },
+      en: {
+        body: push.body.en,
+        link: 'prices',
+        shorten: 'job',
+        title: push.title.en,
+      },
+      ro: {
+        body: push.body.ro,
+        link: 'prices',
+        shorten: 'job',
+        title: push.title.ro,
+      },
     },
     values: reason
       ? { job: 'text', prices: 'link', reason: 'text' }

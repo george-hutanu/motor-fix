@@ -1,10 +1,8 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -18,6 +16,7 @@ import {
   CAR_SYSTEMS,
   type CarSystem,
 } from '@motor-fix/contracts/car-systems';
+import { CATALOGUE_JOB_NAME } from '@motor-fix/contracts/visible-text';
 import {
   type AdminCatalogueJobDto,
   AdminService,
@@ -35,7 +34,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
-import { characters } from '../../characters';
+import { visibleText } from '../../characters';
 import type { ProposedJobDecided } from '../proposed-job-reject/proposed-job-reject';
 
 export interface ProposedJobApproveData {
@@ -79,11 +78,11 @@ export class ProposedJobApprove {
     }),
     nameEn: new FormControl('', {
       nonNullable: true,
-      validators: [characters(3, 80, true)],
+      validators: [visibleText(CATALOGUE_JOB_NAME)],
     }),
     nameRo: new FormControl(this.task.data.job.name, {
       nonNullable: true,
-      validators: [characters(3, 80, true)],
+      validators: [visibleText(CATALOGUE_JOB_NAME)],
     }),
     rarActivity: new FormControl('', { nonNullable: true }),
   });
@@ -107,30 +106,20 @@ export class ProposedJobApprove {
     }));
   });
 
-  // The catalogue job a name collided with, as the refusal named it.
-  private readonly existing = signal<{ field: NameField; name: string } | null>(
-    null,
-  );
-
   protected readonly save = taskSave({
     done: (decided: CatalogueJobDecisionDto) => this.task.close(decided),
     form: this.form,
     messages: 'admin.proposedJobs.approve',
     send: ({ carSystem, nameEn = '', nameRo = '', rarActivity }) =>
-      this.api
-        .jobDecisionsControllerApprove({
-          body: {
-            carSystem: carSystem as CarSystem,
-            nameEn: nameEn.trim(),
-            nameRo: nameRo.trim(),
-            ...(rarActivity ? { rarActivity } : {}),
-          },
-          id: this.task.data.job.id,
-        })
-        .catch((failure: unknown) => {
-          this.existing.set(collision(failure));
-          throw failure;
-        }),
+      this.api.jobDecisionsControllerApprove({
+        body: {
+          carSystem: carSystem as CarSystem,
+          nameEn: nameEn.trim(),
+          nameRo: nameRo.trim(),
+          ...(rarActivity ? { rarActivity } : {}),
+        },
+        id: this.task.data.job.id,
+      }),
   });
 
   protected readonly decided = computed(() => {
@@ -143,23 +132,10 @@ export class ProposedJobApprove {
   // The name of the job a field collided with, while its message shows.
   protected collided(field: NameField): string | null {
     const control = this.form.controls[field];
-    const found = this.existing();
-    if (!this.save.fieldError(control) || found?.field !== field) return null;
-    return control.errors?.['server'] === 'exists' ? found.name : null;
+    const problem = this.save.problem();
+    if (!this.save.fieldError(control) || problem?.code !== 'exists')
+      return null;
+    const named = problem.errors?.some((error) => error.field === field);
+    return named ? (problem.nameRo ?? null) : null;
   }
-}
-
-function collision(
-  failure: unknown,
-): { field: NameField; name: string } | null {
-  if (!(failure instanceof HttpErrorResponse) || failure.status !== 422)
-    return null;
-  const body = failure.error as {
-    code?: string;
-    errors?: { field?: string }[];
-    nameRo?: string;
-  } | null;
-  if (body?.code !== 'exists' || !body.nameRo) return null;
-  const field = body.errors?.[0]?.field === 'nameEn' ? 'nameEn' : 'nameRo';
-  return { field, name: body.nameRo };
 }

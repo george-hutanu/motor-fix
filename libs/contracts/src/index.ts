@@ -84,3 +84,4 @@ export * from './verification-file.dto';
 export * from './verification-queue';
 export * from './verification-status.dto';
 export * from './verification-target';
+export * from './visible-text';

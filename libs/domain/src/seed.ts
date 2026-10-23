@@ -800,7 +800,7 @@ async function dinamoForms(db: Client) {
       [job, position],
     );
   }
-  // A job Dinamo proposed, waiting in the admins' queue as ST-174's propose
+  // A job Dinamo proposed, waiting in the admins' queue as the owner's propose
   // leaves one: pending, named as typed, last on its list. The flows never
   // decide it; once an admin has, a later run leaves it as decided.
   await db.query(

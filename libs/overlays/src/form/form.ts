@@ -290,11 +290,12 @@ function fromBody(answer: unknown, status: number): Problem {
   };
 }
 
-// The problem's text members that are present: a detail, and who decided
-// first and when on a refused decision.
+// The problem's text members that are present: a detail, who decided first
+// and when on a refused decision, and the catalogue job a name collided with.
 function texts(body: Record<string, unknown>) {
-  const found: Pick<Problem, 'detail' | 'decidedBy' | 'decidedAt'> = {};
-  for (const key of ['detail', 'decidedBy', 'decidedAt'] as const) {
+  const found: Pick<Problem, 'detail' | 'decidedBy' | 'decidedAt' | 'nameRo'> =
+    {};
+  for (const key of ['detail', 'decidedBy', 'decidedAt', 'nameRo'] as const) {
     const value = textFrom(body[key]);
     if (value) found[key] = value;
   }

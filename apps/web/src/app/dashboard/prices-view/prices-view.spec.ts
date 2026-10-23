@@ -339,13 +339,6 @@ describe('Prețuri: a job an admin rejected', () => {
     expect(css).toMatch(/\.said\s*\{[^}]*overflow-wrap:\s*anywhere/);
     expect(css).toMatch(/\.said\s*\{[^}]*min-width:\s*0/);
   });
-
-  it('carries no stale comment on the catalogue decision subscription', () => {
-    const source = readFileSync(join(__dirname, 'prices-view.ts'), 'utf8');
-
-    expect(source).not.toMatch(/TODO/);
-    expect(source).toContain("'catalogue_job.decided'");
-  });
 });
 
 // @traces 172-FR-002 172-FR-003

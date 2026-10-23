@@ -2,11 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
-  IsOptional,
   IsString,
-  Length,
-  Matches,
   MaxLength,
+  ValidateBy,
+  ValidateIf,
 } from 'class-validator';
 
 import { CAR_SYSTEMS, type CarSystem } from './car-systems';
@@ -17,11 +16,30 @@ import {
   REJECTION_REASON_MAX,
   REJECTION_REASON_MIN,
 } from './price-range';
+import {
+  CATALOGUE_JOB_NAME,
+  REJECTION_REASON,
+  type VisibleTextRule,
+  visibleTextProblem,
+} from './visible-text';
 
 const RAR_ACTIVITY_MAX = 120;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
+
+// The shared rule the dialogs judge with too: no control characters, and a
+// length of what shows.
+const VisibleText = (rule: VisibleTextRule) =>
+  ValidateBy({
+    name: 'visibleText',
+    validator: {
+      defaultMessage: (args) =>
+        `${args?.property} must hold ${rule.min} to ${rule.max} visible characters and no control characters`,
+      validate: (value) =>
+        typeof value === 'string' && visibleTextProblem(value, rule) === null,
+    },
+  });
 
 export class AdminCatalogueJobGarageDto {
   @ApiProperty({ format: 'uuid' })
@@ -75,8 +93,7 @@ export class ApproveCatalogueJobDto {
   })
   @Transform(trimmed)
   @IsString()
-  @Length(PROPOSED_JOB_NAME_MIN, JOB_NAME_MAX)
-  @Matches(/^\P{Cc}*$/u, { message: 'nameRo must not hold control characters' })
+  @VisibleText(CATALOGUE_JOB_NAME)
   nameRo!: string;
 
   @ApiProperty({
@@ -86,8 +103,7 @@ export class ApproveCatalogueJobDto {
   })
   @Transform(trimmed)
   @IsString()
-  @Length(PROPOSED_JOB_NAME_MIN, JOB_NAME_MAX)
-  @Matches(/^\P{Cc}*$/u, { message: 'nameEn must not hold control characters' })
+  @VisibleText(CATALOGUE_JOB_NAME)
   nameEn!: string;
 
   @ApiProperty({ enum: CAR_SYSTEMS, example: 'engine' })
@@ -99,7 +115,8 @@ export class ApproveCatalogueJobDto {
     example: 'mechanics',
     maxLength: RAR_ACTIVITY_MAX,
   })
-  @IsOptional()
+  // Absent is the only way to say none: a null is refused.
+  @ValidateIf((body: ApproveCatalogueJobDto) => body.rarActivity !== undefined)
   @IsString()
   @MaxLength(RAR_ACTIVITY_MAX)
   rarActivity?: string;
@@ -113,7 +130,7 @@ export class RejectCatalogueJobDto {
   })
   @Transform(trimmed)
   @IsString()
-  @Length(REJECTION_REASON_MIN, REJECTION_REASON_MAX)
+  @VisibleText(REJECTION_REASON)
   reason!: string;
 }
 
