@@ -61,6 +61,7 @@ export class ReviewTask {
   private readonly reviews = inject(ReviewsService);
   private readonly me = inject(MeService);
   private readonly i18n = inject(I18n);
+  protected readonly language = this.i18n.language;
   protected readonly task = injectOverlayTask<{ jobId?: string }, ReviewDto>();
 
   protected readonly steps = STEPS;

@@ -775,3 +775,114 @@ describe('the drawer for a refused job, from the eligibility field', () => {
     expect(task().querySelector('form')).toBeNull();
   });
 });
+
+const rules = () => task().querySelector<HTMLElement>('p.rules');
+const rulesLink = () => rules()?.querySelector<HTMLAnchorElement>('a');
+
+// @traces 182-FR-001 182-FR-002 182-FR-008
+describe('the content rules under the comment', () => {
+  it('sums up the rules after the comment and before the privacy line, linking the rules page in a new tab', async () => {
+    await open();
+
+    const summary = rules();
+    expect(summary).not.toBeNull();
+    expect(summary?.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Fără insulte, date personale sau reclame. Scrie doar despre această reparație.',
+    );
+    const count = task().querySelector('#mf-review-comment-count');
+    const privacy = task().querySelector('p.privacy');
+    expect(
+      (count as Element).compareDocumentPosition(summary as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      (summary as Element).compareDocumentPosition(privacy as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const link = rulesLink();
+    expect(link?.getAttribute('href')).toBe('/ro/review-rules');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener');
+    expect(link?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Regulile recenziilor (se deschide într‑o filă nouă)',
+    );
+    expect(link?.querySelector('.sr-only')?.textContent?.trim()).toBe(
+      '(se deschide într‑o filă nouă)',
+    );
+  });
+
+  it('reads English', async () => {
+    await open({ language: 'en' });
+
+    expect(rules()?.textContent?.replace(/\s+/g, ' ')).toContain(
+      'No insults, personal data or ads. Write only about this repair.',
+    );
+    const link = rulesLink();
+    expect(link?.getAttribute('href')).toBe('/en/review-rules');
+    expect(link?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Review rules (opens in a new tab)',
+    );
+  });
+
+  it('keeps what was typed and sends nothing when the link is pressed', async () => {
+    await open();
+    await rate(5);
+    type(field('Cât ai plătit'), '890');
+    type(field<HTMLTextAreaElement>('Comentariul tău'), 'Gata la timp.');
+    await settle();
+
+    const link = rulesLink() as HTMLAnchorElement;
+    link.addEventListener('click', (e) => e.preventDefault(), { once: true });
+    link.click();
+    await settle();
+
+    expect(radios().find((r) => r.checked)?.value).toBe('5');
+    expect(field('Cât ai plătit').value).toBe('890');
+    expect(field<HTMLTextAreaElement>('Comentariul tău').value).toBe(
+      'Gata la timp.',
+    );
+    expect(task().querySelector('form')).not.toBeNull();
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('stays with the form while the e-mail waits for its confirmation', async () => {
+    await open({ answer: async () => context({ emailConfirmed: false }) });
+
+    expect(rules()).not.toBeNull();
+  });
+
+  it.each([
+    [
+      'not done',
+      () =>
+        context({
+          eligibility: { jobId: JOB, offer: false, reason: 'job_not_done' },
+          job: { id: JOB, status: 'in_work' },
+        }),
+    ],
+    [
+      'own garage',
+      () =>
+        context({
+          eligibility: { jobId: JOB, offer: false, reason: 'own_garage' },
+        }),
+    ],
+    ['already reviewed', () => context({ existing: review() })],
+  ])(
+    'shows no summary on the %s view, which replaces the form',
+    async (_, answer) => {
+      await open({ answer: async () => answer() });
+
+      expect(task().querySelector('form')).toBeNull();
+      expect(rules()).toBeNull();
+    },
+  );
+
+  it('shows no summary on the confirmation after publishing', async () => {
+    await open();
+    await publishNow();
+
+    expect(rules()).toBeNull();
+  });
+});
