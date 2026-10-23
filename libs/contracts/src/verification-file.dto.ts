@@ -589,7 +589,7 @@ export class VerificationFileSuspensionDto {
 
   @ApiProperty({
     description:
-      'The admin who put the garage back on the map, by first name; null while open or when it ended otherwise',
+      'The admin who put the garage back on the map, by first name and initial; null while open or when it ended otherwise',
     nullable: true,
     type: SuspensionLifterDto,
   })
