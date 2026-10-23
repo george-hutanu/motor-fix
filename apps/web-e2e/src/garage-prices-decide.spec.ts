@@ -129,10 +129,6 @@ async function restore(request: APIRequestContext) {
 // @traces 414-FR-014
 test.describe('an admin decides a proposed job and the garage sees it @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'removes its jobs straight from PostgreSQL, which needs DATABASE_URL',
-  );
 
   test.afterAll(async ({ request }) => {
     await restore(request);
