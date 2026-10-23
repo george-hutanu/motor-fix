@@ -5,8 +5,9 @@ import { test } from './fixtures.js';
 
 // The seeded driver with a Dacia Logan saves the seeded Service Auto Militari,
 // which works on Dacia and has an oil change on its price list, then asks it
-// for a quote straight from Service-uri salvate. The save and its removal go
-// through the API, so each test starts and ends without the saved row.
+// for a quote straight from Service-uri salvate. Each test saves it through
+// the API, which is idempotent, and nothing removes it: the tests run in
+// parallel, and one test's removal took the row from under another.
 const DRIVER = 'cerere@example.test';
 const SLUG = 'service-auto-militari';
 const GARAGE = 'Service Auto Militari';
@@ -46,12 +47,6 @@ test.describe('a quote request from a saved garage @seeded', () => {
     });
     expect(saved.ok()).toBe(true);
   });
-  test.afterEach(async ({ request }) => {
-    await request.delete(`/api/v1/me/saved-garages/${garageId}`, {
-      headers: await driverHeaders(request),
-    });
-  });
-
   // @traces 292-FR-001 292-FR-004 292-FR-006 292-FR-009
   test('goes out from the saved row to the garage, named saved, and shows in Cererile mele', async ({
     page,
