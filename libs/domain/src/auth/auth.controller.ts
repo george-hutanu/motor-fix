@@ -134,7 +134,10 @@ export class AuthController {
   ): Promise<SessionDto> {
     if (!this.options.skipSignInAttemptsLimit)
       await this.limits.take('signInAttempts', req.ip ?? '');
-    const issued = await this.signIns.signIn(body, req.ip ?? '');
+    const issued = await this.signIns.signIn(body, req.ip ?? '', {
+      headers: req.headers,
+      socket: req.socket.remoteAddress,
+    });
     keep(res, issued);
     return { accessToken: issued.accessToken };
   }
