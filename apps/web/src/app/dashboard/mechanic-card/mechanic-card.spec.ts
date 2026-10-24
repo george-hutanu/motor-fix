@@ -359,6 +359,7 @@ describe('the card dialog, adding a mechanic', () => {
     expect(panels()).toHaveLength(1);
   });
 
+  // @traces 056-FR-021
   it('starts with the focus inside the dialog and closes on Escape', async () => {
     await open();
 
@@ -371,6 +372,46 @@ describe('the card dialog, adding a mechanic', () => {
     await settle();
 
     await expect(result).resolves.toBe('cancelled');
+  });
+
+  // @traces 056-FR-021
+  it('ties each field to its own message, marked invalid once refused, and the ticks to theirs', async () => {
+    await open();
+    const labels = [
+      'Nume',
+      'Rol',
+      'Specialități',
+      'Certificări',
+      'Ani de experiență',
+    ];
+    for (const label of labels) {
+      const ids = (field(label).getAttribute('aria-describedby') ?? '').split(
+        ' ',
+      );
+      const error = ids.find((id) => id.endsWith('-error'));
+      expect(error && document.getElementById(error)).toBeTruthy();
+      for (const id of ids) expect(document.getElementById(id)).toBeTruthy();
+    }
+    const errors = labels.map((label) =>
+      field(label)
+        .getAttribute('aria-describedby')
+        ?.split(' ')
+        .find((id) => id.endsWith('-error')),
+    );
+    expect(new Set(errors).size).toBe(labels.length);
+    const brands = panel().querySelector('fieldset');
+    expect(brands?.querySelector('legend')).not.toBeNull();
+    expect(
+      document.getElementById(brands?.getAttribute('aria-describedby') ?? ''),
+    ).toBeTruthy();
+
+    type(field('Nume'), 'E');
+    button('Salvează')?.click();
+    await settle();
+
+    expect(field('Nume').getAttribute('aria-invalid')).toBe('true');
+    expect(problem(field('Nume'))).toBe('Numele este obligatoriu');
+    expect(field('Rol').getAttribute('aria-invalid')).not.toBe('true');
   });
 
   // @traces 056-FR-020
