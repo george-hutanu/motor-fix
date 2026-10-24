@@ -274,7 +274,11 @@ export const DASHBOARDS: Record<
           import('./prices-view/prices-view').then((m) => m.PricesView),
       },
       garageView('reviews', 'garage.reviews'),
-      garageView('profile', 'garage.profile'),
+      {
+        ...garageView('profile', 'garage.profile'),
+        load: () =>
+          import('./profile-view/profile-view').then((m) => m.ProfileView),
+      },
       {
         label: 'shell.frame.nav.garage.assistant',
         path: 'assistant',

@@ -41,7 +41,7 @@ function controller(options: Partial<AuthOptions>) {
   const send = () =>
     auth.signIn(
       BODY,
-      { ip: ADDRESS } as Request,
+      { headers: {}, ip: ADDRESS, socket: {} } as Request,
       { cookie: jest.fn() } as unknown as Response,
     );
   return { limits, send, signIn };
@@ -59,7 +59,10 @@ describe('AuthController sign-in route limit', () => {
     });
     await send();
     expect(limits.take).not.toHaveBeenCalled();
-    expect(signIn).toHaveBeenCalledWith(BODY, ADDRESS);
+    expect(signIn).toHaveBeenCalledWith(BODY, ADDRESS, {
+      headers: {},
+      socket: undefined,
+    });
   });
 
   it('takes one signInAttempts count per sign-in from the caller address without the option', async () => {
@@ -113,10 +116,42 @@ describe('AuthController sign-in with no caller address', () => {
 
     await auth.signIn(
       BODY,
-      {} as Request,
+      { headers: {}, socket: {} } as Request,
       { cookie: jest.fn() } as unknown as Response,
     );
 
-    expect(signIn).toHaveBeenCalledWith(BODY, '');
+    expect(signIn).toHaveBeenCalledWith(BODY, '', {
+      headers: {},
+      socket: undefined,
+    });
+  });
+});
+
+// @traces 500-FR-011
+describe('AuthController sign-in forwarding facts', () => {
+  it("hands the sign-in the request's headers and socket address for its refusal line", async () => {
+    const signIn = jest.fn(async () => ({ accessToken: 't', remember: false }));
+    const auth = new AuthController(
+      { signIn } as unknown as SignInService,
+      {} as SignUpService,
+      routeLimits(),
+      { skipSignInAttemptsLimit: true } as AuthOptions,
+    );
+    const headers = { 'x-forwarded-for': '86.125.92.213, 95.173.10.20' };
+
+    await auth.signIn(
+      BODY,
+      {
+        headers,
+        ip: ADDRESS,
+        socket: { remoteAddress: 'fd12:3456::1' },
+      } as unknown as Request,
+      { cookie: jest.fn() } as unknown as Response,
+    );
+
+    expect(signIn).toHaveBeenCalledWith(BODY, ADDRESS, {
+      headers,
+      socket: 'fd12:3456::1',
+    });
   });
 });
