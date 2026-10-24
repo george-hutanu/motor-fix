@@ -14,7 +14,9 @@ const KEEP = '</head>'.length - 1;
 // Adds `tag` before the first `</head>` as the page streams through: only
 // what precedes the head's end is held, and everything after it passes on
 // chunk by chunk.
-function injectTag(tag: string): TransformStream<Uint8Array, Uint8Array> {
+export function injectTag(
+  tag: string,
+): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let held = '';

@@ -12,6 +12,7 @@ import {
 } from '@angular/ssr/node';
 import {
   faroUrl,
+  imageBaseUrl,
   originSecrets,
   plausibleDomain,
   publicWebUrl,
@@ -23,6 +24,7 @@ import express from 'express';
 import { apiInternalUrl } from './api-url';
 import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
+import { headHints, withHeadHints } from './server/head-hints/head-hints';
 import { keepAlive, mountKeepAlive } from './server/keep-alive/keep-alive';
 import { mountOriginGuard } from './server/origin-guard/origin-guard';
 import { withPageCache } from './server/page-cache/page-cache';
@@ -51,6 +53,11 @@ const collector = faro
       version: process.env['RELEASE_SHA'] || 'dev',
     }
   : undefined;
+const hints = headHints({
+  distFolder: browserDistFolder,
+  imageBase: imageBaseUrl(),
+  siteOrigin: publicUrl?.origin,
+});
 const angularApp = new AngularNodeAppEngine({
   allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,
 });
@@ -77,7 +84,11 @@ app.use((req, res, next) => {
         response &&
         withPageCache(
           req.originalUrl,
-          await withTelemetryMeta(response, collector, analytics),
+          await withHeadHints(
+            req.originalUrl,
+            await withTelemetryMeta(response, collector, analytics),
+            hints,
+          ),
         ),
     )
     .then((response) =>
