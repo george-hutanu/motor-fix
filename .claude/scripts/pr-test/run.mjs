@@ -407,10 +407,12 @@ async function main(argv) {
     const apiURL = `http://127.0.0.1:${apiPort}`;
     const webURL = `http://127.0.0.1:${webPort}`;
     // Each app's exit: an app that exits before it answers ends every wait at once.
+    // One that answered and then exits is judged by the readiness check, as before.
     const exits = {};
+    const answered = new Set();
     const appLog = (name) => join(logs, `${name}.out.log`);
     const anyExit = () => {
-      for (const [name, exited] of Object.entries(exits)) if (exited()) return { ...exited(), name, log: appLog(name) };
+      for (const [name, exited] of Object.entries(exits)) if (!answered.has(name) && exited()) return { ...exited(), name, log: appLog(name) };
       return null;
     };
     const launch = (name, extra) => {
@@ -445,6 +447,7 @@ async function main(argv) {
     for (const [name, url] of live) {
       const h = await waitForServer(url, { name, exited: anyExit, log: appLog(name), timeoutMs: 90000 });
       if (h.ok) {
+        answered.add(name);
         log(`health ${name}: HTTP ${h.status}`);
         continue;
       }

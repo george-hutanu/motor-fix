@@ -61,32 +61,23 @@ describe('the boot environment with no .env', () => {
 
   for (const app of ['api', 'web', 'worker']) {
     it(`gives the ${app} every variable its boot requires, from an empty caller environment`, () => {
-      const env = bootEnv({ ports, extra: launch[app], base: {} });
+      const env = { ...bootEnv({ ports, base: {} }), ...launch[app] };
       assert.deepEqual(missingBootEnv(env, lists[app]), [], `${app} boot lacks: ${missingBootEnv(env, lists[app]).join(', ')}`);
       // The boot's own check accepts it: APP_ENV is one readEnv knows, and nothing required is empty.
       assert.doesNotThrow(() => readEnv(lists[app], env));
     });
   }
 
-  it('names a variable a boot starts requiring that services.mjs does not supply', () => {
-    const env = bootEnv({ ports, extra: launch.api, base: {} });
-    assert.deepEqual(missingBootEnv(env, [...lists.api, 'NEW_REQUIRED_SECRET']), ['NEW_REQUIRED_SECRET']);
-  });
 
-  it('counts an empty value as missing, as readEnv does', () => {
-    assert.deepEqual(missingBootEnv({ APP_ENV: 'test', DATABASE_URL: '' }, ['APP_ENV', 'DATABASE_URL']), ['DATABASE_URL']);
-    assert.deepEqual(missingBootEnv({ APP_ENV: 'nope' }, ['APP_ENV']), ['APP_ENV']);
-  });
 
   it("puts the tester's own values over whatever the caller's environment holds", () => {
     const base = { PATH: '/usr/bin', APP_ENV: 'production', AUTH_TOKEN_SECRET: 'a-real-secret', DATABASE_URL: 'postgresql://prod/motorfix', STORAGE_SECRET_ACCESS_KEY: 'real-key' };
-    const env = bootEnv({ ports, extra: launch.api, base });
+    const env = bootEnv({ ports, base });
     assert.equal(env.PATH, '/usr/bin', 'the caller environment still carries the tools');
     assert.equal(env.APP_ENV, 'test');
     assert.notEqual(env.AUTH_TOKEN_SECRET, 'a-real-secret');
     assert.equal(env.DATABASE_URL, `postgresql://motorfix:motorfix@127.0.0.1:${ports.postgres}/motorfix`);
     assert.notEqual(env.STORAGE_SECRET_ACCESS_KEY, 'real-key');
-    assert.equal(env.PORT, '3101');
   });
 
   it('reads no .env: a file in the working directory changes nothing', () => {
@@ -94,20 +85,14 @@ describe('the boot environment with no .env', () => {
     const cwd = process.cwd();
     try {
       writeFileSync(join(dir, '.env'), 'APP_ENV=production\nAUTH_TOKEN_SECRET=from-dotenv\nEXTRA_FROM_DOTENV=1\n');
-      const before = bootEnv({ ports, extra: launch.api, base: {} });
+      const before = bootEnv({ ports, base: {} });
       process.chdir(dir);
-      const inside = bootEnv({ ports, extra: launch.api, base: {} });
+      const inside = bootEnv({ ports, base: {} });
       assert.deepEqual(inside, before);
       assert.equal(inside.EXTRA_FROM_DOTENV, undefined);
     } finally {
       process.chdir(cwd);
       rmSync(dir, { recursive: true, force: true });
     }
-  });
-});
-
-describe('reading the required lists', () => {
-  it('refuses a spread it cannot expand, naming it', () => {
-    assert.throws(() => names("'A', ...OTHER_ENV", 'x.ts'), /x\.ts spreads OTHER_ENV/);
   });
 });

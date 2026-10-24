@@ -70,10 +70,18 @@ export function watchExit(child) {
   return () => gone;
 }
 
-/** The last `n` lines of a server's log, or a line saying it is empty. */
+const TAIL_CHARS = 8000;
+
+/** The last `n` lines of a server's log, at most TAIL_CHARS of them, or a line saying it is empty (or unreadable). */
 export function logTail(file, n = 20) {
-  const text = existsSync(file) ? readFileSync(file, "utf8").trimEnd() : "";
-  return text ? text.split("\n").slice(-n).join("\n") : "(the log is empty)";
+  let text = "";
+  try {
+    text = readFileSync(file, "utf8").trimEnd();
+  } catch {}
+  if (!text) return "(the log is empty)";
+  const lines = text.split(/\r?\n/);
+  const tail = lines.slice(Math.max(0, lines.length - n)).join("\n");
+  return tail.length > TAIL_CHARS ? `…${tail.slice(-TAIL_CHARS)}` : tail;
 }
 
 /**
@@ -280,10 +288,10 @@ export function appEnv({ ports }) {
 }
 
 /**
- * The whole environment of one launched app: the caller's (its PATH, the
- * workflow's switches) with the tester's own values over it, then the app's
- * ports and URLs (`extra`).
+ * The environment of the run's steps and apps: the caller's (its PATH, the
+ * workflow's switches) with the tester's own values over it. Each app adds its
+ * ports and URLs (run.mjs appLaunchEnv).
  */
-export function bootEnv({ ports, extra = {}, base = process.env }) {
-  return { ...base, ...appEnv({ ports }), NX_DAEMON: "false", ...extra };
+export function bootEnv({ ports, base = process.env }) {
+  return { ...base, ...appEnv({ ports }), NX_DAEMON: "false" };
 }
