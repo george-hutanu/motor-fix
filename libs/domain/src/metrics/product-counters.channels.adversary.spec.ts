@@ -65,6 +65,16 @@ describe('the channel counters under hostile labels', () => {
     });
   });
 
+  // @traces 142-FR-008
+  it('counts an SMS that fell back to e-mail when the phone cannot be used', async () => {
+    countChannelFallback('sms', 'email', 'send_failed');
+    const found = await series(FALLBACKS);
+    expect(found).toContainEqual({
+      labels: { from: 'sms', reason: 'send_failed', to: 'email' },
+      value: 1,
+    });
+  });
+
   it('does not open a series for a reason or channel outside the fixed sets', async () => {
     countChannelFallback('sms', 'whatsapp', 'user@example.com' as never);
     countChannelFallback('driver-1f3a' as never, 'email', 'send_failed');

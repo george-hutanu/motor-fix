@@ -47,9 +47,9 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    // Its own 47, one per e-mailed template, and one per support e-mail kind
+    // Its own 48, one per e-mailed template, and one per support e-mail kind
     // and outcome.
-    expect(all).toHaveLength(emails.length + 47 + SUPPORT_EMAILS.length);
+    expect(all).toHaveLength(emails.length + 48 + SUPPORT_EMAILS.length);
     // @traces 067-FR-013
     expect(
       named(all, 'motorfix_garage_restored_notices_total').map(
@@ -103,6 +103,7 @@ describe("the worker's product counters at start", () => {
       ['sms', 'whatsapp', 'sms_cap_reached'],
       ['sms', 'whatsapp', 'send_failed'],
       ['sms', 'email', 'phone_not_verified'],
+      ['sms', 'email', 'send_failed'],
       ['whatsapp', 'email', 'phone_not_verified'],
       ['whatsapp', 'email', 'send_failed'],
       ['push', 'email', 'no_device'],

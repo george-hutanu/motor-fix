@@ -317,6 +317,7 @@ const FALLBACKS = [
   { from: 'sms', reason: 'sms_cap_reached', to: 'whatsapp' },
   { from: 'sms', reason: 'send_failed', to: 'whatsapp' },
   { from: 'sms', reason: 'phone_not_verified', to: 'email' },
+  { from: 'sms', reason: 'send_failed', to: 'email' },
   { from: 'whatsapp', reason: 'phone_not_verified', to: 'email' },
   { from: 'whatsapp', reason: 'send_failed', to: 'email' },
   { from: 'push', reason: 'no_device', to: 'email' },
