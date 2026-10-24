@@ -138,6 +138,7 @@ describe('the unit and integration suites', () => {
     expect(run.stderr).toContain('JEST_SUITE');
   });
 
+  // @traces 438-FR-004
   it('names every spec that needs PostgreSQL, Redis or the seed as an integration spec', () => {
     const misnamed = ['apps', 'libs', 'scripts']
       .flatMap((dir) => specFiles(join(root, dir)))
