@@ -36,6 +36,7 @@ const problem = (
 let remove: jest.Mock;
 let gate: jest.Mock;
 let revoked: jest.Mock;
+let deleteAccount: jest.Mock;
 let close: jest.Mock;
 let dropped: jest.Mock;
 let navigate: jest.SpyInstance;
@@ -57,6 +58,7 @@ async function open(
   remove = jest.fn(() => (queue.shift() ?? (async () => undefined))());
   gate = jest.fn(async () => true);
   revoked = jest.fn();
+  deleteAccount = jest.fn((send: () => Promise<unknown>) => send());
   close = jest.fn();
   dropped = jest.fn(async () => undefined);
   TestBed.configureTestingModule({
@@ -73,6 +75,7 @@ async function open(
             phone: null,
             ...me,
           }),
+          deleteAccount,
           revoked,
         },
       },
@@ -166,6 +169,20 @@ describe('the delete-account dialog', () => {
     type(field(LABEL), 'andrei@example.ro');
     await settle();
     expect(button('Șterge contul').disabled).toBe(false);
+  });
+
+  // @traces 129-FR-008
+  it("sends the deletion as the session's own, so the sign-out word it sends this tab is left to it", async () => {
+    await open();
+
+    await confirm('andrei@example.ro');
+
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(deleteAccount.mock.invocationCallOrder[0]).toBeLessThan(
+      remove.mock.invocationCallOrder[0],
+    );
+    expect(revoked).toHaveBeenCalled();
   });
 
   it('sends what was typed and, once deleted, signs the tab out to Home with a toast', async () => {

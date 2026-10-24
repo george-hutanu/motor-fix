@@ -126,6 +126,9 @@ export class Session {
   private accessToken: string | null = null;
   // Until when this tab's own password change keeps it signed in.
   private keepUntil = 0;
+  // This tab is deleting its account: the "sessions ended" word that sends is
+  // its own, and the deletion signs the tab out itself.
+  private deleting = false;
   private loading: Promise<MeDto | null> | null = null;
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
@@ -310,6 +313,24 @@ export class Session {
       this.keepUntil = 0;
       throw error;
     }
+  }
+
+  // Sends this tab's account deletion; the "sessions ended" word it brings is
+  // left to the deletion until the tab forgets the session, or given back
+  // when the deletion is refused.
+  async deleteAccount<T>(send: () => Promise<T>): Promise<T> {
+    this.deleting = true;
+    try {
+      return await send();
+    } catch (error) {
+      this.deleting = false;
+      throw error;
+    }
+  }
+
+  // Whether a "sessions ended" word is this tab's own account deletion.
+  deletingAccount(): boolean {
+    return this.deleting;
   }
 
   // Whether a "sessions ended" word may be this tab's own password change.
@@ -506,6 +527,7 @@ export class Session {
 
   private drop() {
     const leaving = this.current()?.id ?? this.lapsed?.id;
+    this.deleting = false;
     this.generation++;
     this.loading = null;
     this.renewing = null;

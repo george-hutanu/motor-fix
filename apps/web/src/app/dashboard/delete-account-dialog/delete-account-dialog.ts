@@ -74,13 +74,17 @@ export class DeleteAccountDialog {
     messages: 'shell.deleteAccount',
     send: async ({ confirmation = '' }) => {
       const params = { body: { confirmation: confirmation.trim() } };
-      try {
-        await this.auth.accountDeletionControllerDeleteAccount(params);
-      } catch (error) {
-        if (toProblem(error).code !== 'reauth_required') throw error;
-        if (!(await this.signIn.gate())) throw error;
-        await this.auth.accountDeletionControllerDeleteAccount(params);
-      }
+      // The session's own: the "sessions ended" word the deletion sends this
+      // tab can reach it before the answer does.
+      await this.session.deleteAccount(async () => {
+        try {
+          await this.auth.accountDeletionControllerDeleteAccount(params);
+        } catch (error) {
+          if (toProblem(error).code !== 'reauth_required') throw error;
+          if (!(await this.signIn.gate())) throw error;
+          await this.auth.accountDeletionControllerDeleteAccount(params);
+        }
+      });
       // The account and its sessions are gone: nothing is asked of the server
       // any more, which would only answer with a sign-in.
       this.live.close();

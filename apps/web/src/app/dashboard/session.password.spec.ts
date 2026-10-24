@@ -71,3 +71,33 @@ describe('changing the password from this tab', () => {
     expect(session.keepsThroughRevoke()).toBe(false);
   });
 });
+
+// @traces 129-FR-008
+describe('deleting the account from this tab', () => {
+  it('owns the "sessions ended" word while the deletion is sent, and until the tab forgets the session', async () => {
+    const { session } = passwordSetup();
+    let answer: () => void = () => undefined;
+    expect(session.deletingAccount()).toBe(false);
+
+    const done = session.deleteAccount(
+      () => new Promise<void>((resolve) => (answer = resolve)),
+    );
+    expect(session.deletingAccount()).toBe(true);
+    answer();
+    await done;
+    expect(session.deletingAccount()).toBe(true);
+
+    session.revoked();
+    expect(session.deletingAccount()).toBe(false);
+  });
+
+  it('gives the word back when the deletion is refused', async () => {
+    const { session } = passwordSetup();
+
+    await expect(
+      session.deleteAccount(() => Promise.reject(new Error('mismatch'))),
+    ).rejects.toThrow('mismatch');
+
+    expect(session.deletingAccount()).toBe(false);
+  });
+});

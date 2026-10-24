@@ -51,6 +51,7 @@ async function open(
         provide: Session,
         useValue: {
           current: signal({ email: 'andrei@example.ro', phone: null, ...me }),
+          deleteAccount: (send: () => Promise<unknown>) => send(),
           revoked,
         },
       },
