@@ -10,7 +10,10 @@
 // A workflow's token cannot administer a branch, so both run on the laptop
 // with george-hutanu's token (GH_TOKEN, else `gh auth token -u george-hutanu`),
 // never in a cloud session, whose proxy token cannot either. Not strict: a PR
-// behind main is not made to merge it (AGENTS.md step 5). Exit 0 ok, 1 refused
+// behind main is not made to merge it (AGENTS.md step 5). `CI OK` comes from
+// GitHub Actions; `agent-review` from any source, since post.mjs and carry.mjs
+// write it with the owner's token and GitHub refuses a merge whose newest
+// status came from another source than the pinned app. Exit 0 ok, 1 refused
 // or GitHub said no, 64 usage.
 import { isEntryPoint } from "./lib/entry.mjs";
 import { spawnRun } from "./lib/gh-rest.mjs";
@@ -18,8 +21,16 @@ import { spawnRun } from "./lib/gh-rest.mjs";
 const REPO = "george-hutanu/motor-fix";
 const PATH = `repos/${REPO}/branches/main/protection`;
 export const REQUIRED = Object.freeze(["CI OK", "agent-review"]);
+const GITHUB_ACTIONS_APP = 15368;
+const ANY_SOURCE = -1;
 export const BODY = {
-  required_status_checks: { strict: false, contexts: [...REQUIRED] },
+  required_status_checks: {
+    strict: false,
+    checks: [
+      { context: "CI OK", app_id: GITHUB_ACTIONS_APP },
+      { context: "agent-review", app_id: ANY_SOURCE },
+    ],
+  },
   enforce_admins: true,
   required_pull_request_reviews: null,
   restrictions: null,
@@ -32,6 +43,9 @@ export function missing(protection) {
   const listed = protection?.required_status_checks?.contexts;
   const contexts = Array.isArray(listed) ? listed : [];
   const lacks = REQUIRED.filter((c) => !contexts.includes(c)).map((c) => `required check ${c}`);
+  const checks = protection?.required_status_checks?.checks;
+  const review = Array.isArray(checks) ? checks.find((c) => c?.context === "agent-review") : undefined;
+  if (review && review.app_id != null && review.app_id !== ANY_SOURCE) lacks.push(`agent-review from any source (pinned to app ${review.app_id})`);
   if (protection?.enforce_admins?.enabled !== true) lacks.push("enforce_admins (administrators are exempt)");
   return lacks;
 }

@@ -34,7 +34,13 @@ describe('branch-protection: agent-review and CI OK required on main', () => {
     assert.ok(put.args.includes('repos/george-hutanu/motor-fix/branches/main/protection'));
     assert.deepEqual(JSON.parse(put.input), BODY);
     assert.deepEqual(BODY, {
-      required_status_checks: { strict: false, contexts: ['CI OK', 'agent-review'] },
+      required_status_checks: {
+        strict: false,
+        checks: [
+          { context: 'CI OK', app_id: 15368 },
+          { context: 'agent-review', app_id: -1 },
+        ],
+      },
       enforce_admins: true,
       required_pull_request_reviews: null,
       restrictions: null,
@@ -64,6 +70,16 @@ describe('branch-protection: agent-review and CI OK required on main', () => {
     const admins = go(['check'], () => ok(protection(REQUIRED, false)));
     assert.equal(admins.code, 1);
     assert.match(admins.out, /enforce_admins/);
+  });
+
+  // @traces 961-FR-006
+  it('check fails while agent-review is pinned to an app, since post.mjs and carry.mjs write it with the owner token', () => {
+    const pinned = (appId) => ({ ...protection(), required_status_checks: { strict: false, contexts: [...REQUIRED], checks: [{ context: 'CI OK', app_id: 15368 }, { context: 'agent-review', app_id: appId }] } });
+    const r = go(['check'], () => ok(pinned(15368)));
+    assert.equal(r.code, 1);
+    assert.match(r.out, /agent-review.*any source/);
+    assert.equal(go(['check'], () => ok(pinned(null))).code, 0);
+    assert.equal(go(['check'], () => ok(pinned(-1))).code, 0);
   });
 
   // @traces 961-FR-006

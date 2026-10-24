@@ -2780,7 +2780,7 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
-### 961-FR-006 — `node .claude/scripts/branch-protection.mjs apply` MUST PUT `repos/george-hutanu/motor-fix/branches/main/protection` with required status checks `CI OK` and `agent-review` (strict off), `enforce_admins` on, no required pull-request reviews, no push restrictions, force pushes and deletions off, using the george-hutanu token (`GH_TOKEN`, else `gh auth token -u george-hutanu`) and refusing to run without one; `check` MUST exit 0 only when main's protection requires both contexts and names the missing one otherwise. Both read and write over REST through `.claude/scripts/lib/gh-rest.mjs`.
+### 961-FR-006 — `node .claude/scripts/branch-protection.mjs apply` MUST PUT `repos/george-hutanu/motor-fix/branches/main/protection` with required status checks `CI OK` (from GitHub Actions) and `agent-review` (from any source, since `post.mjs` and `carry.mjs` write it with the owner's token) (strict off), `enforce_admins` on, no required pull-request reviews, no push restrictions, force pushes and deletions off, using the george-hutanu token (`GH_TOKEN`, else `gh auth token -u george-hutanu`) and refusing to run without one; `check` MUST exit 0 only when main's protection requires both contexts with `agent-review` not pinned to an app, and names what is missing otherwise. Both read and write over REST through `.claude/scripts/lib/gh-rest.mjs`.
 
 _From 961-require-agent-review._
 

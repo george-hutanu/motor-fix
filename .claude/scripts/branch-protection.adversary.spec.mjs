@@ -99,8 +99,8 @@ describe('branch-protection: hostile protections and environments', () => {
 
   // @traces 961-FR-006
   it('the PUT body keeps the required list a separate copy, so a caller cannot widen it by editing REQUIRED', () => {
-    assert.deepEqual(BODY.required_status_checks.contexts, ['CI OK', 'agent-review']);
-    assert.ok(Object.isFrozen(REQUIRED) || BODY.required_status_checks.contexts !== REQUIRED);
+    assert.deepEqual(BODY.required_status_checks.checks.map((c) => c.context), ['CI OK', 'agent-review']);
+    assert.ok(Object.isFrozen(REQUIRED) || BODY.required_status_checks.checks !== REQUIRED);
   });
 
   // @traces 961-FR-006
