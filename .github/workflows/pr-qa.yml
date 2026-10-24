@@ -151,13 +151,28 @@ jobs:
       # --tree gives the apps (services.mjs EXTERNAL_PORTS), and so are its
       # credentials and bucket. The object store is healthy only once its
       # bucket exists, within its own 120 s health bound. The job's end
-      # removes the containers.
+      # removes the containers. PostgreSQL answers on its socket while the
+      # PostGIS init scripts run, then restarts: ready is three TCP answers
+      # in a row, inside 60 s of wall clock; past that its log is saved for
+      # the report.
       - name: Start PostgreSQL, Redis and the object store from the PR's compose file
+        id: services
         run: |
           docker compose -p pr-qa -f pr/docker-compose.yml config --services | grep -qx storage || { echo "::error::the PR's docker-compose.yml has no storage service: merge main into the branch"; exit 1; }
           timeout 150 docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis storage
-          for _ in $(seq 1 60); do docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix && break; sleep 1; done
-          docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix || { echo "::error::PostgreSQL did not accept connections within 60 s"; exit 1; }
+          start=$(date +%s); ok=0
+          while :; do
+            if docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -q -t 1 -h 127.0.0.1 -U motorfix; then ok=$((ok + 1)); else ok=0; fi
+            [ "$ok" -ge 3 ] && break
+            elapsed=$(( $(date +%s) - start ))
+            if [ "$elapsed" -ge 60 ]; then
+              mkdir -p "$RUNNER_TEMP/pr-qa"
+              docker compose -p pr-qa -f pr/docker-compose.yml logs --no-color postgres > "$RUNNER_TEMP/pr-qa/postgres.log" 2>&1 || true
+              echo "::error::PostgreSQL did not accept connections at 127.0.0.1 within 60 s ($elapsed s elapsed); its log is postgres.log in the pr-qa artifact"
+              exit 1
+            fi
+            sleep 1
+          done
 
       - uses: actions/setup-node@v7
         with:
@@ -203,7 +218,13 @@ jobs:
         # timeout's reach, so a failed attempt kills it as root and repairs dpkg before the next.
         # Three stalls (a slow mirror) still go on when every library the cached chromium loads
         # resolves: the image carries them; apt was fetching extra fonts and upgrades.
+        # Before any apt, the same check: a cached chromium that loads already needs none.
         run: |
+          bins=$(find "$HOME/.cache/ms-playwright" -type f \( -name chrome -o -name headless_shell -o -name chrome-headless-shell \) 2>/dev/null || true)
+          if [ -n "$bins" ] && ! ldd $bins 2>&1 | grep -q 'not found'; then
+            echo "::notice::playwright install-deps skipped: every library the cached chromium loads resolves"
+            exit 0
+          fi
           for attempt in 1 2 3; do
             timeout -k 10 180 npx playwright install-deps chromium && exit 0
             echo "::warning::playwright install-deps chromium: attempt $attempt of 3 failed or timed out"
@@ -249,6 +270,15 @@ jobs:
       - name: Readiness of the api and the worker
         if: always()
         run: grep -h 'ready ' "$RUNNER_TEMP/pr-qa/run.log" || echo "no readiness line in run.log"
+
+      # A step before the run failed, so run.mjs wrote no report: this one
+      # carries the failure verdict and its reason, and the upload has a file.
+      - name: A report for a run that never started
+        if: failure() && steps.run.outcome == 'skipped'
+        env:
+          REASON: ${{ steps.services.outcome == 'failure' && 'PostgreSQL, Redis or the object store did not come up; see the services step and postgres.log in this artifact' || 'a step before the run failed; see the run log' }}
+        run: |
+          node tester/.claude/scripts/pr-test/boot-report.mjs --pr "$PR" --sha "$SHA" --lap "$LAP" --out "$RUNNER_TEMP/pr-qa"
 
       # Screenshots stay here, never in git: the agent copies only report.md
       # and report.json into specs/<feature>/pr-review/.

@@ -1,7 +1,10 @@
 // @traces 1176-FR-004
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ARTIFACT_PREFIX, WORKFLOW } from './dispatch.mjs';
@@ -201,12 +204,11 @@ describe('PR QA workflow: services', () => {
     assert.match(steps, /config --services \| grep -qx storage \|\| \{ echo "::error::[^"]*merge main[^"]*"; exit 1; \}/);
   });
 
-  it('waits until PostgreSQL accepts connections before the run migrates', () => {
-    assert.match(steps, /pg_isready -U motorfix/);
+  it('waits until PostgreSQL accepts connections over TCP before the run migrates', () => {
+    assert.match(steps, /pg_isready -q -t 1 -h 127\.0\.0\.1 -U motorfix/);
   });
 
   it('fails the step when a service never comes up, rather than running on', () => {
-    assert.match(steps, /pg_isready -U motorfix[^\n]*\n[^\n]*\|\| \{ echo "::error::PostgreSQL[^\n]*exit 1; \}/);
     const bound = Number(/timeout (\d+) docker compose -p pr-qa -f pr\/docker-compose\.yml up/.exec(steps)?.[1]);
     assert.ok(bound > 120 && bound <= 180, `the store's own health bound (120 s) fits inside the step's ${bound} s`);
   });
@@ -301,5 +303,123 @@ describe('PR QA workflow: the routes input', () => {
     assert.ok(uses.length >= 2, uses.join(' | '));
     for (const use of uses) assert.match(use, /^"\$\{?ROUTES\}?"$/, use);
     assert.match(steps, /--routes "\$ROUTES"/);
+  });
+});
+
+/** A step's `run: |` script, dedented (as playwright-install.spec.mjs reads it). */
+function runScript(step) {
+  const body = step.split('\n');
+  const start = body.findIndex((l) => /^\s*run: \|\s*$/.test(l));
+  assert.notEqual(start, -1, 'a run: | script');
+  const out = body.slice(start + 1).filter((l) => l.trim());
+  const pad = Math.min(...out.map((l) => l.length - l.trimStart().length));
+  return out.map((l) => l.slice(pad)).join('\n');
+}
+
+// @traces 988-FR-001
+// @traces 988-FR-002
+describe('PR QA workflow: the PostgreSQL wait, run', () => {
+  // The PostGIS image accepts connections on its socket while its init scripts run,
+  // then restarts, and only then listens on TCP (#332). The step asks over TCP inside
+  // the container and wants three ready answers in a row, inside 60 s of wall clock.
+  const stepList = steps.split(/\n(?= {6}- )/);
+  const services = stepList.find((st) => /name: Start PostgreSQL/.test(st)) ?? '';
+  const wait = (answers, { socket = 1, dateStep = 1 } = {}) => {
+    const dir = mkdtempSync(join(tmpdir(), 'pg-wait-'));
+    const temp = join(dir, 'runner');
+    try {
+      writeFileSync(join(dir, 'answers'), `${answers.join('\n')}\n`);
+      // docker: config lists the services, up succeeds, logs prints the server's log, and
+      // exec pg_isready answers the next line of `answers` over TCP (the last one repeats),
+      // or SOCKET on the socket, the answer a server mid-init gives.
+      writeFileSync(
+        join(dir, 'docker'),
+        `#!/bin/bash
+case "$*" in
+  *"config --services"*) printf 'postgres\\nredis\\nstorage\\n' ;;
+  *" up "*) exit 0 ;;
+  *" logs "*) echo "database system is ready to accept connections" ;;
+  *pg_isready*)
+    echo "$*" >> "${dir}/calls"
+    if [[ "$*" != *"-h 127.0.0.1"* ]]; then exit $(( ${socket} ? 0 : 2 )); fi
+    a=$(head -n 1 "${dir}/answers"); rest=$(tail -n +2 "${dir}/answers")
+    [ -n "$rest" ] && printf '%s\\n' "$rest" > "${dir}/answers"
+    [ "$a" = ok ] ;;
+esac
+`,
+      );
+      writeFileSync(join(dir, 'date'), `#!/bin/sh\nn=$(cat "${dir}/now" 2>/dev/null || echo 1000)\necho $n\necho $((n+${dateStep})) > "${dir}/now"\n`);
+      writeFileSync(join(dir, 'sleep'), '#!/bin/sh\nexit 0\n');
+      writeFileSync(join(dir, 'timeout'), '#!/bin/sh\nshift\nexec "$@"\n');
+      for (const bin of ['docker', 'date', 'sleep', 'timeout']) chmodSync(join(dir, bin), 0o755);
+      const env = { ...process.env, RUNNER_TEMP: temp, PATH: `${dir}:${process.env.PATH}` };
+      const r = spawnSync('bash', ['-e', '-c', runScript(services)], { encoding: 'utf8', env, timeout: 20_000 });
+      const calls = existsSync(join(dir, 'calls')) ? readFileSync(join(dir, 'calls'), 'utf8').trim().split('\n') : [];
+      const log = join(temp, 'pr-qa', 'postgres.log');
+      return { code: r.status, out: `${r.stdout}${r.stderr}`, calls, log: existsSync(log) ? readFileSync(log, 'utf8') : null };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('carries an id, so a later step can tell a failed boot', () => {
+    assert.match(services, /\n {8}id: services\n/);
+  });
+
+  it('waits past the init restart: one ready answer followed by a refusal does not count', () => {
+    const r = wait(['ok', 'no', 'ok', 'ok', 'ok']);
+    assert.equal(r.code, 0, r.out);
+    assert.equal(r.calls.length, 5);
+  });
+
+  it('asks over TCP inside the container, each try bounded to 1 s', () => {
+    const r = wait(['ok']);
+    assert.equal(r.code, 0, r.out);
+    assert.ok(r.calls.length >= 3);
+    for (const call of r.calls) {
+      assert.match(call, /exec -T postgres pg_isready\b/);
+      assert.match(call, /-h 127\.0\.0\.1/);
+      assert.match(call, /-t 1\b/);
+    }
+  });
+
+  it('never takes a socket answer for ready while TCP still refuses', () => {
+    const r = wait(['no'], { socket: 1 });
+    assert.equal(r.code, 1, r.out);
+  });
+
+  it('gives up at 60 s of wall clock, naming the elapsed seconds and the bound, and saves the server log', () => {
+    const r = wait(['no'], { dateStep: 7 });
+    assert.equal(r.code, 1);
+    const line = /::error::PostgreSQL[^\n]*/.exec(r.out)?.[0] ?? '';
+    assert.match(line, /within 60 s/);
+    const elapsed = Number(/\((\d+) s elapsed\)/.exec(line)?.[1]);
+    assert.ok(elapsed >= 60 && elapsed < 70, line);
+    assert.ok(r.calls.length < 12, `${r.calls.length} tries: the bound is wall clock, not a try count`);
+    assert.match(r.log ?? '', /ready to accept connections/);
+  });
+});
+
+// @traces 988-FR-003
+describe('PR QA workflow: a report when the run never started', () => {
+  const stepList = steps.split(/\n(?= {6}- )/);
+  const at = stepList.findIndex((st) => /boot-report\.mjs/.test(st));
+  const step = stepList[at] ?? '';
+
+  it('writes the boot report after a failed step left the run skipped, before the upload', () => {
+    assert.ok(at > -1, 'a step running boot-report.mjs');
+    assert.ok(at > stepList.findIndex((st) => /id: run\n/.test(st)));
+    assert.ok(at < stepList.findIndex((st) => /uses: actions\/upload-artifact@/.test(st)));
+    assert.match(step, /\n {8}if: failure\(\) && steps\.run\.outcome == 'skipped'\n/);
+  });
+
+  it("names the services step's failure, or a step before the run, through env and never in the script", () => {
+    const reason = /\n {10}REASON: (.*)\n/.exec(step)?.[1] ?? '';
+    assert.match(reason, /steps\.services\.outcome == 'failure'/);
+    assert.match(reason, /postgres\.log/);
+    assert.match(reason, /a step before the run failed/);
+    const script = runScript(step);
+    assert.doesNotMatch(script, /\$\{\{/);
+    assert.match(script, /boot-report\.mjs --pr "\$PR" --sha "\$SHA" --lap "\$LAP" --out "\$RUNNER_TEMP\/pr-qa"/);
   });
 });
