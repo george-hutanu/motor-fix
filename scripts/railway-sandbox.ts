@@ -380,6 +380,11 @@ function image(env: Env, serviceId: string) {
   );
   const found = data.serviceInstance?.source?.image;
   if (!found) throw new Error('the service runs no image');
+  // The name is written into the sandbox's shell text, so it holds only what
+  // a docker reference can.
+  if (!/^[\w./:@-]+$/.test(found)) {
+    throw new Error('the service image name is not one docker accepts');
+  }
   process.stdout.write(`${found}\n`);
 }
 

@@ -441,6 +441,22 @@ describe('open', () => {
     ]);
   });
 
+  it('keeps why it failed to start when the destroy fails too', async () => {
+    const r = railway({
+      destroyError: 'Internal server error',
+      statuses: ['CREATING', 'FAILED'],
+    });
+
+    const error = await open(
+      { env: env(), run: r.run },
+      'staging',
+      'postgres',
+      instant(),
+    ).catch((e: unknown) => e as Error);
+    expect(String(error)).toMatch(/FAILED.*then.*Internal server error/);
+    expect(String((error as Error).cause)).toMatch(/FAILED/);
+  });
+
   it('destroys the sandbox when it is still not running past the bound', async () => {
     const r = railway({ statuses: [] });
 

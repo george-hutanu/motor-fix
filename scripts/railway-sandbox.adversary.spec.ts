@@ -494,6 +494,16 @@ process.stdout.write(JSON.stringify({ data }));
   return { calls, cli, execCalls, stdinFile };
 }
 
+// A fake `railway` whose service runs the image given as JSON.
+function imageCli(image: string) {
+  mkdirSync(join(dir, 'image'), { recursive: true });
+  const cli = join(dir, 'image', 'railway');
+  const data = `{"data":{"serviceInstance":{"source":{"image":${image}}}}}`;
+  writeFileSync(cli, `#!/bin/sh\ncat <<'JSON'\n${data}\nJSON\n`);
+  chmodSync(cli, 0o755);
+  return cli;
+}
+
 function run(
   args: string[],
   env: Record<string, string>,
@@ -534,6 +544,48 @@ describe('the command line', () => {
   it('exits 2 on no command at all', () => {
     const f = fakeCli();
     expect(run([], {}, '', f.cli).status).toBe(2);
+  });
+
+  it.each([
+    ["a quote that would end the sandbox's shell string", "pg:18'; rm -rf / #"],
+    ['a space', 'pg:18 -v /:/host'],
+    ['a command substitution', 'pg:$(id)'],
+  ])('refuses an image name with %s', (_why, name) => {
+    const cli = imageCli(JSON.stringify(name));
+    const out = run(
+      ['image', 'svc-1'],
+      { RAILWAY_ENVIRONMENT_ID: 'env-1' },
+      '',
+      cli,
+    );
+    expect(out.status).toBe(1);
+    expect(out.stderr.toString()).toMatch(/not one docker accepts/);
+    expect(out.stdout.toString()).toBe('');
+  });
+
+  it('prints a digest-pinned image name as Railway gives it', () => {
+    const name = 'ghcr.io/george-hutanu/motor-fix-postgres:18@sha256:abc123';
+    const cli = imageCli(JSON.stringify(name));
+    const out = run(
+      ['image', 'svc-1'],
+      { RAILWAY_ENVIRONMENT_ID: 'env-1' },
+      '',
+      cli,
+    );
+    expect(out.status).toBe(0);
+    expect(out.stdout.toString()).toBe(`${name}\n`);
+  });
+
+  it('fails when the service runs no image', () => {
+    const cli = imageCli('null');
+    const out = run(
+      ['image', 'svc-1'],
+      { RAILWAY_ENVIRONMENT_ID: 'env-1' },
+      '',
+      cli,
+    );
+    expect(out.status).toBe(1);
+    expect(out.stderr.toString()).toMatch(/runs no image/);
   });
 
   it('refuses a close with no sandbox id, with a usage line, and calls no Railway', () => {
