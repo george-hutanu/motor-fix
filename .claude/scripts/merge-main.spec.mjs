@@ -61,6 +61,22 @@ describe('capability files', () => {
     assert.equal(out.match(/`same`/g).length, 1);
   });
 
+  // @traces 493-FR-005
+  // The merge that glued `_From 854…_` to `### 850-FR-001` (#624): both sides
+  // appended a requirement at the same place, and theirs followed ours with no
+  // blank line between.
+  it('keeps a blank line before a heading of theirs that follows ours in one hunk', () => {
+    const fm = '---\ncapability: p\nupdated: 2026-10-01\nfeatures:\n  - 1-a\n---\n';
+    const head = `${fm}## Requirements\n\n### 1-FR-001 — x\n\n_From 1-a._\n\n`;
+    const tail = '## Retired\n\n- none\n';
+    const out = mergeCapability({
+      base: head + tail,
+      ours: `${head}### 2-FR-001 — ours\n\n_From 2-b._\n\n${tail}`,
+      theirs: `${head}### 3-FR-001 — theirs\n\n_From 3-c._\n\n${tail}`,
+    });
+    assert.match(out, /_From 2-b\._\n\n### 3-FR-001 — theirs\n\n_From 3-c\._\n\n## Retired/);
+  });
+
   it('collapses the front matter to the later `updated:` and a features list free of duplicates', () => {
     const fm = ['---', 'capability: x', 'updated: 2026-10-12', 'updated: 2026-10-09', 'features:', '  - a', '  - b', '  - a', '---', 'body', 'updated: 2026-01-01', ''].join('\n');
     assert.equal(fixFrontMatter(fm), ['---', 'capability: x', 'updated: 2026-10-12', 'features:', '  - a', '  - b', '---', 'body', 'updated: 2026-01-01', ''].join('\n'));
