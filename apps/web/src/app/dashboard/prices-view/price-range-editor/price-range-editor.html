@@ -85,6 +85,9 @@
       <p class="said mf-message" [class.error]="problem(f.duration)" id="mf-range-duration-said" role="status">{{ said(f.duration) }}</p>
     </div>
   }
+  @if (changedMeanwhile(); as said) {
+    <p class="said mf-message live-changed" role="status">{{ said }}</p>
+  }
   <mf-task-error [save]="save" />
   <div class="actions">
     <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.prices.editor.cancel' | t }}</button>

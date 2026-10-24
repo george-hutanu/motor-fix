@@ -6,7 +6,7 @@
     <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.requests.retry' | t }}</button>
   </div>
 } @else {
-  @if (closed(); as reason) {
+  @if (banner(); as reason) {
     <p class="banner" role="status">{{ reason | t }}</p>
   }
   @if (offline()) {

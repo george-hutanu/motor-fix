@@ -59,6 +59,7 @@ export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dt
 export type { ChangeCopyVoiceDto } from './models/change-copy-voice-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
+export type { ClosedDayAheadDto } from './models/closed-day-ahead-dto';
 export type { CompareBookingDto } from './models/compare-booking-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';
 export type { CompareQuoteDto } from './models/compare-quote-dto';
