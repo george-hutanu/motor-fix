@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,11 +15,19 @@ import { apiPreDeploy } from './railway-deploy.ts';
 
 // Railway runs a pre-deploy command split into words, with no shell: in
 // 2026-10 the old `migrate && monitor && seed` string reached prisma as extra
-// arguments, prisma ignored them, and no staging deploy ever seeded (ST-1373).
+// arguments, prisma ignored them, and no staging deploy ever seeded.
 // So each command here is run exactly that way, against stand-in steps in an
 // app directory laid out like the api image's /app.
+const apps: string[] = [];
+afterEach(() => {
+  for (const app of apps.splice(0)) {
+    rmSync(app, { force: true, recursive: true });
+  }
+});
+
 function deployIn(environment: string, failing?: 'npx' | 'node' | 'reset') {
   const app = mkdtempSync(join(tmpdir(), 'api-pre-deploy-'));
+  apps.push(app);
   const bin = join(app, 'bin');
   const log = join(app, 'steps.log');
   mkdirSync(bin);
@@ -42,7 +51,6 @@ function deployIn(environment: string, failing?: 'npx' | 'node' | 'reset') {
     cwd: app,
     encoding: 'utf8',
     env: { PATH: `${bin}:/usr/bin:/bin` },
-    shell: false,
   });
   let steps: string[] = [];
   try {
@@ -101,11 +109,10 @@ describe('the api pre-deploy command, run as Railway runs it', () => {
   it.each(['', 'Staging', 'prod', 'development', 'staging production'])(
     'refuses the environment %p before any step',
     (environment) => {
-      const app = mkdtempSync(join(tmpdir(), 'api-pre-deploy-'));
       const result = spawnSync(
         'sh',
         [join(__dirname, 'api-pre-deploy.sh'), ...environment.split(' ')],
-        { cwd: app, encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } },
+        { cwd: __dirname, encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } },
       );
 
       expect(result.status).not.toBe(0);

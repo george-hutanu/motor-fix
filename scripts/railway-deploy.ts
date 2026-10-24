@@ -300,15 +300,13 @@ async function restore(options: Options, touched: Touched[]) {
 // The api goes first: its pre-deploy step migrates the database the others
 // use, sets the monitor role's password and, on staging, seeds. Railway runs
 // a pre-deploy command split into words, with no shell, so `a && b` only ran
-// `a` with the rest as its arguments (ST-1373): the steps live in
+// `a` with the rest as its arguments: the steps live in
 // scripts/api-pre-deploy.sh, called with plain words.
-export const API_PRE_DEPLOY = ['sh scripts/api-pre-deploy.sh production'];
-
 export function apiPreDeploy(environment: string): string[] {
-  if (environment === 'production') return API_PRE_DEPLOY;
-  if (environment === 'staging')
-    return ['sh scripts/api-pre-deploy.sh staging'];
-  throw new Error(USAGE);
+  if (environment !== 'production' && environment !== 'staging') {
+    throw new Error(USAGE);
+  }
+  return [`sh scripts/api-pre-deploy.sh ${environment}`];
 }
 
 // The seed's password, which only staging's api gets.

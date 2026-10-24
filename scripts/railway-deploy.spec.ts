@@ -4,7 +4,6 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 
 import {
-  API_PRE_DEPLOY,
   apiPreDeploy,
   deploy,
   putSeedPassword,
@@ -14,6 +13,8 @@ import {
 } from './railway-deploy.ts';
 
 type Call = { query: string; variables: Record<string, unknown> };
+
+const API_PRE_DEPLOY = apiPreDeploy('production');
 
 const services: Service[] = [
   {

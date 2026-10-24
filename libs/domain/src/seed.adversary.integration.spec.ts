@@ -382,8 +382,8 @@ describe('seed restore of accounts, attacked', () => {
   });
 
   // @traces 1372-FR-005
-  // The status is the seed's since ST-1373 (1373-FR-002): a suspended or
-  // deleted seeded account gets its seeded status back, the rest is kept.
+  // The status is the seed's: a suspended or deleted seeded account gets its
+  // seeded status back, the rest is kept.
   // @traces 1373-FR-006
   it('keeps name, phone, last role and phone verification of every seeded account, and restores its status', async () => {
     expect(run().status).toBe(0);

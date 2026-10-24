@@ -1509,7 +1509,7 @@ describe('seed of an account that drifted', () => {
     expect(await account(stranger.email ?? '')).toEqual(before);
     const after = await account('masina-noua@example.test');
     expect(after.roles.map((r) => r.role).sort()).toEqual(['driver', 'garage']);
-    // 1373-FR-002: the status is the seed's now, the last role still the user's.
+    // The status is the seed's now, the last role still the user's.
     expect([after.lastRole, after.status]).toEqual(['driver', 'active']);
   });
 
@@ -1525,8 +1525,9 @@ describe('seed of an account that drifted', () => {
   });
 });
 
-// ST-1373: a deleted seeded account, or one with two password identities,
-// still refused the draft owner; and the seeded driver's day must start unused.
+// A deleted seeded account, or one with two password identities, still
+// refused the draft owner; and the seeded driver's day must start unused.
+// @traces 1373-FR-007
 describe('seed of a deleted or doubled account, and of the day', () => {
   const PASSWORD = 'o-parola-din-secrete';
   const run = () => seed('staging', { SEED_PASSWORD: PASSWORD });
