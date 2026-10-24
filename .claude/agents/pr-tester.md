@@ -70,21 +70,23 @@ the PR cannot merge on that run. With no file, every flow is not run.
 
 Whoever writes the file names each acceptance scenario of the spec in it as
 `US<k> scenario <m>`, in the flow that drives it or in a
-`// not a flow: US<k> scenario <m> — <reason>` line, and waits for `'load'`
-or a visible element, never `networkidle` (live updates keep a connection
-open, so it never settles). `node .claude/scripts/pr-test/precheck.mjs
+`// not a flow: US<k> scenario <m> — <reason>` line, and waits on a visible
+element, `waitForText` or the stream's open state, never `networkidle` (live
+updates keep a connection open, so it never settles; the run loads such a
+wait as `load`, with a note). `node .claude/scripts/pr-test/precheck.mjs
 --flows <file> --spec specs/<feature>/spec.md` checks both, and that the
 module loads, with no browser; `dispatch.mjs --flows` runs it and dispatches
 nothing while it fails.
 
 Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
-apiURL, outDir, repoRoot, signIn, health, ready, waitForText, openSheet, stepButton, accounts }) => findings[]` that drives Playwright
+apiURL, outDir, repoRoot, findings, signIn, health, ready, waitForText, openSheet, stepButton, accounts })` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
 switch the language, reload, open a second tab where the spec asks for it, and
 check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
-with a screenshot under `outDir`. A guarded screen (`/app/...`) opens only
+with a screenshot under `outDir`; push each finding into `findings` as it is
+found, so a later throw keeps it, and push or return it, never both. A guarded screen (`/app/...`) opens only
 signed in: `await signIn(context, 'driver')` on a fresh browser context, before
 its first page, gives it a new session of that role's seeded account, as the
 sweep does for `path@role`, with the account set to Romanian
