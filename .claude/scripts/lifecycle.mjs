@@ -568,6 +568,7 @@ function fixedAfterQa(ctx, head, file, pr) {
   if (kind === "docs") return null;
   let count = findingCount(review.description);
   let fixedAt = null;
+  const why = [];
   if (kind === "fixes") {
     const from = carriedFrom(review.description);
     const statuses = ghJson(ctx.gh(...statusesArgs(from)));
@@ -576,7 +577,7 @@ function fixedAfterQa(ctx, head, file, pr) {
     const compare = ghJson(ctx.gh("api", `repos/{owner}/{repo}/compare/${from}...${head}`));
     const commits = (compare?.commits ?? []).map((c) => String(c.sha));
     const lapAt = Date.parse(statuses.find((s) => s?.context === STATUS_CONTEXT)?.created_at ?? "");
-    fixedAt = (line) => fixedAfterLap(ctx, line, { commits, lapAt, pr });
+    fixedAt = (line) => fixedAfterLap(ctx, line, { commits, lapAt, pr, why });
   }
   if (!(count >= 1)) return null;
   const text = existsSync(file) ? readFileSync(file, "utf8") : "";
@@ -588,7 +589,8 @@ function fixedAfterQa(ctx, head, file, pr) {
   const each = fixedAt
     ? `its severity (medium or low) and where its fix is, made after the lap: a PR commit's sha, a specs-repo trunk commit as specs@<sha>, or qa-flows-${pr}.mjs for a change to the QA flows file only`
     : "its severity (medium or low)";
-  return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}": add one list line per finding, naming ${each} (the file stays in the worktree), then run the merge again`;
+  const refused = why.length ? ` (not counted: ${why.join("; ")})` : "";
+  return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}"${refused}: add one list line per finding, naming ${each} (the file stays in the worktree), then run the merge again`;
 }
 
 /**
@@ -598,31 +600,43 @@ function fixedAfterQa(ctx, head, file, pr) {
  * or a change to this PR's git-ignored QA flows file only
  * (`qa-flows-<pr>.mjs`), modified after that time. With no time on the
  * success, only the first counts. A specs lookup that fails counts nothing.
+ * Why each specs@ or flows reference did not count goes into `why`.
  */
-function fixedAfterLap(ctx, line, { commits, lapAt, pr }) {
+function fixedAfterLap(ctx, line, { commits, lapAt, pr, why }) {
   const shas = line.replace(/\bspecs@[0-9a-f]+/g, "").match(/\b[0-9a-f]{7,40}\b/g) ?? [];
   if (shas.some((sha) => commits.some((c) => c.startsWith(sha)))) return true;
-  if (!Number.isFinite(lapAt)) return false;
   const flows = `qa-flows-${pr}.mjs`;
+  const specs = [...line.matchAll(/\bspecs@([0-9a-f]{7,40})\b/g)].map(([, sha]) => sha);
+  if (!Number.isFinite(lapAt)) {
+    if (specs.length || line.includes(flows)) why.push("the named lap's success carries no time, so only a PR commit counts");
+    return false;
+  }
   if (line.includes(flows)) {
     const path = join(ctx.repo, ".specify", ".cache", flows);
-    if (existsSync(path) && statSync(path).mtimeMs > lapAt) return true;
+    if (!existsSync(path)) why.push(`${flows}: no such file in .specify/.cache`);
+    else if (statSync(path).mtimeMs > lapAt) return true;
+    else why.push(`${flows}: not modified after the lap`);
   }
-  return [...line.matchAll(/\bspecs@([0-9a-f]{7,40})\b/g)].some(([, sha]) => specsCommitAfter(ctx, sha, lapAt));
+  return specs.some((sha) => {
+    const problem = specsCommitAfter(ctx, sha, lapAt);
+    if (problem) why.push(`specs@${sha}: ${problem}`);
+    return !problem;
+  });
 }
 
-/** Whether `sha` is on the specs repo's trunk and was committed after `lapAt`: one REST compare against trunk. */
+/** Why `sha` is not a specs-repo trunk commit made after `lapAt`, or null when it is: one REST compare against trunk. */
 function specsCommitAfter(ctx, sha, lapAt) {
   const r = ctx.ghTry("api", `repos/${SPECS_SLUG}/compare/${sha}...${TRUNK}`);
-  if (r.code !== 0) return false;
+  if (r.code !== 0) return `lookup failed (${(r.stderr || r.stdout).trim().slice(0, 80) || `exit ${r.code}`})`;
   let compare;
   try {
     compare = JSON.parse(r.stdout);
   } catch {
-    return false;
+    return "lookup failed (unreadable answer)";
   }
-  if (!["ahead", "identical"].includes(compare?.status)) return false;
-  return Date.parse(compare?.base_commit?.commit?.committer?.date ?? "") > lapAt;
+  if (!["ahead", "identical"].includes(compare?.status)) return `off trunk (${compare?.status ?? "no status"})`;
+  if (!(Date.parse(compare?.base_commit?.commit?.committer?.date ?? "") > lapAt)) return "committed before the lap";
+  return null;
 }
 
 function merge(ctx, flags) {

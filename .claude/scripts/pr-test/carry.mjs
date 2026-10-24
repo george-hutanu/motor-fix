@@ -25,10 +25,11 @@
 // the content, which the finish comment's "Fixed after QA" list ties to the
 // findings (`lifecycle.mjs merge`), each line naming one of these commits, a
 // specs-repo trunk commit (`specs@<sha>`) or a QA-flows-only change made after
-// the lap: a fix outside the PR's own commits needs no commit here. A merge, in a fixes or a merge carry, is
-// read from both sides (compare against each parent): what it brought onto the
-// branch (its first-parent diff) shares no file with what the PR changes
-// against main (its second-parent diff). Anything else needs a real lap.
+// the lap: a fix outside the PR's own commits needs no commit here. A merge,
+// in a fixes or a merge carry, is read from both sides (compare against each
+// parent): what it brought onto the branch (its first-parent diff) shares no
+// file with what the PR changes against main (its second-parent diff).
+// Anything else needs a real lap.
 //
 //   node .claude/scripts/pr-test/carry.mjs <pr> [--dry-run]
 // picks the kind from the named lap, and exits 0 when it carried (or would, on

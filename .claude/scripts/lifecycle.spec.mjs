@@ -1016,19 +1016,20 @@ describe('merge after a passing lap that reported findings', () => {
     stoppedBeforeMerge(step(['merge'], h.io), h);
 
     comment(`## Fixed after QA\n\n${PR_LINE}${SPECS_LINE}`);
-    h = harness({ answers: [...carriedAt(), specsCommit('ahead', '2026-10-20T09:00:00Z')] });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
-    h = harness({ answers: [...carriedAt(), specsCommit('diverged', '2026-10-20T11:00:00Z')] });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
-    h = harness({ answers: [...carriedAt(), [SPECS_COMPARE, { code: 1, stdout: '', stderr: 'Not Found' }]] });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
+    const stopsWith = (answers, reason) => {
+      const hh = harness({ answers });
+      const result = step(['merge'], hh.io);
+      stoppedBeforeMerge(result, hh);
+      assert.match(result.fix, reason);
+    };
+    stopsWith([...carriedAt(), specsCommit('ahead', '2026-10-20T09:00:00Z')], /specs@cafe1234: committed before the lap/);
+    stopsWith([...carriedAt(), specsCommit('diverged', '2026-10-20T11:00:00Z')], /specs@cafe1234: off trunk \(diverged\)/);
+    stopsWith([...carriedAt(), [SPECS_COMPARE, { code: 1, stdout: '', stderr: 'Not Found' }]], /specs@cafe1234: lookup failed \(Not Found\)/);
 
     comment(`## Fixed after QA\n\n${PR_LINE}${FLOWS_LINE}`);
-    h = harness({ answers: carriedAt() });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
+    stopsWith(carriedAt(), /qa-flows-141\.mjs: no such file/);
     flows(new Date('2026-10-20T09:00:00Z'));
-    h = harness({ answers: carriedAt() });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
+    stopsWith(carriedAt(), /qa-flows-141\.mjs: not modified after the lap/);
   });
 
   // @traces 1378-FR-001
@@ -1039,7 +1040,9 @@ describe('merge after a passing lap that reported findings', () => {
     stoppedBeforeMerge(step(['merge'], h.io), h);
     comment(`## Fixed after QA\n\n${PR_LINE}${SPECS_LINE}`);
     h = harness({ answers: [...carriedFixes, specsCommit('ahead', '2026-10-20T11:00:00Z')] });
-    stoppedBeforeMerge(step(['merge'], h.io), h);
+    const result = step(['merge'], h.io);
+    stoppedBeforeMerge(result, h);
+    assert.match(result.fix, /carries no time/);
   });
 });
 
