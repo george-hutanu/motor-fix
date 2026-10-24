@@ -1,4 +1,7 @@
-// @traces 456-FR-001 456-FR-003
+// @traces 456-FR-001 456-FR-003 456-FR-005
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   assertLoopback,
   CLEAR_STATEMENTS,
@@ -109,5 +112,23 @@ describe('assertLoopback', () => {
       ),
     ).rejects.toThrow(/not a database on this machine/);
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+// A deployed database never holds a role that may empty the audit history
+// (OD-34): only this script makes it, never a migration.
+describe('the cleaning role in deployed databases', () => {
+  it('is created by no migration', () => {
+    const migrations = join(__dirname, '..', 'libs/domain/prisma/migrations');
+    const creating = readdirSync(migrations, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .filter((entry) =>
+        readFileSync(
+          join(migrations, entry.name, 'migration.sql'),
+          'utf8',
+        ).includes('motorfix_migrator'),
+      );
+
+    expect(creating).toEqual([]);
   });
 });
