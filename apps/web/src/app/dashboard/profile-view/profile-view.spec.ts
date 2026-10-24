@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -645,5 +648,27 @@ describe('Profilul service-ului: kept current', () => {
 
     expect(read).toHaveBeenCalledTimes(2);
     expect(element.querySelector('[aria-live]')).toBeNull();
+  });
+});
+
+// @traces 133-FR-012
+describe('Profilul service-ului: type and alignment on a phone', () => {
+  const css = readFileSync(join(__dirname, 'profile-view.css'), 'utf8');
+  const phone =
+    /@media not all and \(min-width: 768px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ??
+    '';
+
+  it('writes the small text at body size on a phone: the fuel lines and the phone tag', () => {
+    expect(phone).toMatch(/:host \{\s*--mf-size-small: var\(--mf-size-body\);/);
+  });
+
+  it('writes the field labels at body size on a phone', () => {
+    expect(phone).toMatch(/\.label \{\s*font-size: var\(--mf-size-body\);/);
+  });
+
+  it("lines the public link's text up with the panel's other lines, its padding and border pulled out", () => {
+    expect(css).toMatch(
+      /\.public-link \{[^}]*margin-inline-start: calc\(-1 \* var\(--mf-space-5\) - 1px\)/,
+    );
   });
 });

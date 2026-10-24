@@ -140,6 +140,9 @@ h3,
 .public-link {
   align-self: flex-start;
   max-width: 100%;
+  /* The ghost button's padding and border, pulled out so its text starts
+     where the panel's other lines do. */
+  margin-inline-start: calc(-1 * var(--mf-space-5) - 1px);
 }
 .skeletons {
   display: flex;
@@ -150,4 +153,15 @@ h3,
   height: var(--mf-tap);
   border-radius: var(--mf-radius-control);
   background: var(--mf-line);
+}
+
+/* Phone: the complement of the tablet query in layout.ts. Running text,
+   the labels, the fuel lines and the phone tag, reads at body size. */
+@media not all and (min-width: 768px) {
+  :host {
+    --mf-size-small: var(--mf-size-body);
+  }
+  .label {
+    font-size: var(--mf-size-body);
+  }
 }
