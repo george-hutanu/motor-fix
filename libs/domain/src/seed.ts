@@ -939,7 +939,9 @@ async function priceList(db: Client) {
   await price('front-brakes', 'bmw', [110000, 170000], null, 2);
   await db.query(
     `UPDATE garage SET labour_to_bani = COALESCE(labour_to_bani, 24000),
-       lift_count = GREATEST(lift_count, 2)
+       lift_count = GREATEST(lift_count, 2),
+       -- The stored phone the owner's profile view shows and drivers never see.
+       phone = COALESCE(phone, '+40700000201')
      WHERE slug = 'service-auto-militari'`,
   );
   await db.query(
@@ -978,6 +980,26 @@ async function seed(db: Client, secret: string) {
   await db.query(
     `UPDATE garage SET rar_activities = (SELECT array_agg(code ORDER BY code) FROM rar_activity)
      WHERE slug = 'atelier-test' AND rar_activities = '{}'`,
+  );
+  // The staff's garage as a sent listing has it: a stored phone, which only
+  // the owner's profile view shows, an address and weekly hours. Each set
+  // once: an owner's later edit is never put back.
+  await db.query(
+    `UPDATE garage SET phone = COALESCE(phone, '+40700000202'),
+       address = COALESCE(address, 'Strada Atelierului 14, București'),
+       hours = CASE WHEN hours = '{}'::jsonb THEN $1::jsonb ELSE hours END
+     WHERE slug = 'atelier-test'`,
+    [
+      JSON.stringify({
+        fri: [['08:00', '18:00']],
+        mon: [['08:00', '18:00']],
+        sat: [['09:00', '13:00']],
+        sun: [],
+        thu: [['08:00', '18:00']],
+        tue: [['08:00', '18:00']],
+        wed: [['08:00', '18:00']],
+      }),
+    ],
   );
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
