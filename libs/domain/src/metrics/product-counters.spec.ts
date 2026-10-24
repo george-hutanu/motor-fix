@@ -10,6 +10,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
   countAccountChange,
+  countAdminAccountAction,
   countApproval,
   countCompletionOpened,
   countConsentRecord,
@@ -177,6 +178,33 @@ function countEverySeries() {
       countSystemLogEntry(kind, outcome);
   }
 }
+
+// @traces 003-FR-021
+describe('the admin account actions counter', () => {
+  it('counts one action by action and outcome, with no other label', async () => {
+    const labels = { action: 'suspend', outcome: 'email_failed' };
+    const before = await total('motorfix_admin_account_actions_total', labels);
+
+    countAdminAccountAction('suspend', 'email_failed');
+
+    expect(await total('motorfix_admin_account_actions_total', labels)).toBe(
+      before + 1,
+    );
+    const { resourceMetrics } = await memory.metricReader.collect();
+    const points = resourceMetrics.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .filter(
+        (m) => m.descriptor.name === 'motorfix_admin_account_actions_total',
+      )
+      .flatMap((m) => m.dataPoints as DataPoint<number>[]);
+    for (const point of points) {
+      expect(Object.keys(point.attributes).sort()).toEqual([
+        'action',
+        'outcome',
+      ]);
+    }
+  });
+});
 
 // @traces 297-FR-014
 describe('the system log counter', () => {

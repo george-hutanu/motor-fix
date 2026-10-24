@@ -1,11 +1,12 @@
 ---
 capability: assistant-access
-updated: 2026-10-17
+updated: 2026-10-24
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
   - 1016-mcp-staging
   - 1019-staging-mcp-connect
+  - 003-admin-account-actions
 ---
 
 # Capability: Assistant access
@@ -161,5 +162,9 @@ _From 1019-staging-mcp-connect._
 ### 1019-FR-008 — The owner instructions MUST say how to add the staging MCP address as a custom connector in Claude and in ChatGPT, how to run the check first, which tool to call (`get_my_account`) and what a passing answer is, how to record each result (date, client, tool called, pass or fail, error text) on #1106 and #869, and that the address changes if #1307 moves /mcp into the api; the setup steps MUST name the `MCP_URL` variable on the GitHub staging environment.
 
 _From 1019-staging-mcp-connect._
+
+### 003-FR-015 — There MUST be one revoke function for an account's assistant grants that, inside the caller's transaction, sets `revoked_at`, `revoked_by` (the acting account's id whenever a person acts, `system` only when a handler acts with no person) and `revoke_reason` on every grant of the account whose `revoked_at` is null (all of them on a role loss too: a grant has no role scope), writes one audit entry per grant (action `update`, subject `assistant_grant`, field `revoked_at`) and records one `assistant_grant.revoked` outbox event per grant (`{ grantId, accountId, reason }`, audience `account:{accountId}`), and does nothing for a grant already revoked. It MUST be called with reason `account_suspended` by FR-007, `account_deleted` by FR-012 and by ST-129's self-service deletion (whose grants are then revoked and kept rather than deleted, Modifies 129-FR-001), and `role_removed` wherever the account loses a role today (the team-leave paths that detach a mechanic or remove a receptionist, and any later role removal), in that write's transaction. Adding a role calls nothing. A still-valid access token of a revoked grant MUST be refused at its next tool call (365-FR-004's `assistant_grant_revoked`; a suspended or deleted account also by 365-FR-005). The identity server's consents and sessions for those grants and any pending approvals are revoked through this same function once ST-372 (#195) adds those steps; until then the MotorFix grant is the gate every call checks (see Assumptions).
+
+_From 003-admin-account-actions._
 
 ## Retired
