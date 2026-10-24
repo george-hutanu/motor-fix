@@ -141,6 +141,21 @@ export class PublicGaragePhotoDto {
   thumbhash?: string;
 }
 
+export class ClosedDayAheadDto {
+  @ApiProperty({
+    description: 'A Bucharest calendar day, "YYYY-MM-DD"',
+    format: 'date',
+  })
+  day!: string;
+
+  @ApiProperty({
+    description:
+      'holiday: a legal holiday, which wins when the garage also closed the day; closed: a day the garage closed',
+    enum: ['holiday', 'closed'],
+  })
+  reason!: 'holiday' | 'closed';
+}
+
 export class PublicGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -255,6 +270,13 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: 'object',
   })
   hours!: WeeklyHours | Record<string, never>;
+
+  @ApiProperty({
+    description:
+      "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+    type: [ClosedDayAheadDto],
+  })
+  closedDays!: ClosedDayAheadDto[];
 
   @ApiProperty({
     description:

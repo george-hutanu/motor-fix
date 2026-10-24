@@ -580,13 +580,13 @@ describe('warming the accept call from the comparison', () => {
     expect(await redis.get(cacheKey('accept', andrei, lost.id))).toBeNull();
     expect(
       await redis.zscore(
-        `v4:tag:warm:account:${andrei}`,
+        `v5:tag:warm:account:${andrei}`,
         cacheKey('accept', andrei, quote.id),
       ),
     ).not.toBeNull();
     expect(
       await redis.zscore(
-        `v4:tag:warm:garage:${dinamo.garage.id}`,
+        `v5:tag:warm:garage:${dinamo.garage.id}`,
         cacheKey('accept', andrei, quote.id),
       ),
     ).not.toBeNull();
