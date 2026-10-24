@@ -319,24 +319,26 @@ export class NotificationsModule implements OnApplicationShutdown {
             NOTIFICATIONS_JOBS,
           ],
           provide: WORKER,
-          // The check may wait out a Brevo outage, so it runs behind the boot.
-          useFactory: (
+          // The queue's gauges and the re-queue sweep start with the boot;
+          // the key check may wait out a Brevo outage, so the consumer opens
+          // behind it.
+          useFactory: async (
             processor: NotificationsProcessor,
             service: NotificationsService,
             jobs: Queue,
           ) => {
             const logger = new Logger('Notifications');
+            observeQueue(jobs);
+            await service
+              .scheduleRequeue()
+              .catch((error) =>
+                logger.error(
+                  `the re-queue sweep is not scheduled: ${String(error)}`,
+                ),
+              );
             const consumer = new NotificationsConsumer(
               (signal) => processor.ready(signal),
               async () => {
-                observeQueue(jobs);
-                await service
-                  .scheduleRequeue()
-                  .catch((error) =>
-                    logger.error(
-                      `the re-queue sweep is not scheduled: ${String(error)}`,
-                    ),
-                  );
                 const worker = new Worker(
                   NOTIFICATIONS_QUEUE,
                   (job) => inJob(job, () => processor.handle(job)),

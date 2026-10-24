@@ -2,6 +2,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Queue } from 'bullmq';
 import request from 'supertest';
 
 import { HealthModule } from '../../health/health.module';
@@ -19,6 +20,7 @@ import {
 const redisUrl = redisUrlFor(0);
 const brevo = new BrevoMock();
 const store = new S3TestStore();
+const queue = new Queue('notifications', { connection: { url: redisUrl } });
 let app: INestApplication | undefined;
 
 // The worker's own wiring: the notifications consumer behind the boot, and
@@ -61,11 +63,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await queue.close();
   await brevo.stop();
   await store.stop();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
+  await queue.obliterate({ force: true });
   brevo.reset();
   jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
@@ -86,6 +90,16 @@ describe('the worker while Brevo is unreachable at start-up', () => {
     expect(await ready()).toBe(503);
     expect(await readyWithin(10_000)).toBe(200);
     expect(brevo.calls.filter((c) => c.path === '/v3/account')).toHaveLength(2);
+  });
+
+  it('schedules the re-queue sweep at boot, while the consumer still waits', async () => {
+    brevo.answer({ status: 503 }, { status: 503 }, { status: 503 });
+
+    await boot();
+
+    expect(await ready()).toBe(503);
+    const schedulers = await queue.getJobSchedulers();
+    expect(schedulers.map((s) => s.name)).toEqual(['requeue']);
   });
 
   it('stays unhealthy on a refused key', async () => {
