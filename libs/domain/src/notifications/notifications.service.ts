@@ -776,7 +776,7 @@ export class NotificationsService {
     // The bell's count moves with the row, in the same transaction. Raising
     // it first locks the account row before the row takes its position, so
     // one account's positions commit in the order they were taken and a
-    // stream never drops a row as already replayed (FR-004).
+    // stream never drops a row as already replayed.
     const { unreadCount } = await tx.account.update({
       data: { unreadCount: { increment: 1 } },
       select: { unreadCount: true },

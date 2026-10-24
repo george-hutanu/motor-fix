@@ -27,8 +27,6 @@ export interface Service {
   healthcheckPath: string;
   replicas: number;
   preDeploy?: string[];
-  // What the pre-deploy command runs, named in the error when it fails.
-  preDeploySteps?: string;
 }
 
 interface Options {
@@ -63,9 +61,54 @@ const authHeader = (kind: TokenKind, token: string): Record<string, string> =>
     ? { 'project-access-token': token }
     : { authorization: `Bearer ${token}` };
 
+// A part of a secret this long or longer is hidden too: an error that echoes
+// half a password has still told half of it.
+const SHORTEST_PART = 6;
+
+// The longest part of the secret that the text repeats from index i.
+function partAt(text: string, i: number, secret: string) {
+  let length = 0;
+  while (
+    i + length < text.length &&
+    secret.includes(text.slice(i, i + length + 1))
+  ) {
+    length += 1;
+  }
+  return length;
+}
+
+function hideParts(text: string, secret: string) {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const length = partAt(text, i, secret);
+    if (length >= Math.min(SHORTEST_PART, secret.length)) {
+      out += '[redacted]';
+      i += length;
+    } else {
+      out += text[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
+// Railway may echo a secret as sent, JSON-escaped or URL-encoded.
+const shapes = (secret: string) => [
+  JSON.stringify(secret).slice(1, -1),
+  encodeURIComponent(secret),
+];
+
 const hide = (options: Options, text: string) =>
-  (options.secrets ?? []).reduce(
-    (out, secret) => (secret ? out.replaceAll(secret, '[redacted]') : out),
+  (options.secrets ?? []).filter(Boolean).reduce(
+    (out, secret) =>
+      hideParts(
+        shapes(secret).reduce(
+          (shaped, shape) => shaped.replaceAll(shape, secret),
+          out,
+        ),
+        secret,
+      ),
     text,
   );
 
@@ -225,8 +268,8 @@ async function deployOne(options: Options, entry: Touched) {
   }
   // A failed pre-deploy command fails the deployment before it starts.
   throw new Error(
-    service.preDeploySteps
-      ? `${service.name}: deployment ${status}; its pre-deploy step (${service.preDeploySteps}) runs first, and the deployment's log shows whether one of them failed`
+    service.preDeploy
+      ? `${service.name}: deployment ${status}; its pre-deploy command (${service.preDeploy.join(' && ')}) runs first, and the deployment's log shows whether it failed`
       : `${service.name}: deployment ${status}`,
   );
 }
@@ -272,11 +315,6 @@ export function apiPreDeploy(environment: string): string[] {
   }
   throw new Error(USAGE);
 }
-
-const PRE_DEPLOY_STEPS: Record<string, string> = {
-  production: 'migrations, monitor password',
-  staging: 'migrations, monitor password, staging seed',
-};
 
 // The seed's password, which only staging's api gets.
 export function seedPassword(
@@ -408,10 +446,7 @@ export function servicesFor(
         image: required(`IMAGE_${name.toUpperCase()}`, env),
         name,
         replicas: settings.replicas[name] ?? 1,
-        ...(name === 'api' && {
-          preDeploy: apiPreDeploy(environment),
-          preDeploySteps: PRE_DEPLOY_STEPS[environment],
-        }),
+        ...(name === 'api' && { preDeploy: apiPreDeploy(environment) }),
       },
     ];
   });
@@ -457,7 +492,6 @@ async function main() {
     // start) decides; this limit only stops a run whose deployment never ends.
     limitMs: 20 * 60_000,
     pollMs: 5_000,
-    secrets: password ? [password] : [],
     services,
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),

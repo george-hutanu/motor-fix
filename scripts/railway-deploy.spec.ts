@@ -242,7 +242,7 @@ describe('railway deploy', () => {
         token: 't',
       }),
     ).rejects.toThrow(
-      /^api: deployment FAILED; its pre-deploy step \(migrations, monitor password, staging seed\)/,
+      /^api: deployment FAILED; its pre-deploy command \(npx prisma migrate deploy && node scripts\/monitor-password\.ts && SEED_ONLY=1 sh scripts\/reset-staging\.sh\)/,
     );
     expect(updates().at(-1)).toEqual({
       environmentId: 'env-1',
