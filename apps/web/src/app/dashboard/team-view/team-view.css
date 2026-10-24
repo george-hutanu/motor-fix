@@ -41,11 +41,11 @@ h2 {
   max-width: 100%;
   text-wrap: balance;
 }
-/* The narrowest phones: a smaller label keeps "Adaugă un mecanic" on one line. */
+/* The narrowest phones: the label keeps the 16 px body size; dropping its tracking and taking the 8 px padding step keeps "Adaugă un mecanic" on one line. */
 @media (max-width: 359px) {
   .add {
-    padding-inline: var(--mf-space-3);
-    font-size: var(--mf-size-small);
+    padding-inline: var(--mf-space-2);
+    letter-spacing: 0;
   }
 }
 .count {
