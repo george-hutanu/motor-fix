@@ -362,7 +362,8 @@ describe('signing in with credentials that do not match', () => {
     expect(wrong.body.code).toBe('invalid_credentials');
   });
 
-  it('logs a failed attempt with its reason and no e-mail, password or address', async () => {
+  // @traces 500-FR-005
+  it('logs a failed attempt with its reason and the caller masked, never the e-mail, password or full address', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
       jest
@@ -381,6 +382,7 @@ describe('signing in with credentials that do not match', () => {
     const all = lines.join('\n');
     expect(all).toContain('invalid_credentials');
     expect(all).not.toMatch(/andrei|secret-typo|198\.51\.100\.7/i);
+    expect(all).toContain('caller=198.51.x.x');
   });
 });
 
