@@ -1,7 +1,6 @@
 // @traces 003-FR-001 003-FR-002 003-FR-003 003-FR-005 003-FR-006 003-FR-007
 // @traces 003-FR-008 003-FR-010 003-FR-011 003-FR-012 003-FR-013 003-FR-014
-// @traces 003-FR-015 003-FR-016 003-FR-021 003-SC-001 003-SC-002 003-SC-003
-// @traces 003-SC-004 003-SC-005 003-FR-009
+// @traces 003-FR-015 003-FR-016 003-FR-020 003-FR-021
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -698,6 +697,7 @@ describe('POST /admin/accounts/:id/suspend', () => {
 
 // The clean-up is the existing consumer of account.suspended, fed the event
 // the suspension recorded.
+// @traces 003-FR-009
 describe('the clean-up after a suspension', () => {
   it('closes the open requests and cancels the future booking once, and a restore reopens nothing', async () => {
     const { auth } = await admin();

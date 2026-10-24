@@ -1,4 +1,4 @@
-// @traces 003-FR-015 003-SC-004
+// @traces 003-FR-015
 import { revokeAssistantGrants } from './assistant-grants';
 import { AuditService } from '../../audit/audit.service';
 import { outbox } from '../../events/event.port';

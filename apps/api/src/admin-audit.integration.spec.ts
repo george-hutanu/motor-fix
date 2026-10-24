@@ -497,6 +497,7 @@ afterAll(async () => {
   await api.stop();
 });
 
+// @traces 003-FR-020
 describe('every admin route', () => {
   it('leaves an entry by the admin when it changes data, and none when it reads', async () => {
     expect(await callEach()).toEqual([]);

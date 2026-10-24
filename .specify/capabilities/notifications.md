@@ -45,6 +45,7 @@ features:
   - 067-restore-suspended-garage
   - 520-brevo-key-check-retry
   - 525-bounce-domain-event
+  - 003-admin-account-actions
 ---
 
 # Capability: Notifications
@@ -818,6 +819,10 @@ _From 525-bounce-domain-event._
 ### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
 
 _From 525-bounce-domain-event._
+
+### 003-FR-022 — The system MUST carry an ACCOUNT_EMAIL purpose `account_suspended` with a Romanian and an English template: subject "Contul tău a fost suspendat" / "Your account was suspended", a body that gives the reason as escaped plain text, the support address when one is configured (279-FR-003) and a button linking to the contact page `/{lang}/contact`, and a footer saying why the person gets it; it is transactional (no preference switches it off), follows the sender's bounce rule, passes the template check and joins the inbox-test matrix (279-FR-007) by being registered.
+
+_From 003-admin-account-actions._
 
 ## Retired
 
