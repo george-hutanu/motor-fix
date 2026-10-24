@@ -1,3 +1,4 @@
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -11,6 +12,7 @@ import {
 } from '../../notifications/notifications.testing';
 import { SearchModule } from '../search.module';
 
+const reader = countedMetrics();
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();
 serialDatabase(databaseUrl);
@@ -305,5 +307,25 @@ describe('GET /garages/:slug/similar', () => {
     const res = await similar('old', { brand: 'bmw' });
 
     expect(res.headers['cache-control']).toBe('no-store');
+  });
+});
+
+// @traces 385-FR-015
+describe('counting the similar garages answers', () => {
+  const read = (outcome: string) =>
+    counterTotal(reader, 'motorfix_similar_garages_total', { outcome });
+
+  it('counts each answer by whether it found a garage, and no refused read', async () => {
+    await garage({ km: 0, slug: 'old', status: 'suspended', worksOn: [bmw] });
+    await garage({ km: 1, slug: 'near', worksOn: [bmw] });
+    const before = { none: await read('none'), results: await read('results') };
+
+    await similar('old', { brand: 'bmw' }).expect(200);
+    await similar('old', { brand: 'dacia' }).expect(200);
+    await similar('old', { brand: 'tesla' }).expect(404);
+    await similar('nobody').expect(404);
+
+    expect(await read('results')).toBe(before.results + 1);
+    expect(await read('none')).toBe(before.none + 1);
   });
 });

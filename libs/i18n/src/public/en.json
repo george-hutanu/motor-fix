@@ -90,6 +90,10 @@
       "one": "{count} review",
       "other": "{count} reviews"
     },
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareCopyBelow": "Copy the link below",
+    "shareName": "Share {name}",
     "status": {
       "break": "Break until {start}",
       "closedDay": "Closed today · opens {when} at {start}",
@@ -108,8 +112,10 @@
     "works": "Works on {brand}"
   },
   "gone": {
-    "home": "Go to the home page",
-    "title": "This garage is no longer available"
+    "search": "Find a garage",
+    "searchBrand": "Find a garage for {brand}",
+    "similar": "Similar garages nearby",
+    "title": "This garage is no longer available on MotorFix."
   },
   "home": {
     "cards": {

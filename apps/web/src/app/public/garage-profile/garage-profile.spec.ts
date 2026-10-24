@@ -13,7 +13,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
-import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
+import {
+  GaragesService,
+  type PublicGarageDto,
+  SearchService,
+  type SimilarGaragesDto,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
@@ -105,6 +110,38 @@ const api = {
   ),
 };
 
+const BMW = { id: 'b-2', name: 'BMW', slug: 'bmw' };
+const NEARBY: SimilarGaragesDto = {
+  brand: BMW,
+  items: [
+    {
+      brand: BMW,
+      brandNote: null,
+      businessKind: 'company',
+      city: 'București',
+      distanceKm: 1.4,
+      doesNotTake: [],
+      facilities: [],
+      id: 'g-9',
+      labourFromLei: null,
+      name: 'Service Auto Drumul Taberei',
+      rating: null,
+      refusalPhrase: null,
+      reviewCount: 0,
+      slug: 'service-auto-drumul-taberei',
+      stance: 'works_on',
+      worksOn: [BMW],
+    },
+  ],
+};
+let similarAnswer: () => Promise<SimilarGaragesDto>;
+const search = {
+  similarGaragesControllerForGarage: jest.fn(
+    (_query: { slug: string; brand?: string }, _context?: HttpContext) =>
+      similarAnswer(),
+  ),
+};
+
 const prefetch = {
   take: jest.fn(
     (_slug: string, _brand: string | undefined): PublicGarageDto | undefined =>
@@ -134,6 +171,8 @@ async function settle() {
 
 beforeEach(async () => {
   reads = [];
+  similarAnswer = () => Promise.resolve(NEARBY);
+  search.similarGaragesControllerForGarage.mockClear();
   response = { headers: new Headers({ 'Content-Type': RENDERED }) };
   api.publicGaragesControllerBySlug.mockClear();
   api.profileViewsControllerRecord.mockClear();
@@ -148,6 +187,7 @@ beforeEach(async () => {
         { children: [], path: ':lang/garages' },
       ]),
       { provide: GaragesService, useValue: api },
+      { provide: SearchService, useValue: search },
       { provide: PublicLive, useValue: live },
       { provide: Consent, useValue: consent },
       { provide: ProfilePrefetch, useValue: prefetch },
@@ -816,6 +856,7 @@ describe('the answer the server render drew', () => {
           { component: GarageProfile, path: ':lang/garages/:garage' },
         ]),
         { provide: GaragesService, useValue: api },
+        { provide: SearchService, useValue: search },
         { provide: PublicLive, useValue: live },
         { provide: Consent, useValue: consent },
         { provide: ProfilePrefetch, useValue: prefetch },
@@ -1395,6 +1436,7 @@ describe('the profile view', () => {
           { component: GarageProfile, path: ':lang/garages/:garage' },
         ]),
         { provide: GaragesService, useValue: api },
+        { provide: SearchService, useValue: search },
         { provide: PublicLive, useValue: live },
         { provide: Consent, useValue: consent },
         { provide: Consent, useValue: consent },
@@ -1734,5 +1776,128 @@ describe('the profile in two columns', () => {
     expect(sheet).toContain(
       '.side:not(:has(section:not(:empty))) {\n  display: none;',
     );
+  });
+});
+
+// @traces 385-FR-001
+describe('the share button on the garage profile', () => {
+  it('sits beside the name of a listed garage, with the brand in context', async () => {
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    await reads[0]?.answer(FIXED);
+
+    const button = page().querySelector('mf-share-button');
+    expect(button).not.toBeNull();
+    expect(button?.parentElement).toBe(
+      page().querySelector('h1')?.parentElement,
+    );
+    expect(button?.querySelector('button')?.getAttribute('aria-label')).toBe(
+      'Distribuie Service Auto Militari',
+    );
+  });
+
+  it.each([404, 410])('is never shown on a %d', async (status) => {
+    await open('/ro/garages/service-titan');
+    await reads[0]?.fail(status);
+    await settle();
+
+    expect(page().querySelector('mf-share-button')).toBeNull();
+  });
+});
+
+// @traces 385-FR-007 385-FR-008 385-FR-009 385-FR-010
+describe('the similar garages of a garage no longer listed', () => {
+  const SIMILAR = makeStateKey<SimilarGaragesDto | null>(
+    'similar:["service-titan","bmw"]',
+  );
+
+  it("reads the similar garages for the link's brand as a public read and lists them", async () => {
+    await open('/ro/garages/service-titan?brand=bmw');
+    await reads[0]?.fail(410);
+    await settle();
+
+    expect(search.similarGaragesControllerForGarage).toHaveBeenCalledTimes(1);
+    const [query, context] =
+      search.similarGaragesControllerForGarage.mock.calls[0];
+    expect(query).toEqual({ brand: 'bmw', slug: 'service-titan' });
+    expect(context?.get(PUBLIC_READ)).toBe(true);
+    expect(text()).toContain(
+      'Acest service nu mai este disponibil pe MotorFix.',
+    );
+    expect(text()).toContain('Service Auto Drumul Taberei');
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(1);
+    expect(response.status).toBe(410);
+  });
+
+  it('reads with no brand when the link has none', async () => {
+    await open('/ro/garages/service-titan');
+    await reads[0]?.fail(410);
+    await settle();
+
+    expect(search.similarGaragesControllerForGarage.mock.calls[0][0]).toEqual({
+      slug: 'service-titan',
+    });
+  });
+
+  it('never reads them for a garage nobody can see', async () => {
+    await open('/ro/garages/atelier-dinamo?brand=bmw');
+    await reads[0]?.fail(404);
+    await settle();
+
+    expect(search.similarGaragesControllerForGarage).not.toHaveBeenCalled();
+    expect(page().querySelector('mf-result-card')).toBeNull();
+    expect(response.status).toBe(404);
+  });
+
+  it('leads home to search, with no error, when the read fails', async () => {
+    similarAnswer = () =>
+      Promise.reject(new HttpErrorResponse({ status: 503 }));
+    await open('/ro/garages/service-titan?brand=bmw');
+    await reads[0]?.fail(410);
+    await settle();
+
+    expect(link(/^\s*Caută un service\s*$/)?.getAttribute('href')).toBe('/ro');
+    expect(page().querySelector('[role="alert"]')).toBeNull();
+    expect(response.status).toBe(410);
+  });
+
+  it('takes the similar garages the server render drew, with no read of its own', async () => {
+    const state = TestBed.inject(TransferState);
+    state.set(SIMILAR, NEARBY);
+
+    await open('/ro/garages/service-titan?brand=bmw');
+    await reads[0]?.fail(410);
+    await settle();
+
+    expect(search.similarGaragesControllerForGarage).not.toHaveBeenCalled();
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(1);
+  });
+
+  it('reads them in the server render and hands them over', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { component: GarageProfile, path: ':lang/garages/:garage' },
+        ]),
+        { provide: GaragesService, useValue: api },
+        { provide: SearchService, useValue: search },
+        { provide: PublicLive, useValue: live },
+        { provide: Consent, useValue: consent },
+        { provide: ProfilePrefetch, useValue: prefetch },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: RESPONSE_INIT, useValue: response },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    harness = await RouterTestingHarness.create();
+
+    await open('/ro/garages/service-titan?brand=bmw');
+    await reads[0]?.fail(410);
+    await settle();
+
+    expect(search.similarGaragesControllerForGarage).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(TransferState).get(SIMILAR, null)).toEqual(NEARBY);
+    expect(page().querySelectorAll('mf-result-card')).toHaveLength(1);
+    expect(response.status).toBe(410);
   });
 });

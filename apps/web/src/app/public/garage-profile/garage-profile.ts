@@ -11,6 +11,7 @@ import {
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
+  type StateKey,
   signal,
   TransferState,
   untracked,
@@ -20,7 +21,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS } from '@motor-fix/contracts/events';
 import { openStatus } from '@motor-fix/contracts/open-status';
 import { nearOf } from '@motor-fix/contracts/search-place';
-import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
+import {
+  GaragesService,
+  type PublicGarageDto,
+  SearchService,
+  type SimilarGaragesDto,
+} from '@motor-fix/data-access';
 import {
   DayPipe,
   formatDistance,
@@ -42,6 +48,7 @@ import { PriceSelection } from './price-selection/price-selection';
 import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
+import { ShareButton } from './share-button/share-button';
 import { sourceOf } from './view-source';
 import { WhereSection } from './where-section/where-section';
 import { Consent } from '../../consent/consent';
@@ -74,6 +81,12 @@ const served = (slug: string, brand: string | undefined) =>
     `profile:${JSON.stringify([slug, brand ?? ''])}`,
   );
 
+// The similar garages the server render drew for a garage no longer listed.
+const drawnSimilar = (slug: string, brand: string | undefined) =>
+  makeStateKey<SimilarGaragesDto | null>(
+    `similar:${JSON.stringify([slug, brand ?? ''])}`,
+  );
+
 // The analytics name of where a profile was opened from; a direct open has none.
 const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
   home: 'home',
@@ -99,6 +112,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     RequestQuoteButton,
     SaveGarageButton,
     RouterLink,
+    ShareButton,
     TranslatePipe,
     WhereSection,
   ],
@@ -112,6 +126,7 @@ export class GarageProfile {
   private readonly router = inject(Router);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly garages = inject(GaragesService);
+  private readonly search = inject(SearchService);
   private readonly consent = inject(Consent);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
@@ -134,6 +149,12 @@ export class GarageProfile {
   // The gone status last read, so a gone view knows 404 from 410; any other
   // failure leaves it as it was.
   private readonly status = signal<number | undefined>(undefined);
+  // The listed garages like one no longer listed: undefined while read, null
+  // when the read failed.
+  protected readonly similar = signal<SimilarGaragesDto | null | undefined>(
+    undefined,
+  );
+  private similarFor: string | undefined;
   // A pre-fetched answer stands in for the first read; the stream's messages
   // read again as on any other open.
   private prefetched: PublicGarageDto | undefined;
@@ -330,6 +351,46 @@ export class GarageProfile {
     this.consent.track('garage_opened', opened ? { source: opened } : {});
   }
 
+  // Read once per garage gone, never an error of its own: a failed read
+  // leaves the way back to search.
+  private async loadSimilar(
+    slug: string,
+    brand: string | undefined,
+  ): Promise<void> {
+    const key = drawnSimilar(slug, brand);
+    // A re-read of the same gone garage keeps the cards it has.
+    if (key === this.similarFor && this.similar() !== undefined) return;
+    this.similarFor = key;
+    this.similar.set(undefined);
+    const similar =
+      this.browser && this.state.hasKey(key)
+        ? this.takeSimilar(key)
+        : await this.readSimilar(slug, brand, key);
+    if (slug === untracked(this.slug) && brand === untracked(this.brand))
+      this.similar.set(similar);
+  }
+
+  private takeSimilar(key: StateKey<SimilarGaragesDto | null>) {
+    const similar = this.state.get(key, null);
+    this.state.remove(key);
+    return similar;
+  }
+
+  private async readSimilar(
+    slug: string,
+    brand: string | undefined,
+    key: StateKey<SimilarGaragesDto | null>,
+  ): Promise<SimilarGaragesDto | null> {
+    const similar = await this.search
+      .similarGaragesControllerForGarage(
+        { slug, ...(brand ? { brand } : {}) },
+        publicRead(),
+      )
+      .catch(() => null);
+    if (!this.browser) this.state.set(key, similar);
+    return similar;
+  }
+
   // The server render waits for the first answer, so its status and its
   // content are the garage's.
   // A read the address moved away from while it ran is read again for the
@@ -362,6 +423,10 @@ export class GarageProfile {
             GONE.includes(failure.status)
           )
             this.status.set(failure.status);
+          // The server render waits for the cards; the browser shows the
+          // view at once and the cards as they come.
+          if (this.status() === 410)
+            void this.loadSimilar(slug, brand).finally(this.pending.add());
           throw failure;
         },
       )
