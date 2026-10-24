@@ -4957,6 +4957,57 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/profile": {
+      "get": {
+        "operationId": "GarageProfileController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The garage id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage without the profile"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "410": {
+            "description": "The garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's public profile as drivers see it, with its stored phone",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{id}/reports": {
       "post": {
         "operationId": "GarageReportsController_report",
@@ -15034,6 +15085,443 @@
           "emailSent"
         ]
       },
+      "PublicBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "fuels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "petrol",
+                "diesel",
+                "hybrid",
+                "electric"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "fuels"
+        ]
+      },
+      "ResponseRateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "new: under 10 requests ever; none: no request counted in 30 days",
+            "enum": [
+              "new",
+              "rate",
+              "none"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "description": "Percent answered within a day; only in the rate state",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "PublicGarageBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "stance": {
+            "type": "string",
+            "description": "does_not_take also when the garage never named the brand",
+            "enum": [
+              "works_on",
+              "does_not_take"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance"
+        ]
+      },
+      "PaymentMethodsDto": {
+        "type": "object",
+        "properties": {
+          "cash": {
+            "type": "boolean"
+          },
+          "card": {
+            "type": "boolean"
+          },
+          "transfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cash",
+          "card",
+          "transfer"
+        ]
+      },
+      "CourtesyCarDto": {
+        "type": "object",
+        "properties": {
+          "paid": {
+            "type": "boolean"
+          },
+          "pricePerDayBani": {
+            "type": "integer",
+            "description": "Per day, in bani: whole lei; only when paid",
+            "maximum": 200000,
+            "minimum": 100,
+            "multipleOf": 100
+          }
+        },
+        "required": [
+          "paid"
+        ]
+      },
+      "PublicJobTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "PublicLabourDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "PublicPriceRowDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fromBani": {
+            "type": "integer",
+            "description": "The brand's range when the garage set one for the brand in context, else the default"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "PublicGaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy (400 px), signed for an hour",
+            "format": "uri"
+          },
+          "displayUrl": {
+            "type": "string",
+            "description": "The display copy (1,600 px), signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "imageBase": {
+            "type": "string",
+            "description": "Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed"
+          },
+          "thumbhash": {
+            "type": "string",
+            "description": "A ThumbHash of the photo, base64, shown while it loads",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "displayUrl"
+        ]
+      },
+      "GarageProfileDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicBrandDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "description": "A workshop only.",
+            "maxLength": 200
+          },
+          "latitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "description": "A mobile mechanic only: how far from its base it travels.",
+            "maximum": 100,
+            "minimum": 1
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "The line the garage wrote about itself, as written",
+            "maxLength": 160
+          },
+          "verifiedAt": {
+            "type": "string",
+            "description": "The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviews exist",
+            "format": "double",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "responseRate": {
+            "$ref": "#/components/schemas/ResponseRateDto"
+          },
+          "brand": {
+            "description": "Only when the read named a catalogue brand",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGarageBrandDto"
+              }
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal. Only with near, and never for a mobile mechanic",
+            "format": "double",
+            "minimum": 0
+          },
+          "paymentMethods": {
+            "$ref": "#/components/schemas/PaymentMethodsDto"
+          },
+          "courtesyCar": {
+            "description": "Absent when the garage does not list one; a price only when paid",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "facilitiesNote": {
+            "type": "string",
+            "description": "What the garage wrote about its facilities; absent when none",
+            "maxLength": 200
+          },
+          "hours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
+          },
+          "jobTypes": {
+            "description": "The public jobs of the price list, in its order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicJobTypeDto"
+            }
+          },
+          "labour": {
+            "description": "Absent when either end of the labour range is unset",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicLabourDto"
+              }
+            ]
+          },
+          "prices": {
+            "description": "The public jobs with the range for the brand in context, in the list order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicPriceRowDto"
+            }
+          },
+          "photos": {
+            "description": "In the owner's order; empty when no photo is ready to be seen",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
+          },
+          "phone": {
+            "type": "string",
+            "description": "The garage's stored phone as saved; never public",
+            "nullable": true
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "id",
+          "name",
+          "slug",
+          "verifiedAt",
+          "rating",
+          "reviewCount",
+          "responseRate",
+          "paymentMethods",
+          "facilities",
+          "hours",
+          "jobTypes",
+          "prices",
+          "photos",
+          "phone"
+        ]
+      },
       "CreateGarageReportDto": {
         "type": "object",
         "properties": {
@@ -15112,43 +15600,6 @@
         },
         "required": [
           "features"
-        ]
-      },
-      "PaymentMethodsDto": {
-        "type": "object",
-        "properties": {
-          "cash": {
-            "type": "boolean"
-          },
-          "card": {
-            "type": "boolean"
-          },
-          "transfer": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "cash",
-          "card",
-          "transfer"
-        ]
-      },
-      "CourtesyCarDto": {
-        "type": "object",
-        "properties": {
-          "paid": {
-            "type": "boolean"
-          },
-          "pricePerDayBani": {
-            "type": "integer",
-            "description": "Per day, in bani: whole lei; only when paid",
-            "maximum": 200000,
-            "minimum": 100,
-            "multipleOf": 100
-          }
-        },
-        "required": [
-          "paid"
         ]
       },
       "UpdateGarageDto": {
@@ -15771,21 +16222,6 @@
           "brandRanges"
         ]
       },
-      "PublicLabourDto": {
-        "type": "object",
-        "properties": {
-          "fromBani": {
-            "type": "integer"
-          },
-          "toBani": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "fromBani",
-          "toBani"
-        ]
-      },
       "PriceListDto": {
         "type": "object",
         "properties": {
@@ -15946,191 +16382,6 @@
           "fromBani",
           "toBani",
           "warnings"
-        ]
-      },
-      "PublicBrandDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          },
-          "fuels": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "petrol",
-                "diesel",
-                "hybrid",
-                "electric"
-              ]
-            }
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "fuels"
-        ]
-      },
-      "ResponseRateDto": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "description": "new: under 10 requests ever; none: no request counted in 30 days",
-            "enum": [
-              "new",
-              "rate",
-              "none"
-            ]
-          },
-          "rate": {
-            "type": "number",
-            "description": "Percent answered within a day; only in the rate state",
-            "maximum": 100,
-            "minimum": 0
-          }
-        },
-        "required": [
-          "state"
-        ]
-      },
-      "PublicGarageBrandDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          },
-          "stance": {
-            "type": "string",
-            "description": "does_not_take also when the garage never named the brand",
-            "enum": [
-              "works_on",
-              "does_not_take"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "stance"
-        ]
-      },
-      "PublicJobTypeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "nameRo",
-          "nameEn"
-        ]
-      },
-      "PublicPriceRowDto": {
-        "type": "object",
-        "properties": {
-          "jobTypeId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          },
-          "durationMinutes": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "fromBani": {
-            "type": "integer",
-            "description": "The brand's range when the garage set one for the brand in context, else the default"
-          },
-          "toBani": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "jobTypeId",
-          "nameRo",
-          "nameEn",
-          "fromBani",
-          "toBani"
-        ]
-      },
-      "PublicGaragePhotoDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "thumbnailUrl": {
-            "type": "string",
-            "description": "The thumbnail copy (400 px), signed for an hour",
-            "format": "uri"
-          },
-          "displayUrl": {
-            "type": "string",
-            "description": "The display copy (1,600 px), signed for an hour",
-            "format": "uri"
-          },
-          "width": {
-            "type": "number",
-            "description": "Upright, when known",
-            "minimum": 1
-          },
-          "height": {
-            "type": "number",
-            "description": "Upright, when known",
-            "minimum": 1
-          },
-          "imageBase": {
-            "type": "string",
-            "description": "Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed"
-          },
-          "thumbhash": {
-            "type": "string",
-            "description": "A ThumbHash of the photo, base64, shown while it loads",
-            "maxLength": 64
-          }
-        },
-        "required": [
-          "id",
-          "thumbnailUrl",
-          "displayUrl"
         ]
       },
       "PublicGarageDto": {
