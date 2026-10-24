@@ -146,11 +146,15 @@ test('scanner helper flags a gauge whose accessible name is removed', async ({
   page,
 }) => {
   await open(page, 'dark', 1280);
+  // A copy Angular does not manage: the gauge itself can be drawn again,
+  // with its label, between the removal and the scan.
   const stripped = await page
     .locator('mf-cockpit-gauges-sample [role="img"][aria-label]')
     .first()
     .evaluate((el) => {
-      el.removeAttribute('aria-label');
+      const copy = el.cloneNode(true) as Element;
+      copy.removeAttribute('aria-label');
+      el.after(copy);
       return true;
     });
   expect(stripped).toBe(true);

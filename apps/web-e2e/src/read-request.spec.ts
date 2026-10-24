@@ -41,10 +41,14 @@ const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
 const DAY = 24 * 60 * 60 * 1000;
 const day = (at: Date) =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(at);
-const tomorrow = () =>
-  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
-  );
+// The next calendar day after today's in Bucharest: 24 hours on from just
+// after midnight on the day the clocks go back is still the same day.
+const tomorrow = () => {
+  const today = new Intl.DateTimeFormat('en-CA', BUCHAREST).format(new Date());
+  const next = new Date(`${today}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+};
 
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);

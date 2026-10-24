@@ -4,6 +4,9 @@ import { Client } from 'pg';
 
 import { PASSWORD } from './accounts.js';
 
+// PostgreSQL's SQLSTATE for a transaction it ended to break a deadlock.
+const DEADLOCK = '40P01';
+
 // A driver of the caller's own with a 2018 Dacia Logan on petrol, signed up
 // with the seeded password: the seeded driver may send 20 requests a day
 // (libs/domain/src/rate-limit/rate-limit.config.ts), and the specs beside the
@@ -24,14 +27,29 @@ export async function ownDriver(
   const db = new Client({ connectionString: process.env['DATABASE_URL'] });
   await db.connect();
 
-  // Always closes the connection, even when a DELETE fails.
-  const remove = async () => {
+  // One transaction, tried again when PostgreSQL picks it as a deadlock's
+  // loser: the API may still be writing the driver's rows as the test ends.
+  const deleteDriver = async (attempt = 1): Promise<void> => {
     try {
+      await db.query('BEGIN');
       await db.query(
         'DELETE FROM quote_request WHERE driver_id IN (SELECT id FROM account WHERE email = $1)',
         [email],
       );
       await db.query('DELETE FROM account WHERE email = $1', [email]);
+      await db.query('COMMIT');
+    } catch (error) {
+      await db.query('ROLLBACK');
+      if ((error as { code?: string }).code !== DEADLOCK || attempt >= 3)
+        throw error;
+      await deleteDriver(attempt + 1);
+    }
+  };
+
+  // Always closes the connection, even when a DELETE fails.
+  const remove = async () => {
+    try {
+      await deleteDriver();
     } finally {
       await db.end();
     }
