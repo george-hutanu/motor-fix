@@ -78,8 +78,11 @@ The tail reads the note and the PR, not the story's transcript,
 and runs lifecycle steps 5–7. It first runs
 `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>`: a note that
 is missing (a cloud session resumed on a fresh VM) is written from the PR's
-newest `<!-- speckit-handoff -->` comment, and one that exists is left as it
-is. With neither, the PR has no recorded QA run (step 3). It reviews a finished QA run, whatever
+newest `<!-- speckit-handoff -->` comment (every page of the PR's comments
+is read), and one that exists is left as it is. Either way it raises run
+state's `repair_iterations` to the note's count (its `Repair iterations:`
+line, or its `QA run:` lap less one), so the cap holds on a fresh VM. With
+neither, the PR has no recorded QA run (step 3). It reviews a finished QA run, whatever
 CI's state, its own background wait having reported it (The wait): a lap
 that needs a new run dispatches it and ends, and a pending check is waited
 for by the tail itself before the merge.

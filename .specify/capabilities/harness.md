@@ -1,11 +1,12 @@
 ---
 capability: harness
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 1359-red-first-harden-precision
   - 1362-lap-verdict-merge
   - 1363-throughput-fixes
   - 482-watch-transcript-holder
+  - 317-handoff-whole
 ---
 
 # Capability: Spec-kit harness
@@ -113,6 +114,30 @@ _From 1363-throughput-fixes._
 ### 482-FR-005 — The `--gate` cases of `.claude/scripts/watch.spec.mjs` MUST judge only the injected `NOW` and modification times the case sets, carry no per-case timeout, and run each state of the gate-versus-full-pass comparison as its own case.
 
 _From 482-watch-transcript-holder._
+
+### 317-FR-001 — The hand-off note carries one `- Repair iterations: <n>` line: `lifecycle.mjs ready` writes it with run state's `repair_iterations`, and `lifecycle.mjs handoff` (posting or not) rewrites it before it posts with the higher of run state's count and the note's own (its count lines and its `QA run:` lap less one), dropping any second count line, so the PR comment carries the current count even when run state was lost.
+
+_From 317-handoff-whole._
+
+### 317-FR-002 — `lifecycle.mjs handoff --restore` sets run state's `repair_iterations` to the highest of its current value, the note's `Repair iterations:` count and the note's `QA run:` lap minus one; it never lowers the count, and it runs whether the note was restored or already present.
+
+_From 317-handoff-whole._
+
+### 317-FR-003 — `handoff --restore` reads every comment of the PR through REST (`lib/gh-rest.mjs`, `gh api … --paginate`), never only the first 100, and takes the newest comment whose first line is `<!-- speckit-handoff -->`.
+
+_From 317-handoff-whole._
+
+### 317-FR-004 — `section()` in `.claude/scripts/tail-handoff-wiring.spec.mjs` ends at the next heading of level 1 or 2.
+
+_From 317-handoff-whole._
+
+### 317-FR-005 — `ci-wait.mjs` ends with exit 2 only after `SPECKIT_CI_GH_TRIES` (default 3) consecutive unreadable gh answers (an error exit or output it cannot parse), polling again after each earlier one; a poll whose every read answered resets the count (counted by poll, so a read that stays broken beside one that answers still ends the wait after N polls), and the overall wait limit still ends a run of unreadable answers. This holds for the mergeable read, the checks read and the QA run read.
+
+_From 317-handoff-whole._
+
+### 317-FR-006 — `tail.md` and `hand-off.md` show the note's `Repair iterations:` line and say the restore puts the count back into run state.
+
+_From 317-handoff-whole._
 
 ## Retired
 
