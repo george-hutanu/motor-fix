@@ -232,6 +232,31 @@ describe('merge gate — the sixth review: argument text, string bounds, eval in
   });
 });
 
+// Seventh review of ST-448: an argv array, gh's flags before pr, a subshell's unset, a sourced file in any place.
+describe('merge gate — the seventh review: argv arrays, sh -c in its subshell, sourced files anywhere', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('refuses a merge another program runs from an argv array or with flags before pr', () => {
+    for (const cmd of [
+      `node -e "require('child_process').execFileSync('gh', ['pr', 'merge', '5'])"`,
+      `python3 -c "import subprocess; subprocess.run(['gh', 'pr', 'merge', '5'])"`,
+      `node -e "require('child_process').execSync('gh -R o/r pr merge 5')"`,
+    ])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot place/, cmd);
+    assert.equal(mergeTarget(`node -e "x('gh', ['pr', 'view', '5', '--json', 'mergeable'])"`), null);
+  });
+
+  it('keeps an export made before a sh -c, whose own unset dies with its subshell', () => {
+    assert.equal(mergeTarget(`export GH_REPO=evil/r; bash -c "unset GH_REPO"; ${cli} 5`)?.repo, 'evil/r');
+  });
+
+  it('refuses a merge after a sourced file wherever the source word stands', () => {
+    for (const cmd of [`builtin source s.sh && ${cli} 5`, `command . s.sh && ${cli} 5`, `if . ./s.sh; then ${cli} 5; fi`, `{ . ./s.sh; ${cli} 5; }`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.deepEqual(mergeTarget(`npx biome check . && ${cli} 5`), { pr: '5' });
+  });
+});
+
 describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
   const cli = ['gh', 'pr', 'merge'].join(' ');
 
