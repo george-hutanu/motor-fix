@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -106,6 +106,7 @@ features:
   - 486-entry-point-symlink
   - 506-railway-deploy-signal-spec
   - 520-brevo-key-check-retry
+  - 988-pr-qa-postgres-wait
 ---
 
 # Capability: Platform
@@ -2018,9 +2019,9 @@ _From 1230-qa-harness-laps._
 
 _From 1230-qa-harness-laps._
 
-### 1230-FR-012 — The PR tester's skill, `AGENTS.md` and the PR tester's agent definition (which states the route grammar today) MUST state, in a few lines, how to write a route (`path[@role][:status]`, a `:lang` segment, a query string, `@role` required under `/app/`) and a flow (the helpers of FR-006, `--check` before dispatch). (Done when, third line.)
+### 988-FR-006 — The PR tester's skill, `AGENTS.md` and the PR tester's agent definition MUST state how to write a route (`path[@role][:status]`, a `:lang` segment, a query string, `@role` required under `/app/`) and a flow (the helpers of 1230-FR-006, `--check` before dispatch, each finding pushed into `findings` as it is found (push or return, never both), waits on a visible element, `waitForText` or the stream's open state, never `networkidle`).
 
-_From 1230-qa-harness-laps._
+_From 988-pr-qa-postgres-wait._
 
 ### 1175-FR-002 — Every health check and every binary the repository runs against the store MUST be Valkey's: the workflows' health command `valkey-cli ping`; the no-Docker path of `.claude/scripts/pr-test/services.mjs` starting `valkey-server` and stopping it with `valkey-cli`, with its pid-file process name updated to match.
 
@@ -2717,6 +2718,38 @@ _From 506-railway-deploy-signal-spec._
 
 _From 520-brevo-key-check-retry._
 
+### 988-FR-001 — The PR QA workflow's database step MUST wait for PostgreSQL by checking readiness over TCP at `127.0.0.1` inside the postgres container (`docker compose exec -T postgres pg_isready -t 1 -h 127.0.0.1`), about once a second, succeeding only after 3 consecutive ready answers (a failure resets the count), and MUST stop at 60 s of wall-clock time read from `date +%s`, not at a count of tries.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-002 — When FR-001's wait times out, the step MUST fail with an error naming the seconds really elapsed and the bound, and MUST save the postgres container's log into the run's report folder as `postgres.log`.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-003 — When the tester run never started (the run step skipped after an earlier step failed), the workflow MUST write `report.json` (PR, sha, lap, verdict `failure`, a summary, one blocker step finding naming the reason, nothing booted, notes) and `report.md` into the report folder (created when missing) before the upload, the reason passed through the environment: the database step's failure names the services and `postgres.log`, any other earlier failure says a step before the run failed and points at the run's log, so the artifact is uploaded and `dispatch.mjs` reads a failure verdict instead of a missing report.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-004 — The run's flows step and `precheck.mjs --check` MUST load the flows file through one shared helper that runs every quoted `networkidle` wait as a wait for `load` and adds one report note per rewritten line naming it; a file with no such literal loads unchanged. The static refusal before dispatch (1171-FR-007) stays: `precheck --check` still lists the static problem and exits 1, and its live run uses the rewritten text.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-005 — The arguments a flows file receives MUST include a `findings` array; findings a flow pushes into it are kept in the report when the flow later throws (together with the "A flow threw" finding) or returns, and a finding both pushed and returned (the same object) is counted once; `precheck --check` behaves the same.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-007 — The PR QA environment MUST set `PLAUSIBLE_DOMAIN` to a stand-in domain that the contracts library's env parser accepts and that no real analytics property counts.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-008 — The browser-cache-hit steps of `ci.yml` and `pr-qa.yml` MUST first check the cached chromium's libraries (the same check as the existing fallback) and, when none is missing, log a notice that `install-deps` is skipped and exit 0 without running it; otherwise the existing bounded three-attempt retry and fallback run unchanged.
+
+_From 988-pr-qa-postgres-wait._
+
+### 988-FR-009 — Each of FR-001 to FR-008 MUST have a harness spec that fails on today's code and passes on the fix, and `npm run test:harness` MUST be green at the end.
+
+_From 988-pr-qa-postgres-wait._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2816,3 +2849,4 @@ _From 520-brevo-key-check-retry._
 - `703-FR-006` — superseded by `482-FR-004` (2026-10-23)
 - `600-FR-002` — superseded by `486-FR-001` (2026-10-23)
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
+- `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
