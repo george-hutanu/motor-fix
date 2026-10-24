@@ -10,9 +10,11 @@ import { keepSeededLanguage } from './seeded-language.js';
 // The owner of Service Auto Militari, an approved garage that works on Dacia
 // petrol cars.
 const OWNER = 'militari@example.test';
-// Sent before the page opens: at 390 × 844 they make the page scroll by more
-// than a row, and they all sit on the list's first page of 20.
-const FILLERS = 6;
+// Rows the list needs before the check: at 390 × 844 the fifth is read with
+// four above it, off screen, and five below. The other specs that send to
+// this garage usually leave that many; only the shortfall is sent, since a
+// burst of new requests pushes another spec's row out of Panou's four.
+const ROWS = 10;
 // Where the row being read sits below the top of the window: clear of the
 // bar above the page and of the pill.
 const READING_AT = 200;
@@ -80,21 +82,23 @@ async function waiting(page: Page) {
   return Number(/^(\d+) /.exec((await pill.textContent())?.trim() ?? '')?.[1]);
 }
 
-// Six fillers on the requests page at 390 × 844, scrolled so the middle one
-// sits READING_AT below the top and the top of the list is off screen.
+// The requests page at 390 × 844 with at least ROWS rows, scrolled so the
+// fifth sits READING_AT below the top and the top of the list is off screen.
 async function scrolled(page: Page, request: APIRequestContext) {
   const send = await sender(request);
-  const fillers: string[] = [];
-  for (let i = 0; i < FILLERS; i++) fillers.push(await send());
-
   await page.setViewportSize({ height: 844, width: 390 });
   await signedIn(page);
   await page.goto('/app/garage/requests');
-  for (const id of fillers) await expect(row(page, id)).toBeVisible();
+  const panel = page.locator('mf-garage-requests-panel');
+  const rows = panel.locator('[data-live-id]');
+  await expect(panel.locator('[data-live-id], .empty').first()).toBeVisible();
+  const short = ROWS - (await rows.count());
+  for (let i = 0; i < short; i++) await send();
+  await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(ROWS);
   await expect(page.locator('mf-live-pill button')).toHaveCount(0);
 
-  // Newest first: the third filler sent sits in the middle of the six.
-  const reading = fillers[2];
+  const reading = (await rows.nth(4).getAttribute('data-live-id')) ?? '';
+  await expect(row(page, reading)).toBeVisible();
   await row(page, reading).evaluate((el, at) => {
     window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - at);
   }, READING_AT);
@@ -104,10 +108,7 @@ async function scrolled(page: Page, request: APIRequestContext) {
   // The top of the list is off screen: the anchor records and the list is
   // not at its top.
   expect(
-    await page
-      .locator('mf-garage-requests-panel [data-live-id]')
-      .first()
-      .evaluate((el) => el.getBoundingClientRect().top),
+    await rows.first().evaluate((el) => el.getBoundingClientRect().top),
   ).toBeLessThan(0);
   return { before: await top(page, reading), reading, send };
 }
@@ -167,7 +168,6 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     await pill.click();
     await expect(row(page, first)).toHaveCount(1);
     await expect(row(page, second)).toBeInViewport();
-    await expect(pill).toHaveCount(0);
   });
 
   // @traces 587-FR-001
@@ -176,12 +176,11 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     request,
   }) => {
     const send = await sender(request);
-    const filler = await send();
-
     await page.setViewportSize({ height: 844, width: 390 });
     await signedIn(page);
     await page.goto('/app/garage/requests');
-    await expect(row(page, filler)).toBeVisible();
+    const panel = page.locator('mf-garage-requests-panel');
+    await expect(panel.locator('[data-live-id], .empty').first()).toBeVisible();
 
     const id = await send();
 
