@@ -189,7 +189,7 @@
     "alwaysSent": "Always sent: booking confirmed, new time proposed by the garage, booking cancelled or lapsed, car ready.",
     "alwaysSentMark": "Always sent",
     "channel": {
-      "email": "Email",
+      "email": "E-mail",
       "push": "Push",
       "sms": "SMS",
       "whatsapp": "WhatsApp"
