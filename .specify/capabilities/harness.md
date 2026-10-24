@@ -7,6 +7,7 @@ features:
   - 1363-throughput-fixes
   - 482-watch-transcript-holder
   - 317-handoff-whole
+  - 961-require-agent-review
   - 448-merge-gate-graphql
 ---
 
@@ -140,6 +141,9 @@ _From 317-handoff-whole._
 
 _From 317-handoff-whole._
 
+### 961-FR-005 — A harness spec MUST pin that `carry.mjs` posts an `agent-review` success on the carried head for a docs-only carry (1362-FR-002, 1362-FR-004), so the carried head satisfies the required check.
+
+_From 961-require-agent-review._
 ### 448-FR-001 — The merge gate (`pre:bash:merge-gate`, `.claude/hooks/merge-gate.mjs`) MUST treat a Bash command that runs `gh api graphql` and whose text, anywhere (a multi-line quoted query included), names the `mergePullRequest` or `enablePullRequestAutoMerge` mutation as a merge, judged by the rule `gh pr merge <n>` is judged by: refused unless the PR's head has an `agent-review` success (or the Dependabot exemption holds) and every check is green. A `gh api graphql` command naming neither mutation is not a merge.
 
 _From 448-merge-gate-graphql._

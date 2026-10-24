@@ -32,7 +32,9 @@
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
 // signature (read off the REST pulls commits list), needs no agent-review
 // status, only the same CI rule below: a failing, pending or missing check
-// still refuses it, and so does an agent review that failed. A failing check
+// still refuses it, and so does an agent review that failed. The success that
+// dependabot-review.yml writes on such a PR (GitHub requires agent-review on
+// main) is not asked for pr-qa provenance: the exemption lets it merge. A failing check
 // on such a PR is sent back through Dependabot, not to the PR tester: a
 // commit of anyone else's would take the exemption away.
 //
@@ -106,7 +108,8 @@ import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { carriedFrom, carryKind, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
 import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
-import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
+import { isDependabot, openedByDependabot } from "../scripts/lib/dependabot.mjs";
+import { committerArgs, hasAgentReview, withCommitters } from "./pr-lifecycle-gate.mjs";
 
 // An orphaned check attempt: an unfinished check run for which another check
 // run of the same name in the same Actions run (the run id in its details URL)
@@ -561,7 +564,7 @@ export function decideMerge(pr, carry, provenance) {
   const checks = pr.statusCheckRollup ?? [];
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
-  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? provenanceRefusal(pr, sha, provenance);
+  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? (isDependabot(pr) ? null : provenanceRefusal(pr, sha, provenance));
   if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha, { dependabot: true });
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;

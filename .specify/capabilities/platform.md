@@ -109,6 +109,7 @@ features:
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
   - 1373-seed-status-identity
+  - 961-require-agent-review
 ---
 
 # Capability: Platform
@@ -743,9 +744,9 @@ _From 610-dependabot-exemption._
 
 _From 610-dependabot-exemption._
 
-### 610-FR-003 — The merge gate MUST give an exempt Dependabot PR with a failing check its own refusal: it names the failing checks, never asks for the PR tester, says a pushed commit takes the exemption away, and points at `@dependabot rebase` / `@dependabot recreate` or closing it for a PR of one's own.
+### 961-FR-004 — `decideMerge` MUST keep the Dependabot exemption for a PR `isDependabot` judges exempt when its `agent-review` is absent or a success: it refuses only on a failing, pending or missing check (610-FR-003's refusal) and does not run the pr-qa provenance check against that success; a Dependabot PR whose `agent-review` is a failure MUST still be refused with the standard refusal. `pr-lifecycle-gate.mjs` keeps its behaviour (it only imports the predicate from `lib/dependabot.mjs`, as `merge-gate.mjs` does). Eval cases in `.claude/evals/cases/merge-gate.json` cover the success, the failure and the no-status Dependabot heads.
 
-_From 610-dependabot-exemption._
+_From 961-require-agent-review._
 
 ### 678-FR-001 — Each session ledger MUST record, for every write, the level of the active feature and the phase from the run state at that moment, and MUST bucket the tokens consumed since the previous write under that (level, phase) pair, so a promotion mid-run splits the run's cost between the two levels, at the granularity of Stop writes (a turn lands whole in the level current at its Stop), rather than rewriting it.
 
@@ -2768,6 +2769,30 @@ _From 1370-release-seed-no-ssh._
 
 _From 1370-release-seed-no-ssh._
 
+### 961-FR-001 — A workflow `.github/workflows/dependabot-review.yml` MUST run on `pull_request_target` (opened, synchronize, reopened) and `workflow_dispatch` with a PR number input, with the job gated on the PR author being `dependabot[bot]`, permissions limited to `statuses: write`, `pull-requests: read`, `contents: read`, and MUST run the base checkout's `.claude/scripts/pr-test/dependabot-review.mjs` without checking out or executing the PR's code.
+
+_From 961-require-agent-review._
+
+### 961-FR-002 — `dependabot-review.mjs <pr>` MUST read the PR and its commits over REST and apply the same rule as `isDependabot` (610-FR-001: every commit authored by Dependabot, committed by `web-flow` or `dependabot[bot]`, signature verified); only then MUST it post an `agent-review` success on the head with a description naming the Dependabot exemption and `target_url` the workflow run; it MUST NOT post when the head already has an `agent-review` status of any state (a tester's verdict stands); otherwise it MUST post nothing, print the reason naming the first failing commit or the author, and exit 0. On `workflow_dispatch` the author check is the script's own, from the PR it reads.
+
+_From 961-require-agent-review._
+
+### 961-FR-003 — The script MUST be dependency-free (Node, `fetch` with `GITHUB_TOKEN`), have a colocated vitest spec covering the exempt PR, a human-commit PR, a non-Dependabot author and a REST failure (no status, exit 1); a spec MUST pin the workflow's event, its author gate and its permissions.
+
+_From 961-require-agent-review._
+
+### 961-FR-006 — `node .claude/scripts/branch-protection.mjs apply` MUST PUT `repos/george-hutanu/motor-fix/branches/main/protection` with required status checks `CI OK` (from GitHub Actions) and `agent-review` (from any source, since `post.mjs` and `carry.mjs` write it with the owner's token) (strict off), `enforce_admins` on, no required pull-request reviews, no push restrictions, force pushes and deletions off, using the george-hutanu token (`GH_TOKEN`, else `gh auth token -u george-hutanu`) and refusing to run without one; `check` MUST exit 0 only when main's protection requires both contexts with `agent-review` not pinned to an app, and names what is missing otherwise. Both read and write over REST through `.claude/scripts/lib/gh-rest.mjs`.
+
+_From 961-require-agent-review._
+
+### 961-FR-007 — The protection MUST be applied to `main` by this task's agent at hand-off, once the review left no CRITICAL/HIGH finding and before the PR is marked ready (so the PR tester can verify it on this PR), and `branch-protection.mjs check` MUST pass afterwards, its output recorded in the PR body and the run log.
+
+_From 961-require-agent-review._
+
+### 961-FR-008 — AGENTS.md step 7 MUST state that `agent-review` and `CI OK` are required status checks on `main`, enforced for administrators, and `.claude/skills/speckit-auto/lifecycle.md`'s Dependabot sentence MUST say the Dependabot review workflow writes the exempt PR's `agent-review` success.
+
+_From 961-require-agent-review._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2870,3 +2895,4 @@ _From 1370-release-seed-no-ssh._
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
 - `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
+- `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
