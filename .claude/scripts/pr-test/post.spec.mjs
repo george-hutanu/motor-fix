@@ -10,6 +10,16 @@ import { missingReport, postVerdict, replaceSection, runUrlFor } from './post.mj
 
 const OWN = 'gh: Unprocessable Entity (HTTP 422)\nCan not request changes on your own pull request';
 
+/**
+ * What `gh api` printed when GitHub refused the tester's APPROVE on PR #553 and
+ * PR #554 (QA runs 40123063512, 40125063826), captured from the same call on
+ * #552: gh writes the JSON body to stdout and only its summary line to stderr.
+ */
+const ghOwnPr422 = (message = 'Review Can not approve your own pull request') => ({
+  stdout: `{"message":"Unprocessable Entity","errors":["${message}"],"documentation_url":"https://docs.github.com/rest/pulls/reviews#create-a-review-for-a-pull-request","status":"422"}`,
+  stderr: 'gh: Unprocessable Entity (HTTP 422)',
+});
+
 /** A fake gh: answers by the first matching rule and records every call. */
 function fakeGh(rules = []) {
   const calls = [];
@@ -50,7 +60,7 @@ describe('posting the review', () => {
     assert.equal(out.review, 'COMMENT');
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-001
   it('falls back for either own-PR refusal GitHub sends, approve or request changes', () => {
     for (const [verdict, message] of [['success', 'Can not approve your own pull request'], ['failure', 'Can not request changes on your own pull request']]) {
       let first = true;
@@ -62,7 +72,7 @@ describe('posting the review', () => {
     }
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-002
   it('reports any other HTTP 422 as a failure and tries no COMMENT review, so the real error is not lost', () => {
     const stderr = 'gh: Validation Failed (HTTP 422)\n{"message":"Validation Failed","errors":["commit_id is not part of the pull request"]}';
     const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
@@ -70,6 +80,43 @@ describe('posting the review', () => {
     assert.deepEqual(events(calls), ['APPROVE']);
     assert.match(out.reviewError, /Validation Failed/);
     assert.match(out.reviewError, /commit_id is not part of the pull request/);
+  });
+
+  // @traces 1377-FR-001
+  it('falls back to a COMMENT review with the same body on the 422 gh gave on #553 and #554: the JSON body on stdout, only the summary on stderr', () => {
+    for (const [verdict, wanted] of [['success', 'APPROVE'], ['failure', 'REQUEST_CHANGES']]) {
+      const message = wanted === 'APPROVE' ? 'Review Can not approve your own pull request' : 'Review Can not request changes on your own pull request';
+      const { calls, gh } = fakeGh([
+        [/\/reviews\b/, (args, opts) => (JSON.parse(opts.input).event === 'COMMENT' ? { code: 0, stdout: '{"id":1}', stderr: '' } : { code: 1, ...ghOwnPr422(message) })],
+      ]);
+      const out = postVerdict({ ...base, verdict, gh });
+      assert.deepEqual(events(calls), [wanted, 'COMMENT']);
+      const [first, second] = reviewCalls(calls).map((c) => JSON.parse(c.input));
+      assert.equal(second.body, first.body);
+      assert.equal(second.commit_id, base.sha);
+      assert.equal(out.review, 'COMMENT');
+      assert.equal(out.reviewError, null);
+    }
+  });
+
+  // @traces 1377-FR-002
+  it('reports a validation 422 in gh\'s real shape with GitHub\'s message, and tries no COMMENT review', () => {
+    const stdout = '{"message":"Validation Failed","errors":["commit_id is not part of the pull request"],"documentation_url":"https://docs.github.com/rest/pulls/reviews#create-a-review-for-a-pull-request","status":"422"}';
+    const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout, stderr: 'gh: Validation Failed (HTTP 422)' }]]);
+    const out = postVerdict({ ...base, verdict: 'success', gh });
+    assert.deepEqual(events(calls), ['APPROVE']);
+    assert.match(out.reviewError, /Validation Failed \(HTTP 422\)/);
+    assert.match(out.reviewError, /commit_id is not part of the pull request/);
+  });
+
+  // @traces 1377-FR-003
+  it('reports the COMMENT fallback\'s own refusal when GitHub refuses that too', () => {
+    const { calls, gh } = fakeGh([
+      [/\/reviews\b/, (args, opts) => (JSON.parse(opts.input).event === 'COMMENT' ? { code: 1, stdout: '{"message":"Validation Failed","errors":["Body is too long (maximum is 65536 characters)"]}', stderr: 'gh: Validation Failed (HTTP 422)' } : { code: 1, ...ghOwnPr422() })],
+    ]);
+    const out = postVerdict({ ...base, verdict: 'success', gh });
+    assert.deepEqual(events(calls), ['APPROVE', 'COMMENT']);
+    assert.match(out.reviewError, /Body is too long/);
   });
 
   // @traces 447-FR-002
@@ -179,7 +226,7 @@ describe('posting from a cloud session, where the workflow owns the status and G
 });
 
 describe('the post command', () => {
-  // @traces 447-FR-001
+  // @traces 1377-FR-002
   it('exits 1 naming the error when GitHub refuses the review for another reason, after the status is set', () => {
     const dir = mkdtempSync(join(tmpdir(), 'post-cli-'));
     const log = join(dir, 'gh.log');
@@ -197,6 +244,29 @@ describe('the post command', () => {
     const calls = readFileSync(log, 'utf8');
     assert.match(calls, /statuses\/a{40}.*state=success/);
     assert.equal(calls.match(/\/reviews/g).length, 1);
+  });
+
+  // @traces 1377-FR-001
+  it('posts the COMMENT review and exits 0 when gh refuses the approval of your own PR the way it did on #553 and #554', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'post-cli-'));
+    const log = join(dir, 'gh.log');
+    const { stdout, stderr } = ghOwnPr422();
+    writeFileSync(join(dir, 'refusal.json'), stdout);
+    // The fake reads the review payload from stdin: APPROVE gets gh's real own-PR 422, COMMENT is posted.
+    writeFileSync(
+      join(dir, 'gh'),
+      `#!/bin/sh\necho "$*" >> "${log}"\ncase "$*" in\n  */reviews*) input=$(cat); echo "$input" >> "${log}"; case "$input" in *'"event":"COMMENT"'*) echo '{"id":1}' ;; *) cat "${join(dir, 'refusal.json')}"; echo '${stderr}' >&2; exit 1 ;; esac ;;\n  "pr view"*) echo '{"body":""}' ;;\n  *) echo '{}' ;;\nesac\n`,
+    );
+    chmodSync(join(dir, 'gh'), 0o755);
+    const report = join(dir, 'report.json');
+    writeFileSync(report, JSON.stringify({ pr: 553, repo: 'george-hutanu/motor-fix', sha: 'c'.repeat(40), verdict: 'success', summary: 'No blocking findings', markdown: 'x', lap: 1 }));
+    const script = join(dirname(fileURLToPath(import.meta.url)), 'post.mjs');
+    const run = spawnSync(process.execPath, [script, '--report', report], { encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, CLAUDE_CODE_REMOTE: '' } });
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(JSON.parse(run.stdout).review, 'COMMENT');
+    const calls = readFileSync(log, 'utf8');
+    assert.equal(calls.match(/pulls\/553\/reviews/g).length, 2);
+    assert.match(calls, /"event":"COMMENT"/);
   });
 });
 

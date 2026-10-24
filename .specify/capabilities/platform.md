@@ -112,6 +112,7 @@ features:
   - 961-require-agent-review
   - 447-own-pr-refusal
   - 1376-pr-test-local-boot
+  - 1377-own-pr-422-fallback
 ---
 
 # Capability: Platform
@@ -2795,9 +2796,9 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
-### 447-FR-001 — `post.mjs` MUST fall back to a COMMENT review only when the review call's error carries GitHub's own-pull-request message (`your own pull request`); any other failure, an `HTTP 422` included, MUST be returned as `reviewError` without a second review call, and the CLI MUST exit 1 naming it once the status and the description are written.
+### 1377-FR-001 — A review refused with HTTP 422 whose body (stdout or stderr) carries GitHub's own-PR refusal ("Can not approve your own pull request", "Can not request changes on your own pull request") is posted again as a COMMENT review with the same body; `reviewError` is null and post.mjs exits 0.
 
-_From 447-own-pr-refusal._
+_From 1377-own-pr-422-fallback._
 
 ### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
 
@@ -2821,6 +2822,14 @@ _From 1376-pr-test-local-boot._
 ### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
 
 _From 1376-pr-test-local-boot._
+
+### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+
+### 1377-FR-003 — When the COMMENT fallback is itself refused, that refusal is the `reviewError` and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
 
 ## Retired
 
@@ -2925,3 +2934,4 @@ _From 1376-pr-test-local-boot._
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
 - `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
+- `447-FR-001` — superseded by `1377-FR-001` (2026-10-24)
