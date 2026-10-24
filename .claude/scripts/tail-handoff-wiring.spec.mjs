@@ -14,12 +14,28 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8');
 const section = (text, heading) => {
   const start = text.indexOf(heading);
   assert.notEqual(start, -1, `no "${heading}" section`);
-  const next = text.indexOf('\n## ', start + heading.length);
-  return text.slice(start, next === -1 ? undefined : next);
+  // hand-off.md and tail.md are read as one text: tail.md's `# ` title ends the hand-off as a `## ` would.
+  const next = text.slice(start + heading.length).search(/\n##? /);
+  return text.slice(start, next === -1 ? undefined : start + heading.length + next);
 };
 
 // speckit-auto keeps the hand-off and the tail beside SKILL.md, read when the run reaches them.
 const auto = ['hand-off.md', 'tail.md'].map((f) => read(`.claude/skills/speckit-auto/${f}`)).join('\n');
+
+// @traces 317-FR-004
+describe('section()', () => {
+  it('ends at the next level-1 heading, so tail.md\'s title and intro never join the hand-off', () => {
+    const joined = ['## Hand-off', 'lifecycle.mjs ready --body-file', '# speckit-auto: the wait and the tail', 'gh pr merge', '## The wait', 'waits'].join('\n');
+    const handoff = section(joined, '## Hand-off');
+    assert.doesNotMatch(handoff, /gh pr merge/);
+    assert.match(handoff, /lifecycle\.mjs ready/);
+  });
+
+  it('still ends at the next level-2 heading and keeps its level-3 ones', () => {
+    const text = ['## The tail', '### What the tail needs', 'repair', '## Next', 'other'].join('\n');
+    assert.equal(section(text, '## The tail'), '## The tail\n### What the tail needs\nrepair');
+  });
+});
 
 describe('the hand-off', () => {
 
