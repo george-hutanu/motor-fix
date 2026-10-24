@@ -111,6 +111,7 @@ features:
   - 1373-seed-status-identity
   - 961-require-agent-review
   - 447-own-pr-refusal
+  - 1376-pr-test-local-boot
 ---
 
 # Capability: Platform
@@ -2805,6 +2806,21 @@ _From 447-own-pr-refusal._
 ### 447-FR-003 — `judgeProvenance` MUST judge a person-written `agent-review` success whose `target_url` names a run by the same run rules as a workflow-written one (PR QA workflow, completed, success, this commit, dispatched on the default branch or a `pull_request` run on a PR that leaves `pr-qa.yml` alone), refusing a `pull_request` run on a PR that changes `pr-qa.yml`; a person-written success that names no run stays accepted. `readProvenance` MUST read the named run for a person's status too, and only a run of this repository (the `target_url`'s owner and name equal to the repository's), so a status naming another repository's run is refused as naming no run.
 
 _From 447-own-pr-refusal._
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
 
 ## Retired
 

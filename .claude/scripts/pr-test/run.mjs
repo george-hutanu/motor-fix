@@ -55,14 +55,15 @@ import {
   HEALTH,
   STORE_INNER_PORTS,
   apiHealth,
-  appEnv,
+  bootEnv,
   cleanStale,
   composePlan,
   externalPlan,
   freePorts,
   localPlan,
   runDirPrefix,
-  waitForHttp,
+  waitForServer,
+  watchExit,
 } from "./services.mjs";
 import { VIEWPORTS, flowSignIn, routeProblem, routerTable, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
@@ -142,6 +143,9 @@ export async function runFlows(run, findings) {
 }
 
 /** The finding for flows that threw; what they pushed before it stays beside it. */
+/** A server that did not come up (FR-003): a blocker carrying the wait's error and the last lines of its log. */
+export const bootFailure = (h, log, what = h.server) => stepFinding(`${what} did not come up`, `${h.error}; last lines of ${log}:\n${h.tail}`);
+
 export const flowThrewFinding = (error) => stepFinding("A flow threw", String(error?.stack ?? error).split("\n").slice(0, 3).join(" / "), "high");
 
 const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high");
@@ -346,7 +350,7 @@ async function main(argv) {
 
     const [pgPort, redisPort, storagePort, apiPort, webPort, workerPort, ...storageInner] = await freePorts(6 + STORE_INNER_PORTS.length);
     const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, storage: storagePort, storageInner };
-    const env = { ...process.env, ...appEnv({ ports }), NX_DAEMON: "false" };
+    const env = bootEnv({ ports });
     const project = `mf-prtest-${opt.pr}-${process.pid}`;
     let plan;
     if (opt.tree) {
@@ -377,6 +381,7 @@ async function main(argv) {
         const [cmd, ...list] = plan.store.cmd;
         const child = spawn(cmd, list, { env: { ...process.env, ...plan.store.env }, stdio: ["ignore", fd, fd], detached: true });
         closeSync(fd);
+        const storeExited = watchExit(child);
         writeFileSync(plan.store.pidFile, String(child.pid));
         teardown.push({
           name: `stop the object store (pid ${child.pid})`,
@@ -386,10 +391,11 @@ async function main(argv) {
             } catch {}
           },
         });
-        const h = await waitForHttp(plan.store.health, { timeoutMs: 30000, intervalMs: 250 });
-        log(`health storage: ${h.ok ? `HTTP ${h.status}` : h.error}`);
+        const storeLog = join(logs, "storage.out.log");
+        const h = await waitForServer(plan.store.health, { name: "storage", exited: storeExited, log: storeLog, timeoutMs: 30000, intervalMs: 250 });
+        log(`health storage: ${h.ok ? `HTTP ${h.status}` : `${h.error}; last lines of ${storeLog}:\n${h.tail}`}`);
         if (!h.ok) {
-          findings.push(stepFinding("The object store did not come up", `${h.error}; see ${join(logs, "storage.out.log")}`));
+          findings.push(bootFailure(h, storeLog, "The object store"));
           return finish();
         }
       }
@@ -413,11 +419,21 @@ async function main(argv) {
 
     const apiURL = `http://127.0.0.1:${apiPort}`;
     const webURL = `http://127.0.0.1:${webPort}`;
+    // Each app's exit: an app that exits before it answers ends every wait at once.
+    // One that answered and then exits is judged by the readiness check, as before.
+    const exits = {};
+    const answered = new Set();
+    const appLog = (name) => join(logs, `${name}.out.log`);
+    const anyExit = () => {
+      for (const [name, exited] of Object.entries(exits)) if (!answered.has(name) && exited()) return { ...exited(), name, log: appLog(name) };
+      return null;
+    };
     const launch = (name, extra) => {
       phase = `start ${name}`;
-      const fd = openSync(join(logs, `${name}.out.log`), "w");
+      const fd = openSync(appLog(name), "w");
       const child = spawn(process.execPath, [APP_SCRIPTS[name]], { cwd: wt.dir, env: { ...env, ...extra }, stdio: ["ignore", fd, fd], detached: true });
       closeSync(fd);
+      exits[name] = watchExit(child);
       // A killed lap cannot tear its apps down; the next lap stops them by this file (cleanStale).
       if (!opt.tree) writeFileSync(join(runDir, `${name}.pid`), String(child.pid));
       teardown.push({
@@ -442,11 +458,17 @@ async function main(argv) {
       ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}${HEALTH.live}`]] : []),
     ];
     for (const [name, url] of live) {
-      const h = await waitForHttp(url, { timeoutMs: 90000 });
-      log(`health ${name}: ${h.ok ? `HTTP ${h.status}` : h.error}`);
-      if (!h.ok) findings.push(stepFinding(`${name} did not come up`, `${h.error}; see ${join(logs, `${name}.out.log`)}`));
+      const h = await waitForServer(url, { name, exited: anyExit, log: appLog(name), timeoutMs: 90000 });
+      if (h.ok) {
+        answered.add(name);
+        log(`health ${name}: HTTP ${h.status}`);
+        continue;
+      }
+      const at = h.server;
+      log(`health ${name}: ${h.error}; last lines of ${appLog(at)}:\n${h.tail}`);
+      findings.push(bootFailure(h, appLog(at)));
+      return finish();
     }
-    if (findings.length) return finish();
 
     phase = "readiness";
     for (const [name, origin] of [["api", apiURL], ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}`]] : [])]) {
