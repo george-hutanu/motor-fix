@@ -494,8 +494,12 @@ export class Frame implements OnInit {
   // Right after this tab's own password change, which keeps its session, the
   // server says whether it still renews instead.
   private async sessionsEnded() {
-    // This tab's own account deletion signs it out once it is answered.
-    if (this.session.deletingAccount()) return;
+    // This tab's own account deletion signs it out once it is answered; the
+    // stream, whose next try could only be refused, stops here.
+    if (this.session.deletingAccount()) {
+      this.live.close();
+      return;
+    }
     if (this.session.keepsThroughRevoke() && (await this.session.renew())) {
       return;
     }

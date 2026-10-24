@@ -284,7 +284,7 @@ describe('a session ended elsewhere', () => {
   });
 
   // @traces 129-FR-008
-  it('leaves the session.revoked its own account deletion sent to the deletion, which signs the tab out itself', async () => {
+  it('stops the live stream on the session.revoked its own account deletion sent, and leaves the sign-out to the deletion', async () => {
     const { live, navigate, session } = await render('driver', '/app/driver');
     session.deletingAccount.mockReturnValue(true);
     navigate.mockClear();
@@ -298,7 +298,7 @@ describe('a session ended elsewhere', () => {
 
     expect(session.revoked).not.toHaveBeenCalled();
     expect(session.renew).not.toHaveBeenCalled();
-    expect(live.close).not.toHaveBeenCalled();
+    expect(live.close).toHaveBeenCalledTimes(1);
     expect(navigate).not.toHaveBeenCalled();
   });
 
