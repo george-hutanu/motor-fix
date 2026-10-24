@@ -46,12 +46,12 @@ const LEGACY = (status) => (Object.hasOwn(RETIRED, status) ? RETIRED[status] : s
 
 const LABEL_STAGE = Object.fromEntries(Object.entries(STAGE).map(([status, label]) => [label, status]));
 
-/** The status a Blocked story with no recorded prior returns to, read from its PR; null with no PR. */
-export function statusFromPr(pr) {
+/** The status a Blocked story with no recorded prior returns to, read from its PR: QA when ready, a draft's stage label otherwise; null when neither tells. */
+function statusFromPr(pr) {
   if (!pr) return null;
   if (!pr.draft) return "QA";
   const status = (pr.labels ?? []).map((label) => LABEL_STAGE[label]).find((s) => s && s !== "QA");
-  return status ?? "Implementing";
+  return status ?? null;
 }
 
 export function decide({ event, current: raw, prior: rawPrior = null, pr = null }) {

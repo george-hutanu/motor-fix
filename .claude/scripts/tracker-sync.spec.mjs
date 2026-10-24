@@ -224,6 +224,18 @@ describe("blocked and unblock", () => {
     assert.equal(draft.itemValues(60).Status, "Planning");
     assert.ok(prEdits(d).some((a) => a.join(" ").includes("--add-label planning --remove-label in development --remove-label QA --remove-label blocked")));
   });
+
+  // @traces 487-FR-004
+  it("unblock with no recorded prior returns to Implementing when the PR read fails or answers nothing", async () => {
+    const failed = world({ story: "Blocked" });
+    const f = await run(["unblock", "--pr", "335"], { gh: failed, ghFails: (a) => a.includes("isDraft,labels") });
+    assert.equal(f.code, 0);
+    assert.equal(failed.itemValues(60).Status, "Implementing");
+
+    const empty = world({ story: "Blocked" });
+    await run(["unblock", "--pr", "335"], { gh: empty, prJson: {} });
+    assert.equal(empty.itemValues(60).Status, "Implementing");
+  });
 });
 
 // @traces 1036-FR-003 1036-FR-011
