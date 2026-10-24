@@ -271,6 +271,23 @@
     },
     "title": "Price list"
   },
+  "profile": {
+    "address": "Address",
+    "area": "Service area: {km}",
+    "error": "We could not load the profile.",
+    "hours": "Hours",
+    "name": "Name",
+    "newTab": "opens in a new tab",
+    "none": "nothing chosen yet",
+    "notOffered": "{label}: no",
+    "panel": "Public profile",
+    "phone": "Phone",
+    "phonePrivate": "not shown publicly",
+    "publicLink": "View public profile",
+    "retry": "Retry",
+    "suspended": "Your profile is not on the map while the garage is suspended.",
+    "unmarked": "Unmarked brands count as a refusal: you show last for them and get no requests."
+  },
   "quotes": {
     "confirm": {
       "cancel": "Cancel",
