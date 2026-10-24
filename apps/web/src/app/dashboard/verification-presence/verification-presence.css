@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+[role="status"] {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0 0 var(--mf-space-3);
+  padding: var(--mf-space-2) var(--mf-space-3);
+  border: 1px solid var(--mf-amber-ink);
+  border-radius: var(--mf-radius-control);
+}
+mf-lamp {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

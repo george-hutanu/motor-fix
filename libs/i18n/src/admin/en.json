@@ -289,6 +289,12 @@
     },
     "noReason": "no reason",
     "photo": "Photo {n}, opened full size",
+    "presence": {
+      "and": "and",
+      "item": "{name} (since {time})",
+      "many": "{list} have the file open",
+      "one": "{name} has had the file open since {time}"
+    },
     "problem": {
       "cancel": "Cancel",
       "choice": "How serious it is",
