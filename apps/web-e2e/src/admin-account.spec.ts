@@ -114,6 +114,33 @@ test.describe('the account drawer @seeded', () => {
     });
   }
 
+  test('moves focus into the drawer and back to its row on close', async ({
+    page,
+    request,
+  }) => {
+    const driver = await freshDriver(request);
+    await signInAsAdmin(page);
+    await page.goto('/app/admin/users');
+
+    const row = page.getByRole('button', {
+      name: `Deschide contul ${driver.name}`,
+    });
+    await row.click();
+    await expect(drawer(page).getByText(driver.email)).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(document.activeElement?.closest('[role="dialog"]')),
+        ),
+      )
+      .toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(drawer(page)).toBeHidden();
+    await expect(page).toHaveURL(/\/app\/admin\/users$/);
+    await expect(row).toBeFocused();
+  });
+
   // The person's side in English; the admin's screens in English are the
   // drawer's and the dialogs' own specs.
   test('tells a suspended driver in English, then lets them back in', async ({
