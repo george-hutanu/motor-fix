@@ -13,6 +13,7 @@ import { sendMeasurementsTo } from '../../telemetry/browser/measure/measure';
 
 const garageOf = (slug: string): PublicGarageDto => ({
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

@@ -28,6 +28,7 @@ const row = (jobTypeId: string, nameRo: string, from: number, to: number) => ({
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

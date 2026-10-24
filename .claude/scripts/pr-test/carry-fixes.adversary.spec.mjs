@@ -32,25 +32,25 @@ function fakeGh(rules) {
 
 describe('the QA fixes carry under hostile commits', () => {
   // @traces 1362-FR-003
-  it('refuses a feat or merge commit in the middle of the range, not only at head', () => {
+  it('refuses a feat or merge commit in the middle of the range, not only at head', async () => {
     assert.match(judge([fix(MID, 'feat(api)!: new route'), fix(HEAD, 'fix: a')]), /bbbbbbb is not a lap fix/);
     assert.match(judge([fix(MID, 'fix: a', 2), fix(HEAD, 'fix: b')]), /bbbbbbb is a merge commit/);
   });
 
   // @traces 1362-FR-003
-  it('refuses subjects that only look like a lap fix', () => {
+  it('refuses subjects that only look like a lap fix', async () => {
     for (const message of ['Revert "fix: a"', 'fixup! fix: a', 'squash! test: a', 'feat!: drop the field', ' fix: leading space']) {
       assert.match(judge([fix(HEAD, message)]), /ccccccc is not a lap fix/, message);
     }
   });
 
   // @traces 1362-FR-003
-  it('reads the type from the subject line only, so a feat in the body does not refuse a fix', () => {
+  it('reads the type from the subject line only, so a feat in the body does not refuse a fix', async () => {
     assert.equal(judge([fix(HEAD, 'fix!: rename the field\n\nfeat: not a subject')]), null);
   });
 
   // @traces 1362-FR-003
-  it('accepts exactly MAX_COMMITS commits and 299 files, and refuses one more of either', () => {
+  it('accepts exactly MAX_COMMITS commits and 299 files, and refuses one more of either', async () => {
     const many = (n) => Array.from({ length: n }, (_, i) => fix(`${i}`.padStart(40, 'd'), 'test: a'));
     const files = (n) => Array.from({ length: n }, (_, i) => ({ filename: `apps/api/src/f${i}.ts` }));
     assert.equal(judge(many(MAX_COMMITS), {}, { files: files(299) }), null);
@@ -59,18 +59,18 @@ describe('the QA fixes carry under hostile commits', () => {
   });
 
   // @traces 1362-FR-003
-  it('refuses a compare that lists fewer commits than it counts, since the rest cannot be verified', () => {
+  it('refuses a compare that lists fewer commits than it counts, since the rest cannot be verified', async () => {
     const compare = compareOf([fix(HEAD, 'fix: a')], { total_commits: 3 });
     assert.notEqual(judgeCarry({ from: FROM, head: HEAD, kind: 'fixes', fromReview: { state: 'success', description: FINDINGS }, compare, between: [], headReviews: [] }), null);
   });
 
   // @traces 1362-FR-003 1362-FR-004
-  it('refuses an unknown carry kind rather than treating it as verified', () => {
+  it('refuses an unknown carry kind rather than treating it as verified', async () => {
     assert.notEqual(judge([fix(HEAD, 'fix: a')], { kind: 'bogus' }), null);
   });
 
   // @traces 1362-FR-002
-  it('never writes the word undefined into a carry description for an unknown kind', () => {
+  it('never writes the word undefined into a carry description for an unknown kind', async () => {
     let text;
     try {
       text = carryDescription(FROM, 'bogus');
@@ -83,19 +83,19 @@ describe('the QA fixes carry under hostile commits', () => {
 
 describe('the finding count', () => {
   // @traces 1362-FR-003
-  it('reads a zero with leading zeros as no findings and refuses a negative or fractional count', () => {
+  it('reads a zero with leading zeros as no findings and refuses a negative or fractional count', async () => {
     assert.equal(findingCount('No blocking findings; 00 in all'), 0);
     assert.equal(findingCount('No blocking findings; -1 in all'), null);
     assert.equal(findingCount('No blocking findings; 1.5 in all'), null);
   });
 
   // @traces 1362-FR-003
-  it('refuses N=0 for the fixes kind even when the count is spelled with leading zeros', () => {
+  it('refuses N=0 for the fixes kind even when the count is spelled with leading zeros', async () => {
     assert.match(judge([fix(HEAD, 'fix: a')], { fromReview: { state: 'success', description: 'No blocking findings; 00 in all' } }), /no medium or low finding/);
   });
 
   // @traces 1362-FR-003 1362-FR-004
-  it('refuses a cloud lap with no count for either carry kind that would let its findings through', () => {
+  it('refuses a cloud lap with no count for either carry kind that would let its findings through', async () => {
     const cloud = { state: 'success', description: 'PR QA lap 3 passed' };
     assert.match(judge([fix(HEAD, 'fix: a')], { fromReview: cloud }), /no medium or low finding/);
   });
@@ -106,25 +106,25 @@ describe('finding a carry among several laps', () => {
   const view = (shas) => ok({ number: 21, headRefOid: shas.at(-1), commits: shas.map((oid) => ({ oid })) });
 
   // @traces 1362-FR-004
-  it('carries from the newest lap that reported findings, not an older clean one', () => {
+  it('carries from the newest lap that reported findings, not an older clean one', async () => {
     const gh = fakeGh([
       [/pr view/, view([FROM, MID, HEAD])],
       [/compare\//, ok(compareOf([fix(HEAD, 'fix: a')], { base_commit: { sha: MID } }))],
       statuses({ [FROM]: [status('success', 'No blocking findings; 0 in all.')], [MID]: [status('success', FINDINGS)] }),
     ]);
-    const out = findCarry({ pr: 21, gh });
+    const out = await findCarry({ pr: 21, gh });
     assert.equal(out.from, MID);
     assert.equal(out.kind, 'fixes');
   });
 
   // @traces 1362-FR-006
-  it('never carries from a lap that failed with findings, even when an older lap passed', () => {
+  it('never carries from a lap that failed with findings, even when an older lap passed', async () => {
     const gh = fakeGh([
       [/pr view/, view([FROM, MID, HEAD])],
       [/compare\//, ok(compareOf([fix(MID, 'fix: a'), fix(HEAD, 'fix: b')]))],
       statuses({ [FROM]: [status('success', FINDINGS)], [MID]: [status('failure', '1 blocking finding; 4 in all')] }),
     ]);
-    const out = findCarry({ pr: 21, gh });
+    const out = await findCarry({ pr: 21, gh });
     assert.equal(out.from, undefined);
     assert.match(out.reason, /failure/);
   });

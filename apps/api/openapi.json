@@ -15851,6 +15851,28 @@
           "paid"
         ]
       },
+      "ClosedDayAheadDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "A Bucharest calendar day, \"YYYY-MM-DD\"",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "description": "holiday: a legal holiday, which wins when the garage also closed the day; closed: a day the garage closed",
+            "enum": [
+              "holiday",
+              "closed"
+            ]
+          }
+        },
+        "required": [
+          "day",
+          "reason"
+        ]
+      },
       "PublicJobTypeDto": {
         "type": "object",
         "properties": {
@@ -16106,6 +16128,13 @@
             },
             "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
           },
+          "closedDays": {
+            "description": "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedDayAheadDto"
+            }
+          },
           "jobTypes": {
             "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
@@ -16156,6 +16185,7 @@
           "paymentMethods",
           "facilities",
           "hours",
+          "closedDays",
           "jobTypes",
           "prices",
           "photos",
@@ -17221,6 +17251,13 @@
             },
             "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
           },
+          "closedDays": {
+            "description": "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedDayAheadDto"
+            }
+          },
           "jobTypes": {
             "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
@@ -17266,6 +17303,7 @@
           "paymentMethods",
           "facilities",
           "hours",
+          "closedDays",
           "jobTypes",
           "prices",
           "photos"
