@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 177,
+    "count": 182,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -21,7 +21,8 @@
         "api-profile-latency",
         "api-memory",
         "api-rate-limit-surge",
-        "api-account-deletion-failed"
+        "api-account-deletion-failed",
+        "api-admin-account-action-failed"
       ],
       "story": "ST-881"
     },
@@ -94,7 +95,8 @@
         "api-profile-latency",
         "api-memory",
         "api-rate-limit-surge",
-        "api-account-deletion-failed"
+        "api-account-deletion-failed",
+        "api-admin-account-action-failed"
       ],
       "story": "ST-881"
     },
@@ -1189,6 +1191,20 @@
     },
     {
       "kind": "endpoint",
+      "name": "admin-account",
+      "source": "libs/domain/src/admin/admin-accounts/account/account.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/admin/accounts/:id and POST /api/v1/admin/accounts/:id/reset-access, /suspend, /restore and /delete-on-request",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency",
+        "api-admin-account-action-failed"
+      ],
+      "reason": "each action logs one 'admin account action' line with the account, the admin, the action and its outcome (never a name, e-mail or reason), each refusal one 'admin accounts request failed' line with the :id route; outcomes count on motorfix_admin_account_actions_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-3"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-job-steps",
       "source": "libs/domain/src/workshop/job-steps/job-steps.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/steps, /order, /:stepId and /:stepId/done",
@@ -1254,6 +1270,17 @@
       ],
       "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
       "story": "ST-129"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_admin_account_actions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "api-admin-account-action-failed"
+      ],
+      "reason": "counts each admin account action (reset_access, suspend, restore, delete_on_request) by outcome (done, refused, conflict, email_failed, failed); api-admin-account-action-failed fires on any failed action",
+      "story": "ST-3"
     },
     {
       "kind": "endpoint",

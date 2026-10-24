@@ -178,13 +178,30 @@ export class PasswordResetService implements BeforeApplicationShutdown {
       where: { email },
     });
     if (account?.status !== 'active') return;
-    const { webUrl } = this.options;
-    if (!webUrl) {
+    if (!this.options.webUrl) {
       this.logger.error(
         'password reset link not sent: PUBLIC_WEB_URL is not set',
       );
       return;
     }
+    await this.send({ ...account, email });
+  }
+
+  // An admin's reset of the account's access sends the same link straight
+  // to an active account's e-mail. Throws when it cannot be sent.
+  async issueFor(accountId: string): Promise<void> {
+    const account = await this.prisma.account.findUnique({
+      select: { email: true, id: true, language: true, status: true },
+      where: { id: accountId },
+    });
+    if (account?.status !== 'active' || !account.email) {
+      throw new Error('no active account with an e-mail');
+    }
+    if (!this.options.webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    await this.send({ ...account, email: account.email });
+  }
+
+  private async send(account: { email: string; id: string; language: string }) {
     const { hash, token } = newToken();
     await this.prisma.$transaction([
       this.prisma.accountToken.deleteMany({
@@ -193,7 +210,7 @@ export class PasswordResetService implements BeforeApplicationShutdown {
       this.prisma.accountToken.create({
         data: {
           accountId: account.id,
-          email,
+          email: account.email,
           expiresAt: new Date(this.now().getTime() + LINK_TTL_MS),
           purpose: PURPOSE,
           tokenHash: hash,
@@ -202,7 +219,7 @@ export class PasswordResetService implements BeforeApplicationShutdown {
     ]);
     await this.notifications.sendAccountEmail({
       accountId: account.id,
-      link: `${webUrl}/${account.language}/reset-password/${token}`,
+      link: `${this.options.webUrl}/${account.language}/reset-password/${token}`,
       purpose: PURPOSE,
     });
   }

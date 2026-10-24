@@ -9,6 +9,18 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AccessResetDto } from '../models/access-reset-dto';
+import { accountControllerDeleteOnRequest } from '../fn/admin/account-controller-delete-on-request';
+import { AccountControllerDeleteOnRequest$Params } from '../fn/admin/account-controller-delete-on-request';
+import { accountControllerRead } from '../fn/admin/account-controller-read';
+import { AccountControllerRead$Params } from '../fn/admin/account-controller-read';
+import { accountControllerResetAccess } from '../fn/admin/account-controller-reset-access';
+import { AccountControllerResetAccess$Params } from '../fn/admin/account-controller-reset-access';
+import { accountControllerRestore } from '../fn/admin/account-controller-restore';
+import { AccountControllerRestore$Params } from '../fn/admin/account-controller-restore';
+import { accountControllerSuspend } from '../fn/admin/account-controller-suspend';
+import { AccountControllerSuspend$Params } from '../fn/admin/account-controller-suspend';
+import { AdminAccountPageDto } from '../models/admin-account-page-dto';
 import { adminAccountsControllerList } from '../fn/admin/admin-accounts-controller-list';
 import { AdminAccountsControllerList$Params } from '../fn/admin/admin-accounts-controller-list';
 import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-controller-summary';
@@ -166,6 +178,131 @@ export class AdminService extends BaseService {
   adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
     const resp = this.adminAccountsControllerSummary$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerRead()` */
+  static readonly AccountControllerReadPath = '/api/v1/admin/accounts/{id}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerRead$Response(params: AccountControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerRead(params: AccountControllerRead$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerResetAccess()` */
+  static readonly AccountControllerResetAccessPath = '/api/v1/admin/accounts/{id}/reset-access';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerResetAccess()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerResetAccess$Response(params: AccountControllerResetAccess$Params, context?: HttpContext): Promise<StrictHttpResponse<AccessResetDto>> {
+    const obs = accountControllerResetAccess(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerResetAccess$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerResetAccess(params: AccountControllerResetAccess$Params, context?: HttpContext): Promise<AccessResetDto> {
+    const resp = this.accountControllerResetAccess$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AccessResetDto>): AccessResetDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerSuspend()` */
+  static readonly AccountControllerSuspendPath = '/api/v1/admin/accounts/{id}/suspend';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerSuspend()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerSuspend$Response(params: AccountControllerSuspend$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerSuspend(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerSuspend$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerSuspend(params: AccountControllerSuspend$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerSuspend$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerRestore()` */
+  static readonly AccountControllerRestorePath = '/api/v1/admin/accounts/{id}/restore';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerRestore()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerRestore$Response(params: AccountControllerRestore$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerRestore(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerRestore$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerRestore(params: AccountControllerRestore$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerRestore$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerDeleteOnRequest()` */
+  static readonly AccountControllerDeleteOnRequestPath = '/api/v1/admin/accounts/{id}/delete-on-request';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerDeleteOnRequest()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerDeleteOnRequest$Response(params: AccountControllerDeleteOnRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = accountControllerDeleteOnRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerDeleteOnRequest$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerDeleteOnRequest(params: AccountControllerDeleteOnRequest$Params, context?: HttpContext): Promise<void> {
+    const resp = this.accountControllerDeleteOnRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `adminBrandsControllerList()` */

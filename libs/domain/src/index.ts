@@ -1,3 +1,4 @@
+export { AdminAccountModule } from './admin/admin-accounts/account/account.module';
 export { AdminAccountsModule } from './admin/admin-accounts/admin-accounts.module';
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
 export { systemLog } from './admin/system-log/system-log';
