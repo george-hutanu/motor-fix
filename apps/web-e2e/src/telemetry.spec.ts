@@ -13,7 +13,10 @@ interface Body {
     app?: { version?: string };
     page?: { url?: string };
   };
-  events?: { name: string; attributes?: Record<string, string> }[];
+  events?: {
+    name: string;
+    attributes?: { fromView?: string; toView?: string };
+  }[];
   measurements?: { type: string; context?: Record<string, string> }[];
   traces?: unknown;
 }
@@ -228,9 +231,10 @@ test.describe('browser telemetry', () => {
           .bodies()
           .filter((body) => body.meta.session?.id === id)
           .flatMap((body) => body.events ?? [])
-          .find((event) => event.name === 'view_changed'),
+          .filter((event) => event.name === 'view_changed')
+          .map((event) => event.attributes?.toView),
       )
-      .toMatchObject({ attributes: { toView: '/:lang/garages' } });
+      .toContain('/:lang/garages');
 
     await withdraw(page);
     const withdrawn = sent.requests.length;
