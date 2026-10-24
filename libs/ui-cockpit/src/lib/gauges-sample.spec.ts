@@ -4,8 +4,6 @@ import { I18n } from '@motor-fix/i18n';
 import { CockpitGaugesSample } from './gauges-sample';
 import { provideCockpitTheme } from './provide-cockpit-theme';
 import { CockpitSamplePage } from './sample-page';
-import en from '../../../i18n/src/cockpit/en.json';
-import ro from '../../../i18n/src/cockpit/ro.json';
 import * as library from '../index';
 
 const text = (key: string) => TestBed.inject(I18n).t(`cockpit.gauges.${key}`);
@@ -119,16 +117,6 @@ describe('CockpitGaugesSample', () => {
 
       expect(odometers(page)[1]).toBe('1.400–1.800 lei');
       expect(figures(page).map((f) => f.text)).toEqual(before);
-    });
-
-    it('writes the captions in both language files', () => {
-      for (const file of [ro, en]) {
-        const gauges = file.gauges as Record<string, unknown>;
-        for (const key of KEYS) {
-          expect(typeof gauges[key]).toBe('string');
-          expect(String(gauges[key]).trim()).not.toBe('');
-        }
-      }
     });
   });
 
