@@ -313,6 +313,8 @@ export type { VerificationFileReporterDto } from './models/verification-file-rep
 export type { VerificationFileStateDto } from './models/verification-file-state-dto';
 export type { VerificationFileSuspensionDto } from './models/verification-file-suspension-dto';
 export type { VerificationFileTimelineDto } from './models/verification-file-timeline-dto';
+export type { VerificationPresenceDto } from './models/verification-presence-dto';
+export type { VerificationPresenceEntryDto } from './models/verification-presence-entry-dto';
 export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
 export type { VerificationQueueDto } from './models/verification-queue-dto';
 export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
