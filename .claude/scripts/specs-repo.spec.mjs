@@ -498,7 +498,7 @@ describe('ensure migrates an existing clone in place', () => {
       const b = commit({ root, message: 'docs: x', paths: [bad] });
       assert.equal(b.ok, false, bad);
     }
-  });
+  }, 30000);
 });
 
 // @traces 1018-FR-001

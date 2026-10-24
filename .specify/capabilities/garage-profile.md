@@ -25,6 +25,7 @@ features:
   - 024-garage-reviews
   - 133-garage-public-profile
   - 309-open-now-directions
+  - 136-legal-check-panel
 ---
 
 # Capability: Garage profile
@@ -646,9 +647,9 @@ _From 133-garage-public-profile._
 
 _From 133-garage-public-profile._
 
-### 133-FR-010 — While the first read is open the panel MUST show a skeleton; on a failed read (a network error or any 5xx) the panel MUST show "Nu am putut încărca profilul." / "We could not load the profile." with a "Reîncearcă" / "Retry" button inside the panel that reads again; a live re-read (FR-011) that fails with a network error or 5xx keeps the last answer shown and shows no error, and one that answers 410 shows the 410 state, 403 or 404 the redirect, as a first read does; on 410 the view MUST show, in place of the panel, "Profilul nu apare pe hartă cât timp service-ul este suspendat." / "Your profile is not on the map while the garage is suspended."; on 403 or 404 the view redirects to the dashboard's own address like a view the session may not open (288-FR-003).
+### 136-FR-005 — On the view's suspended state (the profile read answers 410, 133-FR-010) the view MUST show the suspended line in place of the "Profilul public" panel and MUST still show the legal panel below it, which reads the legal check as for an approved garage (the API answers 200 with `status: suspended`, 1354-FR-001) and shows its "Suspendat" tag and rows (1354-FR-004); the panel's host is mounted once the profile read has answered, with 200, 410 or a failure other than 403 or 404 (each panel then shows its own error and retry, as the Edge Cases state), so on 403 or 404 of the profile read the view redirects as today and the panel is never rendered (no flash of its error or skeleton), and while the first profile read is open neither is the panel; the legal check's own 404 hides the panel alone. Modifies 133-FR-010 (the 410 state keeps the legal panel).
 
-_From 133-garage-public-profile._
+_From 136-legal-check-panel._
 
 ### 133-FR-011 — The open view MUST re-read in place when `garage.updated`, `garage.suspended`, `garage.restored`, `facility.removed` or `facility.re_add_decided` for its garage arrives on the dashboard's existing live stream, with no reload and no polling; the latest read's answer wins over an older one still in flight; the swap is silent for assistive technology (as 308-FR-014).
 
@@ -670,6 +671,30 @@ _From 133-garage-public-profile._
 
 _From 133-garage-public-profile._
 
+### 136-FR-001 — The dashboard view `profile` ("Profilul service-ului", 133-FR-005) MUST show, for the garage's owner, the panel "Verificare legală" / "Legal check" below the "Profilul public" panel as the board's `prof` view places it (a full-width panel under the grid, `DashGarage.dc.html` lines 499–568), placed as the next sibling of the "Profilul public" section with no grid wrapper (the grid's second panel is ST-143's, unbuilt): the same reusable panel component and the same owner host that the overview shows (`mf-garage-legal-check`, 210-FR-012), with no second read, copy or component.
+
+_From 136-legal-check-panel._
+
+### 136-FR-002 — On the view the panel MUST show exactly what it shows on the overview: the tag "Verificat" (or "Suspendat" in red, 1354-FR-004), the four rows company, CAEN, RAR and documents in that order with their state in words and colour (`ok` green "în regulă", `warning` amber "atenție", `failed` red "problemă", `not_run` grey "neverificat"), the RAR row dated by the stored last check or re-check (1354-FR-003), the mobile mechanic's CAEN wording (210-FR-007), the dates as "1 oct. 2026" / "1 Oct 2026" in Europe/Bucharest (210-FR-008), the note on the monthly re-check (1354-FR-006), the "Încarcă documentele" button (068-FR-005), the four-row skeleton and the error with retry (210-FR-010); no admin note, reviewer, evidence or document file is in the answer or the view.
+
+_From 136-legal-check-panel._
+
+### 136-FR-006 — The panel on the view MUST be rendered only for the garage's owner (role `garage`), with no gate of its own: the view's route and redirect (133-FR-010) and the legal check read's refusals (210-FR-001) already keep everyone else out; this story MUST change no capability, role, menu entry or API answer: the receptionist and the mechanic do not reach the view (133-FR-002, 133-FR-003) and the legal check read keeps its 403 for them (210-FR-001). The brief's receptionist tag-only form is deferred to ST-1369 (see Assumptions).
+
+_From 136-legal-check-panel._
+
+### 136-FR-007 — Every text this story introduces MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the view with the panel MUST render at 320 px and 390 px (the panel's rows stacking and wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, every button at least 44 × 44 px and the smallest text at least 12 px; the panel keeps its own named region (its `h2` under the view's `h1`, beside the "Profilul public" region in the approved state, 133-FR-013; on the suspended state the suspended line stays a paragraph, 133-FR-010), its lamps `aria-hidden` and every state carried by text, not colour alone; the QA sweep's axe checks pass on the view in both states.
+
+_From 136-legal-check-panel._
+
+### 136-FR-008 — The story MUST write nothing (no audit entry, no event, no field written), add no endpoint, table, service, queue or outside call, and change no entry of `infra/observability/inventory.json`: the legal check read is already listed there as `garage-legal-check` (210-FR-013) and the profile read as ST-133 lists it (133-FR-014).
+
+_From 136-legal-check-panel._
+
+### 136-FR-009 — Tests MUST exist before the code (Principle II) and name this feature's ids. Jest for the web: the view renders the legal panel for the owner under the "Profilul public" panel; the panel is present on the 410 state and absent on the panel's own 404; the `due` row's text and colour in Romanian and English, with the `valid`, `in_review`, `overdue` and `refused` rows unchanged; the re-read on `document.due` with the latest answer winning; the public profile panel's error leaves the legal panel standing and the reverse. Playwright: the seeded owner opens Profilul service-ului and sees "Verificare legală" with "Verificat", four rows, the RAR day, the documents deadline and the note; a receptionist's and a mechanic's menu lack the view. The amber-without-reload case is covered in Jest through the live kind, and end to end when the e2e fixtures can set the seeded cycle `due` without a new seed (see Assumptions).
+
+_From 136-legal-check-panel._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -687,5 +712,6 @@ _From 133-garage-public-profile._
 - `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)
 - `307-FR-005` — superseded by `308-FR-002` (2026-10-22)
 - `308-FR-006` — superseded by `025-FR-016` (2026-10-23)
+- `133-FR-010` — superseded by `136-FR-005` (2026-10-24)
 - `308-FR-002` — superseded by `309-FR-006` (2026-10-24)
 - `308-FR-003` — superseded by `309-FR-007` (2026-10-24)

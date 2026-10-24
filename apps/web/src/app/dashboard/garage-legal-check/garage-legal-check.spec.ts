@@ -105,6 +105,48 @@ describe('the yearly documents on the owner’s legal check, live', () => {
   });
 });
 
+// @traces 136-FR-004
+// @traces 136-FR-009
+describe('the 30-day reminder on the owner’s legal check, live', () => {
+  it('reads the panel again on document.due and shows the due day', async () => {
+    const fixture = await render();
+    read.mockResolvedValue({
+      ...ANSWER,
+      documents: { ...CYCLE, dueOn: '2027-01-20' },
+    });
+
+    live.emit('document.due', 'garage-1');
+    await wait(350);
+    await settle(fixture);
+
+    expect(read).toHaveBeenCalledTimes(2);
+    const row = fixture.nativeElement.querySelector(
+      '[data-legal-row="documents"]',
+    ) as HTMLElement;
+    expect(row.getAttribute('data-lamp')).toBe('amber');
+    expect(row.textContent).toContain('scadent pe 20 ian. 2027');
+  });
+
+  it('reads once more when document.due arrives during a read', async () => {
+    const fixture = await render();
+    let finish: (value: LegalCheckDto) => void = () => undefined;
+    read.mockImplementationOnce(
+      () => new Promise<LegalCheckDto>((resolve) => (finish = resolve)),
+    );
+
+    live.emit('document.overdue', 'garage-1');
+    await wait(350);
+    live.emit('document.due', 'garage-1');
+    await wait(350);
+    finish(ANSWER);
+    await settle(fixture);
+    await wait(350);
+    await settle(fixture);
+
+    expect(read).toHaveBeenCalledTimes(3);
+  });
+});
+
 // @traces 067-FR-007
 describe('the legal check after the garage is put back on the map', () => {
   it('reads the panel again on garage.restored for the garage', async () => {

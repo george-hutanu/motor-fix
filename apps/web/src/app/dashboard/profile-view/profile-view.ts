@@ -22,6 +22,7 @@ import {
   paymentLine,
 } from '../../public/garage-profile/details-section/detail-lines';
 import { hoursLines } from '../../public/garage-profile/where-section/hours-lines';
+import { GarageLegalCheck } from '../garage-legal-check/garage-legal-check';
 import { Live } from '../live';
 import { garageOf, Session } from '../session';
 
@@ -33,7 +34,7 @@ const SUSPENDED = 410;
 // from the same labels, so the two read the same.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, Lamp, TranslatePipe],
+  imports: [GarageLegalCheck, HlmButton, Lamp, TranslatePipe],
   selector: 'mf-profile-view',
   styleUrl: './profile-view.css',
   templateUrl: './profile-view.html',
