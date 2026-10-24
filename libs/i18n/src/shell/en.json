@@ -69,7 +69,7 @@
     "kept": "Published reviews stay, signed “Șofer MotorFix”, and so do bookings and the records the law asks for, for as long as the privacy notice says.",
     "ownerText": "Your account owns a garage. Write to us through the contact form or by e‑mail so we close the garage; then you can delete the account.",
     "problem": {
-      "car_in_work": "Your car is at the garage. You can delete the account once you collect it.",
+      "car_in_work": "One of your cars is in work. You can delete the account after you pick it up.",
       "deletion_not_allowed": "Your account owns a garage, so it cannot be deleted yet."
     },
     "removed": "We delete the account's details, its sign‑in methods, its sessions on every device, its notification settings and the plates of its cars.",

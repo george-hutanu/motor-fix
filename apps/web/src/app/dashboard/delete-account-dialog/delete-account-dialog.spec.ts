@@ -282,7 +282,7 @@ describe('the delete-account dialog', () => {
     ['ro', 'Ai o mașină în service. Poți șterge contul după ce o ridici.'],
     [
       'en',
-      'Your car is at the garage. You can delete the account once you collect it.',
+      'One of your cars is in work. You can delete the account after you pick it up.',
     ],
   ] as const)(
     'says, in %s, that a car in the workshop holds the deletion, and stays open',
