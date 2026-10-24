@@ -210,6 +210,15 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     assert.equal(decideMerge(bot(fixed)), null);
   });
 
+  // @traces 961-FR-004
+  it('lets a Dependabot PR merge on the success its review workflow wrote, without the pr-qa provenance', () => {
+    const notPrQa = { judge: () => 'agent-review on abc1234 was written by .github/workflows/dependabot-review.yml, not the PR QA workflow' };
+    assert.equal(decideMerge(bot([...green, review('SUCCESS')]), undefined, notPrQa), null);
+    assert.match(decideMerge({ ...bot([...green, review('SUCCESS')]), author: { login: 'george-hutanu' } }, undefined, notPrQa), /not the PR QA workflow/);
+    assert.match(decideMerge(bot([run('CI OK', 'FAILURE'), review('SUCCESS')]), undefined, notPrQa), /CI failed/);
+    assert.match(decideMerge(bot([...green, review('PENDING')]), undefined, notPrQa), /agent-review is pending/);
+  });
+
   it('still refuses a Dependabot PR whose agent review failed', () => {
     assert.match(decideMerge(bot([...green, review('FAILURE')])), /agent-review is failure/);
   });
