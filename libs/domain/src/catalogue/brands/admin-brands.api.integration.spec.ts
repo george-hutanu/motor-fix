@@ -148,7 +148,10 @@ async function references(brandId: string) {
   return { car, works };
 }
 
-// The admin brand routes against real PostgreSQL and Valkey.
+// The admin brand routes against real PostgreSQL and Valkey. This app has no
+// ProblemFilter, so a refusal's body is the exception's own (`message`, every
+// member); the wire shape, `detail` and the members the filter keeps, is
+// checked on the booted API in apps/api/src/admin-brands.problem.integration.spec.ts.
 // @traces 105-FR-021
 describe('GET /admin/brands', () => {
   // @traces 105-FR-002
