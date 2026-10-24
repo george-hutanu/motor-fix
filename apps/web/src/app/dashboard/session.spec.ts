@@ -1,60 +1,41 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
-import { I18n, LanguageChoice } from '@motor-fix/i18n';
+import type { MeDto } from '@motor-fix/data-access';
+import { LanguageChoice } from '@motor-fix/i18n';
 
-import { Session } from './session';
-
-function account(language: 'ro' | 'en') {
-  return {
-    capabilities: [],
-    email: 'andrei@example.ro',
-    garageAccess: [],
-    garageId: null,
-    id: 'account-1',
-    landing: '/app/driver',
-    language,
-    name: 'Andrei',
-    role: 'driver',
-    roles: ['driver'],
-  } as unknown as MeDto;
-}
+import { account, setup } from './signed-in.testing';
 
 const refused = () => Promise.reject(new Error('401'));
 
-function setup({
-  me = account('ro') as MeDto | null,
+function sessionSetup({
+  me = account() as MeDto | null,
   renews = true,
 }: {
   me?: MeDto | null;
   renews?: boolean;
 } = {}) {
   let tokens = 0;
-  const api = {
-    authControllerRefresh: jest.fn(() =>
-      renews
-        ? Promise.resolve({ accessToken: `renewed-${++tokens}` })
-        : refused(),
-    ),
-    authControllerSignIn: jest.fn(() =>
-      Promise.resolve({ accessToken: 'signed-in' }),
-    ),
-    authControllerSignOut: jest.fn(() => Promise.resolve()),
-    passwordResetControllerComplete: jest.fn(() =>
-      Promise.resolve({ accessToken: 'reset' }),
-    ),
-  };
   const meControllerMe = jest.fn(() => (me ? Promise.resolve(me) : refused()));
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe } },
-      { provide: AuthService, useValue: api },
-    ],
+  const parts = setup({
+    auth: {
+      authControllerRefresh: jest.fn(() =>
+        renews
+          ? Promise.resolve({ accessToken: `renewed-${++tokens}` })
+          : refused(),
+      ),
+      authControllerSignIn: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-in' }),
+      ),
+      passwordResetControllerComplete: jest.fn(() =>
+        Promise.resolve({ accessToken: 'reset' }),
+      ),
+    },
+    me: { meControllerMe },
   });
   return {
-    api,
-    i18n: TestBed.inject(I18n),
+    api: parts.auth,
+    i18n: parts.i18n,
     meControllerMe,
-    session: TestBed.inject(Session),
+    session: parts.session,
   };
 }
 
@@ -65,7 +46,7 @@ beforeEach(() => localStorage.clear());
 describe('Session', () => {
   it("switches to the account's language when the session loads, and remembers it", async () => {
     localStorage.setItem('mf.lang', 'ro');
-    const { i18n, session } = setup({ me: account('en') });
+    const { i18n, session } = sessionSetup({ me: account({ language: 'en' }) });
 
     await session.load();
     await flush();
@@ -77,7 +58,7 @@ describe('Session', () => {
   // A public page whose address names its language (/en/garages/…) keeps it.
   it("keeps the page's language when asked, on a load that only reads the role", async () => {
     localStorage.setItem('mf.lang', 'ro');
-    const { i18n, session } = setup({ me: account('en') });
+    const { i18n, session } = sessionSetup({ me: account({ language: 'en' }) });
 
     const me = await session.load({ keepLanguage: true });
     await flush();
@@ -89,7 +70,7 @@ describe('Session', () => {
   });
 
   it('lets a tap made while signed in stand on the next load', async () => {
-    const { i18n, session } = setup({ me: account('en') });
+    const { i18n, session } = sessionSetup({ me: account({ language: 'en' }) });
     await session.load();
     await flush();
 
@@ -101,7 +82,7 @@ describe('Session', () => {
   });
 
   it('changes nothing when nobody is signed in', async () => {
-    const { i18n, session } = setup({ me: null, renews: false });
+    const { i18n, session } = sessionSetup({ me: null, renews: false });
 
     expect(await session.load()).toBeNull();
 
@@ -112,7 +93,7 @@ describe('Session', () => {
 
 describe('Session tokens', () => {
   it('renews from the cookie before asking who is signed in, when it holds no token', async () => {
-    const { api, meControllerMe, session } = setup();
+    const { api, meControllerMe, session } = sessionSetup();
 
     const me = await session.load();
 
@@ -125,7 +106,7 @@ describe('Session tokens', () => {
   });
 
   it('does not ask who is signed in when the renewal fails', async () => {
-    const { meControllerMe, session } = setup({ renews: false });
+    const { meControllerMe, session } = sessionSetup({ renews: false });
 
     expect(await session.load()).toBeNull();
 
@@ -134,7 +115,7 @@ describe('Session tokens', () => {
   });
 
   it('signs in with the e-mail, the password and "keep me signed in", then loads the account', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
 
     const me = await session.signIn('andrei@example.ro', 'parola', false);
 
@@ -148,7 +129,7 @@ describe('Session tokens', () => {
   });
 
   it('starts the session a completed password reset answers with', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
 
     const me = await session.resetPassword('the-token', 'parola-noua');
 
@@ -161,7 +142,7 @@ describe('Session tokens', () => {
   });
 
   it('lets a refused password reset reach the caller, holding no token', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
     api.passwordResetControllerComplete.mockImplementationOnce(refused);
 
     await expect(session.resetPassword('t', 'parola-noua')).rejects.toThrow(
@@ -171,7 +152,7 @@ describe('Session tokens', () => {
   });
 
   it('lets a failed sign-in reach the caller, holding no token', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
     api.authControllerSignIn.mockImplementationOnce(refused);
 
     await expect(session.signIn('a@b.ro', 'x', true)).rejects.toThrow('401');
@@ -179,7 +160,7 @@ describe('Session tokens', () => {
   });
 
   it('shares one renewal between callers that ask at once', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
 
     const results = await Promise.all([session.renew(), session.renew()]);
 
@@ -191,7 +172,7 @@ describe('Session tokens', () => {
   });
 
   it('forgets the token and the account when a renewal fails', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
     await session.load();
     api.authControllerRefresh.mockImplementationOnce(refused);
 
@@ -202,7 +183,7 @@ describe('Session tokens', () => {
   });
 
   it('signs out on the server and forgets the session', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
     await session.load();
 
     await session.signOut();
@@ -213,7 +194,7 @@ describe('Session tokens', () => {
   });
 
   it('signs in again cleanly after a sign-out made while a load was on its way', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = sessionSetup();
     let answerLate: (me: MeDto) => void = () => undefined;
     meControllerMe.mockImplementationOnce(
       () =>
@@ -226,7 +207,7 @@ describe('Session tokens', () => {
 
     await session.signOut();
     const me = await session.signIn('andrei@example.ro', 'parola', true);
-    answerLate(account('ro'));
+    answerLate(account({ language: 'ro' }));
 
     expect(await stale).toBeNull();
     expect(me?.id).toBe('account-1');
@@ -235,7 +216,7 @@ describe('Session tokens', () => {
   });
 
   it('forgets the session even when the sign-out call fails', async () => {
-    const { api, session } = setup();
+    const { api, session } = sessionSetup();
     await session.load();
     api.authControllerSignOut.mockImplementationOnce(refused);
 
@@ -250,7 +231,7 @@ describe('Session tokens', () => {
 // reads the role this browser last saw instead.
 describe('Session role hint', () => {
   it('remembers the role of the account it loads', async () => {
-    const { session } = setup();
+    const { session } = sessionSetup();
 
     await session.load();
 
@@ -261,17 +242,17 @@ describe('Session role hint', () => {
   it('starts from the role a page of this browser saw before', () => {
     localStorage.setItem('mf-role', 'garage');
 
-    expect(setup().session.roleHint()).toBe('garage');
+    expect(sessionSetup().session.roleHint()).toBe('garage');
   });
 
   it('ignores a stored value that is not a role', () => {
     localStorage.setItem('mf-role', 'owner');
 
-    expect(setup().session.roleHint()).toBeNull();
+    expect(sessionSetup().session.roleHint()).toBeNull();
   });
 
   it('follows a switch to another of the account’s roles', async () => {
-    const { api, meControllerMe, session } = setup();
+    const { api, meControllerMe, session } = sessionSetup();
     await session.load();
     Object.assign(api, {
       authControllerSwitchRole: jest.fn(() =>
@@ -279,7 +260,10 @@ describe('Session role hint', () => {
       ),
     });
     meControllerMe.mockImplementationOnce(() =>
-      Promise.resolve({ ...account('ro'), role: 'garage' } as MeDto),
+      Promise.resolve({
+        ...account({ language: 'ro' }),
+        role: 'garage',
+      } as MeDto),
     );
 
     await session.switchRole('garage');
@@ -289,7 +273,7 @@ describe('Session role hint', () => {
   });
 
   it('forgets the role at sign-out', async () => {
-    const { session } = setup();
+    const { session } = sessionSetup();
     await session.load();
 
     await session.signOut();
@@ -300,7 +284,7 @@ describe('Session role hint', () => {
 
   it('forgets the role when the load finds nobody signed in', async () => {
     localStorage.setItem('mf-role', 'garage');
-    const { session } = setup({ me: null, renews: false });
+    const { session } = sessionSetup({ me: null, renews: false });
 
     await session.load();
 
@@ -311,7 +295,7 @@ describe('Session role hint', () => {
   // The cookie can go without a sign-out (it expired, or was cleared).
   it('forgets the role when a renewal finds the session gone', async () => {
     localStorage.setItem('mf-role', 'garage');
-    const { session } = setup({ renews: false });
+    const { session } = sessionSetup({ renews: false });
 
     expect(await session.renew()).toBe(false);
 

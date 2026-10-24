@@ -10,10 +10,11 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { I18n } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, TimeoutError, timeout } from 'rxjs';
 
 import { Live } from './live';
 import { Session } from './session';
@@ -43,10 +44,19 @@ const DATABASE = 'motor-fix';
 const STORE = 'waiting';
 const EXPIRES_AFTER = 24 * 3_600_000;
 const RETRY_AFTER = 60_000;
+// A send with no answer by then is given up and counts as no answer.
+const SEND_LIMIT = 30_000;
+
+// A send given up counts as no answer; an error that is not an answer comes
+// from the app.
+const statusOf = (error: unknown) => {
+  if (error instanceof HttpErrorResponse) return error.status;
+  return error instanceof TimeoutError ? 0 : -1;
+};
 
 // Answers that say nothing about the action itself: it is sent again later.
-// A 401 that the app's renewal could not fix ends the session, and the
-// sign-out drops the actions.
+// A 401 that the app's renewal could not fix lapses the session; the actions
+// wait for the same account to sign back in.
 const kept = (status: number) =>
   status === 0 ||
   status === 401 ||
@@ -95,6 +105,8 @@ export class Waiting {
   private readonly memory = signal<ReadonlyMap<string, Stored>>(new Map());
   private readonly sending = signal<string | null>(null);
   private account: string | null = null;
+  // The account whose session lapsed, its actions kept until it signs back in.
+  private away: string | null = null;
   private flushing = false;
   private again = false;
   private retry: ReturnType<typeof setTimeout> | undefined;
@@ -121,6 +133,10 @@ export class Waiting {
     });
     effect(() => {
       if (this.live.state() === 'open') untracked(() => void this.flush());
+    });
+    this.session.signedOut.pipe(takeUntilDestroyed()).subscribe((account) => {
+      if (this.away === account) this.away = null;
+      this.loaded = this.loaded.then(() => this.dropAll(account));
     });
     if (!this.browser) return;
     const online = () => void this.flush();
@@ -162,8 +178,14 @@ export class Waiting {
   private async signedIn(id: string | null) {
     const before = this.account;
     this.account = id;
-    if (before && before !== id && id === null) await this.dropAll(before);
-    if (!id) return;
+    if (!id) {
+      this.away = before ?? this.away;
+      return;
+    }
+    // Another person on the device: the lapsed account's actions go.
+    const away = this.away;
+    this.away = null;
+    if (away && away !== id) await this.dropAll(away);
     const stored = await this.readAll();
     const next = new Map(this.memory());
     for (const action of stored)
@@ -222,17 +244,19 @@ export class Waiting {
     this.sending.set(action.key);
     try {
       await firstValueFrom(
-        this.http.request(action.method, action.url, {
-          body: action.body,
-          headers: { 'Idempotency-Key': action.key },
-        }),
+        this.http
+          .request(action.method, action.url, {
+            body: action.body,
+            headers: { 'Idempotency-Key': action.key },
+          })
+          .pipe(timeout(SEND_LIMIT)),
       );
       await this.drop(action.key);
       return true;
     } catch (error) {
       // An error that is not an answer comes from the app: sending it again
       // would fail the same way.
-      const status = error instanceof HttpErrorResponse ? error.status : -1;
+      const status = statusOf(error);
       if (kept(status)) return false;
       await this.drop(action.key);
       // The answer came after a sign-out: the next person sees nothing of it.

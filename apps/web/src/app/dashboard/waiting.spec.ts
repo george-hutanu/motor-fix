@@ -17,7 +17,7 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { IDBFactory } from 'fake-indexeddb';
-import { throwError } from 'rxjs';
+import { Subject, throwError } from 'rxjs';
 
 import { Live, type LiveState } from './live';
 import { Session } from './session';
@@ -29,6 +29,7 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 }));
 
 let account: WritableSignal<{ id: string } | null>;
+let signedOut: Subject<string>;
 let live: {
   catchUp: jest.Mock;
   offline: WritableSignal<boolean>;
@@ -46,7 +47,7 @@ async function start() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: PLATFORM_ID, useValue: 'browser' },
-      { provide: Session, useValue: { current: account } },
+      { provide: Session, useValue: { current: account, signedOut } },
       { provide: Live, useValue: live },
     ],
   });
@@ -96,6 +97,7 @@ const noAnswer = (req: TestRequest) =>
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
   account = signal({ id: 'account-1' });
+  signedOut = new Subject<string>();
   live = {
     catchUp: jest.fn(),
     offline: signal(false),
@@ -271,6 +273,7 @@ describe('Waiting: kept across a reload', () => {
     await until(() => first.waiting.actions()[0]?.state === 'waiting');
 
     account.set(null);
+    signedOut.next('account-1');
     await until(() => false);
     expect(first.waiting.actions()).toEqual([]);
 
@@ -436,5 +439,142 @@ describe('Waiting: actions that need a connection', () => {
 
     expect(waiting.connected()).toBe(true);
     expect(toast).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 532-FR-003
+// @traces 532-FR-004
+describe('Waiting: a refused renewal is not a sign-out', () => {
+  async function waitingThenLapse() {
+    const first = await start();
+    const key = await first.waiting.add('job.step', step(1));
+    noAnswer(await nextRequest(first.http));
+    await until(() => first.waiting.actions()[0]?.state === 'waiting');
+    account.set(null);
+    await until(() => false);
+    return { ...first, key };
+  }
+
+  it('keeps the actions through the lapse and sends them when the same account signs back in', async () => {
+    const { http, key } = await waitingThenLapse();
+    expect(http.match(() => true)).toEqual([]);
+
+    account.set({ id: 'account-1' });
+    const sent = await nextRequest(http);
+
+    expect(sent.request.url).toContain('step-1');
+    expect(sent.request.headers.get('Idempotency-Key')).toBe(key);
+  });
+
+  it('keeps them on the device too: a reload signed in as the same account sends them', async () => {
+    await waitingThenLapse();
+
+    account.set({ id: 'account-1' });
+    const { http } = await reload();
+
+    expect((await nextRequest(http)).request.url).toContain('step-1');
+  });
+
+  it('does not send them when another account signs in after the lapse, and drops them', async () => {
+    const { http, waiting } = await waitingThenLapse();
+
+    account.set({ id: 'account-2' });
+    await until(() => false);
+    expect(http.match(() => true)).toEqual([]);
+    expect(waiting.actions()).toEqual([]);
+
+    account.set({ id: 'account-1' });
+    const back = await reload();
+    await until(() => false);
+    expect(back.http.match(() => true)).toEqual([]);
+  });
+
+  it('drops them when the lapse is followed by a sign-out', async () => {
+    const { waiting } = await waitingThenLapse();
+
+    signedOut.next('account-1');
+    await until(() => false);
+    account.set({ id: 'account-1' });
+    const { http } = await reload();
+    await until(() => false);
+
+    expect(waiting.actions()).toEqual([]);
+    expect(http.match(() => true)).toEqual([]);
+  });
+});
+
+// @traces 532-FR-005
+describe('Waiting: a send that never answers', () => {
+  // Fake timers from the start, so the send's time limit is a fake one too.
+  async function hanging() {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    const parts = await start();
+    await parts.waiting.add('job.step', step(1));
+    await parts.waiting.add('job.step', step(2));
+    await jest.advanceTimersByTimeAsync(10);
+    const [first] = parts.http.match(() => true);
+    if (!first) throw new Error('nothing was sent');
+    return { ...parts, first };
+  }
+
+  const sentAfter = async (http: HttpTestingController, ms: number) => {
+    await jest.advanceTimersByTimeAsync(ms);
+    TestBed.tick();
+    await jest.advanceTimersByTimeAsync(10);
+    return http.match(() => true);
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  it('gives up at 30 seconds, keeps the action first in line as waiting and sends nothing after it', async () => {
+    const { first, http, waiting } = await hanging();
+
+    expect(await sentAfter(http, 29_000)).toEqual([]);
+    expect(first.cancelled).toBe(false);
+    expect(await sentAfter(http, 1_100)).toEqual([]);
+
+    expect(first.cancelled).toBe(true);
+    expect(waiting.actions().map((a) => [a.url, a.state])).toEqual([
+      [step(1).url, 'waiting'],
+      [step(2).url, 'waiting'],
+    ]);
+  });
+
+  it('sends it again with the same key 60 seconds after the attempt ended', async () => {
+    const { first, http } = await hanging();
+    await sentAfter(http, 30_100);
+
+    expect(await sentAfter(http, 59_000)).toEqual([]);
+    const again = await sentAfter(http, 1_100);
+
+    expect(again).toHaveLength(1);
+    expect(again[0]?.request.url).toContain('step-1');
+    expect(again[0]?.request.headers.get('Idempotency-Key')).toBe(
+      first.request.headers.get('Idempotency-Key'),
+    );
+  });
+
+  it('sends it again when the network is back', async () => {
+    const { http } = await hanging();
+    await sentAfter(http, 30_100);
+
+    window.dispatchEvent(new Event('online'));
+    const again = await sentAfter(http, 10);
+
+    expect(again).toHaveLength(1);
+    expect(again[0]?.request.url).toContain('step-1');
+  });
+
+  it('sends it again when a live stream opens', async () => {
+    const { http } = await hanging();
+    await sentAfter(http, 30_100);
+
+    live.state.set('reconnecting');
+    TestBed.tick();
+    live.state.set('open');
+    const again = await sentAfter(http, 10);
+
+    expect(again).toHaveLength(1);
+    expect(again[0]?.request.url).toContain('step-1');
   });
 });

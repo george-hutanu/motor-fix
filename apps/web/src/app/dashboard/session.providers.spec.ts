@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { LEAVE, Session } from './session';
+import { LEAVE } from './session';
+import { setup } from './signed-in.testing';
 
 const DRIVER = {
   id: 'account-1',
@@ -11,33 +11,26 @@ const DRIVER = {
   role: 'driver',
 } as unknown as MeDto;
 
-function setup() {
-  const api = {
-    authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-    authControllerSignOut: jest.fn(() => Promise.resolve()),
-    oauthControllerComplete: jest.fn(() =>
-      Promise.resolve({ accessToken: 'from-google' }),
-    ),
-    oauthControllerPending: jest.fn(() =>
-      Promise.resolve({
-        email: 'elena@example.test',
-        name: 'Elena Pop',
-        provider: 'google',
-      }),
-    ),
-  };
+function providerSetup() {
   const leave = jest.fn();
-  TestBed.configureTestingModule({
-    providers: [
-      {
-        provide: MeService,
-        useValue: { meControllerMe: jest.fn(async () => DRIVER) },
-      },
-      { provide: AuthService, useValue: api },
-      { provide: LEAVE, useValue: leave },
-    ],
+  const { auth, session } = setup({
+    auth: {
+      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
+      oauthControllerComplete: jest.fn(() =>
+        Promise.resolve({ accessToken: 'from-google' }),
+      ),
+      oauthControllerPending: jest.fn(() =>
+        Promise.resolve({
+          email: 'elena@example.test',
+          name: 'Elena Pop',
+          provider: 'google',
+        }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(async () => DRIVER) },
+    providers: [{ provide: LEAVE, useValue: leave }],
   });
-  return { api, leave, session: TestBed.inject(Session) };
+  return { api: auth, leave, session };
 }
 
 beforeEach(() => {
@@ -47,7 +40,7 @@ beforeEach(() => {
 
 describe('leaving for a provider', () => {
   it('goes to the start address with the language and the remember choice', async () => {
-    const { leave, session } = setup();
+    const { leave, session } = providerSetup();
 
     await session.leaveFor('google', { language: 'en', remember: false });
 
@@ -58,7 +51,7 @@ describe('leaving for a provider', () => {
   });
 
   it('leaves a dashboard address kept before it in place when no action asked', async () => {
-    const { session } = setup();
+    const { session } = providerSetup();
     session.keepReturnTo('/app/driver/cars');
 
     await session.leaveFor('google', { language: 'ro', remember: true });
@@ -67,7 +60,7 @@ describe('leaving for a provider', () => {
   });
 
   it('replaces a kept address with the screen of the action that asked', async () => {
-    const { session } = setup();
+    const { session } = providerSetup();
     session.keepReturnTo('/app/driver/cars');
 
     await session.leaveFor('google', {
@@ -80,7 +73,7 @@ describe('leaving for a provider', () => {
   });
 
   it('keeps the screen to come back to when an action asked for the sign-in', async () => {
-    const { leave, session } = setup();
+    const { leave, session } = providerSetup();
 
     await session.leaveFor('apple', {
       language: 'ro',
@@ -95,7 +88,7 @@ describe('leaving for a provider', () => {
   });
 
   it('sends a sign-out still owed before it leaves, so it never ends the new session', async () => {
-    const { api, leave, session } = setup();
+    const { api, leave, session } = providerSetup();
     localStorage.setItem('mf-sign-out-pending', 'device');
 
     await session.leaveFor('google', { language: 'ro', remember: true });
@@ -107,7 +100,7 @@ describe('leaving for a provider', () => {
   });
 
   it('keeps an address with its query and fragment, once', () => {
-    const { session } = setup();
+    const { session } = providerSetup();
 
     session.keepReturnTo('/app/driver/cars?x=1#y');
 
@@ -118,7 +111,7 @@ describe('leaving for a provider', () => {
   it.each(['//evil.example/x', '/\\evil.example/x', 'https://evil.example'])(
     'never hands back %p',
     (address) => {
-      const { session } = setup();
+      const { session } = providerSetup();
 
       session.keepReturnTo(address);
 
@@ -127,7 +120,7 @@ describe('leaving for a provider', () => {
   );
 
   it('keeps nothing, and throws nothing, without session storage', () => {
-    const { session } = setup();
+    const { session } = providerSetup();
     const write = jest
       .spyOn(Storage.prototype, 'setItem')
       .mockImplementation(() => {
@@ -140,7 +133,7 @@ describe('leaving for a provider', () => {
   });
 
   it('takes back only an address of this site', () => {
-    const { session } = setup();
+    const { session } = providerSetup();
     sessionStorage.setItem('mf-return-to', '//evil.example/x');
 
     expect(session.takeReturnTo()).toBeNull();
@@ -152,7 +145,7 @@ describe('leaving for a provider', () => {
 
 describe('finishing a sign-up started with a provider', () => {
   it('reads what the provider gave', async () => {
-    const { session } = setup();
+    const { session } = providerSetup();
 
     expect(await session.providerPending()).toEqual({
       email: 'elena@example.test',
@@ -162,14 +155,14 @@ describe('finishing a sign-up started with a provider', () => {
   });
 
   it('answers null when there is no sign-up to finish', async () => {
-    const { api, session } = setup();
+    const { api, session } = providerSetup();
     api.oauthControllerPending.mockRejectedValueOnce(new Error('404'));
 
     expect(await session.providerPending()).toBeNull();
   });
 
   it('sends the name, the language and the consent to the current texts, then holds the session', async () => {
-    const { api, session } = setup();
+    const { api, session } = providerSetup();
 
     const me = await session.completeProviderSignUp('Elena Pop', 'en');
 
