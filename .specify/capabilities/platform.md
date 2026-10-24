@@ -112,6 +112,7 @@ features:
   - 961-require-agent-review
   - 447-own-pr-refusal
   - 1376-pr-test-local-boot
+  - 471-crlf-harness-tidy
 ---
 
 # Capability: Platform
@@ -1193,9 +1194,9 @@ _From 854-precompact-pr-signal._
 
 _From 850-dispatch-test-timeouts._
 
-### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
+### 471-FR-005 — `trace-matrix.mjs` counts only the FRs a spec declares on a `- **FR-XXX**:` line, with the same anchor as `status.mjs`, `impact.mjs` and `retro-evidence.mjs` (one shared helper); an FR named only in prose, or prefixed by a number and a hyphen (`NNN-FR-XXX`, as a Spec Delta names another feature's), is not counted, and trace-matrix and status give the same total.
 
-_From 499-trace-matrix-delta-ids._
+_From 471-crlf-harness-tidy._
 
 ### 884-FR-001 — The web server MUST compress its own responses — the static files it serves (scripts, stylesheets, fonts) and the server-rendered HTML — for a client whose `Accept-Encoding` includes an encoding the server produces (gzip at least), MUST name the encoding and carry `Vary: Accept-Encoding` on the response and MUST send the uncompressed bytes to a client that accepts none. The one-year public cache header on content-hashed static files MUST stay as it is today.
 
@@ -2925,3 +2926,4 @@ _From 1376-pr-test-local-boot._
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
 - `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
+- `499-FR-001` — superseded by `471-FR-005` (2026-10-24)
