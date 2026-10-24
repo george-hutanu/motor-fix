@@ -40,20 +40,40 @@ import { PublicLive } from '../../live';
 
 const REVIEW: GarageReviewDto = {
   author: { shortName: 'Andrei M.' },
-  car: { brand: 'BMW', model: '320d' },
+  car: {
+    brand: 'BMW',
+    engine: null,
+    fuel: 'diesel',
+    model: '320d',
+    year: 2019,
+  },
   id: 'r-1',
   jobs: [
-    { id: 'j-1', nameEn: 'Timing chain kit', nameRo: 'Kit lanț distribuție' },
-    { id: 'j-2', nameEn: 'Brake pads', nameRo: 'Plăcuțe frână' },
+    {
+      id: 'j-1',
+      jobTypeId: 't-1',
+      nameEn: 'Timing chain kit',
+      nameRo: 'Kit lanț distribuție',
+      position: 0,
+    },
+    {
+      id: 'j-2',
+      jobTypeId: 't-2',
+      nameEn: 'Brake pads',
+      nameRo: 'Plăcuțe frână',
+      position: 1,
+    },
   ],
   postedAt: '2026-03-14T10:00:00.000Z',
   rating: 5,
   source: 'job',
   text: 'Treabă curată, <b>la timp</b>.',
-} as GarageReviewDto;
+};
 
-const review = (n: number, extra: Partial<GarageReviewDto> = {}) =>
-  ({ ...REVIEW, id: `r-${n}`, ...extra }) as GarageReviewDto;
+const review = (
+  n: number,
+  extra: Partial<GarageReviewDto> = {},
+): GarageReviewDto => ({ ...REVIEW, id: `r-${n}`, ...extra });
 
 const PAGE: GarageReviewsPageDto = {
   breakdown: { five: 3, four: 2, one: 1, three: 1, two: 0 },
@@ -73,7 +93,7 @@ const EMPTY: GarageReviewsPageDto = {
   rating: null,
   reviewCount: 0,
   total: 0,
-} as unknown as GarageReviewsPageDto;
+};
 
 type Read = {
   params: { garageId: string; page?: number };
@@ -274,7 +294,7 @@ describe('the reviews section on a garage profile', () => {
   });
 
   it('shows the dash for a null stored rating while reviews are listed', async () => {
-    await shown({ ...PAGE, rating: null } as unknown as GarageReviewsPageDto);
+    await shown({ ...PAGE, rating: null });
 
     expect(section().querySelector('.figure')?.textContent?.trim()).toBe('—');
     expect(reviews()).toHaveLength(1);
@@ -602,6 +622,35 @@ describe('the reviews section kept live', () => {
     await liveMessage('review.posted');
     await reads[2]?.answer({ ...first, total: 22 });
     await reads[1]?.answer({ ...first, items: [review(21)], page: 2 });
+
+    expect(reviews()).toHaveLength(20);
+    expect(button('Vezi mai multe')?.disabled).toBe(false);
+  });
+
+  it('drops a page asked for while a re-read was already on its way', async () => {
+    const first = {
+      ...PAGE,
+      items: Array.from({ length: 20 }, (_, i) => review(i + 1)),
+      total: 45,
+    };
+    await shown(first);
+    button('Vezi mai multe')?.click();
+    await settle();
+    await reads[1]?.answer({
+      ...first,
+      items: Array.from({ length: 20 }, (_, i) => review(i + 21)),
+      page: 2,
+    });
+
+    await liveMessage('review.posted');
+    button('Vezi mai multe')?.click();
+    await settle();
+    await reads[2]?.answer(first);
+    await reads[3]?.answer({
+      ...first,
+      items: Array.from({ length: 5 }, (_, i) => review(i + 41)),
+      page: 3,
+    });
 
     expect(reviews()).toHaveLength(20);
     expect(button('Vezi mai multe')?.disabled).toBe(false);

@@ -138,10 +138,7 @@ export class ReviewsSection implements OnInit {
   protected readonly hasMore = computed(() => {
     const page = this.page();
     if (!page) return false;
-    return (
-      this.reviews().length < page.total &&
-      this.pages() * page.pageSize < page.total
-    );
+    return this.pages() * page.pageSize < page.total;
   });
 
   ngOnInit(): void {
@@ -167,6 +164,15 @@ export class ReviewsSection implements OnInit {
   protected more(): void {
     const generation = this.generation;
     const page = this.pages() + 1;
+    // A re-read of the first page that began before the click and answers
+    // before this page does leaves this page out of step: it is dropped.
+    const stale = () => {
+      if (generation === this.generation && this.pages() === page - 1) {
+        return false;
+      }
+      if (generation === this.generation) this.loadingMore.set(false);
+      return true;
+    };
     this.loadingMore.set(true);
     this.moreFailed.set(false);
     this.api
@@ -176,13 +182,13 @@ export class ReviewsSection implements OnInit {
       )
       .then(
         (answer) => {
-          if (generation !== this.generation) return;
+          if (stale()) return;
           this.extra.update((loaded) => [...loaded, ...answer.items]);
           this.pages.set(page);
           this.loadingMore.set(false);
         },
         () => {
-          if (generation !== this.generation) return;
+          if (stale()) return;
           this.moreFailed.set(true);
           this.loadingMore.set(false);
         },

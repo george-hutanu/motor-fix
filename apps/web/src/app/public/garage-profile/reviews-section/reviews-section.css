@@ -109,6 +109,9 @@ p {
 }
 
 .by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-3);
   font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
@@ -117,12 +120,6 @@ p {
 .text {
   white-space: pre-line;
   overflow-wrap: anywhere;
-}
-
-.by {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mf-space-1) var(--mf-space-3);
 }
 
 .more,

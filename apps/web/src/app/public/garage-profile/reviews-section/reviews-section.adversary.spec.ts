@@ -44,7 +44,7 @@ const PAGE = {
   rating: 5,
   reviewCount: 1,
   total: 1,
-} as unknown as GarageReviewsPageDto;
+};
 
 type Read = {
   params: { garageId: string; page?: number };
@@ -168,8 +168,10 @@ describe('the reviews section under hostile answers', () => {
   it('joins a hundred job names without dropping one', async () => {
     const jobs = Array.from({ length: 100 }, (_, i) => ({
       id: `j${i}`,
+      jobTypeId: `t${i}`,
       nameEn: `E${i}`,
       nameRo: `Job${i}`,
+      position: i,
     }));
     await shown({ ...PAGE, items: [review(1, { jobs })] });
 
