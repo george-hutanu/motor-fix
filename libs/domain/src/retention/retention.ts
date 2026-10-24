@@ -7,7 +7,7 @@ import type { PrismaClient } from '../generated/prisma/client';
 import { countRetention } from '../metrics/product-counters';
 import type { StorageService } from '../storage/storage.service';
 
-export interface RetentionDeps {
+interface RetentionDeps {
   prisma: PrismaClient;
   storage: Pick<StorageService, 'deleteObject'>;
   logger: { log(line: string): void; error(line: string): void };

@@ -29,8 +29,6 @@ export const RETENTION = {
   },
 } as const;
 
-export type RetentionPeriod = keyof typeof RETENTION;
-
 // The most rows one statement of a sweep touches.
 export const RETENTION_BATCH = 1000;
 

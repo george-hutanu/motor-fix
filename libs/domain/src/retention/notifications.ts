@@ -16,6 +16,7 @@ export async function sweepNotifications(
 ): Promise<number> {
   const cutoff = retentionCutoff(now, RETENTION.notifications.days);
   let total = 0;
+  // Ends on a short batch: each batch takes its rows out of the next selection.
   for (;;) {
     const [{ deleted }] = await prisma.$queryRaw<{ deleted: number }[]>`
       WITH gone AS (

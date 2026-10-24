@@ -9,7 +9,7 @@ export const SECRET_KINDS = [
   'staff_invite',
 ] as const;
 
-export type SecretKind = (typeof SECRET_KINDS)[number];
+type SecretKind = (typeof SECRET_KINDS)[number];
 
 // One bounded delete of rows whose expiry has passed, used or not; an invite
 // only while still sent (an accepted or revoked one is the garage's record).
@@ -42,6 +42,7 @@ export async function sweepExpired(
   now: Date,
 ): Promise<number> {
   let total = 0;
+  // Ends on a short batch: each batch takes its rows out of the next selection.
   for (;;) {
     const deleted = await BATCH[kind](prisma, now);
     total += deleted;

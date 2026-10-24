@@ -19,6 +19,7 @@ export async function anonymiseAudit(
 ): Promise<number> {
   const cutoff = retentionCutoff(now, RETENTION.auditHistory.days);
   let total = 0;
+  // Ends on a short batch: each batch takes its rows out of the next selection.
   for (;;) {
     const anonymised = await prisma.$executeRaw`
       WITH closed_account AS (

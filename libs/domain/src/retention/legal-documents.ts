@@ -24,6 +24,7 @@ export async function sweepLegalDocuments(
   const stuck: string[] = [];
   const errors: Error[] = [];
   let total = 0;
+  // Ends on a short batch: each batch deletes its rows or marks them stuck.
   for (;;) {
     const due = await prisma.$queryRaw<{ id: string; pages: string[] }[]>`
       SELECT d.id, d.pages FROM legal_document d
