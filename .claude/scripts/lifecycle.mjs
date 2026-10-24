@@ -395,11 +395,22 @@ function runChecks(ctx, known) {
   runCheck(ctx, "lint", "npm", ["run", "lint"]);
   const base = known || ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
   if (!base) throw new Stop("affected typecheck and unit tests", `no merge base with origin/main: git fetch origin, then rerun ${SELF} check`);
-  runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`]);
+  runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`], jestCaps(ctx.env));
 }
 
-function runCheck(ctx, name, file, args) {
-  const r = ctx.io.run(file, args, { env: ctx.env });
+/**
+ * A merge commit makes most projects affected; under heavy.sh's NX_PARALLEL=2
+ * and 3072 MB heap, two Jest runs of two workers each ran out of heap on a
+ * 16 GB laptop. Two workers per run, recycled past 1GB (the idle limit caps
+ * the heap; one worker took 2.2x as long), unless the env
+ * already says otherwise. jest.preset.cjs and libs/domain read JEST_IDLE_MEMORY.
+ */
+function jestCaps(env) {
+  return { ...env, JEST_MAX_WORKERS: env.JEST_MAX_WORKERS || "2", JEST_IDLE_MEMORY: env.JEST_IDLE_MEMORY || "1GB" };
+}
+
+function runCheck(ctx, name, file, args, env = ctx.env) {
+  const r = ctx.io.run(file, args, { env });
   if (r.code !== 0) throw new Stop(name, `${`${r.stdout}${r.stderr}`.trim().slice(-1500)}\nfix it, then rerun ${SELF} check`);
   ctx.did.push(name);
 }

@@ -920,7 +920,7 @@
       },
       "label": "Cod",
       "problem": {
-        "account_suspended": "Contul tău este suspendat.",
+        "account_suspended": "Contul tău este suspendat. Scrie‑ne la suport.",
         "code_expired": "Codul a expirat. Cere un cod nou.",
         "code_invalid": "Codul nu este corect.",
         "consent_required": "Bifează acordul pentru a crea contul.",
@@ -954,7 +954,7 @@
       "withEmail": "Intră cu e‑mail și parolă"
     },
     "problem": {
-      "account_suspended": "Contul tău este suspendat.",
+      "account_suspended": "Contul tău este suspendat. Scrie‑ne la suport.",
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
     },
@@ -969,7 +969,7 @@
       "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
       "failed": "Nu am putut contacta {provider}. Încearcă din nou sau intră cu e‑mail sau telefon.",
       "maintenance": "MotorFix este în mentenanță. Încearcă din nou în câteva minute.",
-      "suspended": "Contul tău este suspendat."
+      "suspended": "Contul tău este suspendat. Scrie‑ne la suport."
     },
     "submit": "Intră în cont",
     "title": "Autentificare",

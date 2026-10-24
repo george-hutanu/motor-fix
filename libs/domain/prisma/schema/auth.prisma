@@ -44,6 +44,8 @@ model Account {
   city                    String?
   language                Language                 @default(ro)
   status                  AccountStatus            @default(active)
+  // Why an admin suspended the account; cleared on restore and deletion.
+  suspendedReason         String?                  @map("suspended_reason")
   lastRole                Role                     @map("last_role")
   lastActiveAt            DateTime?                @map("last_active_at") @db.Timestamptz(3)
   emailBouncedAt          DateTime?                @map("email_bounced_at") @db.Timestamptz(3)

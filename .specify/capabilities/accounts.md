@@ -42,10 +42,12 @@ features:
   - 009-copy-voice-analytics
   - 129-delete-account
   - 292-saved-garage-quote
-  - 532-lost-session-home
   - 500-req-ip-behind-proxy
+  - 003-admin-account-actions
+  - 532-lost-session-home
   - 500-trust-railway-edge
   - 1370-release-seed-no-ssh
+  - 1372-seed-restores-accounts
 ---
 
 # Capability: Accounts
@@ -182,9 +184,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-016 — The dialog MUST show the message for the answer's code in the person's language — `invalid_credentials`, `too_many_attempts`, `account_suspended`, `maintenance`, offline (no answer while the device reports no connection), and the shared messages for a failed call while online and for any other code — in a region screen readers announce; the typed e-mail MUST stay, and the password MUST be cleared after `invalid_credentials`.
+### 003-FR-008 — Once suspended, the next sign-in by every method (e-mail and password, Google, Apple, phone code) and every refresh MUST be refused as the existing `account_suspended` answers say (082-FR-004, 082-FR-008, 083-FR-006, 393-FR-007); the message shown for `account_suspended` everywhere the web shows it MUST read "Contul tău este suspendat. Scrie‑ne la suport." / "Your account is suspended. Write to support." (Modifies 082-FR-016.)
 
-_From 082-sign-in._
+_From 003-admin-account-actions._
 
 ### 082-FR-017 — After a successful sign-in the dialog MUST close and the role's landing (`/app/driver`, `/app/garage` for garage owner, receptionist and mechanic, `/app/admin`) MUST open, in the account's language.
 
@@ -206,9 +208,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
+### 1372-FR-004 — The seed MUST stay idempotent on every staging deploy: a second run on the same database MUST add no row to any table (the existing removal of the seed accounts' last-day quote requests is the one exception) and MUST change no row, the password hash of every seeded identity included (replaces `1370-FR-006`: a seeded account's password identity, seeded roles and seeded garage link a user changed are restored, not kept); the integration spec MUST run the seed twice and compare the row counts and every seeded account's account, identity, role and link rows.
 
-_From 1370-release-seed-no-ssh._
+_From 1372-seed-restores-accounts._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -1071,9 +1073,9 @@ _From 009-copy-voice-analytics._
 
 _From 009-copy-voice-analytics._
 
-### 129-FR-001 — `DELETE /api/v1/auth/account` MUST delete the signed-in account holder's own account, in one transaction: `ACCOUNT.status` → `deleted` by a conditional write that changes the row only while it is `active` (a request that changes no row rolls back and answers 401 `sign_in_required`); name, e-mail, phone, city, `email_verified_at`, `phone_verified_at` and `email_bounced_at` cleared; every ACCOUNT_IDENTITY, REFRESH_TOKEN, PUSH_SUBSCRIPTION, NOTIFICATION_PREFERENCE, ACCOUNT_TOKEN, PHONE_CHANGE, ASSISTANT_GRANT, ASSISTANT_SIGN_IN_CODE and ACCOUNT_ROLE row of the account deleted; then answer 204.
+### 003-FR-012 — `POST /api/v1/admin/accounts/{id}/delete-on-request` with `{ reference, receivedOn, identityChecked }` MUST validate at the edge: `reference` matching `DR-<four-digit year>-<four or more digits>`, `receivedOn` a calendar date not after today (Europe/Bucharest), `identityChecked` exactly `true`; else 400 `validation_failed`. It MUST refuse with 409 `deletion_not_allowed` an account holding an owner membership of any garage, whatever the garage's status (129-FR-004's rule) and with 409 `admin_account` an admin (FR-003). Otherwise it MUST run the deletion use case of ST-129 for an `active` or a `suspended` account (the conditional write admitting both; 129-FR-001's row and field clearing, 129-FR-007's events, 129-FR-008's `session.revoked`, 129-FR-009's team leave, 129-FR-010–FR-012's review, plate and e-mail rules all unchanged) without the self-service checks (no confirmation text, no 15-minute re-sign-in, no assistant refusal), the assistant grants revoked with reason `account_deleted` (FR-015), and write the deletion's audit entry (action `delete`, subject `account`, kind `account_deleted`) with the admin as actor and `text` = `{ reference, receivedOn }`, never the personal values removed. The answer is 204. (Modifies 129-FR-001.)
 
-_From 129-delete-account._
+_From 003-admin-account-actions._
 
 ### 129-FR-002 — The request MUST carry a confirmation: the account's e-mail (case-insensitive) or phone (as normalised at sign-in), or, for an account holding neither, the word `ȘTERGE` or `DELETE`; a mismatch answers 400 `validation_failed` and changes nothing.
 
@@ -1171,7 +1173,7 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
+### 500-FR-016 — The API MUST resolve the caller with a `trust proxy` function that walks the hops from the socket inward and trusts every hop in loopback, link-local, private (RFC 1918), `100.64.0.0/10` or `fc00::/7` (an IPv4-mapped IPv6 hop as the IPv4 address it carries) until it trusts one public hop, and trusts exactly one public hop (Railway's edge PoP, whose range varies by region) when it sits directly before a trusted private hop; the caller is the first hop not trusted. A chain `86.125.92.213, 95.173.1.1, 100.64.0.5` from socket `fd12:e82::1` resolves to `86.125.92.213`. (Modifies 500-FR-008: the trusted hops gain private and the one PoP hop, decided on #303.)
 
 _From 500-trust-railway-edge._
 
@@ -1179,13 +1181,65 @@ _From 500-trust-railway-edge._
 
 _From 532-lost-session-home._
 
-### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+### 500-FR-017 — The function MUST never trust two public hops, a public hop that is not directly before a trusted private hop (so a public socket trusts nothing), any hop past the trusted public hop, or an entry that is not an address; a client-forged prefix before the real chain resolves to the visitor. It is never a hop count and reads no header other than X-Forwarded-For (X-Real-IP is not read; `req.ip` stays the one source). (Modifies 500-FR-009: one public hop is now trusted, by position, never by count.)
 
 _From 500-trust-railway-edge._
 
 ### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
 
 _From 500-trust-railway-edge._
+
+### 003-FR-001 — `GET /api/v1/admin/accounts/{id}` MUST answer, for a MotorFix admin, the account's: name, e-mail, phone, language, roles (in the list's order), the linked garage when the account owns one, is receptionist at one or holds a mechanic card at one (id, name, status), joined time, last active time, status, the suspension reason when `suspended`, counts (cars, quote requests, reviews), sign-in methods (`password`, `google`, `apple`, `whatsapp_phone`, as a list of methods only), whether the account holds `admin` (so no action is offered) and, for a garage owner, the garage's legal documents (ids and titles) the page can open. The answer MUST carry no password hash, no sign-in subject and no token.
+
+_From 003-admin-account-actions._
+
+### 003-FR-002 — The read and every action route of this story MUST be admin-only through the existing actor check: any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended caller 403 `account_suspended`; an unknown id, a malformed id or a `deleted` account answers 404 `not_found`; every error as RFC 9457 problem details with a `code`.
+
+_From 003-admin-account-actions._
+
+### 003-FR-003 — The actions (FR-006, FR-007, FR-010, FR-012) MUST be refused with 409 `admin_account` for an account that holds `admin`, before any write, and the page MUST offer no action button on such an account.
+
+_From 003-admin-account-actions._
+
+### 003-FR-006 — `POST /api/v1/admin/accounts/{id}/reset-access` MUST, in one transaction: revoke every refresh token of the account (the sign-out-everywhere step), write one audit entry (action `update`, subject `account`, kind `access_reset`, actor the admin with role `admin` and their name) and record the outbox event `account.access_reset` (`{ accountId }`, audience `account:{accountId}`). After the commit it MUST publish `session.revoked` to `account:{accountId}` through the sign-in service's one method (569-FR-003) and, when the account holds a `password` identity and an e-mail, send the existing password-reset e-mail with its link directly (194-FR-012, the reset flow's own request), never to a phone-only or e-mail-less account. The answer is 200 `{ email: 'sent' | 'none' | 'failed' }`; a refused send answers `failed` with the sessions already ended, and a repeat of the call is allowed as the retry. The admin never receives, sees or sets a password.
+
+_From 003-admin-account-actions._
+
+### 003-FR-007 — `POST /api/v1/admin/accounts/{id}/suspend` with `{ reason }` (10 to 500 characters after trimming, else 400 `validation_failed`) MUST, in one transaction: move `ACCOUNT.status` `active` → `suspended` by a conditional write (zero rows changed rolls back and answers 409 `account_already_suspended`, or 404 when the account is `deleted`), store the reason as the account's suspension reason, revoke every refresh token, revoke every active assistant grant of the account with reason `account_suspended` (FR-015), write one audit entry (action `update`, subject `account`, field `status`, old `active`, new `suspended`, kind `account_suspended`, `text` = the reason, actor the admin) and record the outbox event `account.suspended` (`{ accountId }`, audience `account:{accountId}`). After the commit it MUST publish `session.revoked` as FR-006 does and, when the account holds an e-mail, queue one ACCOUNT_EMAIL `account_suspended` (FR-022) in the account's language; an account without an e-mail gets no message; a send the sender refuses is logged and counted as outcome `email_failed`, with no retry, and does not change the answer. The answer is 200 with the page's read (FR-001).
+
+_From 003-admin-account-actions._
+
+### 003-FR-009 — The suspension's clean-up runs through the existing consumer of `account.suspended` (428-FR-001–FR-012): the person's open quote requests are closed, their future bookings are cancelled with `cancelled_by_side` `system`, and the garages are told by REQUEST_CANCELLED and BOOKING_CANCELLED [X11]; this story adds no second handler and MUST test that the existing one runs exactly once for the event; a restore reopens nothing (428-FR-001 ignores `account.restored`).
+
+_From 003-admin-account-actions._
+
+### 003-FR-010 — `POST /api/v1/admin/accounts/{id}/restore` with `{ note }` (optional, at most 500 characters) MUST, in one transaction: move `suspended` → `active` by a conditional write (zero rows changed answers 409 `account_not_suspended`, or 404 when `deleted`), clear the suspension reason, write one audit entry (action `update`, subject `account`, field `status`, old `suspended`, new `active`, kind `account_restored`, `text` = the note when given, actor the admin) and record the outbox event `account.restored` (`{ accountId }`, audience `account:{accountId}`); after it the person can sign in again. Requests closed and bookings cancelled by the suspension stay so, revoked assistant grants stay revoked, and no message is sent to the person. The answer is 200 with the page's read.
+
+_From 003-admin-account-actions._
+
+### 003-FR-011 — Suspending, restoring or deleting an account MUST never change a garage's status, its listing or its other members' access: a suspended owner's garage stays listed and its receptionists keep working; the page MUST say, for an owner whose garage is `suspended`, that the garage is suspended from its own page (MF-44) and link there, offering no garage action.
+
+_From 003-admin-account-actions._
+
+### 003-FR-013 — A mechanic's or a receptionist's account deleted on request MUST leave the team as 129-FR-009 says, with the reviews of their work staying with the garage [X12]; the page MUST disable "Șterge la cererea titularului" for a garage owner with the text "Garajul se închide mai întâi prin suport" / "The garage is closed through support first" and keep it disabled until the account holds no owner membership.
+
+_From 003-admin-account-actions._
+
+### 003-FR-014 — Every action MUST write its audit entry and its outbox event in the same transaction as its change, with the admin's account id, role `admin` and first name as the actor (164-FR-001), and every status change MUST be a conditional write so that two admins acting at once leave exactly one winner: the loser answers 409 and the web re-reads the page. Reads write nothing except FR-005's document opening.
+
+_From 003-admin-account-actions._
+
+### 003-FR-016 — Every session end of this story (reset, suspend, delete) MUST reach the person's open tabs through `session.revoked` on `account:{accountId}` (128-FR-009), and the live hub's eviction on `account.suspended` and `account.deleted` (254-FR-008) stays as it is; a failed publish is logged and does not change the answer.
+
+_From 003-admin-account-actions._
+
+### 003-FR-020 — The five routes MUST be REST with OpenAPI, their DTOs in the contracts library validated at the edge, and the generated Angular client regenerated; the events `account.access_reset`, `account.suspended`, `account.restored`, `account.deleted` and `assistant_grant.revoked` are the kinds already declared in the contracts' event list.
+
+_From 003-admin-account-actions._
+
+### 003-FR-023 — Tests MUST cover, before the code (Principle II), in Jest on real PostgreSQL and Valkey where rows are written: each action with its audit entry and event (FR-006, FR-007, FR-010, FR-012); sessions revoked on reset and suspend; sign-in refused for a suspended account by every method and refresh; restore and sign-in again; delete on request refused without the fields and for a garage owner whose garage is open or suspended, allowed for a driver, a mechanic and a receptionist (team left, reviews kept) and for a suspended account; the suspension's clean-up run exactly once; the document opening logged; the actions refused on admin accounts; 404 for non-admins and unknown ids; the concurrent suspend, restore and delete; the e-mail queued with the reason and the contact link, none for an e-mail-less account; the reset e-mail for a password account, none for phone-only, `failed` on a refused send with the tokens gone; the grants revoked per trigger (suspend, delete, role loss) with one event per grant, a still-valid token refused, a role added leaving grants intact; the history filter by actor or subject and the 50 limit; and in Playwright: suspend a seeded driver, fail to sign in as that driver, restore it and sign in, at 390 px and on desktop, in Romanian and English.
+
+_From 003-admin-account-actions._
 
 ### 500-FR-012 — `hops` MUST list the X-Forwarded-For entries left to right, then the address of the socket the API was called on, each masked as FR-001–FR-004 mask the caller (an entry that is not an address reads `unknown`, an empty entry is skipped), comma-separated without spaces. At most the rightmost 8 entries of the header are listed; when more were sent, the list starts with `+<n>`, the number left out. With no X-Forwarded-For header the list is the socket address alone. The entry just before the socket is the one the web edge appended (FR-015).
 
@@ -1202,6 +1256,30 @@ _From 500-trust-railway-edge._
 ### 500-FR-015 — The web edge MUST keep forwarding the X-Forwarded-For chain it was given unchanged and append the address of the socket it was called on (`<given>, <socket>`, or `<socket>` alone), so the API's `hops` show that socket hop masked; this PR asserts the behaviour and does not change it.
 
 _From 500-trust-railway-edge._
+
+### 1372-FR-001 — For each account in its list (`PEOPLE`, matched by e-mail), the seed MUST restore the account's password identity to its seeded state: an identity with method `password` and subject equal to the e-mail whose hash verifies against the seed password; a missing identity is inserted, a hash that does not verify is rewritten with a new argon2id hash of the seed password, and a hash that verifies is left byte-for-byte unchanged (the stored hash is verified against the seed password, never compared to a fresh hash).
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-002 — For each account in its list, the seed MUST ensure every role in that account's seeded `roles` exists on it, inserting the missing ones; a role the account holds that the seed does not list for it MUST be left in place.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-003 — For each account in its list with an `at`, the seed MUST ensure its seeded garage link exists with the seeded values: for `as: owner` or `receptionist`, a `garage_member` row at the seeded garage with that role; for `as: mechanic`, a `mechanic` row for the account at the seeded garage with `can_answer_quotes` equal to the seeded `answersQuotes` (false when absent). A missing link is inserted and a link at the seeded garage with other values is set to the seeded ones; a link at any other garage is left in place; when that link holds the seeded role (an account holds one role at one garage, `garage_member` unique on account and role; one `mechanic` row per account) the seeded link cannot be added, and the seed prints `seed: <e-mail> is <role> at another garage, so its link to <slug> is not added` on stderr and goes on.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-005 — The seed MUST write nothing on an account whose e-mail is not in its list, whatever its hash, roles or links; and on a seeded account it MUST leave `name`, `phone`, `phone_verified_at`, `status`, `last_role` and every other column outside FR-001 to FR-003 as the user left them.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-006 — The staging guard of `scripts/reset-staging.sh`, the staging-only seed in the api's Railway pre-deploy (1370-FR-001), the refusal on `APP_ENV=production` and the `SEED_PASSWORD` guard MUST be unchanged, and the seed password's value MUST never be printed to stdout, stderr, a log or an error message.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-007 — Tests come first and live in `libs/domain/src/seed.integration.spec.ts` (PostgreSQL): a drifted-account test (a seeded account with a hash that does not verify, a missing seeded role and no garage link is restored; a renamed seeded account keeps its name; an account outside the list with a wrong hash, no roles and no link is unchanged) and a second-run test that proves FR-004, each carrying `// @traces 1372-FR-<n>` (the form `.claude/scripts/lib/traces.mjs` reads); the test of `1370-FR-006` that asserts a user-changed hash survives is replaced by these.
+
+_From 1372-seed-restores-accounts._
 
 ## Retired
 
@@ -1229,6 +1307,11 @@ _From 500-trust-railway-edge._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
+- `082-FR-016` — superseded by `003-FR-008` (2026-10-24)
+- `129-FR-001` — superseded by `003-FR-012` (2026-10-24)
 - `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
 - `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
 - `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
+- `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
+- `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
+- `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
