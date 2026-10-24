@@ -34,7 +34,7 @@ import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 
 // The brand list as an admin keeps it: no route deletes a brand, retiring is
-// the only way out of the pickers (105-FR-007).
+// the only way out of the pickers.
 @ApiTags('admin')
 @ApiBearerAuth()
 @Controller('admin/brands')

@@ -148,7 +148,7 @@ async function references(brandId: string) {
   return { car, works };
 }
 
-// The suite FR-021 asks for, against real PostgreSQL and Valkey.
+// The admin brand routes against real PostgreSQL and Valkey.
 // @traces 105-FR-021
 describe('GET /admin/brands', () => {
   // @traces 105-FR-002
@@ -604,27 +604,56 @@ describe('PATCH /admin/brands/{id}', () => {
     expect((await row(mercedes.id)).name).toBe('Mercedes AMG');
   });
 
-  // @traces 105-FR-014
-  it('never caches the list a search read before an admin change', async () => {
-    const cache = app.get<Redis>(AUTH_REDIS);
-    await redis.incr('brands:version');
-    let raced = false;
-    // The search has read PostgreSQL; the admin's rename commits and drops the
-    // cache before the search writes what it read.
-    const write = jest
-      .spyOn(cache, 'set')
-      .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
-        write.mockRestore();
-        raced = true;
-        await update(mercedes.id, {
-          name: 'Mercedes-Benz',
-          seenUpdatedAt: await seen(mercedes.id),
-        });
-        return cache.set(...args);
-      });
+  const TEN = Array.from({ length: 10 }, (_, lap) => lap + 1);
 
-    expect(await publicNames('merc')).toEqual(['Mercedes']);
-    expect(raced).toBe(true);
-    expect(await publicNames('merc')).toEqual(['Mercedes-Benz']);
-  });
+  // @traces 105-FR-014
+  it.each(TEN)(
+    'never caches the list a search read before an admin change (lap %i)',
+    async () => {
+      const cache = app.get<Redis>(AUTH_REDIS);
+      await redis.incr('brands:version');
+      let raced = false;
+      // The search has read PostgreSQL; the admin's rename commits and drops the
+      // cache before the search writes what it read.
+      const write = jest
+        .spyOn(cache, 'set')
+        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
+          write.mockRestore();
+          raced = true;
+          await update(mercedes.id, {
+            name: 'Mercedes-Benz',
+            seenUpdatedAt: await seen(mercedes.id),
+          });
+          return cache.set(...args);
+        });
+
+      expect(await publicNames('merc')).toEqual(['Mercedes']);
+      expect(raced).toBe(true);
+      expect(await publicNames('merc')).toEqual(['Mercedes-Benz']);
+    },
+  );
+
+  // @traces 105-FR-014
+  it.each(TEN)(
+    'never caches the list a search read before a loader change (lap %i)',
+    async () => {
+      const cache = app.get<Redis>(AUTH_REDIS);
+      await redis.incr('brands:version');
+      let raced = false;
+      // The search has read PostgreSQL; the file's rename commits and drops the
+      // cache before the search writes what it read.
+      const write = jest
+        .spyOn(cache, 'set')
+        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
+          write.mockRestore();
+          raced = true;
+          await loader.load(BRANDS);
+          return cache.set(...args);
+        });
+
+      expect(await publicNames('merc')).toEqual(['Mercedes']);
+      expect(raced).toBe(true);
+      expect(await publicNames('merc')).toEqual(['Mercedes-Benz']);
+    },
+  );
 });

@@ -44,7 +44,7 @@ export async function dropActiveBrands(redis: Redis, logger: Logger) {
 const SLUG_MIN = 2;
 const SLUG_MAX = 40;
 
-// The columns an admin edit compares and audits, in the order of the entries.
+// The columns an admin edit compares and audits.
 const EDITED = ['name', 'slug', 'active'] as const;
 
 const notFound = () =>
@@ -94,7 +94,7 @@ const adminRow = (brand: Counted): AdminBrandDto => ({
 });
 
 // The brand an edit asks for, after the body check and the stale check, in
-// that order (105-FR-006); the holder check and the no-op come after.
+// that order; the holder check and the no-op come after.
 function edited(before: Counted, body: UpdateBrandDto) {
   if (body.name === undefined && body.active === undefined) {
     throw refusal(
@@ -133,7 +133,7 @@ export class BrandsService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  // Every brand, retired ones too, with what points to it (105-FR-002).
+  // Every brand, retired ones too, with what points to it.
   async list(actor: Actor, q = ''): Promise<AdminBrandListDto> {
     requireCapability(actor, 'admin.catalogue');
     const wanted = fold(q.trim());
@@ -147,7 +147,7 @@ export class BrandsService {
   }
 
   // An admin's new brand: key and slug from its name, owned by the admin so
-  // the loader leaves it alone (105-FR-004, FR-005, FR-012).
+  // the loader leaves it alone.
   async create(actor: Actor, body: CreateBrandDto): Promise<AdminBrandDto> {
     requireCapability(actor, 'admin.catalogue');
     const slug = slugFor(body.name);
@@ -179,7 +179,7 @@ export class BrandsService {
     return adminRow(created);
   }
 
-  // A rename, a retirement or a bring-back, checked in the order of 105-FR-006.
+  // A rename, a retirement or a bring-back, checked in the spec's order.
   async update(
     actor: Actor,
     id: string,
@@ -236,7 +236,7 @@ export class BrandsService {
   }
 
   // A brand other than `except` holding the slug, as slug or as key; checked
-  // on the slug, so accents and case never make a second brand (105-FR-005).
+  // on the slug, so accents and case never make a second brand.
   private async refuseHeld(
     tx: Prisma.TransactionClient,
     slug: string,

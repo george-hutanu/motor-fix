@@ -1,3 +1,4 @@
+import { brandLoadTimeoutMs } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
@@ -35,7 +36,7 @@ export class BrandLoader {
         return this.apply(tx, records);
       },
       // The full list is a few hundred brands, each audited on its first load.
-      { timeout: 60_000 },
+      { timeout: brandLoadTimeoutMs() },
     );
     this.logger.log(`brands loaded: ${changed} changed`);
     if (changed > 0) {

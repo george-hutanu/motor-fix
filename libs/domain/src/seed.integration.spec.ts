@@ -534,6 +534,30 @@ describe('seed of the listed garages', () => {
     expect(dacia._count.garageBrands).toBeGreaterThan(0);
   });
 
+  // An API that booted before the seed has loaded Saab active and its own.
+  // @traces 105-FR-020
+  it('retires a Saab the loader already holds and hands it to the admin', async () => {
+    await prisma.brand.create({
+      data: {
+        key: 'saab',
+        name: 'Saab',
+        roPossessive: 'Saabul tău',
+        slug: 'saab',
+      },
+    });
+
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const admin = await prisma.account.findUniqueOrThrow({
+      where: { email: 'admin@example.test' },
+    });
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    expect([saab.active, saab.updatedBy]).toEqual([false, admin.id]);
+  });
+
   // @traces 227-FR-013
   it('gives the cards on Home a long brand list, an empty refused list and a mobile radius', async () => {
     expect(seed('test').status).toBe(0);

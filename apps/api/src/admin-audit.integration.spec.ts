@@ -282,7 +282,6 @@ const FIXTURES: Record<
   },
 };
 
-// A garage's job waiting for an admin's decision, under a name of its own.
 // An active brand of the loader's, and the value an admin edit sends back.
 let brandSeen = '';
 async function storedBrand() {
@@ -299,6 +298,7 @@ async function storedBrand() {
   return row.id;
 }
 
+// A garage's job waiting for an admin's decision, under a name of its own.
 async function proposedJob() {
   const name = `Propusă audit ${randomUUID()}`;
   return (
