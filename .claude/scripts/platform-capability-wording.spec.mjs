@@ -11,7 +11,7 @@ const platform = readFileSync(join(import.meta.dirname, '..', '..', '.specify', 
 describe('the platform capability', () => {
   // @traces 493-FR-003
   it('names three routes for a surviving mutant: a test, a behaviour-preserving rewrite, a silenced line', () => {
-    const fr = platform.match(/^### 493-FR-003 — .*$/m)?.[0] ?? '';
+    const fr = platform.match(/^### \S+ — Every surviving and uncovered mutant.*$/m)?.[0] ?? '';
     assert.match(fr, /killed by a test/);
     assert.match(fr, /behaviour-preserving rewrite/);
     assert.match(fr, /Stryker disable next-line/);

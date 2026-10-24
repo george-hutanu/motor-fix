@@ -62,9 +62,8 @@ describe('capability files', () => {
   });
 
   // @traces 493-FR-005
-  // The merge that glued `_From 854…_` to `### 850-FR-001` (#624): both sides
-  // appended a requirement at the same place, and theirs followed ours with no
-  // blank line between.
+  // Both sides appended a requirement at the same place, and theirs followed
+  // ours with no blank line between.
   it('keeps a blank line before a heading of theirs that follows ours in one hunk', () => {
     const fm = '---\ncapability: p\nupdated: 2026-10-01\nfeatures:\n  - 1-a\n---\n';
     const head = `${fm}## Requirements\n\n### 1-FR-001 — x\n\n_From 1-a._\n\n`;
