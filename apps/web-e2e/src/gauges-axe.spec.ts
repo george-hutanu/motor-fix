@@ -7,10 +7,10 @@ import { test } from './fixtures.js';
 // default rules over the whole page, once per theme: nothing is disabled or
 // excluded, so a finding is fixed in the product, never filtered here.
 
-// @traces 451-gauges-axe-FR-001
-// @traces 451-gauges-axe-FR-002
-// @traces 451-gauges-axe-FR-003
-// @traces 451-gauges-axe-FR-004
+// @traces 451-FR-001
+// @traces 451-FR-002
+// @traces 451-FR-003
+// @traces 451-FR-004
 for (const scheme of ['light', 'dark'] as const) {
   test(`the gauges catalogue has no axe violations in ${scheme}`, async ({
     page,
