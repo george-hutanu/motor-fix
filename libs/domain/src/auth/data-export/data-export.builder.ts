@@ -179,6 +179,14 @@ export class DataExportBuilder {
       },
       where: { id },
     });
+    // Ready already: an earlier try stored it and then failed to tell the
+    // driver. The e-mail is one row per export, so asking again is safe.
+    if (row?.status === 'ready') {
+      if (row.account.status !== 'deleted') {
+        await this.tell(id, row.accountId, row.account);
+      }
+      return;
+    }
     if (row?.status !== 'queued') return;
     const { account, accountId, requestedAt } = row;
     if (account.status === 'deleted') {
@@ -186,6 +194,8 @@ export class DataExportBuilder {
       this.logger.log(`data export ${id}: account deleted, expired`);
       return;
     }
+    const zipKey = `data-exports/${accountId}/${id}.zip`;
+    let stored = false;
     try {
       await this.prisma.dataExport.update({
         data: { attempts },
@@ -197,8 +207,8 @@ export class DataExportBuilder {
         requestedAt,
       );
       const zip = writeZip(files);
-      const zipKey = `data-exports/${accountId}/${id}.zip`;
       await this.storage.putObject(zipKey, zip, 'application/zip');
+      stored = true;
       const readyAt = this.now();
       const ready = await this.prisma.$transaction(async (tx) => {
         const { count } = await tx.dataExport.updateMany({
@@ -230,18 +240,41 @@ export class DataExportBuilder {
       );
       await this.tell(id, accountId, account);
     } catch (error) {
-      if (attempts >= ATTEMPTS) {
-        await this.prisma.dataExport.updateMany({
-          data: { status: 'failed' },
-          where: { id, status: 'queued' },
-        });
-        countDataExport('failed');
-        this.logger.error(
-          `data export ${id}: failed after ${ATTEMPTS} attempts: ${classOf(error)}`,
-        );
-      }
+      if (attempts >= ATTEMPTS) await this.fail(id, zipKey, stored, error);
       throw error;
     }
+  }
+
+  // The last try failed. Only an export still queued counts as failed: one
+  // that went ready and then failed to send its e-mail stays ready. A file
+  // stored for a failed export is deleted, since no sweep would find it.
+  private async fail(
+    id: string,
+    zipKey: string,
+    stored: boolean,
+    error: unknown,
+  ) {
+    const { count } = await this.prisma.dataExport.updateMany({
+      data: { status: 'failed' },
+      where: { id, status: 'queued' },
+    });
+    if (count === 0) {
+      this.logger.warn(
+        `data export ${id}: ready e-mail failed: ${classOf(error)}`,
+      );
+      return;
+    }
+    if (stored) {
+      await this.storage.deleteObject(zipKey).catch((cause: unknown) => {
+        this.logger.warn(
+          `data export ${id}: stored file not deleted: ${classOf(cause)}`,
+        );
+      });
+    }
+    countDataExport('failed');
+    this.logger.error(
+      `data export ${id}: failed after ${ATTEMPTS} attempts: ${classOf(error)}`,
+    );
   }
 
   private async tell(
