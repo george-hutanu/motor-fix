@@ -4,6 +4,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { settled } from './accounts.js';
 import { test } from './fixtures.js';
+import { rgb, token } from './tokens.js';
 
 // The page opens in Romanian, the default language.
 const SAMPLE_TEXT: Record<
@@ -15,32 +16,6 @@ const SAMPLE_TEXT: Record<
     'utf8',
   ),
 );
-
-const rgb = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) =>
-    Number.parseInt(hex.slice(i, i + 2), 16),
-  );
-  return `rgb(${r}, ${g}, ${b})`;
-};
-
-const themes = {
-  dark: {
-    amber: '#FFB000',
-    bg: '#0B0C0E',
-    line: '#2A2D31',
-    panel: '#101215',
-    raised: '#15171A',
-    text: '#F2F2F0',
-  },
-  light: {
-    amber: '#FFB000',
-    bg: '#F4F4F1',
-    line: '#D3D5D8',
-    panel: '#FFFFFF',
-    raised: '#ECECE8',
-    text: '#15171A',
-  },
-} as const;
 
 const style = (page: Page, selector: string, property: string) =>
   page
@@ -60,26 +35,35 @@ async function open(page: Page, colorScheme: 'dark' | 'light') {
 
 const primaryButton = 'button.spartan-button-variant-default';
 
+// Each colour is read from the page's own tokens in the scheme under test;
+// the token values themselves are pinned by the theme library's unit specs.
+// @traces 452-FR-001
+// @traces 452-FR-002
+// @traces 452-FR-003
 for (const scheme of ['dark', 'light'] as const) {
   test.describe(`the ${scheme} theme`, () => {
     test('paints the page, panels, hairlines, text and the main action from its tokens', async ({
       page,
     }) => {
       await open(page, scheme);
-      const t = themes[scheme];
 
-      expect(await style(page, 'body', 'background-color')).toBe(rgb(t.bg));
-      expect(await style(page, 'body', 'color')).toBe(rgb(t.text));
+      expect(await style(page, 'body', 'background-color')).toBe(
+        rgb(await token(page, '--mf-bg')),
+      );
+      expect(await style(page, 'body', 'color')).toBe(
+        rgb(await token(page, '--mf-text')),
+      );
       expect(await style(page, 'section.mf-panel', 'background-color')).toBe(
-        rgb(t.panel),
+        rgb(await token(page, '--mf-panel')),
       );
       expect(await style(page, 'section.mf-panel', 'border-top-color')).toBe(
-        rgb(t.line),
+        rgb(await token(page, '--mf-line')),
       );
       // The button eases into its colour; read it once the transition ends.
+      const amber = rgb(await token(page, '--mf-amber'));
       await expect
         .poll(() => style(page, primaryButton, 'background-color'))
-        .toBe(rgb(t.amber));
+        .toBe(amber);
       await expect(page.locator(primaryButton)).toHaveCount(1);
     });
 
@@ -124,7 +108,7 @@ for (const scheme of ['dark', 'light'] as const) {
       page,
     }) => {
       await open(page, scheme);
-      const raised = rgb(themes[scheme].raised);
+      const raised = rgb(await token(page, '--mf-panel-raised'));
 
       for (const [name, surface] of [
         [SAMPLE_TEXT.openDialog, 'hlm-dialog-content'],
@@ -146,7 +130,7 @@ for (const scheme of ['dark', 'light'] as const) {
         raised,
       );
       expect(await style(page, '[data-sonner-toast]', 'border-top-color')).toBe(
-        rgb(themes[scheme].line),
+        rgb(await token(page, '--mf-line')),
       );
     });
   });
@@ -162,14 +146,15 @@ test('changes theme with the device at once, keeping what was typed', async ({
   await input.fill('Dacia Logan 2015');
   await expect(input).toHaveValue('Dacia Logan 2015');
   const url = page.url();
+  const darkBg = await token(page, '--mf-bg');
 
   await page.emulateMedia({ colorScheme: 'light' });
 
   await expect(input).toHaveValue('Dacia Logan 2015');
   expect(page.url()).toBe(url);
-  expect(await style(page, 'body', 'background-color')).toBe(
-    rgb(themes.light.bg),
-  );
+  const lightBg = await token(page, '--mf-bg');
+  expect(lightBg).not.toBe(darkBg);
+  expect(await style(page, 'body', 'background-color')).toBe(rgb(lightBg));
 });
 
 test('shows no text under 12 px on a phone, and 16 px in form fields', async ({
