@@ -766,6 +766,12 @@ describe('picking push', () => {
       expect(save).not.toHaveBeenCalled();
       expect(checked(groupOf(element, 'ITP'))).toBe('email');
       expect(region(element, 'due_dates')?.textContent).toContain(hint);
+      const picker = groupOf(element, 'ITP');
+      const described = element.querySelector(
+        `#${picker.getAttribute('aria-describedby')}`,
+      );
+      expect(described?.textContent).toContain(hint);
+      expect(picker.nextElementSibling).toBe(described);
     },
   );
 });

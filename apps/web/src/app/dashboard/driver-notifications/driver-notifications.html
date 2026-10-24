@@ -48,9 +48,6 @@
                   {{ 'driver.notifications.smsUsed' | t: reach().sms }}
                 </p>
               }
-              @if (pushHint()?.key === row.key) {
-                <p class="hint" role="status">{{ pushHint()!.copy | t }}</p>
-              }
               @for (type of row.types; track type.type) {
                 <div class="type">
                   <span class="type-name" [id]="pickerName(type.type) + '-name'">{{ typeKey(type.type) | t }}</span>
@@ -65,7 +62,8 @@
                       [value]="type.channel"
                       [disabled]="!loaded()"
                       [attr.aria-label]="typeKey(type.type) | t"
-                      (valueChange)="pick(row.key, type.type, $event)"
+                      [attr.aria-describedby]="pushHint()?.type === type.type ? pickerName(type.type) + '-push-hint' : null"
+                      (valueChange)="pick(type.type, $event)"
                     >
                       @for (channel of type.channels; track channel) {
                         <hlm-radio
@@ -78,6 +76,9 @@
                         </hlm-radio>
                       }
                     </div>
+                    @if (pushHint()?.type === type.type) {
+                      <p class="hint" role="status" [id]="pickerName(type.type) + '-push-hint'">{{ pushHint()!.copy | t }}</p>
+                    }
                   } @else {
                     <span class="channel">{{ channelKey(type.channel) | t }}</span>
                   }

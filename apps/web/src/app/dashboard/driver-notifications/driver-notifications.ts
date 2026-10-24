@@ -114,9 +114,9 @@ export class DriverNotifications implements OnInit {
   protected readonly opened = signal<ReadonlySet<NotificationGroupKey>>(
     new Set(),
   );
-  // Why the last push pick of a group did not go through.
+  // Why the last push pick of a type did not go through.
   protected readonly pushHint = signal<{
-    key: NotificationGroupKey;
+    type: string;
     copy: string;
   } | null>(null);
   private consentVersion = '';
@@ -255,7 +255,7 @@ export class DriverNotifications implements OnInit {
 
   // The radio shows the pick at once; a later state comes from the live
   // re-read. Push first makes this browser a device, unless one is saved.
-  protected async pick(key: NotificationGroupKey, type: string, to: string) {
+  protected async pick(type: string, to: string) {
     const entry = this.entries().get(type);
     if (!entry || entry.channel === to) return;
     const channel = to as Channel;
@@ -265,7 +265,7 @@ export class DriverNotifications implements OnInit {
     this.show(type, pick, channel);
     this.pushHint.set(null);
     try {
-      if (channel === 'push' && !(await this.pushReady(key))) {
+      if (channel === 'push' && !(await this.pushReady(type))) {
         this.show(type, pick, was);
         return;
       }
@@ -284,8 +284,8 @@ export class DriverNotifications implements OnInit {
     }
   }
 
-  // True once the account has a push device; else the group says why not.
-  private async pushReady(key: NotificationGroupKey) {
+  // True once the account has a push device; else the picker says why not.
+  private async pushReady(type: string) {
     if (this.reach().pushDevice) return true;
     const device = this.injector.get(PushDevice);
     await device.refresh();
@@ -296,7 +296,7 @@ export class DriverNotifications implements OnInit {
       return true;
     }
     const copy = PUSH_HINTS[state] ?? 'shell.push.unavailable';
-    this.pushHint.set({ copy, key });
+    this.pushHint.set({ copy, type });
     return false;
   }
 
