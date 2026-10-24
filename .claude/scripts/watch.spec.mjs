@@ -154,6 +154,21 @@ describe('holder', () => {
     assert.equal(holderOf(base), 'none');
   });
 
+  // @traces 493-FR-001
+  it("is live for the watcher's own worktree whatever its lock, and owner still wins on the main checkout", () => {
+    assert.equal(holderOf({ ...base, self: true }), 'live');
+    assert.equal(holderOf({ ...base, self: true, lock }), 'live');
+    assert.equal(holderOf({ ...base, self: true, lock, alive: () => true, activityAt: NOW - 600 * MIN }), 'live');
+    assert.equal(holderOf({ ...base, self: true, main: true }), 'owner');
+  });
+
+  // @traces 493-FR-001
+  it('reads a quiet subagent lock whose session still runs as none, not live or dead', () => {
+    const alive = (pid) => pid === 2214;
+    assert.equal(holderOf({ ...base, lock, alive, activityAt: NOW - 31 * MIN }), 'none');
+    assert.equal(holderOf({ ...base, lock, alive, activityAt: NOW - 30 * MIN }), 'live');
+  });
+
   it('counts a claim as live only while it is younger than the threshold', () => {
     assert.equal(holderOf({ ...base, claim: { fix: 'resume', at: new Date(NOW - 10 * MIN).toISOString() } }), 'live');
     assert.equal(holderOf({ ...base, claim: { fix: 'resume', at: new Date(NOW - 31 * MIN).toISOString() } }), 'none');
@@ -234,6 +249,14 @@ describe('phase', () => {
     assert.equal(art({ open: 3, done: 1 }), 'development');
     assert.equal(art({ open: 0, done: 4 }), 'review');
     assert.equal(phaseOf(none), 'development');
+  });
+
+  // @traces 493-FR-002
+  it('reads a tasks.md with no checkbox at all as development, not review', () => {
+    const art = (over) => phaseOf({ ...none, artifacts: { spec: true, plan: true, tasks: true, ...over } });
+    assert.equal(art({ open: 0, done: 0 }), 'development');
+    assert.equal(art({ open: 1, done: 0 }), 'development');
+    assert.equal(art({ open: 0, done: 1 }), 'review');
   });
 });
 
