@@ -8,6 +8,7 @@ import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService } from './notifications.service';
 import {
+  claimAgo,
   databaseUrl,
   failWritesAfter,
   fixtures,
@@ -44,7 +45,6 @@ const at = (iso: string) => () => new Date(iso);
 const DAY = '2026-10-05T11:00:00Z';
 const NIGHT = '2026-10-04T20:10:00Z';
 const MORNING = '2026-10-05T05:00:00Z';
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function build(phone: Record<string, string> = {}) {
   const config = testConfig(mock.url);
@@ -118,9 +118,12 @@ async function queuedEmail(name = 'andrei', eventId = 'evt-1') {
   return { owner, row: (await emailRows(owner))[0] };
 }
 
-const claim = (id: string, claimedAt: Date | null) =>
-  prisma.notification.update({ data: { claimedAt }, where: { id } });
+// The lease is judged on the database clock, so every claim is stamped
+// relative to it.
+const LEASE = 60_000;
+const claim = (id: string, ago: number) => claimAgo(prisma, id, ago);
 
+// @traces 523-FR-008 523-FR-010
 describe('many send jobs for one row', () => {
   it('calls Brevo once when ten run at once on a queued e-mail', async () => {
     const { row: queued } = await queuedEmail();
@@ -325,20 +328,17 @@ describe('many send jobs for one row', () => {
 });
 
 describe('a claim held by another job', () => {
-  it('rejects without calling Brevo when the claim is one millisecond short of the lease', async () => {
+  it('rejects without calling Brevo when the claim is a second short of the lease', async () => {
     const { row: queued } = await queuedEmail();
-    const claimedAt = new Date('2026-10-05T11:00:00.000Z');
-    await claim(queued.id, claimedAt);
-    processor.now = at('2026-10-05T11:00:59.999Z');
+    const claimedAt = await claim(queued.id, LEASE - 1000);
     await expect(sendJob(queued.id)).rejects.toBeDefined();
     expect(mock.emails()).toEqual([]);
     expect(await row(queued.id)).toMatchObject({ claimedAt, status: 'queued' });
   });
 
-  it('takes the claim over one millisecond past the lease and sends once', async () => {
+  it('takes the claim over a second past the lease and sends once', async () => {
     const { row: queued } = await queuedEmail();
-    await claim(queued.id, new Date('2026-10-05T11:00:00.000Z'));
-    processor.now = at('2026-10-05T11:01:00.001Z');
+    await claim(queued.id, LEASE + 1000);
     await sendJob(queued.id);
     expect(mock.emails()).toHaveLength(1);
     expect(await row(queued.id)).toMatchObject({
@@ -347,10 +347,11 @@ describe('a claim held by another job', () => {
     });
   });
 
-  it('still counts a claim exactly the lease old as live', async () => {
+  // @traces 523-FR-009
+  it('counts a live claim as live whatever the worker clock says', async () => {
     const { row: queued } = await queuedEmail();
-    await claim(queued.id, new Date('2026-10-05T11:00:00.000Z'));
-    processor.now = at('2026-10-05T11:01:00.000Z');
+    await claim(queued.id, 1000);
+    processor.now = () => new Date(Date.now() + 10 * LEASE);
     await expect(sendJob(queued.id)).rejects.toThrow(
       'is being sent by another job',
     );
@@ -360,7 +361,7 @@ describe('a claim held by another job', () => {
 
   it('treats a claim stamped in the future as live', async () => {
     const { row: queued } = await queuedEmail();
-    await claim(queued.id, new Date('2026-10-05T11:30:00.000Z'));
+    await claim(queued.id, -30 * LEASE);
     await expect(sendJob(queued.id)).rejects.toBeDefined();
     expect(mock.emails()).toEqual([]);
   });
@@ -374,8 +375,7 @@ describe('a claim held by another job', () => {
       recipients: [ion],
     });
     const [held] = await emailRows(ion);
-    const claimedAt = new Date('2026-10-05T04:59:50.000Z');
-    await claim(held.id, claimedAt);
+    const claimedAt = await claim(held.id, 10_000);
     processor.now = at(MORNING);
     await expect(sendJob(held.id)).rejects.toBeDefined();
     expect(mock.emails()).toEqual([]);
@@ -391,7 +391,7 @@ describe('a claim held by another job', () => {
       recipients: [ion],
     });
     const [held] = await emailRows(ion);
-    await claim(held.id, new Date('2026-10-05T04:00:00.000Z'));
+    await claim(held.id, 60 * LEASE);
     processor.now = at(MORNING);
     await many(held.id, 4);
     expect(mock.emails()).toHaveLength(1);
@@ -404,9 +404,7 @@ describe('a claim held by another job', () => {
   it('does not block a send job for another row', async () => {
     const first = await queuedEmail('andrei', 'evt-1');
     const second = await queuedEmail('maria', 'evt-2');
-    const claimedAt = new Date('2026-10-05T11:00:00.000Z');
-    await claim(first.row.id, claimedAt);
-    processor.now = at('2026-10-05T11:00:10.000Z');
+    const claimedAt = await claim(first.row.id, 10_000);
     await sendJob(second.row.id);
     expect(mock.emails()).toHaveLength(1);
     expect((await row(first.row.id)).claimedAt).toEqual(claimedAt);
@@ -415,14 +413,12 @@ describe('a claim held by another job', () => {
 
   it('succeeds without sending on a retry after the winner sent, and takes no claim', async () => {
     const { row: queued } = await queuedEmail();
-    await claim(queued.id, new Date('2026-10-05T11:00:00.000Z'));
-    processor.now = at('2026-10-05T11:00:20.000Z');
+    await claim(queued.id, 20_000);
     await expect(sendJob(queued.id, 0)).rejects.toBeDefined();
     await prisma.notification.update({
       data: { claimedAt: null, sentAt: new Date(), status: 'sent' },
       where: { id: queued.id },
     });
-    processor.now = at('2026-10-05T11:01:20.000Z');
     await expect(sendJob(queued.id, 1)).resolves.toBeUndefined();
     expect(mock.emails()).toEqual([]);
     expect((await row(queued.id)).claimedAt).toBeNull();
@@ -431,9 +427,7 @@ describe('a claim held by another job', () => {
   it('leaves a stale claim on a sent row untouched and sends nothing', async () => {
     const { row: queued } = await queuedEmail();
     await sendJob(queued.id);
-    const claimedAt = new Date('2026-10-05T09:00:00.000Z');
-    await claim(queued.id, claimedAt);
-    processor.now = at('2026-10-05T12:00:00.000Z');
+    const claimedAt = await claim(queued.id, 180 * LEASE);
     await expect(sendJob(queued.id)).resolves.toBeUndefined();
     expect(mock.emails()).toHaveLength(1);
     expect((await row(queued.id)).claimedAt).toEqual(claimedAt);
@@ -501,11 +495,10 @@ describe('releasing a claim', () => {
     );
     await until(
       'the slow send to claim the row',
-      async () =>
-        (await row(queued.id)).claimedAt?.getTime() === new Date(DAY).getTime(),
+      async () => (await row(queued.id)).claimedAt !== null,
     );
-    expect((await row(queued.id)).claimedAt).toEqual(new Date(DAY));
-    const takeoverAt = new Date('2026-10-05T11:02:00.000Z');
+    // The slow send's worker is taken for dead: its claim has lapsed.
+    const lapsed = await claim(queued.id, LEASE + 1000);
     const other = new NotificationsProcessor(
       prisma,
       service,
@@ -516,9 +509,6 @@ describe('releasing a claim', () => {
       testConfig(mock.url),
       testPhoneConfig({ PHONE_SENDING: 'off', WHATSAPP_SENDER: '' }),
     );
-    other.now = () => takeoverAt;
-    // Not a wait for work: the slow send stays hung on Brevo meanwhile.
-    await wait(1200);
     const takeover = other
       .handle({ attemptsMade: 1, data: { id: queued.id }, name: 'send' })
       .then(
@@ -528,12 +518,12 @@ describe('releasing a claim', () => {
     await until(
       'the takeover to claim the row',
       async () =>
-        (await row(queued.id)).claimedAt?.getTime() === takeoverAt.getTime(),
+        ((await row(queued.id)).claimedAt?.getTime() ?? 0) > lapsed.getTime(),
     );
-    expect((await row(queued.id)).claimedAt).toEqual(takeoverAt);
+    const takenAt = (await row(queued.id)).claimedAt;
     expect(await slow).toBe('rejected');
     expect(await row(queued.id)).toMatchObject({
-      claimedAt: takeoverAt,
+      claimedAt: takenAt,
       status: 'queued',
     });
     await takeover;
@@ -592,7 +582,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
       logged.mockRestore();
     }
     expect(await row(queued.id)).toMatchObject({
-      claimedAt: new Date(DAY),
+      claimedAt: expect.any(Date),
       status: 'queued',
     });
     await queue.obliterate({ force: true });

@@ -32,6 +32,7 @@ import type {
   Notification,
   PrismaClient,
 } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { countEmail, countNotification } from '../metrics/product-counters';
 
 interface NotificationJob {
@@ -53,6 +54,10 @@ export const retryDelay = (failedBefore: number) =>
 // A send job's hold on its row lapses by the time the first retry runs, so a
 // worker that dies holding one cannot keep the row from being sent.
 const CLAIM_MS = retryDelay(0);
+
+// A claim is taken and judged on the database's clock, so workers whose
+// clocks disagree still agree on whether it has lapsed.
+const UNCLAIMED = Prisma.sql`(claimed_at IS NULL OR claimed_at < now() - ${CLAIM_MS}::int * interval '1 millisecond')`;
 
 // The wait after the n-th start-up key check that could not reach Brevo.
 export const keyRetryDelay = (failed: number) =>
@@ -130,27 +135,24 @@ export class NotificationsProcessor {
     }
     if (job.name === 'send' && job.data.id)
       return this.send(job.data.id, job.attemptsMade, job.data.link);
-    if (job.name === 'requeue')
-      return this.service.requeueStranded().then(() => undefined);
+    if (job.name === 'requeue') return this.requeue();
     throw new Error(`unknown notifications job ${job.name}`);
+  }
+
+  // Each pass logs its own failure, so one never stops the other.
+  private async requeue() {
+    await this.service.requeueStranded();
+    await this.service.requeueHeld();
   }
 
   // Only the job holding the row's claim sends it. Another job's live claim
   // fails this one, so the queue retries it after the claim has lapsed.
   private async send(id: string, attemptsMade: number, link?: string) {
-    const at = this.now();
-    const { count } = await this.prisma.notification.updateMany({
-      data: { claimedAt: at },
-      where: {
-        id,
-        OR: [
-          { claimedAt: null },
-          { claimedAt: { lt: new Date(at.getTime() - CLAIM_MS) } },
-        ],
-        status: { in: ['queued', 'held'] },
-      },
-    });
-    if (count === 0) {
+    const [claim] = await this.prisma.$queryRaw<{ claimed_at: Date }[]>`
+      UPDATE notification SET claimed_at = now()
+      WHERE id = ${id}::uuid AND status IN ('queued', 'held') AND ${UNCLAIMED}
+      RETURNING claimed_at`;
+    if (!claim) {
       const row = await this.prisma.notification.findUnique({
         select: { status: true },
         where: { id },
@@ -166,18 +168,25 @@ export class NotificationsProcessor {
       // A send that went unrecorded keeps its claim, so the sweep never hands
       // it to the queue again. A failed release must not retry a message that
       // went: the claim lapses.
-      if (recorded !== false)
-        await this.prisma.notification
-          .updateMany({
-            data: { claimedAt: null },
-            where: { claimedAt: at, id },
-          })
-          .catch((error) =>
-            this.logger.error(
-              `notification ${id} claim not released: ${String(error)}`,
-            ),
-          );
+      if (recorded !== false) await this.release([id], claim.claimed_at);
     }
+  }
+
+  // Only the claim this job took is given back: one another job took over
+  // after it lapsed stays.
+  private release(ids: string[], at: Date) {
+    return this.prisma.notification
+      .updateMany({
+        data: { claimedAt: null },
+        where: { claimedAt: at, id: { in: ids } },
+      })
+      .then(
+        () => undefined,
+        (error) =>
+          this.logger.error(
+            `notification ${ids.join(', ')} claim not released: ${String(error)}`,
+          ),
+      );
   }
 
   private async sendClaimed(
@@ -255,12 +264,60 @@ export class NotificationsProcessor {
     );
   }
 
+  // A window's job sends its held rows in rounds, each claiming the ones no
+  // job holds: a follower that joins while a round sends goes in the next,
+  // and two jobs for one window never send the same row. A first round that
+  // finds the rows under another job's live claim fails, so the queue
+  // retries it after the claim has lapsed.
   private async flush(leaderId: string, attemptsMade: number) {
+    const handled: string[] = [];
+    // Every round claims rows no earlier round handled, so the rounds end.
+    let claimed = await this.claimWindow(leaderId, handled);
+    if (claimed.length === 0 && (await this.heldElsewhere(leaderId)))
+      throw new Error(`notification ${leaderId} is being sent by another job`);
+    while (claimed.length > 0) {
+      const ids = claimed.map(({ id }) => id);
+      handled.push(...ids);
+      let recorded: boolean | undefined;
+      try {
+        recorded = await this.flushClaimed(ids, attemptsMade);
+      } finally {
+        // As in a send job: an unrecorded send keeps its claim.
+        if (recorded !== false) await this.release(ids, claimed[0].claimed_at);
+      }
+      claimed = await this.claimWindow(leaderId, handled);
+    }
+  }
+
+  private claimWindow(leaderId: string, handled: string[]) {
+    return this.prisma.$queryRaw<{ claimed_at: Date; id: string }[]>`
+      UPDATE notification SET claimed_at = now()
+      WHERE group_leader_id = ${leaderId}::uuid AND status = 'held'
+        AND NOT (id = ANY(${handled}::uuid[])) AND ${UNCLAIMED}
+      RETURNING id, claimed_at`;
+  }
+
+  private async heldElsewhere(leaderId: string) {
+    const row = await this.prisma.notification.findFirst({
+      select: { id: true },
+      where: {
+        claimedAt: { not: null },
+        groupLeaderId: leaderId,
+        status: 'held',
+      },
+    });
+    return row !== null;
+  }
+
+  private async flushClaimed(
+    ids: string[],
+    attemptsMade: number,
+  ): Promise<boolean | undefined> {
     const rows = (
       await this.prisma.notification.findMany({
         include: { account: true },
         orderBy: { createdAt: 'asc' },
-        where: { groupLeaderId: leaderId, status: 'held' },
+        where: { id: { in: ids }, status: 'held' },
       })
     ).filter(hasAccount);
     const [first] = rows;
@@ -273,16 +330,15 @@ export class NotificationsProcessor {
     if (!to) return;
     if (rows.length === 1) {
       const values = params(first);
-      await this.write(
+      return this.write(
         rows,
         to,
         templateName(first.kind, values),
         { language: first.account.language, values },
         attemptsMade,
       );
-      return;
     }
-    await this.write(
+    return this.write(
       rows,
       to,
       `${first.kind}.grouped`,
