@@ -1526,7 +1526,7 @@
             "description": "forbidden: an assistant session"
           },
           "409": {
-            "description": "deletion_not_allowed: the account owns a garage"
+            "description": "deletion_not_allowed: the account owns a garage; car_in_work: a car of the account is in work or paused at a garage"
           }
         },
         "security": [

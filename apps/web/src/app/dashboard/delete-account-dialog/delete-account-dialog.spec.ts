@@ -277,6 +277,41 @@ describe('the delete-account dialog', () => {
     expect(revoked).toHaveBeenCalled();
   });
 
+  // @traces 140-FR-013
+  it.each([
+    ['ro', 'Ai o mașină în service. Poți șterge contul după ce o ridici.'],
+    [
+      'en',
+      'Your car is at the garage. You can delete the account once you collect it.',
+    ],
+  ] as const)(
+    'says, in %s, that a car in the workshop holds the deletion, and stays open',
+    async (language, text) => {
+      await open(
+        {},
+        [
+          async () => {
+            throw problem(409, 'car_in_work');
+          },
+        ],
+        language,
+      );
+
+      const english = language === 'en';
+      type(
+        field(english ? 'Type the e‑mail or phone of the account' : LABEL),
+        'andrei@example.ro',
+      );
+      await settle();
+      button(english ? 'Delete account' : 'Șterge contul').click();
+      await settle();
+
+      expect(panel().textContent).toContain(text);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(revoked).not.toHaveBeenCalled();
+    },
+  );
+
   it('closes without sending on "Renunță"', async () => {
     await open();
 

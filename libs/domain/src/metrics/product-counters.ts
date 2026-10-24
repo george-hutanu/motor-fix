@@ -64,6 +64,7 @@ export type AccountDeletionOutcome =
   | 'deleted'
   | 'forbidden'
   | 'refused_owner'
+  | 'refused_in_work'
   | 'reauth_required'
   | 'mismatch'
   | 'failed';

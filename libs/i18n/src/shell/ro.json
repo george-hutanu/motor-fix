@@ -70,6 +70,7 @@
     "kept": "Rămân recenziile publicate, semnate „Șofer MotorFix”, și programările și înregistrările cerute de lege, cât timp spune nota de informare.",
     "ownerText": "Contul tău deține un service. Scrie‑ne prin formularul de contact sau pe e‑mail ca să închidem service‑ul; apoi poți șterge contul.",
     "problem": {
+      "car_in_work": "Ai o mașină în service. Poți șterge contul după ce o ridici.",
       "deletion_not_allowed": "Contul tău deține un service, așa că nu poate fi șters încă."
     },
     "removed": "Ștergem datele contului, metodele de autentificare, sesiunile de pe toate dispozitivele, setările de notificări și numerele de înmatriculare ale mașinilor.",

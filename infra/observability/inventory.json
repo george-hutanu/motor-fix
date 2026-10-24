@@ -1226,7 +1226,7 @@
       "alerts": [
         "api-account-deletion-failed"
       ],
-      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
+      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, refused_in_work, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
       "story": "ST-129"
     },
     {
