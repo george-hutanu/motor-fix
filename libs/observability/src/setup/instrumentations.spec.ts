@@ -174,6 +174,20 @@ describe('the HTTP instrumentation', () => {
     }
   });
 
+  // @traces 1188-FR-008
+  it("keeps the event loop's p99 delay and drops its other percentiles", async () => {
+    // The delay is reported once the 10 ms sampler holds five samples.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const { resourceMetrics } = await memory.metricReader.collect();
+    const names = resourceMetrics.scopeMetrics.flatMap((scope) =>
+      scope.metrics.map((metric) => metric.descriptor.name),
+    );
+
+    expect(names).toContain('nodejs.eventloop.delay.p99');
+    expect(names).not.toContain('nodejs.eventloop.delay.p50');
+    expect(names).not.toContain('nodejs.eventloop.delay.p90');
+  });
+
   it('reports runtime figures and the process CPU time by mode', async () => {
     const { resourceMetrics } = await memory.metricReader.collect();
     const names = resourceMetrics.scopeMetrics.flatMap((scope) =>
