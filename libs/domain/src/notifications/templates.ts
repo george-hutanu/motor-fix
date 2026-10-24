@@ -334,7 +334,8 @@ export function templateName(kind: string, params: Params): string {
   return purpose === 'password_reset' ||
     purpose === 'password_changed' ||
     purpose === 'email_change_notice' ||
-    purpose === 'account_deleted'
+    purpose === 'account_deleted' ||
+    purpose === 'account_suspended'
     ? `ACCOUNT_EMAIL.${purpose}`
     : 'ACCOUNT_EMAIL.email_check';
 }

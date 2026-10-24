@@ -181,9 +181,13 @@ export class NotificationsService {
       | 'email_change_notice'
       | 'password_reset'
       | 'password_changed'
-      | 'account_deleted';
+      | 'account_deleted'
+      | 'account_suspended';
     link: string;
     to?: string;
+    // The suspension's reason and the support address, for account_suspended.
+    reason?: string;
+    support?: string;
   }): Promise<void> {
     await this.notify({
       eventId: randomUUID(),
@@ -192,6 +196,8 @@ export class NotificationsService {
         link: input.link,
         purpose: input.purpose,
         ...(input.to && { to: input.to }),
+        ...(input.reason && { reason: input.reason }),
+        ...(input.support && { support: input.support }),
       },
       recipients: [input.accountId],
       subjectId: input.accountId,

@@ -1,5 +1,6 @@
 import {
   ACCOUNT_DELETED,
+  ACCOUNT_SUSPENDED,
   EMAIL_CHANGE_NOTICE,
   EMAIL_CHECK,
   PASSWORD_CHANGED,
@@ -63,6 +64,7 @@ import type { Registry } from '../templates';
 // type with no e-mail or bell text.
 export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.account_deleted': ACCOUNT_DELETED,
+  'ACCOUNT_EMAIL.account_suspended': ACCOUNT_SUSPENDED,
   'ACCOUNT_EMAIL.email_change_notice': EMAIL_CHANGE_NOTICE,
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,

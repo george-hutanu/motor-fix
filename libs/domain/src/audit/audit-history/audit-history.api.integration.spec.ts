@@ -145,7 +145,8 @@ describe('GET /audit-history', () => {
   });
 
   it.each([
-    ['an unknown parameter', { limit: '100' }],
+    ['an unknown parameter', { size: '10' }],
+    ['a limit over 50', { limit: '100' }],
     ['a malformed garage id', { garageId: 'nord' }],
     ['a malformed person id', { actorId: '1' }],
     ['a malformed job id', { jobId: '1' }],
@@ -196,5 +197,117 @@ describe('GET /audit-history', () => {
       const res = await call().set('Authorization', bearer(w.ion, 'garage'));
       expect(res.status).toBe(404);
     }
+  });
+});
+
+// @traces 003-FR-004
+describe('GET /audit-history for one account', () => {
+  // Before the sign-ups' own entries, which are written now.
+  const OLD = new Date('2026-01-05T10:00:00Z');
+  const WINDOW = { from: '2026-01-01T00:00:00Z', to: '2026-02-01T00:00:00Z' };
+
+  // Entries by Ion, about Ion's account, and about someone else.
+  async function entries() {
+    const w = await world();
+    const admin = await account('Ana', ['admin']);
+    const about = (
+      subjectId: string,
+      actorId: string,
+      role: 'admin' | 'owner' = 'admin',
+    ) =>
+      prisma.activityLog.create({
+        data: {
+          action: 'update',
+          actorId,
+          actorName: 'Ana',
+          actorRole: role,
+          at: OLD,
+          field: 'status',
+          kind: 'account_suspended',
+          newValue: 'suspended',
+          oldValue: 'active',
+          subjectId,
+          subjectType: 'account',
+        },
+      });
+    const aboutIon = await about(w.ion, admin);
+    const aboutIoana = await about(w.ioana, admin);
+    const byIon = await about(w.ioana, w.ion, 'owner');
+    return { ...w, aboutIoana, aboutIon, admin, byIon };
+  }
+
+  it("answers the entries made by the account or about it, and no other's", async () => {
+    const w = await entries();
+
+    const res = await get(
+      { accountId: w.ion, ...WINDOW },
+      bearer(w.admin, 'admin'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((i: { id: string }) => i.id).sort()).toEqual(
+      [w.aboutIon.id, w.byIon.id].sort(),
+    );
+    expect(res.body.total).toBe(2);
+  });
+
+  it('combines the account with the other filters', async () => {
+    const w = await entries();
+
+    const res = await get(
+      {
+        accountId: w.ion,
+        area: 'admin_actions',
+        ...WINDOW,
+      },
+      bearer(w.admin, 'admin'),
+    );
+
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([
+      w.aboutIon.id,
+    ]);
+  });
+
+  it('gives a page of the limit asked for, with the next cursor', async () => {
+    const w = await entries();
+
+    const res = await get(
+      { accountId: w.ion, ...WINDOW, limit: '1' },
+      bearer(w.admin, 'admin'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.nextCursor).toBe(res.body.items[0].id);
+    expect(res.body.total).toBe(2);
+  });
+
+  // The API's problem filter names a pipe's refusal validation_failed.
+  it.each(['0', '51', 'x', '1.5'])(
+    'answers 400 to the limit %s',
+    async (limit) => {
+      const w = await entries();
+
+      const res = await get({ limit }, bearer(w.admin, 'admin'));
+
+      expect(res.status).toBe(400);
+    },
+  );
+
+  it('takes 50 as the largest page', async () => {
+    const w = await entries();
+
+    const res = await get({ limit: '50' }, bearer(w.admin, 'admin'));
+
+    expect(res.status).toBe(200);
+  });
+
+  it('answers 400 validation_failed to a garage role asking for an account', async () => {
+    const w = await entries();
+
+    const res = await get({ accountId: w.ioana }, bearer(w.ion, 'garage'));
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('validation_failed');
   });
 });

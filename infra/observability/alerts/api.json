@@ -678,6 +678,62 @@
               }
             }
           ]
+        },
+        {
+          "uid": "api-admin-account-action-failed",
+          "title": "API admin account actions failing",
+          "condition": "B",
+          "for": "0m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "api"
+          },
+          "annotations": {
+            "summary": "An admin account action failed in the last 15 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-api",
+            "runbook": "An admin's reset, suspend, restore or delete on request ended in a server error and the account kept its state. Read the api logs for 'admin account action' with outcome failed at that time and the PostgreSQL dashboard; the admin can run the action again once the cause is fixed."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 900,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "sum by (deployment_environment) (increase(motorfix_admin_account_actions_total{service_name=\"api\", outcome=\"failed\"}[15m]))",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }
