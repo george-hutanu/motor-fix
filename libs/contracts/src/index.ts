@@ -84,6 +84,7 @@ export * from './system-log/system-log';
 export * from './system-log/system-log.dto';
 export * from './verification-checks';
 export * from './verification-file.dto';
+export * from './verification-presence.dto';
 export * from './verification-queue';
 export * from './verification-status.dto';
 export * from './verification-target';

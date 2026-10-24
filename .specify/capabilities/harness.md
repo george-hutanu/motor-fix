@@ -9,6 +9,8 @@ features:
   - 317-handoff-whole
   - 961-require-agent-review
   - 448-merge-gate-graphql
+  - 471-crlf-harness-tidy
+  - 1378-fixed-after-qa-sources
 ---
 
 # Capability: Spec-kit harness
@@ -97,9 +99,9 @@ _From 1362-lap-verdict-merge._
 
 _From 1362-lap-verdict-merge._
 
-### 1362-FR-007 — `lifecycle.mjs merge` reads the head's `agent-review` before the merge call and the finding count N of the verdict that stands (head's own tester success, or the commit a fixes carry names). When N ≥ 1 it stops before the merge unless `specs/<feature>/finish-comment.md` holds a `## Fixed after QA` section with at least N list lines, each naming its severity (`medium` or `low`); under a fixes carry each line also names a commit of the PR after the named commit. The finish comment it posts carries that list.
+### 1378-FR-001 — `lifecycle.mjs merge` MUST read the head's `agent-review` before the merge call and the finding count N of the verdict that stands (head's own tester success, or the commit a fixes carry names). When N ≥ 1 it stops before the merge unless `specs/<feature>/finish-comment.md` holds a `## Fixed after QA` section with at least N list lines, each naming its severity (`medium` or `low`). Under a fixes carry each line also names where its fix is, made after the named lap's success was posted: a commit of the PR after the named commit (its sha); a commit on `trunk` of george-hutanu/motor-fix-specs (`specs@<sha>`, checked by REST compare against `trunk`, its committer date after the success's `created_at`); or a change to the QA flows file only (`qa-flows-<PR>.mjs`, this PR's number, with `.specify/.cache/qa-flows-<PR>.mjs` in the worktree modified after that time). A line naming none of these, a specs commit before the lap or off trunk, or a flows file missing or older than the lap does not count; with no time on the named lap's success neither of the last two forms counts. The finish comment it posts carries that list.
 
-_From 1362-lap-verdict-merge._
+_From 1378-fixed-after-qa-sources._
 
 ### 448-FR-008 — `carry.mjs <pr> --find` MUST be a CLI mode printing `findCarry`'s result as one JSON object on stdout (exit 0; non-zero with the reason when gh fails). `watch.mjs collect` stays synchronous: its default carry lookup runs that mode in a child process and parses the JSON, and every verdict of 1362-FR-008 (`carry-review`, `waiting`, `merge`, `tail`) is the one today's lookup gives; a failed child or unparsable output leaves the row's `carry` null as a thrown lookup does today.
 
@@ -176,9 +178,30 @@ _From 448-merge-gate-graphql._
 
 _From 448-merge-gate-graphql._
 
+### 471-FR-001 — The repo root has a `.gitattributes` holding `* text=auto eol=lf`, so a checkout on any platform writes LF.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-002 — The frontmatter reader in `.claude/scripts/doctor.mjs` reads a SKILL.md or agent file whose lines end in CRLF as it reads one ending in LF.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-003 — The frontmatter reader in `.claude/skills/skill-models.spec.mjs` reads a CRLF `model:` line as it reads an LF one.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-004 — `trace-matrix.mjs` sets `process.exitCode` and returns instead of calling `process.exit()`, so `--json` over a pipe is never cut short (a report over 64 KB parses), and `--check` still exits 1 on gaps.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-006 — `diff-audit.spec.mjs` covers a tsconfig that sets only `rewriteRelativeImportExtensions: true`, expecting `.ts` specifiers accepted; reverting that half of `lib/tsconfig.mjs` fails it.
+
+_From 471-crlf-harness-tidy._
+
 ## Retired
 
 - `1359-FR-007` — superseded by `1363-FR-006` (2026-10-23)
 - `1362-FR-003` — superseded by `1363-FR-010` (2026-10-23)
 - `1362-FR-005` — superseded by `1363-FR-010` (2026-10-23)
 - `1362-FR-008` — superseded by `448-FR-008` (2026-10-24)
+- `1362-FR-007` — superseded by `1378-FR-001` (2026-10-24)

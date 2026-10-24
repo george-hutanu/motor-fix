@@ -155,6 +155,10 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerChanges$Params as VerificationFileControllerChanges$Params } from './fn/admin/verification-file-controller-changes';
 export { verificationFileControllerChanges as verificationFileControllerChanges } from './fn/admin/verification-file-controller-changes';
+export type { VerificationFileControllerPresence$Params as VerificationFileControllerPresence$Params } from './fn/admin/verification-file-controller-presence';
+export { verificationFileControllerPresence as verificationFileControllerPresence } from './fn/admin/verification-file-controller-presence';
+export type { VerificationFileControllerLeave$Params as VerificationFileControllerLeave$Params } from './fn/admin/verification-file-controller-leave';
+export { verificationFileControllerLeave as verificationFileControllerLeave } from './fn/admin/verification-file-controller-leave';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
 export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';
@@ -285,6 +289,12 @@ export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$
 export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
 export type { GarageMechanicsControllerList$Params as GarageMechanicsControllerList$Params } from './fn/garages/garage-mechanics-controller-list';
 export { garageMechanicsControllerList as garageMechanicsControllerList } from './fn/garages/garage-mechanics-controller-list';
+export type { GarageMechanicsControllerAdd$Params as GarageMechanicsControllerAdd$Params } from './fn/garages/garage-mechanics-controller-add';
+export { garageMechanicsControllerAdd as garageMechanicsControllerAdd } from './fn/garages/garage-mechanics-controller-add';
+export type { GarageMechanicsControllerRemove$Params as GarageMechanicsControllerRemove$Params } from './fn/garages/garage-mechanics-controller-remove';
+export { garageMechanicsControllerRemove as garageMechanicsControllerRemove } from './fn/garages/garage-mechanics-controller-remove';
+export type { GarageMechanicsControllerEdit$Params as GarageMechanicsControllerEdit$Params } from './fn/garages/garage-mechanics-controller-edit';
+export { garageMechanicsControllerEdit as garageMechanicsControllerEdit } from './fn/garages/garage-mechanics-controller-edit';
 export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
 export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';

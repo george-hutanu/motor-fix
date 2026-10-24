@@ -57,6 +57,7 @@ const FEATURES: [RegExp, string][] = [[/^media\./, 'live_media']];
 const REREAD_ACCESS = new Set([
   'member.removed',
   'mechanic.updated',
+  'mechanic.removed',
   'garage.features_changed',
 ]);
 const ENDS_ACCOUNT = new Set(['account.suspended', 'account.deleted']);
@@ -79,7 +80,9 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
     new Set([
       'garage.updated',
       'price_list.updated',
+      'mechanic.added',
       'mechanic.updated',
+      'mechanic.removed',
       'facility.removed',
       'facility.re_add_decided',
       ...REVIEW_KINDS,
@@ -93,7 +96,13 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
   ],
   [
     /^public:mechanic:/,
-    new Set(['mechanic.updated', ...REVIEW_KINDS, 'rating.updated']),
+    new Set([
+      'mechanic.added',
+      'mechanic.updated',
+      'mechanic.removed',
+      ...REVIEW_KINDS,
+      'rating.updated',
+    ]),
   ],
   [
     /^public:search$/,

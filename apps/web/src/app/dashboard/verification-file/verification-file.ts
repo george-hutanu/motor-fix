@@ -75,6 +75,7 @@ import {
   type VerificationMoreRefusal,
   type VerificationMoreRequest,
 } from '../verification-more/verification-more';
+import { VerificationPresence } from '../verification-presence/verification-presence';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
 import {
@@ -196,6 +197,7 @@ const SUSPENSION_CAUSES: Record<SuspendedFor, string> = {
     RouterLink,
     TranslatePipe,
     VerificationChanges,
+    VerificationPresence,
     VerificationRegisterForm,
   ],
   selector: 'mf-verification-file',

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { HttpException } from '@nestjs/common';
 
+import type { PresenceService } from './presence/presence.service';
 import { VerificationFileController } from './verification-file.controller';
 import { VerificationFileService } from './verification-file.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -80,6 +81,7 @@ const controller = () =>
       new DocumentCycleService(prisma),
     ),
     verification(),
+    {} as PresenceService,
   );
 const correct = (rarNumber: string, actor: Actor = ioana, id = fileId) =>
   controller().correct(actor, id, { rarNumber });

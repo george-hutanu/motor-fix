@@ -156,6 +156,16 @@ describe('the frame following the garage’s team', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 056-FR-006
+  it('reads the account again when a mechanic leaves the team, so a removed one loses its menu', async () => {
+    const { events, reload } = await render('/app/garage');
+    reload.mockClear();
+
+    events.next(event('mechanic.removed'));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it('does not read the account again for a kind that changes no view', async () => {
     const { events, reload } = await render('/app/garage');
     reload.mockClear();

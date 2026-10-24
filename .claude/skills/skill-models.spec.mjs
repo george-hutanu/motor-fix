@@ -60,14 +60,17 @@ const MODELS = {
 
 const skillsDir = import.meta.dirname;
 
-const modelOf = (skill) => {
-  const text = readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8');
-  const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+// The `model:` line of a SKILL.md's frontmatter, whichever line ending the
+// checkout wrote.
+const modelIn = (text) => {
+  const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
   const models = [...frontmatter.matchAll(/^model:\s*["']?([^"'\s]+)["']?\s*$/gm)].map((m) => m[1]);
   // A repeated key is invalid YAML and makes the skill unloadable: report it
   // rather than pick one.
   return models.length > 1 ? `${models.length} model lines` : (models[0] ?? null);
 };
+
+const modelOf = (skill) => modelIn(readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8'));
 
 describe('the model each spec-kit phase runs on', () => {
   it('places every speckit skill, and only those', () => {
@@ -83,5 +86,13 @@ describe('the model each spec-kit phase runs on', () => {
       .filter(([skill, model]) => modelOf(skill) !== model)
       .map(([skill, model]) => `${skill}: expected ${model}, found ${modelOf(skill)}`);
     assert.deepEqual(wrong, []);
+  });
+
+  // @traces 471-FR-003
+  it('reads the model line of a SKILL.md whose lines end in CRLF', () => {
+    const lf = '---\nname: speckit-thing\ndescription: does a thing\nmodel: sonnet\n---\n\nBody.\n';
+    assert.equal(modelIn(lf), 'sonnet');
+    assert.equal(modelIn(lf.replace(/\n/g, '\r\n')), 'sonnet');
+    assert.equal(modelIn('---\r\nname: x\r\n---\r\n'), null);
   });
 });
