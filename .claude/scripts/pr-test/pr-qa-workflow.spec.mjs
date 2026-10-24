@@ -318,6 +318,8 @@ function runScript(step) {
 
 // @traces 988-FR-001
 // @traces 988-FR-002
+// The specs of 988-FR-001..008 failed on 8991a66 and pass with the fix (auto-run.md, phase 9):
+// @traces 988-FR-009
 describe('PR QA workflow: the PostgreSQL wait, run', () => {
   // The PostGIS image accepts connections on its socket while its init scripts run,
   // then restarts, and only then listens on TCP (#332). The step asks over TCP inside
