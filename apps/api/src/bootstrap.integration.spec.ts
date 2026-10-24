@@ -205,6 +205,7 @@ describe('api conventions', () => {
 
     expect(await ip('203.0.113.9, 10.0.0.5')).toBe('203.0.113.9');
     expect(await ip('203.0.113.9, fd12::1')).toBe('203.0.113.9');
+    expect(await ip('203.0.113.9, 100.64.1.2')).toBe('203.0.113.9');
     expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
   });
 
