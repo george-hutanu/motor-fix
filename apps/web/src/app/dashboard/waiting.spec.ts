@@ -248,7 +248,7 @@ describe('Waiting: kept across a reload', () => {
     expect((await nextRequest(http)).request.url).toContain('step-2');
   });
 
-  it('never sends one account’s actions with another account signed in', async () => {
+  it('never sends one account’s actions with another account signed in, and drops them', async () => {
     const first = await start();
     await first.waiting.add('job.step', step(1));
     noAnswer(await nextRequest(first.http));
@@ -263,7 +263,9 @@ describe('Waiting: kept across a reload', () => {
 
     account.set({ id: 'account-1' });
     const back = await reload();
-    expect((await nextRequest(back.http)).request.url).toContain('step-1');
+    await until(() => false);
+    expect(back.http.match(() => true)).toEqual([]);
+    expect(back.waiting.actions()).toEqual([]);
   });
 
   it('drops the account’s waiting actions at sign-out', async () => {
@@ -487,6 +489,21 @@ describe('Waiting: a refused renewal is not a sign-out', () => {
     const back = await reload();
     await until(() => false);
     expect(back.http.match(() => true)).toEqual([]);
+  });
+
+  it('drops them when another account signs in after the lapse and a reload', async () => {
+    await waitingThenLapse();
+
+    account.set({ id: 'account-2' });
+    const other = await reload();
+    await until(() => false);
+    expect(other.http.match(() => true)).toEqual([]);
+
+    account.set({ id: 'account-1' });
+    const back = await reload();
+    await until(() => false);
+    expect(back.http.match(() => true)).toEqual([]);
+    expect(back.waiting.actions()).toEqual([]);
   });
 
   it('drops them when the lapse is followed by a sign-out', async () => {

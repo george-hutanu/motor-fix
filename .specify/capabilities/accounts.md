@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 079-account-model
   - 082-sign-in
@@ -42,6 +42,7 @@ features:
   - 009-copy-voice-analytics
   - 129-delete-account
   - 292-saved-garage-quote
+  - 532-lost-session-home
 ---
 
 # Capability: Accounts
@@ -190,9 +191,9 @@ _From 082-sign-in._
 
 _From 130-sign-in-gate._
 
-### 082-FR-019 — When the app needs the session and holds no access token (a reload, a reopened browser), it MUST renew from the cookie before asking "who am I"; a failed renewal means signed out.
+### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
 
-_From 082-sign-in._
+_From 532-lost-session-home._
 
 ### 082-FR-020 — "Ieși din cont" MUST call sign-out, forget the session in memory even when the call fails, and open Home.
 
@@ -1147,6 +1148,10 @@ _From 292-saved-garage-quote._
 
 _From 292-saved-garage-quote._
 
+### 532-FR-002 — A signed-in person's landing MUST be unchanged, and while the sign-in gate dialog keeps the account shown the current screen MUST stay behind it.
+
+_From 532-lost-session-home._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1172,3 +1177,4 @@ _From 292-saved-garage-quote._
 - `250-FR-006` — superseded by `1359-FR-011` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
+- `082-FR-019` — superseded by `532-FR-001` (2026-10-24)

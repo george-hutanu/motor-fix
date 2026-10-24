@@ -286,7 +286,9 @@ export class Frame implements OnInit {
     // A session lost mid-flight (a refused renewal) with no sign-in dialog
     // keeping its account on screen: Home, as after a sign-out.
     effect(() => {
-      if (!this.session.shown()) untracked(() => void this.home());
+      // Signed back in before Home opened: a later loss goes Home again.
+      if (this.session.shown()) this.leaving = false;
+      else untracked(() => void this.home());
     });
     // The approval swaps the verification page for the dashboard: the focus
     // follows to its title instead of staying on a control that is gone.

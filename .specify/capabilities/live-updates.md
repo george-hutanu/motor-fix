@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 253-live-connection
   - 254-live-audience
@@ -25,6 +25,7 @@ features:
   - 398-garage-feature-switches
   - 025-review-mechanic
   - 067-restore-suspended-garage
+  - 532-lost-session-home
 ---
 
 # Capability: Live updates
@@ -245,13 +246,13 @@ _From 255-live-resync._
 
 _From 255-live-resync._
 
-### 255-FR-008 — Waiting actions MUST be kept in the browser's IndexedDB, per account, so they survive a reload and are sent after it. Sign-out MUST drop the account's waiting actions.
+### 532-FR-003 — A refused renewal (a lapse) MUST NOT drop the account's waiting actions; only a real sign-out (this tab's sign-out, sign-out on all devices, a `session.revoked` message, a sign-out in another tab) drops them (modifies 255-FR-008's "Sign-out MUST drop").
 
-_From 255-live-resync._
+_From 532-lost-session-home._
 
-### 255-FR-009 — The queue MUST send actions in the order they were made, one at a time. It sends when an action is added, when the browser fires `online`, when a live stream opens, when the page loads, and 60 seconds after a send that kept an action. A send with no answer, or a 408, 429 or 5xx answer, keeps the action first in line, as `waiting`, and stops sending until the next of those moments. A 401 goes through the app's normal renewal and is sent once more; the answer after it counts. A 401 that survives that renewal keeps the action: the session is ending, and the sign-out drops it (FR-011's sign-out rule).
+### 532-FR-005 — Each send of the waiting queue MUST be bounded at 30 seconds; a send that has no answer by then is treated as a send with no answer under 255-FR-009: the action is kept first in line as `waiting`, the request is aborted, and the line stops until the next sending moment (60 s after the attempt ends, an `online` event, a live stream opening).
 
-_From 255-live-resync._
+_From 532-lost-session-home._
 
 ### 255-FR-010 — A send answered 423, 409, 404 or any other 4xx not kept by FR-009 MUST drop the action and show a notice: the API's `detail` when it gives one, else "S-a schimbat între timp. Vezi starea de acum." for 409, "Nu mai este disponibil." for 404, and "Acțiunea nu a fost primită." for any other status. Every open live view then re-reads.
 
@@ -416,6 +417,10 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
+### 532-FR-004 — After a lapse, a sign-in as the same account MUST send the kept actions in order; a sign-in as another account MUST NOT send them and drops them.
+
+_From 532-lost-session-home._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -436,3 +441,5 @@ _From 1190-live-reconnects._
 - `257-FR-006` — superseded by `025-FR-009` (2026-10-23)
 - `254-FR-001` — superseded by `025-FR-009` (2026-10-23)
 - `049-FR-007` — superseded by `067-FR-007` (2026-10-23)
+- `255-FR-008` — superseded by `532-FR-003` (2026-10-24)
+- `255-FR-009` — superseded by `532-FR-005` (2026-10-24)

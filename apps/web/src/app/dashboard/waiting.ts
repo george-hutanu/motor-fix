@@ -105,8 +105,6 @@ export class Waiting {
   private readonly memory = signal<ReadonlyMap<string, Stored>>(new Map());
   private readonly sending = signal<string | null>(null);
   private account: string | null = null;
-  // The account whose session lapsed, its actions kept until it signs back in.
-  private away: string | null = null;
   private flushing = false;
   private again = false;
   private retry: ReturnType<typeof setTimeout> | undefined;
@@ -128,14 +126,15 @@ export class Waiting {
     effect(() => {
       const id = this.session.current()?.id ?? null;
       untracked(() => {
-        this.loaded = this.signedIn(id);
+        this.account = id;
+        // One sign-in's read at a time: a quick switch reads after the drop.
+        this.loaded = this.loaded.then(() => this.signedIn(id));
       });
     });
     effect(() => {
       if (this.live.state() === 'open') untracked(() => void this.flush());
     });
     this.session.signedOut.pipe(takeUntilDestroyed()).subscribe((account) => {
-      if (this.away === account) this.away = null;
       this.loaded = this.loaded.then(() => this.dropAll(account));
     });
     if (!this.browser) return;
@@ -175,18 +174,17 @@ export class Waiting {
     return false;
   }
 
+  // A refused renewal keeps the actions for the same account to sign back
+  // in, across a reload too; another account signing in drops them.
   private async signedIn(id: string | null) {
-    const before = this.account;
-    this.account = id;
-    if (!id) {
-      this.away = before ?? this.away;
-      return;
-    }
-    // Another person on the device: the lapsed account's actions go.
-    const away = this.away;
-    this.away = null;
-    if (away && away !== id) await this.dropAll(away);
+    if (!id) return;
     const stored = await this.readAll();
+    const others = [...this.memory().values(), ...stored].flatMap((a) =>
+      a.account === id ? [] : [a.key],
+    );
+    for (const key of new Set(others)) await this.drop(key);
+    // Signed out or switched again meanwhile: the next read loads.
+    if (id !== this.account) return;
     const next = new Map(this.memory());
     for (const action of stored)
       if (action.account === id) next.set(action.key, action);
