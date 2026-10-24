@@ -31,7 +31,7 @@ const store = new S3TestStore();
 serialDatabase(databaseUrl);
 
 const reader = countedMetrics();
-const exports = (outcome: string) =>
+const exportsCounted = (outcome: string) =>
   counterTotal(reader, 'motorfix_data_exports_total', { outcome });
 
 let app: NestExpressApplication;
@@ -147,7 +147,7 @@ async function exportOf(
 describe('asking for a copy of my data', () => {
   it('creates one queued export, its audit entry and its event, together', async () => {
     const driverId = await world.account('Andrei Ion Marin');
-    const before = await exports('requested');
+    const before = await exportsCounted('requested');
 
     const res = await ask(driverId).expect(201);
 
@@ -187,7 +187,7 @@ describe('asking for a copy of my data', () => {
       accountId: driverId,
       exportId: row.id,
     });
-    expect(await exports('requested')).toBe(before + 1);
+    expect(await exportsCounted('requested')).toBe(before + 1);
   });
 
   it.each([
@@ -198,13 +198,13 @@ describe('asking for a copy of my data', () => {
     async (_, status) => {
       const driverId = await world.account('Andrei Ion Marin');
       await exportOf(driverId, status, 23 * HOUR);
-      const before = await exports('too_soon');
+      const before = await exportsCounted('too_soon');
 
       const res = await ask(driverId).expect(429);
 
       expect(res.body.code).toBe('export_too_soon');
       expect(await exportsOf(driverId)).toHaveLength(1);
-      expect(await exports('too_soon')).toBe(before + 1);
+      expect(await exportsCounted('too_soon')).toBe(before + 1);
       expect(
         await prisma.activityLog.count({
           where: { kind: 'data_export_requested' },
@@ -237,13 +237,13 @@ describe('asking for a copy of my data', () => {
   it('answers 409 export_ready while a ready file waits, writing nothing', async () => {
     const driverId = await world.account('Andrei Ion Marin');
     await exportOf(driverId, 'ready', 3 * DAY);
-    const before = await exports('already_ready');
+    const before = await exportsCounted('already_ready');
 
     const res = await ask(driverId).expect(409);
 
     expect(res.body.code).toBe('export_ready');
     expect(await exportsOf(driverId)).toHaveLength(1);
-    expect(await exports('already_ready')).toBe(before + 1);
+    expect(await exportsCounted('already_ready')).toBe(before + 1);
   });
 
   it('creates one export for two requests sent at the same moment, the other answered 429', async () => {
@@ -344,7 +344,7 @@ describe('downloading my copy', () => {
     const driverId = await world.account('Andrei Ion Marin');
     const file = Buffer.from('PK the file of Andrei');
     const ready = await exportOf(driverId, 'ready', 2 * DAY, file);
-    const before = await exports('downloaded');
+    const before = await exportsCounted('downloaded');
 
     const res = await download(driverId).expect(200);
 
@@ -354,7 +354,7 @@ describe('downloading my copy', () => {
       `attachment; filename="motorfix-date-${ready.readyAt?.toISOString().slice(0, 10)}.zip"`,
     );
     expect(res.body).toEqual(file);
-    expect(await exports('downloaded')).toBe(before + 1);
+    expect(await exportsCounted('downloaded')).toBe(before + 1);
   });
 
   it('answers 404 not_found when there is no export', async () => {
@@ -422,7 +422,7 @@ describe('downloading my copy', () => {
 describe('an assistant acting for the account', () => {
   it('may not ask for a copy, and nothing is written', async () => {
     const driverId = await world.account('Andrei Ion Marin');
-    const before = await exports('forbidden');
+    const before = await exportsCounted('forbidden');
 
     const refused = await refusedBy(
       app
@@ -435,7 +435,7 @@ describe('an assistant acting for the account', () => {
       status: 403,
     });
     expect(await exportsOf(driverId)).toHaveLength(0);
-    expect(await exports('forbidden')).toBe(before + 1);
+    expect(await exportsCounted('forbidden')).toBe(before + 1);
   });
 
   it('may not read the state of the copy', async () => {

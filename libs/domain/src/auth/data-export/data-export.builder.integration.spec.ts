@@ -52,7 +52,7 @@ const store = new S3TestStore();
 serialDatabase(databaseUrl);
 
 const reader = countedMetrics();
-const exports = (outcome: string) =>
+const exportsCounted = (outcome: string) =>
   counterTotal(reader, 'motorfix_data_exports_total', { outcome });
 
 let app: TestingModule | undefined;
@@ -322,7 +322,7 @@ describe('building the file', () => {
   it('is ready on the first try, for seven days, with its event and one e-mail', async () => {
     const builder = await start();
     const { a } = await twoDrivers();
-    const before = await exports('ready');
+    const before = await exportsCounted('ready');
 
     const { row } = await built(builder, a.id);
 
@@ -350,11 +350,11 @@ describe('building the file', () => {
         channel: 'email',
         eventId: row.id,
         params: expect.objectContaining({
-          link: `${webUrl}/ro/app/driver/settings`,
+          link: `${webUrl}/app/driver/settings`,
         }),
       }),
     ]);
-    expect(await exports('ready')).toBe(before + 1);
+    expect(await exportsCounted('ready')).toBe(before + 1);
   });
 
   it('sends no second e-mail when the same job comes again', async () => {
@@ -441,7 +441,7 @@ describe('building the file', () => {
     jest
       .spyOn(StorageService.prototype, 'putObject')
       .mockRejectedValue(new TypeError(`no store for ${a.email}`));
-    const before = await exports('failed');
+    const before = await exportsCounted('failed');
 
     await expect(builder.onEvent(requested(a.id, row.id, 2))).rejects.toThrow();
 
@@ -456,7 +456,7 @@ describe('building the file', () => {
     );
     const said = JSON.stringify([...error.mock.calls, ...log.mock.calls]);
     expect(said).not.toContain(a.email);
-    expect(await exports('failed')).toBe(before + 1);
+    expect(await exportsCounted('failed')).toBe(before + 1);
   });
 });
 
@@ -465,14 +465,14 @@ describe('expiring the files', () => {
     const builder = await start();
     const driverId = await world.account('Andrei Ion Marin');
     const old = await readyExport(driverId, -60_000);
-    const before = await exports('expired');
+    const before = await exportsCounted('expired');
 
     await builder.sweep();
     await builder.sweep();
 
     expect(await statusOf(old.id)).toBe('expired');
     expect(store.objects.has(old.zipKey ?? '')).toBe(false);
-    expect(await exports('expired')).toBe(before + 1);
+    expect(await exportsCounted('expired')).toBe(before + 1);
   });
 
   it('leaves a file still within its seven days', async () => {
