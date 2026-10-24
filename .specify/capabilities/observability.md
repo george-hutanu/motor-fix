@@ -46,6 +46,7 @@ features:
   - 067-restore-suspended-garage
   - 500-req-ip-behind-proxy
   - 003-admin-account-actions
+  - 1156-retention-job
 ---
 
 # Capability: Observability
@@ -877,6 +878,14 @@ _From 067-restore-suspended-garage._
 ### 003-FR-021 — The new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, one counter of action outcomes labelled by action (`reset_access`, `suspend`, `restore`, `delete_on_request`) and outcome (`done`, `refused`, `conflict`, `email_failed`, `failed`) with no other label, one structured log line per action and per failure (route, outcome, account id, never a name, e-mail, phone or reason text), a dashboard panel and an alert on the error rate and on `failed`, listed in `infra/observability/inventory.json` and in the PR's Notes.
 
 _From 003-admin-account-actions._
+
+### 1156-FR-010 — Each run MUST log one line per kind with the number of rows it removed or anonymised (0 included) and one line for the run with its duration (the lines carry kinds and counts only, never row content or identifiers), and MUST count the same numbers on one product counter by kind; the job MUST be observable like the worker's other jobs (its outcome on the jobs counter, its final failure in the system log and the worker-jobs-failed alert).
+
+_From 1156-retention-job._
+
+### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours; the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
+
+_From 1156-retention-job._
 
 ## Retired
 
