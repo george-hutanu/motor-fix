@@ -6,7 +6,7 @@ import { test } from './fixtures.js';
 // The browser's clock decides the line once the page starts, while the closed
 // days come from the server's real today. So each test fixes the browser at a
 // day the server's window holds, chosen in PostgreSQL.
-// @traces 309-FR-009 309-FR-013
+// @traces 309-FR-009 309-FR-012 309-FR-013
 test.describe('whether a garage is open now @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],
@@ -84,4 +84,30 @@ test.describe('whether a garage is open now @seeded', () => {
       ),
     ).toBeVisible();
   });
+
+  // FR-012: the longest line wraps on a phone instead of scrolling sideways.
+  for (const width of [320, 390]) {
+    test(`shows the holiday line at ${width} px with no sideways scroll`, async ({
+      page,
+    }) => {
+      const { at } = await at1015(
+        `SELECT (now() AT TIME ZONE 'Europe/Bucharest')::date + 14`,
+      );
+      await page.setViewportSize({ height: 800, width });
+      await page.clock.setFixedTime(at);
+
+      await page.goto(`/ro/garages/${slug}`);
+
+      await expect(
+        page.getByText(
+          'Închis azi · sărbătoare legală · deschide mâine la 08:00',
+        ),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+    });
+  }
 });
