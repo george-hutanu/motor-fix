@@ -28,14 +28,19 @@ import { provideServiceWorkerRecovery } from './service-worker-recovery';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
 
+// On the server, withFetch sends every API call through Node's global fetch,
+// whose one undici dispatcher keeps its connections alive between calls.
+export const apiHttpClient = () =>
+  provideHttpClient(
+    withFetch(),
+    withInterceptors([authInterceptor, serverTimeoutInterceptor]),
+  );
+
 export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
-    provideHttpClient(
-      withFetch(),
-      withInterceptors([authInterceptor, serverTimeoutInterceptor]),
-    ),
+    apiHttpClient(),
     provideRouter(routes, withInMemoryScrolling()),
     provideViewScrolling(),
     provideI18n(),

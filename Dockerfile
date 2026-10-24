@@ -64,5 +64,5 @@ FROM runtime AS web
 CMD ["node", "server/server.mjs"]
 
 FROM runtime AS node-app
-ENV NODE_OPTIONS="--max-old-space-size-percentage=75 --enable-source-maps"
+ENV NODE_OPTIONS="${NODE_OPTIONS} --enable-source-maps"
 CMD ["node", "main.js"]
