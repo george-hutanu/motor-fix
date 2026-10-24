@@ -104,8 +104,9 @@ export const authInterceptor: HttpInterceptorFn = (
   };
 
   // A refusal nothing renews away: sign in over the screen, then go on once.
+  // Not while this tab deletes its account: the refusal is the deletion's own.
   const ask = (refusal: unknown) =>
-    mayAsk && signInRequired(refusal)
+    mayAsk && signInRequired(refusal) && !session.deletingAccount()
       ? from(dialog.gate().catch(() => false)).pipe(
           switchMap((signedIn) => repeat(signedIn, refusal)),
         )

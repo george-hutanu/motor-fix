@@ -21,10 +21,11 @@ let controller: HttpTestingController | undefined;
 function setup(
   token: string | null,
   renewsTo: string | null = 'fresh',
-  { signsIn = true, platform = 'browser' } = {},
+  { signsIn = true, platform = 'browser', deleting = false } = {},
 ) {
   let current = token;
   const session = {
+    deletingAccount: () => deleting,
     renew: jest.fn(async () => {
       current = renewsTo;
       return renewsTo !== null;
@@ -359,6 +360,19 @@ describe('authInterceptor', () => {
       await expect(answer).rejects.toMatchObject({ status });
       expect(gate).not.toHaveBeenCalled();
       expect(session.renew).not.toHaveBeenCalled();
+    });
+
+    // @traces 129-FR-008
+    it("never asks to sign in while this tab deletes its account: the refusal is the deletion's own", async () => {
+      const { gate, http, server } = setup('revoked', null, { deleting: true });
+
+      const answer = firstValueFrom(http.get('/api/v1/notifications'));
+      server
+        .expectOne('/api/v1/notifications')
+        .flush(signInRequired.body, signInRequired.options);
+
+      await expect(answer).rejects.toMatchObject({ status: 401 });
+      expect(gate).not.toHaveBeenCalled();
     });
 
     it('never asks to sign in while the page is rendered on the server', async () => {
