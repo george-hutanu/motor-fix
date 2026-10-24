@@ -192,9 +192,9 @@ _From 082-sign-in._
 
 _From 130-sign-in-gate._
 
-### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
+### 082-FR-019 — When the app needs the session and holds no access token (a reload, a reopened browser), it MUST renew from the cookie before asking "who am I"; a failed renewal means signed out.
 
-_From 532-lost-session-home._
+_From 082-sign-in._
 
 ### 082-FR-020 — "Ieși din cont" MUST call sign-out, forget the session in memory even when the call fails, and open Home.
 
@@ -1152,6 +1152,7 @@ _From 292-saved-garage-quote._
 ### 532-FR-002 — A signed-in person's landing MUST be unchanged, and while the sign-in gate dialog keeps the account shown the current screen MUST stay behind it.
 
 _From 532-lost-session-home._
+
 ### 500-FR-001 — The system MUST mask an IPv4 address to its first two octets followed by `.x.x` (`81.196.1.2` → `81.196.x.x`).
 
 _From 500-req-ip-behind-proxy._
@@ -1171,6 +1172,10 @@ _From 500-req-ip-behind-proxy._
 ### 500-FR-006 — A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the logged caller: the caller is the address the trusted-hop chain resolves to, with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`.
 
 _From 500-req-ip-behind-proxy._
+
+### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
+
+_From 532-lost-session-home._
 
 ## Retired
 
@@ -1197,5 +1202,4 @@ _From 500-req-ip-behind-proxy._
 - `250-FR-006` — superseded by `1359-FR-011` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
-- `082-FR-019` — superseded by `532-FR-001` (2026-10-24)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)

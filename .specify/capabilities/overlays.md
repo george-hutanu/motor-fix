@@ -20,9 +20,9 @@ The shared way a short task opens on top of the current screen, in `libs/overlay
 
 ## Requirements
 
-### 532-FR-007 — When a task opens on a page that has had no user activation (the browser reports `navigator.userActivation.hasBeenActive === false`), the task's history entry MUST be pushed at the first user interaction (`pointerdown` or `keydown`) instead of at once; when the page has had activation, or the browser does not report user activation, it MUST be pushed at once as today (modifies 491-FR-001).
+### 491-FR-001 — Opening a task MUST add exactly one entry to the browser's history at the page's current address, marked in the entry's history state as that task's own, without changing the address, without the app's router navigating (no navigation start, on the open nor on the entry's removal) and without the page re-rendering, losing its scroll or its state. (Modifies 157-FR-001: the service still opens a task without changing the page address, but now with one same-address history entry per open task.)
 
-_From 532-lost-session-home._
+_From 491-back-closes-task._
 
 ### 158-FR-010 — On a window at least 768 px wide when the task opens, the `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller. Below 768 px it is the sheet of 158-FR-001. (Replaces 157-FR-002, which applied at every width.)
 
@@ -260,6 +260,10 @@ _From 495-hlm-input-aria-reveal._
 
 _From 532-lost-session-home._
 
+### 532-FR-007 — When a task opens on a page that has had no user activation (the browser reports `navigator.userActivation.hasBeenActive === false`), the task's history entry MUST be pushed at the first user interaction (`pointerdown` or `keydown`) instead of at once; when the page has had activation, or the browser does not report user activation, it MUST be pushed at once as today (refines when 491-FR-001's one entry is added).
+
+_From 532-lost-session-home._
+
 ## Retired
 
 - `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
@@ -271,4 +275,3 @@ _From 532-lost-session-home._
 - `159-FR-005` — superseded by `496-FR-001` (2026-10-07)
 - `159-FR-006` — superseded by `496-FR-002` (2026-10-07)
 - `159-FR-002` — superseded by `495-FR-001` (2026-10-23)
-- `491-FR-001` — superseded by `532-FR-007` (2026-10-24)
