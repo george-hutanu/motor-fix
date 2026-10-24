@@ -120,15 +120,29 @@ describe('handoff rewrites the count from run state', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.deepEqual(countLines(readFileSync(note(), 'utf8')), ['- Repair iterations: 0']);
   });
+
+  // @traces 317-FR-001
+  it('replaces a count line that holds no number instead of keeping it beside a new one', () => {
+    setState({ repair_iterations: 2 });
+    writeFileSync(note(), '# Hand-off\n- Repair iterations: many\n- Open decisions: none\n');
+    assert.equal(step(['handoff', '--pr', '141'], harness().io).ok, true);
+    assert.deepEqual(countLines(readFileSync(note(), 'utf8')), ['- Repair iterations: 2']);
+  });
 });
 
 describe('handoff --restore takes the highest of three counts', () => {
   // @traces 317-FR-002
   it('restores a lap of 1 as 0 and never writes a negative count for lap 0', () => {
+    // Lap 0 and lap 1 both note 0, which never raises an absent count: no state is written.
     restore([marked('# Hand-off\n- QA run: 9 · head abc · lap 0 · url\n')]);
-    assert.ok(!existsSync(stateFile()) || state().repair_iterations >= 0);
+    assert.equal(existsSync(stateFile()), false);
+    rmSync(note(), { force: true });
     restore([marked('# Hand-off\n- QA run: 9 · head abc · lap 1 · url\n')]);
-    if (existsSync(stateFile())) assert.equal(state().repair_iterations, 0);
+    assert.equal(existsSync(stateFile()), false);
+    // Lap 2 notes 1, so the restore does write: the two above were no-ops, not a path that never runs.
+    rmSync(note(), { force: true });
+    restore([marked('# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n')]);
+    assert.equal(state().repair_iterations, 1);
   });
 
   // @traces 317-FR-002

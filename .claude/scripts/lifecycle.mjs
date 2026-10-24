@@ -487,7 +487,7 @@ function notedRepairs(text) {
 /** The note with one count line holding `n`: the first rewritten in place, any later one dropped, else one appended. */
 function withRepairLine(text, n) {
   let first = true;
-  const out = text.replace(/^- Repair iterations: \d+$\n?/gm, (line) => (first ? ((first = false), `${repairLine(n)}${line.endsWith("\n") ? "\n" : ""}`) : ""));
+  const out = text.replace(/^- Repair iterations:.*$\n?/gm, (line) => (first ? ((first = false), `${repairLine(n)}${line.endsWith("\n") ? "\n" : ""}`) : ""));
   return first ? `${text.replace(/\n*$/, "\n")}${repairLine(n)}\n` : out;
 }
 

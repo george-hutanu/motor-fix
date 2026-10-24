@@ -112,15 +112,16 @@ describe('every read the wait makes has the retry', () => {
     assert.equal(reads(w, 'run view'), 4);
   });
 
-  // @traces 317-FR-005
-  // The count is by poll (spec FR-005): three polls in a row each with a different read broken end the wait,
+  // The count is by poll: three polls in a row each with a different read broken end the wait,
   // and a poll whose every read answered between them starts it over.
+  // @traces 317-FR-005
   it('three polls in a row, each with a different read unreadable, end the wait with exit 2', async () => {
     const w = world({ mergeable: ['error', 'MERGEABLE'], run: ['error', { status: 'in_progress', conclusion: '' }, 'error', done] });
     const out = await wait(w, { run: '123' });
     assert.equal(out.code, 2, JSON.stringify(out));
   });
 
+  // @traces 317-FR-005
   it('a whole poll between unreadable ones starts the count over in the QA run wait', async () => {
     const pending = { status: 'in_progress', conclusion: '' };
     const w = world({ mergeable: ['error', 'MERGEABLE', 'MERGEABLE', 'error', 'MERGEABLE'], run: ['error', pending, pending, pending, 'error', done] });
@@ -131,7 +132,7 @@ describe('every read the wait makes has the retry', () => {
   it('an unreadable read does not outlast the overall wait limit', async () => {
     const w = world({ checks: ['error'] });
     const out = await wait(w, { ghTries: 100, waitMs: 60_000, pollMs: 15_000 });
-    assert.equal(out.code === 1 || out.code === 2, true, JSON.stringify(out));
+    assert.equal(out.code, 2, JSON.stringify(out));
     assert.ok(w.now() <= 60_000 + 15_000, String(w.now()));
   });
 });
