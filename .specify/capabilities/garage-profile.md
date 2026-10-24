@@ -23,6 +23,7 @@ features:
   - 308-profile-details
   - 025-review-mechanic
   - 309-open-now-directions
+  - 133-garage-public-profile
 ---
 
 # Capability: Garage profile
@@ -577,6 +578,65 @@ _From 309-open-now-directions._
 ### 309-FR-014 — The feature adds no service, queue, outside call, endpoint or product action and writes nothing but the seed migration: the observability inventory is unchanged, and this is recorded in the PR.
 
 _From 309-open-now-directions._
+### 133-FR-001 — The API MUST expose `GET /api/v1/garages/{garageId}/profile` for the garage's own staff, answering 200 with the public profile read model of `GET /api/v1/garages/{slug}` — the same `PublicGarageDto` fields, field for field, built by the same read (one read model, no second query shape) — plus one field `phone` (the garage's stored `phone` column as saved, already normalised at save by 109-FR-001; `null` when the row has none). The read model part is served through the public read's own cache (1182-FR-007); `phone` is read apart from it and never written into that cache entry. It takes no `brand` or `near` parameter: the owner's view is brand-neutral and shows no distance.
+
+_From 133-garage-public-profile._
+
+### 133-FR-002 — The read MUST answer: 200 for the garage's owner (role `garage`); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic, and the receptionist until ST-1369); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it.
+
+_From 133-garage-public-profile._
+
+### 133-FR-003 — The capability table MUST stay unchanged in this story: `garage.profile` stays the owner's only, so the receptionist is refused the read like the mechanic (granting it is ST-1369's, see `## Split`). Every write keeps checking the owner (`assertGarageOwner`).
+
+_From 133-garage-public-profile._
+
+### 133-FR-004 — The read MUST write no database row, emit no event, record no audit entry and count no profile view; it is read-only and idempotent (filling the public read's cache on a miss, as the public read does, is not a write in this sense).
+
+_From 133-garage-public-profile._
+
+### 133-FR-005 — The dashboard view `profile` of the garage area MUST render the view "Profilul service-ului" / "Garage profile" with the subtitle "Așa te văd șoferii pe hartă" / "This is how drivers see you on the map" (the titles of 097-FR-003 are already in place), read only, with no edit control: the place where "Modifică profilul" will go stays empty until the editing stories (#1246–#1249) add their dialogs.
+
+_From 133-garage-public-profile._
+
+### 133-FR-006 — The view MUST show a panel "Profilul public" / "Public profile" with the lines, in this order and each with its label: "Nume" / "Name"; for a workshop "Adresă" / "Address" with the address as the garage wrote it, for a mobile mechanic (`businessKind` `mobile`) "Zonă de lucru: {r} km" / "Service area: {r} km" where `r` is `serviceRadiusKm` or 20 when the answer has none, and never any address; "Program" / "Hours" as the public profile's hours lines (Monday first, runs of identical days, 24-hour two-digit times, "Închis" / "Closed", 308-FR-012), no line when the answer carries no usable hours; "Telefon" / "Phone" with the stored phone and the tag "nu apare public" / "not shown publicly", no line when the answer has no phone.
+
+_From 133-garage-public-profile._
+
+### 133-FR-007 — The view MUST show "Lucrează pe" / "Works on" and "Nu lucrează pe" / "Does not work on" with chips built in the garage area the way the public profile builds them (308-FR-004, 308-FR-005 minus the brand in context) — the shared lamp, the same fuel labels and order; the public profile's own section component is not reused, as it carries the brand in context and the driver's copy: one chip per brand of `worksOn` with a green lamp, one per brand of `doesNotTake` with a red lamp, in the answer's order; each `worksOn` chip carries its fuel line ("benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", the ticked ones in that fixed order) exactly as the public profile shows it; the lamp is `aria-hidden`, the stance carried by the heading. An unstated brand is in neither list. An empty list shows its heading and "nimic ales încă" / "nothing chosen yet". Under both lists one line reads "Mărcile nemarcate contează ca refuz: apari ultimul la ele și nu primești cereri." / "Unmarked brands count as a refusal: you show last for them and get no requests." The garage's brand note, when the answer carries one, follows as on the public profile (308-FR-007).
+
+_From 133-garage-public-profile._
+
+### 133-FR-008 — The view MUST show "Facilități" / "Facilities" with every catalogue facility, in catalogue order (`courtesy_car`, `pickup_dropoff`, `waiting_area`): one listed in the answer's `facilities` with its label and a green lamp — the courtesy car's label carrying " · gratuit" / " · free" or " · {price} / zi" / " · {price} / day" with the price in whole lei by the money rule (308-FR-009) — and one not listed as "{label}: nu" / "{label}: no" with a grey lamp. Then "Plată: {methods}" / "Payment: {methods}" with the ticked methods in the fixed order numerar, card, transfer / cash, card, transfer (308-FR-010), hidden when none is ticked; then the facilities note when the answer carries one. The labels are the public profile's (308-FR-008).
+
+_From 133-garage-public-profile._
+
+### 133-FR-009 — The view MUST show one button "Vezi profilul public" / "View public profile" that opens `/{lang}/garages/{slug}` — `lang` the interface language, `slug` the answer's — in a new tab with `rel="noopener"`; it is hidden while the view has no answer and on the 410 state.
+
+_From 133-garage-public-profile._
+
+### 133-FR-010 — While the first read is open the panel MUST show a skeleton; on a failed read (a network error or any 5xx) the panel MUST show "Nu am putut încărca profilul." / "We could not load the profile." with a "Reîncearcă" / "Retry" button inside the panel that reads again; a live re-read (FR-011) that fails with a network error or 5xx keeps the last answer shown and shows no error, and one that answers 410 shows the 410 state, 403 or 404 the redirect, as a first read does; on 410 the view MUST show, in place of the panel, "Profilul nu apare pe hartă cât timp service-ul este suspendat." / "Your profile is not on the map while the garage is suspended."; on 403 or 404 the view redirects to the dashboard's own address like a view the session may not open (288-FR-003).
+
+_From 133-garage-public-profile._
+
+### 133-FR-011 — The open view MUST re-read in place when `garage.updated`, `garage.suspended`, `garage.restored`, `facility.removed` or `facility.re_add_decided` for its garage arrives on the dashboard's existing live stream, with no reload and no polling; the latest read's answer wins over an older one still in flight; the swap is silent for assistive technology (as 308-FR-014).
+
+_From 133-garage-public-profile._
+
+### 133-FR-012 — Every text this story introduces for FR-005 to FR-010 MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the labels the view shares with the public profile (fuel words, weekday names, "Închis", the facility labels, "gratuit" / "{price} / zi", "Plată: {methods}" and the payment words) are read from the public area's files, the one copy the public profile shows; money in whole lei and hours in 24-hour time through the shared formats (019-FR-001, 019-FR-006); the view MUST render at 320 px and 390 px (fields stacked, chips wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, buttons at least 44 × 44 px and the smallest text at least 12 px.
+
+_From 133-garage-public-profile._
+
+### 133-FR-013 — The view MUST be one named region, the board's panel "Profilul public" with its `h2` under the view's `h1`, the groups "Lucrează pe", "Nu lucrează pe" and "Facilități" each headed by an `h3`, the lamps `aria-hidden` and never the only carrier of meaning (the "nu" / "no" text carries the not-offered state), the public-profile button a link with its destination announced ("se deschide într-o filă nouă" / "opens in a new tab"); the QA sweep's axe checks pass on the view.
+
+_From 133-garage-public-profile._
+
+### 133-FR-014 — The read of FR-001 MUST be listed in `infra/observability/inventory.json` as an endpoint with its route metric (as `GET /api/v1/garages/:slug` is), with no new panel beyond the existing API latency and error panels, and no alert of its own: it is a staff read of an existing read model. The story adds no service, queue or outside call.
+
+_From 133-garage-public-profile._
+
+### 133-FR-015 — Tests MUST exist before the code (Principle II) and name this feature's ids. Jest on real PostgreSQL and Redis: the answer equals the public read's answer for the same garage plus `phone` (key allow-list: the public keys plus `phone`, never `cui`, `seatAddress`, `latitude`/`longitude` of the seat for a mobile mechanic); 200 owner, 403 receptionist (until ST-1369), 403 mechanic, 404 another garage's owner, driver, admin and a random uuid, 401 without a session, 410 suspended, 404 pending; the read writes no audit row and no event; the capability table and its tests are unchanged (ST-1369 changes them). Jest for the web: the panel lines for a workshop and a mobile mechanic, the two chip lists with fuel lines and the refusal line, the facilities with a not-offered row, the courtesy car free and paid, the payment line, the skeleton, the error with retry, the 410 state, the re-read on each of the five live kinds with the latest answer winning, the public-profile link's address and target. Playwright: the owner opens the view and the public profile and sees the same brands, fuel types, facilities and hours; the phone shows only in the dashboard; a mechanic's menu lacks it.
+
+_From 133-garage-public-profile._
 
 ## Retired
 

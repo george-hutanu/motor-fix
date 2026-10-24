@@ -305,3 +305,14 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
   })
   photos!: PublicGaragePhotoDto[];
 }
+
+// The garage's own staff read of its public profile: the public answer as
+// drivers get it, plus the phone the garage saved, which is never public.
+export class GarageProfileDto extends PublicGarageDto {
+  @ApiProperty({
+    description: "The garage's stored phone as saved; never public",
+    nullable: true,
+    type: String,
+  })
+  phone!: string | null;
+}

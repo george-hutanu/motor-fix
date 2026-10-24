@@ -1,0 +1,185 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+  margin: var(--mf-space-4);
+  min-width: 0;
+}
+p,
+h2,
+h3,
+ul {
+  margin: 0;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+  padding: var(--mf-space-5);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  background: var(--mf-panel);
+  overflow-wrap: anywhere;
+}
+h2,
+h3,
+.label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: var(--mf-space-3);
+}
+/* Each field takes two rows of the list's grid, label then value, so the
+   tallest label in a row (the phone's, with its tag) sets that row's label
+   height and every value box beside it starts at the same line. */
+.field {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  align-items: end;
+  row-gap: var(--mf-space-1);
+  min-width: 0;
+}
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-2);
+  color: var(--mf-text-secondary);
+}
+.tag {
+  padding: 0 var(--mf-space-2);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-chip);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-small);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.value {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--mf-tap);
+  padding: var(--mf-space-2) var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-panel-raised);
+  align-self: stretch;
+}
+/* A field with no label (the area line) still puts its box on the value row. */
+.field > .value:only-child {
+  grid-row: 2;
+}
+.hours-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--mf-space-3);
+}
+.days {
+  font-weight: 600;
+}
+.closed,
+.muted {
+  color: var(--mf-text-secondary);
+}
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.chips li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  max-width: 100%;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  max-width: 100%;
+  padding-inline: var(--mf-space-3) var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-panel-raised);
+}
+.refuses h3,
+.refuses mf-lamp {
+  color: var(--mf-red-ink);
+}
+.off mf-lamp {
+  color: var(--mf-text-secondary);
+}
+.fuels {
+  padding-left: var(--mf-space-3);
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+}
+.failed p {
+  color: var(--mf-red-ink);
+}
+.retry,
+.public-link {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.public-link {
+  align-self: flex-start;
+  max-width: 100%;
+  /* The ghost button's padding and border, pulled out so its text starts
+     where the panel's other lines do. */
+  margin-inline-start: calc(-1 * var(--mf-space-5) - 1px);
+}
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+}
+.skeleton {
+  height: var(--mf-tap);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-line);
+}
+
+/* Phone: the complement of the tablet query in layout.ts. Running text,
+   the labels, the fuel lines and the phone tag, reads at body size; the
+   panel title steps up and the group titles turn bold to stay above them. */
+@media not all and (min-width: 768px) {
+  :host {
+    --mf-size-small: var(--mf-size-body);
+  }
+  h2 {
+    font-size: var(--mf-size-subheading);
+  }
+  h3 {
+    font-size: var(--mf-size-body);
+    font-weight: 600;
+  }
+  .label {
+    font-size: var(--mf-size-body);
+  }
+}
