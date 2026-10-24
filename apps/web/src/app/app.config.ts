@@ -13,7 +13,11 @@ import {
   provideClientHydration,
   withEventReplay,
 } from '@angular/platform-browser';
-import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import {
+  provideRouter,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideI18n, provideRememberedLanguage } from '@motor-fix/i18n';
 import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
@@ -24,6 +28,7 @@ import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
+import { skipStillTransitions } from './view-transitions';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
 
@@ -32,7 +37,11 @@ export const appConfig: ApplicationConfig = {
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
-    provideRouter(routes, withInMemoryScrolling()),
+    provideRouter(
+      routes,
+      withInMemoryScrolling(),
+      withViewTransitions({ onViewTransitionCreated: skipStillTransitions }),
+    ),
     provideViewScrolling(),
     provideI18n(),
     provideCockpitTheme(),

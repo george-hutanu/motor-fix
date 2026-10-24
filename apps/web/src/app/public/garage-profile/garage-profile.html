@@ -40,7 +40,7 @@
           {{ 'public.garageProfile.badge' | t }}
         </span>
       </div>
-      <h1>{{ garage.name }}</h1>
+      <h1 [style.view-transition-name]="'garage-' + garage.id">{{ garage.name }}</h1>
       @let mobileArea =
         garage.businessKind === 'mobile' && garage.serviceRadiusKm;
       @if (mobileArea || distanceSaid() || statusSaid()) {
