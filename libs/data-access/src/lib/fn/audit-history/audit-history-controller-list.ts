@@ -20,6 +20,11 @@ export interface AuditHistoryControllerList$Params {
  * Who made the change
  */
   actorId?: string;
+
+/**
+ * Admin only: the entries the account made or that are about the account
+ */
+  accountId?: string;
   jobId?: string;
   area?: 'requests' | 'quotes' | 'bookings' | 'jobs' | 'prices' | 'repair_history' | 'photos' | 'garage_profile' | 'team' | 'settings' | 'admin_actions';
 
@@ -37,6 +42,11 @@ export interface AuditHistoryControllerList$Params {
  * The nextCursor of the previous page
  */
   cursor?: string;
+
+/**
+ * Entries per page
+ */
+  limit?: number;
 }
 
 export function auditHistoryControllerList(http: HttpClient, rootUrl: string, params?: AuditHistoryControllerList$Params, context?: HttpContext): Observable<StrictHttpResponse<AuditHistoryPageDto>> {
@@ -44,11 +54,13 @@ export function auditHistoryControllerList(http: HttpClient, rootUrl: string, pa
   if (params) {
     rb.query('garageId', params.garageId, {});
     rb.query('actorId', params.actorId, {});
+    rb.query('accountId', params.accountId, {});
     rb.query('jobId', params.jobId, {});
     rb.query('area', params.area, {});
     rb.query('from', params.from, {});
     rb.query('to', params.to, {});
     rb.query('cursor', params.cursor, {});
+    rb.query('limit', params.limit, {});
   }
 
   return http.request(

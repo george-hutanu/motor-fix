@@ -380,7 +380,11 @@ describe('answers that refuse', () => {
       'too_many_attempts',
       'Prea multe încercări. Încearcă din nou în 15 minute.',
     ],
-    [403, 'account_suspended', 'Contul tău este suspendat.'],
+    [
+      403,
+      'account_suspended',
+      'Contul tău este suspendat. Scrie‑ne la suport.',
+    ],
     [
       503,
       'maintenance',

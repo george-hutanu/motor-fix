@@ -446,6 +446,38 @@ describe('check: the CI-only checks and the affected tests before a push', () =>
   });
 });
 
+// @traces 1011-FR-001 1011-FR-003
+describe('check caps the memory of the affected Jest runs', () => {
+  beforeEach(() => fixture());
+
+  const stepEnv = (h) => h.envs.find((e) => e.cmd.startsWith('sh scripts/heavy.sh')).env;
+
+  it('runs the affected tests with two Jest workers, recycled past 1GB, by default', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const env = stepEnv(h);
+    assert.equal(env.JEST_MAX_WORKERS, '2');
+    assert.equal(env.JEST_IDLE_MEMORY, '1GB');
+    assert.equal(env.GH_TOKEN, 'tok-george', 'the rest of the env is passed through');
+  });
+
+  it('keeps the caps already set in the env', () => {
+    const h = harness({ env: { GH_TOKEN: 'tok-george', JEST_MAX_WORKERS: '3', JEST_IDLE_MEMORY: '2GB' }, answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const env = stepEnv(h);
+    assert.equal(env.JEST_MAX_WORKERS, '3');
+    assert.equal(env.JEST_IDLE_MEMORY, '2GB');
+  });
+
+  it('caps only the test step: the other checks run with the env as it was', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const lint = h.envs.find((e) => e.cmd === 'npm run lint').env;
+    assert.equal(lint.JEST_MAX_WORKERS, undefined);
+    assert.equal(lint.JEST_IDLE_MEMORY, undefined);
+  });
+});
+
 // @traces 749-FR-002 749-FR-003
 describe('check and ready reuse a passing proof of the local checks for the same clean tree', () => {
   beforeEach(() => fixture());
