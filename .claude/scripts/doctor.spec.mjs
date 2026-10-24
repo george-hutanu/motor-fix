@@ -210,6 +210,22 @@ describe('doctor — skills and agents', () => {
     assert.equal(status(results, 'skills/frontmatter'), 'ok');
     assert.equal(status(results, 'agents/frontmatter'), 'ok');
   });
+
+  // @traces 471-FR-002
+  it('reads skills and agents whose lines end in CRLF as it reads LF ones', () => {
+    const crlf = (text) => text.replace(/\n/g, '\r\n');
+    write('.claude/skills/speckit-thing/SKILL.md', crlf('---\nname: speckit-thing\ndescription: does a thing\n---\n'));
+    write('.claude/agents/reviewer.md', crlf('---\nname: reviewer\ndescription: reviews\ntools: Read\n---\n'));
+    const results = checkSkillsAndAgents(repo);
+    assert.equal(status(results, 'skills/frontmatter'), 'ok', detail(results, 'skills/frontmatter'));
+    assert.equal(status(results, 'agents/frontmatter'), 'ok', detail(results, 'agents/frontmatter'));
+  });
+
+  // @traces 471-FR-002
+  it('still names a mismatched skill whose lines end in CRLF', () => {
+    write('.claude/skills/speckit-thing/SKILL.md', '---\r\nname: other-thing\r\ndescription: does a thing\r\n---\r\n');
+    assert.match(detail(checkSkillsAndAgents(repo), 'skills/frontmatter'), /frontmatter name is "other-thing"/);
+  });
 });
 
 describe('doctor — commands', () => {

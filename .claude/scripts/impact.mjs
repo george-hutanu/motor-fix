@@ -21,6 +21,7 @@ import { activeFeature, locateFeature } from "./lib/feature.mjs";
 import { testsFor } from "./lib/tests.mjs";
 import { loadCapabilities } from "./capabilities.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { declaredFrs } from "./lib/traces.mjs";
 
 /**
  * Everything that rests on one requirement. `token` is the feature-qualified
@@ -96,7 +97,7 @@ export function main(argv, repo) {
   }
 
   const spec = readFileSync(join(feature.dir, "spec.md"), "utf8");
-  const declared = [...new Set([...spec.matchAll(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]/gm)].map((m) => m[1]))];
+  const declared = declaredFrs(spec);
   const asked = positional.filter((a) => /^FR-\d{3}$/.test(a));
   const wanted = argv.includes("--all") || asked.length === 0 ? declared : asked;
 
