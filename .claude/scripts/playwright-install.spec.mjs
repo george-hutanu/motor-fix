@@ -176,3 +176,50 @@ describe('the retry loop, run', () => {
     assert.equal(runLoop(99, { browser: false }).code, 1);
   });
 });
+
+// @traces 988-FR-008
+describe('a browser cache hit skips install-deps when nothing is missing', () => {
+  // On a cache hit the browser is already there; install-deps only fetches the system
+  // libraries it loads, which the runner image usually carries. The step reads them with
+  // the fallback's own ldd test first and runs apt only when one is missing (#626).
+  const hits = installs.filter((s) => /cache-hit == 'true'/.test(s.text) && /install-deps/.test(s.text));
+  const runHit = (step, { missing }) => {
+    const dir = mkdtempSync(join(tmpdir(), 'pw-hit-'));
+    const home = join(dir, 'home');
+    try {
+      mkdirSync(join(home, '.cache/ms-playwright/chromium-1/chrome-linux'), { recursive: true });
+      writeFileSync(join(home, '.cache/ms-playwright/chromium-1/chrome-linux/chrome'), '');
+      writeFileSync(join(dir, 'ldd'), `#!/bin/sh\necho "libnss3.so => ${missing ? 'not found' : '/usr/lib/libnss3.so'}"\n`);
+      writeFileSync(join(dir, 'npx'), `#!/bin/sh\necho x >> "${dir}/npx-calls"\nexit 1\n`);
+      writeFileSync(join(dir, 'timeout'), '#!/bin/sh\nshift 3\nexec "$@"\n');
+      writeFileSync(join(dir, 'sudo'), '#!/bin/sh\nexit 0\n');
+      for (const bin of ['npx', 'timeout', 'sudo', 'ldd']) chmodSync(join(dir, bin), 0o755);
+      const env = { ...process.env, HOME: home, PATH: `${dir}:${process.env.PATH}` };
+      const r = spawnSync('bash', ['-e', '-c', script(step)], { encoding: 'utf8', env });
+      const calls = existsSync(join(dir, 'npx-calls')) ? readFileSync(join(dir, 'npx-calls'), 'utf8').trim().split('\n').length : 0;
+      return { code: r.status, calls, out: r.stdout };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('finds the cache-hit step of ci.yml and of pr-qa.yml', () => {
+    assert.deepEqual(hits.map((s) => s.name), ['ci.yml', 'pr-qa.yml']);
+  });
+
+  for (const step of hits) {
+    it(`${step.name}: logs a notice and never runs apt when every library the cached chromium loads resolves`, () => {
+      const r = runHit(step, { missing: false });
+      assert.equal(r.code, 0);
+      assert.equal(r.calls, 0, 'npx playwright install-deps ran');
+      assert.match(r.out, /^::notice::playwright install-deps skipped/m);
+    });
+
+    it(`${step.name}: runs the bounded retry unchanged when a library is missing`, () => {
+      const r = runHit(step, { missing: true });
+      assert.equal(r.code, 1);
+      assert.equal(r.calls, 3);
+      assert.doesNotMatch(r.out, /::notice::/);
+    });
+  }
+});

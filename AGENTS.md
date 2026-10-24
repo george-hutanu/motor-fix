@@ -146,7 +146,8 @@ Read only what decides the next step; every check still runs:
 Phones first: 320 px, 390 px, a tablet and a desktop, light and dark,
 Romanian and English, and a screen that scrolls sideways at 320 px is a
 finding. QA runs in CI and its artifact's screenshots are the evidence; no
-images in the repo. The how-to is in `.claude/skills/speckit-pr-test/SKILL.md`.
+images in the repo. The how-to is in `.claude/skills/speckit-pr-test/SKILL.md`;
+its "Routes and flows" says how a route is written and how a flow reports and waits.
 
 ## Specs live in their own repo
 
