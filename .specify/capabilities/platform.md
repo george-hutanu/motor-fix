@@ -2874,6 +2874,7 @@ _From 1156-retention-job._
 ### 1156-FR-014 — Integration tests (real PostgreSQL) MUST exist before the implementation and MUST seed, for every kind the job sweeps today (each token and code kind, invites, notifications, legal documents, audit entries by account closure, by garage closure and by own time), one row just inside and one just outside its limit, and show after one run that only the outside one was removed or anonymised, that the counts match, and that the database still refuses a delete and any non-anonymising update of an audit entry.
 
 _From 1156-retention-job._
+
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 
 _From 493-watcher-docs._
