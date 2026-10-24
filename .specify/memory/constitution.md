@@ -1,5 +1,21 @@
 <!--
-Sync Impact Report (v5.1.0)
+Sync Impact Report (v5.1.1)
+- Version change: 5.1.0 → 5.1.1 (PATCH, wording only: Principle VII steps 1,
+  3 and 5 say each event sets the PR's one stage label (`planning` at the
+  draft, `in development` when `/speckit-implement` starts, `QA` at ready)
+  instead of the older wording that traded its label for `QA`, as the
+  stage-label rule below the steps already states. No rule, gate or label
+  changes)
+- Source: ST-479 (motor-fix-specs#385), folded into ST-489 (#389), 2026-10-24.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ .specify/templates/plan-template.md, spec-template.md,
+    tasks-template.md — no change needed (no stage-label wording)
+  - ✅ AGENTS.md, .claude/skills/speckit-auto/lifecycle.md — already say the
+    PR's one stage label follows the tracker; no change needed
+
+Previous report (v5.1.0)
 - Version change: 5.0.0 → 5.1.0 (MINOR: Principle VII step 4 has the tail
   agent wait for CI and the QA run itself, so a session holds one task being
   built plus any number waiting on QA and CI; `origin/main` is merged on an
@@ -615,17 +631,17 @@ Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
 1. Set the task Planning on its tracker issue (Implementing once
-   `/speckit-implement` starts), then open a draft PR for its branch,
-   labelled `planning` until `/speckit-implement` starts and `in development`
-   from then on,
-   and write that PR's link onto the issue's own `PR` field and the PR's
+   `/speckit-implement` starts), then open a draft PR for its branch, and
+   write that PR's link onto the issue's own `PR` field and the PR's
    `Closes` line. Every story and task links its own PR; one opened later for
-   the same task is added as a comment, never in place of the first.
+   the same task is added as a comment, never in place of the first. Each event
+   sets the PR's one stage label: `planning` at the draft, `in development`
+   when `/speckit-implement` starts, `QA` at ready (step 3).
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
-   CRITICAL/HIGH left), mark the PR ready, swap its label to `QA`, and set
-   the task QA. There is no In review stage: a ready PR is in QA.
+   CRITICAL/HIGH left), mark the PR ready, which sets its one stage label
+   to `QA`, and set the task QA. There is no In review stage: a ready PR is in QA.
 4. Wait for CI, in the background: the tail agent waits for CI and the QA run itself,
    and the session that dispatched it waits for nothing, so a session holds
    one task being built per session, plus any number waiting on QA and CI.
@@ -636,7 +652,7 @@ waits for the owner:
    behind head keeps its QA run. A failing check is fixed on the branch and waited for
    again.
 5. Beside step 4, as soon as the PR is ready and with the task and the PR's
-   label still QA, run the PR tester (`/speckit-pr-test`) on the head
+   stage label still QA, run the PR tester (`/speckit-pr-test`) on the head
    commit: it boots the change on a GitHub Actions runner (the PR QA workflow;
    `--local` on the laptop when Actions is unavailable), tests it in a browser
    and against the API, reviews the diff against the spec and this
@@ -822,4 +838,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 5.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-23
+**Version**: 5.1.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-24

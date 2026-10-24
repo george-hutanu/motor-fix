@@ -58,7 +58,7 @@ export function completionWorld(prisma: PrismaClient) {
   );
   const details = new GarageDetailsService(audit);
   const prices = new GaragePricesService(audit, outbox);
-  const mechanics = new GarageMechanicsService(audit);
+  const mechanics = new GarageMechanicsService(audit, {} as never, {} as never);
   const place = new GaragePlaceService(audit);
   const photos = new GaragePhotosService(audit);
   const verification = new VerificationService(audit, outbox, {

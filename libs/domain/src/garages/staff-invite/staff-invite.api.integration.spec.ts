@@ -626,6 +626,25 @@ describe('opening and accepting a link', () => {
     expect(again.body.code).toBe('invite_invalid');
   });
 
+  // @traces 056-FR-015
+  it("refuses another garage's owner, whose own row never moves", async () => {
+    const { id, nord, radu, token } = await invited();
+    const own = await prisma.mechanic.create({
+      data: { accountId: radu, garageId: nord.id, isOwner: true, name: 'Radu' },
+    });
+
+    const res = await accept(token, bearer(radu, 'garage'));
+
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('invite_invalid');
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: own.id } }),
+    ).toMatchObject({ garageId: nord.id, isOwner: true });
+    expect(
+      (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('sent');
+  });
+
   // @traces 131-FR-008
   it("refuses the garage's own owner", async () => {
     const { id, mihai, token } = await invited();

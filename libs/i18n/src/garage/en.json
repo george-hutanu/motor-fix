@@ -194,6 +194,50 @@
       "unavailable": "Upload is not available right now"
     }
   },
+  "mechanicCard": {
+    "brands": "Brands they work on",
+    "certifications": "Certifications",
+    "certificationsHint": "Separate them with commas, at most 10.",
+    "failed": "We could not save the card. Try again.",
+    "field": {
+      "brands": "A brand the garage does not take",
+      "certificationLong": "At most 80 characters per tag",
+      "certificationsMany": "At most 10 certifications",
+      "nameLong": "At most 80 characters",
+      "nameRequired": "The name is required",
+      "roleLong": "At most 40 characters",
+      "specialtiesMany": "At most 6 specialties",
+      "specialtyLong": "At most 40 characters per tag",
+      "years": "Between 0 and 60 years"
+    },
+    "gone": "The card was removed in the meantime.",
+    "name": "Name",
+    "noBrands": "The garage has no brands it works on yet.",
+    "owned": {
+      "fields": "Photo, bio, languages",
+      "line": "The mechanic fills these in"
+    },
+    "remove": {
+      "bookings": {
+        "one": "{name} has {count} future booking. It will need reassigning.",
+        "other": "{name} has {count} future bookings. They will need reassigning."
+      },
+      "button": "Remove",
+      "cancel": "Cancel",
+      "done": "{name} is no longer on the team.",
+      "failed": "We could not remove the mechanic. Try again.",
+      "question": "Remove {name} from the team?",
+      "title": "Remove the mechanic?"
+    },
+    "roleTitle": "Role",
+    "save": "Save",
+    "saved": "The card was saved.",
+    "specialties": "Specialties",
+    "specialtiesHint": "Separate them with commas, at most 6.",
+    "title": "Add a mechanic",
+    "titleEdit": "{name}",
+    "years": "Years of experience"
+  },
   "prices": {
     "add": "Add a job",
     "addMax": "At most 50 jobs",
@@ -436,7 +480,8 @@
     "seeAll": "See all",
     "stale": "This list may be out of date",
     "toast": "New request: {car} · {job}",
-    "toastCar": "New request: {car}"
+    "toastCar": "New request: {car}",
+    "toReassign": "to reassign"
   },
   "suspended": {
     "next": {
@@ -456,6 +501,7 @@
     "empty": "You have not added mechanics yet.",
     "failed": "We could not load the team. Try again.",
     "noReviews": "no reviews",
+    "owner": "owner",
     "retry": "Try again",
     "reviews": {
       "one": "{rating} · {count} review",
@@ -466,7 +512,11 @@
       "off": "not on the profile",
       "on": "on the profile"
     },
-    "title": "Team"
+    "title": "Team",
+    "years": {
+      "one": "{count} year",
+      "other": "{count} years"
+    }
   },
   "verification": {
     "checkIn": "We check it within 1–2 working days.",
