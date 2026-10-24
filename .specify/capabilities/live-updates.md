@@ -26,7 +26,9 @@ features:
   - 025-review-mechanic
   - 067-restore-suspended-garage
   - 532-lost-session-home
+  - 588-live-changed-gone
   - 587-live-list-e2e
+  - 413-verification-file-presence
 ---
 
 # Capability: Live updates
@@ -191,17 +193,17 @@ _From 256-live-in-place._
 
 _From 256-live-in-place._
 
-### 256-FR-004 — A re-read that answers 404 marks a single-object view `gone`, and the view keeps its last value. A drawer that shows it says "Nu mai este disponibil" / "No longer available" and stays open.
+### 588-FR-006 — When the request drawer has shown a request and a re-read answers 404, it MUST keep the request's detail on screen and show the text `shell.live.gone` as its banner (the place the close-reason banner takes), with Trimite oferta and Refuză disabled; it MUST NOT close, empty or replace what it showed. The gone banner replaces any close-reason banner (one banner) and is announced like it (the existing banner's `role="status"`).
 
-_From 256-live-in-place._
+_From 588-live-changed-gone._
 
 ### 256-FR-005 — A live update never reloads the page, changes the route, closes a dialog, drawer or sheet, or moves focus.
 
 _From 256-live-in-place._
 
-### 256-FR-006 — A form edits a local copy taken when it opens. A re-read never writes into it. While the shown object differs from that copy's source, `changed()` holds the new object, a line "S-a schimbat între timp: <value>" shows, and accepting it makes the new object the source.
+### 588-FR-004 — The line MUST go when the row's range on the list equals the range the form was last filled from again. The 409 re-read that refills the form makes the re-read range the one the form was filled from, so the line goes once the list shows it; while the list still shows a row older than that re-read (by `updatedAt`), no line names that older range.
 
-_From 256-live-in-place._
+_From 588-live-changed-gone._
 
 ### 256-FR-007 — While a list is not at its top, new rows that sort before the rows shown are held back and counted. A pill "{count} actualizare nouă / actualizări noi / de actualizări noi" (EN "{count} new update / updates") shows at the top. Tapping it shows the held rows and scrolls up to the first. At the top, new rows show at once.
 
@@ -430,6 +432,33 @@ _From 532-lost-session-home._
 
 _From 532-lost-session-home._
 
+### 588-FR-001 — While the price range editor is open on a job's own row, it MUST see that row as the live price list currently shows it (a `shown` signal of that row, required on the kind `row` data and handed over by the list), so a re-read of the list reaches the open editor; it sees no other row and opens no live read of its own.
+
+_From 588-live-changed-gone._
+
+### 588-FR-002 — When the row's range (both ends and the duration) on the live list differs from the range the form was last filled from, the editor MUST show the text `shell.live.changed` under the range fields, driven by `liveDraft(…).changed()` over the shown range compared by range, its value being the new range written as the Prețuri list writes it (`formatWholeLeiRange`; an open top as `garage.prices.from`), followed by " · " and the new duration as `formatDuration` writes it when the row has one. The line is `role="status"` and is announced once.
+
+_From 588-live-changed-gone._
+
+### 588-FR-003 — The line MUST NOT write into any field: what the person typed, and what the form was filled with, stay as they are until the person changes them or the existing 409 re-read refills the form.
+
+_From 588-live-changed-gone._
+
+### 588-FR-005 — A re-read that changes only other fields of the row (visibility, state, brand ranges) or other rows MUST show no line; the editor open for a brand range, the labour rate, a new job or a proposal shows no line and is otherwise unchanged.
+
+_From 588-live-changed-gone._
+
+### 588-FR-007 — When the drawer's very first read answers 404 (nothing shown yet), it MUST keep today's `garage.requests.detail.notFound` refusal.
+
+_From 588-live-changed-gone._
+
+### 588-FR-008 — When a later re-read answers the request again, the gone banner MUST go and the drawer MUST behave as before it.
+
+_From 588-live-changed-gone._
+
+### 588-FR-009 — Unit specs MUST cover FR-002 to FR-008 in Romanian and in English, asserting the rendered texts, and MUST prove that each of `shell.live.changed` and `shell.live.gone` is rendered by at least one screen.
+
+_From 588-live-changed-gone._
 ### 587-FR-001 — The live end-to-end suite MUST include a check in which a signed-in garage owner has the garage's quote requests list (a live list that already uses `liveRows`, `LivePill` and `LiveAnchor`) open at a phone-size viewport, scrolled so the top of the list is off screen, and a driver creates a request for that garage from another context; the check MUST assert that the pill is inside the viewport within 5 seconds of the request's 201 with a count of at least 1, and that no pill showed before that request.
 
 _From 587-live-list-e2e._
@@ -445,6 +474,10 @@ _From 587-live-list-e2e._
 ### 587-FR-004 — No product change MUST be needed for the check to pass (a product bug it exposes is fixed in this pull request with its own test); the existing live checks (two dashboards, confirm dialog, typed text, the garage's requests arriving live) stay as they are; the check creates the rows it needs, waits on visible elements and polled conditions only, and tolerates rows added to the same garage by other workers.
 
 _From 587-live-list-e2e._
+
+### 413-FR-007 — When an admin's entry is created or removed by a call, the system MUST publish a `presence.changed` message with the file's id straight to the live stream, to the `admin` audience, through the existing direct publish (not the outbox); a heartbeat that only renews an entry and an expiry publish nothing. `presence.changed` stays out of the shared list of event kinds (`EVENT_KINDS` holds the outbox kinds; its header already names presence among the kinds published straight to the store), as `session.revoked` and `notification.created` do; the drawer reads it from the stream's messages by kind and file id (plan, research R3).
+
+_From 413-verification-file-presence._
 
 ## Retired
 
@@ -466,3 +499,5 @@ _From 587-live-list-e2e._
 - `257-FR-006` — superseded by `025-FR-009` (2026-10-23)
 - `254-FR-001` — superseded by `025-FR-009` (2026-10-23)
 - `049-FR-007` — superseded by `067-FR-007` (2026-10-23)
+- `256-FR-006` — superseded by `588-FR-004` (2026-10-24)
+- `256-FR-004` — superseded by `588-FR-006` (2026-10-24)

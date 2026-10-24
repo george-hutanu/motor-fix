@@ -21,6 +21,7 @@ const GARAGE: PublicGarageDto = {
   address: ADDRESS,
   brandNote: null,
   businessKind: 'company',
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: HOURS,

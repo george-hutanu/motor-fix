@@ -20,6 +20,7 @@ features:
   - 414-approve-catalogue-job
   - 245-seed-catalogues
   - 105-brand-list-admin
+  - 309-open-now-directions
 ---
 
 # Capability: Catalogue
@@ -68,9 +69,9 @@ _From 039-brand-catalogue._
 
 _From 039-brand-catalogue._
 
-### 112-FR-008 — The system MUST hold a public-holiday calendar in the catalogue: one row per legal holiday day with its date and its Romanian and English name, created and filled for 2026 and 2027 by a migration under Romania's Labour Code (1 and 2 January, 6 and 7 January, 24 January, Orthodox Good Friday, Orthodox Easter Sunday and Monday, 1 May, 1 June, Orthodox Pentecost Sunday and Monday, 15 August, 30 November, 1 December, 25 and 26 December), a day held once: 16 days in 2026, where 1 June is both Children's Day and Pentecost Monday and its row carries both names, and 17 in 2027. The insert skips a day already held, so a later year is added by another migration's data with no code change.
+### 309-FR-008 — A new migration MUST add to the holiday calendar the legal holidays of 2028, 2029 and 2030 under the Labour Code (art. 139): 1 and 2 January, 6 and 7 January, 24 January, Orthodox Good Friday (Easter − 2), Orthodox Easter Sunday and Monday (Easter + 1), 1 May, 1 June, Orthodox Whit Sunday and Monday (Easter + 49 and + 50), 15 August, 30 November, 1 December, 25 and 26 December, with Orthodox Easter on 2028-04-16, 2029-04-08 and 2030-04-28; one row per day with its Romanian and English names, the names of two holidays on one day joined with " / " as the 2026 row of 1 June does, and the insert skipping a day already held (modifies 112-FR-008: the calendar now runs to 2030, 2026 and 2027 unchanged).
 
-_From 112-opening-hours._
+_From 309-open-now-directions._
 
 ### 414-FR-001 — The catalogue job row MUST gain three decision columns, added by a migration and empty for every existing row: `decided_by` (the deciding admin's account; set to null when that account is deleted, the row kept), `decided_at` (a time) and `rejection_reason` (text, at most 500 characters, set only on a rejection). The six shipped jobs stay `approved` with all three empty.
 
@@ -415,3 +416,4 @@ _From 105-brand-list-admin._
 - `039-FR-005` — superseded by `105-FR-012` (2026-10-24)
 - `039-FR-006` — superseded by `105-FR-012` (2026-10-24)
 - `039-FR-009` — superseded by `105-FR-014` (2026-10-24)
+- `112-FR-008` — superseded by `309-FR-008` (2026-10-24)

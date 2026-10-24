@@ -115,13 +115,18 @@ import { verificationFileControllerCorrect } from '../fn/admin/verification-file
 import { VerificationFileControllerCorrect$Params } from '../fn/admin/verification-file-controller-correct';
 import { verificationFileControllerDecision } from '../fn/admin/verification-file-controller-decision';
 import { VerificationFileControllerDecision$Params } from '../fn/admin/verification-file-controller-decision';
+import { verificationFileControllerLeave } from '../fn/admin/verification-file-controller-leave';
+import { VerificationFileControllerLeave$Params } from '../fn/admin/verification-file-controller-leave';
 import { verificationFileControllerOpen } from '../fn/admin/verification-file-controller-open';
 import { VerificationFileControllerOpen$Params } from '../fn/admin/verification-file-controller-open';
+import { verificationFileControllerPresence } from '../fn/admin/verification-file-controller-presence';
+import { VerificationFileControllerPresence$Params } from '../fn/admin/verification-file-controller-presence';
 import { verificationFileControllerRead } from '../fn/admin/verification-file-controller-read';
 import { VerificationFileControllerRead$Params } from '../fn/admin/verification-file-controller-read';
 import { verificationFileControllerReopen } from '../fn/admin/verification-file-controller-reopen';
 import { VerificationFileControllerReopen$Params } from '../fn/admin/verification-file-controller-reopen';
 import { VerificationFileDto } from '../models/verification-file-dto';
+import { VerificationPresenceDto } from '../models/verification-presence-dto';
 import { VerificationQueueDto } from '../models/verification-queue-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -885,6 +890,56 @@ export class AdminService extends BaseService {
   verificationFileControllerChanges(params: VerificationFileControllerChanges$Params, context?: HttpContext): Promise<VerificationFileChangesDto> {
     const resp = this.verificationFileControllerChanges$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileChangesDto>): VerificationFileChangesDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerPresence()` */
+  static readonly VerificationFileControllerPresencePath = '/api/v1/admin/verification-files/{id}/presence';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerPresence()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerPresence$Response(params: VerificationFileControllerPresence$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationPresenceDto>> {
+    const obs = verificationFileControllerPresence(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerPresence$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerPresence(params: VerificationFileControllerPresence$Params, context?: HttpContext): Promise<VerificationPresenceDto> {
+    const resp = this.verificationFileControllerPresence$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationPresenceDto>): VerificationPresenceDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerLeave()` */
+  static readonly VerificationFileControllerLeavePath = '/api/v1/admin/verification-files/{id}/presence';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerLeave()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerLeave$Response(params: VerificationFileControllerLeave$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = verificationFileControllerLeave(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerLeave$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerLeave(params: VerificationFileControllerLeave$Params, context?: HttpContext): Promise<void> {
+    const resp = this.verificationFileControllerLeave$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `verificationFileControllerOpen()` */

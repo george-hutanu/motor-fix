@@ -1,7 +1,7 @@
 import { afterEach, describe, it, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -443,6 +443,38 @@ describe('check: the CI-only checks and the affected tests before a push', () =>
     assert.equal(result.stopped, name);
     assert.ok(h.calls.includes('node .claude/scripts/level.mjs check --ready --json'));
     assert.ok(!h.calls.some((c) => c.includes('specs-repo.mjs commit') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
+  });
+});
+
+// @traces 1011-FR-001 1011-FR-003
+describe('check caps the memory of the affected Jest runs', () => {
+  beforeEach(() => fixture());
+
+  const stepEnv = (h) => h.envs.find((e) => e.cmd.startsWith('sh scripts/heavy.sh')).env;
+
+  it('runs the affected tests with two Jest workers, recycled past 1GB, by default', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const env = stepEnv(h);
+    assert.equal(env.JEST_MAX_WORKERS, '2');
+    assert.equal(env.JEST_IDLE_MEMORY, '1GB');
+    assert.equal(env.GH_TOKEN, 'tok-george', 'the rest of the env is passed through');
+  });
+
+  it('keeps the caps already set in the env', () => {
+    const h = harness({ env: { GH_TOKEN: 'tok-george', JEST_MAX_WORKERS: '3', JEST_IDLE_MEMORY: '2GB' }, answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const env = stepEnv(h);
+    assert.equal(env.JEST_MAX_WORKERS, '3');
+    assert.equal(env.JEST_IDLE_MEMORY, '2GB');
+  });
+
+  it('caps only the test step: the other checks run with the env as it was', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    const lint = h.envs.find((e) => e.cmd === 'npm run lint').env;
+    assert.equal(lint.JEST_MAX_WORKERS, undefined);
+    assert.equal(lint.JEST_IDLE_MEMORY, undefined);
   });
 });
 
@@ -937,6 +969,80 @@ describe('merge after a passing lap that reported findings', () => {
     h = harness({ answers: carriedFixes });
     assert.equal(step(['merge'], h.io).ok, true);
     assert.ok(h.calls.includes(MERGE));
+  });
+
+  // A fix can live outside the PR's commits: in the specs repo (a tasks.md
+  // line) or in the git-ignored QA flows file. Each counts when it is made
+  // after the named lap's success was posted (ST-1378).
+  const LAP_AT = '2026-10-20T10:00:00Z';
+  const SPECS = 'cafe1234';
+  const SPECS_COMPARE = `gh api repos/george-hutanu/motor-fix-specs/compare/${SPECS}...trunk`;
+  const lapAt = (at) => ({ stdout: JSON.stringify([{ context: 'agent-review', state: 'success', description: 'No blocking findings; 2 in all. Booted 2/2.', created_at: at }]) });
+  const carriedAt = (at = LAP_AT) => [carriedFixes[0], [carriedFixes[1][0], lapAt(at)], carriedFixes[2]];
+  const specsCommit = (status, date) => [SPECS_COMPARE, { stdout: JSON.stringify({ status, base_commit: { sha: `${SPECS}${'0'.repeat(32)}`, commit: { committer: { date } } } }) }];
+  const flows = (mtime) => {
+    const file = join(repo, '.specify', '.cache', 'qa-flows-141.mjs');
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, 'export default async () => [];\n');
+    utimesSync(file, mtime, mtime);
+  };
+  const SPECS_LINE = `- low: tasks.md missed the T004 line (specs@${SPECS})\n`;
+  const FLOWS_LINE = '- low: the 320 px screenshot was taken before the list loaded (qa-flows-141.mjs only)\n';
+  const PR_LINE = '- medium: the empty list answered 500 (2222222)\n';
+
+  // @traces 1378-FR-001
+  it('under a QA-fixes carry, counts a specs-repo commit on trunk made after the lap', () => {
+    comment(`## Fixed after QA\n\n${PR_LINE}${SPECS_LINE}`);
+    const h = harness({ answers: [...carriedAt(), specsCommit('ahead', '2026-10-20T11:00:00Z')] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(MERGE));
+  });
+
+  // @traces 1378-FR-001
+  it('under a QA-fixes carry, counts a change to this PR\'s QA flows file made after the lap', () => {
+    comment(`## Fixed after QA\n\n${PR_LINE}${FLOWS_LINE}`);
+    flows(new Date('2026-10-20T11:00:00Z'));
+    const h = harness({ answers: carriedAt() });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(MERGE));
+  });
+
+  // @traces 1378-FR-001
+  it('still stops on a line naming nothing, a stale or off-trunk specs commit, or a missing or stale flows file', () => {
+    comment(`## Fixed after QA\n\n${PR_LINE}- low: tasks.md missed the T004 line\n`);
+    let h = harness({ answers: carriedAt() });
+    stoppedBeforeMerge(step(['merge'], h.io), h);
+
+    comment(`## Fixed after QA\n\n${PR_LINE}${SPECS_LINE}`);
+    const stopsWith = (answers, reason) => {
+      const hh = harness({ answers });
+      const result = step(['merge'], hh.io);
+      stoppedBeforeMerge(result, hh);
+      assert.match(result.fix, reason);
+    };
+    stopsWith([...carriedAt(), specsCommit('ahead', '2026-10-20T09:00:00Z')], /specs@cafe1234: committed before the lap/);
+    stopsWith([...carriedAt(), specsCommit('diverged', '2026-10-20T11:00:00Z')], /specs@cafe1234: off trunk \(diverged\)/);
+    stopsWith([...carriedAt(), [SPECS_COMPARE, { code: 1, stdout: '', stderr: 'Not Found' }]], /specs@cafe1234: lookup failed \(Not Found\)/);
+
+    comment(`## Fixed after QA\n\n${PR_LINE}${FLOWS_LINE}`);
+    stopsWith(carriedAt(), /qa-flows-141\.mjs: no such file/);
+    flows(new Date('2026-10-20T09:00:00Z'));
+    stopsWith(carriedAt(), /qa-flows-141\.mjs: not modified after the lap/);
+  });
+
+  // @traces 1378-FR-001
+  it('counts neither new form when the named lap\'s success carries no time', () => {
+    comment(`## Fixed after QA\n\n${PR_LINE}${FLOWS_LINE}`);
+    flows(new Date('2026-10-20T11:00:00Z'));
+    let h = harness({ answers: carriedFixes });
+    stoppedBeforeMerge(step(['merge'], h.io), h);
+    comment(`## Fixed after QA\n\n${PR_LINE}${SPECS_LINE}`);
+    h = harness({ answers: [...carriedFixes, specsCommit('ahead', '2026-10-20T11:00:00Z')] });
+    const result = step(['merge'], h.io);
+    stoppedBeforeMerge(result, h);
+    assert.match(result.fix, /carries no time/);
   });
 });
 

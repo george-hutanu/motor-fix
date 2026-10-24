@@ -30,13 +30,25 @@ import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import type { Actor } from '../../auth/policy';
 import { LIVE_CHANNEL } from '../../events/live/live.hub';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { countChannelChoice } from '../../metrics/product-counters';
 import { NOTIFICATION_TYPES } from '../catalogue';
 import {
   LIVE_PUBLISHER,
   NOTIFICATIONS_PRISMA,
   type Publisher,
 } from '../notifications.service';
+import { SMS_PER_MONTH, smsUsed } from '../sms-counter';
 import { STAFF_TYPES, staffChecks, staffEntries } from '../staff-lists';
+
+type Db = PrismaClient | Prisma.TransactionClient;
+
+// A driver choice that moved a type to another channel: what the choices
+// counter counts.
+const newChannel = (change: PreferenceChange): OutsideChannel | null => {
+  const now = change.newValue as { channel?: OutsideChannel } | null;
+  const was = change.oldValue as { channel?: OutsideChannel } | null;
+  return now?.channel && now.channel !== was?.channel ? now.channel : null;
+};
 
 const refuse = (status: HttpStatus, code: string, message: string) =>
   new HttpException({ code, message }, status);
@@ -52,13 +64,20 @@ export class NotificationPreferencesService {
   ) {}
 
   async read(actor: Actor): Promise<NotificationPreferencesDto> {
-    const [rows, consent] = await Promise.all([
-      this.rows(this.prisma, actor.accountId),
-      this.newsConsent(this.prisma, actor.accountId),
+    const { accountId } = actor;
+    const [rows, consent, phoneVerified, pushDevice, used] = await Promise.all([
+      this.rows(this.prisma, accountId),
+      this.newsConsent(this.prisma, accountId),
+      this.phoneVerified(this.prisma, accountId),
+      this.pushDevice(this.prisma, accountId),
+      smsUsed(this.prisma, accountId, new Date()),
     ]);
     return {
-      ...preferencesView(rows),
+      ...preferencesView(rows, pushDevice),
       newsConsent: newsConsentView(consent),
+      phoneVerified,
+      pushDevice,
+      sms: { cap: SMS_PER_MONTH, used },
       staff: await this.staff(actor, rows),
     };
   }
@@ -77,7 +96,7 @@ export class NotificationPreferencesService {
       subjectType: 'notification_preference',
     };
     // One save at a time per person, so the last one wins per row.
-    await this.prisma.$transaction(async (tx) => {
+    const recorded = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`preferences:${actor.accountId}`}))`;
       const rows = await this.rows(tx, actor.accountId);
       const refused = staffChecks(await this.staff(actor, rows, tx), choices);
@@ -88,7 +107,13 @@ export class NotificationPreferencesService {
           `${refused.type} cannot be saved that way (${refused.code})`,
         );
       }
-      const { changes, writes } = planSave(rows, body.groups ?? [], choices);
+      await this.checkPhone(tx, actor.accountId, choices);
+      const { changes, writes } = planSave(
+        rows,
+        body.groups ?? [],
+        choices,
+        await this.pushDevice(tx, actor.accountId),
+      );
       const { consented, consent } = await this.newsWrite(
         tx,
         actor.accountId,
@@ -114,7 +139,12 @@ export class NotificationPreferencesService {
       for (const entry of [...changes, ...consented]) {
         await this.audit.record(tx, { ...who, ...entry, action: 'update' });
       }
+      return changes;
     });
+    for (const change of recorded) {
+      const channel = newChannel(change);
+      if (channel) countChannelChoice(channel);
+    }
     await this.announce(actor.accountId);
     return this.read(actor);
   }
@@ -162,6 +192,37 @@ export class NotificationPreferencesService {
         `${type} is always sent and cannot be switched off`,
       );
     }
+  }
+
+  // SMS and WhatsApp reach a driver on a phone they confirmed.
+  private async checkPhone(
+    db: Db,
+    accountId: string,
+    choices: readonly UpdateNotificationPreferenceDto[],
+  ) {
+    const needsPhone = choices.some(
+      (c) =>
+        isDriverChoice(c.type, c.garageId) &&
+        (c.channel === 'sms' || c.channel === 'whatsapp'),
+    );
+    if (!needsPhone || (await this.phoneVerified(db, accountId))) return;
+    throw refuse(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'phone_not_verified',
+      'SMS and WhatsApp need a confirmed phone number',
+    );
+  }
+
+  private async phoneVerified(db: Db, accountId: string): Promise<boolean> {
+    const account = await db.account.findUnique({
+      select: { phone: true, phoneVerifiedAt: true },
+      where: { id: accountId },
+    });
+    return !!account?.phone && account.phoneVerifiedAt !== null;
+  }
+
+  private async pushDevice(db: Db, accountId: string): Promise<boolean> {
+    return (await db.pushSubscription.count({ where: { accountId } })) > 0;
   }
 
   private async checkGarages(

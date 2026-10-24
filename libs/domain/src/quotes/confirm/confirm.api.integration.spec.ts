@@ -584,6 +584,41 @@ describe('the switches', () => {
     expect((await confirm(second.booking.id, owner(t), {})).status).toBe(200);
   });
 
+  // @traces 056-FR-015
+  it("marks the fallback row as the owner's", async () => {
+    const t = await team('Atelier Dinamo');
+    await switched(t.garage.id, 'team_mechanics', false);
+    const { booking } = await accepted(t);
+
+    expect((await confirm(booking.id, owner(t), {})).status).toBe(200);
+
+    expect(
+      await prisma.$queryRaw<{ is_owner: boolean }[]>`
+        SELECT is_owner FROM mechanic WHERE account_id = ${t.owner}::uuid`,
+    ).toEqual([{ is_owner: true }]);
+  });
+
+  // @traces 056-FR-015
+  it("puts two overlapping bookings both on the owner's row when the team is off", async () => {
+    const t = await team('Atelier Dinamo');
+    await switched(t.garage.id, 'team_mechanics', false);
+    await switched(t.garage.id, 'lift_schedule', false);
+    const first = await accepted(t);
+    const second = await accepted(t, new Date(TEN.getTime() + 30 * MINUTE));
+
+    expect((await confirm(first.booking.id, owner(t), {})).status).toBe(200);
+    expect((await confirm(second.booking.id, owner(t), {})).status).toBe(200);
+
+    const own = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM mechanic
+      WHERE garage_id = ${t.garage.id}::uuid AND is_owner`;
+    expect(own).toHaveLength(1);
+    const jobs = await prisma.job.findMany({
+      where: { garageId: t.garage.id },
+    });
+    expect(jobs.map((j) => j.mechanicId)).toEqual([own[0].id, own[0].id]);
+  });
+
   it('asks for a mechanic when the team is on, naming the field', async () => {
     const t = await team('Atelier Dinamo');
     const { booking } = await accepted(t);

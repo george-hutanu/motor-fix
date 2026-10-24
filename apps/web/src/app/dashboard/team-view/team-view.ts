@@ -13,12 +13,16 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
-import { InviteStaff } from '../invite-staff/invite-staff';
 import { liveResource } from '../live';
+import {
+  MechanicCard,
+  type MechanicCardData,
+} from '../mechanic-card/mechanic-card';
 import { Session } from '../session';
 
-// "Mecanici": the owner's team, a row per card in the server's order, read
-// again when a card, an invite or a rating changes.
+// "Mecanici": the owner's team, a row per card in the server's order (the
+// owner's own first), read again when a card, an invite or a rating changes.
+// A row opens its card; "Adaugă un mecanic" opens an empty one.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [EmptyState, HlmButton, TranslatePipe],
@@ -38,10 +42,20 @@ export class TeamView {
   protected readonly skeletons = [1, 2, 3];
   protected readonly view = liveResource(
     () => this.api.garageMechanicsControllerList({ garageId: this.garageId() }),
-    ['mechanic.updated', 'invite.accepted', 'rating.updated'],
+    [
+      'mechanic.added',
+      'mechanic.updated',
+      'mechanic.removed',
+      'invite.accepted',
+      'rating.updated',
+    ],
   );
   protected readonly onProfile = computed(
     () => this.view.value()?.items.filter((m) => m.onProfile).length ?? 0,
+  );
+  // The owner's own row alone is still an empty team.
+  protected readonly team = computed(
+    () => this.view.value()?.items.some((m) => !m.isOwner) ?? false,
   );
 
   constructor() {
@@ -64,11 +78,28 @@ export class TeamView {
     });
   }
 
-  protected invite() {
-    void this.overlays.open<'sent', { garageId: string }>(InviteStaff, {
-      data: { garageId: this.garageId() },
+  protected years(mechanic: GarageMechanicDto) {
+    return mechanic.years
+      ? this.i18n.t('garage.team.years', { count: mechanic.years })
+      : '';
+  }
+
+  protected async openCard(card?: GarageMechanicDto) {
+    const brands = this.view.value()?.brands ?? [];
+    const garageId = this.garageId();
+    const outcome = await this.overlays.open<
+      'saved' | 'removed',
+      MechanicCardData
+    >(MechanicCard, {
+      data: card ? { brands, card, garageId } : { brands, garageId },
       shape: 'dialog',
-      title: 'garage.invite.title',
+      ...(card
+        ? {
+            title: 'garage.mechanicCard.titleEdit',
+            titleParams: { name: card.name },
+          }
+        : { title: 'garage.mechanicCard.title' }),
     });
+    if (outcome === 'saved' || outcome === 'removed') this.view.reload();
   }
 }

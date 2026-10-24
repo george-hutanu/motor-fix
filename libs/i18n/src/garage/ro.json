@@ -118,6 +118,7 @@
       "checked": "verificate",
       "checkedOn": "verificate pe {day}",
       "cycle": {
+        "due": "scadent pe {day}",
         "in_review": "în verificare",
         "overdue": "restante din {since}, profilul iese de pe hartă pe {off}",
         "refused": "refuzat: {note}",
@@ -192,6 +193,51 @@
       "title": "Încarcă documentele",
       "unavailable": "Încărcarea nu e disponibilă acum"
     }
+  },
+  "mechanicCard": {
+    "brands": "Mărci pe care lucrează",
+    "certifications": "Certificări",
+    "certificationsHint": "Separă‑le prin virgulă, cel mult 10.",
+    "failed": "Nu am putut salva cardul. Încearcă din nou.",
+    "field": {
+      "brands": "Marcă pe care service‑ul nu o acceptă",
+      "certificationLong": "Cel mult 80 de caractere pe etichetă",
+      "certificationsMany": "Cel mult 10 certificări",
+      "nameLong": "Cel mult 80 de caractere",
+      "nameRequired": "Numele este obligatoriu",
+      "roleLong": "Cel mult 40 de caractere",
+      "specialtiesMany": "Cel mult 6 specialități",
+      "specialtyLong": "Cel mult 40 de caractere pe etichetă",
+      "years": "Între 0 și 60 de ani"
+    },
+    "gone": "Cardul a fost eliminat între timp.",
+    "name": "Nume",
+    "noBrands": "Service‑ul nu are încă mărci pe care lucrează.",
+    "owned": {
+      "fields": "Fotografie, descriere, limbi",
+      "line": "Le completează mecanicul"
+    },
+    "remove": {
+      "bookings": {
+        "few": "{name} are {count} programări viitoare. Vor trebui realocate.",
+        "one": "{name} are {count} programare viitoare. Va trebui realocată.",
+        "other": "{name} are {count} de programări viitoare. Vor trebui realocate."
+      },
+      "button": "Elimină",
+      "cancel": "Renunță",
+      "done": "{name} nu mai face parte din echipă.",
+      "failed": "Nu am putut elimina mecanicul. Încearcă din nou.",
+      "question": "Elimini pe {name} din echipă?",
+      "title": "Elimini mecanicul?"
+    },
+    "roleTitle": "Rol",
+    "save": "Salvează",
+    "saved": "Cardul a fost salvat.",
+    "specialties": "Specialități",
+    "specialtiesHint": "Separă‑le prin virgulă, cel mult 6.",
+    "title": "Adaugă un mecanic",
+    "titleEdit": "{name}",
+    "years": "Ani de experiență"
   },
   "prices": {
     "add": "Adaugă o lucrare",
@@ -437,7 +483,8 @@
     "seeAll": "Vezi toate",
     "stale": "Lista poate fi veche",
     "toast": "Cerere nouă: {car} · {job}",
-    "toastCar": "Cerere nouă: {car}"
+    "toastCar": "Cerere nouă: {car}",
+    "toReassign": "de realocat"
   },
   "suspended": {
     "next": {
@@ -458,6 +505,7 @@
     "empty": "Încă nu ai adăugat mecanici.",
     "failed": "Nu am putut încărca echipa. Reîncearcă.",
     "noReviews": "fără recenzii",
+    "owner": "proprietar",
     "retry": "Reîncearcă",
     "reviews": {
       "few": "{rating} · {count} recenzii",
@@ -469,7 +517,12 @@
       "off": "nu apare pe profil",
       "on": "pe profil"
     },
-    "title": "Echipa"
+    "title": "Echipa",
+    "years": {
+      "few": "{count} ani",
+      "one": "{count} an",
+      "other": "{count} de ani"
+    }
   },
   "verification": {
     "checkIn": "O verificăm în 1–2 zile lucrătoare.",

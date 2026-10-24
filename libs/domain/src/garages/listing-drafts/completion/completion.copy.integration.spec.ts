@@ -45,6 +45,29 @@ describe('the copy of a live garage', () => {
     expect(copy).toEqual({ ...sent, documents: {} });
   });
 
+  // @traces 056-FR-006 056-FR-015
+  it("leaves the owner's own row and a removed card out of the team step", async () => {
+    const sent = full(closedDay());
+    const garage = await listed(account, 'ion', sent);
+    await prisma.mechanic.create({
+      data: {
+        garageId: garage.garageId,
+        name: 'Elena Plecată',
+        onProfile: false,
+        removedAt: new Date(),
+      },
+    });
+
+    const copy = await copyOf(prisma, garage.garageId);
+
+    expect(
+      await prisma.mechanic.count({
+        where: { garageId: garage.garageId, isOwner: true },
+      }),
+    ).toBe(1);
+    expect(copy.steps?.['4']).toEqual(sent.steps?.['4']);
+  });
+
   it('writes the stored values, the defaults the writers filled in included', async () => {
     const sent = plain();
     const garage = await listed(account, 'ana', sent);

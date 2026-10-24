@@ -9,9 +9,11 @@ import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   type GarageProfileDto,
   GaragesService,
+  type LegalCheckDto,
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { ProfileView } from './profile-view';
@@ -26,6 +28,7 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   address: 'Str. Atelierului 14, Militari',
   brandNote: null,
   businessKind: 'company',
+  closedDays: [],
   courtesyCar: { paid: false },
   doesNotTake: [
     { id: 'dacia', name: 'Dacia', slug: 'dacia' },
@@ -66,6 +69,31 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   ...over,
 });
 
+const LEGAL: LegalCheckDto = {
+  companyName: 'SERVICE AUTO MILITARI SRL',
+  documents: {
+    canUpload: false,
+    dueOn: '2027-06-15',
+    graceUntil: null,
+    inReview: false,
+    refusal: null,
+    row: 'valid',
+    state: 'due',
+  },
+  isMobile: false,
+  lastCheckedOn: '2026-10-01',
+  latestRecheck: null,
+  rarActivities: [],
+  rows: (['company', 'caen', 'rar', 'documents'] as const).map((kind) => ({
+    checkedOn: '2026-10-01',
+    detail: null,
+    kind,
+    missing: [],
+    state: 'ok' as const,
+  })),
+  status: 'approved',
+};
+
 const me = {
   garageAccess: [{ garageId: GARAGE, role: 'owner' }],
   garageId: GARAGE,
@@ -74,22 +102,45 @@ const me = {
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let read: jest.Mock;
+let legal: jest.Mock;
 let navigate: jest.Mock;
+// Every GaragesService member the view touches beyond the two reads.
+let touched: string[];
 
 async function render(
   load: () => Promise<GarageProfileDto> = async () => answer(),
   language: 'ro' | 'en' = 'ro',
+  legalLoad: () => Promise<LegalCheckDto> = async () => LEGAL,
 ) {
   events = new Subject();
   resync = new Subject();
   read = jest.fn(load);
+  legal = jest.fn(legalLoad);
   navigate = jest.fn(async () => true);
+  touched = [];
+  const reads: Record<string, unknown> = {
+    garageProfileControllerRead: read,
+    legalCheckControllerRead: legal,
+  };
   TestBed.configureTestingModule({
     providers: [
       {
         provide: GaragesService,
-        useValue: { garageProfileControllerRead: read },
+        useValue: new Proxy(reads, {
+          get: (target, name) => {
+            // Angular itself probes a provider for its ngOnDestroy hook.
+            if (
+              typeof name === 'string' &&
+              !(name in target) &&
+              name !== 'ngOnDestroy'
+            ) {
+              touched.push(name);
+            }
+            return target[name as string];
+          },
+        }),
       },
+      { provide: Overlays, useValue: { open: jest.fn() } },
       { provide: Session, useValue: { shown: signal(me) } },
       { provide: Router, useValue: { navigateByUrl: navigate } },
       {
@@ -121,6 +172,9 @@ async function render(
   return { element, fixture, settle };
 }
 
+const PUBLIC = 'section[aria-labelledby="mf-profile-public"]';
+const LEGAL_PANEL = 'section[aria-labelledby="legal-check-title"]';
+
 const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const all = (element: HTMLElement, selector: string) => [
@@ -147,7 +201,7 @@ describe('Profilul service-ului: the public profile panel', () => {
 
     expect(read).toHaveBeenCalledTimes(1);
     expect(read).toHaveBeenCalledWith({ garageId: GARAGE });
-    const panels = all(element, 'section[aria-labelledby]');
+    const panels = all(element, PUBLIC);
     expect(panels).toHaveLength(1);
     const heading = element.querySelector(
       `#${panels[0].getAttribute('aria-labelledby')}`,
@@ -245,7 +299,7 @@ describe('Profilul service-ului: the public profile panel', () => {
     const { element, settle } = await render();
     await settle();
 
-    expect(all(element, 'button')).toEqual([]);
+    expect(all(element, `${PUBLIC} button`)).toEqual([]);
   });
 });
 
@@ -486,7 +540,7 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
     expect(text(line(element, 'name'))).toContain('Service Auto Militari');
   });
 
-  it('says the profile is off the map while the garage is suspended, with no panels and no link', async () => {
+  it('says the profile is off the map while the garage is suspended, with no profile panel and no link', async () => {
     const { element, settle } = await render(async () => {
       throw status(410);
     });
@@ -495,7 +549,7 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
     expect(text(element.querySelector('[data-suspended]'))).toBe(
       'Profilul nu apare pe hartă cât timp service‑ul este suspendat.',
     );
-    expect(all(element, 'section[aria-labelledby]')).toEqual([]);
+    expect(all(element, PUBLIC)).toEqual([]);
     expect(element.querySelector('[data-public-link]')).toBeNull();
   });
 
@@ -507,6 +561,168 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
     await settle();
 
     expect(navigate).toHaveBeenCalledWith('/app/garage');
+  });
+});
+
+// @traces 136-FR-001
+// @traces 136-FR-002
+// @traces 136-FR-005
+// @traces 136-FR-006
+// @traces 136-FR-008
+// @traces 136-FR-009
+describe('Profilul service-ului: the legal check panel', () => {
+  it('shows the legal check right after the public profile panel, read once for the session garage', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(legal).toHaveBeenCalledTimes(1);
+    expect(legal).toHaveBeenCalledWith({ garageId: GARAGE });
+    const panels = all(element, 'section[aria-labelledby]');
+    expect(panels.map((p) => p.getAttribute('aria-labelledby'))).toEqual([
+      'mf-profile-public',
+      'legal-check-title',
+    ]);
+    const host = element.querySelector('mf-garage-legal-check');
+    expect(host?.previousElementSibling?.matches(PUBLIC)).toBe(true);
+    expect(text(element.querySelector('#legal-check-title'))).toBe(
+      'Verificare legală',
+    );
+    expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
+  });
+
+  it('keeps the profile panel standing when the legal check fails', async () => {
+    const { element, settle } = await render(undefined, 'ro', async () => {
+      throw status(503);
+    });
+    await settle();
+
+    expect(text(line(element, 'name'))).toContain('Service Auto Militari');
+    expect(all(element, `${PUBLIC} [data-error]`)).toEqual([]);
+    expect(all(element, `${LEGAL_PANEL} button`).map(text)).toEqual([
+      'Încearcă din nou',
+    ]);
+  });
+
+  it('keeps the legal check standing when the profile read fails', async () => {
+    const { element, settle } = await render(async () => {
+      throw status(503);
+    });
+    await settle();
+
+    expect(all(element, `${PUBLIC} [data-error]`)).toHaveLength(1);
+    expect(legal).toHaveBeenCalledTimes(1);
+    expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
+    expect(all(element, `${LEGAL_PANEL} [role="alert"]`)).toEqual([]);
+  });
+
+  it('shows nothing for the legal check when it answers 404, and the profile stays', async () => {
+    const { element, settle } = await render(undefined, 'ro', async () => {
+      throw status(404);
+    });
+    await settle();
+
+    expect(all(element, LEGAL_PANEL)).toEqual([]);
+    expect(all(element, PUBLIC)).toHaveLength(1);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the legal check under the suspended line while the garage is suspended', async () => {
+    const { element, settle } = await render(
+      async () => {
+        throw status(410);
+      },
+      'ro',
+      async () => ({ ...LEGAL, status: 'suspended' }),
+    );
+    await settle();
+
+    const suspendedLine = element.querySelector('[data-suspended]');
+    expect(suspendedLine?.tagName).toBe('P');
+    const host = element.querySelector('mf-garage-legal-check');
+    expect(host?.previousElementSibling).toBe(suspendedLine);
+    expect(all(element, LEGAL_PANEL)).toHaveLength(1);
+    expect(text(element.querySelector('[data-legal-tag]'))).toBe('Suspendat');
+  });
+
+  it('keeps both panels as they were when a change makes both re-reads fail', async () => {
+    let fail = false;
+    const { element, settle } = await render(
+      async () => {
+        if (fail) throw status(503);
+        return answer();
+      },
+      'ro',
+      async () => {
+        if (fail) throw status(503);
+        return LEGAL;
+      },
+    );
+    await settle();
+
+    fail = true;
+    events.next(message('garage.suspended', GARAGE));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(legal).toHaveBeenCalledTimes(2);
+    expect(element.querySelector('[data-error]')).toBeNull();
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(text(line(element, 'name'))).toBe('Nume Service Auto Militari');
+    expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
+  });
+
+  it('calls nothing but the two reads, through first render, live re-reads and a retry', async () => {
+    let fail = true;
+    const { element, settle } = await render(undefined, 'ro', async () => {
+      if (fail) throw status(503);
+      return LEGAL;
+    });
+    await settle();
+    fail = false;
+    all(element, `${LEGAL_PANEL} button`)[0]?.click();
+    await settle();
+    events.next(message('garage.suspended', GARAGE));
+    events.next(message('document.due', 'cycle-1'));
+    await wait(350);
+    await settle();
+
+    expect(legal.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(touched).toEqual([]);
+    expect(TestBed.inject(Overlays).open).not.toHaveBeenCalled();
+  });
+
+  it('does not read the legal check while the profile is still loading', async () => {
+    const { element, settle } = await render(
+      () => new Promise(() => undefined),
+    );
+    await settle();
+
+    expect(element.querySelector('mf-garage-legal-check')).toBeNull();
+    expect(legal).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 404])(
+    'never shows the legal check on a %s profile answer',
+    async (code) => {
+      const { element, settle } = await render(async () => {
+        throw status(code);
+      });
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/app/garage');
+      expect(element.querySelector('mf-garage-legal-check')).toBeNull();
+      expect(legal).not.toHaveBeenCalled();
+    },
+  );
+
+  it('speaks English in English', async () => {
+    const { element, settle } = await render(undefined, 'en');
+    await settle();
+
+    expect(text(element.querySelector('#legal-check-title'))).toBe(
+      'Legal check',
+    );
   });
 });
 

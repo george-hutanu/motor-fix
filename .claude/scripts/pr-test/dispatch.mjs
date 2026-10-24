@@ -42,8 +42,10 @@
 // same hand-off line. --flows, --routes and --ref cannot reach such a run (it
 // runs the default routes, no flows).
 //
-// --ref is the branch whose pr-qa.yml and tester scripts run (main; a branch
-// that changes the tester itself can name its own). Exit 0 when the report says
+// --ref is the branch whose pr-qa.yml and tester scripts run (main). A lap
+// dispatched on another branch runs that branch's pr-qa.yml, so the merge gate
+// refuses its verdict whoever posts it (provenance.mjs); a PR that changes the
+// tester itself is tested with run.mjs --local. Exit 0 when the report says
 // success, 1 when it says failure (blocking findings: read the report), 2 when
 // the run left no usable report (an infrastructure failure, not a verdict).
 import { execFileSync, spawnSync } from "node:child_process";

@@ -27,6 +27,7 @@ const FACILITIES_NOTE = 'Cafea și wifi în sala de așteptare.';
 
 const GARAGE: PublicGarageDto = {
   brandNote: NOTE,
+  closedDays: [],
   doesNotTake: ['Dacia', 'Toyota', 'Ford', 'Tesla'].map(refused),
   facilities: [],
   hours: {},

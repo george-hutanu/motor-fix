@@ -350,6 +350,7 @@ export class ConfirmService {
         canMoveBookings: true,
         canRecordFinalPrice: true,
         garageId: garage.id,
+        isOwner: true,
         name: member.account.name,
         onProfile: false,
       },

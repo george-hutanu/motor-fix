@@ -294,6 +294,12 @@
     },
     "noReason": "fără motiv",
     "photo": "Fotografia {n}, deschisă în mărime mare",
+    "presence": {
+      "and": "și",
+      "item": "{name} (din {time})",
+      "many": "{list} au dosarul deschis",
+      "one": "{name} are dosarul deschis din {time}"
+    },
     "problem": {
       "cancel": "Renunță",
       "choice": "Cât de grav e",

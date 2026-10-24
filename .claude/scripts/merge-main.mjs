@@ -82,7 +82,10 @@ export function unionConflicts(text) {
     } else if (state && line.startsWith("|||||||")) state = "base";
     else if (state && line === "=======") state = "theirs";
     else if (state && line.startsWith(">>>>>>>")) {
-      out.push(...ours, ...theirsNotInOurs(ours, theirs));
+      const kept = theirsNotInOurs(ours, theirs);
+      // A heading of theirs right after a line of ours keeps the blank line between them.
+      const gap = ours.length > 0 && ours.at(-1).trim() !== "" && kept[0]?.startsWith("#") ? [""] : [];
+      out.push(...ours, ...gap, ...kept);
       state = null;
     } else if (state === "ours") ours.push(line);
     else if (state === "theirs") theirs.push(line);

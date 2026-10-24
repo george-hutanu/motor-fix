@@ -49,6 +49,7 @@ import {
   rowBookingOf,
   shortName,
   snapshotOf,
+  toReassign,
 } from '../reads';
 
 // Only this garage's own recipient row, quote and booking ride along.
@@ -147,6 +148,7 @@ function summaryOf(
           id: booking.id,
           lift: booking.lift,
           mechanic: mechanicOf(booking),
+          toReassign: toReassign(booking, new Date()),
         }
       : null,
     car: snapshotOf(row),
