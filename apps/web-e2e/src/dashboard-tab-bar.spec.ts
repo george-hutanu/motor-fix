@@ -113,9 +113,12 @@ const DASHBOARDS = [
 // The stubbed garage account has no garage behind it, so the profile view's
 // read answers 404 and the view leaves for the dashboard (its `goneOn`),
 // taking the current tab away from Profil. These tests are about the bar:
-// keep that read in flight, so Profil stays the open view.
+// answer that read with a passing outage instead, which the view shows in
+// place (only a 403 or 404 sends it away), so Profil stays the open view.
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/v1/garages/*/profile', () => {});
+  await page.route('**/api/v1/garages/*/profile', (route) =>
+    route.fulfill({ json: { code: 'unavailable' }, status: 503 }),
+  );
 });
 
 async function open(page: Page, path: string) {
