@@ -556,7 +556,7 @@ describe('the channel of each notification type', () => {
       ].map((g) => g.getAttribute('aria-label')),
     ).toEqual(['ITP', 'RCA', 'Road vignette', 'Service', 'Tyres']);
     expect(options(groupOf(element, 'ITP'))).toEqual([
-      'Email',
+      'E-mail',
       'Push',
       'SMS',
       'WhatsApp',
