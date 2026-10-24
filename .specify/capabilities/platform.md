@@ -110,6 +110,7 @@ features:
   - 1370-release-seed-no-ssh
   - 1373-seed-status-identity
   - 961-require-agent-review
+  - 1376-pr-test-local-boot
 ---
 
 # Capability: Platform
@@ -2792,6 +2793,22 @@ _From 961-require-agent-review._
 ### 961-FR-008 — AGENTS.md step 7 MUST state that `agent-review` and `CI OK` are required status checks on `main`, enforced for administrators, and `.claude/skills/speckit-auto/lifecycle.md`'s Dependabot sentence MUST say the Dependabot review workflow writes the exempt PR's `agent-review` success.
 
 _From 961-require-agent-review._
+
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
 
 ## Retired
 
