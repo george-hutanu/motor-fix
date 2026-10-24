@@ -38,6 +38,7 @@ function setup(status: 'queued' | 'ready') {
       work({ dataExport: { updateMany } }),
     ),
     dataExport: {
+      findMany: jest.fn(async (_query?: unknown): Promise<unknown[]> => []),
       findUnique: jest.fn(async () => ({
         account: {
           email: 'ana@example.test',
@@ -82,7 +83,7 @@ function setup(status: 'queued' | 'ready') {
         payload: { exportId: ID },
       },
     });
-  return { events, notifications, prisma, row, run, storage };
+  return { builder, events, notifications, prisma, row, run, storage };
 }
 
 beforeEach(() => {
@@ -154,5 +155,30 @@ describe('DataExportBuilder, a ready e-mail that fails', () => {
     expect(world.notifications.notify).toHaveBeenCalledTimes(2);
     expect(world.storage.putObject).toHaveBeenCalledTimes(1);
     expect(world.row.status).toBe('ready');
+  });
+});
+
+describe('DataExportBuilder, an export its last try could not mark', () => {
+  it('fails it in the sweep a day on, with the file that try may have stored', async () => {
+    const world = setup('queued');
+    world.prisma.dataExport.findMany.mockImplementation(async (query) => {
+      const where = (query as { where: { status: string } }).where;
+      return where.status === 'queued' ? [{ accountId: ACCOUNT, id: ID }] : [];
+    });
+    const before = await failedTotal();
+
+    await world.builder.sweep(new Date('2026-10-02T10:00:00Z'));
+
+    expect(world.prisma.dataExport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          requestedAt: { lte: new Date('2026-10-01T10:00:00Z') },
+          status: 'queued',
+        },
+      }),
+    );
+    expect(world.storage.deleteObject).toHaveBeenCalledWith(KEY);
+    expect(world.row.status).toBe('failed');
+    expect((await failedTotal()) - before).toBe(1);
   });
 });

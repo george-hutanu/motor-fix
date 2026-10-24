@@ -164,9 +164,39 @@ export class DataExportBuilder {
       select: { id: true, zipKey: true },
       where: { expiresAt: { lte: now }, status: 'ready' },
     });
+    await this.failStale(now);
     const expired = await this.expireEach(rows, 'sweep');
     this.logger.log(`data export sweep: expired ${expired}`);
     return expired;
+  }
+
+  // A build's tries span minutes, so an export still queued a day after it
+  // was asked for has none left: its last try could not even mark it failed.
+  // It fails now, so the driver may ask again, and a file its last try may
+  // have stored goes with it (the key is the export's own).
+  private async failStale(now: Date) {
+    const stale = await this.prisma.dataExport.findMany({
+      select: { accountId: true, id: true },
+      where: {
+        requestedAt: { lte: new Date(now.getTime() - DAY) },
+        status: 'queued',
+      },
+    });
+    for (const { accountId, id } of stale) {
+      try {
+        await this.storage.deleteObject(`data-exports/${accountId}/${id}.zip`);
+        const { count } = await this.prisma.dataExport.updateMany({
+          data: { status: 'failed' },
+          where: { id, status: 'queued' },
+        });
+        if (count > 0) {
+          countDataExport('failed');
+          this.logger.warn(`data export ${id}: stuck in the queue, failed`);
+        }
+      } catch (error) {
+        this.logger.warn(`data export ${id}: not failed: ${classOf(error)}`);
+      }
+    }
   }
 
   private async build(id: string, attempts: number) {
