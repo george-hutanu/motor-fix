@@ -1645,14 +1645,14 @@ describe('seed of a deleted or doubled account, and of the day', () => {
   });
 
   // @traces 1373-FR-003
-  it('keeps one verifying identity on its e-mail when neither password identity is', async () => {
+  it('keeps the first identity by subject, on its e-mail, when neither password identity is', async () => {
     expect(run().status).toBe(0);
     const nou = await account('nou@example.test');
     await prisma.accountIdentity.updateMany({
       data: { passwordHash: 'parola-veche', subject: 'b-nou@example.test' },
       where: { accountId: nou.id, method: 'password' },
     });
-    await prisma.accountIdentity.create({
+    const first = await prisma.accountIdentity.create({
       data: {
         accountId: nou.id,
         method: 'password',
@@ -1663,9 +1663,10 @@ describe('seed of a deleted or doubled account, and of the day', () => {
 
     expect(run().status).toBe(0);
 
-    expect((await passwords('nou@example.test')).map((i) => i.subject)).toEqual(
-      ['nou@example.test'],
-    );
+    const left = await passwords('nou@example.test');
+    expect(left.map((i) => [i.id, i.subject])).toEqual([
+      [first.id, 'nou@example.test'],
+    ]);
     expect(await signsIn('nou@example.test')).toBe(true);
   });
 

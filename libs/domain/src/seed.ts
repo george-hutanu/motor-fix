@@ -498,7 +498,7 @@ async function onePassword(
   }>(
     `SELECT id, subject, password_hash FROM account_identity
      WHERE account_id = $1 AND method = 'password'
-     ORDER BY subject = $2 DESC LIMIT 1`,
+     ORDER BY subject = $2 DESC, subject, id LIMIT 1`,
     [id, email],
   );
   const identity = rows[0];
