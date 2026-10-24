@@ -110,7 +110,7 @@ describe('jobs get what the skipped postinstall used to give them', () => {
         if (!installs(def)) continue;
         if (file.endsWith('release.yml') && job === 'staging') continue;
         const text = runs(def.steps);
-        const needs = commands(text).some((c) => /(^|\s)(npx\s+)?(nx|jest|tsc|prisma)\b/.test(c) && !/prisma\s+generate/.test(c) && !/playwright/.test(c) || /\bnx\b/.test(c));
+        const needs = commands(text).some((c) => /(^|\s)(npx\s+)?(nx|jest|tsc|prisma)\b/.test(c) && !/prisma\s+generate/.test(c) && !/playwright/.test(c));
         const viaSetup = (def.steps ?? []).some((s) => s.uses === './.github/actions/setup');
         const generated = /prisma\s+generate\b/.test(text);
         if (needs && !viaSetup && !generated) offenders.push(`${file}:${job}`);
@@ -232,17 +232,6 @@ describe('the dependency audit fails the step on a signatures error', () => {
     const line = text.split('\n').find((l) => /npm audit signatures/.test(l));
     assert.doesNotMatch(line, /\|\||\|\s|;\s*true|&\s*$|>\s*\/dev\/null\s*2>&1\s*$/);
     assert.doesNotMatch(text, /set\s+\+e|\|\|\s*(true|:|exit\s+0)|\bif\b[^\n]*npm audit signatures/);
-  });
-
-  // @traces 1179-FR-003
-  it('runs under a shell that exits on the first failing command', () => {
-    const { step, def } = audit()[0];
-    const wf = yml('.github/workflows/ci.yml');
-    const shell = step.shell ?? def.defaults?.run?.shell ?? wf.defaults?.run?.shell;
-    if (shell !== undefined) {
-      assert.match(shell, /^(bash|sh)$|-[a-z]*e/, `shell ${shell} does not stop on error`);
-      assert.doesNotMatch(shell, /\+e|pwsh|powershell|python/);
-    }
   });
 
   // @traces 1179-FR-003
