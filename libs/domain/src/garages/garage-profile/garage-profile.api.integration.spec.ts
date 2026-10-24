@@ -224,6 +224,7 @@ describe("the staff read of a garage's own public profile", () => {
     expect(res.body.code).toBe('sign_in_required');
   });
 
+  // @traces 133-FR-003
   it("answers 403 forbidden to the garage's receptionist and mechanic", async () => {
     const w = await world();
 
