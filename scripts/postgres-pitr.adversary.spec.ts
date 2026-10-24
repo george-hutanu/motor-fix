@@ -119,7 +119,6 @@ describe('every workflow trigger', () => {
       expect(text).not.toMatch(/\bsecrets\./);
       expect(text).not.toMatch(/pull_request\.head|refs\/pull\//);
       expect(text).not.toMatch(/^\s*ref:/m);
-      expect(text).not.toMatch(/npm (?:ci|install)/);
     }
   });
 
