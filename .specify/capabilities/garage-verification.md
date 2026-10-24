@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -28,6 +28,7 @@ features:
   - 208-resubmit-after-more
   - 068-yearly-documents
   - 067-restore-suspended-garage
+  - 136-legal-check-panel
 ---
 
 # Capability: Garage verification
@@ -480,9 +481,9 @@ _From 1354-garage-legal-checks._
 
 _From 1354-garage-legal-checks._
 
-### 068-FR-005 — The documents row of the legal panel (210-FR-004) MUST read, by the cycle: `due` with both documents `valid` and nothing in review — green, "de reîncărcat o dată pe an, până în <lună an>" / "upload again once a year, by <Mon yyyy>" ("ian. 2027" / "Jan 2027"; amber when the due date is 30 days or fewer away); a document `in_review` — amber, "în verificare" / "under review"; `overdue` with nothing in review — red, "restante din <zi>, profilul iese de pe hartă pe <zi>" / "overdue since <day>, the profile leaves the map on <day>" (the day after `grace_until`); a kind `refused` and not re-uploaded — red, "refuzat: <notă>" / "refused: <note>". The owner MUST see the button "Încarcă documentele" / "Upload the documents" on the row whenever no document is `in_review`; the legal panel stays owner-only (210-FR-001), so a receptionist or mechanic sees neither. Every state of the row is conveyed by text, not colour alone, and the row and its button read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll (as FR-012 requires of the drawer). `document.overdue`, `document.accepted` and `document.refused` (and `document.uploaded`, so another device of the owner shows the review) arriving on `garage:{garageId}` MUST make the panel read again without a reload, as the verification events do today (210-FR-011).
+### 136-FR-003 — The documents row of the legal panel MUST read, when the cycle's row is `due` (both documents valid, nothing in review, the due date 30 days or fewer away): amber, "atenție", "certificat constatator și autorizație RAR · scadent pe {day}" / "company certificate and RAR authorisation · due on {day}", {day} the due date as a Europe/Bucharest calendar day ("15 ian. 2027" / "15 Jan 2027"); when `valid` (more than 30 days away): green, "de reîncărcat o dată pe an, până în {month}" / "upload again once a year, by {month}", as today. The `in_review`, `overdue` and `refused` texts and colours stay as 068-FR-005 states them. Modifies 068-FR-005 (the `due` row gains the day in place of the month).
 
-_From 068-yearly-documents._
+_From 136-legal-check-panel._
 
 ### 1354-FR-005 — The "Profil verificat" strip (owner and receptionist of an `approved` garage, 210-FR-005) MUST show under its tag the line "Autorizația RAR, reverificată pe {day}" / "RAR authorisation, re-checked on {day}" (or "verificată pe" / "checked on" by FR-003's rule), the day as day and short month without the year, "1 oct." / "1 Oct", in Europe/Bucharest; no line when the stored date is empty. The signed-in person's garage entry in the session MUST carry the stored date of last check and whether a valid re-check has been recorded since it was set, so the strip needs no second read and the receptionist sees the same line. While the garage is `suspended` the strip stays hidden and the banner of 049-FR-012 carries the reason. Modifies 210-FR-005 (the strip gains the date line).
 
@@ -838,6 +839,10 @@ _From 067-restore-suspended-garage._
 
 _From 067-restore-suspended-garage._
 
+### 136-FR-004 — `document.due` for the garage arriving on `garage:{garageId}` MUST make the panel read again without a reload, on the view and on the overview alike (it is one host), joining the kinds that already do so (`verification.decided`, `verification.check_recorded`, `verification.reopened`, `recheck.recorded`, `garage.suspended`, `garage.restored`, `document.uploaded`, `document.overdue`, `document.accepted`, `document.refused`); a change arriving during a read makes one more read after it and the panel shows the last read's answer (existing live-view serialisation); the swap is silent for assistive technology. The event already exists and already reaches the garage's channel (068-FR-014; `libs/domain/src/garages/documents/document-cycle/document-cycle.step.ts:126-131`); nothing is emitted anew.
+
+_From 136-legal-check-panel._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -896,3 +901,4 @@ _From 067-restore-suspended-garage._
 - `068-FR-012` — superseded by `067-FR-009` (2026-10-23)
 - `066-FR-003` — superseded by `067-FR-009` (2026-10-23)
 - `069-FR-008` — superseded by `067-FR-010` (2026-10-23)
+- `068-FR-005` — superseded by `136-FR-003` (2026-10-24)
