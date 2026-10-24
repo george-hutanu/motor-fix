@@ -382,8 +382,18 @@ describe('seed restore of accounts, attacked', () => {
   });
 
   // @traces 1372-FR-005
-  it('keeps name, phone, status, last role and phone verification of every seeded account', async () => {
+  // The status is the seed's: a suspended or deleted seeded account gets its
+  // seeded status back, the rest is kept.
+  // @traces 1373-FR-006
+  it('keeps name, phone, last role and phone verification of every seeded account, and restores its status', async () => {
     expect(run().status).toBe(0);
+    const seededStatus = new Map(
+      (
+        await prisma.account.findMany({
+          where: { email: { endsWith: '@example.test' } },
+        })
+      ).map((a) => [a.email, a.status]),
+    );
     const verified = new Date('2026-01-02T03:04:05.000Z');
     await prisma.account.updateMany({
       data: {
@@ -405,7 +415,11 @@ describe('seed restore of accounts, attacked', () => {
       orderBy: { email: 'asc' },
       where: { email: { endsWith: '@example.test' } },
     });
-    expect(after).toEqual(before);
+    expect(after).toEqual(
+      before.map((a) => ({ ...a, status: seededStatus.get(a.email) })),
+    );
+    expect(after.map((a) => a.status)).toContain('suspended');
+    expect(after.map((a) => a.status)).toContain('active');
   });
 
   // @traces 1372-FR-005

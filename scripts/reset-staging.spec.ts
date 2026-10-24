@@ -98,9 +98,10 @@ describe('api image', () => {
 
   // The staging pre-deploy step runs it from the image's scripts folder.
   // @traces 1370-release-seed-no-ssh-FR-001
-  it('carries the reset script beside the monitor password script, only in the api', () => {
+  // @traces 1373-FR-001
+  it('carries the pre-deploy, monitor password and reset scripts, only in the api', () => {
     expect(dockerfile).toMatch(
-      /if \[ "\$\{APP\}" = api \]; then[\s\S]*cp scripts\/monitor-password\.ts scripts\/reset-staging\.sh dist\/apps\/api\/scripts\//,
+      /if \[ "\$\{APP\}" = api \]; then[\s\S]*cp scripts\/api-pre-deploy\.sh scripts\/monitor-password\.ts scripts\/reset-staging\.sh dist\/apps\/api\/scripts\//,
     );
   });
 });
