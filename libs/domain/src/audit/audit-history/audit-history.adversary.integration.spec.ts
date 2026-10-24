@@ -892,7 +892,8 @@ describe('the time index and the append-only rule', () => {
   });
 
   // On a small table the planner may count through any index that holds
-  // `at`; the million-row case in the service spec requires the time index.
+  // `at`, directly or through a bitmap; the million-row case in the service
+  // spec requires the time index.
   // @traces 469-FR-002
   it('can answer the window count from an index when a scan is not allowed', async () => {
     await entry({ at: minutesAgo(1) });
@@ -911,7 +912,9 @@ describe('the time index and the append-only rule', () => {
         if (e !== rolledBack) throw e;
       });
 
-    expect(plan).toMatch(/Index (Only )?Scan using activity_log_\w*idx/);
+    expect(plan).toMatch(
+      /(Index (Only )?Scan using|Bitmap Index Scan on) activity_log_\w*idx/,
+    );
     expect(plan).not.toMatch(/Seq Scan on activity_log/);
   });
 
