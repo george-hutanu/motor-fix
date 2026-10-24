@@ -115,10 +115,13 @@ describe('StorageService, a photo and its processed copies', () => {
 
     await storage.deleteWithCopies(KEY);
 
-    // The SDK may send a delete twice when a socket resets; a delete repeats
-    // harmlessly, so what counts is which keys went before the thumbnail.
-    expect(deleted.at(-1)).toBe(`${KEY}.thumb`);
-    expect(new Set(deleted.slice(0, deleted.indexOf(`${KEY}.thumb`)))).toEqual(
+    // The SDK may send a delete twice when a socket resets, and under load
+    // the abandoned first try can reach the store after the thumbnail's: a
+    // delete repeats harmlessly, so what counts is which keys went before
+    // the thumbnail's first delete.
+    const thumb = deleted.indexOf(`${KEY}.thumb`);
+    expect(thumb).toBeGreaterThan(0);
+    expect(new Set(deleted.slice(0, thumb))).toEqual(
       new Set([KEY, `${KEY}.display`, ...VARIANTS]),
     );
     expect([...store.objects.keys()]).toEqual([
