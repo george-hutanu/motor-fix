@@ -39,6 +39,7 @@
 // It posts nothing: the pr-tester agent adds its own findings and posts with
 // post.mjs. The report lands in --out (default <tmp>/mf-prtest/<pr>-<sha7>).
 import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
@@ -93,16 +94,52 @@ export function parseArgs(argv) {
 
 // What a PR's QA flows are called with, here and by `precheck.mjs --check`: signIn(context, role) opens a
 // guarded screen as a seeded account; the shared helpers (flow-helpers.mjs) do the waits flows got wrong.
-export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }) => ({
+// `findings` is the run's own array: a flow pushes each finding as it finds it, so one that throws later keeps them.
+export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session, findings }) => ({
   baseURL: webURL,
   apiURL,
   outDir,
   repoRoot,
   worktree,
+  findings,
   signIn: flowSignIn({ session, baseURL: webURL }),
   ...apiHealth(apiURL),
   ...helpers,
 });
+
+const NETWORKIDLE = /(['"`])networkidle\1/g;
+
+/**
+ * Imports a flows file with every quoted `networkidle` run as `load`: a live page keeps its event stream open,
+ * so networkidle never comes. Returns the module and one note per rewritten line. The rewritten text is
+ * imported from a sibling file, so the flows' relative imports still resolve, and removed once loaded; a file
+ * with no networkidle is imported as it is, by `plain`.
+ */
+export async function loadFlows(file, plain = (f) => import(pathToFileURL(resolve(f)).href)) {
+  const text = readFileSync(file, "utf8");
+  const notes = text
+    .split("\n")
+    .flatMap((line, i) => (line.match(NETWORKIDLE) ? [`${file}:${i + 1}: a networkidle wait runs as a wait for load, which a live page reaches`] : []));
+  if (!notes.length) return { mod: await plain(file), notes };
+  const copy = `${resolve(file)}.load-${createHash("sha256").update(text).digest("hex").slice(0, 12)}.mjs`;
+  writeFileSync(copy, text.replace(NETWORKIDLE, "$1load$1"));
+  try {
+    return { mod: await import(pathToFileURL(copy).href), notes };
+  } finally {
+    rmSync(copy, { force: true });
+  }
+}
+
+/**
+ * Runs the flows (`run`, handed `findings` through flowArgs) and adds what they return, leaving out a finding
+ * they also pushed. What they pushed stays in `findings` when they throw; the throw is the caller's.
+ */
+export async function runFlows(run, findings) {
+  const returned = (await collectRejections(findings, run)) ?? [];
+  const added = returned.filter((f) => !findings.includes(f));
+  findings.push(...added);
+  return added;
+}
 
 const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high");
 
@@ -451,12 +488,13 @@ async function main(argv) {
     log(visual.notes.join(" "));
 
     if (opt.flows) {
-      const flow = await import(pathToFileURL(resolve(opt.flows)).href);
+      const { mod: flow, notes: rewritten } = await loadFlows(opt.flows);
+      notes.push(...rewritten);
       phase = "flows";
+      const before = findings.length;
       try {
-        const extra = (await collectRejections(findings, () => flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session })))) ?? [];
-        findings.push(...extra);
-        log(`flows: ${extra.length} finding(s)`);
+        await runFlows(() => flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session, findings })), findings);
+        log(`flows: ${findings.length - before} finding(s)`);
       } catch (error) {
         findings.push(stepFinding("A flow threw", String(error.stack ?? error).split("\n").slice(0, 3).join(" / "), "high"));
       }
