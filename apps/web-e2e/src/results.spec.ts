@@ -393,6 +393,12 @@ test.describe('the map beside the results @seeded', () => {
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
     await db.connect();
+    // The pins of a search near here are every garage standing here, whatever
+    // its brand: a second copy of this block (another worker, a repeated run)
+    // seeding its own four at the same spot doubles them. One copy at a time:
+    // the lock is held until afterAll closes this connection.
+    test.setTimeout(600_000);
+    await db.query("SELECT pg_advisory_lock(hashtext('e2e results map'))");
     const made = await db.query<{ id: string }>(
       `INSERT INTO brand (id, key, name, slug, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $1, now()) RETURNING id`,
