@@ -18,6 +18,7 @@ features:
   - 1357-rar-covered-jobs
   - 007-brand-headline
   - 414-approve-catalogue-job
+  - 245-seed-catalogues
 ---
 
 # Capability: Catalogue
@@ -37,10 +38,6 @@ _From 228-how-it-works-list-garage._
 ### 007-FR-004 — Every brand in the catalogue's list MUST carry a Romanian "your" form, held on the brand row and loaded with the catalogue: the mock's eight ("BMW‑ul tău", "VW‑ul tău", "Mercedesul tău", "Fordul tău", "Dacia ta", "Toyota ta", "Škoda ta", "Tesla ta") and the rest by the rule in Assumptions; the end-to-end seed sets it for every brand row.
 
 _From 007-brand-headline._
-
-### 228-FR-015 — A catalogue reload MUST NOT undo the nightly ranking: it sets a popularity rank only on the brands it inserts.
-
-_From 228-how-it-works-list-garage._
 
 ### 039-FR-005 — When a brand's name or slug is corrected in the file, the loader MUST keep the brand's id and every garage row that names it, and readers MUST see the new name.
 
@@ -182,9 +179,9 @@ _From 405-car-model-licences._
 
 _From 405-car-model-licences._
 
-### 405-FR-005 — MotorFix's brand list MUST gain Opel (`opel`, "Opel"), unranked; the brand loader's existing checks and the brand file's existing tests MUST keep passing.
+### 245-FR-002 — Every brand in the file MUST carry a starting popularity: the mock's twelve keep ranks 1-12 in the mock's order; every other brand carries a rank from 13 upward in descending order of its registered cars in the source edition, ties broken by name, no rank shared. The rank is a starting value only: the loader applies it on insert, and on reload to a stored brand whose rank is null; it never overwrites a number, which the nightly ranking owns (228-FR-012). A null rank filled on reload is one audit entry for that brand, `popularity` from null to the file's rank, like any other loader change.
 
-_From 405-car-model-licences._
+_From 245-seed-catalogues._
 
 ### 405-FR-006 — A unit test MUST hold every licensed model's brand key to a key of the brand list, so a renamed or removed brand that the catalogue names fails the suite.
 
@@ -314,6 +311,26 @@ _From 414-approve-catalogue-job._
 
 _From 414-approve-catalogue-job._
 
+### 245-FR-001 — The brand file MUST list every car brand sold in Romania: every car brand with new registrations in Romania in the last five full years (2021-2025, APIA/DRPCIV figures), every car brand with an official importer in Romania, and every brand no longer sold new that is still common on Romania's roads (at least Chevrolet, Daewoo, Lada, Saab, Rover, Infiniti, ARO, Chrysler and Dodge); and at least Škoda, Mercedes-Benz, Citroën, Alfa Romeo, Land Rover and Lada by name. Each brand appears once, with its official spelling, a key equal to its slug (the slug derived from the name as the file does today), no model, and the 15 brands shipped today keep their keys and names. The file's existing checks (no duplicate key, name or slug; a rank is a whole number from 1) MUST pass over the full file, and the file MUST record its sources and their editions beside the brand list in the feature folder. A brand not sold new and without an official importer is in the file when it has at least 1,000 registered passenger cars in the source edition, the register's spellings of one brand merged. A candidate the build team cannot confirm as sold new through an official importer and that is below the floor is left out of the file and listed in `brand-sources.md` as an open candidate for the owner (FR-009).
+
+_From 245-seed-catalogues._
+
+### 245-FR-003 — Every brand in the file MUST carry a Romanian "your" form: the mock's eight as they are (007-FR-004); every other by the rule — a name ending in "a" takes "<Name> ta"; an acronym, or a name ending in another vowel or in a silent letter, takes "<Name>‑ul tău" with the non-breaking hyphen U+2011 (007-FR-005), never U+002D; any other name takes "<Name>ul tău". No form is empty.
+
+_From 245-seed-catalogues._
+
+### 245-FR-005 — Loading the full brand file and the job file into an empty database MUST create every row of both files, active, with the file's name, slug, rank and "your" form; loading both again MUST change no row and write no audit entry; and loading the full brand file over a database that already holds today's 15 brands MUST insert the new brands, give a stored brand whose rank is null its file rank, and leave every stored number rank as it was. These MUST be proved by tests on a real database over the real files, not over fixtures.
+
+_From 245-seed-catalogues._
+
+### 245-FR-006 — Brand search over the loaded file MUST return Škoda as the first result for "skoda", Citroën for "citroen" and Lada for "Lada" (SC-004), and an empty query MUST return the mock's twelve first, in the mock's order; proved by tests over the real file on a real database.
+
+_From 245-seed-catalogues._
+
+### 245-FR-007 — The end-to-end suite MUST NOT answer a brand search with its own rows: the step-2 test adds Lada from the loaded catalogue, and the brand-search test's abort of the brand route (the "list did not load" state) stays. Every end-to-end expectation that depends on catalogue content MUST still hold against the full file; where a new brand would match a query an existing test types, the test's query changes, never the brand.
+
+_From 245-seed-catalogues._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
@@ -324,3 +341,5 @@ _From 414-approve-catalogue-job._
 - `039-FR-003` — superseded by `007-FR-004` (2026-10-22)
 - `109-FR-021` — superseded by `414-FR-001` (2026-10-23)
 - `1352-FR-008` — superseded by `414-FR-010` (2026-10-23)
+- `405-FR-005` — superseded by `245-FR-002` (2026-10-23)
+- `228-FR-015` — superseded by `245-FR-002` (2026-10-23)

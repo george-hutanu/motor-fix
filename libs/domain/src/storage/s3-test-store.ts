@@ -67,6 +67,7 @@ export class S3TestStore {
   now = () => Date.now();
   beforeCopy: (() => void) | undefined;
   beforeDelete: ((key: string) => void) | undefined;
+  beforeGet: ((key: string) => void) | undefined;
   private readonly server: Server = createServer((req, res) =>
     this.handle(req, res).catch((error: unknown) => {
       const refusal =
@@ -140,7 +141,10 @@ export class S3TestStore {
       this.beforeDelete?.(key);
       this.objects.delete(key);
       res.writeHead(204).end();
-    } else this.getObject(req, url, key, res);
+    } else {
+      if (req.method === 'GET') this.beforeGet?.(key);
+      this.getObject(req, url, key, res);
+    }
   }
 
   private onBucket(req: IncomingMessage, res: ServerResponse) {

@@ -56,21 +56,19 @@ export class BrandLoader {
     const byKey = new Map(stored.map((brand) => [brand.key, brand]));
     let changed = 0;
     for (const record of records) {
+      const brand = byKey.get(record.key);
+      // The file's rank seeds a new brand or a stored one with no rank; a rank
+      // already held is the nightly ranking's and stays.
       const after = {
         active: true,
         name: record.name,
+        popularity: brand?.popularity ?? record.popularity ?? null,
         roPossessive: record.roPossessive ?? null,
         slug: slugOf(record.name),
       };
-      const brand = byKey.get(record.key);
-      // The file's rank seeds a brand it inserts; a stored brand keeps the
-      // rank the nightly ranking gave it.
       const wrote = brand
         ? await this.update(tx, brand, after)
-        : await this.create(tx, record.key, {
-            ...after,
-            popularity: record.popularity ?? null,
-          });
+        : await this.create(tx, record.key, after);
       if (wrote) changed++;
     }
     const keys = new Set(records.map((record) => record.key));
