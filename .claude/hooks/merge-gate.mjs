@@ -7,8 +7,8 @@
 // number, and judged the same way. The command is split into words as the
 // shell splits it (shellCommands: quotes, escapes, substitutions, eval read
 // where it runs, `sh -c` read where it runs under its outer command's GH_REPO=
-// prefix and env -C, a GH_REPO set inside it refused). A merge naming a
-// repository (-R, --repo, GH_REPO, also exported by an earlier command, a PR
+// prefix and env -C, what it changes kept to its own subshell). A merge naming
+// a repository (-R, --repo, GH_REPO, also exported by an earlier command, a PR
 // URL, a REST owner/repo) must name this one, and gh is read where a literal
 // `cd` moved it: only a top-level cd joined to the merge by one unbroken &&
 // chain is followed (speckit-watch merges with `cd <worktree> && …`). Refused
@@ -16,17 +16,17 @@
 // xargs, from a substitution, or after a branch switch with no PR named; a
 // REST merge with no literal number; a merge after any other cd (after || or
 // in a pipe, not the head word, in a group), a pushd, a sourced file (source
-// or `.` where a command starts), a repo set-default, env -C, --hostname, or a
-// GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH setting; a GraphQL merge naming no
-// id the gate can read, or more than one, or repeating a field; any `gh api
-// graphql` whose query the gate cannot see (none, a file, stdin, --input, a
-// shell expansion); and, as the backstop, any command whose text (quotes and
-// escapes dropped) still holds gh with a merge the parser placed nowhere: a
-// string or argv array another program runs (`node -e`, `| sh`, a here-string)
-// or a mere mention (echo, grep), while a title or body that says merge is let
-// through. The gate reads command text only: a merge made outside gh, or a
-// command the shell computes (a variable holding gh, an alias), is out of its
-// reach.
+// or `.` where a command starts), a repo set-default, env -C, sudo -D,
+// --hostname, or a GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH setting; a
+// GraphQL merge naming no id the gate can read, or more than one, or repeating
+// a field; any `gh api graphql` whose query the gate cannot see (none, a file,
+// stdin, --input, a shell expansion); and, as the backstop, any command whose
+// text (quotes and escapes dropped) still holds gh with a merge the parser
+// placed nowhere: a string or argv array another program runs (`node -e`, `|
+// sh`, a here-string) or a mere mention (echo, grep), while a title or body
+// that says merge is let through. The gate reads command text only: a merge
+// made outside gh, or a command the shell computes (a variable holding gh, an
+// alias), is out of its reach.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
@@ -166,6 +166,13 @@ const FIELD_FLAGS = new Set(["-f", "-F", "--field", "--raw-field"]);
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
 /** Words after which the next word is a command: `.` there sources a file. */
 const STARTERS = new Set(["builtin", "command", "exec", "time", "if", "then", "else", "elif", "do", "while", "until", "{", "!"]);
+/** Whether env or sudo among these words moves into another directory: env -C (joined or run together), --chdir, sudo -D. */
+function chdirs(words) {
+  const vs = words.map((w) => w.v);
+  const env = vs.some((v) => base(v) === "env");
+  const sudo = vs.some((v) => base(v) === "sudo");
+  return vs.some((v) => ((env || sudo) && v.startsWith("--chdir")) || (env && /^-[a-zA-Z]*C/.test(v)) || (sudo && /^-[a-zA-Z]*D/.test(v)));
+}
 /** Commands that set shell variables from their arguments. */
 const DECLARERS = new Set(["export", "declare", "typeset", "local", "readonly"]);
 /** Variables that move gh to another repository, checkout or host, or a cd elsewhere, which the gate does not follow. */
@@ -361,10 +368,16 @@ export function mergeTarget(command) {
   let prevAfter = null;
   let shellRepo = null;
   let moved = null;
+  // What a sh -c string changes stays in its subshell: it counts for a merge in a sh -c string only.
+  let subMoved = null;
   let branchMoved = false;
   for (const cmd of shellCommands(command)) {
     const vs = cmd.map((w) => w.v);
     const first = vs.findIndex((v) => !/^\w+=/.test(v));
+    const move = (why) => {
+      if (cmd.sub) subMoved = why;
+      else moved = why;
+    };
     // A followed cd holds only while every command after it, up to the merge, is joined by &&;
     // one the shell may skip (after ||) or run apart (in a pipe) is not followed.
     const skippable = prevAfter === "||" || prevAfter === "|";
@@ -372,39 +385,41 @@ export function mergeTarget(command) {
       if (cwd != null && prevAfter !== "&&") cdBroken = true;
       prevAfter = cmd.after;
     }
-    if (cmd.slice(0, first === -1 ? cmd.length : first).some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
+    if (cmd.slice(0, first === -1 ? cmd.length : first).some((w) => MOVERS.test(w.v))) move("a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH");
     // A cd that is not the head word (command cd, if cd, { cd …) moves the shell where the gate does not look.
-    if (vs.some((v, i) => i !== first && ["cd", "pushd", "popd"].includes(base(v)))) moved = "a cd inside another command";
+    if (vs.some((v, i) => i !== first && ["cd", "pushd", "popd"].includes(base(v)))) move("a cd inside another command");
     // So does a sourced file: `source` or `.` where a command starts (after builtin, if, {…, past their flags), not as an argument.
     const starts = (i) => {
       let j = i - 1;
       while (j > 0 && vs[j].startsWith("-")) j--;
+      // command -v and -V only look a name up.
+      if (vs[j] === "command" && vs.slice(j + 1, i).some((f) => /^-[a-zA-Z]*[vV]/.test(f))) return false;
       return STARTERS.has(vs[j]);
     };
-    if (vs.some((v, i) => i !== first && (v === "source" || v === ".") && starts(i))) moved = "a sourced file";
+    if (vs.some((v, i) => i !== first && (v === "source" || v === ".") && starts(i))) move("a sourced file");
     // A sh -c string runs under the command that started its shell: its env -C or GIT_DIR moves it too.
     const outer = cmd.outer ?? [];
-    if (outer.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
-    if (outer.some((w) => base(w.v) === "env") && outer.some((w) => w.v === "-C" || w.v.startsWith("--chdir"))) moved = "an env -C";
+    if (outer.some((w) => MOVERS.test(w.v))) move("a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH");
+    if (chdirs(outer)) move("an env -C or sudo -D");
     const declares = first === -1 || DECLARERS.has(vs[first]);
     const settings = declares ? cmd.slice(first === -1 ? 0 : first + 1) : [];
-    if (settings.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
+    if (settings.some((w) => MOVERS.test(w.v))) move("a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH");
     if (declares) {
       const w = settings.find((x) => /^GH_REPO=/.test(x.v));
       // Inside a sh -c string a GH_REPO lasts only for that string, which the gate does not track: refused.
-      if (w && cmd.sub) moved = "a GH_REPO set inside sh -c";
+      if (w && cmd.sub) subMoved = "a GH_REPO set inside sh -c";
       else if (w) shellRepo = w.expands ? "" : w.v.slice("GH_REPO=".length);
       continue;
     }
     const head = base(vs[first]);
     if (head === "cd") {
       const to = cmd[first + 1];
-      if (!cmd.top || cdBroken || skippable || to?.expands || to?.v === "-") moved = "a cd outside one && chain";
+      if (!cmd.top || cdBroken || skippable || to?.expands || to?.v === "-") move("a cd outside one && chain");
       else cwd = to == null ? "~" : cwd == null || /^[/~]/.test(to.v) ? to.v : join(cwd, to.v);
       continue;
     }
-    if (head === "pushd" || head === "popd") moved = `a ${head}`;
-    if (head === "." || head === "source") moved = "a sourced file";
+    if (head === "pushd" || head === "popd") move(`a ${head}`);
+    if (head === "." || head === "source") move("a sourced file");
     if (head === "unset" && vs.includes("GH_REPO") && !cmd.sub) shellRepo = null;
     if (head === "git" && vs.slice(first + 1).some((v) => v === "switch" || v === "checkout")) branchMoved = true;
     // A bare gh counts anywhere in the command (after xargs, env, sudo…), the first one that runs pr, api or repo;
@@ -415,9 +430,9 @@ export function mergeTarget(command) {
       .find((c) => ["pr", "api", "repo"].includes(c.sub));
     if (!call) continue;
     const { before, positional, fields, input, sub, verb, arg } = call;
-    if (before.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
-    if (before.some((w) => w.v === "-C" || w.v.startsWith("--chdir"))) moved = "an env -C";
-    if (call.host != null) moved = "a --hostname";
+    if (before.some((w) => MOVERS.test(w.v))) move("a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH");
+    if (chdirs(before)) move("an env -C or sudo -D");
+    if (call.host != null) move("a --hostname");
     let target = null;
     if (sub === "repo" && verb === "set-default") moved = "a repository set-default";
     if (sub === "pr" && verb === "merge") {
@@ -440,7 +455,8 @@ export function mergeTarget(command) {
       }
     }
     if (!target) continue;
-    if (moved) return unresolved(`it runs ${moved} before merging, which the gate cannot follow`);
+    const why = moved ?? (cmd.sub ? subMoved : null);
+    if (why) return unresolved(`it runs ${why} before merging, which the gate cannot follow`);
     if (cwd != null && (!cmd.top || cdBroken)) return unresolved("it merges after a cd outside one && chain, which the gate cannot follow");
     if (target.repo != null && !NUMBERED.test(target.pr ?? "")) return unresolved("it names a repository but no pull request number");
     targets.push({ ...target, cwd, key: `${target.repo ?? ""}#${target.pr}@${cwd ?? ""}` });

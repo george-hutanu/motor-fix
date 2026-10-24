@@ -282,6 +282,22 @@ describe('merge gate — the eighth review: sh -c with its outer command, flags 
   });
 });
 
+// Ninth review of ST-448: env -C with its value attached, sudo -D, and what a sh -c subshell keeps to itself.
+describe('merge gate — the ninth review: joined chdir flags, a subshell cd or lookup that moves nothing', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('refuses env -C with its value joined or run together, and sudo -D', () => {
+    for (const cmd of [`env -C/tmp ${cli} 5`, `env -iC /tmp ${cli} 5`, `env -C/tmp bash -c "${cli} 5"`, `sudo -D /tmp bash -c "${cli} 5"`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.match(mergeTarget(`bash -c "cd /x && ${cli} 5"`)?.unresolved ?? 'allowed', /cannot follow/);
+  });
+
+  it('lets a merge through after a subshell cd or a command -v lookup, which move nothing', () => {
+    assert.deepEqual(mergeTarget(`bash -c "cd /x"; ${cli} 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`command -v source; ${cli} 5`), { pr: '5' });
+  });
+});
+
 describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
   const cli = ['gh', 'pr', 'merge'].join(' ');
 
