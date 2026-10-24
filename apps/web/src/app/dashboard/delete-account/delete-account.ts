@@ -44,11 +44,13 @@ export class DeleteAccount {
     if (deleted !== true) return;
     // The account and its sessions are gone: nothing is asked of the server
     // any more, which would only answer with a sign-in. The dialog has stepped
-    // back over its history entry, so the way Home is not undone.
+    // back over its history entry, so the way Home is not undone. The session
+    // goes once Home is open: forgotten under the dashboard, it would send its
+    // own way Home, overtaking this one and the toast with it.
     this.live.close();
     await this.push.dropped();
-    this.session.revoked();
     await this.router.navigateByUrl('/');
+    this.session.revoked();
     toast(this.i18n.t('shell.deleteAccount.done'));
   }
 }

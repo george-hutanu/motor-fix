@@ -114,19 +114,43 @@ describe('the delete-account row in Setări', () => {
     expect(revoked).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith('/');
     expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
-    // Nothing is asked of the server any more, and the session goes only after
-    // the dialog has stepped back, so its step back cannot undo the way Home.
+    // Nothing is asked of the server any more, and the way Home starts only
+    // after the dialog has stepped back, so its step back cannot undo it.
     expect(open.mock.invocationCallOrder[0]).toBeLessThan(
-      revoked.mock.invocationCallOrder[0],
+      navigate.mock.invocationCallOrder[0],
     );
     expect(close.mock.invocationCallOrder[0]).toBeLessThan(
-      revoked.mock.invocationCallOrder[0],
+      navigate.mock.invocationCallOrder[0],
     );
     expect(dropped.mock.invocationCallOrder[0]).toBeLessThan(
-      revoked.mock.invocationCallOrder[0],
-    );
-    expect(revoked.mock.invocationCallOrder[0]).toBeLessThan(
       navigate.mock.invocationCallOrder[0],
+    );
+  });
+
+  // @traces 129-FR-008
+  it('forgets the session only once Home has opened, so the dashboard sends no second way Home that would drop the toast', async () => {
+    const element = await render(DRIVER, 'ro', 'ajutor@example.ro', true);
+    let arrive: (arrived: boolean) => void = () => undefined;
+    navigate.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        arrive = resolve;
+      }),
+    );
+
+    button(element).click();
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(revoked).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+
+    arrive(true);
+    await settle();
+
+    expect(revoked).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
+    expect(revoked.mock.invocationCallOrder[0]).toBeLessThan(
+      jest.mocked(toast).mock.invocationCallOrder[0],
     );
   });
 
