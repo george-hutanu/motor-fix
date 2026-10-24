@@ -165,3 +165,21 @@ describe('the notification batches', () => {
     expect(await storedUnread(ana)).toBe(1);
   });
 });
+
+// @traces 1156-FR-001
+describe('the notification period read at call time', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('follows a changed period with no other edit', async () => {
+    jest.replaceProperty(RETENTION.notifications, 'days', 30 as never);
+    const ana = await data.account('ana');
+    await notification(ana, ago(now, 31));
+    const young = await notification(ana, ago(now, 29));
+    expect(await sweepNotifications(prisma, now)).toBe(1);
+    expect(
+      (await prisma.notification.findMany({ select: { id: true } })).map(
+        (n) => n.id,
+      ),
+    ).toEqual([young]);
+  });
+});
