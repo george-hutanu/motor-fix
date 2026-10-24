@@ -333,6 +333,21 @@ describe('ci workflow', () => {
     );
   });
 
+  // The audit history refuses DELETE and TRUNCATE, so the job empties it as
+  // the cleaning role before each Jest run reads it.
+  // @traces 456-FR-003
+  it('clears the audit history after the migration, before the tests', () => {
+    const block = job('integration');
+    const clear = 'node scripts/clear-activity-log.ts';
+
+    expect(block.indexOf(clear)).toBeGreaterThan(
+      block.indexOf('prisma migrate deploy'),
+    );
+    expect(block.indexOf(clear)).toBeLessThan(
+      block.indexOf('- name: Integration tests'),
+    );
+  });
+
   // The image preloads pg_stat_statements itself: no step restarts the
   // service container before the data-store specs read the view.
   // @traces 878-FR-013 1174-FR-003
@@ -381,6 +396,11 @@ describe('ci workflow', () => {
         const calls = join(dir, 'calls');
         writeFileSync(join(dir, 'npx'), `#!/bin/sh\necho "$*" >> "${calls}"\n`);
         chmodSync(join(dir, 'npx'), 0o755);
+        writeFileSync(
+          join(dir, 'node'),
+          `#!/bin/sh\necho "node $*" >> "${calls}"\n`,
+        );
+        chmodSync(join(dir, 'node'), 0o755);
         writeFileSync(join(dir, 'step.sh'), script(id, name));
         execFileSync(
           'bash',
@@ -429,13 +449,17 @@ describe('ci workflow', () => {
       expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
     });
 
-    it('runs the named integration specs alone, one Jest run after another', () => {
+    // @traces 456-FR-003
+    it('runs the named integration specs alone, one Jest run after another, each on an empty audit history', () => {
       expect(
         run('integration', 'Integration tests', { REPEAT: '3', SPECS }),
       ).toEqual(
-        Array(3).fill(
-          'jest --ci --runInBand libs/domain/src/store/store.ttl.integration.spec.ts',
-        ),
+        Array(3)
+          .fill([
+            'node scripts/clear-activity-log.ts',
+            'jest --ci --runInBand libs/domain/src/store/store.ttl.integration.spec.ts',
+          ])
+          .flat(),
       );
     });
 

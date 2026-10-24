@@ -250,6 +250,10 @@ jobs:
         run: docker compose up -d --wait storage
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      # activity_log refuses DELETE and TRUNCATE; the cleaning role empties it
+      # before every Jest run so no run reads another's entries.
+      - name: Clear the audit history
+        run: node scripts/clear-activity-log.ts
       # Named spec files run alone, one Jest run after another.
       - name: Integration tests
         env:
@@ -266,6 +270,7 @@ jobs:
           [ -n "$files" ] || exit 0
           for run in $(seq "$REPEAT"); do
             echo "Run $run of $REPEAT"
+            node scripts/clear-activity-log.ts
             npx jest --ci --runInBand $files
           done
 
