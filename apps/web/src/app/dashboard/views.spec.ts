@@ -30,6 +30,7 @@ import { GarageRequestsView } from './garage-requests/garage-requests-view/garag
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { PricesView } from './prices-view/prices-view';
+import { ProfileView } from './profile-view/profile-view';
 import { RequestsView } from './requests-view/requests-view';
 import {
   fakeSavedGarages,
@@ -369,6 +370,21 @@ describe('the dashboard view lists', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
     ).not.toContain('prices');
+  });
+
+  // @traces 133-FR-002 133-FR-005
+  it('gives the owner alone the garage profile view, its body downloaded with the view', async () => {
+    const profile = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'profile',
+    );
+    expect(profile?.capability).toBe('garage.profile');
+    await expect(profile?.load?.()).resolves.toBe(ProfileView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'profile');
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      ProfileView,
+    );
+    expect(paths('garage', OWNER)).toContain('profile');
+    expect(paths('garage', RECEPTIONIST)).not.toContain('profile');
   });
 
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
