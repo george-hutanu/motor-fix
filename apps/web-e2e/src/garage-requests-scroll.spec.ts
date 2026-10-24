@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { ready, signIn, signUpDriver } from './accounts.js';
+import { openSignIn, ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
 import { accessToken, bearer } from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
@@ -63,10 +63,7 @@ async function sender(request: APIRequestContext) {
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  await openSignIn(page);
   await signIn(page, OWNER);
   await expect(page).toHaveURL('/app/garage');
 }
@@ -75,6 +72,45 @@ const row = (page: Page, id: string) =>
   page.locator('mf-garage-requests-panel').locator(`[data-live-id="${id}"]`);
 const top = (page: Page, id: string) =>
   row(page, id).evaluate((el) => el.getBoundingClientRect().top);
+
+const waiting = async (page: Page) =>
+  Number(
+    /^(\d+) /.exec(
+      (await page.locator('mf-live-pill button').textContent())?.trim() ?? '',
+    )?.[1],
+  );
+
+// Six fillers on the requests page at 390 × 844, scrolled so the middle one
+// sits READING_AT below the top and the top of the list is off screen.
+async function scrolled(page: Page, request: APIRequestContext) {
+  const send = await sender(request);
+  const fillers: string[] = [];
+  for (let i = 0; i < FILLERS; i++) fillers.push(await send());
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await signedIn(page);
+  await page.goto('/app/garage/requests');
+  for (const id of fillers) await expect(row(page, id)).toBeVisible();
+  await expect(page.locator('mf-live-pill button')).toHaveCount(0);
+
+  // Newest first: the third filler sent sits in the middle of the six.
+  const reading = fillers[2];
+  await row(page, reading).evaluate((el, at) => {
+    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - at);
+  }, READING_AT);
+  await expect
+    .poll(async () => Math.abs((await top(page, reading)) - READING_AT))
+    .toBeLessThanOrEqual(1);
+  // The top of the list is off screen: the anchor records and the list is
+  // not at its top.
+  expect(
+    await page
+      .locator('mf-garage-requests-panel [data-live-id]')
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().top),
+  ).toBeLessThan(0);
+  return { before: await top(page, reading), reading, send };
+}
 
 // @seeded: a request that arrives while the owner reads further down the list
 // waits behind the pill instead of pushing the list down.
@@ -87,35 +123,14 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     page,
     request,
   }) => {
-    const send = await sender(request);
-    const fillers: string[] = [];
-    for (let i = 0; i < FILLERS; i++) fillers.push(await send());
-
-    await page.setViewportSize({ height: 844, width: 390 });
-    await signedIn(page);
-    await page.goto('/app/garage/requests');
-    for (const id of fillers) await expect(row(page, id)).toBeVisible();
+    const { before, reading, send } = await scrolled(page, request);
     const pill = page.locator('mf-live-pill button');
-    await expect(pill).toHaveCount(0);
-
-    // Newest first: the third filler sent sits in the middle of the six.
-    const reading = fillers[2];
-    await row(page, reading).evaluate((el, at) => {
-      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - at);
-    }, READING_AT);
-    await expect
-      .poll(async () => Math.abs((await top(page, reading)) - READING_AT))
-      .toBeLessThanOrEqual(1);
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    const before = await top(page, reading);
 
     const id = await send();
 
     // Other workers send to this garage too: the count is at least this one.
-    await expect(pill).toBeInViewport({ timeout: 5_000 });
-    expect(
-      Number(/^(\d+) /.exec((await pill.textContent())?.trim() ?? '')?.[1]),
-    ).toBeGreaterThanOrEqual(1);
+    await expect(pill).toBeInViewport();
+    expect(await waiting(page)).toBeGreaterThanOrEqual(1);
     await expect(row(page, id)).toHaveCount(0);
     await expect
       .poll(async () => Math.abs((await top(page, reading)) - before))
@@ -123,5 +138,51 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
 
     await pill.click();
     await expect(row(page, id)).toBeInViewport();
+  });
+
+  // @traces 587-FR-001
+  // @traces 587-FR-002
+  // @traces 587-FR-003
+  test('two requests arriving while scrolled are both held back, counted together, and both shown after one click', async ({
+    page,
+    request,
+  }) => {
+    const { before, reading, send } = await scrolled(page, request);
+    const pill = page.locator('mf-live-pill button');
+
+    const first = await send();
+    const second = await send();
+
+    await expect(pill).toBeInViewport();
+    await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(2);
+    await expect(row(page, first)).toHaveCount(0);
+    await expect(row(page, second)).toHaveCount(0);
+    await expect
+      .poll(async () => Math.abs((await top(page, reading)) - before))
+      .toBeLessThanOrEqual(1);
+
+    await pill.click();
+    await expect(row(page, first)).toHaveCount(1);
+    await expect(row(page, second)).toBeInViewport();
+    await expect(pill).toHaveCount(0);
+  });
+
+  // @traces 587-FR-001
+  test('a request arriving while the list is at the top shows at once with no pill', async ({
+    page,
+    request,
+  }) => {
+    const send = await sender(request);
+    const filler = await send();
+
+    await page.setViewportSize({ height: 844, width: 390 });
+    await signedIn(page);
+    await page.goto('/app/garage/requests');
+    await expect(row(page, filler)).toBeVisible();
+
+    const id = await send();
+
+    await expect(row(page, id)).toBeVisible();
+    await expect(page.locator('mf-live-pill button')).toHaveCount(0);
   });
 });
