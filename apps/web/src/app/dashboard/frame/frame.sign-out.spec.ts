@@ -42,6 +42,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
   const kept = signal<MeDto | null>(null);
   const session = {
     current,
+    deletingAccount: jest.fn(() => false),
     ended: new Subject<void>(),
     keepsThroughRevoke: jest.fn(() => false),
     kept,
@@ -280,6 +281,25 @@ describe('a session ended elsewhere', () => {
     expect(session.revoked).toHaveBeenCalledTimes(1);
     expect(live.close).toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith('/');
+  });
+
+  // @traces 129-FR-008
+  it('stops the live stream on the session.revoked its own account deletion sent, and leaves the sign-out to the deletion', async () => {
+    const { live, navigate, session } = await render('driver', '/app/driver');
+    session.deletingAccount.mockReturnValue(true);
+    navigate.mockClear();
+
+    live.events.next({
+      at: new Date().toISOString(),
+      id: 'event-4',
+      kind: 'session.revoked',
+    });
+    await flush();
+
+    expect(session.revoked).not.toHaveBeenCalled();
+    expect(session.renew).not.toHaveBeenCalled();
+    expect(live.close).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('closes the live connection and opens Home when another tab signed out', async () => {
