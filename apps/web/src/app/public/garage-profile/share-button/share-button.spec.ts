@@ -1,10 +1,9 @@
-import { TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 
 import { ShareButton } from './share-button';
-import { SITE_ORIGIN, SITE_ORIGIN_STATE } from '../../../addresses';
+import { SITE_ORIGIN } from '../../../addresses';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -149,12 +148,15 @@ describe('sharing through the share menu', () => {
     },
   );
 
-  it("builds the address from the site's own origin the server handed over, never the browser's", async () => {
+  it("builds the address from the site's own origin the server named, never the browser's", async () => {
     TestBed.resetTestingModule();
     await TestBed.inject(I18n).enter('public');
-    TestBed.inject(TransferState).set(SITE_ORIGIN_STATE, ORIGIN);
+    const tag = document.createElement('meta');
+    tag.name = 'mf-site';
+    tag.content = ORIGIN;
+    document.head.append(tag);
     withShare();
-    const host = await render();
+    const host = await render().finally(() => tag.remove());
 
     await press(host);
 

@@ -11,7 +11,7 @@ import { publicWebUrl } from '@motor-fix/contracts/env';
 import { provideApiConfiguration } from '@motor-fix/data-access';
 import { setRoute } from '@motor-fix/observability';
 
-import { provideSiteOrigin } from './addresses';
+import { SITE_ORIGIN } from './addresses';
 import { appConfig } from './app.config';
 import { serverRoutes } from './app.routes.server';
 import { routeTemplate } from './telemetry/route-template/route-template';
@@ -41,7 +41,7 @@ const serverConfig: ApplicationConfig = {
     }),
     ...(publicUrl
       ? [
-          provideSiteOrigin(publicUrl.origin),
+          { provide: SITE_ORIGIN, useValue: publicUrl.origin },
           // Each read handed to the browser is keyed by the address the
           // browser will ask, not the API's private one.
           {
