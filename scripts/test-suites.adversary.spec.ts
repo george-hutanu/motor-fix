@@ -137,6 +137,15 @@ describe('the services guard on hostile sources', () => {
   }, 30_000);
 
   // @traces 438-FR-003
+  it('decides a large source repeating a key with no closing brace in bounded time', () => {
+    const source = `{${', DATABASE_URL'.repeat(40_000)}`;
+    const started = Date.now();
+
+    expect(needsServices(source)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(2000);
+  }, 120_000);
+
+  // @traces 438-FR-003
   it('decides a large source with a read at the very end', () => {
     const source = `${'const a = { b: 1 };\n'.repeat(50_000)}§env.REDIS_URL;`;
 

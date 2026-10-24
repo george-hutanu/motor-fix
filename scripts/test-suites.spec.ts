@@ -14,7 +14,10 @@ const NEEDS_SERVICES = new RegExp(
   [
     String.raw`(?<!delete\s+)process\.env\[['"]${KEY}['"]\](?!\s*=[^=])`,
     String.raw`(?<!delete\s+)process\.env\.${KEY}${END}(?!\s*=[^=])`,
-    String.raw`[{,]\s*${KEY}${END}\s*(?:[:=][^,{}]*)?(?:,[^{}]*)?\}\s*=\s*process\.env${END}`,
+    // Anchored at the brace: each brace's scan stops at the next brace, so
+    // the scans never overlap, and the key is looked for only inside a
+    // destructuring from process.env.
+    String.raw`\{(?=[^{}]*\}\s*=\s*process\.env${END})(?=(?:[^{}]*?,)?\s*${KEY}${END}\s*[:=,}])`,
     String.raw`(?<![\p{ID_Continue}$-])seed\.ts${END}`,
   ].join('|'),
   'u',
