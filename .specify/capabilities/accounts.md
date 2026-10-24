@@ -1174,7 +1174,7 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
+### 500-FR-016 — The API MUST resolve the caller with a `trust proxy` function that walks the hops from the socket inward and trusts every hop in loopback, link-local, private (RFC 1918), `100.64.0.0/10` or `fc00::/7` (an IPv4-mapped IPv6 hop as the IPv4 address it carries) until it trusts one public hop, and trusts exactly one public hop (Railway's edge PoP, whose range varies by region) when it sits directly before a trusted private hop; the caller is the first hop not trusted. A chain `86.125.92.213, 95.173.1.1, 100.64.0.5` from socket `fd12:e82::1` resolves to `86.125.92.213`. (Modifies 500-FR-008: the trusted hops gain private and the one PoP hop, decided on #303.)
 
 _From 500-trust-railway-edge._
 
@@ -1234,6 +1234,7 @@ _From 140-account-delete-export._
 
 _From 140-account-delete-export._
 ### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+### 500-FR-017 — The function MUST never trust two public hops, a public hop that is not directly before a trusted private hop (so a public socket trusts nothing), any hop past the trusted public hop, or an entry that is not an address; a client-forged prefix before the real chain resolves to the visitor. It is never a hop count and reads no header other than X-Forwarded-For (X-Real-IP is not read; `req.ip` stays the one source). (Modifies 500-FR-009: one public hop is now trusted, by position, never by count.)
 
 _From 500-trust-railway-edge._
 
@@ -1367,3 +1368,5 @@ _From 1372-seed-restores-accounts._
 - `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
 - `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
 - `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
+- `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
+- `500-FR-009` — superseded by `500-FR-017` (2026-10-24)

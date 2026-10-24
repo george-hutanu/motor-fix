@@ -9,5 +9,6 @@ module.exports = {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   // ts-jest grows a worker's heap suite by suite; recycle it before it runs out.
-  workerIdleMemoryLimit: '1536MB',
+  // JEST_IDLE_MEMORY (set by lifecycle.mjs check) overrides it.
+  workerIdleMemoryLimit: process.env['JEST_IDLE_MEMORY'] || '1536MB',
 };
