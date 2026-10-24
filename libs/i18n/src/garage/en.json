@@ -31,6 +31,9 @@
     "saveFailed": "We could not save. Try again.",
     "title": "Features"
   },
+  "home": {
+    "mechanic": "Your jobs will appear here."
+  },
   "invite": {
     "canAnswerQuotes": "Can answer quote requests",
     "cancel": "Cancel",

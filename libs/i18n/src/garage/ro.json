@@ -31,6 +31,9 @@
     "saveFailed": "Nu am putut salva. Încearcă din nou.",
     "title": "Funcții"
   },
+  "home": {
+    "mechanic": "Lucrările tale vor apărea aici."
+  },
   "invite": {
     "canAnswerQuotes": "Poate răspunde la cererile de ofertă",
     "cancel": "Anulează",
