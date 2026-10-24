@@ -5,11 +5,25 @@ import { dirname, join, relative } from 'node:path';
 const root = join(__dirname, '..');
 const jestBin = require.resolve('jest/bin/jest');
 const INTEGRATION = /\.integration\.spec\.ts$/;
+// A read of a service URL from process.env, bracket, dot or destructured; an
+// assignment or a delete only fakes the variable and needs no service. A name
+// ends where no identifier character follows; each alternative is linear.
+const KEY = '(DATABASE_URL|REDIS_URL)';
+const END = String.raw`(?![\p{ID_Continue}$])`;
+// One character of an entry, or a parenthesised call that may hold commas.
+const ENTRY = String.raw`(?:[^{}(),]|\((?:[^{}()]|\([^{}()]*\))*\))`;
 const NEEDS_SERVICES = new RegExp(
   [
-    String.raw`process\.env\[['"](DATABASE_URL|REDIS_URL)['"]\]`,
-    String.raw`['"]seed\.ts['"]`,
+    String.raw`(?<!delete\s+)process\.env\[['"]${KEY}['"]\](?!\s*=[^=])`,
+    String.raw`(?<!delete\s+)process\.env\.${KEY}${END}(?!\s*=[^=])`,
+    // Anchored at the brace: each brace's scan stops at the next brace, so
+    // the scans never overlap, and the key is looked for only inside a
+    // destructuring from process.env, after a comma outside any call of a
+    // default (two levels of parentheses).
+    String.raw`\{(?=[^{}]*\}\s*=\s*process\.env${END})(?=(?:${ENTRY}*,)*\s*${KEY}${END}\s*[:=,}])`,
+    String.raw`(?<![\p{ID_Continue}$-])seed\.ts${END}`,
   ].join('|'),
+  'u',
 );
 
 function listTests(project: string, suite?: string) {
@@ -50,13 +64,32 @@ function specFiles(dir: string): string[] {
   });
 }
 
+function projectOf(file: string): string | undefined {
+  for (let dir = dirname(file); dir.startsWith(root); dir = dirname(dir))
+    if (existsSync(join(dir, 'project.json'))) return dir;
+  return undefined;
+}
+
 // Only a project with a Jest config splits into JEST_SUITE's unit and
 // integration suites; apps/web-e2e's specs run under Playwright in the E2E job.
 function runByJest(file: string): boolean {
-  for (let dir = dirname(file); dir.startsWith(root); dir = dirname(dir))
-    if (existsSync(join(dir, 'project.json')))
-      return readdirSync(dir).some((name) => name.startsWith('jest.config.'));
-  return false;
+  const project = projectOf(file);
+  return (
+    project !== undefined &&
+    readdirSync(project).some((name) => name.startsWith('jest.config.'))
+  );
+}
+
+// Every project holding an integration spec must honour the split, whatever
+// runs it: one that stops running them through Jest fails here by name.
+function integrationProjects(): string[] {
+  const projects = ['apps', 'libs']
+    .flatMap((dir) => specFiles(join(root, dir)))
+    .filter((file) => INTEGRATION.test(file))
+    .map((file) => projectOf(file))
+    .filter((project) => project !== undefined)
+    .map((project) => relative(root, project));
+  return [...new Set(projects)].sort();
 }
 
 function misnamedIntegrationSpec(file: string, source: string): boolean {
@@ -66,7 +99,16 @@ function misnamedIntegrationSpec(file: string, source: string): boolean {
 }
 
 describe('the unit and integration suites', () => {
-  for (const project of ['apps/api', 'libs/domain']) {
+  const projects = integrationProjects();
+
+  // @traces 438-FR-001 438-FR-002
+  it('derives the projects from where the integration specs are', () => {
+    expect(projects).toEqual(
+      expect.arrayContaining(['apps/api', 'libs/domain']),
+    );
+  });
+
+  for (const project of projects) {
     describe(project, () => {
       const all = listTests(project);
       const unit = listTests(project, 'unit');
@@ -107,6 +149,7 @@ describe('the unit and integration suites', () => {
     expect(run.stderr).toContain('JEST_SUITE');
   });
 
+  // @traces 438-FR-004
   it('names every spec that needs PostgreSQL, Redis or the seed as an integration spec', () => {
     const misnamed = ['apps', 'libs', 'scripts']
       .flatMap((dir) => specFiles(join(root, dir)))
@@ -117,6 +160,49 @@ describe('the unit and integration suites', () => {
       .map((file) => relative(root, file));
 
     expect(misnamed).toEqual([]);
+  });
+
+  // @traces 438-FR-003
+  it.each([
+    "process.env['DATABASE_URL']",
+    'process.env["REDIS_URL"]',
+    'const url = process.env.DATABASE_URL;',
+    "if (!process.env.REDIS_URL) throw new Error('no Redis');",
+    'const { DATABASE_URL } = process.env;',
+    'const { REDIS_URL: redis } = process.env;',
+    'const { NODE_ENV, DATABASE_URL } = process.env;',
+    'const {\n  NODE_ENV,\n  REDIS_URL,\n} = process.env;',
+    "const { DATABASE_URL = 'postgres://localhost' } = process.env;",
+    '// never read process.env.DATABASE_URL here',
+    "spawnSync(process.execPath, [join(domain, 'seed.ts')]);",
+    "execSync('npx tsx prisma/seed.ts');",
+  ])('reports a unit spec that reads %j', (source) => {
+    expect(
+      misnamedIntegrationSpec(join(root, 'apps/api/src/x.spec.ts'), source),
+    ).toBe(true);
+  });
+
+  it.each([
+    'process.env.NODE_ENV',
+    'const { PORT } = process.env;',
+    'const { url: DATABASE_URL } = config;',
+    'const { url: DATABASE_URL } = process.env;',
+    "const name = 'DATABASE_URL';",
+    '// DATABASE_URL comes from the stack',
+    "process.env.DATABASE_URL = 'postgres://fake';",
+    "process.env['REDIS_URL'] = 'redis://fake';",
+    'delete process.env.DATABASE_URL;',
+    "delete process.env['REDIS_URL'];",
+    'delete  process.env.DATABASE_URL;',
+    'delete\n    process.env.REDIS_URL;',
+    'process.env.DATABASE_URL$x',
+    'process.env.DATABASE_URL_SHADOW',
+    "process.env['DATABASE_URL_TEST']",
+    'const { API_PORT, ...rest } = process.env;',
+  ])('leaves a unit spec alone that only has %j', (source) => {
+    expect(
+      misnamedIntegrationSpec(join(root, 'apps/api/src/x.spec.ts'), source),
+    ).toBe(false);
   });
 
   it('leaves out the end-to-end specs, which Playwright runs and Jest never does', () => {
