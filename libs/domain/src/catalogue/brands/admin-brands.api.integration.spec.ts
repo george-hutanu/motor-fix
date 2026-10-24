@@ -148,6 +148,8 @@ async function references(brandId: string) {
   return { car, works };
 }
 
+// The suite FR-021 asks for, against real PostgreSQL and Valkey.
+// @traces 105-FR-021
 describe('GET /admin/brands', () => {
   // @traces 105-FR-002
   it('lists every brand, active and retired, with its counts, by folded name', async () => {

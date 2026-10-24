@@ -591,6 +591,31 @@ describe('node scripts/structure-check.ts', () => {
 });
 
 describe('the repository', () => {
+  // @traces 105-FR-015
+  it("keeps the brand files in the catalogue module's brands folder", () => {
+    const tracked = execFileSync(
+      'git',
+      ['ls-files', '--', 'libs/domain/src/catalogue'],
+      { cwd: repo, encoding: 'utf8' },
+    )
+      .split('\n')
+      .filter((file) => /\/(admin-)?brands\.[^/]*$/.test(file));
+    const recorded: Baseline = JSON.parse(
+      readFileSync(join(repo, 'scripts/structure-baseline.json'), 'utf8'),
+    );
+
+    expect(tracked.length).toBeGreaterThan(0);
+    expect(
+      tracked.filter((f) => !f.startsWith('libs/domain/src/catalogue/brands/')),
+    ).toEqual([]);
+    expect(
+      recorded.submodules.filter((f) => f.includes('/catalogue/brand')),
+    ).toEqual([]);
+    expect(
+      scanRepo(repo).violations.filter((v) => v.file.includes('/brands/')),
+    ).toEqual([]);
+  });
+
   it('baselines exactly the violations it holds today', () => {
     const recorded = JSON.parse(
       readFileSync(join(repo, 'scripts/structure-baseline.json'), 'utf8'),
