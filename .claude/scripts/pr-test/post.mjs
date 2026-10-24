@@ -6,9 +6,11 @@
 // event is tried first and a COMMENT review that states the verdict is the
 // fallback; the commit status is what the gates read. Only GitHub's own
 // refusal ("Can not approve your own pull request", "... request changes on
-// your own pull request") falls back: any other failure, an HTTP 422 such as
-// a validation error included, is reported (`reviewError`, exit 1) once the
-// status and the description are written.
+// your own pull request") falls back, read from gh's stdout, where gh writes
+// GitHub's JSON error body (stderr holds only "gh: ... (HTTP 422)"): any other
+// failure, an HTTP 422 such as a validation error included, and a refused
+// COMMENT fallback, is reported with GitHub's message (`reviewError`, exit 1)
+// once the status and the description are written.
 //
 // The status names the run the report came from (`target_url`, from the
 // ci-run.json dispatch.mjs leaves beside report.json), so the merge gate can
@@ -66,8 +68,20 @@ export function replaceSection(body, heading, content) {
   return [...lines.slice(0, keep), content, "", ...lines.slice(end)].join("\n");
 }
 
+/** A failed `gh api` call's error: the stderr summary joined to the `errors` of the JSON body on stdout (see the header). */
+function ghError({ stdout = "", stderr = "" }) {
+  let errors = [];
+  try {
+    const parsed = JSON.parse(stdout);
+    errors = (Array.isArray(parsed?.errors) ? parsed.errors : []).map((e) => (typeof e === "string" ? e : e?.message)).filter((e) => typeof e === "string" && e);
+  } catch {
+    // not a JSON error body: the summary on stderr is all there is
+  }
+  return [stderr.trim(), ...errors].filter(Boolean).join(": ");
+}
+
 // GitHub's message for a review of the author's own PR; any other 422 is a real error.
-const ownPrRefusal = (stderr) => /\byour own pull request\b/i.test(stderr);
+const ownPrRefusal = (error) => /\byour own pull request\b/i.test(error);
 
 const RUN_URL = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/actions\/runs\/\d+$/;
 
@@ -106,11 +120,11 @@ export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, runUrl
     });
   let posted = wanted;
   let result = review(wanted);
-  if (result.code !== 0 && ownPrRefusal(result.stderr)) {
+  if (result.code !== 0 && ownPrRefusal(ghError(result))) {
     posted = "COMMENT";
     result = review("COMMENT");
   }
-  const reviewError = result.code === 0 ? null : result.stderr.trim();
+  const reviewError = result.code === 0 ? null : ghError(result) || `gh exited ${result.code}`;
 
   if (status) setStatus(gh, repo, sha, status);
 
@@ -143,7 +157,7 @@ function setStatus(gh, repo, sha, status) {
     `description=${status.description}`,
     ...(status.targetUrl ? ["-f", `target_url=${status.targetUrl}`] : []),
   ]);
-  if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${set.stderr.trim()}`);
+  if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${ghError(set)}`);
 }
 
 function flag(argv, name) {
