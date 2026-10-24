@@ -6,15 +6,18 @@ const root = join(__dirname, '..');
 const jestBin = require.resolve('jest/bin/jest');
 const INTEGRATION = /\.integration\.spec\.ts$/;
 // A read of a service URL from process.env, bracket, dot or destructured; an
-// assignment or a delete only fakes the variable and needs no service.
+// assignment or a delete only fakes the variable and needs no service. A name
+// ends where no identifier character follows; each alternative is linear.
 const KEY = '(DATABASE_URL|REDIS_URL)';
+const END = String.raw`(?![\p{ID_Continue}$])`;
 const NEEDS_SERVICES = new RegExp(
   [
-    String.raw`(?<!delete\s)process\.env\[['"]${KEY}['"]\](?!\s*=[^=])`,
-    String.raw`(?<!delete\s)process\.env\.${KEY}\b(?!\s*=[^=])`,
-    String.raw`\{(?:[^}]*,)?\s*${KEY}\b\s*(?:[:=][^,}]*)?(?:,[^}]*)?\}\s*=\s*process\.env\b`,
-    String.raw`['"]seed\.ts['"]`,
+    String.raw`(?<!delete\s+)process\.env\[['"]${KEY}['"]\](?!\s*=[^=])`,
+    String.raw`(?<!delete\s+)process\.env\.${KEY}${END}(?!\s*=[^=])`,
+    String.raw`[{,]\s*${KEY}${END}\s*(?:[:=][^,{}]*)?(?:,[^{}]*)?\}\s*=\s*process\.env${END}`,
+    String.raw`(?<![\p{ID_Continue}$-])seed\.ts${END}`,
   ].join('|'),
+  'u',
 );
 
 function listTests(project: string, suite?: string) {
@@ -90,14 +93,16 @@ function misnamedIntegrationSpec(file: string, source: string): boolean {
 }
 
 describe('the unit and integration suites', () => {
+  const projects = integrationProjects();
+
   // @traces 438-FR-001 438-FR-002
   it('derives the projects from where the integration specs are', () => {
-    expect(integrationProjects()).toEqual(
+    expect(projects).toEqual(
       expect.arrayContaining(['apps/api', 'libs/domain']),
     );
   });
 
-  for (const project of integrationProjects()) {
+  for (const project of projects) {
     describe(project, () => {
       const all = listTests(project);
       const unit = listTests(project, 'unit');
@@ -164,6 +169,7 @@ describe('the unit and integration suites', () => {
     "const { DATABASE_URL = 'postgres://localhost' } = process.env;",
     '// never read process.env.DATABASE_URL here',
     "spawnSync(process.execPath, [join(domain, 'seed.ts')]);",
+    "execSync('npx tsx prisma/seed.ts');",
   ])('reports a unit spec that reads %j', (source) => {
     expect(
       misnamedIntegrationSpec(join(root, 'apps/api/src/x.spec.ts'), source),
@@ -181,6 +187,9 @@ describe('the unit and integration suites', () => {
     "process.env['REDIS_URL'] = 'redis://fake';",
     'delete process.env.DATABASE_URL;',
     "delete process.env['REDIS_URL'];",
+    'delete  process.env.DATABASE_URL;',
+    'delete\n    process.env.REDIS_URL;',
+    'process.env.DATABASE_URL$x',
     'process.env.DATABASE_URL_SHADOW',
     "process.env['DATABASE_URL_TEST']",
     'const { API_PORT, ...rest } = process.env;',
