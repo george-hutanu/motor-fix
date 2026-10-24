@@ -13,6 +13,7 @@ features:
   - 1363-throughput-fixes
   - 485-blocked-strips-stage
   - 1153-debt-issue-st-id
+  - 487-unblock-prior-status
 ---
 
 # Capability: Tracker
@@ -152,6 +153,22 @@ _From 1153-debt-issue-st-id._
 ### 1153-FR-004 — The retitle MUST be a one-off tracker write performed in this task with the existing `gh` tooling, adding no script, command or dependency to the repository; its evidence is `specs/1153-debt-issue-st-id/retitle.md`, one line per issue (`#<n>: <old title> → <new title>`), plus a line for every issue skipped and why.
 
 _From 1153-debt-issue-st-id._
+
+### 487-FR-001 — `unblock` of a Blocked story with no recorded prior status reads the feature PR's state: a draft PR returns to the stage its label shows (`planning` → Planning, `in development` → Implementing; neither → Implementing).
+
+_From 487-unblock-prior-status._
+
+### 487-FR-002 — A ready (non-draft) PR returns to QA.
+
+_From 487-unblock-prior-status._
+
+### 487-FR-003 — The stage labels returned match the status chosen.
+
+_From 487-unblock-prior-status._
+
+### 487-FR-004 — With no recorded prior and no PR to read, the fallback stays Implementing; a recorded prior still wins over the PR.
+
+_From 487-unblock-prior-status._
 
 ## Retired
 
