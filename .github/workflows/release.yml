@@ -190,7 +190,6 @@ jobs:
       # The staging MCP server's public address, ending in /mcp.
       MCP_URL: ${{ vars.MCP_URL }}
       RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
-      KEY_NAME: release-staging-${{ github.run_id }}-${{ github.run_attempt }}
       GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
     steps:
       - uses: actions/checkout@v7
@@ -198,9 +197,21 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # The end-to-end run signs in as the seed accounts, so the api's
+      # pre-deploy step on staging seeds after the migrations: it adds the
+      # seed accounts that are missing and removes the requests they sent in
+      # the last day, so the driver's daily limit (20) starts unused. The
+      # deploy first writes SEED_PASSWORD onto the staging api service, in a
+      # Railway API request's body only; a failed seed fails the api's
+      # deployment and the deploy restores the services. Nothing reaches into
+      # a container: Railway refuses its SSH keys to this token.
       - name: Deploy and wait for each service's health check
+        env:
+          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
         # exec: the runner's cancel signals reach node, not a waiting shell.
-        run: exec node scripts/railway-deploy.ts staging
+        run: |
+          [ -z "$SEED_PASSWORD" ] || printf '::add-mask::%s\n' "$SEED_PASSWORD"
+          exec node scripts/railway-deploy.ts staging
       # Every cached page goes once the new build serves, so none keeps the
       # old build's file names. Without the key (before go-live) it is a
       # notice; a refused purge only warns, as pages age out in 60 s anyway.
@@ -235,44 +246,6 @@ jobs:
           missing=$(for v in RAILWAY_SERVICE_MCP MCP_URL; do [ -n "${!v}" ] || printf '%s, ' "$v"; done)
           [ -z "$missing" ] || { echo "::notice::MCP sign-in check skipped (unset: ${missing%, })"; exit 0; }
           node scripts/mcp-smoke.ts "$MCP_URL"
-      # The end-to-end run signs in as the seed accounts, and only a reset used
-      # to seed staging, so an account added since the last one was missing.
-      # The seed only adds what is missing, and removes the requests the seed
-      # accounts sent in the last day, so the driver's daily limit (20) is not
-      # used up by earlier runs. Staging's Postgres has no public
-      # address: the seed runs inside the api over `railway ssh`, as in
-      # reset-staging.yml, whose script it shares.
-      - name: Install the Railway CLI
-        run: npm install --global @railway/cli@5.63.1
-      - name: Register an SSH key for this run
-        run: |
-          mkdir -p -m 700 ~/.ssh
-          ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
-          railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
-          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
-          chmod 600 ~/.ssh/config
-      - name: Seed staging inside the api
-        env:
-          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
-        # The password travels on stdin, base64 and masked, never as an argument.
-        run: |
-          if [ -z "$SEED_PASSWORD" ]; then
-            echo 'The staging environment has no SEED_PASSWORD secret.' >&2
-            exit 1
-          fi
-          encoded=$(printf %s "$SEED_PASSWORD" | base64 -w0)
-          echo "::add-mask::$encoded"
-          {
-            printf 'SEED_PASSWORD=$(printf %%s %s | base64 -d)\n' "$encoded"
-            printf 'export SEED_PASSWORD\n'
-            printf 'export SEED_ONLY=1\n'
-            cat scripts/reset-staging.sh
-          } | railway ssh --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_API" -- sh -s
-      - name: Remove the SSH key
-        if: always()
-        run: |
-          [ -f ~/.ssh/id_ed25519.pub ] || exit 0
-          railway ssh keys remove "$KEY_NAME"
       - run: npm ci
       - timeout-minutes: 10
         # apt hangs at random: 180 s an attempt, three attempts. apt runs under sudo, out of

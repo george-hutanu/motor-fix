@@ -1,12 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { GaragesService } from '@motor-fix/data-access';
+import { GaragesService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
 import { InviteStaff } from './invite-staff';
+import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -21,6 +22,14 @@ class Host {
 let send: jest.Mock;
 let resend: jest.Mock;
 let result: Promise<OverlayResult<'sent'>>;
+let current: ReturnType<typeof signal<MeDto | null>>;
+
+const owner = (features: Record<string, boolean> = {}) =>
+  ({
+    garageAccess: [{ features, garageId: 'garage-1', role: 'owner' }],
+    garageId: 'garage-1',
+    role: 'garage',
+  }) as unknown as MeDto;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -29,11 +38,16 @@ async function settle() {
   }
 }
 
-async function open(language: 'ro' | 'en' = 'ro') {
+async function open(
+  language: 'ro' | 'en' = 'ro',
+  features: Record<string, boolean> = {},
+) {
   send = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
   resend = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
+  current = signal<MeDto | null>(owner(features));
   TestBed.configureTestingModule({
     providers: [
+      { provide: Session, useValue: { current } },
       {
         provide: GaragesService,
         useValue: {
@@ -268,6 +282,65 @@ describe('the invite dialog', () => {
     for (const label of TICKS) expect(has(label)).toBe(false);
   });
 
+  // @traces 531-FR-003
+  it('offers a mechanic, chosen, while the garage has the team on', async () => {
+    await open('ro', { team_mechanics: true });
+
+    expect(field('Mecanic').checked).toBe(true);
+    for (const label of TICKS) expect(has(label)).toBe(true);
+  });
+
+  // @traces 531-FR-003
+  it('never offers a mechanic while the garage has the team off, and sends a receptionist at once', async () => {
+    await open('ro', { team_mechanics: false });
+
+    expect(has('Mecanic')).toBe(false);
+    expect(field('Recepționer').checked).toBe(true);
+    for (const label of TICKS) expect(has(label)).toBe(false);
+
+    await fill();
+    button('Trimite invitația')?.click();
+    await settle();
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith({
+      body: {
+        email: 'elena@example.ro',
+        kind: 'receptionist',
+        name: 'Elena Stan',
+      },
+      garageId: 'garage-1',
+    });
+  });
+
+  // @traces 531-FR-003
+  it('withdraws a mechanic while open when the reread account has the team off', async () => {
+    await open('ro', { team_mechanics: true });
+    expect(field('Mecanic').checked).toBe(true);
+
+    current.set(owner({ team_mechanics: false }));
+    await settle();
+
+    expect(has('Mecanic')).toBe(false);
+    expect(field('Recepționer').checked).toBe(true);
+    for (const label of TICKS) expect(has(label)).toBe(false);
+  });
+
+  // @traces 531-FR-003
+  it('reads the switch of the garage it invites to, not of another membership', async () => {
+    await open('ro');
+    current.set({
+      ...owner(),
+      garageAccess: [
+        { features: { team_mechanics: false }, garageId: 'garage-2' },
+        { features: {}, garageId: 'garage-1' },
+      ],
+    } as unknown as MeDto);
+    await settle();
+
+    expect(field('Mecanic').checked).toBe(true);
+  });
+
   it("says so when the person is already in the garage's team", async () => {
     await open();
     send.mockRejectedValueOnce(
@@ -299,6 +372,15 @@ describe('the invite dialog', () => {
     await settle();
 
     expect(panel().querySelector('b')).toBeNull();
+  });
+
+  // @traces 531-FR-003 531-FR-004
+  it('reads English with the team off, from the texts it already had', async () => {
+    await open('en', { team_mechanics: false });
+
+    expect(has('Mechanic')).toBe(false);
+    expect(field('Receptionist').checked).toBe(true);
+    expect(text()).not.toContain('garage.invite.');
   });
 
   // @traces 131-FR-013

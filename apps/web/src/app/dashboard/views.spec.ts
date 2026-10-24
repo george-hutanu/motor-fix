@@ -582,6 +582,34 @@ describe('the dashboard view lists', () => {
     ).toEqual(paths('garage', OWNER));
   });
 
+  // @traces 531-FR-001
+  it('drops Programări while the garage has day sheets off, and keeps it while they are on or unknown', () => {
+    const shown = (features: Record<string, boolean>) =>
+      allowedViews('garage', OWNER, features).map((v) => v.path);
+
+    expect(shown({ day_sheets: false })).not.toContain('schedule');
+    expect(shown({ day_sheets: false })).toEqual(
+      paths('garage', OWNER).filter((path) => path !== 'schedule'),
+    );
+    expect(shown({ day_sheets: true })).toContain('schedule');
+    expect(shown({})).toContain('schedule');
+    expect(shown({ day_sheets: false, team_mechanics: false })).toEqual(
+      paths('garage', OWNER).filter(
+        (path) => path !== 'schedule' && path !== 'team',
+      ),
+    );
+  });
+
+  it('ties Programări to day sheets and Mecanici to the team, and no other garage view to a switch', () => {
+    expect(
+      Object.fromEntries(
+        DASHBOARDS.garage.views
+          .filter((view) => view.feature)
+          .map((view) => [view.path, view.feature]),
+      ),
+    ).toEqual({ schedule: 'day_sheets', team: 'team_mechanics' });
+  });
+
   // @traces 101-FR-007
   it('opens no garage view while the garage is a draft, and every allowed one once it is approved or suspended', () => {
     expect(allowedViews('garage', OWNER, {}, 'draft')).toEqual([]);
