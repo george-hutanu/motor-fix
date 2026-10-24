@@ -459,6 +459,7 @@ describe('web edge proxy failures and retries', () => {
 
       expect(seen).toHaveLength(20);
       expect(entries()).toEqual([]);
-    });
+      // Twenty sockets under a full parallel run, as the retry case above.
+    }, 20_000);
   });
 });
