@@ -57,8 +57,11 @@ test.describe('a reviewed garage’s profile @seeded', () => {
        WHERE g.slug = 'atelier-test' AND r.text = $1`,
       [SEEDED],
     );
-    garageId = rows[0]?.garage as string;
-    reviewId = rows[0]?.review as string;
+    const [seeded] = rows;
+    if (!seeded)
+      throw new Error('the seeded review of atelier-test is missing');
+    garageId = seeded.garage;
+    reviewId = seeded.review;
   });
 
   test.afterAll(async () => {
@@ -85,10 +88,19 @@ test.describe('a reviewed garage’s profile @seeded', () => {
   });
 
   test('shows a review’s change without a reload', async ({ page }) => {
+    // The stream is open once its answer has come back: a request alone may
+    // still be refused (the visitors' streams share one address here) and
+    // retried after the message has gone out, which Redis does not replay.
+    const stream = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/live/public?') &&
+        r.url().includes('garages=') &&
+        r.ok(),
+    );
     await page.goto('/ro/garages/atelier-test');
     const reviews = section(page);
     await expect(reviews.getByText(SEEDED)).toBeVisible();
-    await page.waitForRequest(/\/api\/v1\/live\/public\?/);
+    await stream;
     let reloads = 0;
     page.on('framenavigated', (frame) => {
       if (frame === page.mainFrame()) reloads++;

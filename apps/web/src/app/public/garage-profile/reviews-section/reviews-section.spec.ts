@@ -208,7 +208,7 @@ describe('the reviews section on a garage profile', () => {
 
     const heading = section().querySelector('h2');
     expect(heading?.textContent?.trim()).toBe('Ce spun șoferii');
-    expect(section().getAttribute('aria-labelledby')).toBe(heading?.id);
+    expect(section().getAttribute('aria-label')).toBe('Ce spun șoferii');
   });
 
   it('shows the stored rating with a comma, the stored count and the five rows from five stars to one', async () => {
@@ -474,6 +474,39 @@ describe('the pages of the reviews section', () => {
 
     expect(reviews()).toHaveLength(21);
     expect(text()).not.toContain('Nu am putut încărca recenziile');
+  });
+});
+
+describe('the reviews section moved to another garage', () => {
+  beforeEach(() => configure());
+
+  it('reads the new garage’s first page, dropping the old pages and the old page still loading', async () => {
+    await shown({
+      ...PAGE,
+      items: Array.from({ length: 20 }, (_, i) => review(i + 1)),
+      total: 21,
+    });
+    button('Vezi mai multe')?.click();
+    await settle();
+
+    fixture.componentInstance.garageId.set('g-2');
+    await settle();
+    expect(reads[2]?.params).toEqual({ garageId: 'g-2', page: 1 });
+
+    await reads[2]?.answer({
+      ...PAGE,
+      items: [review(90, { text: 'Alt service.' })],
+      total: 1,
+    });
+    await reads[1]?.answer({
+      ...PAGE,
+      items: [review(21)],
+      page: 2,
+      total: 21,
+    });
+
+    expect(reviews().map((r) => r.dataset['liveId'])).toEqual(['r-90']);
+    expect(button('Vezi mai multe')).toBeUndefined();
   });
 });
 

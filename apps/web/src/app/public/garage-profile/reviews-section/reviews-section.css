@@ -79,15 +79,39 @@ p {
   border-top: 1px solid var(--mf-line);
 }
 
-.about,
-.by {
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-3);
+}
+
+/* The profile's chip (details-section.css), as the board draws it. */
+.about {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  max-width: 100%;
+  padding-inline: var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-panel-raised);
   font-size: var(--mf-size-small);
-  color: var(--mf-text-secondary);
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .score {
-  font-weight: 600;
+  font-family: var(--mf-font-label);
+  color: var(--mf-amber-ink);
+  white-space: nowrap;
+}
+
+.by {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .text {

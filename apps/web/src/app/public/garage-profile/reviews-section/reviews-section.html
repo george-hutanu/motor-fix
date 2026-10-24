@@ -1,4 +1,4 @@
-<h2 [id]="headingId">{{ 'public.garageProfile.reviewsSection.title' | t }}</h2>
+<h2>{{ 'public.garageProfile.reviewsSection.title' | t }}</h2>
 @if (view.value(); as page) {
   <div class="summary">
     <span class="figure" [mfLiveChange]="page.rating">{{ figure() }}</span>
@@ -21,15 +21,18 @@
   }
   @for (review of reviews(); track review.id) {
     <article class="review" [attr.data-live-id]="review.id">
-      @if (review.about) {
-        <p class="about">{{ review.about }}</p>
-      }
-      <p class="score">{{ review.score }}</p>
+      <div class="top">
+        @if (review.about) {
+          <span class="about">{{ review.about }}</span>
+        }
+        <span class="score">{{ review.score }}</span>
+      </div>
       @if (review.text) {
         <p class="text">{{ review.text }}</p>
       }
       <p class="by">
         <span class="author">{{ review.author }}</span>
+        <span aria-hidden="true">·</span>
         <span class="month">{{ review.month }}</span>
       </p>
     </article>

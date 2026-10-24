@@ -51,15 +51,13 @@ const SCORES = [
 const served = (garageId: string) =>
   makeStateKey<GarageReviewsPageDto>(`reviews:${garageId}`);
 
-let sections = 0;
-
 // The garage's reviews on its profile: the stored rating and count, how many
 // reviews gave each score, and the reviews newest first, 20 a page. It follows
 // the profile's own stream: a review or rating message reads the first page
 // again, dropping the pages loaded since, and a page still loading loses to it.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[attr.aria-labelledby]': 'headingId' },
+  host: { '[attr.aria-label]': 'label()' },
   imports: [LiveChange, TranslatePipe],
   selector: 'section[mf-reviews-section]',
   styleUrl: './reviews-section.css',
@@ -76,7 +74,9 @@ export class ReviewsSection implements OnInit {
   private readonly state = inject(TransferState);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  protected readonly headingId = `mf-reviews-${++sections}`;
+  protected readonly label = computed(() =>
+    this.i18n.t('public.garageProfile.reviewsSection.title'),
+  );
   protected view!: LiveView<GarageReviewsPageDto>;
   // The answer the server render handed over, standing in for the first read.
   private handed: GarageReviewsPageDto | undefined;
@@ -87,7 +87,7 @@ export class ReviewsSection implements OnInit {
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
 
-  private readonly page = computed(() => this.view?.value());
+  private readonly page = computed(() => this.view.value());
   protected readonly figure = computed(() => {
     const rating = this.page()?.rating;
     return typeof rating === 'number'
@@ -133,9 +133,15 @@ export class ReviewsSection implements OnInit {
       };
     });
   });
+  // A page past the last answers no items with the real total, so the pages
+  // read, not the rows shown, say whether another one remains.
   protected readonly hasMore = computed(() => {
     const page = this.page();
-    return Boolean(page) && this.reviews().length < (page?.total ?? 0);
+    if (!page) return false;
+    return (
+      this.reviews().length < page.total &&
+      this.pages() * page.pageSize < page.total
+    );
   });
 
   ngOnInit(): void {

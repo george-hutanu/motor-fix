@@ -346,7 +346,7 @@ describe('the garage profile', () => {
     );
     const heading = slot?.querySelector('h2');
     expect(heading?.textContent?.trim()).toBe('Ce spun șoferii');
-    expect(slot?.getAttribute('aria-labelledby')).toBe(heading?.id);
+    expect(slot?.getAttribute('aria-label')).toBe('Ce spun șoferii');
     expect(slot?.textContent).toContain('Încă nu are recenzii.');
   });
 
