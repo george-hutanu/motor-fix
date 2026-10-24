@@ -5,13 +5,13 @@ import express, {
 } from 'express';
 import request from 'supertest';
 
-import { TRUSTED_PROXIES } from './bootstrap';
+import { trustProxy } from './trust-proxy';
 
 // supertest always connects over loopback, so the hop that reached the API is
 // stood in for by a header the test sets and the app reads before Express does.
 function appSeenFrom() {
   const app = express();
-  app.set('trust proxy', TRUSTED_PROXIES);
+  app.set('trust proxy', trustProxy);
   app.use((req: Request, _res: Response, next: NextFunction) => {
     Object.defineProperty(req.socket, 'remoteAddress', {
       configurable: true,
@@ -34,29 +34,29 @@ function appSeenFrom() {
 describe('the caller address behind Railway and the web edge', () => {
   const ip = appSeenFrom();
 
-  // @traces 500-FR-008
+  // @traces 500-FR-016
   it('is the visitor when the web edge forwards a chain ending at Railway', async () => {
     expect(await ip('fd12::1', '86.125.92.213, 100.64.1.2')).toBe(
       '86.125.92.213',
     );
   });
 
-  // @traces 500-FR-008
+  // @traces 500-FR-016
   it('is the visitor when Railway calls the API itself', async () => {
     expect(await ip('100.64.1.2', '86.125.92.213')).toBe('86.125.92.213');
   });
 
-  // @traces 500-FR-009
+  // @traces 500-FR-017
   it('stays the visitor when the visitor forges an earlier hop', async () => {
-    expect(await ip('fd12::1', '1.2.3.4, 86.125.92.213, 100.64.1.2')).toBe(
-      '86.125.92.213',
-    );
+    expect(
+      await ip('fd12::1', '1.2.3.4, 86.125.92.213, 95.173.1.1, 100.64.1.2'),
+    ).toBe('86.125.92.213');
   });
 
-  // @traces 500-FR-009
-  it('does not trust an address just outside Railway', async () => {
-    expect(await ip('fd12::1', '86.125.92.213, 100.128.0.1')).toBe(
-      '100.128.0.1',
+  // @traces 500-FR-017
+  it('trusts an address just outside Railway only as the one public hop', async () => {
+    expect(await ip('fd12::1', '86.125.92.213, 95.173.1.1, 100.128.0.1')).toBe(
+      '95.173.1.1',
     );
   });
 
