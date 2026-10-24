@@ -130,6 +130,28 @@ export class Session {
   // its own, and the deletion signs the tab out itself.
   private deleting = false;
   private loading: Promise<MeDto | null> | null = null;
+  // The account re-read in flight, which a 404's re-read joins.
+  private reloading: Promise<void> | null = null;
+  // The garage a re-read after a 404 under its path found no longer held, for
+  // the account and role that lost it.
+  private readonly lostGarage = signal<{
+    accountId: string;
+    garageId: string;
+    role: MeDto['role'];
+  } | null>(null);
+  // The signed-in role's garage is gone: a sign-out, another role or the
+  // garage held again ends it.
+  readonly garageGone = computed(() => {
+    const lost = this.lostGarage();
+    const me = this.current();
+    return (
+      !!lost &&
+      !!me &&
+      me.id === lost.accountId &&
+      me.role === lost.role &&
+      !me.garageAccess.some((garage) => garage.garageId === lost.garageId)
+    );
+  });
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
@@ -403,7 +425,29 @@ export class Session {
 
   // What the server now says about the signed-in account; the old answer
   // stays on screen until then, and stays when the server does not answer.
-  async reload(): Promise<void> {
+  reload(): Promise<void> {
+    const reading = this.reread().finally(() => {
+      if (this.reloading === reading) this.reloading = null;
+    });
+    this.reloading = reading;
+    return reading;
+  }
+
+  // One re-read for every 404 that arrives while one is in flight.
+  reloadOnce(): Promise<void> {
+    return this.reloading ?? this.reload();
+  }
+
+  // A 404 under the garage's own path, after the re-read: when the account
+  // no longer holds the garage, the dashboard says so.
+  loseGarage(garageId: string) {
+    const me = this.current();
+    if (!me || me.garageAccess.some((garage) => garage.garageId === garageId))
+      return;
+    this.lostGarage.set({ accountId: me.id, garageId, role: me.role });
+  }
+
+  private async reread(): Promise<void> {
     if (!this.current()) return;
     const generation = this.generation;
     // A sign-in or a role switch meanwhile: this answer is for the old one.

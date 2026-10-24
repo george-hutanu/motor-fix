@@ -124,6 +124,7 @@ async function open(url: string) {
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           shown: current,
           signOut: jest.fn(),
           token: () => 'access',

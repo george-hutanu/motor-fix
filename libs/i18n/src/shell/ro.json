@@ -114,6 +114,11 @@
     "sending": "Se trimite…"
   },
   "frame": {
+    "access": {
+      "garage": "Nu mai ai acces la acest service",
+      "home": "Spre pagina principală",
+      "section": "Nu mai ai acces la această secțiune."
+    },
     "addCar": "Adaugă o mașină",
     "admin": {
       "city": {

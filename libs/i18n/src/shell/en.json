@@ -112,6 +112,11 @@
     "sending": "Sending…"
   },
   "frame": {
+    "access": {
+      "garage": "You no longer have access to this garage",
+      "home": "To the home page",
+      "section": "You no longer have access to this section."
+    },
     "addCar": "Add a car",
     "admin": {
       "city": {

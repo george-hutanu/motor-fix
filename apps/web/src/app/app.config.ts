@@ -21,6 +21,7 @@ import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
+import { garageGoneInterceptor } from './dashboard/garage-gone.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
@@ -31,7 +32,10 @@ export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([authInterceptor, garageGoneInterceptor]),
+    ),
     provideRouter(routes, withInMemoryScrolling()),
     provideViewScrolling(),
     provideI18n(),
