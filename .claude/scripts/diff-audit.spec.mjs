@@ -104,6 +104,16 @@ describe('diff-audit import-extension', () => {
     assert.equal(out.length, 1);
     assert.match(out[0], /'\.\/c' needs the literal \.js or \.ts extension under nodenext/);
   });
+
+  // @traces 471-FR-006
+  it('accepts .ts specifiers in a nodenext project that only rewrites relative import extensions', () => {
+    write('scripts/tsconfig.json', { extends: '../tsconfig.base.json', compilerOptions: { module: 'nodenext', moduleResolution: 'nodenext', rewriteRelativeImportExtensions: true } });
+    assert.deepEqual(resolveImports(repo, 'scripts/a.ts'), { style: 'nodenext', tsExtensions: true });
+    write('scripts/a.ts', "import { b } from './b.ts';\nimport { c } from './c';\n");
+    const out = audit();
+    assert.equal(out.length, 1);
+    assert.match(out[0], /'\.\/c' needs the literal \.js or \.ts extension under nodenext/);
+  });
 });
 
 describe('diff-audit dead-export', () => {

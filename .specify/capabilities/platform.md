@@ -110,6 +110,12 @@ features:
   - 1370-release-seed-no-ssh
   - 961-require-agent-review
   - 1179-supply-chain-guards
+  - 1373-seed-status-identity
+  - 447-own-pr-refusal
+  - 1376-pr-test-local-boot
+  - 1377-own-pr-422-fallback
+  - 438-test-suites-projects
+  - 471-crlf-harness-tidy
 ---
 
 # Capability: Platform
@@ -226,9 +232,9 @@ _From 1175-valkey._
 
 _From 1179-supply-chain-guards._
 
-### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
+### 1373-FR-001 — The api's Railway pre-deploy command MUST hold no shell syntax (no `&&`, `;`, `|`, quotes or `NAME=value` prefix): it MUST be `sh scripts/api-pre-deploy.sh <environment>`, a script in the api image that runs `npx prisma migrate deploy`, then `node scripts/monitor-password.ts`, then, on `staging` only, `SEED_ONLY=1 sh scripts/reset-staging.sh`, stopping at the first step that fails with its exit code; any other environment argument is refused with a non-zero exit before any step (modifies `1370-FR-001`).
 
-_From 1370-release-seed-no-ssh._
+_From 1373-seed-status-identity._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -1191,9 +1197,9 @@ _From 854-precompact-pr-signal._
 
 _From 850-dispatch-test-timeouts._
 
-### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
+### 471-FR-005 — `trace-matrix.mjs` counts only the FRs a spec declares on a `- **FR-XXX**:` line, with the same anchor as `status.mjs`, `impact.mjs` and `retro-evidence.mjs` (one shared helper); an FR named only in prose, or prefixed by a number and a hyphen (`NNN-FR-XXX`, as a Spec Delta names another feature's), is not counted, and trace-matrix and status give the same total.
 
-_From 499-trace-matrix-delta-ids._
+_From 471-crlf-harness-tidy._
 
 ### 884-FR-001 — The web server MUST compress its own responses — the static files it serves (scripts, stylesheets, fonts) and the server-rendered HTML — for a client whose `Accept-Encoding` includes an encoding the server produces (gzip at least), MUST name the encoding and carry `Vary: Accept-Encoding` on the response and MUST send the uncompressed bytes to a client that accepts none. The one-year public cache header on content-hashed static files MUST stay as it is today.
 
@@ -2804,6 +2810,51 @@ _From 1179-supply-chain-guards._
 ### 1179-FR-004 — The state of the repository's secret scanning and push protection MUST be checked (`gh api repos/george-hutanu/motor-fix`) and recorded; when either is off, the story gets a needs-confirmation question for the owner, and no setting is changed by the agent. The question does not hold the PR: FR-001..003 merge on green CI, and the story waits on the owner's answer instead of going to Done.
 
 _From 1179-supply-chain-guards._
+### 1377-FR-001 — A review refused with HTTP 422 whose body (stdout or stderr) carries GitHub's own-PR refusal ("Can not approve your own pull request", "Can not request changes on your own pull request") is posted again as a COMMENT review with the same body; `reviewError` is null and post.mjs exits 0.
+
+_From 1377-own-pr-422-fallback._
+
+### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-003 — `judgeProvenance` MUST judge a person-written `agent-review` success whose `target_url` names a run by the same run rules as a workflow-written one (PR QA workflow, completed, success, this commit, dispatched on the default branch or a `pull_request` run on a PR that leaves `pr-qa.yml` alone), refusing a `pull_request` run on a PR that changes `pr-qa.yml`; a person-written success that names no run stays accepted. `readProvenance` MUST read the named run for a person's status too, and only a run of this repository (the `target_url`'s owner and name equal to the repository's), so a status naming another repository's run is refused as naming no run.
+
+_From 447-own-pr-refusal._
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
+
+### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+
+### 1377-FR-003 — When the COMMENT fallback is itself refused, that refusal is the `reviewError` and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+### 438-FR-001 — `scripts/test-suites.spec.ts` MUST derive the projects whose unit/integration split it asserts from the repository: the project (nearest ancestor holding a `project.json`) of every `*.integration.spec.ts` under `apps/` or `libs/` (outside `node_modules` and `test-output`), each once, sorted; the fixed `['apps/api', 'libs/domain']` goes. For each derived project the four existing assertions hold (every spec runs with no suite chosen, the unit suite holds no integration spec, the integration suite holds only integration specs, the two suites partition the whole), so a project whose Jest config does not honour `JEST_SUITE` fails the spec by name.
+
+_From 438-test-suites-projects._
+
+### 438-FR-002 — The spec MUST assert the derived list itself as a superset: it is non-empty and contains `apps/api` and `libs/domain` (the two the spec checked until now), so an empty or broken derivation cannot pass vacuously. The full list is observed, not asserted (on `main`: `apps/api`, `apps/mcp`, `apps/worker`, `libs/domain`).
+
+_From 438-test-suites-projects._
+
+### 438-FR-003 — The 435-FR-008 guard MUST report a spec, run by Jest and not named `*.integration.spec.ts`, whose source reads `DATABASE_URL` or `REDIS_URL` from `process.env` in any of: the bracket form (`process.env['DATABASE_URL']`, either quote), the dot form (`process.env.DATABASE_URL`), or a destructuring from `process.env` whose braces name the key in key position, alone, among other keys, renamed (`DATABASE_URL: url`), with a default (`DATABASE_URL = 'x'`) or across lines; and a source that names `seed.ts` as a file (quoted, or inside a command such as `tsx prisma/seed.ts`). It MUST NOT report a longer identifier (`DATABASE_URL_TEST`, `DATABASE_URL$x`, `DATABASE_URLé`: any identifier character, `$` and non-ASCII letters included, continues the name), another variable, an assignment (`process.env.DATABASE_URL = 'x'`) or `delete`, the name in value position (`{ url: DATABASE_URL }`), or the bare name outside a `process.env` expression; a comment holding the whole expression is reported (raw text, no comment stripping). A `delete` separated from `process.env` by any whitespace, newlines included, is not a read. The guard decides any source in time linear in its length (no backtracking blow-up on unclosed braces).
+
+_From 438-test-suites-projects._
 
 ## Retired
 
@@ -2906,5 +2957,8 @@ _From 1179-supply-chain-guards._
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
+- `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
 - `421-FR-027` — superseded by `1179-FR-003` (2026-10-24)
+- `447-FR-001` — superseded by `1377-FR-001` (2026-10-24)
+- `499-FR-001` — superseded by `471-FR-005` (2026-10-24)
