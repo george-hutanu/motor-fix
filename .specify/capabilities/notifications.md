@@ -46,6 +46,7 @@ features:
   - 523-flush-late-follower
   - 520-brevo-key-check-retry
   - 525-bounce-domain-event
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Notifications
@@ -855,9 +856,9 @@ _From 520-brevo-key-check-retry._
 
 _From 520-brevo-key-check-retry._
 
-### 525-FR-001 — Recording a hard bounce for a message that belongs to an account MUST write one `account.updated` domain event through the outbox — subject the account, audience that account, payload `{ accountId, fields: ['emailBouncedAt'] }` — in the same transaction that sets the account's `email_bounced_at` and audits the change, so that none of the three exists without the other two.
+### 1370-FR-007 — Recording a hard bounce MUST lock the account row inside the claiming transaction before reading `emailBouncedAt`, MUST write one audit entry for that field per claimed bounce (old value the mark read under the lock, new value the mark written) even when the value is unchanged, and MUST never move the mark backwards: the written mark is the later of the mark read and the bounce's time; the adversary spec's concurrent case MUST pass on every one of its repetitions against local PostgreSQL.
 
-_From 525-bounce-domain-event._
+_From 1370-release-seed-no-ssh._
 
 ### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
 
@@ -883,3 +884,4 @@ _From 525-bounce-domain-event._
 - `560-FR-007` — superseded by `523-FR-011` (2026-10-24)
 - `560-FR-009` — superseded by `523-FR-014` (2026-10-24)
 - `194-FR-016` — superseded by `520-FR-003` (2026-10-23)
+- `525-FR-001` — superseded by `1370-FR-007` (2026-10-24)

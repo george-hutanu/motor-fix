@@ -43,6 +43,23 @@ const seeded = () =>
     where: { email: { endsWith: '@example.test' } },
   });
 
+// Every table's row count, by name.
+const rowCounts = async () => {
+  const tables = await prisma.$queryRaw<{ name: string }[]>`
+    SELECT table_name AS name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      AND table_name <> '_prisma_migrations'
+    ORDER BY table_name`;
+  const counts: Record<string, number> = {};
+  for (const { name } of tables) {
+    const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+      `SELECT count(*) AS n FROM "${name}"`,
+    );
+    counts[name] = Number(row?.n ?? 0);
+  }
+  return counts;
+};
+
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
@@ -275,6 +292,38 @@ describe('seed', () => {
     expect(seed('test').status).toBe(0);
 
     expect(await seeded()).toEqual(once);
+  });
+
+  // Staging's api seeds on every deploy, after users there changed things.
+  // @traces 1370-release-seed-no-ssh-FR-006
+  it('adds no row on a second staging run and keeps what a user changed', async () => {
+    const password = { SEED_PASSWORD: 'o-parola-din-secrete' };
+    expect(seed('staging', password).status).toBe(0);
+    const driver = await prisma.account.findUniqueOrThrow({
+      include: { identities: true },
+      where: { email: 'sofer@example.test' },
+    });
+    await prisma.account.update({
+      data: { name: 'Șofer Redenumit' },
+      where: { id: driver.id },
+    });
+    await prisma.accountIdentity.updateMany({
+      data: { passwordHash: 'schimbata-de-utilizator' },
+      where: { accountId: driver.id, method: 'password' },
+    });
+    const before = await rowCounts();
+
+    expect(seed('staging', password).status).toBe(0);
+
+    expect(await rowCounts()).toEqual(before);
+    const after = await prisma.account.findUniqueOrThrow({
+      include: { identities: true },
+      where: { id: driver.id },
+    });
+    expect(after.name).toBe('Șofer Redenumit');
+    expect(after.identities.map((i) => i.passwordHash)).toEqual([
+      'schimbata-de-utilizator',
+    ]);
   });
 
   it('leaves two draft garages waiting for verification', async () => {
