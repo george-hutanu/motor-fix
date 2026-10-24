@@ -141,6 +141,48 @@ describe('a heartbeat on a verification file', () => {
     expect(await redis.hexists(key(fileId), ana)).toBe(0);
   });
 
+  it('keeps an admin whose heartbeat lands between the read and the removal of its stale entry', async () => {
+    await service.touch(fileId, ana);
+    clock += 61_000;
+    // Ana's tab beats while Mihai's read is between its HGETALL and the drop.
+    const fresh = JSON.stringify({
+      name: 'Ana P.',
+      seen: new Date(clock).toISOString(),
+      since: new Date(clock).toISOString(),
+    });
+    const racing = new Proxy(redis, {
+      get(target, property) {
+        if (property === 'hgetall')
+          return async (key: string) => {
+            const all = await target.hgetall(key);
+            await target.hset(key, ana, fresh);
+            return all;
+          };
+        const value = Reflect.get(target, property);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const raced = new PresenceService(racing, prisma);
+    raced.now = () => clock;
+
+    await raced.touch(fileId, mihai);
+
+    expect(await redis.hget(key(fileId), ana)).toBe(fresh);
+  });
+
+  it('fails the call, not the store count, when the account cannot be read', async () => {
+    const before = await counted('store_unavailable');
+    const broken = new PresenceService(redis, {
+      account: {
+        findUnique: () => Promise.reject(new Error('database down')),
+      },
+      verificationFile: { findUnique: async () => ({ id: fileId }) },
+    } as never);
+
+    await expect(broken.touch(fileId, ana)).rejects.toThrow('database down');
+    expect((await counted('store_unavailable')) - before).toBe(0);
+  });
+
   it('keeps an admin whose last heartbeat is exactly a minute old', async () => {
     await service.touch(fileId, ana);
     clock += 60_000;

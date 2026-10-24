@@ -4,11 +4,9 @@ import {
   Component,
   computed,
   DestroyRef,
-  effect,
   inject,
   input,
   PLATFORM_ID,
-  untracked,
 } from '@angular/core';
 import type { VerificationPresenceDto } from '@motor-fix/contracts';
 import { ApiConfiguration } from '@motor-fix/data-access/api-configuration';
@@ -46,6 +44,10 @@ export class VerificationPresence {
   // The bearer of the last heartbeat that answered: sign-out drops the
   // session's token before the drawer closes, and the leave still needs one.
   private token: string | null = null;
+  // The beat on the wire, with its bearer: the server may already hold it, and
+  // one that lands after the leave puts this admin back, so it is left again.
+  private onWire: { answered: Promise<boolean>; token: string | null } | null =
+    null;
   private left = false;
   private timer: ReturnType<typeof setInterval> | undefined;
 
@@ -56,11 +58,24 @@ export class VerificationPresence {
       await Promise.resolve();
       if (this.left) throw new Error('left the file');
       const token = this.session.token();
-      const answer = await this.admin.verificationFileControllerPresence({
+      const call = this.admin.verificationFileControllerPresence({
         id: this.fileId(),
       });
-      if (!this.left) this.token = token;
-      return answer;
+      const wire = {
+        answered: call.then(
+          () => true,
+          () => false,
+        ),
+        token,
+      };
+      this.onWire = wire;
+      try {
+        const answer = await call;
+        if (!this.left) this.token = token;
+        return answer;
+      } finally {
+        if (this.onWire === wire) this.onWire = null;
+      }
     },
     {
       changes: this.live.events.pipe(
@@ -94,27 +109,44 @@ export class VerificationPresence {
 
   constructor() {
     if (!this.browser) return;
-    // The first read waits for the input; the beat starts with it.
-    effect(() => {
-      this.fileId();
-      untracked(() => {
-        this.timer ??= setInterval(() => this.view.reload(), HEARTBEAT_MS);
-      });
-    });
+    this.beat();
     window.addEventListener('pagehide', this.leave);
+    window.addEventListener('pageshow', this.back);
     inject(DestroyRef).onDestroy(() => {
       window.removeEventListener('pagehide', this.leave);
+      window.removeEventListener('pageshow', this.back);
       this.leave();
     });
   }
 
-  // Sent with keepalive, so it outlives the page; once per drawer.
+  private beat() {
+    this.timer = setInterval(() => this.view.reload(), HEARTBEAT_MS);
+  }
+
+  // The page came back from the back-forward cache: it left on the way out,
+  // so it beats again and the others see this admin once more.
+  private readonly back = (event: PageTransitionEvent) => {
+    if (!event.persisted || !this.left) return;
+    this.left = false;
+    this.beat();
+    this.view.reload();
+  };
+
+  // Sent with keepalive, so it outlives the page; once per drawer, and once
+  // more after a beat that was on the wire.
   private readonly leave = () => {
     if (this.left) return;
     this.left = true;
     clearInterval(this.timer);
-    const token = this.token;
-    if (!token) return;
+    const wire = this.onWire;
+    const token = this.token ?? wire?.token;
+    if (token) this.send(token);
+    wire?.answered.then((answered) => {
+      if (answered && wire.token) this.send(wire.token);
+    });
+  };
+
+  private send(token: string) {
     fetch(
       `${this.config.rootUrl}/api/v1/admin/verification-files/${this.fileId()}/presence`,
       {
@@ -123,5 +155,5 @@ export class VerificationPresence {
         method: 'DELETE',
       },
     ).catch(() => undefined);
-  };
+  }
 }

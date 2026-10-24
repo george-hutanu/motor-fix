@@ -274,6 +274,34 @@ describe('the heartbeat and the leave', () => {
   });
 
   // @traces 413-FR-004
+  it('leaves at once and again after the first heartbeat answers when the drawer closes while it is on the wire', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    api.verificationFileControllerPresence.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { fixture } = await render();
+    token = null;
+
+    fixture.destroy();
+    expect(leaves()).toHaveLength(1);
+    answer({ others: [] });
+    await pause();
+
+    // The beat may land after the first leave: it is left once more.
+    expect(leaves()).toHaveLength(2);
+    expect(leaves()[1]).toEqual([
+      `https://api.test/api/v1/admin/verification-files/${FILE}/presence`,
+      {
+        headers: { Authorization: 'Bearer token-1' },
+        keepalive: true,
+        method: 'DELETE',
+      },
+    ]);
+  });
+
+  // @traces 413-FR-004
   it('leaves once when the page hides, and not again on destroy', async () => {
     const { fixture } = await render();
 
@@ -282,6 +310,27 @@ describe('the heartbeat and the leave', () => {
     fixture.destroy();
 
     expect(leaves()).toHaveLength(1);
+  });
+
+  // @traces 413-FR-001 413-FR-008
+  it('beats again when the page comes back from the back-forward cache', async () => {
+    const { fixture, host } = await render();
+    window.dispatchEvent(new Event('pagehide'));
+    const calls = api.verificationFileControllerPresence.mock.calls.length;
+
+    window.dispatchEvent(
+      Object.assign(new Event('pageshow'), { persisted: true }),
+    );
+    await pause(350);
+    await settle(fixture);
+
+    expect(api.verificationFileControllerPresence.mock.calls.length).toBe(
+      calls + 1,
+    );
+    expect(heartbeats()).toHaveLength(2);
+    expect(text(banner(host))).toBe('Ana P. are dosarul deschis din 10:42');
+    fixture.destroy();
+    expect(leaves()).toHaveLength(2);
   });
 
   // @traces 413-FR-004
