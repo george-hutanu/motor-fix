@@ -1,3 +1,12 @@
+@if (view.value()?.items?.length) {
+  <p class="count" data-count>
+    @if (onProfile()) {
+      {{ 'garage.team.count' | t: { count: onProfile() } }}
+    } @else {
+      {{ 'garage.team.countNone' | t }}
+    }
+  </p>
+}
 <section class="panel" aria-labelledby="team-title">
   <header class="head">
     <h2 id="team-title">{{ 'garage.team.title' | t }}</h2>
@@ -7,20 +16,13 @@
   </header>
   @if (view.value(); as list) {
     @if (list.items.length) {
-      <p class="count" data-count>
-        @if (onProfile()) {
-          {{ 'garage.team.count' | t: { count: onProfile() } }}
-        } @else {
-          {{ 'garage.team.countNone' | t }}
-        }
-      </p>
       <ul class="rows">
         @for (mechanic of list.items; track mechanic.id) {
           <li data-mechanic class="row">
             <span class="who">
               <span class="name">{{ mechanic.name }}</span>
-              @if (mechanic.speciality) {
-                <span class="speciality">{{ mechanic.speciality }}</span>
+              @if (mechanic.speciality?.trim(); as speciality) {
+                <span class="speciality">{{ speciality }}</span>
               }
             </span>
             <span class="state" [attr.data-state]="mechanic.onProfile ? 'on' : 'off'">
@@ -28,11 +30,10 @@
               <span>
                 @if (mechanic.onProfile) {
                   {{ 'garage.team.state.on' | t }}
-                } @else {
+                } @else if (mechanic.hasAccount) {
                   {{ 'garage.team.state.off' | t }}
-                }
-                @if (!mechanic.hasAccount) {
-                  · {{ 'garage.team.state.noAccount' | t }}
+                } @else {
+                  {{ 'garage.team.state.off' | t }} · {{ 'garage.team.state.noAccount' | t }}
                 }
               </span>
             </span>

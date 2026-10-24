@@ -1,6 +1,7 @@
 :host {
   display: flex;
   flex-direction: column;
+  gap: var(--mf-space-3);
   margin: var(--mf-space-4);
   min-width: 0;
 }
@@ -81,8 +82,7 @@ h2 {
 .name {
   font-weight: 600;
 }
-.speciality,
-.rating {
+.speciality {
   color: var(--mf-text-secondary);
 }
 .state {
@@ -99,12 +99,13 @@ h2 {
   background: var(--mf-green);
 }
 .state[data-state="off"] {
-  color: var(--mf-amber-ink);
+  color: var(--mf-text-secondary);
 }
 .state[data-state="off"] .lamp {
-  background: var(--mf-amber);
+  background: var(--mf-text-secondary);
 }
 .rating {
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 

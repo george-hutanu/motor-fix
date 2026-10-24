@@ -35,6 +35,7 @@ export class GarageMechanicsController {
     @CurrentActor() actor: Actor,
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
   ): Promise<GarageMechanicsDto> {
-    return this.mechanics.list(this.prisma, actor, garageId);
+    // The pipe lets an upper-case uuid through; the actor's garage ids are lower case.
+    return this.mechanics.list(this.prisma, actor, garageId.toLowerCase());
   }
 }

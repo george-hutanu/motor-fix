@@ -104,7 +104,7 @@ describe('StorageService, a photo and its processed copies', () => {
     await expect(storage.deleteWithCopies(KEY)).rejects.toThrow();
   });
 
-  it('deletes the variants the thumbnail names, and the thumbnail last', async () => {
+  it('deletes the variants the thumbnail names, and the thumbnail too', async () => {
     store.put(KEY, BYTES, 'image/jpeg');
     store.put(`${KEY}.display`, BYTES, 'image/jpeg');
     store.put(`${KEY}.thumb`, BYTES, 'image/jpeg', { digest: DIGEST });

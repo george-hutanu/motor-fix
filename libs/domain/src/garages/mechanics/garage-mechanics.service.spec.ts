@@ -139,7 +139,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
       card({
         accountId: 'mechanic-account',
         name: 'Andrei',
-        rating: { toString: () => '4.9' },
+        rating: { toFixed: (digits: number) => (5).toFixed(digits) },
         reviewCount: 58,
         speciality: 'Frâne',
       }),
@@ -157,7 +157,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
           id: '00000000-0000-4000-8000-000000000001',
           name: 'Andrei',
           onProfile: true,
-          rating: '4.9',
+          rating: '5.0',
           reviewCount: 58,
           speciality: 'Frâne',
         },

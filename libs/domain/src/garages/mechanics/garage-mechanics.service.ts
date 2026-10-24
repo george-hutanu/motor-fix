@@ -113,7 +113,7 @@ export class GarageMechanicsService {
       items: rows.map(({ accountId, rating, ...row }) => ({
         ...row,
         hasAccount: accountId !== null,
-        rating: rating === null ? null : rating.toString(),
+        rating: rating === null ? null : rating.toFixed(1),
       })),
     };
   }
@@ -141,7 +141,10 @@ export class GarageMechanicsService {
     section: MechanicsSection,
   ): Promise<void> {
     const given = cardsOf(section);
-    const rows = await tx.mechanic.findMany({ where: { garageId } });
+    // A removed card is out of the team: never matched, kept, or deleted.
+    const rows = await tx.mechanic.findMany({
+      where: { garageId, removedAt: null },
+    });
     const change = { actorId, actorRole: 'garage' as const, garageId };
     for (const row of rows) {
       const card = given.find((values) => values.name === row.name);

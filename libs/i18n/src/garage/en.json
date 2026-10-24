@@ -435,7 +435,7 @@
       "other": "{count} mechanics on the profile"
     },
     "countNone": "The team is not on the profile",
-    "empty": "You have not added any mechanics yet.",
+    "empty": "You have not added mechanics yet.",
     "failed": "We could not load the team. Try again.",
     "noReviews": "no reviews",
     "retry": "Try again",
