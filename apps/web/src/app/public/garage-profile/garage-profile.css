@@ -79,25 +79,25 @@ h1 {
 
 /* The share button beside the name; on a phone it drops under the name
    rather than squeezing it. */
-.title {
+.name-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--mf-space-3) var(--mf-space-4);
 }
 
-.title h1 {
+.name-row h1 {
   flex: 1 1 0;
   min-width: 0;
 }
 
-.title mf-share-button {
-  flex: 0 1 auto;
+.name-row mf-share-button {
+  flex: none;
   max-width: 100%;
 }
 
 @media (max-width: 29.99rem) {
-  .title h1 {
+  .name-row h1 {
     flex-basis: 100%;
   }
 }

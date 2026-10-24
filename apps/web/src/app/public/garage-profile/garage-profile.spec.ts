@@ -1790,7 +1790,7 @@ describe('the share button on the garage profile', () => {
     expect(button?.parentElement).toBe(
       page().querySelector('h1')?.parentElement,
     );
-    expect(button?.parentElement?.classList).toContain('title');
+    expect(button?.parentElement?.classList).toContain('name-row');
     expect(button?.querySelector('button')?.getAttribute('aria-label')).toBe(
       'Distribuie Service Auto Militari',
     );
@@ -1800,11 +1800,27 @@ describe('the share button on the garage profile', () => {
     const sheet = css('garage-profile.css');
 
     expect(sheet).toMatch(
-      /\.title\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*align-items:\s*center;/,
+      /\.name-row\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*align-items:\s*center;/,
     );
     expect(sheet).toMatch(
-      /@media \(max-width: 29\.99rem\)\s*\{\s*\.title h1\s*\{\s*flex-basis:\s*100%;/,
+      /@media \(max-width: 29\.99rem\)\s*\{\s*\.name-row h1\s*\{\s*flex-basis:\s*100%;/,
     );
+  });
+
+  // QA lap 3: the row once shared `.title` with the skeleton's 48 px bar, so a
+  // wrapped name and the button overflowed onto the verification line.
+  it('lets the row grow with a wrapped name and the button under it', () => {
+    const sheet = css('garage-profile.css');
+    const rules = [...sheet.matchAll(/([^{}]+)\{([^}]*)\}/g)].filter(
+      ([, selector]) =>
+        selector.split(',').some((one) => /\.name-row(?![\w-])/.test(one)),
+    );
+
+    expect(rules.length).toBeGreaterThan(0);
+    // ...and the button is never squeezed to "Distrib" beside a long name.
+    expect(sheet).toMatch(/\.name-row mf-share-button\s*\{[^}]*flex:\s*none;/);
+    for (const [, , body] of rules)
+      expect(body).not.toMatch(/(^|[\s;])(max-)?height\s*:/);
   });
 
   it.each([404, 410])('is never shown on a %d', async (status) => {
