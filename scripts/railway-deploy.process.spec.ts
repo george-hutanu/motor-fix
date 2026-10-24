@@ -143,7 +143,14 @@ describe('the deploy script as a process, cancelled mid-deploy', () => {
 
 // What a Railway whose deployments all succeed answers; with echo, it
 // refuses the variable write and repeats the value it was sent.
-function succeeding(call: Call, echo: boolean) {
+function succeeding(
+  call: Call,
+  echo: boolean,
+  echoDeploy: string | false = false,
+) {
+  if (echoDeploy && call.query.includes('serviceInstanceDeployV2')) {
+    return { errors: [{ message: `env has ${echoDeploy}` }] };
+  }
   if (call.query.includes('variableUpsert')) {
     const { value } = call.variables['input'] as { value: string };
     return echo
@@ -162,12 +169,14 @@ describe('the deploy script as a process, with the staging seed password', () =>
   const PASSWORD = 'parola-de-proba-71';
   let calls: Call[];
   let echo: boolean;
+  let echoDeploy: string | false;
   let endpoint: string;
   let server: ReturnType<typeof createServer>;
 
   beforeEach(async () => {
     calls = [];
     echo = false;
+    echoDeploy = false;
     server = createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => {
@@ -177,7 +186,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
         const call = JSON.parse(body) as Call;
         calls.push(call);
         res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify(succeeding(call, echo)));
+        res.end(JSON.stringify(succeeding(call, echo, echoDeploy)));
       });
     });
     await new Promise<void>((resolve) =>
@@ -270,6 +279,17 @@ describe('the deploy script as a process, with the staging seed password', () =>
     expect(calls.some((c) => c.query.includes('serviceInstanceUpdate'))).toBe(
       false,
     );
+  }, 15_000);
+
+  // @traces 1370-release-seed-no-ssh-FR-003
+  it('keeps the password out of stdout and stderr when a later deploy call echoes it', async () => {
+    echoDeploy = PASSWORD;
+
+    const { code, out } = await run('staging', { SEED_PASSWORD: PASSWORD });
+
+    expect(code).toBe(1);
+    expect(out).toContain('env has [redacted]');
+    expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
   // @traces 1370-release-seed-no-ssh-FR-002

@@ -492,6 +492,8 @@ async function main() {
     // start) decides; this limit only stops a run whose deployment never ends.
     limitMs: 20 * 60_000,
     pollMs: 5_000,
+    // Every later call of the run redacts the password too, not only the write.
+    secrets: password ? [password] : [],
     services,
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),
