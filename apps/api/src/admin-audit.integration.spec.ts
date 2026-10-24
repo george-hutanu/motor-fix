@@ -26,6 +26,7 @@ const ALL_VOICES_ON =
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
+// call that only says who is looking (presence) sets `entries: 0`. A
 // route with path parameters gives `path`, which makes what it acts on.
 const FIXTURES: Record<
   string,
@@ -35,6 +36,13 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // Who else has the file open: a hint kept for a minute, never recorded.
+  'DELETE /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   // @traces 003-FR-005 003-FR-014
   'GET /api/v1/admin/accounts/{id}': {
     path: async () => `/api/v1/admin/accounts/${await driver()}`,
@@ -301,6 +309,12 @@ const FIXTURES: Record<
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
+  'PUT /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   'PUT /api/v1/admin/verification-files/{id}/rar-number': {
     body: () => ({ rarNumber: 'RAR-5678' }),
     path: async () =>
@@ -480,7 +494,12 @@ const check = async (route: string) => {
   if (res.status < 200 || res.status > 299) {
     return `${route}: answered ${res.status}`;
   }
-  const expected = changes ? gained >= 1 : gained === (fixture?.entries ?? 0);
+  const expected =
+    fixture?.entries !== undefined
+      ? gained === fixture.entries
+      : changes
+        ? gained >= 1
+        : gained === 0;
   return expected ? undefined : `${route}: left ${gained} entries`;
 };
 
