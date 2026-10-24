@@ -2,11 +2,11 @@ import { type BrandDto, type BrandPageDto, fold } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
-import { ACTIVE_BRANDS_KEY } from './brand-loader';
-import { AUTH_REDIS } from '../auth/attempts';
-import { PRISMA } from '../auth/prisma';
-import { refusal } from '../auth/sign-up.service';
-import type { PrismaClient } from '../generated/prisma/client';
+import { AUTH_REDIS } from '../../auth/attempts';
+import { refusal } from '../../auth/http-refusal';
+import { PRISMA } from '../../auth/prisma';
+import type { PrismaClient } from '../../generated/prisma/client';
+import { ACTIVE_BRANDS_KEY } from '../brand-loader';
 
 const PAGE = 20;
 const CACHE_SECONDS = 3600;

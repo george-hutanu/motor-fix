@@ -48,7 +48,7 @@ export { BrandLoader } from './catalogue/brand-loader';
 export {
   type BodyStyle,
   BRANDS,
-} from './catalogue/brands';
+} from './catalogue/brands/brands';
 export {
   CAR_MODELS,
   type CarForBrand,

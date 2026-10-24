@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis';
 
 import { BrandLoader } from './brand-loader';
-import { BrandFileError, type BrandRecord } from './brands';
+import { BrandFileError, type BrandRecord } from './brands/brands';
 import { AuditService } from '../audit/audit.service';
 import { foreignEntries } from '../audit/audit.testing';
 import { serialDatabase } from '../auth/serial-db.testing';

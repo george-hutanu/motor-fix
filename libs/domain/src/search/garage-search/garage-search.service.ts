@@ -14,8 +14,8 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
 import { GarageSearchCache } from './garage-search.cache';
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { brandAnswer } from '../../garages/brand-answer';
 import {
   publicGarages,

@@ -17,6 +17,7 @@ import {
 } from '../../metrics/product-counters';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { signInRequired } from '../account-loader';
+import { refusal } from '../http-refusal';
 import {
   RESET_OPTIONS,
   type ResetOptions,
@@ -24,7 +25,6 @@ import {
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
 import { SignInService } from '../sign-in.service';
-import { refusal } from '../sign-up.service';
 
 // How recent the sign-in that opened the session must be.
 const RECENT_MS = 15 * 60_000;

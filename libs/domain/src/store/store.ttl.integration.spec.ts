@@ -24,7 +24,7 @@ import { serialDatabase } from '../auth/serial-db.testing';
 import { CacheService, cacheKey, lockKey } from '../cache/cache.service';
 import { purgeTags } from '../cache/purge';
 import { warmCache } from '../cache/warm-up/warm-up';
-import { BrandsService } from '../catalogue/brands.service';
+import { BrandsService } from '../catalogue/brands/brands.service';
 import { ListingDraftThrottle } from '../garages/listing-drafts/listing-drafts.throttle';
 import { ProfileViewsService } from '../insights/profile-views/profile-views.service';
 import { ProfileViewsThrottle } from '../insights/profile-views/profile-views.throttle';

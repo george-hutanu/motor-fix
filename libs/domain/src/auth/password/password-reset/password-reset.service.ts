@@ -15,11 +15,12 @@ import {
   hashToken,
   newToken,
 } from '../../email-confirmation/email-confirmation';
+import { refusal } from '../../http-refusal';
 import { MAINTENANCE, type Maintenance } from '../../maintenance';
 import { roleInUse } from '../../policy';
 import { PRISMA } from '../../prisma';
 import { type Issued, SignInService } from '../../sign-in.service';
-import { refusal, weakPassword } from '../../sign-up.service';
+import { weakPassword } from '../../sign-up.service';
 import { hashPassword } from '../password';
 
 export const RESET_OPTIONS = Symbol('PASSWORD_RESET_OPTIONS');

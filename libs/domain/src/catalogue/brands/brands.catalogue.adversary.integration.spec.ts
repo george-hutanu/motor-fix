@@ -3,18 +3,18 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { BrandLoader } from './brand-loader';
 import { BRANDS } from './brands';
-import { CatalogueModule } from './catalogue.module';
-import { JobTypeLoader } from './job-types/job-type-loader';
-import { JOB_TYPES } from './job-types/job-types';
-import { AuthModule } from '../auth/auth.module';
-import { serialDatabase } from '../auth/serial-db.testing';
+import { AuthModule } from '../../auth/auth.module';
+import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
-} from '../notifications/notifications.testing';
+} from '../../notifications/notifications.testing';
+import { BrandLoader } from '../brand-loader';
+import { CatalogueModule } from '../catalogue.module';
+import { JobTypeLoader } from '../job-types/job-type-loader';
+import { JOB_TYPES } from '../job-types/job-types';
 
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();

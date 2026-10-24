@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 
 import { BrandLoader } from './brand-loader';
-import { BrandsController } from './brands.controller';
-import { BrandsService } from './brands.service';
+import { BrandsController } from './brands/brands.controller';
+import { BrandsService } from './brands/brands.service';
 import { JobDecisionsController } from './job-decisions/job-decisions.controller';
 import { JobDecisionsService } from './job-decisions/job-decisions.service';
 import { JobTypeLoader } from './job-types/job-type-loader';

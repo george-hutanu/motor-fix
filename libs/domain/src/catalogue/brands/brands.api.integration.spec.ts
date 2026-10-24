@@ -5,17 +5,17 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { BrandLoader } from './brand-loader';
 import { BRANDS, type BrandRecord } from './brands';
 import { BrandsService } from './brands.service';
-import { CatalogueModule } from './catalogue.module';
-import { AuthModule } from '../auth/auth.module';
-import { serialDatabase } from '../auth/serial-db.testing';
+import { AuthModule } from '../../auth/auth.module';
+import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
-} from '../notifications/notifications.testing';
+} from '../../notifications/notifications.testing';
+import { BrandLoader } from '../brand-loader';
+import { CatalogueModule } from '../catalogue.module';
 
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();

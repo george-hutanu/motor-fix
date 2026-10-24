@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { BrandLoader } from './brand-loader';
-import { BRANDS, BrandFileError, type BrandRecord } from './brands';
+import { BRANDS, BrandFileError, type BrandRecord } from './brands/brands';
 import { AuditService } from '../audit/audit.service';
 import { foreignEntries } from '../audit/audit.testing';
 import { serialDatabase } from '../auth/serial-db.testing';

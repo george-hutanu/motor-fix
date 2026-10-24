@@ -7,7 +7,7 @@ import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
 import { addMonths, localDay } from './bucharest';
-import { BRANDS } from './catalogue/brands';
+import { BRANDS } from './catalogue/brands/brands';
 import { dayOf } from './garages/documents/document-cycle/document-cycle.service';
 
 const databaseUrl =

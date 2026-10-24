@@ -6,7 +6,7 @@ import {
   type BrandRecord,
   slugOf,
   validateFile,
-} from './brands';
+} from './brands/brands';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { AUTH_REDIS } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';

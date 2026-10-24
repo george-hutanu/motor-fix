@@ -10,9 +10,9 @@ import {
   type AuditPort,
   recordedRole,
 } from '../../audit/audit.port';
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
 import { slotInsideHours } from '../../garages/garage-hours';
 import type {
