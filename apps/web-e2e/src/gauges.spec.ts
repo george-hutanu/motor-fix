@@ -237,3 +237,21 @@ for (const scheme of ['dark', 'light'] as const) {
     });
   }
 }
+
+// @traces 453-FR-001
+for (const width of [768, 1280]) {
+  test(`lines the odometer captions up on one row at ${width} px`, async ({
+    page,
+  }) => {
+    await open(page, 'dark', width);
+    const captions = page.locator('mf-cockpit-gauges-sample figcaption');
+    await expect(captions).toHaveCount(3);
+
+    const tops = await captions.evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().top)),
+    );
+    const rows = new Set(tops);
+
+    expect(rows.size).toBe(1);
+  });
+}
