@@ -14,9 +14,16 @@ import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { TeamView } from './team-view';
-import { InviteStaff } from '../invite-staff/invite-staff';
 import { Live } from '../live';
+import { MechanicCard } from '../mechanic-card/mechanic-card';
 import { Session } from '../session';
+
+// The dialog itself is its own spec's; here it is only what the view opens.
+jest.mock(
+  '../mechanic-card/mechanic-card',
+  () => ({ MechanicCard: class MechanicCard {} }),
+  { virtual: true },
+);
 
 const GARAGE = '0f9c2a54-6a1e-4f43-9d2b-2f5a3c1d7e10';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -24,14 +31,38 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const mechanic = (
   over: Partial<GarageMechanicDto> = {},
 ): GarageMechanicDto => ({
+  brandIds: [],
+  certifications: [],
+  futureBookings: 0,
   hasAccount: true,
   id: 'mechanic-1',
+  isOwner: false,
   name: 'Andrei Popescu',
   onProfile: true,
   rating: '4.9',
   reviewCount: 58,
+  roleTitle: null,
   speciality: 'Frâne, suspensie',
+  specialties: ['Frâne', 'suspensie'],
+  years: null,
   ...over,
+});
+
+const BRANDS = [{ id: 'brand-dacia', name: 'Dacia' }];
+const listOf = (items: GarageMechanicDto[]): GarageMechanicsDto => ({
+  brands: BRANDS,
+  items,
+});
+const OWNER = mechanic({
+  hasAccount: true,
+  id: 'owner-row',
+  isOwner: true,
+  name: 'Mihai Ionescu',
+  onProfile: false,
+  rating: null,
+  reviewCount: 0,
+  speciality: null,
+  specialties: [],
 });
 
 const SEEDED = [
@@ -68,7 +99,7 @@ let open: jest.Mock;
 let navigateByUrl: jest.Mock;
 
 async function render(
-  answer: () => Promise<GarageMechanicsDto> = async () => ({ items: SEEDED }),
+  answer: () => Promise<GarageMechanicsDto> = async () => listOf(SEEDED),
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
@@ -182,9 +213,9 @@ describe('Mecanici, the team list', () => {
   });
 
   it('shows a name and a speciality typed with markup as text', async () => {
-    const { element, settle } = await render(async () => ({
-      items: [mechanic({ name: '<b>Ion</b>', speciality: '<i>x</i>' })],
-    }));
+    const { element, settle } = await render(async () =>
+      listOf([mechanic({ name: '<b>Ion</b>', speciality: '<i>x</i>' })]),
+    );
     await settle();
 
     const [row] = rows(element);
@@ -202,7 +233,7 @@ describe('Mecanici, the rating cell', () => {
     language: 'ro' | 'en' = 'ro',
   ) => {
     const { element, settle } = await render(
-      async () => ({ items: [mechanic({ rating, reviewCount })] }),
+      async () => listOf([mechanic({ rating, reviewCount })]),
       language,
     );
     await settle();
@@ -231,7 +262,10 @@ describe('Mecanici, the count line', () => {
     items: GarageMechanicDto[],
     language: 'ro' | 'en' = 'ro',
   ) => {
-    const { element, settle } = await render(async () => ({ items }), language);
+    const { element, settle } = await render(
+      async () => listOf(items),
+      language,
+    );
     await settle();
     const line = countLine(element);
     TestBed.resetTestingModule();
@@ -268,8 +302,9 @@ describe('Mecanici, the count line', () => {
 
 // @traces 055-FR-009 055-FR-010 055-FR-011
 describe('Mecanici, empty, loading and failing', () => {
-  it('shows the empty state with a button that opens the invite dialog for a mechanic', async () => {
-    const { element, settle } = await render(async () => ({ items: [] }));
+  // @traces 056-FR-012
+  it('shows the empty state with a button that opens the card dialog for a new card', async () => {
+    const { element, settle } = await render(async () => listOf([]));
     await settle();
 
     const empty = element.querySelector('mf-empty-state');
@@ -278,13 +313,16 @@ describe('Mecanici, empty, loading and failing', () => {
     );
     expect(text(empty)).toContain('Încă nu ai adăugat mecanici');
     expect(countLine(element)).toBeNull();
-    const add = [...element.querySelectorAll('button')].find(
+    const add = [...(empty?.querySelectorAll('button') ?? [])].find(
       (b) => text(b) === 'Adaugă un mecanic',
     );
     add?.click();
     expect(open).toHaveBeenCalledWith(
-      InviteStaff,
-      expect.objectContaining({ data: { garageId: GARAGE } }),
+      MechanicCard,
+      expect.objectContaining({
+        data: { brands: BRANDS, garageId: GARAGE },
+        shape: 'dialog',
+      }),
     );
   });
 
@@ -300,7 +338,7 @@ describe('Mecanici, empty, loading and failing', () => {
     let fail = true;
     const { element, settle } = await render(async () => {
       if (fail) throw new HttpErrorResponse({ status: 500 });
-      return { items: SEEDED };
+      return listOf(SEEDED);
     });
     await settle();
 
@@ -372,7 +410,7 @@ describe('Mecanici, kept current', () => {
     let fail = false;
     const { element, settle } = await render(async () => {
       if (fail) throw new HttpErrorResponse({ status: 0 });
-      return { items: SEEDED };
+      return listOf(SEEDED);
     });
     await settle();
     fail = true;
@@ -385,4 +423,168 @@ describe('Mecanici, kept current', () => {
     expect(rows(element)).toHaveLength(3);
     expect(element.querySelector('[role="alert"]')).toBeNull();
   });
+});
+
+// @traces 056-FR-019
+describe("Mecanici, the owner's row and the years", () => {
+  it("shows the owner's row first, named, with proprietar beside the name", async () => {
+    const { element, settle } = await render(async () =>
+      listOf([OWNER, ...SEEDED]),
+    );
+    await settle();
+
+    const [owner, ...others] = rows(element);
+    expect(text(owner.querySelector('.name'))).toBe('Mihai Ionescu');
+    expect(text(owner)).toContain('proprietar');
+    for (const row of others) expect(text(row)).not.toContain('proprietar');
+  });
+
+  it("says owner in English on the owner's row", async () => {
+    const { element, settle } = await render(
+      async () => listOf([OWNER, ...SEEDED]),
+      'en',
+    );
+    await settle();
+
+    expect(text(rows(element)[0])).toContain('owner');
+  });
+
+  const lineOf = async (years: number | null, language: 'ro' | 'en' = 'ro') => {
+    const { element, settle } = await render(
+      async () =>
+        listOf([
+          mechanic({ speciality: 'Frâne', specialties: ['Frâne'], years }),
+        ]),
+      language,
+    );
+    await settle();
+    const line = text(rows(element)[0].querySelector('.speciality'));
+    TestBed.resetTestingModule();
+    return line;
+  };
+
+  it('follows the speciality with the years, with Romanian plurals', async () => {
+    expect(await lineOf(1)).toBe('Frâne · 1 an');
+    expect(await lineOf(2)).toBe('Frâne · 2 ani');
+    expect(await lineOf(19)).toBe('Frâne · 19 ani');
+    expect(await lineOf(20)).toBe('Frâne · 20 de ani');
+  });
+
+  it('reads the years in English', async () => {
+    expect(await lineOf(1, 'en')).toBe('Frâne · 1 year');
+    expect(await lineOf(21, 'en')).toBe('Frâne · 21 years');
+  });
+
+  it('adds no tail for no years or 0', async () => {
+    expect(await lineOf(null)).toBe('Frâne');
+    expect(await lineOf(0)).toBe('Frâne');
+  });
+});
+
+// @traces 056-FR-012 056-FR-016
+describe('Mecanici, opening the card dialog', () => {
+  it("opens a new card from the panel header's Adaugă un mecanic", async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    [
+      ...element.querySelectorAll<HTMLButtonElement>(
+        'section.panel header button',
+      ),
+    ]
+      .find((b) => text(b) === 'Adaugă un mecanic')
+      ?.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [task, options] = open.mock.calls[0];
+    expect(task).toBe(MechanicCard);
+    expect(options).toMatchObject({
+      data: { brands: BRANDS, garageId: GARAGE },
+      shape: 'dialog',
+    });
+    expect(options.data.card).toBeUndefined();
+  });
+
+  it.each([0, 1])(
+    'opens the card of row %i, the owner included, filled in',
+    async (index) => {
+      const items = [OWNER, ...SEEDED];
+      const { element, settle } = await render(async () => listOf(items));
+      await settle();
+
+      rows(element)[index].querySelector('button')?.click();
+
+      expect(open).toHaveBeenCalledWith(
+        MechanicCard,
+        expect.objectContaining({
+          data: { brands: BRANDS, card: items[index], garageId: GARAGE },
+          shape: 'dialog',
+        }),
+      );
+    },
+  );
+
+  it('makes each row a button reachable by keyboard', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    for (const row of rows(element)) {
+      const tap = row.querySelector('button');
+      expect(tap?.getAttribute('type')).toBe('button');
+      expect(text(tap)).toContain(text(row.querySelector('.name')));
+    }
+  });
+
+  it.each(['saved', 'removed'])(
+    'reads the list again once the dialog closes %s',
+    async (outcome) => {
+      const { element, settle } = await render();
+      await settle();
+      open.mockResolvedValueOnce(outcome);
+
+      rows(element)[0].querySelector('button')?.click();
+      await settle();
+
+      expect(list).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it('does not read again when the dialog is cancelled', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    rows(element)[0].querySelector('button')?.click();
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the empty state beside the owner's row when it is the only one, with no count line", async () => {
+    const { element, settle } = await render(async () => listOf([OWNER]));
+    await settle();
+
+    expect(rows(element)).toHaveLength(1);
+    expect(text(element.querySelector('mf-empty-state'))).toContain(
+      'Încă nu ai adăugat mecanici',
+    );
+    expect(countLine(element)).toBeNull();
+    expect(text(element)).not.toContain('Echipa nu apare pe profil');
+  });
+});
+
+// @traces 056-FR-013
+describe('Mecanici, kept current as cards come and go', () => {
+  it.each(['mechanic.added', 'mechanic.removed'])(
+    'reads again on %s',
+    async (kind) => {
+      const { settle } = await render();
+      await settle();
+
+      events.next(message(kind));
+      await wait(350);
+      await settle();
+
+      expect(list).toHaveBeenCalledTimes(2);
+    },
+  );
 });

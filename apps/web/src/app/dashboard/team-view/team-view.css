@@ -71,6 +71,30 @@ h2 {
   background: var(--mf-panel);
   color: var(--mf-text);
 }
+/* A row is the button that opens its card. */
+.row {
+  width: 100%;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.row:hover {
+  border-color: var(--mf-text-secondary);
+}
+.row:focus-visible {
+  outline: 2px solid var(--mf-amber);
+  outline-offset: 2px;
+}
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--mf-space-2);
+}
+.owner {
+  color: var(--mf-text-secondary);
+  font-weight: 400;
+}
 .row > *,
 .who > * {
   min-width: 0;
@@ -123,6 +147,7 @@ h2 {
     align-items: center;
     column-gap: var(--mf-space-3);
   }
+  .owner,
   .speciality,
   .rating,
   .count,

@@ -1,0 +1,15 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <p class="question">{{ 'garage.mechanicCard.remove.question' | t: { name: card.name } }}</p>
+  @if (card.futureBookings > 0) {
+    <p class="bookings">
+      {{ 'garage.mechanicCard.remove.bookings' | t: { count: card.futureBookings, name: card.name } }}
+    </p>
+  }
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" class="remove" [mfTaskSubmit]="save">{{ 'garage.mechanicCard.remove.button' | t }}</button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'garage.mechanicCard.remove.cancel' | t }}
+    </button>
+  </div>
+</form>
