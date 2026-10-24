@@ -839,6 +839,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-mechanics-list",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no side effect, so nothing is audited; its request span and log line carry the route and status, and a 404 feature_off or not_found is the access rule working, not a failure",
+      "story": "ST-55"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-garage-suspension",
       "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/suspend",
