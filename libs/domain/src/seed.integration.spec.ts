@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
-import { isValidCui } from '@motor-fix/contracts';
+import { isValidCui, isWeeklyHours } from '@motor-fix/contracts';
 
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
@@ -294,6 +294,23 @@ describe('seed', () => {
       ['atelier-dinamo', 'draft', ['in_review']],
       ['atelier-nou', 'draft', []],
       ['service-dobre', 'draft', ['submitted']],
+    ]);
+  });
+
+  // @traces 133-FR-006
+  it("gives Atelier Test a stored phone, an address and weekly hours, so the owner's profile view shows every line", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      select: { address: true, hours: true, phone: true },
+      where: { slug: 'atelier-test' },
+    });
+    expect(garage.phone).toBe('+40700000202');
+    expect(garage.address).toBe('Strada Atelierului 14, București');
+    expect(isWeeklyHours(garage.hours)).toBe(true);
+    expect((garage.hours as Record<string, unknown>)['mon']).toEqual([
+      ['08:00', '18:00'],
     ]);
   });
 

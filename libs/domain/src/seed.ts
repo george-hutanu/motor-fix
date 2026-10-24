@@ -947,6 +947,26 @@ async function seed(db: Client, secret: string) {
     `UPDATE garage SET rar_activities = (SELECT array_agg(code ORDER BY code) FROM rar_activity)
      WHERE slug = 'atelier-test' AND rar_activities = '{}'`,
   );
+  // The staff's garage as a sent listing has it: a stored phone, which only
+  // the owner's profile view shows, an address and weekly hours. Each set
+  // once: an owner's later edit is never put back.
+  await db.query(
+    `UPDATE garage SET phone = COALESCE(phone, '+40700000202'),
+       address = COALESCE(address, 'Strada Atelierului 14, București'),
+       hours = CASE WHEN hours = '{}'::jsonb THEN $1::jsonb ELSE hours END
+     WHERE slug = 'atelier-test'`,
+    [
+      JSON.stringify({
+        fri: [['08:00', '18:00']],
+        mon: [['08:00', '18:00']],
+        sat: [['09:00', '13:00']],
+        sun: [],
+        thu: [['08:00', '18:00']],
+        tue: [['08:00', '18:00']],
+        wed: [['08:00', '18:00']],
+      }),
+    ],
+  );
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
     await db.query(
