@@ -47,9 +47,9 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    // Its own 39, one per e-mailed template, and one per support e-mail kind
+    // Its own 47, one per e-mailed template, and one per support e-mail kind
     // and outcome.
-    expect(all).toHaveLength(emails.length + 39 + SUPPORT_EMAILS.length);
+    expect(all).toHaveLength(emails.length + 47 + SUPPORT_EMAILS.length);
     // @traces 067-FR-013
     expect(
       named(all, 'motorfix_garage_restored_notices_total').map(
@@ -92,6 +92,14 @@ describe("the worker's product counters at start", () => {
     // Each instance stays under 150 series.
     expect(all.length).toBeLessThan(150);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
+    // @traces 142-FR-008
+    expect(
+      named(all, 'motorfix_notification_channel_fallbacks_total').map((one) => [
+        one.labels['from'],
+        one.labels['to'],
+        one.labels['reason'],
+      ]),
+    ).toHaveLength(8);
   });
 
   it('holds the verification results and every closed decline window at 0', async () => {

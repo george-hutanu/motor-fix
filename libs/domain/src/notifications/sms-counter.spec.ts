@@ -1,5 +1,7 @@
 // @traces 392-FR-003
-import { smsMonth } from './sms-counter';
+
+import { SMS_PER_MONTH, smsMonth, smsUsed } from './sms-counter';
+import type { PrismaClient } from '../generated/prisma/client';
 
 describe('the month an SMS counts in', () => {
   it('is the calendar month in Bucharest, not in UTC', () => {
@@ -16,5 +18,54 @@ describe('the month an SMS counts in', () => {
 
   it('turns over the year', () => {
     expect(smsMonth(new Date('2026-12-31T22:00:00Z'))).toBe('2027-01');
+  });
+});
+
+// @traces 142-FR-004
+describe('the SMS a driver has used this month', () => {
+  const counted = (rows: Record<string, number>) => {
+    const findUnique = jest.fn(
+      async ({
+        where,
+      }: {
+        where: { accountId_month: { accountId: string; month: string } };
+      }) => {
+        const sentCount = rows[where.accountId_month.month];
+        return sentCount === undefined ? null : { sentCount };
+      },
+    );
+    return {
+      findUnique,
+      prisma: { smsCounter: { findUnique } } as unknown as PrismaClient,
+    };
+  };
+
+  it('is 0 with nothing sent', async () => {
+    const { prisma } = counted({});
+    expect(await smsUsed(prisma, 'ana', new Date('2026-10-20T10:00:00Z'))).toBe(
+      0,
+    );
+  });
+
+  it("is the month's count in Bucharest", async () => {
+    const { findUnique, prisma } = counted({ '2026-10': 5 });
+    expect(await smsUsed(prisma, 'ana', new Date('2026-10-31T21:59:00Z'))).toBe(
+      5,
+    );
+    expect(findUnique).toHaveBeenCalledWith({
+      select: { sentCount: true },
+      where: { accountId_month: { accountId: 'ana', month: '2026-10' } },
+    });
+  });
+
+  it('is 0 again at 00:00 on the 1st in Bucharest', async () => {
+    const { prisma } = counted({ '2026-10': 5 });
+    expect(await smsUsed(prisma, 'ana', new Date('2026-10-31T22:00:00Z'))).toBe(
+      0,
+    );
+  });
+
+  it('is capped at 5 a month', () => {
+    expect(SMS_PER_MONTH).toBe(5);
   });
 });

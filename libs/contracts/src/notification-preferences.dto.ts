@@ -74,6 +74,22 @@ export class UpdateNotificationPreferenceDto {
 export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
   @ApiProperty({ description: 'Sent whatever the person chooses' })
   alwaysSent!: boolean;
+
+  @ApiProperty({
+    description:
+      'The channels the type can be sent by, in order; a staff entry lists its own',
+    enum: OUTSIDE_CHANNELS,
+    isArray: true,
+  })
+  channels!: OutsideChannel[];
+}
+
+export class SmsUsageDto {
+  @ApiProperty({ description: 'SMS sent to the driver this month (Bucharest)' })
+  used!: number;
+
+  @ApiProperty({ description: 'SMS a driver gets per month; then WhatsApp' })
+  cap!: number;
 }
 
 // The consent text the driver confirms before news is turned on (draft,
@@ -196,6 +212,18 @@ export class NotificationPreferencesDto {
 
   @ApiProperty({ type: NewsConsentDto })
   newsConsent!: NewsConsentDto;
+
+  @ApiProperty({
+    description:
+      'A phone is saved and confirmed: SMS and WhatsApp can be picked',
+  })
+  phoneVerified!: boolean;
+
+  @ApiProperty({ description: 'The account has at least one push device' })
+  pushDevice!: boolean;
+
+  @ApiProperty({ type: SmsUsageDto })
+  sms!: SmsUsageDto;
 
   @ApiProperty({
     description:
