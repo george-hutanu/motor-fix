@@ -426,6 +426,16 @@ describe("file", () => {
     assert.equal(issueOf(gh, r.json.issue).title, "ST-77 Old story, refiled");
   });
 
+  // @traces 1153-FR-001
+  it("keeps a title led by a lettered id such as ST-1177c", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, "body.md"), "body\n");
+    const r = await run(["file", "--type", "tech debt", "--title", "ST-1177c Drop the import", "--body-file", join(repo, "body.md")], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(issueOf(gh, r.json.issue).title, "ST-1177c Drop the import");
+  });
+
   it("refuses an unknown type as a usage error", async () => {
     const r = await run(["file", "--type", "chore", "--title", "x", "--body-file", "/nope"]);
     assert.equal(r.code, 64);
