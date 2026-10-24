@@ -13,12 +13,7 @@ export {
   HlmPopoverPortal,
   HlmPopoverTrigger,
 } from './lib/helm/popover';
-// Each part of HlmRadioImports is named too, as for the popover.
-export {
-  HlmRadio,
-  HlmRadioGroup,
-  HlmRadioImports,
-} from './lib/helm/radio-group';
+export { HlmRadio, HlmRadioGroup } from './lib/helm/radio-group';
 export { HlmSheetImports } from './lib/helm/sheet';
 export { HlmSwitch } from './lib/helm/switch';
 export { HlmTableImports } from './lib/helm/table';

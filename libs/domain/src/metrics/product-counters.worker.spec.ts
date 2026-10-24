@@ -99,7 +99,16 @@ describe("the worker's product counters at start", () => {
         one.labels['to'],
         one.labels['reason'],
       ]),
-    ).toHaveLength(8);
+    ).toEqual([
+      ['sms', 'whatsapp', 'sms_cap_reached'],
+      ['sms', 'whatsapp', 'send_failed'],
+      ['sms', 'email', 'phone_not_verified'],
+      ['whatsapp', 'email', 'phone_not_verified'],
+      ['whatsapp', 'email', 'send_failed'],
+      ['push', 'email', 'no_device'],
+      ['push', 'email', 'send_failed'],
+      ['email', 'push', 'send_failed'],
+    ]);
   });
 
   it('holds the verification results and every closed decline window at 0', async () => {

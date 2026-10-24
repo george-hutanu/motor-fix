@@ -48,7 +48,10 @@ const answer = (
       textVersion: null,
       withdrawnAt: null,
     },
+    phoneVerified: false,
     preferences: [],
+    pushDevice: false,
+    sms: { cap: 5, used: 0 },
     staff: [],
   }) as unknown as NotificationPreferencesDto;
 

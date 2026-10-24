@@ -44,14 +44,13 @@ type Entry = Pick<
 // A pick shown but not yet saved.
 type Pick_ = { channel: Channel };
 
-// What the channel step needs of the read, with its defaults for an answer
-// that predates it.
-interface Reach {
-  phoneVerified: boolean;
-  pushDevice: boolean;
-  sms: { cap: number; used: number };
-}
+// What the channel step needs of the read.
+type Reach = Pick<
+  NotificationPreferencesDto,
+  'phoneVerified' | 'pushDevice' | 'sms'
+>;
 
+// Until the first read answers.
 const NO_REACH: Reach = {
   phoneVerified: false,
   pushDevice: false,
@@ -70,11 +69,11 @@ const PUSH_HINTS: Partial<Record<PushState, string>> = {
 const needsPhone = (channel: Channel) =>
   channel === 'sms' || channel === 'whatsapp';
 
-const reachOf = (answer: NotificationPreferencesDto): Reach => ({
-  phoneVerified: answer.phoneVerified === true,
-  pushDevice: answer.pushDevice === true,
-  sms: answer.sms ?? NO_REACH.sms,
-});
+const reachOf = ({
+  phoneVerified,
+  pushDevice,
+  sms,
+}: NotificationPreferencesDto): Reach => ({ phoneVerified, pushDevice, sms });
 
 // What a driver with nothing saved gets: every group but news.
 const DEFAULTS = Object.fromEntries(
