@@ -40,7 +40,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { featuresRoot, grandfathered } from "./lib/feature.mjs";
 import { isTestFile, SKIP_DIRS, TEST_ROOTS } from "./lib/tests.mjs";
-import { traceTokens } from "./lib/traces.mjs";
+import { declaredFrs, traceTokens } from "./lib/traces.mjs";
 import { retiredTokens } from "./capabilities.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -58,10 +58,10 @@ for (const dir of existsSync(specsDir) ? readdirSync(specsDir).sort() : []) {
   const m = dir.match(/^(\d{3,})-/);
   const specFile = join(specsDir, dir, "spec.md");
   if (!m || !existsSync(specFile)) continue;
-  // `(?<!\d-)`: a Spec Delta names other features' requirements as
-  // `NNN-FR-XXX` (an ST id may be shorter), and `\b` alone matches after that
-  // hyphen.
-  const frs = [...new Set(readFileSync(specFile, "utf8").match(/(?<!\d-)\bFR-\d{3}\b/g) ?? [])].sort();
+  // Only an FR declared on its own list line counts (lib/traces.mjs), the
+  // anchor status, impact and retro-evidence use: one named in prose or in a
+  // Spec Delta is not a requirement of this feature.
+  const frs = declaredFrs(readFileSync(specFile, "utf8")).sort();
   const tasksFile = join(specsDir, dir, "tasks.md");
   const tasks = existsSync(tasksFile) ? readFileSync(tasksFile, "utf8") : "";
   const implemented = tasks !== "" && !/- \[ \]/.test(tasks);
@@ -115,6 +115,8 @@ const known = new Set(report.features.flatMap((f) => f.requirements.map((r) => r
 report.orphans = [...tokenFiles.keys()].filter((t) => !known.has(t)).sort();
 
 // --- output -------------------------------------------------------------------
+// The exit status is set, never forced: an exit right after a large
+// console.log cuts a piped --json report off at the pipe's buffer (64 KB).
 let failed = false;
 if (asJson) {
   console.log(JSON.stringify(report, null, 2));
@@ -156,4 +158,4 @@ if (check) {
     failed = true;
   }
 }
-process.exit(failed ? 1 : 0);
+process.exitCode = failed ? 1 : 0;
