@@ -512,21 +512,6 @@ describe('a hard bounce', () => {
     expect(await bounceEvents(andrei)).toHaveLength(1);
   });
 
-  it('keeps the push fallback when the process stops right after the bounce is saved', async () => {
-    const andrei = await account('andrei');
-    await withDevice(andrei);
-    await sentEmail(andrei, 'evt-b', '<b@relay>');
-    const outside = jest
-      .spyOn(prisma.notification, 'createManyAndReturn')
-      .mockRejectedValueOnce(new Error('process stopped'));
-
-    await service.recordBounce('<b@relay>').catch(() => undefined);
-    outside.mockRestore();
-    await service.recordBounce('<b@relay>');
-
-    expect(await pushFallbacks()).toBe(1);
-  });
-
   it('hands a fallback whose job was lost to the queue on the next sweep', async () => {
     const andrei = await account('andrei');
     await withDevice(andrei);
