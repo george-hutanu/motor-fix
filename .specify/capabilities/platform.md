@@ -109,6 +109,7 @@ features:
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
   - 961-require-agent-review
+  - 1179-supply-chain-guards
 ---
 
 # Capability: Platform
@@ -221,9 +222,9 @@ _From 421-monorepo-platform._
 
 _From 1175-valkey._
 
-### 421-FR-027 — On every pull request CI MUST run install, typecheck, lint, unit tests, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead). The API tests against real PostgreSQL and Redis (the integration suite) run on demand and before every release (1170-FR-002, 1170-FR-004).
+### 1179-FR-003 — On every pull request CI MUST run install, typecheck, lint, unit tests, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead). The API tests against real PostgreSQL and Redis (the integration suite) run on demand and before every release (1170-FR-002, 1170-FR-004). The Dependency audit step MUST also run `npm audit signatures`, and the step MUST fail when that command exits non-zero (an invalid signature or attestation). (Replaces 421-FR-027, adding the signature check.)
 
-_From 421-monorepo-platform; modified by 1170-integration-on-demand._
+_From 1179-supply-chain-guards._
 
 ### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
 
@@ -2792,6 +2793,18 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
+### 1179-FR-001 — `.github/dependabot.yml` MUST ignore semver-major updates for `prisma` and `@prisma/*` and set a cooldown of 3 days for new versions on every ecosystem it updates (npm and github-actions), keeping its existing `webpack-dev-server` rule.
+
+_From 1179-supply-chain-guards._
+
+### 1179-FR-002 — Every workflow job that installs the lockfile MUST install with `npm ci --ignore-scripts` (the workflow steps, the shared setup action, and the Node apps' production install in the `Dockerfile` that CI's and the release's image jobs run), and MUST then run explicitly only what that job needs from the skipped scripts, decided from what the job runs: the Prisma client where the apps are typechecked, built, tested or booted, and `sharp` rebuilt where `photo-processing` runs; the PR body MUST list the jobs that rebuild `sharp` and why.
+
+_From 1179-supply-chain-guards._
+
+### 1179-FR-004 — The state of the repository's secret scanning and push protection MUST be checked (`gh api repos/george-hutanu/motor-fix`) and recorded; when either is off, the story gets a needs-confirmation question for the owner, and no setting is changed by the agent. The question does not hold the PR: FR-001..003 merge on green CI, and the story waits on the owner's answer instead of going to Done.
+
+_From 1179-supply-chain-guards._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2894,3 +2907,4 @@ _From 961-require-agent-review._
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
+- `421-FR-027` — superseded by `1179-FR-003` (2026-10-24)

@@ -200,8 +200,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-        with:
-          rebuild: sharp  # photo-processing loads it
       # JEST_SUITE is an input of the test target (nx.json), so the two
       # suites never answer each other from the Nx cache.
       - name: Unit tests
@@ -251,8 +249,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-        with:
-          rebuild: sharp  # photo-processing loads it
       - name: Object storage
         run: docker compose up -d --wait storage
       - name: Migrate the test database
@@ -336,8 +332,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-        with:
-          rebuild: sharp  # photo-processing loads it
       - name: Object storage
         run: docker compose up -d --wait storage
       - name: Identity server

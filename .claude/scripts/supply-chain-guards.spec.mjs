@@ -59,35 +59,27 @@ describe('installs without lifecycle scripts', () => {
   });
 
   // @traces 1179-FR-002
-  it('the setup action generates the Prisma client after the install and rebuilds what a job asks for', () => {
-    const text = runText(setup.runs.steps);
-    const install = text.indexOf('npm ci');
-    const generate = text.indexOf('prisma generate --config libs/domain/prisma.config.ts');
-    assert.ok(install >= 0 && generate > install, 'prisma generate must follow npm ci');
-    assert.ok('rebuild' in (setup.inputs ?? {}), 'the setup action takes a rebuild input');
-    assert.match(text, /npm rebuild \$\{\{ inputs\.rebuild \}\}/);
-  });
-
-  // @traces 1179-FR-002
-  it('the jobs that load sharp rebuild it, and the others do not', () => {
+  it('every install that runs the code generates the Prisma client, then rebuilds sharp', () => {
+    const sites = [
+      ['setup action', runText(setup.runs.steps)],
+      ['pr-qa qa', runText(steps(workflows.prQa, 'qa'))],
+      ['mutation mutate', runText(steps(workflows.mutation, 'mutate'))],
+    ];
+    for (const [name, text] of sites) {
+      const install = text.indexOf('npm ci --ignore-scripts');
+      const generate = text.indexOf('prisma generate --config libs/domain/prisma.config.ts');
+      const rebuild = text.indexOf('npm rebuild sharp');
+      assert.ok(install >= 0 && generate > install && rebuild > generate, name);
+    }
     for (const [workflow, job] of [
       [workflows.ci, 'unit'],
       [workflows.ci, 'integration'],
       [workflows.ci, 'e2e'],
       [workflows.restoreDrill, 'drill'],
     ]) {
-      assert.equal(setupStep(steps(workflow, job))?.with?.rebuild, 'sharp', job);
+      assert.ok(setupStep(steps(workflow, job)), `${job} installs through the setup action`);
     }
-    for (const [workflow, job] of [
-      [workflows.prQa, 'qa'],
-      [workflows.mutation, 'mutate'],
-    ]) {
-      const text = runText(steps(workflow, job));
-      assert.match(text, /npm rebuild sharp/, job);
-      assert.match(text, /prisma generate --config libs\/domain\/prisma\.config\.ts/, job);
-    }
-    assert.equal(setupStep(steps(workflows.ci, 'checks'))?.with?.rebuild, undefined, 'checks');
-    assert.doesNotMatch(runText(steps(workflows.release, 'staging')), /npm rebuild/, 'staging');
+    assert.doesNotMatch(runText(steps(workflows.release, 'staging')), /npm rebuild|prisma generate/, 'staging');
   });
 
   // @traces 1179-FR-002

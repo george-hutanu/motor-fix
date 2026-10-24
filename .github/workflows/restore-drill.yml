@@ -28,7 +28,5 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-        with:
-          rebuild: sharp  # photo-processing loads it
       - name: Restore, compare and boot
         run: bash scripts/backup/restore-drill.sh
