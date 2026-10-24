@@ -6,25 +6,27 @@
 // (inline, or a -f/-F field), which must be this repository's PR of that
 // number, and judged the same way. The command is split into words as the
 // shell splits it (shellCommands: quotes, escapes, substitutions, eval read
-// where it runs, `sh -c` read apart, its subshell changing nothing after it).
-// A merge naming a repository (-R, --repo, GH_REPO, also exported by an
-// earlier command, a PR URL, a REST owner/repo) must name this one, and gh is
-// read where a literal `cd` moved it: only a top-level cd joined to the merge
-// by one unbroken && chain is followed (speckit-watch merges with `cd
-// <worktree> && …`). Refused unread: a command merging more than one PR; a CLI
-// merge taking its PR from xargs, from a substitution, or after a branch
-// switch with no PR named; a REST merge with no literal number; a merge after
-// any other cd (after || or in a pipe, not the head word, in a group), a
-// pushd, a sourced file, a repo set-default, env -C, --hostname, or a GIT_DIR,
-// GIT_WORK_TREE, GH_HOST or CDPATH setting; a GraphQL merge naming no id the
-// gate can read, or more than one, or repeating a field; any `gh api graphql`
-// whose query the gate cannot see (none, a file, stdin, --input, a shell
-// expansion); and, as the backstop, any command whose text (quotes and escapes
-// dropped) still holds gh with a merge the parser placed nowhere: a string or
-// argv array another program runs (`node -e`, `| sh`, a here-string) or a mere
-// mention (echo, grep), while a title or body that says merge is let through.
-// The gate reads command text only: a merge made outside gh, or a command the
-// shell computes (a variable holding gh, an alias), is out of its reach.
+// where it runs, `sh -c` read where it runs under its outer command's GH_REPO=
+// prefix and env -C, a GH_REPO set inside it refused). A merge naming a
+// repository (-R, --repo, GH_REPO, also exported by an earlier command, a PR
+// URL, a REST owner/repo) must name this one, and gh is read where a literal
+// `cd` moved it: only a top-level cd joined to the merge by one unbroken &&
+// chain is followed (speckit-watch merges with `cd <worktree> && …`). Refused
+// unread: a command merging more than one PR; a CLI merge taking its PR from
+// xargs, from a substitution, or after a branch switch with no PR named; a
+// REST merge with no literal number; a merge after any other cd (after || or
+// in a pipe, not the head word, in a group), a pushd, a sourced file (source
+// or `.` where a command starts), a repo set-default, env -C, --hostname, or a
+// GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH setting; a GraphQL merge naming no
+// id the gate can read, or more than one, or repeating a field; any `gh api
+// graphql` whose query the gate cannot see (none, a file, stdin, --input, a
+// shell expansion); and, as the backstop, any command whose text (quotes and
+// escapes dropped) still holds gh with a merge the parser placed nowhere: a
+// string or argv array another program runs (`node -e`, `| sh`, a here-string)
+// or a mere mention (echo, grep), while a title or body that says merge is let
+// through. The gate reads command text only: a merge made outside gh, or a
+// command the shell computes (a variable holding gh, an alias), is out of its
+// reach.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
@@ -291,19 +293,19 @@ export function shellCommands(src, depth = 0, taint = false) {
     else at().v += c;
   }
   endCommand(";");
-  // A string a shell runs is read as the commands it holds: an eval string right where it runs, so its cd or export
-  // comes before what follows; a `sh -c` string after everything, since its subshell changes nothing for later commands.
-  const later = [];
-  const read = commands.flatMap((cmd) => {
+  // A string a shell runs is read as the commands it holds, right where it runs. A `sh -c` string's commands are
+  // marked `sub` (its subshell changes nothing for later commands) and carry `outer`, the words of the command that
+  // started that shell (a GH_REPO= prefix, env -C).
+  return commands.flatMap((cmd) => {
     const vs = cmd.map((w) => w.v);
     const first = vs.findIndex((v) => !/^\w+=/.test(v));
     if (depth >= 8 || first === -1) return [cmd];
+    if (vs[first] === "eval") return [cmd, ...shellCommands(vs.slice(first + 1).join(" "), depth + 1, cmd.slice(first + 1).some((w) => w.expands))];
     const c = vs.findIndex((v, i) => i > first && /^-[a-zA-Z]*c[a-zA-Z]*$/.test(v));
-    if (c > first && cmd[c + 1] && vs.slice(first, c).some((v) => SHELLS.has(base(v)))) later.push(...shellCommands(cmd[c + 1].v, depth + 1, cmd[c + 1].expands));
-    if (vs[first] !== "eval") return [cmd];
-    return [cmd, ...shellCommands(vs.slice(first + 1).join(" "), depth + 1, cmd.slice(first + 1).some((w) => w.expands))];
+    if (!(c > first && cmd[c + 1] && vs.slice(first, c).some((v) => SHELLS.has(base(v))))) return [cmd];
+    const inner = shellCommands(cmd[c + 1].v, depth + 1, cmd[c + 1].expands);
+    return [cmd, ...inner.map((x) => Object.assign(x, { sub: true, outer: [...cmd.slice(0, c), ...(x.outer ?? [])] }))];
   });
-  return [...read, ...later];
 }
 
 /** A `name=value` field, or null for a word without `=`. */
@@ -373,14 +375,25 @@ export function mergeTarget(command) {
     if (cmd.slice(0, first === -1 ? cmd.length : first).some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
     // A cd that is not the head word (command cd, if cd, { cd …) moves the shell where the gate does not look.
     if (vs.some((v, i) => i !== first && ["cd", "pushd", "popd"].includes(base(v)))) moved = "a cd inside another command";
-    // So does a sourced file: `source` anywhere, `.` where a command starts (after builtin, if, {…), not as an argument.
-    if (vs.some((v, i) => i !== first && (v === "source" || (v === "." && STARTERS.has(vs[i - 1]))))) moved = "a sourced file";
+    // So does a sourced file: `source` or `.` where a command starts (after builtin, if, {…, past their flags), not as an argument.
+    const starts = (i) => {
+      let j = i - 1;
+      while (j > 0 && vs[j].startsWith("-")) j--;
+      return STARTERS.has(vs[j]);
+    };
+    if (vs.some((v, i) => i !== first && (v === "source" || v === ".") && starts(i))) moved = "a sourced file";
+    // A sh -c string runs under the command that started its shell: its env -C or GIT_DIR moves it too.
+    const outer = cmd.outer ?? [];
+    if (outer.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
+    if (outer.some((w) => base(w.v) === "env") && outer.some((w) => w.v === "-C" || w.v.startsWith("--chdir"))) moved = "an env -C";
     const declares = first === -1 || DECLARERS.has(vs[first]);
     const settings = declares ? cmd.slice(first === -1 ? 0 : first + 1) : [];
     if (settings.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
     if (declares) {
       const w = settings.find((x) => /^GH_REPO=/.test(x.v));
-      if (w) shellRepo = w.expands ? "" : w.v.slice("GH_REPO=".length);
+      // Inside a sh -c string a GH_REPO lasts only for that string, which the gate does not track: refused.
+      if (w && cmd.sub) moved = "a GH_REPO set inside sh -c";
+      else if (w) shellRepo = w.expands ? "" : w.v.slice("GH_REPO=".length);
       continue;
     }
     const head = base(vs[first]);
@@ -392,7 +405,7 @@ export function mergeTarget(command) {
     }
     if (head === "pushd" || head === "popd") moved = `a ${head}`;
     if (head === "." || head === "source") moved = "a sourced file";
-    if (head === "unset" && vs.includes("GH_REPO")) shellRepo = null;
+    if (head === "unset" && vs.includes("GH_REPO") && !cmd.sub) shellRepo = null;
     if (head === "git" && vs.slice(first + 1).some((v) => v === "switch" || v === "checkout")) branchMoved = true;
     // A bare gh counts anywhere in the command (after xargs, env, sudo…), the first one that runs pr, api or repo;
     // a quoted phrase is one word, so it never does.
@@ -448,7 +461,8 @@ export function mergeTarget(command) {
 function readCall(cmd, gh, shellRepo) {
   const before = cmd.slice(0, gh);
   const rest = cmd.slice(gh + 1);
-  const own = before.find((w) => /^GH_REPO=/.test(w.v));
+  // Its own GH_REPO= prefix, else the last one on the command that started its sh -c shell.
+  const own = before.find((w) => /^GH_REPO=/.test(w.v)) ?? (cmd.outer ?? []).findLast((w) => /^GH_REPO=/.test(w.v));
   let repo = own ? (own.expands ? "" : own.v.slice("GH_REPO=".length)) : shellRepo;
   const positional = [];
   const fields = [];
@@ -481,14 +495,18 @@ function readCall(cmd, gh, shellRepo) {
  */
 export function mentionsMerge(command) {
   const text = command.replace(/['"\\]/g, "");
-  // gh, pr and merge as whole words (a branch named …-merge-…, gh-pages or a JSON field is none of them),
-  // apart by spaces or an argv array's commas and brackets, with only flags and their values between them:
-  // a title or body that says merge is no merge.
   if (!/(?<![\w.-])gh(?![\w.-])/.test(text)) return false;
-  const sep = "[\\s,\\[\\]]+";
-  const flags = `(?:-[^\\s,\\]]+${sep}(?:[^-\\s,\\[\\]][^\\s,\\]]*${sep})?)*`;
+  // gh, pr and merge as whole words (a branch named …-merge-…, gh-pages or a JSON field is none of them), apart by
+  // spaces, with only flags and their values between them: a title or body that says merge is no merge.
+  const spoken = /(?<![\w.-])gh\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*pr\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*merge(?![\w.-])/;
+  // Or as an argv array's quoted words, apart by commas and brackets: ['gh', 'pr', 'merge'], execFile('gh', ['pr', …]).
+  const q = `['"]`;
+  const sep = "\\s*,\\s*\\[?\\s*";
+  const flags = `(?:${q}-[^'"]*${q}${sep}(?:${q}[^'"-][^'"]*${q}${sep})?)*`;
+  const argv = new RegExp(`${q}gh${q}${sep}${flags}${q}pr${q}${sep}${flags}${q}merge${q}`);
   return (
-    new RegExp(`(?<![\\w.-])gh${sep}${flags}pr${sep}${flags}merge(?![\\w.-])`).test(text) ||
+    spoken.test(text) ||
+    argv.test(command.replace(/\\/g, "")) ||
     /pulls\/[^\s/]*\/merge(?![\w-])/.test(text) ||
     (MERGE_MUTATION.test(text) && /\bgraphql\b/.test(text))
   );

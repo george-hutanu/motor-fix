@@ -257,6 +257,31 @@ describe('merge gate — the seventh review: argv arrays, sh -c in its subshell,
   });
 });
 
+// Eighth review of ST-448: a sh -c string read where it runs with its outer command's GH_REPO and env -C, and prose.
+describe('merge gate — the eighth review: sh -c with its outer command, flags before a sourced file, prose', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('reads a sh -c merge with the GH_REPO it ran under, and its outer command\'s prefix or env -C', () => {
+    assert.equal(mergeTarget(`export GH_REPO=evil/r; bash -c "${cli} 5"; unset GH_REPO`)?.repo, 'evil/r');
+    assert.equal(mergeTarget(`GH_REPO=evil/r bash -c "${cli} 5"`)?.repo, 'evil/r');
+    assert.equal(mergeTarget(`env GH_REPO=evil/r bash -c "${cli} 5"`)?.repo, 'evil/r');
+    for (const cmd of [`env -C /tmp bash -c "${cli} 5"`, `bash -c "export GH_REPO=o/r; ${cli} 5"`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+  });
+
+  it('refuses a sourced file behind a flag, and lets source through as an argument', () => {
+    for (const cmd of [`time -p . ./s.sh; ${cli} 5`, `command -p . ./s.sh; ${cli} 5`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.deepEqual(mergeTarget(`grep -rn "source" docs; ${cli} 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`gh pr edit 5 --add-label source; ${cli} 5`), { pr: '5' });
+  });
+
+  it('lets prose through whose commas or brackets sit between gh, pr and merge', () => {
+    for (const cmd of ['gh pr comment 5 --body "Tools: git, gh, pr merge follows"', 'gh pr comment 5 --body "[gh] pr merge gate fixed"'])
+      assert.equal(mergeTarget(cmd), null, cmd);
+  });
+});
+
 describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
   const cli = ['gh', 'pr', 'merge'].join(' ');
 
