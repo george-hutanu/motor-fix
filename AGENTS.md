@@ -218,7 +218,7 @@ source for anything the constitution does not fix.
   than a few files, docker compose, Playwright) go through `scripts/heavy.sh`
   (4 slots machine-wide, 2 in a cloud session); a dev server never holds a
   slot, and mutation tests never run locally.
-  `lifecycle.mjs check`'s Jest: `JEST_MAX_WORKERS=1`, `JEST_IDLE_MEMORY=1GB`, 3072 MB heap; env wins.
+  `lifecycle.mjs check`'s Jest: `JEST_MAX_WORKERS=2`, `JEST_IDLE_MEMORY=1GB`, 3072 MB heap; env wins.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
