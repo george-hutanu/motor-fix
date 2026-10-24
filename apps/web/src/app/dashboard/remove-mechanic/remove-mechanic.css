@@ -1,0 +1,27 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.question {
+  font-weight: 700;
+}
+.bookings {
+  color: var(--mf-amber-ink);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  white-space: normal;
+}
+.remove:not(:disabled) {
+  border-color: var(--mf-red-ink);
+  background: var(--mf-red-ink);
+  color: var(--mf-bg);
+}

@@ -53,6 +53,7 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
   'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
     'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
+  'garages/listing-drafts/submit/submit.service.ts#ownerRow': OWN_NEW_GARAGE,
   'garages/place/garage-place.service.ts#write': OWN_NEW_GARAGE,
   'garages/prices/garage-prices/garage-prices.service.ts#labourAgain': OWN_COPY,
   'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':
