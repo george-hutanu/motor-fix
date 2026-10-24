@@ -10,5 +10,5 @@ module.exports = {
   },
   // ts-jest grows a worker's heap suite by suite; recycle it before it runs out.
   // JEST_IDLE_MEMORY (set by lifecycle.mjs check) overrides it.
-  workerIdleMemoryLimit: process.env.JEST_IDLE_MEMORY || '1536MB',
+  workerIdleMemoryLimit: process.env['JEST_IDLE_MEMORY'] || '1536MB',
 };
