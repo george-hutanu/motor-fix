@@ -167,6 +167,36 @@ describe('merge gate — words read as the shell reads them, and what earlier co
 });
 
 // Fourth review of ST-448: shell spellings the parser misread, a cd it followed wrongly, and a backstop for the rest.
+// Fifth review of ST-448: a cd the shell skips or hides, CDPATH, and gh's joined repo spellings in the backstop.
+describe('merge gate — the fifth review: cd the shell may skip, and joined flags in the backstop', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('refuses a cd the shell may skip or run apart: after || or a pipe, not the head word, inside a group', () => {
+    for (const cmd of [
+      `true || cd .motor-fix-specs && ${cli} 5`,
+      `true | cd .motor-fix-specs && ${cli} 5`,
+      `command cd x && ${cli} 5`,
+      `builtin cd x && ${cli} 5`,
+      `time cd x && ${cli} 5`,
+      `if cd x; then ${cli} 5; fi`,
+      `cd a && { cd b && ${cli} 5; }`,
+      `CDPATH=/elsewhere cd src && ${cli} 5`,
+      `export CDPATH=/elsewhere; ${cli} 5`,
+    ])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.deepEqual(mergeTarget(`cd a && cd b && ${cli} 5`), { pr: '5', cwd: 'a/b' });
+  });
+
+  it('refuses a merge string with a joined --repo= or -R flag that another program runs', () => {
+    const joined = ['gh', 'pr', '--repo=o/r', 'merge', '5'].join(' ');
+    const short = ['gh', 'pr', '-Ro/r', 'merge', '5'].join(' ');
+    for (const cmd of [`node -e "x('${joined}')"`, `echo '${short}' | sh`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot place/, cmd);
+    // A pr and a merge in separate commands (gh pr checks, then git merge) are no merge of a PR.
+    assert.equal(mergeTarget('gh pr checks 5 && git merge origin/main'), null);
+  });
+});
+
 describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
   const cli = ['gh', 'pr', 'merge'].join(' ');
 

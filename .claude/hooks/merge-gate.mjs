@@ -13,8 +13,9 @@
 // `cd <worktree> && …`). Refused unread: a command merging more than one PR;
 // a CLI merge taking its PR from xargs, from a substitution, or after a branch
 // switch with no PR named; a REST merge with no literal number; a merge after
-// any other cd, a pushd, a repo set-default, env -C, or a GIT_DIR,
-// GIT_WORK_TREE or GH_HOST setting; a GraphQL merge naming no id the gate can
+// any other cd (after || or in a pipe, not the head word, in a group), a
+// pushd, a repo set-default, env -C, --hostname, or a GIT_DIR, GIT_WORK_TREE,
+// GH_HOST or CDPATH setting; a GraphQL merge naming no id the gate can
 // read, or more than one, or repeating a field; any `gh api graphql` whose
 // query the gate cannot see (none, a file, stdin, --input, a shell
 // expansion); and, as the backstop, any command whose text (quotes and
@@ -162,8 +163,8 @@ const FIELD_FLAGS = new Set(["-f", "-F", "--field", "--raw-field"]);
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
 /** Commands that set shell variables from their arguments. */
 const DECLARERS = new Set(["export", "declare", "typeset", "local", "readonly"]);
-/** Variables that move gh to another repository, checkout or host, which the gate does not follow. */
-const MOVERS = /^(?:GIT_DIR|GIT_WORK_TREE|GH_HOST)=/;
+/** Variables that move gh to another repository, checkout or host, or a cd elsewhere, which the gate does not follow. */
+const MOVERS = /^(?:GIT_DIR|GIT_WORK_TREE|GH_HOST|CDPATH)=/;
 
 /** The GraphQL mutations that merge a PR, or arm it to merge once green. */
 const MERGE_MUTATION = /\b(?:mergePullRequest|enablePullRequestAutoMerge)\b/;
@@ -356,14 +357,19 @@ export function mergeTarget(command) {
   for (const cmd of shellCommands(command)) {
     const vs = cmd.map((w) => w.v);
     const first = vs.findIndex((v) => !/^\w+=/.test(v));
-    // A followed cd holds only while every command after it, up to the merge, is joined by &&.
+    // A followed cd holds only while every command after it, up to the merge, is joined by &&;
+    // one the shell may skip (after ||) or run apart (in a pipe) is not followed.
+    const skippable = prevAfter === "||" || prevAfter === "|";
     if (cmd.top) {
       if (cwd != null && prevAfter !== "&&") cdBroken = true;
       prevAfter = cmd.after;
     }
+    if (cmd.slice(0, first === -1 ? cmd.length : first).some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
+    // A cd that is not the head word (command cd, if cd, { cd …) moves the shell where the gate does not look.
+    if (vs.some((v, i) => i !== first && ["cd", "pushd", "popd"].includes(base(v)))) moved = "a cd inside another command";
     const declares = first === -1 || DECLARERS.has(vs[first]);
     const settings = declares ? cmd.slice(first === -1 ? 0 : first + 1) : [];
-    if (settings.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE or GH_HOST";
+    if (settings.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
     if (declares) {
       const w = settings.find((x) => /^GH_REPO=/.test(x.v));
       if (w) shellRepo = w.expands ? "" : w.v.slice("GH_REPO=".length);
@@ -372,7 +378,7 @@ export function mergeTarget(command) {
     const head = base(vs[first]);
     if (head === "cd") {
       const to = cmd[first + 1];
-      if (!cmd.top || cdBroken || to?.expands || to?.v === "-") moved = "a cd outside one && chain";
+      if (!cmd.top || cdBroken || skippable || to?.expands || to?.v === "-") moved = "a cd outside one && chain";
       else cwd = to == null ? "~" : cwd == null || /^[/~]/.test(to.v) ? to.v : join(cwd, to.v);
       continue;
     }
@@ -387,7 +393,7 @@ export function mergeTarget(command) {
       .find((c) => ["pr", "api", "repo"].includes(c.sub));
     if (!call) continue;
     const { before, positional, fields, input, sub, verb, arg } = call;
-    if (before.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE or GH_HOST";
+    if (before.some((w) => MOVERS.test(w.v))) moved = "a change of GIT_DIR, GIT_WORK_TREE, GH_HOST or CDPATH";
     if (before.some((w) => w.v === "-C" || w.v.startsWith("--chdir"))) moved = "an env -C";
     if (call.host != null) moved = "a --hostname";
     let target = null;
@@ -467,7 +473,7 @@ function readCall(cmd, gh, shellRepo) {
 export function mentionsMerge(command) {
   const text = command.replace(/['"\\]/g, "");
   if (!/(?:^|[^\w-])gh\b/.test(text)) return false;
-  return /\bpr\s+(?:-\S+\s+\S+\s+)*merge\b/.test(text) || /pulls\/[^\s/]*\/merge\b/.test(text) || (MERGE_MUTATION.test(text) && /\bgraphql\b/.test(text));
+  return /(?:^|[^\w-])gh\b[^;&|\n]*?\bpr\b[^;&|\n]*?\bmerge\b/.test(text) || /pulls\/[^\s/]*\/merge\b/.test(text) || (MERGE_MUTATION.test(text) && /\bgraphql\b/.test(text));
 }
 
 /** The directory gh runs in for this merge: the hook's, or where a literal `cd` before the merge moved it. */
