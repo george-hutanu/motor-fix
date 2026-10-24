@@ -32,7 +32,8 @@ export const iso = (at: Date | null) => at?.toISOString() ?? null;
 export function shortName(name: string): string {
   const words = name.trim().split(/\s+/);
   if (words.length < 2) return words[0] ?? '';
-  return `${words[0]} ${words.at(-1)?.charAt(0)}.`;
+  // The initial is the first character, not the first UTF-16 unit.
+  return `${words[0]} ${Array.from(words.at(-1) ?? '')[0]}.`;
 }
 
 export const snapshotOf = (request: QuoteRequest): CarSnapshotDto => ({

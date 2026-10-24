@@ -28,6 +28,7 @@ features:
   - 208-resubmit-after-more
   - 068-yearly-documents
   - 067-restore-suspended-garage
+  - 413-verification-file-presence
   - 136-legal-check-panel
 ---
 
@@ -290,9 +291,9 @@ _From 204-rar-activities-check._
 
 _From 302-garage-verification-file._
 
-### 302-FR-008 — The drawer MUST re-read the file (FR-001) through the dashboards' shared live re-read when `verification.opened`, `verification.check_recorded`, `verification.decided` or `verification.reopened` arrives on the admin's stream with its own `fileId`, and on every reconnect, so another admin's tick, a record form's save and a decision show within one re-read and no reload (modifies nothing in 301-FR-009: the kinds are already in the shell's list); events of other files MUST cause no re-read. No per-file live channel is added.
+### 413-FR-008 — The drawer MUST show, under its title and above the header, a banner naming the other admins present, read from the presence answer; it MUST re-read presence (FR-002) when `presence.changed` arrives with its own `fileId`, on every reconnect of the live stream, and at every heartbeat; a message about another file causes no re-read; with an empty list the banner is not rendered. The drawer's existing file re-read (302-FR-008) is unchanged.
 
-_From 302-garage-verification-file._
+_From 413-verification-file-presence._
 
 ### 069-FR-009 — On a file `in_review` with at least one `open` report the drawer's footer MUST show "Sesizare nefondată" / "Report unfounded" and "Sesizare confirmată" / "Report confirmed" in place of the three decision buttons, each at least 44 px tall and reachable by keyboard. "Sesizare nefondată" MUST open a confirmation dialog with one optional note field (at most 1,000 characters, "Notă internă" / "Internal note", counted) and send `unfounded`; "Sesizare confirmată" MUST open a dialog with one required reason field (1 to 200 characters, "Motivul pe care îl vede service-ul" / "The reason the garage will see", counted) and the line "Service-ul va fi suspendat și va primi acest motiv." / "The garage will be suspended and receive this reason.", and send `confirmed`; the dialogs MUST refuse to send outside those limits and show the server's 409 as the drawer's existing red line (306-FR-008). On success the drawer MUST show the decided state.
 
@@ -839,6 +840,53 @@ _From 067-restore-suspended-garage._
 
 _From 067-restore-suspended-garage._
 
+### 413-FR-001 — While an admin has a verification file's drawer open, the system MUST hold one presence entry per admin per file in the in-memory store (VERIFICATION_PRESENCE, key `verification:presence:{fileId}`), a hash with one field per admin account id holding the shown name, "since" and the last heartbeat time; the key's time to live MUST be renewed to 60 seconds on every write, and a read MUST drop and delete every field whose last heartbeat is older than 60 seconds, so an entry expires 60 seconds after its last heartbeat; and the browser MUST send a heartbeat every 20 seconds while the drawer is open. Presence MUST NOT be stored in PostgreSQL, MUST write no audit entry and MUST emit nothing through the outbox: it is not a change.
+
+_From 413-verification-file-presence._
+
+### 413-FR-002 — The system MUST expose `PUT /api/v1/admin/verification-files/{id}/presence`, which creates the signed-in admin's entry on the file when there is none, setting "since" to the server's current time, and otherwise only renews its expiry (a heartbeat never resets "since"; the same admin in a second tab keeps the earliest "since"); it answers the list of the other admins present on the file (FR-003).
+
+_From 413-verification-file-presence._
+
+### 413-FR-003 — The presence list MUST hold every other admin with a live entry on the file, never the caller, each with the shown name and "since" (UTC), ordered by "since" ascending.
+
+_From 413-verification-file-presence._
+
+### 413-FR-004 — The system MUST expose `DELETE /api/v1/admin/verification-files/{id}/presence`, which removes the signed-in admin's entry at once and answers nothing; the web app MUST call it when the drawer closes, when the page is left and on sign-out, best effort, the expiry of FR-001 being the fallback. Before the DELETE the drawer MUST stop its heartbeat and its presence re-read, and MUST send no PUT for that file afterwards.
+
+_From 413-verification-file-presence._
+
+### 413-FR-005 — Both presence routes MUST answer 404 to every signed-in non-admin and for an unknown file id, as the file read does (302-FR-002); neither is public: both run behind the session guard, which answers a caller with no session 401 `sign_in_required`. A file of any status, decided ones included, accepts presence.
+
+_From 413-verification-file-presence._
+
+### 413-FR-006 — With the in-memory store unreachable, the presence calls MUST answer success with an empty list (PUT) or nothing (DELETE), with no error to the caller; the failure is counted (FR-013) and logged with the file id, never the admin's name; the drawer, the checks and the decision stop (306-FR-002) work unchanged.
+
+_From 413-verification-file-presence._
+
+### 413-FR-009 — The banner MUST read, for one admin, "{name} are dosarul deschis din {time}" / "{name} has had the file open since {time}" and, for several, "{name} (din {time}) și {name} (din {time}) au dosarul deschis" / "{name} (since {time}) and {name} (since {time}) have the file open", the names joined by ", " and the last by " și " / " and "; {time} is "since" as HH:mm in Europe/Bucharest. It is an amber strip with an info lamp, announced as a status region, at least 44 px tall on phones, and never locks or disables anything in the drawer.
+
+_From 413-verification-file-presence._
+
+### 413-FR-010 — The shown name MUST be the admin account's first name and the initial of the surname with a full stop ("Ana P."), derived from the account's name on the server when the entry is created: the first word plus the initial of the last word, as typed ("Ana Maria Popescu" → "Ana P."); an account with a single name word shows that word alone.
+
+_From 413-verification-file-presence._
+
+### 413-FR-011 — Nothing is locked: ticking a manual check, recording a register check and deciding work exactly as before while a banner is shown; the "already decided by <name> at <time>" stop (306-FR-002) and the reopen (306-FR-005) are not changed by this story.
+
+_From 413-verification-file-presence._
+
+### 413-FR-012 — Every new text MUST live in the shared i18n files in Romanian and English; the banner MUST read at 320 px, 390 px, tablet and desktop, light and dark, in both languages, with no sideways scroll, and the PR QA run's screenshots are the evidence.
+
+_From 413-verification-file-presence._
+
+### 413-FR-013 — The presence DTO lives in the contracts library, both routes are REST with OpenAPI, and the generated client is regenerated, never edited by hand. The two routes MUST be listed in `infra/observability/inventory.json` with the API's request metrics by route, one counter of presence changes by outcome (`created`, `removed`, `store_unavailable`), the store-failure log line, a dashboard panel, and the reason no alert of their own is needed (the data-store alerts already cover an unreachable store); the PR lists them in its Observability section.
+
+_From 413-verification-file-presence._
+
+### 413-FR-014 — Tests MUST cover, in Jest on real PostgreSQL and Redis: an entry's creation, its heartbeat keeping "since" and its expiry at 60 seconds; the delete on close; one entry per admin across two tabs with the earliest "since"; the list excluding the caller and ordered by "since"; 404 for a non-admin and an unknown id; the store unreachable answering an empty list without an error; `presence.changed` published on create and remove and not on a heartbeat; and the shown-name rule. In the browser: the banner's texts for one and for two admins in both languages, its re-read on `presence.changed` for its own file only, the heartbeat and close calls, and no PUT after close. End to end, in the PR QA flow: two admin browsers open the same file, the second sees the first's name and time, the first closes, the banner goes within 2 seconds; the second admin is the seed's existing second admin account (`admin2@example.test`, present since before this story), signed in by the flow itself; the seed is not changed.
+
+_From 413-verification-file-presence._
 ### 136-FR-004 — `document.due` for the garage arriving on `garage:{garageId}` MUST make the panel read again without a reload, on the view and on the overview alike (it is one host), joining the kinds that already do so (`verification.decided`, `verification.check_recorded`, `verification.reopened`, `recheck.recorded`, `garage.suspended`, `garage.restored`, `document.uploaded`, `document.overdue`, `document.accepted`, `document.refused`); a change arriving during a read makes one more read after it and the panel shows the last read's answer (existing live-view serialisation); the swap is silent for assistive technology. The event already exists and already reaches the garage's channel (068-FR-014; `libs/domain/src/garages/documents/document-cycle/document-cycle.step.ts:126-131`); nothing is emitted anew.
 
 _From 136-legal-check-panel._
@@ -901,4 +949,5 @@ _From 136-legal-check-panel._
 - `068-FR-012` — superseded by `067-FR-009` (2026-10-23)
 - `066-FR-003` — superseded by `067-FR-009` (2026-10-23)
 - `069-FR-008` — superseded by `067-FR-010` (2026-10-23)
+- `302-FR-008` — superseded by `413-FR-008` (2026-10-24)
 - `068-FR-005` — superseded by `136-FR-003` (2026-10-24)
