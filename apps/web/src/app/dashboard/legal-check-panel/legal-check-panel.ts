@@ -124,10 +124,12 @@ export class LegalCheckPanel {
     const key = 'garage.legal.documents.cycle';
     switch (cycle.row) {
       case 'valid':
-      case 'due':
         return this.i18n.t(`${key}.renew`, {
           month: formatShortMonthYear(cycle.dueOn, this.i18n.language()),
         });
+      // Thirty days or fewer left: the day itself, which a month cannot carry.
+      case 'due':
+        return this.i18n.t(`${key}.due`, { day: this.day(cycle.dueOn) });
       case 'in_review':
         return this.i18n.t(`${key}.in_review`);
       case 'overdue':
