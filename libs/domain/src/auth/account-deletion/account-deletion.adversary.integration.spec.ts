@@ -803,7 +803,7 @@ describe('the session after the account is deleted', () => {
 });
 
 describe('what a deletion leaves of the team and the events', () => {
-  it('detaches the mechanic and records one mechanic.updated for the garage', async () => {
+  it('detaches the mechanic and records one mechanic.removed for the garage and the profile', async () => {
     const id = await person(EMAIL, ['driver', 'mechanic']);
     const garage = await teamOf(id, 'mechanic');
 
@@ -822,11 +822,17 @@ describe('what a deletion leaves of the team and the events', () => {
     const events = await prisma.outboxEvent.findMany({
       where: {
         audience: { has: `garage:${garage.id}` },
-        kind: 'mechanic.updated',
+        kind: 'mechanic.removed',
       },
     });
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ audience: [`garage:${garage.id}`] });
+    // The card was on the profile, so the public streams hear it (056-FR-014).
+    expect(events[0].audience).toEqual(
+      expect.arrayContaining([
+        `garage:${garage.id}`,
+        `public:garage:${garage.id}`,
+      ]),
+    );
   });
 
   it('records one member.removed for the garage a receptionist leaves', async () => {
@@ -858,7 +864,7 @@ describe('what a deletion leaves of the team and the events', () => {
       await prisma.outboxEvent.count({
         where: {
           audience: { has: `garage:${south.id}` },
-          kind: 'mechanic.updated',
+          kind: 'mechanic.removed',
           subjectId: { not: '' },
         },
       }),

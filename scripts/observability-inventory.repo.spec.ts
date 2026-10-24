@@ -414,8 +414,19 @@ describe("the garage's team read route", () => {
       );
     const team = entries.find((each) => each.name === 'garage-mechanics-list');
 
-    expect(Object.keys(read)).toEqual(['get']);
+    // @traces 056-FR-022
+    expect(Object.keys(read).sort()).toEqual(['get', 'post']);
     expect(team?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/mechanics$/);
     expect(team?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    // The owner's three writes, each with its route's metric and alerts.
+    for (const [name, route] of [
+      ['garage-mechanics-add', /\/mechanics$/],
+      ['garage-mechanics-edit', /\/mechanics\/:mechanicId$/],
+      ['garage-mechanics-remove', /\/mechanics\/:mechanicId$/],
+    ] as const) {
+      const write = entries.find((each) => each.name === name);
+      expect(write?.metric).toMatch(route);
+      expect(write?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    }
   });
 });

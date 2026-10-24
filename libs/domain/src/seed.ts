@@ -779,6 +779,8 @@ async function quoteable(db: Client) {
 
 // Atelier Test's team list, set once: its two mechanics with a speciality and on the
 // profile, beside a card with no account yet, as an owner names one at step 4.
+// Each card carries a role and its years (ST-56), and every seeded garage gets
+// its owner's own row, as the migration gives every garage made before it.
 async function team(db: Client) {
   await db.query(
     `UPDATE mechanic m SET on_profile = true, speciality = s.speciality
@@ -791,6 +793,28 @@ async function team(db: Client) {
      SELECT gen_random_uuid(), g.id, 'Costel Radu', 'Frâne, suspensie și geometrie', true
      FROM garage g WHERE g.slug = 'atelier-test'
        AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.name = 'Costel Radu')`,
+  );
+  await db.query(
+    `UPDATE mechanic m SET role_title = c.role_title, years = c.years,
+       specialties = string_to_array(m.speciality, ', ')
+     FROM garage g, (VALUES ('mecanic@example.test', 'Mecanic șef', 12),
+                            ('mecanic-oferte@example.test', 'Electrician auto', 6),
+                            ('', 'Mecanic', 15)) AS c (email, role_title, years)
+     WHERE g.id = m.garage_id AND g.slug = 'atelier-test' AND m.role_title IS NULL
+       AND m.speciality IS NOT NULL
+       AND (CASE WHEN c.email = '' THEN m.name = 'Costel Radu'
+            ELSE m.account_id = (SELECT id FROM account WHERE email = c.email) END)`,
+  );
+  await db.query(
+    `INSERT INTO mechanic (id, garage_id, account_id, name, on_profile, can_move_bookings,
+       can_answer_quotes, can_record_final_price, is_owner, working_hours)
+     SELECT gen_random_uuid(), g.id, gm.account_id, left(btrim(a.name), 80), false, true, true, true, true, g.hours
+     FROM garage g
+     JOIN garage_member gm ON gm.garage_id = g.id AND gm.role = 'owner'
+     JOIN account a ON a.id = gm.account_id
+     WHERE char_length(btrim(a.name)) >= 2
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.is_owner)
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.account_id = gm.account_id)`,
   );
 }
 

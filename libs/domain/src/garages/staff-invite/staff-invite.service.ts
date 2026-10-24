@@ -235,7 +235,12 @@ export class StaffInviteService {
     const elsewhere = account.memberships.some(
       (m) => m.role === 'receptionist' && m.garageId !== garageId,
     );
-    if (owner || (invite.kind === 'receptionist' && elsewhere)) throw invalid();
+    // An owner's own row is his garage's (056-FR-015): a mechanic link from
+    // another garage would move it away.
+    const ownRow = invite.kind === 'mechanic' && account.mechanic?.isOwner;
+    if (owner || ownRow || (invite.kind === 'receptionist' && elsewhere)) {
+      throw invalid();
+    }
     const by = { id: actor.accountId, role: actor.role };
     await this.prisma.$transaction(async (tx) => {
       // The row lock makes a second accept wait, then find it taken.

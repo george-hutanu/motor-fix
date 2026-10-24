@@ -997,6 +997,8 @@ describe('seed of a request through to a job', () => {
       ]),
     ).toEqual([
       ['Costel Radu', 'Frâne, suspensie și geometrie', true, false],
+      // The owner's own row, kept off the profile.
+      ['Mihai Ionescu', null, false, true],
       ['Radu Oferte', 'Diagnoză electrică', true, true],
       ['Vlad Stan', 'Motor și distribuție', true, true],
     ]);
@@ -1017,6 +1019,7 @@ describe('seed of a request through to a job', () => {
     ).toEqual([
       ['mecanic-oferte@example.test', true],
       ['mecanic@example.test', false],
+      ['service@example.test', true],
     ]);
     const oil = await prisma.jobType.findUniqueOrThrow({
       where: { key: 'oil-service' },

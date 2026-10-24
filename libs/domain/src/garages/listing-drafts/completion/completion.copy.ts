@@ -25,7 +25,12 @@ const INCLUDE = {
   },
   closedDays: { orderBy: { day: 'asc' } },
   facilities: true,
-  mechanics: { orderBy: { name: 'asc' } },
+  // Step 4's cards only: the owner's own row is none of them, and a removed
+  // card is out of the team (056-FR-006, 056-FR-015).
+  mechanics: {
+    orderBy: { name: 'asc' },
+    where: { isOwner: false, removedAt: null },
+  },
   photos: { orderBy: { position: 'asc' } },
   prices: {
     include: { jobType: { select: { nameRo: true, status: true } } },

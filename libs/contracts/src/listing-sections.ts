@@ -40,6 +40,14 @@ export const MECHANIC_NAME_MIN = 2;
 export const MECHANIC_NAME_MAX = 60;
 export const SPECIALITY_MAX = 80;
 export const MECHANICS_MAX = 30;
+// The mechanic card the owner writes in the team dialog (ST-56).
+export const MECHANIC_CARD_NAME_MAX = 80;
+export const ROLE_TITLE_MAX = 40;
+export const TAG_MAX = 40;
+export const CERTIFICATION_MAX = 80;
+export const SPECIALTIES_MAX = 6;
+export const CERTIFICATIONS_MAX = 10;
+export const YEARS_MAX = 60;
 // What a details field may hold while typed: the longest rule plus nothing.
 const DETAILS_VALUE_MAX = 160;
 
