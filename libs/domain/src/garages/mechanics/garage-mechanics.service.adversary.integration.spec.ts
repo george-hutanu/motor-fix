@@ -12,7 +12,11 @@ import {
 import { refused } from '../prices/garage-prices/garage-prices.testing';
 
 const { account, prisma } = fixtures();
-const mechanics = new GarageMechanicsService(new AuditService());
+const mechanics = new GarageMechanicsService(
+  new AuditService(),
+  {} as never,
+  {} as never,
+);
 serialDatabase(databaseUrl);
 
 let owner = '';

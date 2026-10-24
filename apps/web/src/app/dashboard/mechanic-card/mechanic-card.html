@@ -1,0 +1,114 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <div class="field">
+    <label for="mf-mechanic-name">{{ 'garage.mechanicCard.name' | t }}</label>
+    <input
+      hlmInput
+      id="mf-mechanic-name"
+      type="text"
+      autocomplete="off"
+      formControlName="name"
+      aria-describedby="mf-mechanic-name-error"
+    />
+    <p class="problem" id="mf-mechanic-name-error">{{ problem(field.name) }}</p>
+  </div>
+  <div class="field">
+    <label for="mf-mechanic-role">{{ 'garage.mechanicCard.roleTitle' | t }}</label>
+    <input
+      hlmInput
+      id="mf-mechanic-role"
+      type="text"
+      autocomplete="off"
+      formControlName="roleTitle"
+      aria-describedby="mf-mechanic-role-error"
+    />
+    <p class="problem" id="mf-mechanic-role-error">{{ problem(field.roleTitle) }}</p>
+  </div>
+  <div class="field">
+    <label for="mf-mechanic-specialties">{{ 'garage.mechanicCard.specialties' | t }}</label>
+    <input
+      hlmInput
+      id="mf-mechanic-specialties"
+      type="text"
+      autocomplete="off"
+      formControlName="specialties"
+      aria-describedby="mf-mechanic-specialties-hint mf-mechanic-specialties-error"
+    />
+    <p class="hint" id="mf-mechanic-specialties-hint">{{ 'garage.mechanicCard.specialtiesHint' | t }}</p>
+    @if (tags(field.specialties); as list) {
+      @if (list.length) {
+        <ul class="tags" aria-hidden="true">
+          @for (tag of list; track $index) {
+            <li class="tag">{{ tag }}</li>
+          }
+        </ul>
+      }
+    }
+    <p class="problem" id="mf-mechanic-specialties-error">{{ problem(field.specialties) }}</p>
+  </div>
+  <div class="field">
+    <label for="mf-mechanic-certifications">{{ 'garage.mechanicCard.certifications' | t }}</label>
+    <input
+      hlmInput
+      id="mf-mechanic-certifications"
+      type="text"
+      autocomplete="off"
+      formControlName="certifications"
+      aria-describedby="mf-mechanic-certifications-hint mf-mechanic-certifications-error"
+    />
+    <p class="hint" id="mf-mechanic-certifications-hint">{{ 'garage.mechanicCard.certificationsHint' | t }}</p>
+    @if (tags(field.certifications); as list) {
+      @if (list.length) {
+        <ul class="tags" aria-hidden="true">
+          @for (tag of list; track $index) {
+            <li class="tag">{{ tag }}</li>
+          }
+        </ul>
+      }
+    }
+    <p class="problem" id="mf-mechanic-certifications-error">{{ problem(field.certifications) }}</p>
+  </div>
+  <div class="field years">
+    <label for="mf-mechanic-years">{{ 'garage.mechanicCard.years' | t }}</label>
+    <input
+      hlmInput
+      id="mf-mechanic-years"
+      type="number"
+      inputmode="numeric"
+      min="0"
+      max="60"
+      step="1"
+      autocomplete="off"
+      formControlName="years"
+      aria-describedby="mf-mechanic-years-error"
+    />
+    <p class="problem" id="mf-mechanic-years-error">{{ problem(field.years) }}</p>
+  </div>
+  <fieldset formGroupName="brandIds" aria-describedby="mf-mechanic-brands-error">
+    <legend>{{ 'garage.mechanicCard.brands' | t }}</legend>
+    @if (brands.length) {
+      <div class="ticks">
+        @for (brand of brands; track brand.id) {
+          <label class="choice"><input type="checkbox" [formControlName]="brand.id" />{{ brand.name }}</label>
+        }
+      </div>
+    } @else {
+      <p class="hint">{{ 'garage.mechanicCard.noBrands' | t }}</p>
+    }
+    <p class="problem" id="mf-mechanic-brands-error">{{ problem(field.brandIds) }}</p>
+  </fieldset>
+  @if (card?.hasAccount) {
+    <p class="owned">
+      <strong>{{ 'garage.mechanicCard.owned.fields' | t }}</strong>
+      <span>{{ 'garage.mechanicCard.owned.line' | t }}</span>
+    </p>
+  }
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    @if (card && !card.isOwner) {
+      <button hlmBtn variant="ghost" type="button" class="remove" (click)="remove()">
+        {{ 'garage.mechanicCard.remove.button' | t }}
+      </button>
+    }
+    <button hlmBtn type="submit" class="submit" [mfTaskSubmit]="save">{{ 'garage.mechanicCard.save' | t }}</button>
+  </div>
+</form>
