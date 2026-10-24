@@ -112,6 +112,7 @@ features:
   - 961-require-agent-review
   - 447-own-pr-refusal
   - 1376-pr-test-local-boot
+  - 438-test-suites-projects
   - 471-crlf-harness-tidy
 ---
 
@@ -2822,6 +2823,18 @@ _From 1376-pr-test-local-boot._
 ### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
 
 _From 1376-pr-test-local-boot._
+
+### 438-FR-001 — `scripts/test-suites.spec.ts` MUST derive the projects whose unit/integration split it asserts from the repository: the project (nearest ancestor holding a `project.json`) of every `*.integration.spec.ts` under `apps/` or `libs/` (outside `node_modules` and `test-output`), each once, sorted; the fixed `['apps/api', 'libs/domain']` goes. For each derived project the four existing assertions hold (every spec runs with no suite chosen, the unit suite holds no integration spec, the integration suite holds only integration specs, the two suites partition the whole), so a project whose Jest config does not honour `JEST_SUITE` fails the spec by name.
+
+_From 438-test-suites-projects._
+
+### 438-FR-002 — The spec MUST assert the derived list itself as a superset: it is non-empty and contains `apps/api` and `libs/domain` (the two the spec checked until now), so an empty or broken derivation cannot pass vacuously. The full list is observed, not asserted (on `main`: `apps/api`, `apps/mcp`, `apps/worker`, `libs/domain`).
+
+_From 438-test-suites-projects._
+
+### 438-FR-003 — The 435-FR-008 guard MUST report a spec, run by Jest and not named `*.integration.spec.ts`, whose source reads `DATABASE_URL` or `REDIS_URL` from `process.env` in any of: the bracket form (`process.env['DATABASE_URL']`, either quote), the dot form (`process.env.DATABASE_URL`), or a destructuring from `process.env` whose braces name the key in key position, alone, among other keys, renamed (`DATABASE_URL: url`), with a default (`DATABASE_URL = 'x'`) or across lines; and a source that names `seed.ts` as a file (quoted, or inside a command such as `tsx prisma/seed.ts`). It MUST NOT report a longer identifier (`DATABASE_URL_TEST`, `DATABASE_URL$x`, `DATABASE_URLé`: any identifier character, `$` and non-ASCII letters included, continues the name), another variable, an assignment (`process.env.DATABASE_URL = 'x'`) or `delete`, the name in value position (`{ url: DATABASE_URL }`), or the bare name outside a `process.env` expression; a comment holding the whole expression is reported (raw text, no comment stripping). A `delete` separated from `process.env` by any whitespace, newlines included, is not a read. The guard decides any source in time linear in its length (no backtracking blow-up on unclosed braces).
+
+_From 438-test-suites-projects._
 
 ## Retired
 
