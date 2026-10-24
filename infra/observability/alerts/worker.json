@@ -400,8 +400,8 @@
           ]
         },
         {
-          "uid": "retention-stale",
-          "title": "Retention job stale",
+          "uid": "worker-retention-stale",
+          "title": "Worker retention job stale",
           "condition": "B",
           "for": "0s",
           "noDataState": "OK",
@@ -410,7 +410,7 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "The retention job has not completed in 48 hours, so data past its stated retention period is being kept ({{ $labels.deployment_environment }}).",
+            "summary": "The worker has run for 48 hours without the retention job completing, so data past its stated retention period is being kept ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-worker",
             "runbook": "Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
           },
@@ -424,7 +424,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h]))",
+                "expr": "max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200
@@ -444,9 +444,9 @@
                 "conditions": [
                   {
                     "evaluator": {
-                      "type": "lt",
+                      "type": "gt",
                       "params": [
-                        1
+                        0
                       ]
                     }
                   }

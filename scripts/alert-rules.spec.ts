@@ -99,6 +99,7 @@ const ZERO_WAIT = new Set([
   'api-admin-account-action-failed',
   'web-down',
   'worker-down',
+  'worker-retention-stale',
   'mcp-down',
   'api-error-rate',
   'web-error-rate',
@@ -388,6 +389,17 @@ const EXPECTED: Record<
     ],
     for: '15m',
     from: 300,
+    type: 'gt',
+    value: 0,
+  },
+  'worker-retention-stale': {
+    expr: [
+      'target_info{service_name="worker"}[1h] offset 47h',
+      'unless',
+      'increase(motorfix_jobs_total{queue="retention", job_name="retention-nightly", outcome="completed"}[48h])) > 0',
+    ],
+    for: '0s',
+    from: 172800,
     type: 'gt',
     value: 0,
   },
@@ -800,8 +812,9 @@ describe('alert rules', () => {
   // @traces 305-FR-009
   // @traces 304-FR-012
   // @traces 1181-FR-009
-  it('holds forty-eight rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(48);
+  // @traces 1156-FR-011
+  it('holds forty-nine rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(49);
   });
 
   // @traces 1345-FR-004

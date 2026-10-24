@@ -966,7 +966,7 @@
     {
       "id": 31,
       "type": "timeseries",
-      "title": "Retention rows per night",
+      "title": "Retention rows and runs per night",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -986,13 +986,22 @@
           },
           "expr": "sum by (kind) (increase(motorfix_retention_rows_total{service_name=\"worker\", deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{kind}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_jobs_total{service_name=\"worker\", deployment_environment=\"$env\", queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[1d]))",
+          "legendFormat": "runs completed"
         }
       ],
       "fieldConfig": {
         "defaults": {},
         "overrides": []
       },
-      "description": "Rows the nightly retention job removed (or, for audit entries, anonymised), by kind."
+      "description": "Rows the nightly retention job removed (or, for audit entries, anonymised), by kind, and the runs that completed."
     },
     {
       "id": 26,

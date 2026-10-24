@@ -101,6 +101,7 @@ describe('alert rule queries', () => {
   // @traces 1024-FR-001
   it('only match label values that the dashboards use for the same selector', () => {
     const wanted = [
+      'outcome=\\"completed\\"',
       'outcome=\\"failed\\"',
       'outcome=\\"fallback\\"',
       'outcome=\\"hit\\"',
