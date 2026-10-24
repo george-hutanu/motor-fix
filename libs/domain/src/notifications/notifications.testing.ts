@@ -102,3 +102,12 @@ export function failWritesAfter(
     prisma.$transaction = real;
   };
 }
+
+// Stamps a row's send claim `ms` before the database's clock, which the claim
+// lease is judged by, and answers the stamp.
+export async function claimAgo(prisma: PrismaClient, id: string, ms: number) {
+  const [row] = await prisma.$queryRaw<{ claimedAt: Date }[]>`
+    UPDATE notification SET claimed_at = now() - ${ms}::int * interval '1 millisecond'
+    WHERE id = ${id}::uuid RETURNING claimed_at AS "claimedAt"`;
+  return row.claimedAt;
+}
