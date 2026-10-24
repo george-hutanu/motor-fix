@@ -1,6 +1,6 @@
 // Run directly by Node (type stripping), so this file imports nothing from the
 // workspace. Each module's seed rows are added here by the story that owns it.
-import { argon2, randomBytes } from 'node:crypto';
+import { argon2, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import { Client } from 'pg';
 
@@ -380,43 +380,79 @@ const PEOPLE: Person[] = [
 ];
 
 // The same argon2id form the sign-in checks: 19 MiB, 2 passes, 1 lane.
-function hash(secret: string): Promise<string> {
-  const nonce = randomBytes(16);
-  const b64 = (b: Buffer) => b.toString('base64').replace(/=+$/, '');
+function derive(
+  secret: string,
+  nonce: Buffer,
+  [memory, passes, parallelism]: number[],
+  tagLength: number,
+): Promise<Buffer> {
   return new Promise((resolve, reject) =>
     argon2(
       'argon2id',
-      {
-        memory: 19456,
-        message: secret,
-        nonce,
-        parallelism: 1,
-        passes: 2,
-        tagLength: 32,
-      },
-      (error, tag) =>
-        error
-          ? reject(error)
-          : resolve(`$argon2id$v=19$m=19456,t=2,p=1$${b64(nonce)}$${b64(tag)}`),
+      { memory, message: secret, nonce, parallelism, passes, tagLength },
+      (error, tag) => (error ? reject(error) : resolve(tag)),
     ),
   );
 }
 
+async function hash(secret: string): Promise<string> {
+  const nonce = randomBytes(16);
+  const b64 = (b: Buffer) => b.toString('base64').replace(/=+$/, '');
+  const tag = await derive(secret, nonce, [19456, 2, 1], 32);
+  return `$argon2id$v=19$m=19456,t=2,p=1$${b64(nonce)}$${b64(tag)}`;
+}
+
+// Whether a stored hash is of the secret, read the way the sign-in reads it;
+// a hash with a fresh salt never equals the stored one, so it is checked.
+async function verifies(secret: string, stored: string | null) {
+  const parts =
+    /^\$argon2id\$v=19\$m=(\d{1,6}),t=(\d{1,2}),p=(\d{1,2})\$([A-Za-z0-9+/]{11,64})\$([A-Za-z0-9+/]{22,88})$/.exec(
+      stored ?? '',
+    );
+  if (!parts || Number(parts[1]) > 262_144) return false;
+  const expected = Buffer.from(parts[5] ?? '', 'base64');
+  try {
+    const tag = await derive(
+      secret,
+      Buffer.from(parts[4] ?? '', 'base64'),
+      parts.slice(1, 4).map(Number),
+      expected.length,
+    );
+    return timingSafeEqual(tag, expected);
+  } catch {
+    return false;
+  }
+}
+
+// The seeded link, put back with its seeded values; a link at another garage
+// is the account's own and stays.
 function link(db: Client, id: string, at: NonNullable<Person['at']>) {
   const garage = '(SELECT id FROM garage WHERE slug = $2)';
   return at.as === 'mechanic'
     ? db.query(
-        `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes) SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1`,
+        `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes)
+         SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1
+         ON CONFLICT (account_id) DO UPDATE SET can_answer_quotes = EXCLUDED.can_answer_quotes
+         WHERE mechanic.garage_id = EXCLUDED.garage_id
+           AND mechanic.can_answer_quotes <> EXCLUDED.can_answer_quotes`,
         [id, at.garage, at.answersQuotes ?? false],
       )
     : db.query(
-        `INSERT INTO garage_member (account_id, garage_id, role) VALUES ($1, ${garage}, $3::garage_member_role)`,
+        `INSERT INTO garage_member (account_id, garage_id, role)
+         SELECT $1, ${garage}, $3::garage_member_role
+         WHERE NOT EXISTS (
+           SELECT 1 FROM garage_member WHERE account_id = $1
+             AND role = $3::garage_member_role AND garage_id <> ${garage})
+         ON CONFLICT (garage_id, account_id) DO UPDATE SET role = EXCLUDED.role
+         WHERE garage_member.role <> EXCLUDED.role`,
         [id, at.garage, at.as],
       );
 }
 
+// A seeded account is the seed's: each run gives it back its password, its
+// roles and its garage link, writing only what drifted. Its other columns
+// (name, phone, status, last role) are left as a user set them.
 async function add(db: Client, person: Person, secret: string) {
-  // An account that exists is left as it is.
   const created = await db.query<{ id: string }>(
     `INSERT INTO account (id, email, email_verified_at, name, last_role, status, phone, phone_verified_at)
      VALUES (gen_random_uuid(), $1, now(), $2, $3::role, $4::account_status, $5::text, CASE WHEN $5::text IS NULL THEN NULL ELSE now() END)
@@ -429,19 +465,48 @@ async function add(db: Client, person: Person, secret: string) {
       person.phone ?? null,
     ],
   );
-  const id = created.rows[0]?.id;
+  const id =
+    created.rows[0]?.id ??
+    (
+      await db.query<{ id: string }>(
+        'SELECT id FROM account WHERE email = $1',
+        [person.email],
+      )
+    ).rows[0]?.id;
   if (!id) return;
   for (const role of person.roles) {
     await db.query(
-      'INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)',
+      `INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)
+       ON CONFLICT DO NOTHING`,
       [id, role],
     );
   }
-  await db.query(
-    `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
-     VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
-    [id, person.email, await hash(secret)],
+  const { rows } = await db.query<{
+    id: string;
+    password_hash: string | null;
+    subject: string;
+  }>(
+    `SELECT id, subject, password_hash FROM account_identity
+     WHERE account_id = $1 AND method = 'password'
+     ORDER BY subject = $2 DESC LIMIT 1`,
+    [id, person.email],
   );
+  const identity = rows[0];
+  if (!identity) {
+    await db.query(
+      `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
+       VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
+      [id, person.email, await hash(secret)],
+    );
+  } else if (
+    identity.subject !== person.email ||
+    !(await verifies(secret, identity.password_hash))
+  ) {
+    await db.query(
+      'UPDATE account_identity SET subject = $2, password_hash = $3 WHERE id = $1',
+      [identity.id, person.email, await hash(secret)],
+    );
+  }
   if (person.at) await link(db, id, person.at);
 }
 
