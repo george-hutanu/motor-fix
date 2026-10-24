@@ -1,10 +1,11 @@
 ---
 capability: cockpit-gauges
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 051-cockpit-gauges
   - 053-motion
   - 466-odometer-digit-wrap
+  - 453-odometer-captions
 ---
 
 # Capability: cockpit-gauges
@@ -80,6 +81,22 @@ _From 466-odometer-digit-wrap._
 ### 466-FR-005 — A colocated spec in `libs/ui-cockpit/src/lib/odometer.spec.ts` MUST assert the grouping — a range renders exactly two amount groups and a single price exactly one, each digit inside its group — and MUST fail on today's one-item-per-character markup.
 
 _From 466-odometer-digit-wrap._
+
+### 453-FR-001 — The gauges catalogue MUST show a caption with each of its three odometer samples, naming what the sample shows: one price, a price range, no price.
+
+_From 453-odometer-captions._
+
+### 453-FR-002 — Each caption MUST be bound to its own sample (the sample and its caption form one figure), so it is read with that sample and not with its neighbour.
+
+_From 453-odometer-captions._
+
+### 453-FR-003 — The captions MUST come from the cockpit catalogue's Romanian and English text files through the existing translation pipe, with the same keys in both languages.
+
+_From 453-odometer-captions._
+
+### 453-FR-004 — At 320 px and 390 px wide, in light and dark, the page MUST NOT scroll sideways and every odometer sample with its caption MUST sit inside the gauges panel, unclipped.
+
+_From 453-odometer-captions._
 
 ## Retired
 
