@@ -49,6 +49,7 @@ features:
   - 1370-release-seed-no-ssh
   - 1372-seed-restores-accounts
   - 003-admin-account-actions
+  - 1373-seed-status-identity
 ---
 
 # Capability: Accounts
@@ -1322,9 +1323,9 @@ _From 1372-seed-restores-accounts._
 
 _From 1372-seed-restores-accounts._
 
-### 1372-FR-005 — The seed MUST write nothing on an account whose e-mail is not in its list, whatever its hash, roles or links; and on a seeded account it MUST leave `name`, `phone`, `phone_verified_at`, `status`, `last_role` and every other column outside FR-001 to FR-003 as the user left them.
+### 1373-FR-006 — The staging guard of `scripts/reset-staging.sh`, the refusal on `APP_ENV=production`, the `SEED_PASSWORD` rules and the seed's idempotence (`1372-FR-004`) MUST be unchanged; accounts outside the list MUST stay untouched (`1372-FR-005`, whose `status` column now belongs to the seed per FR-002).
 
-_From 1372-seed-restores-accounts._
+_From 1373-seed-status-identity._
 
 ### 1372-FR-006 — The staging guard of `scripts/reset-staging.sh`, the staging-only seed in the api's Railway pre-deploy (1370-FR-001), the refusal on `APP_ENV=production` and the `SEED_PASSWORD` guard MUST be unchanged, and the seed password's value MUST never be printed to stdout, stderr, a log or an error message.
 
@@ -1333,6 +1334,26 @@ _From 1372-seed-restores-accounts._
 ### 1372-FR-007 — Tests come first and live in `libs/domain/src/seed.integration.spec.ts` (PostgreSQL): a drifted-account test (a seeded account with a hash that does not verify, a missing seeded role and no garage link is restored; a renamed seeded account keeps its name; an account outside the list with a wrong hash, no roles and no link is unchanged) and a second-run test that proves FR-004, each carrying `// @traces 1372-FR-<n>` (the form `.claude/scripts/lib/traces.mjs` reads); the test of `1370-FR-006` that asserts a user-changed hash survives is replaced by these.
 
 _From 1372-seed-restores-accounts._
+
+### 1373-FR-002 — For each account in its list, the seed MUST restore the account's `status` to the seeded one (`active`, or the entry's `status`), writing only when it differs.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-003 — For each account in its list, the seed MUST leave exactly one `password` identity: the one FR-001 of 1372 repairs (subject = e-mail preferred), every other `password` identity of that account deleted; identities of another method and of other accounts are untouched.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-004 — After every seed run, no seeded account MUST hold a quote request created since the start of the current Bucharest day: `clearDay()` keeps removing what seeded accounts sent in the last 25 hours, and the seed's own requests are written dated before the start of the Bucharest day (2 h and 1 h before it).
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-005 — The seed MUST print exactly one summary line on stdout per run, `seed: restored password <n>, status <n>, roles <n>, link <n>, extra password identities <n>; cleared <n> quote requests`, each count the number of accounts that existed before the run whose field it wrote (an account that lost three extra password identities counts 1); the seed password's value MUST never appear in stdout, stderr or an error.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-007 — Tests come first: integration tests (`libs/domain/src/seed.integration.spec.ts`) for a `deleted` seeded account, one with two password identities, the day's count at 0 after a seed and the summary line; a unit test of the pre-deploy command run split into words with no shell, each carrying `// @traces 1373-FR-<n>`.
+
+_From 1373-seed-status-identity._
 
 ## Retired
 
@@ -1370,3 +1391,4 @@ _From 1372-seed-restores-accounts._
 - `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
 - `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
 - `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
+- `1372-FR-005` — superseded by `1373-FR-006` (2026-10-24)

@@ -108,6 +108,9 @@ features:
   - 520-brevo-key-check-retry
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
+  - 1373-seed-status-identity
+  - 961-require-agent-review
+  - 1376-pr-test-local-boot
 ---
 
 # Capability: Platform
@@ -224,9 +227,9 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
+### 1373-FR-001 — The api's Railway pre-deploy command MUST hold no shell syntax (no `&&`, `;`, `|`, quotes or `NAME=value` prefix): it MUST be `sh scripts/api-pre-deploy.sh <environment>`, a script in the api image that runs `npx prisma migrate deploy`, then `node scripts/monitor-password.ts`, then, on `staging` only, `SEED_ONLY=1 sh scripts/reset-staging.sh`, stopping at the first step that fails with its exit code; any other environment argument is refused with a non-zero exit before any step (modifies `1370-FR-001`).
 
-_From 1370-release-seed-no-ssh._
+_From 1373-seed-status-identity._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -742,9 +745,9 @@ _From 610-dependabot-exemption._
 
 _From 610-dependabot-exemption._
 
-### 610-FR-003 — The merge gate MUST give an exempt Dependabot PR with a failing check its own refusal: it names the failing checks, never asks for the PR tester, says a pushed commit takes the exemption away, and points at `@dependabot rebase` / `@dependabot recreate` or closing it for a PR of one's own.
+### 961-FR-004 — `decideMerge` MUST keep the Dependabot exemption for a PR `isDependabot` judges exempt when its `agent-review` is absent or a success: it refuses only on a failing, pending or missing check (610-FR-003's refusal) and does not run the pr-qa provenance check against that success; a Dependabot PR whose `agent-review` is a failure MUST still be refused with the standard refusal. `pr-lifecycle-gate.mjs` keeps its behaviour (it only imports the predicate from `lib/dependabot.mjs`, as `merge-gate.mjs` does). Eval cases in `.claude/evals/cases/merge-gate.json` cover the success, the failure and the no-status Dependabot heads.
 
-_From 610-dependabot-exemption._
+_From 961-require-agent-review._
 
 ### 678-FR-001 — Each session ledger MUST record, for every write, the level of the active feature and the phase from the run state at that moment, and MUST bucket the tokens consumed since the previous write under that (level, phase) pair, so a promotion mid-run splits the run's cost between the two levels, at the granularity of Stop writes (a turn lands whole in the level current at its Stop), rather than rewriting it.
 
@@ -2767,6 +2770,46 @@ _From 1370-release-seed-no-ssh._
 
 _From 1370-release-seed-no-ssh._
 
+### 961-FR-001 — A workflow `.github/workflows/dependabot-review.yml` MUST run on `pull_request_target` (opened, synchronize, reopened) and `workflow_dispatch` with a PR number input, with the job gated on the PR author being `dependabot[bot]`, permissions limited to `statuses: write`, `pull-requests: read`, `contents: read`, and MUST run the base checkout's `.claude/scripts/pr-test/dependabot-review.mjs` without checking out or executing the PR's code.
+
+_From 961-require-agent-review._
+
+### 961-FR-002 — `dependabot-review.mjs <pr>` MUST read the PR and its commits over REST and apply the same rule as `isDependabot` (610-FR-001: every commit authored by Dependabot, committed by `web-flow` or `dependabot[bot]`, signature verified); only then MUST it post an `agent-review` success on the head with a description naming the Dependabot exemption and `target_url` the workflow run; it MUST NOT post when the head already has an `agent-review` status of any state (a tester's verdict stands); otherwise it MUST post nothing, print the reason naming the first failing commit or the author, and exit 0. On `workflow_dispatch` the author check is the script's own, from the PR it reads.
+
+_From 961-require-agent-review._
+
+### 961-FR-003 — The script MUST be dependency-free (Node, `fetch` with `GITHUB_TOKEN`), have a colocated vitest spec covering the exempt PR, a human-commit PR, a non-Dependabot author and a REST failure (no status, exit 1); a spec MUST pin the workflow's event, its author gate and its permissions.
+
+_From 961-require-agent-review._
+
+### 961-FR-006 — `node .claude/scripts/branch-protection.mjs apply` MUST PUT `repos/george-hutanu/motor-fix/branches/main/protection` with required status checks `CI OK` (from GitHub Actions) and `agent-review` (from any source, since `post.mjs` and `carry.mjs` write it with the owner's token) (strict off), `enforce_admins` on, no required pull-request reviews, no push restrictions, force pushes and deletions off, using the george-hutanu token (`GH_TOKEN`, else `gh auth token -u george-hutanu`) and refusing to run without one; `check` MUST exit 0 only when main's protection requires both contexts with `agent-review` not pinned to an app, and names what is missing otherwise. Both read and write over REST through `.claude/scripts/lib/gh-rest.mjs`.
+
+_From 961-require-agent-review._
+
+### 961-FR-007 — The protection MUST be applied to `main` by this task's agent at hand-off, once the review left no CRITICAL/HIGH finding and before the PR is marked ready (so the PR tester can verify it on this PR), and `branch-protection.mjs check` MUST pass afterwards, its output recorded in the PR body and the run log.
+
+_From 961-require-agent-review._
+
+### 961-FR-008 — AGENTS.md step 7 MUST state that `agent-review` and `CI OK` are required status checks on `main`, enforced for administrators, and `.claude/skills/speckit-auto/lifecycle.md`'s Dependabot sentence MUST say the Dependabot review workflow writes the exempt PR's `agent-review` success.
+
+_From 961-require-agent-review._
+
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2868,3 +2911,5 @@ _From 1370-release-seed-no-ssh._
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
+- `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
+- `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
