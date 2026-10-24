@@ -10,7 +10,13 @@ section {
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
 }
+:host(.in-panel) section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 h2,
+h3,
 p {
   margin: 0;
 }
@@ -30,6 +36,7 @@ p {
 }
 .destructive {
   width: 100%;
+  min-height: 44px;
   white-space: normal;
   color: var(--mf-red-ink);
 }

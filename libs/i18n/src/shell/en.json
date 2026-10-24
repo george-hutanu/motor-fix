@@ -1,4 +1,8 @@
 {
+  "accountPanel": {
+    "text": "Your data and your account: a copy of your data, or deleting the account.",
+    "title": "Your account"
+  },
   "bell": {
     "empty": "No notifications yet",
     "failed": "Notifications did not load.",
@@ -54,6 +58,17 @@
       "reviews": "Reviews"
     },
     "trap": "Do not fill in this field"
+  },
+  "dataExport": {
+    "button": "Download my data",
+    "download": "Download (ZIP)",
+    "expires": "Available until {date}.",
+    "failed": "We could not prepare the file. Try again.",
+    "queued": "We are preparing the file. We will e‑mail you when it is ready.",
+    "retry": "Try again",
+    "text": "A ZIP file with everything MotorFix keeps about you, by area, plus a summary.",
+    "title": "Download my data",
+    "tooSoon": "You can ask for a new file once a day."
   },
   "deleteAccount": {
     "button": "Delete account",

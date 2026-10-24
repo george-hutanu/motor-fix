@@ -1,0 +1,47 @@
+<h3 id="data-export-title">{{ 'shell.dataExport.title' | t }}</h3>
+<p>{{ 'shell.dataExport.text' | t }}</p>
+<div class="state" role="status" aria-live="polite" id="data-export-state">
+  @switch (view()) {
+    @case ('queued') {
+      <p>{{ 'shell.dataExport.queued' | t }}</p>
+    }
+    @case ('ready') {
+      <p>{{ expires() }}</p>
+    }
+    @case ('request') {
+      @if (tooSoon()) {
+        <p>{{ 'shell.dataExport.tooSoon' | t }}</p>
+      } @else if (failed()) {
+        <p>{{ 'shell.dataExport.failed' | t }}</p>
+      }
+    }
+  }
+</div>
+@if (error(); as message) {
+  <p role="alert">{{ message }}</p>
+}
+<div class="actions">
+  @switch (view()) {
+    @case ('ready') {
+      <a hlmBtn variant="ghost" href="/api/v1/me/data-export/download" download>{{ 'shell.dataExport.download' | t }}</a>
+    }
+    @case ('request') {
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="request"
+        [disabled]="tooSoon() || sending()"
+        [attr.aria-describedby]="tooSoon() ? 'data-export-state' : null"
+        (click)="request()"
+      >
+        {{ 'shell.dataExport.button' | t }}
+      </button>
+    }
+    @case ('unread') {
+      <button hlmBtn variant="ghost" type="button" class="retry" (click)="load()">
+        {{ 'shell.dataExport.retry' | t }}
+      </button>
+    }
+  }
+</div>
