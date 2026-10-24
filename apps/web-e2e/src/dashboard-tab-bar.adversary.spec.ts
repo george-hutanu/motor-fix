@@ -17,10 +17,7 @@ const OWNER = [
   'garage.audit_history',
 ];
 
-const NAMES = {
-  en: { bar: 'Garage dashboard', first: 'Home', last: 'History' },
-  ro: { bar: 'Panou service', first: 'Panou', last: 'Istoric' },
-} as const;
+const BAR = { en: 'Garage dashboard', ro: 'Panou service' } as const;
 
 const sideways = (page: import('@playwright/test').Page) =>
   page.evaluate(() => document.documentElement.scrollWidth);
@@ -32,12 +29,11 @@ test.describe('the garage bar reveals the active tab after the page is already o
       test(`reveals Settings, then History, then the first tab when clicked at ${width} px in ${language}`, async ({
         page,
       }) => {
-        const names = NAMES[language];
         await signInAs(page, 'garage', '/app/garage', OWNER, language);
         await page.setViewportSize({ height: 640, width });
         await page.goto('/app/garage/reviews');
         await settled(page);
-        const bar = page.getByRole('navigation', { name: names.bar });
+        const bar = page.getByRole('navigation', { name: BAR[language] });
         const links = bar.getByRole('link');
 
         await links.nth(8).click();
