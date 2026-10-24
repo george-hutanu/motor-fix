@@ -142,7 +142,8 @@ export class VerificationPresence {
     const token = this.token ?? wire?.token;
     if (token) this.send(token);
     wire?.answered.then((answered) => {
-      if (answered && wire.token) this.send(wire.token);
+      // Unless the page came back meanwhile and beats again.
+      if (answered && wire.token && this.left) this.send(wire.token);
     });
   };
 

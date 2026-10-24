@@ -46,6 +46,14 @@ const parsed = (raw: string): Entry | null => {
   }
 };
 
+// A transaction's replies, or the store's failure: an aborted one or one
+// whose command answered an error.
+const succeeded = (replies: [Error | null, unknown][] | null) => {
+  const failed = replies?.find(([error]) => error)?.[0];
+  if (!replies || failed) throw failed ?? new Error('transaction aborted');
+  return replies;
+};
+
 // Which admins have a verification file open: a hint kept in Valkey only,
 // never a lock, never audited. A store that fails answers nobody, so the
 // file still opens and every check still records.
@@ -106,24 +114,28 @@ export class PresenceService {
     { name, at }: { name: string; at: string },
   ): Promise<boolean> {
     let own = live;
-    let created = false;
     if (!own) {
+      // Created with its expiry in one transaction: a key never lacks a TTL.
       const fresh = { name, seen: at, since: at };
-      created =
-        (await this.redis.hsetnx(key, accountId, JSON.stringify(fresh))) === 1;
-      own = created
-        ? fresh
-        : (parsed((await this.redis.hget(key, accountId)) ?? '') ?? fresh);
+      const [[, set]] = succeeded(
+        await this.redis
+          .multi()
+          .hsetnx(key, accountId, JSON.stringify(fresh))
+          .pexpire(key, TTL_MS)
+          .exec(),
+      );
+      if (set === 1) return true;
+      own = parsed((await this.redis.hget(key, accountId)) ?? '') ?? fresh;
     }
     own.seen = at;
-    const replies = await this.redis
-      .multi()
-      .hset(key, accountId, JSON.stringify(own))
-      .pexpire(key, TTL_MS)
-      .exec();
-    const failed = replies?.find(([error]) => error)?.[0];
-    if (!replies || failed) throw failed ?? new Error('transaction aborted');
-    return created;
+    succeeded(
+      await this.redis
+        .multi()
+        .hset(key, accountId, JSON.stringify(own))
+        .pexpire(key, TTL_MS)
+        .exec(),
+    );
+    return false;
   }
 
   // The tab closed: the others stop seeing the caller at once.

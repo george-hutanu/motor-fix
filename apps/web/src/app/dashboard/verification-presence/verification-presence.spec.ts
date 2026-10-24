@@ -301,6 +301,27 @@ describe('the heartbeat and the leave', () => {
     ]);
   });
 
+  // @traces 413-FR-004 413-FR-008
+  it('does not leave again for a beat that answers after the page came back', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    api.verificationFileControllerPresence.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    await render();
+    token = null;
+
+    window.dispatchEvent(new Event('pagehide'));
+    window.dispatchEvent(
+      Object.assign(new Event('pageshow'), { persisted: true }),
+    );
+    answer({ others: [] });
+    await pause();
+
+    expect(leaves()).toHaveLength(1);
+  });
+
   // @traces 413-FR-004
   it('leaves once when the page hides, and not again on destroy', async () => {
     const { fixture } = await render();

@@ -170,6 +170,53 @@ describe('a heartbeat on a verification file', () => {
     expect(await redis.hget(key(fileId), ana)).toBe(fresh);
   });
 
+  // A transaction that answers an error, or is aborted, is a store failure:
+  // nobody is announced, and the first beat leaves no key without a TTL.
+  it.each([
+    ['answers an error', [[new Error('OOM'), null]]],
+    ['is aborted', null],
+  ])(
+    'treats a transaction that %s as the store failing',
+    async (_title, reply) => {
+      await service.touch(fileId, mihai);
+      await until('Mihai announced', () => changesOf(fileId).length === 1);
+      const before = await counted('store_unavailable');
+      const failing = new Proxy(redis, {
+        get(target, property) {
+          if (property === 'multi')
+            return () => {
+              const chain = new Proxy(
+                {},
+                {
+                  get: (_chain, step) =>
+                    step === 'exec' ? async () => reply : () => chain,
+                },
+              );
+              return chain;
+            };
+          const value = Reflect.get(target, property);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+      const broken = new PresenceService(failing, prisma);
+      broken.now = () => clock;
+      published.splice(0);
+
+      await expect(broken.touch(fileId, ana)).resolves.toEqual({ others: [] });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect((await counted('store_unavailable')) - before).toBe(1);
+      expect(changesOf(fileId)).toHaveLength(0);
+      expect(await redis.hexists(key(fileId), ana)).toBe(0);
+    },
+  );
+
+  it('gives the key its expiry with the first beat', async () => {
+    await service.touch(fileId, ana);
+
+    expect(await redis.pttl(key(fileId))).toBeGreaterThan(59_000);
+  });
+
   it('fails the call, not the store count, when the account cannot be read', async () => {
     const before = await counted('store_unavailable');
     const broken = new PresenceService(redis, {
