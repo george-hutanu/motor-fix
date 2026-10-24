@@ -105,6 +105,7 @@ features:
   - 482-watch-transcript-holder
   - 486-entry-point-symlink
   - 506-railway-deploy-signal-spec
+  - 520-brevo-key-check-retry
 ---
 
 # Capability: Platform
@@ -2711,6 +2712,10 @@ _From 506-railway-deploy-signal-spec._
 ### 506-FR-003 — A spec in the `scripts` project's unit suite MUST spawn `scripts/railway-deploy.ts` as a child process against a fake Railway API on 127.0.0.1, send SIGINT when the first deployment poll arrives and SIGTERM while the restore request is unanswered, and assert that the api's restore request reaches the fake API and the process exits with code 1 (not by a signal) with `deploy cancelled` on stderr; it MUST fail when either signal handler in `main()` is removed, and MUST make no call outside loopback.
 
 _From 506-railway-deploy-signal-spec._
+
+### 520-FR-004 — The worker's `GET /health/ready` MUST report status `error` with 503 while the `notifications` queue consumer is not running (waiting on Brevo, refused, missing configuration), and follow the dependency checks alone once it runs; its `checks` fields and the public health contract stay as they are, and the API's `/health/ready` MUST be unchanged.
+
+_From 520-brevo-key-check-retry._
 
 ## Retired
 

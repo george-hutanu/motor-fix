@@ -1,4 +1,4 @@
-// @traces 195-FR-005 392-FR-001 392-FR-002 392-FR-007
+// @traces 195-FR-005 392-FR-001 392-FR-002 392-FR-007 520-FR-001
 import { Brevo, BrevoError } from './brevo';
 import { BrevoMock } from './brevo-mock.testing';
 import { systemLog } from '../../admin/system-log/system-log';
@@ -111,6 +111,52 @@ describe('the Brevo account check', () => {
     const checked = brevo(30_000).checkKey(caller.signal);
     setTimeout(() => caller.abort(), 20);
     await expect(checked).resolves.toBe(false);
+  });
+});
+
+describe('the Brevo key check outcome', () => {
+  it('passes a key Brevo accepts', async () => {
+    await expect(brevo().keyStatus()).resolves.toEqual({ outcome: 'passed' });
+  });
+
+  it.each([401, 403, 400, 404])(
+    'reads a %s answer as a refused key',
+    async (status) => {
+      mock.answer({ status });
+      await expect(brevo().keyStatus()).resolves.toEqual({
+        outcome: 'refused',
+        status,
+      });
+      mock.answer({ status });
+      await expect(brevo().checkKey()).resolves.toBe(false);
+    },
+  );
+
+  it.each([500, 502, 503, 429])(
+    'reads a %s answer as Brevo unreachable',
+    async (status) => {
+      mock.answer({ status });
+      await expect(brevo().keyStatus()).resolves.toEqual({
+        outcome: 'unreachable',
+        reason: `provider_${status}`,
+      });
+    },
+  );
+
+  it('reads no answer within the timeout as Brevo unreachable', async () => {
+    mock.answer({ hang: true, status: 0 });
+    await expect(brevo(200).keyStatus()).resolves.toEqual({
+      outcome: 'unreachable',
+      reason: 'provider_timeout',
+    });
+  });
+
+  it('reads a refused connection as Brevo unreachable', async () => {
+    const down = new Brevo({ apiKey: 'k', apiUrl: 'http://127.0.0.1:9/v3' });
+    await expect(down.keyStatus()).resolves.toEqual({
+      outcome: 'unreachable',
+      reason: 'provider_unreachable',
+    });
   });
 });
 

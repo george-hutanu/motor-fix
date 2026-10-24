@@ -46,12 +46,25 @@ const logFailure = (
   });
 };
 
+export type KeyStatus =
+  | { outcome: 'passed' }
+  | { outcome: 'refused'; status: number }
+  | { outcome: 'unreachable'; reason: string };
+
+// A call that got no answer: its own time limit ran out, or the network failed.
+// fetch rejects with a DOMException, which is not an Error in every realm.
+const unreachableReason = (error: BrevoError) =>
+  (error.cause as { name?: unknown } | null)?.name === 'TimeoutError'
+    ? 'provider_timeout'
+    : 'provider_unreachable';
+
 export class BrevoError extends Error {
   constructor(
     readonly reason: string,
     readonly retryable: boolean,
+    cause?: unknown,
   ) {
-    super(`Brevo refused the message: ${reason}`);
+    super(`Brevo refused the message: ${reason}`, { cause });
   }
 }
 
@@ -102,10 +115,21 @@ export class Brevo {
 
   // An aborted signal gives up on the check, which then answers false.
   async checkKey(signal?: AbortSignal): Promise<boolean> {
+    return (await this.keyStatus(signal)).outcome === 'passed';
+  }
+
+  // Whether Brevo accepts the key, refuses it, or could not be asked: no
+  // answer, a 5xx or a 429 may pass on a later try; any other refusal will not.
+  async keyStatus(signal?: AbortSignal): Promise<KeyStatus> {
     const res = await this.call('/account', { method: 'GET' }, signal).catch(
-      () => null,
+      (error: BrevoError) => error,
     );
-    return res?.ok ?? false;
+    if (res instanceof BrevoError)
+      return { outcome: 'unreachable', reason: unreachableReason(res) };
+    if (res.ok) return { outcome: 'passed' };
+    if (res.status >= 500 || res.status === 429)
+      return { outcome: 'unreachable', reason: `provider_${res.status}` };
+    return { outcome: 'refused', status: res.status };
   }
 
   // Answers Brevo's message id. Accepted without one, the message may have
@@ -152,8 +176,8 @@ export class Brevo {
           ? AbortSignal.any([AbortSignal.timeout(this.timeoutMs), signal])
           : AbortSignal.timeout(this.timeoutMs),
       });
-    } catch {
-      throw new BrevoError('provider_unreachable', true);
+    } catch (cause) {
+      throw new BrevoError('provider_unreachable', true, cause);
     }
   }
 }

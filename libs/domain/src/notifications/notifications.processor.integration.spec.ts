@@ -721,14 +721,35 @@ describe('starting the worker', () => {
     await expect(processor.ready()).resolves.toBe(true);
   });
 
-  it('refuses to send with a key Brevo refuses, and logs it', async () => {
-    const error = jest
-      .spyOn(Logger.prototype, 'error')
+  it.each([400, 401, 403])(
+    'refuses to send with a key Brevo refuses (%s), logs it and asks once',
+    async (status) => {
+      const error = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      mock.answer({ status });
+      await expect(processor.ready()).resolves.toBe(false);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(mock.calls).toHaveLength(1);
+      error.mockRestore();
+    },
+  );
+
+  // @traces 520-FR-001 520-FR-002 520-FR-003
+  it('waits out an unreachable Brevo and starts once it answers', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    mock.answer({ status: 401 });
-    await expect(processor.ready()).resolves.toBe(false);
-    expect(error).toHaveBeenCalled();
-    error.mockRestore();
+    const delays: number[] = [];
+    processor.sleep = async (ms) => {
+      delays.push(ms);
+    };
+    mock.answer({ status: 503 }, { status: 429 }, { status: 500 });
+    await expect(processor.ready()).resolves.toBe(true);
+    expect(mock.calls).toHaveLength(4);
+    expect(delays).toEqual([1_000, 2_000, 4_000]);
+    expect(warn).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
   });
 
   it.each([

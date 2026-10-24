@@ -61,6 +61,15 @@ function expand(canonical: string): number[] {
   return [...left, ...Array(8 - left.length - right.length).fill(0), ...right];
 }
 
+// The caller as a log line may name it: its network only, two IPv4 octets or
+// two IPv6 groups, read as the counter reads it.
+export function maskCaller(address: string): string {
+  const client = clientOf(address);
+  if (!client) return 'unknown';
+  if (isIP(client) === 4) return `${client.split('.', 2).join('.')}.x.x`;
+  return `${client.split(':', 2).join(':')}:x:x:x:x:x:x`;
+}
+
 // The keys never hold the e-mail or the address itself.
 const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
