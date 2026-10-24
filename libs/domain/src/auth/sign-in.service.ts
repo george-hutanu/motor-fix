@@ -96,16 +96,14 @@ export class SignInService {
   async signIn(
     input: { email: string; password: string; remember?: boolean },
     address: string,
-    // How the request came, for the refusal line only: what trust proxy
-    // rests on, masked (500-FR-011).
-    forwarding?: Forwarding,
+    // How the request came, for the refusal line only: the facts trust proxy
+    // rests on, masked.
+    forwarding: Forwarding,
   ): Promise<Issued> {
     const email = input.email.trim().toLowerCase();
     const refused = (reason: string) =>
       this.logger.warn(
-        `sign-in refused: ${reason} caller=${maskCaller(address)}${
-          forwarding ? ` ${forwardingFields(forwarding)}` : ''
-        }`,
+        `sign-in refused: ${reason} caller=${maskCaller(address)} ${forwardingFields(forwarding)}`,
       );
     if (await this.attempts.blocked(email, address)) {
       refused('too_many_attempts');

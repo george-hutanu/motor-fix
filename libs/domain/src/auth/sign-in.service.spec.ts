@@ -12,6 +12,8 @@ import type { PrismaClient } from '../generated/prisma/client';
 
 const EMAIL = 'andrei@example.test';
 const PASSWORD = 'secret-typo';
+// A request that said nothing of how it came.
+const DIRECT: Forwarding = { headers: {}, socket: undefined };
 
 function service(blocked: boolean) {
   const attempts = {
@@ -35,7 +37,7 @@ function service(blocked: boolean) {
 async function refusal(
   blocked: boolean,
   address: string,
-  forwarding?: Forwarding,
+  forwarding: Forwarding = DIRECT,
 ) {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
@@ -67,7 +69,9 @@ describe('a refused sign-in names its caller masked', () => {
 
     expect(code).toBe('invalid_credentials');
     expect(lines).toEqual([
-      JSON.stringify(['sign-in refused: invalid_credentials caller=203.0.x.x']),
+      JSON.stringify([
+        'sign-in refused: invalid_credentials caller=203.0.x.x hops=unknown headers=none',
+      ]),
     ]);
     expect(attempts.fail).toHaveBeenCalledWith(EMAIL, '203.0.113.9');
   });
@@ -77,7 +81,9 @@ describe('a refused sign-in names its caller masked', () => {
 
     expect(code).toBe('too_many_attempts');
     expect(lines).toEqual([
-      JSON.stringify(['sign-in refused: too_many_attempts caller=203.0.x.x']),
+      JSON.stringify([
+        'sign-in refused: too_many_attempts caller=203.0.x.x hops=unknown headers=none',
+      ]),
     ]);
   });
 
@@ -212,6 +218,7 @@ describe('a successful sign-in', () => {
     const issued = await signIns.signIn(
       { email: EMAIL, password: PASSWORD },
       '203.0.113.9',
+      DIRECT,
     );
 
     expect(issued.accessToken).toBe('t');
