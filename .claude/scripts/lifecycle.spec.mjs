@@ -452,7 +452,7 @@ describe('check caps the memory of the affected Jest runs', () => {
 
   const stepEnv = (h) => h.envs.find((e) => e.cmd.startsWith('sh scripts/heavy.sh')).env;
 
-  it('runs the affected tests with one Jest worker, recycled past 1GB, by default', () => {
+  it('runs the affected tests with two Jest workers, recycled past 1GB, by default', () => {
     const h = harness({ answers: [MERGE_BASE] });
     assert.equal(step(['check'], h.io).ok, true);
     const env = stepEnv(h);
