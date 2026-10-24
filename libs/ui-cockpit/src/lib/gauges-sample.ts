@@ -49,11 +49,16 @@ const RATINGS = [4.8, 4.2] as const;
     }
     figure {
       display: grid;
+      grid-template-rows: 1fr auto;
+      align-self: stretch;
       justify-items: start;
       gap: var(--mf-space-2);
       min-width: 0;
       max-width: 100%;
       margin: 0;
+    }
+    figure > mf-odometer {
+      align-self: center;
     }
     figcaption {
       color: var(--mf-text-secondary);
