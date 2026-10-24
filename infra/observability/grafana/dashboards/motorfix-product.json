@@ -4699,6 +4699,127 @@
     },
     {
       "id": 161,
+      "type": "stat",
+      "title": "Verification presence, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 211
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"created\"}[1h]))",
+          "legendFormat": "Files opened alongside another admin"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"store_unavailable\"}[1h]))",
+          "legendFormat": "Presence store unavailable"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 162,
+      "type": "stat",
+      "title": "Verification presence, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 211
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"created\"}[1d]))",
+          "legendFormat": "Files opened alongside another admin"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"store_unavailable\"}[1d]))",
+          "legendFormat": "Presence store unavailable"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 163,
+      "type": "timeseries",
+      "title": "Verification presence, per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 211
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"created\"}[1h]))",
+          "legendFormat": "Files opened alongside another admin"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_verification_presence_total{deployment_environment=\"$env\",outcome=\"store_unavailable\"}[1h]))",
+          "legendFormat": "Presence store unavailable"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 164,
       "type": "timeseries",
       "title": "Channel choices per hour, by channel",
       "datasource": {
@@ -4709,7 +4830,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 211
+        "y": 215
       },
       "targets": [
         {
@@ -4728,7 +4849,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 165,
       "type": "timeseries",
       "title": "Channel choices per day, by channel",
       "datasource": {
@@ -4739,7 +4860,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 211
+        "y": 215
       },
       "targets": [
         {
@@ -4758,7 +4879,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 166,
       "type": "timeseries",
       "title": "Channel fallbacks per hour, by reason",
       "datasource": {
@@ -4769,7 +4890,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 211
+        "y": 215
       },
       "targets": [
         {
@@ -4788,7 +4909,7 @@
       }
     },
     {
-      "id": 164,
+      "id": 167,
       "type": "timeseries",
       "title": "Channel fallbacks per day, by reason",
       "datasource": {
@@ -4799,7 +4920,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 211
+        "y": 215
       },
       "targets": [
         {

@@ -57,17 +57,18 @@ async function series() {
     );
 }
 
-// Every series the API starts: its own 95 (the decision refusals include
+// Every series the API starts: its own 96 (the decision refusals include
 // note_required, reason_required, note_too_short and the report decision's
 // no_open_report; the rejections one per reason; the listings sent, the
 // requests for more, the copies opened to answer one and the files sent
 // again one each; the report decisions one per outcome; the yearly
-// documents' uploaded, accepted and refused steps),
+// documents' uploaded, accepted and refused steps; the verification
+// presence's store_unavailable only, for the 150 budget),
 // one per check kind and result, one per re-check result, one per booking
 // confirmation outcome, one per quote decline outcome and one per review
 // outcome, and one sort change per sort.
 const API_SERIES =
-  95 +
+  96 +
   SORTS.length +
   BOOKING_CONFIRM_OUTCOMES.length +
   QUOTE_DECLINE_OUTCOMES.length +
@@ -164,6 +165,12 @@ describe("the API's product counters at start", () => {
         (one) => one.labels['outcome'],
       ),
     ).toEqual(['stored', 'refused_limit', 'trap', 'invalid']);
+    // @traces 413-FR-013
+    expect(
+      named(all, 'motorfix_verification_presence_total').map(
+        (one) => one.labels['outcome'],
+      ),
+    ).toEqual(['store_unavailable']);
     // 1345-FR-012: each instance stays under 150 series.
     expect(all.length).toBeLessThan(150);
   });

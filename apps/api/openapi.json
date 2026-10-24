@@ -6856,6 +6856,73 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/presence": {
+      "put": {
+        "operationId": "VerificationFileController_presence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationPresenceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "delete": {
+        "operationId": "VerificationFileController_leave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Gone from the file, or never there"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/verification-files/{id}/open": {
       "post": {
         "operationId": "VerificationFileController_open",
@@ -18790,6 +18857,39 @@
           "requestedAt",
           "changes",
           "total"
+        ]
+      },
+      "VerificationPresenceEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name and the initial of the last"
+          },
+          "since": {
+            "type": "string",
+            "description": "When this admin opened the file",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "since"
+        ]
+      },
+      "VerificationPresenceDto": {
+        "type": "object",
+        "properties": {
+          "others": {
+            "description": "The other admins with the file open, never the caller, the earliest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationPresenceEntryDto"
+            }
+          }
+        },
+        "required": [
+          "others"
         ]
       },
       "VerificationDecisionDto": {
