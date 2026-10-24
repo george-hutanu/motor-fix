@@ -346,6 +346,7 @@ describe("pr links the PR and the issue both ways", () => {
 
 // @traces 1324-FR-005
 // @traces 1324-FR-008
+// @traces 1153-FR-002
 describe("debt and ready are retired", () => {
   for (const [event, message] of [
     ["debt", "tech-debt tickets are retired; fix it in this task"],
