@@ -76,6 +76,36 @@ test.describe('the garage profile view @seeded', () => {
         t.trim(),
       ),
     ).toEqual(refuses.map((t) => t.trim()));
+    const fuels = await page
+      .locator('[data-works] [data-fuels]')
+      .allTextContents();
+    expect(
+      (await profile.locator('.works .fuels').allTextContents()).map((t) =>
+        t.trim(),
+      ),
+    ).toEqual(fuels.map((t) => t.trim()));
+    // The offered facilities, and the hours, read the same on both pages.
+    const offered = await page
+      .locator('[data-facility]:not(.off) mf-lamp')
+      .allTextContents();
+    expect(
+      (await profile.locator('.facilities .chip').allTextContents()).map((t) =>
+        t.trim(),
+      ),
+    ).toEqual(offered.map((t) => t.trim()));
+    const hours = (
+      await page.locator('[data-line="hours"] .hours-line').allTextContents()
+    ).map((t) => t.replace(/\s+/g, ' ').trim());
+    const publicHours = await profile
+      .locator('.days')
+      .evaluateAll((days) =>
+        days.map((d) =>
+          `${d.textContent} ${d.nextElementSibling?.textContent ?? ''}`
+            .replace(/\s+/g, ' ')
+            .trim(),
+        ),
+      );
+    expect(publicHours).toEqual(hours);
     expect(await profile.content()).not.toContain(phone?.slice(3) ?? '-');
   });
 

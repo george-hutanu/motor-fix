@@ -88,7 +88,7 @@
         }
       </div>
       <p class="muted" data-unmarked>{{ 'garage.profile.unmarked' | t }}</p>
-      @if (garage.brandNote) {
+      @if (garage.brandNote && (garage.worksOn.length || garage.doesNotTake.length)) {
         <p class="note" data-brand-note>{{ garage.brandNote }}</p>
       }
     } @else {

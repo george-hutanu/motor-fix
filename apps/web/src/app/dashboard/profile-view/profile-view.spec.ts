@@ -315,6 +315,22 @@ describe('Profilul service-ului: the brands', () => {
   });
 });
 
+// @traces 133-FR-007
+describe('Profilul service-ului: the brand note', () => {
+  it('leaves the brand note out while no brand is marked, as the public profile does', async () => {
+    const { element, settle } = await render(async () =>
+      answer({
+        brandNote: 'Doar modele după 2010',
+        doesNotTake: [],
+        worksOn: [],
+      }),
+    );
+    await settle();
+
+    expect(element.querySelector('[data-brand-note]')).toBeNull();
+  });
+});
+
 // @traces 133-FR-008
 describe('Profilul service-ului: the facilities', () => {
   const rows = (element: HTMLElement) =>
