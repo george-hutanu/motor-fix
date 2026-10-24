@@ -159,6 +159,13 @@ describe('posting the review', () => {
     assert.throws(() => postVerdict({ ...base, verdict: 'success', gh }), /agent-review/);
   });
 
+  // @traces 1377-FR-002
+  it('names GitHub\'s reason from gh\'s stdout when the status is refused', () => {
+    const stdout = '{"message":"Validation Failed","errors":["target_url must use http(s) scheme"],"status":"422"}';
+    const { gh } = fakeGh([[/statuses/, { code: 1, stdout, stderr: 'gh: Validation Failed (HTTP 422)' }]]);
+    assert.throws(() => postVerdict({ ...base, verdict: 'success', gh }), /Validation Failed \(HTTP 422\): target_url must use http\(s\) scheme/);
+  });
+
   it('fills the description\'s Agent review section when the template has one', () => {
     const body = '## Summary\nx\n\n## Agent review\n<!-- filled by the PR tester -->\n\n## Checklist\n- [x] a\n';
     const { calls, gh } = fakeGh([[/pr view/, { code: 0, stdout: JSON.stringify({ body }), stderr: '' }]]);

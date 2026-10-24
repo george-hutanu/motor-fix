@@ -68,11 +68,7 @@ export function replaceSection(body, heading, content) {
   return [...lines.slice(0, keep), content, "", ...lines.slice(end)].join("\n");
 }
 
-/**
- * A failed `gh api` call's error: gh writes GitHub's JSON error body to stdout
- * and only its summary ("gh: Unprocessable Entity (HTTP 422)") to stderr, so
- * GitHub's `errors` are read from stdout and joined to the summary.
- */
+/** A failed `gh api` call's error: the stderr summary joined to the `errors` of the JSON body on stdout (see the header). */
 function ghError({ stdout = "", stderr = "" }) {
   let errors = [];
   try {
@@ -161,7 +157,7 @@ function setStatus(gh, repo, sha, status) {
     `description=${status.description}`,
     ...(status.targetUrl ? ["-f", `target_url=${status.targetUrl}`] : []),
   ]);
-  if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${set.stderr.trim()}`);
+  if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${ghError(set)}`);
 }
 
 function flag(argv, name) {
