@@ -147,7 +147,15 @@ Phones first: 320 px, 390 px, a tablet and a desktop, light and dark,
 Romanian and English, and a screen that scrolls sideways at 320 px is a
 finding. QA runs in CI and its artifact's screenshots are the evidence; no
 images in the repo. The how-to is in `.claude/skills/speckit-pr-test/SKILL.md`;
-its "Routes and flows" says how a route is written and how a flow reports and waits.
+its "Routes and flows" holds the detail:
+
+- A route is `path[?query][@role][:status]`; `/:lang` only as the first
+  segment, and a route under `/app/` needs `@role`.
+- A flow gets the shared helpers and the run's `findings`, and
+  pushes each finding as it finds it: pushed or returned, never both.
+  It waits on a visible element, `waitForText` or the stream's open
+  state, never `networkidle`. Flows a story changed are proven with
+  `precheck.mjs --flows <file> --check` before dispatch.
 
 ## Specs live in their own repo
 
