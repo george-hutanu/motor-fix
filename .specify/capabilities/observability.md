@@ -548,7 +548,7 @@ _From 1024-alert-rules._
 
 _From 1024-alert-rules._
 
-### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004).)
+### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004). (Amended 2026-10-25: `worker-jobs-failed` also carries the retention job's overdue arm, `reason="overdue"` on queue `retention`, and labels its failed arm `reason="failed"` (1156-FR-011).)
 
 _From 1024-alert-rules._
 
@@ -884,7 +884,7 @@ _From 003-admin-account-actions._
 
 _From 1156-retention-job._
 
-### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours; the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
+### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours (an arm of `worker-jobs-failed`, `reason="overdue"`, so the rules stay within the free tier's 50); the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
 
 _From 1156-retention-job._
 

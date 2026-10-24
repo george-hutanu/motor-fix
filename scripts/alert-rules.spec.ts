@@ -99,7 +99,6 @@ const ZERO_WAIT = new Set([
   'api-admin-account-action-failed',
   'web-down',
   'worker-down',
-  'worker-retention-stale',
   'mcp-down',
   'api-error-rate',
   'web-error-rate',
@@ -366,9 +365,14 @@ const EXPECTED: Record<
     expr: [
       'by (deployment_environment, queue)',
       'increase(motorfix_jobs_total{outcome="failed", queue!="verification-result"}[15m])',
+      'target_info{service_name="worker"}[1h] offset 47h',
+      'unless',
+      'increase(motorfix_jobs_total{queue="retention", job_name="retention-nightly", outcome="completed"}[48h])) > 0',
+      '"queue", "retention"',
+      '"reason", "overdue"',
     ],
     for: '0s',
-    from: 900,
+    from: 172800,
     type: 'gt',
     value: 0,
   },
@@ -389,17 +393,6 @@ const EXPECTED: Record<
     ],
     for: '15m',
     from: 300,
-    type: 'gt',
-    value: 0,
-  },
-  'worker-retention-stale': {
-    expr: [
-      'target_info{service_name="worker"}[1h] offset 47h',
-      'unless',
-      'increase(motorfix_jobs_total{queue="retention", job_name="retention-nightly", outcome="completed"}[48h])) > 0',
-    ],
-    for: '0s',
-    from: 172800,
     type: 'gt',
     value: 0,
   },
@@ -807,6 +800,21 @@ describe('alert rules', () => {
     expect(rule?.annotations['summary']).toContain('{{ $labels.queue }}');
   });
 
+  // @traces 1156-FR-011
+  it('tells the owner the retention job is overdue as an arm of worker-jobs-failed, not a rule of its own', () => {
+    const rules = rulesOf(own('worker') as AlertFile);
+    const rule = rules.find((r) => r.uid === 'worker-jobs-failed');
+    const expr = query(rule as Rule)?.model.expr ?? '';
+    expect(rules.map((r) => r.uid)).not.toContain('worker-retention-stale');
+    expect(expr).toContain(
+      'increase(motorfix_jobs_total{queue="retention", job_name="retention-nightly", outcome="completed"}[48h])) > 0',
+    );
+    expect(expr).toContain('"reason", "overdue"');
+    expect(expr).toContain('"reason", "failed"');
+    expect(rule?.annotations['summary']).toContain('$labels.reason');
+    expect(rule?.annotations['runbook']).toContain('retention-nightly');
+  });
+
   // @traces 880-FR-017
   // @traces 1178-FR-009
   // @traces 305-FR-009
@@ -814,8 +822,8 @@ describe('alert rules', () => {
   // @traces 1181-FR-009
   // @traces 1156-FR-011
   // @traces 142-FR-008
-  it('holds fifty rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(50);
+  it('holds forty-nine rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(49);
   });
 
   // @traces 1345-FR-004

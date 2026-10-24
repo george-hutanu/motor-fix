@@ -74,8 +74,7 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory",
-        "worker-retention-stale"
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -113,8 +112,7 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory",
-        "worker-retention-stale"
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -205,10 +203,9 @@
       "alerts": [
         "worker-queue-backlog",
         "worker-queue-growing",
-        "worker-jobs-failed",
-        "worker-retention-stale"
+        "worker-jobs-failed"
       ],
-      "reason": "the nightly retention job: one scheduler, retention-nightly, at 04:00 Europe/Bucharest deletes expired sign-in, phone-change, account and refresh tokens and sent invites, notifications past 12 months and legal documents (with their page files) of garages closed 5 years, and anonymises audit entries past their owner's closure; counted by motorfix_jobs_total{job_name,outcome}, one log line per kind with its count and one with the run's duration, a failed sweep failing the job (3 tries) and worker-jobs-failed on the last; worker-retention-stale fires when no run completed in 48 hours",
+      "reason": "the nightly retention job: one scheduler, retention-nightly, at 04:00 Europe/Bucharest deletes expired sign-in, phone-change, account and refresh tokens and sent invites, notifications past 12 months and legal documents (with their page files) of garages closed 5 years, and anonymises audit entries past their owner's closure; counted by motorfix_jobs_total{job_name,outcome}, one log line per kind with its count and one with the run's duration, a failed sweep failing the job (3 tries) and worker-jobs-failed on the last; worker-jobs-failed (reason overdue) fires when no run completed in 48 hours",
       "story": "ST-1156"
     },
     {
@@ -2135,9 +2132,9 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-worker",
       "alerts": [
-        "worker-retention-stale"
+        "worker-jobs-failed"
       ],
-      "reason": "counts the rows each nightly retention run removed or anonymised, by kind (eight fixed kinds, started at 0 in the worker); panel Retention rows per night; a run that never completes is worker-retention-stale's, a failed one worker-jobs-failed's",
+      "reason": "counts the rows each nightly retention run removed or anonymised, by kind (eight fixed kinds, started at 0 in the worker); panel Retention rows per night; a failed run and a run that has not completed in 48 hours are both worker-jobs-failed's (reason failed or overdue)",
       "story": "ST-1156"
     },
     {
