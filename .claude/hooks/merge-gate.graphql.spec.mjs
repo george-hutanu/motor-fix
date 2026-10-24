@@ -449,3 +449,11 @@ describe('merge gate — the eval cases that hold the graphql path shut', () => 
     assert.ok(JSON.parse(readFileSync(join(root, '.claude/evals/baseline.json'), 'utf8')).pass_rate >= 1);
   });
 });
+
+describe('merge gate — its registry entry says what it judges', () => {
+  it('names the GraphQL merges and the PR title check beside the CLI and REST merges', () => {
+    const registry = JSON.parse(readFileSync(fileURLToPath(new URL('./registry.json', import.meta.url)), 'utf8'));
+    const { description } = registry.hooks.find((hook) => hook.script === 'merge-gate.mjs');
+    for (const word of ['gh pr merge', 'REST', 'mergePullRequest', 'enablePullRequestAutoMerge', 'PR title', 'CI OK']) assert.ok(description.includes(word), word);
+  });
+});
