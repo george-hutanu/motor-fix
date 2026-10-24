@@ -20,7 +20,7 @@ let since: Date;
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
-  await redis.del('brands:active');
+  await redis.del('brands:version');
   const [{ now }] = await prisma.$queryRaw<
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
@@ -131,7 +131,7 @@ describe('BrandLoader under hostile files', () => {
     await loader.load([{ key: 'a', name: 'Alfa' }]);
     const before = await stored();
     const entries = (await history()).length;
-    await redis.set('brands:active', '[]');
+    const version = await redis.incr('brands:version');
 
     await expect(
       loader.load([
@@ -143,7 +143,7 @@ describe('BrandLoader under hostile files', () => {
 
     expect(await stored()).toEqual(before);
     expect(await history()).toHaveLength(entries);
-    expect(await redis.get('brands:active')).toBe('[]');
+    expect(await redis.get('brands:version')).toBe(String(version));
   });
 
   it('names both keys of a clash with a stored brand', async () => {

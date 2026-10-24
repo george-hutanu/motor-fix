@@ -6,12 +6,21 @@ import { AUTH_REDIS } from '../../auth/attempts';
 import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { ACTIVE_BRANDS_KEY } from '../brand-loader';
 
 const PAGE = 20;
 const CACHE_SECONDS = 3600;
+const VERSION_KEY = 'brands:version';
 
-// PostgreSQL holds the list; Redis keeps a copy the loader drops on a change.
+// A change bumps the version instead of deleting the cached list, so a search
+// that read PostgreSQL before the change writes its list under the old version,
+// which no later search reads. A failed bump leaves the old list for its hour.
+export async function dropActiveBrands(redis: Redis, logger: Logger) {
+  await redis.incr(VERSION_KEY).catch((error: unknown) => {
+    logger.warn(`brand cache not dropped: ${String(error)}`);
+  });
+}
+
+// PostgreSQL holds the list; Redis keeps a copy every change drops.
 @Injectable()
 export class BrandsService {
   private readonly logger = new Logger('Brands');
@@ -48,8 +57,12 @@ export class BrandsService {
   }
 
   private async active(): Promise<BrandDto[]> {
+    const key = await this.cache(
+      async () => `brands:active:${(await this.redis.get(VERSION_KEY)) ?? 0}`,
+    );
     const cached = await this.cache(async () => {
-      const text = await this.redis.get(ACTIVE_BRANDS_KEY);
+      if (!key) return null;
+      const text = await this.redis.get(key);
       if (!text) return null;
       const list: unknown = JSON.parse(text);
       return Array.isArray(list) ? (list as BrandDto[]) : null;
@@ -69,14 +82,11 @@ export class BrandsService {
       },
       where: { active: true },
     });
-    await this.cache(() =>
-      this.redis.set(
-        ACTIVE_BRANDS_KEY,
-        JSON.stringify(brands),
-        'EX',
-        CACHE_SECONDS,
-      ),
-    );
+    if (key) {
+      await this.cache(() =>
+        this.redis.set(key, JSON.stringify(brands), 'EX', CACHE_SECONDS),
+      );
+    }
     return brands;
   }
 

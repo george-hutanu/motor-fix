@@ -47,7 +47,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE brand, job_type, garage CASCADE');
-  await redis.del('brands:active');
+  await redis.incr('brands:version');
 });
 
 afterAll(async () => {
