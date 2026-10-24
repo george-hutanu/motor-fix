@@ -119,6 +119,9 @@ export class Session {
   private lapsed: MeDto | null = null;
   // The session ended in another tab of this browser.
   readonly ended = new Subject<void>();
+  // The account a sign-out ended, here, in another tab or on the server; a
+  // refused renewal is not one.
+  readonly signedOut = new Subject<string>();
   private readonly tabs: BroadcastChannel | null = null;
   private accessToken: string | null = null;
   // Until when this tab's own password change keeps it signed in.
@@ -502,6 +505,7 @@ export class Session {
   }
 
   private drop() {
+    const leaving = this.current()?.id ?? this.lapsed?.id;
     this.generation++;
     this.loading = null;
     this.renewing = null;
@@ -509,6 +513,7 @@ export class Session {
     this.kept.set(null);
     this.forget();
     this.hint(null);
+    if (leaving) this.signedOut.next(leaving);
   }
 
   private hint(role: MeDto['role'] | null) {

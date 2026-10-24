@@ -241,9 +241,9 @@ describe('dashboard routing under hostile addresses', () => {
     expect(url()).toBe('/app/driver');
   });
 
-  it('redirects to the dashboard view when the session is empty', async () => {
+  it('opens Home when the session is empty', async () => {
     const { url } = await open(null, 'garage', '/app/garage/requests');
-    expect(url()).toBe('/app/garage');
+    expect(url()).toBe('/');
   });
 
   it('marks only the open view current in the bar and the menu', async () => {

@@ -25,7 +25,11 @@ function world({ checks = [], run = [], mergeable = ['MERGEABLE'] } = {}) {
       if (answer === 'error') return { code: 1, stdout: '', stderr: 'HTTP 502' };
       return { code: 0, stdout: JSON.stringify({ mergeable: answer }), stderr: '' };
     }
-    if (args[0] === 'run' && args[1] === 'view') return { code: 0, stdout: JSON.stringify(next(run)), stderr: '' };
+    if (args[0] === 'run' && args[1] === 'view') {
+      const answer = next(run);
+      if (answer === 'error') return { code: 1, stdout: '', stderr: 'HTTP 502' };
+      return { code: 0, stdout: JSON.stringify(answer), stderr: '' };
+    }
     return { code: 1, stdout: '', stderr: `no route for ${args.join(' ')}` };
   };
   const sleep = async (ms) => {
@@ -223,5 +227,50 @@ describe('a Mutation run on the head, which no task waits for', () => {
   it('still reports a failing check of any other workflow', async () => {
     const w = world({ checks: [[...green, { name: 'Unit tests', bucket: 'fail', workflow: 'CI' }, mutation('fail')]] });
     assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: ['Unit tests: fail'] });
+  });
+});
+
+// @traces 317-FR-005
+describe('a transient gh error, which one poll later is usually gone', () => {
+  const reads = (w, prefix) => w.calls.filter((c) => c.startsWith(prefix)).length;
+
+  it('reads the checks again after one HTTP 502 and exits 0 on green', async () => {
+    const w = world({ checks: ['error', green] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    assert.equal(reads(w, 'pr checks'), 2);
+  });
+
+  it('exits 2 after three unreadable reads in a row, naming the error', async () => {
+    const w = world({ checks: ['error'] });
+    const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
+    assert.equal(out.code, 2);
+    assert.match(out.lines[0], /HTTP 502/);
+    assert.equal(reads(w, 'pr checks'), 3);
+  });
+
+  it('takes the number of tries it is given', async () => {
+    const w = world({ checks: ['garbled'] });
+    assert.equal((await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now, ghTries: 5 })).code, 2);
+    assert.equal(reads(w, 'pr checks'), 5);
+  });
+
+  it('starts the count again after a readable answer', async () => {
+    const pending = [{ name: 'CI OK', bucket: 'pending' }];
+    const w = world({ checks: ['error', 'error', pending, 'error', 'error', green] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+  });
+
+  it('reads the mergeable state again after one failure', async () => {
+    const w = world({ checks: [green], mergeable: ['error', 'MERGEABLE'] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+  });
+
+  it('reads the QA run again after one failure, and exits 2 when it never reads', async () => {
+    const once = world({ run: ['error', done] });
+    assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: once.gh, sleep: once.sleep, now: once.now }), { code: 0, lines: ['QA run: success'] });
+    const never = world({ run: ['error'] });
+    const out = await waitForCi({ pr: 21, run: '123', gh: never.gh, sleep: never.sleep, now: never.now });
+    assert.equal(out.code, 2);
+    assert.equal(reads(never, 'run view'), 3);
   });
 });

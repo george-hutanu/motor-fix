@@ -17,7 +17,9 @@
 // git ignores handoff.md, so a cloud session resumed on a fresh VM has none:
 // there the PR keeps every version of the note as a comment whose first line
 // is HANDOFF_MARK, and the newest one wins. Off the cloud the worktree keeps
-// the note, so nothing is posted.
+// the note, so nothing is posted. run-state.json is git-ignored too, so the
+// note carries the repair count (`- Repair iterations: <n>`, rewritten from
+// run state at each post) and the restore puts it back, never lowering it.
 //
 // A hook only sees `node lifecycle.mjs …`, so every git and gh command is first
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
@@ -46,6 +48,7 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { carriedFrom, carryKind, findingCount, latestReview, statusesArgs } from "./pr-test/carry.mjs";
+import { readState, writeState } from "./run-state.mjs";
 import { featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
@@ -443,6 +446,7 @@ function ready(ctx, flags) {
       `# Hand-off — ${ctx.feature.name}`,
       `- PR: #${pr.number} ${pr.url} · branch ${ctx.branch} · worktree ${resolve(ctx.repo)} · head ${head}`,
       `- Tracker: issue ${qaOut?.url ?? ctx.story} (${ctx.story}) · events in ${ctx.rel}/${LOG}`,
+      repairLine(readState(ctx.repo).repair_iterations ?? 0),
       `- Open decisions: ${flags.decisions ?? "none"}`,
       "",
     ].join("\n"),
@@ -469,23 +473,58 @@ function postHandoff(ctx, n) {
   ctx.did.push("handoff comment");
 }
 
+const REPAIR_LINES = /^- Repair iterations: (\d+)$/gm;
+const repairLine = (n) => `- Repair iterations: ${n}`;
+
+/** The repair laps a note records: the highest of its count lines and its QA run's lap less one; null with none. */
+function notedRepairs(text) {
+  const lap = Number(/^- QA run: .* · lap (\d+) /m.exec(text)?.[1]);
+  const counts = [...text.matchAll(REPAIR_LINES)].map((m) => Number(m[1]));
+  const found = [...counts, lap - 1].filter((n) => Number.isInteger(n) && n >= 0);
+  return found.length ? Math.max(...found) : null;
+}
+
+/** The note with one count line holding `n`: the first rewritten in place, any later one dropped, else one appended. */
+function withRepairLine(text, n) {
+  let first = true;
+  const out = text.replace(/^- Repair iterations:.*$\n?/gm, (line) => (first ? ((first = false), `${repairLine(n)}${line.endsWith("\n") ? "\n" : ""}`) : ""));
+  return first ? `${text.replace(/\n*$/, "\n")}${repairLine(n)}\n` : out;
+}
+
+/** Run state's repair count raised to what the note records; a count already higher is kept. */
+function restoreRepairs(ctx, text) {
+  const noted = notedRepairs(text);
+  const state = readState(ctx.repo);
+  if (noted === null || noted <= (state.repair_iterations ?? 0)) return;
+  writeState(ctx.repo, { ...state, feature: state.feature ?? ctx.rel, repair_iterations: noted });
+  ctx.did.push(`repair_iterations restored: ${noted}`);
+}
+
 function handoff(ctx, flags) {
   const file = join(ctx.feature.dir, "handoff.md");
   const n = flags.pr ?? JSON.parse(ctx.gh("pr", "view", ctx.branch, "--json", "number").stdout).number;
   if (!flags.restore) {
     if (!existsSync(file)) throw new Stop("no handoff.md", `${ctx.rel}/handoff.md is missing: write the note first (or ${SELF} handoff --restore --pr ${n})`);
+    const text = readFileSync(file, "utf8");
+    // Run state lost on a fresh VM reads 0: the note's own count then stands.
+    writeFileSync(file, withRepairLine(text, Math.max(readState(ctx.repo).repair_iterations ?? 0, notedRepairs(text) ?? 0)));
     postHandoff(ctx, n);
     return { pr: Number(n) };
   }
-  if (existsSync(file)) return { pr: Number(n), note: "kept" };
+  if (existsSync(file)) {
+    restoreRepairs(ctx, readFileSync(file, "utf8"));
+    return { pr: Number(n), note: "kept" };
+  }
   const { comments = [] } = JSON.parse(ctx.gh("pr", "view", String(n), "--json", "comments").stdout);
   const newest = comments
     .filter((c) => String(c.body ?? "").split(/\r?\n/, 1)[0].trim() === HANDOFF_MARK)
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
     .at(-1);
   if (!newest) throw new Stop("no hand-off", `${ctx.rel}/handoff.md is missing and PR #${n} has no comment starting ${HANDOFF_MARK}: treat the PR as having no recorded QA run (tail.md step 3)`);
-  writeFileSync(file, newest.body.replace(/^[^\n]*\n/, ""));
+  const text = newest.body.replace(/^[^\n]*\n/, "");
+  writeFileSync(file, text);
   ctx.did.push("handoff.md restored");
+  restoreRepairs(ctx, text);
   return { pr: Number(n), note: "restored" };
 }
 

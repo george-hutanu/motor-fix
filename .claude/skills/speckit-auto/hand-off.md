@@ -76,8 +76,14 @@ and QA lap is where most of a story's cost went.
    - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
    - Tracker: issue <url> (ST-<n>) · events in specs/<feature>/tracker-sync.md
    - QA run: <id> · head <sha> · lap 1 · <url>
+   - Repair iterations: <n>
    - Open decisions: <each, with its source file> | none
    ```
+
+   `ready` writes the `Repair iterations:` line from run state, and each
+   `handoff --pr <n>` rewrites it from run state (never below the note's
+   own count) before it posts: `.specify/run-state.json` is git-ignored,
+   so the note is where a fresh VM finds the repair count.
 
 5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
    write the Final Report, and reply with `NEXT: tail #<n> after QA run <id>`

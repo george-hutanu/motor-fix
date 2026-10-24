@@ -1,8 +1,7 @@
-import { TestBed } from '@angular/core/testing';
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 const DRIVER = {
   capabilities: [],
@@ -17,28 +16,24 @@ const DRIVER = {
   roles: ['driver'],
 } as unknown as MeDto;
 
-function setup() {
-  const api = {
-    authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-    authControllerSignUp: jest.fn(() =>
-      Promise.resolve({ accessToken: 'signed-up' }),
-    ),
-  };
-  const meControllerMe = jest.fn(() => Promise.resolve(DRIVER));
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe } },
-      { provide: AuthService, useValue: api },
-    ],
+function signUpSetup() {
+  const { auth, me, session } = setup({
+    auth: {
+      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
+      authControllerSignUp: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-up' }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(DRIVER)) },
   });
-  return { api, meControllerMe, session: TestBed.inject(Session) };
+  return { api: auth, meControllerMe: me.meControllerMe, session };
 }
 
 beforeEach(() => localStorage.clear());
 
 describe('creating an account', () => {
   it('sends the name, the e-mail, the password, the language and the consent to the current texts, then holds the session', async () => {
-    const { api, meControllerMe, session } = setup();
+    const { api, meControllerMe, session } = signUpSetup();
 
     const me = await session.signUp(
       'Andrei Marin',
@@ -67,7 +62,7 @@ describe('creating an account', () => {
   });
 
   it('lets a refused sign-up reach the caller, holding no token', async () => {
-    const { api, session } = setup();
+    const { api, session } = signUpSetup();
     api.authControllerSignUp.mockRejectedValueOnce(new Error('409'));
 
     await expect(
