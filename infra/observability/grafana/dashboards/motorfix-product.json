@@ -4700,6 +4700,36 @@
     {
       "id": 161,
       "type": "timeseries",
+      "title": "Channel choices per hour, by channel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 211
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (channel) (increase(motorfix_notification_channel_choices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 162,
+      "type": "timeseries",
       "title": "Channel choices per day, by channel",
       "datasource": {
         "type": "prometheus",
@@ -4707,8 +4737,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
-        "x": 0,
+        "w": 6,
+        "x": 6,
         "y": 211
       },
       "targets": [
@@ -4728,7 +4758,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 163,
       "type": "timeseries",
       "title": "Channel fallbacks per hour, by reason",
       "datasource": {
@@ -4737,7 +4767,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
+        "w": 6,
         "x": 12,
         "y": 211
       },
@@ -4749,6 +4779,36 @@
             "uid": "${prom}"
           },
           "expr": "sum by (from, to, reason) (increase(motorfix_notification_channel_fallbacks_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{from}} → {{to}} {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 164,
+      "type": "timeseries",
+      "title": "Channel fallbacks per day, by reason",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 211
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (from, to, reason) (increase(motorfix_notification_channel_fallbacks_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{from}} → {{to}} {{reason}}"
         }
       ],
