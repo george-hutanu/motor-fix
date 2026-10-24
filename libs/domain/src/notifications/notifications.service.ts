@@ -109,6 +109,9 @@ type DraftJob = NextJob & { data: { id: string } };
 // once the message is sent or has failed.
 const IN_FLIGHT_ONLY = ['link'];
 
+// A bounce mark never moves back to an earlier bounce.
+const later = (mark: Date | null, at: Date) => (mark && mark > at ? mark : at);
+
 const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
   Object.fromEntries(
     Object.entries(params).filter(([key]) => !IN_FLIGHT_ONLY.includes(key)),
@@ -599,31 +602,29 @@ export class NotificationsService {
     const at = this.now();
     const ids = rows.map((r) => r.id);
     const next = await this.prisma.$transaction(async (tx) => {
+      const before = await this.lockBounceMark(tx, accountId);
       const { count } = await tx.notification.updateMany({
         data: { failure: 'bounced', status: 'failed' },
         where: { id: { in: ids }, status: { not: 'failed' } },
       });
       if (count === 0) return null;
       await this.forget(ids, tx);
-      const before = await tx.account.findUniqueOrThrow({
-        select: { emailBouncedAt: true },
-        where: { id: accountId },
-      });
+      // Each bounce is audited beside its event, even when the mark stays.
+      const mark = later(before, at);
       await tx.account.update({
-        data: { emailBouncedAt: at },
+        data: { emailBouncedAt: mark },
         where: { id: accountId },
       });
-      await this.audit.recordChanges(
-        tx,
-        {
-          actorId: null,
-          actorRole: 'system',
-          subjectId: accountId,
-          subjectType: 'account',
-        },
-        before,
-        { emailBouncedAt: at },
-      );
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: null,
+        actorRole: 'system',
+        field: 'emailBouncedAt',
+        newValue: mark,
+        oldValue: before,
+        subjectId: accountId,
+        subjectType: 'account',
+      });
       await outbox.record(tx, {
         audience: { accountId, type: 'account' },
         kind: 'account.updated',
@@ -646,6 +647,19 @@ export class NotificationsService {
       );
     }
     for (const job of next) await this.queue(job);
+  }
+
+  // Taken first, so a bounce of another message to the account waits here and
+  // then reads the mark this one wrote. NO KEY: the rows the bounce writes
+  // that point at the account only share-lock its key.
+  private async lockBounceMark(
+    tx: Prisma.TransactionClient,
+    accountId: string,
+  ): Promise<Date | null> {
+    const [row] = await tx.$queryRaw<{ email_bounced_at: Date | null }[]>`
+      SELECT email_bounced_at FROM account WHERE id = ${accountId}::uuid
+      FOR NO KEY UPDATE`;
+    return row?.email_bounced_at ?? null;
   }
 
   // The garage whose choices a recipient's message goes by: the message's,

@@ -253,17 +253,52 @@ describe('a hard bounce at its edges', () => {
     expect(await audits(andrei)).toBe(1);
   });
 
+  // A race shows on some runs only, so the case runs several times.
   // @traces 525-bounce-domain-event-FR-002
-  it('records two events when two different messages to one account bounce together', async () => {
+  // @traces 1370-release-seed-no-ssh-FR-007
+  it.each(Array.from({ length: 10 }, (_, i) => i + 1))(
+    'records two events and two audit entries when two different messages to one account bounce together (round %i)',
+    async () => {
+      const andrei = await account('andrei');
+      await sentEmail(andrei, 'evt-1', '<a@relay>');
+      await sentEmail(andrei, 'evt-2', '<b@relay>');
+
+      await Promise.all([
+        service.recordBounce('<a@relay>'),
+        service.recordBounce('<b@relay>'),
+      ]);
+
+      expect(await events(andrei)).toBe(2);
+      expect(await audits(andrei)).toBe(2);
+      expect(await mark(andrei)).toEqual(new Date(DAY));
+    },
+  );
+
+  // @traces 1370-release-seed-no-ssh-FR-007
+  it('audits a second bounce at the same time as the first, beside its event', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<a@relay>');
     await sentEmail(andrei, 'evt-2', '<b@relay>');
 
-    await Promise.all([
-      service.recordBounce('<a@relay>'),
-      service.recordBounce('<b@relay>'),
-    ]);
+    await service.recordBounce('<a@relay>');
+    await service.recordBounce('<b@relay>');
 
+    expect(await events(andrei)).toBe(2);
+    expect(await audits(andrei)).toBe(2);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-007
+  it('keeps the later mark when an earlier bounce is recorded after it', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-1', '<a@relay>');
+    await sentEmail(andrei, 'evt-2', '<b@relay>');
+    service.now = () => new Date(LATER);
+    await service.recordBounce('<a@relay>');
+    service.now = () => new Date(DAY);
+
+    await service.recordBounce('<b@relay>');
+
+    expect(await mark(andrei)).toEqual(new Date(LATER));
     expect(await events(andrei)).toBe(2);
     expect(await audits(andrei)).toBe(2);
   });
