@@ -36,4 +36,4 @@ The unreachable API in the edge's adversary specs is now a listener the case kee
 
 ## Follow-ups
 
-- `apps/web/src/server/edge.spec.ts` has two `close(upstream)` cases with the same race; it is in PR #530 (ST-500), which the dispatch keeps separate.
+- `apps/web/src/server/edge.spec.ts` has two `close(upstream)` cases with the same race; once #530 (ST-500) merged and `origin/main` was merged in, both were modelled the same way (T011).

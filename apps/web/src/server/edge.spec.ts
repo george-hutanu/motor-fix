@@ -91,6 +91,14 @@ describe('web edge', () => {
     base = await listen(web);
   });
 
+  // The API keeps its port and resets each connection as it is accepted.
+  // Closing it instead would free the port, and a server in another Jest
+  // worker can be handed it at once and answer in its place.
+  const unreachable = () =>
+    upstream.prependListener('connection', (socket) =>
+      socket.resetAndDestroy(),
+    );
+
   afterEach(async () => {
     web.closeAllConnections();
     upstream.closeAllConnections();
@@ -128,7 +136,7 @@ describe('web edge', () => {
   });
 
   it('is not ready when the API cannot be reached', async () => {
-    await close(upstream);
+    unreachable();
 
     const ready = await fetch(`${base}/health/ready`);
 
@@ -224,7 +232,7 @@ describe('web edge', () => {
   });
 
   it('answers 502 when the API cannot be reached', async () => {
-    await close(upstream);
+    unreachable();
 
     const res = await fetch(`${base}/api/v1/garages`);
 
