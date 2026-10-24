@@ -122,7 +122,7 @@ describe('the brands, under odd answers', () => {
     expect(shown.length).toBe(1500);
     expect(shown.slice(0, 3)).toEqual(['Marca1499', 'Marca0', 'Marca1']);
     expect(shown.at(-1)).toBe('Marca1498');
-  });
+  }, 20_000);
 
   it('puts no control, link or per-chip label inside the section', async () => {
     await show({

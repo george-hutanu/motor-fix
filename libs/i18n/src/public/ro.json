@@ -91,6 +91,21 @@
       "one": "{count} recenzie",
       "other": "{count} de recenzii"
     },
+    "reviewsSection": {
+      "deletedAuthor": "Șofer MotorFix",
+      "empty": "Încă nu are recenzii.",
+      "failed": "Nu am putut încărca recenziile",
+      "label": "Recenzii după notă",
+      "more": "Vezi mai multe",
+      "retry": "Încearcă din nou",
+      "score": "{rating} / 5",
+      "stars": {
+        "few": "{count} stele",
+        "one": "{count} stea",
+        "other": "{count} de stele"
+      },
+      "title": "Ce spun șoferii"
+    },
     "verified": "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}.",
     "where": {
       "mobile": "Vine la tine în zona de {km}",
