@@ -8,7 +8,11 @@
 //
 // Reads RAILWAY_API_TOKEN, RAILWAY_ENVIRONMENT_ID, RAILWAY_SERVICE_<APP> and
 // IMAGE_<APP> for each service of the environment: API, WORKER, WEB, and on
-// staging only KEYCLOAK and MCP. An unset RAILWAY_SERVICE_KEYCLOAK or
+// staging only KEYCLOAK and MCP. On staging only, it also reads SEED_PASSWORD
+// and RAILWAY_PROJECT_ID and writes the password onto the api service as a
+// Railway variable before deploying, for the seed its pre-deploy step runs;
+// the value goes in that request's body only, and an error that repeats it
+// prints [redacted] instead. An unset RAILWAY_SERVICE_KEYCLOAK or
 // RAILWAY_SERVICE_MCP skips that service with a notice, until the owner has
 // created it. RAILWAY_TOKEN_KIND=project sends the token as a project token;
 // unset, a bearer token Railway refuses is retried once as a project token.
@@ -23,6 +27,8 @@ export interface Service {
   healthcheckPath: string;
   replicas: number;
   preDeploy?: string[];
+  // What the pre-deploy command runs, named in the error when it fails.
+  preDeploySteps?: string;
 }
 
 interface Options {
@@ -38,6 +44,8 @@ interface Options {
   // Aborted when the run is cancelled: waiting and in-flight calls stop, and
   // the restore runs without it.
   signal?: AbortSignal;
+  // Values never to appear in an error, Railway's own text included.
+  secrets?: string[];
 }
 
 const REGION = 'europe-west4-drams3a';
@@ -55,8 +63,14 @@ const authHeader = (kind: TokenKind, token: string): Record<string, string> =>
     ? { 'project-access-token': token }
     : { authorization: `Bearer ${token}` };
 
-const errorText = (errors?: { message: string }[]) =>
-  errors?.map((e) => e.message).join('; ') ?? '';
+const hide = (options: Options, text: string) =>
+  (options.secrets ?? []).reduce(
+    (out, secret) => (secret ? out.replaceAll(secret, '[redacted]') : out),
+    text,
+  );
+
+const errorText = (options: Options, errors?: { message: string }[]) =>
+  hide(options, errors?.map((e) => e.message).join('; ') ?? '');
 
 async function request<T>(
   options: Options,
@@ -81,7 +95,7 @@ async function request<T>(
     errors?: { message: string }[];
   };
   if (!res.ok) {
-    const why = errorText(body.errors);
+    const why = errorText(options, body.errors);
     throw new Error(
       `Railway API answered HTTP ${res.status}${why ? `: ${why}` : ''}`,
     );
@@ -109,7 +123,7 @@ async function graphql<T>(
     // Remember what worked, so later calls go straight to it.
     if (body.data) options.tokenKind = 'project';
   }
-  if (!body.data) throw new Error(errorText(body.errors) || 'no data');
+  if (!body.data) throw new Error(errorText(options, body.errors) || 'no data');
   return body.data;
 }
 
@@ -204,9 +218,15 @@ async function deployOne(options: Options, entry: Touched) {
   );
   const status = await waitFor(options, deploymentId);
   if (status === DONE) return;
+  if (status === 'TIMED_OUT') {
+    throw new Error(
+      `${service.name}: not healthy within ${options.limitMs / 1000} s`,
+    );
+  }
+  // A failed pre-deploy command fails the deployment before it starts.
   throw new Error(
-    status === 'TIMED_OUT'
-      ? `${service.name}: not healthy within ${options.limitMs / 1000} s`
+    service.preDeploySteps
+      ? `${service.name}: deployment ${status}; its pre-deploy step (${service.preDeploySteps}) runs first, and the deployment's log shows whether one of them failed`
       : `${service.name}: deployment ${status}`,
   );
 }
@@ -240,6 +260,66 @@ export const API_PRE_DEPLOY = [
   'npx prisma migrate deploy && node scripts/monitor-password.ts',
 ];
 
+// Staging's then adds the seed accounts that are missing, inside the new
+// image with the service's own database; the script refuses anywhere Railway
+// and the app do not both say staging.
+const STAGING_SEED = 'SEED_ONLY=1 sh scripts/reset-staging.sh';
+
+export function apiPreDeploy(environment: string): string[] {
+  if (environment === 'production') return API_PRE_DEPLOY;
+  if (environment === 'staging') {
+    return API_PRE_DEPLOY.map((command) => `${command} && ${STAGING_SEED}`);
+  }
+  throw new Error(USAGE);
+}
+
+const PRE_DEPLOY_STEPS: Record<string, string> = {
+  production: 'migrations, monitor password',
+  staging: 'migrations, monitor password, staging seed',
+};
+
+// The seed's password, which only staging's api gets.
+export function seedPassword(
+  environment: string,
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  if (environment !== 'staging') return undefined;
+  const value = env['SEED_PASSWORD'];
+  if (!value) {
+    throw new Error(
+      'The staging environment has no SEED_PASSWORD secret; the seed in the api pre-deploy step needs it',
+    );
+  }
+  return value;
+}
+
+// Writes the seed's password onto the staging api service. skipDeploys: the
+// deploy that follows starts the one deployment.
+export async function putSeedPassword(
+  options: Options,
+  environment: string,
+  target: { projectId: string; serviceId: string },
+  value: string,
+) {
+  if (environment !== 'staging') {
+    throw new Error('SEED_PASSWORD is written to staging only');
+  }
+  await graphql(
+    { ...options, secrets: [...(options.secrets ?? []), value] },
+    'mutation ($input: VariableUpsertInput!) { variableUpsert(input: $input) }',
+    {
+      input: {
+        environmentId: options.environmentId,
+        name: 'SEED_PASSWORD',
+        projectId: target.projectId,
+        serviceId: target.serviceId,
+        skipDeploys: true,
+        value,
+      },
+    },
+  );
+}
+
 export async function deploy(options: Options) {
   const touched: Touched[] = [];
   try {
@@ -264,6 +344,8 @@ export async function deploy(options: Options) {
     throw cancelled ? new Error(CANCELLED) : error;
   }
 }
+
+const USAGE = 'usage: railway-deploy.ts <staging|production>';
 
 // Production is the three apps; the identity server and the MCP server run on
 // staging only, in that order, after the api they both call.
@@ -310,8 +392,7 @@ export function servicesFor(
   const settings = Object.hasOwn(ENVIRONMENTS, environment)
     ? ENVIRONMENTS[environment]
     : undefined;
-  if (!settings)
-    throw new Error('usage: railway-deploy.ts <staging|production>');
+  if (!settings) throw new Error(USAGE);
   return settings.services.flatMap((name) => {
     const id = `RAILWAY_SERVICE_${name.toUpperCase()}`;
     if (OPTIONAL.has(name) && !env[id]) {
@@ -327,7 +408,10 @@ export function servicesFor(
         image: required(`IMAGE_${name.toUpperCase()}`, env),
         name,
         replicas: settings.replicas[name] ?? 1,
-        ...(name === 'api' && { preDeploy: API_PRE_DEPLOY }),
+        ...(name === 'api' && {
+          preDeploy: apiPreDeploy(environment),
+          preDeploySteps: PRE_DEPLOY_STEPS[environment],
+        }),
       },
     ];
   });
@@ -353,7 +437,9 @@ export function railwayEndpoint(
 }
 
 async function main() {
-  const services = servicesFor(process.argv[2] ?? '');
+  const environment = process.argv[2] ?? '';
+  const password = seedPassword(environment);
+  const services = servicesFor(environment);
   // A cancelled run gets SIGINT, then SIGTERM a few seconds later. Both stay
   // handled for the whole run, so the second does not kill the restore.
   const cancel = new AbortController();
@@ -364,20 +450,31 @@ async function main() {
       cancel.abort();
     });
   }
-  return deploy({
+  const options: Options = {
     endpoint: railwayEndpoint(),
     environmentId: required('RAILWAY_ENVIRONMENT_ID'),
     // Railway's own health check (HEALTH_TIMEOUT_S, counted from container
     // start) decides; this limit only stops a run whose deployment never ends.
     limitMs: 20 * 60_000,
     pollMs: 5_000,
+    secrets: password ? [password] : [],
     services,
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),
     ...(process.env['RAILWAY_TOKEN_KIND'] === 'project' && {
       tokenKind: 'project' as const,
     }),
-  });
+  };
+  const api = services.find((s) => s.name === 'api');
+  if (password && api) {
+    await putSeedPassword(
+      options,
+      environment,
+      { projectId: required('RAILWAY_PROJECT_ID'), serviceId: api.id },
+      password,
+    );
+  }
+  return deploy(options);
 }
 
 if (process.argv[1]?.endsWith('railway-deploy.ts')) {

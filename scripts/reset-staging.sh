@@ -4,10 +4,13 @@
 # staging api service over `railway ssh`, so it uses that service's own private
 # DATABASE_URL. The workflow puts SEED_PASSWORD in front of it on stdin.
 #
-# With SEED_ONLY=1 in front too, it only seeds, which adds the seed accounts
-# that are missing and removes the quote requests they sent in the last day,
-# so the seeded driver's daily limit starts unused: the release's staging job
-# does this after each deploy, before the end-to-end run signs in as them.
+# With SEED_ONLY=1 in front, it only seeds, which adds the seed accounts that
+# are missing and removes the quote requests they sent in the last day, so the
+# seeded driver's daily limit starts unused: the staging api's Railway
+# pre-deploy step runs it so after the migrations, from the image
+# (scripts/railway-deploy.ts), with SEED_PASSWORD set on the service, so each
+# deploy is seeded before the end-to-end run signs in. A failed seed exits
+# non-zero, which fails that deployment.
 #
 # It refuses unless the container says it is staging twice over: APP_ENV,
 # which the app reads, and RAILWAY_ENVIRONMENT_NAME, which Railway sets.
@@ -31,7 +34,10 @@ main() {
   if [ "${SEED_ONLY:-}" != 1 ]; then
     npx prisma migrate reset --force
   fi
-  npx prisma db seed
+  npx prisma db seed || {
+    echo 'staging seed failed: npx prisma db seed exited non-zero' >&2
+    exit 1
+  }
 }
 
 main </dev/null
