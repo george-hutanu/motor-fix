@@ -586,6 +586,7 @@ describe('dispatch on the laptop: the dispatched run is the head\'s one run', ()
       statusCheckRollup: [
         { context: 'agent-review', state: 'SUCCESS', description: 'PR QA lap 1 passed' },
         { name: 'CI OK', workflowName: 'CI', status: 'COMPLETED', conclusion: 'SUCCESS' },
+        { name: 'PR title', workflowName: 'PR title', status: 'COMPLETED', conclusion: 'SUCCESS' },
         { name: 'PR QA', workflowName: 'PR QA', status: 'COMPLETED', conclusion: 'SKIPPED' },
       ],
     };

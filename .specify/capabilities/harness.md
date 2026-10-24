@@ -7,6 +7,7 @@ features:
   - 1363-throughput-fixes
   - 482-watch-transcript-holder
   - 317-handoff-whole
+  - 448-merge-gate-graphql
 ---
 
 # Capability: Spec-kit harness
@@ -99,9 +100,9 @@ _From 1362-lap-verdict-merge._
 
 _From 1362-lap-verdict-merge._
 
-### 1362-FR-008 — `watch.mjs` looks up the carry for a ready PR with no `agent-review` on head whose fix would be `tail` or `rerun-qa`, and gives it `carry-review` (applied model-free with the kind `carry.mjs` picked) when the carry holds, whatever CI's state, ahead of `tail` for a handed-off PR; a head with the carried success is `waiting` while CI runs and `merge` once every check is green, and a failing check after the carry is the handed-off PR's `tail` as before.
+### 448-FR-008 — `carry.mjs <pr> --find` MUST be a CLI mode printing `findCarry`'s result as one JSON object on stdout (exit 0; non-zero with the reason when gh fails). `watch.mjs collect` stays synchronous: its default carry lookup runs that mode in a child process and parses the JSON, and every verdict of 1362-FR-008 (`carry-review`, `waiting`, `merge`, `tail`) is the one today's lookup gives; a failed child or unparsable output leaves the row's `carry` null as a thrown lookup does today.
 
-_From 1362-lap-verdict-merge._
+_From 448-merge-gate-graphql._
 
 ### 1362-FR-009 — The constitution is amended to v5.0.0 (MAJOR): Principle VII step 5 and the Enforcement row of `merge-gate.mjs` state the rule, with a Sync Impact Report; the card, `CLAUDE.local.md`'s version line, AGENTS.md lifecycle step 6, tail.md steps 3–4, the `speckit-pr-test` skill and `speckit-tracker-sync` §4 say the same.
 
@@ -139,8 +140,41 @@ _From 317-handoff-whole._
 
 _From 317-handoff-whole._
 
+### 448-FR-001 — The merge gate (`pre:bash:merge-gate`, `.claude/hooks/merge-gate.mjs`) MUST treat a Bash command that runs `gh api graphql` and whose text, anywhere (a multi-line quoted query included), names the `mergePullRequest` or `enablePullRequestAutoMerge` mutation as a merge, judged by the rule `gh pr merge <n>` is judged by: refused unless the PR's head has an `agent-review` success (or the Dependabot exemption holds) and every check is green. A `gh api graphql` command naming neither mutation is not a merge.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-002 — The gate MUST resolve the merged PR from the `pullRequestId` the command names: an inline literal (`pullRequestId: "PR_…"`) or the value of the variable the query references, given as `-f`, `-F`, `--field` or `--raw-field <var>=<id>`. It reads that node once (a GraphQL node query giving the pull request's number) and then judges that PR exactly as `gh pr merge <n>`. A command whose PR it cannot resolve (no literal id, a shell variable, more than one distinct id, a node that is not a pull request, a failed read) is refused, fail-closed, with a message naming `gh pr merge <n>` as the way to merge. `SPECKIT_PR_STATE` replaces the reads as it does today.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-003 — `.claude/evals/cases/merge-gate.json` MUST gain a case: a `gh api graphql` merge of a PR without `agent-review` expects exit 2 and the "no agent-review status" reason; the case exits 0 on today's gate (so it fails) and 2 after. The gate's registry fingerprint is re-blessed after its diff is read.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-004 — The gate MUST refuse a merge while the `PR title` check (workflow and job name `PR title`, `pr-title.yml`) has not reported success on the head, as it does for `CI OK`: missing → refused, wait for it; pending → wait; failing → CI failed. A head with both `CI OK` and `PR title` success (and every other check green) passes the CI rule.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-005 — A Dependabot PR MUST be judged by the same `PR title` rule as any PR (evidence: Dependabot PR #436's head carried a `PR title` success); there is no exemption.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-006 — A spec in `.claude/hooks/` MUST cover FR-004: `CI OK` green and no `PR title` check → refused, failing on today's code and passing after; pending and failing `PR title` cases too.
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-007 — `.claude/scripts/pr-test/carry.mjs` MUST have one carry reader: `findCarry` becomes async and uses `fetchCarryState` (which accepts a `gh` that answers synchronously or with a promise); `readCarryState` is deleted. The merge gate's verdict on carries is unchanged (the carry eval cases and specs stay green).
+
+_From 448-merge-gate-graphql._
+
+### 448-FR-009 — `node .claude/scripts/harness-eval.mjs --check` and `npm run test:harness` MUST be green; `pass_rate` in `.claude/evals/baseline.json` MUST not go down; no file under `apps/` or `libs/` changes, and there is no UI.
+
+_From 448-merge-gate-graphql._
+
 ## Retired
 
 - `1359-FR-007` — superseded by `1363-FR-006` (2026-10-23)
 - `1362-FR-003` — superseded by `1363-FR-010` (2026-10-23)
 - `1362-FR-005` — superseded by `1363-FR-010` (2026-10-23)
+- `1362-FR-008` — superseded by `448-FR-008` (2026-10-24)
