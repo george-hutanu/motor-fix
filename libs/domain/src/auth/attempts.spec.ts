@@ -119,7 +119,6 @@ describe('the caller as a log line may name it', () => {
 
   it.each([
     ['no address at all', ''],
-    ['a missing address', undefined],
     ['something that is no address', 'not-an-ip'],
     ['half an IPv4 address', '81.196'],
     ['five octets', '1.2.3.4.5'],

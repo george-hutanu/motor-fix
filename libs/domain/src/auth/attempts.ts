@@ -63,8 +63,8 @@ function expand(canonical: string): number[] {
 
 // The caller as a log line may name it: its network only, two IPv4 octets or
 // two IPv6 groups, read as the counter reads it.
-export function maskCaller(address: string | undefined): string {
-  const client = clientOf(address ?? '');
+export function maskCaller(address: string): string {
+  const client = clientOf(address);
   if (!client) return 'unknown';
   if (isIP(client) === 4) return `${client.split('.', 2).join('.')}.x.x`;
   return `${client.split(':', 2).join(':')}:x:x:x:x:x:x`;
