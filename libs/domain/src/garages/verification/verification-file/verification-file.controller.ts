@@ -3,10 +3,12 @@ import {
   VerificationDecisionDto,
   VerificationFileChangesDto,
   VerificationFileDto,
+  VerificationPresenceDto,
 } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpException,
@@ -20,12 +22,14 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
+import { PresenceService } from './presence/presence.service';
 import { VerificationFileService } from './verification-file.service';
 import { CurrentActor, Requires } from '../../../auth/actor.guard';
 import type { Actor } from '../../../auth/policy';
@@ -43,6 +47,7 @@ export class VerificationFileController {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly files: VerificationFileService,
     private readonly verification: VerificationService,
+    private readonly presences: PresenceService,
   ) {}
 
   @Get(':id')
@@ -60,6 +65,29 @@ export class VerificationFileController {
   @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
   changes(@Param('id') id: string): Promise<VerificationFileChangesDto> {
     return this.files.changes(id);
+  }
+
+  // The heartbeat of an admin's open drawer: the other admins with the file
+  // open. A hint only, nothing is locked or recorded.
+  @Put(':id/presence')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationPresenceDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  presence(
+    @CurrentActor() actor: Actor,
+    @Param('id') id: string,
+  ): Promise<VerificationPresenceDto> {
+    return this.presences.touch(id, actor.accountId);
+  }
+
+  // The drawer closed: the other admins stop seeing this one at once.
+  @Delete(':id/presence')
+  @HttpCode(204)
+  @Requires('admin.garages')
+  @ApiNoContentResponse({ description: 'Gone from the file, or never there' })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  leave(@CurrentActor() actor: Actor, @Param('id') id: string): Promise<void> {
+    return this.presences.leave(id, actor.accountId);
   }
 
   // A waiting file moves to review for this admin; any other is read as it is.
