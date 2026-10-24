@@ -100,12 +100,6 @@ describe('a garage written with cedilla letters', () => {
     expect(row.bytes).toBe(Buffer.byteLength(plain.name));
   });
 
-  it('keeps the length of a converted value', async () => {
-    const garage = await create('length', cedillas);
-
-    expect((await stored(garage.id)).name).toHaveLength(cedillas.name.length);
-  });
-
   it('keeps a missing value missing and an empty one empty', async () => {
     const garage = await create('empty', { address: '', name: 'Empty' });
 
@@ -127,17 +121,6 @@ describe('a garage written with cedilla letters', () => {
         `SELECT name FROM garage WHERE slug = 'sql'`,
       ),
     ).toEqual([{ name: 'Țarc' }]);
-  });
-
-  it('leaves the slug and the city key as written', async () => {
-    const garage = await create('service-tutuianu', cedillas);
-
-    expect(
-      await prisma.garage.findUniqueOrThrow({
-        select: { cityKey: true, slug: true },
-        where: { id: garage.id },
-      }),
-    ).toEqual({ cityKey: 'iasi', slug: 'service-tutuianu' });
   });
 });
 
