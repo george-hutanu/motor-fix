@@ -76,6 +76,14 @@ describe('the services guard on hostile sources', () => {
       "delete §env.A; §env['DATABASE_URL'];",
     ],
     ['seed in double quotes', 'run("§seed")'],
+    [
+      'a key after a default with a call',
+      'const { a = f(1, 2), DATABASE_URL } = §env;',
+    ],
+    [
+      'a key after a default with a nested call',
+      'const { a = f(g(1, 2), 3), REDIS_URL } = §env;',
+    ],
   ])('reports %s', (_title, source) => {
     expect(needsServices(source)).toBe(true);
   });
@@ -95,6 +103,14 @@ describe('the services guard on hostile sources', () => {
       'const { NODE_ENV, url: REDIS_URL } = §env;',
     ],
     ['the name as a default value', 'const { a = DATABASE_URL, b } = §env;'],
+    [
+      'the name in a default call argument',
+      'const { a = f(1, DATABASE_URL, 2) } = §env;',
+    ],
+    [
+      'the name in a nested default call argument',
+      'const { a = f(g(1, REDIS_URL)) } = §env;',
+    ],
     ['destructuring from something else', 'const { DATABASE_URL } = config;'],
     [
       'destructuring from a longer name',
@@ -144,6 +160,15 @@ describe('the services guard on hostile sources', () => {
     expect(needsServices(source)).toBe(false);
     expect(Date.now() - started).toBeLessThan(2000);
   }, 120_000);
+
+  // @traces 438-FR-003
+  it('decides a large destructuring of default calls in bounded time', () => {
+    const source = `const { ${'a = f(g(1, 2), (3,'.repeat(20_000)} } = §env;`;
+    const started = Date.now();
+
+    expect(needsServices(source)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(2000);
+  }, 30_000);
 
   // @traces 438-FR-003
   it('decides a large source with a read at the very end', () => {

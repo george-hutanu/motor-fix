@@ -10,14 +10,17 @@ const INTEGRATION = /\.integration\.spec\.ts$/;
 // ends where no identifier character follows; each alternative is linear.
 const KEY = '(DATABASE_URL|REDIS_URL)';
 const END = String.raw`(?![\p{ID_Continue}$])`;
+// One character of an entry, or a parenthesised call that may hold commas.
+const ENTRY = String.raw`(?:[^{}(),]|\((?:[^{}()]|\([^{}()]*\))*\))`;
 const NEEDS_SERVICES = new RegExp(
   [
     String.raw`(?<!delete\s+)process\.env\[['"]${KEY}['"]\](?!\s*=[^=])`,
     String.raw`(?<!delete\s+)process\.env\.${KEY}${END}(?!\s*=[^=])`,
     // Anchored at the brace: each brace's scan stops at the next brace, so
     // the scans never overlap, and the key is looked for only inside a
-    // destructuring from process.env.
-    String.raw`\{(?=[^{}]*\}\s*=\s*process\.env${END})(?=(?:[^{}]*?,)?\s*${KEY}${END}\s*[:=,}])`,
+    // destructuring from process.env, after a comma outside any call of a
+    // default (two levels of parentheses).
+    String.raw`\{(?=[^{}]*\}\s*=\s*process\.env${END})(?=(?:${ENTRY}*,)*\s*${KEY}${END}\s*[:=,}])`,
     String.raw`(?<![\p{ID_Continue}$-])seed\.ts${END}`,
   ].join('|'),
   'u',
