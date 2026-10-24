@@ -1,4 +1,4 @@
-// @traces 140-FR-003 140-FR-004 140-FR-005 140-FR-006 140-FR-008 140-FR-017
+// @traces 140-FR-003 140-FR-004 140-FR-005 140-FR-006 140-FR-008 140-FR-016 140-FR-017
 import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';

@@ -1,4 +1,4 @@
-// @traces 140-FR-001 140-FR-002 140-FR-007 140-FR-010 140-FR-011 140-FR-017
+// @traces 140-FR-001 140-FR-002 140-FR-007 140-FR-010 140-FR-011 140-FR-016 140-FR-017
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
