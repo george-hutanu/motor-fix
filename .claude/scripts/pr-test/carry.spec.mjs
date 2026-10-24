@@ -205,6 +205,7 @@ describe('finding a carry for a PR', () => {
 });
 
 describe('posting a carry', () => {
+  // @traces 961-FR-005
   it('sets agent-review success on head naming the commit, and notes it in the Agent review section', async () => {
     const { calls, gh } = fakeGh([
       [/pr view/, ok({ body: '## Agent review\n\n<!-- agent-review: the automated reviewer replaces the line below -->\nVerdict: success (agent-review on aaaaaaa, lap 1)\n' })],

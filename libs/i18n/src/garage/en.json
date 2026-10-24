@@ -118,6 +118,7 @@
       "checked": "checked",
       "checkedOn": "checked on {day}",
       "cycle": {
+        "due": "due on {day}",
         "in_review": "under review",
         "overdue": "overdue since {since}, the profile leaves the map on {off}",
         "refused": "refused: {note}",

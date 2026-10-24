@@ -85,6 +85,8 @@ afterEach(() => TestBed.resetTestingModule());
 
 // @traces 068-FR-005
 // @traces 068-FR-017
+// @traces 136-FR-003
+// @traces 136-FR-007
 describe('the Documente row by the yearly cycle', () => {
   it.each([
     [
@@ -95,7 +97,7 @@ describe('the Documente row by the yearly cycle', () => {
     [
       'due',
       'amber',
-      'Documente certificat constatator și autorizație RAR · de reîncărcat o dată pe an, până în ian. 2027 verificate pe 1 oct. 2026 atenție',
+      'Documente certificat constatator și autorizație RAR · scadent pe 15 ian. 2027 verificate pe 1 oct. 2026 atenție',
     ],
     [
       'in_review',
@@ -122,10 +124,43 @@ describe('the Documente row by the yearly cycle', () => {
     },
   );
 
+  // The day the documents fall due is still `due`: amber, with that day.
+  it('reads documents due today as due on today, amber, with the upload button', async () => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'queueMicrotask',
+        'nextTick',
+      ],
+      now: new Date('2026-10-24T09:00:00.000Z'),
+    });
+    try {
+      const element = (
+        await render(answer(cycle('due', { dueOn: '2026-10-24' })))
+      ).nativeElement;
+
+      expect(said(element)).toBe(
+        'Documente certificat constatator și autorizație RAR · scadent pe 24 oct. 2026 verificate pe 1 oct. 2026 atenție',
+      );
+      expect(documentsRow(element).getAttribute('data-lamp')).toBe('amber');
+      expect(uploadButton(element)).not.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it.each([
     [
       'valid',
       'Documents company certificate and RAR authorisation · upload again once a year, by Jan 2027 checked on 1 Oct 2026 in order',
+    ],
+    [
+      'due',
+      'Documents company certificate and RAR authorisation · due on 15 Jan 2027 checked on 1 Oct 2026 attention',
     ],
     [
       'in_review',

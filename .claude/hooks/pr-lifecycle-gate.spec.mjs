@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { activeFeature } from '../scripts/lib/feature.mjs';
-import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, readPr, specsUnpushed, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, parseCommitters, prLinked, readPr, specsUnpushed, typeLabel } from './pr-lifecycle-gate.mjs';
+import { isDependabot } from '../scripts/lib/dependabot.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
