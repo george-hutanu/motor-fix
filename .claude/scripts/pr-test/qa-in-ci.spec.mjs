@@ -180,10 +180,12 @@ describe('the flows contract is written where the flows are written', () => {
   // waiting for networkidle on a live page timed out. The agent, the skill
   // and AGENTS.md say how a flow is written.
   const routesAndFlows = sections(skill).find((s) => s.heading === 'Routes and flows')?.body ?? '';
+  const screens = sections(agents).find((s) => s.heading === 'Reviewing a change that has screens')?.body ?? '';
 
   for (const [name, md] of [
     ['the agent', agent],
     ["the skill's Routes and flows", routesAndFlows],
+    ['AGENTS.md', screens],
   ]) {
     it(`${name}: findings handed in, pushed as found, pushed or returned and never both`, () => {
       assert.match(md, /`findings`/);
@@ -198,12 +200,18 @@ describe('the flows contract is written where the flows are written', () => {
     });
   }
 
-  it("the skill states the route grammar", () => {
-    assert.ok(routesAndFlows.includes('`path[?query][@role][:status]`'));
-  });
+  for (const [name, md] of [
+    ['the skill', routesAndFlows],
+    ['AGENTS.md', screens],
+  ]) {
+    it(`${name} states the route grammar`, () => {
+      assert.ok(md.includes('`path[?query][@role][:status]`'));
+      assert.match(md, /`\/:lang`/);
+      assert.match(md, /`@role`[^.]*`\/app\/`|`\/app\/`[^.]*`@role`/);
+    });
 
-  it("AGENTS.md points at the skill's Routes and flows", () => {
-    const screens = sections(agents).find((s) => s.heading === 'Reviewing a change that has screens')?.body ?? '';
-    assert.match(screens, /"Routes and flows"/);
-  });
+    it(`${name} says the flows are proven with --check before dispatch`, () => {
+      assert.match(md, /--check/);
+    });
+  }
 });
