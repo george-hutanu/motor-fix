@@ -1,4 +1,4 @@
-# The agent-review a Dependabot-only PR gets without a PR tester run (961-FR-001).
+# The agent-review a Dependabot-only PR gets without a PR tester run.
 #
 # GitHub requires agent-review on main (branch protection, AGENTS.md step 7),
 # and a PR Dependabot opened and alone committed to skips the tester (step 6).
