@@ -1,11 +1,4 @@
-import {
-  afterRenderEffect,
-  Component,
-  ElementRef,
-  inject,
-  input,
-  output,
-} from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
 
@@ -28,20 +21,6 @@ export class DashboardTabBar {
   readonly countsLoading = input(false);
   // An entry that opens a task over the view, not a page.
   readonly act = output<DashboardView>();
-
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-
-  constructor() {
-    // A tab that joins or leaves after the first paint (a feature switch read
-    // late) moves the current one, whose own change already fired.
-    afterRenderEffect(() => {
-      this.views();
-      const tab = this.host.nativeElement.querySelector<HTMLElement>(
-        'a[aria-current="page"]',
-      );
-      if (tab) this.reveal(tab);
-    });
-  }
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
   // `scrollIntoView` is absent on the server and in jsdom.
