@@ -214,11 +214,10 @@ source for anything the constitution does not fix.
   (NestJS modules, Prisma schema per module), `data-access` (Angular client
   generated from `apps/api/openapi.json`: `npx nx run data-access:generate`,
   never edited by hand). A lib is created by the story that first needs it.
-- Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
-  than a few files, docker compose, Playwright) go through `scripts/heavy.sh`
-  (4 slots machine-wide, 2 in a cloud session); a dev server never holds a
-  slot, and mutation tests never run locally.
-  `lifecycle.mjs check`'s Jest: `JEST_MAX_WORKERS=2`, `JEST_IDLE_MEMORY=1GB`, 3072 MB heap; env wins.
+- Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over a
+  few files, docker compose, Playwright) run in `scripts/heavy.sh` (4
+  slots, 2 in a cloud session); never a dev server; no local mutation.
+  `lifecycle.mjs check`'s Jest: `JEST_MAX_WORKERS=2`, `JEST_IDLE_MEMORY=1GB`, 3072 MB; env wins.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
