@@ -194,7 +194,8 @@ describe('api conventions', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
-  it('takes the caller from the right of X-Forwarded-For, past private hops only', async () => {
+  // @traces 500-FR-008
+  it('takes the caller from the right of X-Forwarded-For, past private hops and the Railway edge only', async () => {
     app = await start();
     const ip = async (forwarded: string) =>
       (
@@ -209,7 +210,7 @@ describe('api conventions', () => {
     expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
   });
 
-  // @traces 500-FR-006
+  // @traces 500-FR-008
   it('logs the caller of a refused sign-in as the trusted chain names it, not as the visitor wrote it', async () => {
     app = await start();
     const callers: string[] = [];
