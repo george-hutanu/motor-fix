@@ -354,7 +354,7 @@ export class Session {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
           if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
-            this.lapse();
+            this.lapseUnlessDeleting();
             return false;
           }
           this.accessToken = answer.accessToken;
@@ -363,7 +363,7 @@ export class Session {
         () => {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
-          this.lapse();
+          this.lapseUnlessDeleting();
           return false;
         },
       )
@@ -547,6 +547,12 @@ export class Session {
     await this.sendPending();
     if (!this.accessToken && !(await this.renew())) return null;
     return this.me.meControllerMe().catch(() => null);
+  }
+
+  // This tab's own deletion revoked the session: the account stays on screen
+  // until the deletion signs the tab out itself, Home with its toast.
+  private lapseUnlessDeleting() {
+    if (!this.deleting) this.lapse();
   }
 
   private lapse() {

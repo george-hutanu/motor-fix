@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from '@motor-fix/data-access';
-import { Overlays } from '@motor-fix/overlays';
+import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
 import { DeleteAccountDialog } from './delete-account-dialog';
@@ -25,6 +25,7 @@ class Host {
 let remove: jest.Mock;
 let release: () => void;
 let revoked: jest.Mock;
+let result: Promise<OverlayResult<true>>;
 let dropped: jest.Mock;
 
 async function settle() {
@@ -63,7 +64,7 @@ async function open(
   });
   jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   const host = TestBed.createComponent(Host);
-  host.componentInstance.overlays.open<true>(DeleteAccountDialog, {
+  result = host.componentInstance.overlays.open<true>(DeleteAccountDialog, {
     shape: 'dialog',
     title: 'shell.deleteAccount.dialogTitle',
   });
@@ -135,7 +136,7 @@ describe('the delete-account dialog, attacked', () => {
     await settle();
   });
 
-  it('toasts and signs out once however many times it was pressed', async () => {
+  it('closes as deleted once however many times it was pressed, leaving the sign-out to Setări', async () => {
     await open(() => pending());
     type('andrei@example.ro');
     await settle();
@@ -146,9 +147,11 @@ describe('the delete-account dialog, attacked', () => {
     release();
     await settle();
 
-    expect(toast).toHaveBeenCalledTimes(1);
-    expect(revoked).toHaveBeenCalledTimes(1);
-    expect(dropped).toHaveBeenCalledTimes(1);
+    expect(await result).toBe(true);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(toast).not.toHaveBeenCalled();
+    expect(revoked).not.toHaveBeenCalled();
+    expect(dropped).not.toHaveBeenCalled();
   });
 
   it('does not send an empty or blank field through the form', async () => {
@@ -178,12 +181,12 @@ describe('the delete-account dialog, attacked', () => {
     await settle();
 
     expect(input().value).toBe('andrei@example.ro');
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
     expect(confirmButton().disabled).toBe(false);
     confirmButton().click();
     await settle();
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).toHaveBeenCalledTimes(1);
+    expect(await result).toBe(true);
   });
 
   it('sends the word typed with its surrounding whitespace removed for an account without e-mail or phone', async () => {

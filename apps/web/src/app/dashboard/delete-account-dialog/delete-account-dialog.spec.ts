@@ -182,10 +182,11 @@ describe('the delete-account dialog', () => {
     expect(deleteAccount.mock.invocationCallOrder[0]).toBeLessThan(
       remove.mock.invocationCallOrder[0],
     );
-    expect(revoked).toHaveBeenCalled();
+    expect(await result).toBe(true);
   });
 
-  it('sends what was typed and, once deleted, signs the tab out to Home with a toast', async () => {
+  // @traces 129-FR-008
+  it('sends what was typed and, once deleted, closes as deleted: the sign-out waits until the dialog is gone', async () => {
     await open();
 
     await confirm(' andrei@example.ro ');
@@ -193,27 +194,13 @@ describe('the delete-account dialog', () => {
     expect(remove).toHaveBeenCalledWith({
       body: { confirmation: 'andrei@example.ro' },
     });
-    expect(close).toHaveBeenCalled();
-    expect(revoked).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
     expect(await result).toBe(true);
-  });
-
-  // @traces 129-FR-008
-  it("forgets this browser's push device once deleted, and not before", async () => {
-    await open({}, [
-      async () => {
-        throw problem(500, 'internal_error');
-      },
-    ]);
-
-    await confirm();
+    // A navigation started under the dialog would be undone by its step back.
+    expect(revoked).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
     expect(dropped).not.toHaveBeenCalled();
-
-    button('Șterge contul').click();
-    await settle();
-    expect(dropped).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('shows a mismatch under the field and stays open', async () => {
@@ -228,7 +215,7 @@ describe('the delete-account dialog', () => {
     await confirm('altcineva@example.ro');
 
     expect(panel().textContent).toContain('Nu se potrivește cu contul');
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
     expect(field(LABEL).value).toBe('altcineva@example.ro');
   });
 
@@ -243,7 +230,7 @@ describe('the delete-account dialog', () => {
 
     expect(gate).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).toHaveBeenCalled();
+    expect(await result).toBe(true);
   });
 
   it('sends only once more after a sign-in the server still finds too old', async () => {
@@ -256,7 +243,6 @@ describe('the delete-account dialog', () => {
 
     expect(gate).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).not.toHaveBeenCalled();
     expect(panel()).not.toBeNull();
   });
 
@@ -271,7 +257,7 @@ describe('the delete-account dialog', () => {
     await confirm();
 
     expect(remove).toHaveBeenCalledTimes(1);
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
   });
 
   it('keeps the dialog and the text after a failure, and a second press retries', async () => {
@@ -285,13 +271,13 @@ describe('the delete-account dialog', () => {
 
     expect(panel().textContent).toContain('Ceva nu a mers la noi.');
     expect(field(LABEL).value).toBe('andrei@example.ro');
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
 
     button('Șterge contul').click();
     await settle();
 
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).toHaveBeenCalled();
+    expect(await result).toBe(true);
   });
 
   it('closes without sending on "Renunță"', async () => {

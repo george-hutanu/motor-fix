@@ -1,4 +1,4 @@
-import { setup } from './signed-in.testing';
+import { setup, signedIn } from './signed-in.testing';
 
 function passwordSetup() {
   let answer: (value?: unknown) => void = () => undefined;
@@ -89,6 +89,25 @@ describe('deleting the account from this tab', () => {
 
     session.revoked();
     expect(session.deletingAccount()).toBe(false);
+  });
+
+  it('keeps the account on screen through a renewal the deletion refuses, until the tab forgets it', async () => {
+    const { auth, session } = await signedIn();
+    auth.authControllerRefresh.mockRejectedValue(new Error('401'));
+    let answer: () => void = () => undefined;
+    const done = session.deleteAccount(
+      () => new Promise<void>((resolve) => (answer = resolve)),
+    );
+
+    // A read refused once the sessions are revoked renews, and the renewal is
+    // refused too: the deletion signs the tab out itself, Home with its toast.
+    await expect(session.renew()).resolves.toBe(false);
+    expect(session.shown()).not.toBeNull();
+
+    answer();
+    await done;
+    session.revoked();
+    expect(session.shown()).toBeNull();
   });
 
   it('gives the word back when the deletion is refused', async () => {
