@@ -184,6 +184,17 @@ describe('web edge', () => {
     );
   });
 
+  // @traces 500-FR-015
+  it('keeps a forwarded chain as given and appends only its own caller', async () => {
+    await fetch(`${base}/api/v1/me`, {
+      headers: { 'x-forwarded-for': '86.125.92.213, 95.173.10.20' },
+    });
+
+    expect(forwarded[0]?.for).toMatch(
+      /^86\.125\.92\.213, 95\.173\.10\.20, ((::ffff:)?127\.0\.0\.1|::1)$/,
+    );
+  });
+
   it('passes the refresh cookie to the API and its new value back', async () => {
     const res = await fetch(`${base}/api/v1/auth/refresh`, {
       headers: { cookie: 'mf_refresh=old' },

@@ -230,10 +230,12 @@ describe('api conventions', () => {
     await refused('1.2.3.4, 198.51.100.4');
     warn.mockRestore();
 
-    expect(callers).toEqual([
+    // The line goes on with the masked hops; the caller is as before.
+    expect(callers.map((line) => line.split(' hops=')[0])).toEqual([
       'sign-in refused: invalid_credentials caller=203.0.x.x',
       'sign-in refused: invalid_credentials caller=198.51.x.x',
     ]);
+    expect(callers[1]).toContain(' hops=1.2.x.x,198.51.x.x,');
   });
 
   it('serves sign-in under the prefix with problem details', async () => {
