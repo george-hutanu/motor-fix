@@ -30,12 +30,12 @@ const twoLabels = (extra = {}) => ({
   payload: {},
   env: {
     SPECKIT_PR_STATE: JSON.stringify({
-      branch: '486-entry-point-symlink',
+      branch: 'chore-x',
       ahead: 3,
       unpushed: 0,
       blocked: false,
       pr: {
-        number: 38,
+        number: 44,
         title: 'fix(harness): a change',
         state: 'OPEN',
         isDraft: false,

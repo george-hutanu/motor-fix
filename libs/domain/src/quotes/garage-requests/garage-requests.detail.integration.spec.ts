@@ -245,3 +245,51 @@ describe('GET /garage/requests/:id, why it closed', () => {
     expect(own.closedReason).toBeNull();
   });
 });
+
+// @traces 056-FR-008
+describe('GET /garage/requests/:id, a booking to reassign', () => {
+  async function booked(removed: boolean, startsIn = 48 * 3_600_000) {
+    const andrei = await world.account('Andrei Ion Marin');
+    const t = await team('Atelier Dinamo');
+    const { booking, request } = await world.chain(andrei, t.garage.id);
+    const elena = await prisma.mechanic.create({
+      data: { garageId: t.garage.id, name: 'Elena', onProfile: true },
+    });
+    await prisma.booking.update({
+      data: {
+        mechanicId: elena.id,
+        startsAt: new Date(Date.now() + startsIn),
+      },
+      where: { id: booking.id },
+    });
+    if (removed)
+      await prisma.mechanic.update({
+        data: { onProfile: false, removedAt: new Date() },
+        where: { id: elena.id },
+      });
+    const res = await get(
+      `/garage/requests/${request.id}`,
+      bearer(t.owner, 'garage'),
+    );
+    expect(res.status).toBe(200);
+    return res.body.booking;
+  }
+
+  it("is told for a future confirmed booking of a removed mechanic's card", async () => {
+    expect(await booked(true)).toMatchObject({
+      mechanic: expect.objectContaining({ name: 'Elena' }),
+      status: 'confirmed',
+      toReassign: true,
+    });
+  });
+
+  it('is not told while the card is current', async () => {
+    expect(await booked(false)).toMatchObject({ toReassign: false });
+  });
+
+  it('is not told for a booking already past', async () => {
+    expect(await booked(true, -48 * 3_600_000)).toMatchObject({
+      toReassign: false,
+    });
+  });
+});
