@@ -40,10 +40,15 @@ h3,
   grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
   gap: var(--mf-space-3);
 }
+/* Each field takes two rows of the list's grid, label then value, so the
+   tallest label in a row (the phone's, with its tag) sets that row's label
+   height and every value box beside it starts at the same line. */
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mf-space-1);
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  align-items: end;
+  row-gap: var(--mf-space-1);
   min-width: 0;
 }
 .label {
@@ -71,6 +76,11 @@ h3,
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-control);
   background: var(--mf-panel-raised);
+  align-self: stretch;
+}
+/* A field with no label (the area line) still puts its box on the value row. */
+.field > .value:only-child {
+  grid-row: 2;
 }
 .hours-line {
   display: flex;

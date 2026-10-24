@@ -666,6 +666,13 @@ describe('Profilul service-ului: type and alignment on a phone', () => {
     expect(phone).toMatch(/\.label \{\s*font-size: var\(--mf-size-body\);/);
   });
 
+  it('starts every value box in a row of fields at the same height, whatever its label holds', () => {
+    expect(css).toMatch(
+      /\.field \{[^}]*grid-row: span 2;[^}]*grid-template-rows: subgrid;/,
+    );
+    expect(css).toMatch(/\.field > \.value:only-child \{\s*grid-row: 2;/);
+  });
+
   it("lines the public link's text up with the panel's other lines, its padding and border pulled out", () => {
     expect(css).toMatch(
       /\.public-link \{[^}]*margin-inline-start: calc\(-1 \* var\(--mf-space-5\) - 1px\)/,
