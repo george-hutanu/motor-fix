@@ -270,7 +270,17 @@ describe('api conventions', () => {
 
     expect(
       operation?.parameters?.map((p) => 'name' in p && p.name).sort(),
-    ).toEqual(['actorId', 'area', 'cursor', 'from', 'garageId', 'jobId', 'to']);
+    ).toEqual([
+      'accountId',
+      'actorId',
+      'area',
+      'cursor',
+      'from',
+      'garageId',
+      'jobId',
+      'limit',
+      'to',
+    ]);
     expect(operation?.responses['200']).toBeDefined();
   });
 

@@ -815,6 +815,69 @@
     "state": "suspendat · {text}"
   },
   "users": {
+    "account": {
+      "activity": "Activitate",
+      "adminAccount": "Cont de administrator: nicio acțiune nu se face de aici.",
+      "change": "{from} → {to}",
+      "changed": "Contul s‑a schimbat între timp",
+      "details": "Detalii",
+      "documentFailed": "Nu am putut deschide documentul.",
+      "documents": "Documentele service‑ului",
+      "email": "E‑mail",
+      "emailFailed": "E‑mailul nu a putut fi trimis",
+      "empty": "Nicio înregistrare încă",
+      "failed": "Contul nu s‑a încărcat.",
+      "garage": "Service",
+      "garagePage": "Deschide pagina service‑ului",
+      "garageSuspended": "Service‑ul este suspendat și se gestionează din pagina lui.",
+      "history": "Istoric",
+      "historyFailed": "Istoricul nu s‑a încărcat.",
+      "joined": "Cont creat",
+      "kinds": {
+        "access_reset": "a resetat accesul",
+        "account_restored": "a reactivat contul",
+        "account_suspended": "a suspendat contul",
+        "assistant_grant_revoked": "accesul unui asistent a fost retras",
+        "delete": "a șters contul",
+        "other": "a schimbat {field}"
+      },
+      "language": "Limba",
+      "languages": {
+        "en": "engleză",
+        "ro": "română"
+      },
+      "lastActive": "Activ ultima dată",
+      "line": "{who} · {what} · {when}",
+      "loading": "Se încarcă contul",
+      "methodNames": {
+        "apple": "Apple",
+        "google": "Google",
+        "password": "E‑mail și parolă",
+        "whatsapp_phone": "Telefon, cod pe WhatsApp"
+      },
+      "methods": "Metode de autentificare",
+      "more": "Mai multe",
+      "none": "—",
+      "notFound": "Contul nu există sau a fost șters.",
+      "openPage": "Deschide {document}, pagina {n}",
+      "ownerDelete": "Garajul se închide mai întâi prin suport",
+      "phone": "Telefon",
+      "reason": "Motivul suspendării",
+      "relation": {
+        "mechanic": "mecanic la {name}",
+        "owner": "proprietar la {name}",
+        "receptionist": "recepție la {name}"
+      },
+      "roles": "Roluri",
+      "state": "Stare"
+    },
+    "actions": {
+      "delete": "Șterge la cererea titularului",
+      "heading": "Acțiuni",
+      "reset": "Resetează accesul",
+      "restore": "Reactivează",
+      "suspend": "Suspendă"
+    },
     "cars": {
       "count": {
         "few": "{n} mașini",
@@ -841,6 +904,41 @@
         "other": "{n} de recenzii"
       }
     },
+    "dialogs": {
+      "cancel": "Renunță",
+      "count": "{n}/{max}",
+      "delete": {
+        "confirm": "Șterge",
+        "date": "Data primirii",
+        "identity": "Identitatea a fost verificată",
+        "reference": "Referința cererii",
+        "title": "Șterge la cererea titularului"
+      },
+      "reset": {
+        "confirm": "Resetează",
+        "hint": "Sesiunile se închid pe toate dispozitivele; dacă are parolă și e‑mail, primește linkul de resetare.",
+        "question": "Resetează accesul pentru {name}?",
+        "title": "Resetează accesul"
+      },
+      "restore": {
+        "confirm": "Reactivează",
+        "note": "Notă (opțional)",
+        "title": "Reactivează contul"
+      },
+      "suspend": {
+        "confirm": "Suspendă",
+        "hint": "Persoana primește motivul pe e‑mail.",
+        "reason": "Motivul",
+        "short": "Scrie motivul, cel puțin 10 caractere",
+        "title": "Suspendă contul"
+      }
+    },
+    "done": {
+      "delete": "Contul a fost șters",
+      "reset": "Accesul a fost resetat",
+      "restore": "Contul a fost reactivat",
+      "suspend": "Contul a fost suspendat"
+    },
     "empty": "Niciun cont încă.",
     "failed": "Lista nu s‑a încărcat.",
     "filters": {
@@ -865,6 +963,7 @@
     "loading": "Se încarcă conturile",
     "more": "Următoarele conturi nu s‑au încărcat.",
     "noMatch": "Niciun cont nu se potrivește.",
+    "open": "Deschide contul {name}",
     "recent": "Conturi recente",
     "retry": "Reîncearcă",
     "roles": {

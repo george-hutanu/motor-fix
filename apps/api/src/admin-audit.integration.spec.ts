@@ -35,6 +35,10 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // @traces 003-FR-005 003-FR-014
+  'GET /api/v1/admin/accounts/{id}': {
+    path: async () => `/api/v1/admin/accounts/${await driver()}`,
+  },
   // @traces 414-FR-002
   'GET /api/v1/admin/catalogue-jobs': {},
   'GET /api/v1/admin/garages': {
@@ -101,6 +105,28 @@ const FIXTURES: Record<
       );
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
+  },
+  'POST /api/v1/admin/accounts/{id}/delete-on-request': {
+    body: () => ({
+      identityChecked: true,
+      receivedOn: '2026-01-15',
+      reference: 'DR-2026-0001',
+    }),
+    path: async () =>
+      `/api/v1/admin/accounts/${await driver()}/delete-on-request`,
+  },
+  'POST /api/v1/admin/accounts/{id}/reset-access': {
+    body: () => ({}),
+    path: async () => `/api/v1/admin/accounts/${await driver()}/reset-access`,
+  },
+  'POST /api/v1/admin/accounts/{id}/restore': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/accounts/${await driver('suspended')}/restore`,
+  },
+  'POST /api/v1/admin/accounts/{id}/suspend': {
+    body: () => ({ reason: 'Cereri false, repetate.' }),
+    path: async () => `/api/v1/admin/accounts/${await driver()}/suspend`,
   },
   // @traces 414-FR-003 414-FR-004 414-FR-007
   'POST /api/v1/admin/catalogue-jobs/{id}/approve': {
@@ -270,6 +296,24 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// A driver's account for the account actions, suspended when asked.
+async function driver(status: 'active' | 'suspended' = 'active') {
+  const { id } = await app.get(AccountsService).createAccount({
+    consent: CURRENT_CONSENT,
+    identity: { method: 'google', subject: `driver-${randomUUID()}` },
+    name: 'Radu',
+    roles: ['driver'],
+  });
+  if (status === 'suspended') {
+    await db.query(
+      `UPDATE account SET status = 'suspended', suspended_reason = 'Cereri false, repetate.'
+       WHERE id = $1`,
+      [id],
+    );
+  }
+  return id;
+}
 
 // A garage's job waiting for an admin's decision, under a name of its own.
 async function proposedJob() {

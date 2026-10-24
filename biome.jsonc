@@ -153,6 +153,7 @@
         "apps/web/src/app/consent/consent-bar/consent-bar.html",
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/active-request/active-request.html",
+        "apps/web/src/app/dashboard/admin-account/admin-account.html",
         "apps/web/src/app/dashboard/admin-log/admin-log.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/admin-queue/admin-queue.html",

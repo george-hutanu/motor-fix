@@ -920,7 +920,7 @@
       },
       "label": "Cod",
       "problem": {
-        "account_suspended": "Contul tău este suspendat.",
+        "account_suspended": "Contul tău este suspendat. Scrie‑ne la suport.",
         "code_expired": "Codul a expirat. Cere un cod nou.",
         "code_invalid": "Codul nu este corect.",
         "consent_required": "Bifează acordul pentru a crea contul.",
@@ -954,7 +954,7 @@
       "withEmail": "Intră cu e‑mail și parolă"
     },
     "problem": {
-      "account_suspended": "Contul tău este suspendat.",
+      "account_suspended": "Contul tău este suspendat. Scrie‑ne la suport.",
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
     },

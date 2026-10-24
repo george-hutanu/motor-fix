@@ -67,12 +67,19 @@
           <ul class="list" [attr.aria-busy]="moreState() === 'loading' ? 'true' : null">
             @for (row of rows(); track row.id) {
               <li class="row">
-                <span class="who">
-                  <span class="name">{{ row.name }}</span>
-                  <span class="detail">{{ row.detail }}</span>
-                </span>
-                <mf-lamp [state]="row.lamp" [label]="row.state" />
-                <span class="count">{{ row.count }}</span>
+                <button
+                  type="button"
+                  class="open"
+                  [attr.aria-label]="'admin.users.open' | t: { name: row.name }"
+                  (click)="openAccount(row.id)"
+                >
+                  <span class="who">
+                    <span class="name">{{ row.name }}</span>
+                    <span class="detail">{{ row.detail }}</span>
+                  </span>
+                  <mf-lamp [state]="row.lamp" [label]="row.state" />
+                  <span class="count">{{ row.count }}</span>
+                </button>
               </li>
             }
           </ul>
