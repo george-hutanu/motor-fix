@@ -1,7 +1,7 @@
 import type { PrismaClient } from '../generated/prisma/client';
 
 // The owner's cap on what MotorFix pays for: 5 SMS per driver per month.
-const SMS_PER_MONTH = 5;
+export const SMS_PER_MONTH = 5;
 
 const month = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
@@ -37,4 +37,17 @@ export async function giveSmsBack(
   await prisma.$executeRaw`
     UPDATE sms_counter SET sent_count = sent_count - 1
     WHERE account_id = ${accountId}::uuid AND month = ${inMonth} AND sent_count > 0`;
+}
+
+// How many of this month's SMS the driver has used, for the settings panel.
+export async function smsUsed(
+  prisma: PrismaClient,
+  accountId: string,
+  at: Date,
+): Promise<number> {
+  const row = await prisma.smsCounter.findUnique({
+    select: { sentCount: true },
+    where: { accountId_month: { accountId, month: smsMonth(at) } },
+  });
+  return row?.sentCount ?? 0;
 }

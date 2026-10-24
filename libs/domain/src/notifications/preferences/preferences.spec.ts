@@ -139,6 +139,7 @@ describe('what a person reads after saving', () => {
     expect(view.preferences.at(-1)).toEqual({
       alwaysSent: false,
       channel: 'push',
+      channels: ['push'],
       enabled: false,
       garageId: GARAGE,
       type: 'REQUEST_RECEIVED',
@@ -338,5 +339,117 @@ describe('what a save writes and records', () => {
         oldValue: false,
       },
     ]);
+  });
+});
+
+// @traces 142-FR-005
+describe('the channel a driver type is on when nothing is saved', () => {
+  const pushable = driverTypes.filter((name) => {
+    const type = notificationType(name);
+    return (
+      type.channels.includes('push') && !type.alwaysSent && !type.transactional
+    );
+  });
+
+  it('is push when the account has a push device', () => {
+    const view = preferencesView([], true);
+    for (const type of pushable) {
+      expect(view.preferences.find((p) => p.type === type)?.channel).toBe(
+        'push',
+      );
+    }
+  });
+
+  it('is e-mail without a push device', () => {
+    const view = preferencesView([], false);
+    for (const type of driverTypes) {
+      expect(view.preferences.find((p) => p.type === type)?.channel).toBe(
+        'email',
+      );
+    }
+  });
+
+  it('stays e-mail for always-sent types and for news, whatever the devices', () => {
+    const view = preferencesView([], true);
+    expect(view.preferences.find((p) => p.type === 'JOB_READY')?.channel).toBe(
+      'email',
+    );
+    expect(view.preferences.find((p) => p.type === 'NEWS')?.channel).toBe(
+      'email',
+    );
+  });
+
+  it('keeps a saved channel whatever the devices', () => {
+    const view = preferencesView([row('DUE_ITP', 'whatsapp', true)], true);
+    expect(view.preferences.find((p) => p.type === 'DUE_ITP')?.channel).toBe(
+      'whatsapp',
+    );
+  });
+
+  it('leaves the defaults of enabled as they were', () => {
+    const view = preferencesView([], true);
+    for (const type of driverTypes) {
+      expect(view.preferences.find((p) => p.type === type)?.enabled).toBe(
+        type !== 'NEWS',
+      );
+    }
+  });
+
+  it('opens only push for the message when the account has a device', () => {
+    expect([...mutedChannels('DUE_ITP', [], null, true)].sort()).toEqual([
+      'email',
+      'sms',
+      'whatsapp',
+    ]);
+    expect([...mutedChannels('DUE_ITP', [], null, false)].sort()).toEqual([
+      'push',
+      'sms',
+      'whatsapp',
+    ]);
+  });
+
+  it('keeps the push default when a group switch writes the rows', () => {
+    const { writes } = planSave(
+      [],
+      [{ enabled: false, key: 'due_dates' }],
+      [],
+      true,
+    );
+    expect(writes.map((w) => w.channel)).toEqual(Array(5).fill('push'));
+  });
+
+  it('records nothing for a pick of the channel the type is already on', () => {
+    const { changes, writes } = planSave(
+      [],
+      [],
+      [row('DUE_ITP', 'push', true)],
+      true,
+    );
+    expect(changes).toEqual([]);
+    expect(writes).toEqual([]);
+  });
+});
+
+// @traces 142-FR-001
+describe('the channels each driver entry offers', () => {
+  it('are the catalogue channels of its type, in catalogue order', () => {
+    const view = preferencesView([]);
+    for (const entry of view.preferences) {
+      expect(entry.channels).toEqual([
+        ...notificationType(entry.type).channels,
+      ]);
+    }
+    expect(
+      view.preferences.find((p) => p.type === 'DUE_ITP')?.channels,
+    ).toEqual(['email', 'push', 'sms', 'whatsapp']);
+    expect(
+      view.preferences.find((p) => p.type === 'QUOTE_RECEIVED')?.channels,
+    ).toEqual(['email', 'push', 'whatsapp']);
+    expect(view.preferences.find((p) => p.type === 'NEWS')?.channels).toEqual([
+      'email',
+    ]);
+    expect(
+      view.preferences.find((p) => p.type === 'REVIEW_INVITE')?.channels,
+    ).toEqual(['email', 'push', 'whatsapp']);
   });
 });
