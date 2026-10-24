@@ -41,6 +41,13 @@ h2 {
   max-width: 100%;
   text-wrap: balance;
 }
+/* The narrowest phones: a smaller label keeps "Adaugă un mecanic" on one line. */
+@media (max-width: 359px) {
+  .add {
+    padding-inline: var(--mf-space-3);
+    font-size: var(--mf-size-small);
+  }
+}
 .count {
   color: var(--mf-text-secondary);
 }
