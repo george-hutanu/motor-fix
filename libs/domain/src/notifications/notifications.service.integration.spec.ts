@@ -409,18 +409,6 @@ describe('the event a hard bounce records', () => {
   });
 
   // @traces 525-bounce-domain-event-FR-002
-  // @traces 525-bounce-domain-event-FR-003
-  it('writes nothing more when the same message is reported again', async () => {
-    const andrei = await account('andrei');
-    await sentEmail(andrei, 'evt-e', '<e@relay>');
-
-    await service.recordBounce('<e@relay>');
-    await service.recordBounce('<e@relay>');
-
-    expect(await bounceEvents(andrei)).toHaveLength(1);
-  });
-
-  // @traces 525-bounce-domain-event-FR-002
   it('writes the change once when two reports of a message arrive together', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-e', '<e@relay>');
@@ -464,6 +452,8 @@ describe('the event a hard bounce records', () => {
 });
 
 describe('a hard bounce', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   it('fails the e-mail row, marks the address and falls back to push', async () => {
     const andrei = await account('andrei');
     await withDevice(andrei);
@@ -517,6 +507,48 @@ describe('a hard bounce', () => {
       }),
     ).toBe(1);
     expect(await pushFallbacks()).toBe(1);
+    // @traces 525-bounce-domain-event-FR-002
+    // @traces 525-bounce-domain-event-FR-003
+    expect(await bounceEvents(andrei)).toHaveLength(1);
+  });
+
+  it('keeps the push fallback when the process stops right after the bounce is saved', async () => {
+    const andrei = await account('andrei');
+    await withDevice(andrei);
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    const outside = jest
+      .spyOn(prisma.notification, 'createManyAndReturn')
+      .mockRejectedValueOnce(new Error('process stopped'));
+
+    await service.recordBounce('<b@relay>').catch(() => undefined);
+    outside.mockRestore();
+    await service.recordBounce('<b@relay>');
+
+    expect(await pushFallbacks()).toBe(1);
+  });
+
+  it('hands a fallback whose job was lost to the queue on the next sweep', async () => {
+    const andrei = await account('andrei');
+    await withDevice(andrei);
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    jest
+      .spyOn(queue, 'add')
+      .mockRejectedValueOnce(new Error('Redis unavailable'));
+
+    await expect(service.recordBounce('<b@relay>')).rejects.toThrow(
+      'Redis unavailable',
+    );
+    await service.recordBounce('<b@relay>');
+    const [push] = await prisma.notification.findMany({
+      where: { accountId: andrei, channel: 'push', fallbackOf: { not: null } },
+    });
+    expect(push).toMatchObject({ status: 'queued' });
+    expect(await queue.getJob(`send-${push.id}`)).toBeUndefined();
+
+    await service.requeueStranded(new Date(Date.parse(DAY) + 10 * 60_000));
+
+    expect(await queue.getJob(`send-${push.id}`)).toBeDefined();
+    expect(await pushFallbacks()).toBe(1);
   });
 
   it('fails every row of a grouped e-mail that bounced', async () => {
@@ -533,6 +565,8 @@ describe('a hard bounce', () => {
     expect(emails).toHaveLength(2);
     expect(emails.every((r) => r.status === 'failed')).toBe(true);
     expect(await pushFallbacks()).toBe(2);
+    // @traces 525-bounce-domain-event-FR-002
+    expect(await bounceEvents(andrei)).toHaveLength(1);
   });
 });
 
