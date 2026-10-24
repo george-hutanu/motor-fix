@@ -17,6 +17,7 @@ const api = apiBoot();
 // @traces 1183-FR-009
 // @traces 1192-FR-006
 // @traces 025-FR-011
+// @traces 385-FR-012
 const PUBLIC = [
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
@@ -30,6 +31,7 @@ const PUBLIC = [
   'GET /api/v1/brands/popular',
   'GET /api/v1/copy-voices',
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
+  'GET /api/v1/garages/00000000-0000-4000-8000-000000000000/similar',
   'GET /api/v1/home',
   'GET /api/v1/images/g/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/job-types',

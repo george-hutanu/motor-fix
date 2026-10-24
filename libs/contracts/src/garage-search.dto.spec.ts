@@ -1,7 +1,11 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { GaragePinsQueryDto, GarageSearchQueryDto } from './garage-search.dto';
+import {
+  GaragePinsQueryDto,
+  GarageSearchQueryDto,
+  SimilarGaragesQueryDto,
+} from './garage-search.dto';
 
 const BRAND = '9f1c2a7b-0000-4000-8000-000000000000';
 
@@ -259,5 +263,37 @@ describe('GarageSearchQueryDto sort', () => {
     ['a box and no place', { bbox: '44.35,26,44.5,26.25', brand: 'bmw' }],
   ])('refuses sort=distance with %s, naming sort', (_, query) => {
     expect(errors({ ...query, sort: 'distance' }).join()).toMatch(/^sort /);
+  });
+});
+
+function similarErrors(query: Record<string, unknown>) {
+  return validateSync(plainToInstance(SimilarGaragesQueryDto, query), {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).flatMap((error) => Object.values(error.constraints ?? {}));
+}
+
+// @traces 385-FR-012 385-FR-014
+describe('SimilarGaragesQueryDto', () => {
+  it('takes no brand, or a brand by its slug', () => {
+    expect(similarErrors({})).toEqual([]);
+    expect(similarErrors({ brand: 'bmw' })).toEqual([]);
+    expect(similarErrors({ brand: 'alfa-romeo' })).toEqual([]);
+  });
+
+  it.each(['BMW', 'alfa romeo', 'a'.repeat(81), '', 'bmw/1'])(
+    'refuses the slug %p',
+    (brand) => {
+      expect(similarErrors({ brand })).not.toEqual([]);
+    },
+  );
+
+  it('refuses a repeated brand key', () => {
+    expect(similarErrors({ brand: ['bmw', 'dacia'] })).not.toEqual([]);
+  });
+
+  it('refuses a parameter it does not know', () => {
+    expect(similarErrors({ brandId: BRAND })).not.toEqual([]);
+    expect(similarErrors({ near: '44.4,26.1' })).not.toEqual([]);
   });
 });

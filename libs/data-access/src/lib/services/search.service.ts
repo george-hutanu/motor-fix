@@ -15,6 +15,9 @@ import { GarageSearchControllerForBrand$Params } from '../fn/search/garage-searc
 import { garageSearchControllerPins } from '../fn/search/garage-search-controller-pins';
 import { GarageSearchControllerPins$Params } from '../fn/search/garage-search-controller-pins';
 import { GarageSearchPageDto } from '../models/garage-search-page-dto';
+import { similarGaragesControllerForGarage } from '../fn/search/similar-garages-controller-for-garage';
+import { SimilarGaragesControllerForGarage$Params } from '../fn/search/similar-garages-controller-for-garage';
+import { SimilarGaragesDto } from '../models/similar-garages-dto';
 
 @Injectable({ providedIn: 'root' })
 export class SearchService extends BaseService {
@@ -70,6 +73,31 @@ export class SearchService extends BaseService {
   garageSearchControllerPins(params?: GarageSearchControllerPins$Params, context?: HttpContext): Promise<GaragePinsDto> {
     const resp = this.garageSearchControllerPins$Response(params, context);
     return resp.then((r: StrictHttpResponse<GaragePinsDto>): GaragePinsDto => r.body);
+  }
+
+  /** Path part for operation `similarGaragesControllerForGarage()` */
+  static readonly SimilarGaragesControllerForGaragePath = '/api/v1/garages/{slug}/similar';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `similarGaragesControllerForGarage()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  similarGaragesControllerForGarage$Response(params: SimilarGaragesControllerForGarage$Params, context?: HttpContext): Promise<StrictHttpResponse<SimilarGaragesDto>> {
+    const obs = similarGaragesControllerForGarage(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `similarGaragesControllerForGarage$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  similarGaragesControllerForGarage(params: SimilarGaragesControllerForGarage$Params, context?: HttpContext): Promise<SimilarGaragesDto> {
+    const resp = this.similarGaragesControllerForGarage$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SimilarGaragesDto>): SimilarGaragesDto => r.body);
   }
 
 }
