@@ -1,5 +1,5 @@
--- When the garage closed; NULL while it is open. Closing and reopening a
--- garage set and clear it; the retention job reads it.
+-- When the garage closed; NULL while it is open. No code writes it yet: the
+-- garage closure story sets and clears it; the retention job reads it.
 ALTER TABLE "garage" ADD COLUMN "closed_at" TIMESTAMPTZ(3);
 
 -- The audit history stays append-only for every database user, the table

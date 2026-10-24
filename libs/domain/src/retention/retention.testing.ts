@@ -1,14 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
+import { ANONYMISED, retentionCutoff } from './retention.config';
 import { createPrisma } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
-const DAY_MS = 86_400_000;
-
 // A time `days` whole days and `ms` milliseconds before `now`.
 export const ago = (now: Date, days: number, ms = 0) =>
-  new Date(now.getTime() - days * DAY_MS - ms);
+  new Date(retentionCutoff(now, days).getTime() - ms);
 
 export function retentionFixtures(
   prisma: PrismaClient = createPrisma(databaseUrl),
@@ -75,7 +74,7 @@ export function retentionFixtures(
 
 export const anonymisedShape = {
   actorId: null,
-  actorName: 'anonymised',
+  actorName: ANONYMISED,
   newValue: null,
   oldValue: null,
   text: null,
