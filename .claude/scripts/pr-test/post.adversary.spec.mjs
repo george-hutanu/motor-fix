@@ -23,7 +23,7 @@ const events = (calls) => reviewCalls(calls).map((c) => JSON.parse(c.input).even
 const statusCall = (calls) => calls.find((c) => c.args.includes(`repos/${base.repo}/statuses/${base.sha}`));
 
 describe('own-PR refusal detection', () => {
-  // @traces 447-FR-001
+  // @traces 1377-FR-002
   it('tries no COMMENT review for a 500 or an empty error and returns the error', () => {
     for (const stderr of ['gh: Internal Server Error (HTTP 500)', '', 'HTTP 422']) {
       const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
@@ -33,7 +33,7 @@ describe('own-PR refusal detection', () => {
     }
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-002
   it('still writes the status and the description when the review fails with another 422', () => {
     const stderr = 'gh: Validation Failed (HTTP 422)\nBody is too long';
     const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
@@ -42,7 +42,7 @@ describe('own-PR refusal detection', () => {
     assert.match(out.reviewError, /Body is too long/);
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-003
   it('reports the error when the COMMENT fallback itself is refused', () => {
     const own = 'gh: Unprocessable Entity (HTTP 422)\nCan not approve your own pull request';
     const { calls, gh } = fakeGh([
@@ -53,7 +53,7 @@ describe('own-PR refusal detection', () => {
     assert.match(out.reviewError, /commit_id is stale/);
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-002
   it('does not fall back for a 422 that mentions the phrase only as a quoted reviewed-text, not as GitHub message', () => {
     const stderr = 'gh: Validation Failed (HTTP 422)\n{"message":"Validation Failed","errors":["commit_id is not part of the pull request"]}';
     const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
@@ -61,13 +61,13 @@ describe('own-PR refusal detection', () => {
     assert.deepEqual(events(calls), ['REQUEST_CHANGES']);
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-001
   it('has no reviewError after a clean review', () => {
     const { gh } = fakeGh();
     assert.equal(postVerdict({ ...base, verdict: 'success', gh }).reviewError, null);
   });
 
-  // @traces 447-FR-001
+  // @traces 1377-FR-001
   it('makes no review calls in a dry run', () => {
     const { calls, gh } = fakeGh();
     postVerdict({ ...base, verdict: 'success', gh, dryRun: true });

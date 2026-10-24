@@ -112,6 +112,9 @@ features:
   - 961-require-agent-review
   - 447-own-pr-refusal
   - 1376-pr-test-local-boot
+  - 1377-own-pr-422-fallback
+  - 438-test-suites-projects
+  - 471-crlf-harness-tidy
 ---
 
 # Capability: Platform
@@ -1193,9 +1196,9 @@ _From 854-precompact-pr-signal._
 
 _From 850-dispatch-test-timeouts._
 
-### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
+### 471-FR-005 — `trace-matrix.mjs` counts only the FRs a spec declares on a `- **FR-XXX**:` line, with the same anchor as `status.mjs`, `impact.mjs` and `retro-evidence.mjs` (one shared helper); an FR named only in prose, or prefixed by a number and a hyphen (`NNN-FR-XXX`, as a Spec Delta names another feature's), is not counted, and trace-matrix and status give the same total.
 
-_From 499-trace-matrix-delta-ids._
+_From 471-crlf-harness-tidy._
 
 ### 884-FR-001 — The web server MUST compress its own responses — the static files it serves (scripts, stylesheets, fonts) and the server-rendered HTML — for a client whose `Accept-Encoding` includes an encoding the server produces (gzip at least), MUST name the encoding and carry `Vary: Accept-Encoding` on the response and MUST send the uncompressed bytes to a client that accepts none. The one-year public cache header on content-hashed static files MUST stay as it is today.
 
@@ -2795,9 +2798,9 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
-### 447-FR-001 — `post.mjs` MUST fall back to a COMMENT review only when the review call's error carries GitHub's own-pull-request message (`your own pull request`); any other failure, an `HTTP 422` included, MUST be returned as `reviewError` without a second review call, and the CLI MUST exit 1 naming it once the status and the description are written.
+### 1377-FR-001 — A review refused with HTTP 422 whose body (stdout or stderr) carries GitHub's own-PR refusal ("Can not approve your own pull request", "Can not request changes on your own pull request") is posted again as a COMMENT review with the same body; `reviewError` is null and post.mjs exits 0.
 
-_From 447-own-pr-refusal._
+_From 1377-own-pr-422-fallback._
 
 ### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
 
@@ -2821,6 +2824,25 @@ _From 1376-pr-test-local-boot._
 ### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
 
 _From 1376-pr-test-local-boot._
+
+### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+
+### 1377-FR-003 — When the COMMENT fallback is itself refused, that refusal is the `reviewError` and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+### 438-FR-001 — `scripts/test-suites.spec.ts` MUST derive the projects whose unit/integration split it asserts from the repository: the project (nearest ancestor holding a `project.json`) of every `*.integration.spec.ts` under `apps/` or `libs/` (outside `node_modules` and `test-output`), each once, sorted; the fixed `['apps/api', 'libs/domain']` goes. For each derived project the four existing assertions hold (every spec runs with no suite chosen, the unit suite holds no integration spec, the integration suite holds only integration specs, the two suites partition the whole), so a project whose Jest config does not honour `JEST_SUITE` fails the spec by name.
+
+_From 438-test-suites-projects._
+
+### 438-FR-002 — The spec MUST assert the derived list itself as a superset: it is non-empty and contains `apps/api` and `libs/domain` (the two the spec checked until now), so an empty or broken derivation cannot pass vacuously. The full list is observed, not asserted (on `main`: `apps/api`, `apps/mcp`, `apps/worker`, `libs/domain`).
+
+_From 438-test-suites-projects._
+
+### 438-FR-003 — The 435-FR-008 guard MUST report a spec, run by Jest and not named `*.integration.spec.ts`, whose source reads `DATABASE_URL` or `REDIS_URL` from `process.env` in any of: the bracket form (`process.env['DATABASE_URL']`, either quote), the dot form (`process.env.DATABASE_URL`), or a destructuring from `process.env` whose braces name the key in key position, alone, among other keys, renamed (`DATABASE_URL: url`), with a default (`DATABASE_URL = 'x'`) or across lines; and a source that names `seed.ts` as a file (quoted, or inside a command such as `tsx prisma/seed.ts`). It MUST NOT report a longer identifier (`DATABASE_URL_TEST`, `DATABASE_URL$x`, `DATABASE_URLé`: any identifier character, `$` and non-ASCII letters included, continues the name), another variable, an assignment (`process.env.DATABASE_URL = 'x'`) or `delete`, the name in value position (`{ url: DATABASE_URL }`), or the bare name outside a `process.env` expression; a comment holding the whole expression is reported (raw text, no comment stripping). A `delete` separated from `process.env` by any whitespace, newlines included, is not a read. The guard decides any source in time linear in its length (no backtracking blow-up on unclosed braces).
+
+_From 438-test-suites-projects._
 
 ## Retired
 
@@ -2925,3 +2947,5 @@ _From 1376-pr-test-local-boot._
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
 - `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
+- `447-FR-001` — superseded by `1377-FR-001` (2026-10-24)
+- `499-FR-001` — superseded by `471-FR-005` (2026-10-24)

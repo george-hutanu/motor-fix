@@ -1,9 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
+import { gatherStatus } from './status.mjs';
 
 const root = join(import.meta.dirname, '..', '..');
 
@@ -12,7 +13,7 @@ const T = (feature, n) => `${feature}${'-FR-'}${n}`;
 
 // trace-matrix reads the repo its own file sits in, so each case copies the
 // script and its imports into a throwaway repo beside a fixture spec.
-function matrix(specBody, files = {}) {
+function inRepo(specBody, files, use) {
   const dir = mkdtempSync(join(tmpdir(), 'taskr-trace-'));
   try {
     for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/entry.mjs', 'lib/feature.mjs', 'lib/tests.mjs', 'lib/traces.mjs']) {
@@ -26,18 +27,28 @@ function matrix(specBody, files = {}) {
       mkdirSync(dirname(join(dir, rel)), { recursive: true });
       writeFileSync(join(dir, rel), body);
     }
-    const out = spawnSync(process.execPath, [join(dir, '.claude', 'scripts', 'trace-matrix.mjs'), '--json'], {
-      cwd: dir,
-      encoding: 'utf8',
-      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
-    });
-    return JSON.parse(out.stdout).features.find((f) => f.feature === '002-fixture');
+    return use(dir);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 }
 
+const run = (dir, ...args) =>
+  spawnSync(process.execPath, [join(dir, '.claude', 'scripts', 'trace-matrix.mjs'), ...args], {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+  });
+
+const fixture = (report) => report.features.find((f) => f.feature === '002-fixture');
+
+function matrix(specBody, files = {}) {
+  return inRepo(specBody, files, (dir) => fixture(JSON.parse(run(dir, '--json').stdout)));
+}
+
 describe('trace-matrix requirements', () => {
+  // @traces 471-FR-005
   it('reads only the feature\'s own FR ids, not the feature-qualified ids a Spec Delta names', () => {
     const f = matrix(
       [
@@ -101,5 +112,61 @@ describe('trace-matrix tokens', () => {
     const rows = Object.fromEntries(f.requirements.map((r) => [r.fr, r.tests]));
     assert.deepEqual(rows['FR-001'], ['.claude/scripts/a.spec.mjs']);
     assert.deepEqual(rows['FR-002'] ?? [], []);
+  });
+});
+
+describe('trace-matrix declared requirements', () => {
+  // @traces 471-FR-005
+  it('counts only the FRs declared on a list line, and gives the total status gives', () => {
+    const spec = [
+      '- **FR-001**: does one thing.',
+      '- FR-002: does another.',
+      '',
+      'Unlike FR-009, which another story owns, and FR-010 named in passing.',
+      '',
+    ].join('\n');
+    inRepo(spec, {}, (dir) => {
+      const f = fixture(JSON.parse(run(dir, '--json').stdout));
+      assert.deepEqual(
+        f.requirements.map((r) => r.fr),
+        ['FR-001', 'FR-002'],
+      );
+      const status = gatherStatus(dir).features.find((x) => x.feature === '002-fixture');
+      assert.equal(f.total, status.requirements.live);
+    });
+  });
+});
+
+describe('trace-matrix exit', () => {
+  // @traces 471-FR-004
+  it('writes a --json report over 64 KB whole into a pipe', () => {
+    const n = (i) => String(i).padStart(3, '0');
+    const spec = Array.from({ length: 999 }, (_, i) => `- **FR-${n(i + 1)}**: requirement ${i + 1}.`).join('\n');
+    inRepo(spec, {}, (dir) => {
+      const out = run(dir, '--json');
+      assert.equal(out.status, 0, out.stderr);
+      assert.ok(out.stdout.length > 64 * 1024, `report is ${out.stdout.length} bytes`);
+      assert.equal(fixture(JSON.parse(out.stdout)).total, 999);
+    });
+  });
+
+  // @traces 471-FR-004
+  it('--check still exits 1 on an implemented feature with an untested FR, and 0 once it is tested', () => {
+    const spec = '- **FR-001**: one.\n';
+    const tasks = { 'specs/002-fixture/tasks.md': '- [X] T001 one (FR-001)\n' };
+    inRepo(spec, tasks, (dir) => {
+      const out = run(dir, '--check');
+      assert.equal(out.status, 1, out.stdout);
+      assert.match(out.stderr, /002-fixture is implemented but 1 requirement/);
+    });
+    inRepo(spec, { ...tasks, 'libs/a/src/a.spec.ts': `// @traces ${T('002', '001')}\nit('a', () => {});\n` }, (dir) => {
+      assert.equal(run(dir, '--check').status, 0);
+    });
+  });
+
+  // @traces 471-FR-004
+  it('sets process.exitCode rather than calling process.exit()', () => {
+    const source = readFileSync(join(root, '.claude', 'scripts', 'trace-matrix.mjs'), 'utf8');
+    assert.doesNotMatch(source, /process\.exit\(/);
   });
 });
