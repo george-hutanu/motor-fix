@@ -64,9 +64,21 @@ export type AccountDeletionOutcome =
   | 'deleted'
   | 'forbidden'
   | 'refused_owner'
+  | 'refused_in_work'
   | 'reauth_required'
   | 'mismatch'
   | 'failed';
+// Not started at 0 either: the requests and the download are the API's, the
+// build and the expiry the worker's.
+export type DataExportOutcome =
+  | 'requested'
+  | 'too_soon'
+  | 'already_ready'
+  | 'forbidden'
+  | 'ready'
+  | 'failed'
+  | 'expired'
+  | 'downloaded';
 export type NotificationChannel = 'push' | 'in-app';
 const STEP_ACTIONS = [
   'added',
@@ -158,6 +170,11 @@ const accountDeletions = () =>
   counter(
     'motorfix_account_deletions_total',
     'Account deletions asked for, by outcome',
+  );
+const dataExports = () =>
+  counter(
+    'motorfix_data_exports_total',
+    'Copies of their data people asked for, by outcome',
   );
 const approvals = () =>
   counter(
@@ -324,6 +341,10 @@ export function countCompletionOpened() {
 
 export function countAccountDeletion(outcome: AccountDeletionOutcome) {
   accountDeletions().add(1, { outcome });
+}
+
+export function countDataExport(outcome: DataExportOutcome, by = 1) {
+  dataExports().add(by, { outcome });
 }
 
 export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {

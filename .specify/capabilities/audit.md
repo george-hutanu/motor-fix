@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -13,6 +13,7 @@ features:
   - 1352-catalogue-job-visibility
   - 129-delete-account
   - 469-activity-log-at-index
+  - 140-account-delete-export
 ---
 
 # Capability: Audit history
@@ -232,6 +233,10 @@ _From 469-activity-log-at-index._
 ### 469-FR-005 — The story MUST change no API, contract, screen or answer: the endpoint, its parameters, its page shape, the masking and the ordering stay as 391 states them.
 
 _From 469-activity-log-at-index._
+
+### 140-FR-011 — The request's transaction MUST write one audit entry through the audit writer: action `create`, subject `account` = the driver, kind `data_export_requested`, with the time; it is kept under the audit retention rule.
+
+_From 140-account-delete-export._
 
 ## Retired
 

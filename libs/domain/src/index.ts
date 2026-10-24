@@ -20,6 +20,8 @@ export {
   ROLES,
   type Role,
 } from './auth/capabilities';
+export { DATA_EXPORT_CONSUMER } from './auth/data-export/data-export.builder';
+export { DataExportModule } from './auth/data-export/data-export.module';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';
 export {
   MAINTENANCE,
