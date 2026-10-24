@@ -104,3 +104,6 @@
     }
   </section>
 }
+@if (profile() || suspended()) {
+  <mf-garage-legal-check />
+}

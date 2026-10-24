@@ -18,7 +18,7 @@ import { garageOf, Session } from '../session';
 
 // The owner's legal check on the Panou, read again whenever the garage's
 // verification changes, an admin re-checks it, it is suspended, or its yearly
-// documents change; a 404 (no file) shows nothing. The Documente row's button
+// documents change or fall due; a 404 (no file) shows nothing. The Documente row's button
 // opens the upload dialog, and a sent upload reads the panel again.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +45,7 @@ export class GarageLegalCheck {
         'garage.suspended',
         'garage.restored',
         'document.uploaded',
+        'document.due',
         'document.overdue',
         'document.accepted',
         'document.refused',

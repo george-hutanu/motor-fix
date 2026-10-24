@@ -85,7 +85,14 @@ async function render(
     providers: [
       {
         provide: GaragesService,
-        useValue: { garageProfileControllerRead: read },
+        // The legal check answers 404 (no file), so its host shows nothing
+        // and these cases judge the profile panel alone.
+        useValue: {
+          garageProfileControllerRead: read,
+          legalCheckControllerRead: async () => {
+            throw new HttpErrorResponse({ status: 404, statusText: '404' });
+          },
+        },
       },
       { provide: Session, useValue: { shown: signal(me) } },
       { provide: Router, useValue: { navigateByUrl: navigate } },
@@ -434,7 +441,9 @@ describe('Profilul service-ului failures at the edges', () => {
     await settle();
 
     expect(element.querySelector('[data-suspended]')).toBeNull();
-    expect(all(element, 'section[aria-labelledby]')).toHaveLength(1);
+    expect(
+      all(element, 'section[aria-labelledby="mf-profile-public"]'),
+    ).toHaveLength(1);
     expect(element.querySelector('[data-public-link]')).not.toBeNull();
   });
 });

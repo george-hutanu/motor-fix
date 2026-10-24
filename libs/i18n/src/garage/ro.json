@@ -118,6 +118,7 @@
       "checked": "verificate",
       "checkedOn": "verificate pe {day}",
       "cycle": {
+        "due": "scadent pe {day}",
         "in_review": "în verificare",
         "overdue": "restante din {since}, profilul iese de pe hartă pe {off}",
         "refused": "refuzat: {note}",

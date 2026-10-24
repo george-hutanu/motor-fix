@@ -85,6 +85,8 @@ afterEach(() => TestBed.resetTestingModule());
 
 // @traces 068-FR-005
 // @traces 068-FR-017
+// @traces 136-FR-003
+// @traces 136-FR-007
 describe('the Documente row by the yearly cycle', () => {
   it.each([
     [
@@ -95,7 +97,7 @@ describe('the Documente row by the yearly cycle', () => {
     [
       'due',
       'amber',
-      'Documente certificat constatator și autorizație RAR · de reîncărcat o dată pe an, până în ian. 2027 verificate pe 1 oct. 2026 atenție',
+      'Documente certificat constatator și autorizație RAR · scadent pe 15 ian. 2027 verificate pe 1 oct. 2026 atenție',
     ],
     [
       'in_review',
@@ -126,6 +128,10 @@ describe('the Documente row by the yearly cycle', () => {
     [
       'valid',
       'Documents company certificate and RAR authorisation · upload again once a year, by Jan 2027 checked on 1 Oct 2026 in order',
+    ],
+    [
+      'due',
+      'Documents company certificate and RAR authorisation · due on 15 Jan 2027 checked on 1 Oct 2026 attention',
     ],
     [
       'in_review',
