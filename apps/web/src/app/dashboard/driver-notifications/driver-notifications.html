@@ -9,18 +9,82 @@
     <ul>
       @for (row of rows(); track row.key) {
         <li>
-          <div class="name">
-            <span aria-hidden="true">{{ titleKey(row.key) | t }}</span>
-            <span class="hint" [id]="'driver-notifications-' + row.key">{{ hintKey(row.key) | t }}</span>
+          <div class="head">
+            <div class="name">
+              <span aria-hidden="true">{{ titleKey(row.key) | t }}</span>
+              <span class="hint" [id]="'driver-notifications-' + row.key">{{ hintKey(row.key) | t }}</span>
+            </div>
+            <hlm-switch
+              [inputId]="'driver-notifications-' + row.key + '-switch'"
+              [checked]="row.enabled"
+              [disabled]="!loaded()"
+              [aria-label]="titleKey(row.key) | t"
+              [aria-describedby]="'driver-notifications-' + row.key"
+              (checkedChange)="toggle(row.key, $event)"
+            />
           </div>
-          <hlm-switch
-            [inputId]="'driver-notifications-' + row.key + '-switch'"
-            [checked]="row.enabled"
-            [disabled]="!loaded()"
-            [aria-label]="titleKey(row.key) | t"
-            [aria-describedby]="'driver-notifications-' + row.key"
-            (checkedChange)="toggle(row.key, $event)"
-          />
+          @if (row.types.length) {
+            <button
+              type="button"
+              class="disclosure"
+              [attr.aria-expanded]="isOpen(row.key)"
+              [attr.aria-controls]="'driver-notifications-' + row.key + '-types'"
+              [attr.aria-label]="'driver.notifications.types.label' | t: { group: (titleKey(row.key) | t) }"
+              (click)="flipOpen(row.key)"
+            >
+              <span>{{ 'driver.notifications.types.show' | t }}</span>
+              <span class="chevron" aria-hidden="true"></span>
+            </button>
+          }
+          @if (isOpen(row.key)) {
+            <div class="types" [id]="'driver-notifications-' + row.key + '-types'">
+              @if (row.phone && !reach().phoneVerified) {
+                <p class="hint" [id]="'driver-notifications-' + row.key + '-phone'">
+                  {{ 'driver.notifications.phoneHint' | t }}
+                </p>
+              }
+              @if (row.sms && smsSpent()) {
+                <p class="hint">
+                  {{ 'driver.notifications.smsUsed' | t: reach().sms }}
+                </p>
+              }
+              @if (pushHint()?.key === row.key) {
+                <p class="hint" role="status">{{ pushHint()!.copy | t }}</p>
+              }
+              @for (type of row.types; track type.type) {
+                <div class="type">
+                  <span class="type-name" [id]="pickerName(type.type) + '-name'">{{ typeKey(type.type) | t }}</span>
+                  @if (type.alwaysSent) {
+                    <span class="hint">{{ 'driver.notifications.alwaysSentMark' | t }}</span>
+                  }
+                  @if (type.channels.length > 1) {
+                    <div
+                      hlmRadioGroup
+                      class="spartan-radio-group"
+                      [name]="pickerName(type.type)"
+                      [value]="type.channel"
+                      [disabled]="!loaded()"
+                      [attr.aria-label]="typeKey(type.type) | t"
+                      (valueChange)="pick(row.key, type.type, $event)"
+                    >
+                      @for (channel of type.channels; track channel) {
+                        <hlm-radio
+                          [value]="channel"
+                          [inputId]="pickerName(type.type) + '-' + channel"
+                          [disabled]="locked(channel)"
+                          [aria-describedby]="locked(channel) ? 'driver-notifications-' + row.key + '-phone' : undefined"
+                        >
+                          {{ channelKey(channel) | t }}
+                        </hlm-radio>
+                      }
+                    </div>
+                  } @else {
+                    <span class="channel">{{ channelKey(type.channel) | t }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
         </li>
       }
     </ul>

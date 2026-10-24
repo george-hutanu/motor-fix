@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
 import {
@@ -14,6 +15,7 @@ import { Subject } from 'rxjs';
 
 import { DriverNotifications } from './driver-notifications';
 import { Live } from '../live';
+import { PushDevice, type PushState } from '../push-device';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -55,6 +57,11 @@ let save: jest.Mock;
 let open: jest.Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
+let push: {
+  state: ReturnType<typeof signal<PushState>>;
+  refresh: jest.Mock;
+  enable: jest.Mock;
+};
 
 async function render(
   first: Promise<NotificationPreferencesDto> = Promise.resolve(answer()),
@@ -65,6 +72,11 @@ async function render(
   open = jest.fn(async () => true);
   events = new Subject();
   resync = new Subject();
+  push = {
+    enable: jest.fn(async () => undefined),
+    refresh: jest.fn(async () => undefined),
+    state: signal<PushState>('off'),
+  };
   TestBed.configureTestingModule({
     providers: [
       {
@@ -76,6 +88,7 @@ async function render(
       },
       { provide: Live, useValue: { events, resync } },
       { provide: Overlays, useValue: { open } },
+      { provide: PushDevice, useValue: push },
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -339,4 +352,420 @@ describe('the notification hints on a phone', () => {
     )?.[1];
     expect(tablet).toMatch(/\.hint\s*\{[^}]*font-size: var\(--mf-size-small\)/);
   });
+});
+
+type Channel = 'email' | 'push' | 'sms' | 'whatsapp';
+const EPSW: Channel[] = ['email', 'push', 'sms', 'whatsapp'];
+const EPW: Channel[] = ['email', 'push', 'whatsapp'];
+
+const GROUP_TYPES: Record<string, string[]> = {
+  bookings: ['BOOKING_REMINDER', 'JOB_READY'],
+  due_dates: [
+    'DUE_ITP',
+    'DUE_RCA',
+    'DUE_ROVINIETA',
+    'SERVICE_DUE',
+    'TYRES_SEASON',
+  ],
+  news: ['NEWS'],
+  offers: ['QUOTE_RECEIVED', 'REQUEST_EXPIRED'],
+  reviews_history: ['REVIEW_INVITE'],
+};
+const CHANNELS: Record<string, Channel[]> = {
+  BOOKING_REMINDER: EPSW,
+  DUE_ITP: EPSW,
+  DUE_RCA: EPSW,
+  DUE_ROVINIETA: EPSW,
+  JOB_READY: EPW,
+  NEWS: ['email'],
+  QUOTE_RECEIVED: EPW,
+  REQUEST_EXPIRED: EPW,
+  REVIEW_INVITE: EPW,
+  SERVICE_DUE: EPSW,
+  TYRES_SEASON: EPSW,
+};
+
+const full = (
+  options: {
+    phoneVerified?: boolean;
+    pushDevice?: boolean;
+    used?: number;
+    chosen?: Partial<Record<string, Channel>>;
+  } = {},
+) =>
+  ({
+    ...answer(),
+    groups: KEYS.map((key) => ({
+      enabled: key !== 'news',
+      key,
+      types: GROUP_TYPES[key],
+    })),
+    phoneVerified: options.phoneVerified ?? true,
+    preferences: Object.entries(CHANNELS).map(([type, channels]) => ({
+      alwaysSent: type === 'JOB_READY',
+      channel: options.chosen?.[type] ?? 'email',
+      channels,
+      enabled: type !== 'NEWS',
+      garageId: null,
+      type,
+    })),
+    pushDevice: options.pushDevice ?? false,
+    sms: { cap: 5, used: options.used ?? 0 },
+  }) as unknown as NotificationPreferencesDto;
+
+const disclosure = (element: HTMLElement, key: string) =>
+  element.querySelector<HTMLButtonElement>(
+    `button[aria-controls="driver-notifications-${key}-types"]`,
+  ) as HTMLButtonElement;
+const region = (element: HTMLElement, key: string) =>
+  element.querySelector<HTMLElement>(`#driver-notifications-${key}-types`);
+const groupOf = (element: HTMLElement, name: string) =>
+  element.querySelector<HTMLElement>(
+    `[role="radiogroup"][aria-label="${name}"]`,
+  ) as HTMLElement;
+const options = (group: HTMLElement) =>
+  [...group.querySelectorAll('label')].map((l) => l.textContent?.trim());
+const radio = (group: HTMLElement, channel: Channel) =>
+  group.querySelector<HTMLInputElement>(
+    `input[value="${channel}"]`,
+  ) as HTMLInputElement;
+const labelOf = (group: HTMLElement, channel: Channel) =>
+  group.querySelector<HTMLLabelElement>(
+    `label[for="${radio(group, channel).id}"]`,
+  ) as HTMLLabelElement;
+const checked = (group: HTMLElement) =>
+  group.querySelector<HTMLInputElement>('input:checked')?.value;
+
+async function opened(
+  key: string,
+  first: NotificationPreferencesDto = full(),
+  language: 'ro' | 'en' = 'ro',
+) {
+  const rendered = await render(Promise.resolve(first), language);
+  disclosure(rendered.element, key).click();
+  await rendered.settle();
+  return rendered;
+}
+
+// @traces 142-FR-001 142-FR-007 142-FR-010
+describe('the channel of each notification type', () => {
+  it('sits behind a closed disclosure under each group switch', async () => {
+    const { element, settle } = await render(Promise.resolve(full()));
+
+    const button = disclosure(element, 'due_dates');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(region(element, 'due_dates')).toBeNull();
+    button.click();
+    await settle();
+
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(region(element, 'due_dates')).not.toBeNull();
+    button.click();
+    await settle();
+    expect(region(element, 'due_dates')).toBeNull();
+  });
+
+  it('lists ITP, RCA, Rovinietă, Revizie and Anvelope under Scadențe, each with E-mail, Push, SMS and WhatsApp', async () => {
+    const { element } = await opened('due_dates');
+
+    const names = [
+      ...region(element, 'due_dates')!.querySelectorAll('[role="radiogroup"]'),
+    ].map((g) => g.getAttribute('aria-label'));
+    expect(names).toEqual(['ITP', 'RCA', 'Rovinietă', 'Revizie', 'Anvelope']);
+    for (const name of names) {
+      expect(options(groupOf(element, name as string))).toEqual([
+        'E‑mail',
+        'Push',
+        'SMS',
+        'WhatsApp',
+      ]);
+    }
+  });
+
+  it('offers only E-mail, Push and WhatsApp for the types of Ofertă nouă and for review invites', async () => {
+    const { element, settle } = await opened('offers');
+    disclosure(element, 'reviews_history').click();
+    await settle();
+
+    expect(options(groupOf(element, 'Ofertă nouă de la un service'))).toEqual([
+      'E‑mail',
+      'Push',
+      'WhatsApp',
+    ]);
+    expect(options(groupOf(element, 'Invitație la recenzie'))).toEqual([
+      'E‑mail',
+      'Push',
+      'WhatsApp',
+    ]);
+  });
+
+  it('shows news as e-mail, with no picker', async () => {
+    const { element } = await opened('news');
+
+    const news = region(element, 'news') as HTMLElement;
+    expect(news.querySelector('[role="radiogroup"]')).toBeNull();
+    expect(news.textContent).toContain('Noutăți MotorFix');
+    expect(news.textContent).toContain('E‑mail');
+  });
+
+  it('marks an always-sent type and still lets its channel be picked', async () => {
+    const { element, settle } = await opened('bookings');
+
+    const ready = groupOf(element, 'Mașina e gata');
+    expect(region(element, 'bookings')?.textContent).toContain(
+      'Se trimite mereu',
+    );
+    labelOf(ready, 'whatsapp').click();
+    await settle();
+
+    expect(save).toHaveBeenCalledWith({
+      body: {
+        preferences: [
+          {
+            channel: 'whatsapp',
+            enabled: true,
+            garageId: null,
+            type: 'JOB_READY',
+          },
+        ],
+      },
+    });
+  });
+
+  it('checks the channel each type is on', async () => {
+    const { element } = await opened(
+      'due_dates',
+      full({ chosen: { DUE_RCA: 'sms' } }),
+    );
+
+    expect(checked(groupOf(element, 'ITP'))).toBe('email');
+    expect(checked(groupOf(element, 'RCA'))).toBe('sms');
+  });
+
+  it('names the types and channels in English', async () => {
+    const { element } = await opened('due_dates', full(), 'en');
+
+    expect(
+      [
+        ...region(element, 'due_dates')!.querySelectorAll(
+          '[role="radiogroup"]',
+        ),
+      ].map((g) => g.getAttribute('aria-label')),
+    ).toEqual(['ITP', 'RCA', 'Road vignette', 'Service', 'Tyres']);
+    expect(options(groupOf(element, 'ITP'))).toEqual([
+      'Email',
+      'Push',
+      'SMS',
+      'WhatsApp',
+    ]);
+  });
+});
+
+// @traces 142-FR-002
+describe('picking a channel', () => {
+  it('saves that one type at once, with its enabled as read, and shows the pick', async () => {
+    const { element, settle } = await opened('due_dates');
+
+    const itp = groupOf(element, 'ITP');
+    labelOf(itp, 'whatsapp').click();
+    await settle();
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith({
+      body: {
+        preferences: [
+          {
+            channel: 'whatsapp',
+            enabled: true,
+            garageId: null,
+            type: 'DUE_ITP',
+          },
+        ],
+      },
+    });
+    expect(checked(groupOf(element, 'ITP'))).toBe('whatsapp');
+  });
+
+  it('carries a type that is off as off', async () => {
+    const first = full({ pushDevice: true });
+    const itp = (
+      first.preferences as unknown as { type: string; enabled: boolean }[]
+    ).find((p) => p.type === 'DUE_ITP');
+    if (itp) itp.enabled = false;
+    const { element, settle } = await opened('due_dates', first);
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(save).toHaveBeenCalledWith({
+      body: {
+        preferences: [
+          { channel: 'push', enabled: false, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+    });
+  });
+
+  it('puts the channel back and says so when the save fails', async () => {
+    const { element, settle } = await opened('due_dates');
+    save.mockRejectedValueOnce(new Error('down'));
+
+    labelOf(groupOf(element, 'ITP'), 'sms').click();
+    await settle();
+
+    expect(checked(groupOf(element, 'ITP'))).toBe('email');
+    expect(toast).toHaveBeenCalledWith('Setarea nu a putut fi salvată');
+  });
+
+  it('keeps a pick in flight when the choices are read again', async () => {
+    const { element, settle } = await opened('due_dates');
+    save.mockReturnValueOnce(new Promise(() => undefined));
+    read.mockResolvedValue(full());
+
+    labelOf(groupOf(element, 'ITP'), 'sms').click();
+    await settle();
+    resync.next();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(checked(groupOf(element, 'ITP'))).toBe('sms');
+  });
+});
+
+// @traces 142-FR-003 142-FR-004 142-FR-010
+describe('SMS and WhatsApp', () => {
+  it('cannot be picked without a confirmed phone, and the group says how to fix it once', async () => {
+    const { element } = await opened(
+      'due_dates',
+      full({ phoneVerified: false }),
+    );
+
+    const area = region(element, 'due_dates') as HTMLElement;
+    const hint = 'Adaugă și confirmă numărul de telefon în Datele tale.';
+    expect(area.textContent?.split(hint)).toHaveLength(2);
+    const itp = groupOf(element, 'ITP');
+    for (const channel of ['sms', 'whatsapp'] as const) {
+      const input = radio(itp, channel);
+      expect(input.disabled).toBe(true);
+      const described = element.querySelector(
+        `#${input.getAttribute('aria-describedby')}`,
+      );
+      expect(described?.textContent?.trim()).toBe(hint);
+    }
+    expect(radio(itp, 'push').disabled).toBe(false);
+  });
+
+  it('says the same in English', async () => {
+    const { element } = await opened(
+      'due_dates',
+      full({ phoneVerified: false }),
+      'en',
+    );
+
+    expect(region(element, 'due_dates')?.textContent).toContain(
+      'Add and confirm your phone number in Your details.',
+    );
+  });
+
+  it('can be picked with a confirmed phone, and no hint shows', async () => {
+    const { element } = await opened('due_dates');
+
+    expect(radio(groupOf(element, 'ITP'), 'sms').disabled).toBe(false);
+    expect(region(element, 'due_dates')?.textContent).not.toContain(
+      'Adaugă și confirmă',
+    );
+  });
+
+  it('says once under an opened group with SMS that the month’s 5 SMS are used, and SMS stays pickable', async () => {
+    const { element, settle } = await opened('due_dates', full({ used: 5 }));
+    disclosure(element, 'offers').click();
+    await settle();
+
+    const line =
+      'Ai folosit 5 din 5 SMS luna aceasta; următoarele merg pe WhatsApp.';
+    expect(region(element, 'due_dates')?.textContent?.split(line)).toHaveLength(
+      2,
+    );
+    expect(region(element, 'offers')?.textContent).not.toContain(line);
+    expect(radio(groupOf(element, 'ITP'), 'sms').disabled).toBe(false);
+  });
+
+  it('says nothing about SMS under the cap', async () => {
+    const { element } = await opened('due_dates', full({ used: 4 }));
+
+    expect(region(element, 'due_dates')?.textContent).not.toContain(
+      'Ai folosit',
+    );
+  });
+
+  it('says the SMS line in English', async () => {
+    const { element } = await opened('due_dates', full({ used: 5 }), 'en');
+
+    expect(region(element, 'due_dates')?.textContent).toContain(
+      'You have used 5 of 5 SMS this month; the next ones go by WhatsApp.',
+    );
+  });
+});
+
+// @traces 142-FR-006 142-FR-010
+describe('picking push', () => {
+  it('saves at once when the account already has a push device', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      full({ pushDevice: true }),
+    );
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(push.enable).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the browser first, and saves once this browser is a device', async () => {
+    const { element, settle } = await opened('due_dates');
+    push.enable.mockImplementationOnce(async () => push.state.set('on'));
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(push.refresh).toHaveBeenCalled();
+    expect(push.enable).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith({
+      body: {
+        preferences: [
+          { channel: 'push', enabled: true, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+    });
+  });
+
+  it.each([
+    ['off', 'Primești mesajele importante și când aplicația este închisă.'],
+    [
+      'blocked',
+      'Notificările sunt blocate în browser. Deschide setările site‑ului, permite notificările pentru MotorFix și reîncarcă pagina.',
+    ],
+    ['unsupported', 'Acest browser nu poate primi notificări.'],
+    [
+      'ios-hint',
+      'Pe iPhone sau iPad, adaugă MotorFix pe ecranul principal: apasă Partajează, apoi Adaugă pe ecranul principal. Deschide aplicația de acolo și activează notificările.',
+    ],
+  ] as const)(
+    'keeps the channel and explains when the browser ends %s',
+    async (state, hint) => {
+      const { element, settle } = await opened('due_dates');
+      push.enable.mockImplementationOnce(async () => push.state.set(state));
+      push.refresh.mockImplementationOnce(async () =>
+        push.state.set(state === 'off' ? 'off' : state),
+      );
+
+      labelOf(groupOf(element, 'ITP'), 'push').click();
+      await settle();
+
+      expect(save).not.toHaveBeenCalled();
+      expect(checked(groupOf(element, 'ITP'))).toBe('email');
+      expect(region(element, 'due_dates')?.textContent).toContain(hint);
+    },
+  );
 });
