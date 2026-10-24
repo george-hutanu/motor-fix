@@ -187,7 +187,7 @@ export class AuditEntryDto {
 
 export class AuditHistoryPageDto {
   @ApiProperty({
-    description: 'Newest first, 20 at most',
+    description: 'Newest first; as many as limit asks, 20 when it is not given',
     type: [AuditEntryDto],
   })
   items!: AuditEntryDto[];
