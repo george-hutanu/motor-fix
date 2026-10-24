@@ -1,4 +1,4 @@
-@if (team()) {
+@if (team() || onProfile()) {
   <p class="count" data-count>
     @if (onProfile()) {
       {{ 'garage.team.count' | t: { count: onProfile() } }}

@@ -367,7 +367,7 @@ describe('Mecanici, states under failure', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/app/garage');
   });
 
-  // ST-56: the button now opens an empty card; inviting stays in the frame.
+  // The button opens an empty card; inviting stays in the frame.
   it('opens a new card from the add button shown above a loaded list too', async () => {
     const { element, settle } = await render();
     await settle();

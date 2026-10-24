@@ -114,11 +114,15 @@ describe('the removal confirmation', () => {
     [2, 'Elena Stan are 2 programări viitoare. Vor trebui realocate.'],
     [19, 'Elena Stan are 19 programări viitoare. Vor trebui realocate.'],
     [20, 'Elena Stan are 20 de programări viitoare. Vor trebui realocate.'],
-  ])('names %i future bookings with the Romanian plural', async (n, line) => {
-    await open(n);
+  ])(
+    'names %i future bookings with the Romanian plural, in place of the question',
+    async (n, line) => {
+      await open(n);
 
-    expect(said()).toContain(line);
-  });
+      expect(said()).toContain(line);
+      expect(said()).not.toContain('Elimini pe');
+    },
+  );
 
   it.each([
     [0, 'Remove Elena Stan from the team?'],

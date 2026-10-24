@@ -570,6 +570,18 @@ describe('Mecanici, opening the card dialog', () => {
     expect(countLine(element)).toBeNull();
     expect(text(element)).not.toContain('Echipa nu apare pe profil');
   });
+
+  it("counts the owner's row on the profile like any row when it is the only one", async () => {
+    const { element, settle } = await render(async () =>
+      listOf([{ ...OWNER, onProfile: true }]),
+    );
+    await settle();
+
+    expect(text(countLine(element))).toBe('1 mecanic pe profil');
+    expect(text(element.querySelector('mf-empty-state'))).toContain(
+      'Încă nu ai adăugat mecanici',
+    );
+  });
 });
 
 // @traces 056-FR-013

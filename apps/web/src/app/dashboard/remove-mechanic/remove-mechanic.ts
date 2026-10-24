@@ -7,6 +7,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, toast } from '@motor-fix/ui-cockpit';
 
@@ -14,7 +15,8 @@ export type RemoveMechanicData = { card: GarageMechanicDto; garageId: string };
 
 // "Elimini pe … din echipă?": the second, small dialog over the card. It
 // names the card's confirmed bookings still ahead, which the garage then
-// gives to someone else, and closes with true once the card is removed.
+// gives to someone else, and closes with true once the card is removed, here
+// or already in another tab.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -37,13 +39,16 @@ export class RemoveMechanic {
   >();
   protected readonly card = this.task.data.card;
   protected readonly form = new FormGroup({});
+  private gone = false;
 
   protected readonly save = taskSave({
     done: () => {
       toast(
-        this.i18n.t('garage.mechanicCard.remove.done', {
-          name: this.card.name,
-        }),
+        this.gone
+          ? this.i18n.t('garage.mechanicCard.gone')
+          : this.i18n.t('garage.mechanicCard.remove.done', {
+              name: this.card.name,
+            }),
       );
       this.task.close(true);
     },
@@ -56,6 +61,10 @@ export class RemoveMechanic {
           mechanicId: this.card.id,
         });
       } catch (error) {
+        if (toProblem(error).code === 'not_found') {
+          this.gone = true;
+          return;
+        }
         toast(this.i18n.t('garage.mechanicCard.remove.failed'));
         throw error;
       }

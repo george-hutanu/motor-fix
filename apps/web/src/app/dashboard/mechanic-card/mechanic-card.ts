@@ -58,7 +58,7 @@ type Field = keyof typeof FIELDS;
 
 // A comma-separated field as the tags it stores: each trimmed, the empty
 // ones dropped.
-export const tagsOf = (text: string) =>
+const tagsOf = (text: string) =>
   text
     .split(',')
     .map((tag) => tag.trim())

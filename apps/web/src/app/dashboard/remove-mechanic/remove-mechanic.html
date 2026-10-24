@@ -1,9 +1,10 @@
 <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
-  <p class="question">{{ 'garage.mechanicCard.remove.question' | t: { name: card.name } }}</p>
   @if (card.futureBookings > 0) {
     <p class="bookings">
       {{ 'garage.mechanicCard.remove.bookings' | t: { count: card.futureBookings, name: card.name } }}
     </p>
+  } @else {
+    <p class="question">{{ 'garage.mechanicCard.remove.question' | t: { name: card.name } }}</p>
   }
   <mf-task-error [save]="save" />
   <div class="actions">

@@ -74,7 +74,7 @@ test.describe('the garage team, kept current @seeded @mailbox', () => {
     const panel = await openTeam(page);
     await expect(panel.getByRole('listitem').first()).toBeVisible();
 
-    // The panel's "Adaugă un mecanic" opens a card (ST-56); inviting is the frame's.
+    // The panel's "Adaugă un mecanic" opens a card; inviting is the frame's.
     await page
       .getByRole('button', { exact: true, name: 'Invită în echipă' })
       .first()
