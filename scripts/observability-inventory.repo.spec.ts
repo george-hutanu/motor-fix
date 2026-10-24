@@ -444,3 +444,27 @@ describe("the garage's team read route", () => {
     expect(team?.alerts).toEqual(['api-error-rate', 'api-latency']);
   });
 });
+
+describe('the browser monitoring records', () => {
+  const inventory = JSON.parse(
+    readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+  );
+  const readme = readFileSync(
+    join(root, 'infra/observability/README.md'),
+    'utf8',
+  );
+
+  // @traces 947-FR-011
+  it('say Faro receives sessions and journeys under analytics consent only', () => {
+    const faro = JSON.stringify(inventory).match(
+      /"name":"grafana-faro"[^}]*"reason":"([^"]*)"/,
+    )?.[1];
+
+    expect(faro).toMatch(
+      /under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed/,
+    );
+    expect(readme).toMatch(/Without analytics\s+consent: no session id/);
+    expect(readme).toMatch(/no session replay is loaded/);
+    expect(readme).not.toMatch(/only once the analytics consent gate\s+ships/);
+  });
+});
