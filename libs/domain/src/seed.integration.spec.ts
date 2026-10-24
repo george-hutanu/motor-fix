@@ -295,8 +295,8 @@ describe('seed', () => {
 
   // Staging's api seeds on every deploy, after users there changed things:
   // a seeded account's name is theirs, its password is the seed's.
-  // @traces 1372-seed-restores-accounts-FR-004
-  // @traces 1372-seed-restores-accounts-FR-005
+  // @traces 1372-FR-004
+  // @traces 1372-FR-005
   it('adds no row on a second staging run, keeps a changed name and restores the seed password', async () => {
     const password = { SEED_PASSWORD: 'o-parola-din-secrete' };
     expect(seed('staging', password).status).toBe(0);
@@ -1378,9 +1378,10 @@ describe('seed of an account that drifted', () => {
     });
   };
 
-  // @traces 1372-seed-restores-accounts-FR-001
-  // @traces 1372-seed-restores-accounts-FR-002
-  // @traces 1372-seed-restores-accounts-FR-003
+  // @traces 1372-FR-001
+  // @traces 1372-FR-002
+  // @traces 1372-FR-003
+  // @traces 1372-FR-007
   it('restores a seeded account whose password, roles and garage link drifted, and keeps its name', async () => {
     expect(run().status).toBe(0);
     await drift();
@@ -1414,7 +1415,41 @@ describe('seed of an account that drifted', () => {
     );
   });
 
-  // @traces 1372-seed-restores-accounts-FR-001
+  // @traces 1372-FR-003
+  it('leaves a link a seeded account holds at another garage, and runs on', async () => {
+    expect(run().status).toBe(0);
+    const garageOf = async (slug: string) =>
+      (await prisma.garage.findUniqueOrThrow({ where: { slug } })).id;
+    const owner = await account('doua-roluri@example.test');
+    await prisma.garageMember.updateMany({
+      data: { garageId: await garageOf('atelier-dinamo') },
+      where: { accountId: owner.id },
+    });
+    const mechanic = await account('mecanic-militari@example.test');
+    await prisma.mechanic.update({
+      data: { garageId: await garageOf('atelier-test') },
+      where: { accountId: mechanic.id },
+    });
+
+    const again = run();
+
+    expect(again.status).toBe(0);
+    expect(again.stderr).toContain(
+      'seed: doua-roluri@example.test is owner at another garage, so its link to service-dobre is not added',
+    );
+    expect(again.stderr).toContain(
+      'seed: mecanic-militari@example.test is mechanic at another garage',
+    );
+    const moved = await account('doua-roluri@example.test');
+    expect(moved.memberships.map((m) => [m.garage.slug, m.role])).toEqual([
+      ['atelier-dinamo', 'owner'],
+    ]);
+    expect(
+      (await account('mecanic-militari@example.test')).mechanic?.garageId,
+    ).toBe(await garageOf('atelier-test'));
+  });
+
+  // @traces 1372-FR-001
   it('leaves a seeded password that already verifies as it is', async () => {
     expect(run().status).toBe(0);
     const before = await passwordOf('service@example.test');
@@ -1424,7 +1459,7 @@ describe('seed of an account that drifted', () => {
     expect(await passwordOf('service@example.test')).toEqual(before);
   });
 
-  // @traces 1372-seed-restores-accounts-FR-004
+  // @traces 1372-FR-004
   it('changes no row on the run after a repair', async () => {
     expect(run().status).toBe(0);
     await drift();
@@ -1438,7 +1473,7 @@ describe('seed of an account that drifted', () => {
     expect(await seeded()).toEqual(repaired);
   });
 
-  // @traces 1372-seed-restores-accounts-FR-005
+  // @traces 1372-FR-005
   it('writes nothing on an account it does not own, and keeps a role a seeded account gained', async () => {
     expect(run().status).toBe(0);
     const stranger = await outsider();
@@ -1460,7 +1495,7 @@ describe('seed of an account that drifted', () => {
     expect([after.lastRole, after.status]).toEqual(['driver', 'suspended']);
   });
 
-  // @traces 1372-seed-restores-accounts-FR-006
+  // @traces 1372-FR-006
   it('never prints the seed password while it repairs', async () => {
     expect(run().status).toBe(0);
     await drift();
