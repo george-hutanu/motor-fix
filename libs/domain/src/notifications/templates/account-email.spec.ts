@@ -87,4 +87,32 @@ describe('the account suspended e-mail', () => {
       expect(mail.html).not.toContain('<b>repetate</b>');
     },
   );
+
+  // With no support address configured, the contact page stands in for it.
+  it.each([
+    [
+      'ro',
+      'Dacă crezi că e o greșeală, scrie-ne: https://motorfix.test/ro/contact',
+    ],
+    [
+      'en',
+      'If you think this is a mistake, write to us: https://motorfix.test/ro/contact',
+    ],
+  ])(
+    'reads naturally in %s with the contact page as the address',
+    (language, line) => {
+      const mail = render(
+        'ACCOUNT_EMAIL.account_suspended',
+        'email',
+        language,
+        {
+          ...suspended,
+          support: suspended.link,
+        },
+      );
+
+      expect(mail.text).toContain(line);
+      expect(mail.text).not.toMatch(/contact form|formularul de contact/);
+    },
+  );
 });

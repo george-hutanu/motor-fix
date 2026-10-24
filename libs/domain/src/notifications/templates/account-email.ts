@@ -160,7 +160,7 @@ export const ACCOUNT_SUSPENDED: Template = {
       lines: [
         'Your MotorFix account was suspended and you cannot sign in to it for now.',
         'The reason: {reason}',
-        'If you think this is a mistake, write to us at {support} or through the contact form.',
+        'If you think this is a mistake, write to us: {support}',
       ],
       reason:
         'You get this e-mail because it is the address of this MotorFix account.',
@@ -171,7 +171,7 @@ export const ACCOUNT_SUSPENDED: Template = {
       lines: [
         'Contul tău MotorFix a fost suspendat și deocamdată nu poți intra în el.',
         'Motivul: {reason}',
-        'Dacă crezi că e o greșeală, scrie-ne la {support} sau prin formularul de contact.',
+        'Dacă crezi că e o greșeală, scrie-ne: {support}',
       ],
       reason:
         'Primești acest e-mail pentru că aceasta este adresa contului MotorFix.',

@@ -969,7 +969,7 @@
       "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
       "failed": "Nu am putut contacta {provider}. Încearcă din nou sau intră cu e‑mail sau telefon.",
       "maintenance": "MotorFix este în mentenanță. Încearcă din nou în câteva minute.",
-      "suspended": "Contul tău este suspendat."
+      "suspended": "Contul tău este suspendat. Scrie‑ne la suport."
     },
     "submit": "Intră în cont",
     "title": "Autentificare",

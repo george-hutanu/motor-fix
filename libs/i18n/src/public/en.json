@@ -950,7 +950,7 @@
       "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
       "failed": "We could not reach {provider}. Try again, or use e-mail or phone.",
       "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
-      "suspended": "Your account is suspended."
+      "suspended": "Your account is suspended. Write to support."
     },
     "submit": "Sign in",
     "title": "Sign in",

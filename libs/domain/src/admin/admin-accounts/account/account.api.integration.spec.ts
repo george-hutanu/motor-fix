@@ -1,7 +1,7 @@
 // @traces 003-FR-001 003-FR-002 003-FR-003 003-FR-005 003-FR-006 003-FR-007
 // @traces 003-FR-008 003-FR-010 003-FR-011 003-FR-012 003-FR-013 003-FR-014
 // @traces 003-FR-015 003-FR-016 003-FR-021 003-SC-001 003-SC-002 003-SC-003
-// @traces 003-SC-004 003-SC-005
+// @traces 003-SC-004 003-SC-005 003-FR-009
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -19,6 +19,7 @@ import type { Role } from '../../../auth/capabilities';
 import { hashPassword } from '../../../auth/password/password';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { noEvents } from '../../../events/event.port';
+import { outboxMark } from '../../../events/outbox.testing';
 import { NotificationsModule } from '../../../notifications/notifications.module';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import {
@@ -26,7 +27,11 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhoneConfig,
 } from '../../../notifications/notifications.testing';
+import { AccountClosed } from '../../../quotes/account-closed/account-closed';
+import { AccountClosedModule } from '../../../quotes/account-closed/account-closed.module';
+import { quotesWorld } from '../../../quotes/quotes.testing';
 import { until } from '../../../waits.testing';
 
 const redisUrl = redisUrlFor(9);
@@ -37,6 +42,7 @@ const PASSWORD = 'parola-de-test';
 const REASON = 'Cereri false repetate către service-uri.';
 const { account, prisma, reset } = fixtures();
 const accounts = new AccountsService(prisma, new AuditService(), noEvents);
+const world = quotesWorld(prisma);
 serialDatabase(databaseUrl);
 
 const subscriber = new Redis(redisUrl);
@@ -690,6 +696,79 @@ describe('POST /admin/accounts/:id/suspend', () => {
   });
 });
 
+// The existing consumer of account.suspended does the clean-up (428-FR-001);
+// this story adds no handler of its own.
+describe('the clean-up after a suspension', () => {
+  it('closes the open requests and cancels the future booking once, and a restore reopens nothing', async () => {
+    const { auth } = await admin();
+    const id = await person();
+    const dinamo = await world.garage('Atelier Dinamo');
+    const { booking, request: booked } = await world.chain(id, dinamo.id, {
+      booking: 'confirmed',
+    });
+    const open = await world.request(id);
+    await world.recipient(open.id, dinamo.id);
+
+    await act(id, 'suspend', auth, { reason: REASON }).expect(200);
+
+    const [event] = await eventsOf(id, 'account.suspended');
+    const worker = await Test.createTestingModule({
+      imports: [
+        AccountClosedModule.registerWorker({
+          notifications: NotificationsModule.registerWorker({
+            databaseUrl,
+            email: testConfig('http://127.0.0.1:9'),
+            phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+            redisUrl,
+          }),
+          redisUrl,
+        }),
+      ],
+    }).compile();
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const handler = worker.get(AccountClosed);
+    const job = {
+      data: {
+        id: String(event?.id),
+        kind: String(event?.kind),
+        payload: event?.payload as { accountId: string },
+        subjectId: id,
+      },
+    };
+    try {
+      await handler.onEvent(job);
+      const mark = await outboxMark(prisma);
+      await handler.onEvent(job);
+      expect(
+        await prisma.outboxEvent.count({ where: { id: { gt: mark } } }),
+      ).toBe(0);
+    } finally {
+      await worker.close();
+    }
+
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }),
+    ).toMatchObject({ cancelledBySide: 'system', status: 'cancelled' });
+    const closed = await prisma.quoteRequest.findMany({
+      select: { id: true, status: true },
+      where: { id: { in: [booked.id, open.id] } },
+    });
+    expect(closed.map((r) => r.status)).toEqual(['closed', 'closed']);
+    expect(await eventsOf(booking.id, 'booking.cancelled')).toHaveLength(1);
+
+    await act(id, 'restore', auth).expect(200);
+
+    expect(
+      await prisma.quoteRequest.count({
+        where: { id: { in: [booked.id, open.id] }, status: 'closed' },
+      }),
+    ).toBe(2);
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }),
+    ).toMatchObject({ status: 'cancelled' });
+  });
+});
+
 describe('POST /admin/accounts/:id/restore', () => {
   it('lets the person in again, clearing the reason, sending nothing, grants still revoked', async () => {
     const { auth, id: adminId } = await admin();
@@ -851,6 +930,55 @@ describe('POST /admin/accounts/:id/delete-on-request', () => {
     expect(
       await prisma.mechanic.findFirstOrThrow({ where: { garageId: nord.id } }),
     ).toMatchObject({ accountId: null });
+  });
+
+  it("keeps the reviews of a mechanic's work with the garage", async () => {
+    const { auth } = await admin();
+    const id = await person('elena@example.test', ['mechanic']);
+    const driverId = await account('Mihai Pop', ['driver']);
+    const nord = await world.garage('Service Nord');
+    const elena = await prisma.mechanic.create({
+      data: { accountId: id, garageId: nord.id, name: 'Elena' },
+    });
+    const { booking } = await world.chain(driverId, nord.id);
+    const job = await world.job(booking.id, 'done', { mechanicId: elena.id });
+    const review = await prisma.review.create({
+      data: {
+        driverId,
+        garageId: nord.id,
+        jobId: job.id,
+        mechanicId: elena.id,
+        rating: 5,
+        source: 'job',
+        status: 'published',
+      },
+    });
+
+    await act(id, 'delete-on-request', auth, DELETION).expect(204);
+
+    expect(
+      await prisma.review.findUniqueOrThrow({ where: { id: review.id } }),
+    ).toMatchObject({
+      garageId: nord.id,
+      mechanicId: elena.id,
+      status: 'published',
+    });
+  });
+
+  it('takes a receptionist off the team', async () => {
+    const { auth } = await admin();
+    const id = await person('irina@example.test', ['receptionist']);
+    const nord = await garage('Service Nord');
+    await prisma.garageMember.create({
+      data: { accountId: id, garageId: nord.id, role: 'receptionist' },
+    });
+
+    await act(id, 'delete-on-request', auth, DELETION).expect(204);
+
+    expect(await prisma.garageMember.count({ where: { accountId: id } })).toBe(
+      0,
+    );
+    expect(await eventsOf(nord.id, 'member.removed')).toHaveLength(1);
   });
 
   it.each(['approved', 'suspended', 'draft'] as const)(
