@@ -38,6 +38,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
   const kept = signal<MeDto | null>(null);
   const session = {
     current,
+    deletingAccount: jest.fn(() => false),
     ended: new Subject<void>(),
     keepsThroughRevoke: jest.fn(() => false),
     kept,
