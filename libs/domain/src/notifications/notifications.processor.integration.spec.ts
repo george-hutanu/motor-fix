@@ -36,8 +36,10 @@ const pushFallbacks = () =>
   prisma.notification.count({
     where: { channel: 'push', fallbackOf: { not: null } },
   });
-const withDevice = (accountId: string) =>
-  prisma.pushSubscription.create({
+// A device, with e-mail kept as the quote's channel: a device alone now makes
+// push the default (ST-142), and these tests send e-mail first.
+const withDevice = async (accountId: string) => {
+  await prisma.pushSubscription.create({
     data: {
       accountId,
       auth: 'a',
@@ -45,6 +47,15 @@ const withDevice = (accountId: string) =>
       p256dh: 'p',
     },
   });
+  await prisma.notificationPreference.create({
+    data: {
+      accountId,
+      channel: 'email',
+      enabled: true,
+      type: 'QUOTE_RECEIVED',
+    },
+  });
+};
 
 let service: NotificationsService;
 let processor: NotificationsProcessor;
