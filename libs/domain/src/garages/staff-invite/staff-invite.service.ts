@@ -235,7 +235,7 @@ export class StaffInviteService {
     const elsewhere = account.memberships.some(
       (m) => m.role === 'receptionist' && m.garageId !== garageId,
     );
-    // An owner's own row is his garage's (056-FR-015): a mechanic link from
+    // An owner's own row is his garage's: a mechanic link from
     // another garage would move it away.
     const ownRow = invite.kind === 'mechanic' && account.mechanic?.isOwner;
     if (owner || ownRow || (invite.kind === 'receptionist' && elsewhere)) {

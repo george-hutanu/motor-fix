@@ -21,7 +21,7 @@ export async function leaveTeams(
     });
     await events.record(tx, {
       // As the owner's removal: the public streams hear it while the card
-      // was still on the profile (056-FR-014).
+      // was still on the profile.
       audience: {
         garageId: mechanic.garageId,
         mechanicId: mechanic.id,

@@ -75,7 +75,7 @@ const team = (garageId: string, auth?: string) => {
   return auth ? call.set('Authorization', auth) : call;
 };
 
-// Atelier Dinamo: its owner Mihai (whose own row leads the list, ST-56), a receptionist,
+// Atelier Dinamo: its owner Mihai (whose own row leads the list), a receptionist,
 // a mechanic with an account, and cards with none; Atelier Nord with its owner.
 async function world() {
   const dinamo = await prisma.garage.create({

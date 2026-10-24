@@ -304,7 +304,7 @@ export class ListingSubmitService {
     return this.fill(tx, owner, garageId, data, extras);
   }
 
-  // The owner's own mechanic row (056-FR-015), made with the garage once its
+  // The owner's own mechanic row, made with the garage once its
   // hours are written: the owner's name, off the profile, every right. An
   // account already on another garage's team keeps that card and gets none,
   // as the migration's backfill skips it.

@@ -167,7 +167,7 @@ export function mechanicOf(row: MechanicRow): BookingMechanicDto | null {
 }
 
 // A confirmed booking still ahead whose card was taken off the team: the
-// garage gives it to someone else (056-FR-008). Only the booking's own
+// garage gives it to someone else. Only the booking's own
 // mechanic counts; the job's fallback is the owner's row, never removed.
 export function toReassign(
   row: {
@@ -187,7 +187,6 @@ export function toReassign(
 // A booking as its garage reads it.
 export const garageBookingOf = (
   booking: Booking & MechanicRow,
-  now = new Date(),
 ): GarageBookingDto => ({
   cancelledAt: iso(booking.cancelledAt),
   cancelledBySide: booking.cancelledBySide,
@@ -210,7 +209,7 @@ export const garageBookingOf = (
   quoteId: booking.quoteId,
   startsAt: booking.startsAt.toISOString(),
   status: booking.status,
-  toReassign: toReassign(booking, now),
+  toReassign: toReassign(booking, new Date()),
 });
 
 // A waiting quote of a suspended garage reads as withdrawn: nothing writes

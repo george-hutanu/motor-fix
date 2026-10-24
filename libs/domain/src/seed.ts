@@ -779,7 +779,7 @@ async function quoteable(db: Client) {
 
 // Atelier Test's team list, set once: its two mechanics with a speciality and on the
 // profile, beside a card with no account yet, as an owner names one at step 4.
-// Each card carries a role and its years (ST-56), and every seeded garage gets
+// Each card carries a role and its years, and every seeded garage gets
 // its owner's own row, as the migration gives every garage made before it.
 async function team(db: Client) {
   await db.query(

@@ -826,7 +826,7 @@ describe('what a deletion leaves of the team and the events', () => {
       },
     });
     expect(events).toHaveLength(1);
-    // The card was on the profile, so the public streams hear it (056-FR-014).
+    // The card was on the profile, so the public streams hear it.
     expect(events[0].audience).toEqual(
       expect.arrayContaining([
         `garage:${garage.id}`,

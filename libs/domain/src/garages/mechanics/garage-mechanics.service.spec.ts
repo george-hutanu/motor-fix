@@ -379,13 +379,14 @@ function writer(stored: Record<string, unknown> = card({ id: ELENA })) {
   const create = jest.fn(async ({ data }: { data: Record<string, unknown> }) =>
     card({ ...data, id: ELENA }),
   );
+  let current = stored;
   const update = jest.fn(
-    async ({ data }: { data: Record<string, unknown> }) => ({
-      ...stored,
-      ...data,
-    }),
+    async ({ data }: { data: Record<string, unknown> }) => {
+      current = { ...current, ...data };
+      return { count: 1 };
+    },
   );
-  const found = jest.fn(async () => stored);
+  const found = jest.fn(async () => current);
   const db = fakeDb({
     garageFeature: { findUnique: jest.fn(async () => null) },
     mechanic: {
@@ -394,7 +395,7 @@ function writer(stored: Record<string, unknown> = card({ id: ELENA })) {
       findFirstOrThrow: found,
       findUnique: found,
       findUniqueOrThrow: found,
-      update,
+      updateMany: update,
     },
   });
   const Service = GarageMechanicsService as unknown as new (

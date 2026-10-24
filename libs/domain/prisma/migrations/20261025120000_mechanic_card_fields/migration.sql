@@ -1,4 +1,4 @@
--- The mechanic card's own fields (ST-56), and the garage owner's own row.
+-- The mechanic card's own fields, and the garage owner's own row.
 ALTER TABLE "mechanic"
   ADD COLUMN "role_title" TEXT,
   ADD COLUMN "specialties" TEXT[] NOT NULL DEFAULT '{}',

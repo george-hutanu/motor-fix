@@ -122,10 +122,11 @@ function tagsOf(
     errors.push({ code: 'invalid', field });
     return undefined;
   }
-  const tags = (value as string[])
-    .map((tag) => plainText(tag).trim())
-    .filter((tag) => tag !== '');
+  // Each tag holds 1 to `longest` characters once trimmed; the dialog drops
+  // empty parts before it sends, so a blank one here is refused.
+  const tags = (value as string[]).map((tag) => plainText(tag).trim());
   if (tags.length > most) errors.push({ code: 'too_many', field });
+  else if (tags.includes('')) errors.push({ code: 'invalid', field });
   else if (tags.some((tag) => lengthOf(tag) > longest)) {
     errors.push({ code: 'too_long', field });
   }
@@ -342,14 +343,7 @@ export class GarageMechanicsService {
     actor: Actor,
     garageId: string,
   ): Promise<GarageMechanicsDto> {
-    assertGarageOwner(actor, garageId);
-    if (!(await featureOn(db, garageId, 'team_mechanics'))) {
-      throw refusal(
-        HttpStatus.NOT_FOUND,
-        'feature_off',
-        'This garage does not take mechanics',
-      );
-    }
+    await this.access(db, actor, garageId);
     const rows = await db.mechanic.findMany({
       select: CARD_SELECT,
       where: { garageId, removedAt: null },
@@ -447,14 +441,19 @@ export class GarageMechanicsService {
     if (changed.length === 0) {
       return itemOf(card, await this.futureOf(db, card.id));
     }
-    const data: Prisma.MechanicUpdateInput = {};
+    const data: Prisma.MechanicUpdateManyMutationInput = {};
     for (const key of changed) Object.assign(data, { [key]: fields[key] });
     if (changed.includes('specialties')) {
       data.speciality = joined(fields.specialties ?? []);
     }
     const row = await db.$transaction(async (tx) => {
-      const updated = await tx.mechanic.update({
+      // A remove that committed since the read leaves nothing to edit.
+      const { count } = await tx.mechanic.updateMany({
         data,
+        where: { id: card.id, removedAt: null },
+      });
+      if (count === 0) throw notFound();
+      const updated = await tx.mechanic.findUniqueOrThrow({
         select: CARD_SELECT,
         where: { id: card.id },
       });
@@ -500,10 +499,12 @@ export class GarageMechanicsService {
       );
     }
     const garage = await db.$transaction(async (tx) => {
-      await tx.mechanic.update({
+      // Two removes race to here; only the first finds the card on the team.
+      const { count } = await tx.mechanic.updateMany({
         data: { accountId: null, onProfile: false, removedAt: new Date() },
-        where: { id: card.id },
+        where: { id: card.id, removedAt: null },
       });
+      if (count === 0) throw notFound();
       const email = card.accountId
         ? (
             await tx.account.findUniqueOrThrow({
@@ -565,7 +566,7 @@ export class GarageMechanicsService {
     }
   }
 
-  // Who may write is checked before the switch, as the list does.
+  // Who may read or write is checked before the switch.
   private async access(
     db: Pick<Prisma.TransactionClient, 'garageFeature'>,
     actor: Actor,

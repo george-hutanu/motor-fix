@@ -40,7 +40,7 @@ export const MECHANIC_NAME_MIN = 2;
 export const MECHANIC_NAME_MAX = 60;
 export const SPECIALITY_MAX = 80;
 export const MECHANICS_MAX = 30;
-// The mechanic card the owner writes in the team dialog (ST-56).
+// The mechanic card the owner writes in the team dialog.
 export const MECHANIC_CARD_NAME_MAX = 80;
 export const ROLE_TITLE_MAX = 40;
 export const TAG_MAX = 40;

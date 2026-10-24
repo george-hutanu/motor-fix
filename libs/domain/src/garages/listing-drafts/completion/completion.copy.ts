@@ -26,7 +26,7 @@ const INCLUDE = {
   closedDays: { orderBy: { day: 'asc' } },
   facilities: true,
   // Step 4's cards only: the owner's own row is none of them, and a removed
-  // card is out of the team (056-FR-006, 056-FR-015).
+  // card is out of the team.
   mechanics: {
     orderBy: { name: 'asc' },
     where: { isOwner: false, removedAt: null },

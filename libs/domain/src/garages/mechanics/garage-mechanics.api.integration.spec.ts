@@ -1224,6 +1224,46 @@ describe('removing a card', () => {
     ]);
   });
 
+  // @traces 056-FR-006
+  it('removes a card once when two removes arrive together', async () => {
+    const { dinamo, mihai, vladCard } = await world({ ownerRow: true });
+
+    const answers = await Promise.all([
+      remove(dinamo.id, vladCard.id, bearer(mihai, 'garage')),
+      remove(dinamo.id, vladCard.id, bearer(mihai, 'garage')),
+    ]);
+
+    expect(answers.map((res) => res.status).sort()).toEqual([204, 404]);
+    expect(await entries(vladCard.id)).toHaveLength(1);
+    expect(await outbox('mechanic.removed')).toHaveLength(1);
+  });
+
+  // @traces 056-FR-005, 056-FR-006
+  it('writes nothing onto a card a remove took off the team first', async () => {
+    const { dinamo, mihai, vladCard } = await world({ ownerRow: true });
+
+    const [edited] = await Promise.all([
+      edit(
+        dinamo.id,
+        vladCard.id,
+        { roleTitle: 'Șef de atelier' },
+        bearer(mihai, 'garage'),
+      ),
+      remove(dinamo.id, vladCard.id, bearer(mihai, 'garage')),
+    ]);
+
+    const updated = await outbox('mechanic.updated');
+    if (edited.status === 404) {
+      expect(updated).toHaveLength(0);
+    } else {
+      expect(edited.status).toBe(200);
+      expect(updated).toHaveLength(1);
+    }
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: vladCard.id } }),
+    ).toMatchObject({ removedAt: expect.any(Date) });
+  });
+
   it('tells the garage and the public channels of a card that was on the profile', async () => {
     const { dinamo, mihai, vladCard } = await world({ ownerRow: true });
 

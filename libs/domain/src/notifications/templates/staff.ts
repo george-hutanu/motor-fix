@@ -88,7 +88,7 @@ export const STAFF_JOINED: Template = {
   values: { garage: 'text', name: 'text' },
 };
 
-// To a mechanic the owner took off the team (ST-56).
+// To a mechanic the owner took off the team.
 export const STAFF_REMOVED: Template = {
   audience: 'any',
   bell: {
