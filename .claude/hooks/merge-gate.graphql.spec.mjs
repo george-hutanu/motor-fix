@@ -200,6 +200,38 @@ describe('merge gate — the fifth review: cd the shell may skip, and joined fla
   });
 });
 
+// Sixth review of ST-448: a merge word inside a gh argument, bounds a program's string can carry, eval's place, a sourced file.
+describe('merge gate — the sixth review: argument text, string bounds, eval in order, sourced files', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('lets a gh read or write through whose argument text says merge', () => {
+    for (const cmd of [
+      'gh pr create --title "ST-448 merge gate" --body-file b.md',
+      'gh pr edit 5 --title "fix: merge gate"',
+      'gh pr comment 5 --body "carried: merge of main"',
+      'gh pr list --search "merge gate"',
+      'gh issue comment 5 --body "pr merge done"',
+    ])
+      assert.equal(mergeTarget(cmd), null, cmd);
+  });
+
+  it('refuses a merge string bounded by brackets, commas, braces or a here-string', () => {
+    for (const cmd of [
+      `cat <<<'${cli} 5' | sh`,
+      `node -e "require('child_process').execSync(['${cli} 5'][0])"`,
+      `node -e "x(1,'${cli} 5')"`,
+      `node -e "x({c:'${cli} 5'})"`,
+    ])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot place/, cmd);
+  });
+
+  it('reads an eval string where it runs, and refuses a merge after a sourced file', () => {
+    for (const cmd of [`eval "cd x" && ${cli} 5`, `eval 'export GIT_DIR=x'; ${cli} 5`, `. ./s.sh && ${cli} 5`, `source s.sh && ${cli} 5`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.equal(mergeTarget(`eval 'export GH_REPO=o/r'; ${cli} 5`)?.repo, 'o/r');
+  });
+});
+
 describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
   const cli = ['gh', 'pr', 'merge'].join(' ');
 
