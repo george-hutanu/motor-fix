@@ -12,10 +12,10 @@ import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = apiBoot();
+const api = fileApi();
 
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 type Method = (typeof METHODS)[number];
@@ -26,7 +26,8 @@ const ALL_VOICES_ON =
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
-// route with path parameters gives `path`, which makes what it acts on.
+// write that changes no data, such as presence on a file, sets `entries: 0`.
+// A route with path parameters gives `path`, which makes what it acts on.
 const FIXTURES: Record<
   string,
   {
@@ -35,6 +36,12 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  'DELETE /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   // @traces 003-FR-005 003-FR-014
   'GET /api/v1/admin/accounts/{id}': {
     path: async () => `/api/v1/admin/accounts/${await driver()}`,
@@ -290,6 +297,13 @@ const FIXTURES: Record<
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
+  // Who has the file open lives in Redis for a minute: no history entry.
+  'PUT /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   'PUT /api/v1/admin/verification-files/{id}/rar-number': {
     body: () => ({ rarNumber: 'RAR-5678' }),
     path: async () =>
@@ -453,7 +467,12 @@ const check = async (route: string) => {
   if (res.status < 200 || res.status > 299) {
     return `${route}: answered ${res.status}`;
   }
-  const expected = changes ? gained >= 1 : gained === (fixture?.entries ?? 0);
+  const expected =
+    fixture?.entries !== undefined
+      ? gained === fixture.entries
+      : changes
+        ? gained >= 1
+        : gained === 0;
   return expected ? undefined : `${route}: left ${gained} entries`;
 };
 
