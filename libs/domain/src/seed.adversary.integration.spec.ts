@@ -73,12 +73,11 @@ describe('seed restore of accounts, attacked', () => {
     ['not a hash at all', 'nu-e-un-hash'],
     ['a truncated argon2 prefix', '$argon2id$v=19$m=65536,t=3,p=4$'],
     ['whitespace', '   '],
-    ['a null byte lookalike', '$argon2id$\u0000'],
   ])('rewrites a password hash that is %s', async (_, bad) => {
     expect(run().status).toBe(0);
     const nou = await account('nou@example.test');
     await prisma.accountIdentity.updateMany({
-      data: { passwordHash: bad.includes('\u0000') ? 'x' : bad },
+      data: { passwordHash: bad },
       where: { accountId: nou.id, method: 'password' },
     });
 
@@ -315,19 +314,9 @@ describe('seed restore of accounts, attacked', () => {
     const other = await prisma.garage.findFirstOrThrow({
       where: { slug: 'service-auto-militari' },
     });
-    await prisma.garageMember
-      .create({
-        data: {
-          accountId: desk.id,
-          garageId: other.id,
-          role: 'mechanic' as never,
-        },
-      })
-      .catch(async () => {
-        await prisma.garageMember.create({
-          data: { accountId: desk.id, garageId: other.id, role: 'owner' },
-        });
-      });
+    await prisma.garageMember.create({
+      data: { accountId: desk.id, garageId: other.id, role: 'owner' },
+    });
     await prisma.garageMember.deleteMany({
       where: { accountId: desk.id, garage: { slug: 'atelier-test' } },
     });
@@ -518,7 +507,7 @@ describe('seed restore of accounts, attacked', () => {
     expect((await account('nou@example.test')).identities).toHaveLength(1);
   });
 
-  // @traces 1372-seed-restores-accounts-SC-002
+  // @traces 1372-FR-001 1372-FR-002 1372-FR-003
   it('restores every seeded account when all hashes, roles and links are wiped', async () => {
     expect(run().status).toBe(0);
     const reference = await prisma.account.findMany({
@@ -618,7 +607,7 @@ describe('seed restore of accounts, attacked', () => {
     expect(run().status).toBe(0);
     const nou = await account('nou@example.test');
     await prisma.accountIdentity.deleteMany({ where: { accountId: nou.id } });
-    const stranger = await prisma.account.create({
+    await prisma.account.create({
       data: {
         identities: {
           create: {
@@ -634,7 +623,9 @@ describe('seed restore of accounts, attacked', () => {
 
     const again = run();
 
+    // The subject is another account's: the run fails and writes nothing.
+    expect(again.status).toBe(1);
     expect(`${again.stdout}${again.stderr}`).not.toContain(PASSWORD);
-    expect(stranger.id).not.toBe(nou.id);
+    expect((await account('nou@example.test')).identities).toHaveLength(0);
   });
 });

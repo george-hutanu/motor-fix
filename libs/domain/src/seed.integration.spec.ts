@@ -1425,6 +1425,20 @@ describe('seed of an account that drifted', () => {
       data: { garageId: await garageOf('atelier-dinamo') },
       where: { accountId: owner.id },
     });
+    // An owner elsewhere demoted at its seeded garage: the role stays wrong,
+    // and the seed says so.
+    const switcher = await account('comutare@example.test');
+    await prisma.garageMember.updateMany({
+      data: { role: 'receptionist' },
+      where: { accountId: switcher.id },
+    });
+    await prisma.garageMember.create({
+      data: {
+        accountId: switcher.id,
+        garageId: await garageOf('atelier-nou'),
+        role: 'owner',
+      },
+    });
     const mechanic = await account('mecanic-militari@example.test');
     await prisma.mechanic.update({
       data: { garageId: await garageOf('atelier-test') },
@@ -1439,6 +1453,9 @@ describe('seed of an account that drifted', () => {
     );
     expect(again.stderr).toContain(
       'seed: mecanic-militari@example.test is mechanic at another garage',
+    );
+    expect(again.stderr).toContain(
+      'seed: comutare@example.test is owner at another garage, so its link to atelier-dinamo is not added',
     );
     const moved = await account('doua-roluri@example.test');
     expect(moved.memberships.map((m) => [m.garage.slug, m.role])).toEqual([

@@ -453,10 +453,12 @@ async function link(db: Client, id: string, { at, email }: Person) {
           [id, at.garage, at.as],
         );
   if (linked.rowCount) return;
-  const table = at.as === 'mechanic' ? 'mechanic' : 'garage_member';
   const { rowCount } = await db.query(
-    `SELECT 1 FROM ${table} WHERE account_id = $1 AND garage_id = ${garage}`,
-    [id, at.garage],
+    at.as === 'mechanic'
+      ? `SELECT 1 FROM mechanic WHERE account_id = $1 AND garage_id = ${garage}`
+      : `SELECT 1 FROM garage_member WHERE account_id = $1 AND garage_id = ${garage}
+           AND role = $3::garage_member_role`,
+    at.as === 'mechanic' ? [id, at.garage] : [id, at.garage, at.as],
   );
   if (!rowCount) {
     console.warn(
