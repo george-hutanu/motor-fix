@@ -405,7 +405,7 @@ export function mergeTarget(command) {
       target = { pr: arg ?? null, repo: /^https:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/\d+$/.exec(arg ?? "")?.[1] ?? call.repo };
     } else if (sub === "api") {
       const path = positional.slice(1).find((w) => /(?:^|\/)repos\/[^/]*\/[^/]*\/pulls\//.test(w.v));
-      const m = path && /(?:^|\/)repos\/([^/]+)\/([^/]+)\/pulls\/([^/?]*)\/merge\b/.exec(path.v);
+      const m = path && /(?:^|\/)repos\/([^/]+)\/([^/]+)\/pulls\/([^/?]*)\/merge(?![\w-])/.exec(path.v);
       if (path?.expands) return unresolved("its REST path is built by the shell, so the gate cannot read its pull request number");
       if (m) {
         if (!/^\d+$/.test(m[3])) return unresolved("its REST merge names no pull request number the gate can read");
@@ -472,8 +472,14 @@ function readCall(cmd, gh, shellRepo) {
  */
 export function mentionsMerge(command) {
   const text = command.replace(/['"\\]/g, "");
-  if (!/(?:^|[^\w-])gh\b/.test(text)) return false;
-  return /(?:^|[^\w-])gh\b[^;&|\n]*?\bpr\b[^;&|\n]*?\bmerge\b/.test(text) || /pulls\/[^\s/]*\/merge\b/.test(text) || (MERGE_MUTATION.test(text) && /\bgraphql\b/.test(text));
+  // gh, pr and merge as whole words: a branch named …-merge-…, gh-pages or a JSON field is none of them.
+  const end = "(?![^\\s)`;&|])";
+  if (!new RegExp(`(?<![^\\s(\`/])gh${end}`).test(text)) return false;
+  return (
+    new RegExp(`(?<![^\\s(\`/])gh${end}[^;&|\\n]*?\\spr${end}[^;&|\\n]*?\\smerge${end}`).test(text) ||
+    /pulls\/[^\s/]*\/merge(?![\w-])/.test(text) ||
+    (MERGE_MUTATION.test(text) && /\bgraphql\b/.test(text))
+  );
 }
 
 /** The directory gh runs in for this merge: the hook's, or where a literal `cd` before the merge moved it. */

@@ -194,6 +194,9 @@ describe('merge gate — the fifth review: cd the shell may skip, and joined fla
       assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot place/, cmd);
     // A pr and a merge in separate commands (gh pr checks, then git merge) are no merge of a PR.
     assert.equal(mergeTarget('gh pr checks 5 && git merge origin/main'), null);
+    // A word that only holds merge or gh (a branch name, gh-pages, a JSON field) is no merge.
+    for (const cmd of ['gh pr view 448-merge-gate-graphql --json title,isDraft,body', 'gh pr view 5 --json mergeable,mergeStateStatus', 'gh-pages pr merge-notes', 'gh api repos/o/r/pulls/5/merge-status'])
+      assert.equal(mergeTarget(cmd), null, cmd);
   });
 });
 
