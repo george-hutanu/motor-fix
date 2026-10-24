@@ -22,21 +22,20 @@ export async function revokeAssistantGrants(
   input: { accountId: string; by: GrantRevoker; reason: GrantRevokeReason },
 ): Promise<number> {
   const { accountId, by, reason } = input;
-  const live = await tx.assistantGrant.findMany({
-    select: { id: true },
-    where: { accountId, revokedAt: null },
-  });
-  if (live.length === 0) return 0;
-  const ids = live.map((g) => g.id);
   const revokedAt = new Date();
-  const { count } = await tx.assistantGrant.updateMany({
+  // Only the rows this write changed: a grant another caller revoked a
+  // moment earlier gets no second entry or event.
+  const ended = await tx.assistantGrant.updateManyAndReturn({
     data: {
       revokedAt,
       revokedBy: by === 'system' ? 'system' : by.id,
       revokeReason: reason,
     },
-    where: { id: { in: ids }, revokedAt: null },
+    select: { id: true },
+    where: { accountId, revokedAt: null },
   });
+  if (ended.length === 0) return 0;
+  const ids = ended.map((g) => g.id);
   const actor =
     by === 'system'
       ? { actorId: null, actorRole: 'system' as const }
@@ -67,5 +66,5 @@ export async function revokeAssistantGrants(
       subjectId: grantId,
     });
   }
-  return count;
+  return ids.length;
 }

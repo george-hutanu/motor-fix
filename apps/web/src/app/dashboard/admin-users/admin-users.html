@@ -38,6 +38,7 @@
 />
 <div class="panels">
   <mf-panel [heading]="'admin.users.recent' | t">
+    <p class="said" aria-live="polite">{{ said() }}</p>
     @if (isNarrowed()) {
       <p class="found" aria-live="polite">{{ found() }}</p>
     }

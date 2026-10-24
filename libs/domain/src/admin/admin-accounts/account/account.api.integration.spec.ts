@@ -696,8 +696,8 @@ describe('POST /admin/accounts/:id/suspend', () => {
   });
 });
 
-// The existing consumer of account.suspended does the clean-up (428-FR-001);
-// this story adds no handler of its own.
+// The clean-up is the existing consumer of account.suspended, fed the event
+// the suspension recorded.
 describe('the clean-up after a suspension', () => {
   it('closes the open requests and cancels the future booking once, and a restore reopens nothing', async () => {
     const { auth } = await admin();
@@ -915,6 +915,11 @@ describe('POST /admin/accounts/:id/delete-on-request', () => {
     expect(
       await prisma.account.findUniqueOrThrow({ where: { id } }),
     ).toMatchObject({ status: 'deleted', suspendedReason: null });
+    const [entry] = await auditOf(id, 'account_deleted');
+    expect(entry).toMatchObject({
+      newValue: { status: 'deleted' },
+      oldValue: { status: 'suspended' },
+    });
   });
 
   it('takes a mechanic off the team', async () => {

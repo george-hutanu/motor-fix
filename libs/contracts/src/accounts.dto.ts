@@ -22,6 +22,7 @@ import {
   SEARCH_MAX,
 } from './account-search';
 import { calendarDay } from './cars.dto';
+import { NOTE_TEXT } from './note-text';
 
 const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
 const STATUS = ['active', 'suspended'] as const;
@@ -187,7 +188,7 @@ const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 // Today as Bucharest reads it, YYYY-MM-DD.
-export const bucharestToday = (now = new Date()) =>
+const bucharestToday = (now = new Date()) =>
   new Intl.DateTimeFormat('en-CA', {
     day: '2-digit',
     month: '2-digit',
@@ -330,6 +331,7 @@ export class SuspendAccountDto {
   @Transform(trimmed)
   @IsString()
   @Length(SUSPEND_REASON_MIN, ACCOUNT_NOTE_MAX)
+  @Matches(NOTE_TEXT, { message: 'reason must not hold control characters' })
   reason!: string;
 }
 
@@ -339,6 +341,7 @@ export class RestoreAccountDto {
   @IsOptional()
   @IsString()
   @MaxLength(ACCOUNT_NOTE_MAX)
+  @Matches(NOTE_TEXT, { message: 'note must not hold control characters' })
   note?: string;
 }
 

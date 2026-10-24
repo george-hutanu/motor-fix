@@ -31,6 +31,7 @@ import {
   AdminAccountAction,
   type AdminAccountActionData,
 } from '../admin-account-action/admin-account-action';
+import { bucharestToday } from '../admin-restore-garage/admin-restore-garage';
 
 export interface AdminAccountData {
   id: string;
@@ -49,10 +50,6 @@ const KINDS = new Set([
   'account_restored',
   'account_suspended',
 ]);
-
-const bucharestDay = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Bucharest',
-});
 
 // A value of the history as text: what was written, never markup.
 const plain = (value: unknown) =>
@@ -215,7 +212,7 @@ export class AdminAccount {
           action,
           id: account.id,
           name: account.name,
-          today: bucharestDay.format(new Date()),
+          today: bucharestToday(),
         },
         shape: 'dialog',
         title: `admin.users.dialogs.${action}.title`,

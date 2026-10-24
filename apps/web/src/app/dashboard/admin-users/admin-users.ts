@@ -138,6 +138,8 @@ export class AdminUsers {
   private readonly total = signal<number | undefined>(undefined);
   private readonly cursor = signal<string | null>(null);
   protected readonly listState = signal<Load>('loading');
+  // What the last account action that closed the drawer did, said politely.
+  protected readonly said = signal('');
   protected readonly moreState = signal<'idle' | 'loading' | 'failed'>('idle');
   protected readonly hasMore = computed(
     () => this.listState() === 'ready' && this.cursor() !== null,
@@ -241,7 +243,11 @@ export class AdminUsers {
       title: 'admin.users.account.details',
     });
     this.shown = null;
-    if (result === 'deleted') void this.readFirst();
+    this.said.set('');
+    if (result === 'deleted') {
+      this.said.set(this.i18n.t('admin.users.done.delete'));
+      void this.readFirst();
+    }
     // Leaving the address some other way already took the admin elsewhere;
     // another account's address reached while this one was open opens now.
     if (this.router.url !== address) {

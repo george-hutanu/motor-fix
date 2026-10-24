@@ -189,21 +189,30 @@ export class AccountDeletionService {
     text?: string,
   ): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.account.updateMany({
-        data: {
-          city: null,
-          email: null,
-          emailBouncedAt: null,
-          emailVerifiedAt: null,
-          name: '',
-          phone: null,
-          phoneVerifiedAt: null,
-          status: 'deleted',
-          suspendedReason: null,
-        },
-        where: { id: accountId, status: { in: from } },
-      });
-      if (count === 0) return false;
+      // One conditional write per admitted status, so the history names the
+      // status the account really left.
+      let left: 'active' | 'suspended' | undefined;
+      for (const status of from) {
+        const { count } = await tx.account.updateMany({
+          data: {
+            city: null,
+            email: null,
+            emailBouncedAt: null,
+            emailVerifiedAt: null,
+            name: '',
+            phone: null,
+            phoneVerifiedAt: null,
+            status: 'deleted',
+            suspendedReason: null,
+          },
+          where: { id: accountId, status },
+        });
+        if (count > 0) {
+          left = status;
+          break;
+        }
+      }
+      if (left === undefined) return false;
       const where = { where: { accountId } };
       await tx.accountIdentity.deleteMany(where);
       await tx.refreshToken.deleteMany(where);
@@ -226,7 +235,7 @@ export class AccountDeletionService {
         actorRole: by.role,
         kind: 'account_deleted',
         newValue: { status: 'deleted' },
-        oldValue: { status: from.length === 1 ? from[0] : 'active' },
+        oldValue: { status: left },
         subjectId: accountId,
         subjectType: 'account',
         ...(text !== undefined && { text }),

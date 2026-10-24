@@ -821,5 +821,9 @@ describe("opening an account's drawer", () => {
 
     expect(reads.length).toBe(before + 1);
     expect(url()).toBe(VIEW);
+    // @traces 003-FR-018
+    expect(
+      document.querySelector('p.said[aria-live="polite"]')?.textContent?.trim(),
+    ).toBe('Contul a fost șters');
   });
 });

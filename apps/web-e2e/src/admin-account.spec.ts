@@ -1,7 +1,14 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, openSignIn, PASSWORD, ready, signIn } from './accounts.js';
+import {
+  ACCOUNTS,
+  headers,
+  openSignIn,
+  PASSWORD,
+  ready,
+  signIn,
+} from './accounts.js';
 import { test } from './fixtures.js';
 
 // @traces 003-FR-008 003-FR-017 003-FR-018 003-FR-023
@@ -106,4 +113,45 @@ test.describe('the account drawer @seeded', () => {
       await context.close();
     });
   }
+
+  // The person's side in English; the admin's screens in English are the
+  // drawer's and the dialogs' own specs.
+  test('tells a suspended driver in English, then lets them back in', async ({
+    page,
+    request,
+  }) => {
+    const driver = await freshDriver(request);
+    const auth = await headers(request, ACCOUNTS.admin);
+    const found = await request.get('/api/v1/admin/accounts', {
+      headers: auth,
+      params: { q: driver.name },
+    });
+    const { items } = (await found.json()) as { items: { id: string }[] };
+    const id = items[0]?.id;
+    expect(id).toBeTruthy();
+    const suspend = await request.post(`/api/v1/admin/accounts/${id}/suspend`, {
+      data: { reason: 'Repeated false requests to garages.' },
+      headers: auth,
+    });
+    expect(suspend.status()).toBe(200);
+
+    await ready(page, '/en/garages');
+    await openSignIn(page, 'en');
+    const dialog = page.getByRole('dialog', { name: 'Sign in' });
+    await dialog.getByLabel('E-mail').fill(driver.email);
+    await dialog.getByLabel('Password').fill(PASSWORD);
+    await dialog.getByRole('button', { exact: true, name: 'Sign in' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'Your account is suspended. Write to support.',
+    );
+
+    const restore = await request.post(`/api/v1/admin/accounts/${id}/restore`, {
+      data: {},
+      headers: auth,
+    });
+    expect(restore.status()).toBe(200);
+    await dialog.getByLabel('Password').fill(PASSWORD);
+    await dialog.getByRole('button', { exact: true, name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/app(\/|$)/);
+  });
 });
