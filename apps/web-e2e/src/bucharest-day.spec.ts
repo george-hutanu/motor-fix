@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 import { bucharestDay } from './bucharest-day.js';
+import { test } from './fixtures.js';
 
 test.describe('bucharestDay', () => {
   test('counts calendar days in Bucharest', () => {
