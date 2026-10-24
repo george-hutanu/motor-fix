@@ -44,7 +44,17 @@ const result = (write, story, prior, note) => ({ write, story, prior, note, ...s
 const RETIRED = { "In progress": "Implementing", "In review": "QA" };
 const LEGACY = (status) => (Object.hasOwn(RETIRED, status) ? RETIRED[status] : status);
 
-export function decide({ event, current: raw, prior: rawPrior = null }) {
+const LABEL_STAGE = Object.fromEntries(Object.entries(STAGE).map(([status, label]) => [label, status]));
+
+/** The status a Blocked story with no recorded prior returns to, read from its PR: QA when ready, a draft's stage label otherwise; null when neither tells. */
+function statusFromPr(pr) {
+  if (!pr) return null;
+  if (!pr.draft) return "QA";
+  const status = (pr.labels ?? []).map((label) => LABEL_STAGE[label]).find((s) => s && s !== "QA");
+  return status ?? null;
+}
+
+export function decide({ event, current: raw, prior: rawPrior = null, pr = null }) {
   const current = LEGACY(raw);
   const prior = rawPrior && LEGACY(rawPrior);
   if (!Object.hasOwn(TARGET, event) && event !== "blocked" && event !== "unblock") throw new Error(`unknown event "${event}"`);
@@ -56,7 +66,7 @@ export function decide({ event, current: raw, prior: rawPrior = null }) {
   }
   if (event === "unblock") {
     if (current !== "Blocked") return result(false, current, prior, `not Blocked (${current}); unchanged`);
-    const back = prior ?? "Implementing";
+    const back = prior ?? statusFromPr(pr) ?? "Implementing";
     return result(true, back, null, `Blocked → ${back}`);
   }
   if (current === "Blocked") return result(false, current, prior, `Blocked; only unblock leaves it (recorded: ${prior ?? "none"})`);

@@ -32,10 +32,11 @@ const readJson = (file) => {
 };
 
 const frontmatter = (text) => {
-  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  // `\r?\n`: a checkout that wrote CRLF reads the same as one that wrote LF.
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
   const out = {};
-  for (const line of m[1].split("\n")) {
+  for (const line of m[1].split(/\r?\n/)) {
     const kv = line.match(/^([a-zA-Z_-]+):\s*(.*)$/);
     if (kv) out[kv[1]] = kv[2].trim().replace(/^["']|["']$/g, "");
   }
