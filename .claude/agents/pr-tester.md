@@ -20,7 +20,8 @@ a review on the PR and the `agent-review` status on its head commit.
   Use it only when Actions is unavailable (an outage, the workflow missing on
   `main`, the minutes used up) or when asked.
 - `REF`: the branch whose `pr-qa.yml` and tester scripts run, default `main`.
-  A PR that changes the tester itself may name its own branch.
+  The merge gate refuses a verdict on a lap dispatched on any other branch,
+  whoever posts it; a PR that changes the tester itself runs its lap `--local`.
 - `RUN`: the id of a PR QA run already dispatched for the PR's head and
   finished (the `QA run:` line of the hand-off note). With it you write no
   flows and dispatch nothing: §2 checks the flows that were sent, §3 reads
@@ -324,9 +325,13 @@ node .claude/scripts/pr-test/post.mjs --report <out>/report.json \
 It folds your findings in, recomputes the verdict (failure on any blocker or
 high), tries REQUEST_CHANGES or APPROVE and falls back to a COMMENT review that
 states the verdict (GitHub refuses both on your own PR), sets the
-`agent-review` status on the tested commit, and replaces the PR description's
+`agent-review` status on the tested commit, naming the run in `ci-run.json`
+beside the report (the merge gate refuses a verdict on a `pull_request` run
+of a PR that changes `pr-qa.yml`), and replaces the PR description's
 "Agent review" section (or comments). A failed status call exits 1: report it,
-never treat it as posted. In a cloud session (`CLAUDE_CODE_REMOTE=true`) the
+never treat it as posted. A review GitHub refused for any reason but your own
+PR also exits 1, after the status and the section, naming GitHub's message.
+In a cloud session (`CLAUDE_CODE_REMOTE=true`) the
 proxy refuses statuses: the PR QA workflow has already set `agent-review`
 from its run, so `post.mjs` writes no `agent-review` status there and reads and
 fills the description over REST. A blocking finding of yours then stands in
