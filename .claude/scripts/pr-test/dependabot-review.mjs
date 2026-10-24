@@ -23,13 +23,17 @@ const CONTEXT = "agent-review";
 const PAGE = 100;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 
+// GitHub keeps at most 1000 statuses per context on a commit; past ten pages the head is left to the tester.
+const STATUS_PAGES = 10;
+
 /** The head's agent-review of any state, read page by page so an old one under newer statuses is still found. */
 async function findStatus(get, head) {
-  for (let page = 1; ; page++) {
+  for (let page = 1; page <= STATUS_PAGES; page++) {
     const rows = await get(`/commits/${head}/statuses?per_page=${PAGE}&page=${page}`);
     const hit = rows.find((s) => s?.context === CONTEXT);
     if (hit || rows.length < PAGE) return hit;
   }
+  throw new Error(`statuses of ${short(head)}: more than ${STATUS_PAGES * PAGE}, not read`);
 }
 
 /** Run for `argv` ([pr]); returns the exit code. */

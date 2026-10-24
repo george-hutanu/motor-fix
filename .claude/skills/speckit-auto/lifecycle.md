@@ -230,7 +230,7 @@ there for one that will.
   shard of one (each project's `test:mutation` target, the shards in
   `scripts/mutation-shards.json`), against the floor in each project's
   `stryker.config.json`, which only rises. The root `test:mutation` and
-  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop.
+  `test:mutation:affected` scripts stay, never for a laptop.
   The waits for a handed-off PR are the tail's own, in the background
   inside its run: `node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>`
   for the QA run, then `ci-wait.mjs <n>` for CI before the merge

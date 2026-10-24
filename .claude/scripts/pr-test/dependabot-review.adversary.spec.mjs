@@ -61,6 +61,15 @@ describe('dependabot-review: hostile and degenerate inputs', () => {
   });
 
   // @traces 961-FR-002
+  it('stops reading after ten full pages of statuses, exits 1 and posts nothing', async () => {
+    const filler = Array.from({ length: 100 }, () => ({ context: 'ci/other', state: 'success' }));
+    const r = await go((path) => (path.startsWith(`/commits/${HEAD}/statuses`) ? filler : base()(path)));
+    assert.equal(r.code, 1);
+    assert.equal(r.posts.length, 0);
+    assert.equal(r.calls.filter((c) => c.url.includes('/statuses?')).length, 10);
+  });
+
+  // @traces 961-FR-002
   it('does not overwrite an agent-review failure that sits beyond the first page of statuses', async () => {
     const filler = Array.from({ length: 100 }, () => ({ context: 'ci/other', state: 'success' }));
     const r = await go((path) => {
@@ -171,8 +180,7 @@ describe('dependabot-review: hostile and degenerate inputs', () => {
     for (const body of [null, [], 'oops', { user: { login: 'dependabot[bot]' } }]) {
       const r = await go((path) => (path === '/pulls/7' ? body : base()(path)));
       assert.equal(r.posts.length, 0);
-      assert.ok(r.code === 1 || r.code === 0, 'must resolve with an exit code');
-      assert.notEqual(r.code, undefined);
+      assert.equal(r.code, 1, JSON.stringify(body));
     }
   });
 

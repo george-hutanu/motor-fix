@@ -51,7 +51,7 @@ describe('branch-protection: agent-review and CI OK required on main', () => {
     assert.match(out, /agent-review/);
   });
 
-  // @traces 961-FR-006
+  // @traces 961-FR-006 961-FR-007
   it('check passes only when both contexts are required and admins are not exempt', () => {
     assert.equal(go(['check'], () => ok(protection())).code, 0);
     assert.equal(go(['check'], () => ok(protection(['CI OK', 'agent-review', 'body']))).code, 0);

@@ -596,7 +596,7 @@
   {
     "id": "merge-gate-passes-a-dependabot-pr-on-its-review-workflow-success",
     "hook": "pre:bash:merge-gate",
-    "why": "with agent-review required on main, a Dependabot-only PR gets its success from dependabot-review.yml (961-FR-004); the gate keeps the exemption and does not ask for the pr-qa provenance",
+    "why": "with agent-review required on main, a Dependabot-only PR gets its success from dependabot-review.yml; the gate keeps the exemption and does not ask for the pr-qa provenance",
     "payload": {
       "tool_input": {
         "command": "gh pr merge 82 --merge"
@@ -613,7 +613,7 @@
   {
     "id": "merge-gate-refuses-a-dependabot-pr-whose-review-failed",
     "hook": "pre:bash:merge-gate",
-    "why": "a failing agent-review on a Dependabot PR still refuses the merge (610-FR-003, 961-FR-004)",
+    "why": "a failing agent-review on a Dependabot PR still refuses the merge",
     "payload": {
       "tool_input": {
         "command": "gh pr merge 82 --merge"
