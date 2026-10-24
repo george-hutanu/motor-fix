@@ -13,7 +13,7 @@ const FONTS = {
   ro: 'michroma-latin-ext-400-normal',
 } as const;
 
-export type HeadHints = {
+type HeadHints = {
   fonts: Record<keyof typeof FONTS, string>;
   images: string | undefined;
 };

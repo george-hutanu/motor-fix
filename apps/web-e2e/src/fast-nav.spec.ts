@@ -110,9 +110,8 @@ test.describe('fast navigation on the public pages @seeded', () => {
     await page.getByRole('link', { name: 'Vezi service‑ul' }).first().click();
     await expect(heading(page)).toBeVisible();
 
-    const seen = await transitions(page);
-    test.skip(!seen?.started, 'this browser has no view transitions');
-    expect(seen).toEqual({ skipped: 0, started: 1 });
+    // Chromium has had view transitions since 111.
+    expect(await transitions(page)).toEqual({ skipped: 0, started: 1 });
     await expect(heading(page)).toHaveCSS('view-transition-name', /^garage-/);
   });
 
