@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -44,6 +44,7 @@ features:
   - 1192-photo-variants
   - 068-yearly-documents
   - 067-restore-suspended-garage
+  - 500-req-ip-behind-proxy
 ---
 
 # Capability: Observability
@@ -104,9 +105,9 @@ _From 876-otel-instrumentation._
 
 _From 876-otel-instrumentation._
 
-### 876-FR-006 — Every log line of the three services MUST carry the trace id and span id when one is active, beside the request id (API) or the job id (worker), and MUST hold no personal data.
+### 500-FR-007 — The masked caller MUST consist only of hex digits, decimal digits, `.`, `:` and `x`, or the word `unknown`, so that the telemetry scrubber returns it unchanged; the scrubber itself MUST NOT change.
 
-_From 876-otel-instrumentation._
+_From 500-req-ip-behind-proxy._
 
 ### 876-FR-007 — An API request ending in a server error (5xx) and a job failing on its final attempt MUST write one error log line carrying the trace id (the guarantee for every error, sampled or not), and MUST set the span status to error with the exception recorded (exported when the trace is sampled).
 
@@ -891,3 +892,4 @@ _From 067-restore-suspended-garage._
 - `251-FR-004` — superseded by `1347-FR-004` (2026-10-17)
 - `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)
 - `297-FR-005` — superseded by `299-FR-019` (2026-10-17)
+- `876-FR-006` — superseded by `500-FR-007` (2026-10-24)
