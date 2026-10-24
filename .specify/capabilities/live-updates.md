@@ -28,6 +28,7 @@ features:
   - 532-lost-session-home
   - 588-live-changed-gone
   - 587-live-list-e2e
+  - 413-verification-file-presence
 ---
 
 # Capability: Live updates
@@ -473,6 +474,10 @@ _From 587-live-list-e2e._
 ### 587-FR-004 — No product change MUST be needed for the check to pass (a product bug it exposes is fixed in this pull request with its own test); the existing live checks (two dashboards, confirm dialog, typed text, the garage's requests arriving live) stay as they are; the check creates the rows it needs, waits on visible elements and polled conditions only, and tolerates rows added to the same garage by other workers.
 
 _From 587-live-list-e2e._
+
+### 413-FR-007 — When an admin's entry is created or removed by a call, the system MUST publish a `presence.changed` message with the file's id straight to the live stream, to the `admin` audience, through the existing direct publish (not the outbox); a heartbeat that only renews an entry and an expiry publish nothing. `presence.changed` stays out of the shared list of event kinds (`EVENT_KINDS` holds the outbox kinds; its header already names presence among the kinds published straight to the store), as `session.revoked` and `notification.created` do; the drawer reads it from the stream's messages by kind and file id (plan, research R3).
+
+_From 413-verification-file-presence._
 
 ## Retired
 

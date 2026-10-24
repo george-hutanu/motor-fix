@@ -1,5 +1,5 @@
 import * as reads from './reads';
-import { firstLine } from './reads';
+import { firstLine, shortName } from './reads';
 
 // @traces 313-FR-005
 describe('the first line of a description', () => {
@@ -73,5 +73,18 @@ describe('a booking to reassign', () => {
     ],
   ])('is not %s', (_, row) => {
     expect(toReassign(row, now)).toBe(false);
+  });
+});
+
+// @traces 413-FR-010
+describe('a short name', () => {
+  it.each([
+    ['Ana Popescu', 'Ana P.'],
+    ['Ana Maria Popescu', 'Ana P.'],
+    ['Ana \u{1D4D0}popescu', 'Ana \u{1D4D0}.'],
+    ['Ana', 'Ana'],
+    ['', ''],
+  ])('reads %j as %j', (name, short) => {
+    expect(shortName(name)).toBe(short);
   });
 });
