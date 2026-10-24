@@ -21,9 +21,10 @@ const maxWorkers = process.env.JEST_MAX_WORKERS;
 
 // A worker that has grown past 1 GB after a file is replaced before the next
 // one: the web suite's workers reached a 4 GB heap on CI and crashed.
+// JEST_IDLE_MEMORY (set by lifecycle.mjs check) overrides the limit.
 module.exports = {
   ...nxPreset,
-  workerIdleMemoryLimit: '1GB',
+  workerIdleMemoryLimit: process.env.JEST_IDLE_MEMORY || '1GB',
   ...(suite && { ...suites[suite], passWithNoTests: true }),
   ...(maxWorkers ? { maxWorkers } : {}),
 };
