@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 182,
+    "count": 184,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -235,6 +235,15 @@
       "alerts": "none",
       "reason": "counts every live stream the server ended by reason (expired, evicted, shutdown, reconnect, the planned close before Railway's 15-minute HTTP limit); an evicted surge is a client opening too many streams, which the one-stream-per-browser lock prevents, so it is watched on the panel, not paged",
       "story": "ST-1190"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_presence_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts verification file presence entries created and removed and every presence store call that failed (store_unavailable), never an account or a file; a failure costs only the banner of who else has the file open, the file opens and decides as before, and an unreachable Valkey already pages through redis-unreachable",
+      "story": "ST-413"
     },
     {
       "kind": "product-counter",

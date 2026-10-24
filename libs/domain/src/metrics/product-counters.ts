@@ -214,6 +214,14 @@ const verificationChecks = () =>
     'motorfix_verification_checks_total',
     "Checks an admin recorded on a garage's file, by kind and result",
   );
+const PRESENCE_OUTCOMES = ['created', 'removed', 'store_unavailable'] as const;
+type PresenceOutcome = (typeof PRESENCE_OUTCOMES)[number];
+// No account or file is ever a label.
+const presences = () =>
+  counter(
+    'motorfix_verification_presence_total',
+    'Verification file presence entries created and removed, and store calls that failed, by outcome',
+  );
 const rechecks = () =>
   counter(
     'motorfix_rechecks_total',
@@ -390,6 +398,10 @@ export function countVerificationCheck(
   verificationChecks().add(1, { kind, result });
 }
 
+export function countPresence(outcome: PresenceOutcome) {
+  presences().add(1, { outcome });
+}
+
 export function countRecheck(result: RecheckResult) {
   rechecks().add(1, { result });
 }
@@ -553,6 +565,9 @@ const STARTS: Record<
       ),
     ],
     [rechecks, each('result', RECHECK_RESULTS)],
+    // Only the failure starts at zero for its alert: the 150-series budget
+    // has no room for the other two, which appear with the first presence.
+    [presences, [{ outcome: 'store_unavailable' }]],
     [rejections, each('reason', VERIFICATION_REASON_CODES)],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
