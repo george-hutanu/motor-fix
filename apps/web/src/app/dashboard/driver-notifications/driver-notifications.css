@@ -99,7 +99,7 @@ button[hlmBtn] {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--mf-text-primary);
+  color: var(--mf-text);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
