@@ -2189,6 +2189,25 @@
       ],
       "reason": "a gauge of yearly document cycles in the overdue state, refreshed by each run of the compliance step and shown on the Documente anuale panel; a run that fails for good leaves it stale and fires worker-jobs-failed, which covers the reminders queue",
       "story": "ST-68"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_notification_channel_choices_total",
+      "source": "libs/domain/src/notifications/preferences/preferences.service.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "a count of channel choices drivers save has no failure to alert on; api-error-rate covers the route that saves them",
+      "story": "ST-142"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_notification_channel_fallbacks_total",
+      "source": "libs/domain/src/notifications/notifications.service.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "notification-fallback-rate"
+      ],
+      "story": "ST-142"
     }
   ]
 }

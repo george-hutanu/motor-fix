@@ -290,6 +290,60 @@ button.spartan-switch[data-disabled="true"] {
   opacity: 0.5;
 }
 
+/* A radio group is a row of chips that wraps on a narrow phone. */
+.spartan-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+
+.spartan-radio {
+  display: inline-flex;
+}
+
+.spartan-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  min-width: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  color: var(--mf-text);
+  background: transparent;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-chip);
+  cursor: pointer;
+}
+
+.spartan-radio-dot {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid var(--mf-line-strong);
+  border-radius: 50%;
+}
+
+/* The ink amber: the bright one is under 3:1 on a light panel. */
+.spartan-radio[data-checked="true"] .spartan-radio-label {
+  border-color: var(--mf-amber-ink);
+}
+
+.spartan-radio[data-checked="true"] .spartan-radio-dot {
+  background: var(--mf-amber-ink);
+  border-color: var(--mf-amber-ink);
+  box-shadow: inset 0 0 0 2px var(--mf-panel);
+}
+
+.spartan-radio[data-disabled="true"] .spartan-radio-label {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spartan-radio:has(input:focus-visible) .spartan-radio-label {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
 .spartan-tabs {
   display: grid;
   gap: var(--mf-space-3);
@@ -523,6 +577,15 @@ button.spartan-switch[data-disabled="true"] {
   }
 
   button.spartan-switch[data-state="checked"]::before {
+    background: Highlight;
+  }
+
+  .spartan-radio[data-checked="true"] .spartan-radio-label,
+  .spartan-radio[data-checked="true"] .spartan-radio-dot {
+    border-color: Highlight;
+  }
+
+  .spartan-radio[data-checked="true"] .spartan-radio-dot {
     background: Highlight;
   }
 }
