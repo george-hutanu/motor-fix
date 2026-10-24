@@ -5,11 +5,12 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { type Facility, PAYMENTS } from '@motor-fix/contracts/garage-hours';
-import { FUELS } from '@motor-fix/contracts/plate';
+import type { Facility } from '@motor-fix/contracts/garage-hours';
 import type { PublicGarageDto } from '@motor-fix/data-access';
-import { formatLei, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
+
+import { carTerms, fuelLine, paymentLine } from './detail-lines';
 
 // The brand in context leads the list that holds it; the rest keep the
 // answer's order.
@@ -48,9 +49,7 @@ export class DetailsSection {
     return leading(this.garage().worksOn, this.garage().brand?.id).map(
       (brand) => ({
         ...brand,
-        fuels: FUELS.filter((fuel) => brand.fuels.includes(fuel))
-          .map((fuel) => t(`public.requestQuote.fuelWord.${fuel}`))
-          .join(' · '),
+        fuels: fuelLine(brand.fuels, t),
       }),
     );
   });
@@ -65,38 +64,20 @@ export class DetailsSection {
   protected readonly facilities = computed(() => {
     const { courtesyCar, facilities } = this.garage();
     const language = this.i18n.language();
+    const t = (key: string, params?: Record<string, string>) =>
+      this.i18n.t(key, params);
     return facilities.map((key) => {
-      const label = this.i18n.t(`public.listing.hours.facility.${key}`);
-      if (key !== 'courtesy_car' || !courtesyCar) return { key, label };
-      if (!courtesyCar.paid)
-        return {
-          key,
-          label: `${label} · ${this.i18n.t('public.garageProfile.details.free')}`,
-        };
-      if (courtesyCar.pricePerDayBani === undefined) return { key, label };
-      return {
-        key,
-        label: `${label} · ${this.i18n.t(
-          'public.garageProfile.details.perDay',
-          {
-            price: formatLei(courtesyCar.pricePerDayBani, language),
-          },
-        )}`,
-      };
+      const label = t(`public.listing.hours.facility.${key}`);
+      const terms =
+        key === 'courtesy_car' ? carTerms(courtesyCar, language, t) : '';
+      return { key, label: terms ? `${label} · ${terms}` : label };
     });
   });
-  protected readonly payment = computed(() => {
-    const methods = PAYMENTS.filter(
-      (method) => this.garage().paymentMethods[method],
-    ).map((method) =>
-      this.i18n.t(`public.garageProfile.details.payments.${method}`),
-    );
-    return methods.length
-      ? this.i18n.t('public.garageProfile.details.payment', {
-          methods: methods.join(', '),
-        })
-      : '';
-  });
+  protected readonly payment = computed(() =>
+    paymentLine(this.garage().paymentMethods, (key, params) =>
+      this.i18n.t(key, params),
+    ),
+  );
   protected readonly facilitiesNote = computed(
     () => this.garage().facilitiesNote ?? '',
   );

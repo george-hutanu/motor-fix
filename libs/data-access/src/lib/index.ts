@@ -117,6 +117,7 @@ export type { GarageMechanicsDto } from './models/garage-mechanics-dto';
 export type { GaragePermissionsDto } from './models/garage-permissions-dto';
 export type { GaragePinDto } from './models/garage-pin-dto';
 export type { GaragePinsDto } from './models/garage-pins-dto';
+export type { GarageProfileDto } from './models/garage-profile-dto';
 export type { GarageQuoteDto } from './models/garage-quote-dto';
 export type { GarageRecipientDto } from './models/garage-recipient-dto';
 export type { GarageRefDto } from './models/garage-ref-dto';
@@ -616,6 +617,8 @@ export type { GarageInvitesControllerResend$Params as GarageInvitesControllerRes
 export { garageInvitesControllerResend as garageInvitesControllerResend } from './fn/garages/garage-invites-controller-resend';
 export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRevoke$Params } from './fn/garages/garage-invites-controller-revoke';
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
+export type { GarageProfileControllerRead$Params as GarageProfileControllerRead$Params } from './fn/garages/garage-profile-controller-read';
+export { garageProfileControllerRead as garageProfileControllerRead } from './fn/garages/garage-profile-controller-read';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
