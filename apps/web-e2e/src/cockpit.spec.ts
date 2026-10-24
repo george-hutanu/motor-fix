@@ -146,14 +146,15 @@ test('changes theme with the device at once, keeping what was typed', async ({
   await input.fill('Dacia Logan 2015');
   await expect(input).toHaveValue('Dacia Logan 2015');
   const url = page.url();
+  const darkBg = await token(page, '--mf-bg');
 
   await page.emulateMedia({ colorScheme: 'light' });
 
   await expect(input).toHaveValue('Dacia Logan 2015');
   expect(page.url()).toBe(url);
-  expect(await style(page, 'body', 'background-color')).toBe(
-    rgb(await token(page, '--mf-bg')),
-  );
+  const lightBg = await token(page, '--mf-bg');
+  expect(lightBg).not.toBe(darkBg);
+  expect(await style(page, 'body', 'background-color')).toBe(rgb(lightBg));
 });
 
 test('shows no text under 12 px on a phone, and 16 px in form fields', async ({
