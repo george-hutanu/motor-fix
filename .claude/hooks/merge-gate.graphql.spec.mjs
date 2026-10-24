@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { mergeTarget, prOfNode } from './merge-gate.mjs';
+import { ghCwd, mergeTarget, prOfNode } from './merge-gate.mjs';
 
 // @traces 448-FR-001
 // @traces 448-FR-002
@@ -122,6 +122,45 @@ describe('merge gate — merges hidden by quoting, a pipe or another repository'
     assert.deepEqual(mergeTarget(`${cli} 5 -R ${R}`), { pr: '5', repo: R });
     assert.match(mergeTarget(`${cli} feature -R other/repo`).unresolved, /number/);
     assert.match(mergeTarget(`${cli} 5 -R other/repo && ${cli} 5`).unresolved, /more than one/);
+  });
+});
+
+// Third review of ST-448: a wrapper's option, a quoted field name, or an earlier command moving gh.
+describe('merge gate — words read as the shell reads them, and what earlier commands change', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+  const quotedCli = ['"gh"', 'pr', 'merge'].join(' ');
+
+  it('finds a quoted gh after a wrapper that takes an option value', () => {
+    for (const cmd of [`nice -n 10 ${quotedCli} 5`, `sudo -u me ${quotedCli} 5`, `env -u X ${quotedCli} 5`, `timeout 30 ${quotedCli} 5`])
+      assert.deepEqual(mergeTarget(cmd), { pr: '5' }, cmd);
+    assert.match(mergeTarget(`echo 6 | xargs -n 1 ${quotedCli}`).unresolved, /input/);
+  });
+
+  it('reads a field name the shell unquotes, so a hidden query or id field is seen', () => {
+    const q = `query='mutation($id: ID!) { mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } }'`;
+    assert.match(mergeTarget(`gh api graphql -f query='{ viewer { login } }' -f qu""ery=@q.graphql`).unresolved, /cannot read the query/);
+    assert.match(mergeTarget(`gh api graphql -f query='{ viewer { login } }' -f quer\\y=@q.graphql`).unresolved, /cannot read the query/);
+    assert.match(mergeTarget(`gh api graphql -f ${q} -f id=PR_ours -f i""d=PR_other`).unresolved, /more than one/);
+    assert.match(mergeTarget(`gh api graphql -f ${q} -f "$(echo id)=PR_other"`).unresolved, /cannot read the query/);
+  });
+
+  it('follows GH_REPO and a literal cd set by an earlier command, and refuses what it cannot follow', () => {
+    assert.deepEqual(mergeTarget(`export GH_REPO=other/repo; ${cli} 5`), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`GH_REPO=other/repo; ${cli} 5`), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`cd ../other && ${cli} 5`), { pr: '5', cwd: '../other' });
+    assert.deepEqual(mergeTarget(`${cli} 5; cd ../other`), { pr: '5' });
+    assert.match(mergeTarget(`git switch other && ${cli}`).unresolved, /switches branch/);
+    assert.deepEqual(mergeTarget(`git switch other && ${cli} 5`), { pr: '5' });
+    for (const cmd of [`cd $WT && ${cli} 5`, `pushd ../other && ${cli} 5`, `gh repo set-default other/repo && ${cli} 5`])
+      assert.match(mergeTarget(cmd).unresolved, /cannot follow/, cmd);
+    assert.match(mergeTarget(`${cli} "$(echo 5)"`).unresolved, /built by the shell/);
+  });
+
+  it('reads gh where a literal cd moved it, home included', () => {
+    assert.equal(ghCwd('/w/repo', { pr: '5' }, '/home/me'), '/w/repo');
+    assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '../other' }, '/home/me'), '/w/other');
+    assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '~/x' }, '/home/me'), '/home/me/x');
+    assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '~' }, '/home/me'), '/home/me');
   });
 });
 

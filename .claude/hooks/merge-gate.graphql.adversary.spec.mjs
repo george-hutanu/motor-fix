@@ -29,7 +29,9 @@ describe('merge gate graphql spellings, adversarial', () => {
 
   // @traces 448-FR-001
   it('finds the merge when gh is run inside bash -c', () => {
-    assert.deepEqual(mergeTarget(`bash -c "gh api graphql -f query='${mutation()}'"`), { pr: null, nodeId: ID });
+    assert.deepEqual(mergeTarget(`bash -c "gh api graphql -f query='${mutation().replaceAll('"', '\\"')}'"`), { pr: null, nodeId: ID });
+    // Unescaped, the id's quotes end the -c string, so gh would get the id bare: refused, never let through.
+    assert.ok(mergeTarget(`bash -c "gh api graphql -f query='${mutation()}'"`).unresolved);
   });
 
   // @traces 448-FR-001
