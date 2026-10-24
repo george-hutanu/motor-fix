@@ -99,3 +99,24 @@ describe('AuthController sign-in route limit', () => {
     },
   );
 });
+
+// @traces 500-FR-004
+describe('AuthController sign-in with no caller address', () => {
+  it('hands the sign-in an empty address, which its log names unknown', async () => {
+    const signIn = jest.fn(async () => ({ accessToken: 't', remember: false }));
+    const auth = new AuthController(
+      { signIn } as unknown as SignInService,
+      {} as SignUpService,
+      routeLimits(),
+      { skipSignInAttemptsLimit: true } as AuthOptions,
+    );
+
+    await auth.signIn(
+      BODY,
+      {} as Request,
+      { cookie: jest.fn() } as unknown as Response,
+    );
+
+    expect(signIn).toHaveBeenCalledWith(BODY, '');
+  });
+});
