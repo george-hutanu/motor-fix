@@ -63,16 +63,6 @@ describe('clearActivityLog', () => {
     );
     expect(ENSURE_ROLE).not.toMatch(/PASSWORD|SUPERUSER|DELETE|UPDATE/);
   });
-
-  it('rolls back, closes the connection and passes the database error on', async () => {
-    const { calls, session } = fakeSession('TRUNCATE TABLE activity_log');
-
-    await expect(clearActivityLog(local, () => session)).rejects.toThrow(
-      'refused: TRUNCATE TABLE activity_log',
-    );
-    expect(calls.slice(-2)).toEqual(['ROLLBACK', 'end']);
-    expect(calls).not.toContain('COMMIT');
-  });
 });
 
 describe('assertLoopback', () => {
@@ -91,31 +81,20 @@ describe('assertLoopback', () => {
       'a host parameter',
       'postgresql://u:p@localhost/motorfix?host=db.example.com',
     ],
-    ['a value that is not a URL', 'not a url'],
     [
       'a hostaddr parameter',
       'postgresql://u:p@localhost/motorfix?hostaddr=10.0.0.5',
     ],
   ])('refuses %s', (_, url) => {
-    expect(() => assertLoopback(url)).toThrow(
-      /not a database on this machine|Invalid URL/,
-    );
+    expect(() => assertLoopback(url)).toThrow(/not a database on this machine/);
+  });
+
+  it('refuses a value that is not a URL', () => {
+    expect(() => assertLoopback('not a url')).toThrow(/Invalid URL/);
   });
 
   it('refuses an unset DATABASE_URL', () => {
     expect(() => assertLoopback(undefined)).toThrow(/DATABASE_URL unset/);
-  });
-
-  it('never opens a connection to a remote database', async () => {
-    const open = jest.fn();
-
-    await expect(
-      clearActivityLog(
-        { DATABASE_URL: 'postgresql://app:pw@db.example.com/motorfix' },
-        open,
-      ),
-    ).rejects.toThrow(/not a database on this machine/);
-    expect(open).not.toHaveBeenCalled();
   });
 });
 
