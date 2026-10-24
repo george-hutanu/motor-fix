@@ -323,13 +323,14 @@ button.spartan-switch[data-disabled="true"] {
   border-radius: 50%;
 }
 
+/* The ink amber: the bright one is under 3:1 on a light panel. */
 .spartan-radio[data-checked="true"] .spartan-radio-label {
-  border-color: var(--mf-amber);
+  border-color: var(--mf-amber-ink);
 }
 
 .spartan-radio[data-checked="true"] .spartan-radio-dot {
-  background: var(--mf-amber);
-  border-color: var(--mf-amber);
+  background: var(--mf-amber-ink);
+  border-color: var(--mf-amber-ink);
   box-shadow: inset 0 0 0 2px var(--mf-panel);
 }
 

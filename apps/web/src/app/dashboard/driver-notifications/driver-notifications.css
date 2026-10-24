@@ -106,7 +106,7 @@ button[hlmBtn] {
 }
 
 .disclosure:focus-visible {
-  outline: 2px solid var(--mf-focus);
+  outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
 }
 

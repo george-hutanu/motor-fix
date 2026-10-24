@@ -23,7 +23,7 @@ import {
 export { NOTIFICATION_GROUPS, type NotificationGroupKey };
 
 // The channels a message goes by outside the app.
-export const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
+const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
 
 export type OutsideChannel = (typeof OUTSIDE_CHANNELS)[number];
 
@@ -120,25 +120,20 @@ export class NewsConsentDto {
 
 // What a garage's staff or an admin choose for the messages of their work.
 export const STAFF_CHANNELS = ['email', 'push', 'whatsapp'] as const;
-export const STAFF_ROLES = [
-  'owner',
-  'receptionist',
-  'mechanic',
-  'admin',
-] as const;
-export const STAFF_SECTIONS = [
+const STAFF_ROLES = ['owner', 'receptionist', 'mechanic', 'admin'] as const;
+const STAFF_SECTIONS = [
   'requests_quotes',
   'bookings',
   'reviews',
   'account',
   'admin',
 ] as const;
-export const WHATSAPP_UNAVAILABLE = [
+const WHATSAPP_UNAVAILABLE = [
   'garage_whatsapp_off',
   'phone_not_verified',
 ] as const;
 
-export type StaffChannel = (typeof STAFF_CHANNELS)[number];
+type StaffChannel = (typeof STAFF_CHANNELS)[number];
 export type StaffRole = (typeof STAFF_ROLES)[number];
 export type StaffSectionKey = (typeof STAFF_SECTIONS)[number];
 
