@@ -1,4 +1,4 @@
-// @traces 129-FR-007 129-FR-009
+// @traces 129-FR-007 129-FR-009 055-FR-004
 import { leaveTeams } from './team-leave';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { EventPort } from '../../events/event.port';
@@ -82,6 +82,33 @@ describe('leaving the garage team when the account is deleted', () => {
         subjectId: mechanic.id,
       },
     ]);
+  });
+
+  it('marks the detached card removed, so a new account of the same person gets a card of its own', async () => {
+    const garage = await world.garage('Atelier Dinamo');
+    const accountId = await world.account('Elena Pop', ['mechanic']);
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId, garageId: garage.id, name: 'Elena', onProfile: true },
+    });
+
+    await leave(accountId);
+
+    const detached = await prisma.mechanic.findUniqueOrThrow({
+      where: { id: mechanic.id },
+    });
+    expect(detached.removedAt).toBeInstanceOf(Date);
+    const again = await world.account('Elena Pop din nou', ['mechanic']);
+    await prisma.mechanic.create({
+      data: { accountId: again, garageId: garage.id, name: 'Elena' },
+    });
+    expect(
+      await prisma.mechanic.count({
+        where: { garageId: garage.id, removedAt: null },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: mechanic.id } }),
+    ).toMatchObject({ accountId: null, removedAt: detached.removedAt });
   });
 
   it('deletes the receptionist membership and tells the garage', async () => {
