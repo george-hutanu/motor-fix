@@ -20,7 +20,8 @@
 // --check also runs the flows, once, against the app and API already serving
 // there (by default the dev server and the API on the worktree's port set,
 // WEB_PORT and API_PORT, else http://localhost:4200 and :3000), with the
-// arguments the run gives them and a real signIn as the seeded accounts. It prints one line per finding, thrown error
+// arguments the run gives them and a real signIn as the seeded accounts, loaded as the run loads them (each
+// networkidle wait run as load, one `note:` line each). It prints one line per finding, thrown error
 // and unhandled rejection, exit 1 on any; an address that does not answer is
 // one line and exit 1, and the flows are not run; flows still running after
 // ten minutes are one line too. It starts no server and dispatches nothing.
@@ -35,7 +36,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isEntryPoint } from "../lib/entry.mjs";
 import { seededSession } from "./endpoints.mjs";
-import { collectRejections, flowArgs } from "./run.mjs";
+import { flowArgs, loadFlows, runFlows } from "./run.mjs";
 import { HEALTH } from "./services.mjs";
 
 /** The dev server and API --check reads by default: the worktree's port set when exported (scripts/test-services.ts ports), else 4200 and 3000. */
@@ -142,18 +143,20 @@ export async function checkLive({ flows, baseURL = checkDefaults().baseURL, apiU
     if (why) lines.push(`${name} not serving at ${url}: ${why}`);
   }
   if (lines.length) return lines;
-  const flow = await importFlows(flows);
+  // The run's own loader and findings hand-off (run.mjs): the live check runs what the run would.
+  const { mod: flow, notes } = await loadFlows(flows, importFlows);
+  for (const note of notes) lines.push(`note: ${note}`);
   const outDir = mkdtempSync(join(tmpdir(), "mf-flows-check-"));
   const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
   const findings = [];
   try {
-    const args = flowArgs({ webURL: baseURL, apiURL, outDir, repoRoot, worktree: repoRoot, session: seededSession(apiURL) });
+    const args = flowArgs({ webURL: baseURL, apiURL, outDir, repoRoot, worktree: repoRoot, session: seededSession(apiURL), findings });
     let timer;
     const bound = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error(`the flows did not finish within ${CHECK_MS / 1000} s`)), CHECK_MS);
     });
     try {
-      findings.push(...((await collectRejections(findings, () => Promise.race([flow.default(args), bound]))) ?? []));
+      await runFlows(() => Promise.race([flow.default(args), bound]), findings);
     } finally {
       clearTimeout(timer);
     }

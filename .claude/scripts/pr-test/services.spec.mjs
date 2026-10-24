@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { plausibleDomain } from '../../../libs/contracts/src/env.ts';
 import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
 
 const listen = (server, port = 0) =>
@@ -252,5 +253,16 @@ describe('what a killed lap left behind', () => {
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
+  });
+});
+
+// @traces 988-FR-007
+describe('appEnv: the analytics domain', () => {
+  // The web app reads PLAUSIBLE_DOMAIN at boot; the QA env lacked it. A
+  // reserved .invalid name, as ci.yml's E2E job gives, so no page view is ever counted.
+  it('gives a domain the contracts parser accepts, under the reserved .invalid name', () => {
+    const env = appEnv({ ports: { postgres: 55001, redis: 55002, storage: 55003 } });
+    assert.equal(env.PLAUSIBLE_DOMAIN, 'qa.motorfix.invalid');
+    assert.equal(plausibleDomain(env), 'qa.motorfix.invalid');
   });
 });
