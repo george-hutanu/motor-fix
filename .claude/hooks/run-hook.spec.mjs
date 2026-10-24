@@ -301,7 +301,8 @@ describe('run-hook.mjs — a gate that crashes', () => {
   });
 
   it('refuses any exit other than 0 or 2, and forwards stdout too', () => {
-    hook('bash-guard.mjs', 'process.stdout.write("half-done\\n"); process.exit(3);\n');
+    // Exit once the write is flushed: on macOS a pipe write is asynchronous, and process.exit can drop it.
+    hook('bash-guard.mjs', 'process.stdout.write("half-done\\n", () => process.exit(3));\n');
     const r = run('pre:bash:guard');
     assert.equal(r.status, 2);
     assert.match(r.stdout, /half-done/);

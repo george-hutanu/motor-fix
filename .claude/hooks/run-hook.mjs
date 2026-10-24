@@ -49,6 +49,12 @@ import { hookById, isDryRun, isEnabled, scriptPath } from "../scripts/lib/hooks.
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const id = process.argv[2];
 const note = (msg) => process.stderr.write(`[run-hook] ${msg}\n`);
+// Exit with `code` once stdout and stderr have drained: on macOS a pipe write is
+// asynchronous, and process.exit drops what is still queued (a gate's refusal).
+const exitFlushed = (code) => {
+  process.exitCode = code;
+  process.stdout.write("", () => process.stderr.write("", () => process.exit(code)));
+};
 
 const entry = hookById(repo, id);
 if (!entry) {
@@ -102,10 +108,10 @@ process.stdin.on("end", () => {
     const refusal = `${entry.id} refused: ${why}. A gate that cannot read the request has not approved it — retry with a smaller payload, or disable this gate by id if you mean to proceed unchecked.`;
     if (isDryRun()) {
       note(`DRY RUN — ${refusal}`);
-      process.exit(0);
+      return exitFlushed(0);
     }
     note(refusal);
-    process.exit(2);
+    return exitFlushed(2);
   }
 
   const interpreter = entry.script.endsWith(".sh") ? "bash" : process.execPath;
@@ -127,10 +133,10 @@ process.stdin.on("end", () => {
     process.stderr.write(run.stderr ?? "");
     if (isDryRun()) {
       note(`DRY RUN — ${refusal}`);
-      process.exit(0);
+      return exitFlushed(0);
     }
     note(refusal);
-    process.exit(2);
+    return exitFlushed(2);
   }
 
   // A spawn that failed (no interpreter, or EAGAIN/ENOMEM on a loaded
@@ -139,15 +145,15 @@ process.stdin.on("end", () => {
     const refusal = `${entry.id} refused: ${entry.script} could not be started (${run.error.message}), so it has not approved the request. Try again; if it keeps failing, set SPECKIT_DISABLED_HOOKS=${entry.id} to proceed unchecked.`;
     if (isDryRun()) {
       note(`DRY RUN — ${refusal}`);
-      process.exit(0);
+      return exitFlushed(0);
     }
     note(refusal);
-    process.exit(2);
+    return exitFlushed(2);
   }
 
   if (run.error) {
     note(`${entry.id}: could not run ${entry.script} (${run.error.message}) — gate not enforced`);
-    process.exit(0);
+    return exitFlushed(0);
   }
 
   // No status and no signal is no decision: refused for a fail-closed gate.
@@ -158,20 +164,20 @@ process.stdin.on("end", () => {
     process.stderr.write(run.stderr ?? "");
     if (isDryRun()) {
       note(`DRY RUN — ${refusal}`);
-      process.exit(0);
+      return exitFlushed(0);
     }
     note(refusal);
-    process.exit(2);
+    return exitFlushed(2);
   }
 
   if (isDryRun() && code !== 0) {
     process.stdout.write(run.stdout ?? "");
     note(`DRY RUN — ${entry.id} would have blocked (exit ${code}):`);
     process.stderr.write(run.stderr ?? "");
-    process.exit(0);
+    return exitFlushed(0);
   }
 
   process.stdout.write(run.stdout ?? "");
   process.stderr.write(run.stderr ?? "");
-  process.exit(code);
+  return exitFlushed(code);
 });

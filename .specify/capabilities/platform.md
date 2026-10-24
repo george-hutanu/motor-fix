@@ -108,7 +108,10 @@ features:
   - 520-brevo-key-check-retry
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
+  - 1373-seed-status-identity
   - 961-require-agent-review
+  - 447-own-pr-refusal
+  - 1376-pr-test-local-boot
 ---
 
 # Capability: Platform
@@ -225,9 +228,9 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
+### 1373-FR-001 — The api's Railway pre-deploy command MUST hold no shell syntax (no `&&`, `;`, `|`, quotes or `NAME=value` prefix): it MUST be `sh scripts/api-pre-deploy.sh <environment>`, a script in the api image that runs `npx prisma migrate deploy`, then `node scripts/monitor-password.ts`, then, on `staging` only, `SEED_ONLY=1 sh scripts/reset-staging.sh`, stopping at the first step that fails with its exit code; any other environment argument is refused with a non-zero exit before any step (modifies `1370-FR-001`).
 
-_From 1370-release-seed-no-ssh._
+_From 1373-seed-status-identity._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -2792,6 +2795,33 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
+### 447-FR-001 — `post.mjs` MUST fall back to a COMMENT review only when the review call's error carries GitHub's own-pull-request message (`your own pull request`); any other failure, an `HTTP 422` included, MUST be returned as `reviewError` without a second review call, and the CLI MUST exit 1 naming it once the status and the description are written.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-003 — `judgeProvenance` MUST judge a person-written `agent-review` success whose `target_url` names a run by the same run rules as a workflow-written one (PR QA workflow, completed, success, this commit, dispatched on the default branch or a `pull_request` run on a PR that leaves `pr-qa.yml` alone), refusing a `pull_request` run on a PR that changes `pr-qa.yml`; a person-written success that names no run stays accepted. `readProvenance` MUST read the named run for a person's status too, and only a run of this repository (the `target_url`'s owner and name equal to the repository's), so a status naming another repository's run is refused as naming no run.
+
+_From 447-own-pr-refusal._
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2893,4 +2923,5 @@ _From 961-require-agent-review._
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
+- `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)

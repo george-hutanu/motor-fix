@@ -89,7 +89,8 @@ log.
 
 The ladder is `tracker/status.mjs`'s: To do → Planning →
 Implementing → QA → Done, never backwards; only `unblock` leaves Blocked,
-returning to the status recorded in run-state (for another story's
+returning to the status recorded in run-state, or with none recorded to
+the PR's (ready: QA; draft: the stage its label shows) (for another story's
 `--story`: the `<!-- tracker-sync prior: … -->` marker its newest Blocked
 comment carries, else the newest `blocked` line for it in any
 `specs/*/tracker-sync.md`, else To do). Only the Project's Status,
