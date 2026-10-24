@@ -9,9 +9,11 @@
 #   bash scripts/backup/pitr-drill.sh
 #       staging: the archive the staging PostgreSQL writes, read with
 #       WAL_ARCHIVE_BUCKET, WAL_ARCHIVE_ENDPOINT, WAL_ARCHIVE_REGION,
-#       WAL_ARCHIVE_KEY and WAL_ARCHIVE_SECRET; the markers are written over
-#       `railway ssh` with RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT_ID and
-#       RAILWAY_SERVICE_POSTGRES, as backup.sh reaches the service.
+#       WAL_ARCHIVE_KEY and WAL_ARCHIVE_SECRET; the markers are written as
+#       psql in the sandbox the job opened on staging's private network
+#       (scripts/railway-sandbox.ts, its id in SANDBOX_ID), in the
+#       PostgreSQL service's own image, with RAILWAY_PROJECT_ID,
+#       RAILWAY_ENVIRONMENT_ID and RAILWAY_SERVICE_POSTGRES.
 #
 # The image does the archiving and the restore (infra/postgres/README.md); this
 # script only drives it. It commits two empty transactions on the source, the
@@ -73,10 +75,11 @@ source_sql() {
   if [ "$mode" = self-contained ]; then
     docker exec "$SOURCE" psql -X -q -A -t -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -c "$1"
   else
-    printf '%s\n' "$1" | railway ssh --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" \
-      --service "$RAILWAY_SERVICE_POSTGRES" -- \
-      sh -c 'psql -X -q -A -t -v ON_ERROR_STOP=1 -U "${PGUSER:-${POSTGRES_USER:-postgres}}" -d "${PGDATABASE:-${POSTGRES_DB:-postgres}}"' \
-      | tr -d '\r'
+    # Each row comes back marked, so nothing else the sandbox prints can be
+    # read as a value; psql's own exit code is kept.
+    printf '%s\n' "$1" | node scripts/railway-sandbox.ts exec "$SANDBOX_ID" \
+      "rows=\$(docker run --rm -i --network host -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE --entrypoint psql $source_image -X -q -A -t -v ON_ERROR_STOP=1) && printf '%s\\n' \"\$rows\" | sed 's/^/ROW /'" \
+      | tr -d '\r' | sed -n 's/^ROW //p'
   fi
 }
 
@@ -119,9 +122,11 @@ if [ "$mode" = self-contained ]; then
   repo_path=$(docker exec "$SOURCE" sh -c 'cat "$PGDATA/.pgbackrest_repo_path"')
 else
   for name in WAL_ARCHIVE_BUCKET WAL_ARCHIVE_ENDPOINT WAL_ARCHIVE_REGION WAL_ARCHIVE_KEY WAL_ARCHIVE_SECRET \
-    RAILWAY_PROJECT_ID RAILWAY_ENVIRONMENT_ID RAILWAY_SERVICE_POSTGRES; do
+    RAILWAY_PROJECT_ID RAILWAY_ENVIRONMENT_ID RAILWAY_SERVICE_POSTGRES SANDBOX_ID; do
     [ -n "${!name:-}" ] || fail "$name is not set"
   done
+  source_image=$(node scripts/railway-sandbox.ts image "$RAILWAY_SERVICE_POSTGRES")
+  node scripts/railway-sandbox.ts exec "$SANDBOX_ID" "docker pull -q $source_image >&2" </dev/null
   tls_env=()
   repo_path=$(source_sql "SELECT pg_read_file(current_setting('data_directory') || '/.pgbackrest_repo_path')" | head -n 1)
 fi

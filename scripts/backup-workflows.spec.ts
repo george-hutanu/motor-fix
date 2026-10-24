@@ -115,7 +115,8 @@ describe('the dump', () => {
   });
 
   it('hands the passphrase and bucket keys over stdin only, never as an argument', () => {
-    expect(runner).toMatch(
+    // One command per line once its continuations are joined.
+    expect(runner.replace(/\\\n\s*/g, '')).toMatch(
       /railway-sandbox\.ts prelude [^\n]*BACKUP_GPG_PASSPHRASE[^\n]*BACKUP_S3_ACCESS_KEY_ID[^\n]*BACKUP_S3_SECRET_ACCESS_KEY/,
     );
     expect(runner).not.toMatch(/exec "\$SANDBOX_ID"[^\n]*\$BACKUP_/);

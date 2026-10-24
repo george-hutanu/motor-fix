@@ -231,10 +231,14 @@ describe('railwayApi', () => {
     expect(calls[0]?.env.RAILWAY_TOKEN).toBe('t');
   });
 
-  it('refuses to run with no token', () => {
+  it("uses the CLI's own login when no token is given, retrying nothing", () => {
+    const { calls, run } = fake([refused, answer]);
+
     expect(() =>
-      railwayApi('query { x }', {}, { env: {}, run: fake([answer]).run }),
-    ).toThrow(/RAILWAY_API_TOKEN/);
+      railwayApi('query { x }', {}, { env: { HOME: '/home/me' }, run }),
+    ).toThrow(/Not Authorized/);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.env).toEqual({ HOME: '/home/me' });
   });
 });
 
