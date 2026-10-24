@@ -360,6 +360,102 @@ describe('the browser’s Back button on a sheet', () => {
   });
 });
 
+// @traces 532-FR-007
+// @traces 532-FR-008
+describe('a task opened before the person touched the page', () => {
+  function activation(hasBeenActive: boolean) {
+    Object.defineProperty(window.navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive, isActive: false },
+    });
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(window.navigator, 'userActivation');
+  });
+
+  async function openedUntouched() {
+    activation(false);
+    history.pushState({ page: 'here' }, '');
+    const length = history.length;
+    const host = await openTask();
+    return { host, length };
+  }
+
+  it('pushes no history entry until the first pointerdown, then exactly one', async () => {
+    const { length } = await openedUntouched();
+    expect(history.length).toBe(length);
+    expect(history.state).toEqual({ page: 'here' });
+
+    panel().dispatchEvent(pointerEvent('pointerdown', 10));
+    panel().dispatchEvent(pointerEvent('pointerdown', 10));
+    await settle();
+
+    expect(history.length).toBe(length + 1);
+    expect(history.state).toEqual(
+      expect.objectContaining({ mfOverlay: expect.any(Number), page: 'here' }),
+    );
+  });
+
+  it('pushes it at the first key instead, when that comes first', async () => {
+    const { length } = await openedUntouched();
+
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }),
+    );
+    await settle();
+
+    expect(history.length).toBe(length + 1);
+  });
+
+  it('then closes on Back and leaves the page where it was', async () => {
+    const { host } = await openedUntouched();
+    panel().dispatchEvent(pointerEvent('pointerdown', 10));
+
+    history.back();
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'here' });
+  });
+
+  it('removes no entry and pushes none later when it closes before any touch', async () => {
+    const { host, length } = await openedUntouched();
+
+    panel().querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    document.body.dispatchEvent(pointerEvent('pointerdown', 10));
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('saved');
+    expect(history.length).toBe(length);
+    expect(history.state).toEqual({ page: 'here' });
+  });
+
+  it('ends where it started when the first key is the Escape that closes it', async () => {
+    const { host } = await openedUntouched();
+
+    pressEscape();
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'here' });
+  });
+
+  it('pushes the entry at once on a page that has had a touch', async () => {
+    activation(true);
+    history.pushState({ page: 'here' }, '');
+    const length = history.length;
+
+    await openTask();
+
+    expect(history.length).toBe(length + 1);
+  });
+});
+
 describe('the on-screen keyboard', () => {
   it('fits what is already visible when it opens', async () => {
     fakeViewport(500);

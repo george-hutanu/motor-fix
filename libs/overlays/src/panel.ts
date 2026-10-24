@@ -392,11 +392,25 @@ export class OverlayPanel {
       // Asking instead of closing: the entry comes back, so Back asks again.
       if (this.asking()) mark();
     };
-    mark();
+    // A page nobody has touched yet: Chrome skips an entry pushed now when
+    // Back is pressed, so the entry waits for the first touch or key.
+    const touched = () => {
+      untouched();
+      mark();
+    };
+    const untouched = () => {
+      window.removeEventListener('pointerdown', touched, true);
+      window.removeEventListener('keydown', touched, true);
+    };
+    if (window.navigator.userActivation?.hasBeenActive === false) {
+      window.addEventListener('pointerdown', touched, true);
+      window.addEventListener('keydown', touched, true);
+    } else mark();
     window.addEventListener('popstate', popped);
-    inject(DestroyRef).onDestroy(() =>
-      window.removeEventListener('popstate', popped),
-    );
+    inject(DestroyRef).onDestroy(() => {
+      untouched();
+      window.removeEventListener('popstate', popped);
+    });
   }
 
   private load(loader: () => Promise<Type<unknown>>) {
