@@ -105,6 +105,38 @@ describe('Blocked', () => {
     assert.equal(go('unblock', 'QA', null).write, false);
   });
 
+  // @traces 487-FR-001
+  // @traces 487-FR-003
+  it('with nothing recorded, returns a draft PR to the stage its label shows', () => {
+    const planning = decide({ event: 'unblock', current: 'Blocked', prior: null, pr: { draft: true, labels: ['planning', 'blocked', 'EP-1'] } });
+    assert.equal(planning.write, true);
+    assert.equal(planning.story, 'Planning');
+    assert.equal(planning.stage, 'planning');
+    assert.deepEqual(apply(planning.labels, ['planning', 'blocked', 'EP-1']), ['EP-1', 'planning']);
+    const building = decide({ event: 'unblock', current: 'Blocked', prior: null, pr: { draft: true, labels: ['in development', 'blocked'] } });
+    assert.equal(building.story, 'Implementing');
+    assert.deepEqual(apply(building.labels, ['in development', 'blocked']), ['in development']);
+    const bare = decide({ event: 'unblock', current: 'Blocked', prior: null, pr: { draft: true, labels: ['blocked'] } });
+    assert.equal(bare.story, 'Implementing');
+  });
+
+  // @traces 487-FR-002
+  // @traces 487-FR-003
+  it('with nothing recorded, returns a ready PR to QA, whatever its labels say', () => {
+    const ready = decide({ event: 'unblock', current: 'Blocked', prior: null, pr: { draft: false, labels: ['in development', 'blocked'] } });
+    assert.equal(ready.write, true);
+    assert.equal(ready.story, 'QA');
+    assert.equal(ready.note, 'Blocked → QA');
+    assert.equal(ready.stage, 'QA');
+    assert.deepEqual(apply(ready.labels, ['in development', 'blocked']), ['QA']);
+  });
+
+  // @traces 487-FR-004
+  it('keeps a recorded prior over the PR, and Implementing when there is neither', () => {
+    assert.equal(decide({ event: 'unblock', current: 'Blocked', prior: 'Planning', pr: { draft: false, labels: [] } }).story, 'Planning');
+    assert.equal(decide({ event: 'unblock', current: 'Blocked', prior: null, pr: null }).story, 'Implementing');
+  });
+
   it('reads a legacy In progress record as Implementing', () => {
     assert.equal(go('unblock', 'Blocked', 'In progress').story, 'Implementing');
     assert.equal(go('implement', 'In progress').write, true);
