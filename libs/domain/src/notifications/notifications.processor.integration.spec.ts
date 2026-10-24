@@ -721,7 +721,7 @@ describe('starting the worker', () => {
     await expect(processor.ready()).resolves.toBe(true);
   });
 
-  it.each([401, 403])(
+  it.each([400, 401, 403])(
     'refuses to send with a key Brevo refuses (%s), logs it and asks once',
     async (status) => {
       const error = jest
