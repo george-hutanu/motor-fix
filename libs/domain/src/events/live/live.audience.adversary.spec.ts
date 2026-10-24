@@ -286,8 +286,6 @@ describe('what each garage role gets through the garage channel', () => {
     'member.removed',
     'mechanic.created',
     'mechanic.updated',
-    'garage.updated',
-    'review.posted',
     'invite.sent',
   ])('keeps %s from a receptionist', async (kind) => {
     const receptionist = staff('maria', 'receptionist');
@@ -304,6 +302,10 @@ describe('what each garage role gets through the garage channel', () => {
     'message.created',
     'job.updated',
     'media.added',
+    // @traces 102-FR-010
+    'garage.updated',
+    'review.posted',
+    'booking.moved',
   ])('gives a receptionist %s', async (kind) => {
     const receptionist = staff('maria', 'receptionist');
 

@@ -29,7 +29,7 @@ export class GarageProfileService {
       throw refusal(
         HttpStatus.FORBIDDEN,
         'forbidden',
-        "Only the owner reads the garage's profile",
+        "Your role does not read the garage's profile",
       );
     }
     const row = await this.prisma.garage.findUnique({

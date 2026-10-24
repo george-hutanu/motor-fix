@@ -298,6 +298,7 @@ describe('capability table boundaries', () => {
     expect([...held].sort()).toEqual([
       'garage.audit_history',
       'garage.final_price',
+      'garage.move_bookings',
       'garage.own_jobs',
       'garage.requests',
       'garage.schedule',
@@ -307,10 +308,20 @@ describe('capability table boundaries', () => {
   it('opens each mechanic capability only through its own permission', () => {
     expect(
       [...capabilitiesOf('mechanic', { ...off, canMoveBookings: true })].sort(),
-    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.schedule']);
+    ).toEqual([
+      'garage.audit_history',
+      'garage.move_bookings',
+      'garage.own_jobs',
+      'garage.schedule',
+    ]);
     expect(
       [...capabilitiesOf('mechanic', { ...off, canAnswerQuotes: true })].sort(),
-    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.requests']);
+    ).toEqual([
+      'garage.audit_history',
+      'garage.own_jobs',
+      'garage.requests',
+      'garage.schedule',
+    ]);
     expect(
       [
         ...capabilitiesOf('mechanic', { ...off, canRecordFinalPrice: true }),
@@ -319,16 +330,19 @@ describe('capability table boundaries', () => {
       'garage.audit_history',
       'garage.final_price',
       'garage.own_jobs',
+      'garage.schedule',
     ]);
   });
 
   it('gives a mechanic only the base capabilities when the permissions are missing or not true booleans', () => {
     expect(capabilitiesOf('mechanic', {} as never)).toEqual([
       'garage.own_jobs',
+      'garage.schedule',
       'garage.audit_history',
     ]);
     expect(capabilitiesOf('mechanic', null as never)).toEqual([
       'garage.own_jobs',
+      'garage.schedule',
       'garage.audit_history',
     ]);
     expect(
@@ -337,7 +351,7 @@ describe('capability table boundaries', () => {
         canMoveBookings: 1,
         canRecordFinalPrice: {},
       } as never),
-    ).toEqual(['garage.own_jobs', 'garage.audit_history']);
+    ).toEqual(['garage.own_jobs', 'garage.schedule', 'garage.audit_history']);
   });
 
   it('ignores mechanic permissions for the other roles', () => {

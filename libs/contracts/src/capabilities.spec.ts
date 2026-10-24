@@ -1,3 +1,5 @@
+// @traces 102-FR-001
+// @traces 102-FR-002
 import { CAPABILITIES, capabilitiesOf, ROLES } from './capabilities';
 
 const none = {
@@ -25,6 +27,7 @@ const granted = {
   garage: [
     'garage.requests',
     'garage.schedule',
+    'garage.move_bookings',
     'garage.final_price',
     'garage.own_jobs',
     'garage.reviews',
@@ -34,12 +37,15 @@ const granted = {
     'garage.feature_switches',
     'garage.audit_history',
   ],
-  mechanic: ['garage.own_jobs', 'garage.audit_history'],
+  mechanic: ['garage.own_jobs', 'garage.schedule', 'garage.audit_history'],
   receptionist: [
     'garage.requests',
     'garage.schedule',
+    'garage.move_bookings',
     'garage.final_price',
     'garage.own_jobs',
+    'garage.reviews',
+    'garage.profile',
     'garage.audit_history',
   ],
 } as const;
@@ -63,7 +69,7 @@ describe('capabilities by role', () => {
 
   it.each([
     ['canAnswerQuotes', 'garage.requests'],
-    ['canMoveBookings', 'garage.schedule'],
+    ['canMoveBookings', 'garage.move_bookings'],
     ['canRecordFinalPrice', 'garage.final_price'],
   ] as const)(
     'a mechanic with %s may use %s and nothing more',
@@ -74,10 +80,32 @@ describe('capabilities by role', () => {
       });
 
       expect([...mechanic].sort()).toEqual(
-        ['garage.own_jobs', 'garage.audit_history', capability].sort(),
+        [...granted.mechanic, capability].sort(),
       );
     },
   );
+
+  it.each([
+    ['canAnswerQuotes', 'garage.requests'],
+    ['canMoveBookings', 'garage.move_bookings'],
+    ['canRecordFinalPrice', 'garage.final_price'],
+  ] as const)(
+    'a mechanic without %s may not use %s',
+    (permission, capability) => {
+      const others = {
+        canAnswerQuotes: true,
+        canMoveBookings: true,
+        canRecordFinalPrice: true,
+        [permission]: false,
+      };
+
+      expect(capabilitiesOf('mechanic', others)).not.toContain(capability);
+    },
+  );
+
+  it('lists garage.move_bookings among the capabilities', () => {
+    expect(CAPABILITIES).toContain('garage.move_bookings');
+  });
 
   it('ignores mechanic permissions for every other role', () => {
     const all = {
