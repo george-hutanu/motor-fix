@@ -73,6 +73,7 @@ describe('StorageService', () => {
     store.now = () => Date.now();
     store.beforeCopy = undefined;
     store.beforeDelete = undefined;
+    store.beforeGet = undefined;
   });
 
   async function uploaded(
@@ -478,6 +479,15 @@ describe('StorageService', () => {
         await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
       ).toEqual({ code: 'file_missing', status: 409 });
       expect(store.objects.has(key.replace(/^incoming\//, ''))).toBe(false);
+    });
+
+    it('refuses as missing when another confirm takes the file between its check and its read', async () => {
+      const key = await uploaded(JPEG);
+      store.beforeGet = (taken) => store.objects.delete(taken);
+
+      expect(
+        await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
+      ).toEqual({ code: 'file_missing', status: 409 });
     });
 
     it('returns the final key when removing the incoming object fails', async () => {

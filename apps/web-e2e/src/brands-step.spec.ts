@@ -44,32 +44,10 @@ test.describe('step 2 of list your garage, the brands', () => {
     );
   });
 
+  // @traces 245-FR-007
   test('finds Lada by search and adds it taken, then keeps everything in English', async ({
     page,
   }) => {
-    // The catalogue ships the twelve popular brands and two unranked ones,
-    // so the search for a brand outside them is answered here, shaped like
-    // the API's page.
-    await page.route(
-      (url) =>
-        url.pathname.endsWith('/api/v1/brands') &&
-        url.searchParams.get('q') === 'lada',
-      (route) =>
-        route.fulfill({
-          json: {
-            items: [
-              {
-                id: '00000000-0000-4000-8000-0000000000aa',
-                name: 'Lada',
-                popularity: null,
-                slug: 'lada',
-              },
-            ],
-            nextCursor: null,
-            total: 1,
-          },
-        }),
-    );
     await open(page);
     await tap(page, 'Tesla', 2);
     // A field typed in before hydration is wiped when the client takes over.

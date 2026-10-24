@@ -424,13 +424,17 @@ export class StorageService implements OnApplicationShutdown {
   }
 
   private async firstBytes(key: string): Promise<Uint8Array> {
-    const object = await this.s3.send(
-      new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Range: 'bytes=0-11',
-      }),
-    );
+    const object = await this.s3
+      .send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Range: 'bytes=0-11',
+        }),
+      )
+      .catch((error: unknown) => {
+        throw statusOf(error) === 404 ? missing() : error;
+      });
     return (await object.Body?.transformToByteArray()) ?? new Uint8Array();
   }
 }
