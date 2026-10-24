@@ -59,7 +59,7 @@ describe('check hands the test step its Jest caps', () => {
     const { result, heavy } = run(e());
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(heavy.length, 1);
-    assert.equal(heavy[0].env.JEST_MAX_WORKERS, '1');
+    assert.equal(heavy[0].env.JEST_MAX_WORKERS, '2');
     assert.equal(heavy[0].env.JEST_IDLE_MEMORY, '1GB');
   });
 
@@ -68,7 +68,7 @@ describe('check hands the test step its Jest caps', () => {
     assert.equal(heavy[0].env.JEST_MAX_WORKERS, '4');
     assert.equal(heavy[0].env.JEST_IDLE_MEMORY, '1GB');
     const second = run(e({ JEST_IDLE_MEMORY: '256MB' })).heavy;
-    assert.equal(second[0].env.JEST_MAX_WORKERS, '1');
+    assert.equal(second[0].env.JEST_MAX_WORKERS, '2');
     assert.equal(second[0].env.JEST_IDLE_MEMORY, '256MB');
   });
 
@@ -97,7 +97,7 @@ describe('check hands the test step its Jest caps', () => {
 
   it('treats empty caps as unset so Jest never receives an empty limit', () => {
     const { heavy } = run(e({ JEST_MAX_WORKERS: '', JEST_IDLE_MEMORY: '' }));
-    assert.equal(heavy[0].env.JEST_MAX_WORKERS, '1');
+    assert.equal(heavy[0].env.JEST_MAX_WORKERS, '2');
     assert.equal(heavy[0].env.JEST_IDLE_MEMORY, '1GB');
   });
 
@@ -172,7 +172,7 @@ describe('AGENTS.md names the knobs', () => {
     assert.equal(lines.filter((l) => l.includes('JEST_MAX_WORKERS')).length, 1);
     assert.equal(lines.filter((l) => l.includes('JEST_IDLE_MEMORY')).length, 1);
     const line = lines.find((l) => l.includes('JEST_MAX_WORKERS'));
-    assert.match(line, /JEST_MAX_WORKERS=1/);
+    assert.match(line, /JEST_MAX_WORKERS=2/);
     assert.match(line, /JEST_IDLE_MEMORY=1GB/);
     assert.match(line, /3072/);
   });

@@ -456,7 +456,7 @@ describe('check caps the memory of the affected Jest runs', () => {
     const h = harness({ answers: [MERGE_BASE] });
     assert.equal(step(['check'], h.io).ok, true);
     const env = stepEnv(h);
-    assert.equal(env.JEST_MAX_WORKERS, '1');
+    assert.equal(env.JEST_MAX_WORKERS, '2');
     assert.equal(env.JEST_IDLE_MEMORY, '1GB');
     assert.equal(env.GH_TOKEN, 'tok-george', 'the rest of the env is passed through');
   });
