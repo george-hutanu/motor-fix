@@ -109,7 +109,6 @@ type CardFields = {
   years?: number | null;
 };
 
-// A list of short texts: each trimmed, the empty ones dropped.
 function tagsOf(
   value: unknown,
   field: string,
