@@ -98,6 +98,14 @@ describe('api image', () => {
       /if \[ "\$\{APP\}" = api \]; then[\s\S]*libs\/domain\/src\/seed\.ts dist\/apps\/api\/src\//,
     );
   });
+
+  // The staging pre-deploy step runs it from the image's scripts folder.
+  // @traces 1370-release-seed-no-ssh-FR-001
+  it('carries the reset script beside the monitor password script, only in the api', () => {
+    expect(dockerfile).toMatch(
+      /if \[ "\$\{APP\}" = api \]; then[\s\S]*cp scripts\/monitor-password\.ts scripts\/reset-staging\.sh dist\/apps\/api\/scripts\//,
+    );
+  });
 });
 
 describe('reset-staging.sh', () => {
@@ -172,6 +180,18 @@ describe('reset-staging.sh', () => {
 
     expect(result.status).not.toBe(0);
     expect(calls).toEqual([]);
+  });
+
+  // In the staging pre-deploy step a failed seed fails the api deployment;
+  // its log names the step.
+  // @traces 1370-release-seed-no-ssh-FR-004
+  it('with SEED_ONLY=1, names the seed and exits non-zero when the seed fails', () => {
+    const { calls, result } = run({ ...staging, SEED_ONLY: '1' }, 3);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('staging seed failed: npx prisma db seed');
+    expect(calls).toHaveLength(1);
+    expect(result.stdout + result.stderr).not.toContain('not-a-real-password');
   });
 
   it('stops before seeding when the reset fails', () => {

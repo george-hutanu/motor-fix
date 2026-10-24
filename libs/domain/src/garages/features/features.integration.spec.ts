@@ -430,6 +430,19 @@ describe('switching the team off', () => {
     expect(res.body.features.team_mechanics).toBe(false);
   });
 
+  // @traces 055-FR-004
+  it('goes through when the only other card was detached from a deleted account', async () => {
+    const w = await world();
+    await prisma.mechanic.create({
+      data: { garageId: w.nord.id, name: 'Elena', removedAt: new Date() },
+    });
+
+    const res = await put(w, 'team_mechanics', { enabled: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.features.team_mechanics).toBe(false);
+  });
+
   it('goes through once the other mechanic has been removed', async () => {
     const w = await world();
     const vlad = await addMechanic(w);

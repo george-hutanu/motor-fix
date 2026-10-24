@@ -118,6 +118,12 @@ function specsFile(gh, feature, path, raw = true) {
   return moved.error && /404|not found/i.test(moved.error) ? contents(gh, SPECS_SLUG, name, TRUNK, raw) : moved;
 }
 
+/** A branch's feature folder: a number shorter than three digits is padded (`55-x` → `055-x`), as lib/feature.mjs reads it. */
+function featureName(branch) {
+  const [, number, slug] = /^(\d+)-(.+)$/.exec(branch ?? "") ?? [];
+  return number !== undefined && number.length < 3 ? `${number.padStart(3, "0")}-${slug}` : branch;
+}
+
 /** The FR ids on tasks.md lines naming a changed file, with their text from spec.md; { lines } or { note }. */
 function requirements(gh, feature, paths) {
   const tasks = specsFile(gh, feature, "/tasks.md");
@@ -255,7 +261,7 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
   const view = res.code === 0 ? parseJson(res.stdout) : null;
   const viewError = view ? null : `gh pr view failed: ${reason(res)}`;
   const head = view?.headRefOid ?? report.sha ?? "";
-  const feature = view ? `specs/${view.headRefName}` : null;
+  const feature = view ? `specs/${featureName(view.headRefName)}` : null;
   const reqs = feature ? requirements(gh, feature, (view.files ?? []).map((f) => f.path)) : { note: `Unavailable: ${viewError}` };
   const baseline = chooseBaseline({ gh, repo, pr: Number(pr), head, base: view?.baseRefName, run, explicit });
   try {

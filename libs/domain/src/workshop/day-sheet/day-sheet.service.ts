@@ -64,7 +64,7 @@ export class DaySheetService {
     const mechanics = await this.prisma.mechanic.findMany({
       orderBy: { name: 'asc' },
       select: { id: true, name: true },
-      where: { garageId },
+      where: { garageId, removedAt: null },
     });
     const wanted = plain(asked);
     const found = mechanics.filter(
