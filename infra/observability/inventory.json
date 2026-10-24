@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 172,
+    "count": 175,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1241,6 +1241,45 @@
       ],
       "reason": "each refusal logs one 'account deletion refused: <outcome>' line, a deletion logs 'account deleted <id>' and a failed farewell e-mail logs 'account deleted e-mail not sent'; outcomes count on motorfix_account_deletions_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-129"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-request",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a request logs 'data export requested <exportId>' and a refusal 'data export refused: <outcome>', ids only; outcomes count on motorfix_data_exports_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-state",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the account's own newest export; an assistant's refusal logs 'data export refused: forbidden'; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-download",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export/download",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a download logs 'data export downloaded <exportId>' and counts downloaded on motorfix_data_exports_total; a store failure answers 503 storage_unavailable, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation",
+      "story": "ST-140"
     },
     {
       "kind": "endpoint",

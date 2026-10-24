@@ -20,6 +20,7 @@ export {
   ROLES,
   type Role,
 } from './auth/capabilities';
+export { DataExportModule } from './auth/data-export/data-export.module';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';
 export {
   MAINTENANCE,

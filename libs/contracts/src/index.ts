@@ -13,6 +13,7 @@ export * from './catalogue-job-proposal.dto';
 export * from './consent';
 export * from './consents.dto';
 export * from './copy-voices.dto';
+export * from './data-export.dto';
 export * from './demand-order';
 export * from './env';
 export * from './events';
