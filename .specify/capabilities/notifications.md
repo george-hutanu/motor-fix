@@ -43,8 +43,10 @@ features:
   - 068-yearly-documents
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
+  - 523-flush-late-follower
   - 520-brevo-key-check-retry
   - 525-bounce-domain-event
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Notifications
@@ -85,9 +87,9 @@ _From 195-message-templates._
 
 _From 196-push-notifications._
 
-### 194-FR-009 — For a groupable type, the first `email` row for a (type, recipient) MUST be sent at once and open a 5-minute window; every further row of the same type and recipient built within that window MUST be held, and when the window closes one e-mail MUST go naming the count of held rows (a single held row goes as an ordinary e-mail), with every held row set `sent` together; when that e-mail fails for good, every held row is set `failed` and the fallback is called for each. A row built after the window closed opens a new window. Non-groupable types MUST NOT open a window. A row released from quiet hours MUST go through this rule as if it were built at its release.
+### 523-FR-001 — A grouped-window flush MUST, after each grouped (or single) send, look again for held rows of its leader not yet handled, round by round, and send them, ending only when a round finds none; a groupable e-mail that joins the window while the flush is running is therefore sent by that flush. (Modifies 194-FR-009: the close of a window sends every held row, including rows that joined while the flush ran.)
 
-_From 194-email-sending._
+_From 523-flush-late-follower._
 
 ### 194-FR-010 — An `email` row of a type that is not urgent, built between 22:00 (inclusive) and 08:00 (exclusive) Europe/Bucharest, MUST be `held` with `send_after` set to the next 08:00 Europe/Bucharest (correct across daylight-saving changes) and sent then; its `in_app` row MUST be written at once. Urgent types MUST go at any hour.
 
@@ -305,9 +307,9 @@ _From 646-notification-send-claim._
 
 _From 646-notification-send-claim._
 
-### 646-FR-003 — A claim MUST lapse after a lease no longer than the queue's first retry delay (1 minute), so a retry of a job whose worker died after claiming takes the row over and sends it.
+### 523-FR-008 — The claim lease, in a send as in a flush, MUST be judged against the database clock in the claiming update, never against the worker's own clock. (Modifies 646-FR-003: the lease lapses on the database clock.)
 
-_From 646-notification-send-claim._
+_From 523-flush-late-follower._
 
 ### 646-FR-004 — When a send job ends — sent, failed, held back, retried or thrown — it MUST release its own claim (and only its own).
 
@@ -501,17 +503,17 @@ _From 560-requeue-stranded-notifications._
 
 _From 560-requeue-stranded-notifications._
 
-### 560-FR-007 — The sweep MUST touch only `queued` rows: `held`, `sent` and `failed` rows and group flush jobs are outside it.
+### 523-FR-011 — The periodic re-queue sweep MUST also take every `held` row whose `sendAfter` has passed by the stranded threshold (5 minutes) and hand it its job at once: a follower (one with a group leader) gets its leader's flush job, any other held row its own send job, under the usual job id and options. (Modifies 560-FR-007: the sweep now covers held rows past their release.)
 
-_From 560-requeue-stranded-notifications._
+_From 523-flush-late-follower._
 
 ### 560-FR-008 — A sweep whose read or add fails MUST log the failure and end without changing the row; the next sweep tries again.
 
 _From 560-requeue-stranded-notifications._
 
-### 560-FR-009 — The sweep MUST log how many rows it re-queued whenever that number is not zero, naming the rows, so an operator sees that a hand-off failed.
+### 523-FR-014 — The sweep's summary log MUST name the count of rows it re-queued and at most the first 10 ids, followed by `…` when there are more; with 10 or fewer it names them all. (Modifies 560-FR-009: the rows are named up to ten.)
 
-_From 560-requeue-stranded-notifications._
+_From 523-flush-late-follower._
 
 ### 560-FR-010 — The change MUST add no API route, contract, schema migration or UI.
 
@@ -799,6 +801,49 @@ _From 414-approve-catalogue-job._
 
 _From 067-restore-suspended-garage._
 
+### 523-FR-002 — No row of a closed window MUST stay `held` past its `sendAfter` plus one flush cycle (one flush job's rounds), whatever happened to the first add of its flush job.
+
+_From 523-flush-late-follower._
+
+### 523-FR-003 — Before it sends, a flush MUST claim the leader's held rows with the same claim lease a send uses (one conditional update that takes a row holding no claim or a lapsed claim), and MUST send only the rows its update changed.
+
+_From 523-flush-late-follower._
+
+### 523-FR-004 — Two flush jobs for one leader running at once MUST send exactly one grouped e-mail, every held row of the window set `sent` once.
+
+_From 523-flush-late-follower._
+
+### 523-FR-005 — A flush whose rows another live claim holds MUST send nothing and fail, so the queue retries it after its backoff.
+
+_From 523-flush-late-follower._
+
+### 523-FR-006 — A flush whose claim lapsed (the worker died holding it) MUST be taken over by its retry, which sends the grouped e-mail once.
+
+_From 523-flush-late-follower._
+
+### 523-FR-007 — A flush MUST release its claims (and only its own) when its send ends; it MUST keep them when the provider accepted the e-mail but every write recording the send failed (as 560-FR-006 for a send); and it MUST give them back when the provider answered with a retryable error, so the next attempt sends the rows.
+
+_From 523-flush-late-follower._
+
+### 523-FR-009 — A worker whose clock runs 60 s or more ahead of the database MUST NOT take over a claim that is still live on the database clock.
+
+_From 523-flush-late-follower._
+
+### 523-FR-010 — The lease edge MUST hold to a one-second margin: a claim one second short of the lease on the database clock is refused, a claim one second past it is taken over and the row sent once; the processor's existing integration specs pass with their claim times stamped relative to the database clock.
+
+_From 523-flush-late-follower._
+
+### 523-FR-012 — The held sweep MUST leave a held row that carries a send claim (live or lapsed), an SMS being-sent mark or a listing draft.
+
+_From 523-flush-late-follower._
+
+### 523-FR-013 — The queued-row sweep MUST stay as specified (806-FR-001 and its referenced requirements); the held sweep is a separate pass the requeue job runs after the queued one, and a failure in either pass MUST NOT stop the other.
+
+_From 523-flush-late-follower._
+
+### 523-FR-015 — When the queue rejects a bulk add part way through the paged sweep, the sweep's count MUST hold only the rows the queue accepted, never the rows it rejected.
+
+_From 523-flush-late-follower._
 ### 520-FR-001 — The worker's start-up Brevo key check MUST tell a refused key from an unreachable Brevo: a network error, a timeout, any 5xx and 429 are *unreachable*; 401, 403 and any other non-2xx answer are *refused*; 2xx passes.
 
 _From 520-brevo-key-check-retry._
@@ -811,9 +856,9 @@ _From 520-brevo-key-check-retry._
 
 _From 520-brevo-key-check-retry._
 
-### 525-FR-001 — Recording a hard bounce for a message that belongs to an account MUST write one `account.updated` domain event through the outbox — subject the account, audience that account, payload `{ accountId, fields: ['emailBouncedAt'] }` — in the same transaction that sets the account's `email_bounced_at` and audits the change, so that none of the three exists without the other two.
+### 1370-FR-007 — Recording a hard bounce MUST lock the account row inside the claiming transaction before reading `emailBouncedAt`, MUST write one audit entry for that field per claimed bounce (old value the mark read under the lock, new value the mark written) even when the value is unchanged, and MUST never move the mark backwards: the written mark is the later of the mark read and the bounce's time; the adversary spec's concurrent case MUST pass on every one of its repetitions against local PostgreSQL.
 
-_From 525-bounce-domain-event._
+_From 1370-release-seed-no-ssh._
 
 ### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
 
@@ -834,4 +879,9 @@ _From 525-bounce-domain-event._
 - `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)
 - `198-FR-010` — superseded by `068-FR-004` (2026-10-23)
 - `196-FR-012` — superseded by `068-FR-004` (2026-10-23)
+- `194-FR-009` — superseded by `523-FR-001` (2026-10-24)
+- `646-FR-003` — superseded by `523-FR-008` (2026-10-24)
+- `560-FR-007` — superseded by `523-FR-011` (2026-10-24)
+- `560-FR-009` — superseded by `523-FR-014` (2026-10-24)
 - `194-FR-016` — superseded by `520-FR-003` (2026-10-23)
+- `525-FR-001` — superseded by `1370-FR-007` (2026-10-24)

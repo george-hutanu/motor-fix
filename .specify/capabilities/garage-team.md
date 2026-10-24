@@ -1,10 +1,12 @@
 ---
 capability: garage-team
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
   - 129-delete-account
+  - 531-garage-feature-tabs
+  - 055-team-list
 ---
 
 # Capability: Garage team
@@ -53,9 +55,9 @@ _From 131-invite-garage-staff._
 
 _From 131-invite-garage-staff._
 
-### 131-FR-011 — The garage dashboard frame MUST offer "Invită în echipă" to the owner only, opening a dialog with name, e-mail, kind (mechanic, offered only when `team_mechanics` is on; receptionist), the three permission ticks shown only for mechanic and unticked by default, and a send button; it MUST show the field problems before sending and the API's message after, including "Nu am putut trimite invitația" with "Copiază linkul".
+### 531-FR-003 — The invite dialog MUST read `team_mechanics` for its garage from the session's garage entry at open and follow it while open: off → "Mecanic" is not offered, "Recepționer" is preselected, the permission ticks are hidden and no invite of kind `mechanic` is sent; on or unset → unchanged. The server's 404 `feature_off` answer MUST still withdraw "Mecanic" as today, for a session that has not heard of the switch.
 
-_From 131-invite-garage-staff._
+_From 531-garage-feature-tabs._
 
 ### 131-FR-012 — The public acceptance screen at `/{lang}/invite/:token` MUST show "{garage} te invită să te alături echipei ca {rol}." and, for a mechanic, the line about appearing on the garage's public profile; signed out, it MUST offer sign-in and account creation (the existing dialogs, with the invited name and e-mail filled in) and, when the account is created from the link, accept in the same flow; signed in (including after signing in from the link), it MUST accept only on an explicit "Acceptă"; after acceptance it MUST open the garage dashboard in the account's language; an invalid or expired link MUST show "Invitația nu mai este valabilă. Cere service-ului una nouă."
 
@@ -73,6 +75,71 @@ _From 131-invite-garage-staff._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 129-FR-009 — The same transaction MUST detach the account's MECHANIC row (`account_id` cleared, `on_profile` false) and delete its receptionist GARAGE_MEMBER rows; the mechanic row, its reviews and its future bookings' mechanic reference are kept, so the garage's and the mechanic's figures are unchanged (025-FR) and the owner reassigns through the existing mechanic change.
+### 055-FR-004 — The account deletion's detach (129-FR-009) MUST, in one transaction, clear the MECHANIC row's `account_id`, set its `on_profile` false, delete the account's receptionist GARAGE_MEMBER rows, and set `removed_at` (a time, null by default) on the row; nothing else writes `removed_at` in this story. The row, its reviews and its bookings' mechanic reference are kept, so the figures are unchanged and the owner reassigns those bookings through the existing mechanic change. A card with `removed_at` set is never offered, matched or assigned again: the team list, the booking's confirm options and mechanic check, the day sheet's lookup, the step-4 re-save and the team switch's count all leave it out. A migration adds the nullable column.
 
-_From 129-delete-account._
+_From 055-team-list._
+
+### 055-FR-001 — The API MUST offer `GET /api/v1/garages/:garageId/mechanics`, answering 200 with `{ items: [...] }`, each item carrying `id`, `name`, `speciality` (nullable), `onProfile`, `hasAccount`, `rating` (string with one decimal, or null) and `reviewCount`, read from the MECHANIC rows of that garage, ordered by name A–Z with `Intl.Collator('ro', { sensitivity: 'base' })`, equal names by `id` so the order is stable between reads, leaving out the row whose account is the caller's own (the owner's row of 389-FR-005) and every row with `removed_at` set. The DTO lives in the contracts library, the route in the OpenAPI document, and the web app calls it through the regenerated client.
+
+_From 055-team-list._
+
+### 055-FR-002 — The read MUST be open to the owner of that garage only: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor (another garage's owner, a driver, an admin, a signed-out call's 401 aside) gets 404 `not_found`, as the garage's other owner-only routes do (398-FR-004). The check runs on the server before any row is read.
+
+_From 055-team-list._
+
+### 055-FR-003 — While the garage's `team_mechanics` is off (`featureOn`, a missing row is on), the read MUST answer 404 `feature_off` to the owner, after FR-002's check (a receptionist or mechanic still gets 403, any other actor 404 `not_found`), with the same body shape as the invites' refusal (131-FR-003); the web menu's entry and route stay hidden as 097-FR-007 and 398-FR-009 already hold.
+
+_From 055-team-list._
+
+### 055-FR-005 — The garage dashboard's Mecanici view (path `team`, capability `garage.team`, feature `team_mechanics`, already in the menu) MUST gain a body: the title "Mecanici" / "Mechanics", under it the count line, and the panel "Echipa" / "Team" with one row per item of FR-001, in the API's order.
+
+_From 055-team-list._
+
+### 055-FR-006 — Each row MUST show the name; under it the speciality when set (no years, no separator when empty); a lamp with its text; and the rating cell. The lamp MUST be green with "pe profil" / "on the profile" when `onProfile` is true; grey with "nu apare pe profil · fără cont" / "not on the profile · no account" when `hasAccount` is false; grey with "nu apare pe profil" / "not on the profile" otherwise. The state MUST be readable without colour (the text is always shown, the lamp is decorative for assistive technology).
+
+_From 055-team-list._
+
+### 055-FR-007 — The rating cell MUST read "{rating} · {count} recenzii" / "{rating} · {count} reviews" with the rating in the interface language's format (RO "4,9", EN "4.9") and the count with Romanian plural rules ("1 recenzie", "2 recenzii", "20 de recenzii"); with a count of 0 it reads "fără recenzii" / "no reviews".
+
+_From 055-team-list._
+
+### 055-FR-008 — The count line MUST count the items with `onProfile` true: "{n} mecanici pe profil" / "{n} mechanics on the profile" with Romanian plural rules ("1 mecanic pe profil", "20 de mecanici pe profil"); when the list has items and none is on the profile it reads "Echipa nu apare pe profil" / "The team is not on the profile"; with no items it is absent.
+
+_From 055-team-list._
+
+### 055-FR-009 — With no items the panel MUST show the dashboard's empty state (the existing component, icon `wrench`) with "Încă nu ai adăugat mecanici" / "You have not added mechanics yet" and the button "Adaugă un mecanic" / "Add a mechanic", which opens the staff invite dialog (131-FR-011) with kind mechanic chosen.
+
+_From 055-team-list._
+
+### 055-FR-010 — While the first read is in flight the panel MUST show three skeleton rows; a failed first read (any non-2xx or a network error) MUST show "Nu am putut încărca echipa. Reîncearcă." / "We could not load the team. Try again." in a `role="alert"` with a button "Reîncearcă" / "Try again" that reads again; a 404 (the feature switched off meanwhile, or the garage gone) MUST send the view to the dashboard home as the frame's re-read does. A re-read that fails while a list is on screen (a live refresh, the return from offline) MUST keep that list and show no error panel; the next event or the return of the connection reads again.
+
+_From 055-team-list._
+
+### 055-FR-011 — With a loaded list and the browser offline the view MUST keep the list and show the shared offline note (shell "live.offline": "Fără conexiune. Ce vezi poate fi vechi." / "No connection. What you see may be out of date.") until the connection returns, then read again.
+
+_From 055-team-list._
+
+### 055-FR-012 — The view MUST read the list again, without a reload, when the live stream delivers `mechanic.updated`, `invite.accepted` or `rating.updated` for the garage (the dashboard's live view helper, 253-FR-004, 398-FR-008), and on the stream's resync; a row that appears, changes or goes MUST be on screen within 5 seconds of the event.
+
+_From 055-team-list._
+
+### 055-FR-013 — Every text of FR-005–FR-011 MUST come from the garage area's translation files in Romanian and English (016-FR-002), with comma-below diacritics; text typed by a person (name, speciality) MUST never be shown as markup (131-FR-013).
+
+_From 055-team-list._
+
+### 055-FR-014 — The view MUST lay out phones first: at 320 px and 390 px the row stacks (name, speciality, lamp, rating on their own lines) with no horizontal scroll; from a tablet the lamp and the rating sit on the name's line; light and dark follow the Cockpit theme's tokens; the panel is a Cockpit card as the dashboard's other panels.
+
+_From 055-team-list._
+
+### 055-FR-015 — The read route MUST be listed in `infra/observability/inventory.json` as an endpoint with its reason (a read; the API's request-duration histogram labels the route, 876-FR-008; the `api-error-rate` and `api-latency` rules cover it); no new metric, log, service or queue is added, and no id reaches a metric label (876-FR-011).
+
+_From 055-team-list._
+
+### 055-FR-016 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-001 (the shape, the order with "Ștefan", "stan", "Tudor" reading stan, Ștefan, Tudor, the owner's own row and a `removed_at` row left out, `rating` null with count 0, figures across garages: 40 reviews here and 18 at a previous garage read 58), FR-002 (owner 200, receptionist and mechanic 403, driver, admin and another owner 404, signed out 401), FR-003 (owner 404 `feature_off` with the switch off, a receptionist 403 and another owner 404 `not_found` with it off, 200 again when on), FR-004 (the deletion writes `removed_at`, the figures and bookings stay, and the same person accepting a new invite shows one row); Jest for the lamp text by state, the rating cell (RO and EN, 0, 1, 2 and 20 reviews), the count line (0, 1, 2, 20 on the profile; items with none on the profile) and the empty state's button opening the invite dialog; Playwright (the PR QA sweep) as an owner with three seeded cards: the rows and the count line at 320 px, 390 px, tablet and desktop, light and dark, RO and EN, and the live refresh: a mechanic accepting an invite in a second browser appears in the first within 5 seconds.
+
+_From 055-team-list._
+
+## Retired
+
+- `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
+- `131-FR-011` — superseded by `531-FR-003` (2026-10-24)

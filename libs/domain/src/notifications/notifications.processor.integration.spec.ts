@@ -2,7 +2,7 @@
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
-import { Queue, Worker } from 'bullmq';
+import { Queue, QueueEvents, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { Brevo } from './brevo/brevo';
@@ -10,6 +10,7 @@ import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import { NotificationsService } from './notifications.service';
 import {
+  claimAgo,
   databaseUrl,
   fixtures,
   redisUrlFor,
@@ -438,6 +439,122 @@ describe('the sweep job', () => {
   });
 });
 
+// @traces 523-FR-011 523-FR-012 523-FR-013
+describe('the sweep of held rows whose job was lost', () => {
+  const NIGHT = '2026-10-04T20:10:00Z';
+  const sweep = () =>
+    processor.handle({ attemptsMade: 0, data: {}, name: 'requeue' });
+  // Runs every job the sweep left waiting, twice, as a duplicate would.
+  const runWaiting = async () => {
+    const jobs = await queue.getJobs(['waiting']);
+    for (const job of [...jobs, ...jobs])
+      await processor.handle({
+        attemptsMade: 0,
+        data: job.data,
+        name: job.name,
+      });
+    return jobs;
+  };
+  const clocks = (iso: string) => {
+    service.now = at(iso);
+    processor.now = at(iso);
+  };
+
+  async function heldOvernight() {
+    const ion = await account('ion', ['garage']);
+    service.now = at(NIGHT);
+    await service.notify({
+      eventId: 'r',
+      kind: 'REQUEST_REMINDER',
+      recipients: [ion],
+    });
+    await queue.obliterate({ force: true });
+    return { ion, row: (await emailRows(ion))[0] };
+  }
+
+  it('sends a held row once when its release job was lost and its send time passed five minutes ago', async () => {
+    const { ion, row } = await heldOvernight();
+    expect(row.status).toBe('held');
+    clocks(
+      new Date(row.sendAfter!.getTime() + 5 * 60_000 + 1000).toISOString(),
+    );
+    await sweep();
+    const jobs = await runWaiting();
+    expect(jobs.map((j) => j.name)).toEqual(['send']);
+    expect(mock.emails()).toHaveLength(1);
+    expect((await emailRows(ion))[0]).toMatchObject({
+      claimedAt: null,
+      status: 'sent',
+    });
+  });
+
+  it('leaves a held row until five minutes past its send time', async () => {
+    const { ion, row } = await heldOvernight();
+    clocks(new Date(row.sendAfter!.getTime() + 4 * 60_000).toISOString());
+    await sweep();
+    expect(await queue.getJobs(['waiting', 'delayed'])).toEqual([]);
+    expect((await emailRows(ion))[0].status).toBe('held');
+  });
+
+  it('leaves a held row that carries a send claim', async () => {
+    const { row } = await heldOvernight();
+    await claimAgo(prisma, row.id, 0);
+    clocks(new Date(row.sendAfter!.getTime() + 10 * 60_000).toISOString());
+    await sweep();
+    expect(await queue.getJobs(['waiting', 'delayed'])).toEqual([]);
+  });
+
+  it('sends the grouped e-mail once when a window lost its flush job', async () => {
+    const andrei = await account('andrei');
+    const leader = await quote(andrei, 'evt-a');
+    await sendJob(leader.id);
+    service.now = at('2026-10-05T11:01:00Z');
+    await quote(andrei, 'evt-b');
+    await quote(andrei, 'evt-c');
+    await queue.obliterate({ force: true });
+    clocks('2026-10-05T11:10:01Z');
+    await sweep();
+    const jobs = await runWaiting();
+    expect(jobs.map((j) => [j.name, j.data])).toEqual([
+      ['flush', { leaderId: leader.id }],
+    ]);
+    expect(mock.emails()).toHaveLength(2);
+    expect((mock.emails()[1].body as { subject: string }).subject).toBe(
+      '2 oferte noi',
+    );
+    expect((await emailRows(andrei)).map((r) => r.status)).toEqual([
+      'sent',
+      'sent',
+      'sent',
+    ]);
+  });
+
+  it('still re-queues the stranded queued rows when the held sweep fails', async () => {
+    const { row } = await heldOvernight();
+    clocks(new Date(row.sendAfter!.getTime() + 10 * 60_000).toISOString());
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const stranded = jest
+      .spyOn(service, 'requeueStranded')
+      .mockResolvedValue(1);
+    const read = jest
+      .spyOn(prisma.notification, 'findMany')
+      .mockRejectedValue(new Error('connection lost'));
+    try {
+      await expect(sweep()).resolves.toBeUndefined();
+      expect(stranded).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('connection lost'),
+      );
+    } finally {
+      read.mockRestore();
+      stranded.mockRestore();
+      warn.mockRestore();
+    }
+  });
+});
+
 describe('when Brevo fails', () => {
   it('retries after 1, 5, 15, 60 and 240 minutes', () => {
     expect([0, 1, 2, 3, 4].map(retryDelay)).toEqual(
@@ -710,6 +827,150 @@ describe('through the queue', () => {
   }, 70_000);
 });
 
+// @traces 523-FR-001 523-FR-002 523-FR-003 523-FR-004 523-FR-005 523-FR-006 523-FR-007
+describe('a window whose flush job is already running', () => {
+  const flushJob = (leaderId: string) =>
+    processor.handle({ attemptsMade: 0, data: { leaderId }, name: 'flush' });
+  const flushes = () =>
+    mock.emails().map((e) => (e.body as { subject: string }).subject);
+
+  // Runs `during` once, inside the first e-mail handed to Brevo, then lets
+  // that e-mail go.
+  function duringFirstSend(during: () => Promise<unknown>) {
+    const send = Brevo.prototype.send;
+    let ran = false;
+    return jest
+      .spyOn(Brevo.prototype, 'send')
+      .mockImplementation(async function (this: Brevo, mail) {
+        if (!ran) {
+          ran = true;
+          await during();
+        }
+        return send.call(this, mail);
+      });
+  }
+
+  // A leader sent at 11:00 and two followers held behind it until 11:05.
+  async function window() {
+    const andrei = await account('andrei');
+    const leader = await quote(andrei, 'evt-a');
+    await sendJob(leader.id);
+    mock.reset();
+    service.now = at('2026-10-05T11:01:00Z');
+    await quote(andrei, 'evt-b');
+    await quote(andrei, 'evt-c');
+    await queue.obliterate({ force: true });
+    return { andrei, leader };
+  }
+
+  it('sends a follower that joined while the flush job ran', async () => {
+    const { andrei, leader } = await window();
+    const spy = duringFirstSend(async () => {
+      service.now = at('2026-10-05T11:04:59Z');
+      await quote(andrei, 'evt-late');
+    });
+    const connection = { maxRetriesPerRequest: null, url: redisUrl };
+    const events = new QueueEvents('notifications', { connection });
+    const worker = new Worker('notifications', (job) => processor.handle(job), {
+      connection,
+    });
+    try {
+      await events.waitUntilReady();
+      const job = await queue.add(
+        'flush',
+        { leaderId: leader.id },
+        { jobId: `flush-${leader.id}` },
+      );
+      await job.waitUntilFinished(events, 30_000);
+    } finally {
+      await worker.close();
+      await events.close();
+      spy.mockRestore();
+    }
+    const rows = await emailRows(andrei);
+    expect(rows.map((r) => r.status)).toEqual(['sent', 'sent', 'sent', 'sent']);
+    expect(flushes()).toEqual([
+      '2 oferte noi',
+      'Ofertă nouă de la Atelier Dinamo: 450–600 lei',
+    ]);
+  }, 40_000);
+
+  it('sends one grouped e-mail when two flush jobs for one leader run at once', async () => {
+    const { andrei, leader } = await window();
+    let second: Promise<void> | undefined;
+    const spy = duringFirstSend(async () => {
+      second = flushJob(leader.id);
+      await second.catch(() => undefined);
+    });
+    try {
+      await flushJob(leader.id);
+    } finally {
+      spy.mockRestore();
+    }
+    await expect(second).rejects.toThrow('is being sent by another job');
+    expect(flushes()).toEqual(['2 oferte noi']);
+    expect(
+      (await emailRows(andrei)).map((r) => [r.status, r.claimedAt]),
+    ).toEqual([
+      ['sent', null],
+      ['sent', null],
+      ['sent', null],
+    ]);
+  });
+
+  it('leaves the rows of a flush another job holds, and fails so the queue retries', async () => {
+    const { andrei, leader } = await window();
+    const [, ...held] = await emailRows(andrei);
+    for (const row of held) await claimAgo(prisma, row.id, 10_000);
+    await expect(flushJob(leader.id)).rejects.toThrow(
+      'is being sent by another job',
+    );
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei)).slice(1).map((r) => r.status)).toEqual([
+      'held',
+      'held',
+    ]);
+  });
+
+  it('takes over a flush whose worker died holding its rows, and sends once', async () => {
+    const { andrei, leader } = await window();
+    const [, ...held] = await emailRows(andrei);
+    for (const row of held) await claimAgo(prisma, row.id, 120_000);
+    await flushJob(leader.id);
+    await flushJob(leader.id);
+    expect(flushes()).toEqual(['2 oferte noi']);
+    expect(
+      (await emailRows(andrei)).map((r) => [r.status, r.claimedAt]),
+    ).toEqual([
+      ['sent', null],
+      ['sent', null],
+      ['sent', null],
+    ]);
+  });
+
+  it('gives the rows back when Brevo asks for a retry, so the next attempt sends them', async () => {
+    const { andrei, leader } = await window();
+    mock.answer({ status: 503 });
+    await expect(flushJob(leader.id)).rejects.toThrow();
+    expect(
+      (await emailRows(andrei)).slice(1).map((r) => [r.status, r.claimedAt]),
+    ).toEqual([
+      ['held', null],
+      ['held', null],
+    ]);
+    await processor.handle({
+      attemptsMade: 1,
+      data: { leaderId: leader.id },
+      name: 'flush',
+    });
+    expect((await emailRows(andrei)).map((r) => r.status)).toEqual([
+      'sent',
+      'sent',
+      'sent',
+    ]);
+  });
+});
+
 describe('starting the worker', () => {
   it('starts when sending is off without asking Brevo', async () => {
     build({ EMAIL_SENDING: 'off' });
@@ -790,9 +1051,6 @@ describe('starting the worker', () => {
 describe('two send jobs for one row', () => {
   const NIGHT = '2026-10-04T20:10:00Z';
   const MORNING = '2026-10-05T05:00:00Z';
-  const claim = (id: string, claimedAt: Date) =>
-    prisma.notification.update({ data: { claimedAt }, where: { id } });
-
   it('sends a queued account e-mail once when both run at once', async () => {
     const ana = await account('ana');
     await service.sendAccountEmail({
@@ -828,14 +1086,13 @@ describe('two send jobs for one row', () => {
   it('leaves a row another job is sending to it, and fails so the queue retries', async () => {
     const andrei = await account('andrei');
     const row = await quote(andrei, 'evt-1');
-    processor.now = at('2026-10-05T11:00:30Z');
-    await claim(row.id, new Date('2026-10-05T11:00:00Z'));
+    const claimedAt = await claimAgo(prisma, row.id, 30_000);
     await expect(sendJob(row.id)).rejects.toThrow(
       'is being sent by another job',
     );
     expect(mock.emails()).toEqual([]);
     expect((await emailRows(andrei))[0]).toMatchObject({
-      claimedAt: new Date('2026-10-05T11:00:00Z'),
+      claimedAt,
       status: 'queued',
     });
   });
@@ -843,17 +1100,32 @@ describe('two send jobs for one row', () => {
   it('takes over a row whose claim outlived its worker and sends it once', async () => {
     const andrei = await account('andrei');
     const row = await quote(andrei, 'evt-1');
-    await claim(row.id, new Date('2026-10-05T11:00:00Z'));
-    processor.now = at('2026-10-05T11:00:30Z');
+    await claimAgo(prisma, row.id, 30_000);
     await expect(sendJob(row.id)).rejects.toThrow(
       'is being sent by another job',
     );
-    processor.now = at('2026-10-05T11:01:01Z');
+    await claimAgo(prisma, row.id, 61_000);
     await sendJob(row.id, 1);
     expect(mock.emails()).toHaveLength(1);
     expect((await emailRows(andrei))[0]).toMatchObject({
       claimedAt: null,
       status: 'sent',
+    });
+  });
+
+  // @traces 523-FR-008 523-FR-009
+  it('judges the lease on the database clock, not a worker clock running 61 s ahead', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    const claimedAt = await claimAgo(prisma, row.id, 10_000);
+    processor.now = () => new Date(Date.now() + 61_000);
+    await expect(sendJob(row.id)).rejects.toThrow(
+      'is being sent by another job',
+    );
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      claimedAt,
+      status: 'queued',
     });
   });
 

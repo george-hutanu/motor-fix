@@ -44,6 +44,8 @@ features:
   - 292-saved-garage-quote
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
+  - 500-trust-railway-edge
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Accounts
@@ -164,9 +166,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 500-FR-005 — Both refused-sign-in warning lines of the SignIn logger (`sign-in refused: invalid_credentials` and `sign-in refused: too_many_attempts`) MUST carry the masked caller as the field `caller`, taken from the request address passed to the sign-in service (the same value the per-address attempt counter receives, read with the counter's own parsing), written as a `caller=<masked>` token at the end of the message text, and MUST never carry the full address, the e-mail or the password. No other sign-in outcome logs an address. (Modifies 082-FR-011: "no address" becomes "no address beyond the caller masked by FR-001–FR-004".)
+### 500-FR-011 — Both refused-sign-in warning lines (`sign-in refused: invalid_credentials` and `sign-in refused: too_many_attempts`) MUST carry, after `caller=<masked>` and in this order, the tokens `hops=<hops>` (FR-012) and `headers=<names>` (FR-013), then `real-ip=<masked>` and `forwarded=<masked>` (FR-014) only when that header is present; the controller always hands the sign-in service the request's headers and socket address, so the tokens are always there (`hops=unknown headers=none` for a request that names neither). No token may carry a full address, the e-mail or the password, and no other sign-in outcome logs an address. (Modifies 500-FR-005: the line gains the forwarding facts beside the caller.)
 
-_From 500-req-ip-behind-proxy._
+_From 500-trust-railway-edge._
 
 ### 393-FR-012 — The sign-in dialog MUST offer, under its main button and a "sau" divider, the button "Continuă cu telefonul" (English "Continue with phone"); tapping it MUST show the phone step inside the same dialog: the field "Număr de telefon" with "+40" filled in (`type=tel`, `autocomplete=tel`), "Ține‑mă autentificat" ticked by default, the main button "Trimite codul", and a link back to e-mail and password. Before sending, the dialog MUST check that the number is a possible phone number and show the problem under the field as 082-FR-014 does (modifies 080-FR-009, which lists the dialog's controls under its main button).
 
@@ -204,9 +206,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-023 — The seed MUST add, outside production, one account per role (driver; garage owner of a seeded garage; receptionist and mechanic of that garage; admin), one driver-and-garage account whose last role is `garage`, and one suspended driver, all with e-mails under `example.test` and the password `parola-de-test` in development and test, which MUST come from `SEED_PASSWORD` in every other environment, an unset or unknown `APP_ENV` included (refused without it); an account whose e-mail exists is left as it is, so running it twice changes nothing.
+### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
 
-_From 082-sign-in._
+_From 1370-release-seed-no-ssh._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -1169,13 +1171,37 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-006 — A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the logged caller: the caller is the address the trusted-hop chain resolves to, with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`.
+### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
 
-_From 500-req-ip-behind-proxy._
+_From 500-trust-railway-edge._
 
 ### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
 
 _From 532-lost-session-home._
+
+### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-012 — `hops` MUST list the X-Forwarded-For entries left to right, then the address of the socket the API was called on, each masked as FR-001–FR-004 mask the caller (an entry that is not an address reads `unknown`, an empty entry is skipped), comma-separated without spaces. At most the rightmost 8 entries of the header are listed; when more were sent, the list starts with `+<n>`, the number left out. With no X-Forwarded-For header the list is the socket address alone. The entry just before the socket is the one the web edge appended (FR-015).
+
+_From 500-trust-railway-edge._
+
+### 500-FR-013 — `headers` MUST list the names, never the values, of the forwarding-related request headers present, lower-case, sorted and each once, comma-separated: `forwarded`, `via`, `x-real-ip`, `true-client-ip`, `cf-connecting-ip`, `cdn-clientip`, `fastly-client-ip`, `x-client-ip`, `x-cluster-client-ip`, every `x-forwarded-*`, `x-railway-*` and `x-envoy-*` name, and every other name ending in `-ip` or `clientip`. Only a name made of letters and hyphens, at most 40 characters, is listed, at most 16 names; `none` when no such header is present.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-014 — When an `x-real-ip` header is present, `real-ip` MUST list its comma-separated entries, each masked as FR-012 masks a hop; when a `Forwarded` header is present, `forwarded` MUST list the `for=` value of each of its elements, quotes, IPv6 brackets and a port removed, each masked the same way (an obfuscated or missing `for=` reads `unknown`). Both keep at most 8 entries, the rightmost, with the same `+<n>` prefix.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-015 — The web edge MUST keep forwarding the X-Forwarded-For chain it was given unchanged and append the address of the socket it was called on (`<given>, <socket>`, or `<socket>` alone), so the API's `hops` show that socket hop masked; this PR asserts the behaviour and does not change it.
+
+_From 500-trust-railway-edge._
 
 ## Retired
 
@@ -1203,3 +1229,6 @@ _From 532-lost-session-home._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
+- `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
+- `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
+- `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)

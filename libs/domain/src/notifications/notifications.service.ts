@@ -43,6 +43,8 @@ const STRANDED_MS = 5 * 60_000;
 // How many stranded rows the sweep reads and hands over at a time: a stand-in
 // until a backlog after a Redis loss is measured.
 const REQUEUE_PAGE = 500;
+// How many of the rows it re-queued a sweep's log line names.
+const REQUEUE_NAMED = 10;
 
 const JOB: JobsOptions = {
   attempts: RETRY_MINUTES.length + 1,
@@ -107,6 +109,9 @@ type DraftJob = NextJob & { data: { id: string } };
 // once the message is sent or has failed.
 const IN_FLIGHT_ONLY = ['link'];
 
+// A bounce mark never moves back to an earlier bounce.
+const later = (mark: Date | null, at: Date) => (mark && mark > at ? mark : at);
+
 const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
   Object.fromEntries(
     Object.entries(params).filter(([key]) => !IN_FLIGHT_ONLY.includes(key)),
@@ -121,6 +126,13 @@ const send = (id: string): NextJob => ({
   delay: 0,
   jobId: `send-${id}`,
   name: 'send',
+});
+
+const flush = (leaderId: string, delay = 0): NextJob => ({
+  data: { leaderId },
+  delay,
+  jobId: `flush-${leaderId}`,
+  name: 'flush',
 });
 
 @Injectable()
@@ -437,12 +449,57 @@ export class NotificationsService {
     } catch (error) {
       this.logger.warn(`queued notifications not re-queued: ${String(error)}`);
     }
-    if (added.length > 0) {
-      this.logger.warn(
-        `re-queued ${added.length} queued notifications: ${added.join(', ')}`,
-      );
-    }
+    this.logRequeued('queued', added);
     return added.length;
+  }
+
+  // A held row whose release or flush job was lost, five minutes past its
+  // send time and with no claim, is handed to the queue again: a follower as
+  // its leader's flush job, so the window still goes as one e-mail, any
+  // other as its own send job. Answers how many rows it handed over.
+  async requeueHeld(now = this.now()): Promise<number> {
+    const added: string[] = [];
+    try {
+      let page: { groupLeaderId: string | null; id: string }[];
+      do {
+        page = await this.prisma.notification.findMany({
+          orderBy: { id: 'asc' },
+          select: { groupLeaderId: true, id: true },
+          take: REQUEUE_PAGE,
+          where: {
+            claimedAt: null,
+            id: { gt: added.at(-1) },
+            listingDraftId: null,
+            sendAfter: { lt: new Date(now.getTime() - STRANDED_MS) },
+            sendingAt: null,
+            status: 'held',
+          },
+        });
+        if (page.length === 0) break;
+        const jobs = new Map(
+          page
+            .map(({ groupLeaderId, id }) =>
+              groupLeaderId ? flush(groupLeaderId) : send(id),
+            )
+            .map((next) => [next.jobId, this.job(next)]),
+        );
+        await this.jobs.addBulk([...jobs.values()]);
+        added.push(...page.map(({ id }) => id));
+      } while (page.length === REQUEUE_PAGE);
+    } catch (error) {
+      this.logger.warn(`held notifications not re-queued: ${String(error)}`);
+    }
+    this.logRequeued('held', added);
+    return added.length;
+  }
+
+  private logRequeued(what: 'held' | 'queued', ids: readonly string[]) {
+    if (ids.length === 0) return;
+    const named = ids.slice(0, REQUEUE_NAMED).join(', ');
+    const more = ids.length > REQUEUE_NAMED ? ', …' : '';
+    this.logger.warn(
+      `re-queued ${ids.length} ${what} notifications: ${named}${more}`,
+    );
   }
 
   scheduleRequeue() {
@@ -545,31 +602,29 @@ export class NotificationsService {
     const at = this.now();
     const ids = rows.map((r) => r.id);
     const next = await this.prisma.$transaction(async (tx) => {
+      const before = await this.lockBounceMark(tx, accountId);
       const { count } = await tx.notification.updateMany({
         data: { failure: 'bounced', status: 'failed' },
         where: { id: { in: ids }, status: { not: 'failed' } },
       });
       if (count === 0) return null;
       await this.forget(ids, tx);
-      const before = await tx.account.findUniqueOrThrow({
-        select: { emailBouncedAt: true },
-        where: { id: accountId },
-      });
+      // Each bounce is audited beside its event, even when the mark stays.
+      const mark = later(before, at);
       await tx.account.update({
-        data: { emailBouncedAt: at },
+        data: { emailBouncedAt: mark },
         where: { id: accountId },
       });
-      await this.audit.recordChanges(
-        tx,
-        {
-          actorId: null,
-          actorRole: 'system',
-          subjectId: accountId,
-          subjectType: 'account',
-        },
-        before,
-        { emailBouncedAt: at },
-      );
+      await this.audit.record(tx, {
+        action: 'update',
+        actorId: null,
+        actorRole: 'system',
+        field: 'emailBouncedAt',
+        newValue: mark,
+        oldValue: before,
+        subjectId: accountId,
+        subjectType: 'account',
+      });
       await outbox.record(tx, {
         audience: { accountId, type: 'account' },
         kind: 'account.updated',
@@ -592,6 +647,19 @@ export class NotificationsService {
       );
     }
     for (const job of next) await this.queue(job);
+  }
+
+  // Taken first, so a bounce of another message to the account waits here and
+  // then reads the mark this one wrote. NO KEY: the rows the bounce writes
+  // that point at the account only share-lock its key.
+  private async lockBounceMark(
+    tx: Prisma.TransactionClient,
+    accountId: string,
+  ): Promise<Date | null> {
+    const [row] = await tx.$queryRaw<{ email_bounced_at: Date | null }[]>`
+      SELECT email_bounced_at FROM account WHERE id = ${accountId}::uuid
+      FOR NO KEY UPDATE`;
+    return row?.email_bounced_at ?? null;
   }
 
   // The garage whose choices a recipient's message goes by: the message's,
@@ -708,7 +776,7 @@ export class NotificationsService {
     // The bell's count moves with the row, in the same transaction. Raising
     // it first locks the account row before the row takes its position, so
     // one account's positions commit in the order they were taken and a
-    // stream never drops a row as already replayed (FR-004).
+    // stream never drops a row as already replayed.
     const { unreadCount } = await tx.account.update({
       data: { unreadCount: { increment: 1 } },
       select: { unreadCount: true },
@@ -850,12 +918,7 @@ export class NotificationsService {
       data: { groupLeaderId: leader.id, sendAfter: closes, status: 'held' },
       where: { id: row.id },
     });
-    return {
-      data: { leaderId: leader.id },
-      delay: Math.max(0, closes.getTime() - at.getTime()),
-      jobId: `flush-${leader.id}`,
-      name: 'flush',
-    };
+    return flush(leader.id, Math.max(0, closes.getTime() - at.getTime()));
   }
 
   private queue(next: NextJob) {

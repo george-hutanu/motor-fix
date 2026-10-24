@@ -194,7 +194,8 @@ describe('api conventions', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
-  it('takes the caller from the right of X-Forwarded-For, past private hops only', async () => {
+  // @traces 500-FR-008
+  it('takes the caller from the right of X-Forwarded-For, past private hops and the Railway edge only', async () => {
     app = await start();
     const ip = async (forwarded: string) =>
       (
@@ -205,10 +206,11 @@ describe('api conventions', () => {
 
     expect(await ip('203.0.113.9, 10.0.0.5')).toBe('203.0.113.9');
     expect(await ip('203.0.113.9, fd12::1')).toBe('203.0.113.9');
+    expect(await ip('203.0.113.9, 100.64.1.2')).toBe('203.0.113.9');
     expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
   });
 
-  // @traces 500-FR-006
+  // @traces 500-FR-008
   it('logs the caller of a refused sign-in as the trusted chain names it, not as the visitor wrote it', async () => {
     app = await start();
     const callers: string[] = [];
@@ -228,10 +230,12 @@ describe('api conventions', () => {
     await refused('1.2.3.4, 198.51.100.4');
     warn.mockRestore();
 
-    expect(callers).toEqual([
+    // The line goes on with the masked hops; the caller is as before.
+    expect(callers.map((line) => line.split(' hops=')[0])).toEqual([
       'sign-in refused: invalid_credentials caller=203.0.x.x',
       'sign-in refused: invalid_credentials caller=198.51.x.x',
     ]);
+    expect(callers[1]).toContain(' hops=1.2.x.x,198.51.x.x,');
   });
 
   it('serves sign-in under the prefix with problem details', async () => {

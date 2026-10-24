@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { GaragesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -7,6 +7,7 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
 import { InviteStaff } from './invite-staff';
+import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -34,6 +35,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   resend = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
   TestBed.configureTestingModule({
     providers: [
+      { provide: Session, useValue: { current: signal(null) } },
       {
         provide: GaragesService,
         useValue: {
