@@ -360,7 +360,6 @@ describe('web edge under hostile conditions', () => {
       res.end('fine');
     };
 
-    // Cut short, the answer fails rather than passing as whole.
     const outcome = await fetch(`${base}/api/v1/half`)
       .then((r) => r.text())
       .then(
@@ -396,7 +395,7 @@ describe('web edge under hostile conditions', () => {
     await closed;
   });
 
-  it('answers 502 for every method when the API refuses the connection', async () => {
+  it('answers 502 for every method when the API is down', async () => {
     await boot();
     // The API keeps its port for the whole case and resets each connection
     // as it is accepted. Closing it instead would free the port, and a server
