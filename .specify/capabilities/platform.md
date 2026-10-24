@@ -2841,6 +2841,7 @@ _From 1377-own-pr-422-fallback._
 ### 1377-FR-003 — When the COMMENT fallback is itself refused, that refusal is the `reviewError` and post.mjs exits 1.
 
 _From 1377-own-pr-422-fallback._
+
 ### 438-FR-001 — `scripts/test-suites.spec.ts` MUST derive the projects whose unit/integration split it asserts from the repository: the project (nearest ancestor holding a `project.json`) of every `*.integration.spec.ts` under `apps/` or `libs/` (outside `node_modules` and `test-output`), each once, sorted; the fixed `['apps/api', 'libs/domain']` goes. For each derived project the four existing assertions hold (every spec runs with no suite chosen, the unit suite holds no integration spec, the integration suite holds only integration specs, the two suites partition the whole), so a project whose Jest config does not honour `JEST_SUITE` fails the spec by name.
 
 _From 438-test-suites-projects._
