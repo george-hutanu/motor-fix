@@ -26,15 +26,16 @@ RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; 
 RUN mkdir /maps && if [ "${APP}" = web ]; then \
       find dist/apps/web/browser -name '*.map' -exec mv {} /maps/ \; \
       && find dist/apps/web -name '*.map' -delete; fi
-# The api's pre-deploy step runs the migrations from inside its image, and
-# the staging reset (.github/workflows/reset-staging.yml) runs the seed there:
-# one file, run by Node as it is, with pg already among the api's dependencies.
-# The same step then sets the monitor role's password (monitor-password.ts).
+# The api's pre-deploy step runs the migrations from inside its image, then
+# sets the monitor role's password (monitor-password.ts), and on staging seeds
+# (reset-staging.sh with SEED_ONLY=1), as the staging reset
+# (.github/workflows/reset-staging.yml) does there too: seed.ts is one file,
+# run by Node as it is, with pg already among the api's dependencies.
 RUN if [ "${APP}" = api ]; then \
       cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/ \
       && mkdir -p dist/apps/api/src dist/apps/api/scripts \
       && cp libs/domain/src/seed.ts dist/apps/api/src/ \
-      && cp scripts/monitor-password.ts dist/apps/api/scripts/; fi
+      && cp scripts/monitor-password.ts scripts/reset-staging.sh dist/apps/api/scripts/; fi
 
 FROM scratch AS web-maps
 COPY --from=build /maps /
