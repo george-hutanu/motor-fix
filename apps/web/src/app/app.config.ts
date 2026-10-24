@@ -1,8 +1,4 @@
-import {
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -36,7 +32,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(
       routes,
       withInMemoryScrolling(),
