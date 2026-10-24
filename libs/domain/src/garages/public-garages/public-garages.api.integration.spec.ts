@@ -896,6 +896,7 @@ const PUBLIC_FIELDS = new Set([
   'brand',
   'brandNote',
   'businessKind',
+  'closedDays',
   'courtesyCar',
   'description',
   'doesNotTake',
