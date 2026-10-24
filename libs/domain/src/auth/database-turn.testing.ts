@@ -1,45 +1,97 @@
-import { PrismaPg } from '@prisma/adapter-pg';
-
-import { PrismaClient } from '../generated/prisma/client';
-
-// How often a take asks for the turn again while another file holds it.
-const RETRY_MS = 250;
+import { Client } from 'pg';
 
 // Jest runs test files in parallel workers against one database; files that
 // empty the account tables take turns by holding one advisory lock on a
 // dedicated connection that never idles out.
 //
-// A take asks with pg_try_advisory_lock and waits between asks, never queued
-// on the lock itself: a beforeAll that runs out of time leaves its take
-// behind, and release() must end that wait. A take still queued on the
-// server took the turn once its holder let go and never gave it back.
+// A take queues on the lock, so the turn goes to the files in the order they
+// asked. A beforeAll that runs out of time leaves its take queued behind, and
+// release() cancels it on the server: left there, it took the turn once its
+// holder let go and never gave it back.
 export function databaseTurn(databaseUrl: string) {
-  const lock = new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: databaseUrl,
-      idleTimeoutMillis: 0,
-      max: 1,
-    }),
-  });
+  const lock = new Client({ connectionString: databaseUrl });
+  let backend: Promise<number> | undefined;
+  let asking: Promise<unknown> | undefined;
+  let held = false;
   let released = false;
-  let asking: Promise<unknown> = Promise.resolve();
+  let releasing: Promise<void> | undefined;
+
+  const connect = () => {
+    backend ??= lock.connect().then(async () => {
+      const { rows } = await lock.query<{ pid: number }>(
+        'SELECT pg_backend_pid() AS pid',
+      );
+      return rows[0].pid;
+    });
+    return backend;
+  };
+
+  const cancelAsk = async (pid: number) => {
+    const canceller = new Client({ connectionString: databaseUrl });
+    await canceller.connect();
+    try {
+      await canceller.query('SELECT pg_cancel_backend($1)', [pid]);
+    } finally {
+      await canceller.end();
+    }
+  };
+
+  // A cancel can reach the server before the ask it is meant for, so it is
+  // sent again until the ask ends.
+  const cancelUntilSettled = async (ask: Promise<unknown>, pid: number) => {
+    let settled = false;
+    const ended = ask.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    while (!settled) {
+      await cancelAsk(pid);
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        ended,
+        new Promise((resolve) => {
+          timer = setTimeout(resolve, 250);
+        }),
+      ]);
+      clearTimeout(timer);
+    }
+  };
+
+  const giveBack = async () => {
+    released = true;
+    if (!backend) return;
+    const pid = await backend.catch(() => undefined);
+    if (asking && pid !== undefined) await cancelUntilSettled(asking, pid);
+    // Closing the session gives the turn back if it was held.
+    await lock.end().catch(() => undefined);
+  };
+
   return {
-    release: async () => {
-      released = true;
-      await asking.catch(() => undefined);
-      // Closing the connection gives the turn back if the last ask took it.
-      await lock.$disconnect();
+    // Gives the turn back, or ends a take still queued; once is enough.
+    release: () => {
+      releasing ??= giveBack();
+      return releasing;
     },
-    // Resolves once the turn is held, or, without it, once release() ran.
+    // Resolves once the turn is held (at once when it already is), or,
+    // without it, once release() ran.
     take: async () => {
-      while (!released) {
-        const ask = lock.$queryRaw<{ taken: boolean }[]>`
-          SELECT pg_try_advisory_lock(79079) AS taken`;
-        asking = ask;
-        const [row] = await ask;
-        if (row?.taken) return;
-        await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
-      }
+      if (held || released) return;
+      asking = connect().then(() =>
+        lock.query('SELECT pg_advisory_lock(79079)'),
+      );
+      // A take cancelled by release() ends without the turn.
+      held = await asking.then(
+        () => true,
+        (error: unknown) => {
+          if (!released) throw error;
+          return false;
+        },
+      );
+      asking = undefined;
     },
   };
 }
