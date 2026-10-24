@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-import { refusal } from '../auth/sign-up.service';
+import { refusal } from '../auth/http-refusal';
 
 // The roles that answer a request for their garage, by quote or decline.
 export const ANSWERING = new Set(['garage', 'receptionist', 'mechanic']);

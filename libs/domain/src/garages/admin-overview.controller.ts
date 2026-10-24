@@ -33,8 +33,8 @@ import {
 } from './verification/suspension/suspended-garages';
 import { VerificationService } from './verification/verification.service';
 import { Requires } from '../auth/actor.guard';
+import { refusal } from '../auth/http-refusal';
 import { PRISMA } from '../auth/prisma';
-import { refusal } from '../auth/sign-up.service';
 import type { PrismaClient } from '../generated/prisma/client';
 import { periodRange } from '../insights/periods';
 import {

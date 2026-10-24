@@ -13,9 +13,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type {
   Account,
   Booking,

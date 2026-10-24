@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 import { isValidCui, isWeeklyHours } from '@motor-fix/contracts';
@@ -7,7 +8,7 @@ import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
 import { addMonths, localDay } from './bucharest';
-import { BRANDS } from './catalogue/brands';
+import { BRANDS } from './catalogue/brands/brands';
 import { dayOf } from './garages/documents/document-cycle/document-cycle.service';
 
 const databaseUrl =
@@ -571,6 +572,79 @@ describe('seed of the listed garages', () => {
         new Date('2026-02-01T00:00:00Z').getTime(),
       );
     }
+  });
+
+  // @traces 105-FR-020
+  it('holds a retired brand an admin owns and a brand with cars and garages that work on it', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const admin = await prisma.account.findUniqueOrThrow({
+      where: { email: 'admin@example.test' },
+    });
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    const dacia = await prisma.brand.findUniqueOrThrow({
+      include: {
+        _count: {
+          select: {
+            cars: true,
+            garageBrands: { where: { stance: 'works_on' } },
+          },
+        },
+      },
+      where: { key: 'dacia' },
+    });
+
+    expect([saab.active, saab.updatedBy]).toEqual([false, admin.id]);
+    expect(dacia._count.cars).toBeGreaterThan(0);
+    expect(dacia._count.garageBrands).toBeGreaterThan(0);
+  });
+
+  // An API that booted before the seed has loaded Saab active and its own.
+  // @traces 105-FR-020
+  it('retires a Saab the loader already holds and hands it to the admin', async () => {
+    await prisma.brand.create({
+      data: {
+        key: 'saab',
+        name: 'Saab',
+        roPossessive: 'Saabul tău',
+        slug: 'saab',
+      },
+    });
+
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const admin = await prisma.account.findUniqueOrThrow({
+      where: { email: 'admin@example.test' },
+    });
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    expect([saab.active, saab.updatedBy]).toEqual([false, admin.id]);
+  });
+
+  // A Saab another admin already owns stays as that admin left it.
+  // @traces 105-FR-020
+  it('leaves a Saab another admin owns as it is', async () => {
+    const owner = randomUUID();
+    await prisma.brand.create({
+      data: {
+        key: 'saab',
+        name: 'Saab',
+        roPossessive: 'Saabul tău',
+        slug: 'saab',
+        updatedBy: owner,
+      },
+    });
+
+    expect(seed('test').status).toBe(0);
+
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    expect([saab.active, saab.updatedBy]).toEqual([true, owner]);
   });
 
   // @traces 227-FR-013

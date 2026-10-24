@@ -10,8 +10,8 @@ import {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
-import { refusal } from '../../auth/sign-up.service';
 import type { Mechanic, Prisma } from '../../generated/prisma/client';
 import { featureOn } from '../features/feature-on';
 import { assertGarageOwner } from '../garage-brands/garage-brands.service';

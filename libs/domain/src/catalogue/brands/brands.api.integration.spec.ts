@@ -5,22 +5,28 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { BrandLoader } from './brand-loader';
 import { BRANDS, type BrandRecord } from './brands';
 import { BrandsService } from './brands.service';
-import { CatalogueModule } from './catalogue.module';
-import { AuthModule } from '../auth/auth.module';
-import { serialDatabase } from '../auth/serial-db.testing';
+import { AuditService } from '../../audit/audit.service';
+import { AUTH_REDIS } from '../../auth/attempts';
+import { AuthModule } from '../../auth/auth.module';
+import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
-} from '../notifications/notifications.testing';
+} from '../../notifications/notifications.testing';
+import { BrandLoader } from '../brand-loader';
+import { CatalogueModule } from '../catalogue.module';
 
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();
 const redis = new Redis(redisUrl);
 serialDatabase(databaseUrl);
+
+// The cache entry a search reads now: the list under the current version.
+const activeKey = async () =>
+  `brands:active:${(await redis.get('brands:version')) ?? 0}`;
 
 let app: INestApplication;
 let loader: BrandLoader;
@@ -47,7 +53,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
-  await redis.del('brands:active');
+  await redis.incr('brands:version');
 });
 
 afterAll(async () => {
@@ -69,6 +75,7 @@ const numbered = (count: number): BrandRecord[] =>
   }));
 
 describe('GET /brands', () => {
+  // @traces 039-FR-010
   it.each(['sko', 'Skoda', 'ŠKODA'])(
     'finds Škoda for a visitor typing %s',
     async (q) => {
@@ -101,6 +108,7 @@ describe('GET /brands', () => {
     ]);
   });
 
+  // @traces 039-FR-011
   it('lists every active brand by popularity, then unranked brands by name', async () => {
     await loader.load([
       { key: 'zeta', name: 'Zeta', popularity: 2 },
@@ -166,6 +174,7 @@ describe('GET /brands', () => {
     expect(names(res.body)[0]).toBe(name);
   });
 
+  // @traces 039-FR-012
   it('pages 20 brands at a time with a cursor to the next page', async () => {
     await loader.load(numbered(25));
 
@@ -238,7 +247,7 @@ describe('GET /brands', () => {
   it('serves the list from the cache until the loader changes it', async () => {
     await loader.load(BRANDS);
     await search({ q: 'dacia' });
-    expect(await redis.get('brands:active')).not.toBeNull();
+    expect(await redis.get(await activeKey())).not.toBeNull();
     await prisma.brand.update({
       data: { name: 'Dacia Groupe' },
       where: { key: 'dacia' },
@@ -257,14 +266,48 @@ describe('GET /brands', () => {
     ]);
   });
 
+  // @traces 039-FR-012
   it('keeps the cached list for an hour', async () => {
     await loader.load(BRANDS);
     await search();
 
-    const ttl = await redis.ttl('brands:active');
+    const ttl = await redis.ttl(await activeKey());
 
     expect(ttl).toBeGreaterThan(3590);
     expect(ttl).toBeLessThanOrEqual(3600);
+  });
+});
+
+// @traces 105-FR-014
+describe('a search racing a change of the list', () => {
+  it('never caches the list it read before the change, ten runs out of ten', async () => {
+    await loader.load(BRANDS);
+    const cache = app.get<Redis>(AUTH_REDIS);
+    for (let run = 1; run <= 10; run++) {
+      const name = `Dacia ${run}`;
+      // A cold cache, so the search reads PostgreSQL.
+      for (const key of await cache.keys('brands:*')) await cache.del(key);
+      let raced = false;
+      // The search has read PostgreSQL; the change commits and drops the
+      // cache before the search writes what it read.
+      const write = jest
+        .spyOn(cache, 'set')
+        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
+          write.mockRestore();
+          raced = true;
+          await loader.load(
+            BRANDS.map((brand) =>
+              brand.key === 'dacia' ? { ...brand, name } : brand,
+            ),
+          );
+          return cache.set(...args);
+        });
+
+      await search({ q: 'dacia' });
+
+      expect(raced).toBe(true);
+      expect(names((await search({ q: 'dacia' })).body)).toEqual([name]);
+    }
   });
 });
 
@@ -279,7 +322,11 @@ describe('BrandsService without Redis', () => {
     });
     down.on('error', () => undefined);
 
-    const page = await new BrandsService(prisma, down).search('sko');
+    const page = await new BrandsService(
+      prisma,
+      down,
+      new AuditService(),
+    ).search('sko');
 
     expect(page.items.map((item) => item.name)).toEqual(['Škoda']);
     down.disconnect();

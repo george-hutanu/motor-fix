@@ -35,6 +35,8 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // @traces 105-FR-019
+  'GET /api/v1/admin/brands': {},
   // @traces 414-FR-002
   'GET /api/v1/admin/catalogue-jobs': {},
   'GET /api/v1/admin/garages': {
@@ -81,6 +83,11 @@ const FIXTURES: Record<
         return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
       },
     },
+  // @traces 105-FR-019
+  'PATCH /api/v1/admin/brands/{id}': {
+    body: () => ({ active: false, seenUpdatedAt: brandSeen }),
+    path: async () => `/api/v1/admin/brands/${await storedBrand()}`,
+  },
   'PATCH /api/v1/admin/copy-voices/{voice}': {
     body: () => ({
       enabled: false,
@@ -101,6 +108,10 @@ const FIXTURES: Record<
       );
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
+  },
+  // @traces 105-FR-019
+  'POST /api/v1/admin/brands': {
+    body: () => ({ name: `Marca ${randomUUID().slice(0, 8)}` }),
   },
   // @traces 414-FR-003 414-FR-004 414-FR-007
   'POST /api/v1/admin/catalogue-jobs/{id}/approve': {
@@ -270,6 +281,22 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// An active brand of the loader's, and the value an admin edit sends back.
+let brandSeen = '';
+async function storedBrand() {
+  const key = `audit-${randomUUID()}`;
+  const row = (
+    await db.query(
+      `INSERT INTO brand (id, key, name, slug, updated_at)
+       VALUES (gen_random_uuid(), $1, $1, $1, now())
+       RETURNING id, updated_at`,
+      [key],
+    )
+  ).rows[0] as { id: string; updated_at: Date };
+  brandSeen = row.updated_at.toISOString();
+  return row.id;
+}
 
 // A garage's job waiting for an admin's decision, under a name of its own.
 async function proposedJob() {

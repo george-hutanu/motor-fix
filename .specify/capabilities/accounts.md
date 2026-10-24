@@ -45,6 +45,7 @@ features:
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
   - 500-trust-railway-edge
+  - 105-brand-list-admin
   - 1370-release-seed-no-ssh
 ---
 
@@ -1186,6 +1187,10 @@ _From 500-trust-railway-edge._
 ### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
 
 _From 500-trust-railway-edge._
+
+### 105-FR-016 — `refusal` MUST live in a shared module of the auth library (`libs/domain/src/auth/http-refusal.ts`), re-exported where the existing imports expect it or every import updated; after the change no file outside `libs/domain/src/auth/` imports `auth/sign-up.service` for it (`git grep` shows none). (#568)
+
+_From 105-brand-list-admin._
 
 ### 500-FR-012 — `hops` MUST list the X-Forwarded-For entries left to right, then the address of the socket the API was called on, each masked as FR-001–FR-004 mask the caller (an entry that is not an address reads `unknown`, an empty entry is skipped), comma-separated without spaces. At most the rightmost 8 entries of the header are listed; when more were sent, the list starts with `+<n>`, the number left out. With no X-Forwarded-For header the list is the socket address alone. The entry just before the socket is the one the web edge appended (FR-015).
 

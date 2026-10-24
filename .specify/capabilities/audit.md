@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -13,6 +13,7 @@ features:
   - 1352-catalogue-job-visibility
   - 129-delete-account
   - 469-activity-log-at-index
+  - 105-brand-list-admin
 ---
 
 # Capability: Audit history
@@ -232,6 +233,10 @@ _From 469-activity-log-at-index._
 ### 469-FR-005 — The story MUST change no API, contract, screen or answer: the endpoint, its parameters, its page shape, the masking and the ordering stay as 391 states them.
 
 _From 469-activity-log-at-index._
+
+### 105-FR-010 — Every create, rename, retirement and bring-back MUST write its audit entries through the shared writer inside the same transaction (390-FR-001, 164-FR-001): subject type `brand`, subject id the brand, actor the admin (role `admin`), a `create` entry with the new values for an add and one `update` entry per changed field (`name`, `slug`, `active`) with old and new values for the rest, so the history shows admin, time, brand, old and new values. Popularity is never written here.
+
+_From 105-brand-list-admin._
 
 ## Retired
 

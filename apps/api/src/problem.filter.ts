@@ -5,6 +5,7 @@ import {
   type FieldProblem,
   fieldProblems,
   type Problem,
+  type ProblemBrand,
 } from '@motor-fix/contracts';
 import { countRateLimitRefusal, systemLog } from '@motor-fix/domain';
 import {
@@ -32,6 +33,7 @@ export function sendProblem(
     | 'to'
     | 'rule'
     | 'warnings'
+    | 'brand'
   > & {
     field?: string;
     inviteId?: string;
@@ -104,10 +106,11 @@ export class ProblemFilter implements ExceptionFilter {
       // the wait before a limit lifts, what a refused move was about, and
       // the garage a refused quote request names, the one field a refused
       // re-check marks, and the notes a refused listing check keeps beside
-      // its errors. Nothing else an exception
-      // holds leaves.
+      // its errors, and the current brand a stale save is refused with.
+      // Nothing else an exception holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
+        ...brand(own.brand),
         ...warnings(own.warnings),
         ...attemptsLeft(own.attemptsLeft),
         ...retryAfter(own.retryAfterSeconds),
@@ -160,6 +163,28 @@ function retryAfter(value: unknown): Pick<Problem, 'retryAfterSeconds'> {
   return typeof value === 'number' && Number.isInteger(value) && value > 0
     ? { retryAfterSeconds: value }
     : {};
+}
+
+// The brand as it is now, when a stale save is refused with it: its listed
+// fields only, and none of it unless every one has its type.
+function brand(value: unknown): Pick<Problem, 'brand'> {
+  if (typeof value !== 'object' || value === null) return {};
+  const b = value as Record<keyof ProblemBrand, unknown>;
+  const whole =
+    typeof b.id === 'string' &&
+    typeof b.name === 'string' &&
+    typeof b.slug === 'string' &&
+    (b.state === 'active' || b.state === 'retired') &&
+    Number.isInteger(b.garages) &&
+    Number.isInteger(b.cars) &&
+    typeof b.updatedAt === 'string' &&
+    (typeof b.updatedBy === 'string' || b.updatedBy === null);
+  if (!whole) return {};
+  const { cars, garages, id, name, slug, state, updatedAt, updatedBy } =
+    b as ProblemBrand;
+  return {
+    brand: { cars, garages, id, name, slug, state, updatedAt, updatedBy },
+  };
 }
 
 function detail(message: unknown): string | undefined {

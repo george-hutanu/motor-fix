@@ -15,6 +15,14 @@ import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-contr
 import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-accounts-controller-summary';
 import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
 import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
+import { AdminBrandDto } from '../models/admin-brand-dto';
+import { AdminBrandListDto } from '../models/admin-brand-list-dto';
+import { adminBrandsControllerCreate } from '../fn/admin/admin-brands-controller-create';
+import { AdminBrandsControllerCreate$Params } from '../fn/admin/admin-brands-controller-create';
+import { adminBrandsControllerList } from '../fn/admin/admin-brands-controller-list';
+import { AdminBrandsControllerList$Params } from '../fn/admin/admin-brands-controller-list';
+import { adminBrandsControllerUpdate } from '../fn/admin/admin-brands-controller-update';
+import { AdminBrandsControllerUpdate$Params } from '../fn/admin/admin-brands-controller-update';
 import { AdminCatalogueJobsDto } from '../models/admin-catalogue-jobs-dto';
 import { AdminDemandDto } from '../models/admin-demand-dto';
 import { AdminGaragesDto } from '../models/admin-garages-dto';
@@ -158,6 +166,81 @@ export class AdminService extends BaseService {
   adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
     const resp = this.adminAccountsControllerSummary$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerList()` */
+  static readonly AdminBrandsControllerListPath = '/api/v1/admin/brands';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminBrandsControllerList$Response(params?: AdminBrandsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandListDto>> {
+    const obs = adminBrandsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminBrandsControllerList(params?: AdminBrandsControllerList$Params, context?: HttpContext): Promise<AdminBrandListDto> {
+    const resp = this.adminBrandsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandListDto>): AdminBrandListDto => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerCreate()` */
+  static readonly AdminBrandsControllerCreatePath = '/api/v1/admin/brands';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerCreate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerCreate$Response(params: AdminBrandsControllerCreate$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandDto>> {
+    const obs = adminBrandsControllerCreate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerCreate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerCreate(params: AdminBrandsControllerCreate$Params, context?: HttpContext): Promise<AdminBrandDto> {
+    const resp = this.adminBrandsControllerCreate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandDto>): AdminBrandDto => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerUpdate()` */
+  static readonly AdminBrandsControllerUpdatePath = '/api/v1/admin/brands/{id}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerUpdate$Response(params: AdminBrandsControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandDto>> {
+    const obs = adminBrandsControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerUpdate(params: AdminBrandsControllerUpdate$Params, context?: HttpContext): Promise<AdminBrandDto> {
+    const resp = this.adminBrandsControllerUpdate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandDto>): AdminBrandDto => r.body);
   }
 
   /** Path part for operation `jobDecisionsControllerQueue()` */

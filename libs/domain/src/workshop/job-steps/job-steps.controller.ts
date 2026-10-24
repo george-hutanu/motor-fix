@@ -33,8 +33,8 @@ import {
 
 import { JobStepsService } from './job-steps.service';
 import { CurrentActor } from '../../auth/actor.guard';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
-import { refusal } from '../../auth/sign-up.service';
 
 const KEY = 'Idempotency-Key';
 const uuid = () => new ParseUUIDPipe();

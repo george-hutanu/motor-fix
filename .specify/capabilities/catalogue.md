@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -19,6 +19,7 @@ features:
   - 007-brand-headline
   - 414-approve-catalogue-job
   - 245-seed-catalogues
+  - 105-brand-list-admin
 ---
 
 # Capability: Catalogue
@@ -39,13 +40,9 @@ _From 228-how-it-works-list-garage._
 
 _From 007-brand-headline._
 
-### 039-FR-005 — When a brand's name or slug is corrected in the file, the loader MUST keep the brand's id and every garage row that names it, and readers MUST see the new name.
+### 105-FR-012 — The loader MUST skip every stored brand whose `updated_by` is set: it neither applies the file's record for that key (name, slug, state, "your" form, rank) nor retires it for being absent from the file; it MUST still create every file brand whose key is missing, a file record whose key, name or slug is held by an admin-owned brand is skipped and logged (one warning line naming the key), never a load failure; a collision between two loader-owned brands still fails the load (039-FR-007 unchanged).
 
-_From 039-brand-catalogue._
-
-### 039-FR-006 — When a brand is absent from the file, the loader MUST keep it with its garage rows and mark it inactive; inactive brands are not returned by brand search or pickers.
-
-_From 039-brand-catalogue._
+_From 105-brand-list-admin._
 
 ### 039-FR-007 — A file holding two brands with the same stable key, name or slug, or a brand whose name or slug is already held by another stored brand (a retired one included), MUST fail the whole load, naming the duplicate, and the stored list MUST be exactly what it was before.
 
@@ -55,9 +52,9 @@ _From 039-brand-catalogue._
 
 _From 039-brand-catalogue._
 
-### 039-FR-009 — A change to the brand list MUST drop the cached brand list (one cache entry holding the whole active list) so the next search reflects it.
+### 105-FR-014 — A brand search that read PostgreSQL before a brand change committed MUST NOT be able to write that older list into the cache after the change dropped it: either the cache key carries a version the change bumps, or the cache write is refused when the entry was dropped since the read (for example `SET ... NX` after the drop, or a version check); an integration test with that interleaving (read PostgreSQL, change and drop, then the stale write) shows the new list on the next search. The rule holds for the loader's drop and for the admin writes' drop alike. (#569)
 
-_From 039-brand-catalogue._
+_From 105-brand-list-admin._
 
 ### 039-FR-010 — Brand search MUST match the typed text against brand names ignoring accents and case ("sko", "Skoda" and "ŠKODA" all find "Škoda"), and return only active brands.
 
@@ -331,6 +328,78 @@ _From 245-seed-catalogues._
 
 _From 245-seed-catalogues._
 
+### 105-FR-001 — The system MUST serve `GET /api/v1/admin/brands` to admins alone (capability `admin.catalogue`), with the other admin routes' refusals: every other signed-in role 404 `not_found`, no session 401 `sign_in_required`, a suspended admin 403 `account_suspended`; the same refusals apply to every route under `admin/brands`.
+
+_From 105-brand-list-admin._
+
+### 105-FR-002 — The list MUST return every brand, active and retired, each with: id, name, slug, state (`active` | `retired`), `garages` (the count of garage stances "works on" for it), `cars` (the count of drivers' cars of that brand; both counts are every stored row, whatever the state of the garage, car or account), `updatedAt` (the value the admin sends back as "seen" on an edit) and `updatedBy` (the account id of the admin who last changed it, null when only the loader did), ordered by name (locale-insensitive, folded).
+
+_From 105-brand-list-admin._
+
+### 105-FR-003 — The list MUST accept an optional `q` and keep only the brands whose folded name contains the folded `q` (the same fold as public search, 039-FR-010); an empty `q` returns everything; a `q` longer than 40 characters is 400 `validation_failed` (the name's upper bound). The list is not paged: the whole catalogue is a few hundred rows and the admin filters by search.
+
+_From 105-brand-list-admin._
+
+### 105-FR-004 — `POST /api/v1/admin/brands` with `{ name }` MUST create an active brand: name trimmed, 2 to 40 visible characters, no control characters; slug `slugOf(name)`; key equal to the slug (the stable key the loader matches on; the file never holds this key); popularity null; `ro_possessive` null; `updated_by` the calling admin. It answers 201 with the brand row as FR-002 describes it.
+
+_From 105-brand-list-admin._
+
+### 105-FR-005 — A create or rename whose slug is held by another brand, active or retired, MUST answer 409 `brand_exists` with the message `Marca există deja: <holder's name>`; a name whose slug is empty, too short or too long MUST answer 400 `validation_failed`. The check is on the slug, so accents and case never make a second brand; the unique constraints on `slug` and `name` back it under concurrency.
+
+_From 105-brand-list-admin._
+
+### 105-FR-006 — `PATCH /api/v1/admin/brands/{id}` with `{ name?, active?, seenUpdatedAt }` MUST rename and/or retire or bring back the brand in one transaction, keeping its id; the slug follows the new name; cars, garage stances, prices, requests, reviews and the audit history keep pointing to it. A body with neither `name` nor `active` is 400 `validation_failed`. The checks run in this order: 400 `validation_failed` for a request the route's pipes refuse before any lookup (an `{id}` that is not a uuid, a name outside 2–40 visible characters, a `seenUpdatedAt` that is not an ISO time, an unknown field), 404 `not_found` for an unknown id, 400 `validation_failed` for a body with neither field or a name whose slug falls outside 2–40, 409 `stale_value` when `seenUpdatedAt` differs from the row's `updated_at` (the answer carries the current row), 409 `brand_exists`, then the no-op: a change that alters no field writes nothing (no row update, no audit entry) and answers 200 with the row as it is.
+
+_From 105-brand-list-admin._
+
+### 105-FR-007 — There MUST be no route that deletes a brand; retiring is the only way out of the pickers.
+
+_From 105-brand-list-admin._
+
+### 105-FR-008 — A retired brand MUST be left out of public brand search and every picker (039-FR-006 applies to admin retirement as to the loader's), and MUST stay on the cars, stances, prices and history that name it, under its name.
+
+_From 105-brand-list-admin._
+
+### 105-FR-009 — Every write MUST set `updated_by` to the calling admin and drop the cached active list in the same use case (039-FR-009), after the transaction commits, so open pickers get the new list on their next search.
+
+_From 105-brand-list-admin._
+
+### 105-FR-010 — Every create, rename, retirement and bring-back MUST write its audit entries through the shared writer inside the same transaction (390-FR-001, 164-FR-001): subject type `brand`, subject id the brand, actor the admin (role `admin`), a `create` entry with the new values for an add and one `update` entry per changed field (`name`, `slug`, `active`) with old and new values for the rest, so the history shows admin, time, brand, old and new values. Popularity is never written here.
+
+_From 105-brand-list-admin._
+
+### 105-FR-011 — The `brand` table MUST gain a nullable `updated_by` column (the id of the admin who last changed it; null for a loader-only brand; a plain uuid with no foreign key, never nulled when that account is deleted, so admin ownership survives the account), added by a migration and empty for every existing row.
+
+_From 105-brand-list-admin._
+
+### 105-FR-013 — The loader's transaction timeout MUST be read from `BRAND_LOAD_TIMEOUT_MS` through the contracts library's env readers (as `LISTING_SUBMIT_TX_TIMEOUT_MS` is), default 60000 ms, a positive whole number or the API refuses to start with a message naming the variable; a unit test covers the default and an override. (#570)
+
+_From 105-brand-list-admin._
+
+### 105-FR-015 — `brands.ts`, `brands.controller.ts` and `brands.service.ts` MUST move to `libs/domain/src/catalogue/brands/` with their tests, named after the folder, and the new admin controller and service MUST live there too; their three entries leave `scripts/structure-baseline.json` and the structure check passes in CI. (#659)
+
+_From 105-brand-list-admin._
+
+### 105-FR-017 — The DTOs (`AdminBrandDto`, `AdminBrandListDto`, `CreateBrandDto`, `UpdateBrandDto`) MUST come from the contracts library, be validated at the edge, be described in the OpenAPI document and be in the generated Angular client (`npx nx run data-access:generate`).
+
+_From 105-brand-list-admin._
+
+### 105-FR-018 — The new routes MUST be listed in the observability inventory (`infra/observability/inventory.json`) with their panel and alert, as every new endpoint.
+
+_From 105-brand-list-admin._
+
+### 105-FR-019 — `admin/brands` MUST NOT be `@Public()` and MUST join the admin routes' guard tests (the audit guard test of 164-FR-004 and the admin routes 404 test) by being present in the OpenAPI document.
+
+_From 105-brand-list-admin._
+
+### 105-FR-020 — The seed used by the end-to-end suite and the QA run MUST hold at least one retired brand and one brand with cars and "works on" stances, so the list's states and counts are visible without writing.
+
+_From 105-brand-list-admin._
+
+### 105-FR-021 — Tests MUST cover, before the code (Principle II): in Jest (API, real PostgreSQL and Valkey) — the list's rows, counts and search; 404/401/403 per role; add with slug and cache drop; duplicate on accent and case variants and on a retired holder; rename keeps the id and references; retire hides from public search and keeps references; bring back; no-op writes nothing; 409 `stale_value`; one audit entry per changed field with old and new values (a rename writes two: `name` and `slug`); the loader skips an admin-changed brand and still adds a missing one; the stale cache write interleaving (FR-014); in unit tests — `BRAND_LOAD_TIMEOUT_MS` default and override, DTO validation bounds.
+
+_From 105-brand-list-admin._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
@@ -343,3 +412,6 @@ _From 245-seed-catalogues._
 - `1352-FR-008` — superseded by `414-FR-010` (2026-10-23)
 - `405-FR-005` — superseded by `245-FR-002` (2026-10-23)
 - `228-FR-015` — superseded by `245-FR-002` (2026-10-23)
+- `039-FR-005` — superseded by `105-FR-012` (2026-10-24)
+- `039-FR-006` — superseded by `105-FR-012` (2026-10-24)
+- `039-FR-009` — superseded by `105-FR-014` (2026-10-24)
