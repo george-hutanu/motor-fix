@@ -26,7 +26,12 @@ async function open(
   await expect(
     page.locator('mf-cockpit-gauges-sample mf-lamp').first(),
   ).toBeVisible();
-  await page.waitForFunction(() =>
+  await settled(page);
+}
+
+// No finite animation still running, so axe reads colours as drawn.
+const settled = (page: Page) =>
+  page.waitForFunction(() =>
     document
       .getAnimations()
       .every(
@@ -35,7 +40,6 @@ async function open(
           a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
       ),
   );
-}
 
 const ids = async (
   page: Page,
@@ -57,15 +61,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(
       page.locator('mf-cockpit-gauges-sample mf-odometer').nth(1),
     ).toContainText('1.400–1.800 lei');
-    await page.waitForFunction(() =>
-      document
-        .getAnimations()
-        .every(
-          (a) =>
-            a.playState !== 'running' ||
-            a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
-        ),
-    );
+    await settled(page);
     expect(await ids(page)).toEqual([]);
   });
 
