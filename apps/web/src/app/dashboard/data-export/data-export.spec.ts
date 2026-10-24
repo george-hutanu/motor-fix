@@ -180,6 +180,22 @@ describe('"Descarcă datele mele" in the account panel', () => {
     expect(button(element)?.disabled).toBe(false);
   });
 
+  it('shows the task error and keeps the button when the download fails', async () => {
+    const element = await render([
+      row({ expiresAt: '2026-10-31T10:00:00.000Z', status: 'ready' }),
+    ]);
+    download.mockRejectedValueOnce(refusal(503, 'service_unavailable'));
+
+    link(element)?.click();
+    await settle();
+
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      ro.form.problem.service_unavailable,
+    );
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(link(element)?.disabled).toBe(false);
+  });
+
   it('says the file failed and offers the button again', async () => {
     const element = await render([row({ status: 'failed' })]);
 

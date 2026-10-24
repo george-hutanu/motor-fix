@@ -11,10 +11,10 @@ import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
-// The server names the file; a header the browser hides gets the same form.
+// The name the server gives the file; the API is on the page's own origin,
+// so the header is always readable.
 const fileNameOf = (disposition: string | null) =>
-  /filename="([^"]+)"/.exec(disposition ?? '')?.[1] ??
-  `motorfix-date-${new Date().toISOString().slice(0, 10)}.zip`;
+  /filename="([^"]+)"/.exec(disposition ?? '')?.[1] ?? '';
 
 function saveFile(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
