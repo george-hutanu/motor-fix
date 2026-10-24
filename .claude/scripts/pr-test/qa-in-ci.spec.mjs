@@ -173,3 +173,45 @@ describe('a cloud session tests and merges with no laptop', () => {
     assert.match(skill, /Never set `agent-review` by hand; only the PR QA workflow/);
   });
 });
+
+// @traces 988-FR-006
+describe('the flows contract is written where the flows are written', () => {
+  // A flow that returned its findings at the end lost them on a throw, and a flow
+  // waiting for networkidle on a live page timed out. The agent, the skill
+  // and AGENTS.md say how a flow is written.
+  const routesAndFlows = sections(skill).find((s) => s.heading === 'Routes and flows')?.body ?? '';
+  const screens = sections(agents).find((s) => s.heading === 'Reviewing a change that has screens')?.body ?? '';
+
+  for (const [name, md] of [
+    ['the agent', agent],
+    ["the skill's Routes and flows", routesAndFlows],
+    ['AGENTS.md', screens],
+  ]) {
+    it(`${name}: findings handed in, pushed as found, pushed or returned and never both`, () => {
+      assert.match(md, /`findings`/);
+      assert.match(md, /push(?:es)? each finding/i);
+      assert.match(md, /never both/);
+    });
+
+    it(`${name}: waits on a visible element, waitForText or the stream's open state, never networkidle`, () => {
+      assert.match(md, /waitForText/);
+      assert.match(md, /stream/);
+      assert.match(md, /never `networkidle`/);
+    });
+  }
+
+  for (const [name, md] of [
+    ['the skill', routesAndFlows],
+    ['AGENTS.md', screens],
+  ]) {
+    it(`${name} states the route grammar`, () => {
+      assert.ok(md.includes('`path[?query][@role][:status]`'));
+      assert.match(md, /`\/:lang`/);
+      assert.match(md, /`@role`[^.]*`\/app\/`|`\/app\/`[^.]*`@role`/);
+    });
+
+    it(`${name} says the flows are proven with --check before dispatch`, () => {
+      assert.match(md, /--check/);
+    });
+  }
+});
