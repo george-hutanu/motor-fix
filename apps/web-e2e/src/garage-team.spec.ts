@@ -40,6 +40,7 @@ async function openTeam(page: Page) {
   return page.getByRole('region', { name: 'Echipa' });
 }
 
+// @traces 055-FR-014
 test.describe('the garage team @seeded', () => {
   test("the owner reads the seeded team, each card's state and the count on the profile", async ({
     page,
