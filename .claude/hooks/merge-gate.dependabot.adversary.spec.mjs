@@ -5,7 +5,7 @@ import { decideMerge } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt: '2026-10-05T07:00:00Z' });
-const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
+const green = [run('Unit tests', 'SUCCESS'), run('PR title', 'SUCCESS'), run('CI OK', 'SUCCESS')];
 const commit = (over = {}) => ({ oid: 'abc1234def5678', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true, ...over });
 const bot = (rollup, over = {}) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup, author: { login: 'app/dependabot', is_bot: true }, commits: [commit()], ...over });
 const notPrQa = { judge: () => 'agent-review on abc1234 was written by .github/workflows/dependabot-review.yml, not the PR QA workflow' };

@@ -79,10 +79,10 @@
         "standard",
         "strict"
       ],
-      "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
+      "description": "Constitution VII: refuse `gh pr merge`, the REST merge call and the GraphQL `mergePullRequest` / `enablePullRequestAutoMerge` mutations while the PR's head commit has no `agent-review` success from the PR tester, or `CI OK` or `PR title` is failing, pending or missing",
       "fail_closed": true,
       "timeout_ms": 45000,
-      "fingerprint": "ba7c0795e68b"
+      "fingerprint": "47b42e02c21b"
     },
     {
       "id": "pre:tool:agent-model",

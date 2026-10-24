@@ -5,7 +5,7 @@ import { decideMerge } from './merge-gate.mjs';
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', workflowName = 'CI', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt, workflowName });
 const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
-const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
+const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')];
 
 describe('merge gate against a Mutation run on the head, adversarial', () => {
   // @traces 1344-FR-010
