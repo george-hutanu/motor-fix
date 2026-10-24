@@ -507,6 +507,33 @@ describe('seed of the listed garages', () => {
     }
   });
 
+  // @traces 105-FR-020
+  it('holds a retired brand an admin owns and a brand with cars and garages that work on it', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const admin = await prisma.account.findUniqueOrThrow({
+      where: { email: 'admin@example.test' },
+    });
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    const dacia = await prisma.brand.findUniqueOrThrow({
+      include: {
+        _count: {
+          select: {
+            cars: true,
+            garageBrands: { where: { stance: 'works_on' } },
+          },
+        },
+      },
+      where: { key: 'dacia' },
+    });
+
+    expect([saab.active, saab.updatedBy]).toEqual([false, admin.id]);
+    expect(dacia._count.cars).toBeGreaterThan(0);
+    expect(dacia._count.garageBrands).toBeGreaterThan(0);
+  });
+
   // @traces 227-FR-013
   it('gives the cards on Home a long brand list, an empty refused list and a mobile radius', async () => {
     expect(seed('test').status).toBe(0);

@@ -19,7 +19,7 @@ import {
 const { prisma } = fixtures();
 const redis = new Redis(redisUrlFor(3));
 const loader = new BrandLoader(prisma, new AuditService(), redis);
-const brands = new BrandsService(prisma, redis);
+const brands = new BrandsService(prisma, redis, new AuditService());
 serialDatabase(databaseUrl);
 
 const FILE: BrandRecord[] = [

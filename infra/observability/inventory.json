@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 172,
+    "count": 175,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -364,6 +364,19 @@
       ],
       "reason": "one CATALOGUE_JOB_DECIDED to the proposing garage's owner for each catalogue_job.decided event, keyed by the event id; one log line per event with the job id, the decision and how many owners were told, never the reason; no counter of its own, as its pending twin has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
       "story": "ST-414"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-brands",
+      "source": "libs/domain/src/catalogue/brands/admin-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/brands and /api/v1/admin/brands/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's brand list with its counts, the add and the edit (rename, retire, bring back), written to PostgreSQL with their audit entries in one transaction, then the cached active list dropped by bumping brands:version; one Brands log line per write naming the brand id and the admin's account id, never the name; a failed cache drop is a warning line; a 409 brand_exists or stale_value is the rule working; the API error-rate and latency rules cover the routes; no outside call",
+      "story": "ST-105"
     },
     {
       "kind": "queue",

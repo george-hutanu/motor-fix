@@ -6,6 +6,7 @@ import {
   AdminAccountsService,
   SUMMARY_KEY,
 } from '../admin/admin-accounts/admin-accounts.service';
+import { AuditService } from '../audit/audit.service';
 import { assistantThrottle } from '../auth/assistant/assistant.service';
 import { Attempts, AUTH_REDIS } from '../auth/attempts';
 import { ConsentThrottle } from '../auth/consents/consents.throttle';
@@ -226,6 +227,7 @@ const steps: [string, () => Promise<unknown>][] = [
       new BrandsService(
         { brand: { findMany: async () => [] } } as never,
         store,
+        new AuditService(),
       ).search(),
   ],
   [

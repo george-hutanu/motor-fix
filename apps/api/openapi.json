@@ -2210,6 +2210,152 @@
         ]
       }
     },
+    "/api/v1/admin/brands": {
+      "get": {
+        "operationId": "AdminBrandsController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Part of the name, accents and case ignored.",
+            "schema": {
+              "maxLength": 40,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminBrandsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          },
+          "409": {
+            "description": "brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/brands/{id}": {
+      "patch": {
+        "operationId": "AdminBrandsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no brand"
+          },
+          "409": {
+            "description": "stale_value (with the current brand); brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -10408,6 +10554,111 @@
         },
         "required": [
           "ids"
+        ]
+      },
+      "AdminBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Škoda"
+          },
+          "slug": {
+            "type": "string",
+            "example": "skoda"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "retired"
+            ]
+          },
+          "garages": {
+            "type": "number",
+            "description": "Garages that work on it.",
+            "example": 12
+          },
+          "cars": {
+            "type": "number",
+            "description": "Drivers’ cars of this brand.",
+            "example": 40
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Sent back as seenUpdatedAt on an edit.",
+            "format": "date-time"
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "The admin who last changed it; null when only the loader did.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "state",
+          "garages",
+          "cars",
+          "updatedAt",
+          "updatedBy"
+        ]
+      },
+      "AdminBrandListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminBrandDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Xpeng",
+            "maxLength": 40,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mercedes-Benz",
+            "maxLength": 40
+          },
+          "active": {
+            "type": "boolean",
+            "description": "false retires it, true brings it back."
+          },
+          "seenUpdatedAt": {
+            "type": "string",
+            "description": "The updatedAt the admin saw.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seenUpdatedAt"
         ]
       },
       "BrandDto": {

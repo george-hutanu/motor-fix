@@ -7,6 +7,7 @@ import request from 'supertest';
 
 import { BRANDS, type BrandRecord } from './brands';
 import { BrandsService } from './brands.service';
+import { AuditService } from '../../audit/audit.service';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -317,7 +318,11 @@ describe('BrandsService without Redis', () => {
     });
     down.on('error', () => undefined);
 
-    const page = await new BrandsService(prisma, down).search('sko');
+    const page = await new BrandsService(
+      prisma,
+      down,
+      new AuditService(),
+    ).search('sko');
 
     expect(page.items.map((item) => item.name)).toEqual(['Škoda']);
     down.disconnect();
