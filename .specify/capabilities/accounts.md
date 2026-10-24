@@ -45,6 +45,8 @@ features:
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
   - 140-account-delete-export
+  - 500-trust-railway-edge
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Accounts
@@ -205,9 +207,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-023 — The seed MUST add, outside production, one account per role (driver; garage owner of a seeded garage; receptionist and mechanic of that garage; admin), one driver-and-garage account whose last role is `garage`, and one suspended driver, all with e-mails under `example.test` and the password `parola-de-test` in development and test, which MUST come from `SEED_PASSWORD` in every other environment, an unset or unknown `APP_ENV` included (refused without it); an account whose e-mail exists is left as it is, so running it twice changes nothing.
+### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
 
-_From 082-sign-in._
+_From 1370-release-seed-no-ssh._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -1170,9 +1172,9 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-006 — A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the logged caller: the caller is the address the trusted-hop chain resolves to, with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`.
+### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
 
-_From 500-req-ip-behind-proxy._
+_From 500-trust-railway-edge._
 
 ### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
 
@@ -1229,6 +1231,13 @@ _From 140-account-delete-export._
 ### 140-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Valkey where rows are written: FR-001–FR-003 and FR-007–FR-008 (states, the 24-hour, `ready` and concurrent refusals, the three attempts, the 7-day expiry and file deletion, the clean-up on deletion, the assistant refusals, the download for the owner only), FR-004–FR-005 (every file present, no other file, the two-driver isolation over every file), FR-006 (one e-mail, none without an address), FR-011, FR-012 (refused with `in_work` and `paused`, allowed with `done`), FR-014; the web panel and dialog states in component specs (FR-009, FR-013, FR-015); and in Playwright: request the export and download the ZIP from the sandbox e-mail's link, delete a test driver and fail to sign in with it. Each test file names its FRs in a whole-line `// @traces` comment.
 
 _From 140-account-delete-export._
+### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
+
+_From 500-trust-railway-edge._
 
 ## Retired
 
@@ -1258,3 +1267,5 @@ _From 140-account-delete-export._
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
 - `129-FR-004` — superseded by `140-FR-012` (2026-10-24)
 - `129-FR-014` — superseded by `140-FR-015` (2026-10-24)
+- `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
+- `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)

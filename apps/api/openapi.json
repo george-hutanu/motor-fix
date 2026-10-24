@@ -5194,6 +5194,51 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/mechanics": {
+      "get": {
+        "operationId": "GarageMechanicsController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's mechanic cards, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
       "get": {
         "operationId": "getImageVariant",
@@ -15260,6 +15305,59 @@
         },
         "required": [
           "features"
+        ]
+      },
+      "GarageMechanicDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "speciality": {
+            "type": "string",
+            "nullable": true
+          },
+          "onProfile": {
+            "type": "boolean"
+          },
+          "hasAccount": {
+            "type": "boolean"
+          },
+          "rating": {
+            "type": "string",
+            "example": "4.9",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "speciality",
+          "onProfile",
+          "hasAccount",
+          "rating",
+          "reviewCount"
+        ]
+      },
+      "GarageMechanicsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageMechanicDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "PaymentMethodsDto": {

@@ -14,16 +14,18 @@ import { ProblemFilter, sendProblem } from './problem.filter';
 // forge log lines.
 const REQUEST_ID = /^[\w.-]{1,128}$/;
 
+// The browser reaches the API through Railway's edge (100.64.0.0/10) and the
+// web app's edge, each appending the address it saw. Trust is a list of ranges,
+// never a hop count, so an address the visitor writes into X-Forwarded-For is
+// never taken as req.ip.
+export const TRUSTED_PROXIES =
+  'loopback, linklocal, uniquelocal, 100.64.0.0/10';
+
 export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
   // A bad image address fails the boot, not every garage profile read.
   imageBaseUrl();
   app.useLogger(new JsonLogger());
-  // The browser reaches the API through the web app's edge, which appends the
-  // address it saw; only private hops are trusted, so req.ip is the caller's.
-  app
-    .getHttpAdapter()
-    .getInstance()
-    .set('trust proxy', 'loopback, linklocal, uniquelocal');
+  app.getHttpAdapter().getInstance().set('trust proxy', TRUSTED_PROXIES);
   // A listing draft holds up to 256 KB of form data, past the 100 KB every
   // other route reads; the draft's own limit answers above that with
   // draft_too_large. A body read here is not read again by Nest's parser.
