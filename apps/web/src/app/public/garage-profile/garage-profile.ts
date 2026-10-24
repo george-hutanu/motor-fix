@@ -4,6 +4,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   makeStateKey,
@@ -17,6 +18,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS } from '@motor-fix/contracts/events';
+import { openStatus } from '@motor-fix/contracts/open-status';
 import { nearOf } from '@motor-fix/contracts/search-place';
 import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import {
@@ -34,6 +36,7 @@ import { DetailsSection } from './details-section/details-section';
 import { EstimateBar } from './estimate-bar/estimate-bar';
 import { EstimateSection } from './estimate-section/estimate-section';
 import { Gone } from './gone/gone';
+import { openLine } from './open-line';
 import { PhotosSection } from './photos-section/photos-section';
 import { PriceSelection } from './price-selection/price-selection';
 import { PricesSection } from './prices-section/prices-section';
@@ -183,6 +186,20 @@ export class GarageProfile {
     const km = this.distanceKm();
     return km === undefined ? '' : formatDistance(km, this.i18n.language());
   });
+  // The clock the opening status reads: the server render's instant, then the
+  // browser's own once it starts, then each minute.
+  private readonly now = signal(new Date());
+  protected readonly statusSaid = computed(() => {
+    const garage = this.garage();
+    if (!garage) return null;
+    const now = this.now();
+    return openLine(
+      // An API not yet redeployed answers without the closed days.
+      openStatus(garage.hours, garage.closedDays ?? [], now),
+      now,
+      this.i18n,
+    );
+  });
   protected readonly removed = computed(
     () => this.profile.gone() && this.status() === 410,
   );
@@ -221,7 +238,11 @@ export class GarageProfile {
       if (garage && rendered) untracked(() => this.selection.sync(garage));
     });
     if (this.browser) {
+      const destroyRef = inject(DestroyRef);
       afterNextRender(() => {
+        this.now.set(new Date());
+        const tick = setInterval(() => this.now.set(new Date()), 60_000);
+        destroyRef.onDestroy(() => clearInterval(tick));
         rendered = true;
         const garage = untracked(this.garage);
         if (garage) this.selection.sync(garage);

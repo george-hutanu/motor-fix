@@ -91,6 +91,16 @@
       "one": "{count} recenzie",
       "other": "{count} de recenzii"
     },
+    "status": {
+      "break": "Pauză până la {start}",
+      "closedDay": "Închis azi · deschide {when} la {start}",
+      "closedHoliday": "Închis azi · sărbătoare legală · deschide {when} la {start}",
+      "closedNow": "Închis acum · deschide {when} la {start}",
+      "onDate": "pe {d} {month}",
+      "open": "Deschis azi până la {end}",
+      "today": "azi",
+      "tomorrow": "mâine"
+    },
     "verified": "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}.",
     "where": {
       "mobile": "Vine la tine în zona de {km}",
