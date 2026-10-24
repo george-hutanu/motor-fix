@@ -123,6 +123,7 @@ async function queuedEmail(name = 'andrei', eventId = 'evt-1') {
 const LEASE = 60_000;
 const claim = (id: string, ago: number) => claimAgo(prisma, id, ago);
 
+// @traces 523-FR-008 523-FR-010
 describe('many send jobs for one row', () => {
   it('calls Brevo once when ten run at once on a queued e-mail', async () => {
     const { row: queued } = await queuedEmail();
@@ -346,6 +347,7 @@ describe('a claim held by another job', () => {
     });
   });
 
+  // @traces 523-FR-009
   it('counts a live claim as live whatever the worker clock says', async () => {
     const { row: queued } = await queuedEmail();
     await claim(queued.id, 1000);

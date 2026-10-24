@@ -226,6 +226,7 @@ describe('the sweep of queued rows with no job', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('re-queued 1 '));
   });
 
+  // @traces 523-FR-014
   it('names at most the first ten rows it re-queued in its log line', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')

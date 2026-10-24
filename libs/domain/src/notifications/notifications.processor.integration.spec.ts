@@ -439,6 +439,7 @@ describe('the sweep job', () => {
   });
 });
 
+// @traces 523-FR-011 523-FR-012 523-FR-013
 describe('the sweep of held rows whose job was lost', () => {
   const NIGHT = '2026-10-04T20:10:00Z';
   const sweep = () =>
@@ -826,6 +827,7 @@ describe('through the queue', () => {
   }, 70_000);
 });
 
+// @traces 523-FR-001 523-FR-002 523-FR-003 523-FR-004 523-FR-005 523-FR-006 523-FR-007
 describe('a window whose flush job is already running', () => {
   const flushJob = (leaderId: string) =>
     processor.handle({ attemptsMade: 0, data: { leaderId }, name: 'flush' });
@@ -1090,6 +1092,7 @@ describe('two send jobs for one row', () => {
     });
   });
 
+  // @traces 523-FR-008 523-FR-009
   it('judges the lease on the database clock, not a worker clock running 61 s ahead', async () => {
     const andrei = await account('andrei');
     const row = await quote(andrei, 'evt-1');

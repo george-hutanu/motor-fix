@@ -184,6 +184,7 @@ describe('the sweep under hostile conditions', () => {
     await expect(service.requeueStranded()).resolves.toBe(0);
   });
 
+  // @traces 523-FR-015
   it('counts only the rows it handed over when the queue fails part way', async () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     // The page the sweep reads at a time, as its first read asks for it.
