@@ -298,21 +298,16 @@ async function restore(options: Options, touched: Touched[]) {
 }
 
 // The api goes first: its pre-deploy step migrates the database the others
-// use, then sets the monitor role's password.
-export const API_PRE_DEPLOY = [
-  'npx prisma migrate deploy && node scripts/monitor-password.ts',
-];
-
-// Staging's then adds the seed accounts that are missing, inside the new
-// image with the service's own database; the script refuses anywhere Railway
-// and the app do not both say staging.
-const STAGING_SEED = 'SEED_ONLY=1 sh scripts/reset-staging.sh';
+// use, sets the monitor role's password and, on staging, seeds. Railway runs
+// a pre-deploy command split into words, with no shell, so `a && b` only ran
+// `a` with the rest as its arguments (ST-1373): the steps live in
+// scripts/api-pre-deploy.sh, called with plain words.
+export const API_PRE_DEPLOY = ['sh scripts/api-pre-deploy.sh production'];
 
 export function apiPreDeploy(environment: string): string[] {
   if (environment === 'production') return API_PRE_DEPLOY;
-  if (environment === 'staging') {
-    return API_PRE_DEPLOY.map((command) => `${command} && ${STAGING_SEED}`);
-  }
+  if (environment === 'staging')
+    return ['sh scripts/api-pre-deploy.sh staging'];
   throw new Error(USAGE);
 }
 
