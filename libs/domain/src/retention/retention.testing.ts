@@ -52,9 +52,10 @@ export function retentionFixtures(
       return id;
     },
     async legalDocument(garageId: string, status: string, pages: string[]) {
-      const file = await prisma.verificationFile.create({
-        data: { garageId },
-      });
+      // A garage holds one live verification file; its documents share it.
+      const file =
+        (await prisma.verificationFile.findFirst({ where: { garageId } })) ??
+        (await prisma.verificationFile.create({ data: { garageId } }));
       const { id } = await prisma.legalDocument.create({
         data: {
           kind: `kind-${randomUUID()}`,

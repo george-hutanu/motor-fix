@@ -164,14 +164,16 @@ describe('the audit anonymising sweep', () => {
   });
 
   it("anonymises by the deletion of the entry's actor when it is about something else", async () => {
-    const gone = await data.account('gone', ['driver'], { status: 'deleted' });
+    const gone = await data.account('gone-actor', ['driver'], {
+      status: 'deleted',
+    });
     await data.entry({
       at: outside,
       kind: 'account_deleted',
       subjectId: gone,
       subjectType: 'account',
     });
-    const live = await data.account('live');
+    const live = await data.account('live-actor');
     const due = await data.entry({ actorId: gone, at: longAgo });
     const keep = await data.entry({ actorId: live, at: longAgo });
     await anonymiseAudit(prisma, now);
@@ -251,8 +253,8 @@ describe('the audit batches', () => {
   it('keep going until every due entry is anonymised', async () => {
     const total = RETENTION_BATCH + 4;
     await prisma.$executeRaw`
-      INSERT INTO activity_log (at, action, subject_type, subject_id, actor_role, actor_name, text)
-      SELECT ${outside}, 'update', 'car', gen_random_uuid(), 'system', 'System', 'old'
+      INSERT INTO activity_log (id, at, action, subject_type, subject_id, actor_role, actor_name, text)
+      SELECT gen_random_uuid(), ${outside}, 'update', 'car', gen_random_uuid(), 'system', 'System', 'old'
         FROM generate_series(1, ${total})`;
     expect(await anonymiseAudit(prisma, now)).toBe(total);
     expect(await anonymiseAudit(prisma, now)).toBe(0);

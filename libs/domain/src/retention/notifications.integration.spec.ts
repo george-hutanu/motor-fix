@@ -152,8 +152,8 @@ describe('the notification batches', () => {
     const ana = await data.account('ana');
     const total = RETENTION_BATCH + 3;
     await prisma.$executeRaw`
-      INSERT INTO notification (account_id, kind, channel, status, event_id, created_at)
-      SELECT ${ana}::uuid, 'quote_received', 'in_app', 'sent', gen_random_uuid()::text, ${outside}
+      INSERT INTO notification (id, account_id, kind, channel, status, event_id, created_at)
+      SELECT gen_random_uuid(), ${ana}::uuid, 'quote_received', 'in_app', 'sent', gen_random_uuid()::text, ${outside}
         FROM generate_series(1, ${total})`;
     await notification(ana, inside);
     await prisma.account.update({
