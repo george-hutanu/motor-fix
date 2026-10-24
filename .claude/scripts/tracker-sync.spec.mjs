@@ -90,7 +90,7 @@ function repoWith({ deferred, comment } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, realGh = false, now = () => new Date(2026, 9, 10, 12) } = {}) {
+async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, prJson, realGh = false, now = () => new Date(2026, 9, 10, 12) } = {}) {
   const out = [];
   const err = [];
   const ghCalls = [];
@@ -107,6 +107,7 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
     gh: realGh ? undefined : (args) => {
       ghCalls.push(args);
       if (ghFails(args)) throw new Error(`gh ${args.join(" ")}: HTTP 502`);
+      if (args[0] === "pr" && args[1] === "view" && prJson && args.includes("isDraft,labels")) return JSON.stringify(prJson);
       if (args[0] === "pr" && args[1] === "view") return args.includes(".url") ? `${PR_URL}\n` : "335\n";
       return "";
     },
@@ -209,6 +210,19 @@ describe("blocked and unblock", () => {
 
     await run(["unblock", "--pr", "335"], { gh, repo });
     assert.equal(gh.itemValues(60).Status, "QA");
+  });
+
+  // @traces 487-FR-001 487-FR-002 487-FR-003
+  it("unblock with no recorded prior reads the PR: ready returns to QA, a draft to its label's stage", async () => {
+    const ready = world({ story: "Blocked" });
+    const r = await run(["unblock", "--pr", "335"], { gh: ready, prJson: { isDraft: false, labels: [{ name: "in development" }, { name: "blocked" }] } });
+    assert.equal(ready.itemValues(60).Status, "QA");
+    assert.ok(prEdits(r).some((a) => a.join(" ").includes("--add-label QA --remove-label planning --remove-label in development")), JSON.stringify(prEdits(r)));
+
+    const draft = world({ story: "Blocked" });
+    const d = await run(["unblock", "--pr", "335"], { gh: draft, prJson: { isDraft: true, labels: [{ name: "planning" }, { name: "blocked" }] } });
+    assert.equal(draft.itemValues(60).Status, "Planning");
+    assert.ok(prEdits(d).some((a) => a.join(" ").includes("--add-label planning --remove-label in development --remove-label QA --remove-label blocked")));
   });
 });
 
