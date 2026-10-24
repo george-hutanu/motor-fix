@@ -439,8 +439,43 @@ describe("the garage's team read route", () => {
       );
     const team = entries.find((each) => each.name === 'garage-mechanics-list');
 
-    expect(Object.keys(read)).toEqual(['get']);
+    // @traces 056-FR-022
+    expect(Object.keys(read).sort()).toEqual(['get', 'post']);
     expect(team?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/mechanics$/);
     expect(team?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    // The owner's three writes, each with its route's metric and alerts.
+    for (const [name, route] of [
+      ['garage-mechanics-add', /\/mechanics$/],
+      ['garage-mechanics-edit', /\/mechanics\/:mechanicId$/],
+      ['garage-mechanics-remove', /\/mechanics\/:mechanicId$/],
+    ] as const) {
+      const write = entries.find((each) => each.name === name);
+      expect(write?.metric).toMatch(route);
+      expect(write?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    }
+  });
+});
+
+describe('the browser monitoring records', () => {
+  const inventory = JSON.parse(
+    readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+  );
+  const readme = readFileSync(
+    join(root, 'infra/observability/README.md'),
+    'utf8',
+  );
+
+  // @traces 947-FR-011
+  it('say Faro receives sessions and journeys under analytics consent only', () => {
+    const faro = JSON.stringify(inventory).match(
+      /"name":"grafana-faro"[^}]*"reason":"([^"]*)"/,
+    )?.[1];
+
+    expect(faro).toMatch(
+      /under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed/,
+    );
+    expect(readme).toMatch(/Without analytics\s+consent: no session id/);
+    expect(readme).toMatch(/no session replay is loaded/);
+    expect(readme).not.toMatch(/only once the analytics consent gate\s+ships/);
   });
 });

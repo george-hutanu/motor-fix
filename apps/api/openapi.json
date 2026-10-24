@@ -1076,6 +1076,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "phone_not_verified: SMS or WhatsApp without a confirmed phone; notification_type_always_sent, news_consent_required, channel_not_allowed"
           }
         },
         "security": [
@@ -5437,6 +5440,175 @@
         "tags": [
           "garages"
         ]
+      },
+      "post": {
+        "operationId": "GarageMechanicsController_add",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}": {
+      "patch": {
+        "operationId": "GarageMechanicsController_edit",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "GarageMechanicsController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a mechanic from the team, for the owner",
+        "tags": [
+          "garages"
+        ]
       }
     },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
@@ -6838,6 +7010,73 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/presence": {
+      "put": {
+        "operationId": "VerificationFileController_presence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationPresenceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "delete": {
+        "operationId": "VerificationFileController_leave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Gone from the file, or never there"
           },
           "404": {
             "description": "not_found: not an admin, or no file"
@@ -8538,7 +8777,7 @@
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-17",
+            "example": "2026-10-24",
             "maxLength": 32
           }
         },
@@ -9242,7 +9481,7 @@
           "textVersion": {
             "type": "string",
             "description": "The text the choice was made under; only the current one",
-            "example": "2026-10-10"
+            "example": "2026-10-24"
           },
           "language": {
             "type": "string",
@@ -9535,6 +9774,19 @@
           "alwaysSent": {
             "type": "boolean",
             "description": "Sent whatever the person chooses"
+          },
+          "channels": {
+            "type": "array",
+            "description": "The channels the type can be sent by, in order; a staff entry lists its own",
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "push",
+                "sms",
+                "whatsapp"
+              ]
+            }
           }
         },
         "required": [
@@ -9542,7 +9794,8 @@
           "channel",
           "enabled",
           "garageId",
-          "alwaysSent"
+          "alwaysSent",
+          "channels"
         ]
       },
       "NewsConsentDto": {
@@ -9582,6 +9835,23 @@
           "textVersion",
           "withdrawnAt",
           "currentTextVersion"
+        ]
+      },
+      "SmsUsageDto": {
+        "type": "object",
+        "properties": {
+          "used": {
+            "type": "number",
+            "description": "SMS sent to the driver this month (Bucharest)"
+          },
+          "cap": {
+            "type": "number",
+            "description": "SMS a driver gets per month; then WhatsApp"
+          }
+        },
+        "required": [
+          "used",
+          "cap"
         ]
       },
       "StaffWhatsAppDto": {
@@ -9733,6 +10003,17 @@
           "newsConsent": {
             "$ref": "#/components/schemas/NewsConsentDto"
           },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "A phone is saved and confirmed: SMS and WhatsApp can be picked"
+          },
+          "pushDevice": {
+            "type": "boolean",
+            "description": "The account has at least one push device"
+          },
+          "sms": {
+            "$ref": "#/components/schemas/SmsUsageDto"
+          },
           "staff": {
             "description": "One list per garage the person is staff of, and one for an admin",
             "type": "array",
@@ -9745,6 +10026,9 @@
           "groups",
           "preferences",
           "newsConsent",
+          "phoneVerified",
+          "pushDevice",
+          "sms",
           "staff"
         ]
       },
@@ -12630,6 +12914,10 @@
           "lift": {
             "type": "number",
             "nullable": true
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -12639,7 +12927,8 @@
           "id",
           "durationMinutes",
           "mechanic",
-          "lift"
+          "lift",
+          "toReassign"
         ]
       },
       "GarageRequestSummaryDto": {
@@ -12962,6 +13251,10 @@
           },
           "lateCancellation": {
             "type": "boolean"
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -12985,7 +13278,8 @@
           "moveCount",
           "historyShared",
           "cancelNote",
-          "lateCancellation"
+          "lateCancellation",
+          "toReassign"
         ]
       },
       "GarageRequestDto": {
@@ -16219,6 +16513,39 @@
             "type": "string",
             "nullable": true
           },
+          "roleTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "futureBookings": {
+            "type": "number"
+          },
           "onProfile": {
             "type": "boolean"
           },
@@ -16238,10 +16565,33 @@
           "id",
           "name",
           "speciality",
+          "roleTitle",
+          "specialties",
+          "certifications",
+          "years",
+          "brandIds",
+          "isOwner",
+          "futureBookings",
           "onProfile",
           "hasAccount",
           "rating",
           "reviewCount"
+        ]
+      },
+      "GarageBrandOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "GarageMechanicsDto": {
@@ -16252,11 +16602,111 @@
             "items": {
               "$ref": "#/components/schemas/GarageMechanicDto"
             }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageBrandOptionDto"
+            }
           }
         },
         "required": [
-          "items"
+          "items",
+          "brands"
         ]
+      },
+      "CreateMechanicDto": {
+        "type": "object",
+        "properties": {
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
+          },
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateMechanicDto": {
+        "type": "object",
+        "properties": {
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
+          },
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        }
       },
       "UpdateGarageDto": {
         "type": "object",
@@ -18742,6 +19192,39 @@
           "requestedAt",
           "changes",
           "total"
+        ]
+      },
+      "VerificationPresenceEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name and the initial of the last"
+          },
+          "since": {
+            "type": "string",
+            "description": "When this admin opened the file",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "since"
+        ]
+      },
+      "VerificationPresenceDto": {
+        "type": "object",
+        "properties": {
+          "others": {
+            "description": "The other admins with the file open, never the caller, the earliest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationPresenceEntryDto"
+            }
+          }
+        },
+        "required": [
+          "others"
         ]
       },
       "VerificationDecisionDto": {

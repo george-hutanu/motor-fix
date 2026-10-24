@@ -32,6 +32,9 @@
       @if (booking.mechanic; as mechanic) {
         <span class="mechanic">{{ mechanic.name }}</span>
       }
+      @if (booking.toReassign) {
+        <span class="reassign">{{ 'garage.requests.toReassign' | t }}</span>
+      }
       @if (booking.lift; as n) {
         <span class="lift">{{ 'garage.quotes.sentList.lift' | t: { n } }}</span>
       }

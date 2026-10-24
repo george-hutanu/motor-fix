@@ -402,11 +402,12 @@ export class Frame implements OnInit {
         // A suspension, a restore or a verification decision changes what the garage's
         // dashboard shows, a re-check the RAR line under its verified pill, and
         // the owner's feature switches or a mechanic's change its menu, bar
-        // and routes.
+        // and routes, and a removed mechanic loses the garage's.
         if (
           message.kind === 'account.email_confirmed' ||
           message.kind === 'garage.features_changed' ||
           message.kind === 'mechanic.updated' ||
+          message.kind === 'mechanic.removed' ||
           message.kind === 'garage.suspended' ||
           message.kind === 'garage.restored' ||
           message.kind === 'verification.decided' ||

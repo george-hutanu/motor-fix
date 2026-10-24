@@ -37,7 +37,11 @@ which uses the same scan, so a pass started by it always has something to do.
    node .claude/scripts/watch.mjs --fix --json [--stale <phase>=<minutes>,…]
    ```
 
-   Pass on any `--stale` from the arguments.
+   Pass on any `--stale` from the arguments. From a session isolated in a
+   worktree, run `node .claude/scripts/watch.mjs --json` without `--fix`:
+   the same rule as the dispatch in step 3, since `--fix` removes, unlocks
+   and fast-forwards other checkouts that such a session cannot reach. It
+   reads the board only, so step 2 has no `actions` to report.
 
 2. `actions` lists what `--fix` did: `ff-main`, a clean main checkout
    behind `origin/main` fast-forwarded; dead locks released, merged clean
@@ -78,7 +82,7 @@ which uses the same scan, so a pass started by it always has something to do.
    session inherits that isolation and cannot run a command in another
    worktree (seen 2026-10-04: `EnterWorktree` succeeded, every Bash call was
    refused). In a worktree session, stop after step 3, list the plan, and do
-   not claim.
+   not claim (step 1 already ran without `--fix`).
 
 4. For each entry of `plan` (the watcher already applied the caps and the
    oldest-first order), claim it, then dispatch it:

@@ -13,6 +13,7 @@ export {
   HlmPopoverPortal,
   HlmPopoverTrigger,
 } from './lib/helm/popover';
+export { HlmRadio, HlmRadioGroup } from './lib/helm/radio-group';
 export { HlmSheetImports } from './lib/helm/sheet';
 export { HlmSwitch } from './lib/helm/switch';
 export { HlmTableImports } from './lib/helm/table';

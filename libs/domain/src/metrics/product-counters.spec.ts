@@ -12,6 +12,8 @@ import {
   countAccountChange,
   countAdminAccountAction,
   countApproval,
+  countChannelChoice,
+  countChannelFallback,
   countCompletionOpened,
   countConsentRecord,
   countDeclarationSigned,
@@ -78,6 +80,17 @@ const GARAGE_REPORT_OUTCOMES = [
 
 const SORTS = ['rating', 'distance', 'price'] as const;
 
+const FALLBACKS = [
+  ['sms', 'whatsapp', 'sms_cap_reached'],
+  ['sms', 'whatsapp', 'send_failed'],
+  ['sms', 'email', 'phone_not_verified'],
+  ['whatsapp', 'email', 'phone_not_verified'],
+  ['whatsapp', 'email', 'send_failed'],
+  ['push', 'email', 'no_device'],
+  ['push', 'email', 'send_failed'],
+  ['email', 'push', 'send_failed'],
+] as const;
+
 const memory = inMemory();
 const started = startTelemetry(
   'api',
@@ -123,6 +136,13 @@ function startedNames(process: 'api' | 'worker') {
   return names;
 }
 
+function countChannelSeries() {
+  for (const channel of ['email', 'push', 'sms', 'whatsapp'] as const)
+    countChannelChoice(channel);
+  for (const [from, to, reason] of FALLBACKS)
+    countChannelFallback(from, to, reason);
+}
+
 // Every series an instance can add, once each.
 function countEverySeries() {
   for (const outcome of ['results', 'none'] as const) countSearch(outcome);
@@ -147,6 +167,7 @@ function countEverySeries() {
     if (text.email) countEmail(template);
   }
   for (const channel of ['push', 'in-app'] as const) countNotification(channel);
+  countChannelSeries();
   STEP_ACTIONS.forEach((action) => {
     countJobStep(action);
   });
@@ -414,11 +435,12 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  // Each counter stays under 50 series and each instance under 150, far
+  // @traces 056-FR-024
+  // Each counter stays under 60 series and each instance under 150, far
   // inside the metrics backend's free tier: the API's are the counters it
   // starts, the worker's the ones it starts. The seven counters the
   // observability story added are checked one by one.
-  it('keeps each of the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
+  it('keeps each of the seven counters under 60 series and the instance under 150, every label from a fixed set', async () => {
     countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
@@ -434,7 +456,7 @@ describe('the product counters', () => {
     const texts = series.map((s) => s.text);
     expect(new Set(texts).size).toBe(texts.length);
     for (const name of SEVEN_COUNTERS) {
-      expect(series.filter((s) => s.name === name).length).toBeLessThan(50);
+      expect(series.filter((s) => s.name === name).length).toBeLessThan(60);
     }
     for (const process of ['api', 'worker'] as const) {
       const names = startedNames(process);
@@ -445,5 +467,53 @@ describe('the product counters', () => {
       series.filter((s) => s.name === 'motorfix_account_changes_total'),
     ).toHaveLength(ACCOUNT_FIELDS.length);
     expect(texts.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
+  });
+});
+
+// @traces 142-FR-008
+describe('the channel counters', () => {
+  it.each(['email', 'push', 'sms', 'whatsapp'] as const)(
+    'counts one choice of %s',
+    async (channel) => {
+      const before = await total(
+        'motorfix_notification_channel_choices_total',
+        {
+          channel,
+        },
+      );
+
+      countChannelChoice(channel);
+
+      expect(
+        await total('motorfix_notification_channel_choices_total', { channel }),
+      ).toBe(before + 1);
+    },
+  );
+
+  it.each(FALLBACKS)(
+    'counts one fallback from %s to %s (%s)',
+    async (from, to, reason) => {
+      const labels = { from, reason, to };
+      const before = await total(
+        'motorfix_notification_channel_fallbacks_total',
+        labels,
+      );
+
+      countChannelFallback(from, to, reason);
+
+      expect(
+        await total('motorfix_notification_channel_fallbacks_total', labels),
+      ).toBe(before + 1);
+    },
+  );
+
+  // The API's start set is at its series cap: a pick is counted from the first.
+  it('starts the fallbacks in the worker, and not the choices', () => {
+    expect(startedNames('api')).not.toContain(
+      'motorfix_notification_channel_choices_total',
+    );
+    expect(startedNames('worker')).toContain(
+      'motorfix_notification_channel_fallbacks_total',
+    );
   });
 });

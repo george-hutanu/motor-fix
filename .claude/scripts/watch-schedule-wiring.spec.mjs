@@ -43,6 +43,18 @@ describe('the watch schedule', () => {
     assert.match(skill, /`watch: N worktrees, none stale`/);
   });
 
+  // @traces 493-FR-004
+  // --fix acts on other worktrees, which a worktree-isolated
+  // session cannot reach, so step 1 drops it there as step 3 drops dispatch.
+  it('runs step 1 without --fix from a session isolated in a worktree, the same rule as dispatch', () => {
+    const step1 = skill.slice(skill.indexOf('1. Run the watcher'), skill.indexOf('2. `actions`'));
+    assert.match(step1, /isolated in a worktree/);
+    assert.match(step1, /`node \.claude\/scripts\/watch\.mjs --json/);
+    assert.match(step1, /without `--fix`/);
+    assert.match(step1, /same rule as the dispatch/);
+    assert.match(skill, /Dispatch only from a session that is not itself isolated in a worktree/);
+  });
+
   it('is described the same way in AGENTS.md', () => {
     assert.match(bullet, /watch\.mjs --wait/);
     assert.match(bullet, /--gate/);

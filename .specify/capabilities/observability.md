@@ -47,6 +47,8 @@ features:
   - 500-req-ip-behind-proxy
   - 003-admin-account-actions
   - 1188-tail-latency
+  - 947-faro-consent-journeys
+  - 056-mechanic-dialog
 ---
 
 # Capability: Observability
@@ -263,13 +265,13 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-010 — Before anything leaves the browser, e-mail addresses, Romanian phone numbers and number plates MUST be replaced by `***` in error messages, stacks and any attribute, and every URL-valued attribute, the page URL included, MUST be sent without its query string or fragment.
+### 947-FR-007 — The masking of e-mail addresses, Romanian phone numbers and number plates, and the cutting of every URL to its path (877-FR-010), MUST apply to every event, the journey events and the session's attributes included; a journey event's route template carries no parameter value.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
-### 877-FR-011 — Browser telemetry MUST create and send no session id, user id or device id, set no cookie, record no session replay or user journey, and leave nothing of its own in local storage, session storage or IndexedDB once the page has loaded and sent. The SDK's transient availability probe (one test key set and removed again at load, plan.md R3) and the tracing sampling flag (a session attribute with no id, removed before sending) are permitted because nothing persists and nothing leaves the device.
+### 947-FR-001 — Without a valid `granted` analytics choice in the browser (no choice, `refused`, `withdrawn`, an older text version, or older than 365 days), browser monitoring MUST behave as ST-877 built it: no session id, user id or device id in any payload, no journey event, no cookie, and nothing of its own kept in local storage, session storage or IndexedDB (877-FR-011 applies in full); the outgoing-event filter MUST keep stripping the session and the user from every item in that state.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
 ### 877-FR-012 — Browser requests to the web app's own origin MUST carry a `traceparent` header from a browser span that is exported to the collector; requests to any other origin MUST carry no trace header.
 
@@ -287,13 +289,13 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-016 — `infra/observability/inventory.json` MUST stay passing under `scripts/observability-inventory.ts`; the `web` entries and the new outside service (Grafana Cloud Frontend Observability) MUST be listed with dashboard and alerts `"none"` and the reason that ST-879 and ST-880 add them.
+### 947-FR-011 — The change MUST ship with its observability records: `infra/observability/inventory.json`'s `grafana-faro` entry MUST describe the sessions and journey events it now receives under consent, `infra/observability/README.md` MUST say sessions and journeys exist only under analytics consent and MUST update its owner step that held `FARO_URL` back until the consent gate shipped, `scripts/observability-inventory.ts` MUST pass, and the PR's Observability section MUST list the reports now possible (sessions per release, route walks, errors inside a session).
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
-### 877-FR-017 — Unit tests MUST cover the browser masking and the route-template mapping; one Playwright test MUST load Home with the collector stubbed and assert that a Web Vitals payload is sent and holds no personal data, no id and no trace header to the collector.
+### 947-FR-010 — Unit tests MUST cover: no consent, `granted`, withdrawal mid-session (no session id and no journey event afterwards, device cleared), a choice under the previous text version (no session id until re-accepted), FR-006 and FR-007. One Playwright test with the collector stubbed MUST assert no session id before consent and one session id, with a journey event per route change, after; the existing telemetry end-to-end checks that nothing is stored before consent MUST stay green.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
 ### 877-FR-018 — The PR's Observability section MUST list the signals added (web traces, request metrics, runtime metrics, logs, browser Web Vitals and errors) and the reports they make possible (per-route render latency and errors, Web Vitals by route and viewport class, browser error rate per release) for ST-879 and ST-880.
 
@@ -789,9 +791,9 @@ _From 1345-staging-observability._
 
 _From 1345-staging-observability._
 
-### 280-FR-023 — Restates `1345-FR-012` with a larger instance cap: when telemetry is on, the api and the worker MUST, once their meter provider is registered, initialise every product counter they emit at 0 for each label combination its code can emit (the `motorfix_*_total` counters of `libs/domain/src/metrics/product-counters.ts`, `quotes.metrics.ts` and `garage-search.metrics.ts`, each label from its closed set: an `outcome` from its union, a decline `reason` from `DECLINE_REASON_CODES`, an e-mail `template` per registered template), each process only the counters its own modules record (the API's `motorfix_support_messages_total{outcome}` and the worker's `motorfix_support_emails_total{kind,outcome}` included), within the caps `product-counters.spec.ts` asserts (under 50 series per counter, under 150 per instance), so each panel shows 0 instead of "No data"; a later action adds 1 to the matching series. With telemetry off the initialisation is a no-op (879-FR-011). A test with a metrics reader asserts the 0 data points and that the counts still increment.
+### 056-FR-024 — Restates `280-FR-023` with a larger per-counter cap, since the e-mail counter carries one series per registered template and STAFF_REMOVED is its 50th, still far inside the series budget: when telemetry is on, the api and the worker MUST, once their meter provider is registered, initialise every product counter they emit at 0 for each label combination its code can emit (the `motorfix_*_total` counters of `libs/domain/src/metrics/product-counters.ts`, `quotes.metrics.ts` and `garage-search.metrics.ts`, each label from its closed set: an `outcome` from its union, a decline `reason` from `DECLINE_REASON_CODES`, an e-mail `template` per registered template), each process only the counters its own modules record (the API's `motorfix_support_messages_total{outcome}` and the worker's `motorfix_support_emails_total{kind,outcome}` included), within the caps `product-counters.spec.ts` asserts (under 60 series per counter, under 150 per instance), so each panel shows 0 instead of "No data"; a later action adds 1 to the matching series. With telemetry off the initialisation is a no-op (879-FR-011). A test with a metrics reader asserts the 0 data points and that the counts still increment.
 
-_From 280-contact-motorfix._
+_From 056-mechanic-dialog._
 
 ### 1345-FR-015 — Every Error % panel (the `motorfix-api`, `motorfix-web`, `motorfix-worker` and `motorfix-mcp` dashboards and the four service rows of `motorfix-overview`) MUST show 0 when no failure was counted in a window that holds requests (a 5xx response; for the overview's worker row, which reads jobs, a failed job, `motorfix_jobs_total{outcome="failed"}`) and the share otherwise; the numerator is `(sum(rate(…)) or vector(0))` over the label-free sums the panels use today, and a window with no request (or job) at all stays "No data". `scripts/observability-config.spec.ts` asserts the expressions.
 
@@ -875,6 +877,25 @@ _From 068-yearly-documents._
 
 _From 067-restore-suspended-garage._
 
+### 947-FR-002 — Under a valid `granted` choice, every monitoring payload MUST carry one session id, and the browser MUST send a journey event for the page first shown and for each route change, each named by the route template (never the raw path; a route change is a change of template, so moving between two pages of the same template, such as two garage ids, sends no journey event; an unmatched URL is named `unmatched`), and the session's start or resumption MUST be reported, so that Grafana Frontend Observability lists sessions and shows each session's route walk. Errors and Web Vitals sent during the session MUST carry the same id.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-006 — No session replay: the browser monitoring MUST NOT load any session-replay instrumentation, and the web app MUST NOT depend on a replay package; a unit test MUST fail when either appears.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-008 — The session id MUST be a random short id made in the browser (a stored value that is not a short alphanumeric id of at most 32 characters is discarded and replaced by a new one, never sent), kept per tab in session storage under the monitoring SDK's own key, with no persistent copy elsewhere on the device, never derived from or stored beside the account id, the browser consent id or any other identifier, and never sent to anything but the collector; the user id MUST stay stripped from every payload with or without consent.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-009 — Whether a session id and journey events go out MUST be decided from the choice in force when each item is sent (the consent service's `granted`: `granted`, current text version, less than 365 days at the last read of the stored choice), never from a value read once at page load; the outgoing-event filter drops journey events (`view_changed`, `session_start`, `session_resume` and the SDK's `session_extend`) and removes the session id (meta and span attribute) from every item sent without it.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-012 — The feature MUST add no new endpoint, no new outside call and no new dependency; every failure of the SDK, the storage or the collector MUST be dropped silently and never break, block or slow a page (877-FR-014).
+
+_From 947-faro-consent-journeys._
 ### 003-FR-021 — The new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, one counter of action outcomes labelled by action (`reset_access`, `suspend`, `restore`, `delete_on_request`) and outcome (`done`, `refused`, `conflict`, `email_failed`, `failed`) with no other label, one structured log line per action and per failure (route, outcome, account id, never a name, e-mail, phone or reason text), a dashboard panel and an alert on the error rate and on `failed`, listed in `infra/observability/inventory.json` and in the PR's Notes.
 
 _From 003-admin-account-actions._
@@ -903,3 +924,8 @@ _From 1188-tail-latency._
 - `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)
 - `297-FR-005` — superseded by `299-FR-019` (2026-10-17)
 - `876-FR-006` — superseded by `500-FR-007` (2026-10-24)
+- `877-FR-011` — superseded by `947-FR-001` (2026-10-24)
+- `877-FR-010` — superseded by `947-FR-007` (2026-10-24)
+- `877-FR-016` — superseded by `947-FR-011` (2026-10-24)
+- `877-FR-017` — superseded by `947-FR-010` (2026-10-24)
+- `280-FR-023` — superseded by `056-FR-024` (2026-10-24)

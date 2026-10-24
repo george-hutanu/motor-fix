@@ -1,9 +1,12 @@
 // @traces 129-FR-007 129-FR-009 055-FR-004
+// @traces 056-FR-014
 import { leaveTeams } from './team-leave';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { audienceOf, type LiveSubject } from '../../events/audience';
 import type { EventPort } from '../../events/event.port';
 import { databaseUrl } from '../../notifications/notifications.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
+import * as reads from '../../quotes/reads';
 import { mechanicReviews } from '../../reviews/reviews.testing';
 
 const world = quotesWorld();
@@ -71,17 +74,61 @@ describe('leaving the garage team when the account is deleted', () => {
       1,
     );
     expect(recorded).toEqual([
-      {
-        audience: { garageIds: [garage.id], type: 'garage' },
-        kind: 'mechanic.updated',
+      expect.objectContaining({
+        kind: 'mechanic.removed',
         payload: {
           from: 'account_deleted',
           garageId: garage.id,
           mechanicId: mechanic.id,
         },
         subjectId: mechanic.id,
-      },
+      }),
     ]);
+    const [{ audience }] = recorded as { audience: LiveSubject }[];
+    expect(audienceOf(audience)).toEqual(
+      expect.arrayContaining([
+        `garage:${garage.id}`,
+        `public:garage:${garage.id}`,
+        `public:mechanic:${mechanic.id}`,
+      ]),
+    );
+  });
+
+  it("leaves the card's future confirmed booking to reassign, and a past one not", async () => {
+    const garage = await world.garage('Atelier Dinamo');
+    const accountId = await world.account('Elena Pop', ['mechanic']);
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId, garageId: garage.id, name: 'Elena', onProfile: true },
+    });
+    const ahead = await world.booked(
+      garage.id,
+      new Date(Date.now() + 48 * 3_600_000).toISOString(),
+      'confirmed',
+      { mechanicId: mechanic.id },
+    );
+    const past = await world.booked(
+      garage.id,
+      new Date(Date.now() - 48 * 3_600_000).toISOString(),
+      'confirmed',
+      { mechanicId: mechanic.id },
+    );
+
+    await leave(accountId);
+
+    const read = async (id: string) =>
+      reads.garageBookingOf(
+        await prisma.booking.findUniqueOrThrow({
+          include: reads.bookingMechanicInclude,
+          where: { id },
+        }),
+      ) as unknown as { toReassign?: boolean };
+    expect((await read(ahead.id)).toReassign).toBe(true);
+    expect((await read(past.id)).toReassign).toBe(false);
+    expect(
+      await prisma.mechanic.count({
+        where: { garageId: garage.id, removedAt: null },
+      }),
+    ).toBe(0);
   });
 
   it('marks the detached card removed, so a new account of the same person gets a card of its own', async () => {
