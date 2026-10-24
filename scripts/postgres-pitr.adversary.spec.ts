@@ -102,9 +102,15 @@ describe('the database image across every file', () => {
   });
 });
 
-describe('every workflow trigger', () => {
+describe('every workflow that names the database image', () => {
+  // dependabot-review.yml (ST-961) runs on pull_request_target on purpose:
+  // it checks out only the base branch's scripts and never the image.
   it('is never pull_request_target', () => {
-    for (const text of Object.values(workflows)) {
+    const withImage = Object.values(workflows).filter((text) =>
+      text.includes(IMAGE),
+    );
+    expect(withImage.length).toBeGreaterThan(0);
+    for (const text of withImage) {
       expect(text).not.toContain('pull_request_target');
     }
   });
