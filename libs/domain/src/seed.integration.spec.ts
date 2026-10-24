@@ -973,13 +973,42 @@ describe('seed of a request through to a job', () => {
     ]);
   });
 
+  // @traces 055-FR-001
+  it("gives the staff's garage a team of three on its profile, one card without an account, once however often it runs", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const team = await prisma.mechanic.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        accountId: true,
+        name: true,
+        onProfile: true,
+        speciality: true,
+      },
+      where: { garage: { slug: 'atelier-test' } },
+    });
+    expect(
+      team.map((m) => [
+        m.name,
+        m.speciality,
+        m.onProfile,
+        m.accountId !== null,
+      ]),
+    ).toEqual([
+      ['Costel Radu', 'Frâne, suspensie și geometrie', true, false],
+      ['Radu Oferte', 'Diagnoză electrică', true, true],
+      ['Vlad Stan', 'Motor și distribuție', true, true],
+    ]);
+  });
+
   // @traces 343-FR-005
   it("gives the staff's garage a mechanic who may answer quotes beside one who may not, and the oil service ticked for Dacia", async () => {
     expect(seed('test').status).toBe(0);
 
     const mechanics = await prisma.mechanic.findMany({
       select: { account: { select: { email: true } }, canAnswerQuotes: true },
-      where: { garage: { slug: 'atelier-test' } },
+      where: { accountId: { not: null }, garage: { slug: 'atelier-test' } },
     });
     expect(
       mechanics
