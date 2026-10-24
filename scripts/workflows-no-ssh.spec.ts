@@ -9,12 +9,7 @@ import { join } from 'node:path';
 const dir = join(__dirname, '..', '.github', 'workflows');
 const read = (name: string) => readFileSync(join(dir, name), 'utf8');
 
-// release.yml loses its SSH seed step in ST-1370 (PR #526); this branch
-// merges main once that lands and the exception goes with it.
-const pending = new Set(['release.yml']);
-const workflows = readdirSync(dir).filter(
-  (name) => /\.ya?ml$/.test(name) && !pending.has(name),
-);
+const workflows = readdirSync(dir).filter((name) => /\.ya?ml$/.test(name));
 
 // Every step of the job that starts at `job:` (two-space indent), split at
 // each `- name:` or `- uses:`.
@@ -39,8 +34,9 @@ describe('no workflow reaches Railway over SSH', () => {
     expect(text).not.toMatch(/railway ssh|ssh keys|ssh-keygen|~\/\.ssh/);
   });
 
-  it('reads the three workflows that used to', () => {
+  it('reads the three workflows that used to, and the release', () => {
     for (const [name] of sandboxed) expect(workflows).toContain(name);
+    expect(workflows).toContain('release.yml');
   });
 });
 
