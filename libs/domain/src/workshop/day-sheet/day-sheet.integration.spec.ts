@@ -155,6 +155,31 @@ describe('the mechanic’s day sheet read', () => {
     expect(body.mechanics).toHaveLength(4);
   });
 
+  // @traces 055-FR-004
+  it('neither matches nor lists a card detached from a deleted account', async () => {
+    const t = await team('Atelier Dinamo');
+    const ionescu = await mechanic(t, 'Costel Ionescu');
+    const gone = await mechanic(t, 'Costel Pop');
+    await prisma.mechanic.update({
+      data: { accountId: null, removedAt: new Date() },
+      where: { id: gone.id },
+    });
+
+    const sheet = await service.get(owner(t), { mechanic: 'Costel' }, NOW);
+    const refused = await service
+      .get(owner(t), { mechanic: 'Gigel' }, NOW)
+      .then(
+        () => {
+          throw new Error('the name was taken as a mechanic');
+        },
+        (error: { getResponse(): { mechanics: { id: string }[] } }) =>
+          error.getResponse(),
+      );
+
+    expect(sheet.mechanic).toEqual({ id: ionescu.id, name: 'Costel Ionescu' });
+    expect(refused.mechanics.map((m) => m.id)).not.toContain(gone.id);
+  });
+
   it('answers not_found for another garage’s mechanic id and shows nothing of it', async () => {
     const t = await team('Atelier Dinamo');
     const other = await team('Service Militari');

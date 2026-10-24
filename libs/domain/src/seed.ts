@@ -777,6 +777,23 @@ async function quoteable(db: Client) {
   await dinamoForms(db);
 }
 
+// Atelier Test's team list, set once: its two mechanics with a speciality and on the
+// profile, beside a card with no account yet, as an owner names one at step 4.
+async function team(db: Client) {
+  await db.query(
+    `UPDATE mechanic m SET on_profile = true, speciality = s.speciality
+     FROM account a, (VALUES ('mecanic@example.test', 'Motor și distribuție'),
+                             ('mecanic-oferte@example.test', 'Diagnoză electrică')) AS s (email, speciality)
+     WHERE a.id = m.account_id AND a.email = s.email AND m.speciality IS NULL`,
+  );
+  await db.query(
+    `INSERT INTO mechanic (id, garage_id, name, speciality, on_profile)
+     SELECT gen_random_uuid(), g.id, 'Costel Radu', 'Frâne, suspensie și geometrie', true
+     FROM garage g WHERE g.slug = 'atelier-test'
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.name = 'Costel Radu')`,
+  );
+}
+
 // Atelier Dinamo's waiting file, as the admin's RAR and activities forms read
 // it: a workshop address under "aceeași adresă" and two priced jobs to mark
 // covered or not: oil-service needs `mechanics` and front-brakes `brakes`, so
@@ -1054,6 +1071,7 @@ async function seed(db: Client, secret: string) {
   await reviewed(db);
   await startOlderJob(db);
   await quoteable(db);
+  await team(db);
   // The checks a test run may switch off; production refused the seed above.
   await db.query(
     `INSERT INTO platform_rule (id, key, value, default_value)

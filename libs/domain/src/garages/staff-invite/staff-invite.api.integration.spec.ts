@@ -505,6 +505,30 @@ describe('opening and accepting a link', () => {
     expect(joined.map((n) => n.channel).sort()).toEqual(['email', 'in_app']);
   });
 
+  // @traces 055-FR-004 055-FR-016
+  it('lists one row for a person whose old card was detached and who accepts a new invite', async () => {
+    const { dinamo, mihai, token } = await invited();
+    await prisma.mechanic.create({
+      data: { garageId: dinamo.id, name: 'Elena Stan', removedAt: new Date() },
+    });
+    const ana = await account('ana', ['driver']);
+
+    expect((await accept(token, bearer(ana, 'driver'))).status).toBe(204);
+
+    const res = await http()
+      .get(`/garages/${dinamo.id}/mechanics`)
+      .set('Authorization', bearer(mihai, 'garage'));
+    expect(
+      res.body.items.map(({ hasAccount, name }: Record<string, unknown>) => ({
+        hasAccount,
+        name,
+      })),
+    ).toEqual([
+      { hasAccount: true, name: 'Elena Stan' },
+      { hasAccount: true, name: 'Mecanic' },
+    ]);
+  });
+
   it('lets the new mechanic act in the garage as a mechanic', async () => {
     const { dinamo, token } = await invited();
     const ana = await account('ana', ['driver']);

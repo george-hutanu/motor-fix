@@ -1,5 +1,6 @@
 import {
   type FieldProblem,
+  type GarageMechanicsDto,
   MECHANIC_NAME_MAX,
   MECHANIC_NAME_MIN,
   MECHANICS_MAX,
@@ -10,8 +11,13 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
+import type { Actor } from '../../auth/policy';
 import type { Mechanic, Prisma } from '../../generated/prisma/client';
+import { featureOn } from '../features/feature-on';
+import { assertGarageOwner } from '../garage-brands/garage-brands.service';
 import { isRecord, plainText } from '../plain-text';
+
+const byName = new Intl.Collator('ro', { sensitivity: 'base' });
 
 function sectionErrors(mechanics: MechanicsSection['mechanics'] = []) {
   if (!Array.isArray(mechanics) || !mechanics.every(isRecord)) {
@@ -57,12 +63,60 @@ function cardsOf(section: MechanicsSection) {
   }));
 }
 
-// Saves the step-4 mechanic cards when the listing is sent, inside the
-// caller's transaction; a refusal writes nothing. A card has no account
-// until the mechanic is invited (another story).
+// The garage's mechanic cards: saved from step 4 when the listing is sent,
+// inside the caller's transaction (a refusal writes nothing), and read back
+// for the owner's team list. A card has no account until its mechanic
+// accepts an invite.
 @Injectable()
 export class GarageMechanicsService {
   constructor(@Inject(AUDIT_PORT) private readonly audit: AuditPort) {}
+
+  // The owner's own card stays out (the owner is not "the team"), and so do
+  // the cards of deleted accounts. Who may read is checked before the switch,
+  // so staff and strangers never learn whether the team is on.
+  async list(
+    db: Pick<Prisma.TransactionClient, 'garageFeature' | 'mechanic'>,
+    actor: Actor,
+    garageId: string,
+  ): Promise<GarageMechanicsDto> {
+    assertGarageOwner(actor, garageId);
+    if (!(await featureOn(db, garageId, 'team_mechanics'))) {
+      throw refusal(
+        HttpStatus.NOT_FOUND,
+        'feature_off',
+        'This garage does not take mechanics',
+      );
+    }
+    const rows = await db.mechanic.findMany({
+      select: {
+        accountId: true,
+        id: true,
+        name: true,
+        onProfile: true,
+        rating: true,
+        reviewCount: true,
+        speciality: true,
+      },
+      // A plain NOT on the nullable column would drop the account-less cards.
+      where: {
+        garageId,
+        OR: [{ accountId: null }, { accountId: { not: actor.accountId } }],
+        removedAt: null,
+      },
+    });
+    rows.sort(
+      (a, b) =>
+        byName.compare(a.name, b.name) ||
+        (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    return {
+      items: rows.map(({ accountId, rating, ...row }) => ({
+        ...row,
+        hasAccount: accountId !== null,
+        rating: rating === null ? null : rating.toFixed(1),
+      })),
+    };
+  }
 
   async saveCards(
     tx: Prisma.TransactionClient,
@@ -87,7 +141,10 @@ export class GarageMechanicsService {
     section: MechanicsSection,
   ): Promise<void> {
     const given = cardsOf(section);
-    const rows = await tx.mechanic.findMany({ where: { garageId } });
+    // A removed card is out of the team: never matched, kept, or deleted.
+    const rows = await tx.mechanic.findMany({
+      where: { garageId, removedAt: null },
+    });
     const change = { actorId, actorRole: 'garage' as const, garageId };
     for (const row of rows) {
       const card = given.find((values) => values.name === row.name);

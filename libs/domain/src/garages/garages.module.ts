@@ -21,6 +21,7 @@ import { ListingDraftsController } from './listing-drafts/listing-drafts.control
 import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
+import { GarageMechanicsController } from './mechanics/mechanics.controller';
 import { GaragePlaceService } from './place/garage-place.service';
 import { CatalogueJobsController } from './price-list/catalogue-jobs.controller';
 import { GarageLabourController } from './price-list/labour/labour.controller';
@@ -91,6 +92,7 @@ export class GaragesModule {
         GarageInvitesController,
         GarageReportsController,
         GarageFeaturesController,
+        GarageMechanicsController,
         ImagesController,
         GarageSettingsController,
         InvitesController,

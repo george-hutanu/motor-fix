@@ -179,11 +179,11 @@ export class ConfirmService {
     return { lifts: on('lift_schedule'), team: on('team_mechanics') };
   }
 
-  // The mechanics a booking can be given: every mechanic row of the garage.
+  // The mechanics a booking can be given: every card of the garage's team.
   private offered(client: Tx, garageId: string) {
     return client.mechanic.findMany({
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      where: { garageId },
+      where: { garageId, removedAt: null },
     });
   }
 
@@ -273,7 +273,7 @@ export class ConfirmService {
   ) {
     if (mechanicId === undefined) return null;
     const mechanic = await tx.mechanic.findFirst({
-      where: { garageId, id: mechanicId },
+      where: { garageId, id: mechanicId, removedAt: null },
     });
     if (!mechanic) throw mechanicUnavailable(en);
     return mechanic;

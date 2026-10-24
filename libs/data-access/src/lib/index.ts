@@ -113,6 +113,8 @@ export type { GarageCarDto } from './models/garage-car-dto';
 export type { GarageDriverDto } from './models/garage-driver-dto';
 export type { GarageFeaturesDto } from './models/garage-features-dto';
 export type { GarageFeatureSwitchesDto } from './models/garage-feature-switches-dto';
+export type { GarageMechanicDto } from './models/garage-mechanic-dto';
+export type { GarageMechanicsDto } from './models/garage-mechanics-dto';
 export type { GaragePermissionsDto } from './models/garage-permissions-dto';
 export type { GaragePinDto } from './models/garage-pin-dto';
 export type { GaragePinsDto } from './models/garage-pins-dto';
@@ -625,6 +627,8 @@ export type { GarageReportsControllerReport$Params as GarageReportsControllerRep
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
 export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
+export type { GarageMechanicsControllerList$Params as GarageMechanicsControllerList$Params } from './fn/garages/garage-mechanics-controller-list';
+export { garageMechanicsControllerList as garageMechanicsControllerList } from './fn/garages/garage-mechanics-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';

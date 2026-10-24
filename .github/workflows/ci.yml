@@ -369,7 +369,13 @@ jobs:
         # timeout's reach, so a failed attempt kills it as root and repairs dpkg before the next.
         # Three stalls (a slow mirror) still go on when every library the cached chromium loads
         # resolves: the image carries them; apt was fetching extra fonts and upgrades.
+        # Before any apt, the same check: a cached chromium that loads already needs none.
         run: |
+          bins=$(find "$HOME/.cache/ms-playwright" -type f \( -name chrome -o -name headless_shell -o -name chrome-headless-shell \) 2>/dev/null || true)
+          if [ -n "$bins" ] && ! ldd $bins 2>&1 | grep -q 'not found'; then
+            echo "::notice::playwright install-deps skipped: every library the cached chromium loads resolves"
+            exit 0
+          fi
           for attempt in 1 2 3; do
             timeout -k 10 180 npx playwright install-deps chromium && exit 0
             echo "::warning::playwright install-deps chromium: attempt $attempt of 3 failed or timed out"
