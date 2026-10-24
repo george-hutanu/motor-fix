@@ -2,7 +2,7 @@ import { type TransportItem, TransportItemType } from '@grafana/faro-web-sdk';
 
 import { createBeforeSend, viewportClass } from './before-send';
 
-// No analytics consent: the state ST-877 built for.
+// No analytics consent.
 const off = () => false;
 
 const exception = (value: string, extra: object = {}): TransportItem =>

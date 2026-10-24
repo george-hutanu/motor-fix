@@ -62,7 +62,7 @@ describe('the cookie settings dialog', () => {
     expect(panel().textContent).toContain('Setări cookie');
     expect(panel().textContent).toContain('Statistici de utilizare');
     expect(panel().textContent).toContain(
-      'Numărăm paginile vizitate și urmărim vizita ca o singură sesiune, cu un cod aleatoriu păstrat doar pe acest dispozitiv; fără cookie‑uri, fără nume, fără cont.',
+      'Plausible numără paginile vizitate, iar Grafana Faro urmărește vizita ca o singură sesiune, cu un cod aleatoriu păstrat doar pe acest dispozitiv; fără cookie‑uri, fără nume, fără cont.',
     );
     const link = panel().querySelector('mf-cookie-settings a');
     expect(link?.getAttribute('href')).toBe('/ro/privacy');
@@ -80,7 +80,7 @@ describe('the cookie settings dialog', () => {
 
     expect(panel().textContent).toContain('Cookie settings');
     expect(panel().textContent).toContain(
-      'We count the pages visited and follow the visit as one session with a random id kept on this device; no cookies, no name, no account.',
+      'Plausible counts the pages visited and Grafana Faro follows the visit as one session, with a random id kept on this device; no cookies, no name, no account.',
     );
     expect(
       panel().querySelector('mf-cookie-settings a')?.getAttribute('href'),

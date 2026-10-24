@@ -95,7 +95,7 @@ describe('the browser monitoring session', () => {
       [
         /If you agree to analytics, Grafana Faro also follows your visit as one session/,
         /random id kept on your device/,
-        /Nothing you see or type is recorded/,
+        /No session replay is recorded: nothing you see or type is kept/,
         /the monitoring session id, until you close the tab or withdraw/,
       ],
     ],
@@ -104,7 +104,7 @@ describe('the browser monitoring session', () => {
       [
         /Dacă ești de acord cu analiza vizitelor, Grafana Faro îți urmărește și vizita ca o singură sesiune/,
         /cod aleatoriu păstrat pe dispozitivul tău/,
-        /Nimic din ce vezi sau scrii nu este înregistrat/,
+        /Nu se înregistrează nicio reluare a sesiunii: nimic din ce vezi sau scrii nu este păstrat/,
         /codul sesiunii de monitorizare, până închizi tab‑ul sau îți retragi acordul/,
       ],
     ],

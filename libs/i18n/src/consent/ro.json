@@ -8,7 +8,7 @@
   },
   "dialog": {
     "cancel": "Renunță",
-    "line": "Numărăm paginile vizitate și urmărim vizita ca o singură sesiune, cu un cod aleatoriu păstrat doar pe acest dispozitiv; fără cookie‑uri, fără nume, fără cont.",
+    "line": "Plausible numără paginile vizitate, iar Grafana Faro urmărește vizita ca o singură sesiune, cu un cod aleatoriu păstrat doar pe acest dispozitiv; fără cookie‑uri, fără nume, fără cont.",
     "privacy": "Nota de informare",
     "save": "Salvează",
     "switch": "Statistici de utilizare",

@@ -29,6 +29,15 @@ const write = (id: string | null) => {
   }
 };
 
+// Monitoring never breaks the page: an SDK call that throws is dropped.
+const quietly = (call: () => void) => {
+  try {
+    call();
+  } catch {
+    // The item is lost; the visit goes on.
+  }
+};
+
 // The monitoring session, owned by the app because the SDK's own session
 // tracking stores its session before any consent: a random id per tab, in
 // session storage under the SDK's key, only while analytics consent holds.
@@ -41,7 +50,7 @@ export function sessionSync(
   return (granted) => {
     if (!granted) {
       write(null);
-      if (active) api.setSession({ attributes: SAMPLED });
+      if (active) quietly(() => api.setSession({ attributes: SAMPLED }));
       active = null;
       return;
     }
@@ -49,12 +58,15 @@ export function sessionSync(
     const kept = read();
     active = kept ?? genShortID();
     write(active);
-    api.setSession({ attributes: SAMPLED, id: active });
-    api.pushEvent(
-      kept ? EVENT_SESSION_RESUME : EVENT_SESSION_START,
-      {},
-      undefined,
-      { skipDedupe: true },
+    const id = active;
+    quietly(() => api.setSession({ attributes: SAMPLED, id }));
+    quietly(() =>
+      api.pushEvent(
+        kept ? EVENT_SESSION_RESUME : EVENT_SESSION_START,
+        {},
+        undefined,
+        { skipDedupe: true },
+      ),
     );
   };
 }

@@ -145,6 +145,12 @@ describe('a valid choice', () => {
     expect(isValid(null)).toBe(false);
   });
 
+  // @traces 947-FR-001
+  it('refuses a choice dated more than a day ahead of the clock', () => {
+    expect(isValid(choice({ at: ago(-0.5) }))).toBe(true);
+    expect(isValid(choice({ at: ago(-2) }))).toBe(false);
+  });
+
   // @traces 947-FR-004
   it('no longer holds a choice made before the text named Grafana Faro', () => {
     expect(ANALYTICS_CONSENT_VERSION).toBe('2026-10-24');

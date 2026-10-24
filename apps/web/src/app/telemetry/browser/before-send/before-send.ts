@@ -12,6 +12,7 @@ type Viewport = 'phone' | 'tablet' | 'desktop';
 
 interface Spans {
   resourceSpans?: {
+    resource?: { attributes?: { key: string }[] };
     scopeSpans?: { spans?: { attributes?: { key: string }[] }[] }[];
   }[];
 }
@@ -40,15 +41,20 @@ const isJourney = (item: TransportItem) =>
 
 // Without consent no session: not in the meta, and not in the spans, where
 // the tracing instrumentation copies its id.
+const notSession = (attribute: { key: string }) =>
+  attribute.key !== 'session.id';
+
 function dropSession(sent: TransportItem) {
   delete sent.meta.session;
   if (sent.type !== TransportItemType.TRACE) return;
-  for (const resource of (sent.payload as Spans).resourceSpans ?? [])
-    for (const scope of resource.scopeSpans ?? [])
-      for (const span of scope.spans ?? [])
-        span.attributes = span.attributes?.filter(
-          (attribute) => attribute.key !== 'session.id',
-        );
+  for (const resource of (sent.payload as Spans).resourceSpans ?? []) {
+    if (resource.resource?.attributes)
+      resource.resource.attributes =
+        resource.resource.attributes.filter(notSession);
+    const spans = (resource.scopeSpans ?? []).flatMap((s) => s.spans ?? []);
+    for (const span of spans)
+      span.attributes = span.attributes?.filter(notSession);
+  }
 }
 
 // Runs on every item before it leaves the browser: personal values masked,
