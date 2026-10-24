@@ -73,12 +73,12 @@ const row = (page: Page, id: string) =>
 const top = (page: Page, id: string) =>
   row(page, id).evaluate((el) => el.getBoundingClientRect().top);
 
-const waiting = async (page: Page) =>
-  Number(
-    /^(\d+) /.exec(
-      (await page.locator('mf-live-pill button').textContent())?.trim() ?? '',
-    )?.[1],
-  );
+// The count on the pill, 0 while there is none.
+async function waiting(page: Page) {
+  const pill = page.locator('mf-live-pill button');
+  if ((await pill.count()) === 0) return 0;
+  return Number(/^(\d+) /.exec((await pill.textContent())?.trim() ?? '')?.[1]);
+}
 
 // Six fillers on the requests page at 390 × 844, scrolled so the middle one
 // sits READING_AT below the top and the top of the list is off screen.
@@ -126,11 +126,13 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     const { before, reading, send } = await scrolled(page, request);
     const pill = page.locator('mf-live-pill button');
 
+    // Other workers send to this garage too: the count rises by at least
+    // this one.
+    const held = await waiting(page);
     const id = await send();
 
-    // Other workers send to this garage too: the count is at least this one.
     await expect(pill).toBeInViewport();
-    expect(await waiting(page)).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(held + 1);
     await expect(row(page, id)).toHaveCount(0);
     await expect
       .poll(async () => Math.abs((await top(page, reading)) - before))
@@ -150,11 +152,12 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     const { before, reading, send } = await scrolled(page, request);
     const pill = page.locator('mf-live-pill button');
 
+    const held = await waiting(page);
     const first = await send();
     const second = await send();
 
     await expect(pill).toBeInViewport();
-    await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(held + 2);
     await expect(row(page, first)).toHaveCount(0);
     await expect(row(page, second)).toHaveCount(0);
     await expect
