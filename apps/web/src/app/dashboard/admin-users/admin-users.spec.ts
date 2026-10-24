@@ -754,22 +754,38 @@ describe("opening an account's drawer", () => {
 
   afterEach(() => drawer.mockRestore());
 
+  // The button's name comes from its own content, so it holds the row's
+  // visible text (axe label-content-name-mismatch).
+  const accessibleName = (button: Element) =>
+    (button.textContent ?? '').replace(/\s+/g, ' ').trim();
   const opener = (el: HTMLElement, name: string) =>
-    el.querySelector<HTMLButtonElement>(
-      `li.row button[aria-label="${name}"]`,
+    Array.from(el.querySelectorAll<HTMLButtonElement>('li.row button')).find(
+      (button) =>
+        !button.hasAttribute('aria-label') &&
+        accessibleName(button).startsWith(name) &&
+        name.endsWith(text(button.querySelector('.name')) ?? '\0'),
     ) as HTMLButtonElement;
 
   it('makes each row a button named after the account', async () => {
     const el = await open();
 
-    expect(opener(el, 'Deschide contul Cont 0')).not.toBeNull();
+    expect(opener(el, 'Deschide contul Cont 0')).toBeDefined();
     expect(text(opener(el, 'Deschide contul Cont 0'))).toContain('Cont 0');
+  });
+
+  it("keeps the row's visible text inside the button's name", async () => {
+    const el = await open();
+    const button = el.querySelector('li.row button') as HTMLButtonElement;
+    const visible = button.querySelector('.who') as HTMLElement;
+
+    expect(button.getAttribute('aria-label')).toBeNull();
+    expect(accessibleName(button)).toContain(accessibleName(visible));
   });
 
   it('names the row in English', async () => {
     const el = await open('en');
 
-    expect(opener(el, 'Open the account of Cont 1')).not.toBeNull();
+    expect(opener(el, 'Open the account of Cont 1')).toBeDefined();
   });
 
   it("opens the drawer at the account's own address and goes back on close", async () => {

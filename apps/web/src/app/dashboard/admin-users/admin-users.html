@@ -71,10 +71,10 @@
                 <button
                   type="button"
                   class="open"
-                  [attr.aria-label]="'admin.users.open' | t: { name: row.name }"
                   (click)="openAccount(row.id)"
                 >
                   <span class="who">
+                    <span class="sr-only">{{ 'admin.users.open' | t }} </span>
                     <span class="name">{{ row.name }}</span>
                     <span class="detail">{{ row.detail }}</span>
                   </span>

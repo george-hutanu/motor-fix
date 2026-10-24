@@ -939,7 +939,7 @@
     "loading": "Loading the accounts",
     "more": "The next accounts did not load.",
     "noMatch": "No account matches.",
-    "open": "Open the account of {name}",
+    "open": "Open the account of",
     "recent": "Recent accounts",
     "retry": "Try again",
     "roles": {
