@@ -24,6 +24,7 @@ import {
   CATALOGUE_JOB_APPROVED,
   CATALOGUE_JOB_REJECTED,
 } from './catalogue-job-decided';
+import { DATA_EXPORT_READY } from './data-export-ready';
 import { DOCUMENT_DUE } from './document-due';
 import { DOCUMENT_OVERDUE } from './document-overdue';
 import { DOCUMENT_REFUSED } from './document-refused';
@@ -81,6 +82,7 @@ export const TEMPLATES: Registry = {
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
   'CATALOGUE_JOB_DECIDED.approved': CATALOGUE_JOB_APPROVED,
   'CATALOGUE_JOB_DECIDED.rejected': CATALOGUE_JOB_REJECTED,
+  DATA_EXPORT_READY,
   DOCUMENT_DUE,
   DOCUMENT_OVERDUE,
   DOCUMENT_REFUSED,

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { crc32, inflateRawSync } from 'node:zlib';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 
@@ -211,4 +212,36 @@ export function foreignValuesIn(text: string, other: Driver): string[] {
     other.phone,
     other.plate,
   ].filter((value) => text.includes(value));
+}
+
+// Every entry of a ZIP by name, read through its central directory, each
+// body inflated and its CRC checked: what any unzip tool would do.
+export function readZip(zip: Buffer): Map<string, Buffer> {
+  const end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (end < 0) throw new Error('no end of central directory');
+  const count = zip.readUInt16LE(end + 10);
+  let at = zip.readUInt32LE(end + 16);
+  const entries = new Map<string, Buffer>();
+  for (let i = 0; i < count; i++) {
+    if (zip.readUInt32LE(at) !== 0x02014b50) throw new Error('bad entry');
+    const flags = zip.readUInt16LE(at + 8);
+    const method = zip.readUInt16LE(at + 10);
+    const crc = zip.readUInt32LE(at + 16);
+    const size = zip.readUInt32LE(at + 20);
+    const nameLength = zip.readUInt16LE(at + 28);
+    const extra = zip.readUInt16LE(at + 30);
+    const comment = zip.readUInt16LE(at + 32);
+    const local = zip.readUInt32LE(at + 42);
+    const name = zip.subarray(at + 46, at + 46 + nameLength);
+    // Bit 11: the name is UTF-8.
+    const decoded = name.toString(flags & 0x800 ? 'utf8' : 'latin1');
+    const start =
+      local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+    const stored = zip.subarray(start, start + size);
+    const body = method === 8 ? inflateRawSync(stored) : Buffer.from(stored);
+    if (crc32(body) !== crc) throw new Error(`bad CRC for ${decoded}`);
+    entries.set(decoded, body);
+    at += 46 + nameLength + extra + comment;
+  }
+  return entries;
 }

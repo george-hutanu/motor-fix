@@ -73,7 +73,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -110,7 +111,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -1230,6 +1232,17 @@
       "story": "ST-129"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_data_exports_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-data-export-failed"
+      ],
+      "reason": "counts data exports by outcome: requested, too_soon, already_ready, forbidden and downloaded in the api, ready, failed and expired in the worker; worker-data-export-failed fires on any export failed after its last attempt",
+      "story": "ST-140"
+    },
+    {
       "kind": "endpoint",
       "name": "auth-account-delete",
       "source": "libs/domain/src/auth/account-deletion/account-deletion.controller.ts",
@@ -1893,6 +1906,20 @@
       ],
       "reason": "carries the relay's account.deleted and account.suspended events; one AccountClosed log line per event naming the account id and the requests closed, skipped and failed and the bookings cancelled and skipped; a request that fails is retried with the job (3 tries) and worker-jobs-failed fires on the last; the outcomes are counted by motorfix_account_closed_cleanups_total; BullMQ's queue metrics cover depth and failures",
       "story": "ST-428"
+    },
+    {
+      "kind": "queue",
+      "name": "data-export",
+      "source": "libs/domain/src/auth/data-export/data-export.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "worker-data-export-failed"
+      ],
+      "reason": "carries the relay's data_export.requested and account.deleted events and the hourly sweep; log lines 'data export <id>: built <n> files, <bytes> bytes', 'failed after 3 attempts: <ErrorClass>', 'account deleted, expired' and 'data export sweep: expired <n>'; a build is retried with the job (3 tries) and counted by motorfix_data_exports_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-140"
     },
     {
       "kind": "queue",
