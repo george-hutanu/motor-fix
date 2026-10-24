@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -340,5 +343,14 @@ describe('a session lost mid-flight', () => {
     await flush();
 
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('the sign-out buttons', () => {
+  // PR QA lap 1: "Ieși de pe toate dispozitivele" left its last word alone on a line.
+  it('balance their wrapped label, so no word is left alone on the last line', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
+
+    expect(css).toMatch(/\.account > button \{[^}]*text-wrap: balance/);
   });
 });

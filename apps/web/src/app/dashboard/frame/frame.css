@@ -58,6 +58,7 @@ aside nav a[aria-current="page"] {
   font: inherit;
   font-size: var(--mf-size-body);
   text-align: start;
+  text-wrap: balance;
   cursor: pointer;
 }
 .account button[aria-busy="true"] {
