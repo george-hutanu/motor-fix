@@ -804,6 +804,37 @@ describe("opening an account's drawer", () => {
     expect(url()).toBe(VIEW);
   });
 
+  // Lap 3: the drawer's address kept no query, so the search fell away, the
+  // list read again and the row focus returns to was gone.
+  it('keeps the search under the drawer and the same row on close', async () => {
+    const el = await open('ro', `${VIEW}?q=cont`);
+    const before = reads.length;
+    const row = opener(el, 'Deschide contul Cont 1');
+
+    row.click();
+    await settle();
+
+    expect(url()).toBe(`${VIEW}/id-1?q=cont`);
+    expect(opened[0]).toMatchObject({ data: { id: 'id-1' } });
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=cont`);
+    expect(reads.length).toBe(before);
+    expect(opener(el, 'Deschide contul Cont 1')).toBe(row);
+    expect(row.isConnected).toBe(true);
+  });
+
+  it('opens the drawer from its address with a search and lands on that search', async () => {
+    await open('ro', `${VIEW}/id-7?q=cont`);
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=cont`);
+  });
+
   it('opens the drawer from its address and lands on the list on close', async () => {
     await open('ro', `${VIEW}/id-7`);
 

@@ -114,13 +114,15 @@ test.describe('the account drawer @seeded', () => {
     });
   }
 
-  test('moves focus into the drawer and back to its row on close', async ({
+  test('keeps the search under the drawer and returns focus to its row', async ({
     page,
     request,
   }) => {
     const driver = await freshDriver(request);
     await signInAsAdmin(page);
-    await page.goto('/app/admin/users');
+    // Opened from a search: the list under the drawer must not change.
+    const search = `/app/admin/users?q=${encodeURIComponent(driver.email)}`;
+    await page.goto(search);
 
     const row = page.getByRole('button', {
       name: `Deschide contul ${driver.name}`,
@@ -137,7 +139,7 @@ test.describe('the account drawer @seeded', () => {
 
     await page.keyboard.press('Escape');
     await expect(drawer(page)).toBeHidden();
-    await expect(page).toHaveURL(/\/app\/admin\/users$/);
+    await expect(page).toHaveURL(/\/app\/admin\/users\?q=/);
     await expect(row).toBeFocused();
   });
 

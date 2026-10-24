@@ -222,8 +222,11 @@ export class AdminUsers {
   }
 
   // The row's press: the account's address, remembering where it was opened.
+  // The search and filters stay in the address, so the list under the drawer
+  // neither changes nor reads again and focus has its row to return to.
   protected openAccount(id: string) {
-    void this.router.navigateByUrl(`${VIEW}/${id}`, {
+    void this.router.navigate([VIEW, id], {
+      queryParamsHandling: 'preserve',
       state: { origin: this.router.url },
     });
   }
@@ -258,7 +261,11 @@ export class AdminUsers {
     // Opened in the app, the origin is the entry before: going back to it
     // leaves no second one. Opened by its address, the view replaces it.
     if (typeof origin === 'string') this.location.back();
-    else void this.router.navigateByUrl(VIEW, { replaceUrl: true });
+    else
+      void this.router.navigate([VIEW], {
+        queryParamsHandling: 'preserve',
+        replaceUrl: true,
+      });
   }
 
   private async readSummary() {
