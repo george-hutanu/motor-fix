@@ -108,6 +108,7 @@ features:
   - 520-brevo-key-check-retry
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
+  - 1373-seed-status-identity
   - 961-require-agent-review
   - 447-own-pr-refusal
 ---
@@ -226,9 +227,9 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
+### 1373-FR-001 — The api's Railway pre-deploy command MUST hold no shell syntax (no `&&`, `;`, `|`, quotes or `NAME=value` prefix): it MUST be `sh scripts/api-pre-deploy.sh <environment>`, a script in the api image that runs `npx prisma migrate deploy`, then `node scripts/monitor-password.ts`, then, on `staging` only, `SEED_ONLY=1 sh scripts/reset-staging.sh`, stopping at the first step that fails with its exit code; any other environment argument is refused with a non-zero exit before any step (modifies `1370-FR-001`).
 
-_From 1370-release-seed-no-ssh._
+_From 1373-seed-status-identity._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -2906,4 +2907,5 @@ _From 447-own-pr-refusal._
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
+- `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
 - `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
