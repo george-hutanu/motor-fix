@@ -39,7 +39,7 @@
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
@@ -48,8 +48,9 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { carriedFrom, carryKind, findingCount, latestReview, statusesArgs } from "./pr-test/carry.mjs";
+import { STATUS_CONTEXT } from "./pr-test/post.mjs";
 import { readState, writeState } from "./run-state.mjs";
-import { featuresDir } from "./specs-repo.mjs";
+import { SPECS_SLUG, TRUNK, featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | check | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --tracker-done; handoff [--restore] [--pr <n>])";
@@ -556,32 +557,72 @@ const ghJson = (r) => JSON.parse(r.stdout);
  * merges only once the finish comment's "Fixed after QA" list names each one
  * with its severity. N is the standing verdict's own count: head's tester
  * success, or the lap a QA-fixes carry names, where each line must also name
- * one of the fix commits after that lap. The merge gate judges the verdict;
- * this judges the list. Returns why it falls short, or null.
+ * where its fix is, made after that lap's success was posted (fixedAfterLap).
+ * The merge gate judges the verdict; this judges the list. Returns why it
+ * falls short, or null.
  */
-function fixedAfterQa(ctx, head, file) {
+function fixedAfterQa(ctx, head, file, pr) {
   const review = latestReview(ghJson(ctx.gh(...statusesArgs(head))));
   if (review?.state !== "success") return null;
   const kind = carryKind(review.description);
   if (kind === "docs") return null;
   let count = findingCount(review.description);
-  let commits = null;
+  let fixedAt = null;
   if (kind === "fixes") {
     const from = carriedFrom(review.description);
-    count = findingCount(latestReview(ghJson(ctx.gh(...statusesArgs(from))))?.description);
+    const statuses = ghJson(ctx.gh(...statusesArgs(from)));
+    count = findingCount(latestReview(statuses)?.description);
     if (!(count >= 1)) return `head carries "QA fixes" from ${from.slice(0, 7)}, whose agent-review success reports no finding count: the carry cannot stand, so dispatch a real QA lap for head`;
     const compare = ghJson(ctx.gh("api", `repos/{owner}/{repo}/compare/${from}...${head}`));
-    commits = (compare?.commits ?? []).map((c) => String(c.sha));
+    const commits = (compare?.commits ?? []).map((c) => String(c.sha));
+    const lapAt = Date.parse(statuses.find((s) => s?.context === STATUS_CONTEXT)?.created_at ?? "");
+    fixedAt = (line) => fixedAfterLap(ctx, line, { commits, lapAt, pr });
   }
   if (!(count >= 1)) return null;
   const text = existsSync(file) ? readFileSync(file, "utf8") : "";
   const section = text.split(/^(?=## )/m).find((part) => part.startsWith(FIXED_HEADING)) ?? "";
   const lines = section.split("\n").filter((l) => /^\s*(?:[-*]|\d+\.)\s+\S/.test(l));
   const named = lines.filter((l) => /\b(medium|low)\b/i.test(l));
-  const fixed = commits ? named.filter((l) => (l.match(/\b[0-9a-f]{7,40}\b/g) ?? []).some((sha) => commits.some((c) => c.startsWith(sha)))) : named;
+  const fixed = fixedAt ? named.filter(fixedAt) : named;
   if (fixed.length >= count) return null;
-  const each = commits ? "its severity (medium or low) and the fix commit after the lap" : "its severity (medium or low)";
+  const each = fixedAt
+    ? `its severity (medium or low) and where its fix is, made after the lap: a PR commit's sha, a specs-repo trunk commit as specs@<sha>, or qa-flows-${pr}.mjs for a change to the QA flows file only`
+    : "its severity (medium or low)";
   return `the passing lap reported ${count} findings and ${relative(ctx.repo, file)} lists ${fixed.length} under "${FIXED_HEADING}": add one list line per finding, naming ${each} (the file stays in the worktree), then run the merge again`;
+}
+
+/**
+ * Whether a "Fixed after QA" line names a fix made after the carried lap: a
+ * PR commit after it (a bare sha the compare lists); a commit on the specs
+ * repo's trunk (`specs@<sha>`) committed after the lap's success was posted;
+ * or a change to this PR's git-ignored QA flows file only
+ * (`qa-flows-<pr>.mjs`), modified after that time. With no time on the
+ * success, only the first counts. A specs lookup that fails counts nothing.
+ */
+function fixedAfterLap(ctx, line, { commits, lapAt, pr }) {
+  const shas = line.replace(/\bspecs@[0-9a-f]+/g, "").match(/\b[0-9a-f]{7,40}\b/g) ?? [];
+  if (shas.some((sha) => commits.some((c) => c.startsWith(sha)))) return true;
+  if (!Number.isFinite(lapAt)) return false;
+  const flows = `qa-flows-${pr}.mjs`;
+  if (line.includes(flows)) {
+    const path = join(ctx.repo, ".specify", ".cache", flows);
+    if (existsSync(path) && statSync(path).mtimeMs > lapAt) return true;
+  }
+  return [...line.matchAll(/\bspecs@([0-9a-f]{7,40})\b/g)].some(([, sha]) => specsCommitAfter(ctx, sha, lapAt));
+}
+
+/** Whether `sha` is on the specs repo's trunk and was committed after `lapAt`: one REST compare against trunk. */
+function specsCommitAfter(ctx, sha, lapAt) {
+  const r = ctx.ghTry("api", `repos/${SPECS_SLUG}/compare/${sha}...${TRUNK}`);
+  if (r.code !== 0) return false;
+  let compare;
+  try {
+    compare = JSON.parse(r.stdout);
+  } catch {
+    return false;
+  }
+  if (!["ahead", "identical"].includes(compare?.status)) return false;
+  return Date.parse(compare?.base_commit?.commit?.committer?.date ?? "") > lapAt;
 }
 
 function merge(ctx, flags) {
@@ -590,7 +631,7 @@ function merge(ctx, flags) {
   settleStory(ctx, flags, view.title);
   const n = String(view.number);
   if (view.state !== "MERGED") {
-    const short = fixedAfterQa(ctx, view.headRefOid, join(ctx.feature.dir, "finish-comment.md"));
+    const short = fixedAfterQa(ctx, view.headRefOid, join(ctx.feature.dir, "finish-comment.md"), n);
     if (short) throw new Stop("Fixed after QA", short);
     ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
     ctx.did.push("merged");
