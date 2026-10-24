@@ -2829,6 +2829,7 @@ _From 1376-pr-test-local-boot._
 ### 1185-FR-003 — The database MUST offer one immutable function `f_unaccent(text)` that maps the Romanian diacritics ș ş ț ţ ă â î and their capitals Ș Ş Ț Ţ Ă Â Î to the base letters s t a i (and S T A I), NFC-composing the whole string first, leaving every other character and the case unchanged, with no dependency on a database extension; `account_fold` MUST become `lower(f_unaccent($1))`, so the map exists once and `account_fold`'s values (and its trigram index) do not change; `f_unaccent('ș ş ț ţ ă â î')` MUST equal `'s s t t a a i'` on the repository's own PostgreSQL image.
 
 _From 1185-accent-search._
+
 ### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
 
 _From 1377-own-pr-422-fallback._
