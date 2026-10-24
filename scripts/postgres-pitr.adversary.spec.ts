@@ -103,9 +103,16 @@ describe('the database image across every file', () => {
 });
 
 describe('every workflow trigger', () => {
-  it('is never pull_request_target', () => {
+  // pull_request_target runs with a token that can write, so a workflow on it
+  // must never check out or run the PR's own code.
+  it('is pull_request_target only where the PR code is never checked out', () => {
     for (const text of Object.values(workflows)) {
-      expect(text).not.toContain('pull_request_target');
+      if (!/^\s+pull_request_target:/m.test(text)) continue;
+      expect(text).not.toMatch(
+        /github\.event\.pull_request\.head\.(?:sha|ref)/,
+      );
+      expect(text).not.toMatch(/^\s+ref:/m);
+      expect(text).not.toMatch(/npm (?:ci|install)/);
     }
   });
 });
