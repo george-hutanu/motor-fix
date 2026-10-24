@@ -4,7 +4,6 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 
 import {
-  API_PRE_DEPLOY,
   apiPreDeploy,
   deploy,
   putSeedPassword,
@@ -14,6 +13,8 @@ import {
 } from './railway-deploy.ts';
 
 type Call = { query: string; variables: Record<string, unknown> };
+
+const API_PRE_DEPLOY = apiPreDeploy('production');
 
 const services: Service[] = [
   {
@@ -61,16 +62,15 @@ async function seenIn(calls: () => Call[], match: (call: Call) => boolean) {
 
 // @traces 878-FR-001
 describe('the api pre-deploy step', () => {
-  it('migrates, then applies the monitor role password', () => {
-    expect(API_PRE_DEPLOY).toEqual([
-      'npx prisma migrate deploy && node scripts/monitor-password.ts',
-    ]);
+  it('migrates, then applies the monitor role password, through the script in the image', () => {
+    expect(API_PRE_DEPLOY).toEqual(['sh scripts/api-pre-deploy.sh production']);
   });
 
   // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1373-FR-001
   it('seeds staging after the migration and the monitor password, inside the new image', () => {
     expect(apiPreDeploy('staging')).toEqual([
-      'npx prisma migrate deploy && node scripts/monitor-password.ts && SEED_ONLY=1 sh scripts/reset-staging.sh',
+      'sh scripts/api-pre-deploy.sh staging',
     ]);
   });
 
@@ -242,7 +242,7 @@ describe('railway deploy', () => {
         token: 't',
       }),
     ).rejects.toThrow(
-      /^api: deployment FAILED; its pre-deploy command \(npx prisma migrate deploy && node scripts\/monitor-password\.ts && SEED_ONLY=1 sh scripts\/reset-staging\.sh\)/,
+      /^api: deployment FAILED; its pre-deploy command \(sh scripts\/api-pre-deploy\.sh staging\)/,
     );
     expect(updates().at(-1)).toEqual({
       environmentId: 'env-1',
