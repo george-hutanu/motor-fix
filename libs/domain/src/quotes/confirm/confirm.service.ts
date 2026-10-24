@@ -28,6 +28,7 @@ import { moveBooking, moveQuote, moveRecipient } from '../transitions';
 type Tx = Prisma.TransactionClient;
 
 const MINUTE = 60_000;
+const DEADLOCK_RUNS = 3;
 
 const invalidField = (field: 'mechanicId' | 'lift', message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, [
@@ -112,9 +113,7 @@ export class ConfirmService {
   ): Promise<GarageBookingDto> {
     const en = actor.language === 'en';
     try {
-      return await this.prisma.$transaction((tx) =>
-        this.store(tx, actor, bookingId, dto),
-      );
+      return await this.storeRetried(actor, bookingId, dto);
     } catch (error) {
       const taken = exclusionOf(error);
       if (taken === 'lift' && dto.lift) throw liftBusy(dto.lift, en);
@@ -125,6 +124,26 @@ export class ConfirmService {
         throw mechanicBusy(mechanic?.name ?? '', en);
       }
       throw error;
+    }
+  }
+
+  // Two confirms racing for one lift or mechanic can deadlock on the
+  // exclusion constraints. Postgres aborts one; it runs again and then reads
+  // the other's confirm, so the loser hears 409, not 500.
+  private async storeRetried(
+    actor: Actor,
+    bookingId: string,
+    dto: ConfirmBookingDto,
+  ): Promise<GarageBookingDto> {
+    for (let run = 1; ; run++) {
+      try {
+        return await this.prisma.$transaction((tx) =>
+          this.store(tx, actor, bookingId, dto),
+        );
+      } catch (error) {
+        const deadlocked = (error as { code?: unknown }).code === 'P2034';
+        if (!deadlocked || run === DEADLOCK_RUNS) throw error;
+      }
     }
   }
 
