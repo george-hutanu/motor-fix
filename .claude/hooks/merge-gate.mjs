@@ -6,7 +6,9 @@
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
 // signature (read off the REST pulls commits list), needs no agent-review
 // status, only the same CI rule below: a failing, pending or missing check
-// still refuses it, and so does an agent review that failed. A failing check
+// still refuses it, and so does an agent review that failed. The success that
+// dependabot-review.yml writes on such a PR (GitHub requires agent-review on
+// main) is not asked for pr-qa provenance: the exemption lets it merge. A failing check
 // on such a PR is sent back through Dependabot, not to the PR tester: a
 // commit of anyone else's would take the exemption away.
 //
@@ -162,7 +164,8 @@ export function decideMerge(pr, carry, provenance) {
   const checks = pr.statusCheckRollup ?? [];
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
-  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? provenanceRefusal(pr, sha, provenance);
+  // An exempt Dependabot PR's success comes from dependabot-review.yml, not pr-qa.yml: the exemption, not its provenance, lets it merge.
+  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? (isDependabot(pr) ? null : provenanceRefusal(pr, sha, provenance));
   if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha, { dependabot: true });
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;

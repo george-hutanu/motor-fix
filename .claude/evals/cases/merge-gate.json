@@ -592,5 +592,39 @@
     "expect": {
       "exit": 2
     }
+  },
+  {
+    "id": "merge-gate-passes-a-dependabot-pr-on-its-review-workflow-success",
+    "hook": "pre:bash:merge-gate",
+    "why": "with agent-review required on main, a Dependabot-only PR gets its success from dependabot-review.yml (961-FR-004); the gate keeps the exemption and does not ask for the pr-qa provenance",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}], \"commits\": [{\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\": {\"creator\": {\"login\": \"github-actions[bot]\", \"type\": \"Bot\"}, \"target_url\": \"https://github.com/george-hutanu/motor-fix/actions/runs/456\"}, \"run\": {\"path\": \".github/workflows/dependabot-review.yml\", \"event\": \"pull_request_target\", \"head_branch\": \"main\", \"head_sha\": \"fff0000aaa1111\", \"status\": \"completed\", \"conclusion\": \"success\"}}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-dependabot-pr-whose-review-failed",
+    "hook": "pre:bash:merge-gate",
+    "why": "a failing agent-review on a Dependabot PR still refuses the merge (610-FR-003, 961-FR-004)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"FAILURE\"}], \"commits\": [{\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "agent-review is failure"
+    }
   }
 ]
