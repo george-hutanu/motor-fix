@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -35,13 +35,16 @@ const me = (role: string, landing: string) =>
 async function render(role: string, landing: string, answer: unknown = true) {
   Element.prototype.scrollIntoView = jest.fn();
   const current = signal<MeDto | null>(me(role, landing));
+  // The account the sign-in gate keeps on screen while it is open.
+  const kept = signal<MeDto | null>(null);
   const session = {
     current,
     ended: new Subject<void>(),
     keepsThroughRevoke: jest.fn(() => false),
+    kept,
     renew: jest.fn(async () => true),
     revoked: jest.fn(() => current.set(null)),
-    shown: current,
+    shown: computed(() => current() ?? kept()),
     signOut: jest.fn(async () => current.set(null)),
     signOutEverywhere: jest.fn(async () => current.set(null)),
     token: () => 'access',
@@ -285,5 +288,57 @@ describe('a session ended elsewhere', () => {
     expect(live.close).toHaveBeenCalled();
     expect(session.signOut).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith('/');
+  });
+});
+
+// @traces 532-FR-001
+// @traces 532-FR-002
+describe('a session lost mid-flight', () => {
+  const links = (element: HTMLElement) =>
+    [...element.querySelectorAll<HTMLAnchorElement>('a[href^="/app/"]')].map(
+      (a) => a.getAttribute('href'),
+    );
+
+  it('opens Home when a garage account’s renewal is refused, never the driver dashboard', async () => {
+    const { element, harness, navigate, session } = await render(
+      'garage',
+      '/app/garage',
+    );
+
+    session.current.set(null);
+    harness.detectChanges();
+    await flush();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(links(element).some((href) => href?.startsWith('/app/driver'))).toBe(
+      false,
+    );
+  });
+
+  it('stays on the screen while the sign-in gate keeps the account shown, and opens Home once it closes without a sign-in', async () => {
+    const { harness, navigate, session } = await render(
+      'garage',
+      '/app/garage',
+    );
+
+    session.kept.set(session.current());
+    session.current.set(null);
+    harness.detectChanges();
+    await flush();
+    expect(navigate).not.toHaveBeenCalledWith('/');
+
+    session.kept.set(null);
+    harness.detectChanges();
+    await flush();
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('leaves a signed-in person on their landing', async () => {
+    const { harness, navigate } = await render('garage', '/app/garage');
+
+    harness.detectChanges();
+    await flush();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
