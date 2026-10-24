@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export const DATA_EXPORT_STATUSES = [
-  'queued',
-  'ready',
-  'expired',
-  'failed',
-] as const;
+const DATA_EXPORT_STATUSES = ['queued', 'ready', 'expired', 'failed'] as const;
 
 export type DataExportStatus = (typeof DATA_EXPORT_STATUSES)[number];
 

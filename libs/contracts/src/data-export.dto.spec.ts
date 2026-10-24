@@ -1,7 +1,9 @@
 // @traces 140-FR-002
 import 'reflect-metadata';
 
-import { DATA_EXPORT_STATUSES, DataExportDto } from './data-export.dto';
+import { DataExportDto } from './data-export.dto';
+
+const STATES = ['queued', 'ready', 'expired', 'failed'];
 
 interface Documented {
   enum?: unknown[];
@@ -27,15 +29,6 @@ const listed = () =>
   ).map((name) => name.replace(/^:/, ''));
 
 describe('the data export in the contract', () => {
-  it('has the four states of an export, in their order', () => {
-    expect(DATA_EXPORT_STATUSES).toEqual([
-      'queued',
-      'ready',
-      'expired',
-      'failed',
-    ]);
-  });
-
   it('says the state, the three times and when a new request is allowed, nothing more', () => {
     expect(listed().sort()).toEqual([
       'canRequestAt',
@@ -47,7 +40,7 @@ describe('the data export in the contract', () => {
   });
 
   it('names the state as one of the four', () => {
-    expect(documented('status')?.enum).toEqual([...DATA_EXPORT_STATUSES]);
+    expect(documented('status')?.enum).toEqual(STATES);
     expect(documented('status')?.nullable).toBeFalsy();
   });
 
