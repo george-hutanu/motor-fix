@@ -31,11 +31,11 @@ describe("the team's figures", () => {
       garageId: dinamo.id,
       role: 'garage',
     } as Actor;
-    const { items } = await new GarageMechanicsService({} as AuditPort).list(
-      prisma,
-      owner,
-      dinamo.id,
-    );
+    const { items } = await new GarageMechanicsService(
+      {} as AuditPort,
+      {} as never,
+      {} as never,
+    ).list(prisma, owner, dinamo.id);
 
     expect(items).toEqual([
       expect.objectContaining({ id: m.id, rating: '4.7', reviewCount: 58 }),

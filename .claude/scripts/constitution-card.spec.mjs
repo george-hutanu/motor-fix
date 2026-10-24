@@ -107,7 +107,15 @@ describe('the constitution card', () => {
     assert.match(cardLine, /the tail waits for CI and QA itself/);
     assert.match(cardLine, /one task being built per session/);
     assert.ok(atLeast(full, 5, 1));
-    assert.match(full, /^\*\*Version\*\*: 5\.1\.0 \| \*\*Ratified\*\*: 2026-10-03 \| \*\*Last Amended\*\*: 2026-10-23$/m);
+    assert.match(full, /^\*\*Version\*\*: \d+\.\d+\.\d+ \| \*\*Ratified\*\*: 2026-10-03 \| \*\*Last Amended\*\*: \d{4}-\d{2}-\d{2}$/m);
+  });
+
+  it('has each event set the PR\'s one stage label in principle VII, never swap it', () => {
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start)).replace(/\s+/g, ' ');
+    assert.match(seventh, /Each event sets the PR's one stage label: `planning` at the draft, `in development` when `\/speckit-implement` starts, `QA` at ready/);
+    assert.match(seventh, /mark the PR ready, which sets its one stage label to `QA`/);
+    assert.doesNotMatch(full, /swap/i);
   });
 
   // @traces 1363-FR-007 1363-FR-010

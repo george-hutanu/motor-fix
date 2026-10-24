@@ -245,3 +245,35 @@ describe('audienceOf', () => {
     }
   });
 });
+
+// @traces 056-FR-010
+describe('audienceOf a mechanic card', () => {
+  // Typed loosely until the audience knows the mechanic subject.
+  const card = (onProfile: boolean) =>
+    audienceOf({
+      garageId: garage,
+      mechanicId: mechanic,
+      public: onProfile,
+      type: 'mechanic',
+    } as never);
+
+  it("sends a card on the profile to the garage's staff, its public page and the mechanic's page", () => {
+    expect(card(true)).toEqual([
+      'garage:g1',
+      'public:garage:g1',
+      'public:mechanic:m1',
+    ]);
+  });
+
+  it("keeps a card off the profile with the garage's staff", () => {
+    expect(card(false)).toEqual(['garage:g1']);
+  });
+
+  it('never reaches the search results', () => {
+    for (const onProfile of [true, false]) {
+      expect(
+        card(onProfile).some((key) => key.startsWith('public:search')),
+      ).toBe(false);
+    }
+  });
+});

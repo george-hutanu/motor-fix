@@ -5544,6 +5544,175 @@
         "tags": [
           "garages"
         ]
+      },
+      "post": {
+        "operationId": "GarageMechanicsController_add",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}": {
+      "patch": {
+        "operationId": "GarageMechanicsController_edit",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "GarageMechanicsController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a mechanic from the team, for the owner",
+        "tags": [
+          "garages"
+        ]
       }
     },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
@@ -12845,6 +13014,10 @@
           "lift": {
             "type": "number",
             "nullable": true
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -12854,7 +13027,8 @@
           "id",
           "durationMinutes",
           "mechanic",
-          "lift"
+          "lift",
+          "toReassign"
         ]
       },
       "GarageRequestSummaryDto": {
@@ -13177,6 +13351,10 @@
           },
           "lateCancellation": {
             "type": "boolean"
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -13200,7 +13378,8 @@
           "moveCount",
           "historyShared",
           "cancelNote",
-          "lateCancellation"
+          "lateCancellation",
+          "toReassign"
         ]
       },
       "GarageRequestDto": {
@@ -16434,6 +16613,39 @@
             "type": "string",
             "nullable": true
           },
+          "roleTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "futureBookings": {
+            "type": "number"
+          },
           "onProfile": {
             "type": "boolean"
           },
@@ -16453,10 +16665,33 @@
           "id",
           "name",
           "speciality",
+          "roleTitle",
+          "specialties",
+          "certifications",
+          "years",
+          "brandIds",
+          "isOwner",
+          "futureBookings",
           "onProfile",
           "hasAccount",
           "rating",
           "reviewCount"
+        ]
+      },
+      "GarageBrandOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "GarageMechanicsDto": {
@@ -16467,11 +16702,111 @@
             "items": {
               "$ref": "#/components/schemas/GarageMechanicDto"
             }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageBrandOptionDto"
+            }
           }
         },
         "required": [
-          "items"
+          "items",
+          "brands"
         ]
+      },
+      "CreateMechanicDto": {
+        "type": "object",
+        "properties": {
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
+          },
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateMechanicDto": {
+        "type": "object",
+        "properties": {
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
+          },
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        }
       },
       "UpdateGarageDto": {
         "type": "object",

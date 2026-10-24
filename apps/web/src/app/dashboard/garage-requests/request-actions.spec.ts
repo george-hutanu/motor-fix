@@ -91,6 +91,7 @@ describe('confirmBooking', () => {
         mechanic: null,
         startsAt: '2026-10-17T06:00:00.000Z',
         status: 'awaiting_confirmation',
+        toReassign: false,
       },
     },
     { status: 'accepted' },
