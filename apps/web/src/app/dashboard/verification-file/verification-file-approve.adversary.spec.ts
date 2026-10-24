@@ -233,6 +233,7 @@ async function open(
       {
         provide: Live,
         useValue: {
+          events,
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
