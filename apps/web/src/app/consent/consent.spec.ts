@@ -5,6 +5,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import {
   ANALYTICS_CONSENT_MAX_AGE_DAYS,
   ANALYTICS_CONSENT_VERSION,
+  PRIVACY_VERSION,
 } from '@motor-fix/contracts/consent';
 import { ConsentsService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -142,6 +143,13 @@ describe('a valid choice', () => {
     expect(isValid(choice({ at: ago(365) }))).toBe(false);
     expect(isValid(choice({ textVersion: '2025-01-01' }))).toBe(false);
     expect(isValid(null)).toBe(false);
+  });
+
+  // @traces 947-FR-004
+  it('no longer holds a choice made before the text named Grafana Faro', () => {
+    expect(ANALYTICS_CONSENT_VERSION).toBe('2026-10-24');
+    expect(PRIVACY_VERSION).toBe('2026-10-24');
+    expect(isValid(choice({ textVersion: '2026-10-10' }))).toBe(false);
   });
 });
 

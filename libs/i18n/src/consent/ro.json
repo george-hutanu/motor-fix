@@ -4,11 +4,11 @@
     "label": "Statistici de utilizare",
     "privacy": "Nota de informare",
     "refuse": "Refuz",
-    "text": "MotorFix ar vrea să măsoare cum e folosit site‑ul, ca să‑l facem mai bun. Nu vindem și nu transmitem datele tale."
+    "text": "MotorFix ar vrea să măsoare cum e folosit site‑ul, ca să‑l facem mai bun: Plausible numără paginile vizitate, iar Grafana Faro îți urmărește vizita ca o singură sesiune. Nu vindem și nu transmitem datele tale."
   },
   "dialog": {
     "cancel": "Renunță",
-    "line": "Măsurăm paginile vizitate, fără cookie‑uri și fără să te identificăm.",
+    "line": "Numărăm paginile vizitate și urmărim vizita ca o singură sesiune, cu un cod aleatoriu păstrat doar pe acest dispozitiv; fără cookie‑uri, fără nume, fără cont.",
     "privacy": "Nota de informare",
     "save": "Salvează",
     "switch": "Statistici de utilizare",

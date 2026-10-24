@@ -45,7 +45,7 @@ describe('the consent bar', () => {
     const region = host.querySelector('[role="region"]');
     expect(region?.getAttribute('aria-label')).toBe('Statistici de utilizare');
     expect(region?.textContent).toContain(
-      'MotorFix ar vrea să măsoare cum e folosit site‑ul, ca să‑l facem mai bun. Nu vindem și nu transmitem datele tale.',
+      'MotorFix ar vrea să măsoare cum e folosit site‑ul, ca să‑l facem mai bun: Plausible numără paginile vizitate, iar Grafana Faro îți urmărește vizita ca o singură sesiune. Nu vindem și nu transmitem datele tale.',
     );
     const link = host.querySelector('a');
     expect(link?.textContent?.trim()).toBe('Nota de informare');
@@ -62,7 +62,7 @@ describe('the consent bar', () => {
     const host = await render('en');
 
     expect(host.textContent).toContain(
-      'MotorFix would like to measure how the site is used, to make it better. We never sell or pass on your data.',
+      'MotorFix would like to measure how the site is used, to make it better: Plausible counts the pages visited and Grafana Faro follows your visit as one session. We never sell or pass on your data.',
     );
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/en/privacy');
     expect(host.querySelector('a')?.textContent?.trim()).toBe('Privacy notice');
