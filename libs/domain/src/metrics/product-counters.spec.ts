@@ -418,7 +418,7 @@ describe('the product counters', () => {
   // inside the metrics backend's free tier: the API's are the counters it
   // starts, the worker's the ones it starts. The seven counters the
   // observability story added are checked one by one.
-  it('keeps each of the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
+  it('keeps each of the seven counters under 50 series, the e-mails one per template, and the instance under 150, every label from a fixed set', async () => {
     countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
@@ -433,8 +433,27 @@ describe('the product counters', () => {
       );
     const texts = series.map((s) => s.text);
     expect(new Set(texts).size).toBe(texts.length);
+    // The e-mail counter carries one series per e-mail template (the registry's
+    // and the sign-in code), a fixed set that grows only with a new template;
+    // every other counter stays under 50.
+    const emailTemplates = new Set([
+      'SIGN_IN_CODE',
+      ...Object.entries(TEMPLATES)
+        .filter(([, text]) => text.email)
+        .map(([template]) => template),
+    ]);
     for (const name of SEVEN_COUNTERS) {
-      expect(series.filter((s) => s.name === name).length).toBeLessThan(50);
+      const own = series.filter((s) => s.name === name);
+      if (name === 'motorfix_emails_sent_total')
+        expect(
+          own.filter(
+            (s) =>
+              !emailTemplates.has(
+                JSON.parse(s.text.slice(name.length)).template,
+              ),
+          ),
+        ).toEqual([]);
+      else expect(own.length).toBeLessThan(50);
     }
     for (const process of ['api', 'worker'] as const) {
       const names = startedNames(process);
