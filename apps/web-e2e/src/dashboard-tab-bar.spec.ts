@@ -127,6 +127,12 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
+      // The stubbed garage account has no garage, and the profile view leaves
+      // for the dashboard on its 404, racing the check that Profil is the
+      // current tab: an outage keeps the view on Profil.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });
 

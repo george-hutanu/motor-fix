@@ -844,6 +844,11 @@ test.describe('the map beside the results @seeded', () => {
       await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
       await expect(page.locator('mf-results-map .legend .area')).toHaveCount(1);
       await expect(page.locator('mf-consent-bar button').first()).toBeVisible();
+      // The legend is measured against the zoom buttons, which MapLibre adds
+      // only once its script has loaded, after the page hydrates.
+      await expect(
+        page.locator('mf-results-map .maplibregl-ctrl-top-right button'),
+      ).toHaveCount(2);
 
       for (const at of ['half', 'low'] as const) {
         await restAt(page, at);
