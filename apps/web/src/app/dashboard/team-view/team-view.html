@@ -1,0 +1,59 @@
+@if (view.value()?.items?.length) {
+  <p class="count" data-count>
+    @if (onProfile()) {
+      {{ 'garage.team.count' | t: { count: onProfile() } }}
+    } @else {
+      {{ 'garage.team.countNone' | t }}
+    }
+  </p>
+}
+<section class="panel" aria-labelledby="team-title">
+  <header class="head">
+    <h2 id="team-title">{{ 'garage.team.title' | t }}</h2>
+    @if (view.value()?.items?.length) {
+      <button hlmBtn type="button" class="add" (click)="invite()">{{ 'garage.team.add' | t }}</button>
+    }
+  </header>
+  @if (view.value(); as list) {
+    @if (list.items.length) {
+      <ul class="rows">
+        @for (mechanic of list.items; track mechanic.id) {
+          <li data-mechanic class="row">
+            <span class="who">
+              <span class="name">{{ mechanic.name }}</span>
+              @if (mechanic.speciality?.trim(); as speciality) {
+                <span class="speciality">{{ speciality }}</span>
+              }
+            </span>
+            <span class="state" [attr.data-state]="mechanic.onProfile ? 'on' : 'off'">
+              <span class="lamp" aria-hidden="true"></span>
+              <span>
+                @if (mechanic.onProfile) {
+                  {{ 'garage.team.state.on' | t }}
+                } @else if (mechanic.hasAccount) {
+                  {{ 'garage.team.state.off' | t }}
+                } @else {
+                  {{ 'garage.team.state.off' | t }} · {{ 'garage.team.state.noAccount' | t }}
+                }
+              </span>
+            </span>
+            <span class="rating" data-rating>{{ rating(mechanic) }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <mf-empty-state icon="wrench" text="garage.team.empty">
+        <button hlmBtn type="button" (click)="invite()">{{ 'garage.team.add' | t }}</button>
+      </mf-empty-state>
+    }
+  } @else if (view.failed()) {
+    <p role="alert" class="failed">{{ 'garage.team.failed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" class="retry" (click)="view.reload()">{{ 'garage.team.retry' | t }}</button>
+  } @else if (!view.gone()) {
+    <ul class="rows" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li data-skeleton class="skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  }
+</section>
