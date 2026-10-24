@@ -4,11 +4,23 @@
 import { NewsConsentDto } from '../models/news-consent-dto';
 import { NotificationGroupDto } from '../models/notification-group-dto';
 import { NotificationPreferenceDto } from '../models/notification-preference-dto';
+import { SmsUsageDto } from '../models/sms-usage-dto';
 import { StaffNotificationsDto } from '../models/staff-notifications-dto';
 export interface NotificationPreferencesDto {
   groups: Array<NotificationGroupDto>;
   newsConsent: NewsConsentDto;
+
+  /**
+   * A phone is saved and confirmed: SMS and WhatsApp can be picked
+   */
+  phoneVerified: boolean;
   preferences: Array<NotificationPreferenceDto>;
+
+  /**
+   * The account has at least one push device
+   */
+  pushDevice: boolean;
+  sms: SmsUsageDto;
 
   /**
    * One list per garage the person is staff of, and one for an admin

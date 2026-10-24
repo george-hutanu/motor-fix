@@ -9,6 +9,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import * as counters from '../../metrics/product-counters';
 import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
 import {
@@ -16,6 +17,7 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
 } from '../notifications.testing';
 
 const redisUrl = redisUrlFor(15);
@@ -102,6 +104,18 @@ const entries = (accountId: string) =>
     where: { subjectId: accountId, subjectType: 'notification_preference' },
   });
 
+let phones = 0;
+
+// A driver whose phone is confirmed, so SMS and WhatsApp can be chosen.
+async function withPhone(name: string) {
+  const id = await account(name);
+  await prisma.account.update({
+    data: { phone: testPhone(++phones), phoneVerifiedAt: new Date() },
+    where: { id },
+  });
+  return id;
+}
+
 async function garageOwner(name: string, roles: Role[] = ['garage']) {
   const id = await account(name, roles);
   const garage = await prisma.garage.create({
@@ -131,6 +145,7 @@ describe('a driver who has saved nothing', () => {
     expect(itp).toEqual({
       alwaysSent: false,
       channel: 'email',
+      channels: ['email', 'push', 'sms', 'whatsapp'],
       enabled: true,
       garageId: null,
       type: 'DUE_ITP',
@@ -175,7 +190,7 @@ describe('switching a group', () => {
   });
 
   it('keeps the channel a type already had', async () => {
-    const driver = await account('andrei');
+    const driver = await withPhone('andrei');
     await save(
       {
         preferences: [
@@ -217,7 +232,7 @@ describe('switching a group', () => {
 
 describe('choosing for one type', () => {
   it('keeps one row per driver type, on the channel chosen last', async () => {
-    const driver = await account('andrei');
+    const driver = await withPhone('andrei');
     for (const channel of ['push', 'whatsapp']) {
       const res = await save(
         {
@@ -241,7 +256,7 @@ describe('choosing for one type', () => {
   });
 
   it('lets a driver choose SMS for a reminder', async () => {
-    const driver = await account('sms-driver');
+    const driver = await withPhone('sms-driver');
     const res = await save(
       {
         preferences: [
@@ -277,7 +292,7 @@ describe('choosing for one type', () => {
   });
 
   it('lets two saves at once leave one row, the last one’s', async () => {
-    const driver = await account('andrei');
+    const driver = await withPhone('andrei');
     const choose = (channel: string) =>
       save(
         {
@@ -320,6 +335,7 @@ describe('garage staff', () => {
       {
         alwaysSent: false,
         channel: 'push',
+        channels: ['push'],
         enabled: false,
         garageId: owner.garageId,
         type: 'REQUEST_RECEIVED',
@@ -950,5 +966,213 @@ describe('a staff save', () => {
         'not_found',
       );
     });
+  });
+});
+
+// @traces 142-FR-003 142-FR-004 142-FR-005 142-FR-009
+describe('what the panel reads besides the choices', () => {
+  it('says whether the phone is confirmed', async () => {
+    const without = await account('no-phone');
+    const confirmed = await withPhone('confirmed');
+    const unconfirmed = await account('unconfirmed');
+    await prisma.account.update({
+      data: { phone: testPhone(++phones) },
+      where: { id: unconfirmed },
+    });
+    expect((await read(bearer(without))).body.phoneVerified).toBe(false);
+    expect((await read(bearer(confirmed))).body.phoneVerified).toBe(true);
+    expect((await read(bearer(unconfirmed))).body.phoneVerified).toBe(false);
+  });
+
+  it('gives the SMS sent this Bucharest month out of the cap', async () => {
+    const driver = await account('counted');
+    expect((await read(bearer(driver))).body.sms).toEqual({ cap: 5, used: 0 });
+    const month = new Intl.DateTimeFormat('en-CA', {
+      month: '2-digit',
+      timeZone: 'Europe/Bucharest',
+      year: 'numeric',
+    })
+      .format(new Date())
+      .slice(0, 7);
+    await prisma.smsCounter.create({
+      data: { accountId: driver, month: '2000-01', sentCount: 3 },
+    });
+    expect((await read(bearer(driver))).body.sms).toEqual({ cap: 5, used: 0 });
+    await prisma.smsCounter.create({
+      data: { accountId: driver, month, sentCount: 5 },
+    });
+    expect((await read(bearer(driver))).body.sms).toEqual({ cap: 5, used: 5 });
+  });
+
+  it('says whether the account has a push device, and defaults to push when it has', async () => {
+    const driver = await account('pusher');
+    let res = await read(bearer(driver));
+    expect(res.body.pushDevice).toBe(false);
+    const itp = (body: { preferences: { type: string; channel: string }[] }) =>
+      body.preferences.find((p) => p.type === 'DUE_ITP')?.channel;
+    expect(itp(res.body)).toBe('email');
+    const device = await prisma.pushSubscription.create({
+      data: {
+        accountId: driver,
+        auth: 'auth',
+        endpoint: 'https://push.example.test/1',
+        label: 'test',
+        p256dh: 'key',
+      },
+    });
+    res = await read(bearer(driver));
+    expect(res.body.pushDevice).toBe(true);
+    expect(itp(res.body)).toBe('push');
+    expect(
+      res.body.preferences.find((p: { type: string }) => p.type === 'JOB_READY')
+        ?.channel,
+    ).toBe('email');
+    await prisma.pushSubscription.delete({ where: { id: device.id } });
+    res = await read(bearer(driver));
+    expect(itp(res.body)).toBe('email');
+  });
+
+  it('gives each driver type the channels it can be picked on', async () => {
+    const res = await read(bearer(await account('lister')));
+    const channels = (type: string) =>
+      res.body.preferences.find((p: { type: string }) => p.type === type)
+        ?.channels;
+    expect(channels('DUE_ITP')).toEqual(['email', 'push', 'sms', 'whatsapp']);
+    expect(channels('QUOTE_RECEIVED')).toEqual(['email', 'push', 'whatsapp']);
+    expect(channels('REVIEW_INVITE')).toEqual(['email', 'push', 'whatsapp']);
+    expect(channels('NEWS')).toEqual(['email']);
+  });
+
+  it('is the caller’s own: another driver reads their own phone, SMS and devices', async () => {
+    const andrei = await withPhone('andrei');
+    await prisma.smsCounter.create({
+      data: {
+        accountId: andrei,
+        month: new Intl.DateTimeFormat('en-CA', {
+          month: '2-digit',
+          timeZone: 'Europe/Bucharest',
+          year: 'numeric',
+        })
+          .format(new Date())
+          .slice(0, 7),
+        sentCount: 4,
+      },
+    });
+    const elena = await account('elena');
+    const res = await read(bearer(elena));
+    expect(res.body).toMatchObject({
+      phoneVerified: false,
+      pushDevice: false,
+      sms: { cap: 5, used: 0 },
+    });
+  });
+});
+
+// @traces 142-FR-003
+describe('a driver without a confirmed phone', () => {
+  const choose = (channel: string, type = 'DUE_ITP') => ({
+    preferences: [{ channel, enabled: true, garageId: null, type }],
+  });
+
+  it.each(['sms', 'whatsapp'])('cannot choose %s', async (channel) => {
+    const driver = await account('no-phone');
+    const res = await save(choose(channel), bearer(driver));
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('phone_not_verified');
+    expect(await stored(driver)).toEqual([]);
+    expect(await entries(driver)).toEqual([]);
+  });
+
+  it('cannot choose WhatsApp with a phone not yet confirmed', async () => {
+    const driver = await account('unconfirmed');
+    await prisma.account.update({
+      data: { phone: testPhone(++phones) },
+      where: { id: driver },
+    });
+    const res = await save(
+      choose('whatsapp', 'QUOTE_RECEIVED'),
+      bearer(driver),
+    );
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('phone_not_verified');
+  });
+
+  it('can still choose e-mail and push, and switch groups', async () => {
+    const driver = await account('no-phone');
+    expect((await save(choose('push'), bearer(driver))).status).toBe(200);
+    expect((await save(choose('email'), bearer(driver))).status).toBe(200);
+    expect(
+      (
+        await save(
+          { groups: [{ enabled: false, key: 'due_dates' }] },
+          bearer(driver),
+        )
+      ).status,
+    ).toBe(200);
+  });
+});
+
+// @traces 142-FR-002 142-FR-008 142-FR-010
+describe('the Build brief’s save scenarios', () => {
+  const pick = (type: string, channel: string, enabled = true) => ({
+    preferences: [{ channel, enabled, garageId: null, type }],
+  });
+
+  it('refuses SMS for every type of Ofertă nouă and for REVIEW_INVITE', async () => {
+    const driver = await withPhone('offers');
+    const offers = (await read(bearer(driver))).body.groups.find(
+      (g: { key: string }) => g.key === 'offers',
+    ).types as string[];
+    for (const type of [...offers, 'REVIEW_INVITE']) {
+      const res = await save(pick(type, 'sms'), bearer(driver));
+      expect([400, 422]).toContain(res.status);
+      expect(res.body.code).toBe('channel_not_allowed');
+    }
+    expect(
+      (await save(pick('REVIEW_INVITE', 'whatsapp'), bearer(driver))).status,
+    ).toBe(200);
+  });
+
+  it('lets JOB_READY’s channel be picked but never switched off', async () => {
+    const driver = await withPhone('ready');
+    expect(
+      (await save(pick('JOB_READY', 'whatsapp'), bearer(driver))).status,
+    ).toBe(200);
+    const off = await save(
+      pick('JOB_READY', 'whatsapp', false),
+      bearer(driver),
+    );
+    expect(off.status).toBe(422);
+    expect(off.body.code).toBe('notification_type_always_sent');
+  });
+
+  it('keeps NEWS on e-mail', async () => {
+    const driver = await account('news');
+    const res = await save(pick('NEWS', 'push', false), bearer(driver));
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('channel_not_allowed');
+  });
+
+  it('saves a pick at once, audits it once, announces it, and records nothing for the same pick again', async () => {
+    const driver = await withPhone('picker');
+    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const res = await save(pick('DUE_ITP', 'whatsapp'), bearer(driver));
+    expect(choices.mock.calls).toEqual([['whatsapp']]);
+    expect(res.status).toBe(200);
+    expect(
+      res.body.preferences.find((p: { type: string }) => p.type === 'DUE_ITP'),
+    ).toMatchObject({ channel: 'whatsapp', enabled: true });
+    const audited = await entries(driver);
+    expect(audited).toHaveLength(1);
+    expect(audited[0]).toMatchObject({
+      field: 'DUE_ITP',
+      newValue: { channel: 'whatsapp', enabled: true },
+      oldValue: { channel: 'email', enabled: true },
+    });
+    await until('the change published live', () => published.length > 0);
+    await save(pick('DUE_ITP', 'whatsapp'), bearer(driver));
+    expect(await entries(driver)).toHaveLength(1);
+    expect(choices).toHaveBeenCalledTimes(1);
+    choices.mockRestore();
   });
 });

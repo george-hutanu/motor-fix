@@ -8,6 +8,11 @@ export interface NotificationPreferenceDto {
    */
   alwaysSent: boolean;
   channel: 'email' | 'push' | 'sms' | 'whatsapp';
+
+  /**
+   * The channels the type can be sent by, in order; a staff entry lists its own
+   */
+  channels: Array<'email' | 'push' | 'sms' | 'whatsapp'>;
   enabled: boolean;
 
   /**
