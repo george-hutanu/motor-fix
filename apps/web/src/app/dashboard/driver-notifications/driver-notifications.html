@@ -45,7 +45,7 @@
               }
               @if (row.sms && smsSpent()) {
                 <p class="hint">
-                  {{ 'driver.notifications.smsUsed' | t: reach().sms }}
+                  {{ 'driver.notifications.smsUsed' | t: { cap: reach().sms.cap, used: reach().sms.used } }}
                 </p>
               }
               @for (type of row.types; track type.type) {
