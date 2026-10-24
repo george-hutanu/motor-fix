@@ -93,14 +93,14 @@ class MechanicCardFieldsDto {
   roleTitle?: string | null;
 
   @ApiPropertyOptional({
-    description: `At most ${SPECIALTIES_MAX}, each at most ${TAG_MAX} characters; [] clears them`,
+    description: `At most ${SPECIALTIES_MAX}, each 1 to ${TAG_MAX} characters once trimmed; [] clears them`,
     type: [String],
   })
   @Allow()
   specialties?: string[];
 
   @ApiPropertyOptional({
-    description: `At most ${CERTIFICATIONS_MAX}, each at most ${CERTIFICATION_MAX} characters; [] clears them`,
+    description: `At most ${CERTIFICATIONS_MAX}, each 1 to ${CERTIFICATION_MAX} characters once trimmed; [] clears them`,
     type: [String],
   })
   @Allow()

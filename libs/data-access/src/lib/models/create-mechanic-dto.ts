@@ -9,7 +9,7 @@ export interface CreateMechanicDto {
   brandIds?: Array<string>;
 
   /**
-   * At most 10, each at most 80 characters; [] clears them
+   * At most 10, each 1 to 80 characters once trimmed; [] clears them
    */
   certifications?: Array<string>;
   name: string;
@@ -20,7 +20,7 @@ export interface CreateMechanicDto {
   roleTitle?: string | null;
 
   /**
-   * At most 6, each at most 40 characters; [] clears them
+   * At most 6, each 1 to 40 characters once trimmed; [] clears them
    */
   specialties?: Array<string>;
 

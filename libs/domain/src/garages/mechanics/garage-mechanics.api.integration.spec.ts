@@ -791,6 +791,18 @@ describe('adding a card', () => {
       what: 'a specialty over 40 characters',
     },
     {
+      body: { specialties: ['Frâne', ' '] },
+      code: 'invalid',
+      field: 'specialties',
+      what: 'a blank specialty',
+    },
+    {
+      body: { certifications: [''] },
+      code: 'invalid',
+      field: 'certifications',
+      what: 'an empty certification',
+    },
+    {
       body: { certifications: Array.from({ length: 11 }, (_, i) => `C${i}`) },
       code: 'too_many',
       field: 'certifications',
@@ -1238,7 +1250,7 @@ describe('removing a card', () => {
     expect(await outbox('mechanic.removed')).toHaveLength(1);
   });
 
-  // @traces 056-FR-005, 056-FR-006
+  // @traces 056-FR-005 056-FR-006
   it('writes nothing onto a card a remove took off the team first', async () => {
     const { dinamo, mihai, vladCard } = await world({ ownerRow: true });
 

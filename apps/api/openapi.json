@@ -15952,14 +15952,14 @@
             "nullable": true
           },
           "specialties": {
-            "description": "At most 6, each at most 40 characters; [] clears them",
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "certifications": {
-            "description": "At most 10, each at most 80 characters; [] clears them",
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
             "type": "array",
             "items": {
               "type": "string"
@@ -16000,14 +16000,14 @@
             "nullable": true
           },
           "specialties": {
-            "description": "At most 6, each at most 40 characters; [] clears them",
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "certifications": {
-            "description": "At most 10, each at most 80 characters; [] clears them",
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
             "type": "array",
             "items": {
               "type": "string"
