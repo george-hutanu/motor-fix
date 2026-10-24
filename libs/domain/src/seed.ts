@@ -901,6 +901,14 @@ async function team(db: Client) {
        AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.is_owner)
        AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.account_id = gm.account_id)`,
   );
+  // An owner's row always holds the three permissions; a seeded owner's row
+  // that lost them gets them back, as the staff rows do above.
+  await db.query(
+    `UPDATE mechanic SET can_move_bookings = true, can_answer_quotes = true, can_record_final_price = true
+     WHERE is_owner
+       AND NOT (can_move_bookings AND can_answer_quotes AND can_record_final_price)
+       AND account_id IN (SELECT id FROM account WHERE email LIKE '%@example.test')`,
+  );
 }
 
 // Atelier Dinamo's waiting file, as the admin's RAR and activities forms read
