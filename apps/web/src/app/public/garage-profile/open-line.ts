@@ -1,10 +1,8 @@
+import { todayInBucharest } from '@motor-fix/contracts/garage-hours';
 import type { OpenStatus } from '@motor-fix/contracts/open-status';
 import { calendarNames, type I18n } from '@motor-fix/i18n';
 
 const DAY_MS = 86_400_000;
-const BUCHAREST_DAY = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Bucharest',
-});
 const KEY = 'public.garageProfile.status';
 
 // The opening day spelt as the header says it: today, tomorrow, its weekday
@@ -13,7 +11,7 @@ function whenSaid(inDays: number, now: Date, i18n: I18n): string {
   if (inDays === 0) return i18n.t(`${KEY}.today`);
   if (inDays === 1) return i18n.t(`${KEY}.tomorrow`);
   const day = new Date(
-    Date.parse(`${BUCHAREST_DAY.format(now)}T00:00:00Z`) + inDays * DAY_MS,
+    Date.parse(`${todayInBucharest(now)}T00:00:00Z`) + inDays * DAY_MS,
   );
   const names = calendarNames(i18n.language());
   if (inDays < 7) return names.days[(day.getUTCDay() + 6) % 7] ?? '';

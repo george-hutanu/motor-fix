@@ -186,8 +186,7 @@ export class GarageProfile {
     const km = this.distanceKm();
     return km === undefined ? '' : formatDistance(km, this.i18n.language());
   });
-  // The clock the opening status reads: the server render's instant, then the
-  // browser's own once it starts, then each minute.
+  // The clock the opening status reads, refreshed in the browser each minute.
   private readonly now = signal(new Date());
   protected readonly statusSaid = computed(() => {
     const garage = this.garage();
