@@ -402,10 +402,13 @@ export class PriceRangeEditor {
     const list = await this.api.priceListControllerRead({
       garageId: data.garageId,
     });
-    const row = list.items.find((item) => item.priceId === data.item.priceId);
+    const row = list.items.find(
+      (item): item is EditableRow =>
+        item.priceId === data.item.priceId && item.updatedAt !== undefined,
+    );
     if (!row?.updatedAt) return;
     this.stamp.set(row.updatedAt);
     this.fill(row);
-    this.draft.accept(row as EditableRow);
+    this.draft.accept(row);
   }
 }
