@@ -103,6 +103,8 @@ let resync: Subject<void>;
 let read: jest.Mock;
 let legal: jest.Mock;
 let navigate: jest.Mock;
+// Every GaragesService member the view touches beyond the two reads.
+let touched: string[];
 
 async function render(
   load: () => Promise<GarageProfileDto> = async () => answer(),
@@ -114,14 +116,28 @@ async function render(
   read = jest.fn(load);
   legal = jest.fn(legalLoad);
   navigate = jest.fn(async () => true);
+  touched = [];
+  const reads: Record<string, unknown> = {
+    garageProfileControllerRead: read,
+    legalCheckControllerRead: legal,
+  };
   TestBed.configureTestingModule({
     providers: [
       {
         provide: GaragesService,
-        useValue: {
-          garageProfileControllerRead: read,
-          legalCheckControllerRead: legal,
-        },
+        useValue: new Proxy(reads, {
+          get: (target, name) => {
+            // Angular itself probes a provider for its ngOnDestroy hook.
+            if (
+              typeof name === 'string' &&
+              !(name in target) &&
+              name !== 'ngOnDestroy'
+            ) {
+              touched.push(name);
+            }
+            return target[name as string];
+          },
+        }),
       },
       { provide: Overlays, useValue: { open: jest.fn() } },
       { provide: Session, useValue: { shown: signal(me) } },
@@ -653,6 +669,26 @@ describe('Profilul service-ului: the legal check panel', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(text(line(element, 'name'))).toBe('Nume Service Auto Militari');
     expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
+  });
+
+  it('calls nothing but the two reads, through first render, live re-reads and a retry', async () => {
+    let fail = true;
+    const { element, settle } = await render(undefined, 'ro', async () => {
+      if (fail) throw status(503);
+      return LEGAL;
+    });
+    await settle();
+    fail = false;
+    all(element, `${LEGAL_PANEL} button`)[0]?.click();
+    await settle();
+    events.next(message('garage.suspended', GARAGE));
+    events.next(message('document.due', 'cycle-1'));
+    await wait(350);
+    await settle();
+
+    expect(legal.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(touched).toEqual([]);
+    expect(TestBed.inject(Overlays).open).not.toHaveBeenCalled();
   });
 
   it('does not read the legal check while the profile is still loading', async () => {

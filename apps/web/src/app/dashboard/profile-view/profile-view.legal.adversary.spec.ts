@@ -523,10 +523,9 @@ describe('legal panel live', () => {
     emit('document.due');
     await settle(true);
     expect(element.querySelector('[data-legal-skeleton]')).toBeNull();
-    expect(
-      element.querySelectorAll('[data-legal-row]').length +
-        element.querySelectorAll('.error').length,
-    ).toBeGreaterThan(0);
+    expect(n).toBe(2);
+    expect(element.querySelectorAll('[data-legal-row]')).toHaveLength(4);
+    expect(element.querySelector('[role="alert"]')).toBeNull();
   });
 
   // @traces 136-FR-004
@@ -534,6 +533,8 @@ describe('legal panel live', () => {
     const { element, settle } = await render();
     emit('document.due');
     await settle(true);
+    expect(readLegal).toHaveBeenCalledTimes(2);
+    expect(element.querySelectorAll('[data-legal-row]')).toHaveLength(4);
     expect(element.querySelector('[aria-live]')).toBeNull();
     expect(element.querySelector('[role="status"]')).toBeNull();
     expect(element.querySelector('[role="alert"]')).toBeNull();
@@ -586,6 +587,7 @@ describe('legal panel live', () => {
     const { settle } = await render();
     for (let i = 0; i < 100; i++) emit('document.due', `b${i}`);
     await settle(true);
+    expect(readLegal.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(readLegal.mock.calls.length).toBeLessThanOrEqual(3);
   });
 });
