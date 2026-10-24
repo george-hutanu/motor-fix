@@ -197,6 +197,30 @@
       "unavailable": "Upload is not available right now"
     }
   },
+  "members": {
+    "error": "We could not load the people with access.",
+    "invites": {
+      "none": "No pending invites.",
+      "sent": "sent {when}",
+      "title": "Pending invites",
+      "today": "today",
+      "yesterday": "yesterday"
+    },
+    "loading": "Loading the people with access.",
+    "permissions": {
+      "canAnswerQuotes": "can answer requests",
+      "canMoveBookings": "can move bookings",
+      "canRecordFinalPrice": "can record the final price"
+    },
+    "retry": "Try again",
+    "role": {
+      "mechanic": "mechanic",
+      "owner": "owner",
+      "receptionist": "front desk"
+    },
+    "since": "since {date}",
+    "title": "People with access"
+  },
   "prices": {
     "add": "Add a job",
     "addMax": "At most 50 jobs",

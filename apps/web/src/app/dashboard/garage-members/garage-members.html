@@ -1,0 +1,45 @@
+<section class="panel" aria-labelledby="members-title">
+  <h2 id="members-title">{{ 'garage.members.title' | t }}</h2>
+  @if (view.value(); as list) {
+    <ul class="rows">
+      @for (member of list.members; track member.accountId) {
+        <li data-member class="row">
+          <span class="name">{{ member.name }}</span>
+          <span> · {{ role(member.role) }}</span>
+          @if (since(member); as since) {
+            <span class="meta"> · {{ since }}</span>
+          }
+          @if (permissions(member); as permissions) {
+            <span class="meta"> · {{ permissions }}</span>
+          }
+        </li>
+      }
+    </ul>
+    <h3>{{ 'garage.members.invites.title' | t }}</h3>
+    @if (list.invites.length) {
+      <ul class="rows">
+        @for (invite of list.invites; track invite.id) {
+          <li data-invite class="row">
+            <span class="name">{{ invite.email }}</span>
+            <span> · {{ role(invite.kind) }}</span>
+            <span class="meta"> · {{ sent(invite) }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p data-no-invites class="meta">{{ 'garage.members.invites.none' | t }}</p>
+    }
+  } @else if (view.failed()) {
+    <p role="alert" class="failed">{{ 'garage.members.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" class="retry" (click)="view.reload()">{{ 'garage.members.retry' | t }}</button>
+  } @else if (!view.gone()) {
+    <div role="status" aria-busy="true">
+      <span class="hidden">{{ 'garage.members.loading' | t }}</span>
+      <ul class="rows">
+        @for (n of skeletons; track n) {
+          <li data-skeleton class="skeleton" aria-hidden="true"></li>
+        }
+      </ul>
+    </div>
+  }
+</section>
