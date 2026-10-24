@@ -61,7 +61,7 @@ class RetentionJobs implements OnApplicationBootstrap, OnApplicationShutdown {
       { connection, telemetry: queueTelemetry() },
     );
     logFinalFailure(this.worker, this.logger);
-    observeWorker(this.worker);
+    observeWorker(this.worker, { jobNames: [NIGHTLY_JOB] });
   }
 
   async onApplicationBootstrap() {
