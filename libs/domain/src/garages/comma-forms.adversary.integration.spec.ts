@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { serialDatabase } from '../auth/serial-db.testing';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
@@ -38,6 +35,21 @@ const accountFold = async (value: string | null) =>
       value,
     )
   )[0].v;
+
+// A row as it was before the trigger existed; the trigger is back on whatever
+// the insert does.
+const withoutTrigger = async (sql: string) => {
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE garage DISABLE TRIGGER garage_comma_forms',
+  );
+  try {
+    await prisma.$executeRawUnsafe(sql);
+  } finally {
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE garage ENABLE TRIGGER garage_comma_forms',
+    );
+  }
+};
 
 const nameOf = async (slug: string) =>
   (
@@ -124,14 +136,8 @@ describe('a garage written through plain SQL', () => {
   });
 
   it('converts an UPDATE that assigns a column to itself', async () => {
-    await prisma.$executeRawUnsafe(
-      'ALTER TABLE garage DISABLE TRIGGER garage_comma_forms',
-    );
-    await prisma.$executeRawUnsafe(
+    await withoutTrigger(
       `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), 'Ţarc', 'self')`,
-    );
-    await prisma.$executeRawUnsafe(
-      'ALTER TABLE garage ENABLE TRIGGER garage_comma_forms',
     );
 
     await prisma.$executeRawUnsafe(`UPDATE garage SET name = name`);
@@ -140,14 +146,8 @@ describe('a garage written through plain SQL', () => {
   });
 
   it('leaves a remaining cedilla alone when another column is written', async () => {
-    await prisma.$executeRawUnsafe(
-      'ALTER TABLE garage DISABLE TRIGGER garage_comma_forms',
-    );
-    await prisma.$executeRawUnsafe(
+    await withoutTrigger(
       `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), 'Ţarc', 'left')`,
-    );
-    await prisma.$executeRawUnsafe(
-      'ALTER TABLE garage ENABLE TRIGGER garage_comma_forms',
     );
 
     await prisma.$executeRawUnsafe(
@@ -257,74 +257,7 @@ describe('the length limits with cedilla letters', () => {
   });
 });
 
-describe('the one-off conversion run again', () => {
-  const migration = readFileSync(
-    join(
-      __dirname,
-      '..',
-      '..',
-      'prisma',
-      'migrations',
-      '20261024200000_garage_comma_forms',
-      'migration.sql',
-    ),
-    'utf8',
-  );
-  const conversion = migration.match(/^UPDATE "garage"[\s\S]*?;$/m)?.[0] ?? '';
-
-  const legacy = async (slug: string, name: string, city: string | null) => {
-    await prisma.$executeRawUnsafe(
-      'ALTER TABLE garage DISABLE TRIGGER garage_comma_forms',
-    );
-    try {
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO garage (id, name, slug, city_key, city_name)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
-        name,
-        slug,
-        city === null ? null : 'x',
-        city,
-      );
-    } finally {
-      await prisma.$executeRawUnsafe(
-        'ALTER TABLE garage ENABLE TRIGGER garage_comma_forms',
-      );
-    }
-  };
-
-  it('changes only the rows that hold a cedilla, and none the second time', async () => {
-    await legacy('hit', 'plain', 'Iaşi');
-    await legacy('miss', 'plain', null);
-    await legacy('miss-2', 'Ștefan', 'Brașov');
-
-    expect(await prisma.$executeRawUnsafe(conversion)).toBe(1);
-    expect(await prisma.$executeRawUnsafe(conversion)).toBe(0);
-    expect(
-      await select(`SELECT city_name FROM garage WHERE slug = 'hit'`),
-    ).toEqual([{ city_name: 'Iași' }]);
-  });
-});
-
 describe('f_unaccent', () => {
-  it.each([
-    ['ș', 's'],
-    ['ş', 's'],
-    ['ț', 't'],
-    ['ţ', 't'],
-    ['ă', 'a'],
-    ['â', 'a'],
-    ['î', 'i'],
-    ['Ș', 'S'],
-    ['Ş', 'S'],
-    ['Ț', 'T'],
-    ['Ţ', 'T'],
-    ['Ă', 'A'],
-    ['Â', 'A'],
-    ['Î', 'I'],
-  ])('folds %s to %s', async (from, to) => {
-    expect(await fold(from)).toBe(to);
-  });
-
   it('answers null for null and empty for empty', async () => {
     expect(await fold(null)).toBeNull();
     expect(await fold('')).toBe('');

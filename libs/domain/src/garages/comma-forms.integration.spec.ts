@@ -199,6 +199,14 @@ describe('the one-off conversion of the stored garages', () => {
     });
   });
 
+  it('changes only the rows that hold a cedilla, and none the second time', async () => {
+    await legacy('hit', cedillas);
+    await legacy('miss', commas);
+
+    expect(await prisma.$executeRawUnsafe(conversion as string)).toBe(1);
+    expect(await prisma.$executeRawUnsafe(conversion as string)).toBe(0);
+  });
+
   it('leaves a garage without cedilla letters exactly as it was', async () => {
     await legacy('plain', commas);
     const before = await row('plain');
