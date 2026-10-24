@@ -40,7 +40,8 @@ export function ratingsHarness() {
         ReviewRatingsModule.registerWorker({
           notifications: NotificationsModule.registerWorker({
             databaseUrl,
-            email: testConfig('http://127.0.0.1:9'),
+            // Sending off: the start-up key check would warn about the closed port.
+            email: testConfig('http://127.0.0.1:9', { EMAIL_SENDING: 'off' }),
             phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
             redisUrl,
           }),
