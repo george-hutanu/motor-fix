@@ -396,6 +396,26 @@ describe("file", () => {
     assert.equal(again.json.issue, r.json.issue);
   });
 
+  // @traces 1153-FR-001
+  for (const [type, title] of [
+    ["tech debt", "Tech debt (ST-500): drop the import"],
+    ["decision", "Decision (ST-500): keep the BlockList"],
+  ]) {
+    it(`titles a ${type} issue ST-<its number> before the story it came from`, async () => {
+      const gh = world();
+      const repo = repoWith();
+      writeFileSync(join(repo, "body.md"), "body\n");
+      const r = await run(["file", "--type", type, "--title", title, "--body-file", join(repo, "body.md")], { gh, repo });
+      assert.equal(r.code, 0, r.err.join("\n"));
+      const made = issueOf(gh, r.json.issue);
+      assert.equal(made.title, `ST-${made.number} ${title}`);
+      assert.deepEqual(
+        made.labels.map((l) => l.name),
+        [`type: ${type}`],
+      );
+    });
+  }
+
   // @traces 1132-FR-003
   it("keeps a title that already carries an ST or EP id", async () => {
     const gh = world();
