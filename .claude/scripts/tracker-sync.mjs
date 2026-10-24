@@ -577,8 +577,8 @@ async function fileIssue(ctx) {
   const epic = flags.epic ? await t.find(flags.epic, { label: "epic" }) : null;
   const made = await t.create({
     title: flags.title.trim(),
-    // A later `start --story ST-<n>` finds the issue by its id; one given already is kept.
-    numbered: !/^(?:ST|EP)-\d+\b/.test(flags.title.trim()),
+    // A later `start --story ST-<n>` finds the issue by its id; one given already (a sub-id such as ST-1177c too) is kept.
+    numbered: !/^(?:ST|EP)-\d+[a-z]?\b/.test(flags.title.trim()),
     body: readFileSync(flags["body-file"], "utf8"),
     labels: [...(flags.epic ? [flags.epic] : []), `type: ${flags.type}`],
     fields: { Status: "To do", "Work type": kind, Priority: flags.priority ?? "Medium", ...(flags.epic ? { Epic: flags.epic } : {}) },
