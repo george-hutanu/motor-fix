@@ -110,6 +110,7 @@ features:
   - 1370-release-seed-no-ssh
   - 1373-seed-status-identity
   - 961-require-agent-review
+  - 447-own-pr-refusal
   - 1376-pr-test-local-boot
 ---
 
@@ -2794,6 +2795,17 @@ _From 961-require-agent-review._
 
 _From 961-require-agent-review._
 
+### 447-FR-001 — `post.mjs` MUST fall back to a COMMENT review only when the review call's error carries GitHub's own-pull-request message (`your own pull request`); any other failure, an `HTTP 422` included, MUST be returned as `reviewError` without a second review call, and the CLI MUST exit 1 naming it once the status and the description are written.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-003 — `judgeProvenance` MUST judge a person-written `agent-review` success whose `target_url` names a run by the same run rules as a workflow-written one (PR QA workflow, completed, success, this commit, dispatched on the default branch or a `pull_request` run on a PR that leaves `pr-qa.yml` alone), refusing a `pull_request` run on a PR that changes `pr-qa.yml`; a person-written success that names no run stays accepted. `readProvenance` MUST read the named run for a person's status too, and only a run of this repository (the `target_url`'s owner and name equal to the repository's), so a status naming another repository's run is refused as naming no run.
+
+_From 447-own-pr-refusal._
 ### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
 
 _From 1376-pr-test-local-boot._
