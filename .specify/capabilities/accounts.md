@@ -44,6 +44,7 @@ features:
   - 292-saved-garage-quote
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
+  - 500-trust-railway-edge
 ---
 
 # Capability: Accounts
@@ -1169,13 +1170,21 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-006 — A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the logged caller: the caller is the address the trusted-hop chain resolves to, with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`.
+### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
 
-_From 500-req-ip-behind-proxy._
+_From 500-trust-railway-edge._
 
 ### 532-FR-001 — Whenever the dashboard frame has no account shown (the session lapsed through a refused renewal and no sign-in gate keeps the account shown), the frame MUST open Home (`/`), as sign-out and `session.revoked` already do, and MUST NOT render any role's dashboard.
 
 _From 532-lost-session-home._
+
+### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
+
+_From 500-trust-railway-edge._
 
 ## Retired
 
@@ -1203,3 +1212,4 @@ _From 532-lost-session-home._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
+- `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
