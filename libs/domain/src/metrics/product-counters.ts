@@ -4,6 +4,7 @@ import {
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
   type DocumentKind,
+  type OutsideChannel,
   RECHECK_RESULTS,
   type RecheckResult,
   SEARCH_SORTS,
@@ -21,6 +22,7 @@ import {
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
 import type { Outcome } from '../admin/system-log/system-log';
+import type { FallbackReason, SentChannel } from '../notifications/routing';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
   ACCOUNT_CLOSED_SERIES,
@@ -326,6 +328,37 @@ const consentRecords = () =>
     'motorfix_consent_records_total',
     'Analytics consent choices stored, by decision',
   );
+// The fallbacks the send path can take: a driver's channel it could not use,
+// the row it wrote instead, and why.
+const FALLBACKS = [
+  { from: 'sms', reason: 'sms_cap_reached', to: 'whatsapp' },
+  { from: 'sms', reason: 'send_failed', to: 'whatsapp' },
+  { from: 'sms', reason: 'phone_not_verified', to: 'email' },
+  { from: 'sms', reason: 'send_failed', to: 'email' },
+  { from: 'whatsapp', reason: 'phone_not_verified', to: 'email' },
+  { from: 'whatsapp', reason: 'send_failed', to: 'email' },
+  { from: 'push', reason: 'no_device', to: 'email' },
+  { from: 'push', reason: 'send_failed', to: 'email' },
+  { from: 'email', reason: 'send_failed', to: 'push' },
+] as const;
+// A label outside these sets would open a series of its own.
+const CHOICE_CHANNELS: readonly OutsideChannel[] = [
+  'email',
+  'push',
+  'sms',
+  'whatsapp',
+];
+// Not started at 0: the API's start set is at its series cap.
+const channelChoices = () =>
+  counter(
+    'motorfix_notification_channel_choices_total',
+    "Drivers' channel picks for a notification type, by channel",
+  );
+const channelFallbacks = () =>
+  counter(
+    'motorfix_notification_channel_fallbacks_total',
+    'Messages sent on another channel than the chosen one, by pair and reason',
+  );
 const accountChanges = () =>
   counter(
     'motorfix_account_changes_total',
@@ -522,6 +555,25 @@ export function countAccountChange(field: (typeof ACCOUNT_FIELDS)[number]) {
   accountChanges().add(1, { field });
 }
 
+// One driver pick of a new channel for one type.
+export function countChannelChoice(channel: OutsideChannel) {
+  if (!CHOICE_CHANNELS.includes(channel)) return;
+  channelChoices().add(1, { channel });
+}
+
+// One message written on `to` because `from` could not be used.
+export function countChannelFallback(
+  from: SentChannel,
+  to: SentChannel,
+  reason: FallbackReason,
+) {
+  const known = FALLBACKS.some(
+    (f) => f.from === from && f.reason === reason && f.to === to,
+  );
+  if (!known) return;
+  channelFallbacks().add(1, { from, reason, to });
+}
+
 const each = <K extends string>(key: K, values: readonly string[]) =>
   values.map((value) => ({ [key]: value }) as Record<K, string>);
 
@@ -627,6 +679,7 @@ const STARTS: Record<
     ],
     [documentCycle, each('step', WORKER_DOCUMENT_CYCLE_STEPS)],
     [retentionRows, each('kind', RETENTION_KINDS)],
+    [channelFallbacks, FALLBACKS],
   ],
 };
 

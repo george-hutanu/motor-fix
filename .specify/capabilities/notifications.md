@@ -49,6 +49,7 @@ features:
   - 003-admin-account-actions
   - 1370-release-seed-no-ssh
   - 1156-retention-job
+  - 142-notification-channels
 ---
 
 # Capability: Notifications
@@ -65,9 +66,9 @@ _From 1351-rar-monthly-recheck._
 
 _From 194-email-sending._
 
-### 196-FR-007 — The routing MUST send a message by push when push is one of its type's channels, the person did not mute it, and the person has at least one push device; a person with no device MUST get it by e-mail instead when the type goes by e-mail. Push is on for a person, driver or staff, once they save a device, unless they muted it for that type; for a driver type the e-mail used instead goes whenever the type's channels include e-mail, even when choosing push muted e-mail; for a staff type it goes only when the person did not mute e-mail.
+### 142-FR-005 — With nothing saved for a driver type, its channel MUST be `push` when the driver has at least one push device and `email` otherwise, at read (the preferences view) and at send time (the muted channels), so a driver who never chose gets push where it works and e-mail elsewhere; `enabled` defaults stay as today (every group on but news). A driver who deletes their last device falls back to e-mail by this same rule on the next read and send. The rule holds for every existing account and type with no saved row from the release on; always-sent and transactional types keep their e-mail as today. The read carries `pushDevice`, true when the account has at least one push device.
 
-_From 196-push-notifications._
+_From 142-notification-channels._
 
 ### 194-FR-004 — A type that is always sent MUST include e-mail whenever it allows e-mail, whatever channels are muted; the channel choice MUST take the muted channels as input (empty until ST-197 stores preferences).
 
@@ -537,9 +538,9 @@ _From 806-requeue-sweep-batched._
 
 _From 806-requeue-sweep-batched._
 
-### 138-FR-001 — The driver's Setări (`/sofer/setari` in the story; the app's route is `/app/driver/settings`) MUST show a Notificări panel with exactly five switches, in this order: Ofertă nouă (`offers`), Programare (`bookings`), Scadențe (`due_dates`), Noutăți MotorFix (`news`), Recenzii și istoric (`reviews_history`), each with its title and helper line in the driver's language (texts in User Story 1, scenario 1).
+### 142-FR-001 — Each group row of the driver's Notificări panel (the five of 138-FR-001) MUST gain a disclosure that opens the group's notification types under the switch (closed by default; `aria-expanded` and `aria-controls` on the control). Each type shows its name in the driver's language and one channel picker, a radio group offering only the channels the catalogue gives the type, in the order E-mail, Push, SMS, WhatsApp; a type whose catalogue entry has one channel (NEWS) shows that channel as fixed text and no picker; an always-sent type is marked "Se trimite mereu" and its picker works like any other. The types' order within a group is the catalogue's order.
 
-_From 138-notification-switches._
+_From 142-notification-channels._
 
 ### 138-FR-002 — Each switch MUST show the group's state as the preferences report it; with nothing saved, every group is on except Noutăți MotorFix.
 
@@ -573,9 +574,9 @@ _From 138-notification-switches._
 
 _From 138-notification-switches._
 
-### 138-FR-012 — The panel MUST work on a 320 px phone, a 390 px phone, a tablet and a desktop, in light and dark, with no sideways scroll. A row that does not fit stacks its switch under the title at 320 px, and the switch keeps a 44 px tap target.
+### 142-FR-007 — Every text this story adds MUST exist in Romanian and English (type names, the option labels, the two hints, the usage line, the always-sent mark, the disclosure's accessible name), Romanian words joined by a hyphen using U+2011; the panel MUST work on a 320 px phone, a 390 px phone, a tablet and a desktop, in light and dark, with no sideways scroll, the options wrapping onto a second line at 320 px, each option a 44 px tap target; every picker MUST be operable by keyboard as a radio group with the type's name as accessible name and the hint as description; a disabled option MUST be exposed as disabled.
 
-_From 138-notification-switches._
+_From 142-notification-channels._
 
 ### 138-FR-013 — Every switch MUST be operable by keyboard and carry its title as accessible name with the helper line as description. The disabled loading state and the first-load error MUST be exposed to assistive technology. The consent step MUST take focus when it opens, close on Escape as a cancel, and return focus to the news switch when it closes.
 
@@ -874,6 +875,34 @@ _From 003-admin-account-actions._
 
 _From 1156-retention-job._
 
+### 142-FR-002 — Picking a channel MUST save that one type at once (the option shows as chosen before the save answers), with no other action, through the existing preferences save, carrying the type's last-read `enabled` unchanged; a failed save MUST return the picker to the channel the last read gave and show an error toast in the driver's language; the panel MUST re-read on the existing live preference update, keeping choices still in flight as the switches do (138-FR-011).
+
+_From 142-notification-channels._
+
+### 142-FR-003 — The preferences read MUST tell whether the caller's phone is confirmed (`phoneVerified`, from the account's phone and its confirmation time). While it is false the panel MUST show every SMS and WhatsApp option disabled with one hint per opened group, "Adaugă și confirmă numărul de telefon în Datele tale." / "Add and confirm your phone number in Your details."; the save MUST refuse a driver choice on `sms` or `whatsapp` with 422 `phone_not_verified`, nothing changed, when the phone is not confirmed (the staff lists keep their own `phone_not_verified` reason).
+
+_From 142-notification-channels._
+
+### 142-FR-004 — The preferences read MUST carry the SMS sent to the caller in the current calendar month in Europe/Bucharest and the monthly cap (`sms: { used, cap }`, `used` 0 with no row). When `used` equals the cap, the panel MUST show "Ai folosit 5 din 5 SMS luna aceasta; următoarele merg pe WhatsApp." / "You have used 5 of 5 SMS this month; the next ones go by WhatsApp." once under each opened group that has a type offering SMS; below the cap nothing is shown. The month turns over at 00:00 Europe/Bucharest on the 1st, as the counter does.
+
+_From 142-notification-channels._
+
+### 142-FR-006 — Picking Push MUST first make this browser a push device through the existing push device flow (the permission prompt only after the tap, 196-FR-004): when the browser is already a saved device the choice is saved with no prompt; when permission is granted the device is saved, then the channel; when it is refused or dismissed, or the browser is blocked, unsupported or an iPhone outside the Home Screen, the channel is still saved if the read says the account has a push device (`pushDevice`), and otherwise the choice stays as it was, nothing is saved, and the hint of the push panel's matching state is shown under the picker ("Notificările sunt blocate în browser" with the unblock steps, the Home Screen hint, or that this browser cannot show them).
+
+_From 142-notification-channels._
+
+### 142-FR-008 — Every saved channel change MUST stay one audit entry with old and new `{channel, enabled}` (as today) and MUST increment a product counter `motorfix_notification_channel_choices_total` labelled `channel` (email, push, sms, whatsapp); every send-time change of channel (a push row with no device, an SMS over the cap, an SMS or WhatsApp without a confirmed phone, a push or e-mail fallback after a failed send) MUST increment `motorfix_notification_channel_fallbacks_total` labelled `from`, `to` (each one of email, push, sms, whatsapp) and `reason` (a fixed set: `no_device` for a push with no device or every device gone; `phone_not_verified` for no phone, an unconfirmed phone or a blocked number; `sms_cap_reached`; `send_failed` for every other reason), counted only when a row is written on another channel, `to` being that row's channel, with no id, address or text as a label; an alert rule `notification-fallback-rate` fires when more than 20 fallbacks are counted over one hour for 15 minutes (the threshold and its reasoning are in research R11); both counters and the alert are listed in `infra/observability/inventory.json` and the PR's Notes list the reports they make possible.
+
+_From 142-notification-channels._
+
+### 142-FR-009 — Every route touched stays under `ActorGuard`, acts on the caller's own account only and names no account id in any path; a driver cannot read or set another driver's channels (there is no call that could).
+
+_From 142-notification-channels._
+
+### 142-FR-010 — The Build brief's scenarios 1 to 11 MUST each be an automated test: (1) Scadențe lists ITP, RCA, Rovinietă, Anvelope, Revizie, each with E-mail, Push, SMS, WhatsApp (unit, web); (2) SMS for ITP sends the next ITP reminder by SMS and counts it (API); (3) the 6th SMS of the Bucharest month goes by WhatsApp, the fallback is counted, and the read gives `used` 5 with the usage line shown (API + unit, web); (4) Ofertă nouă offers E-mail, Push, WhatsApp only and SMS is refused for its types (API + unit, web); (5) no confirmed phone: SMS and WhatsApp refused on save and disabled with the hint (API + unit, web); (6) Push asks the browser; a refusal keeps the choice with the hint (unit, web); (7) the default is push with a device and e-mail without, at read and at send (unit + API); (8) JOB_READY's channel can be picked but it cannot be switched off (API); (9) NEWS is fixed to e-mail (unit, web + API); (10) a change is saved at once, audited old and new, counted, and the next message uses it (API); (11) REVIEW_INVITE offers E-mail, Push, WhatsApp and refuses SMS (API). Besides: the month turning on the 1st in Europe/Bucharest (unit); end to end, choose WhatsApp for ITP and SMS for tyres and read them back, the phone hint, the usage line.
+
+_From 142-notification-channels._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -895,3 +924,6 @@ _From 1156-retention-job._
 - `560-FR-009` — superseded by `523-FR-014` (2026-10-24)
 - `194-FR-016` — superseded by `520-FR-003` (2026-10-23)
 - `525-FR-001` — superseded by `1370-FR-007` (2026-10-24)
+- `138-FR-001` — superseded by `142-FR-001` (2026-10-24)
+- `196-FR-007` — superseded by `142-FR-005` (2026-10-24)
+- `138-FR-012` — superseded by `142-FR-007` (2026-10-24)

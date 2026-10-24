@@ -626,6 +626,8 @@ describe('the product dashboard', () => {
       'motorfix_quotes_total',
       'motorfix_emails_sent_total',
       'motorfix_notifications_sent_total',
+      'motorfix_notification_channel_choices_total',
+      'motorfix_notification_channel_fallbacks_total',
       'motorfix_job_steps_total',
       'motorfix_request_received_total',
       'motorfix_retention_rows_total',

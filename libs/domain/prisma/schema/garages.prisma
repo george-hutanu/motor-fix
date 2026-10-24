@@ -214,7 +214,18 @@ model Mechanic {
   garageId            String    @map("garage_id") @db.Uuid
   accountId           String?   @unique @map("account_id") @db.Uuid
   name                String
+  // The specialties joined with ", ", kept for the readers of one line.
   speciality          String?
+  // The card's own fields, the owner's to write (migration CHECKs).
+  roleTitle           String?   @map("role_title")
+  specialties         String[]  @default([])
+  certifications      String[]  @default([])
+  years               Int?
+  // The garage's works_on brands the mechanic works on; no foreign key.
+  brandIds            String[]  @default([]) @map("brand_ids") @db.Uuid
+  // The garage owner's own row: never removed, created with the garage.
+  isOwner             Boolean   @default(false) @map("is_owner")
+  workingHours        Json?     @map("working_hours")
   onProfile           Boolean   @default(false) @map("on_profile")
   canMoveBookings     Boolean   @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean   @default(false) @map("can_answer_quotes")
