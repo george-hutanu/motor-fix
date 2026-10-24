@@ -1,4 +1,12 @@
-import { Component, input, output } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
 
@@ -21,6 +29,29 @@ export class DashboardTabBar {
   readonly countsLoading = input(false);
   // An entry that opens a task over the view, not a page.
   readonly act = output<DashboardView>();
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    const destroyRef = inject(DestroyRef);
+    // A phone turned sideways and back leaves the bar scrolled where the
+    // wide screen clamped it, so a change of width reveals the current tab
+    // again. Height alone (the browser's address bar) leaves it be.
+    afterNextRender(() => {
+      const nav = host.nativeElement.querySelector('nav');
+      if (!nav || typeof ResizeObserver === 'undefined') return;
+      let width: number | undefined;
+      const observer = new ResizeObserver(([entry]) => {
+        const next = entry.contentRect.width;
+        const current = nav.querySelector<HTMLElement>('[aria-current="page"]');
+        if (width !== undefined && next > 0 && next !== width && current) {
+          this.reveal(current);
+        }
+        width = next;
+      });
+      observer.observe(nav);
+      destroyRef.onDestroy(() => observer.disconnect());
+    });
+  }
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
   // `scrollIntoView` is absent on the server and in jsdom.

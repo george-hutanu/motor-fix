@@ -124,9 +124,15 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
     await page.setViewportSize({ height: 812, width: 375 });
   });
 
+  // @traces 1380-FR-006
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
+      // The stub session names no garage, so Profil's read would be gone and
+      // send the page home mid-walk; any other failure keeps the view open.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 500 }),
+      );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });
 
