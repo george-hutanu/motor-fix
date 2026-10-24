@@ -23,7 +23,7 @@ export interface PlatformRulesOptions {
   webUrl?: string;
 }
 
-export type ReviewPolicy =
+type ReviewPolicy =
   | { mode: 'job_only' }
   | { mode: 'profile_allowed'; source: 'profile' };
 

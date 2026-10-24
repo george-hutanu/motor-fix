@@ -74,7 +74,7 @@ export class BrandPageDto {
 
 // A brand's name as an admin types it: 2 to 40 characters that show, the
 // bound the brand file's names keep too.
-export const BRAND_NAME: VisibleTextRule = { max: 40, min: 2 };
+const BRAND_NAME: VisibleTextRule = { max: 40, min: 2 };
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
