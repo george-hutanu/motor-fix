@@ -136,3 +136,51 @@ test.describe("the channel of each driver's notification type @seeded", () => {
     }
   });
 });
+
+// SC-004: every group opened with its pickers, at each size, scheme and
+// language, with no sideways scroll; the screenshots go to the report.
+async function openedPickers(page: Page, email: string) {
+  const closed = page.locator('button.disclosure[aria-expanded="false"]');
+  while ((await closed.count()) > 0) await closed.first().click();
+  const itp = picker(page, 'ITP');
+  await expect(itp.getByRole('radio', { name: email })).toBeVisible();
+  await expect(itp.getByRole('radio', { name: 'WhatsApp' })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
+}
+
+test.describe('the opened channel pickers at every size @seeded', () => {
+  for (const [width, height] of [
+    [320, 640],
+    [390, 844],
+    [768, 1024],
+    [1280, 800],
+  ]) {
+    test(`each group opens with its pickers and no sideways scroll at ${width} px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ height, width });
+      await settings(page, WITH_PHONE);
+      const language = page.getByRole('group', {
+        name: /^(Limba|Language)$/,
+      });
+      for (const [lang, email] of [
+        ['RO', 'E‑mail'],
+        ['EN', 'E-mail'],
+      ] as const) {
+        await language.getByRole('button', { exact: true, name: lang }).click();
+        for (const colorScheme of ['light', 'dark'] as const) {
+          await page.emulateMedia({ colorScheme });
+          await openedPickers(page, email);
+          await testInfo.attach(`pickers-${width}-${colorScheme}-${lang}`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+        }
+      }
+    });
+  }
+});
