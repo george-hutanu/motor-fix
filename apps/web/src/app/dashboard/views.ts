@@ -258,7 +258,7 @@ export const DASHBOARDS: Record<
             './garage-requests/garage-requests-view/garage-requests-view'
           ).then((m) => m.GarageRequestsView),
       },
-      garageView('schedule', 'garage.schedule'),
+      { ...garageView('schedule', 'garage.schedule'), feature: 'day_sheets' },
       {
         ...garageView('jobs', 'garage.own_jobs'),
         load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),

@@ -2,6 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -23,6 +25,7 @@ import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import { characters } from '../../characters';
 import { ADDRESS } from '../../sign-in/sign-in';
+import { Session } from '../session';
 
 type Kind = 'mechanic' | 'receptionist';
 
@@ -36,7 +39,9 @@ function openInvite(error: unknown): string | null {
 // "Invită în echipă": the owner invites a mechanic or a receptionist by
 // e-mail. A mechanic's three permissions start unticked. When the e-mail
 // could not go out, the link is offered to copy; an address with an invite
-// still open can have it sent again. Closes with "sent" from "Gata".
+// still open can have it sent again. Mecanic is offered only while the
+// garage has its team on, as the session last read it. Closes with "sent"
+// from "Gata".
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -55,6 +60,7 @@ function openInvite(error: unknown): string | null {
 export class InviteStaff {
   private readonly garages = inject(GaragesService);
   private readonly i18n = inject(I18n);
+  private readonly session = inject(Session);
   protected readonly task = injectOverlayTask<
     { garageId: string },
     'sent' | 'cancelled'
@@ -63,7 +69,16 @@ export class InviteStaff {
   protected readonly outcome = signal<StaffInviteSentDto | null>(null);
   protected readonly inviteId = signal<string | null>(null);
   protected readonly resending = signal(false);
-  protected readonly mechanics = signal(true);
+  // The server refused a mechanic: the session had not heard of the switch.
+  private readonly refused = signal(false);
+  protected readonly mechanics = computed(
+    () =>
+      !this.refused() &&
+      this.session
+        .current()
+        ?.garageAccess.find((g) => g.garageId === this.task.data.garageId)
+        ?.features['team_mechanics'] !== false,
+  );
 
   protected readonly form = new FormGroup({
     canAnswerQuotes: new FormControl(false, { nonNullable: true }),
@@ -95,10 +110,7 @@ export class InviteStaff {
         const { code } = toProblem(error);
         this.inviteId.set(code === 'invite_open' ? openInvite(error) : null);
         // The garage has mechanics switched off: only a receptionist is left.
-        if (code === 'feature_off') {
-          this.mechanics.set(false);
-          this.form.controls.kind.setValue('receptionist');
-        }
+        if (code === 'feature_off') this.refused.set(true);
         throw error;
       }
     },
@@ -106,6 +118,10 @@ export class InviteStaff {
 
   constructor() {
     void this.i18n.enter('garage');
+    // Only a receptionist is left to invite.
+    effect(() => {
+      if (!this.mechanics()) this.form.controls.kind.setValue('receptionist');
+    });
   }
 
   private address(value: string) {
