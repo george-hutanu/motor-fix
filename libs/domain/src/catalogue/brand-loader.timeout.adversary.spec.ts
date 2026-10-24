@@ -1,4 +1,4 @@
-import { BrandLoader } from '../brand-loader';
+import { BrandLoader } from './brand-loader';
 
 // @traces 105-FR-013
 describe('the brand loader transaction timeout', () => {

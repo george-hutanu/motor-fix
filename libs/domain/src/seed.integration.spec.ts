@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 import { isValidCui } from '@motor-fix/contracts';
@@ -556,6 +557,28 @@ describe('seed of the listed garages', () => {
       where: { key: 'saab' },
     });
     expect([saab.active, saab.updatedBy]).toEqual([false, admin.id]);
+  });
+
+  // A Saab another admin already owns stays as that admin left it.
+  // @traces 105-FR-020
+  it('leaves a Saab another admin owns as it is', async () => {
+    const owner = randomUUID();
+    await prisma.brand.create({
+      data: {
+        key: 'saab',
+        name: 'Saab',
+        roPossessive: 'Saabul tău',
+        slug: 'saab',
+        updatedBy: owner,
+      },
+    });
+
+    expect(seed('test').status).toBe(0);
+
+    const saab = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'saab' },
+    });
+    expect([saab.active, saab.updatedBy]).toEqual([true, owner]);
   });
 
   // @traces 227-FR-013
