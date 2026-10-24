@@ -35,6 +35,9 @@ h2 {
   min-height: var(--mf-tap);
   white-space: normal;
 }
+.add {
+  white-space: nowrap;
+}
 .count {
   color: var(--mf-text-secondary);
 }
