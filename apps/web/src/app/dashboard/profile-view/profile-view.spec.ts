@@ -138,21 +138,24 @@ afterEach(() => TestBed.resetTestingModule());
 
 // @traces 133-FR-005 133-FR-006 133-FR-012 133-FR-013
 describe('Profilul service-ului: the public profile panel', () => {
-  it("reads the session garage's profile once and heads three named panels", async () => {
+  it("reads the session garage's profile once into the board's one panel", async () => {
     const { element, settle } = await render();
     await settle();
 
     expect(read).toHaveBeenCalledTimes(1);
     expect(read).toHaveBeenCalledWith({ garageId: GARAGE });
     const panels = all(element, 'section[aria-labelledby]');
-    expect(panels).toHaveLength(3);
-    for (const panel of panels) {
-      const heading = element.querySelector(
-        `#${panel.getAttribute('aria-labelledby')}`,
-      );
-      expect(heading?.tagName).toBe('H2');
-    }
-    expect(text(panels[0].querySelector('h2'))).toBe('Profilul public');
+    expect(panels).toHaveLength(1);
+    const heading = element.querySelector(
+      `#${panels[0].getAttribute('aria-labelledby')}`,
+    );
+    expect(heading?.tagName).toBe('H2');
+    expect(text(heading)).toBe('Profilul public');
+    expect(all(panels[0], 'h3').map(text)).toEqual([
+      'Lucrează pe',
+      'Nu lucrează pe',
+      'Facilități',
+    ]);
   });
 
   it('shows a workshop its name, address, hours and the phone marked private', async () => {
@@ -279,7 +282,7 @@ describe('Profilul service-ului: the brands', () => {
     const { element, settle } = await render();
     await settle();
 
-    const headings = all(element, 'section h2').map(text);
+    const headings = all(element, 'section h3').map(text);
     expect(headings).toEqual(
       expect.arrayContaining(['Lucrează pe', 'Nu lucrează pe']),
     );
@@ -437,7 +440,7 @@ describe('Profilul service-ului: the public profile link', () => {
 
 // @traces 133-FR-010
 describe('Profilul service-ului: loading, failure and suspension', () => {
-  it('shows a skeleton in each panel while the first read is open', async () => {
+  it('shows the skeleton in the panel while the first read is open', async () => {
     let answerNow: (value: GarageProfileDto) => void = () => undefined;
     const { element, settle } = await render(
       () =>
@@ -457,7 +460,7 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
     expect(element.querySelector('[data-skeleton]')).toBeNull();
   });
 
-  it('shows the error and a retry in each panel, and a retry reads once more', async () => {
+  it('shows the error and a retry in the panel, and a retry reads once more', async () => {
     let fail = true;
     const { element, settle } = await render(async () => {
       if (fail) throw status(503);
@@ -466,10 +469,10 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
     await settle();
 
     const errors = all(element, 'section [data-error]');
-    expect(errors).toHaveLength(3);
+    expect(errors).toHaveLength(1);
     expect(text(errors[0])).toContain('Nu am putut încărca profilul.');
     const retries = all(element, 'section [data-retry]');
-    expect(retries.map(text)).toEqual(Array(3).fill('Reîncearcă'));
+    expect(retries.map(text)).toEqual(['Reîncearcă']);
     expect(element.querySelector('[data-public-link]')).toBeNull();
 
     fail = false;
@@ -570,6 +573,42 @@ describe('Profilul service-ului: kept current', () => {
 
     expect(element.querySelector('[data-suspended]')).not.toBeNull();
     expect(element.querySelector('[data-public-link]')).toBeNull();
+  });
+
+  it('shows the suspended line as soon as garage.suspended arrives', async () => {
+    let suspended = false;
+    const { element, settle } = await render(async () => {
+      if (suspended) throw status(410);
+      return answer();
+    });
+    await settle();
+
+    suspended = true;
+    events.next(message('garage.suspended', GARAGE));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(element.querySelector('[data-suspended]')).not.toBeNull();
+    expect(element.querySelector('[data-public-link]')).toBeNull();
+  });
+
+  it('shows the profile again as soon as garage.restored arrives', async () => {
+    let suspended = true;
+    const { element, settle } = await render(async () => {
+      if (suspended) throw status(410);
+      return answer();
+    });
+    await settle();
+    expect(element.querySelector('[data-suspended]')).not.toBeNull();
+
+    suspended = false;
+    events.next(message('garage.restored', GARAGE));
+    await wait(350);
+    await settle();
+
+    expect(element.querySelector('[data-suspended]')).toBeNull();
+    expect(text(line(element, 'name'))).toBe('Nume Service Auto Militari');
   });
 
   it('shows the latest answer when a change lands during a read', async () => {

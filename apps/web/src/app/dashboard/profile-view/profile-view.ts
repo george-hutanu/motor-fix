@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -9,21 +8,19 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { FACILITIES, PAYMENTS } from '@motor-fix/contracts/garage-hours';
+import { FACILITIES } from '@motor-fix/contracts/garage-hours';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
-import { FUELS } from '@motor-fix/contracts/plate';
 import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
-import {
-  formatKm,
-  formatLei,
-  I18n,
-  type Language,
-  TranslatePipe,
-} from '@motor-fix/i18n';
+import { formatKm, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, Lamp } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
 import { liveView } from '../../live/view';
+import {
+  carTerms,
+  fuelLine,
+  paymentLine,
+} from '../../public/garage-profile/details-section/detail-lines';
 import { hoursLines } from '../../public/garage-profile/where-section/hours-lines';
 import { Live } from '../live';
 import { garageOf, Session } from '../session';
@@ -36,7 +33,7 @@ const SUSPENDED = 410;
 // from the same labels, so the two read the same.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, Lamp, NgTemplateOutlet, TranslatePipe],
+  imports: [HlmButton, Lamp, TranslatePipe],
   selector: 'mf-profile-view',
   styleUrl: './profile-view.css',
   templateUrl: './profile-view.html',
@@ -74,7 +71,13 @@ export class ProfileView {
     },
     {
       changes: this.live
-        .on(['garage.updated', 'facility.removed', 'facility.re_add_decided'])
+        .on([
+          'garage.updated',
+          'garage.suspended',
+          'garage.restored',
+          'facility.removed',
+          'facility.re_add_decided',
+        ])
         .pipe(filter((m) => m.id === this.garageId())),
       goneOn: [403, 404],
       resync: this.live.resync,
@@ -88,7 +91,6 @@ export class ProfileView {
   constructor() {
     void this.i18n.enter('garage');
     void this.i18n.enter('public');
-    // A view the session may not open sends it to the dashboard's own page.
     effect(() => {
       if (this.view.gone()) void this.router.navigateByUrl('/app/garage');
     });
@@ -118,9 +120,7 @@ export class ProfileView {
   protected readonly worksOn = computed(() =>
     (this.profile()?.worksOn ?? []).map((brand) => ({
       ...brand,
-      fuels: FUELS.filter((fuel) => brand.fuels.includes(fuel))
-        .map((fuel) => this.t(`public.requestQuote.fuelWord.${fuel}`))
-        .join(' · '),
+      fuels: fuelLine(brand.fuels, (key) => this.t(key)),
     })),
   );
   // Every facility the listing can offer, the ones not offered among them.
@@ -139,7 +139,9 @@ export class ProfileView {
       }
       const terms =
         key === 'courtesy_car'
-          ? this.carTerms(garage.courtesyCar, language)
+          ? carTerms(garage.courtesyCar, language, (key, params) =>
+              this.t(key, params),
+            )
           : '';
       return {
         key,
@@ -148,32 +150,17 @@ export class ProfileView {
       };
     });
   });
-  protected readonly payment = computed(() => {
-    const methods = PAYMENTS.filter(
-      (method) => this.profile()?.paymentMethods[method],
-    ).map((method) =>
-      this.t(`public.garageProfile.details.payments.${method}`),
-    );
-    return methods.length
-      ? this.t('public.garageProfile.details.payment', {
-          methods: methods.join(', '),
-        })
-      : '';
-  });
+  protected readonly payment = computed(() =>
+    paymentLine(this.profile()?.paymentMethods, (key, params) =>
+      this.t(key, params),
+    ),
+  );
   protected readonly publicHref = computed(() => {
     const garage = this.profile();
-    return garage ? `/${this.i18n.language()}/garages/${garage.slug}` : '';
+    return garage
+      ? `/${this.i18n.language()}/garages/${encodeURIComponent(garage.slug)}`
+      : '';
   });
-
-  // "gratuit", "150 lei / zi", or nothing for a paid car with no price.
-  private carTerms(car: GarageProfileDto['courtesyCar'], language: Language) {
-    if (!car) return '';
-    if (!car.paid) return this.t('public.garageProfile.details.free');
-    if (car.pricePerDayBani === undefined) return '';
-    return this.t('public.garageProfile.details.perDay', {
-      price: formatLei(car.pricePerDayBani, language),
-    });
-  }
 
   protected address(garage: GarageProfileDto) {
     return garage.businessKind === 'mobile' ? '' : (garage.address ?? '');

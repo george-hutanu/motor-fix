@@ -31,7 +31,7 @@ async function signedIn(page: Page, email: string) {
 const chips = (page: Page, list: string) =>
   page.locator(`${list} mf-lamp`).allTextContents();
 
-// @traces 133-FR-005 133-FR-009 133-FR-015 133-SC-001 133-SC-002
+// @traces 133-FR-005 133-FR-009 133-FR-015
 test.describe('the garage profile view @seeded', () => {
   test('shows the owner what drivers see, with the phone kept to the dashboard', async ({
     page,
@@ -84,7 +84,6 @@ test.describe('the garage profile view @seeded', () => {
         t.trim(),
       ),
     ).toEqual(fuels.map((t) => t.trim()));
-    // The offered facilities, and the hours, read the same on both pages.
     const offered = await page
       .locator('[data-facility]:not(.off) mf-lamp')
       .allTextContents();

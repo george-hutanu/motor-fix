@@ -398,3 +398,28 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
     );
   });
 });
+
+// @traces 133-FR-014
+describe("the staff read of a garage's own profile", () => {
+  it('lists the route with its metric and only the shared API alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/profile'];
+    const entries: { name?: string; [key: string]: unknown }[] = Object.values(
+      JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      ),
+    ).flatMap((each) => (Array.isArray(each) ? each : []));
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(
+      entries.find((each) => each.name === 'garage-profile'),
+    ).toMatchObject({
+      alerts: ['api-error-rate', 'api-latency'],
+      dashboard: 'motorfix-api',
+      metric: expect.stringMatching(/\/api\/v1\/garages\/:garageId\/profile$/),
+      source:
+        'libs/domain/src/garages/garage-profile/garage-profile.controller.ts',
+    });
+  });
+});

@@ -7,6 +7,7 @@
 }
 p,
 h2,
+h3,
 ul {
   margin: 0;
 }
@@ -14,7 +15,6 @@ ul {
   padding: 0;
   list-style: none;
 }
-/* The board's panel: the public profile's details section draws the same. */
 .panel {
   display: flex;
   flex-direction: column;
@@ -27,6 +27,7 @@ ul {
   overflow-wrap: anywhere;
 }
 h2,
+h3,
 .label {
   font-family: var(--mf-font-label);
   font-size: var(--mf-size-label);
@@ -110,7 +111,7 @@ h2,
   border-radius: var(--mf-radius-chip);
   background: var(--mf-panel-raised);
 }
-.refuses h2,
+.refuses h3,
 .refuses mf-lamp {
   color: var(--mf-red-ink);
 }

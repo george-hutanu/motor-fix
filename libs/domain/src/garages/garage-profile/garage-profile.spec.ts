@@ -1,10 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { GarageProfileService } from './garage-profile.service';
 import type { Actor } from '../../auth/policy';
 
-// @traces 133-FR-002 133-FR-014
+// @traces 133-FR-002
 
 const GARAGE = '7b0c9a52-2f7e-4d55-9a0f-0d6c1a0e5c11';
 const PERMISSIONS = {
@@ -80,27 +77,5 @@ describe("the staff read of a garage's own public profile, in order", () => {
 
     expect(status(failure)).toBe(404);
     expect(bySlug).not.toHaveBeenCalled();
-  });
-});
-
-describe('the staff read in the observability inventory', () => {
-  it('lists the route with the API panels and no alert of its own', () => {
-    const inventory = JSON.parse(
-      readFileSync(
-        join(__dirname, '../../../../../infra/observability/inventory.json'),
-        'utf8',
-      ),
-    ) as { entries: { name: string; [key: string]: unknown }[] };
-
-    expect(
-      inventory.entries.find((entry) => entry.name === 'garage-profile'),
-    ).toMatchObject({
-      alerts: ['api-error-rate', 'api-latency'],
-      dashboard: 'motorfix-api',
-      kind: 'endpoint',
-      metric: expect.stringContaining('/api/v1/garages/:garageId/profile'),
-      source:
-        'libs/domain/src/garages/garage-profile/garage-profile.controller.ts',
-    });
   });
 });

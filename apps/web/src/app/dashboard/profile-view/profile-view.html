@@ -1,21 +1,6 @@
 @if (suspended()) {
   <p class="panel suspended" data-suspended>{{ 'garage.profile.suspended' | t }}</p>
 } @else {
-  <ng-template #state>
-    @if (view.error()) {
-      <div class="failed" data-error>
-        <p>{{ 'garage.profile.error' | t }}</p>
-        <button hlmBtn variant="secondary" type="button" class="retry" data-retry (click)="view.reload()">{{ 'garage.profile.retry' | t }}</button>
-      </div>
-    } @else {
-      <ul class="skeletons" aria-hidden="true">
-        @for (n of skeletons; track n) {
-          <li class="skeleton" data-skeleton></li>
-        }
-      </ul>
-    }
-  </ng-template>
-
   <section class="panel" aria-labelledby="mf-profile-public">
     <h2 id="mf-profile-public">{{ 'garage.profile.panel' | t }}</h2>
     @if (profile(); as garage) {
@@ -47,15 +32,9 @@
           </li>
         }
       </ul>
-    } @else {
-      <ng-container [ngTemplateOutlet]="state" />
-    }
-  </section>
 
-  <section class="panel" aria-labelledby="mf-profile-works">
-    <div class="group" data-works>
-      <h2 id="mf-profile-works">{{ 'public.garageProfile.details.worksOn' | t }}</h2>
-      @if (profile()) {
+      <div class="group" data-works>
+        <h3>{{ 'public.garageProfile.details.worksOn' | t }}</h3>
         @if (worksOn().length) {
           <ul class="chips">
             @for (brand of worksOn(); track brand.id) {
@@ -70,11 +49,9 @@
         } @else {
           <p class="muted">{{ 'garage.profile.none' | t }}</p>
         }
-      }
-    </div>
-    @if (profile(); as garage) {
+      </div>
       <div class="group refuses" data-refuses>
-        <h2>{{ 'public.garageProfile.details.refuses' | t }}</h2>
+        <h3>{{ 'public.garageProfile.details.refuses' | t }}</h3>
         @if (garage.doesNotTake.length) {
           <ul class="chips">
             @for (brand of garage.doesNotTake; track brand.id) {
@@ -91,36 +68,39 @@
       @if (garage.brandNote && (garage.worksOn.length || garage.doesNotTake.length)) {
         <p class="note" data-brand-note>{{ garage.brandNote }}</p>
       }
-    } @else {
-      <ng-container [ngTemplateOutlet]="state" />
-    }
-  </section>
 
-  <section class="panel" aria-labelledby="mf-profile-facilities">
-    <h2 id="mf-profile-facilities">{{ 'public.garageProfile.details.facilities' | t }}</h2>
-    @if (profile(); as garage) {
-      <ul class="chips">
-        @for (facility of facilities(); track facility.key) {
-          <li [attr.data-facility]="facility.key" [class.off]="!facility.offered">
-            <span class="chip"><mf-lamp [state]="facility.offered ? 'green' : 'grey'" [label]="facility.label" /></span>
-          </li>
+      <div class="group" data-facilities>
+        <h3>{{ 'public.garageProfile.details.facilities' | t }}</h3>
+        <ul class="chips">
+          @for (facility of facilities(); track facility.key) {
+            <li [attr.data-facility]="facility.key" [class.off]="!facility.offered">
+              <span class="chip"><mf-lamp [state]="facility.offered ? 'green' : 'grey'" [label]="facility.label" /></span>
+            </li>
+          }
+        </ul>
+        @if (payment()) {
+          <p data-payment>{{ payment() }}</p>
+        }
+        @if (garage.facilitiesNote) {
+          <p class="note" data-facilities-note>{{ garage.facilitiesNote }}</p>
+        }
+      </div>
+
+      <a hlmBtn variant="ghost" class="public-link" data-public-link [href]="publicHref()" target="_blank" rel="noopener">
+        {{ 'garage.profile.publicLink' | t }}
+        <span class="sr-only">({{ 'garage.profile.newTab' | t }})</span>
+      </a>
+    } @else if (view.error()) {
+      <div class="failed" data-error>
+        <p>{{ 'garage.profile.error' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" class="retry" data-retry (click)="view.reload()">{{ 'garage.profile.retry' | t }}</button>
+      </div>
+    } @else {
+      <ul class="skeletons" aria-hidden="true">
+        @for (n of skeletons; track n) {
+          <li class="skeleton" data-skeleton></li>
         }
       </ul>
-      @if (payment()) {
-        <p data-payment>{{ payment() }}</p>
-      }
-      @if (garage.facilitiesNote) {
-        <p class="note" data-facilities-note>{{ garage.facilitiesNote }}</p>
-      }
-    } @else {
-      <ng-container [ngTemplateOutlet]="state" />
     }
   </section>
-
-  @if (publicHref()) {
-    <a hlmBtn variant="secondary" class="public-link" data-public-link [href]="publicHref()" target="_blank" rel="noopener">
-      {{ 'garage.profile.publicLink' | t }}
-      <span class="sr-only">({{ 'garage.profile.newTab' | t }})</span>
-    </a>
-  }
 }
