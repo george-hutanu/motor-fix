@@ -91,6 +91,14 @@ describe('web edge', () => {
     base = await listen(web);
   });
 
+  // The API keeps its port and resets each connection as it is accepted.
+  // Closing it instead would free the port, and a server in another Jest
+  // worker can be handed it at once and answer in its place.
+  const unreachable = () =>
+    upstream.prependListener('connection', (socket) =>
+      socket.resetAndDestroy(),
+    );
+
   afterEach(async () => {
     web.closeAllConnections();
     upstream.closeAllConnections();
@@ -128,7 +136,7 @@ describe('web edge', () => {
   });
 
   it('is not ready when the API cannot be reached', async () => {
-    await close(upstream);
+    unreachable();
 
     const ready = await fetch(`${base}/health/ready`);
 
@@ -184,6 +192,17 @@ describe('web edge', () => {
     );
   });
 
+  // @traces 500-FR-015
+  it('keeps a forwarded chain as given and appends only its own caller', async () => {
+    await fetch(`${base}/api/v1/me`, {
+      headers: { 'x-forwarded-for': '86.125.92.213, 95.173.10.20' },
+    });
+
+    expect(forwarded[0]?.for).toMatch(
+      /^86\.125\.92\.213, 95\.173\.10\.20, ((::ffff:)?127\.0\.0\.1|::1)$/,
+    );
+  });
+
   it('passes the refresh cookie to the API and its new value back', async () => {
     const res = await fetch(`${base}/api/v1/auth/refresh`, {
       headers: { cookie: 'mf_refresh=old' },
@@ -213,7 +232,7 @@ describe('web edge', () => {
   });
 
   it('answers 502 when the API cannot be reached', async () => {
-    await close(upstream);
+    unreachable();
 
     const res = await fetch(`${base}/api/v1/garages`);
 
