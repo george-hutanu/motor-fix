@@ -106,6 +106,7 @@ export class GarageFeaturesService {
       where: {
         garageId,
         OR: [{ accountId: null }, { accountId: { not: actor.accountId } }],
+        removedAt: null,
       },
     });
     if (others > 0) {

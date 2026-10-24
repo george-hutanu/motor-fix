@@ -257,6 +257,41 @@ describe('GarageMechanicsService.saveAgain', () => {
     expect(await newer()).toEqual([]);
   });
 
+  // @traces 055-FR-004
+  it('leaves a removed card as it is and adds a new card of its name', async () => {
+    const [, mihai] = await cards();
+    await prisma.mechanic.update({
+      data: { onProfile: false, removedAt: new Date() },
+      where: { id: mihai?.id },
+    });
+
+    await again({
+      mechanics: [
+        { name: 'Andrei Pop', speciality: 'Electrică' },
+        { name: 'Mihai Ionescu' },
+      ],
+      onProfile: true,
+    });
+    const kept = await prisma.mechanic.findUniqueOrThrow({
+      where: { id: mihai?.id },
+    });
+    const fresh = (await cards()).filter(
+      (card) => card.name === 'Mihai Ionescu' && card.id !== mihai?.id,
+    );
+    await again({
+      mechanics: [{ name: 'Andrei Pop', speciality: 'Electrică' }],
+      onProfile: true,
+    });
+
+    expect([kept.onProfile, kept.removedAt]).toEqual([false, expect.any(Date)]);
+    expect(fresh).toEqual([
+      expect.objectContaining({ onProfile: true, removedAt: null }),
+    ]);
+    expect((await cards()).map((card) => card.id)).toEqual(
+      expect.arrayContaining([mihai?.id]),
+    );
+  });
+
   it('refuses a broken card and changes nothing', async () => {
     const before = await cards();
 
