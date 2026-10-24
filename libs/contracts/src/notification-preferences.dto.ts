@@ -23,7 +23,7 @@ import {
 export { NOTIFICATION_GROUPS, type NotificationGroupKey };
 
 // The channels a message goes by outside the app.
-export const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
+const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
 
 export type OutsideChannel = (typeof OUTSIDE_CHANNELS)[number];
 
@@ -74,6 +74,22 @@ export class UpdateNotificationPreferenceDto {
 export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
   @ApiProperty({ description: 'Sent whatever the person chooses' })
   alwaysSent!: boolean;
+
+  @ApiProperty({
+    description:
+      'The channels the type can be sent by, in order; a staff entry lists its own',
+    enum: OUTSIDE_CHANNELS,
+    isArray: true,
+  })
+  channels!: OutsideChannel[];
+}
+
+export class SmsUsageDto {
+  @ApiProperty({ description: 'SMS sent to the driver this month (Bucharest)' })
+  used!: number;
+
+  @ApiProperty({ description: 'SMS a driver gets per month; then WhatsApp' })
+  cap!: number;
 }
 
 // The consent text the driver confirms before news is turned on (draft,
@@ -104,25 +120,20 @@ export class NewsConsentDto {
 
 // What a garage's staff or an admin choose for the messages of their work.
 export const STAFF_CHANNELS = ['email', 'push', 'whatsapp'] as const;
-export const STAFF_ROLES = [
-  'owner',
-  'receptionist',
-  'mechanic',
-  'admin',
-] as const;
-export const STAFF_SECTIONS = [
+const STAFF_ROLES = ['owner', 'receptionist', 'mechanic', 'admin'] as const;
+const STAFF_SECTIONS = [
   'requests_quotes',
   'bookings',
   'reviews',
   'account',
   'admin',
 ] as const;
-export const WHATSAPP_UNAVAILABLE = [
+const WHATSAPP_UNAVAILABLE = [
   'garage_whatsapp_off',
   'phone_not_verified',
 ] as const;
 
-export type StaffChannel = (typeof STAFF_CHANNELS)[number];
+type StaffChannel = (typeof STAFF_CHANNELS)[number];
 export type StaffRole = (typeof STAFF_ROLES)[number];
 export type StaffSectionKey = (typeof STAFF_SECTIONS)[number];
 
@@ -196,6 +207,18 @@ export class NotificationPreferencesDto {
 
   @ApiProperty({ type: NewsConsentDto })
   newsConsent!: NewsConsentDto;
+
+  @ApiProperty({
+    description:
+      'A phone is saved and confirmed: SMS and WhatsApp can be picked',
+  })
+  phoneVerified!: boolean;
+
+  @ApiProperty({ description: 'The account has at least one push device' })
+  pushDevice!: boolean;
+
+  @ApiProperty({ type: SmsUsageDto })
+  sms!: SmsUsageDto;
 
   @ApiProperty({
     description:

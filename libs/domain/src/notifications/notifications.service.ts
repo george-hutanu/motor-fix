@@ -12,10 +12,20 @@ import type { JobsOptions } from 'bullmq';
 
 import { type NotificationType, notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
-import { mutedChannels, rowsType } from './preferences/preferences';
+import {
+  isDriverChoice,
+  mutedChannels,
+  rowsType,
+} from './preferences/preferences';
 import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
-import { outsideChannels, type SentChannel } from './routing';
+import {
+  type FallbackReason,
+  outsideChannels,
+  type SentChannel,
+  type Substitution,
+  substitutions,
+} from './routing';
 import { locked, STAFF_TYPES } from './staff-lists';
 import { farewell } from './templates';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
@@ -27,7 +37,11 @@ import type {
   Prisma,
   PrismaClient,
 } from '../generated/prisma/client';
-import { countNotification, countQuote } from '../metrics/product-counters';
+import {
+  countChannelFallback,
+  countNotification,
+  countQuote,
+} from '../metrics/product-counters';
 
 export const NOTIFICATIONS_QUEUE = 'notifications';
 export const NOTIFICATIONS_CONFIG = Symbol('NOTIFICATIONS_CONFIG');
@@ -62,6 +76,21 @@ const NEXT: Partial<Record<Notification['channel'], SentChannel>> = {
   push: 'email',
   sms: 'whatsapp',
   whatsapp: 'email',
+};
+
+// Why a failed send went by another channel, as the fallbacks counter names it.
+const fallbackReason = (failure: string): FallbackReason => {
+  if (failure === 'no_device' || failure === 'push_off') return 'no_device';
+  if (['no_phone', 'phone_not_verified', 'not_allowed'].includes(failure)) {
+    return 'phone_not_verified';
+  }
+  return failure === 'sms_cap_reached' ? 'sms_cap_reached' : 'send_failed';
+};
+
+const countFallbacks = (fallbacks: readonly Substitution[]) => {
+  for (const { from, reason, to } of fallbacks) {
+    countChannelFallback(from, to, reason);
+  }
 };
 
 interface Jobs {
@@ -173,6 +202,7 @@ export class NotificationsService {
         }),
       );
       if (!written) continue;
+      countFallbacks(written.fallbacks);
       await this.announce(written);
       countNotification('in-app');
       // The one path a quote takes today; it moves to the quoting use case
@@ -418,7 +448,9 @@ export class NotificationsService {
       const stops =
         (row.channel === 'email' || row.channel === 'push') &&
         row.fallbackOf !== null;
-      if (next && !stops) await this.fallBack(row, next);
+      if (next && !stops) {
+        await this.fallBack(row, next, fallbackReason(failure));
+      }
     }
   }
 
@@ -528,9 +560,15 @@ export class NotificationsService {
   // The same message on the next channel, unless the event already has a
   // row there for the person or the type does not go by it.
   // At night a type that is not urgent waits until 08:00, as when it was built.
-  private async fallBack(row: Notification, channel: SentChannel) {
+  private async fallBack(
+    row: Notification,
+    channel: SentChannel,
+    reason: FallbackReason,
+  ) {
     const next = await this.fallbackRow(this.prisma, row, channel);
-    if (next) await this.queue(next);
+    if (!next) return;
+    countChannelFallback(row.channel as SentChannel, channel, reason);
+    await this.queue(next);
   }
 
   // Answers the fallback's send job, or null when it wrote no row.
@@ -652,7 +690,10 @@ export class NotificationsService {
         `notification ${r.id} ${r.kind} ${r.channel} failed: bounced`,
       );
     }
-    for (const job of next) await this.queue(job);
+    for (const job of next) {
+      countChannelFallback('email', 'push', 'send_failed');
+      await this.queue(job);
+    }
   }
 
   // Taken first, so a bounce of another message to the account waits here and
@@ -716,14 +757,21 @@ export class NotificationsService {
   ): Promise<Set<OutsideChannel>> {
     let muted: Set<OutsideChannel>;
     try {
-      const rows = await this.prisma.notificationPreference.findMany({
-        select: { channel: true, enabled: true, garageId: true, type: true },
-        where: { accountId, garageId, type: rowsType(kind) },
-      });
+      const [rows, pushDevice] = await Promise.all([
+        this.prisma.notificationPreference.findMany({
+          select: { channel: true, enabled: true, garageId: true, type: true },
+          where: { accountId, garageId, type: rowsType(kind) },
+        }),
+        // A driver who never chose gets push where a device exists.
+        isDriverChoice(kind, garageId)
+          ? this.hasDevice(this.prisma, accountId)
+          : false,
+      ]);
       muted = mutedChannels(
         kind,
         rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel })),
         garageId,
+        pushDevice,
       );
     } catch (error) {
       this.logger.warn(
@@ -749,6 +797,7 @@ export class NotificationsService {
     },
   ): Promise<{
     bell: Notification;
+    fallbacks: Substitution[];
     next: NextJob[];
     unreadCount: number;
     countedAt: Date;
@@ -802,15 +851,16 @@ export class NotificationsService {
     // A change link goes to the address it asks for, not the account's.
     const to = input.params?.['to'];
     const email = typeof to === 'string' ? to : account.email;
+    const reach = {
+      email: Boolean(email),
+      phone: Boolean(account.phone && account.phoneVerifiedAt),
+      push: await this.hasDevice(tx, accountId),
+      whatsapp: choice.whatsapp,
+    };
     const channels = outsideChannels(
       input.kind,
       choice.muted,
-      {
-        email: Boolean(email),
-        phone: Boolean(account.phone && account.phoneVerifiedAt),
-        push: await this.hasDevice(tx, accountId),
-        whatsapp: choice.whatsapp,
-      },
+      reach,
       choice.garageId,
     );
     const next: NextJob[] = [];
@@ -818,7 +868,13 @@ export class NotificationsService {
       const job = await this.outsideRow(tx, type, base, channel, email, at);
       if (job) next.push(job);
     }
-    return { bell, countedAt, next, unreadCount };
+    const fallbacks = substitutions(
+      input.kind,
+      choice.muted,
+      reach,
+      choice.garageId,
+    );
+    return { bell, countedAt, fallbacks, next, unreadCount };
   }
 
   private outsideRow(

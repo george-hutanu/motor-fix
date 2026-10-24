@@ -38,6 +38,7 @@ const WORKER_ONLY = [
   'motorfix_garage_restored_notices_total',
   'motorfix_garage_report_decided_notices_total',
   'motorfix_support_emails_total',
+  'motorfix_notification_channel_fallbacks_total',
 ];
 
 const SORTS = ['rating', 'distance', 'price'];
