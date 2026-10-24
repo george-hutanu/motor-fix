@@ -113,6 +113,7 @@
   "name": "motor-fix",
   "overrides": {
     "deepmerge-ts": "8.0.2",
+    "multer": "2.5.0",
     "mysql2": "3.24.5"
   },
   "private": true,
