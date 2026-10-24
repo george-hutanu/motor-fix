@@ -112,7 +112,7 @@ const NOT_CHANGES = new Set([
   // A link's token; confirming it or the new password is the audited change.
   'EmailChangeService.issue',
   'EmailConfirmationService.issue',
-  'PasswordResetService.issue',
+  'PasswordResetService.send',
   // A sign-in code, and spending it on a session.
   'PhoneSignInService.issue',
   'PhoneSignInService.claim',

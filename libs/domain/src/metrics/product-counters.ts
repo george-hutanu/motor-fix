@@ -67,6 +67,18 @@ export type AccountDeletionOutcome =
   | 'reauth_required'
   | 'mismatch'
   | 'failed';
+// Not started at 0 either, for the same cap.
+export type AdminAccountAction =
+  | 'reset_access'
+  | 'suspend'
+  | 'restore'
+  | 'delete_on_request';
+export type AdminAccountOutcome =
+  | 'done'
+  | 'refused'
+  | 'conflict'
+  | 'email_failed'
+  | 'failed';
 export type NotificationChannel = 'push' | 'in-app';
 const STEP_ACTIONS = [
   'added',
@@ -158,6 +170,11 @@ const accountDeletions = () =>
   counter(
     'motorfix_account_deletions_total',
     'Account deletions asked for, by outcome',
+  );
+const adminAccountActions = () =>
+  counter(
+    'motorfix_admin_account_actions_total',
+    'Admin actions on one account, by action and outcome',
   );
 const approvals = () =>
   counter(
@@ -324,6 +341,13 @@ export function countCompletionOpened() {
 
 export function countAccountDeletion(outcome: AccountDeletionOutcome) {
   accountDeletions().add(1, { outcome });
+}
+
+export function countAdminAccountAction(
+  action: AdminAccountAction,
+  outcome: AdminAccountOutcome,
+) {
+  adminAccountActions().add(1, { action, outcome });
 }
 
 export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {

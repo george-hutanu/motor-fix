@@ -68,6 +68,20 @@ const mask = (field: string | null, value: unknown) =>
 const invalid = (code: string, message: string) =>
   new BadRequestException({ code, message });
 
+// Garage staff read their own garage only, and never one account's history.
+function staffOnly(actor: Actor, query: AuditHistoryQueryDto) {
+  if (query.accountId) {
+    throw invalid('validation_failed', 'accountId is for the admin only');
+  }
+  // A UUID may arrive in capitals; PostgreSQL compares them without case.
+  if (
+    query.garageId &&
+    query.garageId.toLowerCase() !== actor.garageId?.toLowerCase()
+  ) {
+    throw new NotFoundException();
+  }
+}
+
 // One stored entry as a reader sees it; an admin sees every value unmasked.
 export function auditEntryOf(row: ActivityLog, admin: boolean): AuditEntryDto {
   const value = (v: unknown) => (admin ? v : mask(row.field, v));
@@ -104,14 +118,7 @@ export class AuditHistoryService {
       actor,
       admin ? 'admin.audit_history' : 'garage.audit_history',
     );
-    // A UUID may arrive in capitals; PostgreSQL compares them without case.
-    if (
-      !admin &&
-      query.garageId &&
-      query.garageId.toLowerCase() !== actor.garageId?.toLowerCase()
-    ) {
-      throw new NotFoundException();
-    }
+    if (!admin) staffOnly(actor, query);
     const where: Prisma.ActivityLogWhereInput = {
       ...this.filters(query),
       garageId: admin ? query.garageId : actor.garageId,
@@ -133,19 +140,20 @@ export class AuditHistoryService {
       );
     }
 
+    const size = query.limit ?? PAGE;
     const [rows, total] = await Promise.all([
       this.prisma.activityLog.findMany({
         orderBy: [{ at: 'desc' }, { id: 'desc' }],
-        take: PAGE + 1,
+        take: size + 1,
         where,
         ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
       }),
       this.prisma.activityLog.count({ where }),
     ]);
-    const page = rows.slice(0, PAGE);
+    const page = rows.slice(0, size);
     return {
       items: page.map((row) => auditEntryOf(row, admin)),
-      nextCursor: rows.length > PAGE ? (page.at(-1)?.id ?? null) : null,
+      nextCursor: rows.length > size ? (page.at(-1)?.id ?? null) : null,
       total,
     };
   }
@@ -163,6 +171,13 @@ export class AuditHistoryService {
       at: { gte: from, ...(to && { lte: to }) },
       ...(query.actorId && { actorId: query.actorId }),
       ...(query.jobId && { jobId: query.jobId }),
+      // What the account did, or what was done to it.
+      ...(query.accountId && {
+        OR: [
+          { actorId: query.accountId },
+          { subjectId: query.accountId, subjectType: 'account' },
+        ],
+      }),
       ...(area === 'admin_actions' && { actorRole: 'admin' }),
       ...(area &&
         area !== 'admin_actions' && { subjectType: { in: SUBJECTS[area] } }),

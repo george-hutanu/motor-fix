@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -25,6 +25,7 @@ features:
   - 009-copy-voice-analytics
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
+  - 003-admin-account-actions
 ---
 
 # Capability: Admin dashboard
@@ -301,9 +302,9 @@ _From 001-admin-recent-accounts._
 
 _From 001-admin-recent-accounts._
 
-### 001-FR-008 — The panel "Conturi recente" / "Recent accounts" MUST show one row per item: the name over the detail; a lamp and the state; the count right-aligned. The detail MUST read the roles joined by " + " ("șofer", "service", "recepție", "mecanic", "admin" / "driver", "garage", "reception", "mechanic", "admin"), then " · " and, for a driver with no other role, the cars ("1 mașină", "{n} mașini", "fără mașină" / "1 car", "{n} cars", "no car"); for an account with a garage name, that name; for an admin or an account with neither, nothing after the roles.
+### 003-FR-017 — Each row of "Utilizatori" MUST open the account page: the row becomes a button whose accessible name starts with "Deschide contul {name}" / "Open the account of {name}" (a visually hidden prefix before the row's own text, so the name also reads the detail, the state and the count the row shows, as axe's label-content-name-mismatch asks; amended after QA lap 1), opening a right-hand drawer in the shared dialog-and-drawer shape of MF-5 (anchored right from 768 px, a full-height sheet below) whose address is `/{lang}/app/admin/users/{id}` so it can be reloaded and shared; the drawer shows the details first (each field labelled, the state with its lamp as the row shows it, the suspension reason under a suspended state, the sign-in methods as a list), then the actions as buttons ("Resetează accesul", "Suspendă" or "Reactivează" by state, "Șterge la cererea titularului"; none for an admin account; the delete button disabled for an owner with FR-013's text), then the history (each entry: who, what, when, from and to; "Mai multe" / "More" for the next page; the empty text "Nicio înregistrare încă" / "Nothing recorded yet"). (Modifies 001-FR-008.)
 
-_From 001-admin-recent-accounts._
+_From 003-admin-account-actions._
 
 ### 001-FR-009 — The state MUST read, for `active`, a green lamp and "activ · din {month year}" / "active · since {Month year}" from `since` in the language's month names; for `suspended`, a red lamp and "suspendat · din {d mon. yyyy}" / "suspended · since {d Mon yyyy}" from `since`, or "suspendat" / "suspended" alone when `since` is null. The lamp colours are the Cockpit lamp tokens, and the state text is readable without the colour (the word carries the meaning).
 
@@ -843,6 +844,14 @@ _From 414-approve-catalogue-job._
 
 _From 067-restore-suspended-garage._
 
+### 003-FR-018 — Each action MUST confirm in its own dialog: reset — a confirmation naming the person ("Resetează accesul pentru {name}?") with "Resetează" / "Reset" and "Renunță" / "Cancel"; suspend — a reason field of 10 to 500 characters with a live count and a field error under 10 ("Scrie motivul, cel puțin 10 caractere" / "Write the reason, at least 10 characters"), "Suspendă" / "Suspend"; restore — an optional note field, "Reactivează" / "Restore"; delete — the reference field (placeholder `DR-2026-0001`), the date received, the tick "Identitatea a fost verificată" / "Identity was checked", the summary of what is removed and what stays (ST-129's dialog texts), "Șterge" / "Delete", the button enabled only when the three are valid. On success the drawer re-reads the page and announces the result politely ("Accesul a fost resetat" / "Access was reset", "Contul a fost suspendat" / "The account was suspended", "Contul a fost reactivat" / "The account was restored", "Contul a fost șters" / "The account was deleted", the last closing the drawer and re-reading the list); a 409 re-reads the page and shows "Contul s‑a schimbat între timp" / "The account changed meanwhile"; a reset answered `failed` shows "E‑mailul nu a putut fi trimis" / "The e‑mail could not be sent" with the button enabled again; a 404 shows the 404 page; any other failure the shared failed-call text.
+
+_From 003-admin-account-actions._
+
+### 003-FR-019 — The drawer and its dialogs MUST work at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, texts at 12 px or larger, every text in the shared i18n files (Romanian hyphenated words with U+2011), text the person or the admin typed (names, the reason, the note, the reference) never rendered as markup, and MUST pass the axe checks of the QA sweep; focus moves into the drawer or dialog when it opens and returns to the control that opened it when it closes, as the shared overlays do for every other drawer.
+
+_From 003-admin-account-actions._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -871,3 +880,4 @@ _From 067-restore-suspended-garage._
 - `298-FR-001` — superseded by `299-FR-001` (2026-10-17)
 - `298-FR-003` — superseded by `299-FR-006` (2026-10-17)
 - `066-FR-007` — superseded by `067-FR-009` (2026-10-23)
+- `001-FR-008` — superseded by `003-FR-017` (2026-10-24)
