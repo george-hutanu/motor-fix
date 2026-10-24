@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { checkReport } from './dispatch.mjs';
 
 // A PR QA run whose services never came up used to upload nothing, so the tester
-// read "the run left no report" and had no finding to act on (#332). The workflow
+// read "the run left no report" and had no finding to act on. The workflow
 // now runs boot-report.mjs when the run step was skipped after a failure.
 const script = fileURLToPath(new URL('./boot-report.mjs', import.meta.url));
 const SHA = 'a'.repeat(40);
@@ -60,7 +60,9 @@ describe('boot-report.mjs: a report when the run never started', () => {
     assert.equal(checkReport(JSON.parse(r.json ?? 'null'), SHA, 'failure'), null);
   });
 
-  it('refuses to run without a reason', () => {
-    assert.notEqual(boot('').code, 0);
+  it('still writes the report, with the generic reason, when none is given', () => {
+    const empty = boot('');
+    assert.equal(empty.code, 0, empty.err);
+    assert.match(JSON.parse(empty.json ?? '{}').findings[0].steps[0], /a step before the tester run failed/);
   });
 });

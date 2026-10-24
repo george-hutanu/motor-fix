@@ -177,7 +177,7 @@ describe('a cloud session tests and merges with no laptop', () => {
 // @traces 988-FR-006
 describe('the flows contract is written where the flows are written', () => {
   // A flow that returned its findings at the end lost them on a throw, and a flow
-  // waiting for networkidle on a live page timed out (#333). The agent, the skill
+  // waiting for networkidle on a live page timed out. The agent, the skill
   // and AGENTS.md say how a flow is written.
   const routesAndFlows = sections(skill).find((s) => s.heading === 'Routes and flows')?.body ?? '';
 

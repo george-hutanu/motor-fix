@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import { SEEDED } from './endpoints.mjs';
 import * as helpers from './flow-helpers.mjs';
-import { appLaunchEnv, collectRejections, filesBetween, flowArgs, loadFlows, parseArgs, runFlows, strayRejection, testsCommand } from './run.mjs';
+import { appLaunchEnv, collectRejections, filesBetween, flowArgs, flowThrewFinding, loadFlows, parseArgs, runFlows, strayRejection, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -316,7 +316,7 @@ describe('run: an unhandled rejection outside the flows step', () => {
 // @traces 988-FR-004
 describe('loadFlows: a networkidle wait runs as a wait for load', () => {
   // A live page keeps its event stream open, so networkidle never comes and every such
-  // wait spent its whole timeout (#333). The run loads the flows with each quoted
+  // wait spent its whole timeout. The run loads the flows with each quoted
   // networkidle turned into load, and says so in the report's notes.
   const dirs = [];
   afterAll(() => {
@@ -405,7 +405,7 @@ describe('loadFlows: a networkidle wait runs as a wait for load', () => {
 // @traces 988-FR-005
 describe('runFlows: findings a flow pushes are kept', () => {
   // A flow used to return its findings at the end, so one that threw half way lost
-  // everything it had found (#333). Each flow gets the run's findings array.
+  // everything it had found. Each flow gets the run's findings array.
   const args = (findings) => flowArgs({ webURL: 'http://127.0.0.1:4100', apiURL: 'http://127.0.0.1:3100', outDir: '/o', repoRoot: '/r', worktree: '/w', session: async () => 'r', findings });
 
   it("hands the flows the run's own findings array", () => {
@@ -419,8 +419,10 @@ describe('runFlows: findings a flow pushes are kept', () => {
       f.push({ severity: 'medium', title: 'one' }, { severity: 'high', title: 'two' });
       throw new Error('half way');
     };
-    await assert.rejects(runFlows(() => flow(args(findings)), findings), /half way/);
-    assert.deepEqual(findings.map((f) => f.title), ['one', 'two']);
+    await runFlows(() => flow(args(findings)), findings).catch((error) => findings.push(flowThrewFinding(error)));
+    assert.deepEqual(findings.map((f) => f.title), ['one', 'two', 'A flow threw']);
+    assert.equal(findings[2].severity, 'high');
+    assert.match(findings[2].steps[0], /half way/);
   });
 
   it('counts a finding both pushed and returned once, and adds what was only returned', async () => {

@@ -181,7 +181,7 @@ describe('the retry loop, run', () => {
 describe('a browser cache hit skips install-deps when nothing is missing', () => {
   // On a cache hit the browser is already there; install-deps only fetches the system
   // libraries it loads, which the runner image usually carries. The step reads them with
-  // the fallback's own ldd test first and runs apt only when one is missing (#626).
+  // the fallback's own ldd test first and runs apt only when one is missing.
   const hits = installs.filter((s) => /cache-hit == 'true'/.test(s.text) && /install-deps/.test(s.text));
   const runHit = (step, { missing }) => {
     const dir = mkdtempSync(join(tmpdir(), 'pw-hit-'));

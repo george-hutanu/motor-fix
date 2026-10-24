@@ -258,7 +258,7 @@ describe('what a killed lap left behind', () => {
 
 // @traces 988-FR-007
 describe('appEnv: the analytics domain', () => {
-  // The web app reads PLAUSIBLE_DOMAIN at boot; the QA env lacked it (#1234). A
+  // The web app reads PLAUSIBLE_DOMAIN at boot; the QA env lacked it. A
   // reserved .invalid name, as ci.yml's E2E job gives, so no page view is ever counted.
   it('gives a domain the contracts parser accepts, under the reserved .invalid name', () => {
     const env = appEnv({ ports: { postgres: 55001, redis: 55002, storage: 55003 } });

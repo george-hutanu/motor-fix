@@ -157,6 +157,7 @@ jobs:
       # the report.
       - name: Start PostgreSQL, Redis and the object store from the PR's compose file
         id: services
+        timeout-minutes: 5
         run: |
           docker compose -p pr-qa -f pr/docker-compose.yml config --services | grep -qx storage || { echo "::error::the PR's docker-compose.yml has no storage service: merge main into the branch"; exit 1; }
           timeout 150 docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis storage
@@ -276,7 +277,7 @@ jobs:
       - name: A report for a run that never started
         if: failure() && steps.run.outcome == 'skipped'
         env:
-          REASON: ${{ steps.services.outcome == 'failure' && 'PostgreSQL, Redis or the object store did not come up; see the services step and postgres.log in this artifact' || 'a step before the run failed; see the run log' }}
+          REASON: ${{ steps.services.outcome == 'failure' && 'PostgreSQL, Redis or the object store did not come up; see the services step, and postgres.log in this artifact when PostgreSQL timed out' || 'a step before the tester run failed; see the workflow run log' }}
         run: |
           node tester/.claude/scripts/pr-test/boot-report.mjs --pr "$PR" --sha "$SHA" --lap "$LAP" --out "$RUNNER_TEMP/pr-qa"
 

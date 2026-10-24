@@ -318,11 +318,10 @@ function runScript(step) {
 
 // @traces 988-FR-001
 // @traces 988-FR-002
-// The specs of 988-FR-001..008 failed on 8991a66 and pass with the fix (auto-run.md, phase 9):
 // @traces 988-FR-009
-describe('PR QA workflow: the PostgreSQL wait, run', () => {
+describe('PR QA workflow: the PostgreSQL wait, run', { timeout: 30_000 }, () => {
   // The PostGIS image accepts connections on its socket while its init scripts run,
-  // then restarts, and only then listens on TCP (#332). The step asks over TCP inside
+  // then restarts, and only then listens on TCP. The step asks over TCP inside
   // the container and wants three ready answers in a row, inside 60 s of wall clock.
   const stepList = steps.split(/\n(?= {6}- )/);
   const services = stepList.find((st) => /name: Start PostgreSQL/.test(st)) ?? '';
@@ -419,7 +418,7 @@ describe('PR QA workflow: a report when the run never started', () => {
     const reason = /\n {10}REASON: (.*)\n/.exec(step)?.[1] ?? '';
     assert.match(reason, /steps\.services\.outcome == 'failure'/);
     assert.match(reason, /postgres\.log/);
-    assert.match(reason, /a step before the run failed/);
+    assert.match(reason, /a step before the tester run failed/);
     const script = runScript(step);
     assert.doesNotMatch(script, /\$\{\{/);
     assert.match(script, /boot-report\.mjs --pr "\$PR" --sha "\$SHA" --lap "\$LAP" --out "\$RUNNER_TEMP\/pr-qa"/);

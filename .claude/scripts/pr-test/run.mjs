@@ -141,6 +141,9 @@ export async function runFlows(run, findings) {
   return added;
 }
 
+/** The finding for flows that threw; what they pushed before it stays beside it. */
+export const flowThrewFinding = (error) => stepFinding("A flow threw", String(error?.stack ?? error).split("\n").slice(0, 3).join(" / "), "high");
+
 const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high");
 
 /**
@@ -496,7 +499,7 @@ async function main(argv) {
         await runFlows(() => flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session, findings })), findings);
         log(`flows: ${findings.length - before} finding(s)`);
       } catch (error) {
-        findings.push(stepFinding("A flow threw", String(error.stack ?? error).split("\n").slice(0, 3).join(" / "), "high"));
+        findings.push(flowThrewFinding(error));
       }
     }
 
