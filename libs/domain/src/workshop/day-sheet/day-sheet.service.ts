@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
-import { type Actor, requireCapability } from '../../auth/policy';
+import { type Actor, forbidden, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -32,7 +32,10 @@ export class DaySheetService {
   async get(actor: Actor, query: DaySheetQuery, now = new Date()) {
     requireCapability(actor, 'garage.schedule');
     const garageId = actor.garageId as string;
-    const mechanic = await this.mechanicOf(garageId, query.mechanic);
+    const mechanic =
+      actor.role === 'mechanic'
+        ? await this.ownCard(actor, query.mechanic)
+        : await this.mechanicOf(garageId, query.mechanic);
     const day = query.day ?? localDay(now);
     const rows = await this.prisma.booking.findMany({
       include: bookedInclude,
@@ -56,6 +59,23 @@ export class DaySheetService {
       // To the nearest quarter hour.
       totalHours: Math.round(minutes / 15) / 4,
     };
+  }
+
+  // A mechanic reads her own sheet only, asked by her id, full name or
+  // first name; anything else is refused without naming the others.
+  private async ownCard(actor: Actor, asked: string) {
+    const own = await this.prisma.mechanic.findUnique({
+      select: { id: true, name: true },
+      where: { accountId: actor.accountId },
+    });
+    const wanted = plain(asked);
+    const hers =
+      own &&
+      (own.id === asked ||
+        plain(own.name) === wanted ||
+        plain(own.name).split(' ')[0] === wanted);
+    if (!hers) throw forbidden('A mechanic reads only her own day sheet');
+    return own;
   }
 
   // By id, full name or first name. A name that matches no one or more than

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { type Actor, requireCapability } from '../../auth/policy';
+import { type Actor, forbidden, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, daysBetween, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -26,6 +26,7 @@ export class GarageScheduleService {
   async list(actor: Actor, query: ScheduleQuery, now = new Date()) {
     requireCapability(actor, 'garage.schedule');
     const garageId = actor.garageId as string;
+    const mechanicId = await this.mechanicOf(actor, query.mechanicId);
     const from = query.from ?? localDay(now);
     const to = query.to ?? from;
     const span = daysBetween(from, to);
@@ -45,7 +46,7 @@ export class GarageScheduleService {
       where: {
         garageId,
         lift: query.lift,
-        mechanicId: query.mechanicId,
+        mechanicId,
         startsAt: { gte: atLocal(from, 0), lt: atLocal(addDays(to, 1), 0) },
         status: { notIn: ['lapsed', 'cancelled'] },
       },
@@ -68,5 +69,17 @@ export class GarageScheduleService {
       };
     });
     return { entries, from, lifts, to };
+  }
+
+  // A mechanic reads her own card's bookings only, and asks for no other.
+  private async mechanicOf(actor: Actor, asked?: string) {
+    if (actor.role !== 'mechanic') return asked;
+    const own = await this.prisma.mechanic.findUnique({
+      select: { id: true },
+      where: { accountId: actor.accountId },
+    });
+    if (!own || (asked !== undefined && asked !== own.id))
+      throw forbidden('A mechanic reads only her own schedule');
+    return own.id;
   }
 }
