@@ -184,6 +184,38 @@ describe('the sweep under hostile conditions', () => {
     await expect(service.requeueStranded()).resolves.toBe(0);
   });
 
+  it('counts only the rows it handed over when the queue fails part way', async () => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    // The page the sweep reads at a time, as its first read asks for it.
+    const read = jest.spyOn(prisma.notification, 'findMany');
+    await service.requeueStranded();
+    const page = read.mock.calls[0][0]?.take as number;
+    read.mockRestore();
+    await prisma.notification.createMany({
+      data: Array.from({ length: page * 2 + 1 }, () => ({
+        accountId: owner,
+        channel: 'email' as const,
+        createdAt: minutesAgo(10),
+        eventId: randomUUID(),
+        kind: 'QUOTE_RECEIVED',
+        params: QUOTE,
+        status: 'queued' as const,
+      })),
+    });
+    let calls = 0;
+    build({
+      addBulk: (...args: Parameters<Queue['addBulk']>) =>
+        ++calls === 2
+          ? Promise.reject(new Error('Redis down'))
+          : queue.addBulk(...args),
+    });
+    const answered = await service.requeueStranded();
+    const waiting = (await queue.getJobCounts('waiting'))['waiting'];
+    expect(calls).toBe(2);
+    expect(answered).toBe(waiting);
+    expect(answered).toBe(page);
+  });
+
   it('runs twice at once without duplicating jobs', async () => {
     await row();
     await row();

@@ -226,6 +226,21 @@ describe('the sweep of queued rows with no job', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('re-queued 1 '));
   });
 
+  it('names at most the first ten rows it re-queued in its log line', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const ids = await backlog(12);
+    await expect(service.requeueStranded()).resolves.toBe(12);
+    const [line] = warn.mock.calls
+      .map(([text]) => String(text))
+      .filter((text) => text.includes('re-queued 12 '));
+    expect(line).toBeDefined();
+    const named = ids.filter((id) => line.includes(id));
+    expect(named).toEqual(ids.slice(0, 10));
+    expect(line).toMatch(/…$/);
+  });
+
   it('logs and ends without touching the rows when the queue refuses the add', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')

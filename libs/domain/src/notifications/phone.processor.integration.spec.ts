@@ -113,6 +113,21 @@ const rows = (accountId: string) =>
     where: { accountId, channel: { not: 'in_app' } },
   });
 
+// Rejects the counter's statement once; the send claim's own statement runs.
+function failCount(error: Error) {
+  const real = prisma.$queryRaw.bind(prisma);
+  let failed = false;
+  return jest.spyOn(prisma, '$queryRaw').mockImplementation(((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => {
+    if (failed || !strings.join('').includes('sms_counter'))
+      return real(strings, ...values);
+    failed = true;
+    return Promise.reject(error);
+  }) as never);
+}
+
 const sendJob = (id: string, attemptsMade = 0) =>
   processor.handle({ attemptsMade, data: { id }, name: 'send' });
 
@@ -460,9 +475,7 @@ describe('an SMS that may have gone', () => {
 
   it('is sent on its retry when its count could not be taken', async () => {
     const { ana, sms } = await queuedSms();
-    const count = jest
-      .spyOn(prisma, '$queryRaw')
-      .mockRejectedValueOnce(new Error('connection lost'));
+    const count = failCount(new Error('connection lost'));
     try {
       await expect(sendJob(sms.id)).rejects.toThrow('connection lost');
     } finally {
@@ -479,9 +492,7 @@ describe('an SMS that may have gone', () => {
 
   it('fails with the count’s error, and is not sent, when the mark cannot be cleared either', async () => {
     const { ana, sms } = await queuedSms();
-    const count = jest
-      .spyOn(prisma, '$queryRaw')
-      .mockRejectedValueOnce(new Error('count lost'));
+    const count = failCount(new Error('count lost'));
     const real = prisma.notification.update.bind(prisma.notification);
     let calls = 0;
     const update = jest

@@ -42,6 +42,8 @@ const STRANDED_MS = 5 * 60_000;
 // How many stranded rows the sweep reads and hands over at a time: a stand-in
 // until a backlog after a Redis loss is measured.
 const REQUEUE_PAGE = 500;
+// How many of the rows it re-queued a sweep's log line names.
+const REQUEUE_NAMED = 10;
 
 const JOB: JobsOptions = {
   attempts: RETRY_MINUTES.length + 1,
@@ -120,6 +122,13 @@ const send = (id: string): NextJob => ({
   delay: 0,
   jobId: `send-${id}`,
   name: 'send',
+});
+
+const flush = (leaderId: string, delay = 0): NextJob => ({
+  data: { leaderId },
+  delay,
+  jobId: `flush-${leaderId}`,
+  name: 'flush',
 });
 
 @Injectable()
@@ -436,12 +445,57 @@ export class NotificationsService {
     } catch (error) {
       this.logger.warn(`queued notifications not re-queued: ${String(error)}`);
     }
-    if (added.length > 0) {
-      this.logger.warn(
-        `re-queued ${added.length} queued notifications: ${added.join(', ')}`,
-      );
-    }
+    this.logRequeued('queued', added);
     return added.length;
+  }
+
+  // A held row whose release or flush job was lost, five minutes past its
+  // send time and with no claim, is handed to the queue again: a follower as
+  // its leader's flush job, so the window still goes as one e-mail, any
+  // other as its own send job. Answers how many rows it handed over.
+  async requeueHeld(now = this.now()): Promise<number> {
+    const added: string[] = [];
+    try {
+      let page: { groupLeaderId: string | null; id: string }[];
+      do {
+        page = await this.prisma.notification.findMany({
+          orderBy: { id: 'asc' },
+          select: { groupLeaderId: true, id: true },
+          take: REQUEUE_PAGE,
+          where: {
+            claimedAt: null,
+            id: { gt: added.at(-1) },
+            listingDraftId: null,
+            sendAfter: { lt: new Date(now.getTime() - STRANDED_MS) },
+            sendingAt: null,
+            status: 'held',
+          },
+        });
+        if (page.length === 0) break;
+        const jobs = new Map(
+          page
+            .map(({ groupLeaderId, id }) =>
+              groupLeaderId ? flush(groupLeaderId) : send(id),
+            )
+            .map((next) => [next.jobId, this.job(next)]),
+        );
+        await this.jobs.addBulk([...jobs.values()]);
+        added.push(...page.map(({ id }) => id));
+      } while (page.length === REQUEUE_PAGE);
+    } catch (error) {
+      this.logger.warn(`held notifications not re-queued: ${String(error)}`);
+    }
+    this.logRequeued('held', added);
+    return added.length;
+  }
+
+  private logRequeued(what: 'held' | 'queued', ids: readonly string[]) {
+    if (ids.length === 0) return;
+    const named = ids.slice(0, REQUEUE_NAMED).join(', ');
+    const more = ids.length > REQUEUE_NAMED ? ', …' : '';
+    this.logger.warn(
+      `re-queued ${ids.length} ${what} notifications: ${named}${more}`,
+    );
   }
 
   scheduleRequeue() {
@@ -803,12 +857,7 @@ export class NotificationsService {
       data: { groupLeaderId: leader.id, sendAfter: closes, status: 'held' },
       where: { id: row.id },
     });
-    return {
-      data: { leaderId: leader.id },
-      delay: Math.max(0, closes.getTime() - at.getTime()),
-      jobId: `flush-${leader.id}`,
-      name: 'flush',
-    };
+    return flush(leader.id, Math.max(0, closes.getTime() - at.getTime()));
   }
 
   private queue(next: NextJob) {
