@@ -24,7 +24,9 @@ function setup(
   { signsIn = true, platform = 'browser' } = {},
 ) {
   let current = token;
+  let epoch = 0;
   const session = {
+    epoch: () => epoch,
     renew: jest.fn(async () => {
       current = renewsTo;
       return renewsTo !== null;
@@ -53,6 +55,11 @@ function setup(
   controller = TestBed.inject(HttpTestingController);
   return {
     close: () => settle(false),
+    // A sign-out, or the server revoking the session (an account deleted).
+    end: () => {
+      epoch++;
+      current = null;
+    },
     gate,
     http: TestBed.inject(HttpClient),
     platformStatus,
@@ -74,6 +81,38 @@ const unauthorized = { status: 401, statusText: 'Unauthorized' };
 afterEach(() => controller?.verify());
 
 describe('authInterceptor', () => {
+  // A call still out when the session ends (the bell reading a live
+  // notification while the account is deleted) is refused for a session that
+  // is gone: the person left on purpose, so no sign-in opens over the screen
+  // that is leaving.
+  it('asks no sign-in for a call whose session ended while it was out', async () => {
+    const { end, gate, http, server } = setup('abc', null);
+
+    const answer = firstValueFrom(http.get('/api/v1/notifications'));
+    end();
+    server
+      .expectOne('/api/v1/notifications')
+      .flush(signInRequired.body, signInRequired.options);
+
+    await expect(answer).rejects.toMatchObject({ status: 401 });
+    expect(gate).not.toHaveBeenCalled();
+  });
+
+  it('still asks for a call sent after the session ended', async () => {
+    const { end, gate, http, server, close } = setup('abc', null);
+    end();
+
+    const answer = firstValueFrom(http.get('/api/v1/me/saved-garages'));
+    server
+      .expectOne('/api/v1/me/saved-garages')
+      .flush(signInRequired.body, signInRequired.options);
+    await tick();
+    expect(gate).toHaveBeenCalledTimes(1);
+    close();
+
+    await expect(answer).rejects.toMatchObject({ status: 401 });
+  });
+
   it('sends the access token with an API call', async () => {
     const { http, server } = setup('abc');
 
