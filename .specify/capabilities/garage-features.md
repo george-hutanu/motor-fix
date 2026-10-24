@@ -1,8 +1,9 @@
 ---
 capability: garage-features
-updated: 2026-10-22
+updated: 2026-10-24
 features:
   - 398-garage-feature-switches
+  - 531-garage-feature-tabs
 ---
 
 # Capability: Garage features
@@ -39,9 +40,9 @@ _From 398-garage-feature-switches._
 
 _From 398-garage-feature-switches._
 
-### 398-FR-009 — Every open dashboard of the garage MUST read the account again (`GET /api/v1/me`, the frame's existing reload) when it hears `garage.features_changed` for its garage, so the menu, the bar and the routes follow the switches (097-FR-007) within 5 seconds of the write, with no reload; a tab whose current view just lost its feature MUST navigate to `/app/garage` at once. The panel "Funcții" open in another tab MUST show the switches from the same re-read.
+### 531-FR-002 — The dashboard frame MUST read the account again when its live stream delivers `mechanic.updated`, exactly as it does for `garage.features_changed`, so the menu, the bar and the routes of every open dashboard of the garage follow within 5 seconds and without a page reload.
 
-_From 398-garage-feature-switches._
+_From 531-garage-feature-tabs._
 
 ### 398-FR-010 — Switching a feature off MUST first open a confirmation in the shared overlay panel (a dialog from 768 px, a sheet under it) titled "Oprești „{name}”?" / "Switch off “{name}”?" with the feature's own line of what disappears — `team_mechanics`: "Mecanicii, invitațiile și alegerea mecanicului dispar din meniu și din programări." / "The mechanics, the invitations and the choice of mechanic disappear from the menu and the bookings."; `lift_schedule`: "Elevatoarele dispar din programări, din meniu și din fișele de lucru." / "Lifts disappear from the bookings, the menu and the day sheets."; `live_media`: "Butoanele „Foto, video, live” dispar din lucrări." / "The “Photo, video, live” buttons disappear from the jobs."; `day_sheets`: "Fișa zilei și trimiterea ei dispar; echipa nu mai primește foi de lucru." / "The day sheet and its send disappear; the team gets no more day sheets."; `whatsapp`: "Mesajele WhatsApp către echipa ta se opresc. Clienții nu sunt afectați." / "WhatsApp messages to your team stop. Customers are not affected." — and the buttons "Renunță" / "Cancel" and "Oprește" / "Switch off"; the switch MUST NOT move until "Oprește", and closing the dialog any other way (Escape, a tap outside it) counts as "Renunță": nothing is saved and the focus returns to the switch. Switching on MUST save at once with no confirmation.
 
@@ -62,3 +63,15 @@ _From 398-garage-feature-switches._
 ### 398-FR-014 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-003 (no rows → the answer reports all on, first write creates the row, bad key and bad body 400), FR-004 (owner 200, receptionist and mechanic 403, outsider 404, signed out 401), FR-005 (refused with another mechanic row, with or without an account, nothing written; allowed with the owner's own row only; allowed after the removal), FR-006 (the row, the audit entry and the event in one transaction, a failed entry rolling the row back, a no-op write writing nothing) and FR-007 (`featureOn` for each key and a missing row, the staff invites' 404 through it); Jest on the live hub for FR-008 (the kind reaches an owner, a receptionist and a mechanic stream of the garage, no other garage's); Jest on the panel for FR-001, FR-002, FR-010 and FR-011 (five rows from `/me`'s features, the dialog's two outcomes, the flip back on failure and on 409) and on the frame for FR-009 (the reload on the event, the navigation away from a view that lost its feature); and one Playwright test: the owner switches "Echipă și mecanici" off, a second tab of the owner's dashboard sitting on Mecanici loses it from the menu and is moved to `/app/garage` without a reload, the owner switches it on and Mecanici returns. A `// @traces` line names the ids.
 
 _From 398-garage-feature-switches._
+
+### 531-FR-004 — No new text is introduced in either language; every text shown comes from the existing shell and garage translation files, Romanian and English unchanged.
+
+_From 531-garage-feature-tabs._
+
+### 531-FR-005 — Tests MUST cover, failing first: Jest on the view list for FR-001 (schedule absent with `day_sheets: false`, present with `true` and with no value; team unchanged); Jest on the frame for FR-002 (`mechanic.updated` triggers the re-read, an unrelated kind does not); Jest on the invite dialog for FR-003 (on: offered and preselected; off: hidden, receptionist preselected, a receptionist invite sent with no `feature_off` round trip; the change while open; the `feature_off` fallback kept); and the end-to-end test of the switches extended with the day-sheets switch moving "Programări" out of and back into another open tab, when the existing team test's shape carries it without new seeding; a `// @traces` line names the ids.
+
+_From 531-garage-feature-tabs._
+
+## Retired
+
+- `398-FR-009` — superseded by `531-FR-002` (2026-10-24)
