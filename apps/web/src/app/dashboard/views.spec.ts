@@ -30,6 +30,7 @@ import { GarageRequestsView } from './garage-requests/garage-requests-view/garag
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { PricesView } from './prices-view/prices-view';
+import { ProfileView } from './profile-view/profile-view';
 import { RequestsView } from './requests-view/requests-view';
 import {
   fakeSavedGarages,
@@ -371,6 +372,21 @@ describe('the dashboard view lists', () => {
     ).not.toContain('prices');
   });
 
+  // @traces 133-FR-002 133-FR-005
+  it('gives the owner alone the garage profile view, its body downloaded with the view', async () => {
+    const profile = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'profile',
+    );
+    expect(profile?.capability).toBe('garage.profile');
+    await expect(profile?.load?.()).resolves.toBe(ProfileView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'profile');
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      ProfileView,
+    );
+    expect(paths('garage', OWNER)).toContain('profile');
+    expect(paths('garage', RECEPTIONIST)).not.toContain('profile');
+  });
+
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
@@ -582,6 +598,34 @@ describe('the dashboard view lists', () => {
     ).toEqual(paths('garage', OWNER));
   });
 
+  // @traces 531-FR-001
+  it('drops Programări while the garage has day sheets off, and keeps it while they are on or unknown', () => {
+    const shown = (features: Record<string, boolean>) =>
+      allowedViews('garage', OWNER, features).map((v) => v.path);
+
+    expect(shown({ day_sheets: false })).not.toContain('schedule');
+    expect(shown({ day_sheets: false })).toEqual(
+      paths('garage', OWNER).filter((path) => path !== 'schedule'),
+    );
+    expect(shown({ day_sheets: true })).toContain('schedule');
+    expect(shown({})).toContain('schedule');
+    expect(shown({ day_sheets: false, team_mechanics: false })).toEqual(
+      paths('garage', OWNER).filter(
+        (path) => path !== 'schedule' && path !== 'team',
+      ),
+    );
+  });
+
+  it('ties Programări to day sheets and Mecanici to the team, and no other garage view to a switch', () => {
+    expect(
+      Object.fromEntries(
+        DASHBOARDS.garage.views
+          .filter((view) => view.feature)
+          .map((view) => [view.path, view.feature]),
+      ),
+    ).toEqual({ schedule: 'day_sheets', team: 'team_mechanics' });
+  });
+
   // @traces 101-FR-007
   it('opens no garage view while the garage is a draft, and every allowed one once it is approved or suspended', () => {
     expect(allowedViews('garage', OWNER, {}, 'draft')).toEqual([]);
@@ -729,11 +773,11 @@ async function open(
 describe('the dashboard view routes', () => {
   // @traces 097-FR-004
   it('opens an allowed view at its own address, with the empty state of that view', async () => {
-    const { element } = await open('/app/garage/team', OWNER);
+    const { element } = await open('/app/garage/schedule', OWNER);
 
-    expect(TestBed.inject(Router).url).toBe('/app/garage/team');
+    expect(TestBed.inject(Router).url).toBe('/app/garage/schedule');
     expect(element.textContent).toContain(
-      'Aici vei vedea mecanicii service‑ului și ce poate face fiecare.',
+      'Aici vei vedea programările pe zile, pe mecanici și pe elevatoare.',
     );
     expect(element.textContent).not.toContain('Nimic aici încă.');
   });

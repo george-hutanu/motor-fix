@@ -258,19 +258,27 @@ export const DASHBOARDS: Record<
             './garage-requests/garage-requests-view/garage-requests-view'
           ).then((m) => m.GarageRequestsView),
       },
-      garageView('schedule', 'garage.schedule'),
+      { ...garageView('schedule', 'garage.schedule'), feature: 'day_sheets' },
       {
         ...garageView('jobs', 'garage.own_jobs'),
         load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
       },
-      { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
+      {
+        ...garageView('team', 'garage.team'),
+        feature: 'team_mechanics',
+        load: () => import('./team-view/team-view').then((m) => m.TeamView),
+      },
       {
         ...garageView('prices', 'garage.prices'),
         load: () =>
           import('./prices-view/prices-view').then((m) => m.PricesView),
       },
       garageView('reviews', 'garage.reviews'),
-      garageView('profile', 'garage.profile'),
+      {
+        ...garageView('profile', 'garage.profile'),
+        load: () =>
+          import('./profile-view/profile-view').then((m) => m.ProfileView),
+      },
       {
         label: 'shell.frame.nav.garage.assistant',
         path: 'assistant',

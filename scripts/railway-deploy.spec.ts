@@ -5,8 +5,11 @@ import { join } from 'node:path';
 
 import {
   API_PRE_DEPLOY,
+  apiPreDeploy,
   deploy,
+  putSeedPassword,
   type Service,
+  seedPassword,
   servicesFor,
 } from './railway-deploy.ts';
 
@@ -62,6 +65,60 @@ describe('the api pre-deploy step', () => {
     expect(API_PRE_DEPLOY).toEqual([
       'npx prisma migrate deploy && node scripts/monitor-password.ts',
     ]);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-001
+  it('seeds staging after the migration and the monitor password, inside the new image', () => {
+    expect(apiPreDeploy('staging')).toEqual([
+      'npx prisma migrate deploy && node scripts/monitor-password.ts && SEED_ONLY=1 sh scripts/reset-staging.sh',
+    ]);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-001
+  it('keeps production to the migration and the monitor password', () => {
+    expect(apiPreDeploy('production')).toEqual(API_PRE_DEPLOY);
+    expect(apiPreDeploy('production').join(' ')).not.toMatch(/seed|reset/i);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-001
+  it.each(['', 'Staging', 'staging ', 'prod', 'development'])(
+    'refuses to build a pre-deploy step for the environment %p',
+    (environment) => {
+      expect(() => apiPreDeploy(environment)).toThrow(
+        'usage: railway-deploy.ts <staging|production>',
+      );
+    },
+  );
+});
+
+describe('the seed password a staging release needs', () => {
+  // @traces 1370-release-seed-no-ssh-FR-002
+  it('is read from the environment on staging', () => {
+    expect(seedPassword('staging', { SEED_PASSWORD: 'p' })).toBe('p');
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-002
+  it.each([
+    ['unset', {}],
+    ['empty', { SEED_PASSWORD: '' }],
+  ])('fails on staging, naming the variable, when it is %s', (_, env) => {
+    expect(() => seedPassword('staging', env)).toThrow(
+      'The staging environment has no SEED_PASSWORD secret',
+    );
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-002
+  it('is never read for production', () => {
+    const read: string[] = [];
+    const env = new Proxy({ SEED_PASSWORD: 'p' } as Record<string, string>, {
+      get(target, key: string) {
+        read.push(key);
+        return target[key];
+      },
+    });
+
+    expect(seedPassword('production', env)).toBeUndefined();
+    expect(read).toEqual([]);
   });
 });
 
@@ -167,6 +224,32 @@ describe('railway deploy', () => {
     expect(calls.some((c) => c.variables['serviceId'] === 'svc-web')).toBe(
       false,
     );
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-004
+  it("names the api's pre-deploy step, seed included, when staging's api deployment fails, and restores it", async () => {
+    statuses = ['FAILED'];
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const staging = servicesFor('staging', ALL);
+
+    await expect(
+      deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services: staging,
+        token: 't',
+      }),
+    ).rejects.toThrow(
+      /^api: deployment FAILED; its pre-deploy command \(npx prisma migrate deploy && node scripts\/monitor-password\.ts && SEED_ONLY=1 sh scripts\/reset-staging\.sh\)/,
+    );
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-api@sha256:old' } },
+      serviceId: 'svc-api',
+    });
+    jest.restoreAllMocks();
   });
 
   it('puts the previous image back when the run is cancelled mid-deploy', async () => {
@@ -534,6 +617,95 @@ describe('railway deploy with a project token', () => {
   });
 });
 
+describe('the seed password written to the staging api service', () => {
+  let server: Server;
+  let endpoint: string;
+  let calls: Call[];
+  let echo: boolean;
+
+  beforeEach(async () => {
+    calls = [];
+    echo = false;
+    server = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        const input = call.variables['input'] as { value?: string };
+        res.end(
+          JSON.stringify(
+            echo
+              ? { errors: [{ message: `value ${input.value} is not valid` }] }
+              : { data: { variableUpsert: true } },
+          ),
+        );
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    endpoint = `http://localhost:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterEach(() => new Promise((resolve) => server.close(resolve)));
+
+  const options = () => ({
+    endpoint,
+    environmentId: 'env-1',
+    limitMs: 200,
+    pollMs: 5,
+    services: [],
+    token: 't',
+  });
+  const target = { projectId: 'project-1', serviceId: 'svc-api' };
+
+  // @traces 1370-release-seed-no-ssh-FR-002
+  it('upserts SEED_PASSWORD on the api service without starting a deploy', async () => {
+    await putSeedPassword(options(), 'staging', target, 'parola-x');
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.query).toContain('variableUpsert(input: $input)');
+    expect(calls[0]?.query).toContain('$input: VariableUpsertInput!');
+    expect(calls[0]?.variables).toEqual({
+      input: {
+        environmentId: 'env-1',
+        name: 'SEED_PASSWORD',
+        projectId: 'project-1',
+        serviceId: 'svc-api',
+        skipDeploys: true,
+        value: 'parola-x',
+      },
+    });
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-002
+  it.each(['production', '', 'Staging'])(
+    'refuses %p before any call',
+    async (environment) => {
+      await expect(
+        putSeedPassword(options(), environment, target, 'parola-x'),
+      ).rejects.toThrow('SEED_PASSWORD is written to staging only');
+      expect(calls).toEqual([]);
+    },
+  );
+
+  // @traces 1370-release-seed-no-ssh-FR-003
+  it('keeps the value out of the error when Railway echoes it back', async () => {
+    echo = true;
+
+    const error = await putSeedPassword(
+      options(),
+      'staging',
+      target,
+      'parola-x',
+    ).catch((e: Error) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe('value [redacted] is not valid');
+  });
+});
+
 const ALL = {
   IMAGE_API: 'img/api@sha256:a',
   IMAGE_KEYCLOAK: 'img/keycloak@sha256:k',
@@ -579,7 +751,7 @@ describe('the services each environment deploys', () => {
       image: 'img/mcp@sha256:m',
     });
     expect(list.find((s) => s.name === 'api')?.preDeploy).toEqual(
-      API_PRE_DEPLOY,
+      apiPreDeploy('staging'),
     );
     expect(list.find((s) => s.name === 'mcp')?.preDeploy).toBeUndefined();
     expect(notices).toEqual([]);
@@ -603,6 +775,16 @@ describe('the services each environment deploys', () => {
     ]);
     expect(read.filter((k) => /MCP|KEYCLOAK/.test(k))).toEqual([]);
     expect(notices).toEqual([]);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-001
+  it("never gives production's services the staging seed", () => {
+    const list = servicesFor('production', ALL);
+
+    expect(list.find((s) => s.name === 'api')?.preDeploy).toEqual(
+      API_PRE_DEPLOY,
+    );
+    expect(JSON.stringify(list)).not.toMatch(/seed|reset-staging/i);
   });
 
   it('refuses an environment it does not know', () => {

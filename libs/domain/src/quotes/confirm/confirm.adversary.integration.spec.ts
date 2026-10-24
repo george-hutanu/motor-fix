@@ -387,3 +387,24 @@ describe('GET /bookings/:id/confirm-options', () => {
     expect(ids).not.toContain(other.answeringMechanic.id);
   });
 });
+
+// @traces 055-FR-004
+describe('a card detached from a deleted account', () => {
+  it('is not offered to the booking', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    await prisma.mechanic.update({
+      data: { accountId: null, onProfile: false, removedAt: new Date() },
+      where: { id: t.plainMechanic.id },
+    });
+
+    const options = await get(
+      `/bookings/${booking.id}/confirm-options`,
+      owner(t),
+    );
+
+    const ids = options.body.mechanics.map((m: { id: string }) => m.id);
+    expect(ids).toContain(t.answeringMechanic.id);
+    expect(ids).not.toContain(t.plainMechanic.id);
+  });
+});

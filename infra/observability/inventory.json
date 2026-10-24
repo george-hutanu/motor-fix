@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 172,
+    "count": 174,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -839,6 +839,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-mechanics-list",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no side effect, so nothing is audited; its request span and log line carry the route and status, and a 404 feature_off or not_found is the access rule working, not a failure",
+      "story": "ST-55"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-garage-suspension",
       "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/suspend",
@@ -1363,6 +1376,19 @@
       ],
       "reason": "a read with no writes, re-read by the owner's page on each verification event and on reconnect; a 403 or 404 is a caller without access, which the error-rate rule reads with the rest; no counter or alert of its own; no outside call",
       "story": "ST-116"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-profile",
+      "source": "libs/domain/src/garages/garage-profile/garage-profile.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/garages/:garageId/profile",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
+      "story": "ST-133"
     },
     {
       "kind": "endpoint",

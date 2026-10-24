@@ -267,10 +267,14 @@ export type { GarageInvitesControllerResend$Params as GarageInvitesControllerRes
 export { garageInvitesControllerResend as garageInvitesControllerResend } from './fn/garages/garage-invites-controller-resend';
 export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRevoke$Params } from './fn/garages/garage-invites-controller-revoke';
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
+export type { GarageProfileControllerRead$Params as GarageProfileControllerRead$Params } from './fn/garages/garage-profile-controller-read';
+export { garageProfileControllerRead as garageProfileControllerRead } from './fn/garages/garage-profile-controller-read';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
 export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
+export type { GarageMechanicsControllerList$Params as GarageMechanicsControllerList$Params } from './fn/garages/garage-mechanics-controller-list';
+export { garageMechanicsControllerList as garageMechanicsControllerList } from './fn/garages/garage-mechanics-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';

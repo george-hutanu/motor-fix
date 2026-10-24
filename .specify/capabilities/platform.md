@@ -107,6 +107,7 @@ features:
   - 506-railway-deploy-signal-spec
   - 520-brevo-key-check-retry
   - 988-pr-qa-postgres-wait
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Platform
@@ -223,9 +224,9 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 1348-FR-001 — (replaces 000-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (000-FR-004), a service whose Railway id is unset skipped with a notice (000-FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then, while production is on, promote to production with no approval step of its own (the `production` environment's protection rules are the owner's). Production is on only while the repository variable `PRODUCTION_ENABLED` is `true`, compared by GitHub's expression `==` (which ignores letter case); unset, empty or any other value is off. While it is off the production job MUST NOT start (it is skipped before it binds the `production` environment, so no run waits on that environment's reviewer or holds the `release-production` group), and the run MUST end green after staging with a notice and a step-summary line naming the variable. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
 
-_From 1348-release-green._
+_From 1370-release-seed-no-ssh._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -2750,6 +2751,22 @@ _From 988-pr-qa-postgres-wait._
 
 _From 988-pr-qa-postgres-wait._
 
+### 1370-FR-002 — Before deploying any staging service, the deploy script MUST write `SEED_PASSWORD` from the job's environment onto the staging api service as a Railway variable (upsert by project, environment, service and name, with deploys skipped), through the same endpoint, token and project-token fallback as its other calls; a staging run whose `SEED_PASSWORD` is unset or empty MUST fail before any Railway call with a message naming the variable, and for any environment other than `staging` the script MUST send no variable write (a spec proves production sends none).
+
+_From 1370-release-seed-no-ssh._
+
+### 1370-FR-003 — The password MUST travel only in the body of that request: never in the process's arguments, never in a log line and never in an error message, the error text Railway returns included (an occurrence of the value in a reported message is replaced by a fixed placeholder); a spec MUST run the staging deploy with a known value, have the fake API echo it in an error, and assert the value is absent from stdout and stderr.
+
+_From 1370-release-seed-no-ssh._
+
+### 1370-FR-004 — A staging api deployment that fails during its pre-deploy command MUST fail the deploy: a non-zero exit, an error naming the api's pre-deploy step (migration, monitor password and seed), and the existing restore of the touched services; a spec proves the exit code, the message and the restore request.
+
+_From 1370-release-seed-no-ssh._
+
+### 1370-FR-005 — `release.yml`'s staging job MUST drop the Railway CLI install, the SSH key registration, the SSH seed and the key removal steps, MUST pass `SEED_PASSWORD` (the staging environment's secret) to the deploy step and mask it (`::add-mask::`) before that step, and MUST keep "Core flows on staging" after the deploy; `reset-staging.yml` is unchanged.
+
+_From 1370-release-seed-no-ssh._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2850,3 +2867,4 @@ _From 988-pr-qa-postgres-wait._
 - `600-FR-002` — superseded by `486-FR-001` (2026-10-23)
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
+- `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)

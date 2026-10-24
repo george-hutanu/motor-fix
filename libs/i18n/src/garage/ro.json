@@ -271,6 +271,23 @@
     },
     "title": "Lista de prețuri"
   },
+  "profile": {
+    "address": "Adresă",
+    "area": "Zonă de lucru: {km}",
+    "error": "Nu am putut încărca profilul.",
+    "hours": "Program",
+    "name": "Nume",
+    "newTab": "se deschide într‑o filă nouă",
+    "none": "nimic ales încă",
+    "notOffered": "{label}: nu",
+    "panel": "Profilul public",
+    "phone": "Telefon",
+    "phonePrivate": "nu apare public",
+    "publicLink": "Vezi profilul public",
+    "retry": "Reîncearcă",
+    "suspended": "Profilul nu apare pe hartă cât timp service‑ul este suspendat.",
+    "unmarked": "Mărcile nemarcate contează ca refuz: apari ultimul la ele și nu primești cereri."
+  },
   "quotes": {
     "confirm": {
       "cancel": "Renunță",
@@ -429,6 +446,30 @@
       "team": "Răspunde echipei MotorFix."
     },
     "text": "Profil suspendat · {reason}. Profilul nu apare pe hartă până se rezolvă."
+  },
+  "team": {
+    "add": "Adaugă un mecanic",
+    "count": {
+      "few": "{count} mecanici pe profil",
+      "one": "{count} mecanic pe profil",
+      "other": "{count} de mecanici pe profil"
+    },
+    "countNone": "Echipa nu apare pe profil",
+    "empty": "Încă nu ai adăugat mecanici.",
+    "failed": "Nu am putut încărca echipa. Reîncearcă.",
+    "noReviews": "fără recenzii",
+    "retry": "Reîncearcă",
+    "reviews": {
+      "few": "{rating} · {count} recenzii",
+      "one": "{rating} · {count} recenzie",
+      "other": "{rating} · {count} de recenzii"
+    },
+    "state": {
+      "noAccount": "fără cont",
+      "off": "nu apare pe profil",
+      "on": "pe profil"
+    },
+    "title": "Echipa"
   },
   "verification": {
     "checkIn": "O verificăm în 1–2 zile lucrătoare.",

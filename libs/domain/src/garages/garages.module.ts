@@ -15,12 +15,15 @@ import { GarageFeaturesController } from './features/features.controller';
 import { GarageFeaturesService } from './features/features.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
+import { GarageProfileController } from './garage-profile/garage-profile.controller';
+import { GarageProfileService } from './garage-profile/garage-profile.service';
 import { GarageSettingsController } from './garage-settings/garage-settings.controller';
 import { GarageSettingsService } from './garage-settings/garage-settings.service';
 import { ListingDraftsController } from './listing-drafts/listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
+import { GarageMechanicsController } from './mechanics/mechanics.controller';
 import { GaragePlaceService } from './place/garage-place.service';
 import { CatalogueJobsController } from './price-list/catalogue-jobs.controller';
 import { GarageLabourController } from './price-list/labour/labour.controller';
@@ -89,8 +92,10 @@ export class GaragesModule {
         DocumentReviewController,
         GarageBrandsController,
         GarageInvitesController,
+        GarageProfileController,
         GarageReportsController,
         GarageFeaturesController,
+        GarageMechanicsController,
         ImagesController,
         GarageSettingsController,
         InvitesController,
@@ -127,6 +132,7 @@ export class GaragesModule {
         GarageMechanicsService,
         GaragePlaceService,
         GaragePricesService,
+        GarageProfileService,
         GarageReportsService,
         {
           provide: GARAGE_REPORTS_OPTIONS,

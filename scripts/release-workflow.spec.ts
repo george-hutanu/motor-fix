@@ -124,7 +124,7 @@ describe('release workflow', () => {
     (name) => {
       expect(job(name)).toMatch(
         new RegExp(
-          `^ +run: exec node scripts/railway-deploy\\.ts ${name}$`,
+          `^ +(run: )?exec node scripts/railway-deploy\\.ts ${name}$`,
           'm',
         ),
       );
@@ -134,39 +134,52 @@ describe('release workflow', () => {
   // Staging is seeded only by the hand-started reset, so a seed account added
   // after the last reset (sofer2@, comutare@) was missing there and the specs
   // signing in as it failed the release. The seed only adds what is missing.
-  it('seeds staging after the deploy and before the core-flow run', () => {
+  // It runs in the api's pre-deploy step, inside the new image: Railway's SSH
+  // refused the release's token, so no step reaches into staging any more.
+  // @traces 1370-release-seed-no-ssh-FR-005
+  it('hands the deploy the seed password, masked, and runs the core flows after it', () => {
     const block = job('staging');
-    const deploy = block.indexOf(
-      'run: exec node scripts/railway-deploy.ts staging',
-    );
-    const seed = block.indexOf('name: Seed staging inside the api');
+    const name = "- name: Deploy and wait for each service's health check";
+    const at = block.indexOf(name);
+    const deploy = block.slice(at, block.indexOf('- name:', at + 1));
     const e2e = block.indexOf('name: Core flows on staging');
-    const step = block.slice(seed, block.indexOf('- name:', seed + 1));
 
-    expect(deploy).toBeGreaterThan(0);
-    expect(seed).toBeGreaterThan(deploy);
-    expect(e2e).toBeGreaterThan(seed);
-    expect(step).toContain("printf 'export SEED_ONLY=1\\n'");
-    expect(step).toContain('cat scripts/reset-staging.sh');
-    expect(step).toMatch(
-      /railway ssh --project "\$RAILWAY_PROJECT_ID" --environment "\$RAILWAY_ENVIRONMENT_ID" --service "\$RAILWAY_SERVICE_API" -- sh -s/,
+    expect(at).toBeGreaterThan(0);
+    expect(e2e).toBeGreaterThan(at);
+    expect(setting(deploy, 'SEED_PASSWORD')).toBe(gh('secrets.SEED_PASSWORD'));
+    const mask = deploy.indexOf(
+      'printf \'::add-mask::%s\\n\' "$SEED_PASSWORD"',
     );
-    expect(step).toContain('::add-mask::');
-    expect(setting(step, 'SEED_PASSWORD')).toBe(gh('secrets.SEED_PASSWORD'));
-    expect(step).not.toMatch(/echo[^\n]*\$\{?SEED_PASSWORD/);
+    expect(mask).toBeGreaterThan(0);
+    expect(
+      deploy.indexOf('exec node scripts/railway-deploy.ts staging'),
+    ).toBeGreaterThan(mask);
+    expect(deploy).not.toMatch(/echo[^\n]*\$\{?SEED_PASSWORD/);
+    expect(deploy).not.toMatch(/railway-deploy\.ts[^\n]*SEED_PASSWORD/);
     expect(setting(block, 'RAILWAY_PROJECT_ID')).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("removes the seed run's SSH key even when the seed fails", () => {
-    const block = job('staging');
-    const at = block.indexOf('railway ssh keys remove "$KEY_NAME"');
-    const step = block.slice(block.lastIndexOf('- name:', at), at);
-
-    expect(block).toContain(
-      'railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"',
+  // @traces 1370-release-seed-no-ssh-FR-005
+  it('masks nothing when the password is unset, leaving the deploy to name it', () => {
+    const { code, out } = stepRun(
+      "Deploy and wait for each service's health check",
+      {
+        SEED_PASSWORD: '',
+      },
     );
-    expect(at).toBeGreaterThan(0);
-    expect(step).toMatch(/^ +if: always\(\)$/m);
+
+    expect(out).not.toContain('::add-mask::');
+    expect(out).toContain(
+      'The staging environment has no SEED_PASSWORD secret',
+    );
+    expect(code).not.toBe(0);
+  });
+
+  // @traces 1370-release-seed-no-ssh-FR-005
+  it('reaches into staging over no SSH and installs no Railway CLI', () => {
+    expect(workflow).not.toMatch(
+      /railway ssh|@railway\/cli|ssh-keygen|KEY_NAME|\.ssh\//,
+    );
   });
 
   function step(block: string, name: string): string {
@@ -289,12 +302,12 @@ describe('release workflow', () => {
   // @traces 1019-FR-007
   it('checks the MCP sign-in right after the deploy, before the core flows', () => {
     const block = job('staging');
-    const deploy = block.indexOf(
-      'run: exec node scripts/railway-deploy.ts staging',
-    );
+    const deploy = block.indexOf('exec node scripts/railway-deploy.ts staging');
     const check = block.indexOf('name: Check the MCP sign-in on staging');
     const e2e = block.indexOf('name: Core flows on staging');
-    const step = block.slice(check, block.indexOf('- name:', check + 1));
+    // To the next step, named or not.
+    const rest = block.slice(check);
+    const step = rest.slice(0, rest.search(/\n +- /));
 
     expect(setting(block, 'MCP_URL')).toBe(gh('vars.MCP_URL'));
     expect(deploy).toBeGreaterThan(0);
