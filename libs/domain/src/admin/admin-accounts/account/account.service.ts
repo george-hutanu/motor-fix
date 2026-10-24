@@ -367,7 +367,7 @@ export class AccountService {
         link: contact,
         purpose: 'account_suspended',
         reason: text,
-        support: this.options.support ?? contact,
+        ...(this.options.support ? { support: this.options.support } : {}),
       });
       return true;
     } catch (error) {

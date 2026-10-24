@@ -88,31 +88,29 @@ describe('the account suspended e-mail', () => {
     },
   );
 
-  // With no support address configured, the contact page stands in for it.
+  // With no support address configured, the e-mail names none: the button to
+  // the contact page is the way to write.
   it.each([
-    [
-      'ro',
-      'Dacă crezi că e o greșeală, scrie-ne: https://motorfix.test/ro/contact',
-    ],
+    ['ro', 'Dacă crezi că e o greșeală, scrie-ne prin butonul de mai jos.'],
     [
       'en',
-      'If you think this is a mistake, write to us: https://motorfix.test/ro/contact',
+      'If you think this is a mistake, write to us with the button below.',
     ],
-  ])(
-    'reads naturally in %s with the contact page as the address',
-    (language, line) => {
-      const mail = render(
-        'ACCOUNT_EMAIL.account_suspended',
-        'email',
-        language,
-        {
-          ...suspended,
-          support: suspended.link,
-        },
-      );
+  ])('names no support address in %s when none is set', (language, line) => {
+    const { support: _none, ...params } = suspended;
+    const name = templateName('ACCOUNT_EMAIL', params);
+    const mail = render(name, 'email', language, params);
 
-      expect(mail.text).toContain(line);
-      expect(mail.text).not.toMatch(/contact form|formularul de contact/);
-    },
-  );
+    expect(name).toBe('ACCOUNT_EMAIL.account_suspended_contact');
+    expect(mail.text).toContain(line);
+    expect(mail.text).toContain(params.reason);
+    expect(mail.text).not.toContain('{support}');
+    expect(mail.html).toContain(params.link);
+  });
+
+  it('keeps the support line when an address is set', () => {
+    expect(templateName('ACCOUNT_EMAIL', suspended)).toBe(
+      'ACCOUNT_EMAIL.account_suspended',
+    );
+  });
 });
