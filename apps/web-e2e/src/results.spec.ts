@@ -828,6 +828,8 @@ test.describe('the map beside the results @seeded', () => {
   test('shows the whole legend, mobile mechanic included, above the sheet and clear of the zoom buttons at 320 px and 390 px', async ({
     page,
   }) => {
+    // Five page loads and ten rests: more than one load's budget on a busy runner.
+    test.slow();
     await ownMap(page);
     await asking(page);
     for (const [[width, height], lang, scheme] of [
@@ -1021,6 +1023,8 @@ test.describe('the map beside the results @seeded', () => {
     await page.goto('/ro');
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const address = page.url();
+    // A drag on a handle still sliding in misses it.
+    await still(page, 'half');
 
     // A drag the page takes before its sheet listens leaves it half: drag
     // again until it rests full, then step back.
