@@ -74,7 +74,7 @@ _From 131-invite-garage-staff._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 055-FR-004 — The account deletion's detach (129-FR-009) MUST also set `removed_at` (a time, null by default) on the MECHANIC row in the same transaction; nothing else writes it in this story, and no other column changes. A migration adds the nullable column.
+### 055-FR-004 — The account deletion's detach (129-FR-009) MUST, in one transaction, clear the MECHANIC row's `account_id`, set its `on_profile` false, delete the account's receptionist GARAGE_MEMBER rows, and set `removed_at` (a time, null by default) on the row; nothing else writes `removed_at` in this story. The row, its reviews and its bookings' mechanic reference are kept, so the figures are unchanged and the owner reassigns those bookings through the existing mechanic change. A card with `removed_at` set is never offered, matched or assigned again: the team list, the booking's confirm options and mechanic check, the day sheet's lookup, the step-4 re-save and the team switch's count all leave it out. A migration adds the nullable column.
 
 _From 055-team-list._
 
