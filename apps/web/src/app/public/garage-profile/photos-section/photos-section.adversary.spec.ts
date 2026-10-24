@@ -20,6 +20,7 @@ const many = (count: number) =>
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

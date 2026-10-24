@@ -28,6 +28,7 @@ const C = row('j-c', 'Lucrare C', 'Job C', 10_000, 20_000);
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

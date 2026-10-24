@@ -91,6 +91,7 @@ describe('reading a garage by slug, hostilely', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual([
       'brandNote',
+      'closedDays',
       'doesNotTake',
       'facilities',
       'hours',

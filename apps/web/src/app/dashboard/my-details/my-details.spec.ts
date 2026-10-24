@@ -360,7 +360,7 @@ describe('editing the name and the city', () => {
 
     expect(field(element, 'Oraș').value).toBe('Sibiu');
     expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'Contul tău este suspendat.',
+      'Contul tău este suspendat. Scrie‑ne la suport.',
     );
     expect(toast).not.toHaveBeenCalled();
     expect(current()?.city).toBeNull();

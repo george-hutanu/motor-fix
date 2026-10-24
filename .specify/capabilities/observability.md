@@ -46,6 +46,7 @@ features:
   - 067-restore-suspended-garage
   - 500-req-ip-behind-proxy
   - 947-faro-consent-journeys
+  - 003-admin-account-actions
 ---
 
 # Capability: Observability
@@ -893,6 +894,9 @@ _From 947-faro-consent-journeys._
 ### 947-FR-012 — The feature MUST add no new endpoint, no new outside call and no new dependency; every failure of the SDK, the storage or the collector MUST be dropped silently and never break, block or slow a page (877-FR-014).
 
 _From 947-faro-consent-journeys._
+### 003-FR-021 — The new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, one counter of action outcomes labelled by action (`reset_access`, `suspend`, `restore`, `delete_on_request`) and outcome (`done`, `refused`, `conflict`, `email_failed`, `failed`) with no other label, one structured log line per action and per failure (route, outcome, account id, never a name, e-mail, phone or reason text), a dashboard panel and an alert on the error rate and on `failed`, listed in `infra/observability/inventory.json` and in the PR's Notes.
+
+_From 003-admin-account-actions._
 
 ## Retired
 
