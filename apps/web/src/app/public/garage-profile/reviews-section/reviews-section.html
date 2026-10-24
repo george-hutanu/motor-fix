@@ -1,0 +1,63 @@
+<h2 [id]="headingId">{{ 'public.garageProfile.reviewsSection.title' | t }}</h2>
+@if (view.value(); as page) {
+  <div class="summary">
+    <span class="figure" [mfLiveChange]="page.rating">{{ figure() }}</span>
+    @if (page.total === 0) {
+      <p class="empty">{{ 'public.garageProfile.reviewsSection.empty' | t }}</p>
+    } @else {
+      <span class="count">{{ 'public.garageProfile.reviews' | t: { count: page.reviewCount } }}</span>
+    }
+  </div>
+  @if (rows().length) {
+    <ul class="breakdown" [attr.aria-label]="'public.garageProfile.reviewsSection.label' | t">
+      @for (row of rows(); track row.score) {
+        <li>
+          <span class="stars">{{ row.label }}</span>
+          <span class="bar" aria-hidden="true"><span [style.width.%]="row.share" [style.min-width.px]="row.count ? 4 : 0"></span></span>
+          <span class="n">{{ row.count }}</span>
+        </li>
+      }
+    </ul>
+  }
+  @for (review of reviews(); track review.id) {
+    <article class="review" [attr.data-live-id]="review.id">
+      @if (review.about) {
+        <p class="about">{{ review.about }}</p>
+      }
+      <p class="score">{{ review.score }}</p>
+      @if (review.text) {
+        <p class="text">{{ review.text }}</p>
+      }
+      <p class="by">
+        <span class="author">{{ review.author }}</span>
+        <span class="month">{{ review.month }}</span>
+      </p>
+    </article>
+  }
+  @if (moreFailed()) {
+    <div class="failed" role="alert">
+      <p>{{ 'public.garageProfile.reviewsSection.failed' | t }}</p>
+      <button type="button" class="spartan-button spartan-button-variant-outline" (click)="more()">
+        {{ 'public.garageProfile.reviewsSection.retry' | t }}
+      </button>
+    </div>
+  } @else if (hasMore()) {
+    <button type="button" class="more spartan-button spartan-button-variant-outline" [disabled]="loadingMore()" (click)="more()">
+      {{ 'public.garageProfile.reviewsSection.more' | t }}
+    </button>
+  }
+} @else if (view.error()) {
+  <div class="failed" role="alert">
+    <p>{{ 'public.garageProfile.reviewsSection.failed' | t }}</p>
+    <button type="button" class="spartan-button spartan-button-variant-outline" (click)="view.reload()">
+      {{ 'public.garageProfile.reviewsSection.retry' | t }}
+    </button>
+  </div>
+} @else {
+  <div class="loading" aria-hidden="true">
+    <span class="skeleton figure-shape"></span>
+    <span class="skeleton line"></span>
+    <span class="skeleton line"></span>
+    <span class="skeleton line short"></span>
+  </div>
+}
