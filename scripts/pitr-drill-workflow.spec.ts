@@ -148,12 +148,23 @@ describe('the point-in-time drill workflow', () => {
       ).toBe(true);
     });
 
-    it('removes the run’s SSH key however the drill ends', () => {
-      const remove = after.find((s) => s.includes('railway ssh keys remove'));
+    // @traces 1371-workflows-no-ssh-FR-007
+    it('closes its sandbox however the drill ends', () => {
+      const close = after.find((s) => s.includes('railway-sandbox.ts close'));
 
-      expect(remove).toMatch(
-        /if: always\(\) && steps\.settings\.outputs\.skip != 'true'/,
+      expect(close).toMatch(
+        /if: always\(\) && steps\.settings\.outputs\.skip != 'true' && steps\.sandbox\.outputs\.id != ''/,
       );
+    });
+
+    // @traces 1371-workflows-no-ssh-FR-007
+    it('writes its markers as psql inside the sandbox, in the PostgreSQL image', () => {
+      const body = script.slice(script.indexOf('source_sql() {'));
+      expect(body).toMatch(/railway-sandbox\.ts exec "\$SANDBOX_ID"/);
+      expect(body).toMatch(
+        /docker run --rm -i --network host [^\n]*--entrypoint psql/,
+      );
+      expect(script).not.toMatch(/railway ssh/);
     });
   });
 });

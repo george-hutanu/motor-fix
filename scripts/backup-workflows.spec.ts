@@ -83,14 +83,14 @@ describe('the nightly backup workflow', () => {
     expect(notice).toMatch(/::notice[^\n]*\$ENVIRONMENT/);
   });
 
-  it('pins the Railway CLI and removes its one-off SSH key even on failure', () => {
+  // @traces 1371-workflows-no-ssh-FR-001
+  it('pins the Railway CLI and closes its sandbox even on failure', () => {
     expect(backup).toMatch(/npm install --global @railway\/cli@\d+\.\d+\.\d+/);
-    const at = backup.indexOf('railway ssh keys remove "$KEY_NAME"');
+    const at = backup.indexOf('node scripts/railway-sandbox.ts close');
     expect(at).toBeGreaterThan(0);
     expect(backup.slice(backup.lastIndexOf('- name:', at), at)).toMatch(
-      /if: always\(\) && steps\.settings\.outputs\.skip != 'true'/,
+      /if: always\(\) && steps\.settings\.outputs\.skip != 'true' && steps\.sandbox\.outputs\.id != ''/,
     );
-    expect(backup).not.toMatch(/StrictHostKeyChecking[ =]no/);
   });
 
   it('takes the copy with the backup script', () => {
@@ -98,26 +98,57 @@ describe('the nightly backup workflow', () => {
   });
 });
 
-// @traces 251-FR-013
+// @traces 251-FR-013 1371-workflows-no-ssh-FR-005
 describe('the dump', () => {
-  it("runs inside the environment's PostgreSQL service", () => {
-    expect(read('scripts', 'backup', 'backup.sh')).toMatch(
-      /railway ssh --project "\$RAILWAY_PROJECT_ID" --environment "\$RAILWAY_ENVIRONMENT_ID" --service "\$RAILWAY_SERVICE_POSTGRES" -- sh -s/,
+  const runner = read('scripts', 'backup', 'backup.sh');
+  const inside = read('scripts', 'backup', 'sandbox-backup.sh');
+
+  it("runs dump.sh in a sandbox on the private network, in the PostgreSQL service's own image", () => {
+    expect(runner).toContain(
+      'node scripts/railway-sandbox.ts image "$RAILWAY_SERVICE_POSTGRES"',
+    );
+    expect(runner).toMatch(/railway-sandbox\.ts exec "\$SANDBOX_ID"/);
+    expect(runner).toContain('scripts/backup/dump.sh');
+    expect(inside).toMatch(
+      /docker run --rm -i --network host --entrypoint sh [^\n]*-e EXPECTED_ENV [^\n]*"\$IMAGE" -s/,
     );
   });
 
-  it('encrypts before anything reaches the disk, then uploads the copy and its manifest', () => {
-    const text = read('scripts', 'backup', 'backup.sh');
-    expect(text).toMatch(/gpg [^\n]*--symmetric[^\n]*--cipher-algo AES256/);
-    expect(text).toContain('--passphrase-fd');
-    expect(text).toMatch(/aws s3 cp [^\n]*\.dump\.gpg/);
-    expect(text).toMatch(/aws s3 cp [^\n]*\.manifest\.json/);
+  it('hands the passphrase and bucket keys over stdin only, never as an argument', () => {
+    expect(runner).toMatch(
+      /railway-sandbox\.ts prelude [^\n]*BACKUP_GPG_PASSPHRASE[^\n]*BACKUP_S3_ACCESS_KEY_ID[^\n]*BACKUP_S3_SECRET_ACCESS_KEY/,
+    );
+    expect(runner).not.toMatch(/exec "\$SANDBOX_ID"[^\n]*\$BACKUP_/);
+    expect(inside).toContain('--passphrase-file');
+    expect(inside).not.toMatch(/--passphrase[ =]"?\$/);
+  });
+
+  it('encrypts inside the sandbox before anything reaches a disk, and uploads from there', () => {
+    expect(inside).toMatch(/gpg [^\n]*--symmetric[^\n]*--cipher-algo AES256/);
+    expect(inside).toMatch(
+      /amazon\/aws-cli:\d+\.\d+\.\d+ s3 cp [^\n]*dump\.gpg/,
+    );
+    expect(inside).not.toMatch(/>[^\n]*\.dump\b(?!\.gpg)/);
+  });
+
+  it('sends back only the manifest head and the size, never dump bytes', () => {
+    expect(inside).toMatch(/^printf 'BACKUP_HEAD %s\\n'/m);
+    expect(inside).toMatch(/^printf 'BACKUP_SIZE %s\\n'/m);
+    expect(inside).not.toMatch(/cat "\$work\/dump/);
+  });
+
+  it('checks the uploaded size against the size the sandbox wrote, then uploads the manifest', () => {
+    const check = runner.indexOf('s3api head-object');
+    expect(check).toBeGreaterThan(runner.indexOf('railway-sandbox.ts exec'));
+    expect(runner.indexOf('.manifest.json')).toBeGreaterThan(check);
+    expect(runner).toMatch(/aws s3 cp [^\n]*\.manifest\.json/);
   });
 
   it('prunes only after both uploads', () => {
     const text = read('scripts', 'backup', 'backup.sh');
     const prune = text.indexOf('backup.ts prune');
     expect(prune).toBeGreaterThan(text.lastIndexOf('aws s3 cp'));
+    expect(prune).toBeGreaterThan(text.indexOf('s3api head-object'));
     expect(text).toMatch(/^set -eu/m);
   });
 
