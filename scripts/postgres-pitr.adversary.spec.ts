@@ -103,9 +103,14 @@ describe('the database image across every file', () => {
 });
 
 describe('every workflow trigger', () => {
-  it('is never pull_request_target', () => {
+  // pull_request_target holds a token that can write: a workflow on it may
+  // check out only the default branch (no ref, no PR head), never the PR code.
+  it('never runs the PR code under pull_request_target', () => {
     for (const text of Object.values(workflows)) {
-      expect(text).not.toContain('pull_request_target');
+      if (!text.includes('pull_request_target')) continue;
+      expect(text).not.toMatch(/^\s+ref:/m);
+      expect(text).not.toContain('github.event.pull_request.head');
+      expect(text).not.toMatch(/\bnpm (ci|install)\b/);
     }
   });
 });
