@@ -28,8 +28,15 @@ import { garageInvitesControllerSend } from '../fn/garages/garage-invites-contro
 import { GarageInvitesControllerSend$Params } from '../fn/garages/garage-invites-controller-send';
 import { garageLabourControllerSet } from '../fn/garages/garage-labour-controller-set';
 import { GarageLabourControllerSet$Params } from '../fn/garages/garage-labour-controller-set';
+import { GarageMechanicDto } from '../models/garage-mechanic-dto';
+import { garageMechanicsControllerAdd } from '../fn/garages/garage-mechanics-controller-add';
+import { GarageMechanicsControllerAdd$Params } from '../fn/garages/garage-mechanics-controller-add';
+import { garageMechanicsControllerEdit } from '../fn/garages/garage-mechanics-controller-edit';
+import { GarageMechanicsControllerEdit$Params } from '../fn/garages/garage-mechanics-controller-edit';
 import { garageMechanicsControllerList } from '../fn/garages/garage-mechanics-controller-list';
 import { GarageMechanicsControllerList$Params } from '../fn/garages/garage-mechanics-controller-list';
+import { garageMechanicsControllerRemove } from '../fn/garages/garage-mechanics-controller-remove';
+import { GarageMechanicsControllerRemove$Params } from '../fn/garages/garage-mechanics-controller-remove';
 import { GarageMechanicsDto } from '../models/garage-mechanics-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
@@ -376,6 +383,105 @@ export class GaragesService extends BaseService {
   garageMechanicsControllerList(params: GarageMechanicsControllerList$Params, context?: HttpContext): Promise<GarageMechanicsDto> {
     const resp = this.garageMechanicsControllerList$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageMechanicsDto>): GarageMechanicsDto => r.body);
+  }
+
+  /** Path part for operation `garageMechanicsControllerAdd()` */
+  static readonly GarageMechanicsControllerAddPath = '/api/v1/garages/{garageId}/mechanics';
+
+  /**
+   * Add a mechanic card, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMechanicsControllerAdd()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageMechanicsControllerAdd$Response(params: GarageMechanicsControllerAdd$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageMechanicDto>> {
+    const obs = garageMechanicsControllerAdd(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Add a mechanic card, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMechanicsControllerAdd$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageMechanicsControllerAdd(params: GarageMechanicsControllerAdd$Params, context?: HttpContext): Promise<GarageMechanicDto> {
+    const resp = this.garageMechanicsControllerAdd$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageMechanicDto>): GarageMechanicDto => r.body);
+  }
+
+  /** Path part for operation `garageMechanicsControllerRemove()` */
+  static readonly GarageMechanicsControllerRemovePath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}';
+
+  /**
+   * Remove a mechanic from the team, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMechanicsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMechanicsControllerRemove$Response(params: GarageMechanicsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = garageMechanicsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remove a mechanic from the team, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMechanicsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMechanicsControllerRemove(params: GarageMechanicsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.garageMechanicsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageMechanicsControllerEdit()` */
+  static readonly GarageMechanicsControllerEditPath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}';
+
+  /**
+   * Edit a mechanic card, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMechanicsControllerEdit()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageMechanicsControllerEdit$Response(params: GarageMechanicsControllerEdit$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageMechanicDto>> {
+    const obs = garageMechanicsControllerEdit(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Edit a mechanic card, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMechanicsControllerEdit$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageMechanicsControllerEdit(params: GarageMechanicsControllerEdit$Params, context?: HttpContext): Promise<GarageMechanicDto> {
+    const resp = this.garageMechanicsControllerEdit$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageMechanicDto>): GarageMechanicDto => r.body);
   }
 
   /** Path part for operation `getImageVariant()` */

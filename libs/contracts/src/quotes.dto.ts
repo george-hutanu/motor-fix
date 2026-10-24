@@ -438,6 +438,12 @@ export class GarageBookingDto extends OmitType(BookingDto, [
 
   @ApiProperty()
   lateCancellation!: boolean;
+
+  @ApiProperty({
+    description:
+      "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else",
+  })
+  toReassign!: boolean;
 }
 
 // The booking a garage's row needs: when, how long, who and where.
@@ -453,6 +459,12 @@ export class GarageRowBookingDto extends RequestBookingDto {
 
   @ApiProperty({ nullable: true, type: Number })
   lift!: number | null;
+
+  @ApiProperty({
+    description:
+      "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else",
+  })
+  toReassign!: boolean;
 }
 
 export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [

@@ -68,7 +68,7 @@ describe('leaving the garage team, attacked', () => {
       await prisma.mechanic.findUniqueOrThrow({ where: { id: mechanic.id } }),
     ).toMatchObject({ accountId: null, onProfile: false });
     expect(recorded.map((e) => e.kind).sort()).toEqual([
-      'mechanic.updated',
+      'mechanic.removed',
       'member.removed',
     ]);
   });

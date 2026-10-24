@@ -87,3 +87,42 @@ export const STAFF_JOINED: Template = {
   example: { garage: 'Atelier Dinamo', name: 'Elena Stan' },
   values: { garage: 'text', name: 'text' },
 };
+
+// To a mechanic the owner took off the team.
+export const STAFF_REMOVED: Template = {
+  audience: 'any',
+  bell: {
+    en: 'You are no longer part of the team of {garage}.',
+    ro: 'Nu mai faci parte din echipa {garage}.',
+  },
+  email: {
+    en: {
+      button: { label: 'Open MotorFix', link: 'app' },
+      lines: ['You are no longer part of the team of {garage}.'],
+      reason:
+        'You get this e-mail because you were on the team of this garage on MotorFix.',
+      subject: 'You left the team of {garage}',
+    },
+    ro: {
+      button: { label: 'Deschide MotorFix', link: 'app' },
+      lines: ['Nu mai faci parte din echipa {garage}.'],
+      reason:
+        'Primești acest e-mail pentru că ai făcut parte din echipa acestui service pe MotorFix.',
+      subject: 'Nu mai faci parte din echipa {garage}',
+    },
+  },
+  example: { garage: 'Atelier Dinamo' },
+  push: {
+    en: {
+      body: 'You are no longer part of the team of {garage}.',
+      link: 'app',
+      title: 'Team of {garage}',
+    },
+    ro: {
+      body: 'Nu mai faci parte din echipa {garage}.',
+      link: 'app',
+      title: 'Echipa {garage}',
+    },
+  },
+  values: { garage: 'text' },
+};
