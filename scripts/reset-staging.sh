@@ -4,15 +4,17 @@
 #
 # - .github/workflows/reset-staging.yml pipes it to `sh -s` there by hand, with
 #   SEED_PASSWORD in front of it on stdin, to empty and reseed staging.
-# - The api's Railway pre-deploy step on staging (scripts/railway-deploy.ts)
-#   runs it from the image after the migrations, with SEED_ONLY=1 and
+# - The api's Railway pre-deploy step on staging (scripts/api-pre-deploy.sh,
+#   named by scripts/railway-deploy.ts) runs it from the image after the
+#   migrations and the monitor password, with SEED_ONLY=1 and
 #   SEED_PASSWORD set on the service, so each deploy is seeded before the
 #   end-to-end run signs in. A failed seed exits non-zero and fails that
 #   deployment.
 #
 # With SEED_ONLY=1 it only seeds, which adds the seed accounts that are
-# missing and removes the quote requests they sent in the last day, so the
-# seeded driver's daily limit starts unused.
+# missing, restores what each owns (password, one password identity, status,
+# roles, link), removes the quote requests they sent in the last day, so the
+# seeded driver's daily limit starts unused, and prints one summary line.
 #
 # It refuses unless the container says it is staging twice over: APP_ENV,
 # which the app reads, and RAILWAY_ENVIRONMENT_NAME, which Railway sets.

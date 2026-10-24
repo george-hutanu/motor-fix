@@ -1,6 +1,6 @@
 ---
 capability: tracker
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
@@ -12,6 +12,7 @@ features:
   - 1360-tracker-unblock-dependent
   - 1363-throughput-fixes
   - 485-blocked-strips-stage
+  - 1153-debt-issue-st-id
 ---
 
 # Capability: Tracker
@@ -88,9 +89,9 @@ _From 1135-drop-legacy-pr-body._
 
 _From 1169-prefetch-intent._
 
-### 1132-FR-003 — `file` MUST title a new issue `ST-<issue number> <title>` unless the title already starts with an `ST-<n>` or `EP-<n>` id.
+### 1153-FR-001 — `tracker-sync.mjs file` MUST title a new issue `ST-<issue number> <title>` for every `--type` it accepts (`story`, `task`, `bug`, `tech debt`, `decision`) unless the title already starts with an `ST-<n>` id (a sub-id such as `ST-1177c` counts) or an `EP-<n>` id, and the `file` specs MUST prove it for `tech debt` and `decision` against the fake GitHub (`world()`), reading the retitled title and the type label back; `npm run test:harness` stays green.
 
-_From 1132-hold-reason-commas._
+_From 1153-debt-issue-st-id._
 
 ### 1132-FR-004 — `file` MUST stay idempotent: a rerun finds an open issue it already filed and retitled, by `ST-<its number> <title>`, and files nothing new.
 
@@ -144,6 +145,14 @@ _From 485-blocked-strips-stage._
 
 _From 485-blocked-strips-stage._
 
+### 1153-FR-003 — Every open issue of george-hutanu/motor-fix-specs that carries at least one of the labels `type: story`, `type: task`, `type: bug`, `type: decision`, `type: tech debt` and whose title does not start with `ST-<digits>` (a sub-id such as `ST-1177c` counts) or `EP-<digits>` MUST be retitled to `ST-<its own issue number> <title as it was>`; nothing else about the issue changes, and issues labelled `type: feature` or `epic` only, and closed issues, are left alone. An issue whose number is already the legacy ST id of another issue (an older tracker's `ST-<n>` that differs from its own number) is not retitled, since a second `ST-<n>` would make the id ambiguous to `find`; it is listed in retitle.md with the issue holding the id (autonomous default, 2026-10-24: #470 and #501, an open question for the owner in the finish comment).
+
+_From 1153-debt-issue-st-id._
+
+### 1153-FR-004 — The retitle MUST be a one-off tracker write performed in this task with the existing `gh` tooling, adding no script, command or dependency to the repository; its evidence is `specs/1153-debt-issue-st-id/retitle.md`, one line per issue (`#<n>: <old title> → <new title>`), plus a line for every issue skipped and why.
+
+_From 1153-debt-issue-st-id._
+
 ## Retired
 
 - `1036-FR-013` — superseded by `1037-FR-003` (2026-10-10)
@@ -156,3 +165,4 @@ _From 485-blocked-strips-stage._
 - `1132-FR-005` — removed by 1324-retire-debt-and-ready (2026-10-16)
 - `1037-FR-002` — superseded by `1324-FR-013` (2026-10-16)
 - `1036-FR-004` — superseded by `1360-FR-003` (2026-10-21)
+- `1132-FR-003` — superseded by `1153-FR-001` (2026-10-24)
