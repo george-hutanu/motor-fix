@@ -323,6 +323,13 @@ const FALLBACKS = [
   { from: 'push', reason: 'send_failed', to: 'email' },
   { from: 'email', reason: 'send_failed', to: 'push' },
 ] as const;
+// A label outside these sets would open a series of its own.
+const CHOICE_CHANNELS: readonly OutsideChannel[] = [
+  'email',
+  'push',
+  'sms',
+  'whatsapp',
+];
 // Not started at 0: the API's start set is at its series cap.
 const channelChoices = () =>
   counter(
@@ -528,6 +535,7 @@ export function countAccountChange(field: (typeof ACCOUNT_FIELDS)[number]) {
 
 // One driver pick of a new channel for one type.
 export function countChannelChoice(channel: OutsideChannel) {
+  if (!CHOICE_CHANNELS.includes(channel)) return;
   channelChoices().add(1, { channel });
 }
 
@@ -537,6 +545,10 @@ export function countChannelFallback(
   to: SentChannel,
   reason: FallbackReason,
 ) {
+  const known = FALLBACKS.some(
+    (f) => f.from === from && f.reason === reason && f.to === to,
+  );
+  if (!known) return;
   channelFallbacks().add(1, { from, reason, to });
 }
 

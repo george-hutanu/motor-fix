@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   Directive,
+  ElementRef,
   inject,
   input,
 } from '@angular/core';
@@ -24,15 +25,21 @@ import { BrnRadio, BrnRadioGroup } from '@spartan-ng/brain/radio-group';
 })
 export class HlmRadioGroup {
   private readonly group = inject(BrnRadioGroup);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   get name(): string {
     return this.group.name();
   }
 
   // Shows `value` again after a pick its owner did not keep, even when the
-  // owner's bound value never changed in between.
+  // owner's bound value never changed in between. The native radios are set
+  // too: their `checked` binding has not changed, so it would not repaint them.
   reset(value: string) {
     this.group.writeValue(value);
+    const radios = this.host.nativeElement.querySelectorAll<HTMLInputElement>(
+      'input[type="radio"]',
+    );
+    for (const radio of radios) radio.checked = radio.value === value;
   }
 }
 

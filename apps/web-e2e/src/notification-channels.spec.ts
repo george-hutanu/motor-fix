@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
+import { Client } from 'pg';
 
 import { headers, ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
@@ -40,6 +41,16 @@ async function settings(page: Page, email: string) {
     .and(page.locator('[aria-controls="driver-notifications-due_dates-types"]'))
     .click();
 }
+
+// This month in Bucharest, as the SMS counter keys it.
+const thisMonth = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    month: '2-digit',
+    timeZone: 'Europe/Bucharest',
+    year: 'numeric',
+  })
+    .format(new Date())
+    .slice(0, 7);
 
 const picker = (page: Page, name: string) =>
   page.getByRole('radiogroup', { exact: true, name });
@@ -93,5 +104,35 @@ test.describe("the channel of each driver's notification type @seeded", () => {
     await expect(
       page.getByText('Adaugă și confirmă numărul de telefon în Datele tale.'),
     ).toBeVisible();
+  });
+
+  test("once the month's 5 SMS are used, the panel says the next ones go by WhatsApp", async ({
+    page,
+    request,
+  }) => {
+    test.skip(
+      !process.env['DATABASE_URL'],
+      "writes a driver's SMS count straight to PostgreSQL, which needs DATABASE_URL",
+    );
+    const email = await signUpDriver(request, 'sms-cinci');
+    const db = new Client({ connectionString: process.env['DATABASE_URL'] });
+    await db.connect();
+    try {
+      await db.query(
+        `INSERT INTO sms_counter (account_id, month, sent_count)
+         SELECT id, $2, 5 FROM account WHERE email = $1`,
+        [email, thisMonth()],
+      );
+      await settings(page, email);
+
+      await expect(
+        page.getByText(
+          'Ai folosit 5 din 5 SMS luna aceasta; următoarele merg pe WhatsApp.',
+        ),
+      ).toBeVisible();
+    } finally {
+      await db.query('DELETE FROM account WHERE email = $1', [email]);
+      await db.end();
+    }
   });
 });

@@ -223,6 +223,7 @@
       }
     },
     "phoneHint": "Add and confirm your phone number in Your details.",
+    "pushDismissed": "Allow notifications when the browser asks, then pick Push again.",
     "smsUsed": "You have used {used} of {cap} SMS this month; the next ones go by WhatsApp.",
     "title": "Notifications",
     "type": {

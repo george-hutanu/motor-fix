@@ -712,11 +712,13 @@ describe('SMS and WhatsApp', () => {
 
 // @traces 142-FR-006 142-FR-010
 describe('picking push', () => {
-  it('saves at once when the account already has a push device', async () => {
+  it('saves with no prompt when this browser is already a device', async () => {
+    push.state.set('on');
     const { element, settle } = await opened(
       'due_dates',
       full({ pushDevice: true }),
     );
+    push.refresh.mockImplementationOnce(async () => push.state.set('on'));
 
     labelOf(groupOf(element, 'ITP'), 'push').click();
     await settle();
@@ -724,6 +726,43 @@ describe('picking push', () => {
     expect(push.enable).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it('offers this browser too when another device is saved', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      full({ pushDevice: true }),
+    );
+    push.enable.mockImplementationOnce(async () => push.state.set('on'));
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(push.enable).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['off', 'blocked', 'unsupported'] as const)(
+    'still saves when the browser ends %s and another device is saved',
+    async (state) => {
+      const { element, settle } = await opened(
+        'due_dates',
+        full({ pushDevice: true }),
+      );
+      push.enable.mockImplementationOnce(async () => push.state.set(state));
+
+      labelOf(groupOf(element, 'ITP'), 'push').click();
+      await settle();
+
+      expect(save).toHaveBeenCalledWith({
+        body: {
+          preferences: [
+            { channel: 'push', enabled: true, garageId: null, type: 'DUE_ITP' },
+          ],
+        },
+      });
+      expect(checked(groupOf(element, 'ITP'))).toBe('push');
+    },
+  );
 
   it('asks the browser first, and saves once this browser is a device', async () => {
     const { element, settle } = await opened('due_dates');
@@ -744,7 +783,10 @@ describe('picking push', () => {
   });
 
   it.each([
-    ['off', 'Primești mesajele importante și când aplicația este închisă.'],
+    [
+      'off',
+      'Permite notificările când browserul te întreabă, apoi alege Push din nou.',
+    ],
     [
       'blocked',
       'Notificările sunt blocate în browser. Deschide setările site‑ului, permite notificările pentru MotorFix și reîncarcă pagina.',
@@ -777,4 +819,14 @@ describe('picking push', () => {
       expect(picker.nextElementSibling).toBe(described);
     },
   );
+  it('says how to allow a dismissed prompt in English', async () => {
+    const { element, settle } = await opened('due_dates', full(), 'en');
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(region(element, 'due_dates')?.textContent).toContain(
+      'Allow notifications when the browser asks, then pick Push again.',
+    );
+  });
 });

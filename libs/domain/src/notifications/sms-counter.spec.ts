@@ -1,6 +1,6 @@
 // @traces 392-FR-003
 
-import { SMS_PER_MONTH, smsMonth, smsUsed } from './sms-counter';
+import { smsMonth, smsUsed } from './sms-counter';
 import type { PrismaClient } from '../generated/prisma/client';
 
 describe('the month an SMS counts in', () => {
@@ -63,9 +63,5 @@ describe('the SMS a driver has used this month', () => {
     expect(await smsUsed(prisma, 'ana', new Date('2026-10-31T22:00:00Z'))).toBe(
       0,
     );
-  });
-
-  it('is capped at 5 a month', () => {
-    expect(SMS_PER_MONTH).toBe(5);
   });
 });

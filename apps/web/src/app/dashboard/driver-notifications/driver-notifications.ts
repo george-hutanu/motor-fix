@@ -61,7 +61,7 @@ const PUSH_HINTS: Partial<Record<PushState, string>> = {
   blocked: 'shell.push.blocked',
   'ios-hint': 'shell.push.iosHint',
   loading: 'shell.push.unavailable',
-  off: 'shell.push.off',
+  off: 'driver.notifications.pushDismissed',
   unavailable: 'shell.push.unavailable',
   unsupported: 'shell.push.unsupported',
 };
@@ -283,14 +283,14 @@ export class DriverNotifications implements OnInit {
     }
   }
 
-  // True once the account has a push device; else the picker says why not.
+  // Offers this browser as a push device when it can be one. True when the
+  // account then has a device, here or elsewhere; else the picker says why.
   private async pushReady(type: string) {
-    if (this.reach().pushDevice) return true;
     const device = this.injector.get(PushDevice);
     await device.refresh();
     if (device.state() === 'off') await device.enable();
     const state = device.state();
-    if (state === 'on') {
+    if (state === 'on' || this.reach().pushDevice) {
       this.reach.update((reach) => ({ ...reach, pushDevice: true }));
       return true;
     }

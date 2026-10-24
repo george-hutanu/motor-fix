@@ -227,6 +227,7 @@
       }
     },
     "phoneHint": "Adaugă și confirmă numărul de telefon în Datele tale.",
+    "pushDismissed": "Permite notificările când browserul te întreabă, apoi alege Push din nou.",
     "smsUsed": "Ai folosit {used} din {cap} SMS luna aceasta; următoarele merg pe WhatsApp.",
     "title": "Notificări",
     "type": {
