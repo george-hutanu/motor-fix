@@ -100,7 +100,6 @@ export class ProfileView {
     return this.i18n.t(key, params);
   }
 
-  // A mobile mechanic is shown by its area, never by an address.
   protected readonly area = computed(() => {
     const garage = this.profile();
     if (garage?.businessKind !== 'mobile') return '';
@@ -123,7 +122,6 @@ export class ProfileView {
       fuels: fuelLine(brand.fuels, (key) => this.t(key)),
     })),
   );
-  // Every facility the listing can offer, the ones not offered among them.
   protected readonly facilities = computed(() => {
     const garage = this.profile();
     if (!garage) return [];
