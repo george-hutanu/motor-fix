@@ -6,7 +6,7 @@
 //   node scripts/railway-sandbox.ts open <staging|production> <postgres|api>
 //   node scripts/railway-sandbox.ts image <service-id>
 //   node scripts/railway-sandbox.ts exec <sandbox-id> [command...]
-//   node scripts/railway-sandbox.ts close [sandbox-id]
+//   node scripts/railway-sandbox.ts close <sandbox-id>
 //   node scripts/railway-sandbox.ts mask <NAME...>
 //   node scripts/railway-sandbox.ts prelude <NAME...>
 //
@@ -24,7 +24,7 @@
 // base64 forms from the log; never as an argument or a Railway variable.
 //
 // Railway is called through the pinned Railway CLI (`railway api`, `railway
-// sandbox exec`; RAILWAY_CLI names another binary). RAILWAY_API_TOKEN goes as
+// sandbox exec`). RAILWAY_API_TOKEN goes as
 // an account token first and, when Railway refuses it, once more as a project
 // token (RAILWAY_TOKEN), as scripts/railway-deploy.ts does;
 // RAILWAY_TOKEN_KIND=project goes straight to the second. With no
@@ -246,13 +246,11 @@ export async function waitRunning(
   }
 }
 
-const cli = (env: Env) => env.RAILWAY_CLI || 'railway';
-
 function context(env: Env): Context {
   return {
     env,
     run: (args, runEnv) => {
-      const r = spawnSync(cli(env), args, {
+      const r = spawnSync('railway', args, {
         encoding: 'utf8',
         env: runEnv as NodeJS.ProcessEnv,
         maxBuffer: 16 * 1024 * 1024,
@@ -307,7 +305,7 @@ const TIMING: Timing = {
   sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
 };
 
-const found = <T>(value: T | null | undefined, what: string): T => {
+const present = <T>(value: T | null | undefined, what: string): T => {
   if (value == null) throw new Error(`Railway returned no ${what}`);
   return value;
 };
@@ -324,7 +322,7 @@ export async function open(
     { e: environmentId },
     ctx,
   );
-  const actual = found(named.environment, 'environment').name;
+  const actual = present(named.environment, 'environment').name;
   const why = refusal(environment, kind, actual);
   if (why || !isKind(kind)) throw new Error(`sandbox refused: ${why}`);
   const service = railwayApi<{ service: { name: string } | null }>(
@@ -338,12 +336,12 @@ export async function open(
       input: createInput(
         environmentId,
         kind,
-        found(service.service, 'service').name,
+        present(service.service, 'service').name,
       ),
     },
     ctx,
   );
-  const id = found(created.sandboxCreate, 'sandbox').id;
+  const id = present(created.sandboxCreate, 'sandbox').id;
   if (ctx.env.GITHUB_OUTPUT) {
     appendFileSync(ctx.env.GITHUB_OUTPUT, `id=${id}\n`);
   }
@@ -358,7 +356,13 @@ export async function open(
   try {
     await waitRunning(() => status(ctx, environmentId, id), timing);
   } catch (error) {
-    destroy(ctx, environmentId, id);
+    try {
+      destroy(ctx, environmentId, id);
+    } catch (failed) {
+      throw new Error(`${String(error)}; then ${String(failed)}`, {
+        cause: error,
+      });
+    }
     throw error;
   } finally {
     process.off('SIGTERM', stop).off('SIGINT', stop);
@@ -387,7 +391,7 @@ function exec(env: Env, id: string, command: string[]) {
   const now = status(ctx, environmentId, id);
   if (now !== 'RUNNING') throw new Error(`sandbox is ${now}`);
   const r = spawnSync(
-    cli(env),
+    'railway',
     [
       'sandbox',
       'exec',
@@ -411,38 +415,49 @@ function exec(env: Env, id: string, command: string[]) {
   return r.status ?? 1;
 }
 
+function usage() {
+  process.stderr.write(
+    'usage: railway-sandbox.ts open <env> <postgres|api> | image <service-id> | exec <id> [cmd...] | close <id> | mask <NAME...> | prelude <NAME...>\n',
+  );
+  return 2;
+}
+
+const write = (text: string) => {
+  process.stdout.write(text);
+  return 0;
+};
+
+const COMMANDS: Record<
+  string,
+  (env: Env, args: string[]) => number | Promise<number>
+> = {
+  close: (env, [id]) => {
+    if (!id) return usage();
+    return write(
+      close(context(env), id) === 'gone' ? 'sandbox already gone\n' : '',
+    );
+  },
+  exec: (env, [id = '', ...command]) => exec(env, id, command),
+  image: (env, [serviceId = '']) => {
+    image(env, serviceId);
+    return 0;
+  },
+  mask: (env, names) =>
+    write(
+      maskLines(env, names)
+        .map((l) => `${l}\n`)
+        .join(''),
+    ),
+  open: async (env, [environment = '', kind = '']) =>
+    write(`${await open(context(env), environment, kind)}\n`),
+  prelude: (env, names) => write(prelude(env, names)),
+};
+
+// async, so a command that throws ends in the one error line below.
 async function main(argv: string[], env: Env = process.env) {
   const [command = '', ...args] = argv;
-  switch (command) {
-    case 'open':
-      process.stdout.write(
-        `${await open(context(env), args[0] ?? '', args[1] ?? '')}\n`,
-      );
-      return 0;
-    case 'image':
-      image(env, args[0] ?? '');
-      return 0;
-    case 'exec':
-      return exec(env, args[0] ?? '', args.slice(1));
-    case 'close':
-      // Nothing to close when open never got as far as creating one.
-      if (args[0] && close(context(env), args[0]) === 'gone') {
-        process.stdout.write('sandbox already gone\n');
-      }
-      return 0;
-    case 'mask':
-      for (const line of maskLines(env, args))
-        process.stdout.write(`${line}\n`);
-      return 0;
-    case 'prelude':
-      process.stdout.write(prelude(env, args));
-      return 0;
-    default:
-      process.stderr.write(
-        'usage: railway-sandbox.ts open <env> <postgres|api> | image <service-id> | exec <id> [cmd...] | close [id] | mask <NAME...> | prelude <NAME...>\n',
-      );
-      return 2;
-  }
+  const run = Object.hasOwn(COMMANDS, command) ? COMMANDS[command] : undefined;
+  return run ? run(env, args) : usage();
 }
 
 if (process.argv[1]?.endsWith('railway-sandbox.ts')) {

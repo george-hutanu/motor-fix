@@ -133,3 +133,35 @@ describe.each(sandboxed)('%s settings', (name, _job, kind) => {
     expect(reads).toContainEqual({ from: 'vars', key: service });
   });
 });
+
+// Only `sh -s` reading stdin is proven to run in a sandbox, so every exec
+// hands its commands over on stdin and names nothing after the sandbox id.
+const callers = [
+  join(dir, 'reset-staging.yml'),
+  join(__dirname, 'backup', 'backup.sh'),
+  join(__dirname, 'backup', 'pitr-drill.sh'),
+];
+
+// @traces 1371-FR-002
+describe.each(callers)('%s', (path) => {
+  const text = readFileSync(path, 'utf8');
+  const calls = [...text.matchAll(/railway-sandbox\.ts exec [^\n]*/g)].map(
+    ([line]) => line,
+  );
+
+  it('runs every sandbox command from stdin, never as an argument', () => {
+    expect(calls.length).toBeGreaterThan(0);
+    for (const line of calls) {
+      expect(line).toMatch(/exec "\$SANDBOX_ID"\s*(\||$)/);
+    }
+  });
+});
+
+// @traces 1371-FR-006
+describe('the staging reset heredoc', () => {
+  it('cannot be cut short by a line of reset-staging.sh', () => {
+    expect(read('reset-staging.yml')).toContain("printf 'RESET\\n'");
+    const script = readFileSync(join(__dirname, 'reset-staging.sh'), 'utf8');
+    expect(script.split('\n')).not.toContain('RESET');
+  });
+});

@@ -75,11 +75,21 @@ source_sql() {
   if [ "$mode" = self-contained ]; then
     docker exec "$SOURCE" psql -X -q -A -t -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -c "$1"
   else
+    # The sandbox's `sh -s` reads the commands and the statement on stdin.
     # Each row comes back marked, so nothing else the sandbox prints can be
     # read as a value; psql's own exit code is kept.
-    printf '%s\n' "$1" | node scripts/railway-sandbox.ts exec "$SANDBOX_ID" \
-      "rows=\$(docker run --rm -i --network host -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE --entrypoint psql $source_image -X -q -A -t -v ON_ERROR_STOP=1) && printf '%s\\n' \"\$rows\" | sed 's/^/ROW /'" \
-      | tr -d '\r' | sed -n 's/^ROW //p'
+    {
+      printf "image='%s'\n" "$source_image"
+      cat <<'SH'
+rows=$(docker run --rm -i --network host -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE --entrypoint psql "$image" -X -q -A -t -v ON_ERROR_STOP=1 <<'SQL'
+SH
+      printf '%s\n' "$1"
+      cat <<'SH'
+SQL
+) || exit $?
+printf '%s\n' "$rows" | sed 's/^/ROW /'
+SH
+    } | node scripts/railway-sandbox.ts exec "$SANDBOX_ID" | tr -d '\r' | sed -n 's/^ROW //p'
   fi
 }
 
@@ -126,7 +136,7 @@ else
     [ -n "${!name:-}" ] || fail "$name is not set"
   done
   source_image=$(node scripts/railway-sandbox.ts image "$RAILWAY_SERVICE_POSTGRES")
-  node scripts/railway-sandbox.ts exec "$SANDBOX_ID" "docker pull -q $source_image >&2" </dev/null
+  printf "docker pull -q '%s' >&2\n" "$source_image" | node scripts/railway-sandbox.ts exec "$SANDBOX_ID"
   tls_env=()
   repo_path=$(source_sql "SELECT pg_read_file(current_setting('data_directory') || '/.pgbackrest_repo_path')" | head -n 1)
 fi

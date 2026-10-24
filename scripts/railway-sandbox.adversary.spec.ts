@@ -2,13 +2,14 @@ import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import {
   createInput,
@@ -36,8 +37,7 @@ afterEach(() => {
 describe('references, hostile service names', () => {
   it.each([
     ['a trailing newline', 'Postgres\n'],
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: a literal reference opener is the attack
-    ['an expression opener', '${{x}}'],
+    ['an expression opener', '$\x7b{x}}'],
     ['a closing brace', 'a}b'],
     ['a leading space', ' Postgres'],
     ['a quote', 'Post"gres'],
@@ -172,8 +172,7 @@ describe('prelude, hostile values', () => {
     const value = 'x'.repeat(1_000_000);
     const text = prelude({ BIG: value }, ['BIG']);
     expect(text.split('\n').filter(Boolean)).toHaveLength(1);
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: a shell length expansion
-    expect(sh(text, 'printf %s "${#BIG}"').stdout).toBe('1000000');
+    expect(sh(text, 'printf %s "$\x7b#BIG}"').stdout).toBe('1000000');
   });
 
   it('never leaks the raw value, whatever it holds', () => {
@@ -501,10 +500,18 @@ function run(
   input = '',
   cli = '',
 ) {
+  // The fake `railway` sits first on PATH; with none given, one that refuses
+  // everything does, so no test ever reaches the real Railway.
+  let fake = cli;
+  if (!fake) {
+    fake = join(dir, 'refuse', 'railway');
+    mkdirSync(dirname(fake), { recursive: true });
+    writeFileSync(fake, '#!/bin/sh\necho "no Railway in tests" >&2\nexit 99\n');
+    chmodSync(fake, 0o755);
+  }
   return spawnSync(process.execPath, [script, ...args], {
     env: {
-      PATH: process.env.PATH ?? '',
-      ...(cli ? { RAILWAY_CLI: cli } : {}),
+      PATH: `${dirname(fake)}:${process.env.PATH ?? ''}`,
       ...(args[0] === 'close' || args[0] === 'exec'
         ? { RAILWAY_ENVIRONMENT_ID: 'env-1', RAILWAY_PROJECT_ID: 'p-1' }
         : {}),
@@ -529,14 +536,13 @@ describe('the command line', () => {
     expect(run([], {}, '', f.cli).status).toBe(2);
   });
 
-  it('closes nothing and succeeds when no id was ever created', () => {
+  it('refuses a close with no sandbox id, with a usage line, and calls no Railway', () => {
     const f = fakeCli();
-    expect(run(['close'], { RAILWAY_API_TOKEN: 't' }, '', f.cli).status).toBe(
-      0,
-    );
-    expect(
-      run(['close', ''], { RAILWAY_API_TOKEN: 't' }, '', f.cli).status,
-    ).toBe(0);
+    for (const args of [['close'], ['close', '']]) {
+      const out = run(args, { RAILWAY_API_TOKEN: 't' }, '', f.cli);
+      expect(out.status).toBe(2);
+      expect(out.stderr.toString()).toMatch(/usage/);
+    }
     expect(f.calls()).toEqual([]);
   });
 
@@ -554,7 +560,8 @@ describe('the command line', () => {
   });
 
   it('fails the close when Railway refuses to destroy, so the run is not silently green', () => {
-    const cli = join(dir, 'railway-bad');
+    mkdirSync(join(dir, 'bad'));
+    const cli = join(dir, 'bad', 'railway');
     writeFileSync(
       cli,
       '#!/bin/sh\necho \'{"data":null,"errors":[{"message":"Internal server error"}]}\'\nexit 1\n',
@@ -620,13 +627,9 @@ describe('the command line', () => {
     );
     expect(out.status).not.toBe(0);
     expect(out.stdout.toString()).toBe('');
-    try {
-      expect(f.calls().some((c) => c.join(' ').includes('sandboxCreate'))).toBe(
-        false,
-      );
-    } catch {
-      // no call at all is the stronger outcome
-    }
+    expect(f.calls().some((c) => c.join(' ').includes('sandboxCreate'))).toBe(
+      false,
+    );
   });
 
   it('refuses open when RAILWAY_ENVIRONMENT_ID is missing', () => {

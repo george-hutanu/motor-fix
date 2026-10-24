@@ -30,6 +30,7 @@ case "$*" in
     exit 0 ;;
 esac
 cat >"$FAKE_DIR/dump-seen"
+[ "$FAKE_DUMP" = none ] && exit 1
 echo '${HEAD}'
 case "$FAKE_DUMP" in
   ok) printf 'custom-format dump' | base64 ;;
@@ -126,12 +127,19 @@ describe('sandbox-backup.sh', () => {
     ['the dump exits non-zero after its head', { FAKE_DUMP: 'exit' }],
     ['the dump ends in its failure mark', { FAKE_DUMP: 'marked' }],
     ['gpg fails', { FAKE_GPG: 'fail' }],
+    ['the dump prints nothing', { FAKE_DUMP: 'none' }],
   ])('fails and uploads nothing when %s', (_why, fake) => {
     const r = backup(fake);
 
     expect(r.status).not.toBe(0);
     expect(r.uploaded).toBeUndefined();
     expect(r.stdout).not.toContain('BACKUP_SIZE');
+  });
+
+  it('never starts gpg when the dump prints nothing', () => {
+    backup({ FAKE_DUMP: 'none' });
+
+    expect(existsSync(join(dir, 'passphrase-seen'))).toBe(false);
   });
 
   it('fails with no size line when the upload fails', () => {
