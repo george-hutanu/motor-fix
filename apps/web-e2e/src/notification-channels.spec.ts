@@ -140,8 +140,15 @@ test.describe("the channel of each driver's notification type @seeded", () => {
 // SC-004: every group opened with its pickers, at each size, scheme and
 // language, with no sideways scroll; the screenshots go to the report.
 async function openedPickers(page: Page, email: string) {
-  const closed = page.locator('button.disclosure[aria-expanded="false"]');
-  while ((await closed.count()) > 0) await closed.first().click();
+  // Only this panel's disclosures, each awaited open before the next.
+  const toggles = page.locator(
+    'button[aria-controls^="driver-notifications-"]',
+  );
+  for (const toggle of await toggles.all()) {
+    if ((await toggle.getAttribute('aria-expanded')) === 'true') continue;
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  }
   const itp = picker(page, 'ITP');
   await expect(itp.getByRole('radio', { name: email })).toBeVisible();
   await expect(itp.getByRole('radio', { name: 'WhatsApp' })).toBeVisible();
@@ -162,8 +169,11 @@ test.describe('the opened channel pickers at every size @seeded', () => {
     test(`each group opens with its pickers and no sideways scroll at ${width} px`, async ({
       page,
     }, testInfo) => {
-      await page.setViewportSize({ height, width });
+      // Four looks, each with a full-page screenshot.
+      test.setTimeout(120_000);
+      // Signed in on a desktop, where the banner shows the sign-in button.
       await settings(page, WITH_PHONE);
+      await page.setViewportSize({ height, width });
       const language = page.getByRole('group', {
         name: /^(Limba|Language)$/,
       });
