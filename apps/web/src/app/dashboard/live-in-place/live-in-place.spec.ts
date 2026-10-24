@@ -106,6 +106,37 @@ describe('liveDraft', () => {
   });
 });
 
+// @traces 588-FR-002
+// @traces 588-FR-004
+describe('liveDraft compared by what the form edits', () => {
+  const samePrice = (a: Row, b: Row) => a.price === b.price;
+
+  it('says nothing for a new object that is equal, and names one that differs', () => {
+    const first = { id: 'job-1', price: 100 };
+    const shown = signal<Row | undefined>(first);
+    const draft = liveDraft(shown, samePrice);
+    expect(draft.changed()).toBeUndefined();
+
+    shown.set({ id: 'job-1', price: 100 });
+    expect(draft.changed()).toBeUndefined();
+
+    const second = { id: 'job-1', price: 150 };
+    shown.set(second);
+    expect(draft.changed()).toBe(second);
+  });
+
+  it('builds on the value it is given, so a shown value equal to it is no change', () => {
+    const shown = signal<Row | undefined>({ id: 'job-1', price: 100 });
+    const draft = liveDraft(shown, samePrice);
+
+    draft.accept({ id: 'job-1', price: 150 });
+    expect(draft.changed()).toEqual({ id: 'job-1', price: 100 });
+
+    shown.set({ id: 'job-1', price: 150 });
+    expect(draft.changed()).toBeUndefined();
+  });
+});
+
 describe('liveRows', () => {
   const a = { id: 'a', price: 1 };
   const b = { id: 'b', price: 2 };

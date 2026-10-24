@@ -493,3 +493,82 @@ describe('the drawer once the request closed', () => {
     expect(text(element)).toContain('Vlad P.');
   });
 });
+
+// @traces 588-FR-006
+// @traces 588-FR-007
+// @traces 588-FR-008
+// @traces 588-FR-009
+describe('the drawer once the request is gone', () => {
+  const goneOnNextRead = async (
+    shown: GarageRequestDto = detail(),
+    language: 'ro' | 'en' = 'ro',
+  ) => {
+    const drawer = await render(shown, language);
+    read.mockRejectedValueOnce(httpError(404));
+    live.emit('request.cancelled', 'req-1');
+    await wait(350);
+    await drawer.settle();
+    return drawer;
+  };
+
+  it.each([
+    ['ro', 'Nu mai este disponibil', 'Trimite oferta', 'Refuză'],
+    ['en', 'No longer available', 'Send a quote', 'Decline'],
+  ] as const)(
+    'keeps what it showed and says it is no longer available in %s, both buttons disabled',
+    async (language, said, send, decline) => {
+      const { element } = await goneOnNextRead(detail(), language);
+
+      expect(read).toHaveBeenCalledTimes(2);
+      expect(text(banner(element))).toBe(said);
+      expect(text(element)).toContain('Vlad P.');
+      expect(text(element)).toContain('BMW 330i');
+      expect(button(element, send)?.disabled).toBe(true);
+      expect(button(element, decline)?.disabled).toBe(true);
+    },
+  );
+
+  it('shows only the gone banner when the request it kept had closed', async () => {
+    const { element } = await goneOnNextRead(
+      detail({
+        closedReason: 'cancelled',
+        recipient: { ...detail().recipient, status: 'closed' },
+      }),
+    );
+
+    expect(element.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(text(banner(element))).toBe('Nu mai este disponibil');
+  });
+
+  it.each([
+    ['ro', 'Cererea nu mai este disponibilă'],
+    ['en', 'The request is no longer available'],
+  ] as const)(
+    'keeps the refusal when the very first read is gone (%s)',
+    async (language, said) => {
+      const { element } = await render(httpError(404), language);
+
+      expect(text(element)).toContain(said);
+      expect(banner(element)).toBeNull();
+      expect(element.querySelector('button')).toBeNull();
+    },
+  );
+
+  it.each([
+    ['ro', 'Trimite oferta'],
+    ['en', 'Send a quote'],
+  ] as const)(
+    'drops the banner when a later read answers the request again (%s)',
+    async (language, send) => {
+      const { element, settle } = await goneOnNextRead(detail(), language);
+      read.mockResolvedValueOnce(detail());
+
+      live.emit('request.cancelled', 'req-1');
+      await wait(350);
+      await settle();
+
+      expect(banner(element)).toBeNull();
+      expect(button(element, send)?.disabled).toBe(false);
+    },
+  );
+});

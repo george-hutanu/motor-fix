@@ -85,6 +85,23 @@ h1 {
   color: var(--mf-text-secondary);
 }
 
+.place-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-6);
+  align-items: center;
+}
+
+.status {
+  display: inline-flex;
+  gap: var(--mf-space-1);
+  align-items: center;
+}
+
+.status svg {
+  flex: none;
+}
+
 .description {
   max-width: 32em;
   font-size: var(--mf-size-subheading);
