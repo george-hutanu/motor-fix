@@ -20,6 +20,7 @@ const photo = (n: number) => ({
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

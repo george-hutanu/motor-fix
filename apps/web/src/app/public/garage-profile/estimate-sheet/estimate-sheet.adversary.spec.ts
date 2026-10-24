@@ -24,6 +24,7 @@ const price = (id: string, from: number, to: number) => ({
 
 const GARAGE = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

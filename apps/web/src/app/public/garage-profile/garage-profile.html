@@ -41,17 +41,29 @@
         </span>
       </div>
       <h1>{{ garage.name }}</h1>
-      @if (garage.businessKind === 'mobile' && garage.serviceRadiusKm) {
-        <p class="place">
-          {{
-            'public.garageProfile.mobileArea'
-              | t: { km: (garage.serviceRadiusKm | km) }
-          }}
-        </p>
-      } @else if (distanceSaid()) {
-        <p class="place">
-          {{ 'public.garageProfile.distance' | t: { km: distanceSaid() } }}
-        </p>
+      @let mobileArea =
+        garage.businessKind === 'mobile' && garage.serviceRadiusKm;
+      @if (mobileArea || distanceSaid() || statusSaid()) {
+        <div class="place-row">
+          @if (mobileArea) {
+            <p class="place">
+              {{
+                'public.garageProfile.mobileArea'
+                  | t: { km: (garage.serviceRadiusKm | km) }
+              }}
+            </p>
+          } @else if (distanceSaid()) {
+            <p class="place">
+              {{ 'public.garageProfile.distance' | t: { km: distanceSaid() } }}
+            </p>
+          }
+          @if (statusSaid(); as line) {
+            <p class="place status">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              <span>{{ line }}</span>
+            </p>
+          }
+        </div>
       }
       @if (garage.description) {
         <p class="description">{{ garage.description }}</p>
