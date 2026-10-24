@@ -95,7 +95,7 @@ export const assistantTexts: CanMatchFn = async () => {
 // first page is the server's `/`: it hydrates where it is, so a tap made before
 // the app loaded is replayed onto it, and moves once the replay has run.
 // A page that never settles (a stream, a poll) must not keep a first visit on /.
-export const FIRST_VISIT_BOUND = 2_000;
+const FIRST_VISIT_BOUND = 2_000;
 
 export const toLanguageAddress: CanMatchFn = () => {
   if (isPlatformServer(inject(PLATFORM_ID))) return true;
