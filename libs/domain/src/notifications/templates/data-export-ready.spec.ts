@@ -4,7 +4,7 @@ import { notificationType } from '../catalogue';
 import { checkTemplates } from '../template-check';
 import { render, templateName } from '../templates';
 
-const params = { link: 'https://motorfix.test/ro/app/driver/settings' };
+const params = { link: 'https://motorfix.test/app/driver/settings' };
 
 describe('the data file ready e-mail', () => {
   it('is the template the notification type picks', () => {
@@ -28,11 +28,11 @@ describe('the data file ready e-mail', () => {
 
   it('says the file is ready, in English', () => {
     const mail = render('DATA_EXPORT_READY', 'email', 'en', {
-      link: 'https://motorfix.test/en/app/driver/settings',
+      link: 'https://motorfix.test/app/driver/settings',
     });
 
     expect(mail.subject).toBe('Your data file is ready');
-    expect(mail.html).toContain('https://motorfix.test/en/app/driver/settings');
+    expect(mail.html).toContain('https://motorfix.test/app/driver/settings');
   });
 
   it('goes straight to the account, by e-mail only, and cannot be muted', () => {

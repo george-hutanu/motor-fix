@@ -323,7 +323,7 @@ export class DataExportBuilder {
       eventId: id,
       kind: 'DATA_EXPORT_READY',
       params: {
-        link: `${this.webUrl}/${account.language}/app/driver/settings`,
+        link: `${this.webUrl}/app/driver/settings`,
       },
       recipients: [accountId],
       subjectId: id,

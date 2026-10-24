@@ -182,3 +182,20 @@ describe('DataExportBuilder, an export its last try could not mark', () => {
     expect((await failedTotal()) - before).toBe(1);
   });
 });
+
+describe('DataExportBuilder, the ready e-mail’s link', () => {
+  // The web app serves /app/* without a language prefix: /ro/app/… is its
+  // Page not found.
+  it('opens Setări at /app/driver/settings, with no language prefix', async () => {
+    const world = setup('queued');
+
+    await world.run(0);
+
+    expect(world.notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'DATA_EXPORT_READY',
+        params: { link: 'https://motorfix.test/app/driver/settings' },
+      }),
+    );
+  });
+});

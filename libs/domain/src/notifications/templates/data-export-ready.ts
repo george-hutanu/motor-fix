@@ -28,6 +28,6 @@ export const DATA_EXPORT_READY: Template = {
       subject: 'Fișierul tău cu date e gata',
     },
   },
-  example: { link: 'https://motorfix.example/ro/app/driver/settings' },
+  example: { link: 'https://motorfix.example/app/driver/settings' },
   values: { link: 'link' },
 };

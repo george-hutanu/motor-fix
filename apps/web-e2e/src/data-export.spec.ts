@@ -45,7 +45,7 @@ const FILES = [
   'reviews.json',
 ];
 
-const SETTINGS_LINK = /https?:\/\/[^\s"<>]+\/(?:ro|en)\/app\/driver\/settings/;
+const SETTINGS_LINK = /https?:\/\/[^\s"<>]+\/app\/driver\/settings/;
 
 async function newAccount(request: APIRequestContext, language: 'ro' | 'en') {
   const email = `export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
