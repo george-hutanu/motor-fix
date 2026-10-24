@@ -14,8 +14,8 @@ import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { TeamView } from './team-view';
-import { InviteStaff } from '../invite-staff/invite-staff';
 import { Live } from '../live';
+import { MechanicCard } from '../mechanic-card/mechanic-card';
 import { Session } from '../session';
 
 const GARAGE = '0f9c2a54-6a1e-4f43-9d2b-2f5a3c1d7e10';
@@ -24,13 +24,20 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const mechanic = (
   over: Partial<GarageMechanicDto> = {},
 ): GarageMechanicDto => ({
+  brandIds: [],
+  certifications: [],
+  futureBookings: 0,
   hasAccount: true,
   id: 'mechanic-1',
+  isOwner: false,
   name: 'Andrei Popescu',
   onProfile: true,
   rating: '4.9',
   reviewCount: 58,
+  roleTitle: null,
   speciality: 'Frâne, suspensie',
+  specialties: ['Frâne', 'suspensie'],
+  years: null,
   ...over,
 });
 
@@ -68,7 +75,10 @@ let open: jest.Mock;
 let navigateByUrl: jest.Mock;
 
 async function render(
-  answer: () => Promise<GarageMechanicsDto> = async () => ({ items: SEEDED }),
+  answer: () => Promise<GarageMechanicsDto> = async () => ({
+    brands: [],
+    items: SEEDED,
+  }),
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
@@ -129,6 +139,7 @@ afterEach(() => TestBed.resetTestingModule());
 describe('Mecanici, plural boundaries', () => {
   const cellOf = async (count: number) => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ rating: '4.0', reviewCount: count })],
     }));
     await settle();
@@ -138,6 +149,7 @@ describe('Mecanici, plural boundaries', () => {
   };
   const lineOf = async (n: number) => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: Array.from({ length: n }, (_, i) => mechanic({ id: `m-${i}` })),
     }));
     await settle();
@@ -175,6 +187,7 @@ describe('Mecanici, plural boundaries', () => {
 describe('Mecanici, awkward rows', () => {
   it('shows no rating when the count is 0 even if a rating value came with it', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ rating: '4.9', reviewCount: 0 })],
     }));
     await settle();
@@ -186,6 +199,7 @@ describe('Mecanici, awkward rows', () => {
 
   it('shows no rating when a count came with a null rating', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ rating: null, reviewCount: 5 })],
     }));
     await settle();
@@ -197,6 +211,7 @@ describe('Mecanici, awkward rows', () => {
 
   it('shows an empty-string speciality as no speciality', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ speciality: '' })],
     }));
     await settle();
@@ -206,6 +221,7 @@ describe('Mecanici, awkward rows', () => {
 
   it('shows a whitespace-only speciality as no speciality', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ speciality: '   ' })],
     }));
     await settle();
@@ -215,6 +231,7 @@ describe('Mecanici, awkward rows', () => {
 
   it('keeps two cards of the same name as two rows', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ id: 'a' }), mechanic({ id: 'b' })],
     }));
     await settle();
@@ -226,7 +243,10 @@ describe('Mecanici, awkward rows', () => {
     const items = Array.from({ length: 1000 }, (_, i) =>
       mechanic({ id: `m-${i}`, name: `Mecanic ${i}` }),
     );
-    const { element, settle } = await render(async () => ({ items }));
+    const { element, settle } = await render(async () => ({
+      brands: [],
+      items,
+    }));
     await settle();
 
     const shown = rows(element).map((r) => text(r.querySelector('.name')));
@@ -238,6 +258,7 @@ describe('Mecanici, awkward rows', () => {
   it('keeps a very long name in its row without a second row', async () => {
     const long = 'Ion '.repeat(60).trim();
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ name: long })],
     }));
     await settle();
@@ -248,6 +269,7 @@ describe('Mecanici, awkward rows', () => {
 
   it('says a card with no account and on the profile is on the profile', async () => {
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ hasAccount: false, onProfile: true })],
     }));
     await settle();
@@ -295,7 +317,10 @@ describe('Mecanici, states under failure', () => {
   });
 
   it('shows the empty state in English with its button', async () => {
-    const { element, settle } = await render(async () => ({ items: [] }), 'en');
+    const { element, settle } = await render(
+      async () => ({ brands: [], items: [] }),
+      'en',
+    );
     await settle();
 
     expect(text(element.querySelector('mf-empty-state'))).toContain(
@@ -308,7 +333,10 @@ describe('Mecanici, states under failure', () => {
 
   it('keeps the empty state, not the failure, after a re-read that returns nothing', async () => {
     let items = SEEDED;
-    const { element, settle } = await render(async () => ({ items }));
+    const { element, settle } = await render(async () => ({
+      brands: [],
+      items,
+    }));
     await settle();
     items = [];
 
@@ -327,7 +355,7 @@ describe('Mecanici, states under failure', () => {
     let gone = false;
     const { settle } = await render(async () => {
       if (gone) throw new HttpErrorResponse({ status: 404 });
-      return { items: SEEDED };
+      return { brands: [], items: SEEDED };
     });
     await settle();
     gone = true;
@@ -339,7 +367,8 @@ describe('Mecanici, states under failure', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/app/garage');
   });
 
-  it('opens the invite dialog from the add button shown above a loaded list too', async () => {
+  // The button opens an empty card; inviting stays in the frame.
+  it('opens a new card from the add button shown above a loaded list too', async () => {
     const { element, settle } = await render();
     await settle();
 
@@ -348,8 +377,8 @@ describe('Mecanici, states under failure', () => {
       ?.click();
 
     expect(open).toHaveBeenCalledWith(
-      InviteStaff,
-      expect.objectContaining({ data: { garageId: GARAGE } }),
+      MechanicCard,
+      expect.objectContaining({ data: { brands: [], garageId: GARAGE } }),
     );
   });
 });
@@ -386,6 +415,7 @@ describe('Mecanici, live events that must not refresh', () => {
   it('shows the list from the re-read after a rating change', async () => {
     let rating = '4.9';
     const { element, settle } = await render(async () => ({
+      brands: [],
       items: [mechanic({ rating })],
     }));
     await settle();

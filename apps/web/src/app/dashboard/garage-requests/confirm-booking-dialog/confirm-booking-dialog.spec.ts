@@ -45,6 +45,7 @@ const row = (): GarageRequestSummaryDto => {
         mechanic: null,
         startsAt: STARTS,
         status: 'awaiting_confirmation',
+        toReassign: false,
       },
       car: {
         brand: 'BMW',
