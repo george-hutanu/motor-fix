@@ -1,7 +1,6 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 const DRIVER = {
   capabilities: [],
@@ -31,29 +30,19 @@ const GARAGE = {
   roles: ['driver', 'garage'],
 } as MeDto;
 
-function setup() {
-  const meControllerMe = jest.fn(() => Promise.resolve(DRIVER));
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe } },
-      {
-        provide: AuthService,
-        useValue: {
-          authControllerRefresh: jest.fn(() =>
-            Promise.resolve({ accessToken: 'renewed' }),
-          ),
-          authControllerSignIn: jest.fn(() =>
-            Promise.resolve({ accessToken: 'signed-in' }),
-          ),
-          authControllerSignOut: jest.fn(() => Promise.resolve()),
-          authControllerSwitchRole: jest.fn(() =>
-            Promise.resolve({ accessToken: 'as-garage' }),
-          ),
-        },
-      },
-    ],
+function reloadSetup() {
+  const { me, session } = setup({
+    auth: {
+      authControllerSignIn: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-in' }),
+      ),
+      authControllerSwitchRole: jest.fn(() =>
+        Promise.resolve({ accessToken: 'as-garage' }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(DRIVER)) },
   });
-  return { meControllerMe, session: TestBed.inject(Session) };
+  return { meControllerMe: me.meControllerMe, session };
 }
 
 // The next read of the account waits until the test answers it.
@@ -70,7 +59,7 @@ function held(meControllerMe: jest.Mock) {
 
 describe('reading the account again', () => {
   it('replaces the account with what the server now says, keeping it on screen meanwhile', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.load();
     const answer = held(meControllerMe);
 
@@ -84,7 +73,7 @@ describe('reading the account again', () => {
   });
 
   it('keeps the account it has when the server does not answer', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.load();
     meControllerMe.mockRejectedValueOnce(new Error('offline'));
 
@@ -94,7 +83,7 @@ describe('reading the account again', () => {
   });
 
   it('restores nothing after a sign-out', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.load();
     const answer = held(meControllerMe);
 
@@ -107,7 +96,7 @@ describe('reading the account again', () => {
   });
 
   it('keeps the role switched to when the old role answers late', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.load();
     const answer = held(meControllerMe);
 
@@ -122,7 +111,7 @@ describe('reading the account again', () => {
   });
 
   it('keeps the account signed in meanwhile when the old session answers late', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.load();
     const answer = held(meControllerMe);
     const other = { ...DRIVER, id: 'account-2', name: 'Ioana Pop' } as MeDto;
@@ -137,7 +126,7 @@ describe('reading the account again', () => {
   });
 
   it('keeps the answer when the token was only renewed meanwhile', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
     await session.signIn('andrei@example.ro', 'parola-lunga', false);
     const answer = held(meControllerMe);
 
@@ -152,7 +141,7 @@ describe('reading the account again', () => {
   });
 
   it('does nothing signed out', async () => {
-    const { meControllerMe, session } = setup();
+    const { meControllerMe, session } = reloadSetup();
 
     await session.reload();
 

@@ -1,32 +1,26 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, MeService } from '@motor-fix/data-access';
+import { setup } from './signed-in.testing';
 
-import { Session } from './session';
-
-function setup() {
+function passwordSetup() {
   let answer: (value?: unknown) => void = () => undefined;
   let refuse: (error: unknown) => void = () => undefined;
-  const api = {
-    authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-    passwordChangeControllerChange: jest.fn(
-      () =>
-        new Promise((resolve, reject) => {
-          answer = resolve;
-          refuse = reject;
-        }),
-    ),
-  };
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe: jest.fn() } },
-      { provide: AuthService, useValue: api },
-    ],
+  const { auth, session } = setup({
+    auth: {
+      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
+      passwordChangeControllerChange: jest.fn(
+        () =>
+          new Promise((resolve, reject) => {
+            answer = resolve;
+            refuse = reject;
+          }),
+      ),
+    },
+    me: { meControllerMe: jest.fn() },
   });
   return {
     answer: () => answer(),
-    api,
+    api: auth,
     refuse: (error: unknown) => refuse(error),
-    session: TestBed.inject(Session),
+    session,
   };
 }
 
@@ -37,7 +31,7 @@ afterEach(() => jest.useRealTimers());
 // @traces 139-FR-014
 describe('changing the password from this tab', () => {
   it('sends the passwords to the password change', async () => {
-    const { answer, api, session } = setup();
+    const { answer, api, session } = passwordSetup();
 
     const done = session.changePassword({
       currentPassword: 'veche',
@@ -53,7 +47,7 @@ describe('changing the password from this tab', () => {
 
   it('keeps this tab signed in through the sign-out it sends the others, while it is sent and for a while after', async () => {
     jest.useFakeTimers({ now: 0 });
-    const { answer, session } = setup();
+    const { answer, session } = passwordSetup();
     expect(session.keepsThroughRevoke()).toBe(false);
 
     const done = session.changePassword({ newPassword: 'parola-noua' });
@@ -67,7 +61,7 @@ describe('changing the password from this tab', () => {
   });
 
   it('stops keeping it when the change is refused', async () => {
-    const { refuse, session } = setup();
+    const { refuse, session } = passwordSetup();
 
     const done = session.changePassword({ newPassword: 'parola-noua' });
     refuse(new Error('invalid_credentials'));

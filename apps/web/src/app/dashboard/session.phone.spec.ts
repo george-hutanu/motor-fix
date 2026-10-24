@@ -1,8 +1,7 @@
-import { TestBed } from '@angular/core/testing';
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 const OWNER = {
   capabilities: [],
@@ -17,29 +16,25 @@ const OWNER = {
   roles: ['garage'],
 } as unknown as MeDto;
 
-function setup() {
-  const api = {
-    authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-    phoneSignInControllerPhoneCode: jest.fn(() => Promise.resolve()),
-    phoneSignInControllerPhoneSignIn: jest.fn(() =>
-      Promise.resolve({ accessToken: 'by-phone' }),
-    ),
-  };
-  const meControllerMe = jest.fn(() => Promise.resolve(OWNER));
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe } },
-      { provide: AuthService, useValue: api },
-    ],
+function phoneSetup() {
+  const { auth, session } = setup({
+    auth: {
+      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
+      phoneSignInControllerPhoneCode: jest.fn(() => Promise.resolve()),
+      phoneSignInControllerPhoneSignIn: jest.fn(() =>
+        Promise.resolve({ accessToken: 'by-phone' }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(OWNER)) },
   });
-  return { api, session: TestBed.inject(Session) };
+  return { api: auth, session };
 }
 
 beforeEach(() => localStorage.clear());
 
 describe('signing in with a phone number', () => {
   it('asks for a code for the number, in the language given', async () => {
-    const { api, session } = setup();
+    const { api, session } = phoneSetup();
 
     await session.phoneCode('+40722123456', 'en');
 
@@ -50,7 +45,7 @@ describe('signing in with a phone number', () => {
   });
 
   it('sends the number, the code and "keep me signed in", then holds the session', async () => {
-    const { api, session } = setup();
+    const { api, session } = phoneSetup();
 
     const me = await session.signInWithPhone('+40722123456', '012345', false);
 
@@ -62,7 +57,7 @@ describe('signing in with a phone number', () => {
   });
 
   it('answers "profile" for a number no account holds, holding no token', async () => {
-    const { api, session } = setup();
+    const { api, session } = phoneSetup();
     api.phoneSignInControllerPhoneSignIn.mockResolvedValueOnce({
       next: 'profile',
     } as never);
@@ -78,7 +73,7 @@ describe('signing in with a phone number', () => {
   });
 
   it('creates the account with the name, the current consent and the language', async () => {
-    const { api, session } = setup();
+    const { api, session } = phoneSetup();
 
     const me = await session.signInWithPhone('+40733000000', '012345', true, {
       language: 'en',
@@ -99,7 +94,7 @@ describe('signing in with a phone number', () => {
   });
 
   it('lets a refused code reach the caller, holding no token', async () => {
-    const { api, session } = setup();
+    const { api, session } = phoneSetup();
     api.phoneSignInControllerPhoneSignIn.mockRejectedValueOnce(
       new Error('401'),
     );

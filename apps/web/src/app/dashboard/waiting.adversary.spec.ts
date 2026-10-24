@@ -8,6 +8,7 @@ import { PLATFORM_ID, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import { Subject } from 'rxjs';
 
 import { Live, type LiveState } from './live';
 import { Session } from './session';
@@ -21,6 +22,7 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 const toasts = toast as unknown as jest.Mock;
 
 let account: WritableSignal<{ id: string } | null>;
+let signedOut: Subject<string>;
 let live: {
   catchUp: jest.Mock;
   offline: WritableSignal<boolean>;
@@ -48,7 +50,7 @@ async function start() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: PLATFORM_ID, useValue: 'browser' },
-      { provide: Session, useValue: { current: account } },
+      { provide: Session, useValue: { current: account, signedOut } },
       { provide: Live, useValue: live },
     ],
   });
@@ -81,6 +83,7 @@ beforeEach(() => {
   jest.useFakeTimers({ doNotFake: ['setImmediate'] });
   jest.setSystemTime(new Date('2026-10-05T10:00:00.000Z'));
   account = signal({ id: 'account-1' });
+  signedOut = new Subject<string>();
   live = {
     catchUp: jest.fn(),
     offline: signal(false),
@@ -109,7 +112,7 @@ describe('Waiting: order and one at a time', () => {
     await settle();
     live.state.set('open');
     await settle();
-    await elapse(120_000);
+    await elapse(29_000);
 
     expect(take(http)).toEqual([]);
     expect(waiting.actions().map((a) => a.state)).toEqual(['sent', 'waiting']);
@@ -463,6 +466,7 @@ describe('Waiting: accounts and sign-out', () => {
     await settle();
 
     account.set(null);
+    signedOut.next('account-1');
     await settle();
     account.set({ id: 'account-1' });
     await settle();
@@ -499,6 +503,7 @@ describe('Waiting: accounts and sign-out', () => {
     const req = take(http)[0] as TestRequest;
 
     account.set(null);
+    signedOut.next('account-1');
     await settle();
     req.flush(null, { status: 503, statusText: 'x' });
     await settle();
@@ -515,6 +520,7 @@ describe('Waiting: accounts and sign-out', () => {
     const req = take(http)[0] as TestRequest;
 
     account.set(null);
+    signedOut.next('account-1');
     await settle();
     req.flush(null, { status: 409, statusText: 'x' });
     await settle();

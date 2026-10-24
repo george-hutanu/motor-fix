@@ -1,51 +1,35 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
+import { account, setup } from './signed-in.testing';
 
-const account = (role: 'garage' | 'driver') =>
-  ({
-    capabilities: [],
+const roleAccount = (role: 'garage' | 'driver') =>
+  account({
     email: 'mihai@example.ro',
-    garageAccess: [],
     garageId: role === 'garage' ? 'garage-1' : null,
-    id: 'account-1',
     landing: role === 'garage' ? '/app/garage' : '/app/driver',
-    language: 'ro',
     name: 'Mihai',
     role,
     roles: ['garage', 'driver'],
-  }) as unknown as MeDto;
-
-function setup(switches: () => Promise<{ accessToken: string }>) {
-  let role: 'garage' | 'driver' = 'garage';
-  const auth = {
-    authControllerRefresh: jest.fn(() =>
-      Promise.resolve({ accessToken: 'renewed' }),
-    ),
-    authControllerSignOut: jest.fn(() => Promise.resolve()),
-    // Through the refresh cookie, so a signed-out session cannot switch.
-    authControllerSwitchRole: jest.fn(async () => {
-      const answer = await switches();
-      role = 'driver';
-      return answer;
-    }),
-  };
-  const me = {
-    meControllerMe: jest.fn(() => Promise.resolve(account(role))),
-  };
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: me },
-      { provide: AuthService, useValue: auth },
-    ],
   });
-  return { auth, me, session: TestBed.inject(Session) };
+
+function switchSetup(switches: () => Promise<{ accessToken: string }>) {
+  let role: 'garage' | 'driver' = 'garage';
+  return setup({
+    auth: {
+      // Through the refresh cookie, so a signed-out session cannot switch.
+      authControllerSwitchRole: jest.fn(async () => {
+        const answer = await switches();
+        role = 'driver';
+        return answer;
+      }),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(roleAccount(role))) },
+  });
 }
 
 describe('Session, switching the role', () => {
   it('asks for the role, keeps the new token and loads the account in that role', async () => {
-    const { auth, session } = setup(async () => ({
+    const { auth, session } = switchSetup(async () => ({
       accessToken: 'as-driver',
     }));
     await session.load();
@@ -61,7 +45,7 @@ describe('Session, switching the role', () => {
   });
 
   it('keeps the token and the account when the switch fails, and rejects', async () => {
-    const { session } = setup(() => Promise.reject(new Error('offline')));
+    const { session } = switchSetup(() => Promise.reject(new Error('offline')));
     await session.load();
     const before = session.current();
     const token = session.token();
@@ -73,7 +57,7 @@ describe('Session, switching the role', () => {
   });
 
   it('keeps the account when the switch answers no token', async () => {
-    const { session } = setup(async () => ({ accessToken: '' }));
+    const { session } = switchSetup(async () => ({ accessToken: '' }));
     await session.load();
     const before = session.current();
 
@@ -83,7 +67,9 @@ describe('Session, switching the role', () => {
   });
 
   it('goes back to the old token when the account does not load in the new role', async () => {
-    const { me, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    const { me, session } = switchSetup(async () => ({
+      accessToken: 'as-driver',
+    }));
     await session.load();
     const before = session.current();
     const token = session.token();
@@ -99,7 +85,7 @@ describe('Session, switching the role', () => {
 
   it('restores nothing when signed out while the switch was on its way', async () => {
     let answer: (value: { accessToken: string }) => void = () => undefined;
-    const { session } = setup(
+    const { session } = switchSetup(
       () =>
         new Promise((resolve) => {
           answer = resolve;
@@ -119,7 +105,7 @@ describe('Session, switching the role', () => {
 
 describe('Session, renewing the token', () => {
   it('asks for the role the tab is showing', async () => {
-    const { auth, session } = setup(async () => ({ accessToken: 'x' }));
+    const { auth, session } = switchSetup(async () => ({ accessToken: 'x' }));
     await session.load();
 
     await session.renew();
@@ -130,7 +116,9 @@ describe('Session, renewing the token', () => {
   });
 
   it('keeps the switch’s token when a renewal sent before the switch answers after it', async () => {
-    const { auth, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    const { auth, session } = switchSetup(async () => ({
+      accessToken: 'as-driver',
+    }));
     await session.load();
     let answer: (value: { accessToken: string }) => void = () => undefined;
     auth.authControllerRefresh.mockImplementationOnce(
@@ -150,7 +138,9 @@ describe('Session, renewing the token', () => {
   });
 
   it('stays signed in when a renewal sent before the switch fails after it', async () => {
-    const { auth, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    const { auth, session } = switchSetup(async () => ({
+      accessToken: 'as-driver',
+    }));
     await session.load();
     let fail: (error: Error) => void = () => undefined;
     auth.authControllerRefresh.mockImplementationOnce(
@@ -170,7 +160,7 @@ describe('Session, renewing the token', () => {
   });
 
   it('asks for the new role when a renewal starts while the switched account loads', async () => {
-    const { auth, me, session } = setup(async () => ({
+    const { auth, me, session } = switchSetup(async () => ({
       accessToken: 'as-driver',
     }));
     await session.load();
@@ -185,7 +175,7 @@ describe('Session, renewing the token', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     await session.renew();
-    loaded(account('driver'));
+    loaded(roleAccount('driver'));
     await switching;
 
     expect(auth.authControllerRefresh).toHaveBeenLastCalledWith({
@@ -195,7 +185,7 @@ describe('Session, renewing the token', () => {
   });
 
   it('asks for no role before an account is on screen', async () => {
-    const { auth, session } = setup(async () => ({ accessToken: 'x' }));
+    const { auth, session } = switchSetup(async () => ({ accessToken: 'x' }));
 
     await session.renew();
 

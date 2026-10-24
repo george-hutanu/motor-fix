@@ -1,16 +1,7 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, MeService } from '@motor-fix/data-access';
-
-import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 function session() {
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe: jest.fn() } },
-      { provide: AuthService, useValue: {} },
-    ],
-  });
-  return TestBed.inject(Session);
+  return setup({ me: { meControllerMe: jest.fn() } }).session;
 }
 
 beforeEach(() => sessionStorage.clear());

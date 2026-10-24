@@ -1,7 +1,6 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 const GARAGE = {
   capabilities: ['garage.requests', 'garage.team'],
@@ -34,30 +33,19 @@ const DRIVER = {
   roles: ['driver'],
 } as MeDto;
 
-function setup() {
-  const authControllerRefresh = jest.fn(() =>
-    Promise.resolve({ accessToken: 'renewed' }),
-  );
-  const meControllerMe = jest.fn(() => Promise.resolve(GARAGE));
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe } },
-      {
-        provide: AuthService,
-        useValue: {
-          authControllerRefresh,
-          authControllerSignIn: jest.fn(() =>
-            Promise.resolve({ accessToken: 'signed-in' }),
-          ),
-          authControllerSignOut: jest.fn(() => Promise.resolve()),
-        },
-      },
-    ],
+function garageSetup() {
+  const parts = setup({
+    auth: {
+      authControllerSignIn: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-in' }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(GARAGE)) },
   });
   return {
-    authControllerRefresh,
-    meControllerMe,
-    session: TestBed.inject(Session),
+    authControllerRefresh: parts.auth.authControllerRefresh,
+    meControllerMe: parts.me.meControllerMe,
+    session: parts.session,
   };
 }
 
@@ -72,7 +60,7 @@ function gate() {
 
 // Signed in, then the renewal fails: the session forgets the account.
 async function lapsed() {
-  const setupped = setup();
+  const setupped = garageSetup();
   await setupped.session.load();
   setupped.authControllerRefresh.mockRejectedValueOnce(new Error('expired'));
   await setupped.session.renew();
@@ -81,7 +69,7 @@ async function lapsed() {
 
 describe('the account on screen behind the gate dialog', () => {
   it('shows the session account while the session holds one', async () => {
-    const { session } = setup();
+    const { session } = garageSetup();
     expect(session.shown()).toBeNull();
 
     await session.load();
@@ -134,7 +122,7 @@ describe('the account on screen behind the gate dialog', () => {
   });
 
   it('keeps nothing when the gate opens with no account forgotten', async () => {
-    const { session } = setup();
+    const { session } = garageSetup();
     const dialog = gate();
 
     const waiting = session.keepShownWhile(dialog.open);
